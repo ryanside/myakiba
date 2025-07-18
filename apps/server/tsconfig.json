@@ -1,19 +1,19 @@
 {
   "compilerOptions": {
+    "strict": true,
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "bundler",
     "verbatimModuleSyntax": true,
-    "strict": true,
     "skipLibCheck": true,
     "baseUrl": "./",
     "paths": {
-      "@/*": ["./src/*"]
-          },
+      "@/*": ["./src/*"],
+      "@server/*": ["./src/*"],
+      "@web/*": ["../web/src/*"],
+    },
     "outDir": "./dist",
-    "types": [
-      "bun"
-    ],
+    "types": ["bun"],
     "composite": true,
     "jsx": "react-jsx"
   },

@@ -1,5 +1,4 @@
 import { authClient } from "@/lib/auth-client";
-import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect } from "react";
 
@@ -29,7 +28,6 @@ function RouteComponent() {
     <div>
       <h1>Dashboard</h1>
       <p>Welcome {session?.user.name}</p>
-      <p>privateData: {privateData.data?.message}</p>
     </div>
   );
 }

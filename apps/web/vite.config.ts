@@ -15,4 +15,10 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    proxy: {
+      "/json": "http://localhost:3000",
+      "/api": "http://localhost:3000",
+    },
+  },
 });
