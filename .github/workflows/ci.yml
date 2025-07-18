@@ -23,9 +23,6 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Type check
-        run: bun run check-types
-
       - name: Build
         run: bun run build
 
@@ -34,3 +31,6 @@ jobs:
           echo "Checking build artifacts..."
           find . -name "dist" -type d | head -10
           find . -name "*.js" -path "*/dist/*" | head -10 
+          
+      - name: Type check
+        run: bun run check-types
