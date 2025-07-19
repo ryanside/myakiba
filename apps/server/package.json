@@ -24,7 +24,7 @@
     "elysia-helmet": "^3.0.0",
     "elysia-xss": "^1.0.3",
     "logixlysia": "^5.1.0",
-    "zod": "^3.25.16"
+    "zod": "^4.0.5"
   },
   "devDependencies": {
     "tsc-alias": "^1.8.11",
