@@ -11,8 +11,10 @@
     "types": ["vite/client"],
     "rootDirs": ["."],
     "baseUrl": ".",
+    "outDir": "../server/dist",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@server/*": ["../server/src/*"]
     }
   },
   "references": [{

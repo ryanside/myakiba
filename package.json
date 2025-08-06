@@ -12,6 +12,7 @@
     "dev:native": "turbo -F native dev",
     "dev:web": "turbo -F web dev",
     "dev:server": "turbo -F server dev",
+    "dev:worker": "turbo -F worker dev",
     "db:push": "turbo -F server db:push",
     "db:studio": "turbo -F server db:studio",
     "db:generate": "turbo -F server db:generate",
@@ -19,7 +20,7 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "turbo": "^2.5.4"
+    "turbo": "^2.5.5"
   },
   "packageManager": "bun@1.2.19"
 }
