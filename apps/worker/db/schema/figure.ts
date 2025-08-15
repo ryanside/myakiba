@@ -77,11 +77,11 @@ export const collection = pgTable(
     itemId: integer("item_id")
       .notNull()
       .references(() => item.id, { onDelete: "cascade" }),
-    status: text("status").notNull().default("owned"),
+    status: text("status").notNull().default("Owned"),
     count: integer("count").default(1),
     releaseId: uuid("release_id").references(() => item_release.id, {
       onDelete: "cascade",
-    }), // TODO: default function to point to the latest release on default
+    }), 
     score: integer("score").default(0),
     price: decimal("price"),
     shop: text("shop"),
@@ -133,3 +133,15 @@ export const expense_to_collection = pgTable(
   },
   (t) => [primaryKey({ columns: [t.expenseId, t.collectionId] })]
 );
+
+export const budget = pgTable("budget", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  period: text("period").$type<"monthly" | "annual" | "allocated">().notNull(),
+  amount: decimal("amount").notNull(),
+  currency: text("currency"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});

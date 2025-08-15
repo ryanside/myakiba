@@ -447,7 +447,7 @@ scrapeMethod(itemIds, 3, 1000, userId).then(async (successfulResults) => {
     status: "owned",
     score: 0,
     notes: "",
-  })); // TODO: change in worker to add status, score, notes, etc.
+  })); 
 
   for (const item of successfulResults) {
     for (const classification of item.classification) {

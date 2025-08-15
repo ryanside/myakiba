@@ -4,10 +4,11 @@ export const REGEX_PATTERNS = {
   height: /H=(\d+)mm/,
   width: /W=(\d+)mm/,
   depth: /D=(\d+)mm/,
-  price: /(\d{1,3}(?:,\d{3})*)\s+JPY/,
-  priceCurrency: /(\d{1,3}(?:,\d{3})*)\s+([A-Z]{3})/,
+  // Updated to handle decimal prices and various currency formats
+  price: /(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s+(?:<small>)?([A-Z]{3})(?:<\/small>)?/,
+  priceCurrency: /(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s+(?:<small>)?([A-Z]{3})(?:<\/small>)?/,
   barcode: /([A-Z0-9\-]+)$/,
-  typeEnd: /\d{2,}|•|JPY/,
+  typeEnd: /\d{2,}|•|JPY|USD|EUR|CNY/,
   trailingSpace: /\s+$/,
   entryId: /\/entry\/(\d+)/,
 } as const;
@@ -169,7 +170,7 @@ export const extractReleaseData = (
 
       const priceMatch = valueText.match(REGEX_PATTERNS.price);
       const price = priceMatch
-        ? parseInt(priceMatch[1].replace(/,/g, ""), 10)
+        ? parseFloat(priceMatch[1].replace(/,/g, ""))
         : 0;
 
       const priceCurrencyMatch = valueText.match(REGEX_PATTERNS.priceCurrency);

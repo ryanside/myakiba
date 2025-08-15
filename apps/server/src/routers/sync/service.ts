@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { item, collection } from "@/db/schema/figure";
-import { and, inArray, eq } from "drizzle-orm";
+import { item, collection, item_release } from "@/db/schema/figure";
+import { and, inArray, eq, sql } from "drizzle-orm";
 import type { csvItem } from "./model";
 import type { NeonHttpQueryResult } from "drizzle-orm/neon-http";
 import { sanitizeDate } from "@/lib/utils";
@@ -47,20 +47,43 @@ export async function insertToCollection(
   userId: string
 ): Promise<NeonHttpQueryResult<never>> {
   try {
+    // TODO: separate this into two functions
+    const itemIds = items.map((i) => i.id);
+
+    let latestReleasesByItem = new Map<number, string>();
+    if (itemIds.length > 0) {
+      const result = await db.execute<{
+        itemId: number;
+        releaseId: string;
+      }>(sql`
+        SELECT DISTINCT ON (${item_release.itemId})
+          ${item_release.itemId} AS "itemId",
+          ${item_release.id} AS "releaseId"
+        FROM ${item_release}
+        WHERE ${inArray(item_release.itemId, itemIds)}
+        ORDER BY ${item_release.itemId}, ${item_release.date} DESC, ${item_release.createdAt} DESC
+      `);
+      const rows = result.rows as { itemId: number; releaseId: string }[];
+      for (const row of rows) {
+        latestReleasesByItem.set(row.itemId, row.releaseId);
+      }
+    }
+
     return await db.insert(collection).values(
-      items.map((item) => ({
+      items.map((i) => ({
         userId: userId,
-        itemId: item.id,
-        status: item.status,
-        count: item.count,
-        score: item.score,
-        paymentDate: sanitizeDate(item.payment_date),
-        shippingDate: sanitizeDate(item.shipping_date),
-        collectionDate: sanitizeDate(item.collecting_date),
-        price: item.price.toString(),
-        shop: item.shop,
-        shippingMethod: item.shipping_method,
-        notes: item.note,
+        itemId: i.id,
+        status: i.status,
+        count: i.count,
+        score: i.score,
+        paymentDate: sanitizeDate(i.payment_date),
+        shippingDate: sanitizeDate(i.shipping_date),
+        collectionDate: sanitizeDate(i.collecting_date),
+        price: i.price.toString(),
+        shop: i.shop,
+        shippingMethod: i.shipping_method,
+        notes: i.note,
+        releaseId: latestReleasesByItem.get(i.id) ?? null,
       }))
     );
   } catch (error) {

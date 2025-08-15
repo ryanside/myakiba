@@ -5,7 +5,9 @@ import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
 import { logger } from "hono/logger";
 import { serveStatic } from "hono/bun";
-import { sync } from "./routers/sync";
+import { syncRouter } from "./routers/sync";
+import { dashboardRouter } from "./routers/dashboard";
+import { reportsRouter } from "./routers/reports";
 
 const app = new Hono<{
   Variables: Variables;
@@ -40,7 +42,11 @@ app.use("*", async (c, next) => {
 
 app.on(["POST", "GET"], "/api/auth/**", (c) => auth.handler(c.req.raw));
 
-const routes = app.basePath("/api").route("/sync", sync);
+const routes = app
+  .basePath("/api")
+  .route("/sync", syncRouter)
+  .route("/dashboard", dashboardRouter)
+  .route("/reports", reportsRouter);
 
 app.get("*", serveStatic({ root: "./dist" }));
 app.get("*", serveStatic({ path: "./dist/index.html" }));

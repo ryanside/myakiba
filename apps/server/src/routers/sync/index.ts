@@ -23,7 +23,7 @@ const syncQueue = new Queue("sync-queue", {
   },
 });
 
-export const sync = new Hono<{
+export const syncRouter = new Hono<{
   Variables: Variables;
 }>()
   .get(

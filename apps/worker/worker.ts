@@ -24,8 +24,9 @@ import {
   sanitizeDate,
   createFetchOptions,
   normalizeDateString,
+  generateUUID,
 } from "./lib/utils";
-
+ 
 const redis = new Redis({
   host: process.env.NODE_ENV === "production" ? process.env.REDIS_HOST : "localhost",
   port: process.env.NODE_ENV === "production" ? parseInt(process.env.REDIS_PORT!) : 6379,
@@ -97,32 +98,42 @@ const myWorker = new Worker(
           image: item.image,
         }));
 
-        const itemReleases = [];
+        const itemReleases: Array<{
+          id: string;
+          itemId: number;
+          date: string;
+          type: string;
+          price: string;
+          priceCurrency: string;
+          barcode: string;
+        }> = [];
         const entries = [];
         const entryToItems = [];
-        const successfulCollectionItems = job.data.items.filter((item) =>
-          successfulResults.some((result) => result.id === item.id)
+        const latestReleaseIdByItem: Record<number, string | null> = {};
+        const successfulCollectionItems = job.data.items.filter((i) =>
+          successfulResults.some((result) => result.id === i.id)
         );
-        const collectionItems = successfulCollectionItems.map((item) => ({
-          userId: userId,
-          itemId: item.id,
-          status: item.status,
-          count: item.count,
-          score: item.score,
-          paymentDate: sanitizeDate(item.payment_date),
-          shippingDate: sanitizeDate(item.shipping_date),
-          collectionDate: sanitizeDate(item.collecting_date),
-          price: item.price.toString(),
-          shop: item.shop,
-          shippingMethod: item.shipping_method,
-          notes: item.note,
-        }));
+        let collectionItems: Array<{
+          userId: string;
+          itemId: number;
+          status: string;
+          count: number;
+          score: number;
+          paymentDate: string | null;
+          shippingDate: string | null;
+          collectionDate: string | null;
+          price: string;
+          shop: string;
+          shippingMethod: string;
+          notes: string;
+          releaseId?: string | null;
+        }> = [];
 
-        for (const item of successfulResults) {
-          for (const classification of item.classification) {
+        for (const scraped of successfulResults) {
+          for (const classification of scraped.classification) {
             entryToItems.push({
               entryId: classification.id,
-              itemId: item.id,
+              itemId: scraped.id,
               role: classification.role,
             });
             entries.push({
@@ -132,10 +143,10 @@ const myWorker = new Worker(
             });
           }
 
-          for (const origin of item.origin) {
+          for (const origin of scraped.origin) {
             entryToItems.push({
               entryId: origin.id,
-              itemId: item.id,
+              itemId: scraped.id,
               role: "",
             });
             entries.push({
@@ -145,10 +156,10 @@ const myWorker = new Worker(
             });
           }
 
-          for (const character of item.character) {
+          for (const character of scraped.character) {
             entryToItems.push({
               entryId: character.id,
-              itemId: item.id,
+              itemId: scraped.id,
               role: "",
             });
             entries.push({
@@ -158,10 +169,10 @@ const myWorker = new Worker(
             });
           }
 
-          for (const company of item.company) {
+          for (const company of scraped.company) {
             entryToItems.push({
               entryId: company.id,
-              itemId: item.id,
+              itemId: scraped.id,
               role: company.role,
             });
             entries.push({
@@ -171,10 +182,10 @@ const myWorker = new Worker(
             });
           }
 
-          for (const artist of item.artist) {
+          for (const artist of scraped.artist) {
             entryToItems.push({
               entryId: artist.id,
-              itemId: item.id,
+              itemId: scraped.id,
               role: artist.role,
             });
             entries.push({
@@ -184,10 +195,10 @@ const myWorker = new Worker(
             });
           }
 
-          for (const event of item.event) {
+          for (const event of scraped.event) {
             entryToItems.push({
               entryId: event.id,
-              itemId: item.id,
+              itemId: scraped.id,
               role: event.role,
             });
             entries.push({
@@ -197,10 +208,10 @@ const myWorker = new Worker(
             });
           }
 
-          for (const material of item.materials) {
+          for (const material of scraped.materials) {
             entryToItems.push({
               entryId: material.id,
-              itemId: item.id,
+              itemId: scraped.id,
               role: "",
             });
             entries.push({
@@ -210,17 +221,48 @@ const myWorker = new Worker(
             });
           }
 
-          for (const release of item.releaseDate) {
-            itemReleases.push({
-              itemId: item.id,
-              date: normalizeDateString(release.date),
+          // Build release records with generated IDs and capture latest by date
+          const releasesForItem = scraped.releaseDate.map((release) => {
+            const normalizedDate = normalizeDateString(release.date);
+            return {
+              id: generateUUID(),
+              itemId: scraped.id,
+              date: normalizedDate,
               type: release.type,
               price: release.price.toString(),
               priceCurrency: release.priceCurrency,
               barcode: release.barcode,
-            });
+            };
+          });
+
+          if (releasesForItem.length > 0) {
+            const latest = [...releasesForItem].sort((a, b) =>
+              a.date.localeCompare(b.date)
+            )[releasesForItem.length - 1];
+            latestReleaseIdByItem[scraped.id] = latest.id;
+          } else {
+            latestReleaseIdByItem[scraped.id] = null;
           }
+
+          itemReleases.push(...releasesForItem);
         }
+
+        // Finally, build collection items with default latest releaseId per item
+        collectionItems = successfulCollectionItems.map((ci) => ({
+          userId: userId,
+          itemId: ci.id,
+          status: ci.status,
+          count: ci.count,
+          score: ci.score,
+          paymentDate: sanitizeDate(ci.payment_date),
+          shippingDate: sanitizeDate(ci.shipping_date),
+          collectionDate: sanitizeDate(ci.collecting_date),
+          price: ci.price.toString(),
+          shop: ci.shop,
+          shippingMethod: ci.shipping_method,
+          notes: ci.note,
+          releaseId: latestReleaseIdByItem[ci.id] ?? null,
+        }));
 
         console.log("Items to be inserted:", items);
         // console.log("Releases to be inserted:", itemReleases);

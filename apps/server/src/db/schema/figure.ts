@@ -40,7 +40,10 @@ export const item_release = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
-  (t) => [index("item_release_item_id_index").on(t.itemId)]
+  (t) => [
+    index("item_release_item_id_index").on(t.itemId),
+    index("item_release_price_currency_index").on(t.priceCurrency), // For MSRP currency filtering
+  ]
 );
 
 export const entry = pgTable("entry", {
@@ -77,11 +80,11 @@ export const collection = pgTable(
     itemId: integer("item_id")
       .notNull()
       .references(() => item.id, { onDelete: "cascade" }),
-    status: text("status").notNull().default("owned"),
+    status: text("status").notNull().default("Owned"),
     count: integer("count").default(1),
     releaseId: uuid("release_id").references(() => item_release.id, {
       onDelete: "cascade",
-    }), // TODO: default function to point to the latest release on default
+    }), 
     score: integer("score").default(0),
     price: decimal("price"),
     shop: text("shop"),
@@ -94,7 +97,12 @@ export const collection = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
-  (t) => [index("collection_user_id_index").on(t.userId)]
+  (t) => [
+    index("collection_user_id_index").on(t.userId),
+    index("collection_user_status_index").on(t.userId, t.status), // For status filtering by user
+    index("collection_user_created_index").on(t.userId, t.createdAt), // For date range queries by user
+    index("collection_status_created_index").on(t.status, t.createdAt), // For monthly status filtering
+  ]
 );
 
 export const expense = pgTable(
@@ -133,3 +141,15 @@ export const expense_to_collection = pgTable(
   },
   (t) => [primaryKey({ columns: [t.expenseId, t.collectionId] })]
 );
+
+export const budget = pgTable("budget", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  period: text("period").$type<"monthly" | "annual" | "allocated">().notNull(),
+  amount: decimal("amount").notNull(),
+  currency: text("currency"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
