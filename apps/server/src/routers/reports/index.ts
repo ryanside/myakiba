@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { Variables } from "../..";
-import * as service from "./service";
+import ReportsService from "./service";
 
 export const reportsRouter = new Hono<{
   Variables: Variables;
@@ -9,15 +9,31 @@ export const reportsRouter = new Hono<{
     const user = c.get("user");
     if (!user) return c.text("Unauthorized", 401);
 
-    const currency = c.req.query("currency") || "JPY";
-    const data = await service.getPriceRangeDistribution(user.id, currency);
+    const data = await ReportsService.getPriceRangeDistribution(user.id);
     return c.json(data);
   })
-  .get("/top-origins", async (c) => {
+  .get("/top-collected", async (c) => {
     const user = c.get("user");
     if (!user) return c.text("Unauthorized", 401);
 
     const limit = parseInt(c.req.query("limit") || "10");
-    const data = await service.getTopCollectedOrigins(user.id, limit);
+    const data = await ReportsService.getTopCollectedEntries(user.id, limit);
+    return c.json(data);
+  })
+  .get("/scale-distribution", async (c) => {
+    const user = c.get("user");
+    if (!user) return c.text("Unauthorized", 401);
+    const limit = parseInt(c.req.query("limit") || "10");
+    const data = await ReportsService.getScaleDistribution(user.id);
+    return c.json(data);
+  })
+  .get("/average-entry-price", async (c) => {
+    const user = c.get("user");
+    if (!user) return c.text("Unauthorized", 401);
+    const entryCategory = c.req.query("entryCategory") || "Companies";
+    const data = await ReportsService.getAverageEntryPrice(
+      user.id,
+      entryCategory
+    );
     return c.json(data);
   });

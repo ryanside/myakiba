@@ -42,11 +42,11 @@ interface jobData extends Job {
       id: number;
       status: string;
       count: number;
-      score: number;
+      score: string;
       payment_date: string;
       shipping_date: string;
       collecting_date: string;
-      price: number;
+      price: string;
       shop: string;
       shipping_method: string;
       tracking_number: string;
@@ -118,7 +118,7 @@ const myWorker = new Worker(
           itemId: number;
           status: string;
           count: number;
-          score: number;
+          score: string;
           paymentDate: string | null;
           shippingDate: string | null;
           collectionDate: string | null;

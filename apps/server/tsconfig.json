@@ -9,13 +9,15 @@
     "baseUrl": "./",
     "paths": {
       "@/*": ["./src/*"]
-          },
+    },
     "outDir": "./dist",
-    "types": [
-      "bun"
-    ],
+    "types": ["bun"],
     "composite": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "hono/jsx"
+    "jsxImportSource": "hono/jsx",
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noPropertyAccessFromIndexSignature": false
   }
 }

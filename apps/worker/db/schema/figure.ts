@@ -34,13 +34,16 @@ export const item_release = pgTable(
       .references(() => item.id, { onDelete: "cascade" }),
     date: date("date").notNull(),
     type: text("type"), // "original", "rerelease", "limited", etc.
-    price: decimal("price"),
+    price: decimal("price", { scale: 2 }),
     priceCurrency: text("price_currency"),
     barcode: text("barcode"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
-  (t) => [index("item_release_item_id_index").on(t.itemId)]
+  (t) => [
+    index("item_release_item_id_index").on(t.itemId),
+    index("item_release_price_currency_index").on(t.priceCurrency), // For MSRP currency filtering
+  ]
 );
 
 export const entry = pgTable("entry", {
@@ -77,28 +80,40 @@ export const collection = pgTable(
     itemId: integer("item_id")
       .notNull()
       .references(() => item.id, { onDelete: "cascade" }),
+    orderId: uuid("order_id").references(() => order.id, {
+      onDelete: "cascade",
+    }),
     status: text("status").notNull().default("Owned"),
     count: integer("count").default(1),
     releaseId: uuid("release_id").references(() => item_release.id, {
       onDelete: "cascade",
-    }), 
-    score: integer("score").default(0),
-    price: decimal("price"),
+    }),
+    score: decimal("score", { precision: 3, scale: 1 }).default("0.0"),
+    price: decimal("price", { scale: 2 }),
     shop: text("shop"),
+    orderDate: date("order_date"),
     paymentDate: date("payment_date"),
     shippingDate: date("shipping_date"),
     collectionDate: date("collection_date"),
     shippingMethod: text("shipping_method"),
-    shippingFee: integer("shipping_fee").default(0),
+    shippingFee: decimal("shipping_fee", { scale: 2 }),
+    soldFor: decimal("sold_for", { scale: 2 }),
+    soldDate: date("sold_date"),
     notes: text("notes"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
-  (t) => [index("collection_user_id_index").on(t.userId)]
+  (t) => [
+    index("collection_user_id_index").on(t.userId),
+    index("collection_user_status_index").on(t.userId, t.status), // For status filtering by user
+    index("collection_user_created_index").on(t.userId, t.createdAt), // For date range queries by user
+    index("collection_status_created_index").on(t.status, t.createdAt), // For monthly status filtering
+    index("collection_order_id_index").on(t.orderId),
+  ]
 );
 
-export const expense = pgTable(
-  "expense",
+export const order = pgTable(
+  "order",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     userId: text("user_id")
@@ -106,32 +121,21 @@ export const expense = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     title: text("title"),
     shop: text("shop"),
+    orderDate: date("order_date"),
     paymentDate: date("payment_date"),
     shippingDate: date("shipping_date"),
     collectionDate: date("collection_date"),
     shippingMethod: text("shipping_method"),
-    shippingFee: integer("shipping_fee"),
-    miscellaneousAmount: integer("miscellaneous_amount"), // For custom items like display cases, tools, etc.
+    shippingFee: decimal("shipping_fee", { scale: 2 }),
+    miscellaneousAmount: decimal("miscellaneous_amount", { scale: 2 }),
     notes: text("notes"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
-  (t) => [index("expense_user_id_index").on(t.userId)]
-);
-
-export const expense_to_collection = pgTable(
-  "expense_to_collection",
-  {
-    expenseId: uuid("expense_id")
-      .notNull()
-      .references(() => expense.id, { onDelete: "cascade" }),
-    collectionId: uuid("collection_id")
-      .notNull()
-      .references(() => collection.id, { onDelete: "cascade" }),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  },
-  (t) => [primaryKey({ columns: [t.expenseId, t.collectionId] })]
+  (t) => [
+    index("order_user_id_index").on(t.userId),
+    index("order_order_date_index").on(t.orderDate),
+  ]
 );
 
 export const budget = pgTable("budget", {
@@ -140,7 +144,7 @@ export const budget = pgTable("budget", {
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
   period: text("period").$type<"monthly" | "annual" | "allocated">().notNull(),
-  amount: decimal("amount").notNull(),
+  amount: decimal("amount", { scale: 2 }).notNull(),
   currency: text("currency"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

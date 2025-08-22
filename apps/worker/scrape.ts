@@ -21,6 +21,7 @@ import {
 import {
   createFetchOptions,
   normalizeDateString,
+  generateUUID,
 } from "./lib/utils";
 
 const redis = new Redis({
@@ -158,9 +159,12 @@ const scrapeSingleItem = async (
   id: number,
   maxRetries: number = 3,
   baseDelayMs: number = 1000,
-  userId: string
+  userId: string,
+  overallIndex: number = 0,
+  totalItems: number = 1
 ): Promise<scrapedItem | null> => {
   console.time("Scraping Duration");
+  console.log(`Processing item ${overallIndex + 1}/${totalItems}`);
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
@@ -330,14 +334,23 @@ const scrapedItems = async (
   itemIds: number[],
   maxRetries: number = 3,
   baseDelayMs: number = 1000,
-  userId: string
+  userId: string,
+  startingIndex: number = 0,
+  totalItems: number = itemIds.length
 ): Promise<scrapedItem[]> => {
   console.time("Scraping Duration");
 
   console.log(`Starting to scrape ${itemIds.length} items with up to ${maxRetries} retries each`);
 
-  const promises = itemIds.map((id) =>
-    scrapeSingleItem(id, maxRetries, baseDelayMs, userId)
+  const promises = itemIds.map((id, index) =>
+    scrapeSingleItem(
+      id,
+      maxRetries,
+      baseDelayMs,
+      userId,
+      startingIndex + index,
+      totalItems
+    )
   );
   const results = await Promise.allSettled(promises);
 
@@ -395,7 +408,9 @@ const scrapedItemsWithRateLimit = async (
       batch,
       maxRetries,
       baseDelayMs,
-      userId
+      userId,
+      i, // starting index for this batch
+      itemIds.length // total items across all batches
     );
     allResults.push(...batchResults);
 
@@ -412,8 +427,7 @@ const scrapedItemsWithRateLimit = async (
   console.log(`Rate-limited scraping completed in ${duration}ms (${(duration / 1000).toFixed(2)}s)`);
   console.log(`Successfully scraped ${allResults.length} out of ${itemIds.length} items`);
   console.log(
-    `Average time per item: ${(duration / itemIds.length).toFixed(0)}ms`,
-    userId
+    `Average time per item: ${(duration / itemIds.length).toFixed(0)}ms`
   );
   return allResults;
 };
@@ -438,7 +452,15 @@ scrapeMethod(itemIds, 3, 1000, userId).then(async (successfulResults) => {
     image: item.image,
   }));
 
-  const itemReleases = [];
+  const itemReleases: Array<{
+    id: string;
+    itemId: number;
+    date: string;
+    type: string;
+    price: string;
+    priceCurrency: string;
+    barcode: string;
+  }> = [];
   const entries = [];
   const entryToItems = [];
   const collectionItems = successfulResults.map((item) => ({
@@ -543,6 +565,7 @@ scrapeMethod(itemIds, 3, 1000, userId).then(async (successfulResults) => {
 
     for (const release of item.releaseDate) {
       itemReleases.push({
+        id: generateUUID(),
         itemId: item.id,
         date: normalizeDateString(release.date),
         type: release.type,

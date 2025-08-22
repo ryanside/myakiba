@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { Variables } from "../..";
-import * as service from "./service";
+import DashboardService from "./service";
 
 export const dashboardRouter = new Hono<{
   Variables: Variables;
@@ -10,9 +10,9 @@ export const dashboardRouter = new Hono<{
     if (!user) return c.text("Unauthorized", 401);
 
     const [collectionStats, ordersSummary, recentItems] = await Promise.all([
-      service.getCollectionStats(user.id),
-      service.getOrdersSummary(user.id),
-      service.getRecentItems(user.id),
+      DashboardService.getCollectionStats(user.id),
+      DashboardService.getOrdersSummary(user.id),
+      DashboardService.getRecentItems(user.id),
     ]);
 
     return c.json({

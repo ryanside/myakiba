@@ -79,7 +79,7 @@ export async function insertToCollection(
         paymentDate: sanitizeDate(i.payment_date),
         shippingDate: sanitizeDate(i.shipping_date),
         collectionDate: sanitizeDate(i.collecting_date),
-        price: i.price.toString(),
+        price: i.price,
         shop: i.shop,
         shippingMethod: i.shipping_method,
         notes: i.note,

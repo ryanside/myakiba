@@ -42,11 +42,11 @@ type userItem = {
   id: number;
   status: string;
   count: number;
-  score: number;
+  score: string;
   payment_date: string;
   shipping_date: string;
   collecting_date: string;
-  price: number;
+  price: string;
   shop: string;
   shipping_method: string;
   tracking_number: string;
@@ -113,11 +113,11 @@ function RouteComponent() {
           id: Number(item.id),
           status: item.status,
           count: Number(item.count),
-          score: Number(item.score.split("/")[0]),
+          score: item.score.split("/")[0],
           payment_date: item.payment_date,
           shipping_date: item.shipping_date,
           collecting_date: item.collecting_date,
-          price: Number(item.price_1),
+          price: item.price_1,
           shop: item.shop,
           shipping_method: item.shipping_method,
           tracking_number: item.tracking_number,
