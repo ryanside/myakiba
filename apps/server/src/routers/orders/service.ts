@@ -1,50 +1,205 @@
 import { db } from "@/db";
-import { order, collection, item_release, item } from "@/db/schema/figure";
-import { eq, and, asc, inArray } from "drizzle-orm";
+import { order, collection, item } from "@/db/schema/figure";
+import { eq, and, inArray, sql, desc, asc, ilike } from "drizzle-orm";
 import type { orderInsertType, orderUpdateType } from "./model";
-import type { updateCollectionType } from "../collection/model";
 
 class OrdersService {
-  async getOrders(userId: string) {
-    try {
-      const orders = await db
-        .select({
-          title: order.title,
-          shop: order.shop,
-          orderDate: order.orderDate,
-          paymentDate: order.paymentDate,
-          shippingDate: order.shippingDate,
-          collectionDate: order.collectionDate,
-          shippingMethod: order.shippingMethod,
-          shippingFee: order.shippingFee,
-          miscellaneousAmount: order.miscellaneousAmount,
-          notes: order.notes,
-        })
-        .from(order)
-        .innerJoin(collection, eq(order.id, collection.orderId))
-        .innerJoin(item, eq(collection.itemId, item.id))
-        .innerJoin(item_release, eq(collection.releaseId, item_release.id))
-        .where(eq(order.userId, userId))
-        .orderBy(asc(order.orderDate));
+  async getOrders(
+    userId: string,
+    limit: number,
+    offset: number,
+    sortBy: string,
+    orderBy: string,
+    search?: string
+  ) {
+    const sortByColumn = (() => {
+      switch (sortBy) {
+        case "title":
+          return order.title;
+        case "shop":
+          return order.shop;
+        case "orderDate":
+          return order.orderDate;
+        case "releaseMonthYear":
+          return order.releaseMonthYear;
+        case "shippingMethod":
+          return order.shippingMethod;
+        case "total":
+          return sql<string>`SUM(${collection.price}::numeric) + COALESCE(${order.taxes}::numeric, 0) + COALESCE(${order.duties}::numeric, 0) + COALESCE(${order.tariffs}::numeric, 0) + COALESCE(${order.miscFees}::numeric, 0)`;
+        case "itemCount":
+          return sql<number>`COUNT(${collection.id})`;
+        case "createdAt":
+          return order.createdAt;
+        default:
+          return order.createdAt;
+      }
+    })();
 
-      return orders;
-    } catch (error) {
-      console.error("Failed to get orders");
-      throw error;
-    }
+    const orders = await db
+      .select({
+        orderId: order.id,
+        title: order.title,
+        shop: order.shop,
+        releaseMonthYear: order.releaseMonthYear,
+        shippingMethod: order.shippingMethod,
+        orderDate: order.orderDate,
+        paymentDate: order.paymentDate,
+        shippingDate: order.shippingDate,
+        orderStatus: order.orderStatus,
+        total: sql<string>`SUM(${collection.price}::numeric) + COALESCE(${order.shippingFee}::numeric, 0) + COALESCE(${order.taxes}::numeric, 0) + COALESCE(${order.duties}::numeric, 0) + COALESCE(${order.tariffs}::numeric, 0) + COALESCE(${order.miscFees}::numeric, 0)`,
+        itemCount: sql<number>`COUNT(${collection.id})`,
+        itemImages: sql<
+          string[]
+        >`array_agg(DISTINCT ${item.image}) FILTER (WHERE ${item.image} IS NOT NULL)`,
+        itemTitles: sql<string[]>`array_agg(DISTINCT ${item.title})`,
+        itemIds: sql<number[]>`array_agg(DISTINCT ${item.id})`,
+      })
+      .from(order)
+      .leftJoin(
+        collection,
+        and(eq(order.id, collection.orderId), eq(collection.status, "Ordered"))
+      )
+      .leftJoin(item, eq(collection.itemId, item.id))
+      .where(
+        and(
+          eq(order.userId, userId),
+          search ? ilike(order.title, `%${search}%`) : undefined
+        )
+      )
+      .groupBy(
+        order.id,
+        order.title,
+        order.shop,
+        order.releaseMonthYear,
+        order.shippingMethod,
+        order.orderDate,
+        order.paymentDate,
+        order.shippingDate,
+        order.orderStatus,
+        order.shippingFee,
+        order.taxes,
+        order.duties,
+        order.tariffs,
+        order.miscFees
+      )
+      .orderBy(orderBy === "asc" ? asc(sortByColumn) : desc(sortByColumn))
+      .limit(limit)
+      .offset(offset);
+
+    return orders;
   }
 
-  async createOrder(newOrder: orderInsertType) {
-    try {
-      const created = await db.insert(order).values({
+  async getOrder(userId: string, orderId: string) {
+    const orderInfo = await db
+      .select({
+        title: order.title,
+        shop: order.shop,
+        orderDate: order.orderDate,
+        releaseMonthYear: order.releaseMonthYear,
+        paymentDate: order.paymentDate,
+        shippingDate: order.shippingDate,
+        collectionDate: order.collectionDate,
+        shippingMethod: order.shippingMethod,
+        orderStatus: order.orderStatus,
+        total: order.total,
+        shippingFee: order.shippingFee,
+        taxes: order.taxes,
+        duties: order.duties,
+        tariffs: order.tariffs,
+        miscFees: order.miscFees,
+        notes: order.notes,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+        itemCount: sql<number>`COUNT(${collection.id})`,
+        itemImages: sql<
+          string[]
+        >`array_agg(DISTINCT ${item.image}) FILTER (WHERE ${item.image} IS NOT NULL)`,
+        itemTitles: sql<string[]>`array_agg(DISTINCT ${item.title})`,
+        itemIds: sql<number[]>`array_agg(DISTINCT ${item.id})`,
+        itemPrices: sql<string[]>`array_agg(DISTINCT ${collection.price})`,
+      })
+      .from(order)
+      .leftJoin(collection, eq(order.id, collection.orderId))
+      .leftJoin(item, eq(collection.itemId, item.id))
+      .where(and(eq(order.userId, userId), eq(order.id, orderId)));
+
+    if (!orderInfo || orderInfo.length === 0) {
+      throw new Error("ORDER_NOT_FOUND");
+    }
+
+    return orderInfo;
+  }
+
+  async mergeOrders(
+    userId: string,
+    orderIds: string[],
+    newOrder: orderInsertType
+  ) {
+    const merged = await db.transaction(async (tx) => {
+      const newOrderInserted = await tx.insert(order).values({
         ...newOrder,
       });
+      if (!newOrderInserted || newOrderInserted.length === 0) {
+        throw new Error("FAILED_TO_INSERT_NEW_ORDER");
+      }
 
-      return created;
-    } catch (error) {
-      console.error("Failed to create order");
-      throw error;
-    }
+      const collectionUpdated = await tx
+        .update(collection)
+        .set({
+          orderId: newOrder.id,
+        })
+        .where(
+          and(
+            eq(collection.userId, userId),
+            inArray(collection.orderId, orderIds)
+          )
+        );
+      if (!collectionUpdated || collectionUpdated.length === 0) {
+        throw new Error("ORDER_ITEMS_NOT_FOUND");
+      }
+
+      const deletedOrders = await tx
+        .delete(order)
+        .where(and(eq(order.userId, userId), inArray(order.id, orderIds)));
+      if (!deletedOrders || deletedOrders.length === 0) {
+        throw new Error("ORDERS_NOT_FOUND");
+      }
+
+      return { newOrderInserted, collectionUpdated, deletedOrders };
+    });
+
+    return { merged };
+  }
+
+  async splitOrders(
+    userId: string,
+    orderId: string,
+    newOrder: orderInsertType
+  ) {
+    const splitted = await db.transaction(async (tx) => {
+      const newOrderInserted = await tx.insert(order).values({
+        ...newOrder,
+      });
+      if (!newOrderInserted || newOrderInserted.length === 0) {
+        throw new Error("FAILED_TO_INSERT_NEW_ORDER");
+      }
+
+      const collectionUpdated = await tx
+        .update(collection)
+        .set({
+          orderId: newOrder.id,
+        })
+        .where(
+          and(eq(collection.userId, userId), eq(collection.orderId, orderId))
+        );
+      if (!collectionUpdated || collectionUpdated.length === 0) {
+        throw new Error("ORDER_ITEMS_NOT_FOUND");
+      }
+
+      return { newOrderInserted, collectionUpdated };
+    });
+
+    return { splitted };
   }
 
   async updateOrder(
@@ -52,103 +207,107 @@ class OrdersService {
     orderId: string,
     updatedOrder: orderUpdateType
   ) {
-    try {
-      const updated = await db
+    const updated = await db.transaction(async (tx) => {
+      const orderUpdated = await tx
         .update(order)
         .set(updatedOrder)
-        .where(and(eq(order.id, orderId), eq(order.userId, userId)));
-      return updated;
-    } catch (error) {
-      console.error("Failed to update order");
-      throw error;
-    }
-  }
+        .where(and(eq(order.userId, userId), eq(order.id, orderId)));
+      if (!orderUpdated || orderUpdated.length === 0) {
+        throw new Error("ORDER_NOT_FOUND");
+      }
 
-  async assignOrderIdToCollectionItems(
-    userId: string,
-    orderId: string,
-    collectionIds: string[]
-  ) {
-    try {
-      const assigned = await db
+      const collectionUpdated = await tx
         .update(collection)
         .set({
-          orderId: orderId,
+          shop: updatedOrder.shop,
+          orderDate: updatedOrder.orderDate,
+          paymentDate: updatedOrder.paymentDate,
+          shippingDate: updatedOrder.shippingDate,
+          collectionDate: updatedOrder.collectionDate,
+          shippingMethod: updatedOrder.shippingMethod,
         })
+        .where(
+          and(eq(collection.userId, userId), eq(collection.orderId, orderId))
+        );
+      if (!collectionUpdated || collectionUpdated.length === 0) {
+        throw new Error("ORDER_ITEMS_NOT_FOUND");
+      }
+
+      if (updatedOrder.orderStatus === "Collected") {
+        const collectionUpdatedStatus = await tx
+          .update(collection)
+          .set({ status: "Owned" })
+          .where(
+            and(
+              eq(collection.userId, userId),
+              eq(collection.orderId, orderId),
+              eq(collection.status, "Ordered")
+            )
+          );
+        if (!collectionUpdatedStatus || collectionUpdatedStatus.length === 0) {
+          throw new Error("ORDER_ITEMS_NOT_FOUND");
+        }
+
+        return { orderUpdated, collectionUpdated, collectionUpdatedStatus };
+      }
+
+      return { orderUpdated, collectionUpdated };
+    });
+
+    return updated;
+  }
+
+  async deleteItemsFromOrder(
+    userId: string,
+    orderId: string,
+    itemIds: number[]
+  ) {
+    const deleted = await db
+      .delete(collection)
+      .where(
+        and(
+          eq(collection.userId, userId),
+          eq(collection.orderId, orderId),
+          inArray(collection.itemId, itemIds)
+        )
+      );
+
+    if (!deleted || deleted.length === 0) {
+      throw new Error("ORDER_ITEMS_NOT_FOUND");
+    }
+
+    return deleted[0];
+  }
+
+  async deleteOrders(userId: string, orderIds: string[]) {
+    const deleted = await db.transaction(async (tx) => {
+      // Only cascade delete collection items with "Ordered" status
+      const deletedCollectionItems = await tx
+        .delete(collection)
         .where(
           and(
             eq(collection.userId, userId),
-            inArray(collection.id, collectionIds)
+            inArray(collection.orderId, orderIds),
+            eq(collection.status, "Ordered")
           )
         );
 
-      return assigned;
-    } catch (error) {
-      console.error("Failed to assign order to collection item(s)");
-      throw error;
-    }
-  }
+      if (!deletedCollectionItems || deletedCollectionItems.length === 0) {
+        throw new Error("ORDERS_ITEMS_NOT_FOUND");
+      }
 
-  async deleteOrder(userId: string, orderId: string) {
-    try {
-      const deleted = await db
+      const deletedOrders = await tx
         .delete(order)
-        .where(and(eq(order.userId, userId), eq(order.id, orderId)));
+        .where(and(eq(order.userId, userId), inArray(order.id, orderIds)));
 
-      return deleted;
-    } catch (error) {
-      console.error("Failed to delete order");
-      throw error;
-    }
-  }
+      if (!deletedOrders || deletedOrders.length === 0) {
+        throw new Error("ORDERS_NOT_FOUND");
+      }
 
-  async getSingleItemOrders(userId: string) {
-    try {
-      const orders = await db
-        .select()
-        .from(collection)
-        .innerJoin(item, eq(collection.itemId, item.id))
-        .innerJoin(item_release, eq(collection.releaseId, item_release.id))
-        .where(
-          and(eq(collection.userId, userId), eq(collection.status, "Ordered"))
-        );
+      return { deletedCollectionItems, deletedOrders };
+    });
 
-      return orders;
-    } catch (error) {
-      console.error("Failed to get single item orders");
-      throw error;
-    }
-  }
-
-  async updateSingleItemOrder(
-    userId: string,
-    id: string,
-    data: updateCollectionType
-  ) {
-    try {
-      const updateCollection = db
-        .update(collection)
-        .set(data)
-        .where(and(eq(collection.userId, userId), eq(collection.id, id)));
-
-      return updateCollection;
-    } catch (error) {
-      console.error("Failed to update single item order");
-      throw error;
-    }
-  }
-
-  async deleteSingleItemOrder(userId: string, id: string) {
-    try {
-      const deleted = await db
-        .delete(collection)
-        .where(and(eq(collection.userId, userId), eq(collection.id, id)));
-
-      return deleted;
-    } catch (error) {
-      console.error("Failed to delete single item order");
-      throw error;
-    }
+    return deleted;
   }
 }
 

@@ -6,9 +6,11 @@
   "scripts": {
     "dev": "bun run --hot index.ts",
     "start": "bun run index.ts",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "lint": "eslint ."
   },
   "devDependencies": {
+    "@myakiba/eslint-config": "workspace:*",
     "@types/bun": "^1.2.19",
     "drizzle-kit": "^0.31.4"
   },
@@ -18,9 +20,11 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.859.0",
     "@neondatabase/serverless": "^1.0.1",
+    "@paralleldrive/cuid2": "^2.2.2",
     "bullmq": "^5.56.9",
     "cheerio": "^1.1.2",
     "drizzle-orm": "^0.44.4",
-    "ioredis": "^5.7.0"
+    "ioredis": "^5.7.0",
+    "uuid": "^11.1.0"
   }
 }

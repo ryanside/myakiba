@@ -2,28 +2,11 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import type { Variables } from "../..";
-import { Queue } from "bullmq";
-import { Redis } from "ioredis";
-import { csvItemSchema, type csvItem, type status } from "./model";
-import {
-  getExistingItemIdsInCollection,
-  getExistingItemIdsInItem,
-  insertToCollection,
-} from "./service";
-import { generateUUID } from "@/lib/utils";
+import { csvItemSchema } from "./model";
+import SyncService from "./service";
+import { tryCatch } from "@/lib/utils";
 
-const redis = new Redis({
-  host: process.env.REDIS_HOST,
-  port: parseInt(process.env.REDIS_PORT!),
-});
-const syncQueue = new Queue("sync-queue", {
-  connection: {
-    host: process.env.REDIS_HOST,
-    port: parseInt(process.env.REDIS_PORT!),
-  },
-});
-
-export const syncRouter = new Hono<{
+const syncRouter = new Hono<{
   Variables: Variables;
 }>()
   .get(
@@ -37,12 +20,24 @@ export const syncRouter = new Hono<{
       const user = c.get("user");
       if (!user) return c.text("Unauthorized", 401);
 
-      const validated = c.req.valid("query");
-      const jobId = validated.jobId;
+      const validatedQuery = c.req.valid("query");
 
-      const response = await redis.get(`job:${jobId}:status`);
-      if (!response) return c.text("Sync job not found", 404);
-      const jobStatus = JSON.parse(response) as status;
+      const { data: jobStatus, error } = await tryCatch(
+        SyncService.getJobStatus(validatedQuery.jobId)
+      );
+
+      if (error) {
+        if (error.message === "SYNC_JOB_NOT_FOUND") {
+          return c.text("Sync job not found", 404);
+        }
+
+        console.error("Error fetching job status:", error, {
+          userId: user.id,
+          jobId: validatedQuery.jobId,
+        });
+
+        return c.text("Failed to get sync job status", 500);
+      }
 
       return c.json({
         status: jobStatus.status,
@@ -51,7 +46,6 @@ export const syncRouter = new Hono<{
       });
     }
   )
-
   .post(
     "/",
     zValidator("json", z.array(csvItemSchema), (result, c) => {
@@ -63,91 +57,82 @@ export const syncRouter = new Hono<{
       const user = c.get("user");
       if (!user) return c.text("Unauthorized", 401);
 
-      const validated = c.req.valid("json");
-      const itemIds: number[] = validated.map((item: csvItem) => item.id);
-      console.log("Raw Item IDs", itemIds);
+      const validatedJSON = c.req.valid("json");
 
-      const itemIdsInCollection = await getExistingItemIdsInCollection(
-        itemIds,
-        user.id
-      );
-      console.log("DB: Item IDs in Collection", itemIdsInCollection);
-      const itemIdsNotInCollection = itemIds.filter(
-        (itemId) =>
-          !itemIdsInCollection.some(
-            (existingItem) => existingItem.itemId === itemId
-          )
-      );
-      console.log("Item IDs not in Collection", itemIdsNotInCollection);
+      const items = SyncService.assignOrderIdsAndSanitizeDates(validatedJSON);
 
-      const existingItemIds = await getExistingItemIdsInItem(
-        itemIdsNotInCollection
+      const { data: result, error: processItemsError } = await tryCatch(
+        SyncService.processItems(items, user.id)
       );
-      console.log("DB:Existing Item IDs", existingItemIds);
 
-      // using existingItemIds, filter out items to be inserted to user's collection w/o the need for worker scraping
-      const itemsToInsertToCollection = validated.filter((item: csvItem) =>
-        existingItemIds.some((existingItem) => existingItem.id === item.id)
-      );
-      console.log("Items to Insert to Collection", itemsToInsertToCollection);
-      if (itemsToInsertToCollection.length > 0) {
-        const insertToCollectionResult = await insertToCollection(
-          itemsToInsertToCollection,
-          user.id
-        );
-        console.log("DB: Insert to Collection", insertToCollectionResult);
+      if (processItemsError) {
+        console.error("Error during processItems:", processItemsError, {
+          userId: user.id,
+          itemCount: validatedJSON.length,
+        });
+        return c.text("Failed to process sync request", 500);
       }
 
-      const newItemIds = itemIdsNotInCollection.filter(
-        (itemId) =>
-          !existingItemIds.some((existingItem) => existingItem.id === itemId)
-      );
-      console.log("New Item IDs", newItemIds);
-      const newItems = validated.filter((item: csvItem) =>
-        newItemIds.includes(item.id)
-      );
-      console.log("New Items to Scrape", newItems);
+      const {
+        collectionItems,
+        orderItems,
+        csvItemsToScrape: scrapeItems,
+      } = result;
 
-      if (newItems.length > 0) {
-        try {
-          const job = await syncQueue.add(
-            "sync-job",
-            { items: newItems, userId: user.id },
+      if (collectionItems.length > 0) {
+        const { error: insertToCollectionAndOrdersError } = await tryCatch(
+          SyncService.insertToCollectionAndOrders(collectionItems, orderItems)
+        );
+
+        if (insertToCollectionAndOrdersError) {
+          console.error(
+            "Error during insert to collection and orders:",
+            insertToCollectionAndOrdersError,
             {
-              removeOnComplete: true,
-              removeOnFail: true,
-              jobId: generateUUID(),
+              userId: user.id,
+              itemCount: validatedJSON.length,
             }
           );
-          const status = await redis.set(
-            `job:${job.id}:status`,
-            JSON.stringify({
-              status: "Your sync job has been added to queue. Please wait...",
-              finished: false,
-              createdAt: new Date().toISOString(),
-            }),
-            "EX",
-            60
-          );
-          console.log("Pending Status:", status);
-          return c.json({
-            message: "Job added to queue.",
-            success: true,
-            existingItems: itemsToInsertToCollection.length,
-            newItems: newItemIds,
-            jobId: job.id,
-          });
-        } catch (error) {
-          return c.text("Failed to add job to queue.", 500);
+          return c.text("Failed to insert to collection and orders", 500);
         }
       }
 
+      let jobId: string | null | undefined = null;
+      if (scrapeItems.length > 0) {
+        const { data: jobIdData, error: queueNewItemsError } = await tryCatch(
+          SyncService.queueNewItems(scrapeItems, user.id)
+        );
+
+        if (queueNewItemsError) {
+          if (queueNewItemsError.message === "FAILED_TO_QUEUE_SYNC_JOB") {
+            return c.text(
+              "Failed to queue new items that need to be scraped",
+              500
+            );
+          }
+          if (
+            queueNewItemsError.message === "FAILED_TO_SET_JOB_STATUS_IN_REDIS"
+          ) {
+            return c.text("Failed to set job status", 500);
+          }
+          console.error("Error during queue new items:", queueNewItemsError, {
+            userId: user.id,
+            itemCount: validatedJSON.length,
+          });
+          return c.text("Failed to queue new items", 500);
+        }
+
+        jobId = jobIdData;
+      }
+
       return c.json({
-        message: "Sync completed",
+        message: jobId ? "Job added to queue." : "Sync completed",
         success: true,
-        existingItems: itemsToInsertToCollection.length,
-        newItems: newItemIds,
-        jobId: null,
+        existingItemsToInsert: collectionItems.length,
+        newItems: scrapeItems.map((item) => item.id),
+        jobId,
       });
     }
   );
+
+export default syncRouter;

@@ -9,6 +9,7 @@
     "dev": "turbo dev",
     "build": "turbo build",
     "check-types": "turbo check-types",
+    "lint": "turbo lint",
     "dev:native": "turbo -F native dev",
     "dev:web": "turbo -F web dev",
     "dev:server": "turbo -F server dev",
@@ -20,7 +21,11 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "turbo": "^2.5.5"
+    "@eslint/js": "^9.35.0",
+    "eslint": "^9.35.0",
+    "turbo": "^2.5.5",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.42.0"
   },
   "packageManager": "bun@1.2.19"
 }

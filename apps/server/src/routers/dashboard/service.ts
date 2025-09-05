@@ -1,66 +1,53 @@
-import { db } from "@/db";
-import { item, collection, item_release } from "@/db/schema/figure";
-import { eq, count, and, sum, gte, lt, asc, sql } from "drizzle-orm";
+import { dbHttp } from "@/db";
+import {
+  item,
+  collection,
+  item_release,
+  order,
+  budget,
+} from "@/db/schema/figure";
+import { eq, count, and, sum, asc, sql } from "drizzle-orm";
 
 class DashboardService {
-  async getCollectionStats(userId: string) {
-    try {
-      const currentMonth = new Date(
-        new Date().getFullYear(),
-        new Date().getMonth(),
-        1
-      );
-      const nextMonth = new Date(
-        new Date().getFullYear(),
-        new Date().getMonth() + 1,
-        1
-      );
+  async getDashboard(userId: string) {
+    const currentMonth = new Date(
+      new Date().getFullYear(),
+      new Date().getMonth(),
+      1
+    ).toISOString();
+    const nextMonth = new Date(
+      new Date().getFullYear(),
+      new Date().getMonth() + 1,
+      1
+    ).toISOString();
 
-      const [collectionStats] = await db
+    const [
+      collectionStats,
+      categoriesOwned,
+      orders,
+      ordersSummary,
+      budgetSummary,
+    ] = await dbHttp.batch([
+      dbHttp
         .select({
           totalItems: count(),
           itemsThisMonth: count(
-            sql`CASE WHEN ${collection.createdAt} >= ${currentMonth} 
-                AND ${collection.createdAt} < ${nextMonth} 
-                AND ${collection.status} = 'Owned' THEN 1 END`
-          ),
-          totalMsrpJPY: sum(
-            sql`CASE WHEN ${item_release.priceCurrency} = 'JPY' 
-                AND ${collection.status} = 'Owned' 
-                THEN ${item_release.price}::numeric END`
-          ),
-          totalMsrpUSD: sum(
-            sql`CASE WHEN ${item_release.priceCurrency} = 'USD' 
-                AND ${collection.status} = 'Owned' 
-                THEN ${item_release.price}::numeric END`
-          ),
-          totalMsrpCNY: sum(
-            sql`CASE WHEN ${item_release.priceCurrency} = 'CNY' 
-                AND ${collection.status} = 'Owned' 
-                THEN ${item_release.price}::numeric END`
-          ),
-
-          msrpThisMonthJPY: sum(
-            sql`CASE WHEN ${item_release.priceCurrency} = 'JPY' 
-                AND ${collection.status} = 'Owned'
-                AND ${collection.createdAt} >= ${currentMonth} 
-                AND ${collection.createdAt} < ${nextMonth}
-                THEN ${item_release.price}::numeric END`
+            sql`CASE WHEN ${collection.collectionDate} >= ${currentMonth} 
+              AND ${collection.collectionDate} < ${nextMonth} 
+              AND ${collection.status} = 'Owned' THEN 1 END`
           ),
           totalSpent: sum(collection.price),
-          totalShipping: sum(collection.shippingFee),
-          spentThisMonth: sum(
-            sql`CASE WHEN ${collection.status} = 'Ordered'
-                   AND ${collection.createdAt} >= ${currentMonth} 
-                   AND ${collection.createdAt} < ${nextMonth}
-                   THEN ${collection.price}::numeric END`
+          totalSpentThisMonth: sum(
+            sql`CASE WHEN ${collection.paymentDate} >= ${currentMonth} 
+                 AND ${collection.paymentDate} < ${nextMonth}
+                 THEN ${collection.price}::numeric END`
           ),
-          // TODO: add shippingThisMonth
         })
         .from(collection)
         .leftJoin(item_release, eq(collection.releaseId, item_release.id))
-        .where(eq(collection.userId, userId));
-      const categoriesOwned = await db
+        .where(eq(collection.userId, userId)),
+
+      dbHttp
         .select({
           name: item.category,
           count: count(),
@@ -70,114 +57,84 @@ class DashboardService {
         .where(
           and(eq(collection.userId, userId), eq(collection.status, "Owned"))
         )
-        .groupBy(item.category);
-
-      return {
-        itemsSummary: {
-          itemsOwned: collectionStats.totalItems,
-          newItemsThisMonth: collectionStats.itemsThisMonth,
-          categoriesOwned,
-        },
-        msrpSummary: {
-          totalMsrpJPY: collectionStats.totalMsrpJPY,
-          totalMsrpUSD: collectionStats.totalMsrpUSD,
-          totalMsrpCNY: collectionStats.totalMsrpCNY,
-          msrpThisMonthJPY: collectionStats.msrpThisMonthJPY,
-        },
-        spentSummary: {
-          totalSpent: collectionStats.totalSpent,
-          totalSpentThisMonth: collectionStats.spentThisMonth,
-        },
-      };
-    } catch (error) {
-      console.error("Failed to get collection stats");
-      throw error;
-    }
-  }
-
-  async getOrdersSummary(userId: string) {
-    try {
-      const [orders, ordersThisMonth] = await db.batch([
-        // orders
-        db
-          .select({
-            paid: collection.price,
-            itemTitle: item.title,
-            itemReleaseDate: item_release.date,
-            itemMSRP: item_release.price,
-            itemCount: collection.count,
-            currency: item_release.priceCurrency,
-            shop: collection.shop,
-          })
-          .from(collection)
-          .innerJoin(item_release, eq(collection.releaseId, item_release.id))
-          .innerJoin(item, eq(collection.itemId, item.id))
-          .where(
-            and(eq(collection.userId, userId), eq(collection.status, "Ordered"))
-          )
-          .orderBy(asc(item_release.date))
-          .limit(6),
-        // ordersThisMonth
-        db
-          .select({
-            count: count(),
-          })
-          .from(collection)
-          .innerJoin(item_release, eq(collection.releaseId, item_release.id))
-          .where(
-            and(
-              eq(collection.userId, userId),
-              eq(collection.status, "Ordered"),
-              gte(
-                item_release.date,
-                new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-                  .toISOString()
-                  .slice(0, 10)
-              ),
-              lt(
-                item_release.date,
-                new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1)
-                  .toISOString()
-                  .slice(0, 10)
-              )
-            )
-          ),
-      ]);
-
-      return {
-        orders,
-        ordersThisMonth,
-      };
-    } catch (error) {
-      console.error("Failed to get orders");
-      throw error;
-    }
-  }
-
-  async getRecentItems(userId: string) {
-    try {
-      const recentItems = await db
+        .groupBy(item.category),
+      dbHttp
         .select({
-          itemTitle: item.title,
-          itemReleaseDate: item_release.date,
-          itemMSRP: item_release.price,
-          itemCount: collection.count,
-          currency: item_release.priceCurrency,
-          shop: collection.shop,
-          createdAt: collection.createdAt,
+          orderId: order.id,
+          title: order.title,
+          shop: order.shop,
+          releaseMonthYear: order.releaseMonthYear,
+          itemImages: sql<
+            string[]
+          >`array_agg(DISTINCT ${item.image}) FILTER (WHERE ${item.image} IS NOT NULL)`,
+          itemIds: sql<number[]>`array_agg(DISTINCT ${item.id})`,
         })
-        .from(collection)
-        .innerJoin(item, eq(collection.itemId, item.id))
-        .innerJoin(item_release, eq(collection.releaseId, item_release.id))
-        .where(eq(collection.userId, userId))
-        .orderBy(asc(collection.createdAt))
-        .limit(3);
+        .from(order)
+        .leftJoin(
+          collection,
+          and(
+            eq(order.id, collection.orderId),
+            eq(collection.status, "Ordered")
+          )
+        )
+        .leftJoin(item, eq(collection.itemId, item.id))
+        .where(and(eq(order.userId, userId)))
+        .groupBy(order.id, order.title, order.shop, order.releaseMonthYear)
+        .orderBy(asc(order.releaseMonthYear))
+        .limit(6),
+      dbHttp
+        .select({
+          totalActiveOrderCount:
+            sum(sql`CASE WHEN ${order.collectionDate} IS NULL
+                THEN 1 ELSE 0 END`),
+          totalShippingAllTime: sum(order.shippingFee),
+          totalTaxesAllTime: sum(order.taxes),
+          totalDutiesAllTime: sum(order.duties),
+          totalTariffsAllTime: sum(order.tariffs),
+          totalMiscFeesAllTime: sum(order.miscFees),
+          thisMonthOrderCount: sum(
+            sql`CASE WHEN ${order.releaseMonthYear} >= ${currentMonth} 
+                AND ${order.releaseMonthYear} < ${nextMonth} 
+                THEN 1 ELSE 0 END`
+          ),
+          thisMonthShipping: sum(
+            sql`CASE WHEN ${order.paymentDate} >= ${currentMonth} 
+                AND ${order.paymentDate} < ${nextMonth}
+                THEN ${order.shippingFee} ELSE 0 END`
+          ),
+          thisMonthTaxes: sum(
+            sql`CASE WHEN ${order.paymentDate} >= ${currentMonth} 
+                AND ${order.paymentDate} < ${nextMonth}
+                THEN ${order.taxes} ELSE 0 END`
+          ),
+          thisMonthDuties: sum(
+            sql`CASE WHEN ${order.paymentDate} >= ${currentMonth} 
+                AND ${order.paymentDate} < ${nextMonth}
+                THEN ${order.duties} ELSE 0 END`
+          ),
+          thisMonthTariffs: sum(
+            sql`CASE WHEN ${order.paymentDate} >= ${currentMonth} 
+                AND ${order.paymentDate} < ${nextMonth}
+                THEN ${order.tariffs} ELSE 0 END`
+          ),
+          thisMonthMiscFees: sum(
+            sql`CASE WHEN ${order.paymentDate} >= ${currentMonth} 
+                AND ${order.paymentDate} < ${nextMonth}
+                THEN ${order.miscFees} ELSE 0 END`
+          ),
+        })
+        .from(order)
+        .where(eq(order.userId, userId)),
+      dbHttp.select().from(budget).where(eq(budget.userId, userId)),
+    ]);
 
-      return recentItems;
-    } catch (error) {
-      console.error("Failed to get recent items");
-      throw error;
-    }
+    return {
+      collectionStats,
+      categoriesOwned,
+      orders,
+      ordersSummary,
+      budgetSummary,
+    };
   }
 }
 

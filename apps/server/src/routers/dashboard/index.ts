@@ -1,35 +1,27 @@
 import { Hono } from "hono";
 import type { Variables } from "../..";
 import DashboardService from "./service";
+import { tryCatch } from "@/lib/utils";
 
-export const dashboardRouter = new Hono<{
+const dashboardRouter = new Hono<{
   Variables: Variables;
-}>()
-  .get("/summary", async (c) => {
-    const user = c.get("user");
-    if (!user) return c.text("Unauthorized", 401);
+}>().get("/", async (c) => {
+  const user = c.get("user");
+  if (!user) return c.text("Unauthorized", 401);
 
-    const [collectionStats, ordersSummary, recentItems] = await Promise.all([
-      DashboardService.getCollectionStats(user.id),
-      DashboardService.getOrdersSummary(user.id),
-      DashboardService.getRecentItems(user.id),
-    ]);
+  const { data: dashboard, error } = await tryCatch(
+    DashboardService.getDashboard(user.id)
+  );
 
-    return c.json({
-      itemsSummary: collectionStats.itemsSummary,
-      collectionMSRPSummary: collectionStats.msrpSummary,
-      totalSpentSummary: collectionStats.spentSummary,
-      ordersSummary,
-      recentItems,
+  if (error) {
+    console.error("Error fetching dashboard data:", error, {
+      userId: user.id,
     });
-  })
-  .get("/upcoming", (c) => {
-    const user = c.get("user");
-    if (!user) return c.text("Unauthorized", 401);
-    return c.json({ user });
-  })
-  .get("/recent", (c) => {
-    const user = c.get("user");
-    if (!user) return c.text("Unauthorized", 401);
-    return c.json({ user });
-  });
+
+    return c.text("Failed to get dashboard data", 500);
+  }
+
+  return c.json({ dashboard });
+});
+
+export default dashboardRouter;

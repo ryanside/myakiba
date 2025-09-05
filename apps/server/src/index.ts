@@ -5,11 +5,13 @@ import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
 import { logger } from "hono/logger";
 import { serveStatic } from "hono/bun";
-import { syncRouter } from "./routers/sync";
-import { dashboardRouter } from "./routers/dashboard";
-import { reportsRouter } from "./routers/reports";
-import { collectionRouter } from "./routers/collection";
+import syncRouter from "./routers/sync";
+import dashboardRouter from "./routers/dashboard";
+import analyticsRouter from "./routers/analytics";
+import galleryRouter from "./routers/gallery";
 import ordersRouter from "./routers/orders";
+import managerRouter from "./routers/manager";
+import wrappedRouter from "./routers/wrapped";
 
 const app = new Hono<{
   Variables: Variables;
@@ -48,9 +50,11 @@ const routes = app
   .basePath("/api")
   .route("/sync", syncRouter)
   .route("/dashboard", dashboardRouter)
-  .route("/reports", reportsRouter)
-  .route("/collection", collectionRouter)
-  .route("/orders", ordersRouter);
+  .route("/analytics", analyticsRouter)
+  .route("/gallery", galleryRouter)
+  .route("/orders", ordersRouter)
+  .route("/manager", managerRouter)
+  .route("/wrapped", wrappedRouter);
 
 app.get("*", serveStatic({ root: "./dist" }));
 app.get("*", serveStatic({ path: "./dist/index.html" }));

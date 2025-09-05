@@ -1,11 +1,6 @@
 import * as cheerio from "cheerio";
 import { db } from "./db";
-import {
-  entry,
-  entry_to_item,
-  item,
-  item_release,
-} from "./db/schema/figure";
+import { entry, entry_to_item, item, item_release } from "./db/schema/figure";
 import Redis from "ioredis";
 import path from "path";
 import { URL } from "url";
@@ -18,15 +13,12 @@ import {
   extractReleaseData,
   extractMaterialsData,
 } from "./lib/extract";
-import {
-  createFetchOptions,
-  normalizeDateString,
-  generateUUID,
-} from "./lib/utils";
+import { createFetchOptions, normalizeDateString } from "./lib/utils";
+import { v5 as uuidv5 } from "uuid";
 
 const redis = new Redis({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
+  host: process.env.REDIS_HOST || "localhost",
+  port: parseInt(process.env.REDIS_PORT || "6379"),
 });
 
 const s3Client = new S3Client({
@@ -83,10 +75,6 @@ interface scrapedItem {
   depth: number;
   image: string;
 }
-
-
-
-
 
 const scrapeImage = async (
   imageUrl: string,
@@ -340,7 +328,9 @@ const scrapedItems = async (
 ): Promise<scrapedItem[]> => {
   console.time("Scraping Duration");
 
-  console.log(`Starting to scrape ${itemIds.length} items with up to ${maxRetries} retries each`);
+  console.log(
+    `Starting to scrape ${itemIds.length} items with up to ${maxRetries} retries each`
+  );
 
   const promises = itemIds.map((id, index) =>
     scrapeSingleItem(
@@ -371,7 +361,9 @@ const scrapedItems = async (
 
   console.timeEnd("Scraping Duration");
 
-  console.log(`Successfully scraped ${successfulResults.length} out of ${itemIds.length} items`);
+  console.log(
+    `Successfully scraped ${successfulResults.length} out of ${itemIds.length} items`
+  );
 
   return successfulResults;
 };
@@ -393,7 +385,9 @@ const scrapedItemsWithRateLimit = async (
 
   console.log(`Batch size: ${batchSize}, Delay between batches: ${delayMs}ms`);
 
-  console.log(`Max retries per item: ${maxRetries}, Base retry delay: ${baseDelayMs}ms`);
+  console.log(
+    `Max retries per item: ${maxRetries}, Base retry delay: ${baseDelayMs}ms`
+  );
 
   const allResults: scrapedItem[] = [];
   const totalBatches = Math.ceil(itemIds.length / batchSize);
@@ -402,7 +396,9 @@ const scrapedItemsWithRateLimit = async (
     const batch = itemIds.slice(i, i + batchSize);
     const batchNumber = Math.floor(i / batchSize) + 1;
 
-    console.log(`Processing batch ${batchNumber}/${totalBatches} (${batch.length} items): [${batch.join(", ")}]`);
+    console.log(
+      `Processing batch ${batchNumber}/${totalBatches} (${batch.length} items): [${batch.join(", ")}]`
+    );
 
     const batchResults = await scrapedItems(
       batch,
@@ -414,7 +410,9 @@ const scrapedItemsWithRateLimit = async (
     );
     allResults.push(...batchResults);
 
-    console.log(`Batch ${batchNumber} completed: ${batchResults.length}/${batch.length} successful`);
+    console.log(
+      `Batch ${batchNumber} completed: ${batchResults.length}/${batch.length} successful`
+    );
     if (i + batchSize < itemIds.length) {
       console.log(`Waiting ${delayMs}ms before next batch...`);
       await new Promise((resolve) => setTimeout(resolve, delayMs));
@@ -424,8 +422,12 @@ const scrapedItemsWithRateLimit = async (
   console.timeEnd("Rate-Limited Scraping Duration");
   const endTime = Date.now();
   const duration = endTime - startTime;
-  console.log(`Rate-limited scraping completed in ${duration}ms (${(duration / 1000).toFixed(2)}s)`);
-  console.log(`Successfully scraped ${allResults.length} out of ${itemIds.length} items`);
+  console.log(
+    `Rate-limited scraping completed in ${duration}ms (${(duration / 1000).toFixed(2)}s)`
+  );
+  console.log(
+    `Successfully scraped ${allResults.length} out of ${itemIds.length} items`
+  );
   console.log(
     `Average time per item: ${(duration / itemIds.length).toFixed(0)}ms`
   );
@@ -461,15 +463,23 @@ scrapeMethod(itemIds, 3, 1000, userId).then(async (successfulResults) => {
     priceCurrency: string;
     barcode: string;
   }> = [];
-  const entries = [];
-  const entryToItems = [];
+  const entries: Array<{
+    id: number;
+    category: string;
+    name: string;
+  }> = [];
+  const entryToItems: Array<{
+    entryId: number;
+    itemId: number;
+    role: string;
+  }> = [];
   const collectionItems = successfulResults.map((item) => ({
     userId,
     itemId: item.id,
     status: "owned",
     score: 0,
     notes: "",
-  })); 
+  }));
 
   for (const item of successfulResults) {
     for (const classification of item.classification) {
@@ -565,7 +575,10 @@ scrapeMethod(itemIds, 3, 1000, userId).then(async (successfulResults) => {
 
     for (const release of item.releaseDate) {
       itemReleases.push({
-        id: generateUUID(),
+        id: uuidv5(
+          `${item.id}-${normalizeDateString(release.date)}-${release.type}-${release.price}-${release.priceCurrency}-${release.barcode}`,
+          "2c8ed313-3f54-4401-a280-2410ce639ef3"
+        ),
         itemId: item.id,
         date: normalizeDateString(release.date),
         type: release.type,
@@ -580,29 +593,27 @@ scrapeMethod(itemIds, 3, 1000, userId).then(async (successfulResults) => {
   console.log("Releases to be inserted:", itemReleases);
   console.log("Entries to be inserted:", entries);
   console.log("Entry to Items to be inserted:", entryToItems);
-  console.log("Collection Items to be inserted:", collectionItems);
 
-  const batchInsert = await db.batch([
-    db
+  const batchInsert = await db.transaction(async (tx) => {
+    await tx
       .insert(item)
       .values(items)
-      .onConflictDoNothing({ target: [item.id] }),
-    db
+      .onConflictDoNothing({ target: [item.id] });
+    await tx
       .insert(item_release)
       .values(itemReleases)
-      .onConflictDoNothing({ target: [item_release.id] }),
-    db
+      .onConflictDoNothing({ target: [item_release.id] });
+    await tx
       .insert(entry)
       .values(entries)
-      .onConflictDoNothing({ target: [entry.id] }),
-    db
+      .onConflictDoNothing({ target: [entry.id] });
+    await tx
       .insert(entry_to_item)
       .values(entryToItems)
       .onConflictDoNothing({
         target: [entry_to_item.entryId, entry_to_item.itemId],
-      }),
-  ]);
+      });
+  });
   console.log(batchInsert);
   await redis.quit();
 });
-

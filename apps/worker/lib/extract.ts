@@ -4,7 +4,6 @@ export const REGEX_PATTERNS = {
   height: /H=(\d+)mm/,
   width: /W=(\d+)mm/,
   depth: /D=(\d+)mm/,
-  // Updated to handle decimal prices and various currency formats
   price: /(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s+(?:<small>)?([A-Z]{3})(?:<\/small>)?/,
   priceCurrency: /(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s+(?:<small>)?([A-Z]{3})(?:<\/small>)?/,
   barcode: /([A-Z0-9\-]+)$/,

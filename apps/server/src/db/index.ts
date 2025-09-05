@@ -1,12 +1,9 @@
-import { neon, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
-import ws from "ws";
+import { drizzle } from "drizzle-orm/postgres-js";
+import { drizzle as drizzleNeonHttpDriver } from "drizzle-orm/neon-http";
+import { neon } from "@neondatabase/serverless";
 
-neonConfig.webSocketConstructor = ws;
+export const db = drizzle(process.env.DATABASE_URL!);
 
-// To work in edge environments (Cloudflare Workers, Vercel Edge, etc.), enable querying over fetch
-// neonConfig.poolQueryViaFetch = true
-
-const sql = neon(process.env.DATABASE_URL || "");
-export const db = drizzle(sql);
-
+// Secondary driver exclusively for batching queries
+const sql = neon(process.env.DATABASE_URL!);
+export const dbHttp = drizzleNeonHttpDriver(sql);

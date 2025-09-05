@@ -34,6 +34,7 @@ function RouteComponent() {
     queryKey: ["summary"],
     queryFn: getSummary,
     enabled: false,
+    retry: false,
   });
 
   const handleClick = async () => {
@@ -41,7 +42,11 @@ function RouteComponent() {
   };
 
   async function getSummary() {
-    const response = await client.api.orders.$get({});
+    const response = await client.api.manager[":id"].$get({
+      param: {
+        id: "1",
+      },
+    });
     if (!response.ok) {
       throw new Error("Failed to get collection size");
     }

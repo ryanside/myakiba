@@ -7,6 +7,7 @@ import {
   item,
   item_release,
   collection,
+  order,
 } from "./db/schema/figure";
 import Redis from "ioredis";
 import path from "path";
@@ -20,16 +21,18 @@ import {
   extractReleaseData,
   extractMaterialsData,
 } from "./lib/extract";
-import {
-  sanitizeDate,
-  createFetchOptions,
-  normalizeDateString,
-  generateUUID,
-} from "./lib/utils";
- 
+import { createFetchOptions, normalizeDateString } from "./lib/utils";
+import { v5 as uuidv5 } from "uuid";
+
 const redis = new Redis({
-  host: process.env.NODE_ENV === "production" ? process.env.REDIS_HOST : "localhost",
-  port: process.env.NODE_ENV === "production" ? parseInt(process.env.REDIS_PORT!) : 6379,
+  host:
+    process.env.NODE_ENV === "production"
+      ? process.env.REDIS_HOST
+      : "localhost",
+  port:
+    process.env.NODE_ENV === "production"
+      ? parseInt(process.env.REDIS_PORT!)
+      : 6379,
 });
 const s3Client = new S3Client({
   region: process.env.AWS_BUCKET_REGION,
@@ -43,14 +46,15 @@ interface jobData extends Job {
       status: string;
       count: number;
       score: string;
-      payment_date: string;
-      shipping_date: string;
-      collecting_date: string;
+      payment_date: string | null;
+      shipping_date: string | null;
+      collecting_date: string | null;
       price: string;
       shop: string;
       shipping_method: string;
-      tracking_number: string;
       note: string;
+      orderId: string | null;
+      orderDate: string | null;
     }[];
   };
 }
@@ -80,7 +84,7 @@ const myWorker = new Worker(
         if (successfulResults.length === 0) {
           await setJobStatus(
             job.id!,
-            `Sync failed: Failed to scrape any items`,
+            `Sync failed: Failed to scrape any items. MFC might be down, or the MFC item IDs may be invalid.`,
             true
           );
           throw new Error("Failed to scrape any items.");
@@ -107,9 +111,20 @@ const myWorker = new Worker(
           priceCurrency: string;
           barcode: string;
         }> = [];
-        const entries = [];
-        const entryToItems = [];
-        const latestReleaseIdByItem: Record<number, string | null> = {};
+        const entries: Array<{
+          id: number;
+          category: string;
+          name: string;
+        }> = [];
+        const entryToItems: Array<{
+          entryId: number;
+          itemId: number;
+          role: string;
+        }> = [];
+        const latestReleaseIdByItem: Map<
+          number,
+          { releaseId: string | null; date: string | null }
+        > = new Map();
         const successfulCollectionItems = job.data.items.filter((i) =>
           successfulResults.some((result) => result.id === i.id)
         );
@@ -127,6 +142,20 @@ const myWorker = new Worker(
           shippingMethod: string;
           notes: string;
           releaseId?: string | null;
+          orderId: string | null;
+          orderDate: string | null;
+        }> = [];
+        let orders: Array<{
+          id: string;
+          userId: string;
+          title: string;
+          shop: string;
+          orderDate: string | null;
+          paymentDate: string | null;
+          shippingDate: string | null;
+          collectionDate: string | null;
+          shippingMethod: string;
+          releaseMonthYear: string | null;
         }> = [];
 
         for (const scraped of successfulResults) {
@@ -221,11 +250,13 @@ const myWorker = new Worker(
             });
           }
 
-          // Build release records with generated IDs and capture latest by date
           const releasesForItem = scraped.releaseDate.map((release) => {
             const normalizedDate = normalizeDateString(release.date);
             return {
-              id: generateUUID(),
+              id: uuidv5(
+                `${scraped.id}-${normalizedDate}-${release.type}-${release.price}-${release.priceCurrency}-${release.barcode}`,
+                "2c8ed313-3f54-4401-a280-2410ce639ef3"
+              ),
               itemId: scraped.id,
               date: normalizedDate,
               type: release.type,
@@ -239,72 +270,110 @@ const myWorker = new Worker(
             const latest = [...releasesForItem].sort((a, b) =>
               a.date.localeCompare(b.date)
             )[releasesForItem.length - 1];
-            latestReleaseIdByItem[scraped.id] = latest.id;
+            latestReleaseIdByItem.set(scraped.id, {
+              releaseId: latest.id,
+              date: latest.date,
+            });
           } else {
-            latestReleaseIdByItem[scraped.id] = null;
+            latestReleaseIdByItem.set(scraped.id, {
+              releaseId: null,
+              date: null,
+            });
           }
 
           itemReleases.push(...releasesForItem);
         }
 
-        // Finally, build collection items with default latest releaseId per item
         collectionItems = successfulCollectionItems.map((ci) => ({
           userId: userId,
           itemId: ci.id,
           status: ci.status,
           count: ci.count,
-          score: ci.score,
-          paymentDate: sanitizeDate(ci.payment_date),
-          shippingDate: sanitizeDate(ci.shipping_date),
-          collectionDate: sanitizeDate(ci.collecting_date),
-          price: ci.price.toString(),
+          score:
+            ci.score && ci.score.trim() !== "" ? ci.score.toString() : "0.0",
+          paymentDate: ci.payment_date,
+          shippingDate: ci.shipping_date,
+          collectionDate: ci.collecting_date,
+          price:
+            ci.price && ci.price.trim() !== "" ? ci.price.toString() : "0.00",
           shop: ci.shop,
           shippingMethod: ci.shipping_method,
           notes: ci.note,
-          releaseId: latestReleaseIdByItem[ci.id] ?? null,
+          releaseId: latestReleaseIdByItem.get(ci.id)?.releaseId ?? null,
+          orderId: ci.orderId,
+          orderDate: ci.orderDate,
         }));
 
+        orders = successfulCollectionItems
+          .filter((ci) => ci.orderId !== null)
+          .map((ci) => ({
+            id: ci.orderId!,
+            userId: userId,
+            title:
+              successfulResults.find((result) => result.id === ci.id)?.title ??
+              `Order ${ci.orderId}`,
+            shop: ci.shop,
+            orderDate: ci.orderDate,
+            paymentDate: ci.payment_date,
+            shippingDate: ci.shipping_date,
+            collectionDate: ci.collecting_date,
+            shippingMethod: ci.shipping_method,
+            releaseMonthYear: latestReleaseIdByItem.get(ci.id)?.date ?? null,
+          }));
+
         console.log("Items to be inserted:", items);
-        // console.log("Releases to be inserted:", itemReleases);
-        // console.log("Entries to be inserted:", entries);
-        // console.log("Entry to Items to be inserted:", entryToItems);
-        // console.log("Collection Items to be inserted:", collectionItems);
+        console.log("Releases to be inserted:", itemReleases);
+        console.log("Entries to be inserted:", entries);
+        console.log("Entry to Items to be inserted:", entryToItems);
+        console.log("Collection Items to be inserted:", collectionItems);
+        console.log("Orders to be inserted:", orders);
 
         try {
-          const batchInsert = await db.batch([
-            db
+          await db.transaction(async (tx) => {
+            await tx
               .insert(item)
               .values(items)
-              .onConflictDoNothing({ target: [item.id] }),
-            db
-              .insert(item_release)
-              .values(itemReleases)
-              .onConflictDoNothing({ target: [item_release.id] }),
-            db
-              .insert(entry)
-              .values(entries)
-              .onConflictDoNothing({ target: [entry.id] }),
-            db
-              .insert(entry_to_item)
-              .values(entryToItems)
-              .onConflictDoNothing({
-                target: [entry_to_item.entryId, entry_to_item.itemId],
-              }),
-            db.insert(collection).values(collectionItems),
-          ]);
-          // console.log(batchInsert);
+              .onConflictDoNothing({ target: [item.id] });
+            if (itemReleases.length > 0) {
+              await tx
+                .insert(item_release)
+                .values(itemReleases)
+                .onConflictDoNothing({ target: [item_release.id] });
+            }
+            if (entries.length > 0) {
+              await tx
+                .insert(entry)
+                .values(entries)
+                .onConflictDoNothing({ target: [entry.id] });
+            }
+            if (entryToItems.length > 0) {
+              await tx
+                .insert(entry_to_item)
+                .values(entryToItems)
+                .onConflictDoNothing({
+                  target: [entry_to_item.entryId, entry_to_item.itemId],
+                });
+            }
+            if (orders.length > 0) {
+              await tx.insert(order).values(orders);
+            }
+            await tx.insert(collection).values(collectionItems);
+          });
+
+          console.log("Successfully inserted data to database.");
         } catch (error) {
           await setJobStatus(
             job.id!,
             `Sync failed: Failed to insert items to database.`,
             true
           );
-          throw new Error("Failed to batch insert items to database.");
+          console.error("Failed to insert data to database.", error);
+          throw error;
         }
 
         await setJobStatus(
           job.id!,
-          `Sync completed: Successfully synced ${successfulResults.length} out of ${itemIds.length} items`,
+          `Sync completed: Synced ${successfulResults.length} out of ${itemIds.length} items`,
           true
         );
         return {
@@ -323,7 +392,6 @@ const myWorker = new Worker(
   }
 );
 
-// Add event listeners for better debugging
 myWorker.on("ready", () => {
   console.log("🚀 Worker is ready and connected to Redis");
 });
@@ -343,7 +411,6 @@ myWorker.on("completed", (job, result) => {
   console.log("🎉 Job completed:", job.name, "Result:", result);
 });
 
-// Log connection details (without sensitive data)
 console.log("🔧 Worker configuration:");
 console.log("  - Queue name: sync-queue");
 console.log("  - Redis host:", process.env.REDIS_HOST);
@@ -693,7 +760,6 @@ const scrapedItems = async (
   );
   const results = await Promise.allSettled(promises);
 
-  // Filter out failed requests and extract successful results
   const successfulResults = results
     .filter(
       (result): result is PromiseFulfilledResult<scrapedItem> =>
@@ -716,7 +782,6 @@ const scrapedItems = async (
   return successfulResults;
 };
 
-// Rate-limited version for scraping many items
 const scrapedItemsWithRateLimit = async (
   itemIds: number[],
   maxRetries: number = 3,
@@ -755,8 +820,8 @@ const scrapedItemsWithRateLimit = async (
       baseDelayMs,
       userId,
       jobId,
-      i, // starting index for this batch
-      itemIds.length // total items across all batches
+      i,
+      itemIds.length
     );
     allResults.push(...batchResults);
 

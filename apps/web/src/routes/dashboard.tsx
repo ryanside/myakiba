@@ -49,8 +49,9 @@ type userItem = {
   price: string;
   shop: string;
   shipping_method: string;
-  tracking_number: string;
   note: string;
+  orderId: null;
+  orderDate: string;
 };
 
 function RouteComponent() {
@@ -120,8 +121,9 @@ function RouteComponent() {
           price: item.price_1,
           shop: item.shop,
           shipping_method: item.shipping_method,
-          tracking_number: item.tracking_number,
           note: item.note,
+          orderId: null,
+          orderDate: item.payment_date,
         };
       });
 

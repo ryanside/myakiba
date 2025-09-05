@@ -8,7 +8,8 @@
     "build": "vite build",
     "serve": "vite preview",
     "start": "vite",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "lint": "eslint ."
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
@@ -33,6 +34,7 @@
     "zod": "^4.0.14"
   },
   "devDependencies": {
+    "@myakiba/eslint-config": "workspace:*",
     "@tanstack/react-query-devtools": "^5.84.1",
     "@tanstack/react-router-devtools": "^1.130.13",
     "@tanstack/router-plugin": "^1.130.15",
