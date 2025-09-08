@@ -1,6 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { authClient } from "@/lib/auth-client";
-import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { client } from "@/lib/hono-client";
 import { Button } from "@/components/ui/button";
@@ -10,22 +8,6 @@ export const Route = createFileRoute("/test")({
 });
 
 function RouteComponent() {
-  const { data: session, isPending } = authClient.useSession();
-  const navigate = Route.useNavigate();
-
-  useEffect(() => {
-    // Add a small delay to avoid race condition with sign-in
-    const timeoutId = setTimeout(() => {
-      if (!session && !isPending) {
-        navigate({
-          to: "/login",
-        });
-      }
-    }, 100);
-
-    return () => clearTimeout(timeoutId);
-  }, [session, isPending, navigate]);
-
   const {
     data: summary,
     isPending: isSummaryPending,

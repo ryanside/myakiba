@@ -10,25 +10,22 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TestRouteImport } from './routes/test'
-import { Route as ReportsRouteImport } from './routes/reports'
-import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LayoutWrappedRouteImport } from './routes/_layout.wrapped'
+import { Route as LayoutSyncRouteImport } from './routes/_layout.sync'
+import { Route as LayoutOrdersRouteImport } from './routes/_layout.orders'
+import { Route as LayoutManagerRouteImport } from './routes/_layout.manager'
+import { Route as LayoutGalleryRouteImport } from './routes/_layout.gallery'
+import { Route as LayoutDashboardRouteImport } from './routes/_layout.dashboard'
+import { Route as LayoutAnalyticsRouteImport } from './routes/_layout.analytics'
+import { Route as LayoutOrdersIdRouteImport } from './routes/_layout.orders.$id'
+import { Route as LayoutManagerIdRouteImport } from './routes/_layout.manager.$id'
 
 const TestRoute = TestRouteImport.update({
   id: '/test',
   path: '/test',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReportsRoute = ReportsRouteImport.update({
-  id: '/reports',
-  path: '/reports',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OrdersRoute = OrdersRouteImport.update({
-  id: '/orders',
-  path: '/orders',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -36,9 +33,8 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DashboardRoute = DashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
+const LayoutRoute = LayoutRouteImport.update({
+  id: '/_layout',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -46,53 +42,146 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LayoutWrappedRoute = LayoutWrappedRouteImport.update({
+  id: '/wrapped',
+  path: '/wrapped',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutSyncRoute = LayoutSyncRouteImport.update({
+  id: '/sync',
+  path: '/sync',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutOrdersRoute = LayoutOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutManagerRoute = LayoutManagerRouteImport.update({
+  id: '/manager',
+  path: '/manager',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutGalleryRoute = LayoutGalleryRouteImport.update({
+  id: '/gallery',
+  path: '/gallery',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutDashboardRoute = LayoutDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutAnalyticsRoute = LayoutAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutOrdersIdRoute = LayoutOrdersIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => LayoutOrdersRoute,
+} as any)
+const LayoutManagerIdRoute = LayoutManagerIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => LayoutManagerRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
-  '/orders': typeof OrdersRoute
-  '/reports': typeof ReportsRoute
   '/test': typeof TestRoute
+  '/analytics': typeof LayoutAnalyticsRoute
+  '/dashboard': typeof LayoutDashboardRoute
+  '/gallery': typeof LayoutGalleryRoute
+  '/manager': typeof LayoutManagerRouteWithChildren
+  '/orders': typeof LayoutOrdersRouteWithChildren
+  '/sync': typeof LayoutSyncRoute
+  '/wrapped': typeof LayoutWrappedRoute
+  '/manager/$id': typeof LayoutManagerIdRoute
+  '/orders/$id': typeof LayoutOrdersIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
-  '/orders': typeof OrdersRoute
-  '/reports': typeof ReportsRoute
   '/test': typeof TestRoute
+  '/analytics': typeof LayoutAnalyticsRoute
+  '/dashboard': typeof LayoutDashboardRoute
+  '/gallery': typeof LayoutGalleryRoute
+  '/manager': typeof LayoutManagerRouteWithChildren
+  '/orders': typeof LayoutOrdersRouteWithChildren
+  '/sync': typeof LayoutSyncRoute
+  '/wrapped': typeof LayoutWrappedRoute
+  '/manager/$id': typeof LayoutManagerIdRoute
+  '/orders/$id': typeof LayoutOrdersIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
+  '/_layout': typeof LayoutRouteWithChildren
   '/login': typeof LoginRoute
-  '/orders': typeof OrdersRoute
-  '/reports': typeof ReportsRoute
   '/test': typeof TestRoute
+  '/_layout/analytics': typeof LayoutAnalyticsRoute
+  '/_layout/dashboard': typeof LayoutDashboardRoute
+  '/_layout/gallery': typeof LayoutGalleryRoute
+  '/_layout/manager': typeof LayoutManagerRouteWithChildren
+  '/_layout/orders': typeof LayoutOrdersRouteWithChildren
+  '/_layout/sync': typeof LayoutSyncRoute
+  '/_layout/wrapped': typeof LayoutWrappedRoute
+  '/_layout/manager/$id': typeof LayoutManagerIdRoute
+  '/_layout/orders/$id': typeof LayoutOrdersIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard' | '/login' | '/orders' | '/reports' | '/test'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/test'
+    | '/analytics'
+    | '/dashboard'
+    | '/gallery'
+    | '/manager'
+    | '/orders'
+    | '/sync'
+    | '/wrapped'
+    | '/manager/$id'
+    | '/orders/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/login' | '/orders' | '/reports' | '/test'
+  to:
+    | '/'
+    | '/login'
+    | '/test'
+    | '/analytics'
+    | '/dashboard'
+    | '/gallery'
+    | '/manager'
+    | '/orders'
+    | '/sync'
+    | '/wrapped'
+    | '/manager/$id'
+    | '/orders/$id'
   id:
     | '__root__'
     | '/'
-    | '/dashboard'
+    | '/_layout'
     | '/login'
-    | '/orders'
-    | '/reports'
     | '/test'
+    | '/_layout/analytics'
+    | '/_layout/dashboard'
+    | '/_layout/gallery'
+    | '/_layout/manager'
+    | '/_layout/orders'
+    | '/_layout/sync'
+    | '/_layout/wrapped'
+    | '/_layout/manager/$id'
+    | '/_layout/orders/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  DashboardRoute: typeof DashboardRoute
+  LayoutRoute: typeof LayoutRouteWithChildren
   LoginRoute: typeof LoginRoute
-  OrdersRoute: typeof OrdersRoute
-  ReportsRoute: typeof ReportsRoute
   TestRoute: typeof TestRoute
 }
 
@@ -105,20 +194,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TestRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/reports': {
-      id: '/reports'
-      path: '/reports'
-      fullPath: '/reports'
-      preLoaderRoute: typeof ReportsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/orders': {
-      id: '/orders'
-      path: '/orders'
-      fullPath: '/orders'
-      preLoaderRoute: typeof OrdersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -126,11 +201,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
+    '/_layout': {
+      id: '/_layout'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof LayoutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -140,15 +215,123 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_layout/wrapped': {
+      id: '/_layout/wrapped'
+      path: '/wrapped'
+      fullPath: '/wrapped'
+      preLoaderRoute: typeof LayoutWrappedRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/sync': {
+      id: '/_layout/sync'
+      path: '/sync'
+      fullPath: '/sync'
+      preLoaderRoute: typeof LayoutSyncRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/orders': {
+      id: '/_layout/orders'
+      path: '/orders'
+      fullPath: '/orders'
+      preLoaderRoute: typeof LayoutOrdersRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/manager': {
+      id: '/_layout/manager'
+      path: '/manager'
+      fullPath: '/manager'
+      preLoaderRoute: typeof LayoutManagerRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/gallery': {
+      id: '/_layout/gallery'
+      path: '/gallery'
+      fullPath: '/gallery'
+      preLoaderRoute: typeof LayoutGalleryRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/dashboard': {
+      id: '/_layout/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof LayoutDashboardRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/analytics': {
+      id: '/_layout/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof LayoutAnalyticsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/orders/$id': {
+      id: '/_layout/orders/$id'
+      path: '/$id'
+      fullPath: '/orders/$id'
+      preLoaderRoute: typeof LayoutOrdersIdRouteImport
+      parentRoute: typeof LayoutOrdersRoute
+    }
+    '/_layout/manager/$id': {
+      id: '/_layout/manager/$id'
+      path: '/$id'
+      fullPath: '/manager/$id'
+      preLoaderRoute: typeof LayoutManagerIdRouteImport
+      parentRoute: typeof LayoutManagerRoute
+    }
   }
 }
 
+interface LayoutManagerRouteChildren {
+  LayoutManagerIdRoute: typeof LayoutManagerIdRoute
+}
+
+const LayoutManagerRouteChildren: LayoutManagerRouteChildren = {
+  LayoutManagerIdRoute: LayoutManagerIdRoute,
+}
+
+const LayoutManagerRouteWithChildren = LayoutManagerRoute._addFileChildren(
+  LayoutManagerRouteChildren,
+)
+
+interface LayoutOrdersRouteChildren {
+  LayoutOrdersIdRoute: typeof LayoutOrdersIdRoute
+}
+
+const LayoutOrdersRouteChildren: LayoutOrdersRouteChildren = {
+  LayoutOrdersIdRoute: LayoutOrdersIdRoute,
+}
+
+const LayoutOrdersRouteWithChildren = LayoutOrdersRoute._addFileChildren(
+  LayoutOrdersRouteChildren,
+)
+
+interface LayoutRouteChildren {
+  LayoutAnalyticsRoute: typeof LayoutAnalyticsRoute
+  LayoutDashboardRoute: typeof LayoutDashboardRoute
+  LayoutGalleryRoute: typeof LayoutGalleryRoute
+  LayoutManagerRoute: typeof LayoutManagerRouteWithChildren
+  LayoutOrdersRoute: typeof LayoutOrdersRouteWithChildren
+  LayoutSyncRoute: typeof LayoutSyncRoute
+  LayoutWrappedRoute: typeof LayoutWrappedRoute
+}
+
+const LayoutRouteChildren: LayoutRouteChildren = {
+  LayoutAnalyticsRoute: LayoutAnalyticsRoute,
+  LayoutDashboardRoute: LayoutDashboardRoute,
+  LayoutGalleryRoute: LayoutGalleryRoute,
+  LayoutManagerRoute: LayoutManagerRouteWithChildren,
+  LayoutOrdersRoute: LayoutOrdersRouteWithChildren,
+  LayoutSyncRoute: LayoutSyncRoute,
+  LayoutWrappedRoute: LayoutWrappedRoute,
+}
+
+const LayoutRouteWithChildren =
+  LayoutRoute._addFileChildren(LayoutRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  DashboardRoute: DashboardRoute,
+  LayoutRoute: LayoutRouteWithChildren,
   LoginRoute: LoginRoute,
-  OrdersRoute: OrdersRoute,
-  ReportsRoute: ReportsRoute,
   TestRoute: TestRoute,
 }
 export const routeTree = rootRouteImport

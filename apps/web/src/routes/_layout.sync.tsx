@@ -5,15 +5,17 @@ import { z } from "zod";
 import { useForm } from "@tanstack/react-form";
 import Papa from "papaparse";
 import { client } from "@/lib/hono-client";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useStore } from "@tanstack/react-form";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { redirect } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/dashboard")({
+export const Route = createFileRoute("/_layout/sync")({
   component: RouteComponent,
 });
+
 const csvItemSchema = z.object({
   id: z.string(),
   title: z.string(),

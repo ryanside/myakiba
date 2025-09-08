@@ -11,7 +11,7 @@ const router = createRouter({
   routeTree,
   defaultPreload: "intent",
   defaultPendingComponent: () => <Loader />,
-  context: {},
+  defaultNotFoundComponent: () => <div>404 Not Found</div>,
   });
 
 declare module "@tanstack/react-router" {

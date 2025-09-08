@@ -10,7 +10,6 @@ import { authClient } from "@/lib/auth-client";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
-import { Link } from "@tanstack/react-router";
 
 export default function UserMenu() {
   const navigate = useNavigate();
@@ -21,17 +20,17 @@ export default function UserMenu() {
   }
 
   if (!session) {
-    return (
-      <Button variant="outline" asChild>
-        <Link to="/login">Sign In</Link>
-      </Button>
-    );
+    navigate({
+      to: "/login",
+    });
+
+    return null;
   }
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline">{session.user.name}</Button>
+        <Button variant="ghost">{session.user.name}</Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="bg-card">
         <DropdownMenuLabel>My Account</DropdownMenuLabel>
@@ -46,7 +45,7 @@ export default function UserMenu() {
                 fetchOptions: {
                   onSuccess: () => {
                     navigate({
-                      to: "/",
+                      to: "/login",
                     });
                   },
                 },
