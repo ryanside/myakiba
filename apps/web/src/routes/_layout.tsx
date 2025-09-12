@@ -14,7 +14,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Outlet, redirect } from "@tanstack/react-router";
+import { Outlet, redirect, useLocation } from "@tanstack/react-router";
 import { ModeToggle } from "@/components/mode-toggle";
 import UserMenu from "@/components/user-menu";
 import { authClient } from "@/lib/auth-client";
@@ -33,8 +33,9 @@ export const Route = createFileRoute("/_layout")({
     }
   },
 });
-
+  
 function RouteComponent() {
+  const location = useLocation();
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -46,13 +47,20 @@ function RouteComponent() {
               orientation="vertical"
               className="mr-2 data-[orientation=vertical]:h-4"
             />
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem >
+                  <BreadcrumbLink className="text-foreground">{location.pathname.charAt(1).toUpperCase() + location.pathname.slice(2)}</BreadcrumbLink>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
           </div>
           <div className="flex items-center gap-2">
             <ModeToggle />
             <UserMenu />
           </div>
         </header>
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+        <div className="flex flex-1 flex-col gap-4 p-4">
           <Outlet />
           {/* <div className="grid auto-rows-min gap-4 md:grid-cols-3">
             <div className="bg-muted/50 aspect-video rounded-xl" />

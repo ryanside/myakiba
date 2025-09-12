@@ -5,7 +5,6 @@ import {
   ChartNoAxesCombined,
   ChartNoAxesGantt,
   HeartPlus,
-  HelpCircle,
   Home,
   Images,
   Plus,
@@ -16,7 +15,6 @@ import {
 import { NavMain } from "@/components/nav-main";
 import { NavCollection } from "@/components/nav-collection";
 import { NavSecondary } from "@/components/nav-secondary";
-import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
   SidebarContent,
