@@ -12,6 +12,11 @@ class OrdersService {
     orderBy: string,
     search?: string
   ) {
+    const whereConditions = and(
+      eq(order.userId, userId),
+      search ? ilike(order.title, `%${search}%`) : undefined
+    );
+
     const sortByColumn = (() => {
       switch (sortBy) {
         case "title":
@@ -49,10 +54,13 @@ class OrdersService {
         total: sql<string>`SUM(${collection.price}::numeric) + COALESCE(${order.shippingFee}::numeric, 0) + COALESCE(${order.taxes}::numeric, 0) + COALESCE(${order.duties}::numeric, 0) + COALESCE(${order.tariffs}::numeric, 0) + COALESCE(${order.miscFees}::numeric, 0)`,
         itemCount: sql<number>`COUNT(${collection.id})`,
         itemImages: sql<
-          string[]
+        string[]
         >`array_agg(DISTINCT ${item.image}) FILTER (WHERE ${item.image} IS NOT NULL)`,
         itemTitles: sql<string[]>`array_agg(DISTINCT ${item.title})`,
         itemIds: sql<number[]>`array_agg(DISTINCT ${item.id})`,
+        itemPrices: sql<string[]>`array_agg(DISTINCT ${collection.price}::text)`,
+        // Use window function to get total count without additional query
+        totalCount: sql<number>`COUNT(*) OVER()`,
       })
       .from(order)
       .leftJoin(
@@ -60,12 +68,7 @@ class OrdersService {
         and(eq(order.id, collection.orderId), eq(collection.status, "Ordered"))
       )
       .leftJoin(item, eq(collection.itemId, item.id))
-      .where(
-        and(
-          eq(order.userId, userId),
-          search ? ilike(order.title, `%${search}%`) : undefined
-        )
-      )
+      .where(whereConditions)
       .groupBy(
         order.id,
         order.title,
@@ -86,7 +89,8 @@ class OrdersService {
       .limit(limit)
       .offset(offset);
 
-    return orders;
+
+    return { orders };
   }
 
   async getOrder(userId: string, orderId: string) {
@@ -116,7 +120,7 @@ class OrdersService {
         >`array_agg(DISTINCT ${item.image}) FILTER (WHERE ${item.image} IS NOT NULL)`,
         itemTitles: sql<string[]>`array_agg(DISTINCT ${item.title})`,
         itemIds: sql<number[]>`array_agg(DISTINCT ${item.id})`,
-        itemPrices: sql<string[]>`array_agg(DISTINCT ${collection.price})`,
+        itemPrices: sql<string[]>`array_agg(DISTINCT ${collection.price}::text)`,
       })
       .from(order)
       .leftJoin(collection, eq(order.id, collection.orderId))

@@ -11,6 +11,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { Shapes } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 
 // const chartData = [
 //   { browser: "chrome", visitors: 275, fill: "var(--color-chrome)" },
@@ -158,7 +159,7 @@ export function ChartPieDonutText({
                 {item.count}
               </span>
               <span className="ml-auto text-sm text-muted-foreground">
-                ${item.value}
+                {formatCurrency(item.value)}
               </span>
             </div>
           ))}

@@ -84,10 +84,10 @@ const myWorker = new Worker(
         if (successfulResults.length === 0) {
           await setJobStatus(
             job.id!,
-            `Sync failed: Failed to scrape any items. MFC might be down, or the MFC item IDs may be invalid.`,
+            `Sync failed: Failed to scrape items. MFC might be down, or the MFC item IDs may be invalid.`,
             true
           );
-          throw new Error("Failed to scrape any items.");
+          throw new Error("Failed to scrape items.");
         }
 
         const items = successfulResults.map((item) => ({

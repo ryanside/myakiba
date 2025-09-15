@@ -527,6 +527,17 @@ function SidebarMenuButton({
   const Comp = asChild ? Slot : "button";
   const { isMobile, state } = useSidebar();
 
+  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    // Prevent event bubbling when sidebar is collapsed to avoid triggering sidebar expansion
+    if (state === "collapsed") {
+      event.stopPropagation();
+    }
+    // Call the original onClick handler if it exists
+    if (props.onClick) {
+      props.onClick(event as React.MouseEvent<HTMLButtonElement, MouseEvent>);
+    }
+  };
+
   const button = (
     <Comp
       data-slot="sidebar-menu-button"
@@ -535,6 +546,7 @@ function SidebarMenuButton({
       data-active={isActive}
       className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
       {...props}
+      onClick={handleClick}
     />
   );
 

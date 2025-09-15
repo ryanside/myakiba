@@ -14,7 +14,6 @@ const ordersRouter = new Hono<{ Variables: Variables }>()
       z.object({
         limit: z.coerce.number().optional().default(10),
         offset: z.coerce.number().optional().default(0),
-        // TODO: add filters
         sort: z
           .enum([
             "title",
@@ -44,7 +43,7 @@ const ordersRouter = new Hono<{ Variables: Variables }>()
 
       const validatedQuery = c.req.valid("query");
 
-      const { data: orders, error } = await tryCatch(
+      const { data: result, error } = await tryCatch(
         OrdersService.getOrders(
           user.id,
           validatedQuery.limit,
@@ -67,7 +66,17 @@ const ordersRouter = new Hono<{ Variables: Variables }>()
         return c.text("Failed to get orders", 500);
       }
 
-      return c.json({ orders });
+      const totalCount = result.orders.length > 0 ? result.orders[0].totalCount : 0;
+      
+      return c.json({ 
+        orders: result.orders, 
+        totalCount,
+        pagination: {
+          limit: validatedQuery.limit,
+          offset: validatedQuery.offset,
+          pageCount: Math.ceil(totalCount / validatedQuery.limit)
+        }
+      });
     }
   )
   .get(

@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
+import { formatCurrency } from "@/lib/utils";
 
 const chartConfig = {
   cost: {
@@ -106,7 +107,7 @@ export function ChartBarLabelCustom({
                 offset={8}
                 className="fill-foreground"
                 fontSize={12}
-                formatter={(value: number) => `$${value.toFixed(2)}`}
+                formatter={(value: number) => formatCurrency(value)}
               />
             </Bar>
           </BarChart>
@@ -117,52 +118,51 @@ export function ChartBarLabelCustom({
           <div className="flex justify-between">
             <span>Item Costs</span>
             <span className="font-medium">
-              ${data.totalSpent}
+              {formatCurrency(data.totalSpent)}
             </span>
           </div>
           <div className="flex justify-between">
             <span>Shipping</span>
             <span className="font-medium">
-              ${data.totalShipping}
+              {formatCurrency(data.totalShipping)}
             </span>
           </div>
           <div className="flex justify-between">
             <span>Taxes</span>
             <span className="font-medium">
-              ${data.totalTaxes}
+              {formatCurrency(data.totalTaxes)}
             </span>
           </div>
           <div className="flex justify-between">
             <span>Duties</span>
             <span className="font-medium">
-              ${data.totalDuties}
+              {formatCurrency(data.totalDuties)}
             </span>
           </div>
           <div className="flex justify-between">
             <span>Tariffs</span>
             <span className="font-medium">
-              ${data.totalTariffs}
+              {formatCurrency(data.totalTariffs)}
             </span>
           </div>
           <div className="flex justify-between">
             <span>Misc Fees</span>
             <span className="font-medium">
-              ${data.totalMiscFees}
+              {formatCurrency(data.totalMiscFees)}
             </span>
           </div>
         </div>
         <div className="flex justify-between text-foreground font-medium text-sm mt-2.5">
           <span>Total</span>
           <span>
-            $
-            {(
-              Number(data.totalSpent) +
-              Number(data.totalShipping) +
-              Number(data.totalTaxes) +
-              Number(data.totalDuties) +
-              Number(data.totalTariffs) +
-              Number(data.totalMiscFees)
-            ).toFixed(2)}
+            {formatCurrency(
+              data.totalSpent +
+                data.totalShipping +
+                data.totalTaxes +
+                data.totalDuties +
+                data.totalTariffs +
+                data.totalMiscFees
+            )}
           </span>
         </div>
       </div>

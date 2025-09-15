@@ -115,7 +115,7 @@ export const order = pgTable("order", {
   shippingMethod: text("shipping_method"),
   orderStatus: text("order_status", {
     enum: ["Ordered", "Shipped", "Collected"],
-  }).default("Ordered"),
+  }).default("Ordered").notNull(),
   total: decimal("total", { scale: 2 }),
   shippingFee: decimal("shipping_fee", { scale: 2 }).default("0.00").notNull(),
   taxes: decimal("taxes", { scale: 2 }).default("0.00").notNull(),

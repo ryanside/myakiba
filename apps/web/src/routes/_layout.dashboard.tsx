@@ -25,6 +25,7 @@ import {
 import { ChartPieDonutText } from "@/components/pie-chart-donut-text";
 import { ChartBarLabelCustom } from "@/components/chart-bar-label-custom";
 import { Button } from "@/components/ui/button";
+import { formatCurrency } from "@/lib/utils";
 
 export const Route = createFileRoute("/_layout/dashboard")({
   component: RouteComponent,
@@ -33,9 +34,9 @@ export const Route = createFileRoute("/_layout/dashboard")({
 function RouteComponent() {
   return (
     <div className="space-y-4">
-      <Suspense fallback={<DashboardSkeleton />}>
+      {/* <Suspense fallback={<DashboardSkeleton />}> */}
         <DashboardContent />
-      </Suspense>
+      {/* </Suspense> */}
     </div>
   );
 }
@@ -116,16 +117,17 @@ function DashboardContent() {
         />
         <StatsCard
           title="Total Spent"
-          value={`$${(
-            Number(collectionStats[0].totalSpent || 0) +
-            Number(ordersSummary[0].totalShippingAllTime || 0) +
-            Number(ordersSummary[0].totalTaxesAllTime || 0) +
-            Number(ordersSummary[0].totalDutiesAllTime || 0) +
-            Number(ordersSummary[0].totalTariffsAllTime || 0) +
-            Number(ordersSummary[0].totalMiscFeesAllTime || 0)
-          ).toFixed(2)}`}
+          value={formatCurrency(
+            collectionStats[0].totalSpent ||
+              0 + ordersSummary[0].totalShippingAllTime ||
+              0 + ordersSummary[0].totalTaxesAllTime ||
+              0 + ordersSummary[0].totalDutiesAllTime ||
+              0 + ordersSummary[0].totalTariffsAllTime ||
+              0 + ordersSummary[0].totalMiscFeesAllTime ||
+              0
+          )}
           subtitle="this month"
-          subvalue={`+$${Number(collectionStats[0].totalSpentThisMonth || 0).toFixed(2)}`}
+          subvalue={`+${formatCurrency(collectionStats[0].totalSpentThisMonth || 0)}`}
           icon={DollarSign}
         />
         <StatsCard
@@ -136,13 +138,10 @@ function DashboardContent() {
           icon={ShoppingCart}
         />
         <StatsCard
-          title="Budget"
-          value={budgetSummary[0]?.amount || "0.00"}
+          title="Budget [coming soon]"
+          value={formatCurrency(budgetSummary[0]?.amount || 0)}
           subtitle={`this month`}
-          subvalue={
-            Number(budgetSummary[0]?.amount || 0) -
-              Number(collectionStats[0].totalSpentThisMonth || 0) || "0.00"
-          }
+          subvalue={0}
           icon={PiggyBank}
         />
       </div>
@@ -161,68 +160,54 @@ function DashboardContent() {
             <div className="space-y-3">
               <div className="flex justify-between text-muted-foreground text-sm items-center">
                 <span>Active Orders</span>
-                <span>
-                  {ordersSummary[0].totalActiveOrderCount || 0}
-                </span>
+                <span>{ordersSummary[0].totalActiveOrderCount || 0}</span>
               </div>
               <div className="flex justify-between text-muted-foreground text-sm items-center">
                 <span>Orders This Month</span>
-                <span>
-                  {ordersSummary[0].thisMonthOrderCount || 0}
-                </span>
+                <span>{ordersSummary[0].thisMonthOrderCount || 0}</span>
               </div>
               <div className="flex justify-between text-muted-foreground text-sm items-center">
                 <span>Total Item Costs</span>
                 <span>
-                  $
-                  {Number(
+                  {formatCurrency(
                     collectionStats[0].totalActiveOrderPrice || 0
-                  ).toFixed(2)}
+                  )}
                 </span>
               </div>
               <div className="flex justify-between text-muted-foreground text-sm items-center">
                 <span>Total Shipping</span>
                 <span>
-                  $
-                  {Number(
+                  {formatCurrency(
                     ordersSummary[0].totalActiveOrderShipping || 0
-                  ).toFixed(2)}
+                  )}
                 </span>
               </div>
               <div className="flex justify-between text-muted-foreground text-sm items-center">
                 <span>Total Taxes</span>
                 <span>
-                  $
-                  {Number(ordersSummary[0].totalActiveOrderTaxes || 0).toFixed(
-                    2
-                  )}
+                  {formatCurrency(ordersSummary[0].totalActiveOrderTaxes || 0)}
                 </span>
               </div>
               <div className="flex justify-between text-muted-foreground text-sm items-center">
                 <span>Total Duties</span>
                 <span>
-                  $
-                  {Number(ordersSummary[0].totalActiveOrderDuties || 0).toFixed(
-                    2
-                  )}
+                  {formatCurrency(ordersSummary[0].totalActiveOrderDuties || 0)}
                 </span>
               </div>
               <div className="flex justify-between text-muted-foreground text-sm items-center">
                 <span>Total Tariffs</span>
                 <span>
-                  $
-                  {Number(
+                  {formatCurrency(
                     ordersSummary[0].totalActiveOrderTariffs || 0
-                  ).toFixed(2)}
+                  )}
                 </span>
               </div>
               <div className="flex justify-between text-muted-foreground text-sm items-center">
                 <span>Total Misc Fees</span>
                 <span>
-                  $
-                  {Number(
+                  {formatCurrency(
                     ordersSummary[0].totalActiveOrderMiscFees || 0
-                  ).toFixed(2)}
+                  )}
                 </span>
               </div>
             </div>
@@ -230,15 +215,14 @@ function DashboardContent() {
           <div className="flex justify-between items-center mt-auto px-6 text-foreground font-medium text-sm">
             <span>Total</span>
             <span>
-              $
-              {(
-                Number(collectionStats[0].totalActiveOrderPrice) +
-                Number(ordersSummary[0].totalActiveOrderShipping) +
-                Number(ordersSummary[0].totalActiveOrderTaxes) +
-                Number(ordersSummary[0].totalActiveOrderDuties) +
-                Number(ordersSummary[0].totalActiveOrderTariffs) +
-                Number(ordersSummary[0].totalActiveOrderMiscFees)
-              ).toFixed(2)}
+              {formatCurrency(
+                collectionStats[0].totalActiveOrderPrice +
+                  ordersSummary[0].totalActiveOrderShipping +
+                  ordersSummary[0].totalActiveOrderTaxes +
+                  ordersSummary[0].totalActiveOrderDuties +
+                  ordersSummary[0].totalActiveOrderTariffs +
+                  ordersSummary[0].totalActiveOrderMiscFees
+              )}
             </span>
           </div>
         </Card>
@@ -260,7 +244,7 @@ function DashboardContent() {
                       {order.shop ? `${order.shop} • ` : ""}{" "}
                       {order.releaseMonthYear} •{" "}
                       <span className="text-foreground font-medium">
-                        ${order.total}
+                        {formatCurrency(order.total)}
                       </span>
                     </CardDescription>
                   </CardHeader>
@@ -334,13 +318,15 @@ function DashboardContent() {
                       <p className="text-xs text-muted-foreground">
                         {release.category}
                       </p>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-4 mt-1">
                         <p className="text-xs text-muted-foreground">
                           {release.releaseDate} <span>•</span>{" "}
-                          {release.price && (
+                          {release.price && release.priceCurrency && (
                             <span className="text-xs text-foreground font-medium">
-                              {release.price}
-                              {release.priceCurrency}
+                              {formatCurrency(
+                                release.price,
+                                release.priceCurrency
+                              )}
                             </span>
                           )}
                         </p>
