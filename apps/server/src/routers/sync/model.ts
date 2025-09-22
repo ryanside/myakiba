@@ -12,7 +12,7 @@ export const csvItemSchema = z.object({
   collecting_date: z.string().nullable(),
   price: z.string(),
   shop: z.string(),
-  shipping_method: z.string(),
+  shipping_method: z.enum(["n/a", "EMS", "SAL", "AIRMAIL", "SURFACE", "FEDEX", "DHL", "Colissimo", "UPS", "Domestic"]),
   note: z.string(),
   orderId: z.string().nullable(),
   orderDate: z.string().nullable()

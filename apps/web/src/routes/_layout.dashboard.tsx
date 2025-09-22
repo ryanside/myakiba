@@ -35,7 +35,7 @@ function RouteComponent() {
   return (
     <div className="space-y-4">
       {/* <Suspense fallback={<DashboardSkeleton />}> */}
-        <DashboardContent />
+      <DashboardContent />
       {/* </Suspense> */}
     </div>
   );
@@ -242,7 +242,9 @@ function DashboardContent() {
                     <CardTitle className="text-pretty">{order.title}</CardTitle>
                     <CardDescription>
                       {order.shop ? `${order.shop} • ` : ""}{" "}
-                      {order.releaseMonthYear} •{" "}
+                      {order.releaseMonthYear
+                        ? `${order.releaseMonthYear} • `
+                        : ""}
                       <span className="text-foreground font-medium">
                         {formatCurrency(order.total)}
                       </span>
@@ -261,6 +263,9 @@ function DashboardContent() {
                               alt="Item"
                               className="h-full w-full object-cover"
                               loading="lazy"
+                              width="64"
+                              height="64"
+                              style={{ maxWidth: "64px", maxHeight: "64px" }}
                             />
                           </div>
                         ))}
@@ -273,7 +278,11 @@ function DashboardContent() {
                     )}
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Package className="h-4 w-4" />
-                      {order.itemIds.length || 0} items
+                      {/* TODO: REFACTOR ORDER QUERY IN DASHBOARD, TEMP FIX */}
+                      {order.itemIds[0] !== null
+                        ? order.itemIds.length
+                        : 0}{" "}
+                      items
                     </div>
                   </CardContent>
                 </Card>

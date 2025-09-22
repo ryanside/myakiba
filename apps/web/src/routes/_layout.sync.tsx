@@ -33,7 +33,18 @@ const csvItemSchema = z.object({
   collecting_date: z.string(),
   price_1: z.string(),
   shop: z.string(),
-  shipping_method: z.string(),
+  shipping_method: z.enum([
+    "n/a",
+    "EMS",
+    "SAL",
+    "AIRMAIL",
+    "SURFACE",
+    "FEDEX",
+    "DHL",
+    "Colissimo",
+    "UPS",
+    "Domestic",
+  ]),
   tracking_number: z.string(),
   wishibility: z.string().optional(),
   note: z.string(),
@@ -50,7 +61,17 @@ type userItem = {
   collecting_date: string;
   price: string;
   shop: string;
-  shipping_method: string;
+  shipping_method:
+    | "n/a"
+    | "EMS"
+    | "SAL"
+    | "AIRMAIL"
+    | "SURFACE"
+    | "FEDEX"
+    | "DHL"
+    | "Colissimo"
+    | "UPS"
+    | "Domestic";
   note: string;
   orderId: null;
   orderDate: string;

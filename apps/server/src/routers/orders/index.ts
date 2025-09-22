@@ -66,16 +66,17 @@ const ordersRouter = new Hono<{ Variables: Variables }>()
         return c.text("Failed to get orders", 500);
       }
 
-      const totalCount = result.orders.length > 0 ? result.orders[0].totalCount : 0;
-      
-      return c.json({ 
-        orders: result.orders, 
+      const totalCount =
+        result.orders.length > 0 ? result.orders[0].totalCount : 0;
+
+      return c.json({
+        orders: result.orders,
         totalCount,
         pagination: {
           limit: validatedQuery.limit,
           offset: validatedQuery.offset,
-          pageCount: Math.ceil(totalCount / validatedQuery.limit)
-        }
+          pageCount: Math.ceil(totalCount / validatedQuery.limit),
+        },
       });
     }
   )
@@ -117,7 +118,11 @@ const ordersRouter = new Hono<{ Variables: Variables }>()
     "/merge",
     zValidator(
       "json",
-      z.object({ orderIds: z.array(z.string()), newOrder: orderInsertSchema }),
+      z.object({
+        orderIds: z.array(z.string()),
+        newOrder: orderInsertSchema.omit({ userId: true }),
+        cascadeOptions: z.array(z.string()),
+      }),
       (result, c) => {
         if (!result.success) {
           return c.text("Invalid request!", 400);
@@ -130,11 +135,12 @@ const ordersRouter = new Hono<{ Variables: Variables }>()
 
       const validatedJSON = c.req.valid("json");
 
-      const { data: merged, error } = await tryCatch(
+      const { error } = await tryCatch(
         OrdersService.mergeOrders(
           user.id,
           validatedJSON.orderIds,
-          validatedJSON.newOrder
+          validatedJSON.newOrder,
+          validatedJSON.cascadeOptions
         )
       );
 
@@ -148,24 +154,32 @@ const ordersRouter = new Hono<{ Variables: Variables }>()
         if (error.message === "ORDERS_NOT_FOUND") {
           return c.text("One or more orders not found", 404);
         }
+        if (error.message === "FAILED_TO_FETCH_NEW_ORDER") {
+          return c.text("Failed to fetch new order details", 500);
+        }
 
         console.error("Error merging orders:", error, {
           userId: user.id,
           orderIds: validatedJSON.orderIds,
           newOrder: validatedJSON.newOrder,
+          cascadeOptions: validatedJSON.cascadeOptions,
         });
 
         return c.text("Failed to merge orders", 500);
       }
 
-      return c.json({ merged });
+      return c.text("Orders merged successfully");
     }
   )
   .post(
     "/split",
     zValidator(
       "json",
-      z.object({ orderId: z.string(), newOrder: orderInsertSchema }),
+      z.object({
+        collectionIds: z.array(z.string()),
+        newOrder: orderInsertSchema.omit({ userId: true }),
+        cascadeOptions: z.array(z.string()),
+      }),
       (result, c) => {
         if (!result.success) {
           return c.text("Invalid request!", 400);
@@ -178,15 +192,19 @@ const ordersRouter = new Hono<{ Variables: Variables }>()
 
       const validatedJSON = c.req.valid("json");
 
-      const { data: split, error } = await tryCatch(
+      const { error } = await tryCatch(
         OrdersService.splitOrders(
           user.id,
-          validatedJSON.orderId,
-          validatedJSON.newOrder
+          validatedJSON.collectionIds,
+          validatedJSON.newOrder,
+          validatedJSON.cascadeOptions
         )
       );
 
       if (error) {
+        if (error.message === "COLLECTION_IDS_REQUIRED") {
+          return c.text("Collection ids are required", 400);
+        }
         if (error.message === "FAILED_TO_INSERT_NEW_ORDER") {
           return c.text("Failed to insert new order", 500);
         }
@@ -196,14 +214,15 @@ const ordersRouter = new Hono<{ Variables: Variables }>()
 
         console.error("Error splitting orders:", error, {
           userId: user.id,
-          orderId: validatedJSON.orderId,
+          collectionIds: validatedJSON.collectionIds,
           newOrder: validatedJSON.newOrder,
+          cascadeOptions: validatedJSON.cascadeOptions,
         });
 
         return c.text("Failed to split orders", 500);
       }
 
-      return c.json({ split });
+      return c.text("Items split successfully");
     }
   )
   .put(
@@ -213,8 +232,9 @@ const ordersRouter = new Hono<{ Variables: Variables }>()
         return c.text("Invalid order id!", 400);
       }
     }),
-    zValidator("json", z.object({ order: orderUpdateSchema }), (result, c) => {
+    zValidator("json", z.object({ order: orderUpdateSchema, cascadeOptions: z.array(z.string()) }), (result, c) => {
       if (!result.success) {
+        console.log(result.error);
         return c.text("Invalid request!", 400);
       }
     }),
@@ -225,11 +245,12 @@ const ordersRouter = new Hono<{ Variables: Variables }>()
       const validatedJSON = c.req.valid("json");
       const validatedParam = c.req.valid("param");
 
-      const { data: updated, error } = await tryCatch(
+      const { error } = await tryCatch(
         OrdersService.updateOrder(
           user.id,
           validatedParam.orderId,
-          validatedJSON.order
+          validatedJSON.order,
+          validatedJSON.cascadeOptions
         )
       );
 
@@ -237,20 +258,18 @@ const ordersRouter = new Hono<{ Variables: Variables }>()
         if (error.message === "ORDER_NOT_FOUND") {
           return c.text("Order not found", 404);
         }
-        if (error.message === "ORDER_ITEMS_NOT_FOUND") {
-          return c.text("Order items not found", 404);
-        }
 
         console.error("Error updating order:", error, {
           userId: user.id,
           orderId: validatedParam.orderId,
           order: validatedJSON.order,
+          cascadeOptions: validatedJSON.cascadeOptions,
         });
 
         return c.text("Failed to update order", 500);
       }
 
-      return c.json({ updated });
+      return c.text("Order updated successfully");
     }
   )
   .delete(

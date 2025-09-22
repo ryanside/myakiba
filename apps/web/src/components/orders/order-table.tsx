@@ -1,5 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -21,70 +20,28 @@ import {
   type ExpandedState,
   type RowSelectionState,
   getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
   type PaginationState,
   type SortingState,
   useReactTable,
   type Updater,
   type OnChangeFn,
 } from "@tanstack/react-table";
-import { SquareMinus, SquarePlus, Calendar, Package, MoreHorizontal, Copy, Eye, Edit, Trash2 } from "lucide-react";
+import {
+  SquareMinus,
+  SquarePlus,
+  MoreHorizontal,
+  Eye,
+  Edit,
+  Trash2,
+} from "lucide-react";
 import type { VariantProps } from "class-variance-authority";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatDate } from "@/lib/utils";
+import type { Order } from "@/lib/types";
+import { OrderItemsSubTable } from "./order-item-subtable";
 
 export const DEFAULT_PAGE_INDEX = 0;
 export const DEFAULT_PAGE_SIZE = 10;
 
-interface OrderItemData {
-  id: number;
-  title: string;
-  image: string | null;
-  price: string;
-}
-
-interface OrderData {
-  orderId: string;
-  title: string;
-  shop: string | null;
-  releaseMonthYear: string | null;
-  shippingMethod: string | null;
-  orderDate: string | null;
-  paymentDate: string | null;
-  shippingDate: string | null;
-  orderStatus: string;
-  total: string;
-  itemCount: number;
-  itemImages: (string | null)[];
-  itemTitles: string[];
-  itemIds: number[];
-  itemPrices: string[];
-  items?: OrderItemData[]; // Transformed items for sub-table
-}
-
-// Helper function to transform order data arrays into items
-function transformOrderItems(order: OrderData): OrderItemData[] {
-  if (order.items) {
-    return order.items;
-  }
-
-  const items: OrderItemData[] = [];
-  const maxLength = Math.max(order.itemIds.length, order.itemTitles.length);
-
-  for (let i = 0; i < maxLength; i++) {
-    items.push({
-      id: order.itemIds[i] || 0,
-      title: order.itemTitles[i] || "Unknown Item",
-      image: order.itemImages[i] || null,
-      price: order.itemPrices[i] || "N/A",
-    });
-  }
-
-  return items;
-}
-
-// Helper function to get order status badge variant
 function getOrderStatusVariant(
   status: string
 ): VariantProps<typeof Badge>["variant"] {
@@ -98,18 +55,8 @@ function getOrderStatusVariant(
   }
 }
 
-// Helper function to format date
-function formatDate(dateString: string | null): string {
-  if (!dateString) return "N/A";
-  try {
-    return new Date(dateString).toLocaleDateString();
-  } catch {
-    return "Invalid Date";
-  }
-}
-
 interface OrdersDataGridProps {
-  orders: OrderData[];
+  orders: Order[];
   totalCount: number;
   pagination: {
     limit: number;
@@ -120,166 +67,79 @@ interface OrdersDataGridProps {
     order: string;
   };
   search?: string;
-  setFilters: (filters: Partial<{
-    limit: number;
-    offset: number;
-    sort: "title" | "shop" | "orderDate" | "releaseMonthYear" | "shippingMethod" | "total" | "itemCount" | "createdAt";
-    order: "asc" | "desc";
-    search: string;
-  }>) => void;
+  setFilters: (
+    filters: Partial<{
+      limit: number;
+      offset: number;
+      sort:
+        | "title"
+        | "shop"
+        | "orderDate"
+        | "releaseMonthYear"
+        | "shippingMethod"
+        | "total"
+        | "itemCount"
+        | "createdAt";
+      order: "asc" | "desc";
+      search: string;
+    }>
+  ) => void;
   rowSelection: RowSelectionState;
   setRowSelection: OnChangeFn<RowSelectionState>;
+  itemSelection: RowSelectionState;
+  setItemSelection: OnChangeFn<RowSelectionState>;
+  setEditDialogState: (state: { isOpen: boolean; order: Order | null }) => void;
 }
 
-// Sub-table component for order items
-function OrderItemsSubTable({ items }: { items: OrderItemData[] }) {
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: 5, // Show 5 items per page for sub-tables
-  });
-
-  const columns = useMemo<ColumnDef<OrderItemData>[]>(
-    () => [
-      {
-        accessorKey: "title",
-        header: ({ column }) => (
-          <DataGridColumnHeader title="Item" column={column} />
-        ),
-        cell: ({ row }) => {
-          const item = row.original;
-          return (
-            <div className="flex items-center gap-3">
-              {item.image && (
-                <Avatar className="size-8">
-                  <AvatarImage
-                    src={item.image}
-                    alt={item.title}
-                    className="rounded-sm"
-                  />
-                  <AvatarFallback>
-                    <Package className="size-4" />
-                  </AvatarFallback>
-                </Avatar>
-              )}
-              <div className="space-y-px">
-                <div className="font-medium text-foreground">{item.title}</div>
-                <Button
-                  className="text-xs text-muted-foreground"
-                  mode="link"
-                  size="sm"
-                  variant="ghost"
-                >
-                  <a
-                    href={`https://myfigurecollection.net/item/${item.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    https://myfigurecollection.net/item/{item.id}
-                  </a>
-                </Button>
-              </div>
-            </div>
-          );
-        },
-        enableSorting: true,
-        size: 300,
-      },
-      {
-        accessorKey: "price",
-        header: ({ column }) => (
-          <DataGridColumnHeader title="Price" column={column} />
-        ),
-        cell: (info) => formatCurrency(info.getValue() as string),
-        enableSorting: true,
-        size: 100,
-      },
-    ],
-    []
-  );
-
-  const table = useReactTable({
-    data: items,
-    columns,
-    pageCount: Math.ceil(items.length / pagination.pageSize),
-    state: {
-      sorting,
-      pagination,
-    },
-    onSortingChange: setSorting,
-    onPaginationChange: setPagination,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getRowId: (row: OrderItemData) => row.id.toString(),
-  });
-
-  return (
-    <div className="bg-muted/30 p-4">
-      <DataGrid
-        table={table}
-        recordCount={items.length}
-        tableLayout={{
-          cellBorder: true,
-          rowBorder: true,
-          headerBackground: true,
-          headerBorder: true,
-        }}
-      >
-        <div className="w-full space-y-2.5">
-          <div className="bg-card rounded-lg">
-            <DataGridContainer>
-              <ScrollArea>
-                <DataGridTable />
-                <ScrollBar orientation="horizontal" />
-              </ScrollArea>
-            </DataGridContainer>
-          </div>
-          <DataGridPagination className="pb-1.5" />
-        </div>
-      </DataGrid>
-    </div>
-  );
-}
-
-export default function OrdersDataGrid({ 
-  orders, 
-  totalCount, 
+export default function OrdersDataGrid({
+  orders,
+  totalCount,
   pagination: serverPagination,
   sorting: serverSorting,
   search,
   setFilters,
   rowSelection,
   setRowSelection,
+  itemSelection,
+  setItemSelection,
+  setEditDialogState,
 }: OrdersDataGridProps) {
-  // Derive state directly from server state (no useEffect needed)
-  const pagination = useMemo<PaginationState>(() => ({
-    pageIndex: Math.floor(serverPagination.offset / serverPagination.limit),
-    pageSize: serverPagination.limit,
-  }), [serverPagination.offset, serverPagination.limit]);
-  
-  const sorting = useMemo<SortingState>(() => ([
-    {
-      id: serverSorting.sort,
-      desc: serverSorting.order === "desc",
-    },
-  ]), [serverSorting.sort, serverSorting.order]);
-  
+  const pagination = useMemo<PaginationState>(
+    () => ({
+      pageIndex: Math.floor(serverPagination.offset / serverPagination.limit),
+      pageSize: serverPagination.limit,
+    }),
+    [serverPagination.offset, serverPagination.limit]
+  );
+
+  const sorting = useMemo<SortingState>(
+    () => [
+      {
+        id: serverSorting.sort,
+        desc: serverSorting.order === "desc",
+      },
+    ],
+    [serverSorting.sort, serverSorting.order]
+  );
+
   const [expandedRows, setExpandedRows] = useState<ExpandedState>({});
   const [columnOrder, setColumnOrder] = useState<string[]>([
     "select",
     "expand",
     "title",
     "shop",
+    "shippingMethod",
+    "releaseMonthYear",
     "orderDate",
-    "items",
+    "paymentDate",
+    "shippingDate",
+    "itemCount",
     "total",
     "status",
     "actions",
   ]);
-  console.log(rowSelection);
 
-  const columns = useMemo<ColumnDef<OrderData>[]>(
+  const columns = useMemo<ColumnDef<Order>[]>(
     () => [
       {
         id: "select",
@@ -289,10 +149,12 @@ export default function OrdersDataGrid({
               table.getIsAllPageRowsSelected() ||
               (table.getIsSomePageRowsSelected() && "indeterminate")
             }
-            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            onCheckedChange={(value) =>
+              table.toggleAllPageRowsSelected(!!value)
+            }
             aria-label="Select all"
             size="sm"
-            className="align-[inherit] rounded-xs"
+            className="align-[inherit] mb-0.5 rounded-xs"
           />
         ),
         cell: ({ row }) => (
@@ -301,7 +163,7 @@ export default function OrdersDataGrid({
             onCheckedChange={(value) => row.toggleSelected(!!value)}
             aria-label="Select row"
             size="sm"
-            className="align-[inherit] rounded-xs"
+            className="align-[inherit] mb-0.5 rounded-xs"
           />
         ),
         size: 25,
@@ -328,7 +190,12 @@ export default function OrdersDataGrid({
         enableResizing: false,
         meta: {
           expandedContent: (row) => (
-            <OrderItemsSubTable items={transformOrderItems(row)} />
+            <OrderItemsSubTable
+              items={row.items}
+              orderId={row.orderId}
+              itemSelection={itemSelection}
+              setItemSelection={setItemSelection}
+            />
           ),
         },
       },
@@ -346,10 +213,8 @@ export default function OrdersDataGrid({
           const order = row.original;
           return (
             <div className="space-y-px">
-              <div className="font-medium text-foreground truncate">{order.title}</div>
-              <div className="text-xs text-muted-foreground">
-                {order.releaseMonthYear || "N/A"} •{" "}
-                {order.shippingMethod || "N/A"}
+              <div className="font-medium text-foreground truncate">
+                {order.title}
               </div>
             </div>
           );
@@ -370,6 +235,54 @@ export default function OrdersDataGrid({
           />
         ),
         cell: (info) => (info.getValue() as string) || "N/A",
+        enableSorting: true,
+        enableHiding: true,
+        enableResizing: true,
+        size: 120,
+      },
+      {
+        accessorKey: "shippingMethod",
+        id: "shippingMethod",
+        header: ({ column }) => (
+          <DataGridColumnHeader
+            title="Shipping Method"
+            visibility={true}
+            column={column}
+          />
+        ),
+        cell: ({ row }) => {
+          const order = row.original;
+          return (
+            <div className="space-y-px">
+              <div className="text-sm">{order.shippingMethod}</div>
+            </div>
+          );
+        },
+        enableSorting: true,
+        enableHiding: true,
+        enableResizing: true,
+        size: 140,
+      },
+      {
+        accessorKey: "releaseMonthYear",
+        id: "releaseMonthYear",
+        header: ({ column }) => (
+          <DataGridColumnHeader
+            title="Release"
+            visibility={true}
+            column={column}
+          />
+        ),
+        cell: ({ row }) => {
+          const order = row.original;
+          return (
+            <div className="space-y-px">
+              <div className="text-sm">
+                {formatDate(order.releaseMonthYear)}
+              </div>
+            </div>
+          );
+        },
         enableSorting: true,
         enableHiding: true,
         enableResizing: true,
@@ -401,11 +314,11 @@ export default function OrdersDataGrid({
         enableSorting: true,
         enableHiding: true,
         enableResizing: true,
-        size: 150,
+        size: 120,
       },
       {
         accessorKey: "itemCount",
-        id: "items",
+        id: "itemCount",
         header: ({ column }) => (
           <DataGridColumnHeader
             title="Items"
@@ -480,7 +393,7 @@ export default function OrdersDataGrid({
         header: () => null,
         cell: ({ row }) => {
           const order = row.original;
-          
+
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -491,18 +404,18 @@ export default function OrdersDataGrid({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuItem
-                  onClick={() => navigator.clipboard.writeText(order.orderId)}
-                >
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy order ID
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
                 <DropdownMenuItem>
                   <Eye className="mr-2 h-4 w-4" />
                   View details
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    setEditDialogState({
+                      isOpen: true,
+                      order,
+                    })
+                  }
+                >
                   <Edit className="mr-2 h-4 w-4" />
                   Edit order
                 </DropdownMenuItem>
@@ -521,13 +434,13 @@ export default function OrdersDataGrid({
         enableResizing: false,
       },
     ],
-    []
+    [itemSelection, setItemSelection, rowSelection, setRowSelection]
   );
 
-  // Handle pagination changes
   const handlePaginationChange = (updater: Updater<PaginationState>) => {
-    const newPagination = typeof updater === 'function' ? updater(pagination) : updater;
-    
+    const newPagination =
+      typeof updater === "function" ? updater(pagination) : updater;
+
     const newOffset = newPagination.pageIndex * newPagination.pageSize;
     setFilters({
       limit: newPagination.pageSize,
@@ -535,16 +448,23 @@ export default function OrdersDataGrid({
     });
   };
 
-  // Handle sorting changes
   const handleSortingChange = (updater: Updater<SortingState>) => {
-    const newSorting = typeof updater === 'function' ? updater(sorting) : updater;
-    
+    const newSorting =
+      typeof updater === "function" ? updater(sorting) : updater;
+
     if (newSorting.length > 0) {
       const sortConfig = newSorting[0];
       setFilters({
-        sort: sortConfig.id as "title" | "shop" | "orderDate" | "releaseMonthYear" | "shippingMethod" | "total" | "itemCount" | "createdAt",
+        sort: sortConfig.id as
+          | "title"
+          | "shop"
+          | "orderDate"
+          | "releaseMonthYear"
+          | "shippingMethod"
+          | "total"
+          | "itemCount"
+          | "createdAt",
         order: sortConfig.desc ? "desc" : "asc",
-        // Reset to first page when sorting changes
         offset: 0,
       });
     }
@@ -554,8 +474,8 @@ export default function OrdersDataGrid({
     columns,
     data: orders,
     pageCount: Math.ceil(totalCount / serverPagination.limit),
-    getRowId: (row: OrderData) => row.orderId,
-    getRowCanExpand: (row) => Boolean(row.original.itemCount > 0),
+    getRowId: (row: Order) => row.orderId,
+    getRowCanExpand: () => true,
     state: {
       pagination,
       sorting,
