@@ -23,13 +23,12 @@ export type Order = {
     | "DHL"
     | "Colissimo"
     | "UPS"
-    | "Domestic"
-    | null;
+    | "Domestic";
   orderDate: string | null;
   paymentDate: string | null;
   shippingDate: string | null;
   collectionDate: string | null;
-  orderStatus: "Ordered" | "Paid" | "Shipped" | "Collected";
+  status: "Ordered" | "Paid" | "Shipped" | "Owned";
   total: string;
   shippingFee: string;
   taxes: string;
@@ -46,6 +45,8 @@ export type Order = {
 export type OrderItem = {
   collectionId: string;
   itemId: number;
+  releaseId: string | null;
+  status: "Owned" | "Ordered" | "Paid" | "Shipped" | "Sold";
   title: string;
   image: string | null;
   price: string;
@@ -55,9 +56,23 @@ export type OrderItem = {
   paymentDate: string | null;
   shippingDate: string | null;
   collectionDate: string | null;
-  shippingMethod: string | null;
+  shippingMethod:
+    | "n/a"
+    | "EMS"
+    | "SAL"
+    | "AIRMAIL"
+    | "SURFACE"
+    | "FEDEX"
+    | "DHL"
+    | "Colissimo"
+    | "UPS"
+    | "Domestic";
   releaseDate: string | null;
-  condition: string | null;
+  releaseType: string | null;
+  releasePrice: string | null;
+  releasePriceCurrency: string | null;
+  releaseBarcode: string | null;
+  condition: "New" | "Pre-Owned" | null;
 };
 
 export type NewOrder = {
@@ -74,13 +89,12 @@ export type NewOrder = {
     | "DHL"
     | "Colissimo"
     | "UPS"
-    | "Domestic"
-    | null;
+    | "Domestic";
   orderDate: string | null;
   paymentDate: string | null;
   shippingDate: string | null;
   collectionDate: string | null;
-  orderStatus: "Ordered" | "Paid" | "Shipped" | "Collected";
+  status: "Ordered" | "Paid" | "Shipped" | "Owned";
   shippingFee: string;
   taxes: string;
   duties: string;
@@ -111,7 +125,7 @@ export type Filters = {
 };
 
 export type CascadeOptions = Array<
-  | "orderStatus"
+  | "status"
   | "shop"
   | "orderDate"
   | "paymentDate"
@@ -120,3 +134,16 @@ export type CascadeOptions = Array<
   | "shippingMethod"
 >;
 
+export type ItemRelease = {
+  id: string;
+  itemId: number;
+  date: string;
+  type: string | null;
+  price: string | null;
+  priceCurrency: string | null;
+  barcode: string | null;
+};
+
+export type ItemReleasesResponse = {
+  releases: ItemRelease[];
+};

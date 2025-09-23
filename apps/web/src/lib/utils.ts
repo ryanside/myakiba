@@ -4,8 +4,15 @@ import {
   DEFAULT_PAGE_INDEX,
   DEFAULT_PAGE_SIZE,
 } from "../components/orders/order-table";
-import { type SortingState } from "@tanstack/react-table";
-import type { Filters, NewOrder, Order, OrderItem, OrdersQueryResponse, CascadeOptions } from "./types";
+import type {
+  Filters,
+  NewOrder,
+  Order,
+  OrderItem,
+  OrdersQueryResponse,
+  CascadeOptions,
+  EditedOrder,
+} from "./types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -174,18 +181,20 @@ export function filterAndSortOrders(
 export function createOptimisticMergeUpdate(
   old: OrdersQueryResponse,
   values: NewOrder,
-  orderIds: string[],
+  orderIds: Set<string>,
   filters: Filters,
   cascadeOptions: CascadeOptions = []
 ): OrdersQueryResponse {
   if (!old) return old;
 
   const ordersToMerge = old.orders.filter((order: Order) =>
-    orderIds.includes(order.orderId)
+    orderIds.has(order.orderId)
   );
 
+  if (!ordersToMerge) return old;
+
   const remainingOrders = old.orders.filter(
-    (order: Order) => !orderIds.includes(order.orderId)
+    (order: Order) => !orderIds.has(order.orderId)
   );
 
   const cascadeProperties = Object.fromEntries(
@@ -195,12 +204,11 @@ export function createOptimisticMergeUpdate(
     ])
   );
 
-  const combinedItems = ordersToMerge.flatMap(
-    (order: Order) => 
-      (order.items || []).map((item: OrderItem) => ({
-        ...item,
-        ...cascadeProperties,
-      }))
+  const combinedItems = ordersToMerge.flatMap((order: Order) =>
+    (order.items || []).map((item: OrderItem) => ({
+      ...item,
+      ...cascadeProperties,
+    }))
   );
 
   const ordersTotal = ordersToMerge.reduce((sum: number, order: Order) => {
@@ -225,7 +233,7 @@ export function createOptimisticMergeUpdate(
     paymentDate: values.paymentDate,
     shippingDate: values.shippingDate,
     collectionDate: values.collectionDate,
-    orderStatus: values.orderStatus,
+    status: values.status,
     total: combinedTotal,
     shippingFee: values.shippingFee,
     taxes: values.taxes,
@@ -249,7 +257,7 @@ export function createOptimisticMergeUpdate(
   return {
     ...old,
     orders: filteredAndSortedOrders,
-    totalCount: old.totalCount - orderIds.length + 1,
+    totalCount: old.totalCount - orderIds.size + 1,
   };
 }
 
@@ -266,6 +274,9 @@ export function createOptimisticSplitUpdate(
   const ordersToSplit = old.orders.filter((order: Order) =>
     orderIds.has(order.orderId)
   );
+
+  if (!ordersToSplit) return old;
+
   const remainingOrders = old.orders.filter(
     (order: Order) => !orderIds.has(order.orderId)
   );
@@ -278,12 +289,12 @@ export function createOptimisticSplitUpdate(
   );
 
   const splitItems = ordersToSplit.flatMap((order: Order) =>
-    order.items.filter((item: OrderItem) =>
-      collectionIds.has(item.collectionId)
-    ).map((item: OrderItem) => ({
-      ...item,
-      ...cascadeProperties,
-    }))
+    order.items
+      .filter((item: OrderItem) => collectionIds.has(item.collectionId))
+      .map((item: OrderItem) => ({
+        ...item,
+        ...cascadeProperties,
+      }))
   );
 
   const splitItemsTotal = splitItems.reduce((sum: number, item: OrderItem) => {
@@ -344,5 +355,176 @@ export function createOptimisticSplitUpdate(
     ...old,
     orders: filteredAndSortedOrders,
     totalCount: old.totalCount + 1,
+  };
+}
+
+export function createOptimisticEditUpdate(
+  old: OrdersQueryResponse,
+  values: EditedOrder,
+  cascadeOptions: CascadeOptions = []
+): OrdersQueryResponse {
+  if (!old) return old;
+
+  const editedOrder = old.orders.find(
+    (order: Order) => order.orderId === values.orderId
+  );
+
+  if (!editedOrder) {
+    return old;
+  }
+
+  const cascadedProperties = Object.fromEntries(
+    cascadeOptions.map((option) => [option, values[option]])
+  );
+  const items = editedOrder.items.map((item: OrderItem) => {
+    return {
+      ...item,
+      ...cascadedProperties,
+    };
+  });
+
+  const itemsTotal = items.reduce((sum: number, item: OrderItem) => {
+    return sum + parseFloat(item.price);
+  }, 0);
+
+  const total = (
+    itemsTotal +
+    parseFloat(values.shippingFee) +
+    parseFloat(values.taxes) +
+    parseFloat(values.duties) +
+    parseFloat(values.tariffs) +
+    parseFloat(values.miscFees)
+  ).toFixed(2);
+
+  return {
+    ...old,
+    orders: old.orders.map((order: Order) =>
+      order.orderId === values.orderId
+        ? { ...order, ...values, items, total }
+        : order
+    ),
+  };
+}
+
+export function createOptimisticDeleteUpdate(
+  old: OrdersQueryResponse,
+  orderIds: Set<string>
+) {
+  if (!old) return old;
+
+  const deletedOrders = old.orders.filter((order: Order) =>
+    orderIds.has(order.orderId)
+  );
+
+  if (!deletedOrders) return old;
+
+  const deletedOrdersIds = deletedOrders.map((order: Order) => order.orderId);
+
+  const remainingOrders = old.orders.filter(
+    (order: Order) => !deletedOrdersIds.includes(order.orderId)
+  );
+
+  const totalCount = old.totalCount - deletedOrders.length;
+
+  return {
+    ...old,
+    orders: remainingOrders,
+    totalCount,
+  };
+}
+
+export function createOptimisticEditItemUpdate(
+  old: OrdersQueryResponse,
+  orderId: string,
+  collectionId: string,
+  values: OrderItem
+) {
+  const order = old.orders.find((order: Order) => order.orderId === orderId);
+  if (!order) return old;
+  const item = order.items.find(
+    (item: OrderItem) => item.collectionId === collectionId
+  );
+  if (!item) return old;
+
+  const updatedItem = {
+    ...item,
+    ...values,
+  };
+
+  const remainingItems = order.items.filter(
+    (item: OrderItem) => item.collectionId !== collectionId
+  );
+
+  const remainingItemsPriceTotal = remainingItems.reduce(
+    (sum: number, item: OrderItem) => {
+      return sum + parseFloat(item.price);
+    },
+    0
+  );
+
+  const additionalFees =
+    parseFloat(order.shippingFee) +
+    parseFloat(order.taxes) +
+    parseFloat(order.duties) +
+    parseFloat(order.tariffs) +
+    parseFloat(order.miscFees);
+  const newOrderTotal =
+    parseFloat(updatedItem.price) + remainingItemsPriceTotal + additionalFees;
+  const itemsUpdated = order.items.map((item: OrderItem) =>
+    item.collectionId === collectionId ? updatedItem : item
+  );
+
+  return {
+    ...old,
+    orders: old.orders.map((order: Order) =>
+      order.orderId === orderId
+        ? { ...order, items: itemsUpdated, total: newOrderTotal }
+        : order
+    ),
+  };
+}
+
+export function createOptimisticDeleteItemUpdate(
+  old: OrdersQueryResponse,
+  orderId: string,
+  collectionId: string
+) {
+  const order = old.orders.find((order: Order) => order.orderId === orderId);
+  if (!order) return old;
+  const item = order.items.find(
+    (item: OrderItem) => item.collectionId === collectionId
+  );
+  if (!item) return old;
+
+  const remainingItems = order.items.filter(
+    (item: OrderItem) => item.collectionId !== collectionId
+  );
+  const remainingItemsPriceTotal = remainingItems.reduce(
+    (sum: number, item: OrderItem) => {
+      return sum + parseFloat(item.price);
+    },
+    0
+  );
+
+  const additionalFees =
+    parseFloat(order.shippingFee) +
+    parseFloat(order.taxes) +
+    parseFloat(order.duties) +
+    parseFloat(order.tariffs) +
+    parseFloat(order.miscFees);
+  const newOrderTotal = remainingItemsPriceTotal + additionalFees;
+
+  return {
+    ...old,
+    orders: old.orders.map((order: Order) =>
+      order.orderId === orderId
+        ? {
+            ...order,
+            items: remainingItems,
+            total: newOrderTotal,
+            itemCount: remainingItems.length,
+          }
+        : order
+    ),
   };
 }

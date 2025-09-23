@@ -18,13 +18,11 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   type ColumnDef,
   type ExpandedState,
-  type RowSelectionState,
   getCoreRowModel,
   type PaginationState,
   type SortingState,
   useReactTable,
   type Updater,
-  type OnChangeFn,
 } from "@tanstack/react-table";
 import {
   SquareMinus,
@@ -33,11 +31,40 @@ import {
   Eye,
   Edit,
   Trash2,
+  ListRestart,
+  Merge,
+  Split,
+  Trash,
+  Info,
+  Move,
 } from "lucide-react";
 import type { VariantProps } from "class-variance-authority";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import type { Order } from "@/lib/types";
+import type {
+  CascadeOptions,
+  EditedOrder,
+  Filters,
+  NewOrder,
+  Order,
+  OrderItem,
+} from "@/lib/types";
 import { OrderItemsSubTable } from "./order-item-subtable";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import { OrderForm } from "./order-form";
+import { DebouncedInput } from "@/components/debounced-input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  PopoverClose,
+} from "@/components/ui/popover";
+import { useSelection } from "@/hooks/use-selection";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import ItemMoveForm from "./item-move-form";
 
 export const DEFAULT_PAGE_INDEX = 0;
 export const DEFAULT_PAGE_SIZE = 10;
@@ -46,12 +73,18 @@ function getOrderStatusVariant(
   status: string
 ): VariantProps<typeof Badge>["variant"] {
   switch (status.toLowerCase()) {
-    case "collected":
+    case "owned":
       return "success";
     case "shipped":
       return "primary";
-    default:
+    case "paid":
+      return "warning";
+    case "ordered":
       return "info";
+    case "sold":
+      return "destructive";
+    default:
+      return "outline";
   }
 }
 
@@ -66,29 +99,32 @@ interface OrdersDataGridProps {
     sort: string;
     order: string;
   };
-  search?: string;
-  setFilters: (
-    filters: Partial<{
-      limit: number;
-      offset: number;
-      sort:
-        | "title"
-        | "shop"
-        | "orderDate"
-        | "releaseMonthYear"
-        | "shippingMethod"
-        | "total"
-        | "itemCount"
-        | "createdAt";
-      order: "asc" | "desc";
-      search: string;
-    }>
-  ) => void;
-  rowSelection: RowSelectionState;
-  setRowSelection: OnChangeFn<RowSelectionState>;
-  itemSelection: RowSelectionState;
-  setItemSelection: OnChangeFn<RowSelectionState>;
-  setEditDialogState: (state: { isOpen: boolean; order: Order | null }) => void;
+  search: string;
+  onFilterChange: (filters: Filters) => void;
+  onSearchChange: (search: string) => void;
+  onResetFilters: () => void;
+  onMerge: (
+    values: NewOrder,
+    cascadeOptions: CascadeOptions,
+    orderIds: Set<string>
+  ) => Promise<void>;
+  onSplit: (
+    values: NewOrder,
+    cascadeOptions: CascadeOptions,
+    collectionIds: Set<string>,
+    orderIds: Set<string>
+  ) => Promise<void>;
+  onEditOrder: (
+    values: EditedOrder,
+    cascadeOptions: CascadeOptions
+  ) => Promise<void>;
+  onDeleteOrders: (orderIds: Set<string>) => Promise<void>;
+  onEditItem: (
+    orderId: string,
+    itemId: string,
+    values: OrderItem
+  ) => Promise<void>;
+  onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
 }
 
 export default function OrdersDataGrid({
@@ -97,12 +133,15 @@ export default function OrdersDataGrid({
   pagination: serverPagination,
   sorting: serverSorting,
   search,
-  setFilters,
-  rowSelection,
-  setRowSelection,
-  itemSelection,
-  setItemSelection,
-  setEditDialogState,
+  onFilterChange,
+  onSearchChange,
+  onResetFilters,
+  onMerge,
+  onSplit,
+  onEditOrder,
+  onDeleteOrders,
+  onEditItem,
+  onDeleteItem,
 }: OrdersDataGridProps) {
   const pagination = useMemo<PaginationState>(
     () => ({
@@ -121,6 +160,16 @@ export default function OrdersDataGrid({
     ],
     [serverSorting.sort, serverSorting.order]
   );
+
+  const {
+    rowSelection,
+    setRowSelection,
+    itemSelection,
+    setItemSelection,
+    getSelectedOrderIds,
+    getSelectedItemData,
+    clearSelections,
+  } = useSelection();
 
   const [expandedRows, setExpandedRows] = useState<ExpandedState>({});
   const [columnOrder, setColumnOrder] = useState<string[]>([
@@ -195,6 +244,8 @@ export default function OrdersDataGrid({
               orderId={row.orderId}
               itemSelection={itemSelection}
               setItemSelection={setItemSelection}
+              onEditItem={onEditItem}
+              onDeleteItem={onDeleteItem}
             />
           ),
         },
@@ -366,7 +417,7 @@ export default function OrdersDataGrid({
         size: 100,
       },
       {
-        accessorKey: "orderStatus",
+        accessorKey: "status",
         id: "status",
         header: ({ column }) => (
           <DataGridColumnHeader
@@ -376,9 +427,9 @@ export default function OrdersDataGrid({
           />
         ),
         cell: ({ row }) => {
-          const status = row.original.orderStatus;
+          const status = row.original.status;
           return (
-            <Badge variant={getOrderStatusVariant(status)} appearance="light">
+            <Badge variant={getOrderStatusVariant(status)} appearance="outline">
               {status}
             </Badge>
           );
@@ -408,19 +459,24 @@ export default function OrdersDataGrid({
                   <Eye className="mr-2 h-4 w-4" />
                   View details
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() =>
-                    setEditDialogState({
-                      isOpen: true,
-                      order,
-                    })
-                  }
-                >
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit order
-                </DropdownMenuItem>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      Edit order
+                    </DropdownMenuItem>
+                  </DialogTrigger>
+                  <OrderForm
+                    type="edit-order"
+                    orderData={order}
+                    callbackFn={onEditOrder}
+                  />
+                </Dialog>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive">
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => onDeleteOrders(new Set([order.orderId]))}
+                >
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete order
                 </DropdownMenuItem>
@@ -442,7 +498,7 @@ export default function OrdersDataGrid({
       typeof updater === "function" ? updater(pagination) : updater;
 
     const newOffset = newPagination.pageIndex * newPagination.pageSize;
-    setFilters({
+    onFilterChange({
       limit: newPagination.pageSize,
       offset: newOffset,
     });
@@ -454,7 +510,7 @@ export default function OrdersDataGrid({
 
     if (newSorting.length > 0) {
       const sortConfig = newSorting[0];
-      setFilters({
+      onFilterChange({
         sort: sortConfig.id as
           | "title"
           | "shop"
@@ -497,33 +553,136 @@ export default function OrdersDataGrid({
   });
 
   return (
-    <div className="space-y-4">
-      <DataGrid
-        table={table}
-        recordCount={totalCount}
-        tableLayout={{
-          columnsPinnable: true,
-          columnsResizable: true,
-          columnsMovable: true,
-          columnsVisibility: true,
-        }}
-      >
-        <div className="w-full space-y-2.5">
-          <DataGridContainer>
-            <ScrollArea>
-              <DataGridTable />
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
-          </DataGridContainer>
-          <div className="flex items-center justify-between">
-            <div className="flex-1 text-sm text-muted-foreground">
-              {table.getFilteredSelectedRowModel().rows.length} of{" "}
-              {table.getFilteredRowModel().rows.length} row(s) selected
+    <>
+      <div className="flex items-center justify-start gap-2">
+        <DebouncedInput
+          value={search ?? ""}
+          onChange={(e) => onSearchChange(e.toString())}
+          placeholder="Search"
+          className="max-w-xs"
+        />
+        <Button onClick={onResetFilters} variant="outline">
+          <ListRestart className="md:hidden" />
+          <span className="hidden md:block">Reset Filters</span>
+        </Button>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="primary" disabled={getSelectedOrderIds.size < 2}>
+              <Merge className="md:hidden" />
+              <span className="hidden md:block">Merge Orders</span>
+            </Button>
+          </DialogTrigger>
+          <OrderForm
+            orderIds={getSelectedOrderIds}
+            callbackFn={onMerge}
+            type="merge"
+            clearSelections={clearSelections}
+          />
+        </Dialog>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button
+              variant="primary"
+              disabled={getSelectedItemData.collectionIds.size === 0}
+            >
+              <Split className="md:hidden" />
+              <span className="hidden md:block">Split Items</span>
+            </Button>
+          </DialogTrigger>
+          <OrderForm
+            collectionIds={getSelectedItemData.collectionIds}
+            orderIds={getSelectedItemData.orderIds}
+            callbackFn={onSplit}
+            type="split"
+            clearSelections={clearSelections}
+          />
+        </Dialog>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" disabled={getSelectedOrderIds.size === 0}>
+              <Move className="w-4 h-4" />
+            </Button>
+          </DialogTrigger>
+          <ItemMoveForm
+            selectedItemData={getSelectedItemData}
+            clearSelections={clearSelections}
+          />
+        </Dialog>
+        <Popover>
+          <PopoverTrigger asChild disabled={getSelectedOrderIds.size === 0}>
+            <Button variant="outline" disabled={getSelectedOrderIds.size === 0}>
+              <Trash className="stroke-white" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent>
+            <div className="flex flex-col items-center gap-2 text-sm text-pretty">
+              <div className="flex flex-row items-center gap-2">
+                <p>Delete the selected orders and their items?</p>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-4 h-4" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-h-40">
+                    <p>
+                      Items with "Owned" status will not be deleted. You can
+                      delete owned items in the manager tab.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <div className="flex flex-row items-center gap-2 max-w-16 mr-auto">
+                <PopoverClose asChild>
+                  <Button
+                    variant="outline"
+                    disabled={getSelectedOrderIds.size === 0}
+                    className="block"
+                  >
+                    Cancel
+                  </Button>
+                </PopoverClose>
+                <PopoverClose asChild>
+                  <Button
+                    variant="destructive"
+                    disabled={getSelectedOrderIds.size === 0}
+                    className="block"
+                    onClick={() => onDeleteOrders(getSelectedOrderIds)}
+                  >
+                    Delete
+                  </Button>
+                </PopoverClose>
+              </div>
             </div>
-            <DataGridPagination />
+          </PopoverContent>
+        </Popover>
+      </div>
+      <div className="space-y-4">
+        <DataGrid
+          table={table}
+          recordCount={totalCount}
+          tableLayout={{
+            columnsPinnable: true,
+            columnsResizable: true,
+            columnsMovable: true,
+            columnsVisibility: true,
+          }}
+        >
+          <div className="w-full space-y-2.5">
+            <DataGridContainer>
+              <ScrollArea>
+                <DataGridTable />
+                <ScrollBar orientation="horizontal" />
+              </ScrollArea>
+            </DataGridContainer>
+            <div className="flex items-center justify-between">
+              <div className="flex-1 text-sm text-muted-foreground">
+                {table.getFilteredSelectedRowModel().rows.length} of{" "}
+                {table.getFilteredRowModel().rows.length} row(s) selected
+              </div>
+              <DataGridPagination />
+            </div>
           </div>
-        </div>
-      </DataGrid>
-    </div>
+        </DataGrid>
+      </div>
+    </>
   );
 }

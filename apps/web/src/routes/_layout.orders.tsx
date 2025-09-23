@@ -6,39 +6,34 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import OrdersDataGrid from "@/components/orders/order-table";
-import { OrderForm } from "@/components/orders/order-form";
 import { useFilters } from "@/hooks/use-filters";
-import { DebouncedInput } from "@/components/debounced-input";
 import type {
   EditedOrder,
   NewOrder,
-  Order,
   OrdersQueryResponse,
   CascadeOptions,
+  Filters,
   OrderItem,
 } from "@/lib/types";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { ListRestart, Merge, Split, Trash } from "lucide-react";
 import {
   createOptimisticMergeUpdate,
   createOptimisticSplitUpdate,
+  createOptimisticEditUpdate,
+  createOptimisticDeleteUpdate,
+  createOptimisticEditItemUpdate,
+  createOptimisticDeleteItemUpdate,
 } from "@/lib/utils";
 import {
   editOrder,
   getOrders,
   mergeOrders,
   splitOrders,
+  deleteOrders,
+  editOrderItem,
+  deleteOrderItem,
 } from "@/queries/orders";
 import { searchSchema } from "@/lib/validations";
-import { useSelection } from "@/hooks/use-selection";
-import { Dialog, DialogTrigger } from "@/components/ui/dialog";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { useState } from "react";
 
 export const Route = createFileRoute("/_layout/orders")({
   component: RouteComponent,
@@ -47,25 +42,17 @@ export const Route = createFileRoute("/_layout/orders")({
 
 function RouteComponent() {
   const queryClient = useQueryClient();
-  const [editDialogState, setEditDialogState] = useState<{
-    isOpen: boolean;
-    order: Order | null;
-  }>({ isOpen: false, order: null });
   const { filters, setFilters, resetFilters } = useFilters(Route.id);
-  const {
-    rowSelection,
-    setRowSelection,
-    itemSelection,
-    setItemSelection,
-    getSelectedOrderIds,
-    getSelectedItemData,
-    clearSelections,
-  } = useSelection();
+
+  const handleFilterChange = (filters: Filters) => {
+    setFilters(filters);
+  };
+
   const { isPending, isError, data, error } = useQuery({
     queryKey: ["orders", filters],
     queryFn: () => getOrders(filters),
     placeholderData: keepPreviousData,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5, 
     retry: false,
   });
 
@@ -76,7 +63,7 @@ function RouteComponent() {
       cascadeOptions,
     }: {
       values: NewOrder;
-      orderIds: string[];
+      orderIds: Set<string>;
       cascadeOptions: CascadeOptions;
     }) => mergeOrders(values, orderIds, cascadeOptions),
     onMutate: async ({ values, orderIds, cascadeOptions }) => {
@@ -108,12 +95,11 @@ function RouteComponent() {
     },
     onSuccess: (data, variables) => {
       toast.success(
-        `Successfully merged ${variables.orderIds.length} orders into one!`
+        `Successfully merged ${variables.orderIds.size} orders into one!`
       );
     },
     onSettled: (data, error) => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
-      clearSelections();
     },
   });
 
@@ -148,7 +134,6 @@ function RouteComponent() {
       return { previousData, orderIds, collectionIds };
     },
     onError: (error, variables, context) => {
-      // Rollback to previous data on error
       if (context?.previousData) {
         queryClient.setQueryData(["orders", filters], context.previousData);
       }
@@ -162,9 +147,7 @@ function RouteComponent() {
       );
     },
     onSettled: (data, error) => {
-      // Always refetch after error or success and clear selection
       queryClient.invalidateQueries({ queryKey: ["orders"] });
-      clearSelections();
     },
   });
 
@@ -182,36 +165,12 @@ function RouteComponent() {
       queryClient.setQueryData(
         ["orders", filters],
         (old: OrdersQueryResponse) => {
-          const editedOrder = old.orders.find(
-            (order: Order) => order.orderId === values.orderId
-          );
-
-          if (!editedOrder) {
-            return old;
-          }
-
-          const cascadedProperties = Object.fromEntries(
-            cascadeOptions.map((option) => [option, values[option]])
-          );
-          const items = editedOrder.items.map((item: OrderItem) => {
-            return {
-              ...item,
-              ...cascadedProperties,
-            };
-          });
-
-          return {
-            ...old,
-            orders: old.orders.map((order: Order) =>
-              order.orderId === values.orderId ? { ...values, items } : order
-            ),
-          };
+          return createOptimisticEditUpdate(old, values, cascadeOptions);
         }
       );
       return { previousData };
     },
     onError: (error, variables, context) => {
-      // Rollback to previous data on error
       if (context?.previousData) {
         queryClient.setQueryData(["orders", filters], context.previousData);
       }
@@ -223,24 +182,115 @@ function RouteComponent() {
       toast.success(`Successfully updated order!`);
     },
     onSettled: (data, error) => {
-      // Always refetch after error or success and clear selection
       queryClient.invalidateQueries({ queryKey: ["orders"] });
-      clearSelections();
+    },
+  });
+
+  const deleteOrderMutation = useMutation({
+    mutationFn: (orderIds: Set<string>) => deleteOrders(orderIds),
+    onMutate: async (orderIds) => {
+      await queryClient.cancelQueries({ queryKey: ["orders", filters] });
+      const previousData = queryClient.getQueryData(["orders", filters]);
+      queryClient.setQueryData(
+        ["orders", filters],
+        (old: OrdersQueryResponse) => {
+          return createOptimisticDeleteUpdate(old, orderIds);
+        }
+      );
+      return { previousData };
+    },
+    onError: (error, variables, context) => {
+      // Rollback to previous data on error
+      if (context?.previousData) {
+        queryClient.setQueryData(["orders", filters], context.previousData);
+      }
+    },
+    onSuccess: (data, variables) => {
+      toast.success(`Successfully deleted orders!`);
+    },
+    onSettled: (data, error) => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    },
+  });
+
+  const editItemMutation = useMutation({
+    mutationFn: ({
+      orderId,
+      itemId,
+      values,
+    }: {
+      orderId: string;
+      itemId: string;
+      values: OrderItem;
+    }) => editOrderItem(orderId, itemId, values),
+    onMutate: async ({ orderId, itemId, values }) => {
+      await queryClient.cancelQueries({ queryKey: ["orders", filters] });
+      const previousData = queryClient.getQueryData(["orders", filters]);
+      queryClient.setQueryData(
+        ["orders", filters],
+        (old: OrdersQueryResponse) => {
+          return createOptimisticEditItemUpdate(old, orderId, itemId, values);
+        }
+      );
+
+      return { previousData };
+    },
+    onError: (error, variables, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(["orders", filters], context.previousData);
+      }
+      toast.error("Failed to update item. Please try again.", {
+        description: `Error: ${error.message}`,
+      });
+    },
+    onSuccess: (data, variables) => {
+      toast.success(`Successfully updated order item!`);
+    },
+    onSettled: (data, error) => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    },
+  });
+
+  const deleteItemMutation = useMutation({
+    mutationFn: ({ orderId, itemId }: { orderId: string; itemId: string }) =>
+      deleteOrderItem(orderId, itemId),
+    onMutate: async ({ orderId, itemId }) => {
+      await queryClient.cancelQueries({ queryKey: ["orders", filters] });
+      const previousData = queryClient.getQueryData(["orders", filters]);
+      queryClient.setQueryData(
+        ["orders", filters],
+        (old: OrdersQueryResponse) => {
+          return createOptimisticDeleteItemUpdate(old, orderId, itemId);
+        }
+      );
+      return { previousData };
+    },
+    onError: (error, variables, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(["orders", filters], context.previousData);
+      }
+    },
+    onSuccess: (data, variables) => {
+      toast.success(`Successfully deleted order item!`);
+    },
+    onSettled: (data, error) => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
     },
   });
 
   const handleMerge = async (
     values: NewOrder,
-    cascadeOptions: CascadeOptions
+    cascadeOptions: CascadeOptions,
+    orderIds: Set<string>
   ) => {
-    const orderIds = getSelectedOrderIds;
     mergeMutation.mutate({ values, orderIds, cascadeOptions });
   };
   const handleSplit = async (
     values: NewOrder,
-    cascadeOptions: CascadeOptions
+    cascadeOptions: CascadeOptions,
+    collectionIds: Set<string>,
+    orderIds: Set<string>
   ) => {
-    const { collectionIds, orderIds } = getSelectedItemData;
     splitMutation.mutate({
       values,
       orderIds,
@@ -252,8 +302,24 @@ function RouteComponent() {
     values: EditedOrder,
     cascadeOptions: CascadeOptions
   ) => {
-    console.log("values", values);
-    // editOrderMutation.mutate({ values, cascadeOptions });
+    editOrderMutation.mutate({ values, cascadeOptions });
+  };
+
+  const handleDeleteOrders = async (orderIds: Set<string>) => {
+    deleteOrderMutation.mutate(orderIds);
+  };
+
+  const handleEditItem = async (
+    orderId: string,
+    itemId: string,
+    values: OrderItem
+  ) => {
+    // console.log(values.releaseId);
+    editItemMutation.mutate({ orderId, itemId, values });
+  };
+
+  const handleDeleteItem = async (orderId: string, itemId: string) => {
+    deleteItemMutation.mutate({ orderId, itemId });
   };
 
   if (isPending) {
@@ -268,74 +334,6 @@ function RouteComponent() {
 
   return (
     <div className="w-full space-y-4">
-      <div className="flex items-center justify-start gap-2">
-        <DebouncedInput
-          value={filters.search ?? ""}
-          onChange={(e) => setFilters({ ...filters, search: e.toString() })}
-          placeholder="Search"
-          className="max-w-xs"
-        />
-        <Button onClick={resetFilters} variant="outline">
-          <ListRestart className="md:hidden" />
-          <span className="hidden md:block">Reset Filters</span>
-        </Button>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button variant="primary" disabled={getSelectedOrderIds.length < 2}>
-              <Merge className="md:hidden" />
-              <span className="hidden md:block">Merge Orders</span>
-            </Button>
-          </DialogTrigger>
-          <OrderForm
-            selectedCount={getSelectedOrderIds.length}
-            callbackFn={handleMerge}
-            type="merge"
-          />
-        </Dialog>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button
-              variant="primary"
-              disabled={getSelectedItemData.collectionIds.size === 0}
-            >
-              <Split className="md:hidden" />
-              <span className="hidden md:block">Split Items</span>
-            </Button>
-          </DialogTrigger>
-          <OrderForm
-            selectedCount={getSelectedItemData.collectionIds.size}
-            callbackFn={handleSplit}
-            type="split"
-          />
-        </Dialog>
-        <Dialog
-          open={editDialogState.isOpen}
-          onOpenChange={(isOpen) =>
-            setEditDialogState({
-              isOpen,
-              order: isOpen ? editDialogState.order : null,
-            })
-          }
-        >
-          {editDialogState.order && (
-            <OrderForm
-              type="edit-order"
-              orderData={editDialogState.order}
-              callbackFn={handleEditOrder}
-            />
-          )}
-        </Dialog>
-        <Popover>
-          <PopoverTrigger>
-            <Trash />
-          </PopoverTrigger>
-          <PopoverContent>
-            <div className="flex flex-col gap-2">
-              <p>Are you sure you want to delete the selected orders?</p>
-            </div>
-          </PopoverContent>
-        </Popover>
-      </div>
       <OrdersDataGrid
         orders={orders}
         totalCount={totalCount}
@@ -347,13 +345,16 @@ function RouteComponent() {
           sort: filters.sort ?? "createdAt",
           order: filters.order ?? "desc",
         }}
-        search={filters.search}
-        setFilters={setFilters}
-        rowSelection={rowSelection}
-        setRowSelection={setRowSelection}
-        itemSelection={itemSelection}
-        setItemSelection={setItemSelection}
-        setEditDialogState={setEditDialogState}
+        search={filters.search ?? ""}
+        onFilterChange={handleFilterChange}
+        onSearchChange={(search) => handleFilterChange({ ...filters, search })}
+        onResetFilters={resetFilters}
+        onMerge={handleMerge}
+        onSplit={handleSplit}
+        onEditOrder={handleEditOrder}
+        onDeleteOrders={handleDeleteOrders}
+        onEditItem={handleEditItem}
+        onDeleteItem={handleDeleteItem}
       />
     </div>
   );

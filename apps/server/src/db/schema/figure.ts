@@ -76,7 +76,11 @@ export const collection = pgTable("collection", {
   orderId: text("order_id").references(() => order.id, {
     onDelete: "set null",
   }),
-  status: text("status").notNull().default("Owned"),
+  status: text("status", {
+    enum: ["Owned", "Ordered", "Paid", "Shipped", "Sold"],
+  })
+    .notNull()
+    .default("Owned"),
   count: integer("count").default(1),
   releaseId: uuid("release_id").references(() => item_release.id, {
     onDelete: "set null",
@@ -101,11 +105,15 @@ export const collection = pgTable("collection", {
       "UPS",
       "Domestic",
     ],
-  }),
+  })
+    .default("n/a")
+    .notNull(),
   soldFor: decimal("sold_for", { scale: 2 }),
   soldDate: date("sold_date"),
   tags: text("tags").array().default([]),
-  condition: text("condition").default(""),
+  condition: text("condition", {
+    enum: ["New", "Pre-Owned"],
+  }),
   notes: text("notes").default(""),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -138,9 +146,11 @@ export const order = pgTable("order", {
       "UPS",
       "Domestic",
     ],
-  }),
-  orderStatus: text("order_status", {
-    enum: ["Ordered", "Paid", "Shipped", "Collected"],
+  })
+    .default("n/a")
+    .notNull(),
+  status: text("status", {
+    enum: ["Ordered", "Paid", "Shipped", "Owned"],
   })
     .default("Ordered")
     .notNull(),

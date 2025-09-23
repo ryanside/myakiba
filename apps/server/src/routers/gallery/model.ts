@@ -12,7 +12,34 @@ export const galleryQuerySchema = z.object({
   shipDate: z.array(z.string()).optional(),
   colDate: z.array(z.string()).optional(),
   shipMethod: z
-    .union([z.string(), z.array(z.string())])
+    .union([
+      z.enum([
+        "n/a",
+        "EMS",
+        "SAL",
+        "AIRMAIL",
+        "SURFACE",
+        "FEDEX",
+        "DHL",
+        "Colissimo",
+        "UPS",
+        "Domestic",
+      ]),
+      z.array(
+        z.enum([
+          "n/a",
+          "EMS",
+          "SAL",
+          "AIRMAIL",
+          "SURFACE",
+          "FEDEX",
+          "DHL",
+          "Colissimo",
+          "UPS",
+          "Domestic",
+        ])
+      ),
+    ])
     .transform((val) => (Array.isArray(val) ? val : [val]))
     .optional(),
   relDate: z.array(z.string()).optional(),
@@ -38,7 +65,10 @@ export const galleryQuerySchema = z.object({
     .transform((val) => (Array.isArray(val) ? val : [val]))
     .optional(),
   condition: z
-    .union([z.string(), z.array(z.string())])
+    .union([
+      z.enum(["New", "Pre-Owned"]),
+      z.array(z.enum(["New", "Pre-Owned"])),
+    ])
     .transform((val) => (Array.isArray(val) ? val : [val]))
     .optional(),
   sort: z

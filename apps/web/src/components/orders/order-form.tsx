@@ -23,49 +23,48 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useState, useMemo } from "react";
 import { ChevronDown } from "lucide-react";
 import type { CascadeOptions } from "@/lib/types";
-
-const cascadeOptionsList = [
-  "orderStatus",
-  "shop",
-  "orderDate",
-  "paymentDate",
-  "shippingDate",
-  "collectionDate",
-  "shippingMethod",
-];
+import { useCascadeOptions } from "@/hooks/use-cascade-options";
 
 type MergeOrderFormProps = {
-  selectedCount: number;
+  orderIds: Set<string>;
+  collectionIds?: Set<string>;
   type: "merge";
   callbackFn: (
     value: NewOrder,
-    cascadeOptions: CascadeOptions
+    cascadeOptions: CascadeOptions,
+    orderIds: Set<string>
   ) => Promise<void>;
+  clearSelections: () => void;
 };
 
 type SplitOrderFormProps = {
-  selectedCount: number;
+  orderIds: Set<string>;
+  collectionIds: Set<string>;
   type: "split";
   callbackFn: (
     value: NewOrder,
-    cascadeOptions: CascadeOptions
+    cascadeOptions: CascadeOptions,
+    collectionIds: Set<string>,
+    orderIds: Set<string>
   ) => Promise<void>;
+  clearSelections: () => void;
 };
 
 type EditOrderFormProps = {
+  orderIds?: Set<string>;
+  collectionIds?: Set<string>;
   type: "edit-order";
   callbackFn: (
     value: EditedOrder,
     cascadeOptions: CascadeOptions
   ) => Promise<void>;
   orderData: Order;
+  clearSelections?: () => void;
 };
 
 type OrderFormProps =
@@ -74,62 +73,28 @@ type OrderFormProps =
   | EditOrderFormProps;
 
 export function OrderForm(props: OrderFormProps) {
-  const { callbackFn, type } = props;
+  const { callbackFn, type, orderIds, collectionIds, clearSelections } = props;
 
-  // State for cascade options
-  const [cascadeOptions, setCascadeOptions] = useState<CascadeOptions>([
-    "orderStatus",
-    "shop",
-    "orderDate",
-    "paymentDate",
-    "shippingDate",
-    "collectionDate",
-    "shippingMethod",
-  ]);
-
-  // Helper functions for cascade options
-  const handleSelectAll = () => {
-    setCascadeOptions([
-      "orderStatus",
-      "shop",
-      "orderDate",
-      "paymentDate",
-      "shippingDate",
-      "collectionDate",
-      "shippingMethod",
-    ]);
-  };
-
-  const handleSelectNone = () => {
-    setCascadeOptions([]);
-  };
-
-  const handleCascadeOptionChange = (
-    option: CascadeOptions[number],
-    checked: boolean
-  ) => {
-    setCascadeOptions((prev) =>
-      checked ? [...prev, option] : prev.filter((item) => item !== option)
-    );
-  };
-
-  const cascadeDisplayText = useMemo(() => {
-    if (cascadeOptions.length === 0) {
-      return "Cascade None";
-    }
-    if (cascadeOptions.length === cascadeOptionsList.length) {
-      return "Cascade All (Default)";
-    }
-    return cascadeOptions.join(", ");
-  }, [cascadeOptions]);
+  const {
+    cascadeOptions,
+    handleSelectAll,
+    handleSelectNone,
+    handleCascadeOptionChange,
+    cascadeDisplayText,
+    cascadeOptionsList,
+  } = useCascadeOptions();
 
   const selectedCount =
-    type === "merge" || type === "split" ? props.selectedCount : undefined;
+    type === "merge"
+      ? props.orderIds.size
+      : type === "split"
+        ? props.collectionIds.size
+        : undefined;
   const orderData = type === "edit-order" ? props.orderData : undefined;
 
   const form = useForm({
     defaultValues: orderData || {
-      orderStatus: "Ordered" as const,
+      status: "Ordered" as const,
       title:
         type === "merge"
           ? "New Merged Order"
@@ -151,7 +116,6 @@ export function OrderForm(props: OrderFormProps) {
       notes: "",
     },
     onSubmit: async ({ value }) => {
-      console.log("OrderForm: onSubmit", value);
       if (type === "edit-order") {
         const transformedValue: EditedOrder = {
           orderId: orderData!.orderId,
@@ -162,8 +126,8 @@ export function OrderForm(props: OrderFormProps) {
           paymentDate: value.paymentDate || null,
           shippingDate: value.shippingDate || null,
           collectionDate: value.collectionDate || null,
-          orderStatus: value.orderStatus,
-          shippingMethod: value.shippingMethod,
+          status: value.status,
+          shippingMethod: value.shippingMethod || "n/a",
           shippingFee: value.shippingFee,
           taxes: value.taxes,
           duties: value.duties,
@@ -172,6 +136,31 @@ export function OrderForm(props: OrderFormProps) {
           notes: value.notes,
         };
         await callbackFn(transformedValue, cascadeOptions);
+      } else if (type === "split") {
+        const transformedValue: NewOrder = {
+          title: value.title,
+          shop: value.shop,
+          orderDate: value.orderDate || null,
+          releaseMonthYear: value.releaseMonthYear || null,
+          paymentDate: value.paymentDate || null,
+          shippingDate: value.shippingDate || null,
+          collectionDate: value.collectionDate || null,
+          status: value.status,
+          shippingMethod: value.shippingMethod || "n/a",
+          shippingFee: value.shippingFee,
+          taxes: value.taxes,
+          duties: value.duties,
+          tariffs: value.tariffs,
+          miscFees: value.miscFees,
+          notes: value.notes,
+        };
+        await callbackFn(
+          transformedValue,
+          cascadeOptions,
+          collectionIds,
+          orderIds
+        );
+        clearSelections?.();
       } else {
         const transformedValue: NewOrder = {
           title: value.title,
@@ -181,8 +170,8 @@ export function OrderForm(props: OrderFormProps) {
           paymentDate: value.paymentDate || null,
           shippingDate: value.shippingDate || null,
           collectionDate: value.collectionDate || null,
-          orderStatus: value.orderStatus,
-          shippingMethod: value.shippingMethod,
+          status: value.status,
+          shippingMethod: value.shippingMethod || "n/a",
           shippingFee: value.shippingFee,
           taxes: value.taxes,
           duties: value.duties,
@@ -190,7 +179,8 @@ export function OrderForm(props: OrderFormProps) {
           miscFees: value.miscFees,
           notes: value.notes,
         };
-        await callbackFn(transformedValue, cascadeOptions);
+        await callbackFn(transformedValue, cascadeOptions, orderIds);
+        clearSelections?.();
       }
     },
   });
@@ -283,16 +273,16 @@ export function OrderForm(props: OrderFormProps) {
             </div>
 
             <form.Field
-              name="orderStatus"
+              name="status"
               validators={{
                 onChange: z.enum(
-                  ["Ordered", "Paid", "Shipped", "Collected"],
-                  "Order status is required"
+                  ["Ordered", "Paid", "Shipped", "Owned"],
+                  "Status is required"
                 ),
               }}
               children={(field) => (
                 <div className="grid gap-2">
-                  <Label htmlFor={field.name}>Order Status</Label>
+                  <Label htmlFor={field.name}>Status</Label>
                   <Select
                     value={field.state.value}
                     onValueChange={(value) =>
@@ -300,13 +290,13 @@ export function OrderForm(props: OrderFormProps) {
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select order status" />
+                      <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Ordered">Ordered</SelectItem>
+                      <SelectItem value="Owned">Owned</SelectItem>
                       <SelectItem value="Paid">Paid</SelectItem>
                       <SelectItem value="Shipped">Shipped</SelectItem>
-                      <SelectItem value="Collected">Collected</SelectItem>
                     </SelectContent>
                   </Select>
                   {field.state.meta.errors &&

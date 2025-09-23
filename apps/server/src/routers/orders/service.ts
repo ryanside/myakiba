@@ -1,11 +1,17 @@
 import { db } from "@/db";
 import { order, collection, item, item_release } from "@/db/schema/figure";
-import { eq, and, inArray, sql, desc, asc, ilike } from "drizzle-orm";
-import type { orderInsertType, orderUpdateType } from "./model";
+import { eq, and, inArray, sql, desc, asc, ilike, ne } from "drizzle-orm";
+import type {
+  orderInsertType,
+  orderItemUpdateType,
+  orderUpdateType,
+} from "./model";
 
 type OrderItem = {
   collectionId: string;
   itemId: number;
+  releaseId: string;
+  status: "Owned" | "Ordered" | "Paid" | "Shipped" | "Sold";
   title: string;
   image: string | null;
   price: string;
@@ -15,9 +21,23 @@ type OrderItem = {
   paymentDate: string | null;
   shippingDate: string | null;
   collectionDate: string | null;
-  shippingMethod: string | null;
+  shippingMethod:
+    | "n/a"
+    | "EMS"
+    | "SAL"
+    | "AIRMAIL"
+    | "SURFACE"
+    | "FEDEX"
+    | "DHL"
+    | "Colissimo"
+    | "UPS"
+    | "Domestic";
   releaseDate: string | null;
-  condition: string | null;
+  releaseType: string | null;
+  releasePrice: string | null;
+  releasePriceCurrency: string | null;
+  releaseBarcode: string | null;
+  condition: "New" | "Pre-Owned" | null;
 };
 
 class OrdersService {
@@ -68,7 +88,7 @@ class OrdersService {
         paymentDate: order.paymentDate,
         shippingDate: order.shippingDate,
         collectionDate: order.collectionDate,
-        orderStatus: order.orderStatus,
+        status: order.status,
         total: sql<string>`COALESCE(SUM(${collection.price}::numeric), 0) + COALESCE(${order.shippingFee}::numeric, 0) + COALESCE(${order.taxes}::numeric, 0) + COALESCE(${order.duties}::numeric, 0) + COALESCE(${order.tariffs}::numeric, 0) + COALESCE(${order.miscFees}::numeric, 0)`,
         shippingFee: order.shippingFee,
         taxes: order.taxes,
@@ -84,6 +104,8 @@ class OrdersService {
               JSON_BUILD_OBJECT(
                 'collectionId', ${collection.id},
                 'itemId', ${item.id},
+                'releaseId', ${collection.releaseId},
+                'status', ${collection.status},
                 'title', ${item.title},
                 'image', ${item.image},
                 'price', ${collection.price}::text,
@@ -95,6 +117,10 @@ class OrdersService {
                 'collectionDate', ${collection.collectionDate},
                 'shippingMethod', ${collection.shippingMethod},
                 'releaseDate', ${item_release.date},
+                'releaseType', ${item_release.type},
+                'releasePrice', ${item_release.price}::text,
+                'releasePriceCurrency', ${item_release.priceCurrency},
+                'releaseBarcode', ${item_release.barcode},
                 'condition', ${collection.condition}
               )
               ORDER BY ${item.title}
@@ -105,10 +131,7 @@ class OrdersService {
         totalCount: sql<number>`COUNT(*) OVER()`,
       })
       .from(order)
-      .leftJoin(
-        collection,
-        and(eq(order.id, collection.orderId), eq(collection.status, "Ordered"))
-      )
+      .leftJoin(collection, eq(order.id, collection.orderId))
       .leftJoin(item, eq(collection.itemId, item.id))
       .leftJoin(item_release, eq(collection.releaseId, item_release.id))
       .where(whereConditions)
@@ -122,7 +145,7 @@ class OrdersService {
         order.paymentDate,
         order.shippingDate,
         order.collectionDate,
-        order.orderStatus,
+        order.status,
         order.shippingFee,
         order.taxes,
         order.duties,
@@ -153,7 +176,7 @@ class OrdersService {
         shippingDate: order.shippingDate,
         collectionDate: order.collectionDate,
         shippingMethod: order.shippingMethod,
-        orderStatus: order.orderStatus,
+        status: order.status,
         total: sql<string>`COALESCE(SUM(${collection.price}::numeric), 0) + COALESCE(${order.shippingFee}::numeric, 0) + COALESCE(${order.taxes}::numeric, 0) + COALESCE(${order.duties}::numeric, 0) + COALESCE(${order.tariffs}::numeric, 0) + COALESCE(${order.miscFees}::numeric, 0)`,
         shippingFee: order.shippingFee,
         taxes: order.taxes,
@@ -170,6 +193,8 @@ class OrdersService {
               JSON_BUILD_OBJECT(
                 'collectionId', ${collection.id},
                 'itemId', ${item.id},
+                'releaseId', ${collection.releaseId},
+                'status', ${collection.status},
                 'title', ${item.title},
                 'image', ${item.image},
                 'price', ${collection.price}::text,
@@ -181,6 +206,10 @@ class OrdersService {
                 'collectionDate', ${collection.collectionDate},
                 'shippingMethod', ${collection.shippingMethod},
                 'releaseDate', ${item_release.date},
+                'releaseType', ${item_release.type},
+                'releasePrice', ${item_release.price}::text,
+                'releasePriceCurrency', ${item_release.priceCurrency},
+                'releaseBarcode', ${item_release.barcode},
                 'condition', ${collection.condition}
               )
               ORDER BY ${item.title}
@@ -222,14 +251,15 @@ class OrdersService {
         throw new Error("FAILED_TO_INSERT_NEW_ORDER");
       }
 
-      const cascadeProperties = cascadeOptions.length > 0 
-        ? Object.fromEntries(
-            cascadeOptions.map((option) => [
-              option,
-              newOrder[option as keyof typeof newOrder],
-            ])
-          )
-        : {};
+      const cascadeProperties =
+        cascadeOptions.length > 0
+          ? Object.fromEntries(
+              cascadeOptions.map((option) => [
+                option,
+                newOrder[option as keyof typeof newOrder],
+              ])
+            )
+          : {};
 
       const collectionUpdated = await tx
         .update(collection)
@@ -280,14 +310,15 @@ class OrdersService {
         throw new Error("FAILED_TO_INSERT_NEW_ORDER");
       }
 
-      const cascadeProperties = cascadeOptions.length > 0 
-        ? Object.fromEntries(
-            cascadeOptions.map((option) => [
-              option,
-              newOrder[option as keyof typeof newOrder],
-            ])
-          )
-        : {};
+      const cascadeProperties =
+        cascadeOptions.length > 0
+          ? Object.fromEntries(
+              cascadeOptions.map((option) => [
+                option,
+                newOrder[option as keyof typeof newOrder],
+              ])
+            )
+          : {};
 
       const collectionUpdated = await tx
         .update(collection)
@@ -357,57 +388,95 @@ class OrdersService {
     return updated;
   }
 
-  async deleteItemsFromOrder(
+  async updateOrderItem(
     userId: string,
     orderId: string,
-    itemIds: number[]
+    collectionId: string,
+    updatedItem: orderItemUpdateType
   ) {
+    const itemUpdated = await db
+      .update(collection)
+      .set(updatedItem)
+      .where(
+        and(
+          eq(collection.userId, userId),
+          eq(collection.orderId, orderId),
+          eq(collection.id, collectionId)
+        )
+      )
+      .returning();
+    if (!itemUpdated || itemUpdated.length === 0) {
+      throw new Error("ORDER_ITEM_NOT_FOUND");
+    }
+
+    return {};
+  }
+
+  async deleteOrders(userId: string, orderIds: string[]) {
+    const deleted = await db.transaction(async (tx) => {
+      await tx
+        .delete(collection)
+        .where(
+          and(
+            eq(collection.userId, userId),
+            inArray(collection.orderId, orderIds),
+            ne(collection.status, "Owned")
+          )
+        );
+
+      const deletedOrders = await tx
+        .delete(order)
+        .where(and(eq(order.userId, userId), inArray(order.id, orderIds)))
+        .returning();
+
+      if (!deletedOrders || deletedOrders.length === 0) {
+        throw new Error("ORDERS_NOT_FOUND");
+      }
+
+      return {};
+    });
+
+    return deleted;
+  }
+
+  async deleteOrderItem(userId: string, orderId: string, collectionId: string) {
     const deleted = await db
       .delete(collection)
       .where(
         and(
           eq(collection.userId, userId),
           eq(collection.orderId, orderId),
-          inArray(collection.itemId, itemIds)
+          eq(collection.id, collectionId),
+          ne(collection.status, "Owned")
         )
-      );
+      )
+      .returning();
 
     if (!deleted || deleted.length === 0) {
-      throw new Error("ORDER_ITEMS_NOT_FOUND");
+      throw new Error("ORDER_ITEM_NOT_FOUND");
     }
 
-    return deleted[0];
+    return {};
   }
 
-  async deleteOrders(userId: string, orderIds: string[]) {
-    const deleted = await db.transaction(async (tx) => {
-      // Only cascade delete collection items with "Ordered" status
-      const deletedCollectionItems = await tx
-        .delete(collection)
-        .where(
-          and(
-            eq(collection.userId, userId),
-            inArray(collection.orderId, orderIds),
-            eq(collection.status, "Ordered")
-          )
-        );
+  async getOrderIdsAndTitles(userId: string, offset: number, title?: string) {
+    const orderIdsAndTitles = await db
+      .select({ id: order.id, title: order.title })
+      .from(order)
+      .where(
+        and(
+          eq(order.userId, userId),
+          title ? ilike(order.title, `%${title}%`) : undefined
+        )
+      )
+      .limit(10)
+      .offset(offset);
 
-      if (!deletedCollectionItems || deletedCollectionItems.length === 0) {
-        throw new Error("ORDERS_ITEMS_NOT_FOUND");
-      }
+    if (!orderIdsAndTitles || orderIdsAndTitles.length === 0) {
+      throw new Error("ORDERS_NOT_FOUND");
+    }
 
-      const deletedOrders = await tx
-        .delete(order)
-        .where(and(eq(order.userId, userId), inArray(order.id, orderIds)));
-
-      if (!deletedOrders || deletedOrders.length === 0) {
-        throw new Error("ORDERS_NOT_FOUND");
-      }
-
-      return { deletedCollectionItems, deletedOrders };
-    });
-
-    return deleted;
+    return orderIdsAndTitles;
   }
 }
 

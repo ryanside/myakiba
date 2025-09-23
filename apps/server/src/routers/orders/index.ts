@@ -3,7 +3,11 @@ import type { Variables } from "../..";
 import OrdersService from "./service";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
-import { orderInsertSchema, orderUpdateSchema } from "./model";
+import {
+  orderInsertSchema,
+  orderItemUpdateSchema,
+  orderUpdateSchema,
+} from "./model";
 import { tryCatch } from "@/lib/utils";
 
 const ordersRouter = new Hono<{ Variables: Variables }>()
@@ -226,18 +230,73 @@ const ordersRouter = new Hono<{ Variables: Variables }>()
     }
   )
   .put(
+    "/:orderId/items/:collectionId",
+    zValidator(
+      "param",
+      z.object({ orderId: z.string(), collectionId: z.string() }),
+      (result, c) => {
+        if (!result.success) {
+          return c.text("Invalid request param!", 400);
+        }
+      }
+    ),
+
+    zValidator(
+      "json",
+      z.object({
+        item: orderItemUpdateSchema,
+      }),
+      (result, c) => {
+        if (!result.success) {
+          return c.text("Invalid request!", 400);
+        }
+      }
+    ),
+    async (c) => {
+      const user = c.get("user");
+      if (!user) return c.text("Unauthorized", 401);
+
+      const validatedJSON = c.req.valid("json");
+      const validatedParam = c.req.valid("param");
+
+      const { error } = await tryCatch(
+        OrdersService.updateOrderItem(
+          user.id,
+          validatedParam.orderId,
+          validatedParam.collectionId,
+          validatedJSON.item
+        )
+      );
+
+      if (error) {
+        if (error.message === "ORDER_ITEM_NOT_FOUND") {
+          return c.text("Order item not found", 404);
+        }
+      }
+
+      return c.text("Order item updated successfully");
+    }
+  )
+  .put(
     "/:orderId",
     zValidator("param", z.object({ orderId: z.string() }), (result, c) => {
       if (!result.success) {
         return c.text("Invalid order id!", 400);
       }
     }),
-    zValidator("json", z.object({ order: orderUpdateSchema, cascadeOptions: z.array(z.string()) }), (result, c) => {
-      if (!result.success) {
-        console.log(result.error);
-        return c.text("Invalid request!", 400);
+    zValidator(
+      "json",
+      z.object({
+        order: orderUpdateSchema,
+        cascadeOptions: z.array(z.string()),
+      }),
+      (result, c) => {
+        if (!result.success) {
+          console.log(result.error);
+          return c.text("Invalid request!", 400);
+        }
       }
-    }),
+    ),
     async (c) => {
       const user = c.get("user");
       if (!user) return c.text("Unauthorized", 401);
@@ -272,50 +331,7 @@ const ordersRouter = new Hono<{ Variables: Variables }>()
       return c.text("Order updated successfully");
     }
   )
-  .delete(
-    "/:orderId",
-    zValidator("param", z.object({ orderId: z.string() }), (result, c) => {
-      if (!result.success) {
-        return c.text("Invalid order id!", 400);
-      }
-    }),
-    zValidator("json", z.object({ ids: z.array(z.number()) }), (result, c) => {
-      if (!result.success) {
-        return c.text("Invalid request!", 400);
-      }
-    }),
-    async (c) => {
-      const user = c.get("user");
-      if (!user) return c.text("Unauthorized", 401);
 
-      const validatedParam = c.req.valid("param");
-      const validatedJSON = c.req.valid("json");
-
-      const { data: deleted, error } = await tryCatch(
-        OrdersService.deleteItemsFromOrder(
-          user.id,
-          validatedParam.orderId,
-          validatedJSON.ids
-        )
-      );
-
-      if (error) {
-        if (error.message === "ORDER_ITEMS_NOT_FOUND") {
-          return c.text("Order items not found", 404);
-        }
-
-        console.error("Error deleting items from order:", error, {
-          userId: user.id,
-          orderId: validatedParam.orderId,
-          ids: validatedJSON.ids,
-        });
-
-        return c.text("Failed to delete items from order", 500);
-      }
-
-      return c.json({ deleted });
-    }
-  )
   .delete(
     "/",
     zValidator(
@@ -333,7 +349,7 @@ const ordersRouter = new Hono<{ Variables: Variables }>()
 
       const validatedJSON = c.req.valid("json");
 
-      const { data: deleted, error } = await tryCatch(
+      const { error } = await tryCatch(
         OrdersService.deleteOrders(user.id, validatedJSON.orderIds)
       );
 
@@ -354,7 +370,83 @@ const ordersRouter = new Hono<{ Variables: Variables }>()
         return c.text("Failed to delete orders", 500);
       }
 
-      return c.json({ deleted });
+      return c.text("Orders deleted successfully");
+    }
+  )
+  .delete(
+    "/:orderId/items/:collectionId",
+    zValidator(
+      "param",
+      z.object({ orderId: z.string(), collectionId: z.string() }),
+      (result, c) => {
+        if (!result.success) {
+          return c.text("Invalid order id!", 400);
+        }
+      }
+    ),
+    async (c) => {
+      const user = c.get("user");
+      if (!user) return c.text("Unauthorized", 401);
+
+      const validatedParam = c.req.valid("param");
+
+      const { error } = await tryCatch(
+        OrdersService.deleteOrderItem(
+          user.id,
+          validatedParam.orderId,
+          validatedParam.collectionId
+        )
+      );
+
+      if (error) {
+        if (error.message === "ORDER_ITEM_NOT_FOUND") {
+          return c.text("Order item not found", 404);
+        }
+
+        console.error("Error deleting order item:", error, {
+          userId: user.id,
+          orderId: validatedParam.orderId,
+          collectionId: validatedParam.collectionId,
+        });
+
+        return c.text("Failed to delete order item", 500);
+      }
+
+      return c.text("Order item deleted successfully");
+    }
+  )
+  .get(
+    "/ids-and-titles",
+    zValidator(
+      "query",
+      z.object({ offset: z.coerce.number(), title: z.string().optional() }),
+      (result, c) => {
+        if (!result.success) {
+          return c.text("Invalid request!", 400);
+        }
+      }
+    ),
+    async (c) => {
+      const user = c.get("user");
+      if (!user) return c.text("Unauthorized", 401);
+
+      const validatedQuery = c.req.valid("query");
+
+      const { data: result, error } = await tryCatch(
+        OrdersService.getOrderIdsAndTitles(
+          user.id,
+          validatedQuery.offset,
+          validatedQuery.title
+        )
+      );
+
+      if (error) {
+        if (error.message === "ORDERS_NOT_FOUND") {
+          return c.text("Orders not found", 404);
+        }
+      }
+
+      return c.json({ orderIdsAndTitles: result });
     }
   );
 

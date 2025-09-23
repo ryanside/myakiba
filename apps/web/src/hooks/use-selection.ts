@@ -6,7 +6,7 @@ export function useSelection() {
   const [itemSelection, setItemSelection] = useState<RowSelectionState>({});
 
   const getSelectedOrderIds = useMemo(
-    () => Object.keys(rowSelection),
+    () => new Set(Object.keys(rowSelection)),
     [rowSelection]
   );
 

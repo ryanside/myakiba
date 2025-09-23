@@ -76,24 +76,45 @@ export const collection = pgTable("collection", {
   orderId: text("order_id").references(() => order.id, {
     onDelete: "set null",
   }),
-  status: text("status").notNull().default("Owned"),
+  status: text("status", {
+    enum: ["Owned", "Ordered", "Paid", "Shipped", "Sold"],
+  })
+    .notNull()
+    .default("Owned"),
   count: integer("count").default(1),
   releaseId: uuid("release_id").references(() => item_release.id, {
     onDelete: "set null",
   }),
   score: decimal("score", { precision: 3, scale: 1 }),
-  price: decimal("price", { scale: 2 }).default("0.00"),
-  shop: text("shop"),
+  price: decimal("price", { scale: 2 }).default("0.00").notNull(),
+  shop: text("shop").default(""),
   orderDate: date("order_date"),
   paymentDate: date("payment_date"),
   shippingDate: date("shipping_date"),
   collectionDate: date("collection_date"),
-  shippingMethod: text("shipping_method"),
+  shippingMethod: text("shipping_method", {
+    enum: [
+      "n/a",
+      "EMS",
+      "SAL",
+      "AIRMAIL",
+      "SURFACE",
+      "FEDEX",
+      "DHL",
+      "Colissimo",
+      "UPS",
+      "Domestic",
+    ],
+  })
+    .default("n/a")
+    .notNull(),
   soldFor: decimal("sold_for", { scale: 2 }),
   soldDate: date("sold_date"),
-  tags: text("tags").array(),
-  condition: text("condition"),
-  notes: text("notes"),
+  tags: text("tags").array().default([]),
+  condition: text("condition", {
+    enum: ["New", "Pre-Owned"],
+  }),
+  notes: text("notes").default(""),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -106,20 +127,39 @@ export const order = pgTable("order", {
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
-  shop: text("shop"),
+  shop: text("shop").default(""),
   orderDate: date("order_date"),
   releaseMonthYear: date("release_month_year"),
   paymentDate: date("payment_date"),
   shippingDate: date("shipping_date"),
   collectionDate: date("collection_date"),
-  shippingMethod: text("shipping_method"),
-  total: decimal("total", { scale: 2 }),
-  shippingFee: decimal("shipping_fee", { scale: 2 }).default("0.00"),
-  taxes: decimal("taxes", { scale: 2 }).default("0.00"),
-  duties: decimal("duties", { scale: 2 }).default("0.00"),
-  tariffs: decimal("tariffs", { scale: 2 }).default("0.00"),
-  miscFees: decimal("misc_fees", { scale: 2 }).default("0.00"),
-  notes: text("notes"),
+  shippingMethod: text("shipping_method", {
+    enum: [
+      "n/a",
+      "EMS",
+      "SAL",
+      "AIRMAIL",
+      "SURFACE",
+      "FEDEX",
+      "DHL",
+      "Colissimo",
+      "UPS",
+      "Domestic",
+    ],
+  })
+    .default("n/a")
+    .notNull(),
+  status: text("status", {
+    enum: ["Ordered", "Paid", "Shipped", "Owned"],
+  })
+    .default("Ordered")
+    .notNull(),
+  shippingFee: decimal("shipping_fee", { scale: 2 }).default("0.00").notNull(),
+  taxes: decimal("taxes", { scale: 2 }).default("0.00").notNull(),
+  duties: decimal("duties", { scale: 2 }).default("0.00").notNull(),
+  tariffs: decimal("tariffs", { scale: 2 }).default("0.00").notNull(),
+  miscFees: decimal("misc_fees", { scale: 2 }).default("0.00").notNull(),
+  notes: text("notes").default(""),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

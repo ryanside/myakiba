@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge, badgeVariants } from "@/components/ui/badge";
+import { type VariantProps } from "class-variance-authority";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -29,17 +31,47 @@ import {
 import { Package, MoreHorizontal, Copy, Eye, Edit, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import type { OrderItem } from "@/lib/types";
+import { toast } from "sonner";
+import { Dialog, DialogTrigger } from "../ui/dialog";
+import ItemForm from "./item-form";
+
+function getItemStatusVariant(
+  status: string
+): VariantProps<typeof badgeVariants>["variant"] {
+  switch (status.toLowerCase()) {
+    case "owned":
+      return "success";
+    case "shipped":
+      return "primary";
+    case "paid":
+      return "warning";
+    case "ordered":
+      return "info";
+    case "sold":
+      return "destructive";
+    default:
+      return "outline";
+  }
+}
 
 export function OrderItemsSubTable({
   items,
   orderId,
   itemSelection,
   setItemSelection,
+  onEditItem,
+  onDeleteItem,
 }: {
   items: OrderItem[];
   orderId: string;
   itemSelection: RowSelectionState;
   setItemSelection: OnChangeFn<RowSelectionState>;
+  onEditItem: (
+    orderId: string,
+    itemId: string,
+    values: OrderItem
+  ) => Promise<void>;
+  onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
 }) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
@@ -101,20 +133,14 @@ export function OrderItemsSubTable({
               )}
               <div className="space-y-px">
                 <div className="font-medium text-foreground">{item.title}</div>
-                <Button
-                  className="text-xs text-muted-foreground"
-                  mode="link"
-                  size="sm"
-                  variant="ghost"
+                <a
+                  href={`https://myfigurecollection.net/item/${item.itemId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline"
                 >
-                  <a
-                    href={`https://myfigurecollection.net/item/${item.itemId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    https://myfigurecollection.net/item/{item.itemId}
-                  </a>
-                </Button>
+                  https://myfigurecollection.net/item/{item.itemId}
+                </a>
               </div>
             </div>
           );
@@ -150,6 +176,22 @@ export function OrderItemsSubTable({
         size: 30,
       },
       {
+        accessorKey: "status",
+        header: ({ column }) => (
+          <DataGridColumnHeader title="Status" column={column} />
+        ),
+        cell: ({ row }) => {
+          const status = row.original.status;
+          return (
+            <Badge variant={getItemStatusVariant(status)} appearance="outline">
+              {status}
+            </Badge>
+          );
+        },
+        enableSorting: true,
+        size: 30,
+      },
+      {
         accessorKey: "price",
         header: ({ column }) => (
           <DataGridColumnHeader title="Price" column={column} />
@@ -174,26 +216,35 @@ export function OrderItemsSubTable({
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                 <DropdownMenuItem
-                  onClick={() =>
-                    navigator.clipboard.writeText(item.itemId.toString())
-                  }
+                  onClick={() => {
+                    navigator.clipboard.writeText(item.itemId.toString());
+                    toast.success("Copied MFC item ID to clipboard");
+                  }}
                 >
                   <Copy className="mr-2 h-4 w-4" />
                   Copy MFC item ID
                 </DropdownMenuItem>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      Edit item
+                    </DropdownMenuItem>
+                  </DialogTrigger>
+                  <ItemForm
+                    orderId={orderId}
+                    itemData={item}
+                    callbackFn={onEditItem}
+                  />
+                </Dialog>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <Eye className="mr-2 h-4 w-4" />
-                  View details
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit item
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive">
+                <DropdownMenuItem
+                  variant="destructive"
+                  onSelect={(e) => e.preventDefault()}
+                  onClick={() => onDeleteItem(orderId, item.collectionId)}
+                >
                   <Trash2 className="mr-2 h-4 w-4" />
-                  Delete order
+                  Delete item
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

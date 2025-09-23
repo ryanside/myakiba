@@ -6,7 +6,7 @@ import {
   order,
   budget,
 } from "@/db/schema/figure";
-import { eq, count, and, sum, asc, sql, desc } from "drizzle-orm";
+import { eq, count, and, sum, asc, sql, desc, ne } from "drizzle-orm";
 
 class DashboardService {
   async getDashboard(userId: string) {
@@ -87,11 +87,10 @@ class DashboardService {
           collection,
           and(
             eq(order.id, collection.orderId),
-            eq(collection.status, "Ordered")
           )
         )
         .leftJoin(item, eq(collection.itemId, item.id))
-        .where(and(eq(order.userId, userId)))
+        .where(and(eq(order.userId, userId), ne(order.status, "Owned")))
         .groupBy(order.id, order.title, order.shop, order.releaseMonthYear)
         .orderBy(asc(order.releaseMonthYear))
         .limit(6),
@@ -178,7 +177,7 @@ class DashboardService {
           and(
             eq(collection.itemId, item.id),
             eq(collection.userId, userId),
-            eq(collection.status, "Ordered")
+            ne(collection.status, "Owned")
           )
         )
         .where(

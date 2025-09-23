@@ -12,6 +12,7 @@ import galleryRouter from "./routers/gallery";
 import ordersRouter from "./routers/orders";
 import managerRouter from "./routers/manager";
 import wrappedRouter from "./routers/wrapped";
+import itemsRouter from "./routers/items";
 
 const app = new Hono<{
   Variables: Variables;
@@ -28,7 +29,11 @@ app.use(
   })
 );
 
-app.use(csrf());
+app.use(
+  csrf({
+    origin: process.env.CORS_ORIGIN || "",
+  })
+);
 
 app.use("*", async (c, next) => {
   const session = await auth.api.getSession({ headers: c.req.raw.headers });
@@ -54,7 +59,8 @@ const routes = app
   .route("/gallery", galleryRouter)
   .route("/orders", ordersRouter)
   .route("/manager", managerRouter)
-  .route("/wrapped", wrappedRouter);
+  .route("/wrapped", wrappedRouter)
+  .route("/items", itemsRouter);
 
 app.get("*", serveStatic({ root: "./dist" }));
 app.get("*", serveStatic({ path: "./dist/index.html" }));
