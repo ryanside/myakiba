@@ -85,6 +85,36 @@ const ordersRouter = new Hono<{ Variables: Variables }>()
     }
   )
   .get(
+    "/ids-and-titles",
+    zValidator(
+      "query",
+      z.object({ title: z.string().optional() }),
+      (result, c) => {
+        if (!result.success) {
+          return c.text("Invalid request!", 400);
+        }
+      }
+    ),
+    async (c) => {
+      const user = c.get("user");
+      if (!user) return c.text("Unauthorized", 401);
+
+      const validatedQuery = c.req.valid("query");
+
+      const { data: result, error } = await tryCatch(
+        OrdersService.getOrderIdsAndTitles(user.id, validatedQuery.title)
+      );
+
+      if (error) {
+        if (error.message === "FAILED_TO_GET_ORDER_IDS_AND_TITLES") {
+          return c.text("Failed to get order ids and titles", 500);
+        }
+      }
+
+      return c.json({ orderIdsAndTitles: result });
+    }
+  )
+  .get(
     "/:orderId",
     zValidator("param", z.object({ orderId: z.string() }), (result, c) => {
       if (!result.success) {
@@ -278,6 +308,45 @@ const ordersRouter = new Hono<{ Variables: Variables }>()
     }
   )
   .put(
+    "/move-items",
+    zValidator(
+      "json",
+      z.object({
+        targetOrderId: z.string(),
+        collectionIds: z.array(z.string()),
+        orderIds: z.array(z.string()),
+      }),
+      (result, c) => {
+        if (!result.success) {
+          return c.text("Invalid request!", 400);
+        }
+      }
+    ),
+    async (c) => {
+      const user = c.get("user");
+      if (!user) return c.text("Unauthorized", 401);
+
+      const validatedJSON = c.req.valid("json");
+
+      const { error } = await tryCatch(
+        OrdersService.moveItems(
+          user.id,
+          validatedJSON.targetOrderId,
+          validatedJSON.collectionIds,
+          validatedJSON.orderIds
+        )
+      );
+
+      if (error) {
+        if (error.message === "FAILED_TO_MOVE_ITEMS") {
+          return c.text("Failed to move items", 500);
+        }
+      }
+
+      return c.text("Items moved successfully");
+    }
+  )
+  .put(
     "/:orderId",
     zValidator("param", z.object({ orderId: z.string() }), (result, c) => {
       if (!result.success) {
@@ -413,40 +482,6 @@ const ordersRouter = new Hono<{ Variables: Variables }>()
       }
 
       return c.text("Order item deleted successfully");
-    }
-  )
-  .get(
-    "/ids-and-titles",
-    zValidator(
-      "query",
-      z.object({ offset: z.coerce.number(), title: z.string().optional() }),
-      (result, c) => {
-        if (!result.success) {
-          return c.text("Invalid request!", 400);
-        }
-      }
-    ),
-    async (c) => {
-      const user = c.get("user");
-      if (!user) return c.text("Unauthorized", 401);
-
-      const validatedQuery = c.req.valid("query");
-
-      const { data: result, error } = await tryCatch(
-        OrdersService.getOrderIdsAndTitles(
-          user.id,
-          validatedQuery.offset,
-          validatedQuery.title
-        )
-      );
-
-      if (error) {
-        if (error.message === "ORDERS_NOT_FOUND") {
-          return c.text("Orders not found", 404);
-        }
-      }
-
-      return c.json({ orderIdsAndTitles: result });
     }
   );
 

@@ -23,6 +23,7 @@ import {
   createOptimisticDeleteUpdate,
   createOptimisticEditItemUpdate,
   createOptimisticDeleteItemUpdate,
+  createOptimisticMoveItemUpdate,
 } from "@/lib/utils";
 import {
   editOrder,
@@ -32,6 +33,7 @@ import {
   deleteOrders,
   editOrderItem,
   deleteOrderItem,
+  moveItem,
 } from "@/queries/orders";
 import { searchSchema } from "@/lib/validations";
 
@@ -52,7 +54,7 @@ function RouteComponent() {
     queryKey: ["orders", filters],
     queryFn: () => getOrders(filters),
     placeholderData: keepPreviousData,
-    staleTime: 1000 * 60 * 5, 
+    staleTime: 1000 * 60 * 5,
     retry: false,
   });
 
@@ -278,6 +280,49 @@ function RouteComponent() {
     },
   });
 
+  const moveItemMutation = useMutation({
+    mutationFn: ({
+      targetOrderId,
+      collectionIds,
+      orderIds,
+    }: {
+      targetOrderId: string;
+      collectionIds: Set<string>;
+      orderIds: Set<string>;
+    }) => moveItem(targetOrderId, collectionIds, orderIds),
+    onMutate: async ({ targetOrderId, collectionIds, orderIds }) => {
+      await queryClient.cancelQueries({ queryKey: ["orders", filters] });
+      const previousData = queryClient.getQueryData(["orders", filters]);
+      queryClient.setQueryData(
+        ["orders", filters],
+        (old: OrdersQueryResponse) => {
+          return createOptimisticMoveItemUpdate(
+            old,
+            targetOrderId,
+            collectionIds,
+            orderIds,
+            filters
+          );
+        }
+      );
+      return { previousData };
+    },
+    onError: (error, variables, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(["orders", filters], context.previousData);
+      }
+      toast.error("Failed to move items. Please try again.", {
+        description: `Error: ${error.message}`,
+      });
+    },
+    onSuccess: (data, variables) => {
+      toast.success(`Successfully moved items!`);
+    },
+    onSettled: (data, error) => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    },
+  });
+
   const handleMerge = async (
     values: NewOrder,
     cascadeOptions: CascadeOptions,
@@ -322,6 +367,14 @@ function RouteComponent() {
     deleteItemMutation.mutate({ orderId, itemId });
   };
 
+  const handleMoveItem = async (
+    targetOrderId: string,
+    collectionIds: Set<string>,
+    orderIds: Set<string>
+  ) => {
+    moveItemMutation.mutate({ targetOrderId, collectionIds, orderIds });
+  };
+
   if (isPending) {
     return <div>Loading...</div>;
   }
@@ -355,6 +408,7 @@ function RouteComponent() {
         onDeleteOrders={handleDeleteOrders}
         onEditItem={handleEditItem}
         onDeleteItem={handleDeleteItem}
+        onMoveItem={handleMoveItem}
       />
     </div>
   );

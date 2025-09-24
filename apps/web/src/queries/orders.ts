@@ -159,11 +159,10 @@ export async function getItemReleases(itemId: number) {
   return data;
 }
 
-export async function getOrderIdsAndTitles(offset: number, title?: string) {
+export async function getOrderIdsAndTitles(filters: { title?: string }) {
   const response = await client.api.orders["ids-and-titles"].$get({
     query: {
-      offset: offset.toString(),
-      title: title?.toString(),
+      title: filters.title?.toString(),
     },
   });
 
@@ -174,4 +173,23 @@ export async function getOrderIdsAndTitles(offset: number, title?: string) {
 
   const data = await response.json();
   return data;
+}
+
+export async function moveItem(
+  targetOrderId: string,
+  collectionIds: Set<string>,
+  orderIds: Set<string>
+) {
+  const response = await client.api.orders["move-items"].$put({
+    json: {
+      targetOrderId,
+      collectionIds: Array.from(collectionIds),
+      orderIds: Array.from(orderIds),
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || `HTTP ${response.status}`);
+  }
 }

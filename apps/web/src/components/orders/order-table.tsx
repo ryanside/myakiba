@@ -125,6 +125,11 @@ interface OrdersDataGridProps {
     values: OrderItem
   ) => Promise<void>;
   onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
+  onMoveItem: (
+    targetOrderId: string,
+    collectionIds: Set<string>,
+    orderIds: Set<string>
+  ) => Promise<void>;
 }
 
 export default function OrdersDataGrid({
@@ -142,6 +147,7 @@ export default function OrdersDataGrid({
   onDeleteOrders,
   onEditItem,
   onDeleteItem,
+  onMoveItem,
 }: OrdersDataGridProps) {
   const pagination = useMemo<PaginationState>(
     () => ({
@@ -599,12 +605,17 @@ export default function OrdersDataGrid({
         </Dialog>
         <Dialog>
           <DialogTrigger asChild>
-            <Button variant="outline" disabled={getSelectedOrderIds.size === 0}>
-              <Move className="w-4 h-4" />
+            <Button
+              variant="primary"
+              disabled={getSelectedItemData.collectionIds.size === 0}
+            >
+              <Move className="md:hidden" />
+              <span className="hidden md:block">Move Items</span>
             </Button>
           </DialogTrigger>
           <ItemMoveForm
             selectedItemData={getSelectedItemData}
+            callbackFn={onMoveItem}
             clearSelections={clearSelections}
           />
         </Dialog>

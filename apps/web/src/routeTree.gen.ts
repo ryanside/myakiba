@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TestRouteImport } from './routes/test'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as IndexRouteImport } from './routes/index'
@@ -23,11 +22,6 @@ import { Route as LayoutAnalyticsRouteImport } from './routes/_layout.analytics'
 import { Route as LayoutOrdersIdRouteImport } from './routes/_layout.orders.$id'
 import { Route as LayoutManagerIdRouteImport } from './routes/_layout.manager.$id'
 
-const TestRoute = TestRouteImport.update({
-  id: '/test',
-  path: '/test',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -91,7 +85,6 @@ const LayoutManagerIdRoute = LayoutManagerIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/test': typeof TestRoute
   '/analytics': typeof LayoutAnalyticsRoute
   '/dashboard': typeof LayoutDashboardRoute
   '/gallery': typeof LayoutGalleryRoute
@@ -105,7 +98,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/test': typeof TestRoute
   '/analytics': typeof LayoutAnalyticsRoute
   '/dashboard': typeof LayoutDashboardRoute
   '/gallery': typeof LayoutGalleryRoute
@@ -121,7 +113,6 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_layout': typeof LayoutRouteWithChildren
   '/login': typeof LoginRoute
-  '/test': typeof TestRoute
   '/_layout/analytics': typeof LayoutAnalyticsRoute
   '/_layout/dashboard': typeof LayoutDashboardRoute
   '/_layout/gallery': typeof LayoutGalleryRoute
@@ -137,7 +128,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
-    | '/test'
     | '/analytics'
     | '/dashboard'
     | '/gallery'
@@ -151,7 +141,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
-    | '/test'
     | '/analytics'
     | '/dashboard'
     | '/gallery'
@@ -166,7 +155,6 @@ export interface FileRouteTypes {
     | '/'
     | '/_layout'
     | '/login'
-    | '/test'
     | '/_layout/analytics'
     | '/_layout/dashboard'
     | '/_layout/gallery'
@@ -182,18 +170,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LayoutRoute: typeof LayoutRouteWithChildren
   LoginRoute: typeof LoginRoute
-  TestRoute: typeof TestRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/test': {
-      id: '/test'
-      path: '/test'
-      fullPath: '/test'
-      preLoaderRoute: typeof TestRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -332,7 +312,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LayoutRoute: LayoutRouteWithChildren,
   LoginRoute: LoginRoute,
-  TestRoute: TestRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -528,3 +528,131 @@ export function createOptimisticDeleteItemUpdate(
     ),
   };
 }
+
+export function createOptimisticMoveItemUpdate(
+  old: OrdersQueryResponse,
+  targetOrderId: string,
+  collectionIds: Set<string>,
+  orderIds: Set<string>,
+  filters: Filters
+): OrdersQueryResponse {
+  if (!old) return old;
+
+  // Find the target order
+  const targetOrder = old.orders.find(
+    (order: Order) => order.orderId === targetOrderId
+  );
+  if (!targetOrder) return old;
+
+  // Find source orders that contain items to move
+  const sourceOrders = old.orders.filter((order: Order) =>
+    orderIds.has(order.orderId)
+  );
+
+  if (!sourceOrders.length) return old;
+
+  // Extract items to move from source orders
+  const itemsToMove = sourceOrders.flatMap((order: Order) =>
+    order.items.filter((item: OrderItem) =>
+      collectionIds.has(item.collectionId)
+    )
+  );
+
+  if (!itemsToMove.length) return old;
+
+  // Calculate total value of items being moved
+  const movedItemsTotal = itemsToMove.reduce((sum: number, item: OrderItem) => {
+    return sum + parseFloat(item.price);
+  }, 0);
+
+  // Calculate target order's additional fees
+  const targetAdditionalFees =
+    parseFloat(targetOrder.shippingFee) +
+    parseFloat(targetOrder.taxes) +
+    parseFloat(targetOrder.duties) +
+    parseFloat(targetOrder.tariffs) +
+    parseFloat(targetOrder.miscFees);
+
+  // Calculate target order's current items total
+  const targetItemsTotal = targetOrder.items.reduce(
+    (sum: number, item: OrderItem) => {
+      return sum + parseFloat(item.price);
+    },
+    0
+  );
+
+  // Update target order with moved items
+  const updatedTargetOrder = {
+    ...targetOrder,
+    items: [...targetOrder.items, ...itemsToMove],
+    itemCount: targetOrder.items.length + itemsToMove.length,
+    total: (targetItemsTotal + movedItemsTotal + targetAdditionalFees).toFixed(
+      2
+    ),
+  };
+
+  // Update source orders by removing moved items
+  const updatedSourceOrders = sourceOrders.map((order: Order) => {
+    const remainingItems = order.items.filter(
+      (item: OrderItem) => !collectionIds.has(item.collectionId)
+    );
+
+    // Calculate items that were moved from this specific order
+    const orderMovedItems = order.items.filter((item: OrderItem) =>
+      collectionIds.has(item.collectionId)
+    );
+
+    const orderMovedItemsTotal = orderMovedItems.reduce(
+      (sum: number, item: OrderItem) => {
+        return sum + parseFloat(item.price);
+      },
+      0
+    );
+
+    // Calculate this order's additional fees
+    const orderAdditionalFees =
+      parseFloat(order.shippingFee) +
+      parseFloat(order.taxes) +
+      parseFloat(order.duties) +
+      parseFloat(order.tariffs) +
+      parseFloat(order.miscFees);
+
+    const remainingItemsTotal = remainingItems.reduce(
+      (sum: number, item: OrderItem) => {
+        return sum + parseFloat(item.price);
+      },
+      0
+    );
+
+    return {
+      ...order,
+      items: remainingItems,
+      itemCount: remainingItems.length,
+      total: (remainingItemsTotal + orderAdditionalFees).toFixed(2),
+    };
+  });
+
+  // Get orders that weren't affected
+  const unaffectedOrders = old.orders.filter(
+    (order: Order) =>
+      !orderIds.has(order.orderId) && order.orderId !== targetOrderId
+  );
+
+  // Combine all orders
+  const allOrders = [
+    updatedTargetOrder,
+    ...updatedSourceOrders,
+    ...unaffectedOrders,
+  ];
+
+  const filteredAndSortedOrders = filterAndSortOrders(allOrders, {
+    search: filters.search,
+    sort: filters.sort,
+    order: filters.order,
+  });
+
+  return {
+    ...old,
+    orders: filteredAndSortedOrders,
+  };
+}

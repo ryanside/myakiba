@@ -255,7 +255,7 @@ export default function ItemForm(props: ItemFormProps) {
                     )}
                     {releasesError && (
                       <div className="py-2 px-3 text-sm text-red-500">
-                        Error loading releases
+                        {releasesError.message}
                       </div>
                     )}
                     {releasesData?.releases.map((release) => (

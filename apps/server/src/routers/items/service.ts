@@ -3,7 +3,9 @@ import { item_release } from "@/db/schema/figure";
 import { eq } from "drizzle-orm";
 import type { ItemReleasesResponse } from "./model";
 
-export async function getItemReleases(itemId: number): Promise<ItemReleasesResponse> {
+export async function getItemReleases(
+  itemId: number
+): Promise<ItemReleasesResponse> {
   const releases = await db
     .select({
       id: item_release.id,
@@ -19,7 +21,7 @@ export async function getItemReleases(itemId: number): Promise<ItemReleasesRespo
     .orderBy(item_release.date);
 
   if (!releases) {
-    throw new Error("ITEM_RELEASES_NOT_FOUND");
+    throw new Error("FAILED_TO_GET_ITEM_RELEASES");
   }
 
   return {

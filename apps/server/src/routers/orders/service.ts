@@ -217,7 +217,6 @@ class OrdersService {
             '[]'::json
           )
         `,
-        totalCount: sql<number>`COUNT(*) OVER()`,
       })
       .from(order)
       .leftJoin(collection, eq(order.id, collection.orderId))
@@ -459,7 +458,7 @@ class OrdersService {
     return {};
   }
 
-  async getOrderIdsAndTitles(userId: string, offset: number, title?: string) {
+  async getOrderIdsAndTitles(userId: string, title?: string) {
     const orderIdsAndTitles = await db
       .select({ id: order.id, title: order.title })
       .from(order)
@@ -469,14 +468,38 @@ class OrdersService {
           title ? ilike(order.title, `%${title}%`) : undefined
         )
       )
-      .limit(10)
-      .offset(offset);
+      .groupBy(order.id, order.title);
 
-    if (!orderIdsAndTitles || orderIdsAndTitles.length === 0) {
-      throw new Error("ORDERS_NOT_FOUND");
+    if (!orderIdsAndTitles) {
+      throw new Error("FAILED_TO_GET_ORDER_IDS_AND_TITLES");
     }
 
     return orderIdsAndTitles;
+  }
+
+  async moveItems(
+    userId: string,
+    targetOrderId: string,
+    collectionIds: string[],
+    orderIds: string[]
+  ) {
+    const moved = await db
+      .update(collection)
+      .set({ orderId: targetOrderId })
+      .where(
+        and(
+          eq(collection.userId, userId),
+          inArray(collection.id, collectionIds),
+          inArray(collection.orderId, orderIds)
+        )
+      )
+      .returning();
+
+    if (!moved || moved.length === 0) {
+      throw new Error("FAILED_TO_MOVE_ITEMS");
+    }
+
+    return {};
   }
 }
 

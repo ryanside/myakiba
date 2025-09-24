@@ -19,12 +19,14 @@ const itemsRouter = new Hono<{ Variables: Variables }>().get(
     const { data: releases, error } = await tryCatch(getItemReleases(itemId));
 
     if (error) {
-      if (error.message === "ITEM_RELEASES_NOT_FOUND") {
-        return c.text("No item releases found", 404);
+      if (error.message === "FAILED_TO_GET_ITEM_RELEASES") {
+        return c.text("Failed to get item releases", 500);
       }
 
-      console.error("Error fetching item releases:", error);
-      return c.text("Failed to fetch item releases", 500);
+      console.error("Error fetching item releases:", error, {
+        itemId,
+      });
+      return c.text("Failed to get item releases", 500);
     }
 
     return c.json(releases);
