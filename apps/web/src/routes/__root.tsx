@@ -8,7 +8,7 @@ import {
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import "../index.css";
 
-export interface RouterAppContext {}
+export interface RouterAppContext {} // eslint-disable-line @typescript-eslint/no-empty-object-type
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
   component: RootComponent,
@@ -41,7 +41,7 @@ function RootComponent() {
         disableTransitionOnChange
         storageKey="vite-ui-theme"
       >
-        <div className="grid grid-rows-[auto_1fr] min-h-dvh">
+        <div className="grid grid-rows-[auto_1fr] h-screen w-screen">
           <Outlet />
         </div>
         <Toaster richColors />

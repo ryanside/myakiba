@@ -92,7 +92,7 @@ class AnalyticsService {
       .where(and(eq(collection.userId, userId), not(eq(collection.shop, ""))))
       .groupBy(collection.shop)
       .orderBy(desc(count()))
-      .limit(5);
+      .limit(10);
 
     const getMonthlyBreakdown = dbHttp
       .select({
@@ -121,17 +121,14 @@ class AnalyticsService {
       .where(and(eq(collection.userId, userId), eq(collection.status, "Owned")))
       .groupBy(item.category);
 
-      const getTotalOwned = dbHttp
+    const getTotalOwned = dbHttp
       .select({
         count: count(),
       })
       .from(collection)
       .where(
-        and(
-          eq(collection.userId, userId),
-          eq(collection.status, "Owned"),
-        )
-      )
+        and(eq(collection.userId, userId), eq(collection.status, "Owned"))
+      );
 
     const [
       priceRangeDistribution,
@@ -140,7 +137,7 @@ class AnalyticsService {
       topShops,
       monthlyBreakdown,
       categoriesOwned,
-      totalOwned
+      totalOwned,
     ] = await dbHttp.batch([
       getPriceRangeDistribution,
       getScaleDistribution,
@@ -148,7 +145,7 @@ class AnalyticsService {
       getTopShops,
       getMonthlyBreakdown,
       getCategoriesOwned,
-      getTotalOwned
+      getTotalOwned,
     ]);
 
     return {
@@ -163,49 +160,57 @@ class AnalyticsService {
   }
 
   async getEntryAnalytics(userId: string, entryCategory: string) {
-    const entryAnalytics = await dbHttp.batch([
-      dbHttp
-        .select({
-          originName: entry.name,
-          itemCount: count(),
-        })
-        .from(collection)
-        .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
-        .innerJoin(entry, eq(entry_to_item.entryId, entry.id))
-        .where(
-          and(
-            eq(collection.userId, userId),
-            eq(collection.status, "Owned"),
-            eq(entry.category, entryCategory)
+    const [topEntriesCountByCategory, topEntriesAveragePriceByCategory] =
+      await dbHttp.batch([
+        dbHttp
+          .select({
+            originName: entry.name,
+            itemCount: count(),
+          })
+          .from(collection)
+          .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
+          .innerJoin(entry, eq(entry_to_item.entryId, entry.id))
+          .where(
+            and(
+              eq(collection.userId, userId),
+              eq(collection.status, "Owned"),
+              eq(entry.category, entryCategory)
+            )
           )
-        )
-        .groupBy(entry.id, entry.name)        .orderBy(sql`COUNT(*) DESC`)
-        .limit(10),
+          .groupBy(entry.id, entry.name)
+          .orderBy(sql`COUNT(*) DESC`)
+          .limit(10),
 
-      dbHttp
-        .select({
-          category: entry.category,
-          entryName: entry.name,
-          averagePrice: avg(item_release.price),
-        })
-        .from(collection)
-        .innerJoin(item_release, eq(collection.releaseId, item_release.id))
-        .innerJoin(entry_to_item, eq(item_release.itemId, entry_to_item.itemId))
-        .innerJoin(entry, eq(entry_to_item.entryId, entry.id))
-        .where(
-          and(
-            eq(collection.userId, userId),
-            eq(collection.status, "Owned"),
-            eq(item_release.priceCurrency, "JPY"),
-            eq(entry.category, entryCategory)
+        dbHttp
+          .select({
+            category: entry.category,
+            entryName: entry.name,
+            averagePrice: avg(item_release.price),
+          })
+          .from(collection)
+          .innerJoin(item_release, eq(collection.releaseId, item_release.id))
+          .innerJoin(
+            entry_to_item,
+            eq(item_release.itemId, entry_to_item.itemId)
           )
-        )
-        .groupBy(entry.id, entry.name)
-        .orderBy(desc(avg(item_release.price)))
-        .limit(5),
-    ]);
+          .innerJoin(entry, eq(entry_to_item.entryId, entry.id))
+          .where(
+            and(
+              eq(collection.userId, userId),
+              eq(collection.status, "Owned"),
+              eq(item_release.priceCurrency, "JPY"),
+              eq(entry.category, entryCategory)
+            )
+          )
+          .groupBy(entry.id, entry.name)
+          .orderBy(desc(avg(item_release.price)))
+          .limit(5),
+      ]);
 
-    return entryAnalytics;
+    return {
+      topEntriesCountByCategory,
+      topEntriesAveragePriceByCategory,
+    };
   }
 }
 

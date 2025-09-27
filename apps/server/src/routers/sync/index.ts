@@ -10,7 +10,7 @@ const syncRouter = new Hono<{
   Variables: Variables;
 }>()
   .get(
-    "/",
+    "/sse",
     zValidator("query", z.object({ jobId: z.string() }), (result, c) => {
       if (!result.success) {
         return c.text("Invalid request!", 400);
@@ -47,7 +47,7 @@ const syncRouter = new Hono<{
     }
   )
   .post(
-    "/",
+    "/csv",
     zValidator("json", z.array(csvItemSchema), (result, c) => {
       if (!result.success) {
         return c.text("Invalid request!", 400);
@@ -100,7 +100,7 @@ const syncRouter = new Hono<{
       let jobId: string | null | undefined = null;
       if (scrapeItems.length > 0) {
         const { data: jobIdData, error: queueNewItemsError } = await tryCatch(
-          SyncService.queueNewItems(scrapeItems, user.id)
+          SyncService.queueNewItems(scrapeItems, user.id, "csv")
         );
 
         if (queueNewItemsError) {
@@ -126,10 +126,10 @@ const syncRouter = new Hono<{
       }
 
       return c.json({
-        message: jobId ? "Job added to queue." : "Sync completed",
-        success: true,
+        status: jobId ? "Job added to queue." : "Sync completed",
+        isFinished: jobId ? false : true,
         existingItemsToInsert: collectionItems.length,
-        newItems: scrapeItems.map((item) => item.id),
+        newItems: scrapeItems.length,
         jobId,
       });
     }

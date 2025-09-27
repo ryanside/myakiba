@@ -165,7 +165,7 @@ class OrdersService {
   }
 
   async getOrder(userId: string, orderId: string) {
-    const orderInfo = await db
+    const [orderInfo] = await db
       .select({
         orderId: order.id,
         title: order.title,
@@ -222,9 +222,10 @@ class OrdersService {
       .leftJoin(collection, eq(order.id, collection.orderId))
       .leftJoin(item, eq(collection.itemId, item.id))
       .leftJoin(item_release, eq(collection.releaseId, item_release.id))
-      .where(and(eq(order.userId, userId), eq(order.id, orderId)));
+      .where(and(eq(order.userId, userId), eq(order.id, orderId)))
+      .groupBy(order.id);
 
-    if (!orderInfo || orderInfo.length === 0) {
+    if (!orderInfo) {
       throw new Error("ORDER_NOT_FOUND");
     }
 

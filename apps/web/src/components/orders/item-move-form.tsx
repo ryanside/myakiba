@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   DialogClose,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -47,6 +46,7 @@ export default function ItemMoveForm(props: ItemMoveFormProps) {
     queryFn: () => getOrderIdsAndTitles(filters),
     staleTime: 1000 * 60 * 5,
     retry: false,
+    enabled: false,
   });
 
   const form = useForm({

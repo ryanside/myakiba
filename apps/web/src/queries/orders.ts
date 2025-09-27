@@ -4,7 +4,7 @@ import type {
   EditedOrder,
   NewOrder,
   OrderItem,
-} from "@/lib/types";
+} from "@/lib/orders/types";
 
 export async function getOrders(filters: {
   limit?: number;
@@ -23,7 +23,8 @@ export async function getOrders(filters: {
 
   const response = await client.api.orders.$get({ query: queryParams });
   if (!response.ok) {
-    throw new Error("Failed to get orders");
+    const errorText = await response.text();
+    throw new Error(errorText || `HTTP ${response.status}`);
   }
   const data = await response.json();
   return data;
@@ -192,4 +193,20 @@ export async function moveItem(
     const errorText = await response.text();
     throw new Error(errorText || `HTTP ${response.status}`);
   }
+}
+
+export async function getOrder(orderId: string) {
+  const response = await client.api.orders[":orderId"].$get({
+    param: {
+      orderId,
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || `HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data;
 }

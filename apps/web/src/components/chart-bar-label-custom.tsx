@@ -17,19 +17,12 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { ChartNoAxesColumn } from "lucide-react";
-import {
-  Select,
-  SelectItem,
-  SelectContent,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select";
 import { formatCurrency } from "@/lib/utils";
 
 const chartConfig = {
   cost: {
     label: "Costs",
-    color: "var(--foreground)",
+    color: "var(--chart-1)",
   },
   label: {
     color: "var(--background)",
@@ -64,7 +57,7 @@ export function ChartBarLabelCustom({
         <CardTitle className="font-medium">Total Expenses</CardTitle>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig} className="h-[200px]">
+        <ChartContainer config={chartConfig} className="h-[200px] w-full">
           <BarChart
             accessibilityLayer
             data={chartData}

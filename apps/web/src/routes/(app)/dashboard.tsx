@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { client } from "@/lib/hono-client";
-import { Suspense } from "react";
 import {
   Card,
   CardContent,
@@ -10,7 +9,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import Loader from "@/components/loader";
 import {
   Package,
   ShoppingCart,
@@ -24,10 +22,9 @@ import {
 } from "lucide-react";
 import { ChartPieDonutText } from "@/components/pie-chart-donut-text";
 import { ChartBarLabelCustom } from "@/components/chart-bar-label-custom";
-import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
 
-export const Route = createFileRoute("/_layout/dashboard")({
+export const Route = createFileRoute("/(app)/dashboard")({
   component: RouteComponent,
 });
 
@@ -96,14 +93,14 @@ function DashboardContent() {
     totalMiscFees: ordersSummary[0].totalMiscFeesAllTime,
   };
 
-  const chartBarThisMonthData = {
-    totalSpent: collectionStats[0].totalSpentThisMonth,
-    totalShipping: ordersSummary[0].thisMonthShipping,
-    totalTaxes: ordersSummary[0].thisMonthTaxes,
-    totalDuties: ordersSummary[0].thisMonthDuties,
-    totalTariffs: ordersSummary[0].thisMonthTariffs,
-    totalMiscFees: ordersSummary[0].thisMonthMiscFees,
-  };
+  // const chartBarThisMonthData = {
+  //   totalSpent: collectionStats[0].totalSpentThisMonth,
+  //   totalShipping: ordersSummary[0].thisMonthShipping,
+  //   totalTaxes: ordersSummary[0].thisMonthTaxes,
+  //   totalDuties: ordersSummary[0].thisMonthDuties,
+  //   totalTariffs: ordersSummary[0].thisMonthTariffs,
+  //   totalMiscFees: ordersSummary[0].thisMonthMiscFees,
+  // };
 
   return (
     <div className="space-y-6">

@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { z } from "zod";
-import type { EditedOrder, NewOrder, Order } from "@/lib/types";
+import type { EditedOrder, NewOrder, Order } from "@/lib/orders/types";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -27,7 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown } from "lucide-react";
-import type { CascadeOptions } from "@/lib/types";
+import type { CascadeOptions } from "@/lib/orders/types";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 
 type MergeOrderFormProps = {

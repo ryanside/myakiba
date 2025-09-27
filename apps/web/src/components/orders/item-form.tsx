@@ -1,4 +1,4 @@
-import type { OrderItem } from "@/lib/types";
+import type { OrderItem } from "@/lib/orders/types";
 import { useForm } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";

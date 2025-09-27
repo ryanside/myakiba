@@ -5,8 +5,6 @@ import {
   BreadcrumbItem,
   BreadcrumbLink,
   BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -19,7 +17,7 @@ import { ModeToggle } from "@/components/mode-toggle";
 import UserMenu from "@/components/user-menu";
 import { authClient } from "@/lib/auth-client";
 
-export const Route = createFileRoute("/_layout")({
+export const Route = createFileRoute("/(app)")({
   component: RouteComponent,
   beforeLoad: async ({ location }) => {
     const { data: session } = await authClient.getSession();

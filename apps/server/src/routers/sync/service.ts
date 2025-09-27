@@ -202,10 +202,14 @@ class SyncService {
     };
   }
 
-  async queueNewItems(items: csvItem[], userId: string) {
+  async queueNewItems(
+    items: csvItem[],
+    userId: string,
+    type: "csv" | "order" | "collection"
+  ) {
     const job = await syncQueue.add(
       "sync-job",
-      { items: items, userId: userId },
+      { items: items, userId: userId, type: type },
       {
         removeOnComplete: true,
         removeOnFail: true,

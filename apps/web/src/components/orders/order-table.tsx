@@ -10,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Link } from "@tanstack/react-router";
 import { DataGrid, DataGridContainer } from "@/components/ui/data-grid";
 import { DataGridPagination } from "@/components/ui/data-grid-pagination";
 import { DataGridTable } from "@/components/ui/data-grid-table";
@@ -38,8 +39,8 @@ import {
   Info,
   Move,
 } from "lucide-react";
-import type { VariantProps } from "class-variance-authority";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { getOrderStatusVariant } from "@/lib/orders/utils";
 import type {
   CascadeOptions,
   EditedOrder,
@@ -47,7 +48,7 @@ import type {
   NewOrder,
   Order,
   OrderItem,
-} from "@/lib/types";
+} from "@/lib/orders/types";
 import { OrderItemsSubTable } from "./order-item-subtable";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { OrderForm } from "./order-form";
@@ -68,25 +69,6 @@ import ItemMoveForm from "./item-move-form";
 
 export const DEFAULT_PAGE_INDEX = 0;
 export const DEFAULT_PAGE_SIZE = 10;
-
-function getOrderStatusVariant(
-  status: string
-): VariantProps<typeof Badge>["variant"] {
-  switch (status.toLowerCase()) {
-    case "owned":
-      return "success";
-    case "shipped":
-      return "primary";
-    case "paid":
-      return "warning";
-    case "ordered":
-      return "info";
-    case "sold":
-      return "destructive";
-    default:
-      return "outline";
-  }
-}
 
 interface OrdersDataGridProps {
   orders: Order[];
@@ -461,9 +443,11 @@ export default function OrdersDataGrid({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuItem>
-                  <Eye className="mr-2 h-4 w-4" />
-                  View details
+                <DropdownMenuItem asChild>
+                  <Link to="/orders/$id" params={{ id: order.orderId }}>
+                    <Eye className="mr-2 h-4 w-4" />
+                    View details
+                  </Link>
                 </DropdownMenuItem>
                 <Dialog>
                   <DialogTrigger asChild>

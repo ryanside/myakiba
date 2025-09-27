@@ -1,9 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
 
-export const Route = createFileRoute('/_layout/wrapped')({
+export const Route = createFileRoute('/(app)/wrapped')({
   component: RouteComponent,
 })
 
 function RouteComponent() {
-  return <div>Hello "/_layout/wrapped"!</div>
+  return <div>Hello "/wrapped"!</div>
 }

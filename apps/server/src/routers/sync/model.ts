@@ -4,7 +4,7 @@ import { collection, order } from "@/db/schema/figure";
 
 export const csvItemSchema = z.object({
   id: z.int(),
-  status: z.string(),
+  status: z.enum(["Owned", "Ordered"]),
   count: z.int(),
   score: z.string(),
   payment_date: z.string().nullable(),
@@ -12,19 +12,30 @@ export const csvItemSchema = z.object({
   collecting_date: z.string().nullable(),
   price: z.string(),
   shop: z.string(),
-  shipping_method: z.enum(["n/a", "EMS", "SAL", "AIRMAIL", "SURFACE", "FEDEX", "DHL", "Colissimo", "UPS", "Domestic"]),
+  shipping_method: z.enum([
+    "n/a",
+    "EMS",
+    "SAL",
+    "AIRMAIL",
+    "SURFACE",
+    "FEDEX",
+    "DHL",
+    "Colissimo",
+    "UPS",
+    "Domestic",
+  ]),
   note: z.string(),
   orderId: z.string().nullable(),
-  orderDate: z.string().nullable()
+  orderDate: z.string().nullable(),
 });
 
-export type csvItem = z.infer<typeof csvItemSchema>
+export type csvItem = z.infer<typeof csvItemSchema>;
 
-export const orderInsertSchema = createInsertSchema(order)
+export const orderInsertSchema = createInsertSchema(order);
 
 export type orderInsertType = z.infer<typeof orderInsertSchema>;
 
-export const collectionInsertSchema = createInsertSchema(collection)
+export const collectionInsertSchema = createInsertSchema(collection);
 
 export type collectionInsertType = z.infer<typeof collectionInsertSchema>;
 
@@ -35,4 +46,3 @@ export const statusSchema = z.object({
 });
 
 export type status = z.infer<typeof statusSchema>;
-

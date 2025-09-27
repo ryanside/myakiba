@@ -14,7 +14,7 @@ import type {
   CascadeOptions,
   Filters,
   OrderItem,
-} from "@/lib/types";
+} from "@/lib/orders/types";
 import { toast } from "sonner";
 import {
   createOptimisticMergeUpdate,
@@ -24,7 +24,7 @@ import {
   createOptimisticEditItemUpdate,
   createOptimisticDeleteItemUpdate,
   createOptimisticMoveItemUpdate,
-} from "@/lib/utils";
+} from "@/lib/orders/utils";
 import {
   editOrder,
   getOrders,
@@ -37,7 +37,7 @@ import {
 } from "@/queries/orders";
 import { searchSchema } from "@/lib/validations";
 
-export const Route = createFileRoute("/_layout/orders")({
+export const Route = createFileRoute("/(app)/orders")({
   component: RouteComponent,
   validateSearch: searchSchema,
 });
@@ -86,7 +86,7 @@ function RouteComponent() {
       // Return context for rollback
       return { previousData, orderIds };
     },
-    onError: (error, variables, context) => {
+    onError: (error, _, context) => {
       // Rollback to previous data on error
       if (context?.previousData) {
         queryClient.setQueryData(["orders", filters], context.previousData);
@@ -95,12 +95,12 @@ function RouteComponent() {
         description: `Error: ${error.message}`,
       });
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_, variables) => {
       toast.success(
         `Successfully merged ${variables.orderIds.size} orders into one!`
       );
     },
-    onSettled: (data, error) => {
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
     },
   });
@@ -108,7 +108,7 @@ function RouteComponent() {
   const splitMutation = useMutation({
     mutationFn: ({
       values,
-      orderIds,
+      orderIds, // eslint-disable-line @typescript-eslint/no-unused-vars
       collectionIds,
       cascadeOptions,
     }: {
@@ -135,7 +135,7 @@ function RouteComponent() {
       );
       return { previousData, orderIds, collectionIds };
     },
-    onError: (error, variables, context) => {
+    onError: (error, _, context) => {
       if (context?.previousData) {
         queryClient.setQueryData(["orders", filters], context.previousData);
       }
@@ -143,12 +143,12 @@ function RouteComponent() {
         description: `Error: ${error.message}`,
       });
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_, variables) => {
       toast.success(
         `Successfully split ${variables.collectionIds.size} items into one!`
       );
     },
-    onSettled: (data, error) => {
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
     },
   });
@@ -172,7 +172,7 @@ function RouteComponent() {
       );
       return { previousData };
     },
-    onError: (error, variables, context) => {
+    onError: (error, _, context) => {
       if (context?.previousData) {
         queryClient.setQueryData(["orders", filters], context.previousData);
       }
@@ -180,10 +180,10 @@ function RouteComponent() {
         description: `Error: ${error.message}`,
       });
     },
-    onSuccess: (data, variables) => {
+    onSuccess: () => {
       toast.success(`Successfully updated order!`);
     },
-    onSettled: (data, error) => {
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
     },
   });
@@ -201,16 +201,16 @@ function RouteComponent() {
       );
       return { previousData };
     },
-    onError: (error, variables, context) => {
+    onError: (error, _, context) => {
       // Rollback to previous data on error
       if (context?.previousData) {
         queryClient.setQueryData(["orders", filters], context.previousData);
       }
     },
-    onSuccess: (data, variables) => {
+    onSuccess: () => {
       toast.success(`Successfully deleted orders!`);
     },
-    onSettled: (data, error) => {
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
     },
   });
@@ -237,7 +237,7 @@ function RouteComponent() {
 
       return { previousData };
     },
-    onError: (error, variables, context) => {
+    onError: (error, _, context) => {
       if (context?.previousData) {
         queryClient.setQueryData(["orders", filters], context.previousData);
       }
@@ -245,10 +245,10 @@ function RouteComponent() {
         description: `Error: ${error.message}`,
       });
     },
-    onSuccess: (data, variables) => {
+    onSuccess: () => {
       toast.success(`Successfully updated order item!`);
     },
-    onSettled: (data, error) => {
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
     },
   });
@@ -267,15 +267,15 @@ function RouteComponent() {
       );
       return { previousData };
     },
-    onError: (error, variables, context) => {
+    onError: (error, _, context) => {
       if (context?.previousData) {
         queryClient.setQueryData(["orders", filters], context.previousData);
       }
     },
-    onSuccess: (data, variables) => {
+    onSuccess: () => {
       toast.success(`Successfully deleted order item!`);
     },
-    onSettled: (data, error) => {
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
     },
   });
@@ -307,7 +307,7 @@ function RouteComponent() {
       );
       return { previousData };
     },
-    onError: (error, variables, context) => {
+    onError: (error, _, context) => {
       if (context?.previousData) {
         queryClient.setQueryData(["orders", filters], context.previousData);
       }
@@ -315,10 +315,10 @@ function RouteComponent() {
         description: `Error: ${error.message}`,
       });
     },
-    onSuccess: (data, variables) => {
+    onSuccess: () => {
       toast.success(`Successfully moved items!`);
     },
-    onSettled: (data, error) => {
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
     },
   });

@@ -28,9 +28,9 @@ import {
   useReactTable,
   type OnChangeFn,
 } from "@tanstack/react-table";
-import { Package, MoreHorizontal, Copy, Eye, Edit, Trash2 } from "lucide-react";
+import { Package, MoreHorizontal, Copy, Edit, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import type { OrderItem } from "@/lib/types";
+import type { OrderItem } from "@/lib/orders/types";
 import { toast } from "sonner";
 import { Dialog, DialogTrigger } from "../ui/dialog";
 import ItemForm from "./item-form";
@@ -290,7 +290,7 @@ export function OrderItemsSubTable({
           headerBorder: true,
         }}
       >
-        <div className="w-full space-y-2.5">
+        <div className="w-full space-y-2.5 overflow-x-auto">
           <div className="bg-card rounded-lg">
             <DataGridContainer>
               <ScrollArea>
