@@ -1,18 +1,43 @@
 import SignInForm from "@/components/sign-in-form";
 import SignUpForm from "@/components/sign-up-form";
-import { createFileRoute } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
+import { authClient } from "@/lib/auth-client";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 
 export const Route = createFileRoute("/login")({
   component: RouteComponent,
+  beforeLoad: async ({ location }) => {
+    const { data: session } = await authClient.getSession();
+    if (session) {
+      throw redirect({
+        to: "/dashboard",
+      });
+    }
+  },
 });
 
 function RouteComponent() {
   const [showSignIn, setShowSignIn] = useState(true);
 
-  return showSignIn ? (
-    <SignInForm onSwitchToSignUp={() => setShowSignIn(false)} />
-  ) : (
-    <SignUpForm onSwitchToSignIn={() => setShowSignIn(true)} />
+  return (
+    <div className="bg-background flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
+      <div className="absolute top-4 left-4">
+        <Link to="/">
+          <Button variant="ghost" className="text-foreground">
+            <ArrowLeft />
+            Back to homepage
+          </Button>
+        </Link>
+      </div>
+      <div className="w-full max-w-md">
+        {showSignIn ? (
+          <SignInForm onSwitchToSignUp={() => setShowSignIn(false)} />
+        ) : (
+          <SignUpForm onSwitchToSignIn={() => setShowSignIn(true)} />
+        )}
+      </div>
+    </div>
   );
 }

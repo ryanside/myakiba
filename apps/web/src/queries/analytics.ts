@@ -1,4 +1,5 @@
 import { client } from "@/lib/hono-client";
+import type { EntryCategory } from "@/lib/analytics/types";
 
 export async function getAnalytics() {
   const response = await client.api.analytics.$get();
@@ -11,7 +12,7 @@ export async function getAnalytics() {
   return data;
 }
 
-export async function getEntryAnalytics(entryCategory: string) {
+export async function getEntryAnalytics(entryCategory: EntryCategory) {
   const response = await client.api.analytics[":entryCategory"].$get({
     param: {
       entryCategory,

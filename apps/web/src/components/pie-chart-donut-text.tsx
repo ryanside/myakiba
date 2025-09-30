@@ -1,5 +1,3 @@
-"use client";
-
 import * as React from "react";
 import { Label, Pie, PieChart } from "recharts";
 
@@ -11,7 +9,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { Shapes } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 
 // const chartData = [
 //   { browser: "chrome", visitors: 275, fill: "var(--color-chrome)" },
@@ -49,8 +47,12 @@ import { formatCurrency } from "@/lib/utils";
 
 export function ChartPieDonutText({
   data,
+  innerRadius,
+  ...props
 }: {
   data: { name: string | null; count: number; totalValue: string | null }[];
+  className?: string;
+  innerRadius?: number;
 }) {
   const chartData = data.map((item, index) => ({
     name: item.name || "other",
@@ -98,10 +100,13 @@ export function ChartPieDonutText({
         <Shapes className="h-4 w-4 text-muted-foreground" />
         <CardTitle className="font-medium">Collection Breakdown</CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 pb-0">
+      <CardContent className="flex-1 flex flex-col">
         <ChartContainer
           config={chartConfig}
-          className="-mt-6 mx-auto aspect-square h-[250px]"
+          className={cn(
+            `flex items-center justify-center x-auto aspect-auto`
+          )}
+          {...props}
         >
           <PieChart>
             <ChartTooltip
@@ -112,7 +117,7 @@ export function ChartPieDonutText({
               data={chartData}
               dataKey="count"
               nameKey="name"
-              innerRadius={75}
+              innerRadius={innerRadius || 75}
               strokeWidth={5}
             >
               <Label
@@ -147,7 +152,7 @@ export function ChartPieDonutText({
             </Pie>
           </PieChart>
         </ChartContainer>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 mt-auto h-26 overflow-y-auto">
           {chartData.map((item) => (
             <div key={item.name} className="flex flex-row gap-2 items-center">
               <div

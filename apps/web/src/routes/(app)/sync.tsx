@@ -55,7 +55,21 @@ function RouteComponent() {
     status: "",
   });
 
-  const form = useForm({
+  const orderForm = useForm({
+    defaultValues: {},
+    onSubmit: async ({ value }) => {
+      console.log(value);
+    },
+  });
+
+  const collectionForm = useForm({
+    defaultValues: {},
+    onSubmit: async ({ value }) => {
+      console.log(value);
+    },
+  });
+
+  const csvForm = useForm({
     defaultValues: {
       file: undefined as File | undefined,
     },
@@ -121,7 +135,7 @@ function RouteComponent() {
         });
       }
 
-      form.reset();
+      csvForm.reset();
     },
   });
 
@@ -265,16 +279,44 @@ function RouteComponent() {
                   </div>
                 </div>
               )}
+              {index === 1 && syncOption === "order" && (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    void orderForm.handleSubmit();
+                  }}
+                  className="rounded-lg border p-4 space-y-4 w-full"
+                >
+                  <Button variant="outline" onClick={() => setCurrentStep(1)}>
+                    Back to Sync Options
+                  </Button>
+                </form>
+              )}
+              {index === 1 && syncOption === "collection" && (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    void collectionForm.handleSubmit();
+                  }}
+                  className="rounded-lg border p-4 space-y-4 w-full"
+                >
+                  <Button variant="outline" onClick={() => setCurrentStep(1)}>
+                    Back to Sync Options
+                  </Button>
+                </form>
+              )}
               {index === 1 && syncOption === "csv" && (
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    void form.handleSubmit();
+                    void csvForm.handleSubmit();
                   }}
                   className="rounded-lg border p-4 space-y-4 w-full"
                 >
-                  <form.Field
+                  <csvForm.Field
                     name="file"
                     validators={{
                       onSubmitAsync: async ({ value }) => {
@@ -344,7 +386,7 @@ function RouteComponent() {
                     <Button variant="outline" onClick={() => setCurrentStep(1)}>
                       Back to Sync Options
                     </Button>
-                    <form.Subscribe
+                    <csvForm.Subscribe
                       selector={(state) => [
                         state.canSubmit,
                         state.isSubmitting,

@@ -52,7 +52,7 @@ function DashboardContent() {
   const { isPending, isError, data, error } = useQuery({
     queryKey: ["dashboard"],
     queryFn: getDashboard,
-    staleTime: Infinity,
+    staleTime: 1000 * 60 * 5,
     retry: false,
   });
 
@@ -103,7 +103,7 @@ function DashboardContent() {
   // };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 ">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title="Total Items"
@@ -144,7 +144,11 @@ function DashboardContent() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
-        <ChartPieDonutText data={categoriesOwned} />
+        <ChartPieDonutText
+          data={categoriesOwned}
+          className="h-[250px] -mt-5.5"
+          innerRadius={75}
+        />
 
         <ChartBarLabelCustom data={chartBarData} />
 

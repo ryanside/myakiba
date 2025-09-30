@@ -36,6 +36,7 @@ import {
   moveItem,
 } from "@/queries/orders";
 import { searchSchema } from "@/lib/validations";
+import Loader from "@/components/loader";
 
 export const Route = createFileRoute("/(app)/orders")({
   component: RouteComponent,
@@ -376,11 +377,21 @@ function RouteComponent() {
   };
 
   if (isPending) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <Loader />
+      </div>
+    );
   }
 
   if (isError) {
-    return <div>Error: {error.message}</div>;
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <div className="text-lg font-medium text-destructive">
+          Error: {error.message}
+        </div>
+      </div>
+    );
   }
 
   const { orders, totalCount } = data;

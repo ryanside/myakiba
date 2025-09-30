@@ -30,7 +30,11 @@ import {
 } from "lucide-react";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { OrderForm } from "@/components/orders/order-form";
-import type { OrderItem, EditedOrder, CascadeOptions } from "@/lib/orders/types";
+import type {
+  OrderItem,
+  EditedOrder,
+  CascadeOptions,
+} from "@/lib/orders/types";
 import { toast } from "sonner";
 import Loader from "@/components/loader";
 
@@ -131,7 +135,7 @@ function RouteComponent() {
 
   if (isPending) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
         <Loader />
       </div>
     );
