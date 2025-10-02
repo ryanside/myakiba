@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppSidebar } from "@/components/sidebar/app-sidebar";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Outlet, redirect, useLocation } from "@tanstack/react-router";
 import { ModeToggle } from "@/components/mode-toggle";
-import UserMenu from "@/components/user-menu";
+import UserMenu from "@/components/sidebar/user-menu";
 import { authClient } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/(app)")({

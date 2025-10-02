@@ -10,9 +10,9 @@ import {
   Sparkles,
 } from "lucide-react";
 
-import { NavMain } from "@/components/nav-main";
-import { NavCollection } from "@/components/nav-collection";
-import { NavSecondary } from "@/components/nav-secondary";
+import { NavMain } from "@/components/sidebar/nav-main";
+import { NavCollection } from "@/components/sidebar/nav-collection";
+import { NavSecondary } from "@/components/sidebar/nav-secondary";
 import {
   Sidebar,
   SidebarContent,
@@ -24,6 +24,8 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "@tanstack/react-router";
+import ma from "@/public/ma.svg";
+import myakiba from "@/public/myakiba.svg";
 
 const data = {
   user: {
@@ -127,12 +129,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             >
               <Link to="/dashboard">
                 <img
-                  src="../ma.svg"
+                  src={ma}
                   alt="myakiba"
                   className="absolute size-8 opacity-0 group-data-[collapsible=icon]:opacity-100 transition-opacity duration-100 ease-in-out"
                 />
                 <img
-                  src="../myakiba.svg"
+                  src={myakiba}
                   alt="myakiba"
                   className="size-24 ml-2 opacity-100 group-data-[collapsible=icon]:opacity-0 transition-opacity duration-100 ease-in-out"
                 />

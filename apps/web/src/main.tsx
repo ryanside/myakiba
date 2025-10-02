@@ -9,7 +9,7 @@ const queryClient = new QueryClient();
 
 const router = createRouter({
   routeTree,
-  defaultPreload: "intent",
+  defaultPreload: false,
   defaultPendingComponent: () => <Loader />,
   defaultNotFoundComponent: () => <div>404 Not Found</div>,
   });

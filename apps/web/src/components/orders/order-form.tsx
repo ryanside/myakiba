@@ -26,7 +26,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 import type { CascadeOptions } from "@/lib/orders/types";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 
@@ -628,7 +628,7 @@ export function OrderForm(props: OrderFormProps) {
               <DialogClose asChild>
                 <Button type="submit" disabled={!canSubmit} variant="primary">
                   {isSubmitting
-                    ? "Submitting..."
+                    ? (<Loader2 className="w-4 h-4 animate-spin" />)
                     : type === "merge"
                       ? "Merge"
                       : type === "split"

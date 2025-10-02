@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { ChartPieDonutText } from "@/components/pie-chart-donut-text";
+import { ChartPieDonutText } from "@/components/dashboard/pie-chart-donut-text";
 import { formatCurrency } from "@/lib/utils";
 import { useState } from "react";
 import type { EntryCategory } from "@/lib/analytics/types";

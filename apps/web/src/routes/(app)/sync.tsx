@@ -1,10 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useForm } from "@tanstack/react-form";
-import Papa from "papaparse";
-import { client } from "@/lib/hono-client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   Stepper,
@@ -17,19 +13,22 @@ import {
   StepperTitle,
 } from "@/components/ui/stepper";
 import { useState } from "react";
-import {
-  BookImage,
-  Check,
-  Loader2,
-  LoaderCircleIcon,
-  ShoppingCart,
-  Upload,
-} from "lucide-react";
+import { Check, Loader2, LoaderCircleIcon } from "lucide-react";
 import { tryCatch } from "@/lib/utils";
 import { ShimmeringText } from "@/components/ui/shimmering-text";
 import { transformCSVData } from "@/lib/sync/utils";
-import { csvSchema, type userItem, type status } from "@/lib/sync/types";
+import {
+  type userItem,
+  type status,
+  type SyncOrder,
+  type SyncCollectionItem,
+} from "@/lib/sync/types";
 import { toast } from "sonner";
+import { sendItems, getJobStatus } from "@/queries/sync";
+import ChooseSyncOption from "@/components/sync/choose-sync-option";
+import SyncOrderForm from "@/components/sync/sync-order-form";
+import SyncCollectionForm from "@/components/sync/sync-collection-form";
+import SyncCsvForm from "@/components/sync/sync-csv-form";
 
 const steps = [
   { title: "Choose sync option" },
@@ -55,103 +54,7 @@ function RouteComponent() {
     status: "",
   });
 
-  const orderForm = useForm({
-    defaultValues: {},
-    onSubmit: async ({ value }) => {
-      console.log(value);
-    },
-  });
-
-  const collectionForm = useForm({
-    defaultValues: {},
-    onSubmit: async ({ value }) => {
-      console.log(value);
-    },
-  });
-
-  const csvForm = useForm({
-    defaultValues: {
-      file: undefined as File | undefined,
-    },
-    onSubmit: async ({ value }) => {
-      const { data: userItems, error: transformCSVDataError } = await tryCatch(
-        transformCSVData(value)
-      );
-      if (transformCSVDataError) {
-        console.error("Error transforming CSV data", transformCSVDataError);
-        return transformCSVDataError instanceof Error
-          ? transformCSVDataError.message
-          : "An error occurred";
-      }
-
-      const data = await mutation.mutateAsync(userItems);
-
-      setCurrentStep(3);
-
-      if (data.jobId) {
-        const jobId = data.jobId;
-        const interval = setInterval(async () => {
-          const { data, error } = await tryCatch(
-            queryClient.fetchQuery({
-              queryKey: ["job-status", jobId],
-              queryFn: () => getJobStatus(jobId),
-            })
-          );
-
-          if (error) {
-            clearInterval(interval);
-            console.log(error);
-            setStatus((prev) => ({
-              ...prev,
-              isFinished: true,
-              status: "An error occurred",
-            }));
-            return;
-          }
-
-          console.log(data?.status);
-          setStatus((prev) => ({
-            ...prev,
-            isFinished: data?.finished,
-            status: data?.status,
-          }));
-
-          if (data?.finished) {
-            clearInterval(interval);
-            setStatus((prev) => ({
-              ...prev,
-              isFinished: data?.finished,
-              status: data?.status,
-            }));
-            return;
-          }
-        }, 3000);
-      } else {
-        setStatus({
-          existingItems: data.existingItemsToInsert,
-          newItems: data.newItems,
-          isFinished: data.isFinished,
-          status: data.status,
-        });
-      }
-
-      csvForm.reset();
-    },
-  });
-
-  async function getJobStatus(jobId: string) {
-    const response = await client.api.sync.sse.$get({
-      query: {
-        jobId: jobId,
-      },
-    });
-    if (!response.ok) {
-      throw new Error("Failed to get job status");
-    }
-    return response.json();
-  }
-
-  const mutation = useMutation({
+  const csvMutation = useMutation({
     mutationFn: (userItems: userItem[]) => sendItems(userItems),
     onError: (error) => {
       toast.error("Failed to submit CSV. Please try again.", {
@@ -160,15 +63,75 @@ function RouteComponent() {
     },
   });
 
-  async function sendItems(userItems: userItem[]) {
-    const response = await client.api.sync.csv.$post({
-      json: userItems,
-    });
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(errorText || `HTTP ${response.status}`);
+  async function handleSyncCsvSubmit(value: File | undefined) {
+    const { data: userItems, error: transformCSVDataError } = await tryCatch(
+      transformCSVData({ file: value })
+    );
+    if (transformCSVDataError) {
+      console.error("Error transforming CSV data", transformCSVDataError);
+      return transformCSVDataError instanceof Error
+        ? transformCSVDataError.message
+        : "An error occurred";
     }
-    return response.json();
+
+    const data = await csvMutation.mutateAsync(userItems);
+
+    setCurrentStep(3);
+
+    if (data.jobId) {
+      const jobId = data.jobId;
+      const interval = setInterval(async () => {
+        const { data, error } = await tryCatch(
+          queryClient.fetchQuery({
+            queryKey: ["job-status", jobId],
+            queryFn: () => getJobStatus(jobId),
+          })
+        );
+
+        if (error) {
+          clearInterval(interval);
+          console.log(error);
+          setStatus((prev) => ({
+            ...prev,
+            isFinished: true,
+            status: "An error occurred",
+          }));
+          return;
+        }
+
+        console.log(data?.status);
+        setStatus((prev) => ({
+          ...prev,
+          isFinished: data?.finished,
+          status: data?.status,
+        }));
+
+        if (data?.finished) {
+          clearInterval(interval);
+          setStatus((prev) => ({
+            ...prev,
+            isFinished: data?.finished,
+            status: data?.status,
+          }));
+          return;
+        }
+      }, 3000);
+    } else {
+      setStatus({
+        existingItems: data.existingItemsToInsert,
+        newItems: data.newItems,
+        isFinished: data.isFinished,
+        status: data.status,
+      });
+    }
+  }
+
+  function handleSyncOrderSubmit(values: SyncOrder) {
+    console.log(JSON.stringify(values, null, 2));
+  }
+
+  function handleSyncCollectionSubmit(values: SyncCollectionItem[]) {
+    console.log(JSON.stringify(values, null, 2));
   }
 
   function handleSyncOption(option: "csv" | "order" | "collection") {
@@ -215,194 +178,25 @@ function RouteComponent() {
               className="flex items-center justify-center"
             >
               {index === 0 && (
-                <div className="rounded-lg border p-4 space-y-4 w-full">
-                  <Label className="text-lg text-foreground">
-                    Choose a sync option
-                  </Label>
-                  <div className="flex flex-col gap-4 justify-center">
-                    <div
-                      className="rounded-md border p-4 shadow-sm space-y-2 hover:bg-muted"
-                      onClick={() => {
-                        handleSyncOption("csv");
-                      }}
-                    >
-                      <Label className="text-md text-foreground">
-                        <Upload className="w-4 h-4" /> Upload MyFigureCollection
-                        CSV
-                        <span className="text-xs text-bold text-primary">
-                          (Recommended for onboarding)
-                        </span>
-                      </Label>
-                      <div className="">
-                        <p className="text-sm text-pretty">
-                          {`This option allows you to import your items from a
-                          MyFigureCollection CSV file.`}
-                        </p>
-                        <p className="text-sm text-pretty font-light italic tracking-tight">
-                          {`You can export your MyFigureCollection
-                          CSV by going to https://myfigurecollection.net > User Menu > Manager > CSV Export.`}
-                        </p>
-                      </div>
-                    </div>
-                    <div
-                      className="rounded-md border p-4 shadow-sm space-y-2 hover:bg-muted"
-                      onClick={() => {
-                        handleSyncOption("order");
-                      }}
-                    >
-                      <Label className="text-md text-foreground">
-                        <ShoppingCart className="w-4 h-4" /> Add Order using
-                        MyFigureCollection Item IDs
-                      </Label>
-                      <div>
-                        <p className="text-sm text-pretty">
-                          {`This option allows you to create an order and add order items to it using MyFigureCollection Item IDs.`}
-                        </p>
-                      </div>
-                    </div>
-                    <div
-                      className="rounded-md border p-4 shadow-sm space-y-2 hover:bg-muted"
-                      onClick={() => {
-                        handleSyncOption("collection");
-                      }}
-                    >
-                      <Label className="text-md text-foreground">
-                        <BookImage className="w-4 h-4" /> Add Collection Items
-                        using MyFigureCollection Item IDs
-                      </Label>
-                      <div>
-                        <p className="text-sm text-pretty">
-                          {`This option allows you to add to your collection using MyFigureCollection Item IDs.`}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <ChooseSyncOption handleSyncOption={handleSyncOption} />
               )}
               {index === 1 && syncOption === "order" && (
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    void orderForm.handleSubmit();
-                  }}
-                  className="rounded-lg border p-4 space-y-4 w-full"
-                >
-                  <Button variant="outline" onClick={() => setCurrentStep(1)}>
-                    Back to Sync Options
-                  </Button>
-                </form>
+                <SyncOrderForm
+                  setCurrentStep={setCurrentStep}
+                  handleSyncOrderSubmit={handleSyncOrderSubmit}
+                />
               )}
               {index === 1 && syncOption === "collection" && (
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    void collectionForm.handleSubmit();
-                  }}
-                  className="rounded-lg border p-4 space-y-4 w-full"
-                >
-                  <Button variant="outline" onClick={() => setCurrentStep(1)}>
-                    Back to Sync Options
-                  </Button>
-                </form>
+                <SyncCollectionForm
+                  setCurrentStep={setCurrentStep}
+                  handleSyncCollectionSubmit={handleSyncCollectionSubmit}
+                />
               )}
               {index === 1 && syncOption === "csv" && (
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    void csvForm.handleSubmit();
-                  }}
-                  className="rounded-lg border p-4 space-y-4 w-full"
-                >
-                  <csvForm.Field
-                    name="file"
-                    validators={{
-                      onSubmitAsync: async ({ value }) => {
-                        if (!value) {
-                          return "No file selected";
-                        }
-
-                        const text = await value.text();
-                        const parsedCSV = Papa.parse(text, {
-                          header: true,
-                          skipEmptyLines: true,
-                          transformHeader: (header: string) =>
-                            header.trim().toLowerCase().replace(/ /g, "_"),
-                        });
-
-                        const validatedCSV = csvSchema.safeParse(
-                          parsedCSV.data
-                        );
-                        if (!validatedCSV.success) {
-                          console.log("Invalid CSV file", validatedCSV.error);
-                          return "Please select a valid MyFigureCollection CSV file";
-                        }
-
-                        const filteredData = validatedCSV.data.filter(
-                          (item) => {
-                            return (
-                              (item.status === "Owned" ||
-                                item.status === "Ordered") &&
-                              !item.title.startsWith("[NSFW")
-                            );
-                          }
-                        );
-                        if (filteredData.length === 0) {
-                          return "No Owned or Ordered items to sync";
-                        }
-                      },
-                    }}
-                    children={(field) => {
-                      return (
-                        <div className="space-y-4">
-                          <Label
-                            htmlFor="csv-file"
-                            className="text-foreground text-lg"
-                          >
-                            Select MyFigureCollection CSV File
-                          </Label>
-                          <Input
-                            id="csv-file"
-                            type="file"
-                            accept=".csv,text/csv"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              field.handleChange(file);
-                            }}
-                            className="h-48 outline-dashed outline-2 outline-muted-foreground p-2"
-                          />
-                          {!field.state.meta.isValid && (
-                            <em role="alert" className="text-red-500">
-                              {field.state.meta.errors.join(", ")}
-                            </em>
-                          )}
-                        </div>
-                      );
-                    }}
-                  />
-                  <div className="flex justify-start gap-2">
-                    <Button variant="outline" onClick={() => setCurrentStep(1)}>
-                      Back to Sync Options
-                    </Button>
-                    <csvForm.Subscribe
-                      selector={(state) => [
-                        state.canSubmit,
-                        state.isSubmitting,
-                      ]}
-                      children={([canSubmit, isSubmitting]) => (
-                        <Button
-                          type="submit"
-                          disabled={!canSubmit}
-                          variant="primary"
-                        >
-                          {isSubmitting ? "Submitting..." : "Submit"}
-                        </Button>
-                      )}
-                    />
-                  </div>
-                </form>
+                <SyncCsvForm
+                  setCurrentStep={setCurrentStep}
+                  handleSyncCsvSubmit={handleSyncCsvSubmit}
+                />
               )}
               {index === 2 && (
                 <div className="rounded-lg border p-4 space-y-4 gap4 w-full">

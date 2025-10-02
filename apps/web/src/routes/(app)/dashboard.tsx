@@ -20,8 +20,8 @@ import {
   type LucideIcon,
   NotepadText,
 } from "lucide-react";
-import { ChartPieDonutText } from "@/components/pie-chart-donut-text";
-import { ChartBarLabelCustom } from "@/components/chart-bar-label-custom";
+import { ChartPieDonutText } from "@/components/dashboard/pie-chart-donut-text";
+import { ChartBarLabelCustom } from "@/components/dashboard/chart-bar-label-custom";
 import { formatCurrency } from "@/lib/utils";
 
 export const Route = createFileRoute("/(app)/dashboard")({

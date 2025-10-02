@@ -1,5 +1,5 @@
-import SignInForm from "@/components/sign-in-form";
-import SignUpForm from "@/components/sign-up-form";
+import SignInForm from "@/components/auth/sign-in-form";
+import SignUpForm from "@/components/auth/sign-up-form";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
