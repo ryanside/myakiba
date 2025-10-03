@@ -68,8 +68,8 @@ export type status = {
   status: string;
 };
 
-export type SyncOrderItem = {
-  id: string;
+export type SyncFormOrderItem = {
+  itemId: string;
   price: string;
   count: number;
   status: "Owned" | "Ordered" | "Paid" | "Shipped";
@@ -85,14 +85,25 @@ export type SyncOrderItem = {
     | "Colissimo"
     | "UPS"
     | "Domestic";
+  orderDate: string;
+  paymentDate: string;
+  shippingDate: string;
+  collectionDate: string;
+};
+
+export type SyncOrderItem = Omit<
+  SyncFormOrderItem,
+  "itemId" | "orderDate" | "paymentDate" | "shippingDate" | "collectionDate"
+> & {
+  itemId: number;
   orderDate: string | null;
   paymentDate: string | null;
   shippingDate: string | null;
   collectionDate: string | null;
 };
 
-export type SyncOrder = {
-  status: string;
+export type SyncFormOrder = {
+  status: "Ordered" | "Paid" | "Shipped" | "Owned";
   title: string;
   shop: string;
   orderDate: string;
@@ -100,26 +111,53 @@ export type SyncOrder = {
   paymentDate: string;
   shippingDate: string;
   collectionDate: string;
-  shippingMethod: string;
+  shippingMethod:
+    | "n/a"
+    | "EMS"
+    | "SAL"
+    | "AIRMAIL"
+    | "SURFACE"
+    | "FEDEX"
+    | "DHL"
+    | "Colissimo"
+    | "UPS"
+    | "Domestic";
   shippingFee: string;
   taxes: string;
   duties: string;
   tariffs: string;
   miscFees: string;
   notes: string;
-  items: SyncOrderItem[];
+  items: SyncFormOrderItem[];
 };
 
-export type SyncCollectionItem = {
+export type SyncOrder = Omit<
+  SyncFormOrder,
+  | "items"
+  | "orderDate"
+  | "releaseMonthYear"
+  | "paymentDate"
+  | "shippingDate"
+  | "collectionDate"
+> & {
+  items: SyncOrderItem[];
+  orderDate: string | null;
+  releaseMonthYear: string | null;
+  paymentDate: string | null;
+  shippingDate: string | null;
+  collectionDate: string | null;
+};
+
+export type SyncFormCollectionItem = {
   itemId: string;
   price: string;
   count: number;
   score: number;
   shop: string;
-  orderDate: string | null;
-  paymentDate: string | null;
-  shippingDate: string | null;
-  collectionDate: string | null;
+  orderDate: string;
+  paymentDate: string;
+  shippingDate: string;
+  collectionDate: string;
   shippingMethod:
     | "n/a"
     | "EMS"
@@ -134,4 +172,16 @@ export type SyncCollectionItem = {
   tags: string[];
   condition: "New" | "Pre-Owned";
   notes: string;
+};
+
+export type SyncCollectionItem = Omit<
+  SyncFormCollectionItem,
+  "itemId" | "orderDate" | "paymentDate" | "shippingDate" | "collectionDate" | "score"
+> & {
+  itemId: number;
+  orderDate: string | null;
+  paymentDate: string | null;
+  shippingDate: string | null;
+  collectionDate: string | null;
+  score: string;
 };

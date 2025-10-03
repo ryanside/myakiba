@@ -7,7 +7,6 @@ import { captcha, username } from "better-auth/plugins";
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
-
     schema: schema,
   }),
   trustedOrigins: [process.env.CORS_ORIGIN || ""],
@@ -30,9 +29,20 @@ export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL,
   session: {
+    expiresIn: 60 * 60 * 24 * 7, // 7 days
+    updateAge: 60 * 60 * 24, // 1 day (every 1 day the session expiration is updated)
     cookieCache: {
       enabled: true,
       maxAge: 5 * 60, // Cache duration in seconds
+    },
+  },
+  user: {
+    additionalFields: {
+      currency: {
+        type: "string",
+        required: false,
+        defaultValue: "USD",
+      },
     },
   },
 });

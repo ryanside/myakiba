@@ -1,6 +1,6 @@
 import { useForm } from "@tanstack/react-form";
 import { Button } from "../ui/button";
-import { type SyncCollectionItem } from "@/lib/sync/types";
+import { type SyncFormCollectionItem } from "@/lib/sync/types";
 import { ArrowLeft, Edit, Loader2, Plus, X } from "lucide-react";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
@@ -29,7 +29,7 @@ export default function SyncCollectionForm({
   handleSyncCollectionSubmit,
 }: {
   setCurrentStep: (step: number) => void;
-  handleSyncCollectionSubmit: (values: SyncCollectionItem[]) => void;
+  handleSyncCollectionSubmit: (values: SyncFormCollectionItem[]) => void;
 }) {
   const collectionForm = useForm({
     defaultValues: {
@@ -49,10 +49,11 @@ export default function SyncCollectionForm({
           condition: "New",
           notes: "",
         },
-      ] as SyncCollectionItem[],
+      ] as SyncFormCollectionItem[],
     },
     onSubmit: async ({ value }) => {
-      handleSyncCollectionSubmit(value.items);
+      await handleSyncCollectionSubmit(value.items);
+      collectionForm.reset();
     },
   });
   return (

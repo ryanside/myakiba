@@ -89,9 +89,14 @@ export const cleanEmptyParams = <T extends Record<string, unknown>>(
 };
 
 export function formatDate(dateString: string | null): string {
-  if (!dateString) return "N/A";
+  if (!dateString) return "n/a";
   try {
-    return new Date(dateString).toLocaleDateString();
+    // Parse date as local date to avoid timezone issues
+    // When "2026-04-01" is parsed as new Date(), it's treated as UTC midnight
+    // which gets converted to the previous day in timezones behind UTC
+    const [year, month, day] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    return date.toLocaleDateString();
   } catch {
     return "Invalid Date";
   }

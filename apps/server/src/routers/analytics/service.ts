@@ -1,6 +1,6 @@
 import { dbHttp } from "@/db";
-import { collection, item_release, item } from "@/db/schema/figure";
-import { eq, count, and, sql, avg, desc, sum, between, not } from "drizzle-orm";
+import { collection, item } from "@/db/schema/figure";
+import { eq, count, and, sql, desc, sum, between, not } from "drizzle-orm";
 import { entry, entry_to_item } from "@/db/schema/figure";
 
 class AnalyticsService {

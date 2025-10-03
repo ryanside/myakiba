@@ -13,6 +13,9 @@ export const user = pgTable("user", {
     .notNull(),
   username: text("username").unique(),
   displayUsername: text("display_username"),
+  currency: text("currency", {
+    enum: ["USD", "JPY", "EUR", "CNY", "GBP", "CAD", "AUD", "NZD"],
+  }).default("USD").notNull(),
 });
 
 export const session = pgTable("session", {

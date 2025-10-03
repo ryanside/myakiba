@@ -1,6 +1,6 @@
 import Redis from "ioredis";
 
-export const createFetchOptions = (image: boolean = false): any => ({
+export const createFetchOptions = (image: boolean = false) => ({
   proxy: process.env.HTTP_PROXY,
   tls: {
     rejectUnauthorized: false,

@@ -1,4 +1,4 @@
-import type { scrapedItem } from "../types";
+import type { scrapedItem, CsvItem } from "../types";
 import Redis from "ioredis";
 import type { jobData } from "../types";
 import { normalizeDateString } from "../utils";
@@ -18,7 +18,8 @@ export async function finalizeCsvSync(
   successfulResults: scrapedItem[],
   job: jobData,
   userId: string,
-  redis: Redis
+  redis: Redis,
+  csvItems: CsvItem[]
 ) {
   const items = successfulResults.map((item) => ({
     id: item.id,
@@ -55,7 +56,7 @@ export async function finalizeCsvSync(
     number,
     { releaseId: string | null; date: string | null }
   > = new Map();
-  const successfulCollectionItems = job.data.items.filter((i) =>
+  const successfulCollectionItems = csvItems.filter((i) =>
     successfulResults.some((result) => result.id === i.id)
   );
   let collectionItems: Array<{
@@ -343,7 +344,7 @@ export async function finalizeCsvSync(
   await setJobStatus(
     redis,
     job.id!,
-    `Sync completed: Synced ${successfulResults.length} out of ${job.data.items.length} items`,
+    `Sync completed: Synced ${successfulResults.length} out of ${csvItems.length} items`,
     true
   );
   return {

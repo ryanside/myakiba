@@ -21,10 +21,17 @@ import {
   type userItem,
   type status,
   type SyncOrder,
+  type SyncFormCollectionItem,
+  type SyncFormOrder,
   type SyncCollectionItem,
 } from "@/lib/sync/types";
 import { toast } from "sonner";
-import { sendItems, getJobStatus } from "@/queries/sync";
+import {
+  sendItems,
+  getJobStatus,
+  sendOrder,
+  sendCollection,
+} from "@/queries/sync";
 import ChooseSyncOption from "@/components/sync/choose-sync-option";
 import SyncOrderForm from "@/components/sync/sync-order-form";
 import SyncCollectionForm from "@/components/sync/sync-collection-form";
@@ -63,6 +70,25 @@ function RouteComponent() {
     },
   });
 
+  const orderMutation = useMutation({
+    mutationFn: (order: SyncOrder) => sendOrder(order),
+    onError: (error) => {
+      toast.error("Failed to submit order. Please try again.", {
+        description: `Error: ${error.message}`,
+      });
+    },
+  });
+
+  const collectionMutation = useMutation({
+    mutationFn: (collection: SyncCollectionItem[]) =>
+      sendCollection(collection),
+    onError: (error) => {
+      toast.error("Failed to submit collection. Please try again.", {
+        description: `Error: ${error.message}`,
+      });
+    },
+  });
+
   async function handleSyncCsvSubmit(value: File | undefined) {
     const { data: userItems, error: transformCSVDataError } = await tryCatch(
       transformCSVData({ file: value })
@@ -77,6 +103,13 @@ function RouteComponent() {
     const data = await csvMutation.mutateAsync(userItems);
 
     setCurrentStep(3);
+
+    setStatus({
+      existingItems: data.existingItemsToInsert,
+      newItems: data.newItems,
+      isFinished: data.isFinished,
+      status: data.status,
+    });
 
     if (data.jobId) {
       const jobId = data.jobId;
@@ -116,22 +149,136 @@ function RouteComponent() {
           return;
         }
       }, 3000);
-    } else {
-      setStatus({
-        existingItems: data.existingItemsToInsert,
-        newItems: data.newItems,
-        isFinished: data.isFinished,
-        status: data.status,
-      });
     }
   }
 
-  function handleSyncOrderSubmit(values: SyncOrder) {
-    console.log(JSON.stringify(values, null, 2));
+  async function handleSyncOrderSubmit(values: SyncFormOrder) {
+    const updatedValues: SyncOrder = {
+      ...values,
+      orderDate: values.orderDate || null,
+      releaseMonthYear: values.releaseMonthYear || null,
+      paymentDate: values.paymentDate || null,
+      shippingDate: values.shippingDate || null,
+      collectionDate: values.collectionDate || null,
+      items: values.items.map((item) => ({
+        ...item,
+        itemId: parseInt(item.itemId),
+        orderDate: item.orderDate || null,
+        paymentDate: item.paymentDate || null,
+        shippingDate: item.shippingDate || null,
+        collectionDate: item.collectionDate || null,
+      })),
+    };
+    const data = await orderMutation.mutateAsync(updatedValues);
+    setCurrentStep(3);
+
+    setStatus({
+      existingItems: data.existingItemsToInsert,
+      newItems: data.newItems,
+      isFinished: data.isFinished,
+      status: data.status,
+    });
+
+    if (data.jobId) {
+      const jobId = data.jobId;
+      const interval = setInterval(async () => {
+        const { data, error } = await tryCatch(
+          queryClient.fetchQuery({
+            queryKey: ["job-status", jobId],
+            queryFn: () => getJobStatus(jobId),
+          })
+        );
+
+        if (error) {
+          clearInterval(interval);
+          console.log(error);
+          setStatus((prev) => ({
+            ...prev,
+            isFinished: true,
+            status: "An error occurred",
+          }));
+          return;
+        }
+
+        console.log(data?.status);
+        setStatus((prev) => ({
+          ...prev,
+          isFinished: data?.finished,
+          status: data?.status,
+        }));
+
+        if (data?.finished) {
+          clearInterval(interval);
+          setStatus((prev) => ({
+            ...prev,
+            isFinished: data?.finished,
+            status: data?.status,
+          }));
+          return;
+        }
+      }, 3000);
+    }
   }
 
-  function handleSyncCollectionSubmit(values: SyncCollectionItem[]) {
-    console.log(JSON.stringify(values, null, 2));
+  async function handleSyncCollectionSubmit(values: SyncFormCollectionItem[]) {
+    const updatedValues: SyncCollectionItem[] = values.map((item) => ({
+      ...item,
+      itemId: parseInt(item.itemId),
+      orderDate: item.orderDate || null,
+      paymentDate: item.paymentDate || null,
+      shippingDate: item.shippingDate || null,
+      collectionDate: item.collectionDate || null,
+      score: item.score.toString(),
+    }));
+    const data = await collectionMutation.mutateAsync(updatedValues);
+    setCurrentStep(3);
+
+    setStatus({
+      existingItems: data.existingItemsToInsert,
+      newItems: data.newItems,
+      isFinished: data.isFinished,
+      status: data.status,
+    });
+
+    if (data.jobId) {
+      const jobId = data.jobId;
+      const interval = setInterval(async () => {
+        const { data, error } = await tryCatch(
+          queryClient.fetchQuery({
+            queryKey: ["job-status", jobId],
+            queryFn: () => getJobStatus(jobId),
+          })
+        );
+
+        if (error) {
+          clearInterval(interval);
+          console.log(error);
+          setStatus((prev) => ({
+            ...prev,
+            isFinished: true,
+            status: "An error occurred",
+          }));
+          return;
+        }
+
+        console.log(data?.status);
+        setStatus((prev) => ({
+          ...prev,
+          isFinished: data?.finished,
+          status: data?.status,
+        }));
+
+        if (data?.finished) {
+          clearInterval(interval);
+          setStatus((prev) => ({
+            ...prev,
+            isFinished: data?.finished,
+            status: data?.status,
+          }));
+          return;
+        }
+      }, 3000);
+    }
   }
 
   function handleSyncOption(option: "csv" | "order" | "collection") {

@@ -32,14 +32,14 @@ import { X, ChevronDown, Loader2, ArrowLeft, Plus, Edit } from "lucide-react";
 import { z } from "zod";
 import type { CascadeOptions } from "@/lib/orders/types";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
-import type { SyncOrder, SyncOrderItem } from "@/lib/sync/types";
+import type { SyncFormOrder, SyncFormOrderItem } from "@/lib/sync/types";
 
 export default function SyncOrderForm({
   setCurrentStep,
   handleSyncOrderSubmit,
 }: {
   setCurrentStep: (step: number) => void;
-  handleSyncOrderSubmit: (values: SyncOrder) => void;
+  handleSyncOrderSubmit: (values: SyncFormOrder) => void;
 }) {
   const {
     cascadeOptions,
@@ -52,7 +52,7 @@ export default function SyncOrderForm({
 
   const orderForm = useForm({
     defaultValues: {
-      status: "Ordered",
+      status: "Ordered" as SyncFormOrder["status"],
       title: "New Order",
       shop: "",
       orderDate: "",
@@ -60,7 +60,7 @@ export default function SyncOrderForm({
       paymentDate: "",
       shippingDate: "",
       collectionDate: "",
-      shippingMethod: "n/a",
+      shippingMethod: "n/a" as SyncFormOrder["shippingMethod"],
       shippingFee: "0.00",
       taxes: "0.00",
       duties: "0.00",
@@ -69,30 +69,28 @@ export default function SyncOrderForm({
       notes: "",
       items: [
         {
-          id: "",
+          itemId: "",
           price: "0.00",
           count: 1,
-          status: "Ordered",
+          status: "Ordered" as SyncFormOrderItem["status"],
           condition: "New",
-          shippingMethod: "n/a",
+          shippingMethod: "n/a" as SyncFormOrderItem["shippingMethod"],
           orderDate: "",
           paymentDate: "",
           shippingDate: "",
           collectionDate: "",
         },
-      ] as SyncOrderItem[],
+      ] as SyncFormOrderItem[],
     },
     onSubmit: async ({ value }) => {
-      // Apply cascade options to all items
       const updatedValue = {
         ...value,
         items: value.items.map((item) => {
           const updatedItem = { ...item };
 
-          // Apply each selected cascade option
           cascadeOptions.forEach((option: CascadeOptions[number]) => {
             if (option === "status" && value.status) {
-              updatedItem.status = value.status as SyncOrderItem["status"];
+              updatedItem.status = value.status as SyncFormOrderItem["status"];
             } else if (option === "orderDate" && value.orderDate) {
               updatedItem.orderDate = value.orderDate;
             } else if (option === "paymentDate" && value.paymentDate) {
@@ -103,7 +101,7 @@ export default function SyncOrderForm({
               updatedItem.collectionDate = value.collectionDate;
             } else if (option === "shippingMethod" && value.shippingMethod) {
               updatedItem.shippingMethod =
-                value.shippingMethod as SyncOrderItem["shippingMethod"];
+                value.shippingMethod as SyncFormOrderItem["shippingMethod"];
             }
           });
 
@@ -111,7 +109,8 @@ export default function SyncOrderForm({
         }),
       };
 
-      handleSyncOrderSubmit(updatedValue);
+      await handleSyncOrderSubmit(updatedValue);
+      orderForm.reset();
     },
   });
   return (
@@ -550,7 +549,7 @@ export default function SyncOrderForm({
                   return (
                     <orderForm.Field
                       key={i}
-                      name={`items[${i}].id`}
+                      name={`items[${i}].itemId`}
                       validators={{
                         onChange: z.string().nonempty("Item ID is required"),
                       }}
@@ -564,7 +563,6 @@ export default function SyncOrderForm({
                                 onChange={(e) =>
                                   subField.handleChange(e.target.value)
                                 }
-                                type="text"
                                 placeholder="MyFigureCollection Item ID (e.g. 98665)"
                                 className="max-w-sm"
                               />
@@ -990,7 +988,7 @@ export default function SyncOrderForm({
                     e.preventDefault();
                     e.stopPropagation();
                     field.pushValue({
-                      id: "",
+                      itemId: "",
                       price: "0.00",
                       count: 1,
                       status: "Ordered",

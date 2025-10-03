@@ -29,7 +29,7 @@ import {
   type OnChangeFn,
 } from "@tanstack/react-table";
 import { Package, MoreHorizontal, Copy, Edit, Trash2 } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatDate } from "@/lib/utils";
 import type { OrderItem } from "@/lib/orders/types";
 import { toast } from "sonner";
 import { Dialog, DialogTrigger } from "../ui/dialog";
@@ -153,7 +153,7 @@ export function OrderItemsSubTable({
         header: ({ column }) => (
           <DataGridColumnHeader title="Order Date" column={column} />
         ),
-        cell: (info) => info.getValue() as string,
+        cell: (info) => (info.getValue() as string) || "n/a",
         enableSorting: true,
         size: 30,
       },
@@ -162,7 +162,7 @@ export function OrderItemsSubTable({
         header: ({ column }) => (
           <DataGridColumnHeader title="Release" column={column} />
         ),
-        cell: (info) => info.getValue() as string,
+        cell: (info) => formatDate(info.getValue() as string),
         enableSorting: true,
         size: 30,
       },

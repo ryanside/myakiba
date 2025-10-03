@@ -8,7 +8,7 @@ import { useState } from "react";
 
 export const Route = createFileRoute("/login")({
   component: RouteComponent,
-  beforeLoad: async ({ location }) => {
+  beforeLoad: async () => {
     const { data: session } = await authClient.getSession();
     if (session) {
       throw redirect({

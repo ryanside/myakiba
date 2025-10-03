@@ -28,11 +28,6 @@ import ma from "@/public/ma.svg";
 import myakiba from "@/public/myakiba.svg";
 
 const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
   navMain: [
     {
       title: "Dashboard",

@@ -6,6 +6,9 @@ import type {
   csvItem,
   orderInsertType,
   status,
+  UpdatedSyncCollection,
+  UpdatedSyncOrder,
+  UpdatedSyncOrderItem,
 } from "./model";
 import { sanitizeDate } from "@/lib/utils";
 
@@ -81,35 +84,16 @@ class SyncService {
 
   async insertToCollectionAndOrders(
     collectionItems: collectionInsertType[],
-    orderItems: orderInsertType[]
-  ) {
-    const inserted = await db.transaction(async (tx) => {
-      if (orderItems.length > 0) {
-        const orderInserted = await tx.insert(order).values(orderItems);
-        if (!orderInserted || orderInserted.length === 0) {
-          throw new Error("FAILED_TO_INSERT_ORDERS");
-        }
-
-        const collectionInserted = await tx
-          .insert(collection)
-          .values(collectionItems);
-        if (!collectionInserted || collectionInserted.length === 0) {
-          throw new Error("FAILED_TO_INSERT_COLLECTION");
-        }
-
-        return { orderInserted, collectionInserted };
+    orderItems?: orderInsertType[]
+  ): Promise<void> {
+    await db.transaction(async (tx) => {
+      if (orderItems && orderItems.length > 0) {
+        await tx.insert(order).values(orderItems);
+        await tx.insert(collection).values(collectionItems);
+      } else {
+        await tx.insert(collection).values(collectionItems);
       }
-      const collectionInserted = await tx
-        .insert(collection)
-        .values(collectionItems);
-      if (!collectionInserted || collectionInserted.length === 0) {
-        throw new Error("FAILED_TO_INSERT_COLLECTION");
-      }
-
-      return { collectionInserted };
     });
-
-    return inserted;
   }
 
   assignOrderIdsAndSanitizeDates(items: csvItem[]): csvItem[] {
@@ -140,8 +124,8 @@ class SyncService {
 
     const {
       items: existingItems,
-      releases: existingItemsReleases,
-      releaseDates: existingItemsReleaseDates,
+      releases: existingItemsReleases, // release ids
+      releaseDates: existingItemsReleaseDates, // release dates
     } = await this.getExistingItemsWithReleases(idsRequiringItemLookup);
 
     const csvItemsToInsert = items.filter((item: csvItem) =>
@@ -202,14 +186,14 @@ class SyncService {
     };
   }
 
-  async queueNewItems(
-    items: csvItem[],
-    userId: string,
-    type: "csv" | "order" | "collection"
-  ) {
+  async queueCSVSyncJob(items: csvItem[], userId: string) {
     const job = await syncQueue.add(
       "sync-job",
-      { items: items, userId: userId, type: type },
+      {
+        type: "csv" as const,
+        userId: userId,
+        items: items,
+      },
       {
         removeOnComplete: true,
         removeOnFail: true,
@@ -218,13 +202,104 @@ class SyncService {
     );
 
     if (!job) {
-      throw new Error("FAILED_TO_QUEUE_SYNC_JOB");
+      throw new Error("FAILED_TO_QUEUE_CSV_SYNC_JOB");
     }
 
     const setJobStatus = await redis.set(
       `job:${job.id}:status`,
       JSON.stringify({
-        status: "Your sync job has been added to queue. Please wait...",
+        status: "Your CSV sync job has been added to queue. Please wait...",
+        finished: false,
+        createdAt: new Date().toISOString(),
+      }),
+      "EX",
+      60
+    );
+
+    if (!setJobStatus) {
+      throw new Error("FAILED_TO_SET_JOB_STATUS_IN_REDIS");
+    }
+
+    return job.id;
+  }
+
+  async queueOrderSyncJob(
+    userId: string,
+    order: UpdatedSyncOrder,
+    itemsToScrape: UpdatedSyncOrderItem[],
+    itemsToInsert: UpdatedSyncOrderItem[]
+  ) {
+    const job = await syncQueue.add(
+      "sync-job",
+      {
+        type: "order" as const,
+        userId: userId,
+        order: {
+          details: order,
+          itemsToScrape: itemsToScrape,
+          itemsToInsert: itemsToInsert,
+        },
+      },
+      {
+        removeOnComplete: true,
+        removeOnFail: true,
+        jobId: createId(),
+      }
+    );
+
+    if (!job) {
+      throw new Error("FAILED_TO_QUEUE_ORDER_SYNC_JOB");
+    }
+
+    const setJobStatus = await redis.set(
+      `job:${job.id}:status`,
+      JSON.stringify({
+        status: "Your order sync job has been added to queue. Please wait...",
+        finished: false,
+        createdAt: new Date().toISOString(),
+      }),
+      "EX",
+      60
+    );
+
+    if (!setJobStatus) {
+      throw new Error("FAILED_TO_SET_JOB_STATUS_IN_REDIS");
+    }
+
+    return job.id;
+  }
+
+  async queueCollectionSyncJob(
+    userId: string,
+    itemsToScrape: UpdatedSyncCollection[],
+    itemsToInsert: UpdatedSyncCollection[]
+  ) {
+    const job = await syncQueue.add(
+      "sync-job",
+      {
+        type: "collection" as const,
+        userId: userId,
+        collection: {
+          itemsToScrape: itemsToScrape,
+          itemsToInsert: itemsToInsert,
+        },
+      },
+      {
+        removeOnComplete: true,
+        removeOnFail: true,
+        jobId: createId(),
+      }
+    );
+
+    if (!job) {
+      throw new Error("FAILED_TO_QUEUE_COLLECTION_SYNC_JOB");
+    }
+
+    const setJobStatus = await redis.set(
+      `job:${job.id}:status`,
+      JSON.stringify({
+        status:
+          "Your collection sync job has been added to queue. Please wait...",
         finished: false,
         createdAt: new Date().toISOString(),
       }),

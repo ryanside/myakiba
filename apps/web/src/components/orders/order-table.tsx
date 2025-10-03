@@ -273,7 +273,7 @@ export default function OrdersDataGrid({
             column={column}
           />
         ),
-        cell: (info) => (info.getValue() as string) || "N/A",
+        cell: (info) => (info.getValue() as string) || "n/a",
         enableSorting: true,
         enableHiding: true,
         enableResizing: true,
