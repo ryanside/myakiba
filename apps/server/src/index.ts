@@ -10,9 +10,11 @@ import dashboardRouter from "./routers/dashboard";
 import analyticsRouter from "./routers/analytics";
 import galleryRouter from "./routers/gallery";
 import ordersRouter from "./routers/orders";
-import managerRouter from "./routers/manager";
+import collectionRouter from "./routers/collection";
 import wrappedRouter from "./routers/wrapped";
 import itemsRouter from "./routers/items";
+import entriesRouter from "./routers/entries";
+import searchRouter from "./routers/search";
 
 const app = new Hono<{
   Variables: Variables;
@@ -58,9 +60,11 @@ const routes = app
   .route("/analytics", analyticsRouter)
   .route("/gallery", galleryRouter)
   .route("/orders", ordersRouter)
-  .route("/manager", managerRouter)
+  .route("/collection", collectionRouter)
   .route("/wrapped", wrappedRouter)
-  .route("/items", itemsRouter);
+  .route("/items", itemsRouter)
+  .route("/entries", entriesRouter)
+  .route("/search", searchRouter);
 
 app.get("*", serveStatic({ root: "./dist" }));
 app.get("*", serveStatic({ path: "./dist/index.html" }));

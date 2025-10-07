@@ -158,7 +158,7 @@ export default function SignUpForm({
                   username: value,
                 });
                 if (data?.available === false) {
-                  return error;
+                  return "Username is already taken";
                 }
               },
               onBlur: z
@@ -178,8 +178,11 @@ export default function SignUpForm({
                   onChange={(e) => field.handleChange(e.target.value)}
                 />
                 {field.state.meta.errors.map((error) => (
-                  <p key={error?.message} className="text-red-500">
-                    {error?.message}
+                  <p
+                    key={typeof error === "string" ? error : error?.message}
+                    className="text-red-500"
+                  >
+                    {typeof error === "string" ? error : error?.message}
                   </p>
                 ))}
               </div>

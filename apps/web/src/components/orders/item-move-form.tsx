@@ -1,5 +1,5 @@
 import { useForm } from "@tanstack/react-form";
-import { z } from "zod";
+import * as z from "zod";
 import { useQuery } from "@tanstack/react-query";
 import {
   DialogClose,
@@ -8,18 +8,26 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useState } from "react";
 import { getOrderIdsAndTitles } from "@/queries/orders";
 import { DebouncedInput } from "@/components/debounced-input";
 import { Label } from "@/components/ui/label";
 import { Button } from "../ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { CheckIcon, ChevronsUpDownIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { ScrollArea } from "../ui/scroll-area";
 
 type ItemMoveFormProps = {
   selectedItemData: {
@@ -41,12 +49,14 @@ export default function ItemMoveForm(props: ItemMoveFormProps) {
     title: "",
   });
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const [open, setOpen] = useState(false);
+
+  const { data, isLoading, error } = useQuery({
     queryKey: ["orderIdsAndTitles", filters],
     queryFn: () => getOrderIdsAndTitles(filters),
     staleTime: 1000 * 60 * 5,
     retry: false,
-    enabled: false,
+    enabled: filters.title.length > 0,
   });
 
   const form = useForm({
@@ -63,7 +73,7 @@ export default function ItemMoveForm(props: ItemMoveFormProps) {
     },
   });
   return (
-    <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+    <DialogContent className="sm:max-w-[600px] overflow-y-auto">
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -74,76 +84,97 @@ export default function ItemMoveForm(props: ItemMoveFormProps) {
         <DialogHeader>
           <DialogTitle>Move Items</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="gap-4 w-full overflow-auto">
-            <form.Field
-              name="targetOrderId"
-              validators={{
-                onChange: z.string().nonempty("Target order id is required"),
-              }}
-              children={(field) => (
-                <div className="grid gap-2">
-                  <Label htmlFor={field.name}>Move to Order:</Label>
-                  <Select
-                    value={field.state.value}
-                    onValueChange={field.handleChange}
-                    onOpenChange={(open) => {
-                      if (open) {
-                        refetch();
-                      }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select target order" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <div className="overflow-auto space-y-2">
-                        <DebouncedInput
-                          value={filters.title}
-                          onChange={(value) =>
-                            setFilters({ title: value.toString() })
-                          }
-                          placeholder="Search by title"
-                          className="w-full text-foreground"
-                          autoFocus
-                          onKeyDown={(e) => {
-                            e.stopPropagation();
-                          }}
-                        />
-                        <div className="max-h-[500px] overflow-auto">
-                          {isLoading && (
-                            <div className="px-2 py-1 text-sm text-muted-foreground">
-                              Searching...
-                            </div>
-                          )}
-                          {error && (
-                            <div className="px-2 py-1 text-sm text-red-500">
-                              {error.message}
-                            </div>
-                          )}
-                          {data?.orderIdsAndTitles?.map((order) => (
-                            <SelectItem key={order.id} value={order.id}>
-                              {order.title}
-                            </SelectItem>
-                          ))}
-                          {data?.orderIdsAndTitles?.length === 0 &&
-                            !isLoading && (
-                              <div className="px-2 py-1 text-sm text-muted-foreground">
-                                No orders found
-                              </div>
+        <ScrollArea className="gap-4 py-4 w-full overflow-auto max-h-[70vh]">
+          <form.Field
+            name="targetOrderId"
+            validators={{
+              onChange: z.string().nonempty("Target order id is required"),
+            }}
+            children={(field) => (
+              <div className="grid gap-2">
+                <Label htmlFor={field.name}>Move to Order:</Label>
+                <Popover open={open} onOpenChange={setOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={open}
+                      className="w-full justify-between"
+                      type="button"
+                    >
+                      {field.state.value
+                        ? data?.orderIdsAndTitles?.find(
+                            (order) => order.id === field.state.value
+                          )?.title || "Select target order"
+                        : "Select target order"}
+                      <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                    <Command>
+                      <DebouncedInput
+                        value={filters.title}
+                        onChange={(value) =>
+                          setFilters({ title: value.toString() })
+                        }
+                        placeholder="Search by title..."
+                        debounce={200}
+                        className="rounded-none shadow-none border-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-background"
+                      />
+                      {data?.orderIdsAndTitles &&
+                        data.orderIdsAndTitles.length > 0 && (
+                          <CommandList className="space-y-2 p-1">
+                            {error && (
+                              <CommandEmpty>
+                                Error searching orders: {error.message}
+                              </CommandEmpty>
                             )}
-                        </div>
-                      </div>
-                    </SelectContent>
-                  </Select>
-                  {!field.state.meta.isValid && (
-                    <em role="alert">{field.state.meta.errors.join(", ")}</em>
-                  )}
-                </div>
-              )}
-            />
-          </div>
-        </div>
+                            {data.orderIdsAndTitles.length === 0 &&
+                              !isLoading &&
+                              !error && (
+                                <CommandEmpty>No orders found.</CommandEmpty>
+                              )}
+                            <CommandGroup>
+                              {data.orderIdsAndTitles.map((order) => (
+                                <CommandItem
+                                  key={order.id}
+                                  value={order.id}
+                                  onSelect={() => {
+                                    field.handleChange(order.id);
+                                    setOpen(false);
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      e.preventDefault();
+                                      field.handleChange(order.id);
+                                      setOpen(false);
+                                    }
+                                  }}
+                                >
+                                  <CheckIcon
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      field.state.value === order.id
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                  />
+                                  {order.title}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        )}
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                {!field.state.meta.isValid && (
+                  <em role="alert">{field.state.meta.errors.join(", ")}</em>
+                )}
+              </div>
+            )}
+          />
+        </ScrollArea>
         <DialogFooter>
           <DialogClose asChild>
             <Button variant="outline" type="button">

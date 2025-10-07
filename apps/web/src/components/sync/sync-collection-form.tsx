@@ -21,8 +21,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import { z } from "zod";
+import { DatePicker } from "../ui/date-picker";
+import * as z from "zod";
 import { Rating } from "../ui/rating";
+import { Textarea } from "../ui/textarea";
 
 export default function SyncCollectionForm({
   setCurrentStep,
@@ -284,17 +286,19 @@ export default function SyncCollectionForm({
                                             <Label htmlFor={`score-${i}`}>
                                               Score
                                             </Label>
-                                            <Rating
-                                              rating={
-                                                scoreField.state.value ?? 0
-                                              }
-                                              editable={true}
-                                              onRatingChange={
-                                                scoreField.handleChange
-                                              }
-                                              showValue={true}
-                                              maxRating={10}
-                                            />
+                                            <div className="my-auto">
+                                              <Rating
+                                                rating={
+                                                  scoreField.state.value ?? 0
+                                                }
+                                                editable={true}
+                                                onRatingChange={
+                                                  scoreField.handleChange
+                                                }
+                                                showValue={true}
+                                                maxRating={10}
+                                              />
+                                            </div>
                                           </div>
                                         )}
                                       />
@@ -406,19 +410,20 @@ export default function SyncCollectionForm({
                                             <Label htmlFor={`orderDate-${i}`}>
                                               Order Date
                                             </Label>
-                                            <Input
+                                            <DatePicker
                                               id={`orderDate-${i}`}
                                               name={orderDateField.name}
                                               value={
-                                                orderDateField.state.value ?? ""
+                                                orderDateField.state.value ??
+                                                null
                                               }
                                               onBlur={orderDateField.handleBlur}
-                                              type="date"
-                                              onChange={(e) =>
+                                              onChange={(value) =>
                                                 orderDateField.handleChange(
-                                                  e.target.value
+                                                  value ?? ""
                                                 )
                                               }
+                                              placeholder="Select order date"
                                             />
                                           </div>
                                         )}
@@ -430,22 +435,22 @@ export default function SyncCollectionForm({
                                             <Label htmlFor={`paymentDate-${i}`}>
                                               Payment Date
                                             </Label>
-                                            <Input
+                                            <DatePicker
                                               id={`paymentDate-${i}`}
                                               name={paymentDateField.name}
                                               value={
                                                 paymentDateField.state.value ??
-                                                ""
+                                                null
                                               }
                                               onBlur={
                                                 paymentDateField.handleBlur
                                               }
-                                              type="date"
-                                              onChange={(e) =>
+                                              onChange={(value) =>
                                                 paymentDateField.handleChange(
-                                                  e.target.value
+                                                  value ?? ""
                                                 )
                                               }
+                                              placeholder="Select payment date"
                                             />
                                           </div>
                                         )}
@@ -462,22 +467,22 @@ export default function SyncCollectionForm({
                                             >
                                               Shipping Date
                                             </Label>
-                                            <Input
+                                            <DatePicker
                                               id={`shippingDate-${i}`}
                                               name={shippingDateField.name}
                                               value={
                                                 shippingDateField.state.value ??
-                                                ""
+                                                null
                                               }
                                               onBlur={
                                                 shippingDateField.handleBlur
                                               }
-                                              type="date"
-                                              onChange={(e) =>
+                                              onChange={(value) =>
                                                 shippingDateField.handleChange(
-                                                  e.target.value
+                                                  value ?? ""
                                                 )
                                               }
+                                              placeholder="Select shipping date"
                                             />
                                           </div>
                                         )}
@@ -491,22 +496,22 @@ export default function SyncCollectionForm({
                                             >
                                               Collection Date
                                             </Label>
-                                            <Input
+                                            <DatePicker
                                               id={`collectionDate-${i}`}
                                               name={collectionDateField.name}
                                               value={
                                                 collectionDateField.state
-                                                  .value ?? ""
+                                                  .value ?? null
                                               }
                                               onBlur={
                                                 collectionDateField.handleBlur
                                               }
-                                              type="date"
-                                              onChange={(e) =>
+                                              onChange={(value) =>
                                                 collectionDateField.handleChange(
-                                                  e.target.value
+                                                  value ?? ""
                                                 )
                                               }
+                                              placeholder="Select collection date"
                                             />
                                           </div>
                                         )}
@@ -591,7 +596,7 @@ export default function SyncCollectionForm({
                                           <Label htmlFor={`notes-${i}`}>
                                             Notes
                                           </Label>
-                                          <textarea
+                                          <Textarea
                                             id={`notes-${i}`}
                                             name={notesField.name}
                                             value={notesField.state.value ?? ""}

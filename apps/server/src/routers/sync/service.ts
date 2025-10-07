@@ -166,7 +166,7 @@ class SyncService {
       itemId: i.id,
       status: i.status,
       count: i.count,
-      score: i.score && i.score.trim() !== "" ? i.score : null,
+      score: i.score && i.score.trim() !== "" ? i.score : "0.0",
       paymentDate: i.payment_date,
       shippingDate: i.shipping_date,
       collectionDate: sanitizeDate(i.collecting_date),

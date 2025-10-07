@@ -1,4 +1,3 @@
-import * as React from "react";
 import {
   ChartNoAxesCombined,
   ChartNoAxesGantt,
@@ -35,25 +34,18 @@ const data = {
       icon: Home,
     },
     {
-      title: "Orders",
-      url: "orders",
-      icon: ShoppingCart,
-    },
-    {
       title: "Analytics",
       url: "analytics",
       icon: ChartNoAxesCombined,
     },
     {
-      title: "Wrapped",
-      url: "wrapped",
-      icon: Sparkles,
+      title: "Orders",
+      url: "orders",
+      icon: ShoppingCart,
     },
-  ],
-  navCollection: [
     {
-      title: "Manager",
-      url: "manager",
+      title: "Collection",
+      url: "collection",
       icon: ChartNoAxesGantt,
     },
     {
@@ -61,7 +53,24 @@ const data = {
       url: "gallery",
       icon: Images,
     },
+    {
+      title: "Wrapped",
+      url: "wrapped",
+      icon: Sparkles,
+    },
   ],
+  // navCollection: [
+  //   {
+  //     title: "Collection",
+  //     url: "collection",
+  //     icon: ChartNoAxesGantt,
+  //   },
+  //   {
+  //     title: "Gallery",
+  //     url: "gallery",
+  //     icon: Images,
+  //   },
+  // ],
   navSecondary: [
     {
       title: "Donate",
@@ -156,7 +165,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenu>
         </SidebarGroup>
         <NavMain items={data.navMain} location={location} />
-        <NavCollection items={data.navCollection} location={location} />
+        {/* <NavCollection items={data.navCollection} location={location} /> */}
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter></SidebarFooter>

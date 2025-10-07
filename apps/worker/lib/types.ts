@@ -1,5 +1,5 @@
 import type { Job } from "bullmq";
-import { z } from "zod";
+import * as z from "zod";
 
 export interface scrapedItem {
   id: number;

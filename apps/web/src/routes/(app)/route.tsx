@@ -16,12 +16,14 @@ import { Outlet, redirect, useLocation } from "@tanstack/react-router";
 import { ModeToggle } from "@/components/mode-toggle";
 import UserMenu from "@/components/sidebar/user-menu";
 import { authClient } from "@/lib/auth-client";
+import { SearchCommand } from "@/components/sidebar/search-command";
+import { Button } from "@/components/ui/button";
+import { Search } from "lucide-react";
 
 export const Route = createFileRoute("/(app)")({
   component: RouteComponent,
   beforeLoad: async ({ location }) => {
     const { data: session } = await authClient.getSession();
-    console.log(session);
     if (!session) {
       throw redirect({
         to: "/login",
@@ -32,8 +34,9 @@ export const Route = createFileRoute("/(app)")({
     }
   },
 });
-  
+
 function RouteComponent() {
+
   const location = useLocation();
   return (
     <SidebarProvider>
@@ -48,11 +51,17 @@ function RouteComponent() {
             />
             <Breadcrumb>
               <BreadcrumbList>
-                <BreadcrumbItem >
-                  <BreadcrumbLink className="text-foreground">{location.pathname.charAt(1).toUpperCase() + location.pathname.slice(2)}</BreadcrumbLink>
+                <BreadcrumbItem>
+                  <BreadcrumbLink className="text-foreground">
+                    {location.pathname.charAt(1).toUpperCase() +
+                      location.pathname.slice(2)}
+                  </BreadcrumbLink>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
+          </div>
+          <div className="flex items-center gap-2">
+              <SearchCommand />
           </div>
           <div className="flex items-center gap-2">
             <ModeToggle />

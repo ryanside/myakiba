@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import type { Variables } from "../..";
 import OrdersService from "./service";
 import { zValidator } from "@hono/zod-validator";
-import { z } from "zod";
+import * as z from "zod";
 import {
   orderInsertSchema,
   orderItemUpdateSchema,

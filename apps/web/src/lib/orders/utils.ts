@@ -1,5 +1,5 @@
 import type {
-  Filters,
+  OrderFilters,
   NewOrder,
   Order,
   OrderItem,
@@ -126,7 +126,7 @@ export function createOptimisticMergeUpdate(
   old: OrdersQueryResponse,
   values: NewOrder,
   orderIds: Set<string>,
-  filters: Filters,
+  filters: OrderFilters,
   cascadeOptions: CascadeOptions = []
 ): OrdersQueryResponse {
   if (!old) return old;
@@ -210,7 +210,7 @@ export function createOptimisticSplitUpdate(
   values: NewOrder,
   orderIds: Set<string>,
   collectionIds: Set<string>,
-  filters: Filters,
+  filters: OrderFilters,
   cascadeOptions: CascadeOptions = []
 ): OrdersQueryResponse {
   if (!old) return old;
@@ -478,7 +478,7 @@ export function createOptimisticMoveItemUpdate(
   targetOrderId: string,
   collectionIds: Set<string>,
   orderIds: Set<string>,
-  filters: Filters
+  filters: OrderFilters
 ): OrdersQueryResponse {
   if (!old) return old;
 

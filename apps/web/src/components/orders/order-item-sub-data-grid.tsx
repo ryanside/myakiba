@@ -29,7 +29,7 @@ import {
   type OnChangeFn,
 } from "@tanstack/react-table";
 import { Package, MoreHorizontal, Copy, Edit, Trash2 } from "lucide-react";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import type { OrderItem } from "@/lib/orders/types";
 import { toast } from "sonner";
 import { Dialog, DialogTrigger } from "../ui/dialog";
@@ -54,7 +54,7 @@ function getItemStatusVariant(
   }
 }
 
-export function OrderItemsSubTable({
+export function OrderItemSubDataGrid({
   items,
   orderId,
   itemSelection,
@@ -78,6 +78,16 @@ export function OrderItemsSubTable({
     pageIndex: 0,
     pageSize: 5,
   });
+  const [columnOrder, setColumnOrder] = useState<string[]>([
+    "select",
+    "title",
+    "orderDate",
+    "releaseDate",
+    "count",
+    "status",
+    "price",
+    "actions",
+  ]);
 
   const columns = useMemo<ColumnDef<OrderItem>[]>(
     () => [
@@ -99,21 +109,36 @@ export function OrderItemsSubTable({
           />
         ),
         cell: ({ row }) => (
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            onClick={(e) => e.stopPropagation()}
-            aria-label="Select row"
-            size="sm"
-            className="align-[inherit] mb-0.5 rounded-xs"
-          />
+          <>
+            <div
+              className={cn(
+                "hidden absolute top-0 bottom-0 start-0 w-[2px] bg-primary",
+                row.getIsSelected() && "block"
+              )}
+            ></div>
+            <Checkbox
+              checked={row.getIsSelected()}
+              onCheckedChange={(value) => row.toggleSelected(!!value)}
+              onClick={(e) => e.stopPropagation()}
+              aria-label="Select row"
+              size="sm"
+              className="align-[inherit] mb-0.5 rounded-xs"
+            />
+          </>
         ),
-        size: 10,
+        size: 40,
+        enableSorting: false,
+        enableHiding: false,
+        enableResizing: false,
       },
       {
         accessorKey: "title",
         header: ({ column }) => (
-          <DataGridColumnHeader title="Item" column={column} />
+          <DataGridColumnHeader
+            title="Item"
+            visibility={true}
+            column={column}
+          />
         ),
         cell: ({ row }) => {
           const item = row.original;
@@ -137,7 +162,7 @@ export function OrderItemsSubTable({
                   href={`https://myfigurecollection.net/item/${item.itemId}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline"
+                  className="text-xs text-muted-foreground font-light hover:text-foreground transition-colors underline-offset-4 hover:underline"
                 >
                   https://myfigurecollection.net/item/{item.itemId}
                 </a>
@@ -146,39 +171,63 @@ export function OrderItemsSubTable({
           );
         },
         enableSorting: true,
-        size: 190,
+        enableHiding: true,
+        enableResizing: true,
+        size: 450,
       },
       {
         accessorKey: "orderDate",
         header: ({ column }) => (
-          <DataGridColumnHeader title="Order Date" column={column} />
+          <DataGridColumnHeader
+            title="Order Date"
+            visibility={true}
+            column={column}
+          />
         ),
         cell: (info) => (info.getValue() as string) || "n/a",
         enableSorting: true,
-        size: 30,
+        enableHiding: true,
+        enableResizing: true,
+        size: 100,
       },
       {
         accessorKey: "releaseDate",
         header: ({ column }) => (
-          <DataGridColumnHeader title="Release" column={column} />
+          <DataGridColumnHeader
+            title="Release"
+            visibility={true}
+            column={column}
+          />
         ),
         cell: (info) => formatDate(info.getValue() as string),
         enableSorting: true,
-        size: 30,
+        enableHiding: true,
+        enableResizing: true,
+        size: 100,
       },
       {
         accessorKey: "count",
         header: ({ column }) => (
-          <DataGridColumnHeader title="Count" column={column} />
+          <DataGridColumnHeader
+            title="Count"
+            visibility={true}
+            column={column}
+          />
         ),
         cell: (info) => info.getValue() as string,
         enableSorting: true,
-        size: 30,
+        enableHiding: true,
+        enableResizing: true,
+        size: 70,
       },
       {
         accessorKey: "status",
         header: ({ column }) => (
-          <DataGridColumnHeader title="Status" column={column} />
+          <DataGridColumnHeader
+            title="Status"
+            visibility={true}
+            column={column}
+          />
         ),
         cell: ({ row }) => {
           const status = row.original.status;
@@ -189,16 +238,24 @@ export function OrderItemsSubTable({
           );
         },
         enableSorting: true,
-        size: 30,
+        enableHiding: true,
+        enableResizing: true,
+        size: 95,
       },
       {
         accessorKey: "price",
         header: ({ column }) => (
-          <DataGridColumnHeader title="Price" column={column} />
+          <DataGridColumnHeader
+            title="Price"
+            visibility={true}
+            column={column}
+          />
         ),
         cell: (info) => formatCurrency(info.getValue() as string),
         enableSorting: true,
-        size: 30,
+        enableHiding: true,
+        enableResizing: true,
+        size: 95,
       },
       {
         id: "actions",
@@ -250,7 +307,7 @@ export function OrderItemsSubTable({
             </DropdownMenu>
           );
         },
-        size: 20,
+        size: 60,
         enableSorting: false,
         enableHiding: false,
         enableResizing: false,
@@ -267,10 +324,13 @@ export function OrderItemsSubTable({
       sorting,
       pagination,
       rowSelection: itemSelection,
+      columnOrder,
     },
+    columnResizeMode: "onChange",
     onSortingChange: setSorting,
     onPaginationChange: setPagination,
     onRowSelectionChange: setItemSelection,
+    onColumnOrderChange: setColumnOrder,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -284,10 +344,13 @@ export function OrderItemsSubTable({
         table={subTable}
         recordCount={items.length}
         tableLayout={{
-          cellBorder: true,
           rowBorder: true,
           headerBackground: true,
           headerBorder: true,
+          columnsPinnable: true,
+          columnsResizable: true,
+          columnsMovable: true,
+          columnsVisibility: true,
         }}
       >
         <div className="w-full space-y-2.5 overflow-x-auto">

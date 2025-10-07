@@ -16,7 +16,7 @@ type OrderItem = {
   image: string | null;
   price: string;
   count: number;
-  shop: string | null;
+  shop: string;
   orderDate: string | null;
   paymentDate: string | null;
   shippingDate: string | null;
@@ -37,7 +37,7 @@ type OrderItem = {
   releasePrice: string | null;
   releasePriceCurrency: string | null;
   releaseBarcode: string | null;
-  condition: "New" | "Pre-Owned" | null;
+  condition: "New" | "Pre-Owned";
 };
 
 class OrdersService {

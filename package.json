@@ -19,7 +19,9 @@
     "db:generate": "turbo -F server db:generate",
     "db:migrate": "turbo -F server db:migrate"
   },
-  "dependencies": {},
+  "dependencies": {
+    "better-auth-harmony": "^1.2.5"
+  },
   "devDependencies": {
     "@eslint/js": "^9.35.0",
     "eslint": "^9.35.0",

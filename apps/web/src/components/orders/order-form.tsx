@@ -17,7 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { z } from "zod";
+import { DatePicker } from "@/components/ui/date-picker";
+import * as z from "zod";
 import type { EditedOrder, NewOrder, Order } from "@/lib/orders/types";
 import {
   DropdownMenu,
@@ -29,6 +30,7 @@ import {
 import { ChevronDown, Loader2 } from "lucide-react";
 import type { CascadeOptions } from "@/lib/orders/types";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
+import { Textarea } from "../ui/textarea";
 
 type MergeOrderFormProps = {
   orderIds: Set<string>;
@@ -227,7 +229,7 @@ export function OrderForm(props: OrderFormProps) {
                     <ChevronDown className="h-4 w-4 z-10" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-66">
+                <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
                   <div className="flex gap-2 py-1">
                     <Button
                       variant="ghost"
@@ -358,13 +360,13 @@ export function OrderForm(props: OrderFormProps) {
               children={(field) => (
                 <div className="grid gap-2">
                   <Label htmlFor={field.name}>Order Date</Label>
-                  <Input
+                  <DatePicker
                     id={field.name}
                     name={field.name}
-                    value={field.state.value ?? ""}
+                    value={field.state.value ?? null}
                     onBlur={field.handleBlur}
-                    type="date"
-                    onChange={(e) => field.handleChange(e.target.value)}
+                    onChange={(value) => field.handleChange(value)}
+                    placeholder="Select order date"
                   />
                 </div>
               )}
@@ -375,13 +377,13 @@ export function OrderForm(props: OrderFormProps) {
               children={(field) => (
                 <div className="grid gap-2">
                   <Label htmlFor={field.name}>Release</Label>
-                  <Input
+                  <DatePicker
                     id={field.name}
                     name={field.name}
-                    value={field.state.value ?? ""}
+                    value={field.state.value ?? null}
                     onBlur={field.handleBlur}
-                    type="date"
-                    onChange={(e) => field.handleChange(e.target.value)}
+                    onChange={(value) => field.handleChange(value)}
+                    placeholder="Select release date"
                   />
                 </div>
               )}
@@ -394,13 +396,13 @@ export function OrderForm(props: OrderFormProps) {
               children={(field) => (
                 <div className="grid gap-2">
                   <Label htmlFor={field.name}>Payment Date</Label>
-                  <Input
+                  <DatePicker
                     id={field.name}
                     name={field.name}
-                    value={field.state.value ?? ""}
+                    value={field.state.value ?? null}
                     onBlur={field.handleBlur}
-                    type="date"
-                    onChange={(e) => field.handleChange(e.target.value)}
+                    onChange={(value) => field.handleChange(value)}
+                    placeholder="Select payment date"
                   />
                 </div>
               )}
@@ -411,13 +413,13 @@ export function OrderForm(props: OrderFormProps) {
               children={(field) => (
                 <div className="grid gap-2">
                   <Label htmlFor={field.name}>Shipping Date</Label>
-                  <Input
+                  <DatePicker
                     id={field.name}
                     name={field.name}
-                    value={field.state.value ?? ""}
+                    value={field.state.value ?? null}
                     onBlur={field.handleBlur}
-                    type="date"
-                    onChange={(e) => field.handleChange(e.target.value)}
+                    onChange={(value) => field.handleChange(value)}
+                    placeholder="Select shipping date"
                   />
                 </div>
               )}
@@ -430,13 +432,13 @@ export function OrderForm(props: OrderFormProps) {
               children={(field) => (
                 <div className="grid gap-2">
                   <Label htmlFor={field.name}>Collection Date</Label>
-                  <Input
+                  <DatePicker
                     id={field.name}
                     name={field.name}
-                    value={field.state.value ?? ""}
+                    value={field.state.value ?? null}
                     onBlur={field.handleBlur}
-                    type="date"
-                    onChange={(e) => field.handleChange(e.target.value)}
+                    onChange={(value) => field.handleChange(value)}
+                    placeholder="Select collection date"
                   />
                 </div>
               )}
@@ -601,7 +603,7 @@ export function OrderForm(props: OrderFormProps) {
             children={(field) => (
               <div className="grid gap-2">
                 <Label htmlFor={field.name}>Notes</Label>
-                <textarea
+                <Textarea
                   id={field.name}
                   name={field.name}
                   value={field.state.value ?? ""}
@@ -627,13 +629,15 @@ export function OrderForm(props: OrderFormProps) {
             children={([canSubmit, isSubmitting]) => (
               <DialogClose asChild>
                 <Button type="submit" disabled={!canSubmit} variant="primary">
-                  {isSubmitting
-                    ? (<Loader2 className="w-4 h-4 animate-spin" />)
-                    : type === "merge"
-                      ? "Merge"
-                      : type === "split"
-                        ? "Split"
-                        : "Update"}
+                  {isSubmitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : type === "merge" ? (
+                    "Merge"
+                  ) : type === "split" ? (
+                    "Split"
+                  ) : (
+                    "Update"
+                  )}
                 </Button>
               </DialogClose>
             )}

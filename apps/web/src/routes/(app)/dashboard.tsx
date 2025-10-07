@@ -381,7 +381,7 @@ function DashboardContent() {
                       </p>
                       <p className="text-xs text-muted-foreground">
                         <span
-                          className={`${collectionItem.status === "Owned" ? "text-primary" : "text-secondary"} font-medium`}
+                          className={`text-primary font-medium`}
                         >
                           {collectionItem.status}
                         </span>{" "}

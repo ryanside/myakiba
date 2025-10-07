@@ -15,12 +15,12 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as appWrappedRouteImport } from './routes/(app)/wrapped'
 import { Route as appSyncRouteImport } from './routes/(app)/sync'
 import { Route as appOrdersRouteImport } from './routes/(app)/orders'
-import { Route as appManagerRouteImport } from './routes/(app)/manager'
 import { Route as appGalleryRouteImport } from './routes/(app)/gallery'
 import { Route as appDashboardRouteImport } from './routes/(app)/dashboard'
+import { Route as appCollectionRouteImport } from './routes/(app)/collection'
 import { Route as appAnalyticsRouteImport } from './routes/(app)/analytics'
 import { Route as appOrdersIdRouteImport } from './routes/(app)/orders_.$id'
-import { Route as appManagerIdRouteImport } from './routes/(app)/manager_.$id'
+import { Route as appItemsIdRouteImport } from './routes/(app)/items_.$id'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -51,11 +51,6 @@ const appOrdersRoute = appOrdersRouteImport.update({
   path: '/orders',
   getParentRoute: () => appRouteRoute,
 } as any)
-const appManagerRoute = appManagerRouteImport.update({
-  id: '/manager',
-  path: '/manager',
-  getParentRoute: () => appRouteRoute,
-} as any)
 const appGalleryRoute = appGalleryRouteImport.update({
   id: '/gallery',
   path: '/gallery',
@@ -64,6 +59,11 @@ const appGalleryRoute = appGalleryRouteImport.update({
 const appDashboardRoute = appDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => appRouteRoute,
+} as any)
+const appCollectionRoute = appCollectionRouteImport.update({
+  id: '/collection',
+  path: '/collection',
   getParentRoute: () => appRouteRoute,
 } as any)
 const appAnalyticsRoute = appAnalyticsRouteImport.update({
@@ -76,9 +76,9 @@ const appOrdersIdRoute = appOrdersIdRouteImport.update({
   path: '/orders/$id',
   getParentRoute: () => appRouteRoute,
 } as any)
-const appManagerIdRoute = appManagerIdRouteImport.update({
-  id: '/manager_/$id',
-  path: '/manager/$id',
+const appItemsIdRoute = appItemsIdRouteImport.update({
+  id: '/items_/$id',
+  path: '/items/$id',
   getParentRoute: () => appRouteRoute,
 } as any)
 
@@ -86,26 +86,26 @@ export interface FileRoutesByFullPath {
   '/': typeof appRouteRouteWithChildren
   '/login': typeof LoginRoute
   '/analytics': typeof appAnalyticsRoute
+  '/collection': typeof appCollectionRoute
   '/dashboard': typeof appDashboardRoute
   '/gallery': typeof appGalleryRoute
-  '/manager': typeof appManagerRoute
   '/orders': typeof appOrdersRoute
   '/sync': typeof appSyncRoute
   '/wrapped': typeof appWrappedRoute
-  '/manager/$id': typeof appManagerIdRoute
+  '/items/$id': typeof appItemsIdRoute
   '/orders/$id': typeof appOrdersIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof appRouteRouteWithChildren
   '/login': typeof LoginRoute
   '/analytics': typeof appAnalyticsRoute
+  '/collection': typeof appCollectionRoute
   '/dashboard': typeof appDashboardRoute
   '/gallery': typeof appGalleryRoute
-  '/manager': typeof appManagerRoute
   '/orders': typeof appOrdersRoute
   '/sync': typeof appSyncRoute
   '/wrapped': typeof appWrappedRoute
-  '/manager/$id': typeof appManagerIdRoute
+  '/items/$id': typeof appItemsIdRoute
   '/orders/$id': typeof appOrdersIdRoute
 }
 export interface FileRoutesById {
@@ -114,13 +114,13 @@ export interface FileRoutesById {
   '/(app)': typeof appRouteRouteWithChildren
   '/login': typeof LoginRoute
   '/(app)/analytics': typeof appAnalyticsRoute
+  '/(app)/collection': typeof appCollectionRoute
   '/(app)/dashboard': typeof appDashboardRoute
   '/(app)/gallery': typeof appGalleryRoute
-  '/(app)/manager': typeof appManagerRoute
   '/(app)/orders': typeof appOrdersRoute
   '/(app)/sync': typeof appSyncRoute
   '/(app)/wrapped': typeof appWrappedRoute
-  '/(app)/manager_/$id': typeof appManagerIdRoute
+  '/(app)/items_/$id': typeof appItemsIdRoute
   '/(app)/orders_/$id': typeof appOrdersIdRoute
 }
 export interface FileRouteTypes {
@@ -129,26 +129,26 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/analytics'
+    | '/collection'
     | '/dashboard'
     | '/gallery'
-    | '/manager'
     | '/orders'
     | '/sync'
     | '/wrapped'
-    | '/manager/$id'
+    | '/items/$id'
     | '/orders/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
     | '/analytics'
+    | '/collection'
     | '/dashboard'
     | '/gallery'
-    | '/manager'
     | '/orders'
     | '/sync'
     | '/wrapped'
-    | '/manager/$id'
+    | '/items/$id'
     | '/orders/$id'
   id:
     | '__root__'
@@ -156,13 +156,13 @@ export interface FileRouteTypes {
     | '/(app)'
     | '/login'
     | '/(app)/analytics'
+    | '/(app)/collection'
     | '/(app)/dashboard'
     | '/(app)/gallery'
-    | '/(app)/manager'
     | '/(app)/orders'
     | '/(app)/sync'
     | '/(app)/wrapped'
-    | '/(app)/manager_/$id'
+    | '/(app)/items_/$id'
     | '/(app)/orders_/$id'
   fileRoutesById: FileRoutesById
 }
@@ -216,13 +216,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appOrdersRouteImport
       parentRoute: typeof appRouteRoute
     }
-    '/(app)/manager': {
-      id: '/(app)/manager'
-      path: '/manager'
-      fullPath: '/manager'
-      preLoaderRoute: typeof appManagerRouteImport
-      parentRoute: typeof appRouteRoute
-    }
     '/(app)/gallery': {
       id: '/(app)/gallery'
       path: '/gallery'
@@ -235,6 +228,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof appDashboardRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/collection': {
+      id: '/(app)/collection'
+      path: '/collection'
+      fullPath: '/collection'
+      preLoaderRoute: typeof appCollectionRouteImport
       parentRoute: typeof appRouteRoute
     }
     '/(app)/analytics': {
@@ -251,11 +251,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appOrdersIdRouteImport
       parentRoute: typeof appRouteRoute
     }
-    '/(app)/manager_/$id': {
-      id: '/(app)/manager_/$id'
-      path: '/manager/$id'
-      fullPath: '/manager/$id'
-      preLoaderRoute: typeof appManagerIdRouteImport
+    '/(app)/items_/$id': {
+      id: '/(app)/items_/$id'
+      path: '/items/$id'
+      fullPath: '/items/$id'
+      preLoaderRoute: typeof appItemsIdRouteImport
       parentRoute: typeof appRouteRoute
     }
   }
@@ -263,25 +263,25 @@ declare module '@tanstack/react-router' {
 
 interface appRouteRouteChildren {
   appAnalyticsRoute: typeof appAnalyticsRoute
+  appCollectionRoute: typeof appCollectionRoute
   appDashboardRoute: typeof appDashboardRoute
   appGalleryRoute: typeof appGalleryRoute
-  appManagerRoute: typeof appManagerRoute
   appOrdersRoute: typeof appOrdersRoute
   appSyncRoute: typeof appSyncRoute
   appWrappedRoute: typeof appWrappedRoute
-  appManagerIdRoute: typeof appManagerIdRoute
+  appItemsIdRoute: typeof appItemsIdRoute
   appOrdersIdRoute: typeof appOrdersIdRoute
 }
 
 const appRouteRouteChildren: appRouteRouteChildren = {
   appAnalyticsRoute: appAnalyticsRoute,
+  appCollectionRoute: appCollectionRoute,
   appDashboardRoute: appDashboardRoute,
   appGalleryRoute: appGalleryRoute,
-  appManagerRoute: appManagerRoute,
   appOrdersRoute: appOrdersRoute,
   appSyncRoute: appSyncRoute,
   appWrappedRoute: appWrappedRoute,
-  appManagerIdRoute: appManagerIdRoute,
+  appItemsIdRoute: appItemsIdRoute,
   appOrdersIdRoute: appOrdersIdRoute,
 }
 

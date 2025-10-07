@@ -16,9 +16,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { getOrderStatusVariant } from "@/lib/orders/utils";
-import { OrderItemsSubTable } from "@/components/orders/order-item-subtable";
-import { useState } from "react";
+import { OrderItemSubDataGrid } from "@/components/orders/order-item-sub-data-grid";
+import { useState, useEffect } from "react";
 import type { RowSelectionState } from "@tanstack/react-table";
+import { addRecentItem } from "@/lib/recent-items";
 import {
   Calendar,
   Package,
@@ -54,6 +55,17 @@ function RouteComponent() {
     staleTime: 1000 * 60 * 5,
     retry: false,
   });
+
+  // Track recently viewed order
+  useEffect(() => {
+    if (data?.order) {
+      addRecentItem({
+        id: data.order.orderId,
+        type: "order",
+        title: data.order.title,
+      });
+    }
+  }, [data?.order]);
 
   const editOrderMutation = useMutation({
     mutationFn: async ({
@@ -398,7 +410,7 @@ function RouteComponent() {
         </CardHeader>
         <CardContent className="p-0">
           {order.items.length > 0 ? (
-            <OrderItemsSubTable
+            <OrderItemSubDataGrid
               items={order.items}
               orderId={order.orderId}
               itemSelection={itemSelection}

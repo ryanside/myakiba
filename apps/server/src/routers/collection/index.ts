@@ -1,21 +1,21 @@
 import { Hono } from "hono";
 import type { Variables } from "../..";
 import { zValidator } from "@hono/zod-validator";
-import ManagerService from "./service";
+import CollectionService from "./service";
 import {
-  managerQuerySchema,
-  managerParamSchema,
-  managerUpdateSchema,
-  managerDeleteSchema,
+  collectionQuerySchema,
+  collectionParamSchema,
+  collectionUpdateSchema,
+  collectionDeleteSchema,
 } from "./model";
 import { tryCatch } from "@/lib/utils";
 
-const managerRouter = new Hono<{
+const collectionRouter = new Hono<{
   Variables: Variables;
 }>()
   .get(
     "/",
-    zValidator("query", managerQuerySchema, (result, c) => {
+    zValidator("query", collectionQuerySchema, (result, c) => {
       if (!result.success) {
         console.log(result.error);
         return c.text("Invalid request!", 400);
@@ -28,20 +28,26 @@ const managerRouter = new Hono<{
       const validatedQuery = c.req.valid("query");
 
       const { data: collection, error } = await tryCatch(
-        ManagerService.getCollectionTable(
+        CollectionService.getCollection(
           user.id,
           validatedQuery.limit,
           validatedQuery.offset,
           validatedQuery.sort,
           validatedQuery.order,
-          validatedQuery.paid,
+          validatedQuery.paidMin,
+          validatedQuery.paidMax,
           validatedQuery.shop,
-          validatedQuery.payDate,
-          validatedQuery.shipDate,
-          validatedQuery.colDate,
+          validatedQuery.payDateStart,
+          validatedQuery.payDateEnd,
+          validatedQuery.shipDateStart,
+          validatedQuery.shipDateEnd,
+          validatedQuery.colDateStart,
+          validatedQuery.colDateEnd,
           validatedQuery.shipMethod,
-          validatedQuery.relDate,
-          validatedQuery.relPrice,
+          validatedQuery.relDateStart,
+          validatedQuery.relDateEnd,
+          validatedQuery.relPriceMin,
+          validatedQuery.relPriceMax,
           validatedQuery.relCurrency,
           validatedQuery.category,
           validatedQuery.entries,
@@ -69,7 +75,7 @@ const managerRouter = new Hono<{
   )
   .get(
     "/:id",
-    zValidator("param", managerParamSchema, (result, c) => {
+    zValidator("param", collectionParamSchema, (result, c) => {
       if (!result.success) {
         console.log(result.error);
         return c.text("Invalid request param!", 400);
@@ -82,7 +88,7 @@ const managerRouter = new Hono<{
       const validatedParam = c.req.valid("param");
 
       const { data: collectionItem, error } = await tryCatch(
-        ManagerService.getCollectionItem(user.id, validatedParam.id)
+        CollectionService.getCollectionItem(user.id, validatedParam.id)
       );
 
       if (error) {
@@ -103,13 +109,13 @@ const managerRouter = new Hono<{
   )
   .put(
     "/:id",
-    zValidator("param", managerParamSchema, (result, c) => {
+    zValidator("param", collectionParamSchema, (result, c) => {
       if (!result.success) {
         console.log(result.error);
         return c.text("Invalid request param!", 400);
       }
     }),
-    zValidator("json", managerUpdateSchema, (result, c) => {
+    zValidator("json", collectionUpdateSchema, (result, c) => {
       if (!result.success) {
         console.log(result.error);
         return c.text("Invalid request!", 400);
@@ -123,7 +129,7 @@ const managerRouter = new Hono<{
       const validatedParam = c.req.valid("param");
 
       const { data: update, error } = await tryCatch(
-        ManagerService.updateCollectionItem(
+        CollectionService.updateCollectionItem(
           user.id,
           validatedParam.id,
           validatedJSON
@@ -149,7 +155,7 @@ const managerRouter = new Hono<{
   )
   .delete(
     "/:id",
-    zValidator("param", managerParamSchema, (result, c) => {
+    zValidator("param", collectionParamSchema, (result, c) => {
       if (!result.success) {
         console.log(result.error);
         return c.text("Invalid request param!", 400);
@@ -162,7 +168,7 @@ const managerRouter = new Hono<{
       const validatedParam = c.req.valid("param");
 
       const { data: deleted, error } = await tryCatch(
-        ManagerService.deleteCollectionItem(user.id, validatedParam.id)
+        CollectionService.deleteCollectionItem(user.id, validatedParam.id)
       );
 
       if (error) {
@@ -183,7 +189,7 @@ const managerRouter = new Hono<{
   )
   .delete(
     "/",
-    zValidator("json", managerDeleteSchema, (result, c) => {
+    zValidator("json", collectionDeleteSchema, (result, c) => {
       if (!result.success) {
         console.log(result.error);
         return c.text("Invalid request!", 400);
@@ -195,25 +201,25 @@ const managerRouter = new Hono<{
 
       const validatedJSON = c.req.valid("json");
 
-      const { data: deleted, error } = await tryCatch(
-        ManagerService.deleteCollectionItems(user.id, validatedJSON.ids)
+      const { error } = await tryCatch(
+        CollectionService.deleteCollectionItems(user.id, validatedJSON.ids)
       );
 
       if (error) {
         if (error.message === "COLLECTION_ITEMS_NOT_FOUND") {
-          return c.text("Collection items not found", 404);
+          return c.text("Collection item(s) not found", 404);
         }
 
-        console.error("Error deleting collection items:", error, {
+        console.error("Error deleting collection item(s):", error, {
           userId: user.id,
           collectionIds: validatedJSON.ids,
         });
 
-        return c.text("Failed to delete collection items", 500);
+        return c.text("Failed to delete collection item(s)", 500);
       }
 
-      return c.json({ deleted });
+      return c.text("Collection item(s) deleted successfully");
     }
   );
 
-export default managerRouter;
+export default collectionRouter;

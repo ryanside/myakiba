@@ -1,7 +1,6 @@
 import { db } from "@/db";
 import {
   collection,
-  entry,
   entry_to_item,
   item,
   item_release,
@@ -9,54 +8,92 @@ import {
 import {
   and,
   eq,
-  between,
+  gte,
+  lte,
   inArray,
   arrayContains,
   desc,
   asc,
   ilike,
+  sql,
 } from "drizzle-orm";
 import type { collectionUpdateType } from "./model";
 
-class ManagerService {
-  async getCollectionTable(
+class CollectionService {
+  async getCollection(
     userId: string,
     limit: number,
     offset: number,
     sortBy: string,
     orderBy: string,
-    paid?: Array<string>,
+    paidMin?: string,
+    paidMax?: string,
     shop?: Array<string>,
-    paymentDate?: Array<string>,
-    shippingDate?: Array<string>,
-    collectionDate?: Array<string>,
-    shippingMethod?: Array<"n/a" | "EMS" | "SAL" | "AIRMAIL" | "SURFACE" | "FEDEX" | "DHL" | "Colissimo" | "UPS" | "Domestic">,
-    releaseDate?: Array<string>,
-    releasePrice?: Array<string>,
+    paymentDateStart?: string,
+    paymentDateEnd?: string,
+    shippingDateStart?: string,
+    shippingDateEnd?: string,
+    collectionDateStart?: string,
+    collectionDateEnd?: string,
+    shippingMethod?: Array<
+      | "n/a"
+      | "EMS"
+      | "SAL"
+      | "AIRMAIL"
+      | "SURFACE"
+      | "FEDEX"
+      | "DHL"
+      | "Colissimo"
+      | "UPS"
+      | "Domestic"
+    >,
+    releaseDateStart?: string,
+    releaseDateEnd?: string,
+    releasePriceMin?: string,
+    releasePriceMax?: string,
     releaseCurrency?: Array<string>,
     category?: Array<string>,
-    entries?: Array<string>,
+    entries?: Array<number>,
     scale?: Array<string>,
     tags?: Array<string>,
     condition?: Array<"New" | "Pre-Owned">,
     search?: string
   ) {
+    let itemIdsWithEntries: number[] | undefined;
+    if (entries && entries.length > 0) {
+      const itemsWithEntries = await db
+        .select({
+          itemId: entry_to_item.itemId,
+        })
+        .from(entry_to_item)
+        .where(inArray(entry_to_item.entryId, entries));
+
+      itemIdsWithEntries = itemsWithEntries.map((item) => item.itemId);
+
+      if (itemIdsWithEntries.length === 0) {
+        return [];
+      }
+    }
+
     const filters = and(
       eq(collection.userId, userId),
+      eq(collection.status, "Owned"),
       shop ? inArray(collection.shop, shop) : undefined,
-      paid ? between(collection.price, paid[0], paid[1]) : undefined,
-      paymentDate
-        ? between(collection.paymentDate, paymentDate[0], paymentDate[1])
+      paidMin ? gte(collection.price, paidMin) : undefined,
+      paidMax ? lte(collection.price, paidMax) : undefined,
+      paymentDateStart
+        ? gte(collection.paymentDate, paymentDateStart)
         : undefined,
-      shippingDate
-        ? between(collection.shippingDate, shippingDate[0], shippingDate[1])
+      paymentDateEnd ? lte(collection.paymentDate, paymentDateEnd) : undefined,
+      shippingDateStart
+        ? gte(collection.shippingDate, shippingDateStart)
         : undefined,
-      collectionDate
-        ? between(
-            collection.collectionDate,
-            collectionDate[0],
-            collectionDate[1]
-          )
+      shippingDateEnd ? lte(collection.shippingDate, shippingDateEnd) : undefined,
+      collectionDateStart
+        ? gte(collection.collectionDate, collectionDateStart)
+        : undefined,
+      collectionDateEnd
+        ? lte(collection.collectionDate, collectionDateEnd)
         : undefined,
       shippingMethod
         ? inArray(collection.shippingMethod, shippingMethod)
@@ -65,40 +102,39 @@ class ManagerService {
       scale ? inArray(item.scale, scale) : undefined,
       tags ? arrayContains(collection.tags, tags) : undefined,
       condition ? inArray(collection.condition, condition) : undefined,
-      releaseDate && releaseDate.length > 0
-        ? between(item_release.date, releaseDate[0], releaseDate[1])
-        : undefined,
-      releasePrice && releasePrice.length > 0
-        ? between(item_release.price, releasePrice[0], releasePrice[1])
-        : undefined,
+      releaseDateStart ? gte(item_release.date, releaseDateStart) : undefined,
+      releaseDateEnd ? lte(item_release.date, releaseDateEnd) : undefined,
+      releasePriceMin ? gte(item_release.price, releasePriceMin) : undefined,
+      releasePriceMax ? lte(item_release.price, releasePriceMax) : undefined,
       releaseCurrency && releaseCurrency.length > 0
         ? inArray(item_release.priceCurrency, releaseCurrency)
         : undefined,
+      itemIdsWithEntries ? inArray(item.id, itemIdsWithEntries) : undefined,
       search ? ilike(item.title, `%${search}%`) : undefined
     );
 
     const sortByColumn = (() => {
       switch (sortBy) {
-        case "release":
-          return item_release.date;
-        case "paid":
-          return collection.paymentDate;
-        case "price":
-          return collection.price;
+        case "itemTitle":
+          return item.title;
+        case "itemCategory":
+          return item.category;
+        case "itemScale":
+          return item.scale;
+        case "status":
+          return collection.status;
+        case "count":
+          return collection.count;
         case "score":
           return collection.score;
-        case "payDate":
-          return collection.paymentDate;
-        case "shipDate":
-          return collection.shippingDate;
-        case "colDate":
-          return collection.collectionDate;
-        case "height":
-          return item.height;
-        case "scale":
-          return item.scale;
+        case "price":
+          return collection.price;
         case "shop":
           return collection.shop;
+        case "releaseDate":
+          return item_release.date;
+        case "collectionDate":
+          return collection.collectionDate;
         case "createdAt":
           return collection.createdAt;
         default:
@@ -120,6 +156,7 @@ class ManagerService {
         score: collection.score,
         price: collection.price,
         shop: collection.shop,
+        condition: collection.condition,
         paymentDate: collection.paymentDate,
         shippingDate: collection.shippingDate,
         collectionDate: collection.collectionDate,
@@ -129,8 +166,12 @@ class ManagerService {
         releaseDate: item_release.date,
         releasePrice: item_release.price,
         releaseCurrency: item_release.priceCurrency,
+        releaseBarcode: item_release.barcode,
+        releaseType: item_release.type,
         createdAt: collection.createdAt,
         updatedAt: collection.updatedAt,
+        totalCount: sql<number>`COUNT(*) OVER()`,
+        totalValue: sql<string>`COALESCE(SUM(${collection.price}) OVER(), 0)`,
       })
       .from(collection)
       .innerJoin(item, eq(collection.itemId, item.id))
@@ -140,23 +181,7 @@ class ManagerService {
       .limit(limit)
       .offset(offset);
 
-    let filteredItems = collectionItems;
-    if (entries && entries.length > 0) {
-      const itemsWithEntries = await db
-        .select({
-          itemId: entry_to_item.itemId,
-        })
-        .from(entry_to_item)
-        .innerJoin(entry, eq(entry_to_item.entryId, entry.id))
-        .where(inArray(entry.name, entries));
-
-      const entryItemIds = itemsWithEntries.map((item) => item.itemId);
-      filteredItems = collectionItems.filter((item) =>
-        entryItemIds.includes(item.itemId)
-      );
-    }
-
-    return filteredItems;
+    return collectionItems;
   }
 
   async getCollectionItem(userId: string, collectionId: string) {
@@ -213,7 +238,8 @@ class ManagerService {
       })
       .where(
         and(eq(collection.userId, userId), eq(collection.id, collectionId))
-      );
+      )
+      .returning();
 
     if (!updated || updated.length === 0) {
       throw new Error("COLLECTION_ITEM_NOT_FOUND");
@@ -244,14 +270,15 @@ class ManagerService {
           eq(collection.userId, userId),
           inArray(collection.id, collectionIds)
         )
-      );
+      )
+      .returning();
 
     if (!deleted || deleted.length === 0) {
       throw new Error("COLLECTION_ITEMS_NOT_FOUND");
     }
 
-    return deleted[0];
+    return {};
   }
 }
 
-export default new ManagerService();
+export default new CollectionService();

@@ -16,9 +16,9 @@ export async function getOrders(filters: {
   const queryParams = {
     limit: filters.limit?.toString(),
     offset: filters.offset?.toString(),
-    sort: filters.sort?.toString(),
-    order: filters.order?.toString(),
-    search: filters.search?.toString(),
+    sort: filters.sort,
+    order: filters.order,
+    search: filters.search,
   };
 
   const response = await client.api.orders.$get({ query: queryParams });

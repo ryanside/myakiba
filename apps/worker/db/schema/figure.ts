@@ -81,13 +81,13 @@ export const collection = pgTable("collection", {
   })
     .notNull()
     .default("Owned"),
-  count: integer("count").default(1),
+  count: integer("count").default(1).notNull(),
   releaseId: uuid("release_id").references(() => item_release.id, {
     onDelete: "set null",
   }),
-  score: decimal("score", { precision: 3, scale: 1 }),
+  score: decimal("score", { precision: 3, scale: 1 }).default("0.0").notNull(),
   price: decimal("price", { scale: 2 }).default("0.00").notNull(),
-  shop: text("shop").default(""),
+  shop: text("shop").default("").notNull(),
   orderDate: date("order_date"),
   paymentDate: date("payment_date"),
   shippingDate: date("shipping_date"),
@@ -110,11 +110,11 @@ export const collection = pgTable("collection", {
     .notNull(),
   soldFor: decimal("sold_for", { scale: 2 }),
   soldDate: date("sold_date"),
-  tags: text("tags").array().default([]),
+  tags: text("tags").array().default([]).notNull(),
   condition: text("condition", {
     enum: ["New", "Pre-Owned"],
-  }),
-  notes: text("notes").default(""),
+  }).default("New").notNull(),
+  notes: text("notes").default("").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -127,7 +127,7 @@ export const order = pgTable("order", {
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
-  shop: text("shop").default(""),
+  shop: text("shop").default("").notNull(),
   orderDate: date("order_date"),
   releaseMonthYear: date("release_month_year"),
   paymentDate: date("payment_date"),
@@ -159,7 +159,7 @@ export const order = pgTable("order", {
   duties: decimal("duties", { scale: 2 }).default("0.00").notNull(),
   tariffs: decimal("tariffs", { scale: 2 }).default("0.00").notNull(),
   miscFees: decimal("misc_fees", { scale: 2 }).default("0.00").notNull(),
-  notes: text("notes").default(""),
+  notes: text("notes").default("").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

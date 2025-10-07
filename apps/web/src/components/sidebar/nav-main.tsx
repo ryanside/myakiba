@@ -31,7 +31,7 @@ export function NavMain({
 
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:pb-0">
-      <SidebarGroupLabel className="group-data-[collapsible=icon]:-z-10 transition-all duration-100 ease-in-out">Main</SidebarGroupLabel>
+      {/* <SidebarGroupLabel className="group-data-[collapsible=icon]:-z-10 transition-all duration-100 ease-in-out">Main</SidebarGroupLabel> */}
       <SidebarMenu>
         {items.map((item) => (
           <Collapsible key={item.title} asChild defaultOpen={item.isActive}>

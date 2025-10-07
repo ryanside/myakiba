@@ -1,0 +1,97 @@
+export type CollectionFilters = {
+  limit?: number | undefined;
+  offset?: number | undefined;
+  sort?:
+    | "itemTitle"
+    | "itemCategory"
+    | "itemScale"
+    | "status"
+    | "count"
+    | "score"
+    | "price"
+    | "shop"
+    | "releaseDate"
+    | "collectionDate"
+    | "createdAt"
+    | undefined;
+  order?: "asc" | "desc" | undefined;
+  search?: string | undefined;
+  paidMin?: string | undefined;
+  paidMax?: string | undefined;
+  shop?: string[] | undefined;
+  payDateStart?: string | undefined;
+  payDateEnd?: string | undefined;
+  shipDateStart?: string | undefined;
+  shipDateEnd?: string | undefined;
+  colDateStart?: string | undefined;
+  colDateEnd?: string | undefined;
+  shipMethod?:
+    | (
+        | "n/a"
+        | "EMS"
+        | "SAL"
+        | "AIRMAIL"
+        | "SURFACE"
+        | "FEDEX"
+        | "DHL"
+        | "Colissimo"
+        | "UPS"
+        | "Domestic"
+      )[]
+    | undefined;
+  relDateStart?: string | undefined;
+  relDateEnd?: string | undefined;
+  relPriceMin?: string | undefined;
+  relPriceMax?: string | undefined;
+  relCurrency?: string[] | undefined;
+  category?: string[] | undefined;
+  entries?: number[] | undefined;
+  scale?: string[] | undefined;
+  tags?: string[] | undefined;
+  condition?: ("New" | "Pre-Owned")[] | undefined;
+};
+
+export type CollectionItem = {
+  collectionId: string;
+  itemId: number;
+  itemTitle: string;
+  itemImage: string | null;
+  itemCategory: string | null;
+  itemScale: string | null;
+  itemHeight: number | null;
+  status: "Ordered" | "Paid" | "Shipped" | "Owned" | "Sold";
+  count: number;
+  score: string;
+  price: string;
+  shop: string;
+  condition: "New" | "Pre-Owned";
+  paymentDate: string | null;
+  shippingDate: string | null;
+  collectionDate: string | null;
+  shippingMethod:
+    | "n/a"
+    | "EMS"
+    | "SAL"
+    | "AIRMAIL"
+    | "SURFACE"
+    | "FEDEX"
+    | "DHL"
+    | "Colissimo"
+    | "UPS"
+    | "Domestic";
+  notes: string;
+  releaseId: string | null;
+  releaseDate: string | null;
+  releasePrice: string | null;
+  releaseType: string | null;
+  releaseCurrency: string | null;
+  releaseBarcode: string | null;
+  createdAt: string;
+  updatedAt: string;
+  totalCount: number;
+  totalValue: string;
+};
+
+export type CollectionQueryResponse = {
+  collection: CollectionItem[];
+};

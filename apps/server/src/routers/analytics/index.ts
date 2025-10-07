@@ -3,7 +3,7 @@ import type { Variables } from "../..";
 import AnalyticsService from "./service";
 import { tryCatch } from "@/lib/utils";
 import { zValidator } from "@hono/zod-validator";
-import { z } from "zod";
+import * as z from "zod";
 
 const analyticsRouter = new Hono<{
   Variables: Variables;

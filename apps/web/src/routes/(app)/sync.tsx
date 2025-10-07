@@ -68,6 +68,14 @@ function RouteComponent() {
         description: `Error: ${error.message}`,
       });
     },
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["order"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
+        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
+      ]);
+    },
   });
 
   const orderMutation = useMutation({
@@ -76,6 +84,14 @@ function RouteComponent() {
       toast.error("Failed to submit order. Please try again.", {
         description: `Error: ${error.message}`,
       });
+    },
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["order"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
+        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
+      ]);
     },
   });
 
@@ -86,6 +102,15 @@ function RouteComponent() {
       toast.error("Failed to submit collection. Please try again.", {
         description: `Error: ${error.message}`,
       });
+    },
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["collection"] }),
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["order"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
+        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
+      ]);
     },
   });
 
@@ -398,9 +423,9 @@ function RouteComponent() {
                         Go to Orders
                       </Button>
                     </Link>
-                    <Link to="/manager">
+                    <Link to="/collection">
                       <Button variant="primary" disabled={!status.isFinished}>
-                        Go to Collection Manager
+                        Go to Collection
                       </Button>
                     </Link>
                     <Link to="/dashboard">

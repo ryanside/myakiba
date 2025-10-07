@@ -1,4 +1,4 @@
-import { z } from "zod";
+import * as z from "zod";
 
 export const galleryQuerySchema = z.object({
   limit: z.coerce.number().optional().default(10),

@@ -5,14 +5,14 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import OrdersDataGrid from "@/components/orders/order-table";
+import OrdersDataGrid from "@/components/orders/orders-data-grid";
 import { useFilters } from "@/hooks/use-filters";
 import type {
   EditedOrder,
   NewOrder,
   OrdersQueryResponse,
   CascadeOptions,
-  Filters,
+  OrderFilters,
   OrderItem,
 } from "@/lib/orders/types";
 import { toast } from "sonner";
@@ -47,7 +47,7 @@ function RouteComponent() {
   const queryClient = useQueryClient();
   const { filters, setFilters, resetFilters } = useFilters(Route.id);
 
-  const handleFilterChange = (filters: Filters) => {
+  const handleFilterChange = (filters: OrderFilters) => {
     setFilters(filters);
   };
 
@@ -272,6 +272,9 @@ function RouteComponent() {
       if (context?.previousData) {
         queryClient.setQueryData(["orders", filters], context.previousData);
       }
+      toast.error("Failed to delete item. Please try again.", {
+        description: `Error: ${error.message}`,
+      });
     },
     onSuccess: () => {
       toast.success(`Successfully deleted order item!`);

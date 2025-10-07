@@ -16,6 +16,7 @@ import {
   SelectContent,
   SelectItem,
 } from "../ui/select";
+import { DatePicker } from "../ui/date-picker";
 import { Badge } from "../ui/badge";
 import { Separator } from "../ui/separator";
 import {
@@ -29,10 +30,11 @@ import {
   DialogTrigger,
 } from "../ui/dialog";
 import { X, ChevronDown, Loader2, ArrowLeft, Plus, Edit } from "lucide-react";
-import { z } from "zod";
+import * as z from "zod";
 import type { CascadeOptions } from "@/lib/orders/types";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import type { SyncFormOrder, SyncFormOrderItem } from "@/lib/sync/types";
+import { Textarea } from "../ui/textarea";
 
 export default function SyncOrderForm({
   setCurrentStep,
@@ -168,7 +170,7 @@ export default function SyncOrderForm({
                 <ChevronDown className="h-4 w-4 z-10" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-66">
+            <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
               <div className="flex gap-2 py-1">
                 <Button
                   variant="ghost"
@@ -348,13 +350,13 @@ export default function SyncOrderForm({
             children={(field) => (
               <div className="grid gap-2">
                 <Label htmlFor={field.name}>Order Date</Label>
-                <Input
+                <DatePicker
                   id={field.name}
                   name={field.name}
-                  value={field.state.value ?? ""}
+                  value={field.state.value ?? null}
                   onBlur={field.handleBlur}
-                  type="date"
-                  onChange={(e) => field.handleChange(e.target.value)}
+                  onChange={(value) => field.handleChange(value ?? "")}
+                  placeholder="Select order date"
                 />
               </div>
             )}
@@ -364,13 +366,13 @@ export default function SyncOrderForm({
             children={(field) => (
               <div className="grid gap-2">
                 <Label htmlFor={field.name}>Payment Date</Label>
-                <Input
+                <DatePicker
                   id={field.name}
                   name={field.name}
-                  value={field.state.value ?? ""}
+                  value={field.state.value ?? null}
                   onBlur={field.handleBlur}
-                  type="date"
-                  onChange={(e) => field.handleChange(e.target.value)}
+                  onChange={(value) => field.handleChange(value ?? "")}
+                  placeholder="Select payment date"
                 />
               </div>
             )}
@@ -380,13 +382,13 @@ export default function SyncOrderForm({
             children={(field) => (
               <div className="grid gap-2">
                 <Label htmlFor={field.name}>Shipping Date</Label>
-                <Input
+                <DatePicker
                   id={field.name}
                   name={field.name}
-                  value={field.state.value ?? ""}
+                  value={field.state.value ?? null}
                   onBlur={field.handleBlur}
-                  type="date"
-                  onChange={(e) => field.handleChange(e.target.value)}
+                  onChange={(value) => field.handleChange(value ?? "")}
+                  placeholder="Select shipping date"
                 />
               </div>
             )}
@@ -396,13 +398,13 @@ export default function SyncOrderForm({
             children={(field) => (
               <div className="grid gap-2">
                 <Label htmlFor={field.name}>Collection Date</Label>
-                <Input
+                <DatePicker
                   id={field.name}
                   name={field.name}
-                  value={field.state.value ?? ""}
+                  value={field.state.value ?? null}
                   onBlur={field.handleBlur}
-                  type="date"
-                  onChange={(e) => field.handleChange(e.target.value)}
+                  onChange={(value) => field.handleChange(value ?? "")}
+                  placeholder="Select collection date"
                 />
               </div>
             )}
@@ -510,7 +512,7 @@ export default function SyncOrderForm({
           children={(field) => (
             <div className="grid gap-2">
               <Label htmlFor={field.name}>Notes</Label>
-              <textarea
+              <Textarea
                 id={field.name}
                 name={field.name}
                 value={field.state.value ?? ""}
@@ -844,19 +846,17 @@ export default function SyncOrderForm({
                                             <Label htmlFor={`orderDate-${i}`}>
                                               Order Date
                                             </Label>
-                                            <Input
+                                            <DatePicker
                                               id={`orderDate-${i}`}
                                               name={orderDateField.name}
                                               value={
-                                                orderDateField.state.value ?? ""
+                                                orderDateField.state.value ?? null
                                               }
                                               onBlur={orderDateField.handleBlur}
-                                              type="date"
-                                              onChange={(e) =>
-                                                orderDateField.handleChange(
-                                                  e.target.value
-                                                )
+                                              onChange={(value) =>
+                                                orderDateField.handleChange(value ?? "")
                                               }
+                                              placeholder="Select order date"
                                             />
                                           </div>
                                         )}
@@ -868,22 +868,19 @@ export default function SyncOrderForm({
                                             <Label htmlFor={`paymentDate-${i}`}>
                                               Payment Date
                                             </Label>
-                                            <Input
+                                            <DatePicker
                                               id={`paymentDate-${i}`}
                                               name={paymentDateField.name}
                                               value={
-                                                paymentDateField.state.value ??
-                                                ""
+                                                paymentDateField.state.value ?? null
                                               }
                                               onBlur={
                                                 paymentDateField.handleBlur
                                               }
-                                              type="date"
-                                              onChange={(e) =>
-                                                paymentDateField.handleChange(
-                                                  e.target.value
-                                                )
+                                              onChange={(value) =>
+                                                paymentDateField.handleChange(value ?? "")
                                               }
+                                              placeholder="Select payment date"
                                             />
                                           </div>
                                         )}
@@ -900,22 +897,19 @@ export default function SyncOrderForm({
                                             >
                                               Shipping Date
                                             </Label>
-                                            <Input
+                                            <DatePicker
                                               id={`shippingDate-${i}`}
                                               name={shippingDateField.name}
                                               value={
-                                                shippingDateField.state.value ??
-                                                ""
+                                                shippingDateField.state.value ?? null
                                               }
                                               onBlur={
                                                 shippingDateField.handleBlur
                                               }
-                                              type="date"
-                                              onChange={(e) =>
-                                                shippingDateField.handleChange(
-                                                  e.target.value
-                                                )
+                                              onChange={(value) =>
+                                                shippingDateField.handleChange(value ?? "")
                                               }
+                                              placeholder="Select shipping date"
                                             />
                                           </div>
                                         )}
@@ -929,22 +923,19 @@ export default function SyncOrderForm({
                                             >
                                               Collection Date
                                             </Label>
-                                            <Input
+                                            <DatePicker
                                               id={`collectionDate-${i}`}
                                               name={collectionDateField.name}
                                               value={
-                                                collectionDateField.state
-                                                  .value ?? ""
+                                                collectionDateField.state.value ?? null
                                               }
                                               onBlur={
                                                 collectionDateField.handleBlur
                                               }
-                                              type="date"
-                                              onChange={(e) =>
-                                                collectionDateField.handleChange(
-                                                  e.target.value
-                                                )
+                                              onChange={(value) =>
+                                                collectionDateField.handleChange(value ?? "")
                                               }
+                                              placeholder="Select collection date"
                                             />
                                           </div>
                                         )}

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import * as z from "zod";
 
 export const csvItemSchema = z.object({
   id: z.string(),

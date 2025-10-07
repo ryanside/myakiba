@@ -3,6 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "../db";
 import * as schema from "../db/schema/auth";
 import { captcha, username } from "better-auth/plugins";
+import { emailHarmony } from "better-auth-harmony";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -25,6 +26,7 @@ export const auth = betterAuth({
       secretKey: process.env.TURNSTILE_SECRET_KEY!,
     }),
     username(),
+    emailHarmony({}),
   ],
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL,

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import * as z from "zod";
 
 // Wrapped query parameter schemas
 export const wrappedQuerySchema = z.object({

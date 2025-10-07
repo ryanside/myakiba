@@ -3,7 +3,7 @@ import { twMerge } from "tailwind-merge";
 import {
   DEFAULT_PAGE_INDEX,
   DEFAULT_PAGE_SIZE,
-} from "../components/orders/order-table";
+} from "../components/orders/orders-data-grid";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -55,6 +55,7 @@ export function formatCurrency(
         style: "currency",
         currency: currency,
       }).format(amount);
+    case "USD":
     default:
       return new Intl.NumberFormat("en-US", {
         style: "currency",

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import * as z from "zod";
 import { createInsertSchema, createUpdateSchema } from "drizzle-zod";
 import { collection, order } from "@/db/schema/figure";
 

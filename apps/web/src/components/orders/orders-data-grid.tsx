@@ -39,17 +39,17 @@ import {
   Info,
   Move,
 } from "lucide-react";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import { getOrderStatusVariant } from "@/lib/orders/utils";
 import type {
   CascadeOptions,
   EditedOrder,
-  Filters,
+  OrderFilters,
   NewOrder,
   Order,
   OrderItem,
 } from "@/lib/orders/types";
-import { OrderItemsSubTable } from "./order-item-subtable";
+import { OrderItemSubDataGrid } from "./order-item-sub-data-grid";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { OrderForm } from "./order-form";
 import { DebouncedInput } from "@/components/debounced-input";
@@ -82,7 +82,7 @@ interface OrdersDataGridProps {
     order: string;
   };
   search: string;
-  onFilterChange: (filters: Filters) => void;
+  onFilterChange: (filters: OrderFilters) => void;
   onSearchChange: (search: string) => void;
   onResetFilters: () => void;
   onMerge: (
@@ -195,13 +195,21 @@ export default function OrdersDataGrid({
           />
         ),
         cell: ({ row }) => (
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="Select row"
-            size="sm"
-            className="align-[inherit] mb-0.5 rounded-xs"
-          />
+          <>
+            <div
+              className={cn(
+                "hidden absolute top-0 bottom-0 start-0 w-[2px] bg-primary",
+                row.getIsSelected() && "block"
+              )}
+            ></div>
+            <Checkbox
+              checked={row.getIsSelected()}
+              onCheckedChange={(value) => row.toggleSelected(!!value)}
+              aria-label="Select row"
+              size="sm"
+              className="align-[inherit] mb-0.5 rounded-xs"
+            />
+          </>
         ),
         size: 25,
         enableSorting: false,
@@ -227,7 +235,7 @@ export default function OrdersDataGrid({
         enableResizing: false,
         meta: {
           expandedContent: (row) => (
-            <OrderItemsSubTable
+            <OrderItemSubDataGrid
               items={row.items}
               orderId={row.orderId}
               itemSelection={itemSelection}
@@ -552,13 +560,13 @@ export default function OrdersDataGrid({
           className="max-w-xs"
         />
         <Button onClick={onResetFilters} variant="outline">
-          <ListRestart className="md:hidden" />
+          <ListRestart />
           <span className="hidden md:block">Reset Filters</span>
         </Button>
         <Dialog>
           <DialogTrigger asChild>
             <Button variant="primary" disabled={getSelectedOrderIds.size < 2}>
-              <Merge className="md:hidden" />
+              <Merge />
               <span className="hidden md:block">Merge Orders</span>
             </Button>
           </DialogTrigger>
@@ -575,7 +583,7 @@ export default function OrdersDataGrid({
               variant="primary"
               disabled={getSelectedItemData.collectionIds.size === 0}
             >
-              <Split className="md:hidden" />
+              <Split />
               <span className="hidden md:block">Split Items</span>
             </Button>
           </DialogTrigger>
@@ -593,7 +601,7 @@ export default function OrdersDataGrid({
               variant="primary"
               disabled={getSelectedItemData.collectionIds.size === 0}
             >
-              <Move className="md:hidden" />
+              <Move />
               <span className="hidden md:block">Move Items</span>
             </Button>
           </DialogTrigger>
@@ -620,7 +628,7 @@ export default function OrdersDataGrid({
                   <TooltipContent className="max-h-40">
                     <p>
                       Items with "Owned" status will not be deleted. You can
-                      delete owned items in the manager tab.
+                      delete owned items in the collection tab.
                     </p>
                   </TooltipContent>
                 </Tooltip>

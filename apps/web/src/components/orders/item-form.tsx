@@ -1,7 +1,7 @@
 import type { OrderItem } from "@/lib/orders/types";
 import { useForm } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
-import { z } from "zod";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
   DialogClose,
@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
 import { getItemReleases } from "@/queries/orders";
 
 type ItemFormProps = {
@@ -190,13 +191,13 @@ export default function ItemForm(props: ItemFormProps) {
             children={(field) => (
               <div className="grid gap-2">
                 <Label htmlFor={field.name}>Order Date</Label>
-                <Input
+                <DatePicker
                   id={field.name}
                   name={field.name}
-                  value={field.state.value ?? ""}
+                  value={field.state.value ?? null}
                   onBlur={field.handleBlur}
-                  type="date"
-                  onChange={(e) => field.handleChange(e.target.value)}
+                  onChange={(value) => field.handleChange(value)}
+                  placeholder="Select order date"
                 />
               </div>
             )}
@@ -220,28 +221,41 @@ export default function ItemForm(props: ItemFormProps) {
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select release">
-                      {field.state.value && (
-                        <div className="flex items-center truncate text-xs gap-2 justify-between">
-                          <div className="font-medium">
-                            {itemData.releaseDate}
-                          </div>
-                          <div className="text-muted-foreground">
-                            {itemData.releaseType && (
-                              <span>{itemData.releaseType}</span>
-                            )}
-                            {itemData.releasePrice &&
-                              itemData.releasePriceCurrency && (
-                                <span>
-                                  {itemData.releasePriceCurrency}{" "}
-                                  {itemData.releasePrice}
-                                </span>
+                      {field.state.value && (() => {
+                        const selectedRelease = releasesData?.releases.find(
+                          (r) => r.id === field.state.value
+                        );
+                        const displayData = selectedRelease || {
+                          date: itemData.releaseDate,
+                          type: itemData.releaseType,
+                          price: itemData.releasePrice,
+                          priceCurrency: itemData.releasePriceCurrency,
+                          barcode: itemData.releaseBarcode,
+                        };
+                        
+                        return (
+                          <div className="flex items-center truncate text-xs gap-2 justify-between">
+                            <div className="font-medium">
+                              {displayData.date}
+                            </div>
+                            <div className="text-muted-foreground">
+                              {displayData.type && (
+                                <span>{displayData.type}</span>
                               )}
-                            {itemData.releaseBarcode && (
-                              <span>#{itemData.releaseBarcode}</span>
-                            )}
+                              {displayData.price &&
+                                displayData.priceCurrency && (
+                                  <span>
+                                    {displayData.priceCurrency}{" "}
+                                    {displayData.price}
+                                  </span>
+                                )}
+                              {displayData.barcode && (
+                                <span>#{displayData.barcode}</span>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        );
+                      })()}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
@@ -259,7 +273,7 @@ export default function ItemForm(props: ItemFormProps) {
                       </div>
                     )}
                     {releasesData?.releases.map((release) => (
-                      <SelectItem value={release.id}>
+                      <SelectItem key={release.id} value={release.id}>
                         <div className="flex items-center truncate text-xs gap-2 justify-between">
                           <div className="font-medium">{release.date}</div>
                           <div className="text-muted-foreground">
@@ -292,13 +306,13 @@ export default function ItemForm(props: ItemFormProps) {
               children={(field) => (
                 <div className="grid gap-2">
                   <Label htmlFor={field.name}>Payment Date</Label>
-                  <Input
+                  <DatePicker
                     id={field.name}
                     name={field.name}
-                    value={field.state.value ?? ""}
+                    value={field.state.value ?? null}
                     onBlur={field.handleBlur}
-                    type="date"
-                    onChange={(e) => field.handleChange(e.target.value)}
+                    onChange={(value) => field.handleChange(value)}
+                    placeholder="Select payment date"
                   />
                 </div>
               )}
@@ -309,13 +323,13 @@ export default function ItemForm(props: ItemFormProps) {
               children={(field) => (
                 <div className="grid gap-2">
                   <Label htmlFor={field.name}>Shipping Date</Label>
-                  <Input
+                  <DatePicker
                     id={field.name}
                     name={field.name}
-                    value={field.state.value ?? ""}
+                    value={field.state.value ?? null}
                     onBlur={field.handleBlur}
-                    type="date"
-                    onChange={(e) => field.handleChange(e.target.value)}
+                    onChange={(value) => field.handleChange(value)}
+                    placeholder="Select shipping date"
                   />
                 </div>
               )}
@@ -328,13 +342,13 @@ export default function ItemForm(props: ItemFormProps) {
               children={(field) => (
                 <div className="grid gap-2">
                   <Label htmlFor={field.name}>Collection Date</Label>
-                  <Input
+                  <DatePicker
                     id={field.name}
                     name={field.name}
-                    value={field.state.value ?? ""}
+                    value={field.state.value ?? null}
                     onBlur={field.handleBlur}
-                    type="date"
-                    onChange={(e) => field.handleChange(e.target.value)}
+                    onChange={(value) => field.handleChange(value)}
+                    placeholder="Select collection date"
                   />
                 </div>
               )}

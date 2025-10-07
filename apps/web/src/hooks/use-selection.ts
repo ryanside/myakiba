@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import type { RowSelectionState } from "@tanstack/react-table";
-
+// TODO: Rename variables to be more reusable 
 export function useSelection() {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [itemSelection, setItemSelection] = useState<RowSelectionState>({});

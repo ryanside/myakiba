@@ -1,4 +1,4 @@
-import { z } from "zod";
+import * as z from "zod";
 
 export const itemReleaseSchema = z.object({
   id: z.string(),
