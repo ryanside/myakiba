@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge, badgeVariants } from "@/components/ui/badge";
-import { type VariantProps } from "class-variance-authority";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -34,25 +33,8 @@ import type { OrderItem } from "@/lib/orders/types";
 import { toast } from "sonner";
 import { Dialog, DialogTrigger } from "../ui/dialog";
 import ItemForm from "./item-form";
-
-function getItemStatusVariant(
-  status: string
-): VariantProps<typeof badgeVariants>["variant"] {
-  switch (status.toLowerCase()) {
-    case "owned":
-      return "success";
-    case "shipped":
-      return "primary";
-    case "paid":
-      return "warning";
-    case "ordered":
-      return "info";
-    case "sold":
-      return "destructive";
-    default:
-      return "outline";
-  }
-}
+import { Link } from "@tanstack/react-router";
+import { getStatusVariant } from "@/lib/orders/utils";
 
 export function OrderItemSubDataGrid({
   items,
@@ -157,15 +139,23 @@ export function OrderItemSubDataGrid({
                 </Avatar>
               )}
               <div className="space-y-px">
-                <div className="font-medium text-foreground">{item.title}</div>
-                <a
-                  href={`https://myfigurecollection.net/item/${item.itemId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-muted-foreground font-light hover:text-foreground transition-colors underline-offset-4 hover:underline"
+                <Link
+                  className="font-medium text-foreground truncate"
+                  to="/items/$id"
+                  params={{ id: item.itemId.toString() }}
                 >
-                  https://myfigurecollection.net/item/{item.itemId}
-                </a>
+                  {item.title}
+                </Link>
+                <div className="flex items-center gap-1 font-light">
+                  <a
+                    href={`https://myfigurecollection.net/item/${item.itemId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-muted-foreground font-light hover:text-foreground transition-colors underline-offset-4 hover:underline"
+                  >
+                    https://myfigurecollection.net/item/{item.itemId}
+                  </a>
+                </div>
               </div>
             </div>
           );
@@ -232,7 +222,7 @@ export function OrderItemSubDataGrid({
         cell: ({ row }) => {
           const status = row.original.status;
           return (
-            <Badge variant={getItemStatusVariant(status)} appearance="outline">
+            <Badge variant={getStatusVariant(status)} appearance="outline">
               {status}
             </Badge>
           );

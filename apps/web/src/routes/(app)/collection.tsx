@@ -7,8 +7,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useFilters } from "@/hooks/use-filters";
 import type {
   CollectionFilters,
-  CollectionItem,
   CollectionQueryResponse,
+  CollectionItemFormValues,
 } from "@/lib/collection/types";
 import { getCollection, updateCollectionItem } from "@/queries/collection";
 import Loader from "@/components/loader";
@@ -68,13 +68,21 @@ function RouteComponent() {
     onSuccess: () => {
       toast.success("Collection item(s) deleted successfully");
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["collection"] });
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["order"] }),
+        queryClient.invalidateQueries({ queryKey: ["collection"] }),
+        queryClient.invalidateQueries({ queryKey: ["item"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
+        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
+      ]);
     },
   });
 
   const editCollectionItemMutation = useMutation({
-    mutationFn: (values: CollectionItem) => updateCollectionItem(values),
+    mutationFn: (values: CollectionItemFormValues) =>
+      updateCollectionItem(values),
     onMutate: async (values) => {
       await queryClient.cancelQueries({ queryKey: ["collection", filters] });
       const previousData = queryClient.getQueryData(["collection", filters]);
@@ -97,17 +105,24 @@ function RouteComponent() {
     onSuccess: () => {
       toast.success("Collection item updated successfully");
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["collection"] });
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["order"] }),
+        queryClient.invalidateQueries({ queryKey: ["collection"] }),
+        queryClient.invalidateQueries({ queryKey: ["item"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
+        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
+      ]);
     },
   });
 
   const handleDeleteCollectionItems = async (collectionIds: Set<string>) => {
-    deleteCollectionItemsMutation.mutate({ collectionIds });
+    await deleteCollectionItemsMutation.mutateAsync({ collectionIds });
   };
 
-  const handleEditCollectionItem = async (values: CollectionItem) => {
-    editCollectionItemMutation.mutate(values);
+  const handleEditCollectionItem = async (values: CollectionItemFormValues) => {
+    await editCollectionItemMutation.mutateAsync(values);
   };
 
   if (isPending) {

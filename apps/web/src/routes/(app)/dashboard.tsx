@@ -20,6 +20,7 @@ import {
   type LucideIcon,
   NotepadText,
 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { ChartPieDonutText } from "@/components/dashboard/pie-chart-donut-text";
 import { ChartBarLabelCustom } from "@/components/dashboard/chart-bar-label-custom";
 import { formatCurrency } from "@/lib/utils";
@@ -103,7 +104,7 @@ function DashboardContent() {
   // };
 
   return (
-    <div className="space-y-6 ">
+    <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title="Total Items"
@@ -238,55 +239,57 @@ function DashboardContent() {
           <CardContent className="flex-1">
             <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
               {orders.map((order) => (
-                <Card key={order.orderId}>
-                  <CardHeader className="">
-                    <CardTitle className="text-pretty">{order.title}</CardTitle>
-                    <CardDescription>
-                      {order.shop ? `${order.shop} • ` : ""}{" "}
-                      {order.releaseMonthYear
-                        ? `${order.releaseMonthYear} • `
-                        : ""}
-                      <span className="text-foreground font-medium">
-                        {formatCurrency(order.total)}
-                      </span>
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="mt-auto">
-                    {order.itemImages && order.itemImages.length > 0 && (
-                      <div className="flex gap-2 mb-3">
-                        {order.itemImages.slice(0, 3).map((image, idx) => (
-                          <div
-                            key={idx}
-                            className="relative h-16 w-16 rounded-md overflow-hidden bg-muted"
-                          >
-                            <img
-                              src={image}
-                              alt="Item"
-                              className="h-full w-full object-cover"
-                              loading="lazy"
-                              width="64"
-                              height="64"
-                              style={{ maxWidth: "64px", maxHeight: "64px" }}
-                            />
-                          </div>
-                        ))}
-                        {order.itemImages.length > 3 && (
-                          <div className="h-16 w-16 rounded-md bg-muted flex items-center justify-center text-xs text-muted-foreground">
-                            +{order.itemImages.length - 3}
-                          </div>
-                        )}
+                <Link to={`/orders/$id`} params={{ id: order.orderId }}>
+                  <Card key={order.orderId}>
+                    <CardHeader className="">
+                      <CardTitle className="text-pretty">
+                        {order.title}
+                      </CardTitle>
+                      <CardDescription>
+                        {order.shop ? `${order.shop} • ` : ""}{" "}
+                        {order.releaseMonthYear
+                          ? `${order.releaseMonthYear} • `
+                          : ""}
+                        <span className="text-foreground font-medium">
+                          {formatCurrency(order.total)}
+                        </span>
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="mt-auto">
+                      {order.itemImages && order.itemImages.length > 0 && (
+                        <div className="flex gap-2 mb-3">
+                          {order.itemImages.slice(0, 3).map((image, idx) => (
+                            <div
+                              key={idx}
+                              className="relative h-16 w-16 rounded-md overflow-hidden bg-muted"
+                            >
+                              <img
+                                src={image}
+                                alt="Item"
+                                className="h-full w-full object-cover"
+                                loading="lazy"
+                                width="64"
+                                height="64"
+                                style={{ maxWidth: "64px", maxHeight: "64px" }}
+                              />
+                            </div>
+                          ))}
+                          {order.itemImages.length > 3 && (
+                            <div className="h-16 w-16 rounded-md bg-muted flex items-center justify-center text-xs text-muted-foreground">
+                              +{order.itemImages.length - 3}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Package className="h-4 w-4" />
+                        {/* TODO: REFACTOR ORDER QUERY IN DASHBOARD, TEMP FIX */}
+                        {order.itemIds[0] !== null ? order.itemIds.length : 0}{" "}
+                        items
                       </div>
-                    )}
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Package className="h-4 w-4" />
-                      {/* TODO: REFACTOR ORDER QUERY IN DASHBOARD, TEMP FIX */}
-                      {order.itemIds[0] !== null
-                        ? order.itemIds.length
-                        : 0}{" "}
-                      items
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                </Link>
               ))}
               {orders.length === 0 && (
                 <div className="col-span-full">
@@ -307,8 +310,10 @@ function DashboardContent() {
             <div className="space-y-3">
               {upcomingReleases && upcomingReleases.length > 0 ? (
                 upcomingReleases.map((release) => (
-                  <div
+                  <Link
                     key={`${release.itemId}-${release.releaseDate}`}
+                    to={`/items/$id`}
+                    params={{ id: release.itemId.toString() }}
                     className="flex items-center gap-3 p-2 rounded-md hover:bg-muted transition-colors"
                   >
                     {release.image && (
@@ -342,7 +347,7 @@ function DashboardContent() {
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 ))
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-8">
@@ -361,8 +366,10 @@ function DashboardContent() {
             <div className="space-y-3">
               {latestCollectionItems && latestCollectionItems.length > 0 ? (
                 latestCollectionItems.map((collectionItem) => (
-                  <div
+                  <Link
                     key={`${collectionItem.itemId}`}
+                    to={`/items/$id`}
+                    params={{ id: collectionItem.itemId.toString() }}
                     className="flex items-center gap-3 p-2 rounded-md hover:bg-muted transition-colors"
                   >
                     {collectionItem.image && (
@@ -380,9 +387,7 @@ function DashboardContent() {
                         {collectionItem.title}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        <span
-                          className={`text-primary font-medium`}
-                        >
+                        <span className={`text-primary font-medium`}>
                           {collectionItem.status}
                         </span>{" "}
                         <span>•</span> {collectionItem.category} <span>•</span>{" "}
@@ -391,7 +396,7 @@ function DashboardContent() {
                         ).toLocaleDateString()}
                       </p>
                     </div>
-                  </div>
+                  </Link>
                 ))
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-8">
@@ -443,7 +448,7 @@ function StatsCard({
 
 function DashboardSkeleton() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {[...Array(4)].map((_, i) => (
           <Card key={i}>

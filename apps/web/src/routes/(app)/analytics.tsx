@@ -1,12 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { getAnalytics, getEntryAnalytics } from "@/queries/analytics";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ChartPieDonutText } from "@/components/dashboard/pie-chart-donut-text";
@@ -70,12 +65,13 @@ function RouteComponent() {
   console.log(JSON.stringify(analytics, null, 2));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
         <ChartPieDonutText
           data={analytics.categoriesOwned}
           className="h-[300px]"
           innerRadius={95}
+          withIcon={false}
         />
         <ChartBarLabel
           monthlyBreakdown={analytics.monthlyBreakdown}

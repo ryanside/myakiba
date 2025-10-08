@@ -40,7 +40,7 @@ import {
   Move,
 } from "lucide-react";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
-import { getOrderStatusVariant } from "@/lib/orders/utils";
+import { getStatusVariant } from "@/lib/orders/utils";
 import type {
   CascadeOptions,
   EditedOrder,
@@ -260,9 +260,9 @@ export default function OrdersDataGrid({
           const order = row.original;
           return (
             <div className="space-y-px">
-              <div className="font-medium text-foreground truncate">
+              <Link to="/orders/$id" params={{id: order.orderId}} className="font-medium text-foreground truncate">
                 {order.title}
-              </div>
+              </Link>
             </div>
           );
         },
@@ -425,7 +425,7 @@ export default function OrdersDataGrid({
         cell: ({ row }) => {
           const status = row.original.status;
           return (
-            <Badge variant={getOrderStatusVariant(status)} appearance="outline">
+            <Badge variant={getStatusVariant(status)} appearance="outline">
               {status}
             </Badge>
           );
@@ -565,7 +565,7 @@ export default function OrdersDataGrid({
         </Button>
         <Dialog>
           <DialogTrigger asChild>
-            <Button variant="primary" disabled={getSelectedOrderIds.size < 2}>
+            <Button variant="outline" disabled={getSelectedOrderIds.size < 2}>
               <Merge />
               <span className="hidden md:block">Merge Orders</span>
             </Button>
@@ -580,7 +580,7 @@ export default function OrdersDataGrid({
         <Dialog>
           <DialogTrigger asChild>
             <Button
-              variant="primary"
+              variant="outline"
               disabled={getSelectedItemData.collectionIds.size === 0}
             >
               <Split />
@@ -598,7 +598,7 @@ export default function OrdersDataGrid({
         <Dialog>
           <DialogTrigger asChild>
             <Button
-              variant="primary"
+              variant="outline"
               disabled={getSelectedItemData.collectionIds.size === 0}
             >
               <Move />
@@ -613,7 +613,7 @@ export default function OrdersDataGrid({
         </Dialog>
         <Popover>
           <PopoverTrigger asChild disabled={getSelectedOrderIds.size === 0}>
-            <Button variant="outline" disabled={getSelectedOrderIds.size === 0}>
+            <Button variant="outline" disabled={getSelectedOrderIds.size === 0} size="icon">
               <Trash className="stroke-white" />
             </Button>
           </PopoverTrigger>

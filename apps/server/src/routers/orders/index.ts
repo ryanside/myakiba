@@ -292,7 +292,6 @@ const ordersRouter = new Hono<{ Variables: Variables }>()
       const { error } = await tryCatch(
         OrdersService.updateOrderItem(
           user.id,
-          validatedParam.orderId,
           validatedParam.collectionId,
           validatedJSON.item
         )

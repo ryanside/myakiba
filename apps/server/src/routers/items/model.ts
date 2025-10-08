@@ -17,3 +17,12 @@ export const itemReleasesResponseSchema = z.object({
 });
 
 export type ItemReleasesResponse = z.infer<typeof itemReleasesResponseSchema>;
+
+export const entriesWithRolesSchema = z.object({
+  id: z.number(),
+  category: z.string(),
+  name: z.string(),
+  role: z.string(),
+});
+
+export type EntriesWithRoles = z.infer<typeof entriesWithRolesSchema>;

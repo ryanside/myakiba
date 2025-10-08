@@ -101,8 +101,15 @@ function RouteComponent() {
         `Successfully merged ${variables.orderIds.size} orders into one!`
       );
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["order"] }),
+        queryClient.invalidateQueries({ queryKey: ["collection"] }),
+        queryClient.invalidateQueries({ queryKey: ["item"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
+        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
+      ]);
     },
   });
 
@@ -149,8 +156,15 @@ function RouteComponent() {
         `Successfully split ${variables.collectionIds.size} items into one!`
       );
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["order"] }),
+        queryClient.invalidateQueries({ queryKey: ["collection"] }),
+        queryClient.invalidateQueries({ queryKey: ["item"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
+        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
+      ]);
     },
   });
 
@@ -184,8 +198,15 @@ function RouteComponent() {
     onSuccess: () => {
       toast.success(`Successfully updated order!`);
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["order"] }),
+        queryClient.invalidateQueries({ queryKey: ["collection"] }),
+        queryClient.invalidateQueries({ queryKey: ["item"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
+        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
+      ]);
     },
   });
 
@@ -207,12 +228,22 @@ function RouteComponent() {
       if (context?.previousData) {
         queryClient.setQueryData(["orders", filters], context.previousData);
       }
+      toast.error("Failed to delete order(s). Please try again.", {
+        description: `Error: ${error.message}`,
+      });
     },
     onSuccess: () => {
-      toast.success(`Successfully deleted orders!`);
+      toast.success(`Successfully deleted order(s)!`);
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["order"] }),
+        queryClient.invalidateQueries({ queryKey: ["collection"] }),
+        queryClient.invalidateQueries({ queryKey: ["item"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
+        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
+      ]);
     },
   });
 
@@ -249,8 +280,15 @@ function RouteComponent() {
     onSuccess: () => {
       toast.success(`Successfully updated order item!`);
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["order"] }),
+        queryClient.invalidateQueries({ queryKey: ["collection"] }),
+        queryClient.invalidateQueries({ queryKey: ["item"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
+        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
+      ]);
     },
   });
 
@@ -279,8 +317,15 @@ function RouteComponent() {
     onSuccess: () => {
       toast.success(`Successfully deleted order item!`);
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["order"] }),
+        queryClient.invalidateQueries({ queryKey: ["collection"] }),
+        queryClient.invalidateQueries({ queryKey: ["item"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
+        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
+      ]);
     },
   });
 
@@ -322,8 +367,15 @@ function RouteComponent() {
     onSuccess: () => {
       toast.success(`Successfully moved items!`);
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["order"] }),
+        queryClient.invalidateQueries({ queryKey: ["collection"] }),
+        queryClient.invalidateQueries({ queryKey: ["item"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
+        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
+      ]);
     },
   });
 

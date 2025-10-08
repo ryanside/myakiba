@@ -1,4 +1,8 @@
-import type { CollectionItem, CollectionQueryResponse } from "./types";
+import type {
+  CollectionItem,
+  CollectionItemFormValues,
+  CollectionQueryResponse,
+} from "./types";
 
 export function createOptimisticDeleteUpdate(
   old: CollectionQueryResponse,
@@ -16,7 +20,7 @@ export function createOptimisticDeleteUpdate(
 
 export function createOptimisticEditUpdate(
   old: CollectionQueryResponse,
-  values: CollectionItem
+  values: CollectionItemFormValues
 ) {
   const collectionItem = old.collection.find(
     (item: CollectionItem) => item.collectionId === values.collectionId
@@ -26,7 +30,7 @@ export function createOptimisticEditUpdate(
   return {
     ...old,
     collection: old.collection.map((item: CollectionItem) =>
-      item.collectionId === values.collectionId ? values : item
+      item.collectionId === values.collectionId ? { ...item, ...values } : item
     ),
   };
 }

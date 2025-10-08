@@ -8,6 +8,8 @@ export type OrdersQueryResponse = {
   };
 };
 
+export type OrderQueryResponse = Omit<Order, "totalCount">;
+
 export type Order = {
   orderId: string;
   title: string;
@@ -38,6 +40,7 @@ export type Order = {
   notes: string;
   itemCount: number;
   createdAt: string;
+  updatedAt: string;
   items: OrderItem[];
   totalCount: number;
 };
@@ -45,13 +48,13 @@ export type Order = {
 export type OrderItem = {
   collectionId: string;
   itemId: number;
-  releaseId: string | null;
   status: "Owned" | "Ordered" | "Paid" | "Shipped" | "Sold";
   title: string;
   image: string | null;
   price: string;
   count: number;
   shop: string;
+  score: string;
   orderDate: string | null;
   paymentDate: string | null;
   shippingDate: string | null;
@@ -67,13 +70,18 @@ export type OrderItem = {
     | "Colissimo"
     | "UPS"
     | "Domestic";
+  releaseId: string | null;
   releaseDate: string | null;
   releaseType: string | null;
   releasePrice: string | null;
   releasePriceCurrency: string | null;
   releaseBarcode: string | null;
   condition: "New" | "Pre-Owned";
+  tags: string[];
+  notes: string;
 };
+
+export type OrderItemFormValues = Omit<OrderItem, "title" | "image">;
 
 export type NewOrder = {
   title: string;
@@ -123,8 +131,6 @@ export type OrderFilters = {
   order?: "asc" | "desc" | undefined;
   search?: string | undefined;
 };
-
-
 
 export type CascadeOptions = Array<
   | "status"

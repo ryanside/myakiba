@@ -58,13 +58,13 @@ export type CollectionItem = {
   itemImage: string | null;
   itemCategory: string | null;
   itemScale: string | null;
-  itemHeight: number | null;
   status: "Ordered" | "Paid" | "Shipped" | "Owned" | "Sold";
   count: number;
   score: string;
   price: string;
   shop: string;
   condition: "New" | "Pre-Owned";
+  orderDate: string | null;
   paymentDate: string | null;
   shippingDate: string | null;
   collectionDate: string | null;
@@ -79,6 +79,7 @@ export type CollectionItem = {
     | "Colissimo"
     | "UPS"
     | "Domestic";
+  tags: string[];
   notes: string;
   releaseId: string | null;
   releaseDate: string | null;
@@ -91,6 +92,16 @@ export type CollectionItem = {
   totalCount: number;
   totalValue: string;
 };
+
+export type CollectionItemFormValues = Omit<
+  CollectionItem,
+  | "createdAt"
+  | "updatedAt"
+  | "totalCount"
+  | "totalValue"
+  | "itemCategory"
+  | "itemScale"
+>;
 
 export type CollectionQueryResponse = {
   collection: CollectionItem[];

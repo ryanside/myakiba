@@ -8,11 +8,11 @@ import type {
   EditedOrder,
 } from "./types";
 import type { VariantProps } from "class-variance-authority";
-import type { Badge } from "@/components/ui/badge";
+import { badgeVariants } from "@/components/ui/badge";
 
-export function getOrderStatusVariant(
+export function getStatusVariant(
   status: string
-): VariantProps<typeof Badge>["variant"] {
+): VariantProps<typeof badgeVariants>["variant"] {
   switch (status.toLowerCase()) {
     case "owned":
       return "success";
@@ -187,6 +187,7 @@ export function createOptimisticMergeUpdate(
     notes: values.notes,
     itemCount: combinedItems.length,
     createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     items: combinedItems,
     totalCount: old.totalCount,
   };
@@ -255,6 +256,7 @@ export function createOptimisticSplitUpdate(
   const newOrder = {
     ...values,
     orderId: `temp-${Date.now()}`, // Temporary ID for optimistic update
+    updatedAt: new Date().toISOString(),
     items: splitItems,
     total: combinedTotal,
     itemCount: splitItems.length,

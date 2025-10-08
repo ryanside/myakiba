@@ -1,5 +1,9 @@
 import { useSelection } from "@/hooks/use-selection";
-import type { CollectionFilters, CollectionItem } from "@/lib/collection/types";
+import type {
+  CollectionFilters,
+  CollectionItem,
+  CollectionItemFormValues,
+} from "@/lib/collection/types";
 import type {
   Updater,
   ColumnDef,
@@ -9,7 +13,6 @@ import type {
 } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -71,7 +74,7 @@ interface CollectionDataGridProps {
   onSearchChange: (search: string) => void;
   onResetFilters: () => void;
   onDeleteCollectionItems: (collectionIds: Set<string>) => void;
-  onEditCollectionItem: (values: CollectionItem) => void;
+  onEditCollectionItem: (values: CollectionItemFormValues) => void;
 }
 
 export const CollectionDataGrid = ({
@@ -195,9 +198,13 @@ export const CollectionDataGrid = ({
                 </Avatar>
               )}
               <div className="space-y-px">
-                <div className="font-medium text-foreground">
+                <Link
+                  to="/items/$id"
+                  params={{ id: item.itemId.toString() }}
+                  className="font-medium text-foreground truncate"
+                >
                   {item.itemTitle}
-                </div>
+                </Link>
                 <div className="flex items-center gap-1 font-light">
                   <a
                     href={`https://myfigurecollection.net/item/${item.itemId}`}
@@ -316,22 +323,6 @@ export const CollectionDataGrid = ({
         enableHiding: true,
         enableResizing: true,
         size: 100,
-      },
-      {
-        accessorKey: "releaseDate",
-        id: "releaseDate",
-        header: ({ column }) => (
-          <DataGridColumnHeader
-            title="Release"
-            visibility={true}
-            column={column}
-          />
-        ),
-        cell: (info) => (info.getValue() as string | null) || "n/a",
-        enableSorting: true,
-        enableHiding: true,
-        enableResizing: true,
-        size: 120,
       },
       {
         accessorKey: "collectionDate",

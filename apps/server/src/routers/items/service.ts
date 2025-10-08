@@ -1,7 +1,18 @@
 import { db } from "@/db";
-import { item, item_release } from "@/db/schema/figure";
-import { eq } from "drizzle-orm";
-import type { ItemReleasesResponse } from "./model";
+import {
+  collection,
+  entry,
+  entry_to_item,
+  item,
+  item_release,
+  order,
+} from "@/db/schema/figure";
+import { desc, eq, sql } from "drizzle-orm";
+import type {
+  ItemReleasesResponse,
+  ItemRelease,
+  EntriesWithRoles,
+} from "./model";
 
 class ItemService {
   async getItemReleases(itemId: number): Promise<ItemReleasesResponse> {
@@ -42,16 +53,112 @@ class ItemService {
         image: item.image,
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
+        releases: sql<ItemRelease[]>`
+          COALESCE(
+            (
+              SELECT JSON_AGG(
+                JSON_BUILD_OBJECT(
+                  'id', ir.id,
+                  'itemId', ir.item_id,
+                  'date', ir.date,
+                  'type', ir.type,
+                  'price', ir.price::text,
+                  'priceCurrency', ir.price_currency,
+                  'barcode', ir.barcode
+                )
+                ORDER BY ir.date DESC
+              )
+              FROM ${item_release} ir
+              WHERE ir.item_id = ${item}.id
+            ),
+            '[]'::json
+          )
+        `,
+        entries: sql<EntriesWithRoles[]>`
+          COALESCE(
+            (
+              SELECT JSON_AGG(
+                JSON_BUILD_OBJECT(
+                  'id', e.id,
+                  'category', e.category,
+                  'name', e.name,
+                  'role', eti.role
+                )
+              )
+              FROM ${entry_to_item} eti
+              LEFT JOIN ${entry} e ON eti.entry_id = e.id
+              WHERE eti.item_id = ${item}.id
+            ),
+            '[]'::json
+          )
+        `,
       })
       .from(item)
-      .where(eq(item.id, itemId))
-      .limit(1);
+      .where(eq(item.id, itemId));
 
     if (!itemData || itemData.length === 0) {
       throw new Error("ITEM_NOT_FOUND");
     }
 
     return itemData[0];
+  }
+  async getItemRelatedOrders(itemId: number) {
+    const orders = await db
+      .select({
+        id: order.id,
+        title: order.title,
+        shop: order.shop,
+        releaseMonthYear: order.releaseMonthYear,
+        shippingFee: order.shippingFee,
+        taxes: order.taxes,
+        duties: order.duties,
+        tariffs: order.tariffs,
+        miscFees: order.miscFees,
+      })
+      .from(order)
+      .leftJoin(collection, eq(order.id, collection.orderId))
+      .where(eq(collection.itemId, itemId))
+      .groupBy(order.id)
+      .orderBy(desc(order.releaseMonthYear));
+
+    if (!orders) {
+      throw new Error("FAILED_TO_GET_ITEM_RELATED_ORDERS");
+    }
+
+    return orders;
+  }
+  async getItemRelatedCollection(itemId: number) {
+    const collectionItems = await db
+      .select({
+        id: collection.id,
+        itemId: collection.itemId,
+        orderId: collection.orderId,
+        status: collection.status,
+        count: collection.count,
+        score: collection.score,
+        price: collection.price,
+        shop: collection.shop,
+        orderDate: collection.orderDate,
+        paymentDate: collection.paymentDate,
+        shippingDate: collection.shippingDate,
+        collectionDate: collection.collectionDate,
+        shippingMethod: collection.shippingMethod,
+        notes: collection.notes,
+        tags: collection.tags,
+        condition: collection.condition,
+        releaseId: collection.releaseId,
+        createdAt: collection.createdAt,
+        updatedAt: collection.updatedAt,
+      })
+      .from(collection)
+      .where(eq(collection.itemId, itemId))
+      .groupBy(collection.id);
+
+    if (!collectionItems) {
+      throw new Error("FAILED_TO_GET_ITEM_RELATED_COLLECTION");
+    }
+
+    return collectionItems;
   }
 }
 

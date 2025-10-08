@@ -60,7 +60,7 @@ function RouteComponent() {
               </BreadcrumbList>
             </Breadcrumb>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex gap-2">
               <SearchCommand />
           </div>
           <div className="flex items-center gap-2">

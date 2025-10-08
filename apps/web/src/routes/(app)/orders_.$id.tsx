@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { getOrderStatusVariant } from "@/lib/orders/utils";
+import { getStatusVariant } from "@/lib/orders/utils";
 import { OrderItemSubDataGrid } from "@/components/orders/order-item-sub-data-grid";
 import { useState, useEffect } from "react";
 import type { RowSelectionState } from "@tanstack/react-table";
@@ -67,6 +67,8 @@ function RouteComponent() {
     }
   }, [data?.order]);
 
+  // TODO: add delete order mutation
+
   const editOrderMutation = useMutation({
     mutationFn: async ({
       values,
@@ -77,12 +79,25 @@ function RouteComponent() {
     }) => {
       return await editOrder(values, cascadeOptions);
     },
+    // TODO: add optimistic update 
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["order", id] });
       toast.success("Order updated successfully");
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to update order");
+      toast.error("Failed to update order. Please try again.", {
+        description: `Error: ${error.message}`,
+      });
+    },
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["order", id] }),
+        queryClient.invalidateQueries({ queryKey: ["item"] }),
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["order"] }),
+        queryClient.invalidateQueries({ queryKey: ["collection"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
+        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
+      ]);
     },
   });
 
@@ -98,12 +113,25 @@ function RouteComponent() {
     }) => {
       return await editOrderItem(orderId, collectionId, values);
     },
+    // TODO: add optimistic update 
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["order", id] });
       toast.success("Item updated successfully");
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to update item");
+      toast.error("Failed to update item. Please try again.", {
+        description: `Error: ${error.message}`,
+      });
+    },
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["order", id] }),
+        queryClient.invalidateQueries({ queryKey: ["item"] }),
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["order"] }),
+        queryClient.invalidateQueries({ queryKey: ["collection"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
+        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
+      ]);
     },
   });
 
@@ -117,12 +145,25 @@ function RouteComponent() {
     }) => {
       return await deleteOrderItem(orderId, collectionId);
     },
+    // TODO: add optimistic update 
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["order", id] });
       toast.success("Item deleted successfully");
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to delete item");
+      toast.error("Failed to delete item. Please try again.", {
+        description: `Error: ${error.message}`,
+      });
+    },
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["order", id] }),
+        queryClient.invalidateQueries({ queryKey: ["item"] }),
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["order"] }),
+        queryClient.invalidateQueries({ queryKey: ["collection"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
+        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
+      ]);
     },
   });
 
@@ -195,11 +236,11 @@ function RouteComponent() {
             </Link>
           </Button>
           <div className="flex flex-row items-center space-x-2">
-            <h1 className="text-2xl font-bold text-foreground">
+            <h1 className="text-2xl font-semibold text-foreground">
               {order.title}
             </h1>
             <Badge
-              variant={getOrderStatusVariant(order.status)}
+              variant={getStatusVariant(order.status)}
               appearance="outline"
               className="text-sm"
               size="lg"

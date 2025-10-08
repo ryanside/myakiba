@@ -17,6 +17,7 @@ type OrderItem = {
   price: string;
   count: number;
   shop: string;
+  score: string;
   orderDate: string | null;
   paymentDate: string | null;
   shippingDate: string | null;
@@ -38,6 +39,8 @@ type OrderItem = {
   releasePriceCurrency: string | null;
   releaseBarcode: string | null;
   condition: "New" | "Pre-Owned";
+  tags: string[];
+  notes: string;
 };
 
 class OrdersService {
@@ -98,6 +101,7 @@ class OrdersService {
         notes: order.notes,
         itemCount: sql<number>`COUNT(${collection.id})`,
         createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
         items: sql<OrderItem[]>`
           COALESCE(
             JSON_AGG(
@@ -111,6 +115,7 @@ class OrdersService {
                 'price', ${collection.price}::text,
                 'count', ${collection.count},
                 'shop', ${collection.shop},
+                'score', ${collection.score},
                 'orderDate', ${collection.orderDate},
                 'paymentDate', ${collection.paymentDate},
                 'shippingDate', ${collection.shippingDate},
@@ -121,7 +126,9 @@ class OrdersService {
                 'releasePrice', ${item_release.price}::text,
                 'releasePriceCurrency', ${item_release.priceCurrency},
                 'releaseBarcode', ${item_release.barcode},
-                'condition', ${collection.condition}
+                'condition', ${collection.condition},
+                'tags', ${collection.tags},
+                'notes', ${collection.notes}
               )
               ORDER BY ${item.title}
             ) FILTER (WHERE ${collection.id} IS NOT NULL),
@@ -152,7 +159,8 @@ class OrdersService {
         order.tariffs,
         order.miscFees,
         order.notes,
-        order.createdAt
+        order.createdAt,
+        order.updatedAt
       )
       .orderBy(
         orderBy === "asc" ? asc(sortByColumn) : desc(sortByColumn),
@@ -200,6 +208,7 @@ class OrdersService {
                 'price', ${collection.price}::text,
                 'count', ${collection.count},
                 'shop', ${collection.shop},
+                'score', ${collection.score},
                 'orderDate', ${collection.orderDate},
                 'paymentDate', ${collection.paymentDate},
                 'shippingDate', ${collection.shippingDate},
@@ -210,7 +219,9 @@ class OrdersService {
                 'releasePrice', ${item_release.price}::text,
                 'releasePriceCurrency', ${item_release.priceCurrency},
                 'releaseBarcode', ${item_release.barcode},
-                'condition', ${collection.condition}
+                'condition', ${collection.condition},
+                'tags', ${collection.tags},
+                'notes', ${collection.notes}
               )
               ORDER BY ${item.title}
             ) FILTER (WHERE ${collection.id} IS NOT NULL),
@@ -390,19 +401,14 @@ class OrdersService {
 
   async updateOrderItem(
     userId: string,
-    orderId: string,
     collectionId: string,
     updatedItem: orderItemUpdateType
   ) {
     const itemUpdated = await db
       .update(collection)
-      .set(updatedItem)
+      .set({ ...updatedItem })
       .where(
-        and(
-          eq(collection.userId, userId),
-          eq(collection.orderId, orderId),
-          eq(collection.id, collectionId)
-        )
+        and(eq(collection.userId, userId), eq(collection.id, collectionId))
       )
       .returning();
     if (!itemUpdated || itemUpdated.length === 0) {

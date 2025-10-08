@@ -1,5 +1,8 @@
 import { client } from "@/lib/hono-client";
-import type { CollectionFilters, CollectionItem } from "@/lib/collection/types";
+import type {
+  CollectionFilters,
+  CollectionItemFormValues,
+} from "@/lib/collection/types";
 
 export async function getCollection(filters: CollectionFilters) {
   // Build query params - convert arrays to comma-separated strings
@@ -63,7 +66,7 @@ export async function searchEntries(search: string) {
   return response.json();
 }
 
-export async function updateCollectionItem(values: CollectionItem) {
+export async function updateCollectionItem(values: CollectionItemFormValues) {
   const response = await client.api.collection[":id"].$put({
     param: { id: values.collectionId },
     json: values,

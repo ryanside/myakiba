@@ -48,11 +48,13 @@ import { cn, formatCurrency } from "@/lib/utils";
 export function ChartPieDonutText({
   data,
   innerRadius,
+  withIcon = true,
   ...props
 }: {
   data: { name: string | null; count: number; totalValue: string | null }[];
   className?: string;
   innerRadius?: number;
+  withIcon?: boolean;
 }) {
   const chartData = data.map((item, index) => ({
     name: item.name || "other",
@@ -82,7 +84,7 @@ export function ChartPieDonutText({
     return (
       <Card className="flex flex-col">
         <CardHeader className="flex flex-row items-center space-y-0 gap-2">
-          <Shapes className="h-4 w-4 text-muted-foreground" />
+          {withIcon && <Shapes className="h-4 w-4 text-muted-foreground" />}
           <CardTitle className="font-medium">Collection Breakdown</CardTitle>
         </CardHeader>
         <CardContent className="flex-1 pb-0">
@@ -97,15 +99,13 @@ export function ChartPieDonutText({
   return (
     <Card className="flex flex-col">
       <CardHeader className="flex flex-row items-center space-y-0 gap-2">
-        <Shapes className="h-4 w-4 text-muted-foreground" />
+        {withIcon && <Shapes className="h-4 w-4 text-muted-foreground" />}
         <CardTitle className="font-medium">Collection Breakdown</CardTitle>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col">
         <ChartContainer
           config={chartConfig}
-          className={cn(
-            `flex items-center justify-center x-auto aspect-auto`
-          )}
+          className={cn(`flex items-center justify-center x-auto aspect-auto`)}
           {...props}
         >
           <PieChart>

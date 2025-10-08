@@ -1,4 +1,4 @@
-import type { CollectionItem } from "@/lib/collection/types";
+import type { CollectionItemFormValues } from "@/lib/collection/types";
 import {
   DialogContent,
   DialogHeader,
@@ -25,10 +25,13 @@ import { DatePicker } from "@/components/ui/date-picker";
 import * as z from "zod";
 import { Textarea } from "../ui/textarea";
 import { Rating } from "../ui/rating";
+import { Field, FieldContent, FieldTitle } from "@/components/ui/field";
+import { Badge } from "../ui/badge";
+import { X } from "lucide-react";
 
 type CollectionItemFormProps = {
-  itemData: CollectionItem;
-  callbackFn: (itemData: CollectionItem) => void;
+  itemData: CollectionItemFormValues;
+  callbackFn: (itemData: CollectionItemFormValues) => void;
 };
 
 export default function CollectionItemForm(props: CollectionItemFormProps) {
@@ -67,7 +70,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
           <DialogTitle>Edit Item</DialogTitle>
           <DialogDescription>{itemData.itemTitle}</DialogDescription>
         </DialogHeader>
-        <ScrollArea className="max-h-[70vh]">
+        <ScrollArea className="max-h-[70vh] overflow-y-auto">
           <div className="grid gap-4 p-2">
             {/* Price, Count, Score */}
             <div className="grid grid-cols-2 gap-4">
@@ -346,6 +349,23 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
             {/* Date Fields */}
             <div className="grid grid-cols-2 gap-4">
               <form.Field
+                name="orderDate"
+                children={(field) => (
+                  <div className="grid gap-2">
+                    <Label htmlFor={field.name}>Order Date</Label>
+                    <DatePicker
+                      id={field.name}
+                      name={field.name}
+                      value={field.state.value ?? null}
+                      onBlur={field.handleBlur}
+                      onChange={(value) => field.handleChange(value)}
+                      placeholder="Select order date"
+                    />
+                  </div>
+                )}
+              />
+
+              <form.Field
                 name="paymentDate"
                 children={(field) => (
                   <div className="grid gap-2">
@@ -361,7 +381,9 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                   </div>
                 )}
               />
+            </div>
 
+            <div className="grid grid-cols-2 gap-4">
               <form.Field
                 name="shippingDate"
                 children={(field) => (
@@ -378,9 +400,6 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                   </div>
                 )}
               />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
               <form.Field
                 name="collectionDate"
                 children={(field) => (
@@ -397,60 +416,114 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                   </div>
                 )}
               />
-
-              <form.Field
-                name="shippingMethod"
-                validators={{
-                  onChange: z.enum(
-                    [
-                      "n/a",
-                      "EMS",
-                      "SAL",
-                      "AIRMAIL",
-                      "SURFACE",
-                      "FEDEX",
-                      "DHL",
-                      "Colissimo",
-                      "UPS",
-                      "Domestic",
-                    ],
-                    "Shipping method is required"
-                  ),
-                }}
-                children={(field) => (
-                  <div className="grid gap-2">
-                    <Label htmlFor={field.name}>Shipping Method</Label>
-                    <Select
-                      value={field.state.value ?? ""}
-                      onValueChange={(value) =>
-                        field.handleChange(value as typeof field.state.value)
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select shipping method" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="n/a">n/a</SelectItem>
-                        <SelectItem value="EMS">EMS</SelectItem>
-                        <SelectItem value="SAL">SAL</SelectItem>
-                        <SelectItem value="AIRMAIL">AIRMAIL</SelectItem>
-                        <SelectItem value="SURFACE">SURFACE</SelectItem>
-                        <SelectItem value="FEDEX">FEDEX</SelectItem>
-                        <SelectItem value="DHL">DHL</SelectItem>
-                        <SelectItem value="Colissimo">Colissimo</SelectItem>
-                        <SelectItem value="UPS">UPS</SelectItem>
-                        <SelectItem value="Domestic">Domestic</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {!field.state.meta.isValid && (
-                      <em role="alert" className="text-xs text-destructive">
-                        {field.state.meta.errors.join(", ")}
-                      </em>
-                    )}
-                  </div>
-                )}
-              />
             </div>
+            <form.Field
+              name="shippingMethod"
+              validators={{
+                onChange: z.enum(
+                  [
+                    "n/a",
+                    "EMS",
+                    "SAL",
+                    "AIRMAIL",
+                    "SURFACE",
+                    "FEDEX",
+                    "DHL",
+                    "Colissimo",
+                    "UPS",
+                    "Domestic",
+                  ],
+                  "Shipping method is required"
+                ),
+              }}
+              children={(field) => (
+                <div className="grid gap-2">
+                  <Label htmlFor={field.name}>Shipping Method</Label>
+                  <Select
+                    value={field.state.value ?? ""}
+                    onValueChange={(value) =>
+                      field.handleChange(value as typeof field.state.value)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select shipping method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="n/a">n/a</SelectItem>
+                      <SelectItem value="EMS">EMS</SelectItem>
+                      <SelectItem value="SAL">SAL</SelectItem>
+                      <SelectItem value="AIRMAIL">AIRMAIL</SelectItem>
+                      <SelectItem value="SURFACE">SURFACE</SelectItem>
+                      <SelectItem value="FEDEX">FEDEX</SelectItem>
+                      <SelectItem value="DHL">DHL</SelectItem>
+                      <SelectItem value="Colissimo">Colissimo</SelectItem>
+                      <SelectItem value="UPS">UPS</SelectItem>
+                      <SelectItem value="Domestic">Domestic</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {!field.state.meta.isValid && (
+                    <em role="alert" className="text-xs text-destructive">
+                      {field.state.meta.errors.join(", ")}
+                    </em>
+                  )}
+                </div>
+              )}
+            />
+            <form.Field
+              name="tags"
+              children={(field) => (
+                <Field className="gap-2">
+                  <FieldTitle>Tags</FieldTitle>
+                  <FieldContent>
+                    <div className="flex flex-wrap gap-2">
+                      {field.state.value?.map((tag, tagIndex) => (
+                        <Badge
+                          key={tagIndex}
+                          variant="outline"
+                          size="lg"
+                          className="flex items-center justify-between pr-0"
+                        >
+                          {tag}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              const current = field.state.value || [];
+                              field.handleChange(
+                                current.filter((_, idx) => idx !== tagIndex)
+                              );
+                            }}
+                            className=" hover:text-red-500 hover:bg-transparent"
+                          >
+                            <X />
+                          </Button>
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        id="tags-input"
+                        type="text"
+                        placeholder="Press enter after each tag to add"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            const input = e.currentTarget;
+                            const value = input.value.trim();
+                            if (value) {
+                              const current = field.state.value || [];
+                              field.handleChange([...current, value]);
+                              input.value = "";
+                            }
+                          }
+                        }}
+                      />
+                    </div>
+                  </FieldContent>
+                </Field>
+              )}
+            />
 
             {/* Notes */}
             <form.Field
