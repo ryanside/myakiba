@@ -119,7 +119,7 @@ export default function ChooseSyncOption({
                         </FieldDescription>
                         <FieldDescription className="italic font-light">
                           {`You can export your MyFigureCollection
-                        CSV by going to https://myfigurecollection.net > User Menu > Manager > CSV Export.`}
+                        CSV by going to https://myfigurecollection.net > User Menu > Manager > CSV Export (with all fields checked).`}
                         </FieldDescription>
                       </div>
                     </FieldContent>

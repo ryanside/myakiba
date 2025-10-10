@@ -29,6 +29,7 @@ const chartConfig = {
 
 export function ChartBarLabelCustom({
   data,
+  currency = "USD",
 }: {
   data: {
     totalSpent: string;
@@ -38,6 +39,7 @@ export function ChartBarLabelCustom({
     totalTariffs: string;
     totalMiscFees: string;
   };
+  currency?: string;
 }) {
   const chartData = [
     { expense: "Item Costs", cost: parseFloat(data.totalSpent) },
@@ -50,7 +52,7 @@ export function ChartBarLabelCustom({
 
   return (
     <Card className="">
-      <CardHeader className="flex flex-row items-center space-y-0 gap-2">
+      <CardHeader className="flex flex-row items-center gap-2">
         <ChartNoAxesColumn className="h-4 w-4 text-muted-foreground" />
         <CardTitle className="font-medium">Total Expenses</CardTitle>
       </CardHeader>
@@ -98,7 +100,7 @@ export function ChartBarLabelCustom({
                 offset={8}
                 className="fill-foreground"
                 fontSize={12}
-                formatter={(value: number) => formatCurrency(value)}
+                formatter={(value: number) => formatCurrency(value, currency)}
               />
             </Bar>
           </BarChart>
@@ -109,37 +111,37 @@ export function ChartBarLabelCustom({
           <div className="flex justify-between">
             <span>Item Costs</span>
             <span className="font-medium">
-              {formatCurrency(data.totalSpent)}
+              {formatCurrency(data.totalSpent, currency)}
             </span>
           </div>
           <div className="flex justify-between">
             <span>Shipping</span>
             <span className="font-medium">
-              {formatCurrency(data.totalShipping)}
+              {formatCurrency(data.totalShipping, currency)}
             </span>
           </div>
           <div className="flex justify-between">
             <span>Taxes</span>
             <span className="font-medium">
-              {formatCurrency(data.totalTaxes)}
+              {formatCurrency(data.totalTaxes, currency)}
             </span>
           </div>
           <div className="flex justify-between">
             <span>Duties</span>
             <span className="font-medium">
-              {formatCurrency(data.totalDuties)}
+              {formatCurrency(data.totalDuties, currency)}
             </span>
           </div>
           <div className="flex justify-between">
             <span>Tariffs</span>
             <span className="font-medium">
-              {formatCurrency(data.totalTariffs)}
+              {formatCurrency(data.totalTariffs, currency)}
             </span>
           </div>
           <div className="flex justify-between">
             <span>Misc Fees</span>
             <span className="font-medium">
-              {formatCurrency(data.totalMiscFees)}
+              {formatCurrency(data.totalMiscFees, currency)}
             </span>
           </div>
         </div>
@@ -152,7 +154,8 @@ export function ChartBarLabelCustom({
                 data.totalTaxes +
                 data.totalDuties +
                 data.totalTariffs +
-                data.totalMiscFees
+                data.totalMiscFees,
+              currency
             )}
           </span>
         </div>

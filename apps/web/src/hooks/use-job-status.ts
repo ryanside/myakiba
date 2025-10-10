@@ -5,10 +5,14 @@ import * as z from "zod";
 const jobStatusSchema = z.object({
   status: z.string(),
   finished: z.boolean(),
-  isFinished: z.boolean(),
+  createdAt: z.string().optional(),
 });
 
-type JobStatus = z.infer<typeof jobStatusSchema>;
+type JobStatus = {
+  status: string;
+  finished: boolean;
+  isFinished: boolean;
+};
 
 export function useJobStatus(jobId: string | null): JobStatus {
   const [status, setStatus] = useState<JobStatus>({
@@ -54,6 +58,8 @@ export function useJobStatus(jobId: string | null): JobStatus {
       try {
         const parsedData = jobStatusSchema.safeParse(JSON.parse(event.data));
         if (!parsedData.success) {
+          console.error("Schema validation failed:", parsedData.error);
+          console.error("Received data:", event.data);
           setStatus({
             status: "Error parsing status update",
             finished: true,

@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Link, type ParsedLocation } from "@tanstack/react-router";
 
-export function NavMain({
+export function NavManagement({
   items,
   location,
 }: {
@@ -27,15 +27,17 @@ export function NavMain({
   location: ParsedLocation;
 }) {
   return (
-    <SidebarGroup className="group-data-[collapsible=icon]:pb-0">
-      <SidebarGroupLabel className="group-data-[collapsible=icon]:-z-10 transition-all duration-100 ease-in-out">Main</SidebarGroupLabel>
+    <SidebarGroup className="group-data-[collapsible=icon]:pt-1">
+      <SidebarGroupLabel className="group-data-[collapsible=icon]:-z-10 transition-all duration-100 ease-in-out">
+        Manage
+      </SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => (
           <Collapsible key={item.title} asChild defaultOpen={item.isActive}>
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                className="data-[active=true]:shadow-xs data-[state=active]:text-white"
+                className="data-[state=active]:shadow"
                 tooltip={item.title}
                 isActive={location.pathname === `${item.url}`}
               >

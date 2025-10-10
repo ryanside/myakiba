@@ -1,10 +1,10 @@
 "use client";
 import { Link } from "@tanstack/react-router";
-import myakiba from "@/public/myakiba.svg";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import React from "react";
 import { cn } from "@/lib/utils";
+import { MyAkibaLogo } from "../myakiba-logo";
 
 // const menuItems = [
 //   { name: "Features", href: "#link" },
@@ -44,9 +44,9 @@ export const HeroHeader = () => {
               <Link
                 to="/"
                 aria-label="home"
-                className="flex items-center space-x-2"
+                className="flex items-center gap-x-2"
               >
-                <img src={myakiba} alt="myakiba" className="h-4" />
+                <MyAkibaLogo size="full" className="size-24 block" />
               </Link>
 
               <button

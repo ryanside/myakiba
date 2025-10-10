@@ -12,11 +12,52 @@ export const searchSchema = z.object({
       "shippingMethod",
       "total",
       "itemCount",
+      "status",
       "createdAt",
     ])
     .optional(),
   order: z.enum(["asc", "desc"]).optional(),
   search: z.string().optional(),
+  shop: z.array(z.string()).optional(),
+  releaseMonthYearStart: z.string().optional(),
+  releaseMonthYearEnd: z.string().optional(),
+  shipMethod: z
+    .array(
+      z.enum([
+        "n/a",
+        "EMS",
+        "SAL",
+        "AIRMAIL",
+        "SURFACE",
+        "FEDEX",
+        "DHL",
+        "Colissimo",
+        "UPS",
+        "Domestic",
+      ])
+    )
+    .optional(),
+  orderDateStart: z.string().optional(),
+  orderDateEnd: z.string().optional(),
+  payDateStart: z.string().optional(),
+  payDateEnd: z.string().optional(),
+  shipDateStart: z.string().optional(),
+  shipDateEnd: z.string().optional(),
+  colDateStart: z.string().optional(),
+  colDateEnd: z.string().optional(),
+  status: z.array(z.enum(["Ordered", "Paid", "Shipped", "Owned"])).optional(),
+  totalMin: z.string().optional(),
+  totalMax: z.string().optional(),
+  shippingFeeMin: z.string().optional(),
+  shippingFeeMax: z.string().optional(),
+  taxesMin: z.string().optional(),
+  taxesMax: z.string().optional(),
+  dutiesMin: z.string().optional(),
+  dutiesMax: z.string().optional(),
+  tariffsMin: z.string().optional(),
+  tariffsMax: z.string().optional(),
+  miscFeesMin: z.string().optional(),
+  miscFeesMax: z.string().optional(),
 });
 
 export const collectionSearchSchema = z.object({
@@ -48,18 +89,22 @@ export const collectionSearchSchema = z.object({
   shipDateEnd: z.string().optional(),
   colDateStart: z.string().optional(),
   colDateEnd: z.string().optional(),
-  shipMethod: z.array(z.enum([
-    "n/a",
-    "EMS",
-    "SAL",
-    "AIRMAIL",
-    "SURFACE",
-    "FEDEX",
-    "DHL",
-    "Colissimo",
-    "UPS",
-    "Domestic",
-  ])).optional(),
+  shipMethod: z
+    .array(
+      z.enum([
+        "n/a",
+        "EMS",
+        "SAL",
+        "AIRMAIL",
+        "SURFACE",
+        "FEDEX",
+        "DHL",
+        "Colissimo",
+        "UPS",
+        "Domestic",
+      ])
+    )
+    .optional(),
   relDateStart: z.string().optional(),
   relDateEnd: z.string().optional(),
   relPriceMin: z.string().optional(),

@@ -49,12 +49,14 @@ export function ChartPieDonutText({
   data,
   innerRadius,
   withIcon = true,
+  currency = "USD",
   ...props
 }: {
   data: { name: string | null; count: number; totalValue: string | null }[];
   className?: string;
   innerRadius?: number;
   withIcon?: boolean;
+  currency?: string;
 }) {
   const chartData = data.map((item, index) => ({
     name: item.name || "other",
@@ -83,7 +85,7 @@ export function ChartPieDonutText({
   if (totalItems === 0) {
     return (
       <Card className="flex flex-col">
-        <CardHeader className="flex flex-row items-center space-y-0 gap-2">
+        <CardHeader className="flex flex-row items-center gap-2">
           {withIcon && <Shapes className="h-4 w-4 text-muted-foreground" />}
           <CardTitle className="font-medium">Collection Breakdown</CardTitle>
         </CardHeader>
@@ -98,7 +100,7 @@ export function ChartPieDonutText({
 
   return (
     <Card className="flex flex-col">
-      <CardHeader className="flex flex-row items-center space-y-0 gap-2">
+      <CardHeader className="flex flex-row items-center gap-2">
         {withIcon && <Shapes className="h-4 w-4 text-muted-foreground" />}
         <CardTitle className="font-medium">Collection Breakdown</CardTitle>
       </CardHeader>
@@ -164,7 +166,7 @@ export function ChartPieDonutText({
                 {item.count}
               </span>
               <span className="ml-auto text-sm text-muted-foreground">
-                {formatCurrency(item.value)}
+                {formatCurrency(item.value, currency)}
               </span>
             </div>
           ))}

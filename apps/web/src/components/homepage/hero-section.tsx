@@ -9,7 +9,7 @@ export default function HeroSection() {
     <>
       <HeroHeader />
       <main>
-        <section className="before:bg-gradient-to-br before:from-sidebar before:from-15% before:to-85% before:via-black before:to-secondary before:border before:border-border border-e-foreground relative overflow-hidden before:absolute before:inset-1 before:h-[calc(100%-8rem)] before:rounded-2xl sm:before:inset-2 md:before:rounded-[2rem] lg:before:h-[calc(100%-14rem)]">
+        <section className="before:bg-gradient-to-br before:from-sidebar before:from-15% before:to-85% before:via-darker-background before:to-secondary before:border before:border-border border-e-foreground relative overflow-hidden before:absolute before:inset-1 before:h-[calc(100%-8rem)] before:rounded-2xl sm:before:inset-2 md:before:rounded-[2rem] lg:before:h-[calc(100%-14rem)]">
           <div className="py-20 md:py-36">
             <div className="relative z-10 mx-auto max-w-5xl px-6 text-center">
               <div>
@@ -29,7 +29,7 @@ export default function HeroSection() {
                     early, early build out now
                   </span>
                 </Link>
-                <h1 className="mx-auto mt-8 max-w-3xl text-balance text-white/90 text-4xl font-bold tracking-tight sm:text-5xl">
+                <h1 className="mx-auto mt-8 max-w-3xl text-balance dark:text-white/90 text-4xl font-bold tracking-tight sm:text-5xl">
                   enhanced collection management.
                 </h1>
                 <p className="text-foreground mx-auto my-6 max-w-xl text-balance text-xl">

@@ -45,6 +45,7 @@ import {
 } from "@/queries/collection";
 import { toast } from "sonner";
 import type { ItemRelatedCollection } from "@/lib/items/types";
+import { authClient } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/(app)/items_/$id")({
   component: RouteComponent,
@@ -102,6 +103,8 @@ async function getItemRelatedCollection(itemId: string) {
 }
 
 function RouteComponent() {
+  const { data: session } = authClient.useSession();
+  const userCurrency = session?.user.currency || "USD";
   const queryClient = useQueryClient();
   const { id } = useParams({ from: "/(app)/items_/$id" });
 
@@ -286,7 +289,7 @@ function RouteComponent() {
 
   if (isPending) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+      <div className="flex flex-col items-center justify-center h-64 gap-y-4">
         <Loader />
       </div>
     );
@@ -294,7 +297,7 @@ function RouteComponent() {
 
   if (isError) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+      <div className="flex flex-col items-center justify-center h-64 gap-y-4">
         <div className="text-lg font-medium text-destructive">
           Error: {error.message}
         </div>
@@ -334,7 +337,7 @@ function RouteComponent() {
               )}
 
               <div className="flex-1 h-full space-y-2">
-                <div className="flex flex-col space-y-0.5">
+                <div className="flex flex-col gap-y-0.5">
                   <h1 className="text-xl font-semibold ">{item.title}</h1>
                   <a
                     href={`https://myfigurecollection.net/item/${item.id}`}
@@ -347,7 +350,9 @@ function RouteComponent() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="primary">{item.category}</Badge>
-                  <Badge variant="outline">{item.scale}</Badge>
+                  {item.scale && item.scale !== "NON_SCALE" && (
+                    <Badge variant="outline">{item.scale}</Badge>
+                  )}
                   {item.version && item.version.length > 0 && (
                     <Badge variant="outline">{item.version}</Badge>
                   )}
@@ -584,7 +589,7 @@ function RouteComponent() {
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
                           <span>Price</span>
                           <span className="text-foreground font-medium">
-                            {formatCurrency(collectionItem.price)}
+                            {formatCurrency(collectionItem.price, userCurrency)}
                           </span>
                         </div>
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
@@ -595,15 +600,15 @@ function RouteComponent() {
                         </div>
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
                           <span>Shop</span>
-                          <span>{collectionItem.shop || "n/a"}</span>
+                          <span className="text-foreground font-medium">{collectionItem.shop || "n/a"}</span>
                         </div>
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
                           <span>Shipping Method</span>
-                          <span>{collectionItem.shippingMethod}</span>
+                          <span className="text-foreground font-medium">{collectionItem.shippingMethod}</span>
                         </div>
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
                           <span>Release</span>
-                          <span>
+                          <span className="text-foreground font-medium">
                             {data.item.releases.find(
                               (release) =>
                                 release.id === collectionItem.releaseId
@@ -612,35 +617,35 @@ function RouteComponent() {
                         </div>
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
                           <span>Order Date</span>
-                          <span>{collectionItem.orderDate || "n/a"}</span>
+                          <span className="text-foreground font-medium">{collectionItem.orderDate || "n/a"}</span>
                         </div>
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
                           <span>Payment Date</span>
-                          <span>{collectionItem.paymentDate || "n/a"}</span>
+                          <span className="text-foreground font-medium">{collectionItem.paymentDate || "n/a"}</span>
                         </div>
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
                           <span>Shipping Date</span>
-                          <span>{collectionItem.shippingDate || "n/a"}</span>
+                          <span className="text-foreground font-medium">{collectionItem.shippingDate || "n/a"}</span>
                         </div>
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
                           <span>Collection Date</span>
-                          <span>{collectionItem.collectionDate || "n/a"}</span>
+                          <span className="text-foreground font-medium">{collectionItem.collectionDate || "n/a"}</span>
                         </div>
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
                           <span>Score</span>
-                          <span className="text-right">
+                          <span className="text-right text-foreground font-medium">
                             {collectionItem.score || "n/a"}
                           </span>
                         </div>
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
                           <span>Tags</span>
-                          <span className="text-right">
+                          <span className="text-right text-foreground font-medium">
                             {collectionItem.tags.join(", ") || "n/a"}
                           </span>
                         </div>
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
                           <span>Notes</span>
-                          <span className="text-right max-w-[60%]">
+                          <span className="text-right max-w-[60%] text-foreground font-medium">
                             {collectionItem.notes || "n/a"}
                           </span>
                         </div>
@@ -677,7 +682,7 @@ function RouteComponent() {
                                   )?.shop && (
                                     <div className="flex justify-between text-muted-foreground text-sm items-center">
                                       <span>Shop</span>
-                                      <span>
+                                      <span className="text-foreground font-medium">
                                         {
                                           ordersList.find(
                                             (order) =>
@@ -694,7 +699,7 @@ function RouteComponent() {
                                   )?.releaseMonthYear && (
                                     <div className="flex justify-between text-muted-foreground text-sm items-center">
                                       <span>Release</span>
-                                      <span>
+                                      <span className="text-foreground font-medium">
                                         {
                                           ordersList.find(
                                             (order) =>
@@ -711,13 +716,14 @@ function RouteComponent() {
                                   )?.shippingFee && (
                                     <div className="flex justify-between text-muted-foreground text-sm items-center">
                                       <span>Shipping Fee</span>
-                                      <span>
+                                      <span className="text-foreground font-medium">
                                         {formatCurrency(
                                           ordersList.find(
                                             (order) =>
                                               order.id ===
                                               collectionItem.orderId
-                                          )?.shippingFee || 0
+                                          )?.shippingFee || 0,
+                                          userCurrency
                                         )}
                                       </span>
                                     </div>
@@ -728,13 +734,14 @@ function RouteComponent() {
                                   )?.taxes && (
                                     <div className="flex justify-between text-muted-foreground text-sm items-center">
                                       <span>Taxes</span>
-                                      <span>
+                                      <span className="text-foreground font-medium">
                                         {formatCurrency(
                                           ordersList.find(
                                             (order) =>
                                               order.id ===
                                               collectionItem.orderId
-                                          )?.taxes || 0
+                                          )?.taxes || 0,
+                                          userCurrency
                                         )}
                                       </span>
                                     </div>
@@ -745,13 +752,14 @@ function RouteComponent() {
                                   )?.duties && (
                                     <div className="flex justify-between text-muted-foreground text-sm items-center">
                                       <span>Duties</span>
-                                      <span>
+                                      <span className="text-foreground font-medium">
                                         {formatCurrency(
                                           ordersList.find(
                                             (order) =>
                                               order.id ===
                                               collectionItem.orderId
-                                          )?.duties || 0
+                                          )?.duties || 0,
+                                          userCurrency
                                         )}
                                       </span>
                                     </div>
@@ -762,13 +770,14 @@ function RouteComponent() {
                                   )?.tariffs && (
                                     <div className="flex justify-between text-muted-foreground text-sm items-center">
                                       <span>Tariffs</span>
-                                      <span>
+                                      <span className="text-foreground font-medium">
                                         {formatCurrency(
                                           ordersList.find(
                                             (order) =>
                                               order.id ===
                                               collectionItem.orderId
-                                          )?.tariffs || 0
+                                          )?.tariffs || 0,
+                                          userCurrency
                                         )}
                                       </span>
                                     </div>
@@ -779,13 +788,14 @@ function RouteComponent() {
                                   )?.miscFees && (
                                     <div className="flex justify-between text-muted-foreground text-sm items-center">
                                       <span>Misc Fees</span>
-                                      <span>
+                                      <span className="text-foreground font-medium">
                                         {formatCurrency(
                                           ordersList.find(
                                             (order) =>
                                               order.id ===
                                               collectionItem.orderId
-                                          )?.miscFees || 0
+                                          )?.miscFees || 0,
+                                          userCurrency
                                         )}
                                       </span>
                                     </div>

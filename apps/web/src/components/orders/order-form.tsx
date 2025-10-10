@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { MaskInput } from "@/components/ui/mask-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -31,6 +32,8 @@ import { ChevronDown, Loader2 } from "lucide-react";
 import type { CascadeOptions } from "@/lib/orders/types";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import { Textarea } from "../ui/textarea";
+import { authClient } from "@/lib/auth-client";
+import { getCurrencyLocale } from "@/lib/utils";
 
 type MergeOrderFormProps = {
   orderIds: Set<string>;
@@ -76,6 +79,10 @@ type OrderFormProps =
 
 export function OrderForm(props: OrderFormProps) {
   const { callbackFn, type, orderIds, collectionIds, clearSelections } = props;
+
+  const { data: session } = authClient.useSession();
+  const userCurrency = session?.user?.currency || "USD";
+  const userLocale = getCurrencyLocale(userCurrency);
 
   const {
     cascadeOptions,
@@ -499,15 +506,17 @@ export function OrderForm(props: OrderFormProps) {
               children={(field) => (
                 <div className="grid gap-2">
                   <Label htmlFor={field.name}>Shipping Fee</Label>
-                  <Input
+                  <MaskInput
                     id={field.name}
                     name={field.name}
-                    value={field.state.value ?? ""}
+                    mask="currency"
+                    currency={userCurrency}
+                    locale={userLocale}
+                    value={field.state.value}
                     onBlur={field.handleBlur}
-                    type="number"
-                    step="0.01"
-                    min="0.00"
-                    onChange={(e) => field.handleChange(e.target.value)}
+                    onValueChange={(maskedValue, unmaskedValue) =>
+                      field.handleChange(unmaskedValue)
+                    }
                     placeholder="0.00"
                   />
                 </div>
@@ -519,15 +528,17 @@ export function OrderForm(props: OrderFormProps) {
               children={(field) => (
                 <div className="grid gap-2">
                   <Label htmlFor={field.name}>Taxes</Label>
-                  <Input
+                  <MaskInput
                     id={field.name}
                     name={field.name}
+                    mask="currency"
+                    currency={userCurrency}
+                    locale={userLocale}
                     value={field.state.value}
                     onBlur={field.handleBlur}
-                    type="number"
-                    step="0.01"
-                    min="0.00"
-                    onChange={(e) => field.handleChange(e.target.value)}
+                    onValueChange={(maskedValue, unmaskedValue) =>
+                      field.handleChange(unmaskedValue)
+                    }
                     placeholder="0.00"
                   />
                 </div>
@@ -541,15 +552,17 @@ export function OrderForm(props: OrderFormProps) {
               children={(field) => (
                 <div className="grid gap-2">
                   <Label htmlFor={field.name}>Duties</Label>
-                  <Input
+                  <MaskInput
                     id={field.name}
                     name={field.name}
+                    mask="currency"
+                    currency={userCurrency}
+                    locale={userLocale}
                     value={field.state.value}
                     onBlur={field.handleBlur}
-                    type="number"
-                    step="0.01"
-                    min="0.00"
-                    onChange={(e) => field.handleChange(e.target.value)}
+                    onValueChange={(maskedValue, unmaskedValue) =>
+                      field.handleChange(unmaskedValue)
+                    }
                     placeholder="0.00"
                   />
                 </div>
@@ -561,15 +574,17 @@ export function OrderForm(props: OrderFormProps) {
               children={(field) => (
                 <div className="grid gap-2">
                   <Label htmlFor={field.name}>Tariffs</Label>
-                  <Input
+                  <MaskInput
                     id={field.name}
                     name={field.name}
+                    mask="currency"
+                    currency={userCurrency}
+                    locale={userLocale}
                     value={field.state.value}
                     onBlur={field.handleBlur}
-                    type="number"
-                    step="0.01"
-                    min="0.00"
-                    onChange={(e) => field.handleChange(e.target.value)}
+                    onValueChange={(maskedValue, unmaskedValue) =>
+                      field.handleChange(unmaskedValue)
+                    }
                     placeholder="0.00"
                   />
                 </div>
@@ -582,15 +597,17 @@ export function OrderForm(props: OrderFormProps) {
             children={(field) => (
               <div className="grid gap-2">
                 <Label htmlFor={field.name}>Miscellaneous Fees</Label>
-                <Input
+                <MaskInput
                   id={field.name}
                   name={field.name}
+                  mask="currency"
+                  currency={userCurrency}
+                  locale={userLocale}
                   value={field.state.value}
                   onBlur={field.handleBlur}
-                  type="number"
-                  step="0.01"
-                  min="0.00"
-                  onChange={(e) => field.handleChange(e.target.value)}
+                  onValueChange={(maskedValue, unmaskedValue) =>
+                    field.handleChange(unmaskedValue)
+                  }
                   placeholder="0.00"
                 />
               </div>

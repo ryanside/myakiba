@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import Loader from "@/components/loader";
 import type { CollectionItemFormValues } from "@/lib/collection/types";
 import { updateCollectionItem } from "@/queries/collection";
+import { authClient } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/(app)/orders_/$id")({
   component: RouteComponent,
@@ -55,6 +56,8 @@ export const Route = createFileRoute("/(app)/orders_/$id")({
 });
 
 function RouteComponent() {
+  const { data: session } = authClient.useSession();
+  const userCurrency = session?.user.currency || "USD";
   const { id } = useParams({ from: "/(app)/orders_/$id" });
   const queryClient = useQueryClient();
   const [itemSelection, setItemSelection] = useState<RowSelectionState>({});
@@ -187,7 +190,7 @@ function RouteComponent() {
 
   if (isPending) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+      <div className="flex flex-col items-center justify-center h-64 gap-y-4">
         <Loader />
       </div>
     );
@@ -195,7 +198,7 @@ function RouteComponent() {
 
   if (isError) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+      <div className="flex flex-col items-center justify-center h-64 gap-y-4">
         <div className="text-lg font-medium text-destructive">
           Error: {error.message}
         </div>
@@ -227,14 +230,14 @@ function RouteComponent() {
     <div className="space-y-6">
       {/* Header Section */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center gap-x-4">
           <Button asChild variant="ghost">
             <Link to="/orders">
-              <ArrowLeft className="mr-2 h-4 w-4" />
+              <ArrowLeft className="size-4" />
               Back to Orders
             </Link>
           </Button>
-          <div className="flex flex-row items-center space-x-2">
+          <div className="flex flex-row items-center gap-x-2">
             <h1 className="text-2xl font-semibold text-foreground">
               {order.title}
             </h1>
@@ -248,11 +251,11 @@ function RouteComponent() {
             </Badge>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-x-2">
           <Dialog>
             <DialogTrigger asChild>
               <Button variant="outline">
-                <Edit className="mr-2 h-4 w-4" />
+                <Edit className="size-4" />
                 Edit Order
               </Button>
             </DialogTrigger>
@@ -268,9 +271,9 @@ function RouteComponent() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Order Information */}
         <Card>
-          <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-            <div className="flex items-center space-x-2">
-              <Package className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="flex flex-row items-center gap-2 pb-2">
+            <div className="flex items-center gap-x-2">
+              <Package className="size-4 text-muted-foreground" />
               <CardTitle className="text-sm font-medium">
                 Order Details
               </CardTitle>
@@ -326,9 +329,9 @@ function RouteComponent() {
 
         {/* Timeline */}
         <Card>
-          <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-            <div className="flex items-center space-x-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="flex flex-row items-center gap-2 pb-2">
+            <div className="flex items-center gap-x-2">
+              <Calendar className="size-4 text-muted-foreground" />
               <CardTitle className="text-sm font-medium">Timeline</CardTitle>
             </div>
           </CardHeader>
@@ -364,9 +367,9 @@ function RouteComponent() {
 
         {/* Financial Summary */}
         <Card>
-          <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-            <div className="flex items-center space-x-2">
-              <CreditCard className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="flex flex-row items-center gap-2 pb-2">
+            <div className="flex items-center gap-x-2">
+              <CreditCard className="size-4 text-muted-foreground" />
               <CardTitle className="text-sm font-medium">
                 Financial Summary
               </CardTitle>
@@ -378,43 +381,43 @@ function RouteComponent() {
                 Items Total:
               </span>
               <span className="text-sm font-medium">
-                {formatCurrency(itemsTotal.toString())}
+                {formatCurrency(itemsTotal.toString(), userCurrency)}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Shipping:</span>
               <span className="text-sm font-medium">
-                {formatCurrency(shippingFee.toString())}
+                {formatCurrency(shippingFee.toString(), userCurrency)}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Taxes:</span>
               <span className="text-sm font-medium">
-                {formatCurrency(taxes.toString())}
+                {formatCurrency(taxes.toString(), userCurrency)}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Duties:</span>
               <span className="text-sm font-medium">
-                {formatCurrency(duties.toString())}
+                {formatCurrency(duties.toString(), userCurrency)}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Tariffs:</span>
               <span className="text-sm font-medium">
-                {formatCurrency(tariffs.toString())}
+                {formatCurrency(tariffs.toString(), userCurrency)}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Misc Fees:</span>
               <span className="text-sm font-medium">
-                {formatCurrency(miscFees.toString())}
+                {formatCurrency(miscFees.toString(), userCurrency)}
               </span>
             </div>
             <div className="flex items-center justify-between font-semibold">
               <span className="text-sm">Total Amount:</span>
               <span className="text-sm">
-                {formatCurrency(totalAmount.toString())}
+                {formatCurrency(totalAmount.toString(), userCurrency)}
               </span>
             </div>
           </CardContent>
@@ -424,9 +427,9 @@ function RouteComponent() {
       {/* Notes Section */}
       {order.notes && (
         <Card>
-          <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-            <div className="flex items-center space-x-2">
-              <FileText className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="flex flex-row items-center gap-2 pb-2">
+            <div className="flex items-center gap-x-2">
+              <FileText className="size-4 text-muted-foreground" />
               <CardTitle className="text-sm font-medium">Notes</CardTitle>
             </div>
           </CardHeader>
@@ -440,9 +443,9 @@ function RouteComponent() {
 
       {/* Order Items */}
       <Card>
-        <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-          <div className="flex items-center space-x-2">
-            <Users className="h-4 w-4 text-muted-foreground" />
+        <CardHeader className="flex flex-row items-center gap-2 pb-2">
+          <div className="flex items-center gap-x-2">
+            <Users className="size-4 text-muted-foreground" />
             <CardTitle className="text-sm font-medium">
               Order Items ({order.itemCount})
             </CardTitle>
@@ -457,10 +460,11 @@ function RouteComponent() {
               setItemSelection={setItemSelection}
               onEditItem={handleEditItem}
               onDeleteItem={handleDeleteItem}
+              currency={userCurrency}
             />
           ) : (
             <div className="flex items-center justify-center py-8 text-muted-foreground">
-              <Package className="mr-2 h-5 w-5" />
+              <Package className="size-5" />
               No items in this order
             </div>
           )}

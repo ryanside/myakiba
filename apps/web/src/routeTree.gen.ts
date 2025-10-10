@@ -9,10 +9,12 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as LoginRouteImport } from './routes/login'
 import { Route as appRouteRouteImport } from './routes/(app)/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProfileUsernameRouteImport } from './routes/profile.$username'
+import { Route as authResetPasswordRouteImport } from './routes/(auth)/reset-password'
+import { Route as authLoginRouteImport } from './routes/(auth)/login'
+import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-password'
 import { Route as appSyncRouteImport } from './routes/(app)/sync'
 import { Route as appSettingsRouteImport } from './routes/(app)/settings'
 import { Route as appOrdersRouteImport } from './routes/(app)/orders'
@@ -23,11 +25,6 @@ import { Route as appAnalyticsRouteImport } from './routes/(app)/analytics'
 import { Route as appOrdersIdRouteImport } from './routes/(app)/orders_.$id'
 import { Route as appItemsIdRouteImport } from './routes/(app)/items_.$id'
 
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const appRouteRoute = appRouteRouteImport.update({
   id: '/(app)',
   getParentRoute: () => rootRouteImport,
@@ -40,6 +37,21 @@ const IndexRoute = IndexRouteImport.update({
 const ProfileUsernameRoute = ProfileUsernameRouteImport.update({
   id: '/profile/$username',
   path: '/profile/$username',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const authResetPasswordRoute = authResetPasswordRouteImport.update({
+  id: '/(auth)/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const authLoginRoute = authLoginRouteImport.update({
+  id: '/(auth)/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const authForgotPasswordRoute = authForgotPasswordRouteImport.update({
+  id: '/(auth)/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const appSyncRoute = appSyncRouteImport.update({
@@ -90,7 +102,6 @@ const appItemsIdRoute = appItemsIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof appRouteRouteWithChildren
-  '/login': typeof LoginRoute
   '/analytics': typeof appAnalyticsRoute
   '/collection': typeof appCollectionRoute
   '/dashboard': typeof appDashboardRoute
@@ -98,13 +109,15 @@ export interface FileRoutesByFullPath {
   '/orders': typeof appOrdersRoute
   '/settings': typeof appSettingsRoute
   '/sync': typeof appSyncRoute
+  '/forgot-password': typeof authForgotPasswordRoute
+  '/login': typeof authLoginRoute
+  '/reset-password': typeof authResetPasswordRoute
   '/profile/$username': typeof ProfileUsernameRoute
   '/items/$id': typeof appItemsIdRoute
   '/orders/$id': typeof appOrdersIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof appRouteRouteWithChildren
-  '/login': typeof LoginRoute
   '/analytics': typeof appAnalyticsRoute
   '/collection': typeof appCollectionRoute
   '/dashboard': typeof appDashboardRoute
@@ -112,6 +125,9 @@ export interface FileRoutesByTo {
   '/orders': typeof appOrdersRoute
   '/settings': typeof appSettingsRoute
   '/sync': typeof appSyncRoute
+  '/forgot-password': typeof authForgotPasswordRoute
+  '/login': typeof authLoginRoute
+  '/reset-password': typeof authResetPasswordRoute
   '/profile/$username': typeof ProfileUsernameRoute
   '/items/$id': typeof appItemsIdRoute
   '/orders/$id': typeof appOrdersIdRoute
@@ -120,7 +136,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/(app)': typeof appRouteRouteWithChildren
-  '/login': typeof LoginRoute
   '/(app)/analytics': typeof appAnalyticsRoute
   '/(app)/collection': typeof appCollectionRoute
   '/(app)/dashboard': typeof appDashboardRoute
@@ -128,6 +143,9 @@ export interface FileRoutesById {
   '/(app)/orders': typeof appOrdersRoute
   '/(app)/settings': typeof appSettingsRoute
   '/(app)/sync': typeof appSyncRoute
+  '/(auth)/forgot-password': typeof authForgotPasswordRoute
+  '/(auth)/login': typeof authLoginRoute
+  '/(auth)/reset-password': typeof authResetPasswordRoute
   '/profile/$username': typeof ProfileUsernameRoute
   '/(app)/items_/$id': typeof appItemsIdRoute
   '/(app)/orders_/$id': typeof appOrdersIdRoute
@@ -136,7 +154,6 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/login'
     | '/analytics'
     | '/collection'
     | '/dashboard'
@@ -144,13 +161,15 @@ export interface FileRouteTypes {
     | '/orders'
     | '/settings'
     | '/sync'
+    | '/forgot-password'
+    | '/login'
+    | '/reset-password'
     | '/profile/$username'
     | '/items/$id'
     | '/orders/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/login'
     | '/analytics'
     | '/collection'
     | '/dashboard'
@@ -158,6 +177,9 @@ export interface FileRouteTypes {
     | '/orders'
     | '/settings'
     | '/sync'
+    | '/forgot-password'
+    | '/login'
+    | '/reset-password'
     | '/profile/$username'
     | '/items/$id'
     | '/orders/$id'
@@ -165,7 +187,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/(app)'
-    | '/login'
     | '/(app)/analytics'
     | '/(app)/collection'
     | '/(app)/dashboard'
@@ -173,6 +194,9 @@ export interface FileRouteTypes {
     | '/(app)/orders'
     | '/(app)/settings'
     | '/(app)/sync'
+    | '/(auth)/forgot-password'
+    | '/(auth)/login'
+    | '/(auth)/reset-password'
     | '/profile/$username'
     | '/(app)/items_/$id'
     | '/(app)/orders_/$id'
@@ -181,19 +205,14 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   appRouteRoute: typeof appRouteRouteWithChildren
-  LoginRoute: typeof LoginRoute
+  authForgotPasswordRoute: typeof authForgotPasswordRoute
+  authLoginRoute: typeof authLoginRoute
+  authResetPasswordRoute: typeof authResetPasswordRoute
   ProfileUsernameRoute: typeof ProfileUsernameRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/(app)': {
       id: '/(app)'
       path: '/'
@@ -213,6 +232,27 @@ declare module '@tanstack/react-router' {
       path: '/profile/$username'
       fullPath: '/profile/$username'
       preLoaderRoute: typeof ProfileUsernameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(auth)/reset-password': {
+      id: '/(auth)/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof authResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(auth)/login': {
+      id: '/(auth)/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof authLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(auth)/forgot-password': {
+      id: '/(auth)/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof authForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(app)/sync': {
@@ -312,7 +352,9 @@ const appRouteRouteWithChildren = appRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   appRouteRoute: appRouteRouteWithChildren,
-  LoginRoute: LoginRoute,
+  authForgotPasswordRoute: authForgotPasswordRoute,
+  authLoginRoute: authLoginRoute,
+  authResetPasswordRoute: authResetPasswordRoute,
   ProfileUsernameRoute: ProfileUsernameRoute,
 }
 export const routeTree = rootRouteImport

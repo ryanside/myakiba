@@ -17,6 +17,7 @@ import {
   SelectContent,
 } from "@/components/ui/select";
 import Loader from "@/components/loader";
+import { authClient } from "@/lib/auth-client";
 export const Route = createFileRoute("/(app)/analytics")({
   component: RouteComponent,
   head: () => ({
@@ -40,6 +41,8 @@ export const Route = createFileRoute("/(app)/analytics")({
 });
 
 function RouteComponent() {
+  const { data: session } = authClient.useSession();
+  const userCurrency = session?.user.currency || "USD";
   const [entryCategory, setEntryCategory] =
     useState<EntryCategory>("Characters");
   const { isPending, isError, data, error } = useQuery({
@@ -63,7 +66,7 @@ function RouteComponent() {
 
   if (isPending) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+      <div className="flex flex-col items-center justify-center h-64 gap-y-4">
         <Loader />
       </div>
     );
@@ -71,7 +74,7 @@ function RouteComponent() {
 
   if (isError) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+      <div className="flex flex-col items-center justify-center h-64 gap-y-4">
         <div className="text-lg font-medium text-destructive">
           Error: {error.message}
         </div>
@@ -90,6 +93,7 @@ function RouteComponent() {
           className="h-[300px]"
           innerRadius={95}
           withIcon={false}
+          currency={userCurrency}
         />
         <ChartBarLabel
           monthlyBreakdown={analytics.monthlyBreakdown}
@@ -113,7 +117,7 @@ function RouteComponent() {
                       {range.count} items
                     </Badge>
                     <span className="text-sm text-muted-foreground">
-                      {formatCurrency(range.totalValue, "USD")}
+                      {formatCurrency(range.totalValue, userCurrency)}
                     </span>
                   </div>
                 </div>
@@ -138,7 +142,7 @@ function RouteComponent() {
                       {range.count} items
                     </Badge>
                     <span className="text-sm text-muted-foreground">
-                      {formatCurrency(range.totalValue, "USD")}
+                      {formatCurrency(range.totalValue, userCurrency)}
                     </span>
                   </div>
                 </div>
@@ -161,7 +165,7 @@ function RouteComponent() {
                       {range.count} items
                     </Badge>
                     <span className="text-sm text-muted-foreground">
-                      {formatCurrency(range.totalSpent, "USD")}
+                      {formatCurrency(range.totalSpent, userCurrency)}
                     </span>
                   </div>
                 </div>
@@ -212,7 +216,7 @@ function RouteComponent() {
                           {entry.itemCount} items
                         </Badge>
                         <span className="text-sm text-muted-foreground">
-                          {formatCurrency(entry.totalValue, "USD")}
+                          {formatCurrency(entry.totalValue, userCurrency)}
                         </span>
                       </div>
                     </div>
@@ -231,7 +235,7 @@ function RouteComponent() {
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
         <Card className="">
-          <CardHeader className="flex flex-row items-center space-y-0 gap-2">
+          <CardHeader className="flex flex-row items-center gap-2">
             <CardTitle className="font-medium">Most Expensive Items</CardTitle>
           </CardHeader>
           <CardContent className="flex-1">
@@ -262,7 +266,7 @@ function RouteComponent() {
                       <div className="flex items-center gap-4 mt-1">
                         <p className="text-xs text-muted-foreground">
                           <span className="text-xs text-foreground font-medium">
-                            {formatCurrency(item.collectionPrice, "USD")}
+                            {formatCurrency(item.collectionPrice, userCurrency)}
                           </span>
                         </p>
                       </div>
@@ -278,7 +282,7 @@ function RouteComponent() {
           </CardContent>
         </Card>
         <Card className="">
-          <CardHeader className="flex flex-row items-center space-y-0 gap-2">
+          <CardHeader className="flex flex-row items-center gap-2">
             <CardTitle className="font-medium">Most Popular Items</CardTitle>
           </CardHeader>
           <CardContent className="flex-1">
@@ -288,7 +292,7 @@ function RouteComponent() {
           </CardContent>
         </Card>
         <Card className="">
-          <CardHeader className="flex flex-row items-center space-y-0 gap-2">
+          <CardHeader className="flex flex-row items-center gap-2">
             <CardTitle className="font-medium">Top Rated Items</CardTitle>
           </CardHeader>
           <CardContent className="flex-1">

@@ -11,21 +11,21 @@
   },
   "devDependencies": {
     "@myakiba/eslint-config": "workspace:*",
-    "@types/bun": "^1.2.19",
-    "drizzle-kit": "^0.31.4"
+    "@types/bun": "^1.2.23",
+    "drizzle-kit": "^0.31.5"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.859.0",
-    "@neondatabase/serverless": "^1.0.1",
+    "@aws-sdk/client-s3": "^3.907.0",
+    "@neondatabase/serverless": "^1.0.2",
     "@paralleldrive/cuid2": "^2.2.2",
-    "bullmq": "^5.56.9",
+    "bullmq": "^5.61.0",
     "cheerio": "^1.1.2",
-    "drizzle-orm": "^0.44.4",
-    "ioredis": "^5.7.0",
+    "drizzle-orm": "^0.44.6",
+    "ioredis": "^5.8.1",
     "uuid": "^11.1.0",
-    "zod": "^4.1.11"
+    "zod": "^4.1.12"
   }
 }

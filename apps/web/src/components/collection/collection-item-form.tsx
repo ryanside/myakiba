@@ -10,6 +10,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "../ui/button";
 import { Input } from "@/components/ui/input";
+import { MaskInput } from "@/components/ui/mask-input";
 import { useForm } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import { getItemReleases } from "@/queries/orders";
@@ -28,6 +29,8 @@ import { Rating } from "../ui/rating";
 import { Field, FieldContent, FieldTitle } from "@/components/ui/field";
 import { Badge } from "../ui/badge";
 import { X } from "lucide-react";
+import { authClient } from "@/lib/auth-client";
+import { getCurrencyLocale } from "@/lib/utils";
 
 type CollectionItemFormProps = {
   itemData: CollectionItemFormValues;
@@ -36,6 +39,10 @@ type CollectionItemFormProps = {
 
 export default function CollectionItemForm(props: CollectionItemFormProps) {
   const { itemData, callbackFn } = props;
+
+  const { data: session } = authClient.useSession();
+  const userCurrency = session?.user?.currency || "USD";
+  const userLocale = getCurrencyLocale(userCurrency);
 
   const form = useForm({
     defaultValues: itemData,
@@ -82,15 +89,17 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                 children={(field) => (
                   <div className="grid gap-2">
                     <Label htmlFor={field.name}>Price</Label>
-                    <Input
+                    <MaskInput
                       id={field.name}
                       name={field.name}
+                      mask="currency"
+                      currency={userCurrency}
+                      locale={userLocale}
                       value={field.state.value}
                       onBlur={field.handleBlur}
-                      type="number"
-                      step="0.01"
-                      min="0.00"
-                      onChange={(e) => field.handleChange(e.target.value)}
+                      onValueChange={(maskedValue, unmaskedValue) =>
+                        field.handleChange(unmaskedValue)
+                      }
                       placeholder="0.00"
                     />
                     {!field.state.meta.isValid && (

@@ -4,21 +4,41 @@ import type {
   CascadeOptions,
   EditedOrder,
   NewOrder,
+  OrderFilters,
 } from "@/lib/orders/types";
 
-export async function getOrders(filters: {
-  limit?: number;
-  offset?: number;
-  sort?: string;
-  order?: string;
-  search?: string;
-}) {
+export async function getOrders(filters: OrderFilters) {
   const queryParams = {
     limit: filters.limit?.toString(),
     offset: filters.offset?.toString(),
     sort: filters.sort,
     order: filters.order,
     search: filters.search,
+    shop: filters.shop?.join(",") || [],
+    releaseMonthYearStart: filters.releaseMonthYearStart,
+    releaseMonthYearEnd: filters.releaseMonthYearEnd,
+    shipMethod: filters.shipMethod?.join(",") || [],
+    orderDateStart: filters.orderDateStart,
+    orderDateEnd: filters.orderDateEnd,
+    payDateStart: filters.payDateStart,
+    payDateEnd: filters.payDateEnd,
+    shipDateStart: filters.shipDateStart,
+    shipDateEnd: filters.shipDateEnd,
+    colDateStart: filters.colDateStart,
+    colDateEnd: filters.colDateEnd,
+    status: filters.status?.join(",") || [],
+    totalMin: filters.totalMin,
+    totalMax: filters.totalMax,
+    shippingFeeMin: filters.shippingFeeMin,
+    shippingFeeMax: filters.shippingFeeMax,
+    taxesMin: filters.taxesMin,
+    taxesMax: filters.taxesMax,
+    dutiesMin: filters.dutiesMin,
+    dutiesMax: filters.dutiesMax,
+    tariffsMin: filters.tariffsMin,
+    tariffsMax: filters.tariffsMax,
+    miscFeesMin: filters.miscFeesMin,
+    miscFeesMax: filters.miscFeesMax,
   };
 
   const response = await client.api.orders.$get({ query: queryParams });

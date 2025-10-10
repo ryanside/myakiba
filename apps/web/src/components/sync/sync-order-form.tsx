@@ -2,6 +2,7 @@ import { useForm } from "@tanstack/react-form";
 import { Button } from "../ui/button";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
+import { MaskInput } from "../ui/mask-input";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -35,6 +36,8 @@ import type { CascadeOptions } from "@/lib/orders/types";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import type { SyncFormOrder, SyncFormOrderItem } from "@/lib/sync/types";
 import { Textarea } from "../ui/textarea";
+import { authClient } from "@/lib/auth-client";
+import { getCurrencyLocale } from "@/lib/utils";
 
 export default function SyncOrderForm({
   setCurrentStep,
@@ -43,6 +46,10 @@ export default function SyncOrderForm({
   setCurrentStep: (step: number) => void;
   handleSyncOrderSubmit: (values: SyncFormOrder) => void;
 }) {
+  const { data: session } = authClient.useSession();
+  const userCurrency = session?.user?.currency || "USD";
+  const userLocale = getCurrencyLocale(userCurrency);
+
   const {
     cascadeOptions,
     cascadeOptionsList,
@@ -539,7 +546,7 @@ export default function SyncOrderForm({
         >
           {(field) => {
             return (
-              <div className="flex flex-col gap-2 space-y-2">
+              <div className="flex flex-col gap-4">
                 <div className="flex flex-row gap-3 items-center">
                   <Label className="text-lg text-white">Order Items</Label>
                   <Badge size="sm">
@@ -600,18 +607,16 @@ export default function SyncOrderForm({
                                             <Label htmlFor={`price-${i}`}>
                                               Price
                                             </Label>
-                                            <Input
+                                            <MaskInput
                                               id={`price-${i}`}
                                               name={priceField.name}
+                                              mask="currency"
+                                              currency={userCurrency}
+                                              locale={userLocale}
                                               value={priceField.state.value}
                                               onBlur={priceField.handleBlur}
-                                              type="number"
-                                              step="0.01"
-                                              min="0.00"
-                                              onChange={(e) =>
-                                                priceField.handleChange(
-                                                  e.target.value
-                                                )
+                                              onValueChange={(maskedValue, unmaskedValue) =>
+                                                priceField.handleChange(unmaskedValue)
                                               }
                                               placeholder="0.00"
                                             />

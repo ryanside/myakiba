@@ -44,6 +44,7 @@ export function OrderItemSubDataGrid({
   setItemSelection,
   onEditItem,
   onDeleteItem,
+  currency = "USD",
 }: {
   items: OrderItem[];
   orderId: string;
@@ -51,6 +52,7 @@ export function OrderItemSubDataGrid({
   setItemSelection: OnChangeFn<RowSelectionState>;
   onEditItem: (values: CollectionItemFormValues) => Promise<void>;
   onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
+  currency?: string;
 }) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
@@ -238,7 +240,7 @@ export function OrderItemSubDataGrid({
             column={column}
           />
         ),
-        cell: (info) => formatCurrency(info.getValue() as string),
+        cell: (info) => formatCurrency(info.getValue() as string, currency),
         enableSorting: true,
         enableHiding: true,
         enableResizing: true,

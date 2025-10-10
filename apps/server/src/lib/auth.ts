@@ -4,6 +4,10 @@ import { db } from "../db";
 import * as schema from "../db/schema/auth";
 import { captcha, username } from "better-auth/plugins";
 import { emailHarmony } from "better-auth-harmony";
+import { Resend } from "resend";
+// import { EmailTemplate } from "../emails/email-template";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -13,6 +17,19 @@ export const auth = betterAuth({
   trustedOrigins: [process.env.CORS_ORIGIN || ""],
   emailAndPassword: {
     enabled: true,
+    sendResetPassword: async ({ user, url, token }, request) => {
+      await resend.emails.send({
+        from: "Myakiba <onboarding@resend.dev>",
+        to: ["delivered@resend.dev"],
+        subject: "Reset your password",
+        text: `Click the link to reset your password: ${url}`,
+        // react: EmailTemplate({ firstName: user.name }),
+      });
+    },
+    onPasswordReset: async ({ user }, request) => {
+      // your logic here
+      console.log(`Password for user ${user.email} has been reset.`);
+    },
   },
   socialProviders: {
     google: {

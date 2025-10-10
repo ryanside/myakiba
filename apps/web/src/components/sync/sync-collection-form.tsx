@@ -4,6 +4,7 @@ import { type SyncFormCollectionItem } from "@/lib/sync/types";
 import { ArrowLeft, Edit, Loader2, Plus, X } from "lucide-react";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
+import { MaskInput } from "../ui/mask-input";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +26,8 @@ import { DatePicker } from "../ui/date-picker";
 import * as z from "zod";
 import { Rating } from "../ui/rating";
 import { Textarea } from "../ui/textarea";
+import { authClient } from "@/lib/auth-client";
+import { getCurrencyLocale } from "@/lib/utils";
 
 export default function SyncCollectionForm({
   setCurrentStep,
@@ -33,6 +36,10 @@ export default function SyncCollectionForm({
   setCurrentStep: (step: number) => void;
   handleSyncCollectionSubmit: (values: SyncFormCollectionItem[]) => void;
 }) {
+  const { data: session } = authClient.useSession();
+  const userCurrency = session?.user?.currency || "USD";
+  const userLocale = getCurrencyLocale(userCurrency);
+
   const collectionForm = useForm({
     defaultValues: {
       items: [
@@ -93,7 +100,7 @@ export default function SyncCollectionForm({
         >
           {(field) => {
             return (
-              <div className="flex flex-col gap-2 space-y-2">
+              <div className="flex flex-col gap-4">
                 <div className="flex flex-row gap-3 items-center">
                   <Label className="text-lg text-white">Collection Items</Label>
                   <Badge size="sm">
@@ -177,18 +184,16 @@ export default function SyncCollectionForm({
                                             <Label htmlFor={`price-${i}`}>
                                               Price
                                             </Label>
-                                            <Input
+                                            <MaskInput
                                               id={`price-${i}`}
                                               name={priceField.name}
+                                              mask="currency"
+                                              currency={userCurrency}
+                                              locale={userLocale}
                                               value={priceField.state.value}
                                               onBlur={priceField.handleBlur}
-                                              type="number"
-                                              step="0.01"
-                                              min="0.00"
-                                              onChange={(e) =>
-                                                priceField.handleChange(
-                                                  e.target.value
-                                                )
+                                              onValueChange={(maskedValue, unmaskedValue) =>
+                                                priceField.handleChange(unmaskedValue)
                                               }
                                               placeholder="0.00"
                                             />

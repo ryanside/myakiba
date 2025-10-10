@@ -8,7 +8,7 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { Loader2 } from "lucide-react";
-import myakiba from "@/public/myakiba.svg";
+import { MyAkibaLogo } from "../myakiba-logo";
 
 function GoogleIcon() {
   return (
@@ -109,10 +109,10 @@ export default function SignUpForm({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col items-center justify-center gap-2">
-        <div className="text-xl font-semibold flex items-center gap-2 -my-8">
+        <div className="text-xl font-semibold flex items-center gap-2">
           <span className="">Welcome to</span>
           <Link to="/">
-            <img src={myakiba} alt="myakiba" className="size-28 inline-block" />
+            <MyAkibaLogo size="full" className="size-28 inline-block" />
           </Link>
         </div>
         <div className="text-center text-sm">

@@ -64,6 +64,20 @@ export function formatCurrency(
   }
 }
 
+export function getCurrencyLocale(currency: string = "USD"): string {
+  const localeMap: Record<string, string> = {
+    JPY: "ja-JP",
+    EUR: "de-DE",
+    CNY: "zh-CN",
+    GBP: "en-GB",
+    CAD: "en-CA",
+    AUD: "en-AU",
+    NZD: "en-NZ",
+    USD: "en-US",
+  };
+  return localeMap[currency] || "en-US";
+}
+
 export const cleanEmptyParams = <T extends Record<string, unknown>>(
   search: T
 ) => {

@@ -6,40 +6,19 @@ import * as z from "zod";
 import {
   orderInsertSchema,
   orderUpdateSchema,
+  ordersQuerySchema,
 } from "./model";
 import { tryCatch } from "@/lib/utils";
 
 const ordersRouter = new Hono<{ Variables: Variables }>()
   .get(
     "/",
-    zValidator(
-      "query",
-      z.object({
-        limit: z.coerce.number().optional().default(10),
-        offset: z.coerce.number().optional().default(0),
-        sort: z
-          .enum([
-            "title",
-            "shop",
-            "orderDate",
-            "releaseMonthYear",
-            "shippingMethod",
-            "total",
-            "itemCount",
-            "createdAt",
-          ])
-          .optional()
-          .default("createdAt"),
-        order: z.enum(["asc", "desc"]).optional().default("desc"),
-        search: z.string().optional(),
-      }),
-      (result, c) => {
-        if (!result.success) {
-          console.log(result.error);
-          return c.text("Invalid request!", 400);
-        }
+    zValidator("query", ordersQuerySchema, (result, c) => {
+      if (!result.success) {
+        console.log(result.error);
+        return c.text("Invalid request!", 400);
       }
-    ),
+    }),
     async (c) => {
       const user = c.get("user");
       if (!user) return c.text("Unauthorized", 401);
@@ -53,7 +32,32 @@ const ordersRouter = new Hono<{ Variables: Variables }>()
           validatedQuery.offset,
           validatedQuery.sort,
           validatedQuery.order,
-          validatedQuery.search
+          validatedQuery.search,
+          validatedQuery.shop,
+          validatedQuery.releaseMonthYearStart,
+          validatedQuery.releaseMonthYearEnd,
+          validatedQuery.shipMethod,
+          validatedQuery.orderDateStart,
+          validatedQuery.orderDateEnd,
+          validatedQuery.payDateStart,
+          validatedQuery.payDateEnd,
+          validatedQuery.shipDateStart,
+          validatedQuery.shipDateEnd,
+          validatedQuery.colDateStart,
+          validatedQuery.colDateEnd,
+          validatedQuery.status,
+          validatedQuery.totalMin,
+          validatedQuery.totalMax,
+          validatedQuery.shippingFeeMin,
+          validatedQuery.shippingFeeMax,
+          validatedQuery.taxesMin,
+          validatedQuery.taxesMax,
+          validatedQuery.dutiesMin,
+          validatedQuery.dutiesMax,
+          validatedQuery.tariffsMin,
+          validatedQuery.tariffsMax,
+          validatedQuery.miscFeesMin,
+          validatedQuery.miscFeesMax
         )
       );
 

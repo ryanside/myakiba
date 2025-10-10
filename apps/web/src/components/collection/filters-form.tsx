@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { MaskInput } from "@/components/ui/mask-input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +47,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { authClient } from "@/lib/auth-client";
+import { getCurrencyLocale } from "@/lib/utils";
 
 const SHIPPING_METHODS = [
   "n/a",
@@ -105,6 +108,10 @@ export default function FiltersForm({
   currentFilters,
   onApplyFilters,
 }: FiltersFormProps) {
+  const { data: session } = authClient.useSession();
+  const userCurrency = session?.user?.currency || "USD";
+  const userLocale = getCurrencyLocale(userCurrency);
+
   const form = useForm({
     defaultValues: {
       paidMin: currentFilters?.paidMin ?? "",
@@ -346,22 +353,30 @@ export default function FiltersForm({
                 <form.Field
                   name="paidMin"
                   children={(field) => (
-                    <Input
-                      type="number"
+                    <MaskInput
+                      mask="currency"
+                      currency={userCurrency}
+                      locale={userLocale}
                       placeholder="Min"
                       value={field.state.value || ""}
-                      onChange={(e) => field.handleChange(e.target.value)}
+                      onValueChange={(maskedValue, unmaskedValue) =>
+                        field.handleChange(unmaskedValue)
+                      }
                     />
                   )}
                 />
                 <form.Field
                   name="paidMax"
                   children={(field) => (
-                    <Input
-                      type="number"
+                    <MaskInput
+                      mask="currency"
+                      currency={userCurrency}
+                      locale={userLocale}
                       placeholder="Max"
                       value={field.state.value || ""}
-                      onChange={(e) => field.handleChange(e.target.value)}
+                      onValueChange={(maskedValue, unmaskedValue) =>
+                        field.handleChange(unmaskedValue)
+                      }
                     />
                   )}
                 />
@@ -778,22 +793,30 @@ export default function FiltersForm({
                 <form.Field
                   name="relPriceMin"
                   children={(field) => (
-                    <Input
-                      type="number"
+                    <MaskInput
+                      mask="currency"
+                      currency={userCurrency}
+                      locale={userLocale}
                       placeholder="Min"
                       value={field.state.value || ""}
-                      onChange={(e) => field.handleChange(e.target.value)}
+                      onValueChange={(maskedValue, unmaskedValue) =>
+                        field.handleChange(unmaskedValue)
+                      }
                     />
                   )}
                 />
                 <form.Field
                   name="relPriceMax"
                   children={(field) => (
-                    <Input
-                      type="number"
+                    <MaskInput
+                      mask="currency"
+                      currency={userCurrency}
+                      locale={userLocale}
                       placeholder="Max"
                       value={field.state.value || ""}
-                      onChange={(e) => field.handleChange(e.target.value)}
+                      onValueChange={(maskedValue, unmaskedValue) =>
+                        field.handleChange(unmaskedValue)
+                      }
                     />
                   )}
                 />

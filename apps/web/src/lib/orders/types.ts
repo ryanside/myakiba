@@ -100,10 +100,47 @@ export type OrderFilters = {
     | "shippingMethod"
     | "total"
     | "itemCount"
+    | "status"
     | "createdAt"
     | undefined;
   order?: "asc" | "desc" | undefined;
   search?: string | undefined;
+  shop?: string[] | undefined;
+  releaseMonthYearStart?: string | undefined;
+  releaseMonthYearEnd?: string | undefined;
+  shipMethod?: Array<
+    | "n/a"
+    | "EMS"
+    | "SAL"
+    | "AIRMAIL"
+    | "SURFACE"
+    | "FEDEX"
+    | "DHL"
+    | "Colissimo"
+    | "UPS"
+    | "Domestic"
+  > | undefined;
+  orderDateStart?: string | undefined;
+  orderDateEnd?: string | undefined;
+  payDateStart?: string | undefined;
+  payDateEnd?: string | undefined;
+  shipDateStart?: string | undefined;
+  shipDateEnd?: string | undefined;
+  colDateStart?: string | undefined;
+  colDateEnd?: string | undefined;
+  status?: Array<"Ordered" | "Paid" | "Shipped" | "Owned"> | undefined;
+  totalMin?: string | undefined;
+  totalMax?: string | undefined;
+  shippingFeeMin?: string | undefined;
+  shippingFeeMax?: string | undefined;
+  taxesMin?: string | undefined;
+  taxesMax?: string | undefined;
+  dutiesMin?: string | undefined;
+  dutiesMax?: string | undefined;
+  tariffsMin?: string | undefined;
+  tariffsMax?: string | undefined;
+  miscFeesMin?: string | undefined;
+  miscFeesMax?: string | undefined;
 };
 
 export type CascadeOptions = Array<

@@ -75,6 +75,7 @@ interface CollectionDataGridProps {
   onResetFilters: () => void;
   onDeleteCollectionItems: (collectionIds: Set<string>) => void;
   onEditCollectionItem: (values: CollectionItemFormValues) => void;
+  currency?: string;
 }
 
 export const CollectionDataGrid = ({
@@ -89,6 +90,7 @@ export const CollectionDataGrid = ({
   onResetFilters,
   onDeleteCollectionItems,
   onEditCollectionItem,
+  currency = "USD",
 }: CollectionDataGridProps) => {
   const pagination = useMemo<PaginationState>(
     () => ({
@@ -315,7 +317,7 @@ export const CollectionDataGrid = ({
           const price = row.original.price;
           return (
             <div className="font-medium text-foreground">
-              {formatCurrency(price)}
+              {formatCurrency(price, currency)}
             </div>
           );
         },

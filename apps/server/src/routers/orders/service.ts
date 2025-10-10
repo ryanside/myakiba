@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { order, collection, item, item_release } from "@/db/schema/figure";
-import { eq, and, inArray, sql, desc, asc, ilike, ne } from "drizzle-orm";
+import { eq, and, inArray, sql, desc, asc, ilike, ne, gte, lte } from "drizzle-orm";
 import type { orderInsertType, orderUpdateType } from "./model";
 
 type OrderItem = {
@@ -47,11 +47,76 @@ class OrdersService {
     offset: number,
     sortBy: string,
     orderBy: string,
-    search?: string
+    search?: string,
+    shop?: Array<string>,
+    releaseMonthYearStart?: string,
+    releaseMonthYearEnd?: string,
+    shippingMethod?: Array<
+      | "n/a"
+      | "EMS"
+      | "SAL"
+      | "AIRMAIL"
+      | "SURFACE"
+      | "FEDEX"
+      | "DHL"
+      | "Colissimo"
+      | "UPS"
+      | "Domestic"
+    >,
+    orderDateStart?: string,
+    orderDateEnd?: string,
+    paymentDateStart?: string,
+    paymentDateEnd?: string,
+    shippingDateStart?: string,
+    shippingDateEnd?: string,
+    collectionDateStart?: string,
+    collectionDateEnd?: string,
+    status?: Array<"Ordered" | "Paid" | "Shipped" | "Owned">,
+    totalMin?: string,
+    totalMax?: string,
+    shippingFeeMin?: string,
+    shippingFeeMax?: string,
+    taxesMin?: string,
+    taxesMax?: string,
+    dutiesMin?: string,
+    dutiesMax?: string,
+    tariffsMin?: string,
+    tariffsMax?: string,
+    miscFeesMin?: string,
+    miscFeesMax?: string
   ) {
     const whereConditions = and(
       eq(order.userId, userId),
-      search ? ilike(order.title, `%${search}%`) : undefined
+      search ? ilike(order.title, `%${search}%`) : undefined,
+      shop ? inArray(order.shop, shop) : undefined,
+      releaseMonthYearStart
+        ? gte(order.releaseMonthYear, releaseMonthYearStart)
+        : undefined,
+      releaseMonthYearEnd
+        ? lte(order.releaseMonthYear, releaseMonthYearEnd)
+        : undefined,
+      shippingMethod ? inArray(order.shippingMethod, shippingMethod) : undefined,
+      orderDateStart ? gte(order.orderDate, orderDateStart) : undefined,
+      orderDateEnd ? lte(order.orderDate, orderDateEnd) : undefined,
+      paymentDateStart ? gte(order.paymentDate, paymentDateStart) : undefined,
+      paymentDateEnd ? lte(order.paymentDate, paymentDateEnd) : undefined,
+      shippingDateStart ? gte(order.shippingDate, shippingDateStart) : undefined,
+      shippingDateEnd ? lte(order.shippingDate, shippingDateEnd) : undefined,
+      collectionDateStart
+        ? gte(order.collectionDate, collectionDateStart)
+        : undefined,
+      collectionDateEnd ? lte(order.collectionDate, collectionDateEnd) : undefined,
+      status ? inArray(order.status, status) : undefined,
+      shippingFeeMin ? gte(order.shippingFee, shippingFeeMin) : undefined,
+      shippingFeeMax ? lte(order.shippingFee, shippingFeeMax) : undefined,
+      taxesMin ? gte(order.taxes, taxesMin) : undefined,
+      taxesMax ? lte(order.taxes, taxesMax) : undefined,
+      dutiesMin ? gte(order.duties, dutiesMin) : undefined,
+      dutiesMax ? lte(order.duties, dutiesMax) : undefined,
+      tariffsMin ? gte(order.tariffs, tariffsMin) : undefined,
+      tariffsMax ? lte(order.tariffs, tariffsMax) : undefined,
+      miscFeesMin ? gte(order.miscFees, miscFeesMin) : undefined,
+      miscFeesMax ? lte(order.miscFees, miscFeesMax) : undefined
     );
 
     const sortByColumn = (() => {
@@ -68,6 +133,8 @@ class OrdersService {
           return order.shippingMethod;
         case "total":
           return sql<string>`COALESCE(SUM(${collection.price}::numeric), 0) + COALESCE(${order.shippingFee}::numeric, 0) + COALESCE(${order.taxes}::numeric, 0) + COALESCE(${order.duties}::numeric, 0) + COALESCE(${order.tariffs}::numeric, 0) + COALESCE(${order.miscFees}::numeric, 0)`;
+        case "status":
+          return order.status;
         case "itemCount":
           return sql<number>`COUNT(${collection.id})`;
         case "createdAt":
@@ -159,6 +226,16 @@ class OrdersService {
         order.notes,
         order.createdAt,
         order.updatedAt
+      )
+      .having(
+        and(
+          totalMin
+            ? sql`COALESCE(SUM(${collection.price}::numeric), 0) + COALESCE(${order.shippingFee}::numeric, 0) + COALESCE(${order.taxes}::numeric, 0) + COALESCE(${order.duties}::numeric, 0) + COALESCE(${order.tariffs}::numeric, 0) + COALESCE(${order.miscFees}::numeric, 0) >= ${totalMin}::numeric`
+            : undefined,
+          totalMax
+            ? sql`COALESCE(SUM(${collection.price}::numeric), 0) + COALESCE(${order.shippingFee}::numeric, 0) + COALESCE(${order.taxes}::numeric, 0) + COALESCE(${order.duties}::numeric, 0) + COALESCE(${order.tariffs}::numeric, 0) + COALESCE(${order.miscFees}::numeric, 0) <= ${totalMax}::numeric`
+            : undefined
+        )
       )
       .orderBy(
         orderBy === "asc" ? asc(sortByColumn) : desc(sortByColumn),

@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 import { NavMain } from "@/components/sidebar/nav-main";
-import { NavCollection } from "@/components/sidebar/nav-collection";
+import { NavManagement } from "@/components/sidebar/nav-management";
 import { NavSecondary } from "@/components/sidebar/nav-secondary";
 import {
   Sidebar,
@@ -24,55 +24,40 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "@tanstack/react-router";
-import ma from "@/public/ma.svg";
-import myakiba from "@/public/myakiba.svg";
 import { PlusIcon } from "@/components/ui/plus";
+import { MyAkibaLogo } from "@/components/myakiba-logo";
 
 const data = {
   navMain: [
     {
       title: "Dashboard",
-      url: "dashboard",
+      url: "/dashboard",
       icon: Home,
     },
     {
       title: "Analytics",
-      url: "analytics",
+      url: "/analytics",
       icon: ChartNoAxesCombined,
     },
+
+    {
+      title: "Gallery",
+      url: "/gallery",
+      icon: Images,
+    },
+  ],
+  navManagement: [
     {
       title: "Orders",
-      url: "orders",
+      url: "/orders",
       icon: ShoppingCart,
     },
     {
       title: "Collection",
-      url: "collection",
+      url: "/collection",
       icon: ChartNoAxesGantt,
     },
-    {
-      title: "Gallery",
-      url: "gallery",
-      icon: Images,
-    },
-    {
-      title: "Settings",
-      url: "settings",
-      icon: Settings,
-    },
   ],
-  // navCollection: [
-  //   {
-  //     title: "Collection",
-  //     url: "collection",
-  //     icon: ChartNoAxesGantt,
-  //   },
-  //   {
-  //     title: "Gallery",
-  //     url: "gallery",
-  //     icon: Images,
-  //   },
-  // ],
   navSecondary: [
     {
       title: "Github",
@@ -121,18 +106,26 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuButton
               size="lg"
               asChild
-              className="px-0 hover:bg-transparent group-data-[collapsible=icon]:p-0! focus:bg-transparent! max-w-fit"
+              className="flex justify-start items-center hover:bg-transparent group-data-[collapsible=icon]:p-0! focus:bg-transparent! w-full"
             >
               <Link to="/dashboard">
-                <img
+                {/* <img
                   src={ma}
                   alt="myakiba"
                   className="absolute size-8 opacity-0 group-data-[collapsible=icon]:opacity-100 transition-opacity duration-100 ease-in-out"
-                />
-                <img
+                /> */}
+                {/* <img
                   src={myakiba}
                   alt="myakiba"
                   className="size-24 ml-2 opacity-100 group-data-[collapsible=icon]:opacity-0 transition-opacity duration-100 ease-in-out"
+                /> */}
+                <MyAkibaLogo
+                  size="icon"
+                  className="ml-2 scale-175 opacity-0 group-data-[collapsible=icon]:opacity-100 transition-opacity duration-100 ease-in-out"
+                />
+                <MyAkibaLogo
+                  size="full"
+                  className="scale-500 opacity-100 group-data-[collapsible=icon]:opacity-0 transition-opacity duration-75 ease-in-out"
                 />
               </Link>
             </SidebarMenuButton>
@@ -146,7 +139,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <SidebarMenuButton
                 asChild
                 tooltip="Add MFC items"
-                className="bg-sidebar-primary text-primary-foreground hover:bg-sidebar-primary/90 hover:text-primary-foreground active:bg-sidebar-primary/90 active:text-primary-foreground rounded-lg"
+                className="bg-sidebar-primary shadow-xs text-primary-foreground hover:bg-sidebar-primary/90 hover:text-primary-foreground active:bg-sidebar-primary/90 active:text-primary-foreground rounded-lg"
               >
                 <Link to="/sync">
                   <PlusIcon size={18} />
@@ -157,7 +150,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenu>
         </SidebarGroup>
         <NavMain items={data.navMain} location={location} />
-        {/* <NavCollection items={data.navCollection} location={location} /> */}
+        <NavManagement items={data.navManagement} location={location} />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter></SidebarFooter>

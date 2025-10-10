@@ -24,6 +24,7 @@ import { Link } from "@tanstack/react-router";
 import { ChartPieDonutText } from "@/components/dashboard/pie-chart-donut-text";
 import { ChartBarLabelCustom } from "@/components/dashboard/chart-bar-label-custom";
 import { formatCurrency } from "@/lib/utils";
+import { authClient } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/(app)/dashboard")({
   component: RouteComponent,
@@ -58,6 +59,9 @@ function RouteComponent() {
 }
 
 function DashboardContent() {
+  const { data: session } = authClient.useSession();
+  const userCurrency = session?.user.currency || "USD";
+
   async function getDashboard() {
     const response = await client.api.dashboard.$get();
 
@@ -140,10 +144,11 @@ function DashboardContent() {
               0 + ordersSummary[0].totalDutiesAllTime ||
               0 + ordersSummary[0].totalTariffsAllTime ||
               0 + ordersSummary[0].totalMiscFeesAllTime ||
-              0
+              0,
+            userCurrency
           )}
           subtitle="this month"
-          subvalue={`+${formatCurrency(collectionStats[0].totalSpentThisMonth || 0)}`}
+          subvalue={`+${formatCurrency(collectionStats[0].totalSpentThisMonth || 0, userCurrency)}`}
           icon={DollarSign}
         />
         <StatsCard
@@ -155,7 +160,7 @@ function DashboardContent() {
         />
         <StatsCard
           title="Budget [coming soon]"
-          value={formatCurrency(budgetSummary[0]?.amount || 0)}
+          value={formatCurrency(budgetSummary[0]?.amount || 0, userCurrency)}
           subtitle={`this month`}
           subvalue={0}
           icon={PiggyBank}
@@ -167,12 +172,13 @@ function DashboardContent() {
           data={categoriesOwned}
           className="h-[250px] -mt-5.5"
           innerRadius={75}
+          currency={userCurrency}
         />
 
-        <ChartBarLabelCustom data={chartBarData} />
+        <ChartBarLabelCustom data={chartBarData} currency={userCurrency} />
 
         <Card className="col-span-1">
-          <CardHeader className="flex flex-row items-center space-y-0 gap-2">
+          <CardHeader className="flex flex-row items-center gap-2">
             <NotepadText className="h-4 w-4 text-muted-foreground" />
             <CardTitle className="font-medium">Orders Summary</CardTitle>
           </CardHeader>
@@ -190,7 +196,8 @@ function DashboardContent() {
                 <span>Total Item Costs</span>
                 <span>
                   {formatCurrency(
-                    collectionStats[0].totalActiveOrderPrice || 0
+                    collectionStats[0].totalActiveOrderPrice || 0,
+                    userCurrency
                   )}
                 </span>
               </div>
@@ -198,27 +205,29 @@ function DashboardContent() {
                 <span>Total Shipping</span>
                 <span>
                   {formatCurrency(
-                    ordersSummary[0].totalActiveOrderShipping || 0
+                    ordersSummary[0].totalActiveOrderShipping || 0,
+                    userCurrency
                   )}
                 </span>
               </div>
               <div className="flex justify-between text-muted-foreground text-sm items-center">
                 <span>Total Taxes</span>
                 <span>
-                  {formatCurrency(ordersSummary[0].totalActiveOrderTaxes || 0)}
+                  {formatCurrency(ordersSummary[0].totalActiveOrderTaxes || 0, userCurrency)}
                 </span>
               </div>
               <div className="flex justify-between text-muted-foreground text-sm items-center">
                 <span>Total Duties</span>
                 <span>
-                  {formatCurrency(ordersSummary[0].totalActiveOrderDuties || 0)}
+                  {formatCurrency(ordersSummary[0].totalActiveOrderDuties || 0, userCurrency)}
                 </span>
               </div>
               <div className="flex justify-between text-muted-foreground text-sm items-center">
                 <span>Total Tariffs</span>
                 <span>
                   {formatCurrency(
-                    ordersSummary[0].totalActiveOrderTariffs || 0
+                    ordersSummary[0].totalActiveOrderTariffs || 0,
+                    userCurrency
                   )}
                 </span>
               </div>
@@ -226,7 +235,8 @@ function DashboardContent() {
                 <span>Total Misc Fees</span>
                 <span>
                   {formatCurrency(
-                    ordersSummary[0].totalActiveOrderMiscFees || 0
+                    ordersSummary[0].totalActiveOrderMiscFees || 0,
+                    userCurrency
                   )}
                 </span>
               </div>
@@ -241,7 +251,8 @@ function DashboardContent() {
                   ordersSummary[0].totalActiveOrderTaxes +
                   ordersSummary[0].totalActiveOrderDuties +
                   ordersSummary[0].totalActiveOrderTariffs +
-                  ordersSummary[0].totalActiveOrderMiscFees
+                  ordersSummary[0].totalActiveOrderMiscFees,
+                userCurrency
               )}
             </span>
           </div>
@@ -250,7 +261,7 @@ function DashboardContent() {
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3 lg:grid-rows-2">
         <Card className="lg:col-span-2 lg:row-span-2">
-          <CardHeader className="flex flex-row items-center space-y-0 gap-2">
+          <CardHeader className="flex flex-row items-center gap-2">
             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
             <CardTitle className="font-medium">Orders</CardTitle>
           </CardHeader>
@@ -269,7 +280,7 @@ function DashboardContent() {
                           ? `${order.releaseMonthYear} • `
                           : ""}
                         <span className="text-foreground font-medium">
-                          {formatCurrency(order.total)}
+                          {formatCurrency(order.total, userCurrency)}
                         </span>
                       </CardDescription>
                     </CardHeader>
@@ -320,7 +331,7 @@ function DashboardContent() {
           </CardContent>
         </Card>
         <Card className="lg:col-span-1 lg:row-span-1 flex flex-col">
-          <CardHeader className="flex flex-row items-center space-y-0 gap-2">
+          <CardHeader className="flex flex-row items-center gap-2">
             <Calendar className="h-4 w-4 text-muted-foreground" />
             <CardTitle className="font-medium">Upcoming Releases</CardTitle>
           </CardHeader>
@@ -376,7 +387,7 @@ function DashboardContent() {
           </CardContent>
         </Card>
         <Card className="lg:col-span-1 lg:row-span-1 flex flex-col">
-          <CardHeader className="flex flex-row items-center space-y-0 gap-2">
+          <CardHeader className="flex flex-row items-center gap-2">
             <Flame className="h-4 w-4 text-muted-foreground" />
             <CardTitle className="font-medium">Activity</CardTitle>
           </CardHeader>
@@ -400,7 +411,7 @@ function DashboardContent() {
                         />
                       </div>
                     )}
-                    <div className="flex-1 min-w-0 space-y-1">
+                    <div className="min-w-0 space-y-1">
                       <p className="text-sm font-medium truncate">
                         {collectionItem.title}
                       </p>
@@ -444,7 +455,7 @@ function StatsCard({
 }) {
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center space-y-0 gap-2">
+      <CardHeader className="flex flex-row items-center gap-2">
         <Icon className="h-4 w-4 text-muted-foreground" />
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
       </CardHeader>
@@ -470,7 +481,7 @@ function DashboardSkeleton() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {[...Array(4)].map((_, i) => (
           <Card key={i}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
               <Skeleton className="h-4 w-20" />
               <Skeleton className="h-4 w-4" />
             </CardHeader>

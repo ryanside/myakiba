@@ -38,6 +38,7 @@ import {
   Trash,
   Info,
   Move,
+  Filter,
 } from "lucide-react";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import { getStatusVariant } from "@/lib/orders/utils";
@@ -67,6 +68,7 @@ import {
 } from "@/components/ui/tooltip";
 import ItemMoveForm from "./item-move-form";
 import type { CollectionItemFormValues } from "@/lib/collection/types";
+import OrdersFiltersForm from "./orders-filters-form";
 
 export const DEFAULT_PAGE_INDEX = 0;
 export const DEFAULT_PAGE_SIZE = 10;
@@ -83,6 +85,7 @@ interface OrdersDataGridProps {
     order: string;
   };
   search: string;
+  filters: OrderFilters;
   onFilterChange: (filters: OrderFilters) => void;
   onSearchChange: (search: string) => void;
   onResetFilters: () => void;
@@ -111,6 +114,7 @@ interface OrdersDataGridProps {
     collectionIds: Set<string>,
     orderIds: Set<string>
   ) => Promise<void>;
+  currency?: string;
 }
 
 export default function OrdersDataGrid({
@@ -119,6 +123,7 @@ export default function OrdersDataGrid({
   pagination: serverPagination,
   sorting: serverSorting,
   search,
+  filters,
   onFilterChange,
   onSearchChange,
   onResetFilters,
@@ -129,6 +134,7 @@ export default function OrdersDataGrid({
   onEditItem,
   onDeleteItem,
   onMoveItem,
+  currency = "USD",
 }: OrdersDataGridProps) {
   const pagination = useMemo<PaginationState>(
     () => ({
@@ -241,6 +247,7 @@ export default function OrdersDataGrid({
               setItemSelection={setItemSelection}
               onEditItem={onEditItem}
               onDeleteItem={onDeleteItem}
+              currency={currency}
             />
           ),
         },
@@ -402,7 +409,7 @@ export default function OrdersDataGrid({
           const total = row.original.total;
           return (
             <div className="font-medium text-foreground">
-              {formatCurrency(total)}
+              {formatCurrency(total, currency)}
             </div>
           );
         },
@@ -516,6 +523,7 @@ export default function OrdersDataGrid({
           | "shippingMethod"
           | "total"
           | "itemCount"
+          | "status"
           | "createdAt",
         order: sortConfig.desc ? "desc" : "asc",
         offset: 0,
@@ -558,6 +566,22 @@ export default function OrdersDataGrid({
           placeholder="Search"
           className="max-w-xs"
         />
+        <Dialog key={JSON.stringify(filters)}>
+          <DialogTrigger asChild>
+            <Button variant="outline">
+              <Filter className="" />
+              <span className="hidden md:block">Filters</span>
+            </Button>
+          </DialogTrigger>
+          <OrdersFiltersForm
+            currentFilters={{
+              ...filters,
+            }}
+            onApplyFilters={(newFilters) =>
+              onFilterChange({ ...filters, ...newFilters, offset: 0 })
+            }
+          />
+        </Dialog>
         <Button onClick={onResetFilters} variant="outline">
           <ListRestart />
           <span className="hidden md:block">Reset Filters</span>

@@ -6,7 +6,7 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 
-export const Route = createFileRoute("/login")({
+export const Route = createFileRoute("/(auth)/login")({
   component: RouteComponent,
   head: () => ({
     meta: [
@@ -45,7 +45,7 @@ function RouteComponent() {
         <Link to="/">
           <Button variant="ghost" className="text-foreground">
             <ArrowLeft />
-            Back to homepage
+            Home
           </Button>
         </Link>
       </div>

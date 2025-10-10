@@ -37,6 +37,7 @@ import { searchSchema } from "@/lib/validations";
 import Loader from "@/components/loader";
 import type { CollectionItemFormValues } from "@/lib/collection/types";
 import { updateCollectionItem } from "@/queries/collection";
+import { authClient } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/(app)/orders")({
   component: RouteComponent,
@@ -62,6 +63,8 @@ export const Route = createFileRoute("/(app)/orders")({
 });
 
 function RouteComponent() {
+  const { data: session } = authClient.useSession();
+  const userCurrency = session?.user.currency || "USD";
   const queryClient = useQueryClient();
   const { filters, setFilters, resetFilters } = useFilters(Route.id);
 
@@ -440,7 +443,7 @@ function RouteComponent() {
 
   if (isPending) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+      <div className="flex flex-col items-center justify-center h-64 gap-y-4">
         <Loader />
       </div>
     );
@@ -448,7 +451,7 @@ function RouteComponent() {
 
   if (isError) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+      <div className="flex flex-col items-center justify-center h-64 gap-y-4">
         <div className="text-lg font-medium text-destructive">
           Error: {error.message}
         </div>
@@ -461,6 +464,7 @@ function RouteComponent() {
   return (
     <div className="w-full space-y-4">
       <OrdersDataGrid
+        key="orders-data-grid"
         orders={orders}
         totalCount={totalCount}
         pagination={{
@@ -472,6 +476,7 @@ function RouteComponent() {
           order: filters.order ?? "desc",
         }}
         search={filters.search ?? ""}
+        filters={filters}
         onFilterChange={handleFilterChange}
         onSearchChange={(search) => handleFilterChange({ ...filters, search })}
         onResetFilters={resetFilters}
@@ -482,6 +487,7 @@ function RouteComponent() {
         onEditItem={handleEditItem}
         onDeleteItem={handleDeleteItem}
         onMoveItem={handleMoveItem}
+        currency={userCurrency}
       />
     </div>
   );
