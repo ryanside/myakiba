@@ -1,17 +1,30 @@
 import { createFileRoute } from "@tanstack/react-router";
+import HeroSection from "@/components/homepage/hero-section";
 
 export const Route = createFileRoute("/")({
   component: HomeComponent,
+  head: () => ({
+    meta: [
+      {
+        name: "description",
+        content: "collection manager for japanese goods collectors",
+      },
+      {
+        title: "Home — myakiba",
+      },
+    ],
+    links: [
+      {
+        rel: "icon",
+        href: "/favicon.ico",
+      },
+    ],
+    scripts: [],
+  }),
 });
 
 function HomeComponent() {
   return (
-    <div className="container mx-auto max-w-3xl px-4 py-2">
-      <div className="grid gap-6">
-        <section className="rounded-lg border p-4">
-          <h2 className="mb-2 font-medium">API Status</h2>
-        </section>
-      </div>
-    </div>
+    <HeroSection />
   );
 }

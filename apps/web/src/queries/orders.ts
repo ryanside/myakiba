@@ -1,9 +1,9 @@
+import type { CollectionItemFormValues } from "@/lib/collection/types";
 import { client } from "@/lib/hono-client";
 import type {
   CascadeOptions,
   EditedOrder,
   NewOrder,
-  OrderItem,
 } from "@/lib/orders/types";
 
 export async function getOrders(filters: {
@@ -83,29 +83,6 @@ export async function editOrder(
     json: {
       order: values,
       cascadeOptions,
-    },
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `HTTP ${response.status}`);
-  }
-}
-
-export async function editOrderItem(
-  orderId: string,
-  collectionId: string,
-  values: OrderItem
-) {
-  const response = await client.api.orders[":orderId"].items[
-    ":collectionId"
-  ].$put({
-    param: {
-      orderId,
-      collectionId,
-    },
-    json: {
-      item: values,
     },
   });
 

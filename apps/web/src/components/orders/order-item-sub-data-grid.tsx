@@ -32,9 +32,10 @@ import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import type { OrderItem } from "@/lib/orders/types";
 import { toast } from "sonner";
 import { Dialog, DialogTrigger } from "../ui/dialog";
-import ItemForm from "./item-form";
 import { Link } from "@tanstack/react-router";
 import { getStatusVariant } from "@/lib/orders/utils";
+import CollectionItemForm from "../collection/collection-item-form";
+import type { CollectionItemFormValues } from "@/lib/collection/types";
 
 export function OrderItemSubDataGrid({
   items,
@@ -48,11 +49,7 @@ export function OrderItemSubDataGrid({
   orderId: string;
   itemSelection: RowSelectionState;
   setItemSelection: OnChangeFn<RowSelectionState>;
-  onEditItem: (
-    orderId: string,
-    itemId: string,
-    values: OrderItem
-  ) => Promise<void>;
+  onEditItem: (values: CollectionItemFormValues) => Promise<void>;
   onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
 }) {
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -126,11 +123,11 @@ export function OrderItemSubDataGrid({
           const item = row.original;
           return (
             <div className="flex items-center gap-3">
-              {item.image && (
+              {item.itemImage && (
                 <Avatar className="size-8">
                   <AvatarImage
-                    src={item.image}
-                    alt={item.title}
+                    src={item.itemImage}
+                    alt={item.itemTitle}
                     className="rounded-sm"
                   />
                   <AvatarFallback className="rounded-sm">
@@ -144,7 +141,7 @@ export function OrderItemSubDataGrid({
                   to="/items/$id"
                   params={{ id: item.itemId.toString() }}
                 >
-                  {item.title}
+                  {item.itemTitle}
                 </Link>
                 <div className="flex items-center gap-1 font-light">
                   <a
@@ -278,17 +275,13 @@ export function OrderItemSubDataGrid({
                       Edit item
                     </DropdownMenuItem>
                   </DialogTrigger>
-                  <ItemForm
-                    orderId={orderId}
-                    itemData={item}
-                    callbackFn={onEditItem}
-                  />
+                  <CollectionItemForm itemData={item} callbackFn={onEditItem} />
                 </Dialog>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   variant="destructive"
                   onSelect={(e) => e.preventDefault()}
-                  onClick={() => onDeleteItem(orderId, item.collectionId)}
+                  onClick={() => onDeleteItem(orderId, item.id)}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete item
@@ -324,7 +317,7 @@ export function OrderItemSubDataGrid({
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    getRowId: (row: OrderItem) => `${orderId}-${row.collectionId}`,
+    getRowId: (row: OrderItem) => `${orderId}-${row.id}`,
     enableRowSelection: true,
   });
 

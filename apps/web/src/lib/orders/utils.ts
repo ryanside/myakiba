@@ -9,6 +9,7 @@ import type {
 } from "./types";
 import type { VariantProps } from "class-variance-authority";
 import { badgeVariants } from "@/components/ui/badge";
+import type { CollectionItemFormValues } from "@/lib/collection/types";
 
 export function getStatusVariant(
   status: string
@@ -235,7 +236,7 @@ export function createOptimisticSplitUpdate(
 
   const splitItems = ordersToSplit.flatMap((order: Order) =>
     order.items
-      .filter((item: OrderItem) => collectionIds.has(item.collectionId))
+      .filter((item: OrderItem) => collectionIds.has(item.id))
       .map((item: OrderItem) => ({
         ...item,
         ...cascadeProperties,
@@ -267,12 +268,12 @@ export function createOptimisticSplitUpdate(
   // edit the effected orders by removing the split items
   const updatedOrders = ordersToSplit.map((order: Order) => {
     const remainingItems = order.items.filter(
-      (item: OrderItem) => !collectionIds.has(item.collectionId)
+      (item: OrderItem) => !collectionIds.has(item.id)
     );
 
     // get the items that were split from this specific order
     const orderSplitItems = order.items.filter((item: OrderItem) =>
-      collectionIds.has(item.collectionId)
+      collectionIds.has(item.id)
     );
 
     const orderSplitItemsTotal = orderSplitItems.reduce(
@@ -381,14 +382,12 @@ export function createOptimisticDeleteUpdate(
 
 export function createOptimisticEditItemUpdate(
   old: OrdersQueryResponse,
-  orderId: string,
-  collectionId: string,
-  values: OrderItem
+  values: CollectionItemFormValues
 ) {
-  const order = old.orders.find((order: Order) => order.orderId === orderId);
+  const order = old.orders.find((order: Order) => order.orderId === values.orderId);
   if (!order) return old;
   const item = order.items.find(
-    (item: OrderItem) => item.collectionId === collectionId
+    (item: OrderItem) => item.id === values.id
   );
   if (!item) return old;
 
@@ -398,7 +397,7 @@ export function createOptimisticEditItemUpdate(
   };
 
   const remainingItems = order.items.filter(
-    (item: OrderItem) => item.collectionId !== collectionId
+    (item: OrderItem) => item.id !== values.id
   );
 
   const remainingItemsPriceTotal = remainingItems.reduce(
@@ -417,13 +416,13 @@ export function createOptimisticEditItemUpdate(
   const newOrderTotal =
     parseFloat(updatedItem.price) + remainingItemsPriceTotal + additionalFees;
   const itemsUpdated = order.items.map((item: OrderItem) =>
-    item.collectionId === collectionId ? updatedItem : item
+    item.id === values.id ? updatedItem : item
   );
 
   return {
     ...old,
     orders: old.orders.map((order: Order) =>
-      order.orderId === orderId
+      order.orderId === values.orderId
         ? { ...order, items: itemsUpdated, total: newOrderTotal }
         : order
     ),
@@ -438,12 +437,12 @@ export function createOptimisticDeleteItemUpdate(
   const order = old.orders.find((order: Order) => order.orderId === orderId);
   if (!order) return old;
   const item = order.items.find(
-    (item: OrderItem) => item.collectionId === collectionId
+    (item: OrderItem) => item.id === collectionId
   );
   if (!item) return old;
 
   const remainingItems = order.items.filter(
-    (item: OrderItem) => item.collectionId !== collectionId
+    (item: OrderItem) => item.id !== collectionId
   );
   const remainingItemsPriceTotal = remainingItems.reduce(
     (sum: number, item: OrderItem) => {
@@ -500,7 +499,7 @@ export function createOptimisticMoveItemUpdate(
   // Extract items to move from source orders
   const itemsToMove = sourceOrders.flatMap((order: Order) =>
     order.items.filter((item: OrderItem) =>
-      collectionIds.has(item.collectionId)
+      collectionIds.has(item.id)
     )
   );
 
@@ -540,7 +539,7 @@ export function createOptimisticMoveItemUpdate(
   // Update source orders by removing moved items
   const updatedSourceOrders = sourceOrders.map((order: Order) => {
     const remainingItems = order.items.filter(
-      (item: OrderItem) => !collectionIds.has(item.collectionId)
+      (item: OrderItem) => !collectionIds.has(item.id)
     );
 
     // Calculate this order's additional fees

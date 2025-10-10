@@ -5,7 +5,6 @@ import { zValidator } from "@hono/zod-validator";
 import * as z from "zod";
 import {
   orderInsertSchema,
-  orderItemUpdateSchema,
   orderUpdateSchema,
 } from "./model";
 import { tryCatch } from "@/lib/utils";
@@ -257,53 +256,6 @@ const ordersRouter = new Hono<{ Variables: Variables }>()
       }
 
       return c.text("Items split successfully");
-    }
-  )
-  .put(
-    "/:orderId/items/:collectionId",
-    zValidator(
-      "param",
-      z.object({ orderId: z.string(), collectionId: z.string() }),
-      (result, c) => {
-        if (!result.success) {
-          return c.text("Invalid request param!", 400);
-        }
-      }
-    ),
-
-    zValidator(
-      "json",
-      z.object({
-        item: orderItemUpdateSchema,
-      }),
-      (result, c) => {
-        if (!result.success) {
-          return c.text("Invalid request!", 400);
-        }
-      }
-    ),
-    async (c) => {
-      const user = c.get("user");
-      if (!user) return c.text("Unauthorized", 401);
-
-      const validatedJSON = c.req.valid("json");
-      const validatedParam = c.req.valid("param");
-
-      const { error } = await tryCatch(
-        OrdersService.updateOrderItem(
-          user.id,
-          validatedParam.collectionId,
-          validatedJSON.item
-        )
-      );
-
-      if (error) {
-        if (error.message === "ORDER_ITEM_NOT_FOUND") {
-          return c.text("Order item not found", 404);
-        }
-      }
-
-      return c.text("Order item updated successfully");
     }
   )
   .put(

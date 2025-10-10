@@ -12,7 +12,7 @@ import {
   StepperSeparator,
   StepperTitle,
 } from "@/components/ui/stepper";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Check, Loader2, LoaderCircleIcon } from "lucide-react";
 import { tryCatch } from "@/lib/utils";
 import { ShimmeringText } from "@/components/ui/shimmering-text";
@@ -26,16 +26,12 @@ import {
   type SyncCollectionItem,
 } from "@/lib/sync/types";
 import { toast } from "sonner";
-import {
-  sendItems,
-  getJobStatus,
-  sendOrder,
-  sendCollection,
-} from "@/queries/sync";
+import { sendItems, sendOrder, sendCollection } from "@/queries/sync";
 import ChooseSyncOption from "@/components/sync/choose-sync-option";
 import SyncOrderForm from "@/components/sync/sync-order-form";
 import SyncCollectionForm from "@/components/sync/sync-collection-form";
 import SyncCsvForm from "@/components/sync/sync-csv-form";
+import { useJobStatus } from "@/hooks/use-job-status";
 
 const steps = [
   { title: "Choose sync option" },
@@ -45,6 +41,24 @@ const steps = [
 
 export const Route = createFileRoute("/(app)/sync")({
   component: RouteComponent,
+  head: () => ({
+    meta: [
+      {
+        name: "description",
+        content: "sync MyFigureCollection data to myakiba",
+      },
+      {
+        title: "Sync — myakiba",
+      },
+    ],
+    links: [
+      {
+        rel: "icon",
+        href: "/favicon.ico",
+      },
+    ],
+    scripts: [],
+  }),
 });
 
 function RouteComponent() {
@@ -54,12 +68,25 @@ function RouteComponent() {
   const [syncOption, setSyncOption] = useState<
     "csv" | "order" | "collection" | ""
   >("");
+  const [jobId, setJobId] = useState<string | null>(null);
   const [status, setStatus] = useState<status>({
     existingItems: 0,
     newItems: 0,
     isFinished: true,
     status: "",
   });
+
+  const jobStatus = useJobStatus(jobId);
+  
+  useEffect(() => {
+    if (jobId && jobStatus.status) {
+      setStatus((prev) => ({
+        ...prev,
+        status: jobStatus.status,
+        isFinished: jobStatus.isFinished,
+      }));
+    }
+  }, [jobId, jobStatus]);
 
   const csvMutation = useMutation({
     mutationFn: (userItems: userItem[]) => sendItems(userItems),
@@ -141,44 +168,9 @@ function RouteComponent() {
       status: data.status,
     });
 
+    // Set jobId to trigger WebSocket connection
     if (data.jobId) {
-      const jobId = data.jobId;
-      const interval = setInterval(async () => {
-        const { data, error } = await tryCatch(
-          queryClient.fetchQuery({
-            queryKey: ["job-status", jobId],
-            queryFn: () => getJobStatus(jobId),
-          })
-        );
-
-        if (error) {
-          clearInterval(interval);
-          console.log(error);
-          setStatus((prev) => ({
-            ...prev,
-            isFinished: true,
-            status: "An error occurred",
-          }));
-          return;
-        }
-
-        console.log(data?.status);
-        setStatus((prev) => ({
-          ...prev,
-          isFinished: data?.finished,
-          status: data?.status,
-        }));
-
-        if (data?.finished) {
-          clearInterval(interval);
-          setStatus((prev) => ({
-            ...prev,
-            isFinished: data?.finished,
-            status: data?.status,
-          }));
-          return;
-        }
-      }, 3000);
+      setJobId(data.jobId);
     }
   }
 
@@ -209,44 +201,9 @@ function RouteComponent() {
       status: data.status,
     });
 
+    // Set jobId to trigger WebSocket connection
     if (data.jobId) {
-      const jobId = data.jobId;
-      const interval = setInterval(async () => {
-        const { data, error } = await tryCatch(
-          queryClient.fetchQuery({
-            queryKey: ["job-status", jobId],
-            queryFn: () => getJobStatus(jobId),
-          })
-        );
-
-        if (error) {
-          clearInterval(interval);
-          console.log(error);
-          setStatus((prev) => ({
-            ...prev,
-            isFinished: true,
-            status: "An error occurred",
-          }));
-          return;
-        }
-
-        console.log(data?.status);
-        setStatus((prev) => ({
-          ...prev,
-          isFinished: data?.finished,
-          status: data?.status,
-        }));
-
-        if (data?.finished) {
-          clearInterval(interval);
-          setStatus((prev) => ({
-            ...prev,
-            isFinished: data?.finished,
-            status: data?.status,
-          }));
-          return;
-        }
-      }, 3000);
+      setJobId(data.jobId);
     }
   }
 
@@ -270,44 +227,9 @@ function RouteComponent() {
       status: data.status,
     });
 
+    // Set jobId to trigger WebSocket connection
     if (data.jobId) {
-      const jobId = data.jobId;
-      const interval = setInterval(async () => {
-        const { data, error } = await tryCatch(
-          queryClient.fetchQuery({
-            queryKey: ["job-status", jobId],
-            queryFn: () => getJobStatus(jobId),
-          })
-        );
-
-        if (error) {
-          clearInterval(interval);
-          console.log(error);
-          setStatus((prev) => ({
-            ...prev,
-            isFinished: true,
-            status: "An error occurred",
-          }));
-          return;
-        }
-
-        console.log(data?.status);
-        setStatus((prev) => ({
-          ...prev,
-          isFinished: data?.finished,
-          status: data?.status,
-        }));
-
-        if (data?.finished) {
-          clearInterval(interval);
-          setStatus((prev) => ({
-            ...prev,
-            isFinished: data?.finished,
-            status: data?.status,
-          }));
-          return;
-        }
-      }, 3000);
+      setJobId(data.jobId);
     }
   }
 
@@ -413,6 +335,7 @@ function RouteComponent() {
                       onClick={() => {
                         setCurrentStep(1);
                         setSyncOption("");
+                        setJobId(null);
                         setStatus({
                           existingItems: 0,
                           newItems: 0,

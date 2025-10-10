@@ -8,6 +8,24 @@ import { useState } from "react";
 
 export const Route = createFileRoute("/login")({
   component: RouteComponent,
+  head: () => ({
+    meta: [
+      {
+        name: "description",
+        content: "login to your myakiba account",
+      },
+      {
+        title: "Login — myakiba",
+      },
+    ],
+    links: [
+      {
+        rel: "icon",
+        href: "/favicon.ico",
+      },
+    ],
+    scripts: [],
+  }),
   beforeLoad: async () => {
     const { data: session } = await authClient.getSession();
     if (session) {

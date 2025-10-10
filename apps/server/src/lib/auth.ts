@@ -39,6 +39,9 @@ export const auth = betterAuth({
     },
   },
   user: {
+    deleteUser: {
+      enabled: true,
+    },
     additionalFields: {
       currency: {
         type: "string",

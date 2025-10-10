@@ -1,4 +1,5 @@
 import { pgTable, text, timestamp, boolean } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -11,11 +12,16 @@ export const user = pgTable("user", {
     .defaultNow()
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
-  username: text("username").unique(),
+  username: text("username")
+    .unique()
+    .$defaultFn(() => createId())
+    .notNull(),
   displayUsername: text("display_username"),
   currency: text("currency", {
     enum: ["USD", "JPY", "EUR", "CNY", "GBP", "CAD", "AUD", "NZD"],
-  }).default("USD").notNull(),
+  })
+    .default("USD")
+    .notNull(),
   normalizedEmail: text("normalized_email").unique(),
 });
 

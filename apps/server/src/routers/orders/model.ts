@@ -7,6 +7,3 @@ export const orderUpdateSchema = createUpdateSchema(order);
 
 export type orderInsertType = z.infer<typeof orderInsertSchema>;
 export type orderUpdateType = z.infer<typeof orderUpdateSchema>;
-
-export const orderItemUpdateSchema = createUpdateSchema(collection);
-export type orderItemUpdateType = z.infer<typeof orderItemUpdateSchema>;

@@ -1,3 +1,5 @@
+import type { CollectionItem } from "@/lib/collection/types";
+
 export type OrdersQueryResponse = {
   orders: Order[];
   totalCount: number;
@@ -45,43 +47,15 @@ export type Order = {
   totalCount: number;
 };
 
-export type OrderItem = {
-  collectionId: string;
-  itemId: number;
-  status: "Owned" | "Ordered" | "Paid" | "Shipped" | "Sold";
-  title: string;
-  image: string | null;
-  price: string;
-  count: number;
-  shop: string;
-  score: string;
-  orderDate: string | null;
-  paymentDate: string | null;
-  shippingDate: string | null;
-  collectionDate: string | null;
-  shippingMethod:
-    | "n/a"
-    | "EMS"
-    | "SAL"
-    | "AIRMAIL"
-    | "SURFACE"
-    | "FEDEX"
-    | "DHL"
-    | "Colissimo"
-    | "UPS"
-    | "Domestic";
-  releaseId: string | null;
-  releaseDate: string | null;
-  releaseType: string | null;
-  releasePrice: string | null;
-  releasePriceCurrency: string | null;
-  releaseBarcode: string | null;
-  condition: "New" | "Pre-Owned";
-  tags: string[];
-  notes: string;
-};
-
-export type OrderItemFormValues = Omit<OrderItem, "title" | "image">;
+export type OrderItem = Omit<
+  CollectionItem,
+  | "itemCategory"
+  | "itemScale"
+  | "createdAt"
+  | "updatedAt"
+  | "totalCount"
+  | "totalValue"
+>;
 
 export type NewOrder = {
   title: string;

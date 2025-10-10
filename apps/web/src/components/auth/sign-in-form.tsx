@@ -44,6 +44,7 @@ export default function SignInForm({
     await authClient.signIn.social(
       {
         provider: "google",
+        callbackURL: import.meta.env.PROD ? "/dashboard" : "http://localhost:3001/dashboard",
       },
       {
         onSuccess: () => {

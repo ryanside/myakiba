@@ -10,11 +10,14 @@ import { authClient } from "@/lib/auth-client";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "../ui/button";
 import { Skeleton } from "../ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { User } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function UserMenu() {
   const navigate = useNavigate();
   const { data: session, isPending } = authClient.useSession();
-
+  const queryClient = useQueryClient();
   if (isPending) {
     return <Skeleton className="h-9 w-24" />;
   }
@@ -27,33 +30,58 @@ export default function UserMenu() {
     return null;
   }
 
+  const handleSignOut = async () => {
+    authClient.signOut({
+      fetchOptions: {
+        onSuccess: async () => {
+          await queryClient.invalidateQueries();
+          navigate({
+            to: "/login",
+          });
+        },
+      },
+    });
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost">{session.user.name}</Button>
+        <Avatar className="h-8 w-8">
+          {session.user.image && <AvatarImage src={session.user.image} />}
+          <AvatarFallback className="bg-gradient-to-br from-background via-muted to-background">
+            <User className="size-4" />
+          </AvatarFallback>
+        </Avatar>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="bg-card">
-        <DropdownMenuLabel>My Account</DropdownMenuLabel>
+      <DropdownMenuContent>
+        <DropdownMenuItem
+          onClick={() => {
+            navigate({
+              to: "/profile/$username",
+              params: {
+                username: session.user.username ?? "",
+              },
+            });
+          }}
+        >
+          Profile
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => {
+            navigate({
+              to: "/settings",
+            });
+          }}
+        >
+          Settings
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>{session.user.email}</DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Button
-            variant="destructive"
-            className="w-full"
-            onClick={() => {
-              authClient.signOut({
-                fetchOptions: {
-                  onSuccess: () => {
-                    navigate({
-                      to: "/login",
-                    });
-                  },
-                },
-              });
-            }}
-          >
-            Sign Out
-          </Button>
+        <DropdownMenuItem
+          onClick={() => {
+            handleSignOut();
+          }}
+        >
+          Sign Out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

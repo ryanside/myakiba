@@ -13,7 +13,7 @@ export function createOptimisticDeleteUpdate(
   return {
     ...old,
     collection: old.collection.filter(
-      (item: CollectionItem) => !collectionIds.has(item.collectionId)
+      (item: CollectionItem) => !collectionIds.has(item.id)
     ),
   };
 }
@@ -23,14 +23,14 @@ export function createOptimisticEditUpdate(
   values: CollectionItemFormValues
 ) {
   const collectionItem = old.collection.find(
-    (item: CollectionItem) => item.collectionId === values.collectionId
+    (item: CollectionItem) => item.id === values.id
   );
   if (!collectionItem) return old;
 
   return {
     ...old,
     collection: old.collection.map((item: CollectionItem) =>
-      item.collectionId === values.collectionId ? { ...item, ...values } : item
+      item.id === values.id ? { ...item, ...values } : item
     ),
   };
 }

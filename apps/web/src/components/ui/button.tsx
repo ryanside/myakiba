@@ -402,7 +402,7 @@ function Button({
 }
 
 interface ButtonArrowProps extends React.SVGProps<SVGSVGElement> {
-  icon?: LucideIcon; // Allows passing any Lucide icon
+  icon?: LucideIcon; // Allows passing Lucide icon
 }
 
 function ButtonArrow({ icon: Icon = ChevronDown, className, ...props }: ButtonArrowProps) {

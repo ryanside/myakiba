@@ -12,23 +12,6 @@ export interface RouterAppContext {} // eslint-disable-line @typescript-eslint/n
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
   component: RootComponent,
-  head: () => ({
-    meta: [
-      {
-        title: "myakiba",
-      },
-      {
-        name: "description",
-        content: "myakiba is a web application",
-      },
-    ],
-    links: [
-      {
-        rel: "icon",
-        href: "/favicon.ico",
-      },
-    ],
-  }),
 });
 
 function RootComponent() {

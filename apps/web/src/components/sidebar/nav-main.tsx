@@ -1,34 +1,31 @@
-import { type LucideIcon } from "lucide-react"
+import { type LucideIcon } from "lucide-react";
 
-import {
-  Collapsible,
-} from "@/components/ui/collapsible"
+import { Collapsible } from "@/components/ui/collapsible";
 import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar"
-import { Link, type ParsedLocation } from "@tanstack/react-router"
+} from "@/components/ui/sidebar";
+import { Link, type ParsedLocation } from "@tanstack/react-router";
 
 export function NavMain({
   items,
   location,
 }: {
   items: {
-    title: string
-    url: string
-    icon: LucideIcon
-    isActive?: boolean
+    title: string;
+    url: string;
+    icon: LucideIcon;
+    isActive?: boolean;
     items?: {
-      title: string
-      url: string
-    }[]
-  }[]
-  location: ParsedLocation
+      title: string;
+      url: string;
+    }[];
+  }[];
+  location: ParsedLocation;
 }) {
-
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:pb-0">
       {/* <SidebarGroupLabel className="group-data-[collapsible=icon]:-z-10 transition-all duration-100 ease-in-out">Main</SidebarGroupLabel> */}
@@ -36,7 +33,12 @@ export function NavMain({
         {items.map((item) => (
           <Collapsible key={item.title} asChild defaultOpen={item.isActive}>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip={item.title} isActive={location.pathname === `/${item.url}`}>
+              <SidebarMenuButton
+                asChild
+                className=""
+                tooltip={item.title}
+                isActive={location.pathname === `/${item.url}`}
+              >
                 <Link to={item.url}>
                   <item.icon />
                   <span>{item.title}</span>
@@ -47,5 +49,5 @@ export function NavMain({
         ))}
       </SidebarMenu>
     </SidebarGroup>
-  )
+  );
 }

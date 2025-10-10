@@ -15,47 +15,17 @@ import {
 import SyncService from "./service";
 import { tryCatch } from "@/lib/utils";
 import { createId } from "@paralleldrive/cuid2";
+import { createBunWebSocket } from "hono/bun";
+import type { WSContext } from "hono/ws";
+
+const { upgradeWebSocket, websocket } = createBunWebSocket();
+
+// WeakMap to store intervals associated with WebSocket connections
+const wsIntervals = new WeakMap<WSContext, NodeJS.Timeout>();
 
 const syncRouter = new Hono<{
   Variables: Variables;
 }>()
-  .get(
-    "/",
-    zValidator("query", z.object({ jobId: z.string() }), (result, c) => {
-      if (!result.success) {
-        return c.text("Invalid request!", 400);
-      }
-    }),
-    async (c) => {
-      const user = c.get("user");
-      if (!user) return c.text("Unauthorized", 401);
-
-      const validatedQuery = c.req.valid("query");
-
-      const { data: jobStatus, error } = await tryCatch(
-        SyncService.getJobStatus(validatedQuery.jobId)
-      );
-
-      if (error) {
-        if (error.message === "SYNC_JOB_NOT_FOUND") {
-          return c.text("Sync job not found", 404);
-        }
-
-        console.error("Error getJobStatus():", error, {
-          userId: user.id,
-          jobId: validatedQuery.jobId,
-        });
-
-        return c.text("Failed to get sync job status", 500);
-      }
-
-      return c.json({
-        status: jobStatus.status,
-        finished: jobStatus.finished,
-        createdAt: jobStatus.createdAt,
-      });
-    }
-  )
   .post(
     "/csv",
     zValidator("json", z.array(csvItemSchema), (result, c) => {
@@ -405,5 +375,107 @@ const syncRouter = new Hono<{
         jobId,
       });
     }
+  )
+  .get(
+    "/ws",
+    upgradeWebSocket(async (c) => {
+      const user = c.get("user");
+      const jobId = c.req.query("jobId");
+
+      return {
+        onOpen(_event, ws) {
+          // Validate after connection is established
+          if (!user) {
+            ws.send(
+              JSON.stringify({
+                status: "Unauthorized",
+                finished: true,
+                createdAt: new Date().toISOString(),
+              })
+            );
+            ws.close();
+            return;
+          }
+
+          if (!jobId) {
+            ws.send(
+              JSON.stringify({
+                status: "Missing jobId query parameter",
+                finished: true,
+                createdAt: new Date().toISOString(),
+              })
+            );
+            ws.close();
+            return;
+          }
+
+          console.log("WebSocket connection opened for job:", jobId);
+
+          const interval = setInterval(async () => {
+            const { data: jobStatus, error } = await tryCatch(
+              SyncService.getJobStatus(jobId)
+            );
+
+            if (error) {
+              if (error.message === "SYNC_JOB_NOT_FOUND") {
+                ws.send(
+                  JSON.stringify({
+                    status: "Job not found",
+                    finished: true,
+                    createdAt: new Date().toISOString(),
+                  })
+                );
+              } else {
+                ws.send(
+                  JSON.stringify({
+                    status: "Error fetching job status",
+                    finished: true,
+                    createdAt: new Date().toISOString(),
+                  })
+                );
+              }
+              clearInterval(interval);
+              ws.close();
+              return;
+            }
+
+            ws.send(
+              JSON.stringify({
+                status: jobStatus.status,
+                finished: jobStatus.finished,
+                createdAt: jobStatus.createdAt,
+              })
+            );
+
+            if (jobStatus.finished) {
+              clearInterval(interval);
+              ws.close();
+            }
+          }, 2000);
+
+          wsIntervals.set(ws, interval);
+        },
+        onMessage(_event, _ws) {
+        },
+        onClose(_event, ws) {
+          console.log("WebSocket connection closed for job:", jobId);
+          const interval = wsIntervals.get(ws);
+          if (interval) {
+            clearInterval(interval);
+            wsIntervals.delete(ws);
+          }
+        },
+        onError(event, ws) {
+          console.error("WebSocket error for job:", jobId, event);
+          const interval = wsIntervals.get(ws);
+          if (interval) {
+            clearInterval(interval);
+            wsIntervals.delete(ws);
+          }
+        },
+      };
+    })
   );
+
 export default syncRouter;
+export { websocket };

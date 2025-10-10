@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@custom-variant dark (&:is(.dark *));
+
 .inter-font {
   font-family: "Inter", sans-serif;
   font-optical-sizing: auto;
@@ -24,7 +26,7 @@
   --popover-foreground: #201127;
   --primary: #a2d843;
   --primary-foreground: #ffffff;
-  --secondary: #525275;
+  --secondary: #7353e7;
   --secondary-foreground: #ffffff;
   --muted: #f5f3f6;
   --muted-foreground: #796b80;
@@ -35,11 +37,11 @@
   --border: #e9e5eb;
   --input: #e9e5eb;
   --ring: #a2d843;
-  --chart-1: #5f5f87;
+  --chart-1: #7353e7;
   --chart-2: #b0e753;
-  --chart-3: #c7fb97;
-  --chart-4: #888888;
-  --chart-5: #999999;
+  --chart-3: #e85479;
+  --chart-4: #53dde7;
+  --chart-5: #e8aa54;
   --sidebar: #f5f3f6;
   --sidebar-foreground: #201127;
   --sidebar-primary: #a2d843;
@@ -48,10 +50,16 @@
   --sidebar-accent-foreground: #201127;
   --sidebar-border: #e9e5eb;
   --sidebar-ring: #a2d843;
-  --font-sans: Inter, ui-sans-serif, sans-serif, system-ui;
+  --font-sans: Inter, ui-monospace, monospace;
   --font-serif: serif;
   --font-mono: JetBrains Mono, monospace;
   --radius: 0.75rem;
+  --shadow-x: 0px;
+  --shadow-y: 1px;
+  --shadow-blur: 4px;
+  --shadow-spread: 0px;
+  --shadow-opacity: 0.05;
+  --shadow-color: #000000;
   --shadow-2xs: 0px 1px 4px 0px hsl(0 0% 0% / 0.03);
   --shadow-xs: 0px 1px 4px 0px hsl(0 0% 0% / 0.03);
   --shadow-sm: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 1px 2px -1px hsl(0 0% 0% / 0.05);
@@ -69,11 +77,11 @@
   --foreground: #c1c1c1;
   --card: #121212;
   --card-foreground: #c1c1c1;
-  --popover: #121212;
+  --popover: #1b181a;
   --popover-foreground: #c1c1c1;
   --primary: #b0e753;
   --primary-foreground: #1b181a;
-  --secondary: #5f5f87;
+  --secondary: #7353e7;
   --secondary-foreground: #1b181a;
   --muted: #222222;
   --muted-foreground: #888888;
@@ -85,10 +93,10 @@
   --input: #222222;
   --ring: #b0e753;
   --chart-1: #7353e7;
-  --chart-2: #E85479;
-  --chart-3: #53dde7;
-  --chart-4: #E8AA54;
-  --chart-5: #999999;
+  --chart-2: #b0e753;
+  --chart-3: #e85479;
+  --chart-4: #53dde7;
+  --chart-5: #e8aa54;
   --sidebar: #121212;
   --sidebar-foreground: #c1c1c1;
   --sidebar-primary: #b0e753;
@@ -97,10 +105,16 @@
   --sidebar-accent-foreground: #c1c1c1;
   --sidebar-border: #222222;
   --sidebar-ring: #b0e753;
-  --font-sans: Inter, ui-sans-serif, sans-serif, system-ui;
+  --font-sans: Inter, ui-monospace, monospace;
   --font-serif: serif;
   --font-mono: JetBrains Mono, monospace;
   --radius: 0.75rem;
+  --shadow-x: 0px;
+  --shadow-y: 1px;
+  --shadow-blur: 4px;
+  --shadow-spread: 0px;
+  --shadow-opacity: 0.05;
+  --shadow-color: #000000;
   --shadow-2xs: 0px 1px 4px 0px hsl(0 0% 0% / 0.03);
   --shadow-xs: 0px 1px 4px 0px hsl(0 0% 0% / 0.03);
   --shadow-sm: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 1px 2px -1px hsl(0 0% 0% / 0.05);
@@ -175,6 +189,10 @@ body {
   letter-spacing: var(--tracking-normal);
 }
 
+body {
+  letter-spacing: var(--tracking-normal);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -182,4 +200,38 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+* {
+  scrollbar-width: auto;
+  scrollbar-color: #333333 #121212;
+}
+
+*::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #121212;
+  border-radius: 0.5rem;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #333333;
+  border-radius: 0.5rem;
+  border: 2px solid #121212;
+  transition: background 0.2s ease;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #444444;
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background: #555555;
+}
+
+*::-webkit-scrollbar-corner {
+  background: #121212;
 }

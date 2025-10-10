@@ -110,7 +110,7 @@ const CommandShortcut = ({ className, ...props }: React.HTMLAttributes<HTMLSpanE
 };
 
 interface ButtonArrowProps extends React.SVGProps<SVGSVGElement> {
-  icon?: LucideIcon; // Allows passing any Lucide icon
+  icon?: LucideIcon; // Allows passing Lucide icon
 }
 
 function CommandCheck({ icon: Icon = Check, className, ...props }: ButtonArrowProps) {

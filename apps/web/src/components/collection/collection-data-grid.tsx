@@ -394,7 +394,7 @@ export const CollectionDataGrid = ({
                 <DropdownMenuItem
                   variant="destructive"
                   onClick={() =>
-                    onDeleteCollectionItems(new Set([item.collectionId]))
+                    onDeleteCollectionItems(new Set([item.id]))
                   }
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
@@ -452,7 +452,7 @@ export const CollectionDataGrid = ({
     columns,
     data: collection,
     pageCount: Math.ceil(totalCount / serverPagination.limit),
-    getRowId: (row: CollectionItem) => row.collectionId,
+    getRowId: (row: CollectionItem) => row.id,
     getRowCanExpand: () => true,
     state: {
       pagination,

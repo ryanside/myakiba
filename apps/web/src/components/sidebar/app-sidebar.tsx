@@ -5,6 +5,7 @@ import {
   Home,
   Images,
   Plus,
+  Settings,
   ShoppingCart,
   Sparkles,
 } from "lucide-react";
@@ -25,6 +26,7 @@ import {
 import { Link, useLocation } from "@tanstack/react-router";
 import ma from "@/public/ma.svg";
 import myakiba from "@/public/myakiba.svg";
+import { PlusIcon } from "@/components/ui/plus";
 
 const data = {
   navMain: [
@@ -54,9 +56,9 @@ const data = {
       icon: Images,
     },
     {
-      title: "Wrapped",
-      url: "wrapped",
-      icon: Sparkles,
+      title: "Settings",
+      url: "settings",
+      icon: Settings,
     },
   ],
   // navCollection: [
@@ -72,16 +74,6 @@ const data = {
   //   },
   // ],
   navSecondary: [
-    {
-      title: "Donate",
-      url: "help",
-      icon: HeartPlus,
-    },
-    {
-      title: "Discord",
-      url: "discord",
-      icon: DiscordIcon,
-    },
     {
       title: "Github",
       url: "https://github.com/ryanside/myakiba",
@@ -157,7 +149,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 className="bg-sidebar-primary text-primary-foreground hover:bg-sidebar-primary/90 hover:text-primary-foreground active:bg-sidebar-primary/90 active:text-primary-foreground rounded-lg"
               >
                 <Link to="/sync">
-                  <Plus className="" />
+                  <PlusIcon size={18} />
                   <span className="">Add MFC items</span>
                 </Link>
               </SidebarMenuButton>

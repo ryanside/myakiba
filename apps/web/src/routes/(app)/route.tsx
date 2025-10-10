@@ -17,8 +17,6 @@ import { ModeToggle } from "@/components/mode-toggle";
 import UserMenu from "@/components/sidebar/user-menu";
 import { authClient } from "@/lib/auth-client";
 import { SearchCommand } from "@/components/sidebar/search-command";
-import { Button } from "@/components/ui/button";
-import { Search } from "lucide-react";
 
 export const Route = createFileRoute("/(app)")({
   component: RouteComponent,
@@ -36,15 +34,15 @@ export const Route = createFileRoute("/(app)")({
 });
 
 function RouteComponent() {
-
   const location = useLocation();
   return (
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset className="">
         <header className="flex h-12 shrink-0 items-center justify-between gap-2 border-b px-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-0.5">
             <SidebarTrigger className="-ml-1" />
+            <SearchCommand />
             <Separator
               orientation="vertical"
               className="mr-2 data-[orientation=vertical]:h-4"
@@ -59,9 +57,6 @@ function RouteComponent() {
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
-          </div>
-          <div className="flex gap-2">
-              <SearchCommand />
           </div>
           <div className="flex items-center gap-2">
             <ModeToggle />

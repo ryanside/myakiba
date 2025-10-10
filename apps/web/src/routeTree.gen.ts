@@ -12,8 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as appRouteRouteImport } from './routes/(app)/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as appWrappedRouteImport } from './routes/(app)/wrapped'
+import { Route as ProfileUsernameRouteImport } from './routes/profile.$username'
 import { Route as appSyncRouteImport } from './routes/(app)/sync'
+import { Route as appSettingsRouteImport } from './routes/(app)/settings'
 import { Route as appOrdersRouteImport } from './routes/(app)/orders'
 import { Route as appGalleryRouteImport } from './routes/(app)/gallery'
 import { Route as appDashboardRouteImport } from './routes/(app)/dashboard'
@@ -36,14 +37,19 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const appWrappedRoute = appWrappedRouteImport.update({
-  id: '/wrapped',
-  path: '/wrapped',
-  getParentRoute: () => appRouteRoute,
+const ProfileUsernameRoute = ProfileUsernameRouteImport.update({
+  id: '/profile/$username',
+  path: '/profile/$username',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const appSyncRoute = appSyncRouteImport.update({
   id: '/sync',
   path: '/sync',
+  getParentRoute: () => appRouteRoute,
+} as any)
+const appSettingsRoute = appSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => appRouteRoute,
 } as any)
 const appOrdersRoute = appOrdersRouteImport.update({
@@ -90,8 +96,9 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof appDashboardRoute
   '/gallery': typeof appGalleryRoute
   '/orders': typeof appOrdersRoute
+  '/settings': typeof appSettingsRoute
   '/sync': typeof appSyncRoute
-  '/wrapped': typeof appWrappedRoute
+  '/profile/$username': typeof ProfileUsernameRoute
   '/items/$id': typeof appItemsIdRoute
   '/orders/$id': typeof appOrdersIdRoute
 }
@@ -103,8 +110,9 @@ export interface FileRoutesByTo {
   '/dashboard': typeof appDashboardRoute
   '/gallery': typeof appGalleryRoute
   '/orders': typeof appOrdersRoute
+  '/settings': typeof appSettingsRoute
   '/sync': typeof appSyncRoute
-  '/wrapped': typeof appWrappedRoute
+  '/profile/$username': typeof ProfileUsernameRoute
   '/items/$id': typeof appItemsIdRoute
   '/orders/$id': typeof appOrdersIdRoute
 }
@@ -118,8 +126,9 @@ export interface FileRoutesById {
   '/(app)/dashboard': typeof appDashboardRoute
   '/(app)/gallery': typeof appGalleryRoute
   '/(app)/orders': typeof appOrdersRoute
+  '/(app)/settings': typeof appSettingsRoute
   '/(app)/sync': typeof appSyncRoute
-  '/(app)/wrapped': typeof appWrappedRoute
+  '/profile/$username': typeof ProfileUsernameRoute
   '/(app)/items_/$id': typeof appItemsIdRoute
   '/(app)/orders_/$id': typeof appOrdersIdRoute
 }
@@ -133,8 +142,9 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/gallery'
     | '/orders'
+    | '/settings'
     | '/sync'
-    | '/wrapped'
+    | '/profile/$username'
     | '/items/$id'
     | '/orders/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -146,8 +156,9 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/gallery'
     | '/orders'
+    | '/settings'
     | '/sync'
-    | '/wrapped'
+    | '/profile/$username'
     | '/items/$id'
     | '/orders/$id'
   id:
@@ -160,8 +171,9 @@ export interface FileRouteTypes {
     | '/(app)/dashboard'
     | '/(app)/gallery'
     | '/(app)/orders'
+    | '/(app)/settings'
     | '/(app)/sync'
-    | '/(app)/wrapped'
+    | '/profile/$username'
     | '/(app)/items_/$id'
     | '/(app)/orders_/$id'
   fileRoutesById: FileRoutesById
@@ -170,6 +182,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   appRouteRoute: typeof appRouteRouteWithChildren
   LoginRoute: typeof LoginRoute
+  ProfileUsernameRoute: typeof ProfileUsernameRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -195,18 +208,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/(app)/wrapped': {
-      id: '/(app)/wrapped'
-      path: '/wrapped'
-      fullPath: '/wrapped'
-      preLoaderRoute: typeof appWrappedRouteImport
-      parentRoute: typeof appRouteRoute
+    '/profile/$username': {
+      id: '/profile/$username'
+      path: '/profile/$username'
+      fullPath: '/profile/$username'
+      preLoaderRoute: typeof ProfileUsernameRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/(app)/sync': {
       id: '/(app)/sync'
       path: '/sync'
       fullPath: '/sync'
       preLoaderRoute: typeof appSyncRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/settings': {
+      id: '/(app)/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof appSettingsRouteImport
       parentRoute: typeof appRouteRoute
     }
     '/(app)/orders': {
@@ -267,8 +287,8 @@ interface appRouteRouteChildren {
   appDashboardRoute: typeof appDashboardRoute
   appGalleryRoute: typeof appGalleryRoute
   appOrdersRoute: typeof appOrdersRoute
+  appSettingsRoute: typeof appSettingsRoute
   appSyncRoute: typeof appSyncRoute
-  appWrappedRoute: typeof appWrappedRoute
   appItemsIdRoute: typeof appItemsIdRoute
   appOrdersIdRoute: typeof appOrdersIdRoute
 }
@@ -279,8 +299,8 @@ const appRouteRouteChildren: appRouteRouteChildren = {
   appDashboardRoute: appDashboardRoute,
   appGalleryRoute: appGalleryRoute,
   appOrdersRoute: appOrdersRoute,
+  appSettingsRoute: appSettingsRoute,
   appSyncRoute: appSyncRoute,
-  appWrappedRoute: appWrappedRoute,
   appItemsIdRoute: appItemsIdRoute,
   appOrdersIdRoute: appOrdersIdRoute,
 }
@@ -293,6 +313,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   appRouteRoute: appRouteRouteWithChildren,
   LoginRoute: LoginRoute,
+  ProfileUsernameRoute: ProfileUsernameRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

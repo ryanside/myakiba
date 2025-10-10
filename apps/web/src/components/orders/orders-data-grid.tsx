@@ -66,6 +66,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import ItemMoveForm from "./item-move-form";
+import type { CollectionItemFormValues } from "@/lib/collection/types";
 
 export const DEFAULT_PAGE_INDEX = 0;
 export const DEFAULT_PAGE_SIZE = 10;
@@ -102,9 +103,7 @@ interface OrdersDataGridProps {
   ) => Promise<void>;
   onDeleteOrders: (orderIds: Set<string>) => Promise<void>;
   onEditItem: (
-    orderId: string,
-    itemId: string,
-    values: OrderItem
+    values: CollectionItemFormValues
   ) => Promise<void>;
   onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
   onMoveItem: (

@@ -13,7 +13,6 @@ import type {
   OrdersQueryResponse,
   CascadeOptions,
   OrderFilters,
-  OrderItem,
 } from "@/lib/orders/types";
 import { toast } from "sonner";
 import {
@@ -31,16 +30,35 @@ import {
   mergeOrders,
   splitOrders,
   deleteOrders,
-  editOrderItem,
   deleteOrderItem,
   moveItem,
 } from "@/queries/orders";
 import { searchSchema } from "@/lib/validations";
 import Loader from "@/components/loader";
+import type { CollectionItemFormValues } from "@/lib/collection/types";
+import { updateCollectionItem } from "@/queries/collection";
 
 export const Route = createFileRoute("/(app)/orders")({
   component: RouteComponent,
   validateSearch: searchSchema,
+  head: () => ({
+    meta: [
+      {
+        name: "description",
+        content: "your orders",
+      },
+      {
+        title: "Orders — myakiba",
+      },
+    ],
+    links: [
+      {
+        rel: "icon",
+        href: "/favicon.ico",
+      },
+    ],
+    scripts: [],
+  }),
 });
 
 function RouteComponent() {
@@ -248,22 +266,15 @@ function RouteComponent() {
   });
 
   const editItemMutation = useMutation({
-    mutationFn: ({
-      orderId,
-      itemId,
-      values,
-    }: {
-      orderId: string;
-      itemId: string;
-      values: OrderItem;
-    }) => editOrderItem(orderId, itemId, values),
-    onMutate: async ({ orderId, itemId, values }) => {
+    mutationFn: ({ values }: { values: CollectionItemFormValues }) =>
+      updateCollectionItem(values),
+    onMutate: async ({ values }) => {
       await queryClient.cancelQueries({ queryKey: ["orders", filters] });
       const previousData = queryClient.getQueryData(["orders", filters]);
       queryClient.setQueryData(
         ["orders", filters],
         (old: OrdersQueryResponse) => {
-          return createOptimisticEditItemUpdate(old, orderId, itemId, values);
+          return createOptimisticEditItemUpdate(old, values);
         }
       );
 
@@ -410,13 +421,9 @@ function RouteComponent() {
     deleteOrderMutation.mutate(orderIds);
   };
 
-  const handleEditItem = async (
-    orderId: string,
-    itemId: string,
-    values: OrderItem
-  ) => {
+  const handleEditItem = async (values: CollectionItemFormValues) => {
     // console.log(values.releaseId);
-    editItemMutation.mutate({ orderId, itemId, values });
+    editItemMutation.mutate({ values });
   };
 
   const handleDeleteItem = async (orderId: string, itemId: string) => {

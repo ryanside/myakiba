@@ -44,9 +44,28 @@ import {
   updateCollectionItem,
 } from "@/queries/collection";
 import { toast } from "sonner";
+import type { ItemRelatedCollection } from "@/lib/items/types";
 
 export const Route = createFileRoute("/(app)/items_/$id")({
   component: RouteComponent,
+  head: ({ params }) => ({
+    meta: [
+      {
+        name: "description",
+        content: `item ${params.id} details`,
+      },
+      {
+        title: `Item ${params.id} — myakiba`,
+      },
+    ],
+    links: [
+      {
+        rel: "icon",
+        href: "/favicon.ico",
+      },
+    ],
+    scripts: [],
+  }),
 });
 
 async function getItem(itemId: string) {
@@ -81,40 +100,6 @@ async function getItemRelatedCollection(itemId: string) {
   }
   return response.json();
 }
-
-type ItemRelatedCollection = {
-  collection: {
-    id: string;
-    itemId: number;
-    orderId: string | null;
-    status: "Owned" | "Ordered" | "Paid" | "Shipped" | "Sold";
-    count: number;
-    score: string;
-    price: string;
-    shop: string;
-    orderDate: string | null;
-    paymentDate: string | null;
-    shippingDate: string | null;
-    collectionDate: string | null;
-    shippingMethod:
-      | "n/a"
-      | "EMS"
-      | "SAL"
-      | "AIRMAIL"
-      | "SURFACE"
-      | "FEDEX"
-      | "DHL"
-      | "Colissimo"
-      | "UPS"
-      | "Domestic";
-    notes: string;
-    tags: string[];
-    condition: "New" | "Pre-Owned";
-    releaseId: string | null;
-    createdAt: string;
-    updatedAt: string;
-  }[];
-};
 
 function RouteComponent() {
   const queryClient = useQueryClient();
@@ -169,7 +154,7 @@ function RouteComponent() {
           return {
             ...old,
             collection: old.collection.map((collectionItem) => {
-              if (collectionItem.id === values.collectionId) {
+              if (collectionItem.id === values.id) {
                 return {
                   ...collectionItem,
                   status: values.status,
@@ -519,7 +504,7 @@ function RouteComponent() {
                             <CollectionItemForm
                               itemData={{
                                 ...collectionItem,
-                                collectionId: collectionItem.id,
+                                id: collectionItem.id,
                                 itemTitle: data.item.title,
                                 itemImage: data.item.image,
                                 releaseDate:

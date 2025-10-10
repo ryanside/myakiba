@@ -19,6 +19,24 @@ import {
 import Loader from "@/components/loader";
 export const Route = createFileRoute("/(app)/analytics")({
   component: RouteComponent,
+  head: () => ({
+    meta: [
+      {
+        name: "description",
+        content: "your analytics",
+      },
+      {
+        title: "Analytics — myakiba",
+      },
+    ],
+    links: [
+      {
+        rel: "icon",
+        href: "/favicon.ico",
+      },
+    ],
+    scripts: [],
+  }),
 });
 
 function RouteComponent() {
@@ -170,7 +188,6 @@ function RouteComponent() {
                 <SelectItem value="Origins">Origins</SelectItem>
                 <SelectItem value="Artists">Artists</SelectItem>
                 <SelectItem value="Materials">Materials</SelectItem>
-                <SelectItem value="Events">Events</SelectItem>
                 <SelectItem value="Classifications">Classifications</SelectItem>
                 <SelectItem value="Event">Event</SelectItem>
               </SelectContent>

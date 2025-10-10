@@ -39,8 +39,8 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
 
   const form = useForm({
     defaultValues: itemData,
-    onSubmit: async ({ value }) => {
-      await callbackFn(value);
+    onSubmit: ({ value }) => {
+      callbackFn(value);
     },
   });
 

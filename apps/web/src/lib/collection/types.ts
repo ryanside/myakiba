@@ -52,7 +52,8 @@ export type CollectionFilters = {
 };
 
 export type CollectionItem = {
-  collectionId: string;
+  id: string;
+  orderId: string | null;
   itemId: number;
   itemTitle: string;
   itemImage: string | null;

@@ -1,10 +1,5 @@
 import { createFileRoute, useParams, Link } from "@tanstack/react-router";
-import {
-  getOrder,
-  editOrder,
-  editOrderItem,
-  deleteOrderItem,
-} from "@/queries/orders";
+import { getOrder, editOrder, deleteOrderItem } from "@/queries/orders";
 import {
   keepPreviousData,
   useQuery,
@@ -31,16 +26,32 @@ import {
 } from "lucide-react";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { OrderForm } from "@/components/orders/order-form";
-import type {
-  OrderItem,
-  EditedOrder,
-  CascadeOptions,
-} from "@/lib/orders/types";
+import type { EditedOrder, CascadeOptions } from "@/lib/orders/types";
 import { toast } from "sonner";
 import Loader from "@/components/loader";
+import type { CollectionItemFormValues } from "@/lib/collection/types";
+import { updateCollectionItem } from "@/queries/collection";
 
 export const Route = createFileRoute("/(app)/orders_/$id")({
   component: RouteComponent,
+  head: ({ params }) => ({
+    meta: [
+      {
+        name: "description",
+        content: `order ${params.id} details`,
+      },
+      {
+        title: `Order ${params.id} — myakiba`,
+      },
+    ],
+    links: [
+      {
+        rel: "icon",
+        href: "/favicon.ico",
+      },
+    ],
+    scripts: [],
+  }),
 });
 
 function RouteComponent() {
@@ -79,7 +90,7 @@ function RouteComponent() {
     }) => {
       return await editOrder(values, cascadeOptions);
     },
-    // TODO: add optimistic update 
+    // TODO: add optimistic update
     onSuccess: () => {
       toast.success("Order updated successfully");
     },
@@ -102,18 +113,10 @@ function RouteComponent() {
   });
 
   const editItemMutation = useMutation({
-    mutationFn: async ({
-      orderId,
-      collectionId,
-      values,
-    }: {
-      orderId: string;
-      collectionId: string;
-      values: OrderItem;
-    }) => {
-      return await editOrderItem(orderId, collectionId, values);
+    mutationFn: async ({ values }: { values: CollectionItemFormValues }) => {
+      return await updateCollectionItem(values);
     },
-    // TODO: add optimistic update 
+    // TODO: add optimistic update
     onSuccess: () => {
       toast.success("Item updated successfully");
     },
@@ -145,7 +148,7 @@ function RouteComponent() {
     }) => {
       return await deleteOrderItem(orderId, collectionId);
     },
-    // TODO: add optimistic update 
+    // TODO: add optimistic update
     onSuccess: () => {
       toast.success("Item deleted successfully");
     },
@@ -174,12 +177,8 @@ function RouteComponent() {
     await editOrderMutation.mutateAsync({ values, cascadeOptions });
   };
 
-  const handleEditItem = async (
-    orderId: string,
-    collectionId: string,
-    values: OrderItem
-  ) => {
-    await editItemMutation.mutateAsync({ orderId, collectionId, values });
+  const handleEditItem = async (values: CollectionItemFormValues) => {
+    await editItemMutation.mutateAsync({ values });
   };
 
   const handleDeleteItem = async (orderId: string, collectionId: string) => {

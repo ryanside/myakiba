@@ -45,6 +45,9 @@ export default function SignUpForm({
     await authClient.signIn.social(
       {
         provider: "google",
+        callbackURL: import.meta.env.PROD
+          ? "/dashboard"
+          : "http://localhost:3001/dashboard",
       },
       {
         onSuccess: () => {
@@ -154,17 +157,23 @@ export default function SignUpForm({
             asyncDebounceMs={1000}
             validators={{
               onChangeAsync: async ({ value }) => {
-                const { data, error } = await authClient.isUsernameAvailable({
-                  username: value,
-                });
-                if (data?.available === false) {
-                  return "Username is already taken";
+                if (value.length < 3) {
+                  return;
+                } else if (value.length > 30) {
+                  return;
+                } else {
+                  const { data, error } = await authClient.isUsernameAvailable({
+                    username: value,
+                  });
+                  if (data?.available === false) {
+                    return "Username is already taken";
+                  }
                 }
               },
               onBlur: z
                 .string()
                 .min(3, "Username must be at least 3 characters")
-                .max(30, "Username must be less than 20 characters"),
+                .max(30, "Username must be less than 30 characters"),
             }}
           >
             {(field) => (

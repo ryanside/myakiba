@@ -1,15 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/(app)/gallery")({
+export const Route = createFileRoute("/profile/$username")({
   component: RouteComponent,
   head: ({ params }) => ({
     meta: [
       {
         name: "description",
-        content: `your gallery`,
+        content: `${params.username}'s myakiba profile`,
       },
       {
-        title: `Gallery — myakiba`,
+        title: `${params.username} — myakiba`,
       },
     ],
     links: [
@@ -23,5 +23,5 @@ export const Route = createFileRoute("/(app)/gallery")({
 });
 
 function RouteComponent() {
-  return <div>(in development)</div>;
+  return <div>Hello "/profile/$username"!</div>;
 }

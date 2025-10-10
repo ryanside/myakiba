@@ -1,19 +1,16 @@
 import { db } from "@/db";
 import { order, collection, item, item_release } from "@/db/schema/figure";
 import { eq, and, inArray, sql, desc, asc, ilike, ne } from "drizzle-orm";
-import type {
-  orderInsertType,
-  orderItemUpdateType,
-  orderUpdateType,
-} from "./model";
+import type { orderInsertType, orderUpdateType } from "./model";
 
 type OrderItem = {
-  collectionId: string;
+  id: string;
+  orderId: string | null;
   itemId: number;
   releaseId: string;
   status: "Owned" | "Ordered" | "Paid" | "Shipped" | "Sold";
-  title: string;
-  image: string | null;
+  itemTitle: string;
+  itemImage: string | null;
   price: string;
   count: number;
   shop: string;
@@ -36,7 +33,7 @@ type OrderItem = {
   releaseDate: string | null;
   releaseType: string | null;
   releasePrice: string | null;
-  releasePriceCurrency: string | null;
+  releaseCurrency: string | null;
   releaseBarcode: string | null;
   condition: "New" | "Pre-Owned";
   tags: string[];
@@ -106,16 +103,17 @@ class OrdersService {
           COALESCE(
             JSON_AGG(
               JSON_BUILD_OBJECT(
-                'collectionId', ${collection.id},
+                'id', ${collection.id},
+                'orderId', ${collection.orderId},
                 'itemId', ${item.id},
                 'releaseId', ${collection.releaseId},
                 'status', ${collection.status},
-                'title', ${item.title},
-                'image', ${item.image},
+                'itemTitle', ${item.title},
+                'itemImage', ${item.image},
                 'price', ${collection.price}::text,
                 'count', ${collection.count},
                 'shop', ${collection.shop},
-                'score', ${collection.score},
+                'score', ${collection.score}::text, 
                 'orderDate', ${collection.orderDate},
                 'paymentDate', ${collection.paymentDate},
                 'shippingDate', ${collection.shippingDate},
@@ -124,7 +122,7 @@ class OrdersService {
                 'releaseDate', ${item_release.date},
                 'releaseType', ${item_release.type},
                 'releasePrice', ${item_release.price}::text,
-                'releasePriceCurrency', ${item_release.priceCurrency},
+                'releaseCurrency', ${item_release.priceCurrency},
                 'releaseBarcode', ${item_release.barcode},
                 'condition', ${collection.condition},
                 'tags', ${collection.tags},
@@ -199,16 +197,17 @@ class OrdersService {
           COALESCE(
             JSON_AGG(
               JSON_BUILD_OBJECT(
-                'collectionId', ${collection.id},
+                'id', ${collection.id},
+                'orderId', ${collection.orderId},
                 'itemId', ${item.id},
                 'releaseId', ${collection.releaseId},
                 'status', ${collection.status},
-                'title', ${item.title},
-                'image', ${item.image},
+                'itemTitle', ${item.title},
+                'itemImage', ${item.image},
                 'price', ${collection.price}::text,
                 'count', ${collection.count},
                 'shop', ${collection.shop},
-                'score', ${collection.score},
+                'score', ${collection.score}::text,
                 'orderDate', ${collection.orderDate},
                 'paymentDate', ${collection.paymentDate},
                 'shippingDate', ${collection.shippingDate},
@@ -217,7 +216,7 @@ class OrdersService {
                 'releaseDate', ${item_release.date},
                 'releaseType', ${item_release.type},
                 'releasePrice', ${item_release.price}::text,
-                'releasePriceCurrency', ${item_release.priceCurrency},
+                'releaseCurrency', ${item_release.priceCurrency},
                 'releaseBarcode', ${item_release.barcode},
                 'condition', ${collection.condition},
                 'tags', ${collection.tags},
@@ -397,25 +396,6 @@ class OrdersService {
     });
 
     return updated;
-  }
-
-  async updateOrderItem(
-    userId: string,
-    collectionId: string,
-    updatedItem: orderItemUpdateType
-  ) {
-    const itemUpdated = await db
-      .update(collection)
-      .set({ ...updatedItem })
-      .where(
-        and(eq(collection.userId, userId), eq(collection.id, collectionId))
-      )
-      .returning();
-    if (!itemUpdated || itemUpdated.length === 0) {
-      throw new Error("ORDER_ITEM_NOT_FOUND");
-    }
-
-    return {};
   }
 
   async deleteOrders(userId: string, orderIds: string[]) {

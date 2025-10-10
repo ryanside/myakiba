@@ -144,7 +144,8 @@ class CollectionService {
 
     const collectionItems = await db
       .select({
-        collectionId: collection.id,
+        id: collection.id,
+        orderId: collection.orderId,
         itemId: item.id,
         itemTitle: item.title,
         itemImage: item.image,
@@ -188,7 +189,8 @@ class CollectionService {
   async getCollectionItem(userId: string, collectionId: string) {
     const collectionItem = await db
       .select({
-        collectionId: collection.id,
+        id: collection.id,
+        orderId: collection.orderId,
         itemId: item.id,
         itemTitle: item.title,
         itemImage: item.image,

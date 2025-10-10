@@ -75,17 +75,12 @@ export function SearchCommand() {
   return (
     <>
       <Button
-        variant="outline"
-        className="gap-4 b lg:w-xs flex justify-between"
+        variant="ghost"
+        size="icon"
+        className="size-7"
         onClick={() => setOpen(true)}
       >
         <Search className="h-4 w-4" />
-        <span className="hidden md:block mr-auto">Search</span>
-        <p className="text-muted-foreground text-sm hidden md:block">
-          <kbd className="bg-muted text-muted-foreground pointer-events-none inline-flex h-5 items-center gap-1 rounded border px-1.5 font-mono text-[10px] font-medium opacity-100 select-none">
-            <span className="text-xs">⌘</span>K
-          </kbd>
-        </p>
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className={"overflow-hidden p-0 shadow-lg"}>
@@ -151,11 +146,7 @@ export function SearchCommand() {
                         value={item.id}
                         onSelect={() => setOpen(false)}
                       >
-                        {item.type === "order" ? (
-                          <ShoppingCart />
-                        ) : (
-                          <Images />
-                        )}
+                        {item.type === "order" ? <ShoppingCart /> : <Images />}
                         <span>{item.title}</span>
                       </CommandItem>
                     </Link>

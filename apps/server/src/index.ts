@@ -5,7 +5,7 @@ import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
 import { logger } from "hono/logger";
 import { serveStatic } from "hono/bun";
-import syncRouter from "./routers/sync";
+import syncRouter, { websocket } from "./routers/sync";
 import dashboardRouter from "./routers/dashboard";
 import analyticsRouter from "./routers/analytics";
 import galleryRouter from "./routers/gallery";
@@ -69,7 +69,11 @@ const routes = app
 app.get("*", serveStatic({ root: "./dist" }));
 app.get("*", serveStatic({ path: "./dist/index.html" }));
 
-export default app;
+export default {
+  fetch: app.fetch,
+  websocket,
+};
+
 export type AppType = typeof routes;
 export type Variables = {
   user: typeof auth.$Infer.Session.user | null;

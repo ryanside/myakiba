@@ -25,6 +25,24 @@ import {
 export const Route = createFileRoute("/(app)/collection")({
   component: RouteComponent,
   validateSearch: collectionSearchSchema,
+  head: ({ params }) => ({
+    meta: [
+      {
+        name: "description",
+        content: `your collection`,
+      },
+      {
+        title: `Collection — myakiba`,
+      },
+    ],
+    links: [
+      {
+        rel: "icon",
+        href: "/favicon.ico",
+      },
+    ],
+    scripts: [],
+  }),
 });
 
 function RouteComponent() {

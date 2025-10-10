@@ -27,6 +27,24 @@ import { formatCurrency } from "@/lib/utils";
 
 export const Route = createFileRoute("/(app)/dashboard")({
   component: RouteComponent,
+  head: ({ params }) => ({
+    meta: [
+      {
+        name: "description",
+        content: `your dashboard`,
+      },
+      {
+        title: `Dashboard — myakiba`,
+      },
+    ],
+    links: [
+      {
+        rel: "icon",
+        href: "/favicon.ico",
+      },
+    ],
+    scripts: [],
+  }),
 });
 
 function RouteComponent() {
