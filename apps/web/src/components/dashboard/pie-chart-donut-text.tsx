@@ -165,7 +165,7 @@ export function ChartPieDonutText({
               <span className="text-sm text-muted-foreground">
                 {item.count}
               </span>
-              <span className="ml-auto text-sm text-muted-foreground">
+              <span className="ml-auto text-sm text-foreground">
                 {formatCurrency(item.value, currency)}
               </span>
             </div>

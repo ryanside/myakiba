@@ -77,7 +77,9 @@ export default function SyncCollectionForm({
         >
           <ArrowLeft />
         </Button>
-        <h1 className="text-lg text-white">Add Collection Items</h1>
+        <h1 className="text-lg text-black dark:text-white">
+          Add Collection Items
+        </h1>
       </div>
       <form
         onSubmit={(e) => {
@@ -102,7 +104,9 @@ export default function SyncCollectionForm({
             return (
               <div className="flex flex-col gap-4">
                 <div className="flex flex-row gap-3 items-center">
-                  <Label className="text-lg text-white">Collection Items</Label>
+                  <Label className="text-lg text-black dark:text-white">
+                    Collection Items
+                  </Label>
                   <Badge size="sm">
                     {field.state.value.length}{" "}
                     {field.state.value.length === 1 ? "item" : "items"}
@@ -192,8 +196,13 @@ export default function SyncCollectionForm({
                                               locale={userLocale}
                                               value={priceField.state.value}
                                               onBlur={priceField.handleBlur}
-                                              onValueChange={(maskedValue, unmaskedValue) =>
-                                                priceField.handleChange(unmaskedValue)
+                                              onValueChange={(
+                                                maskedValue,
+                                                unmaskedValue
+                                              ) =>
+                                                priceField.handleChange(
+                                                  unmaskedValue
+                                                )
                                               }
                                               placeholder="0.00"
                                             />

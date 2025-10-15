@@ -195,7 +195,7 @@ export function OrderForm(props: OrderFormProps) {
   });
 
   return (
-    <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+    <DialogContent className="max-w-2xl overflow-y-auto">
       <form
         onSubmit={(e) => {
           e.preventDefault();

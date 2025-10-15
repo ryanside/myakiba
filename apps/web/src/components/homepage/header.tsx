@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import React from "react";
 import { cn } from "@/lib/utils";
 import { MyAkibaLogo } from "../myakiba-logo";
+import { GithubIcon } from "@/components/sidebar/app-sidebar";
 
 // const menuItems = [
 //   { name: "Features", href: "#link" },
@@ -29,8 +30,7 @@ export const HeroHeader = () => {
         data-state={menuState && "active"}
         className={cn(
           "fixed z-20 w-full transition-all duration-300",
-          isScrolled &&
-            "bg-background/75 border-b border-black/5 backdrop-blur-lg"
+          isScrolled && "bg-background/75 backdrop-blur-lg"
         )}
       >
         <div className="mx-auto max-w-5xl px-6">
@@ -89,6 +89,21 @@ export const HeroHeader = () => {
                 </ul>
               </div> */}
               <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit">
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className={cn(isScrolled && "lg:hidden")}
+                >
+                  <a
+                    href="https://github.com/ryanside/myakiba"
+                    target="_blank"
+                    className="flex items-center gap-2"
+                  >
+                    <GithubIcon />
+                    <span>Github</span>
+                  </a>
+                </Button>
                 <Button
                   asChild
                   variant="ghost"

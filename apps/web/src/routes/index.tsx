@@ -1,5 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { HeroHeader } from "@/components/homepage/header";
 import HeroSection from "@/components/homepage/hero-section";
+import Features from "@/components/homepage/features";
+import FooterSection from "@/components/homepage/footer";
 
 export const Route = createFileRoute("/")({
   component: HomeComponent,
@@ -25,6 +28,11 @@ export const Route = createFileRoute("/")({
 
 function HomeComponent() {
   return (
-    <HeroSection />
+    <>
+      <HeroHeader />
+      <HeroSection />
+      <Features />
+      <FooterSection />
+    </>
   );
 }

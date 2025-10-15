@@ -34,10 +34,10 @@ import {
   moveItem,
 } from "@/queries/orders";
 import { searchSchema } from "@/lib/validations";
-import Loader from "@/components/loader";
 import type { CollectionItemFormValues } from "@/lib/collection/types";
 import { updateCollectionItem } from "@/queries/collection";
 import { authClient } from "@/lib/auth-client";
+import { OrdersGridSkeleton } from "@/components/skeletons/orders-grid-skeleton";
 
 export const Route = createFileRoute("/(app)/orders")({
   component: RouteComponent,
@@ -442,11 +442,7 @@ function RouteComponent() {
   };
 
   if (isPending) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 gap-y-4">
-        <Loader />
-      </div>
-    );
+    return <OrdersGridSkeleton />;
   }
 
   if (isError) {
@@ -460,6 +456,7 @@ function RouteComponent() {
   }
 
   const { orders, totalCount } = data;
+
 
   return (
     <div className="w-full space-y-4">

@@ -44,7 +44,9 @@ export default function SignInForm({
     await authClient.signIn.social(
       {
         provider: "google",
-        callbackURL: import.meta.env.PROD ? "/dashboard" : "http://localhost:3001/dashboard",
+        callbackURL: import.meta.env.PROD
+          ? "/dashboard"
+          : "http://localhost:3001/dashboard",
       },
       {
         onSuccess: () => {
@@ -82,6 +84,12 @@ export default function SignInForm({
             toast.success("Sign in successful");
           },
           onError: (error) => {
+            if (error.error.status === 403) {
+              toast.error(
+                "Please verify your email address. Check your inbox for a verification email."
+              );
+              return;
+            }
             toast.error(error.error.message || error.error.statusText);
           },
         }
@@ -101,9 +109,7 @@ export default function SignInForm({
       <div className="flex flex-col items-center justify-center gap-2">
         <div className="text-xl font-semibold flex items-center gap-2">
           <span className="">Login to</span>
-          <Link to="/">
-            <MyAkibaLogo size="full" className="size-28 inline-block" />
-          </Link>
+          <MyAkibaLogo size="full" className="size-28 inline-block" />
         </div>
         <div className="text-center text-sm">
           Don't have an account?{" "}
@@ -168,7 +174,15 @@ export default function SignInForm({
           <form.Field name="password">
             {(field) => (
               <div className="space-y-2">
-                <Label htmlFor={field.name}>Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor={field.name}>Password</Label>
+                  <Link
+                    to="/forgot-password"
+                    className="text-sm text-primary hover:underline underline-offset-4"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
                 <Input
                   id={field.name}
                   name={field.name}

@@ -73,7 +73,7 @@ export default function ItemMoveForm(props: ItemMoveFormProps) {
     },
   });
   return (
-    <DialogContent className="sm:max-w-[600px] overflow-y-auto">
+    <DialogContent className="max-w-2xl  overflow-y-auto">
       <form
         onSubmit={(e) => {
           e.preventDefault();

@@ -1,18 +1,21 @@
 import { RouterProvider, createRouter } from "@tanstack/react-router";
 import ReactDOM from "react-dom/client";
-import Loader from "./components/loader";
 import { routeTree } from "./routeTree.gen";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
-
 
 const router = createRouter({
   routeTree,
   defaultPreload: false,
-  defaultPendingComponent: () => <Loader />,
+  defaultPendingComponent: () => (
+    <div className="flex min-h-dvh items-center justify-center pt-8">
+      <Loader2 className="animate-spin" />
+    </div>
+  ),
   defaultNotFoundComponent: () => <div>404 Not Found</div>,
-  });
+});
 
 declare module "@tanstack/react-router" {
   interface Register {

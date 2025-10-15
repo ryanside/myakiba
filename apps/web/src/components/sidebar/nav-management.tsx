@@ -37,7 +37,7 @@ export function NavManagement({
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                className="data-[state=active]:shadow"
+                className="data-[active=true]:shadow-md data-[active=true]:outline data-[active=true]:text-sidebar-accent-foreground text-muted-foreground"
                 tooltip={item.title}
                 isActive={location.pathname === `${item.url}`}
               >

@@ -1,6 +1,8 @@
 import {
   ChartNoAxesCombined,
   ChartNoAxesGantt,
+  CreditCard,
+  DollarSign,
   HeartPlus,
   Home,
   Images,
@@ -39,7 +41,11 @@ const data = {
       url: "/analytics",
       icon: ChartNoAxesCombined,
     },
-
+    {
+      title: "Expenses",
+      url: "/expenses",
+      icon: DollarSign,
+    },
     {
       title: "Gallery",
       url: "/gallery",
@@ -81,7 +87,7 @@ function DiscordIcon() {
   );
 }
 
-function GithubIcon() {
+export function GithubIcon() {
   return (
     <svg
       role="img"
@@ -139,7 +145,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <SidebarMenuButton
                 asChild
                 tooltip="Add MFC items"
-                className="bg-sidebar-primary shadow-xs text-primary-foreground hover:bg-sidebar-primary/90 hover:text-primary-foreground active:bg-sidebar-primary/90 active:text-primary-foreground rounded-lg"
+                className="bg-sidebar-primary shadow-xs text-black hover:bg-sidebar-primary/90 hover:text-black active:bg-sidebar-primary/90 active:text-black rounded-lg"
               >
                 <Link to="/sync">
                   <PlusIcon size={18} />

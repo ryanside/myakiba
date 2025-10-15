@@ -16,8 +16,8 @@ import {
   SelectTrigger,
   SelectContent,
 } from "@/components/ui/select";
-import Loader from "@/components/loader";
 import { authClient } from "@/lib/auth-client";
+import { AnalyticsSkeleton } from "@/components/skeletons/analytics-skeleton";
 export const Route = createFileRoute("/(app)/analytics")({
   component: RouteComponent,
   head: () => ({
@@ -65,11 +65,7 @@ function RouteComponent() {
   });
 
   if (isPending) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 gap-y-4">
-        <Loader />
-      </div>
-    );
+    return <AnalyticsSkeleton />;
   }
 
   if (isError) {
@@ -124,6 +120,11 @@ function RouteComponent() {
                 <Progress value={range.count} className="" />
               </div>
             ))}
+            {analytics.priceRangeDistribution.length === 0 && (
+              <div className="text-muted-foreground text-center py-8">
+                No price range distribution found
+              </div>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -131,24 +132,31 @@ function RouteComponent() {
             <CardTitle>Scale Distribution</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {analytics.scaleDistribution.map((range, index) => (
-              <div key={index} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">
-                    {range.scale ? range.scale : "Non-Scale"}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <Badge className="text-foreground" appearance="ghost">
-                      {range.count} items
-                    </Badge>
-                    <span className="text-sm text-muted-foreground">
-                      {formatCurrency(range.totalValue, userCurrency)}
+            {analytics.scaleDistribution &&
+              analytics.scaleDistribution.map((range, index) => (
+                <div key={index} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">
+                      {range.scale ? range.scale : "Non-Scale"}
                     </span>
+                    <div className="flex items-center gap-2">
+                      <Badge className="text-foreground" appearance="ghost">
+                        {range.count} items
+                      </Badge>
+                      <span className="text-sm text-muted-foreground">
+                        {formatCurrency(range.totalValue, userCurrency)}
+                      </span>
+                    </div>
                   </div>
+                  <Progress value={range.count} className="" />
                 </div>
-                <Progress value={range.count} className="" />
-              </div>
-            ))}
+              ))}
+            {analytics.scaleDistribution &&
+              analytics.scaleDistribution.length === 0 && (
+                <div className="text-muted-foreground text-center py-8">
+                  No scale distribution found
+                </div>
+              )}
           </CardContent>
         </Card>
         <Card>
@@ -156,22 +164,28 @@ function RouteComponent() {
             <CardTitle>Top Shops</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {analytics.topShops.map((range, index) => (
-              <div key={index} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">{range.shop}</span>
-                  <div className="flex items-center gap-2">
-                    <Badge className="text-foreground" appearance="ghost">
-                      {range.count} items
-                    </Badge>
-                    <span className="text-sm text-muted-foreground">
-                      {formatCurrency(range.totalSpent, userCurrency)}
-                    </span>
+            {analytics.topShops &&
+              analytics.topShops.map((range, index) => (
+                <div key={index} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{range.shop}</span>
+                    <div className="flex items-center gap-2">
+                      <Badge className="text-foreground" appearance="ghost">
+                        {range.count} items
+                      </Badge>
+                      <span className="text-sm text-muted-foreground">
+                        {formatCurrency(range.totalSpent, userCurrency)}
+                      </span>
+                    </div>
                   </div>
+                  <Progress value={range.count} className="" />
                 </div>
-                <Progress value={range.count} className="" />
+              ))}
+            {analytics.topShops && analytics.topShops.length === 0 && (
+              <div className="text-muted-foreground text-center py-8">
+                No top shops found
               </div>
-            ))}
+            )}
           </CardContent>
         </Card>
         <Card>

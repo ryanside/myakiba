@@ -43,9 +43,12 @@ const itemsRouter = new Hono<{ Variables: Variables }>()
       }
     ),
     async (c) => {
+      const user = c.get("user");
+      if (!user) return c.text("Unauthorized", 401);
+
       const { itemId } = c.req.valid("param");
       const { data: orders, error } = await tryCatch(
-        ItemService.getItemRelatedOrders(itemId)
+        ItemService.getItemRelatedOrders(user.id, itemId)
       );
       if (error) {
         return c.text("Failed to get item related orders", 500);
@@ -66,9 +69,12 @@ const itemsRouter = new Hono<{ Variables: Variables }>()
       }
     ),
     async (c) => {
+      const user = c.get("user");
+      if (!user) return c.text("Unauthorized", 401);
+
       const { itemId } = c.req.valid("param");
       const { data: collection, error } = await tryCatch(
-        ItemService.getItemRelatedCollection(itemId)
+        ItemService.getItemRelatedCollection(user.id, itemId)
       );
       if (error) {
         return c.text("Failed to get item related collections", 500);

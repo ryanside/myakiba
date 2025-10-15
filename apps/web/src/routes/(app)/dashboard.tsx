@@ -8,7 +8,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Package,
   ShoppingCart,
@@ -25,6 +24,7 @@ import { ChartPieDonutText } from "@/components/dashboard/pie-chart-donut-text";
 import { ChartBarLabelCustom } from "@/components/dashboard/chart-bar-label-custom";
 import { formatCurrency } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
+import { DashboardSkeleton } from "@/components/skeletons/dashboard-skeleton";
 
 export const Route = createFileRoute("/(app)/dashboard")({
   component: RouteComponent,
@@ -49,13 +49,7 @@ export const Route = createFileRoute("/(app)/dashboard")({
 });
 
 function RouteComponent() {
-  return (
-    <div className="space-y-4">
-      {/* <Suspense fallback={<DashboardSkeleton />}> */}
-      <DashboardContent />
-      {/* </Suspense> */}
-    </div>
-  );
+  return <DashboardContent />;
 }
 
 function DashboardContent() {
@@ -138,17 +132,19 @@ function DashboardContent() {
         <StatsCard
           title="Total Spent"
           value={formatCurrency(
-            collectionStats[0].totalSpent ||
-              0 + ordersSummary[0].totalShippingAllTime ||
-              0 + ordersSummary[0].totalTaxesAllTime ||
-              0 + ordersSummary[0].totalDutiesAllTime ||
-              0 + ordersSummary[0].totalTariffsAllTime ||
-              0 + ordersSummary[0].totalMiscFeesAllTime ||
-              0,
+            Number(collectionStats[0].totalSpent || 0) +
+              Number(ordersSummary[0].totalShippingAllTime || 0) +
+              Number(ordersSummary[0].totalTaxesAllTime || 0) +
+              Number(ordersSummary[0].totalDutiesAllTime || 0) +
+              Number(ordersSummary[0].totalTariffsAllTime || 0) +
+              Number(ordersSummary[0].totalMiscFeesAllTime || 0),
             userCurrency
           )}
           subtitle="this month"
-          subvalue={`+${formatCurrency(collectionStats[0].totalSpentThisMonth || 0, userCurrency)}`}
+          subvalue={`+${formatCurrency(
+            collectionStats[0].totalSpentThisMonth || 0,
+            userCurrency
+          )}`}
           icon={DollarSign}
         />
         <StatsCard
@@ -186,15 +182,19 @@ function DashboardContent() {
             <div className="space-y-3">
               <div className="flex justify-between text-muted-foreground text-sm items-center">
                 <span>Active Orders</span>
-                <span>{ordersSummary[0].totalActiveOrderCount || 0}</span>
+                <span className="text-foreground">
+                  {ordersSummary[0].totalActiveOrderCount || 0}
+                </span>
               </div>
               <div className="flex justify-between text-muted-foreground text-sm items-center">
                 <span>Orders This Month</span>
-                <span>{ordersSummary[0].thisMonthOrderCount || 0}</span>
+                <span className="text-foreground">
+                  {ordersSummary[0].thisMonthOrderCount || 0}
+                </span>
               </div>
               <div className="flex justify-between text-muted-foreground text-sm items-center">
                 <span>Total Item Costs</span>
-                <span>
+                <span className="text-foreground">
                   {formatCurrency(
                     collectionStats[0].totalActiveOrderPrice || 0,
                     userCurrency
@@ -203,7 +203,7 @@ function DashboardContent() {
               </div>
               <div className="flex justify-between text-muted-foreground text-sm items-center">
                 <span>Total Shipping</span>
-                <span>
+                <span className="text-foreground">
                   {formatCurrency(
                     ordersSummary[0].totalActiveOrderShipping || 0,
                     userCurrency
@@ -212,19 +212,25 @@ function DashboardContent() {
               </div>
               <div className="flex justify-between text-muted-foreground text-sm items-center">
                 <span>Total Taxes</span>
-                <span>
-                  {formatCurrency(ordersSummary[0].totalActiveOrderTaxes || 0, userCurrency)}
+                <span className="text-foreground">
+                  {formatCurrency(
+                    ordersSummary[0].totalActiveOrderTaxes || 0,
+                    userCurrency
+                  )}
                 </span>
               </div>
               <div className="flex justify-between text-muted-foreground text-sm items-center">
                 <span>Total Duties</span>
-                <span>
-                  {formatCurrency(ordersSummary[0].totalActiveOrderDuties || 0, userCurrency)}
+                <span className="text-foreground">
+                  {formatCurrency(
+                    ordersSummary[0].totalActiveOrderDuties || 0,
+                    userCurrency
+                  )}
                 </span>
               </div>
               <div className="flex justify-between text-muted-foreground text-sm items-center">
                 <span>Total Tariffs</span>
-                <span>
+                <span className="text-foreground">
                   {formatCurrency(
                     ordersSummary[0].totalActiveOrderTariffs || 0,
                     userCurrency
@@ -233,7 +239,7 @@ function DashboardContent() {
               </div>
               <div className="flex justify-between text-muted-foreground text-sm items-center">
                 <span>Total Misc Fees</span>
-                <span>
+                <span className="text-foreground">
                   {formatCurrency(
                     ordersSummary[0].totalActiveOrderMiscFees || 0,
                     userCurrency
@@ -246,12 +252,12 @@ function DashboardContent() {
             <span>Total</span>
             <span>
               {formatCurrency(
-                collectionStats[0].totalActiveOrderPrice +
-                  ordersSummary[0].totalActiveOrderShipping +
-                  ordersSummary[0].totalActiveOrderTaxes +
-                  ordersSummary[0].totalActiveOrderDuties +
-                  ordersSummary[0].totalActiveOrderTariffs +
-                  ordersSummary[0].totalActiveOrderMiscFees,
+                Number(collectionStats[0].totalActiveOrderPrice || 0) +
+                  Number(ordersSummary[0].totalActiveOrderShipping || 0) +
+                  Number(ordersSummary[0].totalActiveOrderTaxes || 0) +
+                  Number(ordersSummary[0].totalActiveOrderDuties || 0) +
+                  Number(ordersSummary[0].totalActiveOrderTariffs || 0) +
+                  Number(ordersSummary[0].totalActiveOrderMiscFees || 0),
                 userCurrency
               )}
             </span>
@@ -269,11 +275,9 @@ function DashboardContent() {
             <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
               {orders.map((order) => (
                 <Link to={`/orders/$id`} params={{ id: order.orderId }}>
-                  <Card key={order.orderId}>
+                  <Card key={order.orderId} className="h-[210px]">
                     <CardHeader className="">
-                      <CardTitle className="text-pretty">
-                        {order.title}
-                      </CardTitle>
+                      <CardTitle className="truncate">{order.title}</CardTitle>
                       <CardDescription>
                         {order.shop ? `${order.shop} • ` : ""}{" "}
                         {order.releaseMonthYear
@@ -472,106 +476,5 @@ function StatsCard({
         <p className="text-xs text-muted-foreground">{subValue}</p> */}
       </CardContent>
     </Card>
-  );
-}
-
-function DashboardSkeleton() {
-  return (
-    <div className="space-y-4">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {[...Array(4)].map((_, i) => (
-          <Card key={i}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-4 w-4" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-8 w-16 mb-2" />
-              <Skeleton className="h-3 w-24" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {[...Array(3)].map((_, i) => (
-          <Card key={i}>
-            <CardHeader>
-              <Skeleton className="h-5 w-32" />
-              <Skeleton className="h-4 w-24" />
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {[...Array(4)].map((_, j) => (
-                  <div key={j} className="flex justify-between items-center">
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-4 w-12" />
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
-        <Card className="lg:col-span-2 row-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <Skeleton className="h-6 w-24" />
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-              {[...Array(6)].map((_, i) => (
-                <Card key={i} className="border-2">
-                  <CardHeader className="pb-3">
-                    <Skeleton className="h-5 w-32" />
-                    <Skeleton className="h-4 w-24" />
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="flex gap-2 mb-3">
-                      {[...Array(3)].map((_, j) => (
-                        <Skeleton key={j} className="h-16 w-16 rounded-md" />
-                      ))}
-                    </div>
-                    <Skeleton className="h-4 w-20" />
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="col-span-1">
-          <CardHeader>
-            <Skeleton className="h-5 w-36" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <Skeleton className="h-12 w-12 rounded-md" />
-                  <div className="flex-1">
-                    <Skeleton className="h-4 w-24 mb-1" />
-                    <Skeleton className="h-3 w-16 mb-2" />
-                    <Skeleton className="h-3 w-20" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="col-span-1">
-          <CardHeader>
-            <Skeleton className="h-5 w-20" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <Skeleton className="h-4 w-32" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
   );
 }

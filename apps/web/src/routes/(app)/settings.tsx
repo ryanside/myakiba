@@ -83,7 +83,7 @@ function RouteComponent() {
         <PreferencesForm user={session.user} />
         <ProfileForm user={session.user} />
         <PasswordForm />
-        <DangerZone navigate={navigate} />
+        <DeleteAccountForm navigate={navigate} />
       </div>
     </div>
   );
@@ -427,7 +427,8 @@ function PreferencesForm({ user }: { user: User }) {
                   </SelectContent>
                 </Select>
                 <p className="text-sm text-muted-foreground">
-                  Choose your preferred currency for displaying and inputting prices
+                  Choose your preferred currency for displaying and inputting
+                  prices
                 </p>
                 {field.state.meta.errors.length > 0 && (
                   <p className="text-sm text-destructive">
@@ -461,7 +462,7 @@ function PreferencesForm({ user }: { user: User }) {
   );
 }
 
-function DangerZone({ navigate }: { navigate: UseNavigateResult<string> }) {
+function DeleteAccountForm({ navigate }: { navigate: UseNavigateResult<string> }) {
   const form = useForm({
     defaultValues: {
       password: "",
@@ -492,11 +493,12 @@ function DangerZone({ navigate }: { navigate: UseNavigateResult<string> }) {
   });
 
   return (
-    <Card className="border-destructive">
+    <Card>
       <CardHeader>
-        <CardTitle className="text-destructive">Danger Zone</CardTitle>
+        <CardTitle>Delete Account</CardTitle>
         <CardDescription>
-          Irreversible actions that will permanently affect your account
+          Permanently delete your account and remove all your data from our
+          servers
         </CardDescription>
       </CardHeader>
       <CardContent>

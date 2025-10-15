@@ -11,7 +11,7 @@ import {
 
 // Parse YYYY-MM-DD string to Date object in local timezone
 function parseLocalDate(dateString: string): Date {
-  const [year, month, day] = dateString.split('-').map(Number);
+  const [year, month, day] = dateString.split("-").map(Number);
   return new Date(year, month - 1, day);
 }
 
@@ -38,7 +38,7 @@ export function DatePicker({
 
   const handleSelect = (date: Date | undefined): void => {
     if (!onChange) return;
-    
+
     if (date) {
       // Format date as YYYY-MM-DD to match the input[type="date"] format
       const formattedDate = format(date, "yyyy-MM-dd");
@@ -71,6 +71,7 @@ export function DatePicker({
           mode="single"
           selected={dateValue}
           onSelect={handleSelect}
+          captionLayout="dropdown"
           initialFocus
         />
       </PopoverContent>

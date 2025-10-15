@@ -14,8 +14,10 @@ import { Button } from "../ui/button";
 import { Loader2 } from "lucide-react";
 export default function ChooseSyncOption({
   handleSyncOption,
+  emailVerified,
 }: {
   handleSyncOption: (option: "csv" | "order" | "collection") => void;
+  emailVerified: boolean;
 }) {
   const form = useForm({
     defaultValues: {
@@ -32,11 +34,11 @@ export default function ChooseSyncOption({
         e.stopPropagation();
         void form.handleSubmit();
       }}
-      className="rounded-lg border p-4 space-y-4 w-full"
+      className="rounded-xl border bg-card p-6 space-y-4 w-full"
     >
       <FieldGroup>
         <FieldSet className="flex flex-col gap-4 justify-center">
-          <div className="flex flex-row py-1">
+          <div className="flex flex-row">
             <div className="flex flex-col gap-0">
               <FieldLabel htmlFor="sync-option">
                 Choose a sync option
@@ -50,7 +52,7 @@ export default function ChooseSyncOption({
               children={([canSubmit, isSubmitting]) => (
                 <Button
                   type="submit"
-                  disabled={!canSubmit}
+                  disabled={!canSubmit || !emailVerified}
                   variant="primary"
                   className="ml-auto"
                   size="md"

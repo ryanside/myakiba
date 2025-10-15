@@ -81,9 +81,15 @@ export default function SignUpForm({
           headers: {
             "x-captcha-response": value.turnstileToken,
           },
-          onSuccess: () => {
+          onSuccess: async () => {
+            await authClient.sendVerificationEmail({
+              email: value.email,
+              callbackURL: import.meta.env.PROD
+                ? "https://myakiba.app/sync"
+                : "http://localhost:3001/sync",
+            });
             navigate({
-              to: "/dashboard",
+              to: "/sync",
             });
             toast.success("Sign up successful");
           },
@@ -111,9 +117,7 @@ export default function SignUpForm({
       <div className="flex flex-col items-center justify-center gap-2">
         <div className="text-xl font-semibold flex items-center gap-2">
           <span className="">Welcome to</span>
-          <Link to="/">
-            <MyAkibaLogo size="full" className="size-28 inline-block" />
-          </Link>
+          <MyAkibaLogo size="full" className="size-28 inline-block" />
         </div>
         <div className="text-center text-sm">
           Already have an account?{" "}
@@ -238,7 +242,15 @@ export default function SignUpForm({
           >
             {(field) => (
               <div className="space-y-2">
-                <Label htmlFor={field.name}>Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor={field.name}>Password</Label>
+                  <Link
+                    to="/forgot-password"
+                    className="text-sm text-primary hover:underline underline-offset-4"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
                 <Input
                   id={field.name}
                   name={field.name}

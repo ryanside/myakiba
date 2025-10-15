@@ -11,7 +11,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Button } from "../ui/button";
 import { Skeleton } from "../ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { User } from "lucide-react";
+import { LogOut, Settings, User } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function UserMenu() {
@@ -53,7 +53,11 @@ export default function UserMenu() {
           </AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
-      <DropdownMenuContent>
+      <DropdownMenuContent className="min-w-48">
+        <div className="flex bg-gradient-to-br from-background via-muted to-background rounded-sm outline outline-border items-center gap-2 px-2 py-1.5 text-sm">
+          {session.user.username}
+        </div>
+        <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={() => {
             navigate({
@@ -64,6 +68,7 @@ export default function UserMenu() {
             });
           }}
         >
+          <User />
           Profile
         </DropdownMenuItem>
         <DropdownMenuItem
@@ -73,6 +78,7 @@ export default function UserMenu() {
             });
           }}
         >
+          <Settings />
           Settings
         </DropdownMenuItem>
         <DropdownMenuSeparator />
@@ -81,6 +87,7 @@ export default function UserMenu() {
             handleSignOut();
           }}
         >
+          <LogOut />
           Sign Out
         </DropdownMenuItem>
       </DropdownMenuContent>

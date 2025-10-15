@@ -34,7 +34,9 @@ export default function SyncCsvForm({
         >
           <ArrowLeft />
         </Button>
-        <h1 className="text-lg text-white">Upload MyFigureCollection CSV</h1>
+        <h1 className="text-lg text-black dark:text-white">
+          Upload MyFigureCollection CSV
+        </h1>
       </div>
       <form
         onSubmit={(e) => {
@@ -81,7 +83,7 @@ export default function SyncCsvForm({
             return (
               <div className="space-y-4">
                 <div className="flex flex-row gap-2">
-                  <Label className="text-lg text-white">
+                  <Label className="text-lg text-black dark:text-white">
                     Select MyFigureCollection CSV File
                   </Label>
                   <csvForm.Subscribe

@@ -11,9 +11,9 @@ import type {
   CollectionItemFormValues,
 } from "@/lib/collection/types";
 import { getCollection, updateCollectionItem } from "@/queries/collection";
-import Loader from "@/components/loader";
 import { CollectionDataGrid } from "@/components/collection/collection-data-grid";
 import { collectionSearchSchema } from "@/lib/validations";
+import { CollectionSkeleton } from "@/components/skeletons/collection-skeleton";
 import { deleteCollectionItems } from "@/queries/collection";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -147,11 +147,7 @@ function RouteComponent() {
   };
 
   if (isPending) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 gap-y-4">
-        <Loader />
-      </div>
-    );
+    return <CollectionSkeleton />;
   }
 
   if (isError) {

@@ -28,10 +28,10 @@ import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { OrderForm } from "@/components/orders/order-form";
 import type { EditedOrder, CascadeOptions } from "@/lib/orders/types";
 import { toast } from "sonner";
-import Loader from "@/components/loader";
 import type { CollectionItemFormValues } from "@/lib/collection/types";
 import { updateCollectionItem } from "@/queries/collection";
 import { authClient } from "@/lib/auth-client";
+import { OrderDetailSkeleton } from "@/components/skeletons/order-detail-skeleton";
 
 export const Route = createFileRoute("/(app)/orders_/$id")({
   component: RouteComponent,
@@ -189,11 +189,7 @@ function RouteComponent() {
   };
 
   if (isPending) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 gap-y-4">
-        <Loader />
-      </div>
-    );
+    return <OrderDetailSkeleton />;
   }
 
   if (isError) {
@@ -225,6 +221,8 @@ function RouteComponent() {
   const tariffs = parseFloat(order.tariffs || "0");
   const miscFees = parseFloat(order.miscFees || "0");
   const totalAmount = parseFloat(order.total);
+
+
 
   return (
     <div className="space-y-6">

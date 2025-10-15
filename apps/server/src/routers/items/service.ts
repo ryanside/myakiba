@@ -7,7 +7,7 @@ import {
   item_release,
   order,
 } from "@/db/schema/figure";
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import type {
   ItemReleasesResponse,
   ItemRelease,
@@ -102,7 +102,7 @@ class ItemService {
 
     return itemData[0];
   }
-  async getItemRelatedOrders(itemId: number) {
+  async getItemRelatedOrders(userId: string, itemId: number) {
     const orders = await db
       .select({
         id: order.id,
@@ -117,7 +117,7 @@ class ItemService {
       })
       .from(order)
       .leftJoin(collection, eq(order.id, collection.orderId))
-      .where(eq(collection.itemId, itemId))
+      .where(and(eq(collection.itemId, itemId), eq(order.userId, userId)))
       .groupBy(order.id)
       .orderBy(desc(order.releaseMonthYear));
 
@@ -127,7 +127,7 @@ class ItemService {
 
     return orders;
   }
-  async getItemRelatedCollection(itemId: number) {
+  async getItemRelatedCollection(userId: string, itemId: number) {
     const collectionItems = await db
       .select({
         id: collection.id,
@@ -151,7 +151,7 @@ class ItemService {
         updatedAt: collection.updatedAt,
       })
       .from(collection)
-      .where(eq(collection.itemId, itemId))
+      .where(and(eq(collection.itemId, itemId), eq(collection.userId, userId)))
       .groupBy(collection.id);
 
     if (!collectionItems) {

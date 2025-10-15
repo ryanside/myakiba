@@ -18,11 +18,11 @@
 }
 
 :root {
-  --background: #ffffff;
+  --background: #fafafa;
   --foreground: #201127;
-  --card: #ffffff;
+  --card: #fefefe;
   --card-foreground: #201127;
-  --popover: #ffffff;
+  --popover: #fafafa;
   --popover-foreground: #201127;
   --primary: #a2d843;
   --primary-foreground: #201127;
@@ -32,25 +32,26 @@
   --muted-foreground: #796b80;
   --accent: #eeeeee;
   --accent-foreground: #201127;
-  --destructive: #ff5b5b;
-  --destructive-foreground: #fafafa;
+  --destructive: #e54b4f;
+  --destructive-foreground: #201127;
   --border: #e9e5eb;
   --input: #e9e5eb;
   --ring: #a2d843;
   --chart-1: #7353e7;
-  --chart-2: #b0e753;
+  --chart-2: #a2d843;
   --chart-3: #e85479;
   --chart-4: #53dde7;
   --chart-5: #e8aa54;
+  --chart-6: oklch(45.7% 0.24 277.023);
   --sidebar: #f5f3f6;
   --sidebar-foreground: #201127;
   --sidebar-primary: #a2d843;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #ffffff;
+  --sidebar-primary-foreground: #201127;
+  --sidebar-accent: #fefefe;
   --sidebar-accent-foreground: #201127;
   --sidebar-border: #e9e5eb;
   --sidebar-ring: #a2d843;
-  --font-sans: Inter, ui-monospace, monospace;
+  --font-sans: Inter, ui-sans-serif, sans-serif, system-ui;
   --font-serif: serif;
   --font-mono: JetBrains Mono, monospace;
   --radius: 0.75rem;
@@ -70,43 +71,43 @@
   --shadow-2xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.13);
   --tracking-normal: 0rem;
   --spacing: 0.25rem;
-  --darker-background: #ffffff;
 }
 
 .dark {
-  --background: #121212;
+  --background: #141414;
   --foreground: #c1c1c1;
   --card: #121212;
   --card-foreground: #c1c1c1;
-  --popover: #121212;
+  --popover: #141414;
   --popover-foreground: #c1c1c1;
   --primary: #b0e753;
-  --primary-foreground: #1b181a;
+  --primary-foreground: #141414;
   --secondary: #7353e7;
-  --secondary-foreground: #1b181a;
+  --secondary-foreground: #141414;
   --muted: #222222;
   --muted-foreground: #888888;
   --accent: #333333;
   --accent-foreground: #c1c1c1;
-  --destructive: #ff5b5b;
-  --destructive-foreground: #1b181a;
+  --destructive: #e54b4f;
+  --destructive-foreground: #141414;
   --border: #222222;
   --input: #222222;
   --ring: #b0e753;
   --chart-1: #7353e7;
-  --chart-2: #b0e753;
+  --chart-2: #a2d843;
   --chart-3: #e85479;
   --chart-4: #53dde7;
   --chart-5: #e8aa54;
+  --chart-6: oklch(45.7% 0.24 277.023);
   --sidebar: #121212;
   --sidebar-foreground: #c1c1c1;
   --sidebar-primary: #b0e753;
-  --sidebar-primary-foreground: #1b181a;
+  --sidebar-primary-foreground: #141414;
   --sidebar-accent: #333333;
   --sidebar-accent-foreground: #c1c1c1;
   --sidebar-border: #222222;
   --sidebar-ring: #b0e753;
-  --font-sans: Inter, ui-monospace, monospace;
+  --font-sans: Inter, ui-sans-serif, sans-serif, system-ui;
   --font-serif: serif;
   --font-mono: JetBrains Mono, monospace;
   --radius: 0.75rem;
@@ -124,7 +125,6 @@
   --shadow-lg: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 4px 6px -1px hsl(0 0% 0% / 0.05);
   --shadow-xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 8px 10px -1px hsl(0 0% 0% / 0.05);
   --shadow-2xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.13);
-  --darker-background: #000000;
 }
 
 @theme inline {
@@ -152,6 +152,7 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -160,7 +161,7 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --color-darker-background: var(--darker-background);
+
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
   --font-serif: var(--font-serif);
@@ -185,10 +186,6 @@
   --tracking-wide: calc(var(--tracking-normal) + 0.025em);
   --tracking-wider: calc(var(--tracking-normal) + 0.05em);
   --tracking-widest: calc(var(--tracking-normal) + 0.1em);
-}
-
-body {
-  letter-spacing: var(--tracking-normal);
 }
 
 body {

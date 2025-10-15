@@ -30,7 +30,15 @@ import {
   DialogClose,
   DialogTrigger,
 } from "../ui/dialog";
-import { X, ChevronDown, Loader2, ArrowLeft, Plus, Edit } from "lucide-react";
+import {
+  X,
+  ChevronDown,
+  Loader2,
+  ArrowLeft,
+  Plus,
+  Edit,
+  Info,
+} from "lucide-react";
 import * as z from "zod";
 import type { CascadeOptions } from "@/lib/orders/types";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
@@ -38,6 +46,11 @@ import type { SyncFormOrder, SyncFormOrderItem } from "@/lib/sync/types";
 import { Textarea } from "../ui/textarea";
 import { authClient } from "@/lib/auth-client";
 import { getCurrencyLocale } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function SyncOrderForm({
   setCurrentStep,
@@ -134,7 +147,7 @@ export default function SyncOrderForm({
         >
           <ArrowLeft />
         </Button>
-        <h1 className="text-lg text-white">Add Order</h1>
+        <h1 className="text-lg text-black dark:text-white">Add Order</h1>
       </div>
       <form
         onSubmit={(e) => {
@@ -145,7 +158,9 @@ export default function SyncOrderForm({
         className="rounded-lg border p-4 space-y-4 w-full"
       >
         <div className="flex flex-row gap-2">
-          <Label className="text-lg text-white">Order Details</Label>
+          <Label className="text-lg text-black dark:text-white">
+            Order Details
+          </Label>
           <orderForm.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
             children={([canSubmit, isSubmitting]) => (
@@ -548,11 +563,23 @@ export default function SyncOrderForm({
             return (
               <div className="flex flex-col gap-4">
                 <div className="flex flex-row gap-3 items-center">
-                  <Label className="text-lg text-white">Order Items</Label>
+                  <Label className="text-lg text-black dark:text-white">
+                    Order Items
+                  </Label>
                   <Badge size="sm">
                     {field.state.value.length}{" "}
                     {field.state.value.length === 1 ? "item" : "items"}
                   </Badge>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="w-4 h-4" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-h-40">
+                      <p>
+                        Once you set the order and/or item(s) status to "Owned", the item(s) will get added to your collection.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
                 {field.state.value.map((_, i) => {
                   return (
@@ -587,7 +614,7 @@ export default function SyncOrderForm({
                                 </DialogTrigger>
                                 <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
                                   <DialogHeader>
-                                    <DialogTitle>Edit Order Item</DialogTitle>
+                                    <DialogTitle>Edit Order Item </DialogTitle>
                                     <DialogDescription>
                                       MFC Item ID:{" "}
                                       {subField.state.value || "Not set"}
@@ -615,8 +642,13 @@ export default function SyncOrderForm({
                                               locale={userLocale}
                                               value={priceField.state.value}
                                               onBlur={priceField.handleBlur}
-                                              onValueChange={(maskedValue, unmaskedValue) =>
-                                                priceField.handleChange(unmaskedValue)
+                                              onValueChange={(
+                                                maskedValue,
+                                                unmaskedValue
+                                              ) =>
+                                                priceField.handleChange(
+                                                  unmaskedValue
+                                                )
                                               }
                                               placeholder="0.00"
                                             />
@@ -855,11 +887,14 @@ export default function SyncOrderForm({
                                               id={`orderDate-${i}`}
                                               name={orderDateField.name}
                                               value={
-                                                orderDateField.state.value ?? null
+                                                orderDateField.state.value ??
+                                                null
                                               }
                                               onBlur={orderDateField.handleBlur}
                                               onChange={(value) =>
-                                                orderDateField.handleChange(value ?? "")
+                                                orderDateField.handleChange(
+                                                  value ?? ""
+                                                )
                                               }
                                               placeholder="Select order date"
                                             />
@@ -877,13 +912,16 @@ export default function SyncOrderForm({
                                               id={`paymentDate-${i}`}
                                               name={paymentDateField.name}
                                               value={
-                                                paymentDateField.state.value ?? null
+                                                paymentDateField.state.value ??
+                                                null
                                               }
                                               onBlur={
                                                 paymentDateField.handleBlur
                                               }
                                               onChange={(value) =>
-                                                paymentDateField.handleChange(value ?? "")
+                                                paymentDateField.handleChange(
+                                                  value ?? ""
+                                                )
                                               }
                                               placeholder="Select payment date"
                                             />
@@ -906,13 +944,16 @@ export default function SyncOrderForm({
                                               id={`shippingDate-${i}`}
                                               name={shippingDateField.name}
                                               value={
-                                                shippingDateField.state.value ?? null
+                                                shippingDateField.state.value ??
+                                                null
                                               }
                                               onBlur={
                                                 shippingDateField.handleBlur
                                               }
                                               onChange={(value) =>
-                                                shippingDateField.handleChange(value ?? "")
+                                                shippingDateField.handleChange(
+                                                  value ?? ""
+                                                )
                                               }
                                               placeholder="Select shipping date"
                                             />
@@ -932,13 +973,16 @@ export default function SyncOrderForm({
                                               id={`collectionDate-${i}`}
                                               name={collectionDateField.name}
                                               value={
-                                                collectionDateField.state.value ?? null
+                                                collectionDateField.state
+                                                  .value ?? null
                                               }
                                               onBlur={
                                                 collectionDateField.handleBlur
                                               }
                                               onChange={(value) =>
-                                                collectionDateField.handleChange(value ?? "")
+                                                collectionDateField.handleChange(
+                                                  value ?? ""
+                                                )
                                               }
                                               placeholder="Select collection date"
                                             />

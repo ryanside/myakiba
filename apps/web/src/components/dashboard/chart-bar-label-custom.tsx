@@ -110,51 +110,51 @@ export function ChartBarLabelCustom({
         <div className="grid grid-cols-2 gap-2">
           <div className="flex justify-between">
             <span>Item Costs</span>
-            <span className="font-medium">
+            <span className="text-foreground">
               {formatCurrency(data.totalSpent, currency)}
             </span>
           </div>
           <div className="flex justify-between">
             <span>Shipping</span>
-            <span className="font-medium">
+            <span className="text-foreground">
               {formatCurrency(data.totalShipping, currency)}
             </span>
           </div>
           <div className="flex justify-between">
             <span>Taxes</span>
-            <span className="font-medium">
+            <span className="text-foreground">
               {formatCurrency(data.totalTaxes, currency)}
             </span>
           </div>
           <div className="flex justify-between">
             <span>Duties</span>
-            <span className="font-medium">
+            <span className="text-foreground">
               {formatCurrency(data.totalDuties, currency)}
             </span>
           </div>
           <div className="flex justify-between">
             <span>Tariffs</span>
-            <span className="font-medium">
+            <span className="text-foreground">
               {formatCurrency(data.totalTariffs, currency)}
             </span>
           </div>
           <div className="flex justify-between">
             <span>Misc Fees</span>
-            <span className="font-medium">
+            <span className="text-foreground">
               {formatCurrency(data.totalMiscFees, currency)}
             </span>
           </div>
         </div>
         <div className="flex justify-between text-foreground font-medium text-sm mt-2.5">
           <span>Total</span>
-          <span>
+          <span className="text-foreground">
             {formatCurrency(
-              data.totalSpent +
-                data.totalShipping +
-                data.totalTaxes +
-                data.totalDuties +
-                data.totalTariffs +
-                data.totalMiscFees,
+              Number(data.totalSpent) +
+                Number(data.totalShipping) +
+                Number(data.totalTaxes) +
+                Number(data.totalDuties) +
+                Number(data.totalTariffs) +
+                Number(data.totalMiscFees),
               currency
             )}
           </span>

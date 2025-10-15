@@ -17,18 +17,33 @@ export const auth = betterAuth({
   trustedOrigins: [process.env.CORS_ORIGIN || ""],
   emailAndPassword: {
     enabled: true,
-    sendResetPassword: async ({ user, url, token }, request) => {
+    sendResetPassword: async ({ user, url }) => {
       await resend.emails.send({
-        from: "Myakiba <onboarding@resend.dev>",
-        to: ["delivered@resend.dev"],
+        from: import.meta.env.PROD
+          ? "myakiba <noreply@myakiba.app>"
+          : "myakiba <onboarding@resend.dev>",
+        to: user.email,
         subject: "Reset your password",
         text: `Click the link to reset your password: ${url}`,
         // react: EmailTemplate({ firstName: user.name }),
       });
     },
-    onPasswordReset: async ({ user }, request) => {
+    onPasswordReset: async ({ user }) => {
       // your logic here
       console.log(`Password for user ${user.email} has been reset.`);
+    },
+  },
+  emailVerification: {
+    autoSignInAfterVerification: true,
+    sendVerificationEmail: async ({ user, url }) => {
+      await resend.emails.send({
+        from: import.meta.env.PROD
+          ? "myakiba <noreply@myakiba.app>"
+          : "myakiba <onboarding@resend.dev>",
+        to: user.email,
+        subject: "Verify your email address",
+        text: `Click the link to verify your email: ${url}`,
+      });
     },
   },
   socialProviders: {

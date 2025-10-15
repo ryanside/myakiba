@@ -202,7 +202,7 @@ export default function FiltersForm({
   });
 
   return (
-    <DialogContent className="max-w-2xl max-h-[100vh]">
+    <DialogContent className="max-w-2xl">
       <form
         onSubmit={(e) => {
           e.preventDefault();

@@ -9,11 +9,11 @@ import {
   Package2,
   Calendar,
   Edit,
-  Trash2,
   Trash,
+  Loader2,
 } from "lucide-react";
-import Loader from "@/components/loader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ItemDetailSkeleton } from "@/components/skeletons/item-detail-skeleton";
 import {
   Accordion,
   AccordionContent,
@@ -288,11 +288,7 @@ function RouteComponent() {
   }, [data?.item]);
 
   if (isPending) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 gap-y-4">
-        <Loader />
-      </div>
-    );
+    return <ItemDetailSkeleton />;
   }
 
   if (isError) {
@@ -315,6 +311,7 @@ function RouteComponent() {
 
   const collectionItems = itemRelatedCollection?.collection || [];
   const ordersList = itemRelatedOrders?.orders || [];
+
 
   return (
     <div className="flex flex-col">
@@ -465,8 +462,8 @@ function RouteComponent() {
           </CardHeader>
           <CardContent className="flex-1 px-4 overflow-y-auto">
             {isPendingItemRelatedCollection ? (
-              <div className="flex justify-center py-8">
-                <Loader />
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="animate-spin" />
               </div>
             ) : isErrorItemRelatedCollection ? (
               <Empty>
@@ -600,11 +597,15 @@ function RouteComponent() {
                         </div>
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
                           <span>Shop</span>
-                          <span className="text-foreground font-medium">{collectionItem.shop || "n/a"}</span>
+                          <span className="text-foreground font-medium">
+                            {collectionItem.shop || "n/a"}
+                          </span>
                         </div>
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
                           <span>Shipping Method</span>
-                          <span className="text-foreground font-medium">{collectionItem.shippingMethod}</span>
+                          <span className="text-foreground font-medium">
+                            {collectionItem.shippingMethod}
+                          </span>
                         </div>
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
                           <span>Release</span>
@@ -617,19 +618,27 @@ function RouteComponent() {
                         </div>
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
                           <span>Order Date</span>
-                          <span className="text-foreground font-medium">{collectionItem.orderDate || "n/a"}</span>
+                          <span className="text-foreground font-medium">
+                            {collectionItem.orderDate || "n/a"}
+                          </span>
                         </div>
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
                           <span>Payment Date</span>
-                          <span className="text-foreground font-medium">{collectionItem.paymentDate || "n/a"}</span>
+                          <span className="text-foreground font-medium">
+                            {collectionItem.paymentDate || "n/a"}
+                          </span>
                         </div>
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
                           <span>Shipping Date</span>
-                          <span className="text-foreground font-medium">{collectionItem.shippingDate || "n/a"}</span>
+                          <span className="text-foreground font-medium">
+                            {collectionItem.shippingDate || "n/a"}
+                          </span>
                         </div>
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
                           <span>Collection Date</span>
-                          <span className="text-foreground font-medium">{collectionItem.collectionDate || "n/a"}</span>
+                          <span className="text-foreground font-medium">
+                            {collectionItem.collectionDate || "n/a"}
+                          </span>
                         </div>
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
                           <span>Score</span>

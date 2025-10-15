@@ -17,6 +17,11 @@ import { tryCatch } from "@/lib/utils";
 import { createId } from "@paralleldrive/cuid2";
 import { createBunWebSocket } from "hono/bun";
 import type { WSContext } from "hono/ws";
+import {
+  csvRateLimit,
+  orderRateLimit,
+  collectionRateLimit,
+} from "@/middleware/sync-rate-limit";
 
 const { upgradeWebSocket, websocket } = createBunWebSocket();
 
@@ -28,6 +33,7 @@ const syncRouter = new Hono<{
 }>()
   .post(
     "/csv",
+    csvRateLimit,
     zValidator("json", z.array(csvItemSchema), (result, c) => {
       if (!result.success) {
         return c.text("Invalid request!", 400);
@@ -118,6 +124,7 @@ const syncRouter = new Hono<{
   )
   .post(
     "/order",
+    orderRateLimit,
     zValidator("json", orderSyncSchema, (result, c) => {
       if (!result.success) {
         return c.text("Invalid request!", 400);
@@ -261,6 +268,7 @@ const syncRouter = new Hono<{
   )
   .post(
     "/collection",
+    collectionRateLimit,
     zValidator("json", z.array(collectionSyncSchema), (result, c) => {
       if (!result.success) {
         return c.text("Invalid request!", 400);
@@ -455,8 +463,7 @@ const syncRouter = new Hono<{
 
           wsIntervals.set(ws, interval);
         },
-        onMessage(_event, _ws) {
-        },
+        onMessage(_event, _ws) {},
         onClose(_event, ws) {
           console.log("WebSocket connection closed for job:", jobId);
           const interval = wsIntervals.get(ws);

@@ -263,6 +263,46 @@ const ordersRouter = new Hono<{ Variables: Variables }>()
     }
   )
   .put(
+    "/move-items",
+    zValidator(
+      "json",
+      z.object({
+        targetOrderId: z.string(),
+        collectionIds: z.array(z.string()),
+        orderIds: z.array(z.string()),
+      }),
+      (result, c) => {
+        if (!result.success) {
+          console.log("Validation error on /move-items:", result.error);
+          return c.text("Invalid request!", 400);
+        }
+      }
+    ),
+    async (c) => {
+      const user = c.get("user");
+      if (!user) return c.text("Unauthorized", 401);
+
+      const validatedJSON = c.req.valid("json");
+
+      const { error } = await tryCatch(
+        OrdersService.moveItems(
+          user.id,
+          validatedJSON.targetOrderId,
+          validatedJSON.collectionIds,
+          validatedJSON.orderIds
+        )
+      );
+
+      if (error) {
+        if (error.message === "FAILED_TO_MOVE_ITEMS") {
+          return c.text("Failed to move items", 500);
+        }
+      }
+
+      return c.text("Items moved successfully");
+    }
+  )
+  .put(
     "/:orderId",
     zValidator("param", z.object({ orderId: z.string() }), (result, c) => {
       if (!result.success) {
@@ -314,45 +354,6 @@ const ordersRouter = new Hono<{ Variables: Variables }>()
       }
 
       return c.text("Order updated successfully");
-    }
-  )
-  .put(
-    "/move-items",
-    zValidator(
-      "json",
-      z.object({
-        targetOrderId: z.string(),
-        collectionIds: z.array(z.string()),
-        orderIds: z.array(z.string()),
-      }),
-      (result, c) => {
-        if (!result.success) {
-          return c.text("Invalid request!", 400);
-        }
-      }
-    ),
-    async (c) => {
-      const user = c.get("user");
-      if (!user) return c.text("Unauthorized", 401);
-
-      const validatedJSON = c.req.valid("json");
-
-      const { error } = await tryCatch(
-        OrdersService.moveItems(
-          user.id,
-          validatedJSON.targetOrderId,
-          validatedJSON.collectionIds,
-          validatedJSON.orderIds
-        )
-      );
-
-      if (error) {
-        if (error.message === "FAILED_TO_MOVE_ITEMS") {
-          return c.text("Failed to move items", 500);
-        }
-      }
-
-      return c.text("Items moved successfully");
     }
   )
   .delete(

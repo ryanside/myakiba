@@ -63,7 +63,7 @@ function RouteComponent() {
             <UserMenu />
           </div>
         </header>
-        <div className="flex flex-1 flex-col gap-4 p-4">
+        <div className="h-full w-full p-4">
           <Outlet />
         </div>
       </SidebarInset>
