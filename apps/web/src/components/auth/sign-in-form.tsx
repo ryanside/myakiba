@@ -174,15 +174,7 @@ export default function SignInForm({
           <form.Field name="password">
             {(field) => (
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor={field.name}>Password</Label>
-                  <Link
-                    to="/forgot-password"
-                    className="text-sm text-primary hover:underline underline-offset-4"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
+                <Label htmlFor={field.name}>Password</Label>
                 <Input
                   id={field.name}
                   name={field.name}
@@ -196,6 +188,14 @@ export default function SignInForm({
                     {error?.message}
                   </p>
                 ))}
+                <div className="flex items-center justify-end">
+                  <Link
+                    to="/forgot-password"
+                    className="text-sm text-primary hover:underline underline-offset-4"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
               </div>
             )}
           </form.Field>

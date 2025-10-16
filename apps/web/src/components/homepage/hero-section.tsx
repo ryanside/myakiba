@@ -1,8 +1,8 @@
-import React from "react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Sparkle } from "lucide-react";
-import heroDashboard from "@/public/hero-dashboard.png";
+import dashboard from "/dashboard.webp";
+
 export default function HeroSection() {
   return (
     <main>
@@ -46,7 +46,7 @@ export default function HeroSection() {
               <div className="mt-12 md:mt-16">
                 <div className="bg-border rounded-(--radius) relative mx-auto overflow-hidden border border-transparent shadow-lg shadow-black/10 ring-1 ring-black/10">
                   <img
-                    src={heroDashboard}
+                    src={dashboard}
                     alt="app screen"
                     width="2880"
                     height="1842"
