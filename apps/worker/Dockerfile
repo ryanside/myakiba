@@ -1,39 +1,56 @@
-# use the official Bun image
-# see all versions at https://hub.docker.com/r/oven/bun/tags
-FROM oven/bun:1 AS base
+# Build stage - handle workspace context
+FROM oven/bun:1.2.19-alpine AS build
+
 WORKDIR /app
 
-# install dependencies into temp directory
-# this will cache them and speed up future builds
-FROM base AS install
-RUN mkdir -p /temp/dev
-COPY package.json /temp/dev/
-RUN cd /temp/dev && bun install
+# Copy workspace package files for proper dependency resolution
+COPY package.json bun.lock ./
+COPY apps/server/package.json ./apps/server/
+COPY apps/web/package.json ./apps/web/
+COPY apps/worker/package.json ./apps/worker/
+COPY packages/eslint-config/package.json ./packages/eslint-config/
 
-# install with --production (exclude devDependencies)
-RUN mkdir -p /temp/prod
-COPY package.json /temp/prod/
-RUN cd /temp/prod && bun install --production
+# Install all dependencies (needed for workspace resolution)
+RUN bun install --frozen-lockfile
 
-# copy node_modules from temp directory
-# then copy all (non-ignored) project files into the image
-FROM base AS prerelease
-COPY --from=install /temp/dev/node_modules node_modules
+# Copy the rest of the application
 COPY . .
 
-# [optional] tests & build
+# Dependencies stage - install only production deps
+FROM oven/bun:1.2.19-alpine AS deps
 
-# copy production dependencies and source code into final image
-FROM base AS release
-COPY --from=install /temp/prod/node_modules node_modules
-COPY --from=prerelease /app/index.ts .
-COPY --from=prerelease /app/worker.ts .
-COPY --from=prerelease /app/package.json .
-COPY --from=prerelease /app/db ./db
-COPY --from=prerelease /app/lib ./lib
+WORKDIR /app
+
+# Copy package files (including workspace packages to satisfy Bun workspaces)
+COPY package.json bun.lock ./
+COPY apps/worker/package.json ./apps/worker/
+COPY packages/eslint-config/package.json ./packages/eslint-config/
+
+# Install only production dependencies
+RUN bun install --omit=dev --no-cache
+
+# Our application runner
+FROM oven/bun:1.2.19-alpine AS runner
 
 ENV NODE_ENV=production
 
-# run the app
-USER bun
-ENTRYPOINT [ "bun", "run", "index.ts" ]
+WORKDIR /app
+
+# Copy worker source code and config
+COPY --from=build /app/apps/worker/index.ts ./index.ts
+COPY --from=build /app/apps/worker/worker.ts ./worker.ts
+COPY --from=build /app/apps/worker/tsconfig.json ./tsconfig.json
+COPY --from=build /app/apps/worker/db ./db
+COPY --from=build /app/apps/worker/lib ./lib
+
+# Copy only production node_modules
+COPY --from=deps /app/node_modules ./node_modules
+
+# Remove unnecessary files from node_modules to reduce size
+RUN find ./node_modules -name "*.md" -delete && \
+    find ./node_modules -name "*.ts" -not -name "*.d.ts" -delete && \
+    find ./node_modules -name "test" -type d -prune -exec rm -rf {} + && \
+    find ./node_modules -name "tests" -type d -prune -exec rm -rf {} + && \
+    find ./node_modules -name "*.map" -delete
+
+ENTRYPOINT ["bun", "run", "index.ts"]

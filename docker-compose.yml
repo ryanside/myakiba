@@ -29,8 +29,10 @@ services:
     depends_on:
       - redis
     build:
-      context: apps/worker
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    deploy:
+      replicas: 2
     environment:
       - HTTP_PROXY=${HTTP_PROXY}
       - DATABASE_URL=${DATABASE_URL}
