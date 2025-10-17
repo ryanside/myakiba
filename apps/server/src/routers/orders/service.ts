@@ -1,7 +1,44 @@
 import { db } from "@/db";
-import { order, collection, item } from "@/db/schema/figure";
-import { eq, and, inArray, sql, desc, asc, ilike } from "drizzle-orm";
+import { order, collection, item, item_release } from "@/db/schema/figure";
+import { eq, and, inArray, sql, desc, asc, ilike, ne, gte, lte } from "drizzle-orm";
 import type { orderInsertType, orderUpdateType } from "./model";
+
+type OrderItem = {
+  id: string;
+  orderId: string | null;
+  itemId: number;
+  releaseId: string;
+  status: "Owned" | "Ordered" | "Paid" | "Shipped" | "Sold";
+  itemTitle: string;
+  itemImage: string | null;
+  price: string;
+  count: number;
+  shop: string;
+  score: string;
+  orderDate: string | null;
+  paymentDate: string | null;
+  shippingDate: string | null;
+  collectionDate: string | null;
+  shippingMethod:
+    | "n/a"
+    | "EMS"
+    | "SAL"
+    | "AIRMAIL"
+    | "SURFACE"
+    | "FEDEX"
+    | "DHL"
+    | "Colissimo"
+    | "UPS"
+    | "Domestic";
+  releaseDate: string | null;
+  releaseType: string | null;
+  releasePrice: string | null;
+  releaseCurrency: string | null;
+  releaseBarcode: string | null;
+  condition: "New" | "Pre-Owned";
+  tags: string[];
+  notes: string;
+};
 
 class OrdersService {
   async getOrders(
@@ -10,8 +47,78 @@ class OrdersService {
     offset: number,
     sortBy: string,
     orderBy: string,
-    search?: string
+    search?: string,
+    shop?: Array<string>,
+    releaseMonthYearStart?: string,
+    releaseMonthYearEnd?: string,
+    shippingMethod?: Array<
+      | "n/a"
+      | "EMS"
+      | "SAL"
+      | "AIRMAIL"
+      | "SURFACE"
+      | "FEDEX"
+      | "DHL"
+      | "Colissimo"
+      | "UPS"
+      | "Domestic"
+    >,
+    orderDateStart?: string,
+    orderDateEnd?: string,
+    paymentDateStart?: string,
+    paymentDateEnd?: string,
+    shippingDateStart?: string,
+    shippingDateEnd?: string,
+    collectionDateStart?: string,
+    collectionDateEnd?: string,
+    status?: Array<"Ordered" | "Paid" | "Shipped" | "Owned">,
+    totalMin?: string,
+    totalMax?: string,
+    shippingFeeMin?: string,
+    shippingFeeMax?: string,
+    taxesMin?: string,
+    taxesMax?: string,
+    dutiesMin?: string,
+    dutiesMax?: string,
+    tariffsMin?: string,
+    tariffsMax?: string,
+    miscFeesMin?: string,
+    miscFeesMax?: string
   ) {
+    const whereConditions = and(
+      eq(order.userId, userId),
+      search ? ilike(order.title, `%${search}%`) : undefined,
+      shop ? inArray(order.shop, shop) : undefined,
+      releaseMonthYearStart
+        ? gte(order.releaseMonthYear, releaseMonthYearStart)
+        : undefined,
+      releaseMonthYearEnd
+        ? lte(order.releaseMonthYear, releaseMonthYearEnd)
+        : undefined,
+      shippingMethod ? inArray(order.shippingMethod, shippingMethod) : undefined,
+      orderDateStart ? gte(order.orderDate, orderDateStart) : undefined,
+      orderDateEnd ? lte(order.orderDate, orderDateEnd) : undefined,
+      paymentDateStart ? gte(order.paymentDate, paymentDateStart) : undefined,
+      paymentDateEnd ? lte(order.paymentDate, paymentDateEnd) : undefined,
+      shippingDateStart ? gte(order.shippingDate, shippingDateStart) : undefined,
+      shippingDateEnd ? lte(order.shippingDate, shippingDateEnd) : undefined,
+      collectionDateStart
+        ? gte(order.collectionDate, collectionDateStart)
+        : undefined,
+      collectionDateEnd ? lte(order.collectionDate, collectionDateEnd) : undefined,
+      status ? inArray(order.status, status) : undefined,
+      shippingFeeMin ? gte(order.shippingFee, shippingFeeMin) : undefined,
+      shippingFeeMax ? lte(order.shippingFee, shippingFeeMax) : undefined,
+      taxesMin ? gte(order.taxes, taxesMin) : undefined,
+      taxesMax ? lte(order.taxes, taxesMax) : undefined,
+      dutiesMin ? gte(order.duties, dutiesMin) : undefined,
+      dutiesMax ? lte(order.duties, dutiesMax) : undefined,
+      tariffsMin ? gte(order.tariffs, tariffsMin) : undefined,
+      tariffsMax ? lte(order.tariffs, tariffsMax) : undefined,
+      miscFeesMin ? gte(order.miscFees, miscFeesMin) : undefined,
+      miscFeesMax ? lte(order.miscFees, miscFeesMax) : undefined
+    );
+
     const sortByColumn = (() => {
       switch (sortBy) {
         case "title":
@@ -25,7 +132,9 @@ class OrdersService {
         case "shippingMethod":
           return order.shippingMethod;
         case "total":
-          return sql<string>`SUM(${collection.price}::numeric) + COALESCE(${order.taxes}::numeric, 0) + COALESCE(${order.duties}::numeric, 0) + COALESCE(${order.tariffs}::numeric, 0) + COALESCE(${order.miscFees}::numeric, 0)`;
+          return sql<string>`COALESCE(SUM(${collection.price}::numeric), 0) + COALESCE(${order.shippingFee}::numeric, 0) + COALESCE(${order.taxes}::numeric, 0) + COALESCE(${order.duties}::numeric, 0) + COALESCE(${order.tariffs}::numeric, 0) + COALESCE(${order.miscFees}::numeric, 0)`;
+        case "status":
+          return order.status;
         case "itemCount":
           return sql<number>`COUNT(${collection.id})`;
         case "createdAt":
@@ -45,27 +154,59 @@ class OrdersService {
         orderDate: order.orderDate,
         paymentDate: order.paymentDate,
         shippingDate: order.shippingDate,
-        orderStatus: order.orderStatus,
-        total: sql<string>`SUM(${collection.price}::numeric) + COALESCE(${order.shippingFee}::numeric, 0) + COALESCE(${order.taxes}::numeric, 0) + COALESCE(${order.duties}::numeric, 0) + COALESCE(${order.tariffs}::numeric, 0) + COALESCE(${order.miscFees}::numeric, 0)`,
+        collectionDate: order.collectionDate,
+        status: order.status,
+        total: sql<string>`COALESCE(SUM(${collection.price}::numeric), 0) + COALESCE(${order.shippingFee}::numeric, 0) + COALESCE(${order.taxes}::numeric, 0) + COALESCE(${order.duties}::numeric, 0) + COALESCE(${order.tariffs}::numeric, 0) + COALESCE(${order.miscFees}::numeric, 0)`,
+        shippingFee: order.shippingFee,
+        taxes: order.taxes,
+        duties: order.duties,
+        tariffs: order.tariffs,
+        miscFees: order.miscFees,
+        notes: order.notes,
         itemCount: sql<number>`COUNT(${collection.id})`,
-        itemImages: sql<
-          string[]
-        >`array_agg(DISTINCT ${item.image}) FILTER (WHERE ${item.image} IS NOT NULL)`,
-        itemTitles: sql<string[]>`array_agg(DISTINCT ${item.title})`,
-        itemIds: sql<number[]>`array_agg(DISTINCT ${item.id})`,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+        items: sql<OrderItem[]>`
+          COALESCE(
+            JSON_AGG(
+              JSON_BUILD_OBJECT(
+                'id', ${collection.id},
+                'orderId', ${collection.orderId},
+                'itemId', ${item.id},
+                'releaseId', ${collection.releaseId},
+                'status', ${collection.status},
+                'itemTitle', ${item.title},
+                'itemImage', ${item.image},
+                'price', ${collection.price}::text,
+                'count', ${collection.count},
+                'shop', ${collection.shop},
+                'score', ${collection.score}::text, 
+                'orderDate', ${collection.orderDate},
+                'paymentDate', ${collection.paymentDate},
+                'shippingDate', ${collection.shippingDate},
+                'collectionDate', ${collection.collectionDate},
+                'shippingMethod', ${collection.shippingMethod},
+                'releaseDate', ${item_release.date},
+                'releaseType', ${item_release.type},
+                'releasePrice', ${item_release.price}::text,
+                'releaseCurrency', ${item_release.priceCurrency},
+                'releaseBarcode', ${item_release.barcode},
+                'condition', ${collection.condition},
+                'tags', ${collection.tags},
+                'notes', ${collection.notes}
+              )
+              ORDER BY ${item.title}
+            ) FILTER (WHERE ${collection.id} IS NOT NULL),
+            '[]'::json
+          )
+        `,
+        totalCount: sql<number>`COUNT(*) OVER()`,
       })
       .from(order)
-      .leftJoin(
-        collection,
-        and(eq(order.id, collection.orderId), eq(collection.status, "Ordered"))
-      )
+      .leftJoin(collection, eq(order.id, collection.orderId))
       .leftJoin(item, eq(collection.itemId, item.id))
-      .where(
-        and(
-          eq(order.userId, userId),
-          search ? ilike(order.title, `%${search}%`) : undefined
-        )
-      )
+      .leftJoin(item_release, eq(collection.releaseId, item_release.id))
+      .where(whereConditions)
       .groupBy(
         order.id,
         order.title,
@@ -75,23 +216,41 @@ class OrdersService {
         order.orderDate,
         order.paymentDate,
         order.shippingDate,
-        order.orderStatus,
+        order.collectionDate,
+        order.status,
         order.shippingFee,
         order.taxes,
         order.duties,
         order.tariffs,
-        order.miscFees
+        order.miscFees,
+        order.notes,
+        order.createdAt,
+        order.updatedAt
       )
-      .orderBy(orderBy === "asc" ? asc(sortByColumn) : desc(sortByColumn))
+      .having(
+        and(
+          totalMin
+            ? sql`COALESCE(SUM(${collection.price}::numeric), 0) + COALESCE(${order.shippingFee}::numeric, 0) + COALESCE(${order.taxes}::numeric, 0) + COALESCE(${order.duties}::numeric, 0) + COALESCE(${order.tariffs}::numeric, 0) + COALESCE(${order.miscFees}::numeric, 0) >= ${totalMin}::numeric`
+            : undefined,
+          totalMax
+            ? sql`COALESCE(SUM(${collection.price}::numeric), 0) + COALESCE(${order.shippingFee}::numeric, 0) + COALESCE(${order.taxes}::numeric, 0) + COALESCE(${order.duties}::numeric, 0) + COALESCE(${order.tariffs}::numeric, 0) + COALESCE(${order.miscFees}::numeric, 0) <= ${totalMax}::numeric`
+            : undefined
+        )
+      )
+      .orderBy(
+        orderBy === "asc" ? asc(sortByColumn) : desc(sortByColumn),
+        orderBy === "asc" ? asc(order.createdAt) : desc(order.createdAt)
+      )
       .limit(limit)
       .offset(offset);
 
-    return orders;
+    return { orders };
   }
 
   async getOrder(userId: string, orderId: string) {
-    const orderInfo = await db
+    const [orderInfo] = await db
       .select({
+        orderId: order.id,
         title: order.title,
         shop: order.shop,
         orderDate: order.orderDate,
@@ -100,8 +259,8 @@ class OrdersService {
         shippingDate: order.shippingDate,
         collectionDate: order.collectionDate,
         shippingMethod: order.shippingMethod,
-        orderStatus: order.orderStatus,
-        total: order.total,
+        status: order.status,
+        total: sql<string>`COALESCE(SUM(${collection.price}::numeric), 0) + COALESCE(${order.shippingFee}::numeric, 0) + COALESCE(${order.taxes}::numeric, 0) + COALESCE(${order.duties}::numeric, 0) + COALESCE(${order.tariffs}::numeric, 0) + COALESCE(${order.miscFees}::numeric, 0)`,
         shippingFee: order.shippingFee,
         taxes: order.taxes,
         duties: order.duties,
@@ -111,19 +270,49 @@ class OrdersService {
         createdAt: order.createdAt,
         updatedAt: order.updatedAt,
         itemCount: sql<number>`COUNT(${collection.id})`,
-        itemImages: sql<
-          string[]
-        >`array_agg(DISTINCT ${item.image}) FILTER (WHERE ${item.image} IS NOT NULL)`,
-        itemTitles: sql<string[]>`array_agg(DISTINCT ${item.title})`,
-        itemIds: sql<number[]>`array_agg(DISTINCT ${item.id})`,
-        itemPrices: sql<string[]>`array_agg(DISTINCT ${collection.price})`,
+        items: sql<OrderItem[]>`
+          COALESCE(
+            JSON_AGG(
+              JSON_BUILD_OBJECT(
+                'id', ${collection.id},
+                'orderId', ${collection.orderId},
+                'itemId', ${item.id},
+                'releaseId', ${collection.releaseId},
+                'status', ${collection.status},
+                'itemTitle', ${item.title},
+                'itemImage', ${item.image},
+                'price', ${collection.price}::text,
+                'count', ${collection.count},
+                'shop', ${collection.shop},
+                'score', ${collection.score}::text,
+                'orderDate', ${collection.orderDate},
+                'paymentDate', ${collection.paymentDate},
+                'shippingDate', ${collection.shippingDate},
+                'collectionDate', ${collection.collectionDate},
+                'shippingMethod', ${collection.shippingMethod},
+                'releaseDate', ${item_release.date},
+                'releaseType', ${item_release.type},
+                'releasePrice', ${item_release.price}::text,
+                'releaseCurrency', ${item_release.priceCurrency},
+                'releaseBarcode', ${item_release.barcode},
+                'condition', ${collection.condition},
+                'tags', ${collection.tags},
+                'notes', ${collection.notes}
+              )
+              ORDER BY ${item.title}
+            ) FILTER (WHERE ${collection.id} IS NOT NULL),
+            '[]'::json
+          )
+        `,
       })
       .from(order)
       .leftJoin(collection, eq(order.id, collection.orderId))
       .leftJoin(item, eq(collection.itemId, item.id))
-      .where(and(eq(order.userId, userId), eq(order.id, orderId)));
+      .leftJoin(item_release, eq(collection.releaseId, item_release.id))
+      .where(and(eq(order.userId, userId), eq(order.id, orderId)))
+      .groupBy(order.id);
 
-    if (!orderInfo || orderInfo.length === 0) {
+    if (!orderInfo) {
       throw new Error("ORDER_NOT_FOUND");
     }
 
@@ -133,181 +322,248 @@ class OrdersService {
   async mergeOrders(
     userId: string,
     orderIds: string[],
-    newOrder: orderInsertType
+    newOrder: Omit<orderInsertType, "userId">,
+    cascadeOptions: string[]
   ) {
     const merged = await db.transaction(async (tx) => {
-      const newOrderInserted = await tx.insert(order).values({
-        ...newOrder,
-      });
+      const newOrderInserted = await tx
+        .insert(order)
+        .values({
+          userId: userId,
+          ...newOrder,
+        })
+        .returning();
+
       if (!newOrderInserted || newOrderInserted.length === 0) {
         throw new Error("FAILED_TO_INSERT_NEW_ORDER");
       }
 
+      const cascadeProperties =
+        cascadeOptions.length > 0
+          ? Object.fromEntries(
+              cascadeOptions.map((option) => [
+                option,
+                newOrder[option as keyof typeof newOrder],
+              ])
+            )
+          : {};
+
       const collectionUpdated = await tx
         .update(collection)
         .set({
-          orderId: newOrder.id,
+          orderId: newOrderInserted[0].id,
+          ...cascadeProperties,
         })
         .where(
           and(
             eq(collection.userId, userId),
             inArray(collection.orderId, orderIds)
           )
-        );
+        )
+        .returning({ id: collection.id });
       if (!collectionUpdated || collectionUpdated.length === 0) {
         throw new Error("ORDER_ITEMS_NOT_FOUND");
       }
 
       const deletedOrders = await tx
         .delete(order)
-        .where(and(eq(order.userId, userId), inArray(order.id, orderIds)));
+        .where(and(eq(order.userId, userId), inArray(order.id, orderIds)))
+        .returning({ id: order.id });
       if (!deletedOrders || deletedOrders.length === 0) {
         throw new Error("ORDERS_NOT_FOUND");
       }
 
-      return { newOrderInserted, collectionUpdated, deletedOrders };
+      return {};
     });
 
-    return { merged };
+    return merged;
   }
 
   async splitOrders(
     userId: string,
-    orderId: string,
-    newOrder: orderInsertType
+    collectionIds: string[],
+    newOrder: Omit<orderInsertType, "userId">,
+    cascadeOptions: string[]
   ) {
     const splitted = await db.transaction(async (tx) => {
-      const newOrderInserted = await tx.insert(order).values({
-        ...newOrder,
-      });
+      const newOrderInserted = await tx
+        .insert(order)
+        .values({
+          userId: userId,
+          ...newOrder,
+        })
+        .returning();
       if (!newOrderInserted || newOrderInserted.length === 0) {
         throw new Error("FAILED_TO_INSERT_NEW_ORDER");
       }
 
+      const cascadeProperties =
+        cascadeOptions.length > 0
+          ? Object.fromEntries(
+              cascadeOptions.map((option) => [
+                option,
+                newOrder[option as keyof typeof newOrder],
+              ])
+            )
+          : {};
+
       const collectionUpdated = await tx
         .update(collection)
         .set({
-          orderId: newOrder.id,
+          orderId: newOrderInserted[0].id,
+          ...cascadeProperties,
         })
         .where(
-          and(eq(collection.userId, userId), eq(collection.orderId, orderId))
-        );
+          and(
+            eq(collection.userId, userId),
+            inArray(collection.id, collectionIds)
+          )
+        )
+        .returning({ id: collection.id });
+
       if (!collectionUpdated || collectionUpdated.length === 0) {
         throw new Error("ORDER_ITEMS_NOT_FOUND");
       }
 
-      return { newOrderInserted, collectionUpdated };
+      return {};
     });
 
-    return { splitted };
+    return splitted;
   }
 
   async updateOrder(
     userId: string,
     orderId: string,
-    updatedOrder: orderUpdateType
+    updatedOrder: orderUpdateType,
+    cascadeOptions: string[]
   ) {
     const updated = await db.transaction(async (tx) => {
       const orderUpdated = await tx
         .update(order)
         .set(updatedOrder)
-        .where(and(eq(order.userId, userId), eq(order.id, orderId)));
+        .where(and(eq(order.userId, userId), eq(order.id, orderId)))
+        .returning();
       if (!orderUpdated || orderUpdated.length === 0) {
         throw new Error("ORDER_NOT_FOUND");
       }
 
-      const collectionUpdated = await tx
-        .update(collection)
-        .set({
-          shop: updatedOrder.shop,
-          orderDate: updatedOrder.orderDate,
-          paymentDate: updatedOrder.paymentDate,
-          shippingDate: updatedOrder.shippingDate,
-          collectionDate: updatedOrder.collectionDate,
-          shippingMethod: updatedOrder.shippingMethod,
-        })
-        .where(
-          and(eq(collection.userId, userId), eq(collection.orderId, orderId))
+      if (cascadeOptions.length > 0) {
+        const cascadeProperties = Object.fromEntries(
+          cascadeOptions.map((option) => [
+            option,
+            updatedOrder[option as keyof typeof updatedOrder],
+          ])
         );
-      if (!collectionUpdated || collectionUpdated.length === 0) {
-        throw new Error("ORDER_ITEMS_NOT_FOUND");
-      }
 
-      if (updatedOrder.orderStatus === "Collected") {
-        const collectionUpdatedStatus = await tx
+        const collectionUpdated = await tx
           .update(collection)
-          .set({ status: "Owned" })
+          .set({
+            ...cascadeProperties,
+          })
           .where(
-            and(
-              eq(collection.userId, userId),
-              eq(collection.orderId, orderId),
-              eq(collection.status, "Ordered")
-            )
-          );
-        if (!collectionUpdatedStatus || collectionUpdatedStatus.length === 0) {
+            and(eq(collection.userId, userId), eq(collection.orderId, orderId))
+          )
+          .returning();
+        if (!collectionUpdated || collectionUpdated.length === 0) {
           throw new Error("ORDER_ITEMS_NOT_FOUND");
         }
-
-        return { orderUpdated, collectionUpdated, collectionUpdatedStatus };
       }
 
-      return { orderUpdated, collectionUpdated };
+      return {};
     });
 
     return updated;
   }
 
-  async deleteItemsFromOrder(
-    userId: string,
-    orderId: string,
-    itemIds: number[]
-  ) {
+  async deleteOrders(userId: string, orderIds: string[]) {
+    const deleted = await db.transaction(async (tx) => {
+      await tx
+        .delete(collection)
+        .where(
+          and(
+            eq(collection.userId, userId),
+            inArray(collection.orderId, orderIds),
+            ne(collection.status, "Owned")
+          )
+        );
+
+      const deletedOrders = await tx
+        .delete(order)
+        .where(and(eq(order.userId, userId), inArray(order.id, orderIds)))
+        .returning();
+
+      if (!deletedOrders || deletedOrders.length === 0) {
+        throw new Error("ORDERS_NOT_FOUND");
+      }
+
+      return {};
+    });
+
+    return deleted;
+  }
+
+  async deleteOrderItem(userId: string, orderId: string, collectionId: string) {
     const deleted = await db
       .delete(collection)
       .where(
         and(
           eq(collection.userId, userId),
           eq(collection.orderId, orderId),
-          inArray(collection.itemId, itemIds)
+          eq(collection.id, collectionId),
+          ne(collection.status, "Owned")
         )
-      );
+      )
+      .returning();
 
     if (!deleted || deleted.length === 0) {
-      throw new Error("ORDER_ITEMS_NOT_FOUND");
+      throw new Error("ORDER_ITEM_NOT_FOUND");
     }
 
-    return deleted[0];
+    return {};
   }
 
-  async deleteOrders(userId: string, orderIds: string[]) {
-    const deleted = await db.transaction(async (tx) => {
-      // Only cascade delete collection items with "Ordered" status
-      const deletedCollectionItems = await tx
-        .delete(collection)
-        .where(
-          and(
-            eq(collection.userId, userId),
-            inArray(collection.orderId, orderIds),
-            eq(collection.status, "Ordered")
-          )
-        );
+  async getOrderIdsAndTitles(userId: string, title?: string) {
+    const orderIdsAndTitles = await db
+      .select({ id: order.id, title: order.title })
+      .from(order)
+      .where(
+        and(
+          eq(order.userId, userId),
+          title ? ilike(order.title, `%${title}%`) : undefined
+        )
+      )
+      .groupBy(order.id, order.title);
 
-      if (!deletedCollectionItems || deletedCollectionItems.length === 0) {
-        throw new Error("ORDERS_ITEMS_NOT_FOUND");
-      }
+    if (!orderIdsAndTitles) {
+      throw new Error("FAILED_TO_GET_ORDER_IDS_AND_TITLES");
+    }
 
-      const deletedOrders = await tx
-        .delete(order)
-        .where(and(eq(order.userId, userId), inArray(order.id, orderIds)));
+    return orderIdsAndTitles;
+  }
 
-      if (!deletedOrders || deletedOrders.length === 0) {
-        throw new Error("ORDERS_NOT_FOUND");
-      }
+  async moveItems(
+    userId: string,
+    targetOrderId: string,
+    collectionIds: string[],
+    orderIds: string[]
+  ) {
+    const moved = await db
+      .update(collection)
+      .set({ orderId: targetOrderId })
+      .where(
+        and(
+          eq(collection.userId, userId),
+          inArray(collection.id, collectionIds),
+          inArray(collection.orderId, orderIds)
+        )
+      )
+      .returning();
 
-      return { deletedCollectionItems, deletedOrders };
-    });
+    if (!moved || moved.length === 0) {
+      throw new Error("FAILED_TO_MOVE_ITEMS");
+    }
 
-    return deleted;
+    return {};
   }
 }
 

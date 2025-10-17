@@ -1,0 +1,130 @@
+import { useForm } from "@tanstack/react-form";
+import { Button } from "../ui/button";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { csvSchema } from "@/lib/sync/types";
+import Papa from "papaparse";
+import { Label } from "../ui/label";
+import { Input } from "../ui/input";
+
+export default function SyncCsvForm({
+  setCurrentStep,
+  handleSyncCsvSubmit,
+}: {
+  setCurrentStep: (step: number) => void;
+  handleSyncCsvSubmit: (values: File | undefined) => void;
+}) {
+  const csvForm = useForm({
+    defaultValues: {
+      file: undefined as File | undefined,
+    },
+    onSubmit: async ({ value }) => {
+      await handleSyncCsvSubmit(value.file);
+      csvForm.reset();
+    },
+  });
+  return (
+    <div className="w-full">
+      <div className="p-4 pt-0 pl-0 w-full flex flex-row items-center justify-start gap-2">
+        <Button
+          variant="ghost"
+          onClick={() => setCurrentStep(1)}
+          className="text-foreground"
+          aria-label="Back to Sync Options"
+          size="icon"
+        >
+          <ArrowLeft />
+        </Button>
+        <h1 className="text-lg text-black dark:text-white">
+          Upload MyFigureCollection CSV
+        </h1>
+      </div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          void csvForm.handleSubmit();
+        }}
+        className="rounded-lg border p-4 space-y-4 w-full"
+      >
+        <csvForm.Field
+          name="file"
+          validators={{
+            onSubmitAsync: async ({ value }) => {
+              if (!value) {
+                return "No file selected";
+              }
+
+              const text = await value.text();
+              const parsedCSV = Papa.parse(text, {
+                header: true,
+                skipEmptyLines: true,
+                transformHeader: (header: string) =>
+                  header.trim().toLowerCase().replace(/ /g, "_"),
+              });
+
+              const validatedCSV = csvSchema.safeParse(parsedCSV.data);
+              if (!validatedCSV.success) {
+                console.log("Invalid CSV file", validatedCSV.error);
+                return "Please select a valid MyFigureCollection CSV file";
+              }
+
+              const filteredData = validatedCSV.data.filter((item) => {
+                return (
+                  (item.status === "Owned" || item.status === "Ordered") &&
+                  !item.title.startsWith("[NSFW")
+                );
+              });
+              if (filteredData.length === 0) {
+                return "No Owned or Ordered items to sync";
+              }
+            },
+          }}
+          children={(field) => {
+            return (
+              <div className="space-y-4">
+                <div className="flex flex-row gap-2">
+                  <Label className="text-lg text-black dark:text-white">
+                    Select MyFigureCollection CSV File
+                  </Label>
+                  <csvForm.Subscribe
+                    selector={(state) => [state.canSubmit, state.isSubmitting]}
+                    children={([canSubmit, isSubmitting]) => (
+                      <Button
+                        type="submit"
+                        disabled={!canSubmit}
+                        variant="primary"
+                        className="ml-auto"
+                        size="md"
+                      >
+                        {isSubmitting ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          "Submit CSV"
+                        )}
+                      </Button>
+                    )}
+                  />
+                </div>
+                <Input
+                  id="csv-file"
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    field.handleChange(file);
+                  }}
+                  className="h-48 border-dashed border-2 p-2"
+                />
+                {!field.state.meta.isValid && (
+                  <em role="alert" className="text-red-500 text-xs">
+                    {field.state.meta.errors.join(", ")}
+                  </em>
+                )}
+              </div>
+            );
+          }}
+        />
+      </form>
+    </div>
+  );
+}

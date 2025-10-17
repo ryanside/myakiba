@@ -1,39 +1,36 @@
-# use the official Bun image
-# see all versions at https://hub.docker.com/r/oven/bun/tags
-FROM oven/bun:1 AS base
+# Build stage
+FROM oven/bun:1.2-debian AS build
+
 WORKDIR /app
 
-# install dependencies into temp directory
-# this will cache them and speed up future builds
-FROM base AS install
-RUN mkdir -p /temp/dev
-COPY package.json /temp/dev/
-RUN cd /temp/dev && bun install
+# Copy dependencies
+COPY bun.lock package.json ./
+COPY /apps/server/package.json ./apps/server/package.json
+COPY /apps/web/package.json ./apps/web/package.json
+COPY /apps/worker/package.json ./apps/worker/package.json
+COPY /packages/eslint-config/package.json ./packages/eslint-config/package.json
 
-# install with --production (exclude devDependencies)
-RUN mkdir -p /temp/prod
-COPY package.json /temp/prod/
-RUN cd /temp/prod && bun install --production
+# Install dependencies
+RUN bun install --frozen-lockfile
 
-# copy node_modules from temp directory
-# then copy all (non-ignored) project files into the image
-FROM base AS prerelease
-COPY --from=install /temp/dev/node_modules node_modules
+# Copy the rest of the application
 COPY . .
 
-# [optional] tests & build
+# Build the worker
+WORKDIR /app
 
-# copy production dependencies and source code into final image
-FROM base AS release
-COPY --from=install /temp/prod/node_modules node_modules
-COPY --from=prerelease /app/index.ts .
-COPY --from=prerelease /app/worker.ts .
-COPY --from=prerelease /app/package.json .
-COPY --from=prerelease /app/db ./db
-COPY --from=prerelease /app/lib ./lib
+# Remove workspace node_modules symlinks to force resolution from root
+RUN rm -rf apps/server/node_modules apps/web/node_modules apps/worker/node_modules
+
+RUN bun build --compile --minify --sourcemap --packages bundle ./apps/worker/index.ts --outfile worker
+
+# Our application runner
+FROM gcr.io/distroless/base-debian12:nonroot AS runner
 
 ENV NODE_ENV=production
 
-# run the app
-USER bun
-ENTRYPOINT [ "bun", "run", "index.ts" ]
+WORKDIR /app
+
+COPY --from=build /app/worker .
+
+ENTRYPOINT ["./worker"]

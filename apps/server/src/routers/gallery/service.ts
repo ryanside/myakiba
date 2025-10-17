@@ -24,7 +24,18 @@ class GalleryService {
     paymentDate?: Array<string>,
     shippingDate?: Array<string>,
     collectionDate?: Array<string>,
-    shippingMethod?: Array<string>,
+    shippingMethod?: Array<
+      | "n/a"
+      | "EMS"
+      | "SAL"
+      | "AIRMAIL"
+      | "SURFACE"
+      | "FEDEX"
+      | "DHL"
+      | "Colissimo"
+      | "UPS"
+      | "Domestic"
+    >,
     releaseDate?: Array<string>,
     releasePrice?: Array<string>,
     releaseCurrency?: Array<string>,
@@ -32,7 +43,7 @@ class GalleryService {
     entries?: Array<string>,
     scale?: Array<string>,
     tags?: Array<string>,
-    condition?: Array<string>
+    condition?: Array<"New" | "Pre-Owned">
   ): Promise<GalleryResponse> {
     // Build common filters for all queries
     const commonFilters = and(

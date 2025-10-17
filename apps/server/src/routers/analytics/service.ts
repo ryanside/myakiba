@@ -1,6 +1,6 @@
 import { dbHttp } from "@/db";
-import { collection, item_release, item } from "@/db/schema/figure";
-import { eq, count, and, sql, avg, desc, sum, between, not } from "drizzle-orm";
+import { collection, item } from "@/db/schema/figure";
+import { eq, count, and, sql, desc, sum, between, not } from "drizzle-orm";
 import { entry, entry_to_item } from "@/db/schema/figure";
 
 class AnalyticsService {
@@ -16,47 +16,39 @@ class AnalyticsService {
       .select({
         priceRange: sql<string>`
           CASE 
-            WHEN ${item_release.price}::numeric < 5000 THEN '< ¥5,000'
-            WHEN ${item_release.price}::numeric < 10000 THEN '¥5,000-¥10,000'
-            WHEN ${item_release.price}::numeric < 20000 THEN '¥10,000-¥20,000'
-            WHEN ${item_release.price}::numeric < 50000 THEN '¥20,000-¥50,000'
-            ELSE '> ¥50,000'
+            WHEN ${collection.price}::numeric < 50 THEN '< $50'
+            WHEN ${collection.price}::numeric < 100 THEN '$50-$100'
+            WHEN ${collection.price}::numeric < 200 THEN '$100-$200'
+            WHEN ${collection.price}::numeric < 500 THEN '$200-$500'
+            ELSE '> $500'
           END
         `,
         count: count(),
-        totalValue: sql<string>`SUM(${item_release.price}::numeric)`,
+        totalValue: sql<string>`SUM(${collection.price}::numeric)`,
       })
       .from(collection)
-      .innerJoin(item_release, eq(collection.releaseId, item_release.id))
-      .where(
-        and(
-          eq(collection.userId, userId),
-          eq(collection.status, "Owned"),
-          eq(item_release.priceCurrency, "JPY")
-        )
-      )
+      .where(and(eq(collection.userId, userId), eq(collection.status, "Owned")))
       .groupBy(
         sql`
         CASE 
-          WHEN ${item_release.price}::numeric < 5000 THEN '< ¥5,000'
-          WHEN ${item_release.price}::numeric < 10000 THEN '¥5,000-¥10,000'
-          WHEN ${item_release.price}::numeric < 20000 THEN '¥10,000-¥20,000'
-          WHEN ${item_release.price}::numeric < 50000 THEN '¥20,000-¥50,000'
-          ELSE '> ¥50,000'
+          WHEN ${collection.price}::numeric < 50 THEN '< $50'
+          WHEN ${collection.price}::numeric < 100 THEN '$50-$100'
+          WHEN ${collection.price}::numeric < 200 THEN '$100-$200'
+          WHEN ${collection.price}::numeric < 500 THEN '$200-$500'
+          ELSE '> $500'
         END
       `
       )
-      .orderBy(sql`MIN(${item_release.price}::numeric)`);
+      .orderBy(sql`MIN(${collection.price}::numeric)`);
 
     const getScaleDistribution = dbHttp
       .select({
         scale: item.scale,
         count: count(),
-        totalValue: sql<string>`SUM(${item_release.price}::numeric)`,
+        totalValue: sql<string>`SUM(${collection.price}::numeric)`,
       })
       .from(collection)
-      .innerJoin(item_release, eq(collection.releaseId, item_release.id))
-      .innerJoin(item, eq(item_release.itemId, item.id))
+      .innerJoin(item, eq(collection.itemId, item.id))
       .where(
         and(
           eq(collection.userId, userId),
@@ -70,29 +62,32 @@ class AnalyticsService {
 
     const getMostExpensiveCollectionItems = dbHttp
       .select({
+        itemId: item.id,
         itemTitle: item.title,
-        itemReleaseDate: item_release.date,
-        itemMSRP: item_release.price,
-        currency: item_release.priceCurrency,
+        itemImage: item.image,
+        itemCategory: item.category,
+        collectionPrice: collection.price,
       })
       .from(collection)
-      .innerJoin(item_release, eq(collection.releaseId, item_release.id))
       .innerJoin(item, eq(collection.itemId, item.id))
       .where(and(eq(collection.userId, userId), eq(collection.status, "Owned")))
-      .orderBy(desc(item_release.price))
-      .limit(5);
+      .orderBy(desc(collection.price))
+      .limit(3);
 
     const getTopShops = dbHttp
       .select({
         shop: collection.shop,
         count: count(),
-        totalSpent: sum(collection.price),
+        totalSpent: sql<string>`SUM(${collection.price}::numeric)`,
       })
       .from(collection)
       .where(and(eq(collection.userId, userId), not(eq(collection.shop, ""))))
       .groupBy(collection.shop)
-      .orderBy(desc(count()))
-      .limit(5);
+      .orderBy(
+        desc(count()),
+        desc(sql<string>`SUM(${collection.price}::numeric)`)
+      )
+      .limit(10);
 
     const getMonthlyBreakdown = dbHttp
       .select({
@@ -115,23 +110,22 @@ class AnalyticsService {
       .select({
         name: item.category,
         count: count(),
+        totalValue: sum(sql`COALESCE(${collection.price}, 0)`),
       })
       .from(collection)
       .innerJoin(item, eq(collection.itemId, item.id))
       .where(and(eq(collection.userId, userId), eq(collection.status, "Owned")))
-      .groupBy(item.category);
+      .groupBy(item.category)
+      .orderBy(desc(count()));
 
-      const getTotalOwned = dbHttp
+    const getTotalOwned = dbHttp
       .select({
         count: count(),
       })
       .from(collection)
       .where(
-        and(
-          eq(collection.userId, userId),
-          eq(collection.status, "Owned"),
-        )
-      )
+        and(eq(collection.userId, userId), eq(collection.status, "Owned"))
+      );
 
     const [
       priceRangeDistribution,
@@ -140,7 +134,7 @@ class AnalyticsService {
       topShops,
       monthlyBreakdown,
       categoriesOwned,
-      totalOwned
+      totalOwned,
     ] = await dbHttp.batch([
       getPriceRangeDistribution,
       getScaleDistribution,
@@ -148,7 +142,7 @@ class AnalyticsService {
       getTopShops,
       getMonthlyBreakdown,
       getCategoriesOwned,
-      getTotalOwned
+      getTotalOwned,
     ]);
 
     return {
@@ -163,11 +157,12 @@ class AnalyticsService {
   }
 
   async getEntryAnalytics(userId: string, entryCategory: string) {
-    const entryAnalytics = await dbHttp.batch([
+    const [topEntriesByCategory] = await dbHttp.batch([
       dbHttp
         .select({
           originName: entry.name,
           itemCount: count(),
+          totalValue: sql<string>`SUM(${collection.price}::numeric)`,
         })
         .from(collection)
         .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
@@ -179,33 +174,16 @@ class AnalyticsService {
             eq(entry.category, entryCategory)
           )
         )
-        .groupBy(entry.id, entry.name)        .orderBy(sql`COUNT(*) DESC`)
-        .limit(10),
-
-      dbHttp
-        .select({
-          category: entry.category,
-          entryName: entry.name,
-          averagePrice: avg(item_release.price),
-        })
-        .from(collection)
-        .innerJoin(item_release, eq(collection.releaseId, item_release.id))
-        .innerJoin(entry_to_item, eq(item_release.itemId, entry_to_item.itemId))
-        .innerJoin(entry, eq(entry_to_item.entryId, entry.id))
-        .where(
-          and(
-            eq(collection.userId, userId),
-            eq(collection.status, "Owned"),
-            eq(item_release.priceCurrency, "JPY"),
-            eq(entry.category, entryCategory)
-          )
-        )
         .groupBy(entry.id, entry.name)
-        .orderBy(desc(avg(item_release.price)))
-        .limit(5),
+        .orderBy(
+          desc(count()),
+          desc(sql<string>`SUM(${collection.price}::numeric)`)
+        )
+        .limit(10),
     ]);
-
-    return entryAnalytics;
+    return {
+      topEntriesByCategory,
+    };
   }
 }
 
