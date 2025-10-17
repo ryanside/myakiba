@@ -11,7 +11,7 @@ services:
       - redis
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: apps/server/Dockerfile
     ports:
       - "3000:3000"
     environment:

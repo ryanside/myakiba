@@ -15,14 +15,8 @@ import type { scrapedItem } from "./types";
 import Redis from "ioredis";
 
 const redis = new Redis({
-  host:
-    process.env.NODE_ENV === "production"
-      ? process.env.REDIS_HOST
-      : "localhost",
-  port:
-    process.env.NODE_ENV === "production"
-      ? parseInt(process.env.REDIS_PORT!)
-      : 6379,
+  host: process.env.REDIS_HOST || "localhost",
+  port: parseInt(process.env.REDIS_PORT || "6379"),
 });
 
 const s3Client = new S3Client({

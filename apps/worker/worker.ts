@@ -8,14 +8,8 @@ import { finalizeOrderSync } from "./lib/order/utils";
 import { finalizeCsvSync } from "./lib/csv/utils";
 
 const redis = new Redis({
-  host:
-    process.env.NODE_ENV === "production"
-      ? process.env.REDIS_HOST
-      : "localhost",
-  port:
-    process.env.NODE_ENV === "production"
-      ? parseInt(process.env.REDIS_PORT!)
-      : 6379,
+  host: process.env.REDIS_HOST || "localhost",
+  port: parseInt(process.env.REDIS_PORT || "6379"),
 });
 
 const myWorker = new Worker(
