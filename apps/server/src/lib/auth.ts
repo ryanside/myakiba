@@ -19,7 +19,7 @@ export const auth = betterAuth({
     enabled: true,
     sendResetPassword: async ({ user, url }) => {
       await resend.emails.send({
-        from: import.meta.env.PROD
+        from: process.env.NODE_ENV === "production"
           ? "myakiba <noreply@myakiba.app>"
           : "myakiba <onboarding@resend.dev>",
         to: user.email,
@@ -37,7 +37,7 @@ export const auth = betterAuth({
     autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, url }) => {
       await resend.emails.send({
-        from: import.meta.env.PROD
+        from: process.env.NODE_ENV === "production"
           ? "myakiba <noreply@myakiba.app>"
           : "myakiba <onboarding@resend.dev>",
         to: user.email,
