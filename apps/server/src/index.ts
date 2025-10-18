@@ -24,7 +24,7 @@ app.use(logger());
 app.use(
   "/*",
   cors({
-    origin: process.env.CORS_ORIGIN || "",
+    origin: process.env.CORS_ORIGIN?.split(',').map(origin => origin.trim()) || [],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization", "x-captcha-response"],
     credentials: true,
@@ -33,7 +33,7 @@ app.use(
 
 app.use(
   csrf({
-    origin: process.env.CORS_ORIGIN || "",
+    origin: process.env.CORS_ORIGIN?.split(',').map(origin => origin.trim()) || [],
   })
 );
 

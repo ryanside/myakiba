@@ -14,14 +14,12 @@ export const auth = betterAuth({
     provider: "pg",
     schema: schema,
   }),
-  trustedOrigins: [process.env.CORS_ORIGIN || ""],
+  trustedOrigins: process.env.CORS_ORIGIN?.split(',').map(origin => origin.trim()) || [],
   emailAndPassword: {
     enabled: true,
     sendResetPassword: async ({ user, url }) => {
       await resend.emails.send({
-        from: process.env.NODE_ENV === "production"
-          ? "myakiba <noreply@myakiba.app>"
-          : "myakiba <onboarding@resend.dev>",
+        from: process.env.RESEND_FROM_EMAIL || "myakiba <onboarding@resend.dev>",
         to: user.email,
         subject: "Reset your password",
         text: `Click the link to reset your password: ${url}`,
@@ -37,9 +35,7 @@ export const auth = betterAuth({
     autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, url }) => {
       await resend.emails.send({
-        from: process.env.NODE_ENV === "production"
-          ? "myakiba <noreply@myakiba.app>"
-          : "myakiba <onboarding@resend.dev>",
+        from: process.env.RESEND_FROM_EMAIL || "myakiba <onboarding@resend.dev>",
         to: user.email,
         subject: "Verify your email address",
         text: `Click the link to verify your email: ${url}`,

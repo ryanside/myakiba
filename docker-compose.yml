@@ -26,6 +26,7 @@ services:
       - REDIS_PORT=${REDIS_PORT}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - RESEND_FROM_EMAIL=${RESEND_FROM_EMAIL}
   worker1:
     depends_on:
       - redis
