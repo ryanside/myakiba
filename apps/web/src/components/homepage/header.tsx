@@ -1,11 +1,20 @@
 "use client";
 import { Link } from "@tanstack/react-router";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import React from "react";
 import { cn } from "@/lib/utils";
 import { MyAkibaLogo } from "../myakiba-logo";
 import { GithubIcon } from "@/components/sidebar/app-sidebar";
+import { ModeToggle } from "../mode-toggle";
+import { useTheme } from "@/components/theme-provider";
+
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // const menuItems = [
 //   { name: "Features", href: "#link" },
@@ -16,7 +25,7 @@ import { GithubIcon } from "@/components/sidebar/app-sidebar";
 export const HeroHeader = () => {
   const [menuState, setMenuState] = React.useState(false);
   const [isScrolled, setIsScrolled] = React.useState(false);
-
+  const { setTheme } = useTheme();
   React.useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
@@ -88,12 +97,12 @@ export const HeroHeader = () => {
                   ))}
                 </ul>
               </div> */}
-              <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit">
+              <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-2 sm:space-y-0 md:w-fit">
                 <Button
                   asChild
                   variant="ghost"
                   size="sm"
-                  className={cn(isScrolled && "lg:hidden")}
+                  className={cn(isScrolled && "lg:hidden") + " hover:bg-black/10"}
                 >
                   <a
                     href="https://github.com/ryanside/myakiba"
@@ -101,14 +110,37 @@ export const HeroHeader = () => {
                     className="flex items-center gap-2"
                   >
                     <GithubIcon />
-                    <span>Github</span>
                   </a>
                 </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={cn(isScrolled && "lg:hidden") + " hover:bg-black/10"}
+                    >
+                      <Sun className="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90 stroke-black dark:stroke-white" />
+                      <Moon className="absolute h-[1.2rem] w-[1.2rem] scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0 stroke-black dark:stroke-white" />
+                      <span className="sr-only">Toggle theme</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setTheme("light")}>
+                      Light
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setTheme("dark")}>
+                      Dark
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setTheme("system")}>
+                      System
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <Button
                   asChild
                   variant="ghost"
                   size="sm"
-                  className={cn(isScrolled && "lg:hidden")}
+                  className={cn(isScrolled && "lg:hidden") + " hover:bg-black/10"}
                 >
                   <Link to="/login">
                     <span>Login</span>

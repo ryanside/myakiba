@@ -15,6 +15,7 @@ import {
 } from "./lib/extract";
 import { createFetchOptions, normalizeDateString } from "./lib/utils";
 import { v5 as uuidv5 } from "uuid";
+import type { scrapedItem } from "./lib/types";
 
 const redis = new Redis({
   host: process.env.REDIS_HOST || "localhost",
@@ -24,57 +25,6 @@ const redis = new Redis({
 const s3Client = new S3Client({
   region: process.env.AWS_BUCKET_REGION,
 });
-
-interface scrapedItem {
-  id: number;
-  title: string;
-  category: string;
-  classification: {
-    id: number;
-    name: string;
-    role: string;
-  }[];
-  origin: {
-    id: number;
-    name: string;
-  }[];
-  character: {
-    id: number;
-    name: string;
-  }[];
-  company: {
-    id: number;
-    name: string;
-    role: string;
-  }[];
-  artist: {
-    id: number;
-    name: string;
-    role: string;
-  }[];
-  version: string[];
-  releaseDate: {
-    date: string;
-    type: string;
-    price: number;
-    priceCurrency: string;
-    barcode: string;
-  }[];
-  event: {
-    id: number;
-    name: string;
-    role: string;
-  }[];
-  materials: {
-    id: number;
-    name: string;
-  }[];
-  scale: string;
-  height: number;
-  width: number;
-  depth: number;
-  image: string;
-}
 
 const scrapeImage = async (
   imageUrl: string,
@@ -148,6 +98,7 @@ const scrapeSingleItem = async (
   maxRetries: number = 3,
   baseDelayMs: number = 1000,
   userId: string,
+  jobId?: string,
   overallIndex: number = 0,
   totalItems: number = 1
 ): Promise<scrapedItem | null> => {
@@ -323,6 +274,7 @@ const scrapedItems = async (
   maxRetries: number = 3,
   baseDelayMs: number = 1000,
   userId: string,
+  jobId?: string,
   startingIndex: number = 0,
   totalItems: number = itemIds.length
 ): Promise<scrapedItem[]> => {
@@ -338,6 +290,7 @@ const scrapedItems = async (
       maxRetries,
       baseDelayMs,
       userId,
+      jobId,
       startingIndex + index,
       totalItems
     )
@@ -373,7 +326,8 @@ const scrapedItemsWithRateLimit = async (
   itemIds: number[],
   maxRetries: number = 3,
   baseDelayMs: number = 1000,
-  userId: string
+  userId: string,
+  jobId?: string
 ): Promise<scrapedItem[]> => {
   console.time("Rate-Limited Scraping Duration");
   const startTime = Date.now();
@@ -397,7 +351,9 @@ const scrapedItemsWithRateLimit = async (
     const batchNumber = Math.floor(i / batchSize) + 1;
 
     console.log(
-      `Processing batch ${batchNumber}/${totalBatches} (${batch.length} items): [${batch.join(", ")}]`
+      `Processing batch ${batchNumber}/${totalBatches} (${
+        batch.length
+      } items): [${batch.join(", ")}]`
     );
 
     const batchResults = await scrapedItems(
@@ -405,6 +361,7 @@ const scrapedItemsWithRateLimit = async (
       maxRetries,
       baseDelayMs,
       userId,
+      jobId,
       i, // starting index for this batch
       itemIds.length // total items across all batches
     );
@@ -423,7 +380,9 @@ const scrapedItemsWithRateLimit = async (
   const endTime = Date.now();
   const duration = endTime - startTime;
   console.log(
-    `Rate-limited scraping completed in ${duration}ms (${(duration / 1000).toFixed(2)}s)`
+    `Rate-limited scraping completed in ${duration}ms (${(
+      duration / 1000
+    ).toFixed(2)}s)`
   );
   console.log(
     `Successfully scraped ${allResults.length} out of ${itemIds.length} items`
@@ -434,186 +393,192 @@ const scrapedItemsWithRateLimit = async (
   return allResults;
 };
 
-const itemIds: number[] = [];
+const itemIds: number[] = [1049502];
 const userId = "";
 
 const scrapeMethod =
   itemIds.length <= 5 ? scrapedItems : scrapedItemsWithRateLimit;
 
-scrapeMethod(itemIds, 3, 1000, userId).then(async (successfulResults) => {
-  // prepare for db insert (item, item_release, entry, entry_to_item, collection)
-  const items = successfulResults.map((item) => ({
-    id: item.id,
-    title: item.title,
-    category: item.category,
-    version: item.version,
-    scale: item.scale,
-    height: item.height,
-    width: item.width,
-    depth: item.depth,
-    image: item.image,
-  }));
+scrapeMethod(itemIds, 3, 1000, userId, undefined).then(
+  async (successfulResults) => {
+    // prepare for db insert (item, item_release, entry, entry_to_item, collection)
+    const items = successfulResults.map((item) => ({
+      id: item.id,
+      title: item.title,
+      category: item.category,
+      version: item.version,
+      scale: item.scale,
+      height: item.height,
+      width: item.width,
+      depth: item.depth,
+      image: item.image,
+    }));
 
-  const itemReleases: Array<{
-    id: string;
-    itemId: number;
-    date: string;
-    type: string;
-    price: string;
-    priceCurrency: string;
-    barcode: string;
-  }> = [];
-  const entries: Array<{
-    id: number;
-    category: string;
-    name: string;
-  }> = [];
-  const entryToItems: Array<{
-    entryId: number;
-    itemId: number;
-    role: string;
-  }> = [];
-  const collectionItems = successfulResults.map((item) => ({
-    userId,
-    itemId: item.id,
-    status: "owned",
-    score: 0,
-    notes: "",
-  }));
+    const itemReleases: Array<{
+      id: string;
+      itemId: number;
+      date: string;
+      type: string;
+      price: string;
+      priceCurrency: string;
+      barcode: string;
+    }> = [];
+    const entries: Array<{
+      id: number;
+      category: string;
+      name: string;
+    }> = [];
+    const entryToItems: Array<{
+      entryId: number;
+      itemId: number;
+      role: string;
+    }> = [];
+    const collectionItems = successfulResults.map((item) => ({
+      userId,
+      itemId: item.id,
+      status: "owned",
+      score: 0,
+      notes: "",
+    }));
 
-  for (const item of successfulResults) {
-    for (const classification of item.classification) {
-      entryToItems.push({
-        entryId: classification.id,
-        itemId: item.id,
-        role: classification.role,
-      });
-      entries.push({
-        id: classification.id,
-        category: "Classifications",
-        name: classification.name,
-      });
+    for (const item of successfulResults) {
+      for (const classification of item.classification) {
+        entryToItems.push({
+          entryId: classification.id,
+          itemId: item.id,
+          role: classification.role,
+        });
+        entries.push({
+          id: classification.id,
+          category: "Classifications",
+          name: classification.name,
+        });
+      }
+
+      for (const origin of item.origin) {
+        entryToItems.push({
+          entryId: origin.id,
+          itemId: item.id,
+          role: "",
+        });
+        entries.push({
+          id: origin.id,
+          category: "Origins",
+          name: origin.name,
+        });
+      }
+
+      for (const character of item.character) {
+        entryToItems.push({
+          entryId: character.id,
+          itemId: item.id,
+          role: "",
+        });
+        entries.push({
+          id: character.id,
+          category: "Characters",
+          name: character.name,
+        });
+      }
+
+      for (const company of item.company) {
+        entryToItems.push({
+          entryId: company.id,
+          itemId: item.id,
+          role: company.role,
+        });
+        entries.push({
+          id: company.id,
+          category: "Companies",
+          name: company.name,
+        });
+      }
+
+      for (const artist of item.artist) {
+        entryToItems.push({
+          entryId: artist.id,
+          itemId: item.id,
+          role: artist.role,
+        });
+        entries.push({
+          id: artist.id,
+          category: "Artists",
+          name: artist.name,
+        });
+      }
+
+      for (const event of item.event) {
+        entryToItems.push({
+          entryId: event.id,
+          itemId: item.id,
+          role: event.role,
+        });
+        entries.push({
+          id: event.id,
+          category: "Events",
+          name: event.name,
+        });
+      }
+
+      for (const material of item.materials) {
+        entryToItems.push({
+          entryId: material.id,
+          itemId: item.id,
+          role: "",
+        });
+        entries.push({
+          id: material.id,
+          category: "Materials",
+          name: material.name,
+        });
+      }
+
+      for (const release of item.releaseDate) {
+        itemReleases.push({
+          id: uuidv5(
+            `${item.id}-${normalizeDateString(release.date)}-${release.type}-${
+              release.price
+            }-${release.priceCurrency}-${release.barcode}`,
+            "2c8ed313-3f54-4401-a280-2410ce639ef3"
+          ),
+          itemId: item.id,
+          date: normalizeDateString(release.date),
+          type: release.type,
+          price: release.price.toString(),
+          priceCurrency: release.priceCurrency,
+          barcode: release.barcode,
+        });
+      }
     }
 
-    for (const origin of item.origin) {
-      entryToItems.push({
-        entryId: origin.id,
-        itemId: item.id,
-        role: "",
-      });
-      entries.push({
-        id: origin.id,
-        category: "Origins",
-        name: origin.name,
-      });
-    }
+    console.log("Items to be inserted:", items);
+    console.log("Releases to be inserted:", itemReleases);
+    console.log("Entries to be inserted:", entries);
+    console.log("Entry to Items to be inserted:", entryToItems);
 
-    for (const character of item.character) {
-      entryToItems.push({
-        entryId: character.id,
-        itemId: item.id,
-        role: "",
-      });
-      entries.push({
-        id: character.id,
-        category: "Characters",
-        name: character.name,
-      });
-    }
+    const batchInsert = await db.transaction(async (tx) => {
+      await tx
+        .insert(item)
+        .values(items)
+        .onConflictDoNothing({ target: [item.id] });
+      await tx
+        .insert(item_release)
+        .values(itemReleases)
+        .onConflictDoNothing({ target: [item_release.id] });
+      await tx
+        .insert(entry)
+        .values(entries)
+        .onConflictDoNothing({ target: [entry.id] });
+      await tx
+        .insert(entry_to_item)
+        .values(entryToItems)
+        .onConflictDoNothing({
+          target: [entry_to_item.entryId, entry_to_item.itemId],
+        });
+    });
+    console.log(batchInsert);
+    await redis.quit();
 
-    for (const company of item.company) {
-      entryToItems.push({
-        entryId: company.id,
-        itemId: item.id,
-        role: company.role,
-      });
-      entries.push({
-        id: company.id,
-        category: "Companies",
-        name: company.name,
-      });
-    }
-
-    for (const artist of item.artist) {
-      entryToItems.push({
-        entryId: artist.id,
-        itemId: item.id,
-        role: artist.role,
-      });
-      entries.push({
-        id: artist.id,
-        category: "Artists",
-        name: artist.name,
-      });
-    }
-
-    for (const event of item.event) {
-      entryToItems.push({
-        entryId: event.id,
-        itemId: item.id,
-        role: event.role,
-      });
-      entries.push({
-        id: event.id,
-        category: "Events",
-        name: event.name,
-      });
-    }
-
-    for (const material of item.materials) {
-      entryToItems.push({
-        entryId: material.id,
-        itemId: item.id,
-        role: "",
-      });
-      entries.push({
-        id: material.id,
-        category: "Materials",
-        name: material.name,
-      });
-    }
-
-    for (const release of item.releaseDate) {
-      itemReleases.push({
-        id: uuidv5(
-          `${item.id}-${normalizeDateString(release.date)}-${release.type}-${release.price}-${release.priceCurrency}-${release.barcode}`,
-          "2c8ed313-3f54-4401-a280-2410ce639ef3"
-        ),
-        itemId: item.id,
-        date: normalizeDateString(release.date),
-        type: release.type,
-        price: release.price.toString(),
-        priceCurrency: release.priceCurrency,
-        barcode: release.barcode,
-      });
-    }
+    return;
   }
-
-  console.log("Items to be inserted:", items);
-  console.log("Releases to be inserted:", itemReleases);
-  console.log("Entries to be inserted:", entries);
-  console.log("Entry to Items to be inserted:", entryToItems);
-
-  const batchInsert = await db.transaction(async (tx) => {
-    await tx
-      .insert(item)
-      .values(items)
-      .onConflictDoNothing({ target: [item.id] });
-    await tx
-      .insert(item_release)
-      .values(itemReleases)
-      .onConflictDoNothing({ target: [item_release.id] });
-    await tx
-      .insert(entry)
-      .values(entries)
-      .onConflictDoNothing({ target: [entry.id] });
-    await tx
-      .insert(entry_to_item)
-      .values(entryToItems)
-      .onConflictDoNothing({
-        target: [entry_to_item.entryId, entry_to_item.itemId],
-      });
-  });
-  console.log(batchInsert);
-  await redis.quit();
-});
+);

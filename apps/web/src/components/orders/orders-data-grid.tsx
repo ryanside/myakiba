@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -105,9 +105,7 @@ interface OrdersDataGridProps {
     cascadeOptions: CascadeOptions
   ) => Promise<void>;
   onDeleteOrders: (orderIds: Set<string>) => Promise<void>;
-  onEditItem: (
-    values: CollectionItemFormValues
-  ) => Promise<void>;
+  onEditItem: (values: CollectionItemFormValues) => Promise<void>;
   onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
   onMoveItem: (
     targetOrderId: string,
@@ -194,6 +192,7 @@ export default function OrdersDataGrid({
             onCheckedChange={(value) =>
               table.toggleAllPageRowsSelected(!!value)
             }
+            onClick={(e) => e.stopPropagation()}
             aria-label="Select all"
             size="sm"
             className="align-[inherit] mb-0.5 rounded-xs"
@@ -210,13 +209,14 @@ export default function OrdersDataGrid({
             <Checkbox
               checked={row.getIsSelected()}
               onCheckedChange={(value) => row.toggleSelected(!!value)}
+              onClick={(e) => e.stopPropagation()}
               aria-label="Select row"
               size="sm"
               className="align-[inherit] mb-0.5 rounded-xs"
             />
           </>
         ),
-        size: 25,
+        size: 30,
         enableSorting: false,
         enableHiding: false,
         enableResizing: false,
@@ -266,7 +266,11 @@ export default function OrdersDataGrid({
           const order = row.original;
           return (
             <div className="space-y-px">
-              <Link to="/orders/$id" params={{id: order.orderId}} className="font-medium text-foreground truncate">
+              <Link
+                to="/orders/$id"
+                params={{ id: order.orderId }}
+                className="font-medium text-foreground truncate"
+              >
                 {order.title}
               </Link>
             </div>
@@ -494,10 +498,18 @@ export default function OrdersDataGrid({
         enableResizing: false,
       },
     ],
-    [itemSelection, setItemSelection, rowSelection, setRowSelection]
+    [
+      onEditItem,
+      onDeleteItem,
+      onEditOrder,
+      onDeleteOrders,
+      currency,
+      itemSelection,
+      setItemSelection
+    ]
   );
 
-  const handlePaginationChange = (updater: Updater<PaginationState>) => {
+  const handlePaginationChange = useCallback((updater: Updater<PaginationState>) => {
     const newPagination =
       typeof updater === "function" ? updater(pagination) : updater;
 
@@ -506,9 +518,9 @@ export default function OrdersDataGrid({
       limit: newPagination.pageSize,
       offset: newOffset,
     });
-  };
+  }, [pagination, onFilterChange]);
 
-  const handleSortingChange = (updater: Updater<SortingState>) => {
+  const handleSortingChange = useCallback((updater: Updater<SortingState>) => {
     const newSorting =
       typeof updater === "function" ? updater(sorting) : updater;
 
@@ -529,7 +541,7 @@ export default function OrdersDataGrid({
         offset: 0,
       });
     }
-  };
+  }, [sorting, onFilterChange]);
 
   const table = useReactTable({
     columns,
@@ -636,7 +648,11 @@ export default function OrdersDataGrid({
         </Dialog>
         <Popover>
           <PopoverTrigger asChild disabled={getSelectedOrderIds.size === 0}>
-            <Button variant="outline" disabled={getSelectedOrderIds.size === 0} size="icon">
+            <Button
+              variant="outline"
+              disabled={getSelectedOrderIds.size === 0}
+              size="icon"
+            >
               <Trash className="stroke-white" />
             </Button>
           </PopoverTrigger>

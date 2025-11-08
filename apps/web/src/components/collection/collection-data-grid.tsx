@@ -11,7 +11,7 @@ import type {
   PaginationState,
   SortingState,
 } from "@tanstack/react-table";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import {
@@ -412,9 +412,9 @@ export const CollectionDataGrid = ({
         enableResizing: false,
       },
     ],
-    [collectionSelection, setCollectionSelection]
+    [currency, onEditCollectionItem, onDeleteCollectionItems]
   );
-  const handlePaginationChange = (updater: Updater<PaginationState>) => {
+  const handlePaginationChange = useCallback((updater: Updater<PaginationState>) => {
     const newPagination =
       typeof updater === "function" ? updater(pagination) : updater;
 
@@ -423,9 +423,9 @@ export const CollectionDataGrid = ({
       limit: newPagination.pageSize,
       offset: newOffset,
     });
-  };
+  }, [pagination, onFilterChange]);
 
-  const handleSortingChange = (updater: Updater<SortingState>) => {
+  const handleSortingChange = useCallback((updater: Updater<SortingState>) => {
     const newSorting =
       typeof updater === "function" ? updater(sorting) : updater;
 
@@ -448,7 +448,7 @@ export const CollectionDataGrid = ({
         offset: 0,
       });
     }
-  };
+  }, [sorting, onFilterChange]);
 
   const table = useReactTable({
     columns,

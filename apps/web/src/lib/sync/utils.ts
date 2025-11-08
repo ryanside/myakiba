@@ -1,6 +1,40 @@
 import Papa from "papaparse";
 import { csvSchema, type userItem } from "./types";
 
+/**
+ * Extracts the MyFigureCollection item ID from a URL or returns the ID if it's already a number.
+ * Handles URLs like: https://myfigurecollection.net/item/998271
+ * Also handles trailing slashes, query parameters, and fragments.
+ * 
+ * @param input - Either a MyFigureCollection URL or a numeric ID string
+ * @returns The extracted item ID as a string, or null if invalid
+ */
+export function extractMfcItemId(input: string): string | null {
+  if (!input || typeof input !== "string") {
+    return null;
+  }
+
+  const trimmed = input.trim();
+
+  // If it's already just a number, return it
+  if (/^\d+$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  // Try to extract ID from URL
+  // Pattern: https://myfigurecollection.net/item/{id}
+  // Also handles: http://, trailing slashes, query params, fragments
+  const urlPattern = /myfigurecollection\.net\/item\/(\d+)/i;
+  const match = trimmed.match(urlPattern);
+
+  if (match && match[1]) {
+    return match[1];
+  }
+
+  // If no match found, return null
+  return null;
+}
+
 export async function transformCSVData(value: { file: File | undefined }) {
   if (!value.file) {
     throw new Error("No file selected");

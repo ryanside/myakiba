@@ -16,7 +16,7 @@ import { useState, useEffect } from "react";
 import { Check, Info, Loader2, LoaderCircleIcon } from "lucide-react";
 import { tryCatch } from "@/lib/utils";
 import { ShimmeringText } from "@/components/ui/shimmering-text";
-import { transformCSVData } from "@/lib/sync/utils";
+import { transformCSVData, extractMfcItemId } from "@/lib/sync/utils";
 import {
   type userItem,
   type status,
@@ -191,14 +191,20 @@ function RouteComponent() {
       paymentDate: values.paymentDate || null,
       shippingDate: values.shippingDate || null,
       collectionDate: values.collectionDate || null,
-      items: values.items.map((item) => ({
-        ...item,
-        itemId: parseInt(item.itemId),
-        orderDate: item.orderDate || null,
-        paymentDate: item.paymentDate || null,
-        shippingDate: item.shippingDate || null,
-        collectionDate: item.collectionDate || null,
-      })),
+      items: values.items.map((item) => {
+        const extractedId = extractMfcItemId(item.itemId);
+        if (!extractedId) {
+          throw new Error(`Invalid item ID: ${item.itemId}`);
+        }
+        return {
+          ...item,
+          itemId: parseInt(extractedId),
+          orderDate: item.orderDate || null,
+          paymentDate: item.paymentDate || null,
+          shippingDate: item.shippingDate || null,
+          collectionDate: item.collectionDate || null,
+        };
+      }),
     };
     const data = await orderMutation.mutateAsync(updatedValues);
     setCurrentStep(3);
@@ -217,15 +223,21 @@ function RouteComponent() {
   }
 
   async function handleSyncCollectionSubmit(values: SyncFormCollectionItem[]) {
-    const updatedValues: SyncCollectionItem[] = values.map((item) => ({
-      ...item,
-      itemId: parseInt(item.itemId),
-      orderDate: item.orderDate || null,
-      paymentDate: item.paymentDate || null,
-      shippingDate: item.shippingDate || null,
-      collectionDate: item.collectionDate || null,
-      score: item.score.toString(),
-    }));
+    const updatedValues: SyncCollectionItem[] = values.map((item) => {
+      const extractedId = extractMfcItemId(item.itemId);
+      if (!extractedId) {
+        throw new Error(`Invalid item ID: ${item.itemId}`);
+      }
+      return {
+        ...item,
+        itemId: parseInt(extractedId),
+        orderDate: item.orderDate || null,
+        paymentDate: item.paymentDate || null,
+        shippingDate: item.shippingDate || null,
+        collectionDate: item.collectionDate || null,
+        score: item.score.toString(),
+      };
+    });
     const data = await collectionMutation.mutateAsync(updatedValues);
     setCurrentStep(3);
 
