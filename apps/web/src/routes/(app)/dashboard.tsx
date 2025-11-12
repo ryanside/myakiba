@@ -23,8 +23,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { CollectionBreakdownPieChart } from "@/components/dashboard/CollectionBreakdownPieChart";
-import { ChartBarLabelCustom } from "@/components/dashboard/chart-bar-label-custom";
+import { CollectionBreakdown } from "@/components/dashboard/CollectionBreakdown";
 import { BudgetControlCard } from "@/components/dashboard/budget-control-card";
 import { ReleaseCalendar } from "@/components/dashboard/release-calendar";
 import { UnpaidOrders } from "@/components/dashboard/unpaid-orders";
@@ -34,6 +33,7 @@ import { DashboardSkeleton } from "@/components/skeletons/dashboard-skeleton";
 import { Button } from "@/components/ui/button";
 import OrderKanban from "@/components/dashboard/OrderKanban";
 import { Badge } from "@/components/ui/badge";
+import { ValueLineBarChart } from "@/components/ui/value-line-bar-chart";
 
 export const Route = createFileRoute("/(app)/dashboard")({
   component: RouteComponent,
@@ -108,13 +108,15 @@ function DashboardContent() {
     ordersSummary,
     budgetSummary,
     unpaidOrders,
+    monthlyOrders,
   } = dashboard;
 
   return (
     <div className="">
       <div className="flex flex-col lg:flex-row items-start mb-6 gap-4">
-        <h2 className="text-2xl tracking-tight">
-          Welcome, {session?.user.name}
+        <h2 className="text-2xl tracking-tight ">
+          Welcome,{" "}
+          <span className="text-muted-foreground">{session?.user.name} (づ｡◕‿‿◕｡)づ</span>
         </h2>
         <div className="flex flex-row flex-wrap items-center gap-2 lg:ml-auto">
           <Button
@@ -164,20 +166,17 @@ function DashboardContent() {
           {/* Inner Layout */}
           <div className="grid gap-4 grid-cols-1 lg:grid-cols-3 border-dashed">
             <div className="col-span-1 lg:col-span-3 grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="col-span-1 lg:col-span-2">
-                <CollectionBreakdownPieChart
-                  data={categoriesOwned}
-                  currency={userCurrency}
-                />
-              </div>
-              <div className="flex flex-col gap-4 col-span-1 border-dashed h-full">
-                <StatsCard
+              <CollectionBreakdown data={categoriesOwned} />
+              <ValueLineBarChart data={monthlyOrders} />
+              <div className="flex flex-col gap-4 col-span-1 h-full">
+                <KPICard
                   title="Total Spent"
+                  subtitle="based on all paid collection & order items"
                   value={formatCurrency(
                     collectionStats[0].totalSpent,
                     userCurrency
                   )}
-                  subtitle="This Month"
+                  subvalueTitle="this month"
                   subvalue={formatCurrency(
                     collectionStats[0].totalSpentThisMonth +
                       ordersSummary[0].thisMonthShipping +
@@ -188,10 +187,11 @@ function DashboardContent() {
                     userCurrency
                   )}
                 />
-                <StatsCard
+                <KPICard
                   title="Active Orders"
+                  subtitle="total number of orders not yet collected"
                   value={ordersSummary[0].totalActiveOrderCount}
-                  subtitle="Unpaid"
+                  subvalueTitle="unpaid"
                   subvalue={unpaidOrders.length}
                 />
               </div>
@@ -271,32 +271,37 @@ function DashboardContent() {
   );
 }
 
-function StatsCard({
+function KPICard({
   title,
-  value,
   subtitle,
+  value,
+  subvalueTitle,
   subvalue,
 }: {
   title: string;
-  value: string | number;
   subtitle?: string;
+  value: string | number;
+  subvalueTitle?: string;
   subvalue?: string | number;
 }) {
   return (
     <Card className="flex-1 flex flex-col ">
-      <CardHeader className="flex flex-row items-center gap-2">
+      <CardHeader className="flex flex-col items-start gap-2">
         <CardTitle className="text-md font-medium">{title}</CardTitle>
+        <CardDescription className="text-xs text-muted-foreground">
+          {subtitle}
+        </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="mt-auto">
         <div className="flex flex-row items-baseline w-full">
-          <p className="text-xl font-medium">{value}</p>
-          {subtitle && subvalue && (
+          <p className="text-2xl font-mono">{value}</p>
+          {subvalueTitle && subvalue && (
             <div className="flex-row gap-1 ml-2 flex">
               <p className="text-xs text-muted-foreground  font-light">
                 {subvalue}
               </p>
               <p className="text-xs text-muted-foreground font-light">
-                {subtitle}
+                {subvalueTitle}
               </p>
             </div>
           )}

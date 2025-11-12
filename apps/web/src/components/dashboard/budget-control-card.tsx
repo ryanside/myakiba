@@ -8,6 +8,7 @@ import { Progress } from "../ui/progress";
 interface BudgetControlCardProps {
   currentSpent?: number;
   limit?: number;
+  period?: string;
   currency: string;
   warningThreshold?: number; // percentage at which to show warning (default 80%)
 }
@@ -15,6 +16,7 @@ interface BudgetControlCardProps {
 export function BudgetControlCard({
   currentSpent = 0,
   limit,
+  period = "Monthly",
   currency,
   warningThreshold = 80,
 }: BudgetControlCardProps) {
@@ -33,7 +35,7 @@ export function BudgetControlCard({
       <CardContent className="space-y-4">
         <div className="space-y-3">
           <p className="text-muted-foreground text-xs">
-            Monthly Transaction Limit
+            {period} transaction limit
           </p>
 
           <div className="space-y-1">
@@ -48,7 +50,7 @@ export function BudgetControlCard({
               </div>
             ) : (
               <div className="flex items-baseline gap-1.5">
-                <span className="text-xl font-light tracking-tight text-muted-foreground">
+                <span className="text-xl text-foreground">
                   No budget set
                 </span>
               </div>

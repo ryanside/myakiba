@@ -32,6 +32,12 @@ class DashboardService {
       new Date().getMonth() + 1,
       1
     ).toISOString();
+    const startOfYear = new Date(new Date().getFullYear(), 0, 1).toISOString();
+    const endOfYear = new Date(
+      new Date().getFullYear() + 1,
+      0,
+      1
+    ).toISOString();
 
     const [
       collectionStats,
@@ -40,6 +46,7 @@ class DashboardService {
       ordersSummary,
       budgetSummary,
       unpaidOrders,
+      monthlyOrders,
     ] = await dbHttp.batch([
       // Total Items, Total Spent, Total Spent This Month (Items only)
       dbHttp
@@ -173,6 +180,23 @@ class DashboardService {
         .orderBy(asc(order.releaseMonthYear))
         .groupBy(order.id, order.title, order.shop, order.releaseMonthYear),
 
+      // Monthly Orders - Order counts grouped by release month for current year
+      dbHttp
+        .select({
+          month: sql<number>`EXTRACT(MONTH FROM ${order.releaseMonthYear})`,
+          orderCount: count(),
+        })
+        .from(order)
+        .where(
+          and(
+            eq(order.userId, userId),
+            gte(order.releaseMonthYear, startOfYear),
+            lte(order.releaseMonthYear, endOfYear)
+          )
+        )
+        .groupBy(sql`EXTRACT(MONTH FROM ${order.releaseMonthYear})`)
+        .orderBy(sql`EXTRACT(MONTH FROM ${order.releaseMonthYear})`),
+
       // dbHttp
       //   .select({
       //     itemId: item.id,
@@ -207,6 +231,7 @@ class DashboardService {
       ordersSummary,
       budgetSummary,
       unpaidOrders,
+      monthlyOrders,
     };
   }
 
