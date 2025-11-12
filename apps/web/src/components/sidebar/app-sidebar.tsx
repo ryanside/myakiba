@@ -8,7 +8,8 @@ import {
   Images,
   Plus,
   Settings,
-  ShoppingCart,
+  Package,
+  ShoppingBag,
   Sparkles,
 } from "lucide-react";
 
@@ -46,17 +47,12 @@ const data = {
       url: "/expenses",
       icon: DollarSign,
     },
-    {
-      title: "Gallery",
-      url: "/gallery",
-      icon: Images,
-    },
   ],
   navManagement: [
     {
       title: "Orders",
       url: "/orders",
-      icon: ShoppingCart,
+      icon: Package,
     },
     {
       title: "Collection",

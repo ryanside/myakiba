@@ -39,7 +39,7 @@ function RouteComponent() {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset className="">
-        <header className="flex h-12 shrink-0 items-center justify-between gap-2 border-b px-4">
+        <header className="flex h-12 shrink-0 items-center justify-between gap-2 px-4">
           <div className="flex items-center gap-0.5">
             <SidebarTrigger className="-ml-1" />
             <SearchCommand />
@@ -63,7 +63,7 @@ function RouteComponent() {
             <UserMenu />
           </div>
         </header>
-        <div className="h-full w-full p-4">
+        <div className="h-full w-full p-6">
           <Outlet />
         </div>
       </SidebarInset>

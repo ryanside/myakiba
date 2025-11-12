@@ -82,7 +82,7 @@ export default function ChooseSyncOption({
                 }}
               >
                 <FieldLabel htmlFor="collection">
-                  <Field orientation="horizontal">
+                  <Field orientation="horizontal" className="">
                     <FieldContent>
                       <FieldTitle>Collection</FieldTitle>
                       <FieldDescription>

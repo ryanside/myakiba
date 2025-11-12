@@ -2,6 +2,7 @@ import { useForm } from "@tanstack/react-form";
 import { Button } from "../ui/button";
 import { type SyncFormCollectionItem } from "@/lib/sync/types";
 import { ArrowLeft, Edit, Loader2, Plus, X } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { MaskInput } from "../ui/mask-input";
@@ -37,6 +38,7 @@ export default function SyncCollectionForm({
   setCurrentStep: (step: number) => void;
   handleSyncCollectionSubmit: (values: SyncFormCollectionItem[]) => void;
 }) {
+  const navigate = useNavigate();
   const { data: session } = authClient.useSession();
   const userCurrency = session?.user?.currency || "USD";
   const userLocale = getCurrencyLocale(userCurrency);
@@ -71,7 +73,7 @@ export default function SyncCollectionForm({
       <div className="p-4 pt-0 pl-0 w-full flex flex-row items-center justify-start gap-2">
         <Button
           variant="ghost"
-          onClick={() => setCurrentStep(1)}
+          onClick={() => navigate({ to: "/sync" })}
           className="text-foreground"
           aria-label="Back to Sync Options"
           size="icon"

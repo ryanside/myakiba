@@ -3,6 +3,7 @@ import { Button } from "../ui/button";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { MaskInput } from "../ui/mask-input";
+import { useNavigate } from "@tanstack/react-router";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -60,6 +61,7 @@ export default function SyncOrderForm({
   setCurrentStep: (step: number) => void;
   handleSyncOrderSubmit: (values: SyncFormOrder) => void;
 }) {
+  const navigate = useNavigate();
   const { data: session } = authClient.useSession();
   const userCurrency = session?.user?.currency || "USD";
   const userLocale = getCurrencyLocale(userCurrency);
@@ -141,7 +143,7 @@ export default function SyncOrderForm({
       <div className="p-4 pt-0 pl-0 w-full flex flex-row items-center justify-start gap-2">
         <Button
           variant="ghost"
-          onClick={() => setCurrentStep(1)}
+          onClick={() => navigate({ to: "/sync" })}
           className="text-foreground"
           aria-label="Back to Sync Options"
           size="icon"

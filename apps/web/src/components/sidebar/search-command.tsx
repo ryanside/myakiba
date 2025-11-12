@@ -5,7 +5,7 @@ import {
   Images,
   Search,
   Settings,
-  ShoppingCart,
+  Package,
   User,
 } from "lucide-react";
 
@@ -107,7 +107,7 @@ export function SearchCommand() {
                         value={order.orderId}
                         onSelect={() => setOpen(false)}
                       >
-                        <ShoppingCart />
+                        <Package />
                         <span>{order.orderTitle}</span>
                       </CommandItem>
                     </Link>
@@ -146,7 +146,7 @@ export function SearchCommand() {
                         value={item.id}
                         onSelect={() => setOpen(false)}
                       >
-                        {item.type === "order" ? <ShoppingCart /> : <Images />}
+                        {item.type === "order" ? <Package /> : <Images />}
                         <span>{item.title}</span>
                       </CommandItem>
                     </Link>

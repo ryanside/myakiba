@@ -45,11 +45,11 @@ import { cn, formatCurrency } from "@/lib/utils";
 //   },
 // } satisfies ChartConfig;
 
-export function ChartPieDonutText({
+export function CollectionBreakdownPieChart({
   data,
   innerRadius,
-  withIcon = true,
   currency = "USD",
+  className,
   ...props
 }: {
   data: { name: string | null; count: number; totalValue: string | null }[];
@@ -66,16 +66,13 @@ export function ChartPieDonutText({
   }));
 
   const chartConfig = {
-    ...chartData.reduce(
-      (acc, curr) => {
-        acc[curr.name || "other"] = {
-          label: curr.name || "other",
-          color: curr.fill,
-        };
-        return acc;
-      },
-      {} as Record<string, { label: string; color: string }>
-    ),
+    ...chartData.reduce((acc, curr) => {
+      acc[curr.name || "other"] = {
+        label: curr.name || "other",
+        color: curr.fill,
+      };
+      return acc;
+    }, {} as Record<string, { label: string; color: string }>),
   } satisfies ChartConfig;
 
   const totalItems = React.useMemo(() => {
@@ -84,10 +81,9 @@ export function ChartPieDonutText({
 
   if (totalItems === 0) {
     return (
-      <Card className="flex flex-col">
+      <Card className={cn("flex flex-col", className)}>
         <CardHeader className="flex flex-row items-center gap-2">
-          {withIcon && <Shapes className="h-4 w-4 text-muted-foreground" />}
-          <CardTitle className="font-medium">Collection Breakdown</CardTitle>
+          <CardTitle className="text-sm font-medium">Collection Breakdown</CardTitle>
         </CardHeader>
         <CardContent className="flex-1 pb-0">
           <p className="text-sm text-muted-foreground text-center py-8">
@@ -99,64 +95,64 @@ export function ChartPieDonutText({
   }
 
   return (
-    <Card className="flex flex-col">
+    <Card className={cn("flex flex-col h-full ", className)}>
       <CardHeader className="flex flex-row items-center gap-2">
-        {withIcon && <Shapes className="h-4 w-4 text-muted-foreground" />}
-        <CardTitle className="font-medium">Collection Breakdown</CardTitle>
+        <CardTitle className="text-md font-medium">Collection Breakdown</CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col">
-        <ChartContainer
-          config={chartConfig}
-          className={cn(`flex items-center justify-center x-auto aspect-auto`)}
-          {...props}
-        >
-          <PieChart>
-            <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent hideLabel />}
-            />
-            <Pie
-              data={chartData}
-              dataKey="count"
-              nameKey="name"
-              innerRadius={innerRadius || 75}
-              strokeWidth={5}
-            >
-              <Label
-                content={({ viewBox }) => {
-                  if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                    return (
-                      <text
-                        x={viewBox.cx}
-                        y={viewBox.cy}
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                      >
-                        <tspan
+      <CardContent className="flex flex-row items-center justify-center gap-4 pl-0">
+        <div className="flex-1 h-full ml-6">
+          <ChartContainer
+            config={chartConfig}
+            className="flex items-center justify-center aspect-square size-50 -m-4"
+          >
+            <PieChart className="">
+              <ChartTooltip
+                cursor={false}
+                content={<ChartTooltipContent hideLabel />}
+              />
+              <Pie
+                data={chartData}
+                dataKey="count"
+                nameKey="name"
+                innerRadius={65}
+                strokeWidth={5}
+              >
+                <Label
+                  content={({ viewBox }) => {
+                    if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                      return (
+                        <text
                           x={viewBox.cx}
                           y={viewBox.cy}
-                          className="fill-foreground text-3xl font-bold"
+                          textAnchor="middle"
+                          dominantBaseline="middle"
                         >
-                          {totalItems.toLocaleString()}
-                        </tspan>
-                        <tspan
-                          x={viewBox.cx}
-                          y={(viewBox.cy || 0) + 24}
-                          className="fill-muted-foreground"
-                        >
-                          Total Items
-                        </tspan>
-                      </text>
-                    );
-                  }
-                }}
-              />
-            </Pie>
-          </PieChart>
-        </ChartContainer>
-        <div className="flex flex-col gap-2 mt-auto h-26 overflow-y-auto">
+                          <tspan
+                            x={viewBox.cx}
+                            y={viewBox.cy}
+                            className="fill-foreground text-4xl font-semibold"
+                          >
+                            {totalItems.toLocaleString()}
+                          </tspan>
+                          <tspan
+                            x={viewBox.cx}
+                            y={(viewBox.cy || 0) + 24}
+                            className="fill-muted-foreground"
+                          >
+                            Total Items
+                          </tspan>
+                        </text>
+                      );
+                    }
+                  }}
+                />
+              </Pie>
+            </PieChart>
+          </ChartContainer>
+        </div>
+        <div className="flex-2 flex flex-col gap-2 overflow-y-auto">
           {chartData.map((item) => (
-            <div key={item.name} className="flex flex-row gap-2 items-center">
+            <div key={item.name} className="flex flex-row gap-2 items-center font-light">
               <div
                 className="w-1 h-4 rounded-2xl"
                 style={{ backgroundColor: item.fill }}

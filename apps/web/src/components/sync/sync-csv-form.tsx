@@ -5,6 +5,7 @@ import { csvSchema } from "@/lib/sync/types";
 import Papa from "papaparse";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
+import { useNavigate } from "@tanstack/react-router";
 
 export default function SyncCsvForm({
   setCurrentStep,
@@ -13,6 +14,7 @@ export default function SyncCsvForm({
   setCurrentStep: (step: number) => void;
   handleSyncCsvSubmit: (values: File | undefined) => void;
 }) {
+  const navigate = useNavigate();
   const csvForm = useForm({
     defaultValues: {
       file: undefined as File | undefined,
@@ -27,7 +29,7 @@ export default function SyncCsvForm({
       <div className="p-4 pt-0 pl-0 w-full flex flex-row items-center justify-start gap-2">
         <Button
           variant="ghost"
-          onClick={() => setCurrentStep(1)}
+          onClick={() => navigate({ to: "/sync" })}
           className="text-foreground"
           aria-label="Back to Sync Options"
           size="icon"

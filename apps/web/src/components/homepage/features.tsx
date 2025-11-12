@@ -22,6 +22,7 @@ import dashboard from "/dashboard.webp";
 import { BorderTrail } from "../ui/border-trail";
 import { Button } from "../ui/button";
 import { Link } from "@tanstack/react-router";
+import { MyAkibaLogo } from "../myakiba-logo";
 
 export default function Features() {
   type ImageKey = "item-1" | "item-2" | "item-3" | "item-4";
@@ -154,8 +155,8 @@ export default function Features() {
         </div>
         <div className="relative z-10 space-y-6 text-center mx-auto pt-12">
           <div className="flex justify-end items-center gap-6">
-            <h3 className="text-balance text-2xl font-semibold lg:text-4xl dark:text-white/90 text">
-              and more with myakiba.
+            <h3 className=" text-xl font-semibold lg:text-4xl dark:text-white/90 text flex items-center gap-2">
+              and more with <MyAkibaLogo size="full" className="inline-block h-[1.2em] ml-2" />.
             </h3>
             <Button
               size="lg"

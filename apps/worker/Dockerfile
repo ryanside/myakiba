@@ -1,5 +1,5 @@
 # Build stage
-FROM oven/bun:1.2-debian AS build
+FROM oven/bun:1.3-debian AS build
 
 WORKDIR /app
 
@@ -11,7 +11,7 @@ COPY /apps/worker/package.json ./apps/worker/package.json
 COPY /packages/eslint-config/package.json ./packages/eslint-config/package.json
 
 # Install dependencies
-RUN bun install --frozen-lockfile
+RUN bun install --frozen-lockfile --production --verbose
 
 # Copy the rest of the application
 COPY . .

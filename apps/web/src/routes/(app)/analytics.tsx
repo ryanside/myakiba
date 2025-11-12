@@ -4,7 +4,7 @@ import { getAnalytics, getEntryAnalytics } from "@/queries/analytics";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { ChartPieDonutText } from "@/components/dashboard/pie-chart-donut-text";
+import { CollectionBreakdownPieChart } from "@/components/dashboard/CollectionBreakdownPieChart";
 import { formatCurrency } from "@/lib/utils";
 import { useState } from "react";
 import type { EntryCategory } from "@/lib/analytics/types";
@@ -81,25 +81,23 @@ function RouteComponent() {
   const { analytics } = data;
   console.log(JSON.stringify(analytics, null, 2));
 
+  // Extract total collection count for progress bars
+  const totalCollectionCount = analytics.totalOwned[0]?.count || 100;
+
   return (
-    <div className="space-y-4">
-      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
-        <ChartPieDonutText
-          data={analytics.categoriesOwned}
-          className="h-[300px]"
-          innerRadius={95}
-          withIcon={false}
-          currency={userCurrency}
-        />
-        <ChartBarLabel
-          monthlyBreakdown={analytics.monthlyBreakdown}
-          className="h-[300px] aspect-auto"
-        />
+    <div className="flex flex-col gap-12 max-w-6xl mx-auto">
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-row items-start gap-4">
+          <h2 className="text-2xl tracking-tight">Collection Analytics</h2>
+        </div>
+        <p className="text-muted-foreground text-sm font-light">
+          See how your collection is distributed across different categories.
+        </p>
       </div>
-      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Price Range Distribution</CardTitle>
+            <CardTitle className="text-md font-medium">Price Range</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {analytics.priceRangeDistribution.map((range, index) => (
@@ -117,7 +115,7 @@ function RouteComponent() {
                     </span>
                   </div>
                 </div>
-                <Progress value={range.count} className="" />
+                <Progress value={range.count} max={totalCollectionCount} />
               </div>
             ))}
             {analytics.priceRangeDistribution.length === 0 && (
@@ -129,7 +127,7 @@ function RouteComponent() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Scale Distribution</CardTitle>
+            <CardTitle className="text-md font-medium">Scale</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {analytics.scaleDistribution &&
@@ -148,7 +146,7 @@ function RouteComponent() {
                       </span>
                     </div>
                   </div>
-                  <Progress value={range.count} className="" />
+                  <Progress value={range.count} max={totalCollectionCount} className="" />
                 </div>
               ))}
             {analytics.scaleDistribution &&
@@ -161,7 +159,7 @@ function RouteComponent() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Top Shops</CardTitle>
+            <CardTitle className="text-md font-medium">Top Shops</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {analytics.topShops &&
@@ -178,7 +176,7 @@ function RouteComponent() {
                       </span>
                     </div>
                   </div>
-                  <Progress value={range.count} className="" />
+                  <Progress value={range.count} max={totalCollectionCount} className="" />
                 </div>
               ))}
             {analytics.topShops && analytics.topShops.length === 0 && (
@@ -190,7 +188,7 @@ function RouteComponent() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2">
-            <CardTitle>Top Entries By Category</CardTitle>
+            <CardTitle className="text-md font-medium">Top Entries By Category</CardTitle>
             <Select
               value={entryCategory}
               onValueChange={(value) =>
@@ -234,7 +232,7 @@ function RouteComponent() {
                         </span>
                       </div>
                     </div>
-                    <Progress value={entry.itemCount} className="" />
+                    <Progress value={entry.itemCount} max={totalCollectionCount} className="" />
                   </div>
                 )
               )
@@ -247,7 +245,7 @@ function RouteComponent() {
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
+      {/* <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
         <Card className="">
           <CardHeader className="flex flex-row items-center gap-2">
             <CardTitle className="font-medium">Most Expensive Items</CardTitle>
@@ -315,7 +313,7 @@ function RouteComponent() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </div> */}
     </div>
   );
 }

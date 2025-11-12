@@ -207,3 +207,25 @@ export async function getOrder(orderId: string) {
   const data = await response.json();
   return data;
 }
+
+export async function updateOrderStatus(
+  orderId: string,
+  status: "Ordered" | "Paid" | "Shipped" | "Owned"
+): Promise<void> {
+  const response = await client.api.orders[":orderId"].$put({
+    param: {
+      orderId,
+    },
+    json: {
+      order: {
+        status,
+      },
+      cascadeOptions: ["status"],
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || `HTTP ${response.status}`);
+  }
+}
