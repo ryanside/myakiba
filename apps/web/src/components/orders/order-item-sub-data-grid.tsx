@@ -3,6 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { InlineEditableCell } from "@/components/ui/inline-editable-cell";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -203,7 +204,28 @@ export function OrderItemSubDataGrid({
             column={column}
           />
         ),
-        cell: (info) => info.getValue() as string,
+        cell: ({ row }) => {
+          const item = row.original;
+          return (
+            <InlineEditableCell
+              value={item.count.toString()}
+              onSubmit={async (newValue) => {
+                await onEditItem({
+                  ...item,
+                  count: parseInt(newValue, 10),
+                });
+              }}
+              validate={(value) => {
+                const num = parseInt(value, 10);
+                if (isNaN(num) || num < 0) {
+                  return "Enter a valid positive number";
+                }
+                return true;
+              }}
+              previewClassName="text-sm"
+            />
+          );
+        },
         enableSorting: true,
         enableHiding: true,
         enableResizing: true,
@@ -240,7 +262,28 @@ export function OrderItemSubDataGrid({
             column={column}
           />
         ),
-        cell: (info) => formatCurrency(info.getValue() as string, currency),
+        cell: ({ row }) => {
+          const item = row.original;
+          return (
+            <InlineEditableCell
+              value={item.price}
+              onSubmit={async (newValue) => {
+                await onEditItem({
+                  ...item,
+                  price: newValue,
+                });
+              }}
+              validate={(value) => {
+                // Allow decimal numbers with up to 2 decimal places
+                if (!/^\d+(\.\d{0,2})?$/.test(value)) {
+                  return "Enter a valid amount (e.g., 10.99)";
+                }
+                return true;
+              }}
+              previewClassName="font-medium text-foreground"
+            />
+          );
+        },
         enableSorting: true,
         enableHiding: true,
         enableResizing: true,
