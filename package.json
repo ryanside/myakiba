@@ -22,7 +22,7 @@
   "devDependencies": {
     "@eslint/js": "^9.37.0",
     "eslint": "^9.37.0",
-    "turbo": "^2.5.8",
+    "turbo": "^2.6.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.1"
   },

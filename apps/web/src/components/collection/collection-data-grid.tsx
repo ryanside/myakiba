@@ -11,9 +11,10 @@ import type {
   PaginationState,
   SortingState,
 } from "@tanstack/react-table";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
+import { InlineEditableCell } from "@/components/ui/inline-editable-cell";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -257,8 +258,26 @@ export const CollectionDataGrid = ({
           />
         ),
         cell: ({ row }) => {
-          const count = row.original.count;
-          return <div className="text-sm">{count ?? "n/a"}</div>;
+          const item = row.original;
+          return (
+            <InlineEditableCell
+              value={item.count.toString()}
+              onSubmit={async (newValue) => {
+                await onEditCollectionItem({
+                  ...item,
+                  count: parseInt(newValue, 10),
+                });
+              }}
+              validate={(value) => {
+                const num = parseInt(value, 10);
+                if (isNaN(num) || num < 0) {
+                  return "Enter a valid positive number";
+                }
+                return true;
+              }}
+              previewClassName="text-sm"
+            />
+          );
         },
         enableSorting: true,
         enableHiding: true,
@@ -276,8 +295,19 @@ export const CollectionDataGrid = ({
           />
         ),
         cell: ({ row }) => {
-          const score = row.original.score;
-          return <div className="text-sm">{score || "n/a"}</div>;
+          const item = row.original;
+          return (
+            <InlineEditableCell
+              value={item.score}
+              onSubmit={async (newValue) => {
+                await onEditCollectionItem({
+                  ...item,
+                  score: newValue,
+                });
+              }}
+              previewClassName="text-sm"
+            />
+          );
         },
         enableSorting: true,
         enableHiding: true,
@@ -295,8 +325,25 @@ export const CollectionDataGrid = ({
           />
         ),
         cell: ({ row }) => {
-          const shop = row.original.shop;
-          return <div className="text-sm">{shop || "n/a"}</div>;
+          const item = row.original;
+          return (
+            <InlineEditableCell
+              value={item.shop}
+              onSubmit={async (newValue) => {
+                await onEditCollectionItem({
+                  ...item,
+                  shop: newValue,
+                });
+              }}
+              validate={(value) => {
+                if (!value || value.trim().length === 0) {
+                  return "Shop cannot be empty";
+                }
+                return true;
+              }}
+              previewClassName="text-sm"
+            />
+          );
         },
         enableSorting: true,
         enableHiding: true,
@@ -314,11 +361,25 @@ export const CollectionDataGrid = ({
           />
         ),
         cell: ({ row }) => {
-          const price = row.original.price;
+          const item = row.original;
           return (
-            <div className="font-medium text-foreground">
-              {formatCurrency(price, currency)}
-            </div>
+            <InlineEditableCell
+              value={item.price}
+              onSubmit={async (newValue) => {
+                await onEditCollectionItem({
+                  ...item,
+                  price: newValue,
+                });
+              }}
+              validate={(value) => {
+                // Allow decimal numbers with up to 2 decimal places
+                if (!/^\d+(\.\d{0,2})?$/.test(value)) {
+                  return "Enter a valid amount (e.g., 10.99)";
+                }
+                return true;
+              }}
+              previewClassName="font-medium text-foreground"
+            />
           );
         },
         enableSorting: true,
@@ -412,9 +473,9 @@ export const CollectionDataGrid = ({
         enableResizing: false,
       },
     ],
-    [collectionSelection, setCollectionSelection]
+    [currency, onEditCollectionItem, onDeleteCollectionItems]
   );
-  const handlePaginationChange = (updater: Updater<PaginationState>) => {
+  const handlePaginationChange = useCallback((updater: Updater<PaginationState>) => {
     const newPagination =
       typeof updater === "function" ? updater(pagination) : updater;
 
@@ -423,9 +484,9 @@ export const CollectionDataGrid = ({
       limit: newPagination.pageSize,
       offset: newOffset,
     });
-  };
+  }, [pagination, onFilterChange]);
 
-  const handleSortingChange = (updater: Updater<SortingState>) => {
+  const handleSortingChange = useCallback((updater: Updater<SortingState>) => {
     const newSorting =
       typeof updater === "function" ? updater(sorting) : updater;
 
@@ -448,7 +509,7 @@ export const CollectionDataGrid = ({
         offset: 0,
       });
     }
-  };
+  }, [sorting, onFilterChange]);
 
   const table = useReactTable({
     columns,

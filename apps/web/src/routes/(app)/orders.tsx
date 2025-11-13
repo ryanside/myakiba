@@ -38,6 +38,7 @@ import type { CollectionItemFormValues } from "@/lib/collection/types";
 import { updateCollectionItem } from "@/queries/collection";
 import { authClient } from "@/lib/auth-client";
 import { OrdersGridSkeleton } from "@/components/skeletons/orders-grid-skeleton";
+import { useCallback } from "react";
 
 export const Route = createFileRoute("/(app)/orders")({
   component: RouteComponent,
@@ -68,9 +69,12 @@ function RouteComponent() {
   const queryClient = useQueryClient();
   const { filters, setFilters, resetFilters } = useFilters(Route.id);
 
-  const handleFilterChange = (filters: OrderFilters) => {
-    setFilters(filters);
-  };
+  const handleFilterChange = useCallback(
+    (filters: OrderFilters) => {
+      setFilters(filters);
+    },
+    [setFilters]
+  );
 
   const { isPending, isError, data, error } = useQuery({
     queryKey: ["orders", filters],
@@ -393,53 +397,78 @@ function RouteComponent() {
     },
   });
 
-  const handleMerge = async (
-    values: NewOrder,
-    cascadeOptions: CascadeOptions,
-    orderIds: Set<string>
-  ) => {
-    mergeMutation.mutate({ values, orderIds, cascadeOptions });
-  };
-  const handleSplit = async (
-    values: NewOrder,
-    cascadeOptions: CascadeOptions,
-    collectionIds: Set<string>,
-    orderIds: Set<string>
-  ) => {
-    splitMutation.mutate({
-      values,
-      orderIds,
-      collectionIds,
-      cascadeOptions,
-    });
-  };
-  const handleEditOrder = async (
-    values: EditedOrder,
-    cascadeOptions: CascadeOptions
-  ) => {
-    editOrderMutation.mutate({ values, cascadeOptions });
-  };
+  const handleMerge = useCallback(
+    async (
+      values: NewOrder,
+      cascadeOptions: CascadeOptions,
+      orderIds: Set<string>
+    ) => {
+      mergeMutation.mutate({ values, orderIds, cascadeOptions });
+    },
+    [mergeMutation]
+  );
+  const handleSplit = useCallback(
+    async (
+      values: NewOrder,
+      cascadeOptions: CascadeOptions,
+      collectionIds: Set<string>,
+      orderIds: Set<string>
+    ) => {
+      splitMutation.mutate({
+        values,
+        orderIds,
+        collectionIds,
+        cascadeOptions,
+      });
+    },
+    [splitMutation]
+  );
+  const handleEditOrder = useCallback(
+    async (values: EditedOrder, cascadeOptions: CascadeOptions) => {
+      editOrderMutation.mutate({ values, cascadeOptions });
+    },
+    [editOrderMutation]
+  );
 
-  const handleDeleteOrders = async (orderIds: Set<string>) => {
-    deleteOrderMutation.mutate(orderIds);
-  };
+  const handleDeleteOrders = useCallback(
+    async (orderIds: Set<string>) => {
+      deleteOrderMutation.mutate(orderIds);
+    },
+    [deleteOrderMutation]
+  );
 
-  const handleEditItem = async (values: CollectionItemFormValues) => {
-    // console.log(values.releaseId);
-    editItemMutation.mutate({ values });
-  };
+  const handleEditItem = useCallback(
+    async (values: CollectionItemFormValues) => {
+      // console.log(values.releaseId);
+      editItemMutation.mutate({ values });
+    },
+    [editItemMutation]
+  );
 
-  const handleDeleteItem = async (orderId: string, itemId: string) => {
-    deleteItemMutation.mutate({ orderId, itemId });
-  };
+  const handleDeleteItem = useCallback(
+    async (orderId: string, itemId: string) => {
+      deleteItemMutation.mutate({ orderId, itemId });
+    },
+    [deleteItemMutation]
+  );
 
-  const handleMoveItem = async (
-    targetOrderId: string,
-    collectionIds: Set<string>,
-    orderIds: Set<string>
-  ) => {
-    moveItemMutation.mutate({ targetOrderId, collectionIds, orderIds });
-  };
+  const handleMoveItem = useCallback(
+    async (
+      targetOrderId: string,
+      collectionIds: Set<string>,
+      orderIds: Set<string>
+    ) => {
+      moveItemMutation.mutate({ targetOrderId, collectionIds, orderIds });
+    },
+    [moveItemMutation]
+  );
+
+  const handleSearchChange = useCallback(
+    (search: string) => {
+      setFilters({ ...filters, search });
+    },
+    [filters, setFilters]
+  );
 
   if (isPending) {
     return <OrdersGridSkeleton />;
@@ -456,7 +485,6 @@ function RouteComponent() {
   }
 
   const { orders, totalCount } = data;
-
 
   return (
     <div className="w-full space-y-4">
@@ -475,7 +503,7 @@ function RouteComponent() {
         search={filters.search ?? ""}
         filters={filters}
         onFilterChange={handleFilterChange}
-        onSearchChange={(search) => handleFilterChange({ ...filters, search })}
+        onSearchChange={handleSearchChange}
         onResetFilters={resetFilters}
         onMerge={handleMerge}
         onSplit={handleSplit}

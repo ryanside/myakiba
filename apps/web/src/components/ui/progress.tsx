@@ -6,21 +6,27 @@ import { cn } from "@/lib/utils"
 function Progress({
   className,
   value,
+  max = 100,
   ...props
 }: React.ComponentProps<typeof ProgressPrimitive.Root>) {
+  // Calculate percentage based on value and max
+  const percentage = max > 0 ? Math.min(((value || 0) / max) * 100, 100) : 0;
+  
   return (
     <ProgressPrimitive.Root
       data-slot="progress"
       className={cn(
-        "bg-primary/20 relative h-2 w-full overflow-hidden rounded-full",
+        "bg-secondary/20 relative h-2 w-full overflow-hidden rounded-full",
         className
       )}
+      max={max}
+      value={value}
       {...props}
     >
       <ProgressPrimitive.Indicator
         data-slot="progress-indicator"
-        className="bg-primary h-full w-full flex-1 transition-all"
-        style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
+        className="bg-secondary h-full w-full flex-1 transition-all"
+        style={{ transform: `translateX(-${100 - percentage}%)` }}
       />
     </ProgressPrimitive.Root>
   )

@@ -3,8 +3,8 @@
 
 @custom-variant dark (&:is(.dark *));
 
-.inter-font {
-  font-family: "Inter", sans-serif;
+.instrument-sans-font {
+  font-family: "Instrument Sans", sans-serif;
   font-optical-sizing: auto;
   font-weight: normal;
   font-style: normal;
@@ -51,7 +51,7 @@
   --sidebar-accent-foreground: #201127;
   --sidebar-border: #e9e5eb;
   --sidebar-ring: #a2d843;
-  --font-sans: Inter, ui-sans-serif, sans-serif, system-ui;
+  --font-sans: Instrument Sans, ui-sans-serif, sans-serif, system-ui;
   --font-serif: serif;
   --font-mono: JetBrains Mono, monospace;
   --radius: 0.75rem;
@@ -69,14 +69,13 @@
   --shadow-lg: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 4px 6px -1px hsl(0 0% 0% / 0.05);
   --shadow-xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 8px 10px -1px hsl(0 0% 0% / 0.05);
   --shadow-2xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.13);
-  --tracking-normal: 0rem;
   --spacing: 0.25rem;
 }
 
 .dark {
-  --background: #141414;
+  --background: #121212;
   --foreground: #c1c1c1;
-  --card: #121212;
+  --card: #141414;
   --card-foreground: #c1c1c1;
   --popover: #141414;
   --popover-foreground: #c1c1c1;
@@ -99,7 +98,7 @@
   --chart-4: #53dde7;
   --chart-5: #e8aa54;
   --chart-6: oklch(45.7% 0.24 277.023);
-  --sidebar: #121212;
+  --sidebar: #101010;
   --sidebar-foreground: #c1c1c1;
   --sidebar-primary: #b0e753;
   --sidebar-primary-foreground: #141414;
@@ -107,7 +106,7 @@
   --sidebar-accent-foreground: #c1c1c1;
   --sidebar-border: #222222;
   --sidebar-ring: #b0e753;
-  --font-sans: Inter, ui-sans-serif, sans-serif, system-ui;
+  --font-sans: Instrument Sans, ui-sans-serif, sans-serif, system-ui;
   --font-serif: serif;
   --font-mono: JetBrains Mono, monospace;
   --radius: 0.75rem;

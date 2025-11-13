@@ -22,6 +22,7 @@ import {
   createOptimisticEditUpdate,
 } from "@/lib/collection/utils";
 import { authClient } from "@/lib/auth-client";
+import { useCallback } from "react";
 
 export const Route = createFileRoute("/(app)/collection")({
   component: RouteComponent,
@@ -52,9 +53,9 @@ function RouteComponent() {
   const queryClient = useQueryClient();
   const { filters, setFilters, resetFilters } = useFilters(Route.id);
 
-  const handleFilterChange = (filters: CollectionFilters) => {
+  const handleFilterChange = useCallback((filters: CollectionFilters) => {
     setFilters(filters);
-  };
+  }, [ setFilters ]);
 
   const { isPending, isError, data, error } = useQuery({
     queryKey: ["collection", filters],
@@ -138,13 +139,13 @@ function RouteComponent() {
     },
   });
 
-  const handleDeleteCollectionItems = async (collectionIds: Set<string>) => {
+  const handleDeleteCollectionItems = useCallback(async (collectionIds: Set<string>) => {
     await deleteCollectionItemsMutation.mutateAsync({ collectionIds });
-  };
+  }, [deleteCollectionItemsMutation]);
 
-  const handleEditCollectionItem = async (values: CollectionItemFormValues) => {
+  const handleEditCollectionItem = useCallback(async (values: CollectionItemFormValues) => {
     await editCollectionItemMutation.mutateAsync(values);
-  };
+  }, [editCollectionItemMutation]);
 
   if (isPending) {
     return <CollectionSkeleton />;

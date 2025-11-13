@@ -1,17 +1,10 @@
 import { dbHttp } from "@/db";
 import { collection, item } from "@/db/schema/figure";
-import { eq, count, and, sql, desc, sum, between, not } from "drizzle-orm";
+import { eq, count, and, sql, desc, not } from "drizzle-orm";
 import { entry, entry_to_item } from "@/db/schema/figure";
 
 class AnalyticsService {
   async getAnalytics(userId: string) {
-    const startOfYear = new Date(new Date().getFullYear(), 0, 1).toISOString();
-    const endOfYear = new Date(
-      new Date().getFullYear() + 1,
-      0,
-      1
-    ).toISOString();
-
     const getPriceRangeDistribution = dbHttp
       .select({
         priceRange: sql<string>`
@@ -89,35 +82,6 @@ class AnalyticsService {
       )
       .limit(10);
 
-    const getMonthlyBreakdown = dbHttp
-      .select({
-        month: sql<number>`EXTRACT(MONTH FROM ${collection.collectionDate})`,
-        itemsAdded: count(),
-        amountSpent: sum(collection.price),
-      })
-      .from(collection)
-      .where(
-        and(
-          eq(collection.userId, userId),
-          eq(collection.status, "Owned"),
-          between(collection.collectionDate, startOfYear, endOfYear)
-        )
-      )
-      .groupBy(sql`EXTRACT(MONTH FROM ${collection.collectionDate})`)
-      .orderBy(sql`EXTRACT(MONTH FROM ${collection.collectionDate})`);
-
-    const getCategoriesOwned = dbHttp
-      .select({
-        name: item.category,
-        count: count(),
-        totalValue: sum(sql`COALESCE(${collection.price}, 0)`),
-      })
-      .from(collection)
-      .innerJoin(item, eq(collection.itemId, item.id))
-      .where(and(eq(collection.userId, userId), eq(collection.status, "Owned")))
-      .groupBy(item.category)
-      .orderBy(desc(count()));
-
     const getTotalOwned = dbHttp
       .select({
         count: count(),
@@ -127,42 +91,24 @@ class AnalyticsService {
         and(eq(collection.userId, userId), eq(collection.status, "Owned"))
       );
 
-    const [
-      priceRangeDistribution,
-      scaleDistribution,
-      mostExpensiveCollectionItems,
-      topShops,
-      monthlyBreakdown,
-      categoriesOwned,
-      totalOwned,
-    ] = await dbHttp.batch([
-      getPriceRangeDistribution,
-      getScaleDistribution,
-      getMostExpensiveCollectionItems,
-      getTopShops,
-      getMonthlyBreakdown,
-      getCategoriesOwned,
-      getTotalOwned,
-    ]);
+    // Queries for all entry categories
+    const allCategories = [
+      "Characters",
+      "Origins",
+      "Companies",
+      "Artists",
+      "Materials",
+      "Classifications",
+      "Event",
+    ];
 
-    return {
-      priceRangeDistribution,
-      scaleDistribution,
-      mostExpensiveCollectionItems,
-      topShops,
-      monthlyBreakdown,
-      categoriesOwned,
-      totalOwned,
-    };
-  }
-
-  async getEntryAnalytics(userId: string, entryCategory: string) {
-    const [topEntriesByCategory] = await dbHttp.batch([
+    const topEntriesByCategoryQueries = allCategories.map((category) =>
       dbHttp
         .select({
           originName: entry.name,
           itemCount: count(),
           totalValue: sql<string>`SUM(${collection.price}::numeric)`,
+          category: sql<string>`${category}`,
         })
         .from(collection)
         .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
@@ -171,7 +117,7 @@ class AnalyticsService {
           and(
             eq(collection.userId, userId),
             eq(collection.status, "Owned"),
-            eq(entry.category, entryCategory)
+            eq(entry.category, category)
           )
         )
         .groupBy(entry.id, entry.name)
@@ -179,10 +125,41 @@ class AnalyticsService {
           desc(count()),
           desc(sql<string>`SUM(${collection.price}::numeric)`)
         )
-        .limit(10),
+        .limit(10)
+    );
+
+    const [
+      priceRangeDistribution,
+      scaleDistribution,
+      mostExpensiveCollectionItems,
+      topShops,
+      totalOwned,
+      ...topEntriesResults
+    ] = await dbHttp.batch([
+      getPriceRangeDistribution,
+      getScaleDistribution,
+      getMostExpensiveCollectionItems,
+      getTopShops,
+      getTotalOwned,
+      ...topEntriesByCategoryQueries,
     ]);
+
+    // Structure the top entries by category
+    const topEntriesByAllCategories = allCategories.reduce(
+      (acc, category, index) => {
+        acc[category] = topEntriesResults[index];
+        return acc;
+      },
+      {} as Record<string, typeof topEntriesResults[0]>
+    );
+
     return {
-      topEntriesByCategory,
+      priceRangeDistribution,
+      scaleDistribution,
+      mostExpensiveCollectionItems,
+      topShops,
+      totalOwned,
+      topEntriesByAllCategories,
     };
   }
 }
