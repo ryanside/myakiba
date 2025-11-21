@@ -14,7 +14,7 @@ import type {
 import { useCallback, useMemo, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { InlineEditableCell } from "@/components/ui/inline-editable-cell";
+import { EditableTextCell } from "@/components/editable/editable-text-cell";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link } from "@tanstack/react-router";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { cn, formatDate, getCurrencyLocale } from "@/lib/utils";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { DebouncedInput } from "../debounced-input";
 import { DataGridPagination } from "../ui/data-grid-pagination";
@@ -54,6 +54,8 @@ import {
   PopoverTrigger,
 } from "../ui/popover";
 import CollectionItemForm from "./collection-item-form";
+import * as z from "zod";
+import { EditablePriceCell } from "../editable/editable-price-cell";
 
 export const DEFAULT_PAGE_INDEX = 0;
 export const DEFAULT_PAGE_SIZE = 10;
@@ -115,21 +117,17 @@ export const CollectionDataGrid = ({
     rowSelection: collectionSelection,
     setRowSelection: setCollectionSelection,
     getSelectedOrderIds: getSelectedCollectionIds,
-    clearSelections,
   } = useSelection();
 
   const [expandedRows, setExpandedRows] = useState<ExpandedState>({});
   const [columnOrder, setColumnOrder] = useState<string[]>([
     "select",
     "itemTitle",
-    "itemCategory",
     "itemScale",
-    "status",
     "count",
     "score",
     "price",
     "shop",
-    "releaseDate",
     "collectionDate",
     "actions",
   ]);
@@ -260,7 +258,7 @@ export const CollectionDataGrid = ({
         cell: ({ row }) => {
           const item = row.original;
           return (
-            <InlineEditableCell
+            <EditableTextCell
               value={item.count.toString()}
               onSubmit={async (newValue) => {
                 await onEditCollectionItem({
@@ -269,13 +267,17 @@ export const CollectionDataGrid = ({
                 });
               }}
               validate={(value) => {
-                const num = parseInt(value, 10);
-                if (isNaN(num) || num < 0) {
-                  return "Enter a valid positive number";
+                const num = z
+                  .number()
+                  .min(1, "Count must be at least 1")
+                  .safeParse(parseInt(value, 10));
+                if (!num.success) {
+                  return "Enter a valid count";
                 }
                 return true;
               }}
               previewClassName="text-sm"
+              inputClassName="bg-sidebar"
             />
           );
         },
@@ -297,13 +299,24 @@ export const CollectionDataGrid = ({
         cell: ({ row }) => {
           const item = row.original;
           return (
-            <InlineEditableCell
+            <EditableTextCell
               value={item.score}
               onSubmit={async (newValue) => {
                 await onEditCollectionItem({
                   ...item,
                   score: newValue,
                 });
+              }}
+              validate={(value) => {
+                const num = z
+                  .number()
+                  .min(0, "Score must be at least 1")
+                  .max(10, "Score must be at most 10")
+                  .safeParse(parseInt(value, 10));
+                if (!num.success) {
+                  return "Enter a valid score";
+                }
+                return true;
               }}
               previewClassName="text-sm"
             />
@@ -327,7 +340,7 @@ export const CollectionDataGrid = ({
         cell: ({ row }) => {
           const item = row.original;
           return (
-            <InlineEditableCell
+            <EditableTextCell
               value={item.shop}
               onSubmit={async (newValue) => {
                 await onEditCollectionItem({
@@ -363,22 +376,17 @@ export const CollectionDataGrid = ({
         cell: ({ row }) => {
           const item = row.original;
           return (
-            <InlineEditableCell
-              value={item.price}
+            <EditablePriceCell
+              oldValue={item.price}
+              currency={currency}
               onSubmit={async (newValue) => {
                 await onEditCollectionItem({
                   ...item,
                   price: newValue,
                 });
               }}
-              validate={(value) => {
-                // Allow decimal numbers with up to 2 decimal places
-                if (!/^\d+(\.\d{0,2})?$/.test(value)) {
-                  return "Enter a valid amount (e.g., 10.99)";
-                }
-                return true;
-              }}
-              previewClassName="font-medium text-foreground"
+              locale={getCurrencyLocale(currency)}
+              disabled={false}
             />
           );
         },
@@ -456,9 +464,7 @@ export const CollectionDataGrid = ({
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   variant="destructive"
-                  onClick={() =>
-                    onDeleteCollectionItems(new Set([item.id]))
-                  }
+                  onClick={() => onDeleteCollectionItems(new Set([item.id]))}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete item
@@ -475,41 +481,44 @@ export const CollectionDataGrid = ({
     ],
     [currency, onEditCollectionItem, onDeleteCollectionItems]
   );
-  const handlePaginationChange = useCallback((updater: Updater<PaginationState>) => {
-    const newPagination =
-      typeof updater === "function" ? updater(pagination) : updater;
+  const handlePaginationChange = useCallback(
+    (updater: Updater<PaginationState>) => {
+      const newPagination =
+        typeof updater === "function" ? updater(pagination) : updater;
 
-    const newOffset = newPagination.pageIndex * newPagination.pageSize;
-    onFilterChange({
-      limit: newPagination.pageSize,
-      offset: newOffset,
-    });
-  }, [pagination, onFilterChange]);
-
-  const handleSortingChange = useCallback((updater: Updater<SortingState>) => {
-    const newSorting =
-      typeof updater === "function" ? updater(sorting) : updater;
-
-    if (newSorting.length > 0) {
-      const sortConfig = newSorting[0];
+      const newOffset = newPagination.pageIndex * newPagination.pageSize;
       onFilterChange({
-        sort: sortConfig.id as
-          | "itemTitle"
-          | "itemCategory"
-          | "itemScale"
-          | "status"
-          | "count"
-          | "score"
-          | "price"
-          | "shop"
-          | "releaseDate"
-          | "collectionDate"
-          | "createdAt",
-        order: sortConfig.desc ? "desc" : "asc",
-        offset: 0,
+        limit: newPagination.pageSize,
+        offset: newOffset,
       });
-    }
-  }, [sorting, onFilterChange]);
+    },
+    [pagination, onFilterChange]
+  );
+
+  const handleSortingChange = useCallback(
+    (updater: Updater<SortingState>) => {
+      const newSorting =
+        typeof updater === "function" ? updater(sorting) : updater;
+
+      if (newSorting.length > 0) {
+        const sortConfig = newSorting[0];
+        onFilterChange({
+          sort: sortConfig.id as
+            | "itemTitle"
+            | "itemScale"
+            | "count"
+            | "score"
+            | "price"
+            | "shop"
+            | "collectionDate"
+            | "createdAt",
+          order: sortConfig.desc ? "desc" : "asc",
+          offset: 0,
+        });
+      }
+    },
+    [sorting, onFilterChange]
+  );
 
   const table = useReactTable({
     columns,

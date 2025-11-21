@@ -19,7 +19,7 @@ export default function UserMenu() {
   const { data: session, isPending } = authClient.useSession();
   const queryClient = useQueryClient();
   if (isPending) {
-    return <Skeleton className="h-9 w-24" />;
+    return <Skeleton className="h-8 w-8 rounded-full" />;
   }
 
   if (!session) {

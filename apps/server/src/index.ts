@@ -15,6 +15,7 @@ import wrappedRouter from "./routers/wrapped";
 import itemsRouter from "./routers/items";
 import entriesRouter from "./routers/entries";
 import searchRouter from "./routers/search";
+import settingsRouter from "./routers/settings";
 
 const app = new Hono<{
   Variables: Variables;
@@ -64,7 +65,8 @@ const routes = app
   .route("/wrapped", wrappedRouter)
   .route("/items", itemsRouter)
   .route("/entries", entriesRouter)
-  .route("/search", searchRouter);
+  .route("/search", searchRouter)
+  .route("/settings", settingsRouter);
 
 app.get("*", serveStatic({ root: "./dist" }));
 app.get("*", serveStatic({ path: "./dist/index.html" }));

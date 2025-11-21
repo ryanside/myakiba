@@ -32,7 +32,6 @@ function HomeComponent() {
     <>
       <HeroHeader />
       <HeroSection />
-      <Features />
       <FooterSection />
     </>
   );

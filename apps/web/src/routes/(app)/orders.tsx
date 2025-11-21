@@ -39,6 +39,8 @@ import { updateCollectionItem } from "@/queries/collection";
 import { authClient } from "@/lib/auth-client";
 import { OrdersGridSkeleton } from "@/components/skeletons/orders-grid-skeleton";
 import { useCallback } from "react";
+import { KPICard } from "@/components/ui/kpi-card";
+import { formatCurrency } from "@/lib/utils";
 
 export const Route = createFileRoute("/(app)/orders")({
   component: RouteComponent,
@@ -484,10 +486,40 @@ function RouteComponent() {
     );
   }
 
-  const { orders, totalCount } = data;
+  const { orders, orderStats, totalCount } = data;
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full space-y-8">
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-row items-start gap-4">
+          <h1 className="text-2xl tracking-tight">Orders</h1>
+        </div>
+        <p className="text-muted-foreground text-sm font-light">
+          Manage and track your orders
+        </p>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        <KPICard
+          title="Total Orders"
+          subtitle="all time"
+          value={orderStats.totalOrders}
+        />
+        <KPICard
+          title="Total Spent"
+          subtitle="all time, including all fees"
+          value={formatCurrency(orderStats.totalSpent, userCurrency)}
+        />
+        <KPICard
+          title="Active Orders"
+          subtitle="orders not yet collected"
+          value={orderStats.activeOrders}
+        />
+        <KPICard
+          title="Unpaid Costs"
+          subtitle="unpaid order costs"
+          value={formatCurrency(orderStats.unpaidCosts, userCurrency)}
+        />
+      </div>
       <OrdersDataGrid
         key="orders-data-grid"
         orders={orders}

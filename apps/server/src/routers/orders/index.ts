@@ -78,6 +78,7 @@ const ordersRouter = new Hono<{ Variables: Variables }>()
 
       return c.json({
         orders: result.orders,
+        orderStats: result.orderStats,
         totalCount,
         pagination: {
           limit: validatedQuery.limit,

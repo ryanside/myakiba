@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { InlineEditableCell } from "@/components/ui/inline-editable-cell";
+import { EditableTextCell } from "@/components/editable/editable-text-cell";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -207,7 +207,7 @@ export function OrderItemSubDataGrid({
         cell: ({ row }) => {
           const item = row.original;
           return (
-            <InlineEditableCell
+            <EditableTextCell
               value={item.count.toString()}
               onSubmit={async (newValue) => {
                 await onEditItem({
@@ -265,7 +265,7 @@ export function OrderItemSubDataGrid({
         cell: ({ row }) => {
           const item = row.original;
           return (
-            <InlineEditableCell
+            <EditableTextCell
               value={item.price}
               onSubmit={async (newValue) => {
                 await onEditItem({

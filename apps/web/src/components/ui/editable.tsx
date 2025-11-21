@@ -1,4 +1,4 @@
-"use client";
+;
 
 import { Slot } from "@radix-ui/react-slot";
 import * as React from "react";

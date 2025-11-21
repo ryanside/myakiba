@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatCurrency } from "@/lib/utils";
 import { Progress } from "../ui/progress";
+import { Link } from "@tanstack/react-router";
 
 interface BudgetControlCardProps {
   currentSpent?: number;
@@ -28,9 +29,11 @@ export function BudgetControlCard({
     <Card className="">
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-md font-medium">Budget Control</CardTitle>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-          <Settings className="h-4 w-4" />
-        </Button>
+        <Link to="/settings">
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Settings className="h-4 w-4" />
+          </Button>
+        </Link>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-3">
@@ -50,9 +53,7 @@ export function BudgetControlCard({
               </div>
             ) : (
               <div className="flex items-baseline gap-1.5">
-                <span className="text-xl text-foreground">
-                  No budget set
-                </span>
+                <span className="text-xl text-foreground">No budget set</span>
               </div>
             )}
           </div>

@@ -50,10 +50,6 @@ export default function Features() {
   return (
     <section className="relative bg-background pb-32 pt-16">
       <div className="bg-linear-to-b absolute inset-0 -z-10 sm:inset-6 sm:rounded-b-3xl dark:block dark:to-[color-mix(in_oklab,var(--color-zinc-900)_75%,var(--color-background))]"></div>
-      <div
-        aria-hidden
-        className="absolute bottom-0 left-0 right-0 h-112 z-0 pointer-events-none [background:radial-gradient(150%_100%_at_50%_0%,transparent_40%,var(--color-secondary),var(--color-foreground)_100%)]"
-      />
       <div className="relative mx-auto max-w-5xl space-y-8 px-6 md:space-y-16 lg:space-y-20 dark:[--color-border:color-mix(in_oklab,var(--color-white)_10%,transparent)]">
         <div className="relative z-10 max-w-2xl space-y-6 text-start">
           <h2 className="text-balance text-3xl font-semibold lg:text-6xl dark:text-white/90">

@@ -244,7 +244,36 @@ class OrdersService {
       .limit(limit)
       .offset(offset);
 
-    return { orders };
+    const orderTotalsSubquery = db
+      .select({
+        orderId: order.id,
+        collectionDate: order.collectionDate,
+        paymentDate: order.paymentDate,
+        status: order.status,
+        total: sql<string>`COALESCE(SUM(${collection.price}::numeric), 0) + COALESCE(${order.shippingFee}::numeric, 0) + COALESCE(${order.taxes}::numeric, 0) + COALESCE(${order.duties}::numeric, 0) + COALESCE(${order.tariffs}::numeric, 0) + COALESCE(${order.miscFees}::numeric, 0)`.as('total'),
+      })
+      .from(order)
+      .leftJoin(collection, eq(order.id, collection.orderId))
+      .where(eq(order.userId, userId))
+      .groupBy(order.id, order.collectionDate, order.paymentDate, order.status)
+      .as("order_totals");
+
+    const [orderStatsResult] = await db
+      .select({
+        totalOrders: sql<number>`COUNT(*)`,
+        totalSpent: sql<string>`COALESCE(SUM(${orderTotalsSubquery.total}::numeric), 0)`,
+        activeOrders: sql<number>`COUNT(CASE WHEN ${orderTotalsSubquery.collectionDate} IS NULL THEN 1 END)`,
+        unpaidCosts: sql<string>`COALESCE(SUM(
+          CASE WHEN ${orderTotalsSubquery.paymentDate} IS NULL 
+            AND ${orderTotalsSubquery.status} NOT IN ('Owned', 'Paid')
+            THEN ${orderTotalsSubquery.total}::numeric
+            ELSE 0 
+          END
+        ), 0)`,
+      })
+      .from(orderTotalsSubquery);
+
+    return { orders, orderStats: orderStatsResult };
   }
 
   async getOrder(userId: string, orderId: string) {

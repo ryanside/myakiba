@@ -40,7 +40,7 @@ import {
   Move,
   Filter,
 } from "lucide-react";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { cn, formatCurrency, formatDate, getCurrencyLocale } from "@/lib/utils";
 import { getStatusVariant } from "@/lib/orders/utils";
 import type {
   CascadeOptions,
@@ -69,6 +69,7 @@ import {
 import ItemMoveForm from "./item-move-form";
 import type { CollectionItemFormValues } from "@/lib/collection/types";
 import OrdersFiltersForm from "./orders-filters-form";
+import { EditablePopoverCell } from "../editable/editable-popover-cell";
 
 export const DEFAULT_PAGE_INDEX = 0;
 export const DEFAULT_PAGE_SIZE = 10;
@@ -410,11 +411,56 @@ export default function OrdersDataGrid({
           />
         ),
         cell: ({ row }) => {
-          const total = row.original.total;
+          const order = row.original;
+          const inputs = [
+            {
+              title: "Shipping Fee",
+              name: "shippingFee",
+              type: "currency" as const,
+              value: order.shippingFee,
+            },
+            {
+              title: "Taxes",
+              name: "taxes",
+              type: "currency" as const,
+              value: order.taxes,
+            },
+            {
+              title: "Duties",
+              name: "duties",
+              type: "currency" as const,
+              value: order.duties,
+            },
+            {
+              title: "Tariffs",
+              name: "tariffs",
+              type: "currency" as const,
+              value: order.tariffs,
+            },
+            {
+              title: "Misc Fees",
+              name: "miscFees",
+              type: "currency" as const,
+              value: order.miscFees,
+            },
+          ];
+          const locale = getCurrencyLocale(currency);
           return (
-            <div className="font-medium text-foreground">
-              {formatCurrency(total, currency)}
-            </div>
+            <EditablePopoverCell
+              inputs={inputs}
+              displayValue={formatCurrency(order.total, currency)}
+              currency={currency}
+              locale={locale}
+              onSubmit={async (newValues) => {
+                await onEditOrder(
+                  {
+                    ...order,
+                    ...newValues,
+                  },
+                  [] as CascadeOptions
+                );
+              }}
+            />
           );
         },
         enableSorting: true,
@@ -505,43 +551,49 @@ export default function OrdersDataGrid({
       onDeleteOrders,
       currency,
       itemSelection,
-      setItemSelection
+      setItemSelection,
     ]
   );
 
-  const handlePaginationChange = useCallback((updater: Updater<PaginationState>) => {
-    const newPagination =
-      typeof updater === "function" ? updater(pagination) : updater;
+  const handlePaginationChange = useCallback(
+    (updater: Updater<PaginationState>) => {
+      const newPagination =
+        typeof updater === "function" ? updater(pagination) : updater;
 
-    const newOffset = newPagination.pageIndex * newPagination.pageSize;
-    onFilterChange({
-      limit: newPagination.pageSize,
-      offset: newOffset,
-    });
-  }, [pagination, onFilterChange]);
-
-  const handleSortingChange = useCallback((updater: Updater<SortingState>) => {
-    const newSorting =
-      typeof updater === "function" ? updater(sorting) : updater;
-
-    if (newSorting.length > 0) {
-      const sortConfig = newSorting[0];
+      const newOffset = newPagination.pageIndex * newPagination.pageSize;
       onFilterChange({
-        sort: sortConfig.id as
-          | "title"
-          | "shop"
-          | "orderDate"
-          | "releaseMonthYear"
-          | "shippingMethod"
-          | "total"
-          | "itemCount"
-          | "status"
-          | "createdAt",
-        order: sortConfig.desc ? "desc" : "asc",
-        offset: 0,
+        limit: newPagination.pageSize,
+        offset: newOffset,
       });
-    }
-  }, [sorting, onFilterChange]);
+    },
+    [pagination, onFilterChange]
+  );
+
+  const handleSortingChange = useCallback(
+    (updater: Updater<SortingState>) => {
+      const newSorting =
+        typeof updater === "function" ? updater(sorting) : updater;
+
+      if (newSorting.length > 0) {
+        const sortConfig = newSorting[0];
+        onFilterChange({
+          sort: sortConfig.id as
+            | "title"
+            | "shop"
+            | "orderDate"
+            | "releaseMonthYear"
+            | "shippingMethod"
+            | "total"
+            | "itemCount"
+            | "status"
+            | "createdAt",
+          order: sortConfig.desc ? "desc" : "asc",
+          offset: 0,
+        });
+      }
+    },
+    [sorting, onFilterChange]
+  );
 
   const table = useReactTable({
     columns,

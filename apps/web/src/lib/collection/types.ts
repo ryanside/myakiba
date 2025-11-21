@@ -90,8 +90,8 @@ export type CollectionItem = {
   releaseBarcode: string | null;
   createdAt: string;
   updatedAt: string;
-  totalCount: number;
-  totalValue: string;
+  totalCount: number; // number of items in the collection
+  totalValue: string; // total value of the collection
 };
 
 export type CollectionItemFormValues = Omit<
@@ -104,6 +104,14 @@ export type CollectionItemFormValues = Omit<
   | "itemScale"
 >;
 
+export type CollectionStats = {
+  totalItems: number;
+  totalSpent: string;
+  totalItemsThisMonth: number;
+  totalSpentThisMonth: string;
+};
+
 export type CollectionQueryResponse = {
   collection: CollectionItem[];
+  collectionStats: CollectionStats;
 };
