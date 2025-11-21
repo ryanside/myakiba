@@ -13,8 +13,15 @@ export default function HeroSection() {
   return (
     <section className="py-20">
       <div className="relative z-10 mx-auto w-full max-w-6xl px-6 lg:px-0">
-        <div className="relative">
-          <h1 className="mt-16 max-w-xl text-balance text-black dark:text-white text-2xl font-medium">
+        <div className="relative mt-8">
+          <div className="flex w-fit items-center justify-center gap-2">
+            <div className="flex relative items-center bg-sidebar hover:bg-background transition-all duration-150 border border-foreground/10 gap-2 rounded-3xl p-1 px-2 text-xs shadow-xs">
+              <span className="font-medium text-foreground">
+                v0.1.0 early build out now
+              </span>
+            </div>
+          </div>
+          <h1 className="mt-4 max-w-xl text-balance text-black dark:text-white text-2xl font-medium">
             Built to provide a better collecting experience.
           </h1>
 
@@ -29,7 +36,7 @@ export default function HeroSection() {
             .
           </p>
 
-          <div className="flex flex-col items-center gap-2 *:w-full sm:flex-row sm:*:w-auto">
+          <div className="flex flex-row items-center gap-2 *:w-full sm:flex-row sm:*:w-auto">
             <Button asChild variant="mono" className="">
               <Link to="/login">
                 <span className="text-nowrap">Get Started</span>

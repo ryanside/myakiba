@@ -11,7 +11,7 @@ const links = [
 export default function FooterSection() {
   return (
     <footer className="bg-background py-6">
-      <div className="mx-auto max-w-5xl px-6">
+      <div className="mx-auto max-w-7xl px-6">
         <div className="flex flex-wrap justify-center gap-6">
           <div className="order-last flex items-center gap-3 md:order-first">
             <span className="text-foreground block text-center text-sm">

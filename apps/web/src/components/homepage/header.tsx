@@ -40,7 +40,7 @@ export const HeroHeader = () => {
           isScrolled && "bg-background/75 backdrop-blur-lg"
         )}
       >
-        <div className="mx-auto max-w-6xl">
+        <div className="mx-auto max-w-6xl px-6 lg:px-0">
           <div
             className={cn(
               "relative flex flex-wrap items-center justify-between gap-6 py-6 transition-all duration-200 lg:gap-0",
