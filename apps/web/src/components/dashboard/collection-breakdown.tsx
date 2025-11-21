@@ -131,8 +131,8 @@ export function CollectionBreakdown({
         {/* Total Items Section */}
         <div className="flex flex-col gap-2 pt-4 border-t">
           <div className="flex justify-between items-center">
-            <span className="text-xl ">Total Items</span>
-            <span className="text-xl ">{totalItems}</span>
+            <span className="text-lg ">Total Items</span>
+            <span className="text-lg ">{totalItems}</span>
           </div>
         </div>
 

@@ -3,6 +3,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
+
 .instrument-sans-font {
   font-family: "Instrument Sans", sans-serif;
   font-optical-sizing: auto;
@@ -70,6 +71,7 @@
   --shadow-xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 8px 10px -1px hsl(0 0% 0% / 0.05);
   --shadow-2xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.13);
   --spacing: 0.25rem;
+  --font-weight-medium: 450;
 }
 
 .dark {
@@ -124,6 +126,7 @@
   --shadow-lg: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 4px 6px -1px hsl(0 0% 0% / 0.05);
   --shadow-xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 8px 10px -1px hsl(0 0% 0% / 0.05);
   --shadow-2xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.13);
+  --font-weight-medium: 450;
 }
 
 @theme inline {
@@ -185,6 +188,8 @@
   --tracking-wide: calc(var(--tracking-normal) + 0.025em);
   --tracking-wider: calc(var(--tracking-normal) + 0.05em);
   --tracking-widest: calc(var(--tracking-normal) + 0.1em);
+
+  --font-weight-medium: var(--font-weight-medium);
 }
 
 body {
@@ -233,3 +238,4 @@ body {
 *::-webkit-scrollbar-corner {
   background: #121212;
 }
+

@@ -64,7 +64,10 @@ export const scrapeImage = async (
         throw new Error("Failed to upload image to S3");
       }
 
-      const imageS3Url = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_BUCKET_REGION}.amazonaws.com/${filename}`;
+      const imageS3Url =
+        process.env.NODE_ENV === "production"
+          ? `https://static.myakiba.app/${filename}`
+          : `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_BUCKET_REGION}.amazonaws.com/${filename}`;
       console.timeEnd("Scraping Image Duration");
 
       return imageS3Url;

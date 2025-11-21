@@ -23,7 +23,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { CollectionBreakdown } from "@/components/dashboard/CollectionBreakdown";
+import { CollectionBreakdown } from "@/components/dashboard/collection-breakdown";
 import { BudgetControlCard } from "@/components/dashboard/budget-control-card";
 import { ReleaseCalendar } from "@/components/dashboard/release-calendar";
 import { UnpaidOrders } from "@/components/dashboard/unpaid-orders";
@@ -31,9 +31,10 @@ import { formatCurrency } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
 import { DashboardSkeleton } from "@/components/skeletons/dashboard-skeleton";
 import { Button } from "@/components/ui/button";
-import OrderKanban from "@/components/dashboard/OrderKanban";
+import OrderKanban from "@/components/dashboard/order-kanban";
 import { Badge } from "@/components/ui/badge";
 import { ValueLineBarChart } from "@/components/ui/value-line-bar-chart";
+import { KPICard } from "@/components/ui/kpi-card";
 
 export const Route = createFileRoute("/(app)/dashboard")({
   component: RouteComponent,
@@ -114,10 +115,12 @@ function DashboardContent() {
   return (
     <div className="">
       <div className="flex flex-col lg:flex-row items-start mb-6 gap-4">
-        <h2 className="text-2xl tracking-tight ">
+        <h1 className="text-2xl tracking-tight ">
           Welcome,{" "}
-          <span className="text-muted-foreground">{session?.user.name} (づ｡◕‿‿◕｡)づ</span>
-        </h2>
+          <span className="text-muted-foreground">
+            {session?.user.username} (づ｡◕‿‿◕｡)づ
+          </span>
+        </h1>
         <div className="flex flex-row flex-wrap items-center gap-2 lg:ml-auto">
           <Button
             variant="outline"
@@ -144,7 +147,7 @@ function DashboardContent() {
             Add Order
           </Button>
           <Button
-            className="bg-gradient-to-br from-background via-muted to-background text-foreground border"
+            className="bg-gradient-to-br from-background via-muted to-background text-foreground dark:!border-border"
             size="md"
             onClick={() => {
               navigate({
@@ -156,22 +159,23 @@ function DashboardContent() {
             }}
           >
             <User className="h-4 w-4" />
-            Go to Profile
+            View Profile
           </Button>
         </div>
       </div>
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-4">
-        {/* Outer Layout */}
         <div className="col-span-1 lg:col-span-3 border-dashed space-y-4 flex flex-col">
-          {/* Inner Layout */}
           <div className="grid gap-4 grid-cols-1 lg:grid-cols-3 border-dashed">
             <div className="col-span-1 lg:col-span-3 grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <CollectionBreakdown data={categoriesOwned} />
+              <CollectionBreakdown
+                data={categoriesOwned}
+                currency={userCurrency}
+              />
               <ValueLineBarChart data={monthlyOrders} />
               <div className="flex flex-col gap-4 col-span-1 h-full">
                 <KPICard
                   title="Total Spent"
-                  subtitle="based on all paid collection & order items"
+                  subtitle="based on paid collection & order items"
                   value={formatCurrency(
                     collectionStats[0].totalSpent,
                     userCurrency
@@ -189,7 +193,7 @@ function DashboardContent() {
                 />
                 <KPICard
                   title="Active Orders"
-                  subtitle="total number of orders not yet collected"
+                  subtitle="orders not yet collected"
                   value={ordersSummary[0].totalActiveOrderCount}
                   subvalueTitle="unpaid"
                   subvalue={unpaidOrders.length}
@@ -199,11 +203,16 @@ function DashboardContent() {
           </div>
           <Card className="col-span-1 lg:col-span-3 h-full">
             <CardHeader className="flex flex-row items-center gap-2">
-              <CardTitle className="text-md font-medium">
-                Orders Board
-              </CardTitle>
+              <div className="flex flex-col items-start gap-2">
+                <CardTitle className="text-md font-medium">
+                  Orders Board
+                </CardTitle>
+                <CardDescription className="text-xs text-muted-foreground">
+                  Quickly manage upcoming active orders
+                </CardDescription>
+              </div>
               <Link to="/orders" className="ml-auto">
-                <Button variant="outline" size="sm" className="rounded-md">
+                <Button variant="outline" size="md" className="rounded-md">
                   View All
                 </Button>
               </Link>
@@ -268,45 +277,5 @@ function DashboardContent() {
         </div>
       </div>
     </div>
-  );
-}
-
-function KPICard({
-  title,
-  subtitle,
-  value,
-  subvalueTitle,
-  subvalue,
-}: {
-  title: string;
-  subtitle?: string;
-  value: string | number;
-  subvalueTitle?: string;
-  subvalue?: string | number;
-}) {
-  return (
-    <Card className="flex-1 flex flex-col ">
-      <CardHeader className="flex flex-col items-start gap-2">
-        <CardTitle className="text-md font-medium">{title}</CardTitle>
-        <CardDescription className="text-xs text-muted-foreground">
-          {subtitle}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="mt-auto">
-        <div className="flex flex-row items-baseline w-full">
-          <p className="text-2xl font-mono">{value}</p>
-          {subvalueTitle && subvalue && (
-            <div className="flex-row gap-1 ml-2 flex">
-              <p className="text-xs text-muted-foreground  font-light">
-                {subvalue}
-              </p>
-              <p className="text-xs text-muted-foreground font-light">
-                {subvalueTitle}
-              </p>
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
   );
 }

@@ -1,7 +1,15 @@
 import type { CollectionItem } from "@/lib/collection/types";
 
+export type OrderStats = {
+  totalOrders: number;
+  totalSpent: string;
+  activeOrders: number;
+  unpaidCosts: string;
+};
+
 export type OrdersQueryResponse = {
   orders: Order[];
+  orderStats: OrderStats;
   totalCount: number;
   pagination: {
     limit: number;

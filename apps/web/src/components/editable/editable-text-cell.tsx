@@ -1,8 +1,7 @@
-"use client";
-
 import * as React from "react";
 import * as Editable from "@/components/ui/editable";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface InlineEditableCellProps {
   value: string;
@@ -15,7 +14,7 @@ interface InlineEditableCellProps {
   readOnly?: boolean;
 }
 
-export function InlineEditableCell({
+export function EditableTextCell({
   value,
   onSubmit,
   validate,
@@ -26,59 +25,58 @@ export function InlineEditableCell({
   readOnly,
 }: InlineEditableCellProps): React.ReactElement {
   const [isEditing, setIsEditing] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [currentValue, setCurrentValue] = React.useState(value);
+
+  const resetToPreviousValue = React.useCallback(() => {
+    setCurrentValue(value);
+  }, [value]);
 
   const handleSubmit = React.useCallback(
     async (newValue: string) => {
-      // Validate if validator provided
+      if (value === newValue) {
+        setIsEditing(false);
+        return;
+      }
+
       if (validate) {
         const validationResult = validate(newValue);
         if (validationResult !== true) {
-          setError(
-            typeof validationResult === "string"
-              ? validationResult
-              : "Invalid value"
-          );
+          toast.error(validationResult as string);
+          resetToPreviousValue();
           return;
         }
       }
-
-      setError(null);
       setIsEditing(false);
-
-      // Call the onSubmit callback
       try {
         await onSubmit(newValue);
       } catch (err) {
         console.error("Failed to submit edit:", err);
       }
     },
-    [onSubmit, validate]
+    [onSubmit, resetToPreviousValue, validate, value]
   );
 
   const handleEdit = React.useCallback(() => {
     setIsEditing(true);
-    setError(null);
   }, []);
 
   const handleCancel = React.useCallback(() => {
     setIsEditing(false);
-    setError(null);
   }, []);
 
   return (
     <Editable.Root
-      value={value}
+      value={currentValue}
+      onValueChange={setCurrentValue}
       onSubmit={handleSubmit}
       onEdit={handleEdit}
       onCancel={handleCancel}
       editing={isEditing}
       onEditingChange={setIsEditing}
-      triggerMode="dblclick"
+      triggerMode="click"
       placeholder={placeholder}
       disabled={disabled}
       readOnly={readOnly}
-      invalid={!!error}
     >
       <Editable.Area
         className="w-full"
@@ -88,11 +86,7 @@ export function InlineEditableCell({
         }}
       >
         <Editable.Preview
-          className={cn(
-            "w-full cursor-text",
-            error && "text-destructive",
-            previewClassName
-          )}
+          className={cn("w-full cursor-text", previewClassName)}
         />
         <Editable.Input
           className={cn("w-full", inputClassName)}
@@ -102,10 +96,6 @@ export function InlineEditableCell({
           }}
         />
       </Editable.Area>
-      {error && (
-        <div className="text-xs text-destructive mt-1">{error}</div>
-      )}
     </Editable.Root>
   );
 }
-

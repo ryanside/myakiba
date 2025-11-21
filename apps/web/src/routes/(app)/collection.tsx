@@ -23,6 +23,8 @@ import {
 } from "@/lib/collection/utils";
 import { authClient } from "@/lib/auth-client";
 import { useCallback } from "react";
+import { KPICard } from "@/components/ui/kpi-card";
+import { formatCurrency } from "@/lib/utils";
 
 export const Route = createFileRoute("/(app)/collection")({
   component: RouteComponent,
@@ -53,9 +55,12 @@ function RouteComponent() {
   const queryClient = useQueryClient();
   const { filters, setFilters, resetFilters } = useFilters(Route.id);
 
-  const handleFilterChange = useCallback((filters: CollectionFilters) => {
-    setFilters(filters);
-  }, [ setFilters ]);
+  const handleFilterChange = useCallback(
+    (filters: CollectionFilters) => {
+      setFilters(filters);
+    },
+    [setFilters]
+  );
 
   const { isPending, isError, data, error } = useQuery({
     queryKey: ["collection", filters],
@@ -139,13 +144,19 @@ function RouteComponent() {
     },
   });
 
-  const handleDeleteCollectionItems = useCallback(async (collectionIds: Set<string>) => {
-    await deleteCollectionItemsMutation.mutateAsync({ collectionIds });
-  }, [deleteCollectionItemsMutation]);
+  const handleDeleteCollectionItems = useCallback(
+    async (collectionIds: Set<string>) => {
+      await deleteCollectionItemsMutation.mutateAsync({ collectionIds });
+    },
+    [deleteCollectionItemsMutation]
+  );
 
-  const handleEditCollectionItem = useCallback(async (values: CollectionItemFormValues) => {
-    await editCollectionItemMutation.mutateAsync(values);
-  }, [editCollectionItemMutation]);
+  const handleEditCollectionItem = useCallback(
+    async (values: CollectionItemFormValues) => {
+      await editCollectionItemMutation.mutateAsync(values);
+    },
+    [editCollectionItemMutation]
+  );
 
   if (isPending) {
     return <CollectionSkeleton />;
@@ -164,11 +175,47 @@ function RouteComponent() {
   const { collection } = data;
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full space-y-8">
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-row items-start gap-4">
+          <h1 className="text-2xl tracking-tight">Collection</h1>
+        </div>
+        <p className="text-muted-foreground text-sm font-light">
+          Manage and track your collection items
+        </p>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        <KPICard
+          title="Total Items"
+          subtitle="all collection items"
+          value={collection.collectionStats.totalItems}
+        />
+        <KPICard
+          title="Total Spent"
+          subtitle="based on paid collection items"
+          value={formatCurrency(
+            collection.collectionStats.totalSpent,
+            userCurrency
+          )}
+        />
+        <KPICard
+          title="Total Items This Month"
+          subtitle="collected this month"
+          value={collection.collectionStats.totalItemsThisMonth}
+        />
+        <KPICard
+          title="Total Spent This Month"
+          subtitle="paid this month"
+          value={formatCurrency(
+            collection.collectionStats.totalSpentThisMonth,
+            userCurrency
+          )}
+        />
+      </div>
       <CollectionDataGrid
         key="collection-data-grid"
-        collection={collection}
-        totalCount={collection[0]?.totalCount ?? 0}
+        collection={collection.collectionItems}
+        totalCount={collection.collectionStats.totalItems}
         pagination={{
           limit: filters.limit ?? 10,
           offset: filters.offset ?? 0,

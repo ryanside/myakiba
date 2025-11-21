@@ -62,7 +62,7 @@ function RouteComponent() {
     <div className="flex flex-col gap-12 max-w-6xl mx-auto">
       <div className="flex flex-col gap-2">
         <div className="flex flex-row items-start gap-4">
-          <h2 className="text-2xl tracking-tight">Collection Analytics</h2>
+          <h1 className="text-2xl tracking-tight">Collection Analytics</h1>
         </div>
         <p className="text-muted-foreground text-sm font-light">
           See how your collection is distributed across different categories.

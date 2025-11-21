@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Sparkle } from "lucide-react";
 import dashboard from "/dashboard.webp";
-import Aurora from "../Aurora";
+import Aurora from "./aurora";
 import { Card } from "../ui/card";
 import { useTheme } from "@/components/theme-provider";
 import { BorderTrail } from "../ui/border-trail";
@@ -31,12 +31,12 @@ export default function HeroSection() {
               >
                 <div className="flex relative items-center bg-black/15 hover:bg-black/30 transition-all duration-150 border border-black/10 inset-shadow-xs gap-2 rounded-3xl p-2 px-3 text-sm shadow-lg">
                   <BorderTrail
-                    className="bg-chart-1"
+                    className="bg-foreground"
                     style={{
                       boxShadow:
                         "0px 0px 60px 30px rgb(255 255 255 / 50%), 0 0 100px 60px rgb(0 0 0 / 50%), 0 0 140px 90px rgb(0 0 0 / 50%)",
                     }}
-                    size={50}
+                    size={35}
                   />
                   <div
                     aria-hidden

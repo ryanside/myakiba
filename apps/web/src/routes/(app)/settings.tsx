@@ -6,6 +6,7 @@ import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
 import { useForm } from "@tanstack/react-form";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Card,
   CardContent,
@@ -35,6 +36,18 @@ import {
 import { Loader2, Trash2 } from "lucide-react";
 import * as z from "zod";
 import type { User } from "better-auth";
+import { MaskInput } from "@/components/ui/mask-input";
+import { getCurrencyLocale } from "@/lib/utils";
+import { client } from "@/lib/hono-client";
+
+interface Budget {
+  id: string;
+  userId: string;
+  period: "monthly" | "annual" | "allocated";
+  amount: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export const Route = createFileRoute("/(app)/settings")({
   component: RouteComponent,
@@ -62,7 +75,20 @@ function RouteComponent() {
   const navigate = useNavigate();
   const { data: session, isPending } = authClient.useSession();
 
-  if (isPending || !session) {
+  const { data: budgetData, isPending: isBudgetPending } = useQuery({
+    queryKey: ["settings"],
+    queryFn: async () => {
+      const response = await client.api.settings.$get();
+      if (!response.ok) {
+        throw new Error("Failed to get settings");
+      }
+      return response.json();
+    },
+    staleTime: 1000 * 60 * 5,
+    retry: false,
+  });
+
+  if (isPending || !session || isBudgetPending) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="animate-spin" />
@@ -72,14 +98,17 @@ function RouteComponent() {
 
   return (
     <div className="container max-w-4xl mx-auto py-8 space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground mt-2">
-          Manage your account settings and preferences
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-row items-start gap-4">
+          <h1 className="text-2xl tracking-tight">Settings</h1>
+        </div>
+        <p className="text-muted-foreground text-sm font-light">
+          Manage your settings and preferences.
         </p>
       </div>
 
       <div className="space-y-6">
+        <BudgetForm user={session.user} budget={budgetData?.budget || null} />
         <PreferencesForm user={session.user} />
         <ProfileForm user={session.user} />
         <PasswordForm />
@@ -89,13 +118,196 @@ function RouteComponent() {
   );
 }
 
+function BudgetForm({ user, budget }: { user: User; budget: Budget | null }) {
+  const queryClient = useQueryClient();
+
+  const upsertBudgetMutation = useMutation({
+    mutationFn: async ({
+      amount,
+      period,
+    }: {
+      amount: number;
+      period: "monthly" | "annual" | "allocated";
+    }) => {
+      const response = await client.api.settings.$put({
+        json: { amount, period },
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `HTTP ${response.status}`);
+      }
+    },
+    onError: (error) => {
+      toast.error("Failed to update budget", {
+        description: `Error: ${error.message}`,
+      });
+    },
+    onSuccess: async () => {
+      toast.success("Budget updated successfully");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["settings"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
+      ]);
+    },
+  });
+
+  const deleteBudgetMutation = useMutation({
+    mutationFn: async () => {
+      const response = await client.api.settings.$delete();
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `HTTP ${response.status}`);
+      }
+    },
+    onError: (error) => {
+      toast.error("Failed to delete budget", {
+        description: `Error: ${error.message}`,
+      });
+    },
+    onSuccess: async () => {
+      toast.success("Budget deleted successfully");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["settings"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
+      ]);
+    },
+  });
+
+  const form = useForm({
+    defaultValues: {
+      amount: budget?.amount || "0",
+      period: (budget?.period || "monthly") as
+        | "monthly"
+        | "annual"
+        | "allocated",
+    },
+    onSubmit: async ({ value }) => {
+      upsertBudgetMutation.mutate({
+        amount: parseFloat(value.amount),
+        period: value.period,
+      });
+    },
+    validators: {
+      onSubmit: z.object({
+        amount: z.string().refine((val) => {
+          const num = parseFloat(val);
+          return !isNaN(num) && num >= 0;
+        }, "Amount must be at least 0"),
+        period: z.enum(["monthly", "annual", "allocated"]),
+      }),
+    },
+  });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Budget</CardTitle>
+        <CardDescription>Set your budget limit</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            form.handleSubmit();
+          }}
+          className="space-y-4"
+        >
+          <form.Field name="amount">
+            {(field) => (
+              <div className="space-y-2">
+                <Label htmlFor={field.name}>Budget Limit</Label>
+                <MaskInput
+                  id={field.name}
+                  name={field.name}
+                  mask="currency"
+                  currency={user.currency}
+                  locale={getCurrencyLocale(user.currency)}
+                  value={field.state.value}
+                  onValueChange={(_, unmaskedValue) =>
+                    field.handleChange(unmaskedValue)
+                  }
+                />
+                {field.state.meta.errors.length > 0 && (
+                  <p className="text-sm text-destructive">
+                    {String(field.state.meta.errors[0])}
+                  </p>
+                )}
+              </div>
+            )}
+          </form.Field>
+          <form.Field name="period">
+            {(field) => (
+              <div className="space-y-2">
+                <Label htmlFor={field.name}>Period</Label>
+                <Select
+                  value={field.state.value}
+                  onValueChange={(value) =>
+                    field.handleChange(
+                      value as "monthly" | "annual" | "allocated"
+                    )
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={field.state.value} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="annual">Annual</SelectItem>
+                    <SelectItem value="allocated">Allocated</SelectItem>
+                  </SelectContent>
+                </Select>
+                {field.state.meta.errors.length > 0 && (
+                  <p className="text-sm text-destructive">
+                    {String(field.state.meta.errors[0])}
+                  </p>
+                )}
+              </div>
+            )}
+          </form.Field>
+          <div className="flex flex-row gap-2">
+            <form.Subscribe>
+              {(state) => (
+                <Button
+                  type="submit"
+                  disabled={!state.canSubmit || state.isSubmitting}
+                >
+                  {state.isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
+              )}
+            </form.Subscribe>
+            <Button
+              variant="ghost"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                deleteBudgetMutation.mutate();
+                form.reset();
+              }}
+            >
+              Clear Budget
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
 function ProfileForm({ user }: { user: User }) {
   const form = useForm({
     defaultValues: {
       username: user.username || "",
     },
     onSubmit: async ({ value }) => {
-      const { data, error } = await authClient.updateUser({
+      const { error } = await authClient.updateUser({
         username: value.username,
       });
 
@@ -462,7 +674,11 @@ function PreferencesForm({ user }: { user: User }) {
   );
 }
 
-function DeleteAccountForm({ navigate }: { navigate: UseNavigateResult<string> }) {
+function DeleteAccountForm({
+  navigate,
+}: {
+  navigate: UseNavigateResult<string>;
+}) {
   const form = useForm({
     defaultValues: {
       password: "",

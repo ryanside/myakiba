@@ -16,6 +16,8 @@ import {
   asc,
   ilike,
   sql,
+  count,
+  sum,
 } from "drizzle-orm";
 import type { collectionUpdateType } from "./model";
 
@@ -88,7 +90,9 @@ class CollectionService {
       shippingDateStart
         ? gte(collection.shippingDate, shippingDateStart)
         : undefined,
-      shippingDateEnd ? lte(collection.shippingDate, shippingDateEnd) : undefined,
+      shippingDateEnd
+        ? lte(collection.shippingDate, shippingDateEnd)
+        : undefined,
       collectionDateStart
         ? gte(collection.collectionDate, collectionDateStart)
         : undefined,
@@ -142,6 +146,43 @@ class CollectionService {
       }
     })();
 
+    // Calculate current month boundaries
+    const currentMonth = new Date(
+      new Date().getFullYear(),
+      new Date().getMonth(),
+      1
+    ).toISOString();
+    const nextMonth = new Date(
+      new Date().getFullYear(),
+      new Date().getMonth() + 1,
+      1
+    ).toISOString();
+
+    // Get stats for all Owned items (unfiltered)
+    const collectionStats = await db
+      .select({
+        totalItems: count(
+          sql`CASE WHEN ${collection.status} = 'Owned' THEN 1 END`
+        ),
+        totalSpent: sql<string>`COALESCE(${sum(collection.price)}, 0)`,
+        totalItemsThisMonth: sql<number>`COALESCE(${count(
+          sql`CASE WHEN ${collection.status} = 'Owned' 
+              AND ${collection.collectionDate} >= ${currentMonth} 
+              AND ${collection.collectionDate} < ${nextMonth}
+              THEN 1 END`
+        )}, 0)`,
+        totalSpentThisMonth: sql<string>`COALESCE(${sum(
+          sql`CASE WHEN ${collection.status} = 'Owned'
+              AND ${collection.paymentDate} >= ${currentMonth} 
+              AND ${collection.paymentDate} < ${nextMonth}
+              THEN ${collection.price} ELSE 0 END`
+        )}, 0)`,
+      })
+      .from(collection)
+      .where(
+        and(eq(collection.userId, userId), eq(collection.status, "Owned"))
+      );
+
     const collectionItems = await db
       .select({
         id: collection.id,
@@ -183,7 +224,7 @@ class CollectionService {
       .limit(limit)
       .offset(offset);
 
-    return collectionItems;
+    return { collectionItems, collectionStats: collectionStats[0] };
   }
 
   async getCollectionItem(userId: string, collectionId: string) {

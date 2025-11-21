@@ -98,7 +98,13 @@ class DashboardService {
         .leftJoin(collection, and(eq(order.id, collection.orderId)))
         .leftJoin(item, eq(collection.itemId, item.id))
         .where(and(eq(order.userId, userId), ne(order.status, "Owned")))
-        .groupBy(order.id, order.title, order.shop, order.status, order.releaseMonthYear)
+        .groupBy(
+          order.id,
+          order.title,
+          order.shop,
+          order.status,
+          order.releaseMonthYear
+        )
         .orderBy(asc(order.releaseMonthYear))
         .limit(10),
 
@@ -238,9 +244,6 @@ class DashboardService {
   async getReleaseCalendar(userId: string, month: number, year: number) {
     const startDate = new Date(year, month - 1, 1).toISOString();
     const endDate = new Date(year, month, 0).toISOString();
-
-    console.log("Start Date", startDate);
-    console.log("End Date", endDate);
 
     const releases = await db
       .select({
