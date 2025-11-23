@@ -2,8 +2,8 @@ import { MaskInput } from "@/components/ui/mask-input";
 import { useCallback, useState } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "../ui/button";
-interface EditablePriceCellProps {
-  oldValue: string;
+interface InlineCurrencyCellProps {
+  value: string;
   currency: string;
   onSubmit: (newValue: string) => Promise<void>;
   locale: string;
@@ -11,30 +11,30 @@ interface EditablePriceCellProps {
 }
 import { tryCatch } from "@/lib/utils";
 
-export function EditablePriceCell({
-  oldValue,
+export function InlineCurrencyCell({
+  value,
   currency,
   onSubmit,
   locale,
   disabled,
-}: EditablePriceCellProps) {
+}: InlineCurrencyCellProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [newValue, setNewValue] = useState(oldValue);
+  const [newValue, setNewValue] = useState(value);
 
   const handleSubmit = useCallback(async () => {
-    if (newValue === oldValue) {
+    if (newValue === value) {
       setIsEditing(false);
       return;
     }
     const { error } = await tryCatch(onSubmit(newValue));
     if (error) {
-      setNewValue(oldValue);
+      setNewValue(value);
     }
     setIsEditing(false);
-  }, [newValue, oldValue, onSubmit]);
+  }, [newValue, value, onSubmit]);
 
   const handleCancel = () => {
-    setNewValue(oldValue);
+    setNewValue(value);
     setIsEditing(false);
   };
 
@@ -69,7 +69,7 @@ export function EditablePriceCell({
       variant="ghost"
       disabled={disabled}
     >
-      {formatCurrency(oldValue, currency)}
+      {formatCurrency(value, currency)}
     </Button>
   );
 }

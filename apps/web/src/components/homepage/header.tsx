@@ -7,13 +7,6 @@ import { MyAkibaLogo } from "../myakiba-logo";
 import { GithubIcon } from "@/components/sidebar/app-sidebar";
 import { useTheme } from "@/components/theme-provider";
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-
 // const menuItems = [
 //   { name: "Features", href: "#link" },
 //   { name: "Pricing", href: "#link" },
@@ -40,7 +33,7 @@ export const HeroHeader = () => {
           isScrolled && "bg-background/75 backdrop-blur-lg"
         )}
       >
-        <div className="mx-auto max-w-6xl px-6 lg:px-0">
+        <div className="mx-auto max-w-7xl px-6 lg:px-0">
           <div
             className={cn(
               "relative flex flex-wrap items-center justify-between gap-6 py-6 transition-all duration-200 lg:gap-0",
@@ -112,32 +105,6 @@ export const HeroHeader = () => {
                     <GithubIcon />
                   </a>
                 </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={
-                        cn(isScrolled && "lg:hidden") + " hover:bg-black/10"
-                      }
-                    >
-                      <Sun className="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90 stroke-black dark:stroke-white" />
-                      <Moon className="absolute h-[1.2rem] w-[1.2rem] scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0 stroke-black dark:stroke-white" />
-                      <span className="sr-only">Toggle theme</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setTheme("light")}>
-                      Light
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setTheme("dark")}>
-                      Dark
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setTheme("system")}>
-                      System
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
                 <Button
                   asChild
                   variant="ghost"

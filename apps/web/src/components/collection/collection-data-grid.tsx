@@ -14,7 +14,7 @@ import type {
 import { useCallback, useMemo, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { EditableTextCell } from "@/components/editable/editable-text-cell";
+import { InlineTextCell } from "@/components/cells/inline-text-cell";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,7 +55,10 @@ import {
 } from "../ui/popover";
 import CollectionItemForm from "./collection-item-form";
 import * as z from "zod";
-import { EditablePriceCell } from "../editable/editable-price-cell";
+import { InlineCurrencyCell } from "../cells/inline-currency-cell";
+import { PopoverRatingCell } from "../cells/popover-rating-cell";
+import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
+import { InlineCountCell } from "../cells/inline-count-cell";
 
 export const DEFAULT_PAGE_INDEX = 0;
 export const DEFAULT_PAGE_SIZE = 10;
@@ -258,26 +261,14 @@ export const CollectionDataGrid = ({
         cell: ({ row }) => {
           const item = row.original;
           return (
-            <EditableTextCell
-              value={item.count.toString()}
+            <InlineCountCell
+              value={item.count}
               onSubmit={async (newValue) => {
                 await onEditCollectionItem({
                   ...item,
-                  count: parseInt(newValue, 10),
+                  count: newValue,
                 });
               }}
-              validate={(value) => {
-                const num = z
-                  .number()
-                  .min(1, "Count must be at least 1")
-                  .safeParse(parseInt(value, 10));
-                if (!num.success) {
-                  return "Enter a valid count";
-                }
-                return true;
-              }}
-              previewClassName="text-sm"
-              inputClassName="bg-sidebar"
             />
           );
         },
@@ -299,7 +290,7 @@ export const CollectionDataGrid = ({
         cell: ({ row }) => {
           const item = row.original;
           return (
-            <EditableTextCell
+            <PopoverRatingCell
               value={item.score}
               onSubmit={async (newValue) => {
                 await onEditCollectionItem({
@@ -307,18 +298,6 @@ export const CollectionDataGrid = ({
                   score: newValue,
                 });
               }}
-              validate={(value) => {
-                const num = z
-                  .number()
-                  .min(0, "Score must be at least 1")
-                  .max(10, "Score must be at most 10")
-                  .safeParse(parseInt(value, 10));
-                if (!num.success) {
-                  return "Enter a valid score";
-                }
-                return true;
-              }}
-              previewClassName="text-sm"
             />
           );
         },
@@ -340,7 +319,7 @@ export const CollectionDataGrid = ({
         cell: ({ row }) => {
           const item = row.original;
           return (
-            <EditableTextCell
+            <InlineTextCell
               value={item.shop}
               onSubmit={async (newValue) => {
                 await onEditCollectionItem({
@@ -376,8 +355,8 @@ export const CollectionDataGrid = ({
         cell: ({ row }) => {
           const item = row.original;
           return (
-            <EditablePriceCell
-              oldValue={item.price}
+            <InlineCurrencyCell
+              value={item.price}
               currency={currency}
               onSubmit={async (newValue) => {
                 await onEditCollectionItem({
@@ -408,9 +387,15 @@ export const CollectionDataGrid = ({
         cell: ({ row }) => {
           const collectionDate = row.original.collectionDate;
           return (
-            <div className="text-sm">
-              {collectionDate ? formatDate(collectionDate) : "n/a"}
-            </div>
+            <PopoverDatePickerCell
+              value={collectionDate}
+              onSubmit={async (newValue) => {
+                await onEditCollectionItem({
+                  ...row.original,
+                  collectionDate: newValue,
+                });
+              }}
+            />
           );
         },
         enableSorting: true,
@@ -586,12 +571,12 @@ export const CollectionDataGrid = ({
               size="icon"
               disabled={getSelectedCollectionIds.size === 0}
             >
-              <Trash className="stroke-white" />
+              <Trash className="" />
             </Button>
           </PopoverTrigger>
           <PopoverContent>
             <div className="flex flex-col items-center gap-2 text-sm text-pretty">
-              <div className="flex flex-row items-center gap-2">
+              <div className="flex flex-row items-center gap-2 mr-auto">
                 <p>Delete the selected collection items?</p>
               </div>
               <div className="flex flex-row items-center gap-2 max-w-16 mr-auto">

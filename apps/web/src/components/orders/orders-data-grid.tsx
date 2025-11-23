@@ -34,7 +34,6 @@ import {
   Trash2,
   ListRestart,
   Merge,
-  Split,
   Trash,
   Info,
   Move,
@@ -66,10 +65,13 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import ItemMoveForm from "./item-move-form";
+import UnifiedItemMoveForm from "./unified-item-move-form";
 import type { CollectionItemFormValues } from "@/lib/collection/types";
 import OrdersFiltersForm from "./orders-filters-form";
-import { EditablePopoverCell } from "../editable/editable-popover-cell";
+import { PopoverMultiInputCell } from "../cells/popover-multi-input-cell";
+import { SelectCell } from "../cells/select-cell";
+import { InlineTextCell } from "../cells/inline-text-cell";
+import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
 
 export const DEFAULT_PAGE_INDEX = 0;
 export const DEFAULT_PAGE_SIZE = 10;
@@ -292,7 +294,22 @@ export default function OrdersDataGrid({
             column={column}
           />
         ),
-        cell: (info) => (info.getValue() as string) || "n/a",
+        cell: ({ row }) => (
+          <InlineTextCell
+            value={row.original.shop}
+            onSubmit={async (newValue) => {
+              const { createdAt, updatedAt, ...orderWithoutTimestamps } =
+                row.original;
+              await onEditOrder(
+                {
+                  ...orderWithoutTimestamps,
+                  shop: newValue,
+                },
+                ["shop"] as CascadeOptions
+              );
+            }}
+          />
+        ),
         enableSorting: true,
         enableHiding: true,
         enableResizing: true,
@@ -312,7 +329,42 @@ export default function OrdersDataGrid({
           const order = row.original;
           return (
             <div className="space-y-px">
-              <div className="text-sm">{order.shippingMethod}</div>
+              <SelectCell
+                value={order.shippingMethod}
+                options={[
+                  "n/a",
+                  "EMS",
+                  "SAL",
+                  "AIRMAIL",
+                  "SURFACE",
+                  "FEDEX",
+                  "DHL",
+                  "Colissimo",
+                  "UPS",
+                  "Domestic",
+                ]}
+                onSubmit={async (value) => {
+                  const { createdAt, updatedAt, ...orderWithoutTimestamps } =
+                    row.original;
+                  await onEditOrder(
+                    {
+                      ...orderWithoutTimestamps,
+                      shippingMethod: value as
+                        | "n/a"
+                        | "EMS"
+                        | "SAL"
+                        | "AIRMAIL"
+                        | "SURFACE"
+                        | "FEDEX"
+                        | "DHL"
+                        | "Colissimo"
+                        | "UPS"
+                        | "Domestic",
+                    },
+                    ["shippingMethod"] as CascadeOptions
+                  );
+                }}
+              />
             </div>
           );
         },
@@ -334,11 +386,20 @@ export default function OrdersDataGrid({
         cell: ({ row }) => {
           const order = row.original;
           return (
-            <div className="space-y-px">
-              <div className="text-sm">
-                {formatDate(order.releaseMonthYear)}
-              </div>
-            </div>
+            <PopoverDatePickerCell
+              value={order.releaseMonthYear}
+              onSubmit={async (newValue) => {
+                const { createdAt, updatedAt, ...orderWithoutTimestamps } =
+                  row.original;
+                await onEditOrder(
+                  {
+                    ...orderWithoutTimestamps,
+                    releaseMonthYear: newValue,
+                  },
+                  [] as CascadeOptions
+                );
+              }}
+            />
           );
         },
         enableSorting: true,
@@ -359,14 +420,22 @@ export default function OrdersDataGrid({
         cell: ({ row }) => {
           const order = row.original;
           return (
-            <div className="space-y-px">
-              <div className="text-sm">{formatDate(order.orderDate)}</div>
-              {order.paymentDate && (
-                <div className="text-xs text-muted-foreground">
-                  Paid: {formatDate(order.paymentDate)}
-                </div>
-              )}
-            </div>
+            <PopoverDatePickerCell
+              value={order.orderDate}
+              onSubmit={async (newValue) => {
+                const { createdAt, updatedAt, ...orderWithoutTimestamps } =
+                  row.original;
+                await onEditOrder(
+                  {
+                    ...orderWithoutTimestamps,
+                    orderDate: newValue,
+                  },
+                  [
+                    "orderDate",
+                  ] as CascadeOptions
+                );
+              }}
+            />
           );
         },
         enableSorting: true,
@@ -446,18 +515,21 @@ export default function OrdersDataGrid({
           ];
           const locale = getCurrencyLocale(currency);
           return (
-            <EditablePopoverCell
+            <PopoverMultiInputCell
               inputs={inputs}
-              displayValue={formatCurrency(order.total, currency)}
+              total={formatCurrency(order.total, currency)}
               currency={currency}
               locale={locale}
               onSubmit={async (newValues) => {
+                const { createdAt, updatedAt, ...orderWithoutTimestamps } =
+                  order;
                 await onEditOrder(
                   {
-                    ...order,
+                    ...orderWithoutTimestamps,
                     ...newValues,
                   },
-                  [] as CascadeOptions
+                  [
+                  ] as CascadeOptions
                 );
               }}
             />
@@ -481,9 +553,24 @@ export default function OrdersDataGrid({
         cell: ({ row }) => {
           const status = row.original.status;
           return (
-            <Badge variant={getStatusVariant(status)} appearance="outline">
-              {status}
-            </Badge>
+            // <Badge variant={getStatusVariant(status)} appearance="outline">
+            //   {status}
+            // </Badge>
+            <SelectCell
+              value={status}
+              options={["Ordered", "Paid", "Shipped", "Owned"]}
+              onSubmit={async (value) => {
+                const { createdAt, updatedAt, ...orderWithoutTimestamps } =
+                  row.original;
+                await onEditOrder(
+                  {
+                    ...orderWithoutTimestamps,
+                    status: value as "Ordered" | "Paid" | "Shipped" | "Owned",
+                  },
+                  ["status"] as CascadeOptions
+                );
+              }}
+            />
           );
         },
         enableSorting: true,
@@ -670,31 +757,14 @@ export default function OrdersDataGrid({
               variant="outline"
               disabled={getSelectedItemData.collectionIds.size === 0}
             >
-              <Split />
-              <span className="hidden md:block">Split Items</span>
-            </Button>
-          </DialogTrigger>
-          <OrderForm
-            collectionIds={getSelectedItemData.collectionIds}
-            orderIds={getSelectedItemData.orderIds}
-            callbackFn={onSplit}
-            type="split"
-            clearSelections={clearSelections}
-          />
-        </Dialog>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button
-              variant="outline"
-              disabled={getSelectedItemData.collectionIds.size === 0}
-            >
               <Move />
               <span className="hidden md:block">Move Items</span>
             </Button>
           </DialogTrigger>
-          <ItemMoveForm
+          <UnifiedItemMoveForm
             selectedItemData={getSelectedItemData}
-            callbackFn={onMoveItem}
+            onMoveToExisting={onMoveItem}
+            onMoveToNew={onSplit}
             clearSelections={clearSelections}
           />
         </Dialog>
@@ -705,12 +775,12 @@ export default function OrdersDataGrid({
               disabled={getSelectedOrderIds.size === 0}
               size="icon"
             >
-              <Trash className="stroke-white" />
+              <Trash className="" />
             </Button>
           </PopoverTrigger>
           <PopoverContent>
             <div className="flex flex-col items-center gap-2 text-sm text-pretty">
-              <div className="flex flex-row items-center gap-2">
+              <div className="flex flex-row items-center gap-2 mr-auto">
                 <p>Delete the selected orders and their items?</p>
                 <Tooltip>
                   <TooltipTrigger asChild>

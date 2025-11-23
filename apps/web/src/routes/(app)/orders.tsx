@@ -174,13 +174,13 @@ function RouteComponent() {
       if (context?.previousData) {
         queryClient.setQueryData(["orders", filters], context.previousData);
       }
-      toast.error("Failed to split orders. Please try again.", {
+      toast.error("Failed to move items to a new order. Please try again.", {
         description: `Error: ${error.message}`,
       });
     },
     onSuccess: (_, variables) => {
       toast.success(
-        `Successfully split ${variables.collectionIds.size} items into one!`
+        `Successfully moved ${variables.collectionIds.size} items to a new order!`
       );
     },
     onSettled: async () => {
@@ -223,7 +223,6 @@ function RouteComponent() {
       });
     },
     onSuccess: () => {
-      toast.success(`Successfully updated order!`);
     },
     onSettled: async () => {
       await Promise.all([
@@ -260,7 +259,6 @@ function RouteComponent() {
       });
     },
     onSuccess: () => {
-      toast.success(`Successfully deleted order(s)!`);
     },
     onSettled: async () => {
       await Promise.all([
@@ -298,7 +296,6 @@ function RouteComponent() {
       });
     },
     onSuccess: () => {
-      toast.success(`Successfully updated order item!`);
     },
     onSettled: async () => {
       await Promise.all([
@@ -335,7 +332,6 @@ function RouteComponent() {
       });
     },
     onSuccess: () => {
-      toast.success(`Successfully deleted order item!`);
     },
     onSettled: async () => {
       await Promise.all([
@@ -385,7 +381,6 @@ function RouteComponent() {
       });
     },
     onSuccess: () => {
-      toast.success(`Successfully moved items!`);
     },
     onSettled: async () => {
       await Promise.all([

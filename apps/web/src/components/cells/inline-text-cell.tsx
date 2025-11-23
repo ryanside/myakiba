@@ -3,7 +3,7 @@ import * as Editable from "@/components/ui/editable";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-interface InlineEditableCellProps {
+interface InlineTextCellProps {
   value: string;
   onSubmit: (value: string) => Promise<void> | void;
   validate?: (value: string) => boolean | string;
@@ -14,7 +14,7 @@ interface InlineEditableCellProps {
   readOnly?: boolean;
 }
 
-export function EditableTextCell({
+export function InlineTextCell({
   value,
   onSubmit,
   validate,
@@ -23,7 +23,7 @@ export function EditableTextCell({
   placeholder,
   disabled,
   readOnly,
-}: InlineEditableCellProps): React.ReactElement {
+}: InlineTextCellProps): React.ReactElement {
   const [isEditing, setIsEditing] = React.useState(false);
   const [currentValue, setCurrentValue] = React.useState(value);
 

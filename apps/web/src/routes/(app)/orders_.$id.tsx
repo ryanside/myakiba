@@ -95,7 +95,6 @@ function RouteComponent() {
     },
     // TODO: add optimistic update
     onSuccess: () => {
-      toast.success("Order updated successfully");
     },
     onError: (error) => {
       toast.error("Failed to update order. Please try again.", {
@@ -121,7 +120,6 @@ function RouteComponent() {
     },
     // TODO: add optimistic update
     onSuccess: () => {
-      toast.success("Item updated successfully");
     },
     onError: (error) => {
       toast.error("Failed to update item. Please try again.", {
@@ -153,7 +151,6 @@ function RouteComponent() {
     },
     // TODO: add optimistic update
     onSuccess: () => {
-      toast.success("Item deleted successfully");
     },
     onError: (error) => {
       toast.error("Failed to delete item. Please try again.", {

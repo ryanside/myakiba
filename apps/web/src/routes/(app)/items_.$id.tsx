@@ -184,7 +184,6 @@ function RouteComponent() {
       return { previousData };
     },
     onSuccess: () => {
-      toast.success("Collection item updated successfully");
     },
     onError: (error, _, context) => {
       if (context?.previousData) {
@@ -250,7 +249,6 @@ function RouteComponent() {
       });
     },
     onSuccess: () => {
-      toast.success("Collection item deleted successfully");
     },
     onSettled: async () => {
       await Promise.all([
@@ -547,7 +545,7 @@ function RouteComponent() {
                             <PopoverContent>
                               <div className="flex flex-col gap-3">
                                 <p className="text-sm">
-                                  Delete the selected collection item?
+                                  Delete this collection item?
                                 </p>
                                 <div className="flex justify-end gap-2">
                                   <PopoverClose asChild>

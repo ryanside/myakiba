@@ -112,6 +112,8 @@ export type CollectionStats = {
 };
 
 export type CollectionQueryResponse = {
-  collection: CollectionItem[];
-  collectionStats: CollectionStats;
+  collection: {
+    collectionItems: CollectionItem[];
+    collectionStats: CollectionStats;
+  };
 };

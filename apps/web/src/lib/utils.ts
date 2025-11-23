@@ -109,10 +109,16 @@ export function formatDate(dateString: string | null): string {
     // Parse date as local date to avoid timezone issues
     // When "2026-04-01" is parsed as new Date(), it's treated as UTC midnight
     // which gets converted to the previous day in timezones behind UTC
-    const [year, month, day] = dateString.split('-').map(Number);
+    const [year, month, day] = dateString.split("-").map(Number);
     const date = new Date(year, month - 1, day);
     return date.toLocaleDateString();
   } catch {
     return "Invalid Date";
   }
+}
+
+// Parse YYYY-MM-DD string to Date object in local timezone
+export function parseLocalDate(dateString: string): Date {
+  const [year, month, day] = dateString.split("-").map(Number);
+  return new Date(year, month - 1, day);
 }
