@@ -135,6 +135,12 @@ class CollectionService {
           return collection.price;
         case "shop":
           return collection.shop;
+        case "orderDate":
+          return collection.orderDate;
+        case "paymentDate":
+          return collection.paymentDate;
+        case "shippingDate":
+          return collection.shippingDate;
         case "releaseDate":
           return item_release.date;
         case "collectionDate":

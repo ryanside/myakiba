@@ -4,6 +4,7 @@ import type {
   Order,
   OrderItem,
   OrdersQueryResponse,
+  OrderStats,
   CascadeOptions,
   EditedOrder,
 } from "./types";
@@ -28,6 +29,29 @@ export function getStatusVariant(
     default:
       return "outline";
   }
+}
+
+function calculateOrderStats(orders: Order[]): OrderStats {
+  const totalOrders = orders.length;
+  
+  const totalSpent = orders.reduce((sum, order) => {
+    return sum + parseFloat(order.total || "0");
+  }, 0).toFixed(2);
+  
+  const activeOrders = orders.filter(order => order.status !== "Owned").length;
+  
+  const unpaidCosts = orders
+    .filter(order => order.status === "Ordered" || order.status === "Shipped")
+    .reduce((sum, order) => {
+      return sum + parseFloat(order.total || "0");
+    }, 0).toFixed(2);
+  
+  return {
+    totalOrders,
+    totalSpent,
+    activeOrders,
+    unpaidCosts,
+  };
 }
 
 export function filterAndSortOrders(
@@ -69,6 +93,18 @@ export function filterAndSortOrders(
         aValue = a.orderDate ? new Date(a.orderDate) : new Date(0);
         bValue = b.orderDate ? new Date(b.orderDate) : new Date(0);
         break;
+      case "paymentDate":
+        aValue = a.paymentDate ? new Date(a.paymentDate) : new Date(0);
+        bValue = b.paymentDate ? new Date(b.paymentDate) : new Date(0);
+        break;
+      case "shippingDate":
+        aValue = a.shippingDate ? new Date(a.shippingDate) : new Date(0);
+        bValue = b.shippingDate ? new Date(b.shippingDate) : new Date(0);
+        break;
+      case "collectionDate":
+        aValue = a.collectionDate ? new Date(a.collectionDate) : new Date(0);
+        bValue = b.collectionDate ? new Date(b.collectionDate) : new Date(0);
+        break;
       case "releaseMonthYear":
         aValue = a.releaseMonthYear || "";
         bValue = b.releaseMonthYear || "";
@@ -80,6 +116,26 @@ export function filterAndSortOrders(
       case "total":
         aValue = parseFloat(a.total) || 0;
         bValue = parseFloat(b.total) || 0;
+        break;
+      case "shippingFee":
+        aValue = parseFloat(a.shippingFee) || 0;
+        bValue = parseFloat(b.shippingFee) || 0;
+        break;
+      case "taxes":
+        aValue = parseFloat(a.taxes) || 0;
+        bValue = parseFloat(b.taxes) || 0;
+        break;
+      case "duties":
+        aValue = parseFloat(a.duties) || 0;
+        bValue = parseFloat(b.duties) || 0;
+        break;
+      case "tariffs":
+        aValue = parseFloat(a.tariffs) || 0;
+        bValue = parseFloat(b.tariffs) || 0;
+        break;
+      case "miscFees":
+        aValue = parseFloat(a.miscFees) || 0;
+        bValue = parseFloat(b.miscFees) || 0;
         break;
       case "itemCount":
         aValue = a.itemCount || 0;
@@ -203,6 +259,7 @@ export function createOptimisticMergeUpdate(
   return {
     ...old,
     orders: filteredAndSortedOrders,
+    orderStats: calculateOrderStats(allOrders),
     totalCount: old.totalCount - orderIds.size + 1,
   };
 }
@@ -301,6 +358,7 @@ export function createOptimisticSplitUpdate(
   return {
     ...old,
     orders: filteredAndSortedOrders,
+    orderStats: calculateOrderStats(allOrders),
     totalCount: old.totalCount + 1,
   };
 }
@@ -343,13 +401,16 @@ export function createOptimisticEditUpdate(
     parseFloat(values.miscFees)
   ).toFixed(2);
 
+  const updatedOrders = old.orders.map((order: Order) =>
+    order.orderId === values.orderId
+      ? { ...order, ...values, items, total }
+      : order
+  );
+
   return {
     ...old,
-    orders: old.orders.map((order: Order) =>
-      order.orderId === values.orderId
-        ? { ...order, ...values, items, total }
-        : order
-    ),
+    orders: updatedOrders,
+    orderStats: calculateOrderStats(updatedOrders),
   };
 }
 
@@ -376,6 +437,7 @@ export function createOptimisticDeleteUpdate(
   return {
     ...old,
     orders: remainingOrders,
+    orderStats: calculateOrderStats(remainingOrders),
     totalCount,
   };
 }
@@ -419,13 +481,16 @@ export function createOptimisticEditItemUpdate(
     item.id === values.id ? updatedItem : item
   );
 
+  const updatedOrders = old.orders.map((order: Order) =>
+    order.orderId === values.orderId
+      ? { ...order, items: itemsUpdated, total: newOrderTotal.toFixed(2) }
+      : order
+  );
+
   return {
     ...old,
-    orders: old.orders.map((order: Order) =>
-      order.orderId === values.orderId
-        ? { ...order, items: itemsUpdated, total: newOrderTotal }
-        : order
-    ),
+    orders: updatedOrders,
+    orderStats: calculateOrderStats(updatedOrders),
   };
 }
 
@@ -459,18 +524,21 @@ export function createOptimisticDeleteItemUpdate(
     parseFloat(order.miscFees);
   const newOrderTotal = remainingItemsPriceTotal + additionalFees;
 
+  const updatedOrders = old.orders.map((order: Order) =>
+    order.orderId === orderId
+      ? {
+          ...order,
+          items: remainingItems,
+          total: newOrderTotal.toFixed(2),
+          itemCount: remainingItems.length,
+        }
+      : order
+  );
+
   return {
     ...old,
-    orders: old.orders.map((order: Order) =>
-      order.orderId === orderId
-        ? {
-            ...order,
-            items: remainingItems,
-            total: newOrderTotal,
-            itemCount: remainingItems.length,
-          }
-        : order
-    ),
+    orders: updatedOrders,
+    orderStats: calculateOrderStats(updatedOrders),
   };
 }
 
@@ -587,5 +655,6 @@ export function createOptimisticMoveItemUpdate(
   return {
     ...old,
     orders: filteredAndSortedOrders,
+    orderStats: calculateOrderStats(allOrders),
   };
 }

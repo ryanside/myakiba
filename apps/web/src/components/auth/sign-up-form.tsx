@@ -91,7 +91,6 @@ export default function SignUpForm({
             navigate({
               to: "/sync",
             });
-            toast.success("Sign up successful");
           },
           onError: (error) => {
             toast.error(error.error.message || error.error.statusText);

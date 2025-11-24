@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { EditableTextCell } from "@/components/editable/editable-text-cell";
+import { InlineTextCell } from "@/components/cells/inline-text-cell";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,7 +29,7 @@ import {
   type OnChangeFn,
 } from "@tanstack/react-table";
 import { Package, MoreHorizontal, Copy, Edit, Trash2 } from "lucide-react";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { cn, formatDate, getCurrencyLocale } from "@/lib/utils";
 import type { OrderItem } from "@/lib/orders/types";
 import { toast } from "sonner";
 import { Dialog, DialogTrigger } from "../ui/dialog";
@@ -37,6 +37,10 @@ import { Link } from "@tanstack/react-router";
 import { getStatusVariant } from "@/lib/orders/utils";
 import CollectionItemForm from "../collection/collection-item-form";
 import type { CollectionItemFormValues } from "@/lib/collection/types";
+import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
+import { InlineCountCell } from "../cells/inline-count-cell";
+import { SelectCell } from "../cells/select-cell";
+import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 
 export function OrderItemSubDataGrid({
   items,
@@ -66,8 +70,8 @@ export function OrderItemSubDataGrid({
     "orderDate",
     "releaseDate",
     "count",
-    "status",
     "price",
+    "status",
     "actions",
   ]);
 
@@ -174,7 +178,17 @@ export function OrderItemSubDataGrid({
             column={column}
           />
         ),
-        cell: (info) => (info.getValue() as string) || "n/a",
+        cell: ({ row }) => {
+          const item = row.original;
+          return (
+            <PopoverDatePickerCell
+              value={item.orderDate}
+              onSubmit={async (newValue) => {
+                await onEditItem({ ...item, orderDate: newValue });
+              }}
+            />
+          );
+        },
         enableSorting: true,
         enableHiding: true,
         enableResizing: true,
@@ -207,22 +221,11 @@ export function OrderItemSubDataGrid({
         cell: ({ row }) => {
           const item = row.original;
           return (
-            <EditableTextCell
-              value={item.count.toString()}
+            <InlineCountCell
+              value={item.count}
               onSubmit={async (newValue) => {
-                await onEditItem({
-                  ...item,
-                  count: parseInt(newValue, 10),
-                });
+                await onEditItem({ ...item, count: newValue });
               }}
-              validate={(value) => {
-                const num = parseInt(value, 10);
-                if (isNaN(num) || num < 0) {
-                  return "Enter a valid positive number";
-                }
-                return true;
-              }}
-              previewClassName="text-sm"
             />
           );
         },
@@ -241,11 +244,18 @@ export function OrderItemSubDataGrid({
           />
         ),
         cell: ({ row }) => {
-          const status = row.original.status;
+          const item = row.original;
           return (
-            <Badge variant={getStatusVariant(status)} appearance="outline">
-              {status}
-            </Badge>
+            <SelectCell
+              value={item.status}
+              options={["Ordered", "Paid", "Shipped", "Owned"]}
+              onSubmit={async (value) => {
+                await onEditItem({
+                  ...item,
+                  status: value as "Ordered" | "Paid" | "Shipped" | "Owned",
+                });
+              }}
+            />
           );
         },
         enableSorting: true,
@@ -255,6 +265,7 @@ export function OrderItemSubDataGrid({
       },
       {
         accessorKey: "price",
+        accessorFn: (row) => Number(row.price),
         header: ({ column }) => (
           <DataGridColumnHeader
             title="Price"
@@ -265,22 +276,14 @@ export function OrderItemSubDataGrid({
         cell: ({ row }) => {
           const item = row.original;
           return (
-            <EditableTextCell
+            <InlineCurrencyCell
               value={item.price}
+              currency={currency}
               onSubmit={async (newValue) => {
-                await onEditItem({
-                  ...item,
-                  price: newValue,
-                });
+                await onEditItem({ ...item, price: newValue });
               }}
-              validate={(value) => {
-                // Allow decimal numbers with up to 2 decimal places
-                if (!/^\d+(\.\d{0,2})?$/.test(value)) {
-                  return "Enter a valid amount (e.g., 10.99)";
-                }
-                return true;
-              }}
-              previewClassName="font-medium text-foreground"
+              locale={getCurrencyLocale(currency)}
+              disabled={false}
             />
           );
         },
@@ -341,7 +344,7 @@ export function OrderItemSubDataGrid({
         enableResizing: false,
       },
     ],
-    [ currency, onDeleteItem, onEditItem, orderId ]
+    [currency, onDeleteItem, onEditItem, orderId]
   );
 
   const subTable = useReactTable({

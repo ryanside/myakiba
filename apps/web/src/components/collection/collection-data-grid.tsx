@@ -10,11 +10,12 @@ import type {
   ExpandedState,
   PaginationState,
   SortingState,
+  VisibilityState,
 } from "@tanstack/react-table";
 import { useCallback, useMemo, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { EditableTextCell } from "@/components/editable/editable-text-cell";
+import { InlineTextCell } from "@/components/cells/inline-text-cell";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,6 +35,7 @@ import {
   Copy,
   Filter,
   Trash,
+  Columns,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link } from "@tanstack/react-router";
@@ -55,7 +57,12 @@ import {
 } from "../ui/popover";
 import CollectionItemForm from "./collection-item-form";
 import * as z from "zod";
-import { EditablePriceCell } from "../editable/editable-price-cell";
+import { InlineCurrencyCell } from "../cells/inline-currency-cell";
+import { PopoverRatingCell } from "../cells/popover-rating-cell";
+import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
+import { InlineCountCell } from "../cells/inline-count-cell";
+import { DataGridColumnCombobox } from "../ui/data-grid-column-combobox";
+import { DataGridSortCombobox } from "../ui/data-grid-sort-combobox";
 
 export const DEFAULT_PAGE_INDEX = 0;
 export const DEFAULT_PAGE_SIZE = 10;
@@ -120,6 +127,11 @@ export const CollectionDataGrid = ({
   } = useSelection();
 
   const [expandedRows, setExpandedRows] = useState<ExpandedState>({});
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
+    orderDate: false,
+    paymentDate: false,
+    shippingDate: false,
+  });
   const [columnOrder, setColumnOrder] = useState<string[]>([
     "select",
     "itemTitle",
@@ -128,6 +140,9 @@ export const CollectionDataGrid = ({
     "score",
     "price",
     "shop",
+    "orderDate",
+    "paymentDate",
+    "shippingDate",
     "collectionDate",
     "actions",
   ]);
@@ -258,26 +273,14 @@ export const CollectionDataGrid = ({
         cell: ({ row }) => {
           const item = row.original;
           return (
-            <EditableTextCell
-              value={item.count.toString()}
+            <InlineCountCell
+              value={item.count}
               onSubmit={async (newValue) => {
                 await onEditCollectionItem({
                   ...item,
-                  count: parseInt(newValue, 10),
+                  count: newValue,
                 });
               }}
-              validate={(value) => {
-                const num = z
-                  .number()
-                  .min(1, "Count must be at least 1")
-                  .safeParse(parseInt(value, 10));
-                if (!num.success) {
-                  return "Enter a valid count";
-                }
-                return true;
-              }}
-              previewClassName="text-sm"
-              inputClassName="bg-sidebar"
             />
           );
         },
@@ -299,7 +302,7 @@ export const CollectionDataGrid = ({
         cell: ({ row }) => {
           const item = row.original;
           return (
-            <EditableTextCell
+            <PopoverRatingCell
               value={item.score}
               onSubmit={async (newValue) => {
                 await onEditCollectionItem({
@@ -307,18 +310,6 @@ export const CollectionDataGrid = ({
                   score: newValue,
                 });
               }}
-              validate={(value) => {
-                const num = z
-                  .number()
-                  .min(0, "Score must be at least 1")
-                  .max(10, "Score must be at most 10")
-                  .safeParse(parseInt(value, 10));
-                if (!num.success) {
-                  return "Enter a valid score";
-                }
-                return true;
-              }}
-              previewClassName="text-sm"
             />
           );
         },
@@ -340,7 +331,7 @@ export const CollectionDataGrid = ({
         cell: ({ row }) => {
           const item = row.original;
           return (
-            <EditableTextCell
+            <InlineTextCell
               value={item.shop}
               onSubmit={async (newValue) => {
                 await onEditCollectionItem({
@@ -365,6 +356,7 @@ export const CollectionDataGrid = ({
       },
       {
         accessorKey: "price",
+        accessorFn: (row) => Number(row.price),
         id: "price",
         header: ({ column }) => (
           <DataGridColumnHeader
@@ -376,8 +368,8 @@ export const CollectionDataGrid = ({
         cell: ({ row }) => {
           const item = row.original;
           return (
-            <EditablePriceCell
-              oldValue={item.price}
+            <InlineCurrencyCell
+              value={item.price}
               currency={currency}
               onSubmit={async (newValue) => {
                 await onEditCollectionItem({
@@ -396,6 +388,102 @@ export const CollectionDataGrid = ({
         size: 100,
       },
       {
+        accessorKey: "orderDate",
+        id: "orderDate",
+        header: ({ column }) => (
+          <DataGridColumnHeader
+            title="Order Date"
+            visibility={true}
+            column={column}
+          />
+        ),
+        cell: ({ row }) => {
+          const orderDate = row.original.orderDate;
+          return (
+            <PopoverDatePickerCell
+              value={orderDate}
+              onSubmit={async (newValue) => {
+                await onEditCollectionItem({
+                  ...row.original,
+                  orderDate: newValue,
+                });
+              }}
+            />
+          );
+        },
+        enableSorting: true,
+        enableHiding: true,
+        enableResizing: true,
+        size: 120,
+        meta: {
+          headerTitle: "Order Date",
+        },
+      },
+      {
+        accessorKey: "paymentDate",
+        id: "paymentDate",
+        header: ({ column }) => (
+          <DataGridColumnHeader
+            title="Payment Date"
+            visibility={true}
+            column={column}
+          />
+        ),
+        cell: ({ row }) => {
+          const paymentDate = row.original.paymentDate;
+          return (
+            <PopoverDatePickerCell
+              value={paymentDate}
+              onSubmit={async (newValue) => {
+                await onEditCollectionItem({
+                  ...row.original,
+                  paymentDate: newValue,
+                });
+              }}
+            />
+          );
+        },
+        enableSorting: true,
+        enableHiding: true,
+        enableResizing: true,
+        size: 120,
+        meta: {
+          headerTitle: "Payment Date",
+        },
+      },
+      {
+        accessorKey: "shippingDate",
+        id: "shippingDate",
+        header: ({ column }) => (
+          <DataGridColumnHeader
+            title="Shipping Date"
+            visibility={true}
+            column={column}
+          />
+        ),
+        cell: ({ row }) => {
+          const shippingDate = row.original.shippingDate;
+          return (
+            <PopoverDatePickerCell
+              value={shippingDate}
+              onSubmit={async (newValue) => {
+                await onEditCollectionItem({
+                  ...row.original,
+                  shippingDate: newValue,
+                });
+              }}
+            />
+          );
+        },
+        enableSorting: true,
+        enableHiding: true,
+        enableResizing: true,
+        size: 120,
+        meta: {
+          headerTitle: "Shipping Date",
+        },
+      },
+      {
         accessorKey: "collectionDate",
         id: "collectionDate",
         header: ({ column }) => (
@@ -408,15 +496,24 @@ export const CollectionDataGrid = ({
         cell: ({ row }) => {
           const collectionDate = row.original.collectionDate;
           return (
-            <div className="text-sm">
-              {collectionDate ? formatDate(collectionDate) : "n/a"}
-            </div>
+            <PopoverDatePickerCell
+              value={collectionDate}
+              onSubmit={async (newValue) => {
+                await onEditCollectionItem({
+                  ...row.original,
+                  collectionDate: newValue,
+                });
+              }}
+            />
           );
         },
         enableSorting: true,
         enableHiding: true,
         enableResizing: true,
         size: 120,
+        meta: {
+          headerTitle: "Collection Date",
+        },
       },
       {
         id: "actions",
@@ -510,6 +607,9 @@ export const CollectionDataGrid = ({
             | "score"
             | "price"
             | "shop"
+            | "orderDate"
+            | "paymentDate"
+            | "shippingDate"
             | "collectionDate"
             | "createdAt",
           order: sortConfig.desc ? "desc" : "asc",
@@ -532,6 +632,7 @@ export const CollectionDataGrid = ({
       expanded: expandedRows,
       rowSelection: collectionSelection,
       columnOrder,
+      columnVisibility,
     },
     columnResizeMode: "onChange",
     onPaginationChange: handlePaginationChange,
@@ -539,6 +640,7 @@ export const CollectionDataGrid = ({
     onExpandedChange: setExpandedRows,
     onRowSelectionChange: setCollectionSelection,
     onColumnOrderChange: setColumnOrder,
+    onColumnVisibilityChange: setColumnVisibility,
     manualFiltering: true,
     manualSorting: true,
     manualPagination: true,
@@ -576,6 +678,37 @@ export const CollectionDataGrid = ({
           <ListRestart className="" />
           <span className="hidden md:block">Reset Filters</span>
         </Button>
+        <DataGridColumnCombobox table={table} />
+        <DataGridSortCombobox
+          table={table}
+          onSortChange={(columnId, direction) => {
+            if (columnId === null || direction === null) {
+              // Clear sorting - use default sort
+              onFilterChange({
+                sort: "createdAt",
+                order: "desc",
+                offset: 0,
+              });
+            } else {
+              onFilterChange({
+                sort: columnId as
+                  | "itemTitle"
+                  | "itemScale"
+                  | "count"
+                  | "score"
+                  | "price"
+                  | "shop"
+                  | "orderDate"
+                  | "paymentDate"
+                  | "shippingDate"
+                  | "collectionDate"
+                  | "createdAt",
+                order: direction,
+                offset: 0,
+              });
+            }
+          }}
+        />
         <Popover>
           <PopoverTrigger
             asChild
@@ -586,12 +719,12 @@ export const CollectionDataGrid = ({
               size="icon"
               disabled={getSelectedCollectionIds.size === 0}
             >
-              <Trash className="stroke-white" />
+              <Trash className="" />
             </Button>
           </PopoverTrigger>
           <PopoverContent>
             <div className="flex flex-col items-center gap-2 text-sm text-pretty">
-              <div className="flex flex-row items-center gap-2">
+              <div className="flex flex-row items-center gap-2 mr-auto">
                 <p>Delete the selected collection items?</p>
               </div>
               <div className="flex flex-row items-center gap-2 max-w-16 mr-auto">

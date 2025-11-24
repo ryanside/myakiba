@@ -25,7 +25,7 @@ export default function HeroSection() {
             Built to provide a better collecting experience.
           </h1>
 
-          <p className="text-muted-foreground mb-6 mt-2 text-balance text-lg">
+          <p className="text-muted-foreground mb-6 mt-2 text-balance text-lg max-w-2xl">
             the community-powered catalog from{" "}
             <span className="text-foreground">MyFigureCollection</span> and the{" "}
             <span className="text-foreground">flexibility of spreadsheets</span>

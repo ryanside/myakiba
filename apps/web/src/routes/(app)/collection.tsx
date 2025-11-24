@@ -93,7 +93,6 @@ function RouteComponent() {
       });
     },
     onSuccess: () => {
-      toast.success("Collection item(s) deleted successfully");
     },
     onSettled: async () => {
       await Promise.all([
@@ -130,7 +129,6 @@ function RouteComponent() {
       });
     },
     onSuccess: () => {
-      toast.success("Collection item updated successfully");
     },
     onSettled: async () => {
       await Promise.all([

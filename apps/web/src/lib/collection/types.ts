@@ -10,6 +10,9 @@ export type CollectionFilters = {
     | "score"
     | "price"
     | "shop"
+    | "orderDate"
+    | "paymentDate"
+    | "shippingDate"
     | "releaseDate"
     | "collectionDate"
     | "createdAt"
@@ -112,6 +115,8 @@ export type CollectionStats = {
 };
 
 export type CollectionQueryResponse = {
-  collection: CollectionItem[];
-  collectionStats: CollectionStats;
+  collection: {
+    collectionItems: CollectionItem[];
+    collectionStats: CollectionStats;
+  };
 };

@@ -1,6 +1,6 @@
 import * as z from "zod";
 import { createInsertSchema, createUpdateSchema } from "drizzle-zod";
-import { collection, order } from "@/db/schema/figure";
+import { order } from "@/db/schema/figure";
 
 const commaSeparatedStringArray = z.preprocess((val) => {
   if (typeof val === "string" && val.length > 0) {
@@ -52,9 +52,17 @@ export const ordersQuerySchema = z.object({
       "title",
       "shop",
       "orderDate",
+      "paymentDate",
+      "shippingDate",
+      "collectionDate",
       "releaseMonthYear",
       "shippingMethod",
       "total",
+      "shippingFee",
+      "taxes",
+      "duties",
+      "tariffs",
+      "miscFees",
       "itemCount",
       "status",
       "createdAt",

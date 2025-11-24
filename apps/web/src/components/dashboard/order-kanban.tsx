@@ -213,16 +213,26 @@ export default function OrderKanban({ orders, currency }: OrdersKanbanProps) {
       status: "Ordered" | "Paid" | "Shipped" | "Owned";
     }) => updateOrderStatus(orderId, status),
     onSuccess: () => {
-      // Invalidate dashboard query to refetch fresh data
-      toast.success(`Order status updated successfully`);
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["order"] }),
+        queryClient.invalidateQueries({ queryKey: ["collection"] }),
+        queryClient.invalidateQueries({ queryKey: ["item"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
+        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
+      ]);
     },
     onError: (error: Error, variables) => {
       console.error(
         `Failed to update order ${variables.orderId} to status ${variables.status}:`,
         error
       );
-      // Revert to initial columns on error
+      toast.error(
+        `Failed to update order ${variables.orderId} to status ${variables.status}:`,
+        {
+          description: `Error: ${error.message}`,
+        }
+      );
       setColumns(initialColumns);
     },
   });

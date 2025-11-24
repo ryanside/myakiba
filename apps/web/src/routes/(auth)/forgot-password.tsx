@@ -48,7 +48,6 @@ function RouteComponent() {
           "x-captcha-response": turnstileToken,
         },
         onSuccess: () => {
-          toast.success("Password reset email sent");
           setSentEmail(email);
           setEmailSent(true);
         },

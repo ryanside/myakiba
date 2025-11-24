@@ -81,7 +81,6 @@ export default function SignInForm({
             navigate({
               to: "/dashboard",
             });
-            toast.success("Sign in successful");
           },
           onError: (error) => {
             if (error.error.status === 403) {

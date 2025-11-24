@@ -22,6 +22,7 @@ import {
   getCoreRowModel,
   type PaginationState,
   type SortingState,
+  type VisibilityState,
   useReactTable,
   type Updater,
 } from "@tanstack/react-table";
@@ -34,11 +35,11 @@ import {
   Trash2,
   ListRestart,
   Merge,
-  Split,
   Trash,
   Info,
   Move,
   Filter,
+  Columns,
 } from "lucide-react";
 import { cn, formatCurrency, formatDate, getCurrencyLocale } from "@/lib/utils";
 import { getStatusVariant } from "@/lib/orders/utils";
@@ -66,10 +67,16 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import ItemMoveForm from "./item-move-form";
+import UnifiedItemMoveForm from "./unified-item-move-form";
 import type { CollectionItemFormValues } from "@/lib/collection/types";
 import OrdersFiltersForm from "./orders-filters-form";
-import { EditablePopoverCell } from "../editable/editable-popover-cell";
+import { PopoverMultiInputCell } from "../cells/popover-multi-input-cell";
+import { SelectCell } from "../cells/select-cell";
+import { InlineTextCell } from "../cells/inline-text-cell";
+import { InlineCurrencyCell } from "../cells/inline-currency-cell";
+import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
+import { DataGridColumnCombobox } from "../ui/data-grid-column-combobox";
+import { DataGridSortCombobox } from "../ui/data-grid-sort-combobox";
 
 export const DEFAULT_PAGE_INDEX = 0;
 export const DEFAULT_PAGE_SIZE = 10;
@@ -164,6 +171,16 @@ export default function OrdersDataGrid({
   } = useSelection();
 
   const [expandedRows, setExpandedRows] = useState<ExpandedState>({});
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
+    paymentDate: false,
+    shippingDate: false,
+    collectionDate: false,
+    shippingFee: false,
+    taxes: false,
+    duties: false,
+    tariffs: false,
+    miscFees: false,
+  });
   const [columnOrder, setColumnOrder] = useState<string[]>([
     "select",
     "expand",
@@ -174,8 +191,14 @@ export default function OrdersDataGrid({
     "orderDate",
     "paymentDate",
     "shippingDate",
+    "collectionDate",
     "itemCount",
     "total",
+    "shippingFee",
+    "taxes",
+    "duties",
+    "tariffs",
+    "miscFees",
     "status",
     "actions",
   ]);
@@ -292,7 +315,22 @@ export default function OrdersDataGrid({
             column={column}
           />
         ),
-        cell: (info) => (info.getValue() as string) || "n/a",
+        cell: ({ row }) => (
+          <InlineTextCell
+            value={row.original.shop}
+            onSubmit={async (newValue) => {
+              const { createdAt, updatedAt, ...orderWithoutTimestamps } =
+                row.original;
+              await onEditOrder(
+                {
+                  ...orderWithoutTimestamps,
+                  shop: newValue,
+                },
+                ["shop"] as CascadeOptions
+              );
+            }}
+          />
+        ),
         enableSorting: true,
         enableHiding: true,
         enableResizing: true,
@@ -312,7 +350,42 @@ export default function OrdersDataGrid({
           const order = row.original;
           return (
             <div className="space-y-px">
-              <div className="text-sm">{order.shippingMethod}</div>
+              <SelectCell
+                value={order.shippingMethod}
+                options={[
+                  "n/a",
+                  "EMS",
+                  "SAL",
+                  "AIRMAIL",
+                  "SURFACE",
+                  "FEDEX",
+                  "DHL",
+                  "Colissimo",
+                  "UPS",
+                  "Domestic",
+                ]}
+                onSubmit={async (value) => {
+                  const { createdAt, updatedAt, ...orderWithoutTimestamps } =
+                    row.original;
+                  await onEditOrder(
+                    {
+                      ...orderWithoutTimestamps,
+                      shippingMethod: value as
+                        | "n/a"
+                        | "EMS"
+                        | "SAL"
+                        | "AIRMAIL"
+                        | "SURFACE"
+                        | "FEDEX"
+                        | "DHL"
+                        | "Colissimo"
+                        | "UPS"
+                        | "Domestic",
+                    },
+                    ["shippingMethod"] as CascadeOptions
+                  );
+                }}
+              />
             </div>
           );
         },
@@ -334,11 +407,20 @@ export default function OrdersDataGrid({
         cell: ({ row }) => {
           const order = row.original;
           return (
-            <div className="space-y-px">
-              <div className="text-sm">
-                {formatDate(order.releaseMonthYear)}
-              </div>
-            </div>
+            <PopoverDatePickerCell
+              value={order.releaseMonthYear}
+              onSubmit={async (newValue) => {
+                const { createdAt, updatedAt, ...orderWithoutTimestamps } =
+                  row.original;
+                await onEditOrder(
+                  {
+                    ...orderWithoutTimestamps,
+                    releaseMonthYear: newValue,
+                  },
+                  [] as CascadeOptions
+                );
+              }}
+            />
           );
         },
         enableSorting: true,
@@ -359,20 +441,148 @@ export default function OrdersDataGrid({
         cell: ({ row }) => {
           const order = row.original;
           return (
-            <div className="space-y-px">
-              <div className="text-sm">{formatDate(order.orderDate)}</div>
-              {order.paymentDate && (
-                <div className="text-xs text-muted-foreground">
-                  Paid: {formatDate(order.paymentDate)}
-                </div>
-              )}
-            </div>
+            <PopoverDatePickerCell
+              value={order.orderDate}
+              onSubmit={async (newValue) => {
+                const { createdAt, updatedAt, ...orderWithoutTimestamps } =
+                  row.original;
+                await onEditOrder(
+                  {
+                    ...orderWithoutTimestamps,
+                    orderDate: newValue,
+                  },
+                  [
+                    "orderDate",
+                  ] as CascadeOptions
+                );
+              }}
+            />
           );
         },
         enableSorting: true,
         enableHiding: true,
         enableResizing: true,
         size: 120,
+        meta: {
+          headerTitle: "Order Date",
+        },
+      },
+      {
+        accessorKey: "paymentDate",
+        id: "paymentDate",
+        header: ({ column }) => (
+          <DataGridColumnHeader
+            title="Payment Date"
+            visibility={true}
+            column={column}
+          />
+        ),
+        cell: ({ row }) => {
+          const order = row.original;
+          return (
+            <PopoverDatePickerCell
+              value={order.paymentDate}
+              onSubmit={async (newValue) => {
+                const { createdAt, updatedAt, ...orderWithoutTimestamps } =
+                  row.original;
+                await onEditOrder(
+                  {
+                    ...orderWithoutTimestamps,
+                    paymentDate: newValue,
+                  },
+                  [
+                    "paymentDate",
+                  ] as CascadeOptions
+                );
+              }}
+            />
+          );
+        },
+        enableSorting: true,
+        enableHiding: true,
+        enableResizing: true,
+        size: 120,
+        meta: {
+          headerTitle: "Payment Date",
+        },
+      },
+      {
+        accessorKey: "shippingDate",
+        id: "shippingDate",
+        header: ({ column }) => (
+          <DataGridColumnHeader
+            title="Shipping Date"
+            visibility={true}
+            column={column}
+          />
+        ),
+        cell: ({ row }) => {
+          const order = row.original;
+          return (
+            <PopoverDatePickerCell
+              value={order.shippingDate}
+              onSubmit={async (newValue) => {
+                const { createdAt, updatedAt, ...orderWithoutTimestamps } =
+                  row.original;
+                await onEditOrder(
+                  {
+                    ...orderWithoutTimestamps,
+                    shippingDate: newValue,
+                  },
+                  [
+                    "shippingDate",
+                  ] as CascadeOptions
+                );
+              }}
+            />
+          );
+        },
+        enableSorting: true,
+        enableHiding: true,
+        enableResizing: true,
+        size: 120,
+        meta: {
+          headerTitle: "Shipping Date",
+        },
+      },
+      {
+        accessorKey: "collectionDate",
+        id: "collectionDate",
+        header: ({ column }) => (
+          <DataGridColumnHeader
+            title="Collection Date"
+            visibility={true}
+            column={column}
+          />
+        ),
+        cell: ({ row }) => {
+          const order = row.original;
+          return (
+            <PopoverDatePickerCell
+              value={order.collectionDate}
+              onSubmit={async (newValue) => {
+                const { createdAt, updatedAt, ...orderWithoutTimestamps } =
+                  row.original;
+                await onEditOrder(
+                  {
+                    ...orderWithoutTimestamps,
+                    collectionDate: newValue,
+                  },
+                  [
+                    "collectionDate",
+                  ] as CascadeOptions
+                );
+              }}
+            />
+          );
+        },
+        enableSorting: true,
+        enableHiding: true,
+        enableResizing: true,
+        size: 120,
+        meta: {
+          headerTitle: "Collection Date",
+        },
       },
       {
         accessorKey: "itemCount",
@@ -446,18 +656,21 @@ export default function OrdersDataGrid({
           ];
           const locale = getCurrencyLocale(currency);
           return (
-            <EditablePopoverCell
+            <PopoverMultiInputCell
               inputs={inputs}
-              displayValue={formatCurrency(order.total, currency)}
+              total={formatCurrency(order.total, currency)}
               currency={currency}
               locale={locale}
               onSubmit={async (newValues) => {
+                const { createdAt, updatedAt, ...orderWithoutTimestamps } =
+                  order;
                 await onEditOrder(
                   {
-                    ...order,
+                    ...orderWithoutTimestamps,
                     ...newValues,
                   },
-                  [] as CascadeOptions
+                  [
+                  ] as CascadeOptions
                 );
               }}
             />
@@ -467,6 +680,214 @@ export default function OrdersDataGrid({
         enableHiding: true,
         enableResizing: true,
         size: 100,
+        meta: {
+          headerTitle: "Total",
+        },
+      },
+      {
+        accessorKey: "shippingFee",
+        accessorFn: (row) => Number(row.shippingFee),
+        id: "shippingFee",
+        header: ({ column }) => (
+          <DataGridColumnHeader
+            title="Shipping Fee"
+            visibility={true}
+            column={column}
+          />
+        ),
+        cell: ({ row }) => {
+          const order = row.original;
+          return (
+            <InlineCurrencyCell
+              value={order.shippingFee}
+              currency={currency}
+              locale={getCurrencyLocale(currency)}
+              onSubmit={async (newValue) => {
+                const { createdAt, updatedAt, ...orderWithoutTimestamps } =
+                  row.original;
+                await onEditOrder(
+                  {
+                    ...orderWithoutTimestamps,
+                    shippingFee: newValue,
+                  },
+                  [] as CascadeOptions
+                );
+              }}
+              disabled={false}
+            />
+          );
+        },
+        enableSorting: true,
+        enableHiding: true,
+        enableResizing: true,
+        size: 100,
+        meta: {
+          headerTitle: "Shipping Fee",
+        },
+      },
+      {
+        accessorKey: "taxes",
+        accessorFn: (row) => Number(row.taxes),
+        id: "taxes",
+        header: ({ column }) => (
+          <DataGridColumnHeader
+            title="Taxes"
+            visibility={true}
+            column={column}
+          />
+        ),
+        cell: ({ row }) => {
+          const order = row.original;
+          return (
+            <InlineCurrencyCell
+              value={order.taxes}
+              currency={currency}
+              locale={getCurrencyLocale(currency)}
+              onSubmit={async (newValue) => {
+                const { createdAt, updatedAt, ...orderWithoutTimestamps } =
+                  row.original;
+                await onEditOrder(
+                  {
+                    ...orderWithoutTimestamps,
+                    taxes: newValue,
+                  },
+                  [] as CascadeOptions
+                );
+              }}
+              disabled={false}
+            />
+          );
+        },
+        enableSorting: true,
+        enableHiding: true,
+        enableResizing: true,
+        size: 100,
+        meta: {
+          headerTitle: "Taxes",
+        },
+      },
+      {
+        accessorKey: "duties",
+        accessorFn: (row) => Number(row.duties),
+        id: "duties",
+        header: ({ column }) => (
+          <DataGridColumnHeader
+            title="Duties"
+            visibility={true}
+            column={column}
+          />
+        ),
+        cell: ({ row }) => {
+          const order = row.original;
+          return (
+            <InlineCurrencyCell
+              value={order.duties}
+              currency={currency}
+              locale={getCurrencyLocale(currency)}
+              onSubmit={async (newValue) => {
+                const { createdAt, updatedAt, ...orderWithoutTimestamps } =
+                  row.original;
+                await onEditOrder(
+                  {
+                    ...orderWithoutTimestamps,
+                    duties: newValue,
+                  },
+                  [] as CascadeOptions
+                );
+              }}
+              disabled={false}
+            />
+          );
+        },
+        enableSorting: true,
+        enableHiding: true,
+        enableResizing: true,
+        size: 100,
+        meta: {
+          headerTitle: "Duties",
+        },
+      },
+      {
+        accessorKey: "tariffs",
+        accessorFn: (row) => Number(row.tariffs),
+        id: "tariffs",
+        header: ({ column }) => (
+          <DataGridColumnHeader
+            title="Tariffs"
+            visibility={true}
+            column={column}
+          />
+        ),
+        cell: ({ row }) => {
+          const order = row.original;
+          return (
+            <InlineCurrencyCell
+              value={order.tariffs}
+              currency={currency}
+              locale={getCurrencyLocale(currency)}
+              onSubmit={async (newValue) => {
+                const { createdAt, updatedAt, ...orderWithoutTimestamps } =
+                  row.original;
+                await onEditOrder(
+                  {
+                    ...orderWithoutTimestamps,
+                    tariffs: newValue,
+                  },
+                  [] as CascadeOptions
+                );
+              }}
+              disabled={false}
+            />
+          );
+        },
+        enableSorting: true,
+        enableHiding: true,
+        enableResizing: true,
+        size: 100,
+        meta: {
+          headerTitle: "Tariffs",
+        },
+      },
+      {
+        accessorKey: "miscFees",
+        accessorFn: (row) => Number(row.miscFees),
+        id: "miscFees",
+        header: ({ column }) => (
+          <DataGridColumnHeader
+            title="Misc Fees"
+            visibility={true}
+            column={column}
+          />
+        ),
+        cell: ({ row }) => {
+          const order = row.original;
+          return (
+            <InlineCurrencyCell
+              value={order.miscFees}
+              currency={currency}
+              locale={getCurrencyLocale(currency)}
+              onSubmit={async (newValue) => {
+                const { createdAt, updatedAt, ...orderWithoutTimestamps } =
+                  row.original;
+                await onEditOrder(
+                  {
+                    ...orderWithoutTimestamps,
+                    miscFees: newValue,
+                  },
+                  [] as CascadeOptions
+                );
+              }}
+              disabled={false}
+            />
+          );
+        },
+        enableSorting: true,
+        enableHiding: true,
+        enableResizing: true,
+        size: 100,
+        meta: {
+          headerTitle: "Misc Fees",
+        },
       },
       {
         accessorKey: "status",
@@ -481,9 +902,24 @@ export default function OrdersDataGrid({
         cell: ({ row }) => {
           const status = row.original.status;
           return (
-            <Badge variant={getStatusVariant(status)} appearance="outline">
-              {status}
-            </Badge>
+            // <Badge variant={getStatusVariant(status)} appearance="outline">
+            //   {status}
+            // </Badge>
+            <SelectCell
+              value={status}
+              options={["Ordered", "Paid", "Shipped", "Owned"]}
+              onSubmit={async (value) => {
+                const { createdAt, updatedAt, ...orderWithoutTimestamps } =
+                  row.original;
+                await onEditOrder(
+                  {
+                    ...orderWithoutTimestamps,
+                    status: value as "Ordered" | "Paid" | "Shipped" | "Owned",
+                  },
+                  ["status"] as CascadeOptions
+                );
+              }}
+            />
           );
         },
         enableSorting: true,
@@ -581,9 +1017,17 @@ export default function OrdersDataGrid({
             | "title"
             | "shop"
             | "orderDate"
+            | "paymentDate"
+            | "shippingDate"
+            | "collectionDate"
             | "releaseMonthYear"
             | "shippingMethod"
             | "total"
+            | "shippingFee"
+            | "taxes"
+            | "duties"
+            | "tariffs"
+            | "miscFees"
             | "itemCount"
             | "status"
             | "createdAt",
@@ -607,6 +1051,7 @@ export default function OrdersDataGrid({
       expanded: expandedRows,
       rowSelection,
       columnOrder,
+      columnVisibility,
     },
     columnResizeMode: "onChange",
     onPaginationChange: handlePaginationChange,
@@ -614,6 +1059,7 @@ export default function OrdersDataGrid({
     onExpandedChange: setExpandedRows,
     onRowSelectionChange: setRowSelection,
     onColumnOrderChange: setColumnOrder,
+    onColumnVisibilityChange: setColumnVisibility,
     manualFiltering: true,
     manualSorting: true,
     manualPagination: true,
@@ -650,11 +1096,48 @@ export default function OrdersDataGrid({
           <ListRestart />
           <span className="hidden md:block">Reset Filters</span>
         </Button>
+        <DataGridColumnCombobox table={table} />
+        <DataGridSortCombobox
+          table={table}
+          onSortChange={(columnId, direction) => {
+            if (columnId === null || direction === null) {
+              // Clear sorting - use default sort
+              onFilterChange({
+                sort: "createdAt",
+                order: "desc",
+                offset: 0,
+              });
+            } else {
+              onFilterChange({
+                sort: columnId as
+                  | "title"
+                  | "shop"
+                  | "orderDate"
+                  | "paymentDate"
+                  | "shippingDate"
+                  | "collectionDate"
+                  | "releaseMonthYear"
+                  | "shippingMethod"
+                  | "total"
+                  | "shippingFee"
+                  | "taxes"
+                  | "duties"
+                  | "tariffs"
+                  | "miscFees"
+                  | "itemCount"
+                  | "status"
+                  | "createdAt",
+                order: direction,
+                offset: 0,
+              });
+            }
+          }}
+        />
         <Dialog>
           <DialogTrigger asChild>
             <Button variant="outline" disabled={getSelectedOrderIds.size < 2}>
               <Merge />
-              <span className="hidden md:block">Merge Orders</span>
+              <span className="hidden md:block">Merge</span>
             </Button>
           </DialogTrigger>
           <OrderForm
@@ -670,31 +1153,14 @@ export default function OrdersDataGrid({
               variant="outline"
               disabled={getSelectedItemData.collectionIds.size === 0}
             >
-              <Split />
-              <span className="hidden md:block">Split Items</span>
-            </Button>
-          </DialogTrigger>
-          <OrderForm
-            collectionIds={getSelectedItemData.collectionIds}
-            orderIds={getSelectedItemData.orderIds}
-            callbackFn={onSplit}
-            type="split"
-            clearSelections={clearSelections}
-          />
-        </Dialog>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button
-              variant="outline"
-              disabled={getSelectedItemData.collectionIds.size === 0}
-            >
               <Move />
-              <span className="hidden md:block">Move Items</span>
+              <span className="hidden md:block">Move Item</span>
             </Button>
           </DialogTrigger>
-          <ItemMoveForm
+          <UnifiedItemMoveForm
             selectedItemData={getSelectedItemData}
-            callbackFn={onMoveItem}
+            onMoveToExisting={onMoveItem}
+            onMoveToNew={onSplit}
             clearSelections={clearSelections}
           />
         </Dialog>
@@ -705,12 +1171,12 @@ export default function OrdersDataGrid({
               disabled={getSelectedOrderIds.size === 0}
               size="icon"
             >
-              <Trash className="stroke-white" />
+              <Trash className="" />
             </Button>
           </PopoverTrigger>
           <PopoverContent>
             <div className="flex flex-col items-center gap-2 text-sm text-pretty">
-              <div className="flex flex-row items-center gap-2">
+              <div className="flex flex-row items-center gap-2 mr-auto">
                 <p>Delete the selected orders and their items?</p>
                 <Tooltip>
                   <TooltipTrigger asChild>
