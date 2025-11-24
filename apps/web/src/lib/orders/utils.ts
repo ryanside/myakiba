@@ -93,6 +93,18 @@ export function filterAndSortOrders(
         aValue = a.orderDate ? new Date(a.orderDate) : new Date(0);
         bValue = b.orderDate ? new Date(b.orderDate) : new Date(0);
         break;
+      case "paymentDate":
+        aValue = a.paymentDate ? new Date(a.paymentDate) : new Date(0);
+        bValue = b.paymentDate ? new Date(b.paymentDate) : new Date(0);
+        break;
+      case "shippingDate":
+        aValue = a.shippingDate ? new Date(a.shippingDate) : new Date(0);
+        bValue = b.shippingDate ? new Date(b.shippingDate) : new Date(0);
+        break;
+      case "collectionDate":
+        aValue = a.collectionDate ? new Date(a.collectionDate) : new Date(0);
+        bValue = b.collectionDate ? new Date(b.collectionDate) : new Date(0);
+        break;
       case "releaseMonthYear":
         aValue = a.releaseMonthYear || "";
         bValue = b.releaseMonthYear || "";
@@ -104,6 +116,26 @@ export function filterAndSortOrders(
       case "total":
         aValue = parseFloat(a.total) || 0;
         bValue = parseFloat(b.total) || 0;
+        break;
+      case "shippingFee":
+        aValue = parseFloat(a.shippingFee) || 0;
+        bValue = parseFloat(b.shippingFee) || 0;
+        break;
+      case "taxes":
+        aValue = parseFloat(a.taxes) || 0;
+        bValue = parseFloat(b.taxes) || 0;
+        break;
+      case "duties":
+        aValue = parseFloat(a.duties) || 0;
+        bValue = parseFloat(b.duties) || 0;
+        break;
+      case "tariffs":
+        aValue = parseFloat(a.tariffs) || 0;
+        bValue = parseFloat(b.tariffs) || 0;
+        break;
+      case "miscFees":
+        aValue = parseFloat(a.miscFees) || 0;
+        bValue = parseFloat(b.miscFees) || 0;
         break;
       case "itemCount":
         aValue = a.itemCount || 0;

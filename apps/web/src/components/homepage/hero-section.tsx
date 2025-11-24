@@ -12,7 +12,7 @@ export default function HeroSection() {
 
   return (
     <section className="py-20">
-      <div className="relative z-10 mx-auto w-full max-w-7xl px-6 lg:px-0">
+      <div className="relative z-10 mx-auto w-full max-w-6xl px-6 lg:px-0">
         <div className="relative mt-8">
           <div className="flex w-fit items-center justify-center gap-2">
             <div className="flex relative items-center bg-sidebar hover:bg-background transition-all duration-150 border border-foreground/10 gap-2 rounded-3xl p-1 px-2 text-xs shadow-xs">

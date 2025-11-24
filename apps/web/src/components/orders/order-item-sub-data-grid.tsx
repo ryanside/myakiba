@@ -265,6 +265,7 @@ export function OrderItemSubDataGrid({
       },
       {
         accessorKey: "price",
+        accessorFn: (row) => Number(row.price),
         header: ({ column }) => (
           <DataGridColumnHeader
             title="Price"

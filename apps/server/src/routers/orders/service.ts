@@ -127,12 +127,28 @@ class OrdersService {
           return order.shop;
         case "orderDate":
           return order.orderDate;
+        case "paymentDate":
+          return order.paymentDate;
+        case "shippingDate":
+          return order.shippingDate;
+        case "collectionDate":
+          return order.collectionDate;
         case "releaseMonthYear":
           return order.releaseMonthYear;
         case "shippingMethod":
           return order.shippingMethod;
         case "total":
           return sql<string>`COALESCE(SUM(${collection.price}::numeric), 0) + COALESCE(${order.shippingFee}::numeric, 0) + COALESCE(${order.taxes}::numeric, 0) + COALESCE(${order.duties}::numeric, 0) + COALESCE(${order.tariffs}::numeric, 0) + COALESCE(${order.miscFees}::numeric, 0)`;
+        case "shippingFee":
+          return order.shippingFee;
+        case "taxes":
+          return order.taxes;
+        case "duties":
+          return order.duties;
+        case "tariffs":
+          return order.tariffs;
+        case "miscFees":
+          return order.miscFees;
         case "status":
           return order.status;
         case "itemCount":
