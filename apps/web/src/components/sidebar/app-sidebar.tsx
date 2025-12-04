@@ -69,7 +69,7 @@ const data = {
   ],
 };
 
-function DiscordIcon() {
+export function DiscordIcon() {
   return (
     <svg
       role="img"

@@ -3,7 +3,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-
 .instrument-sans-font {
   font-family: "Instrument Sans", sans-serif;
   font-optical-sizing: auto;
