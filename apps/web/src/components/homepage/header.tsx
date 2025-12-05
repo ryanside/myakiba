@@ -88,7 +88,7 @@ export const HeroHeader = () => {
               <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-2 sm:space-y-0 md:w-fit">
                 <Button asChild variant="ghost" size="sm">
                   <a
-                    href="https://github.com/ryanside/myakiba"
+                    href="https://discord.gg/VKHVvhcC2z"
                     target="_blank"
                     className="flex items-center gap-2"
                   >
