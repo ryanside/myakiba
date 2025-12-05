@@ -87,7 +87,7 @@ function HomeComponent() {
           backgroundImage={FeatureBackground2}
           featureImage={theme === "dark" ? OrdersDarkImage : OrdersLightImage}
           title="Manage your orders"
-          description="Manage pre-orders, track shipments, and monitor order status"
+          description="Manage pre-orders, track shipments, and monitor order status."
           link="/login"
           linkText="Get started"
         />
@@ -98,7 +98,7 @@ function HomeComponent() {
             theme === "dark" ? CollectionDarkImage : CollectionLightImage
           }
           title="Manage your collection"
-          description="Organize and track your entire figure collection with detailed item information from MyFigureCollection"
+          description="Track your collection with item information from MyFigureCollection."
           link="/login"
           linkText="Get started"
         />

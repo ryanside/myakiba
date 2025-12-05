@@ -36,17 +36,15 @@ export default function FAQs() {
     },
     {
       id: "item-5",
-      question:
-        "Why build this?",
+      question: "Why build this?",
       answer:
         "The other tools were either too simple (like Spreadsheets) or lacked the features I wanted (like MyFigureCollection), so I build this for myself and decided to share it with the community. It's also a fun project to work on and learn new things as a developer.",
     },
     {
       id: "item-6",
-      question:
-        "I'm a developer. Can I contribute to the project?",
+      question: "I'm a developer. Can I contribute to the project?",
       answer:
-        "Yes! Contributions are welcome! Please check out the GitHub repository.",
+        "Yes! Contributions are welcome. Please check out the GitHub repository and feel free to join our Discord server.",
     },
   ];
 
@@ -63,12 +61,13 @@ export default function FAQs() {
             </p>
             <p className="text-muted-foreground mt-6 hidden md:block">
               Have a different question? Join and ask in our{" "}
-              <Link
-                to="/"
+              <a
+                href="https://discord.gg/VKHVvhcC2z"
+                target="_blank"
                 className="text-foreground font-medium hover:underline"
               >
                 Discord
-              </Link>
+              </a>
             </p>
           </div>
 
