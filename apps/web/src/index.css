@@ -71,6 +71,25 @@
   --shadow-2xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.13);
   --spacing: 0.25rem;
   --font-weight-medium: 450;
+
+  --category-accessories: #808080;
+  --category-action-dolls: #0080ff;
+  --category-prepainted: green;
+  --category-garage-kits: purple;
+  --category-model-kits: maroon;
+  --category-trading: orange;
+  --category-apparel: magenta;
+  --category-dishes: #e0b7a2;         /* lighter maroon */
+  --category-hanged-up: #ffd280;       /* lighter orange */
+  --category-linens: #b89fff;          /* lighter purple */
+  --category-misc: #338979;
+  --category-plushes: #00c8ff;
+  --category-stationeries: black;
+  --category-on-walls: #90ee90;        /* lighter green */
+  --category-books: #cccccc;
+  --category-music: #3d9395;
+  --category-video: #0297D7;
+  --category-games: #EE2A84;
 }
 
 .dark {
@@ -126,6 +145,25 @@
   --shadow-xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 8px 10px -1px hsl(0 0% 0% / 0.05);
   --shadow-2xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.13);
   --font-weight-medium: 450;
+
+  --category-accessories: #808080;
+  --category-action-dolls: #0080ff;
+  --category-prepainted: green;
+  --category-garage-kits: purple;
+  --category-model-kits: maroon;
+  --category-trading: orange;
+  --category-apparel: magenta;
+  --category-dishes: #e0b7a2;         /* lighter maroon */
+  --category-hanged-up: #ffd280;       /* lighter orange */
+  --category-linens: #b89fff;          /* lighter purple */
+  --category-misc: #338979;
+  --category-plushes: #00c8ff;
+  --category-stationeries: black;
+  --category-on-walls: #90ee90;        /* lighter green */
+  --category-books: #cccccc;
+  --category-music: #3d9395;
+  --category-video: #0297D7;
+  --category-games: #EE2A84;
 }
 
 @theme inline {
@@ -189,6 +227,25 @@
   --tracking-widest: calc(var(--tracking-normal) + 0.1em);
 
   --font-weight-medium: var(--font-weight-medium);
+
+  --category-accessories: var(--category-accessories);
+  --category-action-dolls: var(--category-action-dolls);
+  --category-prepainted: var(--category-prepainted);
+  --category-garage-kits: var(--category-garage-kits);
+  --category-model-kits: var(--category-model-kits);
+  --category-trading: var(--category-trading);
+  --category-apparel: var(--category-apparel);
+  --category-dishes: var(--category-dishes);
+  --category-hanged-up: var(--category-hanged-up);
+  --category-linens: var(--category-linens);
+  --category-misc: var(--category-misc);
+  --category-plushes: var(--category-plushes);
+  --category-stationeries: var(--category-stationeries);
+  --category-on-walls: var(--category-on-walls);
+  --category-books: var(--category-books);
+  --category-music: var(--category-music);
+  --category-video: var(--category-video);
+  --category-games: var(--category-games);
 }
 
 body {

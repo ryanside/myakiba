@@ -61,7 +61,7 @@ export function createOptimisticDeleteUpdate(
     collection: {
       ...old.collection,
       collectionItems: updatedItems,
-      collectionStats: calculateCollectionStats(updatedItems),
+      collectionStats: old.collection.collectionStats,
     },
   };
 }
@@ -84,7 +84,7 @@ export function createOptimisticEditUpdate(
     collection: {
       ...old.collection,
       collectionItems: updatedItems,
-      collectionStats: calculateCollectionStats(updatedItems),
+      collectionStats: old.collection.collectionStats,
     },
   };
 }

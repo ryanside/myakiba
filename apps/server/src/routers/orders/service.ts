@@ -500,18 +500,14 @@ class OrdersService {
           ])
         );
 
-        const collectionUpdated = await tx
+        await tx
           .update(collection)
           .set({
             ...cascadeProperties,
           })
           .where(
             and(eq(collection.userId, userId), eq(collection.orderId, orderId))
-          )
-          .returning();
-        if (!collectionUpdated || collectionUpdated.length === 0) {
-          throw new Error("ORDER_ITEMS_NOT_FOUND");
-        }
+          );
       }
 
       return {};

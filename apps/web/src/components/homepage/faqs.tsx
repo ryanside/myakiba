@@ -13,34 +13,40 @@ export default function FAQs() {
     {
       id: "item-1",
       question: "Does myakiba use MyFigureCollection's data?",
-      answer:
-        "myakiba scrapes item data from MyFigureCollection item links (e.g. myfigurecollection.net/item/) that the user provides and stores the item data in a database. The scraper is heavily rate limited and throttled to prevent overloading MyFigureCollection.",
+      answer: `Yes, we use MyFigureCollection's core item information. Since MyFigureCollection does not provide an API, myakiba scrapes and stores item information from MyFigureCollection item links (https://myfigurecollection.net/item/xxxxx) that the user provides. Items are periodically rescraped to ensure the item information is accurate and up to date.`,
     },
     {
       id: "item-2",
       question: "How does myakiba compare to MyFigureCollection?",
       answer:
-        "myakiba was built to realize the features that I thought were missing from MyFigureCollection. It offers a dashboard, lots of analytics, expense tracking, comprehensive order management (like allowing you to add multiple items to an order), collection management, and a sharable analytics-focused profile page that complements your MyFigureCollection profile.",
+        "myakiba was built to realize the features that I thought were missing from MyFigureCollection. It currently offers a dashboard, analytics, comprehensive order management, and collection management, with expense tracking and a sharable analytics-focused profile page (complements your MyFigureCollection profile!) in development.",
     },
     {
       id: "item-3",
-      question:
-        "why build this",
+      question: "Who is myakiba for?",
       answer:
-        "The other tools were either too simple (like Spreadsheets) or lacked the features I wanted (like MyFigureCollection). So I built this for myself and decided to share it with the community.",
+        "Collectors who want a viable alternative to MyFigureCollection/Spreadsheets. Collectors who also want to see a Spotify-wrapped like experience for their collection.",
     },
     {
       id: "item-4",
-      question: "Who is myakiba for?",
+      question:
+        "Is myakiba safe to use since it scrapes data from MyFigureCollection?",
       answer:
-        "Collectors who want a viable alternative to MyFigureCollection/Spreadsheets.",
+        "Yes. MyFigureCollection's terms of service does not prohibit scraping. We also don't mass scrape MyFigureCollection, only scraping core item data from the user's provided MyFigureCollection item links. The scraper is heavily rate limited and throttled to prevent overloading MyFigureCollection, item data is cached so we don't need to scrape the same item data multiple times, and users are limited to syncing a few times per hour to prevent abuse",
     },
     {
       id: "item-5",
       question:
-        "Is myakiba safe to use since it scrapes data from MyFigureCollection?",
+        "Why build this?",
       answer:
-        "Yes. MyFigureCollection's terms of service does not prohibit scraping. We also don't mass scrape MyFigureCollection. We only scrape item data from the user's provided MyFigureCollection item links. The scraper is heavily rate limited and throttled to prevent overloading MyFigureCollection, and item data is cached so we don't need to scrape the same item data multiple times. Items are periodically rescraped to ensure the data is accurate and up to date.",
+        "The other tools were either too simple (like Spreadsheets) or lacked the features I wanted (like MyFigureCollection), so I build this for myself and decided to share it with the community. It's also a fun project to work on and learn new things as a developer.",
+    },
+    {
+      id: "item-6",
+      question:
+        "I'm a developer. Can I contribute to the project?",
+      answer:
+        "Yes! Contributions are welcome! Please check out the GitHub repository.",
     },
   ];
 

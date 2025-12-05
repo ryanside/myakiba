@@ -1,7 +1,7 @@
 import { InfiniteSlider } from "@/components/ui/infinite-slider";
 import { ProgressiveBlur } from "@/components/ui/progressive-blur";
 
-export default function LogoCloud() {
+export default function LogoCloud({ images }: { images: string[] }) {
   return (
     <section className="bg-background overflow-hidden py-8">
       <div className="group relative m-auto max-w-7xl">
@@ -13,13 +13,13 @@ export default function LogoCloud() {
           </div>
           <div className="relative py-6 md:w-[calc(100%-11rem)]">
             <InfiniteSlider speedOnHover={20} speed={40} gap={100}>
-              {[...Array(7)].map((_, idx) => (
+              {images.map((image, idx) => (
                 <div
                   key={idx}
                   className="relative size-24 rounded-lg overflow-hidden border shrink-0"
                 >
                   <img
-                    src="https://myakiba.s3.us-east-2.amazonaws.com/287683-72c19.jpg"
+                    src={image}
                     alt=""
                     className="w-full h-full object-top object-cover"
                     loading="lazy"

@@ -1,7 +1,4 @@
 import { Link } from "@tanstack/react-router";
-import { Button } from "../ui/button";
-import analytics from "/analytics.webp";
-import heroImage from "/hero-section-bg.webp";
 import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -73,7 +70,12 @@ function FeatureInfo({
   imageOrientation,
 }: Omit<FeatureProps, "backgroundImage" | "featureImage">) {
   return (
-    <div className={cn("md:col-span-1 col-span-3 flex flex-col justify-center items-start gap-2 relative", imageOrientation === "right" ? "md:px-2" : "md:pl-6 md:pr-2")}>
+    <div
+      className={cn(
+        "md:col-span-1 col-span-3 flex flex-col justify-center items-start gap-2 relative",
+        imageOrientation === "right" ? "md:px-2" : "md:pl-6 md:pr-2"
+      )}
+    >
       <div className="flex flex-col">
         <h2 className="md:text-xl text-base text-black dark:text-white">
           {title}
@@ -105,7 +107,7 @@ function FeatureImage({
       <img
         src={backgroundImage}
         alt="hero background image"
-        className="absolute inset-0 size-full object-cover opacity-75"
+        className="absolute inset-0 size-full object-cover opacity-100"
         loading="eager"
         fetchPriority="high"
       />

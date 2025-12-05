@@ -2,13 +2,9 @@ import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { ArrowRightIcon, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
-import dashboard from "/dashboard.webp";
-import dashboardLight from "/dashboard-light.webp";
-import heroImage from "/hero-section-bg.webp";
-import { useTheme } from "@/components/theme-provider";
 
-export default function HeroSection() {
-  const { theme } = useTheme();
+
+export default function HeroSection({ heroImage, heroBackgroundImage }: { heroImage: string, heroBackgroundImage: string }) {
 
   return (
     <section className="py-20" id="hero">
@@ -47,16 +43,16 @@ export default function HeroSection() {
 
         <div className="relative mt-12 overflow-hidden rounded-sm bg-black/10 md:mt-16 aspect-video">
           <img
-            src={heroImage}
+            src={heroBackgroundImage}
             alt="hero background image"
-            className="absolute inset-0 size-full object-cover opacity-75"
+            className="absolute inset-0 size-full object-cover opacity-100"
             loading="eager"
             fetchPriority="high"
           />
 
           <div className="bg-background rounded-lg relative m-4 overflow-hidden shadow-xl shadow-black/15 ring-1 ring-black/10 sm:m-8 md:m-12">
             <img
-              src={theme === "light" ? dashboardLight : dashboard}
+              src={heroImage}
               alt="app screen"
               className="object-top-left size-full object-cover"
               loading="eager"
