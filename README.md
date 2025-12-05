@@ -66,7 +66,7 @@ Get a comprehensive overview of your collection at a glance. Monitor your spendi
 
 <div align="center">
 
-![Dashboard](apps/web/public/dashboard.webp)
+![Dashboard](apps/web/public/dashboard-light.webp)
 
 </div>
 
@@ -76,7 +76,7 @@ Manage your entire collection with a powerful data table. Filter, sort, and orga
 
 <div align="center">
 
-![Collection](apps/web/public/collection.webp)
+![Collection](apps/web/public/collection-light.webp)
 
 </div>
 
@@ -86,7 +86,7 @@ Keep track of all your orders and purchases in one place. Track payments (includ
 
 <div align="center">
 
-![Orders](apps/web/public/orders.webp)
+![Orders](apps/web/public/orders-light.webp)
 
 </div>
 
@@ -96,7 +96,7 @@ Dive deep into your collection data with comprehensive analytics. Visualize spen
 
 <div align="center">
 
-![Analytics](apps/web/public/analytics.webp)
+![Analytics](apps/web/public/analytics-light.webp)
 
 </div>
 

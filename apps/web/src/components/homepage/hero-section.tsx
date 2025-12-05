@@ -1,18 +1,14 @@
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { BookOpen } from "lucide-react";
+import { ArrowRightIcon, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
-import dashboard from "/dashboard.webp";
-import dashboardLight from "/dashboard-light.webp";
-import heroImage from "/hero-section-bg.webp";
-import { useTheme } from "@/components/theme-provider";
 
-export default function HeroSection() {
-  const { theme } = useTheme();
+
+export default function HeroSection({ heroImage, heroBackgroundImage }: { heroImage: string, heroBackgroundImage: string }) {
 
   return (
-    <section className="py-20">
-      <div className="relative z-10 mx-auto w-full max-w-6xl px-6 lg:px-0">
+    <section className="py-20" id="hero">
+      <div className="relative z-10 mx-auto w-full max-w-7xl px-6 xl:px-0">
         <div className="relative mt-8">
           <div className="flex w-fit items-center justify-center gap-2">
             <div className="flex relative items-center bg-sidebar hover:bg-background transition-all duration-150 border border-foreground/10 gap-2 rounded-3xl p-1 px-2 text-xs shadow-xs">
@@ -36,32 +32,31 @@ export default function HeroSection() {
             .
           </p>
 
-          <div className="flex flex-row items-center gap-2 *:w-full sm:flex-row sm:*:w-auto">
-            <Button asChild variant="mono" className="">
+          <div className="flex flex-row items-center gap-2 sm:flex-row sm:*:w-auto">
+            <Button asChild variant="mono" className="p-6 rounded-full">
               <Link to="/login">
-                <span className="text-nowrap">Get Started</span>
-              </Link>
-            </Button>
-            <Button asChild variant="ghost">
-              <Link to="/login">
-                <span className="text-nowrap">Learn More</span>
+                Get Started <ArrowRightIcon className="w-4 h-4" />
               </Link>
             </Button>
           </div>
         </div>
 
-        <div className="relative mt-12 overflow-hidden rounded-sm bg-black/10 md:mt-16">
+        <div className="relative mt-12 overflow-hidden rounded-sm bg-black/10 md:mt-16 aspect-video">
           <img
-            src={heroImage}
-            alt=""
-            className="absolute inset-0 size-full object-cover opacity-75"
+            src={heroBackgroundImage}
+            alt="hero background image"
+            className="absolute inset-0 size-full object-cover opacity-100"
+            loading="eager"
+            fetchPriority="high"
           />
 
           <div className="bg-background rounded-lg relative m-4 overflow-hidden shadow-xl shadow-black/15 ring-1 ring-black/10 sm:m-8 md:m-12">
             <img
-              src={theme === "light" ? dashboardLight : dashboard}
+              src={heroImage}
               alt="app screen"
               className="object-top-left size-full object-cover"
+              loading="eager"
+              fetchPriority="high"
             />
           </div>
         </div>

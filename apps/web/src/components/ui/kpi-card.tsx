@@ -32,7 +32,7 @@ export function KPICard({
       <CardContent className="mt-auto">
         <div className="flex flex-row items-baseline w-full">
           <p className="text-2xl font-mono">{value}</p>
-          {subvalueTitle && subvalue && (
+          {subvalueTitle && (subvalue !== undefined) && (
             <div className="flex-row gap-1 ml-2 flex">
               <p className="text-xs text-muted-foreground  font-light">
                 {subvalue}

@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency, getCategoryColor } from "@/lib/utils";
 
 export function CollectionBreakdown({
   data,
@@ -15,11 +15,11 @@ export function CollectionBreakdown({
   const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null);
 
   const chartData = React.useMemo(() => {
-    return data.map((item, index) => ({
+    return data.map((item) => ({
       name: item.name || "other",
       count: item.count,
       value: parseFloat(item.totalValue || "0"),
-      fill: `var(--chart-${index + 1})`,
+      fill: getCategoryColor(item.name),
     }));
   }, [data]);
 
@@ -137,7 +137,7 @@ export function CollectionBreakdown({
         </div>
 
         {/* Legend */}
-        <div className="flex flex-col overflow-auto">
+        <div className="flex flex-col overflow-auto max-h-34">
           {chartDataWithPercentages.map((item, index) => {
             const isHovered = hoveredIndex === index;
             const isOtherHovered =

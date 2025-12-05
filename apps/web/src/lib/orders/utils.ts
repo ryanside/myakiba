@@ -259,7 +259,7 @@ export function createOptimisticMergeUpdate(
   return {
     ...old,
     orders: filteredAndSortedOrders,
-    orderStats: calculateOrderStats(allOrders),
+    orderStats: old.orderStats,
     totalCount: old.totalCount - orderIds.size + 1,
   };
 }
@@ -358,7 +358,7 @@ export function createOptimisticSplitUpdate(
   return {
     ...old,
     orders: filteredAndSortedOrders,
-    orderStats: calculateOrderStats(allOrders),
+    orderStats: old.orderStats,
     totalCount: old.totalCount + 1,
   };
 }
@@ -410,7 +410,7 @@ export function createOptimisticEditUpdate(
   return {
     ...old,
     orders: updatedOrders,
-    orderStats: calculateOrderStats(updatedOrders),
+    orderStats: old.orderStats,
   };
 }
 
@@ -437,7 +437,7 @@ export function createOptimisticDeleteUpdate(
   return {
     ...old,
     orders: remainingOrders,
-    orderStats: calculateOrderStats(remainingOrders),
+    orderStats: old.orderStats,
     totalCount,
   };
 }
@@ -490,7 +490,7 @@ export function createOptimisticEditItemUpdate(
   return {
     ...old,
     orders: updatedOrders,
-    orderStats: calculateOrderStats(updatedOrders),
+    orderStats: old.orderStats,
   };
 }
 
@@ -538,7 +538,7 @@ export function createOptimisticDeleteItemUpdate(
   return {
     ...old,
     orders: updatedOrders,
-    orderStats: calculateOrderStats(updatedOrders),
+    orderStats: old.orderStats,
   };
 }
 
@@ -655,6 +655,6 @@ export function createOptimisticMoveItemUpdate(
   return {
     ...old,
     orders: filteredAndSortedOrders,
-    orderStats: calculateOrderStats(allOrders),
+    orderStats: old.orderStats,
   };
 }

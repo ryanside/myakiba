@@ -182,12 +182,12 @@ function DashboardContent() {
                   )}
                   subvalueTitle="this month"
                   subvalue={formatCurrency(
-                    collectionStats[0].totalSpentThisMonth +
-                      ordersSummary[0].thisMonthShipping +
-                      ordersSummary[0].thisMonthTaxes +
-                      ordersSummary[0].thisMonthDuties +
-                      ordersSummary[0].thisMonthTariffs +
-                      ordersSummary[0].thisMonthMiscFees,
+                    Number(collectionStats[0].totalSpentThisMonth) +
+                      Number(ordersSummary[0].thisMonthShipping) +
+                      Number(ordersSummary[0].thisMonthTaxes) +
+                      Number(ordersSummary[0].thisMonthDuties) +
+                      Number(ordersSummary[0].thisMonthTariffs) +
+                      Number(ordersSummary[0].thisMonthMiscFees),
                     userCurrency
                   )}
                 />

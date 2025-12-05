@@ -343,7 +343,7 @@ function DataGridTableBodyRowCell<TData>({
 
 function DataGridTableEmpty() {
   const { table, props } = useDataGrid();
-  const totalColumns = table.getAllColumns().length;
+  const totalColumns = table.getVisibleFlatColumns().length;
 
   return (
     <tr>

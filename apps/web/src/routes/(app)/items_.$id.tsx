@@ -28,7 +28,7 @@ import {
   EmptyDescription,
   EmptyMedia,
 } from "@/components/ui/empty";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, getCategoryColor } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import CollectionItemForm from "@/components/collection/collection-item-form";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
@@ -325,7 +325,7 @@ function RouteComponent() {
                   <img
                     src={item.image}
                     alt={item.title}
-                    className="w-32 h-32 object-cover rounded-lg border"
+                    className="w-32 h-32 object-cover object-top rounded-lg border"
                     loading="lazy"
                   />
                 </div>
@@ -344,7 +344,7 @@ function RouteComponent() {
                   </a>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant="primary">{item.category}</Badge>
+                  <Badge variant="outline" style={{ borderColor: getCategoryColor(item.category), color: getCategoryColor(item.category) }}>{item.category}</Badge>
                   {item.scale && item.scale !== "NON_SCALE" && (
                     <Badge variant="outline">{item.scale}</Badge>
                   )}

@@ -136,6 +136,7 @@ export function OrderItemSubDataGrid({
                     src={item.itemImage}
                     alt={item.itemTitle}
                     className="rounded-sm"
+                    style={{ objectFit: "cover", objectPosition: "top" }}
                   />
                   <AvatarFallback className="rounded-sm">
                     <Package className="size-4" />

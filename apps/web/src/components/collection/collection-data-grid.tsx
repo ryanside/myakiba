@@ -35,11 +35,10 @@ import {
   Copy,
   Filter,
   Trash,
-  Columns,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link } from "@tanstack/react-router";
-import { cn, formatDate, getCurrencyLocale } from "@/lib/utils";
+import { cn, getCurrencyLocale, getCategoryColor } from "@/lib/utils";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { DebouncedInput } from "../debounced-input";
 import { DataGridPagination } from "../ui/data-grid-pagination";
@@ -56,7 +55,6 @@ import {
   PopoverTrigger,
 } from "../ui/popover";
 import CollectionItemForm from "./collection-item-form";
-import * as z from "zod";
 import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import { PopoverRatingCell } from "../cells/popover-rating-cell";
 import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
@@ -202,11 +200,12 @@ export const CollectionDataGrid = ({
           return (
             <div className="flex items-center gap-3">
               {item.itemImage && (
-                <Avatar className="size-8">
+                <Avatar className="size-8 ">
                   <AvatarImage
                     src={item.itemImage}
                     alt={item.itemTitle}
                     className="rounded-sm"
+                    style={{ objectFit: "cover", objectPosition: "top" }}
                   />
                   <AvatarFallback className="rounded-sm">
                     <Package className="size-4" />
@@ -230,7 +229,10 @@ export const CollectionDataGrid = ({
                   >
                     https://myfigurecollection.net/item/{item.itemId}
                   </a>
-                  <p className="text-xs text-primary">
+                  <p
+                    className="text-xs"
+                    style={{ color: getCategoryColor(item.itemCategory) }}
+                  >
                     <span className="text-muted-foreground">•</span>{" "}
                     {item.itemCategory}
                   </p>

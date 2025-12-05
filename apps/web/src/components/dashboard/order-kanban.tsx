@@ -61,7 +61,7 @@ function OrderCard({ order, currency, asHandle, ...props }: OrderCardProps) {
                 <img
                   src={image}
                   alt=""
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover object-top"
                 />
               </div>
             ))}
