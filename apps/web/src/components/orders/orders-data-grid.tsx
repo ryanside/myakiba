@@ -1,5 +1,4 @@
 import { useCallback, useMemo, useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -41,15 +40,13 @@ import {
   Filter,
   Columns,
 } from "lucide-react";
-import { cn, formatCurrency, formatDate, getCurrencyLocale } from "@/lib/utils";
-import { getStatusVariant } from "@/lib/orders/utils";
+import { cn, formatCurrency, getCurrencyLocale } from "@/lib/utils";
 import type {
   CascadeOptions,
   EditedOrder,
   OrderFilters,
   NewOrder,
   Order,
-  OrderItem,
 } from "@/lib/orders/types";
 import { OrderItemSubDataGrid } from "./order-item-sub-data-grid";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";

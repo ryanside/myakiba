@@ -13,7 +13,7 @@ import type {
 import { getCollection, updateCollectionItem } from "@/queries/collection";
 import { CollectionDataGrid } from "@/components/collection/collection-data-grid";
 import { collectionSearchSchema } from "@/lib/validations";
-import { CollectionSkeleton } from "@/components/skeletons/collection-skeleton";
+import { CollectionDataGridSkeleton } from "@/components/skeletons/collection-data-grid-skeleton";
 import { deleteCollectionItems } from "@/queries/collection";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -92,8 +92,7 @@ function RouteComponent() {
         description: `Error: ${error.message}`,
       });
     },
-    onSuccess: () => {
-    },
+    onSuccess: () => {},
     onSettled: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["orders"] }),
@@ -128,8 +127,7 @@ function RouteComponent() {
         description: `Error: ${error.message}`,
       });
     },
-    onSuccess: () => {
-    },
+    onSuccess: () => {},
     onSettled: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["orders"] }),
@@ -156,22 +154,29 @@ function RouteComponent() {
     [editCollectionItemMutation]
   );
 
-  if (isPending) {
-    return <CollectionSkeleton />;
-  }
-
   if (isError) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 gap-y-4">
-        <div className="text-lg font-medium text-destructive">
-          Error: {error.message}
+      <div className="w-full space-y-8">
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-row items-start gap-4">
+            <h1 className="text-2xl tracking-tight">Collection</h1>
+          </div>
+          <p className="text-muted-foreground text-sm font-light">
+            Manage and track your collection items
+          </p>
+        </div>
+        <div className="flex flex-col items-center justify-center h-64 gap-y-4">
+          <div className="text-lg font-medium text-destructive">
+            Error: {error.message}
+          </div>
         </div>
       </div>
     );
   }
 
-  const { collection } = data;
-
+  const collectionItems = data?.collection?.collectionItems ?? [];
+  const collectionStats = data?.collection?.collectionStats;
+  
   return (
     <div className="w-full space-y-8">
       <div className="flex flex-col gap-2">
@@ -186,51 +191,62 @@ function RouteComponent() {
         <KPICard
           title="Total Items"
           subtitle="all collection items"
-          value={collection.collectionStats.totalItems}
+          value={collectionStats?.totalItems}
         />
         <KPICard
           title="Total Spent"
           subtitle="based on paid collection items"
-          value={formatCurrency(
-            collection.collectionStats.totalSpent,
-            userCurrency
-          )}
+          value={
+            collectionStats
+              ? formatCurrency(collectionStats.totalSpent, userCurrency)
+              : undefined
+          }
         />
         <KPICard
           title="Total Items This Month"
           subtitle="collected this month"
-          value={collection.collectionStats.totalItemsThisMonth}
+          value={collectionStats?.totalItemsThisMonth}
         />
         <KPICard
           title="Total Spent This Month"
           subtitle="paid this month"
-          value={formatCurrency(
-            collection.collectionStats.totalSpentThisMonth,
-            userCurrency
-          )}
+          value={
+            collectionStats
+              ? formatCurrency(
+                  collectionStats.totalSpentThisMonth,
+                  userCurrency
+                )
+              : undefined
+          }
         />
       </div>
-      <CollectionDataGrid
-        key="collection-data-grid"
-        collection={collection.collectionItems}
-        totalCount={collection.collectionStats.totalItems}
-        pagination={{
-          limit: filters.limit ?? 10,
-          offset: filters.offset ?? 0,
-        }}
-        sorting={{
-          sort: filters.sort ?? "createdAt",
-          order: filters.order ?? "desc",
-        }}
-        search={filters.search ?? ""}
-        filters={filters}
-        onFilterChange={handleFilterChange}
-        onSearchChange={(search) => handleFilterChange({ ...filters, search })}
-        onResetFilters={resetFilters}
-        onDeleteCollectionItems={handleDeleteCollectionItems}
-        onEditCollectionItem={handleEditCollectionItem}
-        currency={userCurrency}
-      />
+      {isPending ? (
+        <CollectionDataGridSkeleton />
+      ) : (
+        <CollectionDataGrid
+          key="collection-data-grid"
+          collection={collectionItems}
+          totalCount={collectionItems?.[0]?.totalCount ?? 0}
+          pagination={{
+            limit: filters.limit ?? 10,
+            offset: filters.offset ?? 0,
+          }}
+          sorting={{
+            sort: filters.sort ?? "createdAt",
+            order: filters.order ?? "desc",
+          }}
+          search={filters.search ?? ""}
+          filters={filters}
+          onFilterChange={handleFilterChange}
+          onSearchChange={(search) =>
+            handleFilterChange({ ...filters, search })
+          }
+          onResetFilters={resetFilters}
+          onDeleteCollectionItems={handleDeleteCollectionItems}
+          onEditCollectionItem={handleEditCollectionItem}
+          currency={userCurrency}
+        />
+      )}
     </div>
   );
 }

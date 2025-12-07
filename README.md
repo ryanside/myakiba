@@ -104,10 +104,11 @@ Dive deep into your collection data with comprehensive analytics. Visualize spen
 
 myakiba is actively being developed with more features on the horizon:
 
-- [ ] **Better MFC Sync options**
+- [ ] **Syncing with MFC simply by username**
 - [ ] **Profile page**
 - [ ] **Expense tracking**
-- [ ] **More Analytics**
+- [ ] **More analytics**
+- [ ] **Refining existing features**
 
 ## Self-host/Run Locally
 

@@ -1,9 +1,9 @@
 import { dbHttp } from "@/db";
 import { collection, item, order } from "@/db/schema/figure";
-import { like, eq } from "drizzle-orm";
+import { eq, sql, and, ilike } from "drizzle-orm";
 
 class SearchService {
-  async getSearchResults(search: string) {
+  async getSearchResults(search: string, userId: string) {
     const [collectionResults, orderResults] = await dbHttp.batch([
       dbHttp
         .select({
@@ -15,7 +15,13 @@ class SearchService {
         })
         .from(collection)
         .innerJoin(item, eq(collection.itemId, item.id))
-        .where(like(item.title, `%${search}%`)),
+        .where(
+          and(
+            ilike(item.title, `%${search}%`),
+            eq(collection.status, "Owned"),
+            eq(collection.userId, userId)
+          )
+        ),
       dbHttp
         .select({
           orderId: order.id,
@@ -23,9 +29,29 @@ class SearchService {
           orderStatus: order.status,
           orderShop: order.shop,
           orderReleaseMonthYear: order.releaseMonthYear,
+          itemImages: sql<string[]>`
+            COALESCE(
+              (
+                SELECT array_agg(DISTINCT img)
+                FROM (
+                  SELECT i.image as img
+                  FROM collection c
+                  INNER JOIN item i ON c.item_id = i.id
+                  WHERE c.order_id = "order".id
+                    AND i.image IS NOT NULL
+                  LIMIT 4
+                ) subq
+              ),
+              ARRAY[]::text[]
+            )
+          `,
         })
         .from(order)
-        .where(like(order.title, `%${search}%`)),
+        .innerJoin(collection, eq(order.id, collection.orderId))
+        .where(
+          and(ilike(order.title, `%${search}%`), eq(collection.userId, userId))
+        )
+        .groupBy(order.id),
     ]);
     return { collectionResults, orderResults };
   }

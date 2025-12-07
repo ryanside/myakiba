@@ -15,11 +15,15 @@ const searchRouter = new Hono<{
     }
   }),
   async (c) => {
+    const user = c.get("user");
+    if (!user) return c.text("Unauthorized", 401);
+
     const validatedQuery = c.req.valid("query");
     const { data: searchData, error } = await tryCatch(
-      SearchService.getSearchResults(validatedQuery.search)
+      SearchService.getSearchResults(validatedQuery.search, user.id)
     );
     if (error) {
+      console.error("Error searching:", error);
       return c.text("Failed to search", 500);
     }
     return c.json({ searchData });

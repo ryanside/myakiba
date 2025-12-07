@@ -392,7 +392,6 @@ const syncRouter = new Hono<{
 
       return {
         onOpen(_event, ws) {
-          // Validate after connection is established
           if (!user) {
             ws.send(
               JSON.stringify({

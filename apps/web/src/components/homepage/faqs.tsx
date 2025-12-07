@@ -21,18 +21,19 @@ export default function FAQs() {
       answer:
         "myakiba was built to realize the features that I thought were missing from MyFigureCollection. It currently offers a dashboard, analytics, comprehensive order management, and collection management, with expense tracking and a sharable analytics-focused profile page (complements your MyFigureCollection profile!) in development.",
     },
+
     {
       id: "item-3",
-      question: "Who is myakiba for?",
-      answer:
-        "Collectors who want a viable alternative to MyFigureCollection/Spreadsheets. Collectors who also want to see a Spotify-wrapped like experience for their collection.",
-    },
-    {
-      id: "item-4",
       question:
         "Is myakiba safe to use since it scrapes data from MyFigureCollection?",
       answer:
-        "Yes. MyFigureCollection's terms of service does not prohibit scraping. We also don't mass scrape MyFigureCollection, only scraping core item data from the user's provided MyFigureCollection item links. The scraper is heavily rate limited and throttled to prevent overloading MyFigureCollection, item data is cached so we don't need to scrape the same item data multiple times, and users are limited to syncing a few times per hour to prevent abuse",
+        "Yes. MyFigureCollection's terms of service do not prohibit scraping. We also don't mass scrape MyFigureCollection, only scraping core item data from the user's provided MyFigureCollection item links. The scraper is heavily rate limited and throttled to prevent overloading MyFigureCollection, item data is cached so we don't need to scrape the same item data multiple times, and users are limited to syncing a few times per hour to prevent abuse.",
+    },
+    {
+      id: "item-4",   
+      question: "Who is myakiba for?",
+      answer:
+        "Collectors who want a viable alternative to MyFigureCollection/Spreadsheets. Collectors who also want to see a Spotify-wrapped like experience for their collection.",
     },
     {
       id: "item-5",

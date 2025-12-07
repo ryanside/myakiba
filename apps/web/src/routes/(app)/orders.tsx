@@ -37,7 +37,7 @@ import { searchSchema } from "@/lib/validations";
 import type { CollectionItemFormValues } from "@/lib/collection/types";
 import { updateCollectionItem } from "@/queries/collection";
 import { authClient } from "@/lib/auth-client";
-import { OrdersGridSkeleton } from "@/components/skeletons/orders-grid-skeleton";
+import { OrdersDataGridSkeleton } from "@/components/skeletons/orders-data-grid-skeleton";
 import { useCallback } from "react";
 import { KPICard } from "@/components/ui/kpi-card";
 import { formatCurrency } from "@/lib/utils";
@@ -467,21 +467,29 @@ function RouteComponent() {
     [filters, setFilters]
   );
 
-  if (isPending) {
-    return <OrdersGridSkeleton />;
-  }
+  const orders = data?.orders ?? [];
+  const orderStats = data?.orderStats;
+  const totalCount = data?.totalCount ?? 0;
 
   if (isError) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 gap-y-4">
-        <div className="text-lg font-medium text-destructive">
-          Error: {error.message}
+      <div className="w-full space-y-8">
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-row items-start gap-4">
+            <h1 className="text-2xl tracking-tight">Orders</h1>
+          </div>
+          <p className="text-muted-foreground text-sm font-light">
+            Manage and track your orders
+          </p>
+        </div>
+        <div className="flex flex-col items-center justify-center h-64 gap-y-4">
+          <div className="text-lg font-medium text-destructive">
+            Error: {error.message}
+          </div>
         </div>
       </div>
     );
   }
-
-  const { orders, orderStats, totalCount } = data;
 
   return (
     <div className="w-full space-y-8">
@@ -497,50 +505,54 @@ function RouteComponent() {
         <KPICard
           title="Total Orders"
           subtitle="all time"
-          value={orderStats.totalOrders}
+          value={orderStats?.totalOrders}
         />
         <KPICard
           title="Total Spent"
           subtitle="all time, including all fees"
-          value={formatCurrency(orderStats.totalSpent, userCurrency)}
+          value={orderStats ? formatCurrency(orderStats.totalSpent, userCurrency) : undefined}
         />
         <KPICard
           title="Active Orders"
           subtitle="orders not yet collected"
-          value={orderStats.activeOrders}
+          value={orderStats?.activeOrders}
         />
         <KPICard
           title="Unpaid Costs"
           subtitle="unpaid order costs"
-          value={formatCurrency(orderStats.unpaidCosts, userCurrency)}
+          value={orderStats ? formatCurrency(orderStats.unpaidCosts, userCurrency) : undefined}
         />
       </div>
-      <OrdersDataGrid
-        key="orders-data-grid"
-        orders={orders}
-        totalCount={totalCount}
-        pagination={{
-          limit: filters.limit ?? 10,
-          offset: filters.offset ?? 0,
-        }}
-        sorting={{
-          sort: filters.sort ?? "createdAt",
-          order: filters.order ?? "desc",
-        }}
-        search={filters.search ?? ""}
-        filters={filters}
-        onFilterChange={handleFilterChange}
-        onSearchChange={handleSearchChange}
-        onResetFilters={resetFilters}
-        onMerge={handleMerge}
-        onSplit={handleSplit}
-        onEditOrder={handleEditOrder}
-        onDeleteOrders={handleDeleteOrders}
-        onEditItem={handleEditItem}
-        onDeleteItem={handleDeleteItem}
-        onMoveItem={handleMoveItem}
-        currency={userCurrency}
-      />
+      {isPending ? (
+        <OrdersDataGridSkeleton />
+      ) : (
+        <OrdersDataGrid
+          key="orders-data-grid"
+          orders={orders}
+          totalCount={totalCount}
+          pagination={{
+            limit: filters.limit ?? 10,
+            offset: filters.offset ?? 0,
+          }}
+          sorting={{
+            sort: filters.sort ?? "createdAt",
+            order: filters.order ?? "desc",
+          }}
+          search={filters.search ?? ""}
+          filters={filters}
+          onFilterChange={handleFilterChange}
+          onSearchChange={handleSearchChange}
+          onResetFilters={resetFilters}
+          onMerge={handleMerge}
+          onSplit={handleSplit}
+          onEditOrder={handleEditOrder}
+          onDeleteOrders={handleDeleteOrders}
+          onEditItem={handleEditItem}
+          onDeleteItem={handleDeleteItem}
+          onMoveItem={handleMoveItem}
+          currency={userCurrency}
+        />
+      )}
     </div>
   );
 }

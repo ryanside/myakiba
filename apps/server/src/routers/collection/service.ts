@@ -71,10 +71,6 @@ class CollectionService {
         .where(inArray(entry_to_item.entryId, entries));
 
       itemIdsWithEntries = itemsWithEntries.map((item) => item.itemId);
-
-      if (itemIdsWithEntries.length === 0) {
-        return [];
-      }
     }
 
     const filters = and(
@@ -113,7 +109,7 @@ class CollectionService {
       releaseCurrency && releaseCurrency.length > 0
         ? inArray(item_release.priceCurrency, releaseCurrency)
         : undefined,
-      itemIdsWithEntries ? inArray(item.id, itemIdsWithEntries) : undefined,
+      itemIdsWithEntries && itemIdsWithEntries.length > 0 ? inArray(item.id, itemIdsWithEntries) : undefined,
       search ? ilike(item.title, `%${search}%`) : undefined
     );
 
@@ -152,7 +148,6 @@ class CollectionService {
       }
     })();
 
-    // Calculate current month boundaries
     const currentMonth = new Date(
       new Date().getFullYear(),
       new Date().getMonth(),
@@ -164,7 +159,6 @@ class CollectionService {
       1
     ).toISOString();
 
-    // Get stats for all Owned items (unfiltered)
     const collectionStats = await db
       .select({
         totalItems: count(

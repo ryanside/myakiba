@@ -91,7 +91,6 @@ class AnalyticsService {
         and(eq(collection.userId, userId), eq(collection.status, "Owned"))
       );
 
-    // Queries for all entry categories
     const allCategories = [
       "Characters",
       "Origins",
