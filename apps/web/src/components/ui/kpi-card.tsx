@@ -37,7 +37,7 @@ export function KPICard({
           ) : (
             <p className="text-2xl font-mono">{value}</p>
           )}
-          {value !== null && subvalueTitle && (subvalue !== undefined) && (
+          {value != null && subvalueTitle && (subvalue !== undefined) && (
             <div className="flex-row gap-1 ml-2 flex">
               <p className="text-xs text-muted-foreground  font-light">
                 {subvalue}

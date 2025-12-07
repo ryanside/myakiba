@@ -154,9 +154,6 @@ function RouteComponent() {
     [editCollectionItemMutation]
   );
 
-  const collectionItems = data?.collection?.collectionItems ?? [];
-  const collectionStats = data?.collection?.collectionStats;
-
   if (isError) {
     return (
       <div className="w-full space-y-8">
@@ -177,6 +174,9 @@ function RouteComponent() {
     );
   }
 
+  const collectionItems = data?.collection?.collectionItems ?? [];
+  const collectionStats = data?.collection?.collectionStats;
+  
   return (
     <div className="w-full space-y-8">
       <div className="flex flex-col gap-2">
@@ -226,7 +226,7 @@ function RouteComponent() {
         <CollectionDataGrid
           key="collection-data-grid"
           collection={collectionItems}
-          totalCount={collectionStats?.totalItems ?? 0}
+          totalCount={collectionItems?.[0]?.totalCount ?? 0}
           pagination={{
             limit: filters.limit ?? 10,
             offset: filters.offset ?? 0,

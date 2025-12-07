@@ -30,12 +30,17 @@ export function getRecentItems(): RecentItem[] {
   const stored = localStorage.getItem(RECENT_ITEMS_KEY);
   if (!stored) return [];
 
-  const items = JSON.parse(stored) as RecentItem[];
-  const normalizedItems = items.map((item) => ({
-    ...item,
-    images: item.images || [],
-  }));
-  return normalizedItems.sort((a, b) => b.timestamp - a.timestamp);
+  try {
+    const items = JSON.parse(stored) as RecentItem[];
+    const normalizedItems = items.map((item) => ({
+      ...item,
+      images: item.images || [],
+    }));
+    return normalizedItems.sort((a, b) => b.timestamp - a.timestamp);
+  } catch (error) {
+    console.error("Error parsing recent items:", error);
+    return [];
+  }
 }
 
 export function clearRecentItems(): void {
