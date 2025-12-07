@@ -71,10 +71,18 @@ class CollectionService {
         .where(inArray(entry_to_item.entryId, entries));
 
       itemIdsWithEntries = itemsWithEntries.map((item) => item.itemId);
-
-      if (itemIdsWithEntries.length === 0) {
-        return [];
-      }
+      
+      // if (itemIdsWithEntries.length === 0) {
+      //   return {
+      //     collectionItems: [],
+      //     collectionStats: {
+      //       totalItems: 0,
+      //       totalSpent: "0",
+      //       totalItemsThisMonth: 0,
+      //       totalSpentThisMonth: "0",
+      //     },
+      //   };
+      // }
     }
 
     const filters = and(

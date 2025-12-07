@@ -131,7 +131,7 @@ const appItemsIdRoute = appItemsIdRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof appRouteRouteWithChildren
+  '/': typeof IndexRoute
   '/sync': typeof appSyncRouteRouteWithChildren
   '/analytics': typeof appAnalyticsRoute
   '/collection': typeof appCollectionRoute
@@ -152,7 +152,7 @@ export interface FileRoutesByFullPath {
   '/sync/': typeof appSyncIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof appRouteRouteWithChildren
+  '/': typeof IndexRoute
   '/analytics': typeof appAnalyticsRoute
   '/collection': typeof appCollectionRoute
   '/dashboard': typeof appDashboardRoute
@@ -273,8 +273,8 @@ declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
     '/(app)': {
       id: '/(app)'
-      path: '/'
-      fullPath: '/'
+      path: ''
+      fullPath: ''
       preLoaderRoute: typeof appRouteRouteImport
       parentRoute: typeof rootRouteImport
     }

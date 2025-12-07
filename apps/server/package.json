@@ -24,7 +24,7 @@
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.44.7",
     "drizzle-zod": "^0.8.3",
-    "hono": "^4.10.7",
+    "hono": "4.9.10",
     "ioredis": "^5.8.2",
     "postgres": "^3.4.7",
     "resend": "^6.5.2",

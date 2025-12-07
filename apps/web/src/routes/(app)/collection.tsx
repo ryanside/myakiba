@@ -92,8 +92,7 @@ function RouteComponent() {
         description: `Error: ${error.message}`,
       });
     },
-    onSuccess: () => {
-    },
+    onSuccess: () => {},
     onSettled: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["orders"] }),
@@ -128,8 +127,7 @@ function RouteComponent() {
         description: `Error: ${error.message}`,
       });
     },
-    onSuccess: () => {
-    },
+    onSuccess: () => {},
     onSettled: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["orders"] }),
@@ -156,8 +154,8 @@ function RouteComponent() {
     [editCollectionItemMutation]
   );
 
-  const collection = data?.collection;
-  const collectionStats = collection?.collectionStats;
+  const collectionItems = data?.collection?.collectionItems ?? [];
+  const collectionStats = data?.collection?.collectionStats;
 
   if (isError) {
     return (
@@ -198,7 +196,11 @@ function RouteComponent() {
         <KPICard
           title="Total Spent"
           subtitle="based on paid collection items"
-          value={collectionStats ? formatCurrency(collectionStats.totalSpent, userCurrency) : undefined}
+          value={
+            collectionStats
+              ? formatCurrency(collectionStats.totalSpent, userCurrency)
+              : undefined
+          }
         />
         <KPICard
           title="Total Items This Month"
@@ -208,7 +210,14 @@ function RouteComponent() {
         <KPICard
           title="Total Spent This Month"
           subtitle="paid this month"
-          value={collectionStats ? formatCurrency(collectionStats.totalSpentThisMonth, userCurrency) : undefined}
+          value={
+            collectionStats
+              ? formatCurrency(
+                  collectionStats.totalSpentThisMonth,
+                  userCurrency
+                )
+              : undefined
+          }
         />
       </div>
       {isPending ? (
@@ -216,8 +225,8 @@ function RouteComponent() {
       ) : (
         <CollectionDataGrid
           key="collection-data-grid"
-          collection={collection.collectionItems}
-          totalCount={collectionStats.totalItems}
+          collection={collectionItems}
+          totalCount={collectionStats?.totalItems ?? 0}
           pagination={{
             limit: filters.limit ?? 10,
             offset: filters.offset ?? 0,
@@ -229,7 +238,9 @@ function RouteComponent() {
           search={filters.search ?? ""}
           filters={filters}
           onFilterChange={handleFilterChange}
-          onSearchChange={(search) => handleFilterChange({ ...filters, search })}
+          onSearchChange={(search) =>
+            handleFilterChange({ ...filters, search })
+          }
           onResetFilters={resetFilters}
           onDeleteCollectionItems={handleDeleteCollectionItems}
           onEditCollectionItem={handleEditCollectionItem}
