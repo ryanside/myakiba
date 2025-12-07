@@ -1,9 +1,7 @@
 import { useMemo, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { InlineTextCell } from "@/components/cells/inline-text-cell";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,7 +32,6 @@ import type { OrderItem } from "@/lib/orders/types";
 import { toast } from "sonner";
 import { Dialog, DialogTrigger } from "../ui/dialog";
 import { Link } from "@tanstack/react-router";
-import { getStatusVariant } from "@/lib/orders/utils";
 import CollectionItemForm from "../collection/collection-item-form";
 import type { CollectionItemFormValues } from "@/lib/collection/types";
 import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";

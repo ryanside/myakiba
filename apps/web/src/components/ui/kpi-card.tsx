@@ -5,13 +5,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface KPICardProps {
   title: string;
   subtitle?: string;
-  value: string | number;
+  value: string | number | undefined;
   subvalueTitle?: string;
-  subvalue?: string | number;
+  subvalue?: string | number | undefined;
 }
 
 export function KPICard({
@@ -31,8 +32,12 @@ export function KPICard({
       </CardHeader>
       <CardContent className="mt-auto">
         <div className="flex flex-row items-baseline w-full">
-          <p className="text-2xl font-mono">{value}</p>
-          {subvalueTitle && (subvalue !== undefined) && (
+          {value == null ? (
+            <Skeleton className="h-8 w-24" />
+          ) : (
+            <p className="text-2xl font-mono">{value}</p>
+          )}
+          {value !== null && subvalueTitle && (subvalue !== undefined) && (
             <div className="flex-row gap-1 ml-2 flex">
               <p className="text-xs text-muted-foreground  font-light">
                 {subvalue}

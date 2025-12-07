@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { entry } from "@/db/schema/figure";
-import { like } from "drizzle-orm";
+import { ilike } from "drizzle-orm";
 
 class EntriesService {
   async getEntries(search: string) {
@@ -11,7 +11,7 @@ class EntriesService {
         category: entry.category,
       })
       .from(entry)
-      .where(like(entry.name, `%${search}%`));
+      .where(ilike(entry.name, `%${search}%`));
 
     if (!entries) {
       throw new Error("FAILED_TO_GET_ENTRIES");

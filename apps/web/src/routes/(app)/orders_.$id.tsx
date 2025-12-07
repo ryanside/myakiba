@@ -73,10 +73,15 @@ function RouteComponent() {
   // Track recently viewed order
   useEffect(() => {
     if (data?.order) {
+      const images = data.order.items
+        ?.map((item) => item.itemImage)
+        .filter((img): img is string => Boolean(img))
+        .slice(0, 4) || [];
       addRecentItem({
         id: data.order.orderId,
         type: "order",
         title: data.order.title,
+        images,
       });
     }
   }, [data?.order]);

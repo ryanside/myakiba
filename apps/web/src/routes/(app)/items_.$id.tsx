@@ -281,6 +281,7 @@ function RouteComponent() {
         id: data.item.id.toString(),
         type: "collection",
         title: data.item.title,
+        images: data.item.image ? [data.item.image] : [],
       });
     }
   }, [data?.item]);

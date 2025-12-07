@@ -152,7 +152,6 @@ class CollectionService {
       }
     })();
 
-    // Calculate current month boundaries
     const currentMonth = new Date(
       new Date().getFullYear(),
       new Date().getMonth(),
@@ -164,7 +163,6 @@ class CollectionService {
       1
     ).toISOString();
 
-    // Get stats for all Owned items (unfiltered)
     const collectionStats = await db
       .select({
         totalItems: count(

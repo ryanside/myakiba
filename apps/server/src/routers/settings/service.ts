@@ -15,11 +15,9 @@ class SettingsService {
   }
 
   async upsertBudget(userId: string, budgetData: BudgetUpsertType) {
-    // Check if budget exists
     const existingBudget = await this.getBudget(userId);
 
     if (existingBudget) {
-      // Update existing budget
       const [updatedBudget] = await db
         .update(budget)
         .set({
@@ -32,7 +30,6 @@ class SettingsService {
 
       return updatedBudget;
     } else {
-      // Insert new budget
       const [newBudget] = await db
         .insert(budget)
         .values({

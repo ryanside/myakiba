@@ -16,6 +16,7 @@ import { formatCurrency } from "@/lib/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateOrderStatus } from "@/queries/orders";
 import { toast } from "sonner";
+import { Link } from "@tanstack/react-router";
 
 interface KanbanOrder {
   orderId: string;
@@ -77,9 +78,13 @@ function OrderCard({ order, currency, asHandle, ...props }: OrderCardProps) {
 
         {/* Title */}
         <div className="flex flex-col gap-1">
-          <span className="line-clamp-2 font-light text-sm leading-tight">
+          <Link
+            to="/orders/$id"
+            params={{ id: order.orderId }}
+            className="line-clamp-2 font-light text-sm leading-tight hover:underline"
+          >
             {order.title}
-          </span>
+          </Link>
           {order.shop && (
             <Badge
               variant="outline"
