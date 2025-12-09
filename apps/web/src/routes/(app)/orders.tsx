@@ -37,7 +37,7 @@ import { searchSchema } from "@/lib/validations";
 import type { CollectionItemFormValues } from "@/lib/collection/types";
 import { updateCollectionItem } from "@/queries/collection";
 import { authClient } from "@/lib/auth-client";
-import { OrdersDataGridSkeleton } from "@/components/skeletons/orders-data-grid-skeleton";
+import { OrdersDataGridSkeleton } from "@/components/orders/orders-data-grid-skeleton";
 import { useCallback } from "react";
 import { KPICard } from "@/components/ui/kpi-card";
 import { formatCurrency } from "@/lib/utils";
@@ -514,12 +514,12 @@ function RouteComponent() {
         />
         <KPICard
           title="Active Orders"
-          subtitle="orders not yet collected"
+          subtitle="orders without status 'Owned'"
           value={orderStats?.activeOrders}
         />
         <KPICard
           title="Unpaid Costs"
-          subtitle="unpaid order costs"
+          subtitle="costs with status 'Ordered'"
           value={orderStats ? formatCurrency(orderStats.unpaidCosts, userCurrency) : undefined}
         />
       </div>

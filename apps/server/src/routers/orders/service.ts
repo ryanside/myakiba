@@ -278,10 +278,9 @@ class OrdersService {
       .select({
         totalOrders: sql<number>`COUNT(*)`,
         totalSpent: sql<string>`COALESCE(SUM(${orderTotalsSubquery.total}::numeric), 0)`,
-        activeOrders: sql<number>`COUNT(CASE WHEN ${orderTotalsSubquery.collectionDate} IS NULL THEN 1 END)`,
+        activeOrders: sql<number>`COUNT(CASE WHEN ${orderTotalsSubquery.status} != 'Owned' THEN 1 END)`,
         unpaidCosts: sql<string>`COALESCE(SUM(
-          CASE WHEN ${orderTotalsSubquery.paymentDate} IS NULL 
-            AND ${orderTotalsSubquery.status} NOT IN ('Owned', 'Paid')
+          CASE WHEN ${orderTotalsSubquery.status} = 'Ordered'
             THEN ${orderTotalsSubquery.total}::numeric
             ELSE 0 
           END

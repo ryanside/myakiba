@@ -13,7 +13,7 @@ import type {
 import { getCollection, updateCollectionItem } from "@/queries/collection";
 import { CollectionDataGrid } from "@/components/collection/collection-data-grid";
 import { collectionSearchSchema } from "@/lib/validations";
-import { CollectionDataGridSkeleton } from "@/components/skeletons/collection-data-grid-skeleton";
+import { CollectionDataGridSkeleton } from "@/components/collection/collection-data-grid-skeleton";
 import { deleteCollectionItems } from "@/queries/collection";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -176,7 +176,7 @@ function RouteComponent() {
 
   const collectionItems = data?.collection?.collectionItems ?? [];
   const collectionStats = data?.collection?.collectionStats;
-  
+
   return (
     <div className="w-full space-y-8">
       <div className="flex flex-col gap-2">
@@ -195,7 +195,7 @@ function RouteComponent() {
         />
         <KPICard
           title="Total Spent"
-          subtitle="based on paid collection items"
+          subtitle="based on total item prices"
           value={
             collectionStats
               ? formatCurrency(collectionStats.totalSpent, userCurrency)
@@ -204,12 +204,12 @@ function RouteComponent() {
         />
         <KPICard
           title="Total Items This Month"
-          subtitle="collected this month"
+          subtitle="based on collection date"
           value={collectionStats?.totalItemsThisMonth}
         />
         <KPICard
           title="Total Spent This Month"
-          subtitle="paid this month"
+          subtitle="based on payment date"
           value={
             collectionStats
               ? formatCurrency(

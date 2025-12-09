@@ -65,7 +65,7 @@ class AnalyticsService {
       .innerJoin(item, eq(collection.itemId, item.id))
       .where(and(eq(collection.userId, userId), eq(collection.status, "Owned")))
       .orderBy(desc(collection.price))
-      .limit(3);
+      .limit(10);
 
     const getTopShops = dbHttp
       .select({
@@ -104,6 +104,7 @@ class AnalyticsService {
     const topEntriesByCategoryQueries = allCategories.map((category) =>
       dbHttp
         .select({
+          entryId: entry.id,
           originName: entry.name,
           itemCount: count(),
           totalValue: sql<string>`SUM(${collection.price}::numeric)`,

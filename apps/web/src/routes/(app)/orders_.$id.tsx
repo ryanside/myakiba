@@ -31,7 +31,7 @@ import { toast } from "sonner";
 import type { CollectionItemFormValues } from "@/lib/collection/types";
 import { updateCollectionItem } from "@/queries/collection";
 import { authClient } from "@/lib/auth-client";
-import { OrderDetailSkeleton } from "@/components/skeletons/order-detail-skeleton";
+import { OrderDetailSkeleton } from "@/components/orders/order-detail-skeleton";
 
 export const Route = createFileRoute("/(app)/orders_/$id")({
   component: RouteComponent,

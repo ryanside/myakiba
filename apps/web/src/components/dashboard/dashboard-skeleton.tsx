@@ -10,9 +10,9 @@ export function DashboardSkeleton() {
           <Skeleton className="h-8 w-64" />
         </div>
         <div className="flex flex-row flex-wrap items-center gap-2 lg:ml-auto">
-          <Skeleton className="h-10 w-40" />
-          <Skeleton className="h-10 w-32" />
-          <Skeleton className="h-10 w-36" />
+          <Skeleton className="h-8.5 w-42" />
+          <Skeleton className="h-8.5 w-28" />
+          <Skeleton className="h-8.5 w-30" />
         </div>
       </div>
 
@@ -108,7 +108,10 @@ export function DashboardSkeleton() {
         {/* Orders Board card - Kanban */}
         <Card className="col-span-1 lg:col-span-3 h-full">
           <CardHeader className="flex flex-row items-center gap-2">
-            <Skeleton className="h-4 w-24" />
+            <div className="flex flex-col items-start gap-2">
+              <Skeleton className="h-6 w-24" />
+              <Skeleton className="h-4 w-40" />
+            </div>
             <Skeleton className="h-8 w-20 ml-auto" />
           </CardHeader>
           <CardContent className="h-full">
@@ -117,18 +120,17 @@ export function DashboardSkeleton() {
               {[...Array(3)].map((_, colIdx) => (
                 <div
                   key={colIdx}
-                  className="rounded-lg border bg-background p-4 shadow-xs max-h-[300px] overflow-auto"
+                  className="rounded-lg border bg-background p-4 shadow-xs"
                 >
                   {/* Column Header */}
                   <div className="flex items-center justify-between mb-2.5">
                     <div className="flex items-center gap-2.5">
-                      <Skeleton className="h-4 w-16" />
-                      <Skeleton className="h-5 w-6" />
+                      <Skeleton className="h-6 w-16" />
+                      <Skeleton className="h-6 w-6" />
                     </div>
-                    <Skeleton className="h-8 w-8" />
                   </div>
                   {/* Order Cards */}
-                  <div className="flex flex-col gap-2.5 p-0.5">
+                  <div className="flex flex-col gap-4 p-0.5">
                     {[...Array(2)].map((_, cardIdx) => (
                       <div
                         key={cardIdx}
@@ -144,8 +146,7 @@ export function DashboardSkeleton() {
                           ))}
                         </div>
                         {/* Title and Shop */}
-                        <div className="flex flex-col gap-1 mb-2">
-                          <Skeleton className="h-4 w-full" />
+                        <div className="flex flex-col gap-2 mb-2">
                           <Skeleton className="h-3 w-3/4" />
                           <Skeleton className="h-4 w-16" />
                         </div>
@@ -168,11 +169,11 @@ export function DashboardSkeleton() {
       <div className="col-span-1 space-y-4 flex flex-col">
         {/* Budget Control card */}
         <Card>
-          <CardHeader className="flex flex-row items-center gap-2">
+          <CardHeader className="flex flex-row items-center gap-4 mb-4">
             <Skeleton className="h-4 w-32" />
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
               <Skeleton className="h-4 w-full" />
               <Skeleton className="h-2 w-full" />
             </div>

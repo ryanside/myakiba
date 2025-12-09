@@ -15,7 +15,6 @@ import {
   sql,
   desc,
   ne,
-  isNull,
   gte,
   lte,
 } from "drizzle-orm";
@@ -114,7 +113,7 @@ class DashboardService {
       dbHttp
         .select({
           totalActiveOrderCount: sql<string>`COALESCE(${sum(
-            sql`CASE WHEN ${order.collectionDate} IS NULL
+            sql`CASE WHEN ${order.status} != 'Owned'
                 THEN 1 ELSE 0 END`
           )}, 0)`,
           totalShippingAllTime: sql<string>`COALESCE(${sum(order.shippingFee)}, 0)`,
@@ -178,9 +177,7 @@ class DashboardService {
         .where(
           and(
             eq(order.userId, userId),
-            ne(order.status, "Owned"),
-            ne(order.status, "Paid"),
-            isNull(order.paymentDate)
+            eq(order.status, "Ordered")
           )
         )
         .orderBy(asc(order.releaseMonthYear))

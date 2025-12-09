@@ -7,16 +7,18 @@ export function AnalyticsSkeleton() {
       {/* Header section */}
       <div className="flex flex-col gap-2">
         <div className="flex flex-row items-start gap-4">
-          <Skeleton className="h-8 w-56" />
+          <h1 className="text-2xl tracking-tight">Collection Analytics</h1>
         </div>
-        <Skeleton className="h-4 w-96" />
+        <p className="text-muted-foreground text-sm font-light">
+          See how your collection is distributed across different categories.
+        </p>
       </div>
 
       {/* Grid of analytics cards */}
       <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
         {/* Multiple cards with progress bars - representing different analytics sections */}
         {[...Array(9)].map((_, cardIndex) => (
-          <Card key={cardIndex}>
+          <Card key={cardIndex} className="min-h-[620px]">
             <CardHeader>
               <Skeleton className="h-5 w-32" />
             </CardHeader>
@@ -45,10 +47,7 @@ export function AnalyticsSkeleton() {
           <CardContent className="flex-1">
             <div className="space-y-3">
               {[...Array(5)].map((_, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-3 p-2 rounded-md"
-                >
+                <div key={i} className="flex items-center gap-3 p-2 rounded-md">
                   <Skeleton className="h-12 w-12 rounded-md flex-shrink-0" />
                   <div className="flex-1 min-w-0 space-y-2">
                     <Skeleton className="h-4 w-full" />
