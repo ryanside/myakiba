@@ -343,6 +343,7 @@ function RouteComponent(): React.ReactNode {
           data={eventsData}
           emptyMessage="No events found"
           className="min-h-[620px]"
+          currency={userCurrency}
           getRowNavigation={getEntryNavigation}
         />
         <RankingCard

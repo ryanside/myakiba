@@ -102,7 +102,7 @@ export function RankingCard({
         );
       },
     }));
-  }, [columns]);
+  }, [columns, currency]);
 
   const [sorting, setSorting] = useState<SortingState>([]);
   const table = useReactTable({

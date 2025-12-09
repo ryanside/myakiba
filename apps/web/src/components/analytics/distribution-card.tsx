@@ -74,12 +74,10 @@ export function DistributionCard({
                     {item.label}
                   </span>
                   <div className="flex items-center gap-3">
-                    <Badge variant="outline" >
-                      {item.count} items
-                    </Badge>
+                    <Badge variant="outline">{item.count} items</Badge>
                     {item.value && (
-                      <span className="text-sm text- tabular-nums">
-                        {item.value ? formatCurrency(item.value as number, currency) : item.value}
+                      <span className="text-sm text-muted-foreground tabular-nums">
+                        {formatCurrency(item.value as number, currency)}
                       </span>
                     )}
                   </div>
@@ -101,4 +99,3 @@ export function DistributionCard({
     </div>
   );
 }
-
