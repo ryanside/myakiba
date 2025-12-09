@@ -222,7 +222,7 @@ export function OrderForm(props: OrderFormProps) {
           )}
         </DialogHeader>
 
-        <div className="grid gap-4 py-4">
+        <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto">
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label>Cascade Order Details to Items</Label>

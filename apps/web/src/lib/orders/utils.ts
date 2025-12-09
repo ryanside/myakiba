@@ -4,7 +4,6 @@ import type {
   Order,
   OrderItem,
   OrdersQueryResponse,
-  OrderStats,
   CascadeOptions,
   EditedOrder,
 } from "./types";
@@ -29,29 +28,6 @@ export function getStatusVariant(
     default:
       return "outline";
   }
-}
-
-function calculateOrderStats(orders: Order[]): OrderStats {
-  const totalOrders = orders.length;
-  
-  const totalSpent = orders.reduce((sum, order) => {
-    return sum + parseFloat(order.total || "0");
-  }, 0).toFixed(2);
-  
-  const activeOrders = orders.filter(order => order.status !== "Owned").length;
-  
-  const unpaidCosts = orders
-    .filter(order => order.status === "Ordered" || order.status === "Shipped")
-    .reduce((sum, order) => {
-      return sum + parseFloat(order.total || "0");
-    }, 0).toFixed(2);
-  
-  return {
-    totalOrders,
-    totalSpent,
-    activeOrders,
-    unpaidCosts,
-  };
 }
 
 export function filterAndSortOrders(

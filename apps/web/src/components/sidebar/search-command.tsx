@@ -1,8 +1,4 @@
-import {
-  Images,
-  Search,
-  Package,
-} from "lucide-react";
+import { Images, Search, Package } from "lucide-react";
 import {
   Command,
   CommandEmpty,
@@ -17,7 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { DebouncedInput } from "../debounced-input";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "../ui/button";
-import { Link } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { getRecentItems } from "@/lib/recent-items";
 
 function ImageThumbnail({
@@ -47,7 +43,7 @@ function ImageThumbnail({
         <img
           src={images[0]}
           alt={title}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover object-top"
         />
       ) : imageCount === 2 ? (
         <div className="grid grid-cols-2 gap-px w-full h-full">
@@ -56,7 +52,7 @@ function ImageThumbnail({
               <img
                 src={img}
                 alt={`${title} ${idx + 1}`}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover object-top"
               />
             </div>
           ))}
@@ -67,21 +63,21 @@ function ImageThumbnail({
             <img
               src={displayImages[0]}
               alt={`${title} 1`}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover object-top"
             />
           </div>
           <div className="w-full h-full overflow-hidden">
             <img
               src={displayImages[1]}
               alt={`${title} 2`}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover object-top"
             />
           </div>
           <div className="w-full h-full overflow-hidden">
             <img
               src={displayImages[2]}
               alt={`${title} 3`}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover object-top"
             />
           </div>
         </div>
@@ -92,7 +88,7 @@ function ImageThumbnail({
               <img
                 src={img}
                 alt={`${title} ${idx + 1}`}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover object-top"
               />
             </div>
           ))}
@@ -110,6 +106,7 @@ function ImageThumbnail({
 }
 
 export function SearchCommand() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState<string>("");
   const [open, setOpen] = useState(false);
   const [recentItems, setRecentItems] = useState(getRecentItems());
@@ -163,7 +160,7 @@ export function SearchCommand() {
         <Search className="h-4 w-4" />
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className={"overflow-hidden p-0 shadow-lg"}>
+        <DialogContent className={"p-0 shadow-lg max-w-3xl h-[75vh]"}>
           <DialogTitle className="hidden" />
           <Command
             shouldFilter={false}
@@ -181,48 +178,50 @@ export function SearchCommand() {
                 <CommandGroup heading="Orders">
                   <CommandEmpty>No orders found.</CommandEmpty>
                   {data.searchData.orderResults.map((order) => (
-                    <Link to={`/orders/$id`} params={{ id: order.orderId }}>
-                      <CommandItem
-                        key={order.orderId}
-                        value={order.orderId}
-                        onSelect={() => setOpen(false)}
-                      >
-                        <ImageThumbnail
-                          images={order.itemImages || []}
-                          title={order.orderTitle}
-                          fallbackIcon={
-                            <Package className="h-5 w-5 text-muted-foreground" />
-                          }
-                        />
-                        <span>{order.orderTitle}</span>
-                      </CommandItem>
-                    </Link>
+                    <CommandItem
+                      key={order.orderId}
+                      value={order.orderId}
+                      onSelect={() => {
+                        navigate({ to: "/orders/$id", params: { id: order.orderId } });
+                        setOpen(false);
+                      }}
+                    >
+                      <ImageThumbnail
+                        images={order.itemImages || []}
+                        title={order.orderTitle}
+                        fallbackIcon={
+                          <Package className="h-5 w-5 text-muted-foreground" />
+                        }
+                      />
+                      <span>{order.orderTitle}</span>
+                    </CommandItem>
                   ))}
                 </CommandGroup>
                 <CommandGroup heading="Collection">
                   <CommandEmpty>No items found.</CommandEmpty>
                   {data.searchData.collectionResults.map((collection) => (
-                    <Link
-                      to={`/items/$id`}
-                      params={{ id: collection.itemId.toString() }}
+                    <CommandItem
+                      key={collection.collectionId}
+                      value={collection.collectionId}
+                      onSelect={() => {
+                        navigate({
+                          to: "/items/$id",
+                          params: { id: collection.itemId.toString() },
+                        });
+                        setOpen(false);
+                      }}
                     >
-                      <CommandItem
-                        key={collection.collectionId}
-                        value={collection.collectionId}
-                        onSelect={() => setOpen(false)}
-                      >
-                        <ImageThumbnail
-                          images={
-                            collection.itemImage ? [collection.itemImage] : []
-                          }
-                          title={collection.itemTitle}
-                          fallbackIcon={
-                            <Images className="h-5 w-5 text-muted-foreground" />
-                          }
-                        />
-                        <span>{collection.itemTitle}</span>
-                      </CommandItem>
-                    </Link>
+                      <ImageThumbnail
+                        images={
+                          collection.itemImage ? [collection.itemImage] : []
+                        }
+                        title={collection.itemTitle}
+                        fallbackIcon={
+                          <Images className="h-5 w-5 text-muted-foreground" />
+                        }
+                      />
+                      <span>{collection.itemTitle}</span>
+                    </CommandItem>
                   ))}
                 </CommandGroup>
               </CommandList>
@@ -231,29 +230,30 @@ export function SearchCommand() {
               <CommandList>
                 <CommandGroup heading="Recent">
                   {recentItems.map((item) => (
-                    <Link
+                    <CommandItem
                       key={`${item.type}-${item.id}`}
-                      to={item.type === "order" ? `/orders/$id` : `/items/$id`}
-                      params={{ id: item.id }}
+                      value={item.id}
+                      onSelect={() => {
+                        navigate({
+                          to: item.type === "order" ? "/orders/$id" : "/items/$id",
+                          params: { id: item.id },
+                        });
+                        setOpen(false);
+                      }}
                     >
-                      <CommandItem
-                        value={item.id}
-                        onSelect={() => setOpen(false)}
-                      >
-                        <ImageThumbnail
-                          images={item.images || []}
-                          title={item.title}
-                          fallbackIcon={
-                            item.type === "order" ? (
-                              <Package className="h-5 w-5 text-muted-foreground" />
-                            ) : (
-                              <Images className="h-5 w-5 text-muted-foreground" />
-                            )
-                          }
-                        />{" "}
-                        <span>{item.title}</span>
-                      </CommandItem>
-                    </Link>
+                      <ImageThumbnail
+                        images={item.images || []}
+                        title={item.title}
+                        fallbackIcon={
+                          item.type === "order" ? (
+                            <Package className="h-5 w-5 text-muted-foreground" />
+                          ) : (
+                            <Images className="h-5 w-5 text-muted-foreground" />
+                          )
+                        }
+                      />{" "}
+                      <span>{item.title}</span>
+                    </CommandItem>
                   ))}
                 </CommandGroup>
               </CommandList>

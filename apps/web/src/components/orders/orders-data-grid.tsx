@@ -448,9 +448,7 @@ export default function OrdersDataGrid({
                     ...orderWithoutTimestamps,
                     orderDate: newValue,
                   },
-                  [
-                    "orderDate",
-                  ] as CascadeOptions
+                  ["orderDate"] as CascadeOptions
                 );
               }}
             />
@@ -487,9 +485,7 @@ export default function OrdersDataGrid({
                     ...orderWithoutTimestamps,
                     paymentDate: newValue,
                   },
-                  [
-                    "paymentDate",
-                  ] as CascadeOptions
+                  ["paymentDate"] as CascadeOptions
                 );
               }}
             />
@@ -526,9 +522,7 @@ export default function OrdersDataGrid({
                     ...orderWithoutTimestamps,
                     shippingDate: newValue,
                   },
-                  [
-                    "shippingDate",
-                  ] as CascadeOptions
+                  ["shippingDate"] as CascadeOptions
                 );
               }}
             />
@@ -565,9 +559,7 @@ export default function OrdersDataGrid({
                     ...orderWithoutTimestamps,
                     collectionDate: newValue,
                   },
-                  [
-                    "collectionDate",
-                  ] as CascadeOptions
+                  ["collectionDate"] as CascadeOptions
                 );
               }}
             />
@@ -666,8 +658,7 @@ export default function OrdersDataGrid({
                     ...orderWithoutTimestamps,
                     ...newValues,
                   },
-                  [
-                  ] as CascadeOptions
+                  [] as CascadeOptions
                 );
               }}
             />
@@ -1089,11 +1080,6 @@ export default function OrdersDataGrid({
             }
           />
         </Dialog>
-        <Button onClick={onResetFilters} variant="outline">
-          <ListRestart />
-          <span className="hidden md:block">Reset Filters</span>
-        </Button>
-        <DataGridColumnCombobox table={table} />
         <DataGridSortCombobox
           table={table}
           onSortChange={(columnId, direction) => {
@@ -1130,6 +1116,12 @@ export default function OrdersDataGrid({
             }
           }}
         />
+        <Button onClick={onResetFilters} variant="outline">
+          <ListRestart />
+          <span className="hidden md:block">Reset Filters</span>
+        </Button>
+        <DataGridColumnCombobox table={table} />
+
         <Dialog>
           <DialogTrigger asChild>
             <Button variant="outline" disabled={getSelectedOrderIds.size < 2}>

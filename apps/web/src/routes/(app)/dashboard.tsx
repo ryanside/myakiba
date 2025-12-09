@@ -9,18 +9,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  DollarSign,
-  Star,
-  PiggyBank,
-  Flame,
-  CalendarIcon,
-  NotepadText,
-  ChartPie,
-  ShoppingBasket,
-  Package,
   Plus,
   User,
-  ArrowRight,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { CollectionBreakdown } from "@/components/dashboard/collection-breakdown";
@@ -29,12 +19,12 @@ import { ReleaseCalendar } from "@/components/dashboard/release-calendar";
 import { UnpaidOrders } from "@/components/dashboard/unpaid-orders";
 import { formatCurrency } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
-import { DashboardSkeleton } from "@/components/skeletons/dashboard-skeleton";
 import { Button } from "@/components/ui/button";
 import OrderKanban from "@/components/dashboard/order-kanban";
 import { Badge } from "@/components/ui/badge";
 import { ValueLineBarChart } from "@/components/ui/value-line-bar-chart";
 import { KPICard } from "@/components/ui/kpi-card";
+import Loader from "@/components/loader";
 
 export const Route = createFileRoute("/(app)/dashboard")({
   component: RouteComponent,
@@ -85,7 +75,7 @@ function DashboardContent() {
   });
 
   if (isPending) {
-    return <DashboardSkeleton />;
+    return <Loader />;
   }
 
   if (isError) {

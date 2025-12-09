@@ -13,7 +13,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ItemDetailSkeleton } from "@/components/skeletons/item-detail-skeleton";
+import { ItemDetailSkeleton } from "@/components/items/item-detail-skeleton";
 import {
   Accordion,
   AccordionContent,
@@ -315,10 +315,7 @@ function RouteComponent() {
   return (
     <div className="flex flex-col">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1">
-        <Card className="lg:col-span-2 h-[800px] overflow-auto">
-          <CardHeader>
-            <CardTitle>Item</CardTitle>
-          </CardHeader>
+        <Card className="lg:col-span-2 border-none bg-background rounded-none">
           <CardContent className="space-y-6">
             <div className="flex flex-col md:flex-row gap-6">
               {item.image && (
@@ -454,8 +451,7 @@ function RouteComponent() {
           </CardContent>
         </Card>
 
-        {/* Collection Section */}
-        <Card className="flex flex-col h-[800px]">
+        <Card className="flex flex-col">
           <CardHeader className="flex-shrink-0">
             <CardTitle>Personal</CardTitle>
           </CardHeader>

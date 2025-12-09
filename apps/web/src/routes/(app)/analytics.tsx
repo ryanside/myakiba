@@ -1,12 +1,24 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { getAnalytics } from "@/queries/analytics";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { formatCurrency } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
-import { AnalyticsSkeleton } from "@/components/skeletons/analytics-skeleton";
+import { AnalyticsSkeleton } from "@/components/analytics/analytics-skeleton";
+import { RankingCard } from "@/components/analytics/ranking-card";
+import { DistributionCard } from "@/components/analytics/distribution-card";
+import {
+  Users,
+  Globe,
+  Building2,
+  Palette,
+  Store,
+  Sparkles,
+  DollarSign,
+  Tag,
+  Calendar,
+  Boxes,
+  PencilRuler,
+} from "lucide-react";
+
 export const Route = createFileRoute("/(app)/analytics")({
   component: RouteComponent,
   head: () => ({
@@ -29,7 +41,7 @@ export const Route = createFileRoute("/(app)/analytics")({
   }),
 });
 
-function RouteComponent() {
+function RouteComponent(): React.ReactNode {
   const { data: session } = authClient.useSession();
   const userCurrency = session?.user.currency || "USD";
   const { isPending, isError, data, error } = useQuery({
@@ -54,9 +66,170 @@ function RouteComponent() {
   }
 
   const { analytics } = data;
-
-  // Extract total collection count for progress bars
   const totalCollectionCount = analytics.totalOwned[0]?.count || 100;
+
+  // ranking cards data
+  const topCharactersData =
+    analytics.topEntriesByAllCategories.Characters?.map((entry, idx) => ({
+      rank: idx + 1,
+      entryId: entry.entryId,
+      name: entry.originName,
+      count: `${entry.itemCount}`,
+      value: Number(entry.totalValue),
+    })) || [];
+
+  const topOriginsData =
+    analytics.topEntriesByAllCategories.Origins?.map((entry, idx) => ({
+      rank: idx + 1,
+      entryId: entry.entryId,
+      name: entry.originName,
+      count: `${entry.itemCount}`,
+      value: Number(entry.totalValue),
+    })) || [];
+
+  const topCompaniesData =
+    analytics.topEntriesByAllCategories.Companies?.map((entry, idx) => ({
+      rank: idx + 1,
+      entryId: entry.entryId,
+      name: entry.originName,
+      count: `${entry.itemCount}`,
+      value: Number(entry.totalValue),
+    })) || [];
+
+  const topArtistsData =
+    analytics.topEntriesByAllCategories.Artists?.map((entry, idx) => ({
+      rank: idx + 1,
+      entryId: entry.entryId,
+      name: entry.originName,
+      count: `${entry.itemCount}`,
+      value: Number(entry.totalValue),
+    })) || [];
+
+  const topShopsData =
+    analytics.topShops?.map((shop, idx) => ({
+      rank: idx + 1,
+      shopName: shop.shop,
+      name: shop.shop,
+      count: `${shop.count}`,
+      value: Number(shop.totalSpent),
+    })) || [];
+
+  const mostExpensiveData =
+    analytics.mostExpensiveCollectionItems?.map((item, idx) => ({
+      rank: idx + 1,
+      itemId: item.itemId,
+      name: item.itemTitle,
+      category: item.itemCategory || "n/a",
+      value: Number(item.collectionPrice),
+    })) || [];
+
+  const scaleData =
+    analytics.scaleDistribution?.map((item, idx) => ({
+      rank: idx + 1,
+      scaleName: item.scale || "Non-Scale",
+      name: item.scale || "Non-Scale",
+      count: item.count,
+      value: Number(item.totalValue),
+    })) || [];
+
+  const materialsData =
+    analytics.topEntriesByAllCategories.Materials?.map((entry, idx) => ({
+      rank: idx + 1,
+      entryId: entry.entryId,
+      name: entry.originName,
+      count: entry.itemCount,
+      value: Number(entry.totalValue),
+    })) || [];
+
+  const classificationsData =
+    analytics.topEntriesByAllCategories.Classifications?.map((entry, idx) => ({
+      rank: idx + 1,
+      entryId: entry.entryId,
+      name: entry.originName,
+      count: entry.itemCount,
+      value: Number(entry.totalValue),
+    })) || [];
+
+  const eventsData =
+    analytics.topEntriesByAllCategories.Event?.map((entry, idx) => ({
+      rank: idx + 1,
+      entryId: entry.entryId,
+      name: entry.originName,
+      count: entry.itemCount,
+      value: Number(entry.totalValue),
+    })) || [];
+
+  // distribution cards data
+  const priceRangeData = analytics.priceRangeDistribution.map((range) => ({
+    label: range.priceRange,
+    count: range.count,
+    value: Number(range.totalValue),
+  }));
+
+  const rankingColumns = [
+    { key: "rank", label: "Rank", align: "center" as const, type: "number" as const },
+    { key: "name", label: "Name", align: "left" as const, type: "string" as const, cellClassName: "text-foreground" },
+    { key: "count", label: "Count", align: "left" as const, type: "number" as const, cellText: "items" },
+    { key: "value", label: "Spent", align: "left" as const, type: "currency" as const },
+  ];
+
+  const expensiveColumns = [
+    { key: "rank", label: "Rank", align: "center" as const },
+    { key: "name", label: "Item", align: "left" as const, cellClassName: "text-foreground" },
+    { key: "category", label: "Category", align: "left" as const },
+    { key: "value", label: "Price", align: "left" as const, type: "currency" as const },
+  ];
+
+  const getEntryNavigation = (row: Record<string, string | number>) => {
+    const entryId = row.entryId as number;
+    if (!entryId) return undefined;
+    return {
+      to: "/collection",
+      search: { entries: [entryId] },
+    };
+  };
+
+  const getShopNavigation = (row: Record<string, string | number>) => {
+    const shopName = row.shopName as string;
+    if (!shopName) return undefined;
+    return {
+      to: "/collection",
+      search: { shop: [shopName] },
+    };
+  };
+
+  const getScaleNavigation = (row: Record<string, string | number>) => {
+    const scaleName = row.scaleName as string;
+    if (!scaleName) return undefined;
+    return {
+      to: "/collection",
+      search: { scale: [scaleName] },
+    };
+  };
+
+  const getItemNavigation = (row: Record<string, string | number>) => {
+    const itemId = row.itemId as number;
+    if (!itemId) return undefined;
+    return {
+      to: `/items/${itemId}`,
+    };
+  };
+
+  const getPriceRangeNavigation = (item: { label: string; count: number; value?: string | number }) => {
+    const label = item.label;
+    if (label === "< $50") {
+      return { to: "/collection", search: { paidMax: "50" } };
+    } else if (label === "$50-$100") {
+      return { to: "/collection", search: { paidMin: "50", paidMax: "100" } };
+    } else if (label === "$100-$200") {
+      return { to: "/collection", search: { paidMin: "100", paidMax: "200" } };
+    } else if (label === "$200-$500") {
+      return { to: "/collection", search: { paidMin: "200", paidMax: "500" } };
+    } else if (label === "> $500") {
+      return { to: "/collection", search: { paidMin: "500" } };
+    }
+    return undefined;
+  };
 
   return (
     <div className="flex flex-col gap-12 max-w-6xl mx-auto">
@@ -68,434 +241,149 @@ function RouteComponent() {
           See how your collection is distributed across different categories.
         </p>
       </div>
+
       <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-md font-medium">Price Range</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {analytics.priceRangeDistribution.map((range, index) => (
-              <div key={index} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">
-                    {range.priceRange}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <Badge className="text-foreground" appearance="ghost">
-                      {range.count} items
-                    </Badge>
-                    <span className="text-sm text-muted-foreground">
-                      {formatCurrency(range.totalValue, userCurrency)}
-                    </span>
-                  </div>
-                </div>
-                <Progress value={range.count} max={totalCollectionCount} />
-              </div>
-            ))}
-            {analytics.priceRangeDistribution.length === 0 && (
-              <div className="text-muted-foreground text-center py-8">
-                No price range distribution found
-              </div>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-md font-medium">Scale</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {analytics.scaleDistribution &&
-              analytics.scaleDistribution.map((range, index) => (
-                <div key={index} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">
-                      {range.scale ? range.scale : "Non-Scale"}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <Badge className="text-foreground" appearance="ghost">
-                        {range.count} items
-                      </Badge>
-                      <span className="text-sm text-muted-foreground">
-                        {formatCurrency(range.totalValue, userCurrency)}
-                      </span>
-                    </div>
-                  </div>
-                  <Progress
-                    value={range.count}
-                    max={totalCollectionCount}
-                    className=""
-                  />
-                </div>
-              ))}
-            {analytics.scaleDistribution &&
-              analytics.scaleDistribution.length === 0 && (
-                <div className="text-muted-foreground text-center py-8">
-                  No scale distribution found
-                </div>
-              )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-md font-medium">Top Shops</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {analytics.topShops &&
-              analytics.topShops.map((range, index) => (
-                <div key={index} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{range.shop}</span>
-                    <div className="flex items-center gap-2">
-                      <Badge className="text-foreground" appearance="ghost">
-                        {range.count} items
-                      </Badge>
-                      <span className="text-sm text-muted-foreground">
-                        {formatCurrency(range.totalSpent, userCurrency)}
-                      </span>
-                    </div>
-                  </div>
-                  <Progress
-                    value={range.count}
-                    max={totalCollectionCount}
-                    className=""
-                  />
-                </div>
-              ))}
-            {analytics.topShops && analytics.topShops.length === 0 && (
-              <div className="text-muted-foreground text-center py-8">
-                No top shops found
-              </div>
-            )}
-          </CardContent>
-        </Card>
-        {/* Top Characters */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-md font-medium">
-              Top Characters
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {analytics.topEntriesByAllCategories.Characters &&
-            analytics.topEntriesByAllCategories.Characters.length > 0 ? (
-              analytics.topEntriesByAllCategories.Characters.map(
-                (entry, index) => (
-                  <div key={index} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">
-                        {entry.originName}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <Badge className="text-foreground" appearance="ghost">
-                          {entry.itemCount} items
-                        </Badge>
-                        <span className="text-sm text-muted-foreground">
-                          {formatCurrency(entry.totalValue, userCurrency)}
-                        </span>
-                      </div>
-                    </div>
-                    <Progress
-                      value={entry.itemCount}
-                      max={totalCollectionCount}
-                    />
-                  </div>
-                )
-              )
-            ) : (
-              <div className="text-muted-foreground text-center py-8">
-                No characters found
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <RankingCard
+          title="Top Characters"
+          icon={<Users className="size-4 stroke-foreground" />}
+          progressKey="count"
+          progressMax={totalCollectionCount}
+          columns={rankingColumns}
+          data={topCharactersData}
+          emptyMessage="No characters found"
+          className="min-h-[620px]"
+          currency={userCurrency}
+          getRowNavigation={getEntryNavigation}
+        />
 
-        {/* Top Origins */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-md font-medium">Top Origins</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {analytics.topEntriesByAllCategories.Origins &&
-            analytics.topEntriesByAllCategories.Origins.length > 0 ? (
-              analytics.topEntriesByAllCategories.Origins.map(
-                (entry, index) => (
-                  <div key={index} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">
-                        {entry.originName}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <Badge className="text-foreground" appearance="ghost">
-                          {entry.itemCount} items
-                        </Badge>
-                        <span className="text-sm text-muted-foreground">
-                          {formatCurrency(entry.totalValue, userCurrency)}
-                        </span>
-                      </div>
-                    </div>
-                    <Progress
-                      value={entry.itemCount}
-                      max={totalCollectionCount}
-                    />
-                  </div>
-                )
-              )
-            ) : (
-              <div className="text-muted-foreground text-center py-8">
-                No origins found
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <RankingCard
+          title="Top Origins"
+          icon={<Globe className="size-4 stroke-foreground" />}
+          progressKey="count"
+          progressMax={totalCollectionCount}
+          columns={rankingColumns}
+          data={topOriginsData}
+          emptyMessage="No origins found"
+          className="min-h-[620px]"
+          currency={userCurrency}
+          getRowNavigation={getEntryNavigation}
+        />
 
-        {/* Top Companies */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-md font-medium">Top Companies</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {analytics.topEntriesByAllCategories.Companies &&
-            analytics.topEntriesByAllCategories.Companies.length > 0 ? (
-              analytics.topEntriesByAllCategories.Companies.map(
-                (entry, index) => (
-                  <div key={index} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">
-                        {entry.originName}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <Badge className="text-foreground" appearance="ghost">
-                          {entry.itemCount} items
-                        </Badge>
-                        <span className="text-sm text-muted-foreground">
-                          {formatCurrency(entry.totalValue, userCurrency)}
-                        </span>
-                      </div>
-                    </div>
-                    <Progress
-                      value={entry.itemCount}
-                      max={totalCollectionCount}
-                    />
-                  </div>
-                )
-              )
-            ) : (
-              <div className="text-muted-foreground text-center py-8">
-                No companies found
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <RankingCard
+          title="Top Companies"
+          icon={<Building2 className="size-4 stroke-foreground" />}
+          progressKey="count"
+          progressMax={totalCollectionCount}
+          columns={rankingColumns}
+          data={topCompaniesData}
+          emptyMessage="No companies found"
+          className="min-h-[620px]"
+          currency={userCurrency}
+          getRowNavigation={getEntryNavigation}
+        />
 
-        {/* Top Artists */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-md font-medium">Top Artists</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {analytics.topEntriesByAllCategories.Artists &&
-            analytics.topEntriesByAllCategories.Artists.length > 0 ? (
-              analytics.topEntriesByAllCategories.Artists.map(
-                (entry, index) => (
-                  <div key={index} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">
-                        {entry.originName}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <Badge className="text-foreground" appearance="ghost">
-                          {entry.itemCount} items
-                        </Badge>
-                        <span className="text-sm text-muted-foreground">
-                          {formatCurrency(entry.totalValue, userCurrency)}
-                        </span>
-                      </div>
-                    </div>
-                    <Progress
-                      value={entry.itemCount}
-                      max={totalCollectionCount}
-                    />
-                  </div>
-                )
-              )
-            ) : (
-              <div className="text-muted-foreground text-center py-8">
-                No artists found
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <RankingCard
+          title="Top Artists"
+          icon={<Palette className="size-4 stroke-foreground" />}
+          progressKey="count"
+          progressMax={totalCollectionCount}
+          columns={rankingColumns}
+          data={topArtistsData}
+          emptyMessage="No artists found"
+          className="min-h-[620px]"
+          currency={userCurrency}
+          getRowNavigation={getEntryNavigation}
+        />
 
-        {/* Top Materials */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-md font-medium">Top Materials</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {analytics.topEntriesByAllCategories.Materials &&
-            analytics.topEntriesByAllCategories.Materials.length > 0 ? (
-              analytics.topEntriesByAllCategories.Materials.map(
-                (entry, index) => (
-                  <div key={index} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">
-                        {entry.originName}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <Badge className="text-foreground" appearance="ghost">
-                          {entry.itemCount} items
-                        </Badge>
-                        <span className="text-sm text-muted-foreground">
-                          {formatCurrency(entry.totalValue, userCurrency)}
-                        </span>
-                      </div>
-                    </div>
-                    <Progress
-                      value={entry.itemCount}
-                      max={totalCollectionCount}
-                    />
-                  </div>
-                )
-              )
-            ) : (
-              <div className="text-muted-foreground text-center py-8">
-                No materials found
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <RankingCard
+          title="Top Shops"
+          icon={<Store className="size-4 stroke-foreground" />}
+          progressKey="count"
+          progressMax={totalCollectionCount}
+          columns={rankingColumns}
+          data={topShopsData}
+          emptyMessage="No shops found"
+          className="min-h-[620px]"
+          currency={userCurrency}
+          getRowNavigation={getShopNavigation}
+        />
 
-        {/* Top Classifications */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-md font-medium">
-              Top Classifications
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {analytics.topEntriesByAllCategories.Classifications &&
-            analytics.topEntriesByAllCategories.Classifications.length > 0 ? (
-              analytics.topEntriesByAllCategories.Classifications.map(
-                (entry, index) => (
-                  <div key={index} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">
-                        {entry.originName}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <Badge className="text-foreground" appearance="ghost">
-                          {entry.itemCount} items
-                        </Badge>
-                        <span className="text-sm text-muted-foreground">
-                          {formatCurrency(entry.totalValue, userCurrency)}
-                        </span>
-                      </div>
-                    </div>
-                    <Progress
-                      value={entry.itemCount}
-                      max={totalCollectionCount}
-                    />
-                  </div>
-                )
-              )
-            ) : (
-              <div className="text-muted-foreground text-center py-8">
-                No classifications found
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <RankingCard
+          title="Top Materials"
+          icon={<Boxes className="size-4 stroke-foreground" />}
+          progressKey="count"
+          progressMax={totalCollectionCount}
+          columns={rankingColumns}
+          data={materialsData}
+          emptyMessage="No materials found"
+          className="min-h-[620px]"
+          currency={userCurrency}
+          getRowNavigation={getEntryNavigation}
+        />
 
-        {/* Top Events */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-md font-medium">Top Events</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {analytics.topEntriesByAllCategories.Event &&
-            analytics.topEntriesByAllCategories.Event.length > 0 ? (
-              analytics.topEntriesByAllCategories.Event.map((entry, index) => (
-                <div key={index} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">
-                      {entry.originName}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <Badge className="text-foreground" appearance="ghost">
-                        {entry.itemCount} items
-                      </Badge>
-                      <span className="text-sm text-muted-foreground">
-                        {formatCurrency(entry.totalValue, userCurrency)}
-                      </span>
-                    </div>
-                  </div>
-                  <Progress
-                    value={entry.itemCount}
-                    max={totalCollectionCount}
-                  />
-                </div>
-              ))
-            ) : (
-              <div className="text-muted-foreground text-center py-8">
-                No events found
-              </div>
-            )}
-          </CardContent>
-        </Card>
-        <Card className="">
-          <CardHeader className="flex flex-row items-center gap-2">
-            <CardTitle className="font-medium">Most Expensive Items</CardTitle>
-          </CardHeader>
-          <CardContent className="flex-1">
-            <div className="space-y-3">
-              {analytics.mostExpensiveCollectionItems.length > 0 ? (
-                analytics.mostExpensiveCollectionItems.map((item) => (
-                  <div
-                    key={item.itemId}
-                    className="flex items-center gap-3 p-2 rounded-md"
-                  >
-                    {item.itemImage && (
-                      <div className="h-12 w-12 rounded-md overflow-hidden bg-muted flex-shrink-0">
-                        <img
-                          src={item.itemImage}
-                          alt={item.itemTitle}
-                          className="h-full w-full object-cover"
-                          loading="lazy"
-                        />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {item.itemTitle}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {item.itemCategory}
-                      </p>
-                      <div className="flex items-center gap-4 mt-1">
-                        <p className="text-xs text-muted-foreground">
-                          <span className="text-xs text-foreground font-medium">
-                            {formatCurrency(item.collectionPrice, userCurrency)}
-                          </span>
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  No most expensive items found
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="flex flex-row items-center justify-center bg-transparent border-none">
-          <CardHeader className="flex flex-row items-center justify-center">
-            <CardTitle className="text-md font-light text-nowrap">
-              More coming soon! (*ˊᗜˋ*)/ᵗᑋᵃᐢᵏ ᵞᵒᵘ*
-            </CardTitle>
-          </CardHeader>
-        </Card>
+        <RankingCard
+          title="Top Classifications"
+          icon={<Tag className="size-4 stroke-foreground" />}
+          progressKey="count"
+          progressMax={totalCollectionCount}
+          columns={rankingColumns}
+          data={classificationsData}
+          emptyMessage="No classifications found"
+          className="min-h-[620px]"
+          currency={userCurrency}
+          getRowNavigation={getEntryNavigation}
+        />
+
+        <RankingCard
+          title="Top Events"
+          icon={<Calendar className="size-4 stroke-foreground" />}
+          progressKey="count"
+          progressMax={totalCollectionCount}
+          columns={rankingColumns}
+          data={eventsData}
+          emptyMessage="No events found"
+          className="min-h-[620px]"
+          currency={userCurrency}
+          getRowNavigation={getEntryNavigation}
+        />
+        <RankingCard
+          title="Scale"
+          icon={<PencilRuler className="size-4 stroke-foreground" />}
+          progressKey="count"
+          progressMax={totalCollectionCount}
+          columns={rankingColumns}
+          data={scaleData}
+          emptyMessage="No scale distribution found"
+          className="lg:col-span-2"
+          currency={userCurrency}
+          getRowNavigation={getScaleNavigation}
+        />
+        <DistributionCard
+          title="Price Range"
+          icon={<DollarSign className="size-4 stroke-foreground" />}
+          data={priceRangeData}
+          maxValue={totalCollectionCount}
+          emptyMessage="No price range distribution found"
+          className="lg:col-span-2"
+          currency={userCurrency}
+          getRowNavigation={getPriceRangeNavigation}
+        />
+        <RankingCard
+          title="Most Expensive Items"
+          icon={<Sparkles className="size-4 stroke-foreground" />}
+          columns={expensiveColumns}
+          data={mostExpensiveData}
+          emptyMessage="No expensive items found"
+          className="lg:col-span-2"
+          currency={userCurrency}
+          getRowNavigation={getItemNavigation}
+        />
+
+        <div className="lg:col-span-2 flex items-center justify-center py-8">
+          <p className="text-sm font-light text-muted-foreground">
+            More coming soon! (*ˊᗜˋ*)/ᵗᑋᵃᐢᵏ ᵞᵒᵘ*
+          </p>
+        </div>
       </div>
     </div>
   );

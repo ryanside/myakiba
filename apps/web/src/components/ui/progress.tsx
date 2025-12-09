@@ -1,17 +1,20 @@
-import * as React from "react"
-import * as ProgressPrimitive from "@radix-ui/react-progress"
+import * as React from "react";
+import * as ProgressPrimitive from "@radix-ui/react-progress";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 function Progress({
   className,
   value,
   max = 100,
+  indicatorClassName,
   ...props
-}: React.ComponentProps<typeof ProgressPrimitive.Root>) {
+}: React.ComponentProps<typeof ProgressPrimitive.Root> & {
+  indicatorClassName?: string;
+}) {
   // Calculate percentage based on value and max
   const percentage = max > 0 ? Math.min(((value || 0) / max) * 100, 100) : 0;
-  
+
   return (
     <ProgressPrimitive.Root
       data-slot="progress"
@@ -25,11 +28,14 @@ function Progress({
     >
       <ProgressPrimitive.Indicator
         data-slot="progress-indicator"
-        className="bg-secondary h-full w-full flex-1 transition-all"
+        className={cn(
+          "bg-secondary h-full w-full flex-1 transition-all",
+          indicatorClassName
+        )}
         style={{ transform: `translateX(-${100 - percentage}%)` }}
       />
     </ProgressPrimitive.Root>
-  )
+  );
 }
 
-export { Progress }
+export { Progress };

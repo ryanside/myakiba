@@ -675,12 +675,6 @@ export const CollectionDataGrid = ({
             }
           />
         </Dialog>
-
-        <Button onClick={onResetFilters} variant="outline">
-          <ListRestart className="" />
-          <span className="hidden md:block">Reset Filters</span>
-        </Button>
-        <DataGridColumnCombobox table={table} />
         <DataGridSortCombobox
           table={table}
           onSortChange={(columnId, direction) => {
@@ -711,6 +705,12 @@ export const CollectionDataGrid = ({
             }
           }}
         />
+        <Button onClick={onResetFilters} variant="outline">
+          <ListRestart className="" />
+          <span className="hidden md:block">Reset Filters</span>
+        </Button>
+        <DataGridColumnCombobox table={table} />
+
         <Popover>
           <PopoverTrigger
             asChild
