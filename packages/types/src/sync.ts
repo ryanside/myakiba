@@ -1,0 +1,169 @@
+import type { ShippingMethod, OrderStatus, Condition } from "./enums";
+
+export type SyncStatus = {
+  existingItems?: number;
+  newItems?: number;
+  isFinished: boolean;
+  status: string;
+};
+
+export type SyncFormOrderItem = {
+  itemId: string;
+  price: string;
+  count: number;
+  status: OrderStatus;
+  condition: Condition;
+  shippingMethod: ShippingMethod;
+  orderDate: string;
+  paymentDate: string;
+  shippingDate: string;
+  collectionDate: string;
+};
+
+export type SyncOrderItem = Omit<
+  SyncFormOrderItem,
+  "itemId" | "orderDate" | "paymentDate" | "shippingDate" | "collectionDate"
+> & {
+  itemId: number;
+  orderDate: string | null;
+  paymentDate: string | null;
+  shippingDate: string | null;
+  collectionDate: string | null;
+};
+
+export type SyncFormOrder = {
+  status: OrderStatus;
+  title: string;
+  shop: string;
+  orderDate: string;
+  releaseMonthYear: string;
+  paymentDate: string;
+  shippingDate: string;
+  collectionDate: string;
+  shippingMethod: ShippingMethod;
+  shippingFee: string;
+  taxes: string;
+  duties: string;
+  tariffs: string;
+  miscFees: string;
+  notes: string;
+  items: SyncFormOrderItem[];
+};
+
+export type SyncOrder = Omit<
+  SyncFormOrder,
+  | "items"
+  | "orderDate"
+  | "releaseMonthYear"
+  | "paymentDate"
+  | "shippingDate"
+  | "collectionDate"
+> & {
+  items: SyncOrderItem[];
+  orderDate: string | null;
+  releaseMonthYear: string | null;
+  paymentDate: string | null;
+  shippingDate: string | null;
+  collectionDate: string | null;
+};
+
+export type SyncFormCollectionItem = {
+  itemId: string;
+  price: string;
+  count: number;
+  score: number;
+  shop: string;
+  orderDate: string;
+  paymentDate: string;
+  shippingDate: string;
+  collectionDate: string;
+  shippingMethod: ShippingMethod;
+  tags: string[];
+  condition: Condition;
+  notes: string;
+};
+
+export type SyncCollectionItem = Omit<
+  SyncFormCollectionItem,
+  | "itemId"
+  | "orderDate"
+  | "paymentDate"
+  | "shippingDate"
+  | "collectionDate"
+  | "score"
+> & {
+  itemId: number;
+  orderDate: string | null;
+  paymentDate: string | null;
+  shippingDate: string | null;
+  collectionDate: string | null;
+  score: string;
+};
+
+export type UserItem = {
+  id: number;
+  status: "Owned" | "Ordered";
+  count: number;
+  score: string;
+  payment_date: string;
+  shipping_date: string;
+  collecting_date: string;
+  price: string;
+  shop: string;
+  shipping_method: ShippingMethod;
+  note: string;
+  orderId: null;
+  orderDate: string;
+};
+
+export type ScrapedItem = {
+  id: number;
+  title: string;
+  category: string;
+  classification: {
+    id: number;
+    name: string;
+    role: string;
+  }[];
+  origin: {
+    id: number;
+    name: string;
+  }[];
+  character: {
+    id: number;
+    name: string;
+  }[];
+  company: {
+    id: number;
+    name: string;
+    role: string;
+  }[];
+  artist: {
+    id: number;
+    name: string;
+    role: string;
+  }[];
+  version: string[];
+  releaseDate: {
+    date: string;
+    type: string;
+    price: number;
+    priceCurrency: string;
+    barcode: string;
+  }[];
+  event: {
+    id: number;
+    name: string;
+    role: string;
+  }[];
+  materials: {
+    id: number;
+    name: string;
+  }[];
+  scale: string;
+  height: number;
+  width: number;
+  depth: number;
+  image: string;
+};
+

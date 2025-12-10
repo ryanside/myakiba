@@ -1,11 +1,11 @@
-import { db, dbHttp } from "@/db";
+import { db, dbHttp } from "@myakiba/db";
 import {
   item,
   collection,
   item_release,
   order,
   budget,
-} from "@/db/schema/figure";
+} from "@myakiba/db/schema/figure";
 import {
   eq,
   count,

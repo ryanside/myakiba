@@ -1,6 +1,6 @@
 import * as z from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { collection, order } from "@/db/schema/figure";
+import { collection, order } from "@myakiba/db/schema/figure";
 
 export const csvItemSchema = z.object({
   id: z.int(),

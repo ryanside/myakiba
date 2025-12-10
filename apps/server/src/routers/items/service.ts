@@ -1,4 +1,4 @@
-import { db } from "@/db";
+import { db } from "@myakiba/db";
 import {
   collection,
   entry,
@@ -6,7 +6,7 @@ import {
   item,
   item_release,
   order,
-} from "@/db/schema/figure";
+} from "@myakiba/db/schema/figure";
 import { and, desc, eq, sql } from "drizzle-orm";
 import type {
   ItemReleasesResponse,

@@ -1,6 +1,6 @@
 import * as z from "zod";
 import { createInsertSchema, createUpdateSchema } from "drizzle-zod";
-import { order } from "@/db/schema/figure";
+import { order } from "@myakiba/db/schema/figure";
 
 const commaSeparatedStringArray = z.preprocess((val) => {
   if (typeof val === "string" && val.length > 0) {

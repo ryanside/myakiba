@@ -1,7 +1,7 @@
-import { dbHttp } from "@/db";
-import { collection, item } from "@/db/schema/figure";
+import { dbHttp } from "@myakiba/db";
+import { collection, item } from "@myakiba/db/schema/figure";
 import { eq, count, and, sql, desc, not } from "drizzle-orm";
-import { entry, entry_to_item } from "@/db/schema/figure";
+import { entry, entry_to_item } from "@myakiba/db/schema/figure";
 
 class AnalyticsService {
   async getAnalytics(userId: string) {

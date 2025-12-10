@@ -1,11 +1,10 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { db } from "../db";
-import * as schema from "../db/schema/auth";
+import { db } from "@myakiba/db";
+import * as schema from "@myakiba/db/schema/auth";
 import { captcha, username } from "better-auth/plugins";
 import { emailHarmony } from "better-auth-harmony";
 import { Resend } from "resend";
-// import { EmailTemplate } from "../emails/email-template";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -23,11 +22,9 @@ export const auth = betterAuth({
         to: user.email,
         subject: "Reset your password",
         text: `Click the link to reset your password: ${url}`,
-        // react: EmailTemplate({ firstName: user.name }),
       });
     },
     onPasswordReset: async ({ user }) => {
-      // your logic here
       console.log(`Password for user ${user.email} has been reset.`);
     },
   },
@@ -79,3 +76,4 @@ export const auth = betterAuth({
     },
   },
 });
+

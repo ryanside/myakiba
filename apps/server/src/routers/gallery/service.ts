@@ -1,11 +1,11 @@
-import { db } from "@/db";
+import { db } from "@myakiba/db";
 import {
   collection,
   entry,
   entry_to_item,
   item,
   item_release,
-} from "@/db/schema/figure";
+} from "@myakiba/db/schema/figure";
 import { and, eq, between, inArray, arrayContains, desc } from "drizzle-orm";
 import type {
   GroupingType,

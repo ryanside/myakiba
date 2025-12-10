@@ -49,55 +49,12 @@ import {
 } from "@/components/ui/popover";
 import { authClient } from "@/lib/auth-client";
 import { getCurrencyLocale } from "@/lib/utils";
-
-const SHIPPING_METHODS = [
-  "n/a",
-  "EMS",
-  "SAL",
-  "AIRMAIL",
-  "SURFACE",
-  "FEDEX",
-  "DHL",
-  "Colissimo",
-  "UPS",
-  "Domestic",
-] as const;
-
-const CONDITIONS = ["New", "Pre-Owned"] as const;
-
-const CURRENCIES = [
-  "USD",
-  "JPY",
-  "CNY",
-  "EUR",
-  "GBP",
-  "CAD",
-  "AUD",
-  "NZD",
-] as const;
-
-const CATEGORIES = [
-  "Overall",
-  "Prepainted",
-  "Action/Dolls",
-  "Trading",
-  "Garage Kits",
-  "Model Kits",
-  "Accessories",
-  "Plushes",
-  "Linens",
-  "Dishes",
-  "Hanged Up",
-  "Apparel",
-  "On Walls",
-  "Stationaries",
-  "Misc",
-  "Books",
-  "Music",
-  "Video",
-  "Games",
-  "Software",
-] as const;
+import {
+  SHIPPING_METHODS,
+  CONDITIONS,
+  CURRENCIES,
+  CATEGORIES,
+} from "@myakiba/constants";
 
 interface FiltersFormProps {
   currentFilters?: CollectionFilters;

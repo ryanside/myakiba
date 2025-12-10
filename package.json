@@ -14,10 +14,10 @@
     "dev:web": "turbo -F web dev",
     "dev:server": "turbo -F server dev",
     "dev:worker": "turbo -F worker dev",
-    "db:push": "turbo -F server db:push",
-    "db:studio": "turbo -F server db:studio",
-    "db:generate": "turbo -F server db:generate",
-    "db:migrate": "turbo -F server db:migrate"
+    "db:push": "turbo -F @myakiba/db db:push",
+    "db:studio": "turbo -F @myakiba/db db:studio",
+    "db:generate": "turbo -F @myakiba/db db:generate",
+    "db:migrate": "turbo -F @myakiba/db db:migrate"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

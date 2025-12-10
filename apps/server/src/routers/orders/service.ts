@@ -1,5 +1,5 @@
-import { db } from "@/db";
-import { order, collection, item, item_release } from "@/db/schema/figure";
+import { db } from "@myakiba/db";
+import { order, collection, item, item_release } from "@myakiba/db/schema/figure";
 import { eq, and, inArray, sql, desc, asc, ilike, ne, gte, lte } from "drizzle-orm";
 import type { orderInsertType, orderUpdateType } from "./model";
 

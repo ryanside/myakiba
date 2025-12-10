@@ -222,3 +222,4 @@ export const budget = pgTable("budget", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+

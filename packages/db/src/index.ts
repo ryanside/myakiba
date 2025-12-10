@@ -9,3 +9,4 @@ export const db = drizzle(client);
 // Secondary driver exclusively for batching queries
 const sql = neon(process.env.DATABASE_URL!);
 export const dbHttp = drizzleNeonHttpDriver(sql);
+
