@@ -30,21 +30,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import type { OrderFilters } from "@/lib/orders/types";
 import { authClient } from "@/lib/auth-client";
 import { getCurrencyLocale } from "@/lib/utils";
-
-const SHIPPING_METHODS = [
-  "n/a",
-  "EMS",
-  "SAL",
-  "AIRMAIL",
-  "SURFACE",
-  "FEDEX",
-  "DHL",
-  "Colissimo",
-  "UPS",
-  "Domestic",
-] as const;
-
-const STATUSES = ["Ordered", "Paid", "Shipped", "Owned"] as const;
+import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/constants";
 
 interface OrdersFiltersFormProps {
   currentFilters?: OrderFilters;
@@ -169,7 +155,7 @@ export default function OrdersFiltersForm({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
-                      {STATUSES.map((status) => (
+                      {ORDER_STATUSES.map((status) => (
                         <DropdownMenuCheckboxItem
                           key={status}
                           checked={field.state.value?.includes(status)}

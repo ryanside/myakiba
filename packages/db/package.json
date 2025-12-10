@@ -1,0 +1,36 @@
+{
+  "name": "@myakiba/db",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./schema/*": {
+      "default": "./src/schema/*.ts"
+    }
+  },
+  "scripts": {
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
+  },
+  "devDependencies": {
+    "@myakiba/config": "workspace:*",
+    "drizzle-kit": "^0.31.8"
+  },
+  "peerDependencies": {
+    "typescript": "^5",
+    "drizzle-orm": "^0.44.7"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
+    "@paralleldrive/cuid2": "^2.3.1",
+    "drizzle-zod": "^0.8.3",
+    "postgres": "^3.4.7",
+    "uuid": "^11.1.0",
+    "zod": "^4.1.13"
+  }
+}

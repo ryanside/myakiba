@@ -3,7 +3,7 @@ import Redis from "ioredis";
 import type { jobData } from "../types";
 import { normalizeDateString } from "../utils";
 import { v5 as uuidv5 } from "uuid";
-import { db } from "../../db";
+import { db } from "@myakiba/db";
 import { setJobStatus } from "../utils";
 import {
   item,
@@ -11,7 +11,7 @@ import {
   entry,
   entry_to_item,
   collection,
-} from "../../db/schema/figure";
+} from "@myakiba/db/schema/figure";
 
 export async function finalizeCollectionSync(
   successfulResults: scrapedItem[],

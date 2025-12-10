@@ -1,5 +1,5 @@
-import { db } from "@/db";
-import { entry } from "@/db/schema/figure";
+import { db } from "@myakiba/db";
+import { entry } from "@myakiba/db/schema/figure";
 import { ilike } from "drizzle-orm";
 
 class EntriesService {

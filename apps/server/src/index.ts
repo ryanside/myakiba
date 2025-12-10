@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { auth } from "./lib/auth";
+import { auth } from "@myakiba/auth";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";

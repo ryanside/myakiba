@@ -74,9 +74,9 @@ import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
 import { DataGridColumnCombobox } from "../ui/data-grid-column-combobox";
 import { DataGridSortCombobox } from "../ui/data-grid-sort-combobox";
+import { DEFAULT_PAGE_INDEX, DEFAULT_PAGE_SIZE } from "@myakiba/constants";
 
-export const DEFAULT_PAGE_INDEX = 0;
-export const DEFAULT_PAGE_SIZE = 10;
+export { DEFAULT_PAGE_INDEX, DEFAULT_PAGE_SIZE };
 
 interface OrdersDataGridProps {
   orders: Order[];

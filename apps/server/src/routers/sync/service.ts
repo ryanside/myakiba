@@ -1,5 +1,5 @@
-import { db } from "@/db";
-import { item, collection, item_release, order } from "@/db/schema/figure";
+import { db } from "@myakiba/db";
+import { item, collection, item_release, order } from "@myakiba/db/schema/figure";
 import { and, inArray, eq, sql } from "drizzle-orm";
 import type {
   collectionInsertType,

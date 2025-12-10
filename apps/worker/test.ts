@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
-import { db } from "./db";
-import { entry, entry_to_item, item, item_release } from "./db/schema/figure";
+import { db } from "@myakiba/db";
+import { entry, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
 import Redis from "ioredis";
 import path from "path";
 import { URL } from "url";

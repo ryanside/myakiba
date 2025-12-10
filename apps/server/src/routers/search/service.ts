@@ -1,5 +1,5 @@
-import { dbHttp } from "@/db";
-import { collection, item, order } from "@/db/schema/figure";
+import { dbHttp } from "@myakiba/db";
+import { collection, item, order } from "@myakiba/db/schema/figure";
 import { eq, sql, and, ilike } from "drizzle-orm";
 
 class SearchService {

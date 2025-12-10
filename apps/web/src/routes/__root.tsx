@@ -27,7 +27,7 @@ function RootComponent() {
         <div className="grid grid-rows-[auto_1fr] min-h-dvh">
           <Outlet />
         </div>
-        <Toaster richColors />
+        <Toaster richColors position="top-center" />
       </ThemeProvider>
       {import.meta.env.DEV && (
         <TanStackRouterDevtools position="bottom-right" />

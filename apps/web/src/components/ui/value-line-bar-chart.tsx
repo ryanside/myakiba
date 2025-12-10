@@ -12,7 +12,7 @@ import {
 import { type ChartConfig, ChartContainer } from "@/components/ui/chart";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { useMotionValueEvent, useSpring } from "framer-motion";
+import { useMotionValueEvent, useSpring } from "motion/react";
 
 const CHART_MARGIN = 35;
 
@@ -58,10 +58,10 @@ export function ValueLineBarChart({ data }: ValueLineBarChartProps) {
       desktop: monthMap.get(index + 1) || 0,
     }));
   }, [data]);
-  
+
   // Get current month index (0-11)
   const currentMonthIndex = React.useMemo(() => new Date().getMonth(), []);
-  
+
   const [activeIndex, setActiveIndex] = React.useState<number | undefined>(
     currentMonthIndex
   );
@@ -100,7 +100,9 @@ export function ValueLineBarChart({ data }: ValueLineBarChartProps) {
             {maxValueIndex.value}
           </span>
         </CardTitle>
-        <CardDescription>orders in {chartData[maxValueIndex.index].month}</CardDescription>
+        <CardDescription>
+          orders in {chartData[maxValueIndex.index].month}
+        </CardDescription>
       </CardHeader>
       <CardContent className="">
         <AnimatePresence mode="wait">

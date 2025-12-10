@@ -1,5 +1,5 @@
-import { db } from "@/db";
-import { budget } from "@/db/schema/figure";
+import { db } from "@myakiba/db";
+import { budget } from "@myakiba/db/schema/figure";
 import { eq } from "drizzle-orm";
 import type { BudgetUpsertType } from "./model";
 

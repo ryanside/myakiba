@@ -1,9 +1,9 @@
-import { dbHttp } from "@/db";
+import { dbHttp } from "@myakiba/db";
 import {
   collection,
   item,
   order,
-} from "@/db/schema/figure";
+} from "@myakiba/db/schema/figure";
 import { and, eq, count, sum, desc, avg, between, sql } from "drizzle-orm";
 import type { wrappedResponseType } from "./model";
 
