@@ -948,6 +948,7 @@ export default function OrdersDataGrid({
                     type="edit-order"
                     orderData={order}
                     callbackFn={onEditOrder}
+                    currency={currency}
                   />
                 </Dialog>
                 <DropdownMenuSeparator />
@@ -1078,6 +1079,7 @@ export default function OrdersDataGrid({
             onApplyFilters={(newFilters) =>
               onFilterChange({ ...filters, ...newFilters, offset: 0 })
             }
+            currency={currency}
           />
         </Dialog>
         <DataGridSortCombobox
@@ -1134,6 +1136,7 @@ export default function OrdersDataGrid({
             callbackFn={onMerge}
             type="merge"
             clearSelections={clearSelections}
+            currency={currency}
           />
         </Dialog>
         <Dialog>
@@ -1151,6 +1154,7 @@ export default function OrdersDataGrid({
             onMoveToExisting={onMoveItem}
             onMoveToNew={onSplit}
             clearSelections={clearSelections}
+            currency={currency}
           />
         </Dialog>
         <Popover>

@@ -32,7 +32,6 @@ import { ChevronDown, Loader2 } from "lucide-react";
 import type { CascadeOptions } from "@/lib/orders/types";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import { Textarea } from "../ui/textarea";
-import { authClient } from "@/lib/auth-client";
 import { getCurrencyLocale } from "@/lib/utils";
 
 type MergeOrderFormProps = {
@@ -45,6 +44,7 @@ type MergeOrderFormProps = {
     orderIds: Set<string>
   ) => Promise<void>;
   clearSelections: () => void;
+  currency?: string;
 };
 
 type SplitOrderFormProps = {
@@ -58,6 +58,7 @@ type SplitOrderFormProps = {
     orderIds: Set<string>
   ) => Promise<void>;
   clearSelections: () => void;
+  currency?: string;
 };
 
 type EditOrderFormProps = {
@@ -70,6 +71,7 @@ type EditOrderFormProps = {
   ) => Promise<void>;
   orderData: Order;
   clearSelections?: () => void;
+  currency?: string;
 };
 
 type OrderFormProps =
@@ -78,10 +80,9 @@ type OrderFormProps =
   | EditOrderFormProps;
 
 export function OrderForm(props: OrderFormProps) {
-  const { callbackFn, type, orderIds, collectionIds, clearSelections } = props;
+  const { callbackFn, type, orderIds, collectionIds, clearSelections, currency } = props;
 
-  const { data: session } = authClient.useSession();
-  const userCurrency = session?.user?.currency || "USD";
+  const userCurrency = currency || "USD";
   const userLocale = getCurrencyLocale(userCurrency);
 
   const {

@@ -100,7 +100,6 @@ function FeatureInfo({
 function FeatureImage({
   backgroundImage,
   featureImage,
-  imageOrientation,
 }: Omit<FeatureProps, "title" | "description" | "link" | "linkText">) {
   return (
     <div className="md:col-span-2 col-span-3 flex flex-col justify-center items-center relative overflow-hidden rounded-sm">
@@ -108,16 +107,14 @@ function FeatureImage({
         src={backgroundImage}
         alt="hero background image"
         className="absolute inset-0 size-full object-cover opacity-100"
-        loading="eager"
-        fetchPriority="high"
+        loading="lazy"
       />
       <div className="bg-background rounded-lg relative m-4 sm:m-8 md:m-12 overflow-hidden shadow-xl shadow-black/15 ring-1 ring-black/10 ">
         <img
           src={featureImage}
           alt="app screen"
           className="object-top-left size-full object-cover"
-          loading="eager"
-          fetchPriority="high"
+          loading="lazy"
         />
       </div>
     </div>

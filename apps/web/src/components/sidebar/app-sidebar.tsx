@@ -1,16 +1,9 @@
 import {
   ChartNoAxesCombined,
   ChartNoAxesGantt,
-  CreditCard,
   DollarSign,
-  HeartPlus,
   Home,
-  Images,
-  Plus,
-  Settings,
   Package,
-  ShoppingBag,
-  Sparkles,
 } from "lucide-react";
 
 import { NavMain } from "@/components/sidebar/nav-main";
@@ -141,10 +134,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <SidebarMenuButton
                 asChild
                 tooltip="Add MFC items"
-                className="bg-sidebar-primary shadow-xs text-black hover:bg-sidebar-primary/90 hover:text-black active:bg-sidebar-primary/90 active:text-black rounded-lg"
+                className="from-primary to-primary/85 text-primary-foreground border border-zinc-950/25 bg-gradient-to-t shadow-md shadow-zinc-950/20 ring-1 ring-inset ring-white/20 transition-[filter] duration-200 hover:brightness-110 active:brightness-90 dark:border-white/20 dark:ring-transparent"
               >
                 <Link to="/sync">
-                  <PlusIcon size={18} />
+                  <PlusIcon size={17} className="text-black" />
                   <span className="">Add MFC items</span>
                 </Link>
               </SidebarMenuButton>

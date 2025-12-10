@@ -20,7 +20,7 @@ export default function LogoCloud({ images }: { images: string[] }) {
                 >
                   <img
                     src={image}
-                    alt=""
+                    alt="MyFigureCollection Item Image"
                     className="w-full h-full object-top object-cover"
                     loading="lazy"
                   />

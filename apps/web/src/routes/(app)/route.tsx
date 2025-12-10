@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, RouterContextProvider } from "@tanstack/react-router";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
 import {
   Breadcrumb,
@@ -13,7 +13,6 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Outlet, redirect, useLocation } from "@tanstack/react-router";
-import { ModeToggle } from "@/components/mode-toggle";
 import UserMenu from "@/components/sidebar/user-menu";
 import { authClient } from "@/lib/auth-client";
 import { SearchCommand } from "@/components/sidebar/search-command";
@@ -30,11 +29,15 @@ export const Route = createFileRoute("/(app)")({
         },
       });
     }
+    return {
+      session,
+    };
   },
 });
 
 function RouteComponent() {
   const location = useLocation();
+  const { session } = Route.useRouteContext();
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -59,8 +62,7 @@ function RouteComponent() {
             </Breadcrumb>
           </div>
           <div className="flex items-center gap-2">
-            <ModeToggle />
-            <UserMenu />
+            <UserMenu session={session} />
           </div>
         </header>
         <div className="h-full w-full p-6">

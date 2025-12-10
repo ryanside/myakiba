@@ -36,7 +36,6 @@ import {
 import { searchSchema } from "@/lib/validations";
 import type { CollectionItemFormValues } from "@/lib/collection/types";
 import { updateCollectionItem } from "@/queries/collection";
-import { authClient } from "@/lib/auth-client";
 import { OrdersDataGridSkeleton } from "@/components/orders/orders-data-grid-skeleton";
 import { useCallback } from "react";
 import { KPICard } from "@/components/ui/kpi-card";
@@ -66,7 +65,7 @@ export const Route = createFileRoute("/(app)/orders")({
 });
 
 function RouteComponent() {
-  const { data: session } = authClient.useSession();
+  const { session } = Route.useRouteContext();
   const userCurrency = session?.user.currency || "USD";
   const queryClient = useQueryClient();
   const { filters, setFilters, resetFilters } = useFilters(Route.id);

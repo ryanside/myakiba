@@ -30,8 +30,7 @@ import type { EditedOrder, CascadeOptions } from "@/lib/orders/types";
 import { toast } from "sonner";
 import type { CollectionItemFormValues } from "@/lib/collection/types";
 import { updateCollectionItem } from "@/queries/collection";
-import { authClient } from "@/lib/auth-client";
-import { OrderDetailSkeleton } from "@/components/orders/order-detail-skeleton";
+import Loader from "@/components/loader";
 
 export const Route = createFileRoute("/(app)/orders_/$id")({
   component: RouteComponent,
@@ -56,7 +55,7 @@ export const Route = createFileRoute("/(app)/orders_/$id")({
 });
 
 function RouteComponent() {
-  const { data: session } = authClient.useSession();
+  const { session } = Route.useRouteContext();
   const userCurrency = session?.user.currency || "USD";
   const { id } = useParams({ from: "/(app)/orders_/$id" });
   const queryClient = useQueryClient();
@@ -73,10 +72,11 @@ function RouteComponent() {
   // Track recently viewed order
   useEffect(() => {
     if (data?.order) {
-      const images = data.order.items
-        ?.map((item) => item.itemImage)
-        .filter((img): img is string => Boolean(img))
-        .slice(0, 4) || [];
+      const images =
+        data.order.items
+          ?.map((item) => item.itemImage)
+          .filter((img): img is string => Boolean(img))
+          .slice(0, 4) || [];
       addRecentItem({
         id: data.order.orderId,
         type: "order",
@@ -99,8 +99,7 @@ function RouteComponent() {
       return await editOrder(values, cascadeOptions);
     },
     // TODO: add optimistic update
-    onSuccess: () => {
-    },
+    onSuccess: () => {},
     onError: (error) => {
       toast.error("Failed to update order. Please try again.", {
         description: `Error: ${error.message}`,
@@ -124,8 +123,7 @@ function RouteComponent() {
       return await updateCollectionItem(values);
     },
     // TODO: add optimistic update
-    onSuccess: () => {
-    },
+    onSuccess: () => {},
     onError: (error) => {
       toast.error("Failed to update item. Please try again.", {
         description: `Error: ${error.message}`,
@@ -155,8 +153,7 @@ function RouteComponent() {
       return await deleteOrderItem(orderId, collectionId);
     },
     // TODO: add optimistic update
-    onSuccess: () => {
-    },
+    onSuccess: () => {},
     onError: (error) => {
       toast.error("Failed to delete item. Please try again.", {
         description: `Error: ${error.message}`,
@@ -191,7 +188,7 @@ function RouteComponent() {
   };
 
   if (isPending) {
-    return <OrderDetailSkeleton />;
+    return <Loader />;
   }
 
   if (isError) {
@@ -224,13 +221,11 @@ function RouteComponent() {
   const miscFees = parseFloat(order.miscFees || "0");
   const totalAmount = parseFloat(order.total);
 
-
-
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6 min-h-full">
       {/* Header Section */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-x-4">
+        <div className="flex items-center gap-4">
           <Button asChild variant="ghost">
             <Link to="/orders">
               <ArrowLeft className="size-4" />
@@ -268,9 +263,9 @@ function RouteComponent() {
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {/* Order Information */}
-        <Card>
+        <Card className="shadow-none">
           <CardHeader className="flex flex-row items-center gap-2 pb-2">
             <div className="flex items-center gap-x-2">
               <Package className="size-4 text-muted-foreground" />
@@ -328,7 +323,7 @@ function RouteComponent() {
         </Card>
 
         {/* Timeline */}
-        <Card>
+        <Card className="shadow-none">
           <CardHeader className="flex flex-row items-center gap-2 pb-2">
             <div className="flex items-center gap-x-2">
               <Calendar className="size-4 text-muted-foreground" />
@@ -366,7 +361,7 @@ function RouteComponent() {
         </Card>
 
         {/* Financial Summary */}
-        <Card>
+        <Card className="shadow-none">
           <CardHeader className="flex flex-row items-center gap-2 pb-2">
             <div className="flex items-center gap-x-2">
               <CreditCard className="size-4 text-muted-foreground" />
@@ -442,7 +437,7 @@ function RouteComponent() {
       )}
 
       {/* Order Items */}
-      <Card>
+      <Card className="shadow-none flex-1">
         <CardHeader className="flex flex-row items-center gap-2 pb-2">
           <div className="flex items-center gap-x-2">
             <Users className="size-4 text-muted-foreground" />

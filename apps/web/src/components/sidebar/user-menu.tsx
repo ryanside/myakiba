@@ -13,14 +13,12 @@ import { Skeleton } from "../ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { LogOut, Settings, User } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { ModeToggle } from "../mode-toggle";
+import { type RouterAppContext } from "@/routes/__root";
 
-export default function UserMenu() {
+export default function UserMenu({ session }: { session: RouterAppContext["session"] }) {
   const navigate = useNavigate();
-  const { data: session, isPending } = authClient.useSession();
   const queryClient = useQueryClient();
-  if (isPending) {
-    return <Skeleton className="h-8 w-8 rounded-full" />;
-  }
 
   if (!session) {
     navigate({
@@ -58,6 +56,8 @@ export default function UserMenu() {
           {session.user.username}
         </div>
         <DropdownMenuSeparator />
+        <ModeToggle className="mb-1"/>
+
         <DropdownMenuItem
           onClick={() => {
             navigate({

@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { ArrowRightIcon, BookOpen } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ArrowRightIcon } from "lucide-react";
 
 
 export default function HeroSection({ heroImage, heroBackgroundImage }: { heroImage: string, heroBackgroundImage: string }) {
@@ -9,8 +8,8 @@ export default function HeroSection({ heroImage, heroBackgroundImage }: { heroIm
   return (
     <section className="py-20" id="hero">
       <div className="relative z-10 mx-auto w-full max-w-7xl px-6 xl:px-0">
-        <div className="relative mt-8">
-          <div className="flex w-fit items-center justify-center gap-2">
+        <div className="flex flex-col items-start justify-center relative mt-14">
+          <div className="flex w-fit items-start justify-center gap-2">
             <div className="flex relative items-center bg-sidebar hover:bg-background transition-all duration-150 border border-foreground/10 gap-2 rounded-3xl p-1 px-2 text-xs shadow-xs">
               <span className="font-medium text-foreground">
                 v0.1.0 early build out now
@@ -21,7 +20,7 @@ export default function HeroSection({ heroImage, heroBackgroundImage }: { heroIm
             Built to provide a better collecting experience.
           </h1>
 
-          <p className="text-muted-foreground mb-6 mt-2 text-balance text-lg max-w-2xl">
+          <p className="text-muted-foreground mb-6 mt-2 text-start text-lg max-w-2xl">
             the community-powered catalog from{" "}
             <span className="text-foreground">MyFigureCollection</span> and the{" "}
             <span className="text-foreground">flexibility of spreadsheets</span>
@@ -41,7 +40,7 @@ export default function HeroSection({ heroImage, heroBackgroundImage }: { heroIm
           </div>
         </div>
 
-        <div className="relative mt-12 overflow-hidden rounded-sm bg-black/10 md:mt-16 aspect-video">
+        <div className="flex flex-col items-center justify-center relative mt-12 overflow-hidden rounded-sm bg-black/10 md:mt-16 aspect-video">
           <img
             src={heroBackgroundImage}
             alt="hero background image"
@@ -50,7 +49,7 @@ export default function HeroSection({ heroImage, heroBackgroundImage }: { heroIm
             fetchPriority="high"
           />
 
-          <div className="bg-background rounded-lg relative m-4 overflow-hidden shadow-xl shadow-black/15 ring-1 ring-black/10 sm:m-8 md:m-12">
+          <div className="bg-background relative rounded-lg overflow-hidden shadow-xl shadow-black/15 lg:mx-32">
             <img
               src={heroImage}
               alt="app screen"
@@ -64,17 +63,3 @@ export default function HeroSection({ heroImage, heroBackgroundImage }: { heroIm
     </section>
   );
 }
-
-const MistKitLogo = ({ className }: { className?: string }) => (
-  <div
-    aria-hidden
-    className={cn(
-      "border-background bg-linear-to-b rounded-(--radius) relative flex size-9 translate-y-0.5 items-center justify-center border from-yellow-300 to-orange-600 shadow-lg shadow-black/20 ring-1 ring-black/10",
-      className
-    )}
-  >
-    <BookOpen className="mask-b-from-25% size-6 fill-white stroke-white drop-shadow-sm" />
-    <BookOpen className="absolute inset-0 m-auto size-6 fill-white stroke-white opacity-65 drop-shadow-sm" />
-    <div className="z-1 h-4.5 absolute inset-2 m-auto w-px translate-y-px rounded-full bg-black/10"></div>
-  </div>
-);

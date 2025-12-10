@@ -45,7 +45,6 @@ import type { CascadeOptions } from "@/lib/orders/types";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import type { SyncFormOrder, SyncFormOrderItem } from "@/lib/sync/types";
 import { Textarea } from "../ui/textarea";
-import { authClient } from "@/lib/auth-client";
 import { getCurrencyLocale } from "@/lib/utils";
 import {
   Tooltip,
@@ -57,13 +56,14 @@ import { extractMfcItemId } from "@/lib/sync/utils";
 export default function SyncOrderForm({
   setCurrentStep,
   handleSyncOrderSubmit,
+  currency,
 }: {
   setCurrentStep: (step: number) => void;
   handleSyncOrderSubmit: (values: SyncFormOrder) => void;
+  currency?: string;
 }) {
   const navigate = useNavigate();
-  const { data: session } = authClient.useSession();
-  const userCurrency = session?.user?.currency || "USD";
+  const userCurrency = currency || "USD";
   const userLocale = getCurrencyLocale(userCurrency);
 
   const {

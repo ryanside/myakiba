@@ -27,20 +27,20 @@ import { DatePicker } from "../ui/date-picker";
 import * as z from "zod";
 import { Rating } from "../ui/rating";
 import { Textarea } from "../ui/textarea";
-import { authClient } from "@/lib/auth-client";
 import { getCurrencyLocale } from "@/lib/utils";
 import { extractMfcItemId } from "@/lib/sync/utils";
 
 export default function SyncCollectionForm({
   setCurrentStep,
   handleSyncCollectionSubmit,
+  currency,
 }: {
   setCurrentStep: (step: number) => void;
   handleSyncCollectionSubmit: (values: SyncFormCollectionItem[]) => void;
+  currency?: string;
 }) {
   const navigate = useNavigate();
-  const { data: session } = authClient.useSession();
-  const userCurrency = session?.user?.currency || "USD";
+  const userCurrency = currency || "USD";
   const userLocale = getCurrencyLocale(userCurrency);
 
   const collectionForm = useForm({

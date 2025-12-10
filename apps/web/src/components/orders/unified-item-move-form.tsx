@@ -31,7 +31,6 @@ import {
 import { ChevronDown, Loader2, ChevronsUpDownIcon, CheckIcon } from "lucide-react";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import { Textarea } from "../ui/textarea";
-import { authClient } from "@/lib/auth-client";
 import { getCurrencyLocale, cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useState } from "react";
@@ -69,6 +68,7 @@ type UnifiedItemMoveFormProps = {
     orderIds: Set<string>
   ) => Promise<void>;
   clearSelections: () => void;
+  currency?: string;
 };
 
 export default function UnifiedItemMoveForm({
@@ -76,11 +76,11 @@ export default function UnifiedItemMoveForm({
   onMoveToExisting,
   onMoveToNew,
   clearSelections,
+  currency,
 }: UnifiedItemMoveFormProps) {
   const [moveMode, setMoveMode] = useState<"existing" | "new">("existing");
 
-  const { data: session } = authClient.useSession();
-  const userCurrency = session?.user?.currency || "USD";
+  const userCurrency = currency || "USD";
   const userLocale = getCurrencyLocale(userCurrency);
 
   const {

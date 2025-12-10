@@ -21,7 +21,6 @@ import {
   createOptimisticDeleteUpdate,
   createOptimisticEditUpdate,
 } from "@/lib/collection/utils";
-import { authClient } from "@/lib/auth-client";
 import { useCallback } from "react";
 import { KPICard } from "@/components/ui/kpi-card";
 import { formatCurrency } from "@/lib/utils";
@@ -50,7 +49,7 @@ export const Route = createFileRoute("/(app)/collection")({
 });
 
 function RouteComponent() {
-  const { data: session } = authClient.useSession();
+  const { session } = Route.useRouteContext();
   const userCurrency = session?.user.currency || "USD";
   const queryClient = useQueryClient();
   const { filters, setFilters, resetFilters } = useFilters(Route.id);

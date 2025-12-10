@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { getAnalytics } from "@/queries/analytics";
-import { authClient } from "@/lib/auth-client";
 import { AnalyticsSkeleton } from "@/components/analytics/analytics-skeleton";
 import { RankingCard } from "@/components/analytics/ranking-card";
 import { DistributionCard } from "@/components/analytics/distribution-card";
@@ -42,7 +41,7 @@ export const Route = createFileRoute("/(app)/analytics")({
 });
 
 function RouteComponent(): React.ReactNode {
-  const { data: session } = authClient.useSession();
+  const { session } = Route.useRouteContext();
   const userCurrency = session?.user.currency || "USD";
   const { isPending, isError, data, error } = useQuery({
     queryKey: ["analytics"],

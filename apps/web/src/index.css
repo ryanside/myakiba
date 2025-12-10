@@ -70,7 +70,6 @@
   --shadow-xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 8px 10px -1px hsl(0 0% 0% / 0.05);
   --shadow-2xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.13);
   --spacing: 0.25rem;
-  --font-weight-medium: 450;
 
   --category-accessories: #808080;
   --category-action-dolls: #0080ff;
@@ -90,6 +89,11 @@
   --category-music: #3d9395;
   --category-video: #0297D7;
   --category-games: #EE2A84;
+
+  --scrollbar-track: #e9e5eb;
+  --scrollbar-thumb: #d0cad1;
+  --scrollbar-thumb-hover: #c0b8c1;
+  --scrollbar-thumb-active: #b0a6b1;
 }
 
 .dark {
@@ -144,7 +148,6 @@
   --shadow-lg: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 4px 6px -1px hsl(0 0% 0% / 0.05);
   --shadow-xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 8px 10px -1px hsl(0 0% 0% / 0.05);
   --shadow-2xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.13);
-  --font-weight-medium: 450;
 
   --category-accessories: #808080;
   --category-action-dolls: #0080ff;
@@ -164,6 +167,11 @@
   --category-music: #3d9395;
   --category-video: #0297D7;
   --category-games: #EE2A84;
+
+  --scrollbar-track: #121212;
+  --scrollbar-thumb: #333333;
+  --scrollbar-thumb-hover: #444444;
+  --scrollbar-thumb-active: #555555;
 }
 
 @theme inline {
@@ -226,8 +234,6 @@
   --tracking-wider: calc(var(--tracking-normal) + 0.05em);
   --tracking-widest: calc(var(--tracking-normal) + 0.1em);
 
-  --font-weight-medium: var(--font-weight-medium);
-
   --category-accessories: var(--category-accessories);
   --category-action-dolls: var(--category-action-dolls);
   --category-prepainted: var(--category-prepainted);
@@ -258,12 +264,14 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
 * {
   scrollbar-width: auto;
-  scrollbar-color: #333333 #121212;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 *::-webkit-scrollbar {
@@ -272,26 +280,26 @@ body {
 }
 
 *::-webkit-scrollbar-track {
-  background: #121212;
+  background: var(--scrollbar-track);
   border-radius: 0.5rem;
 }
 
 *::-webkit-scrollbar-thumb {
-  background: #333333;
+  background: var(--scrollbar-thumb);
   border-radius: 0.5rem;
-  border: 2px solid #121212;
+  border: 2px solid var(--scrollbar-track);
   transition: background 0.2s ease;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: #444444;
+  background: var(--scrollbar-thumb-hover);
 }
 
 *::-webkit-scrollbar-thumb:active {
-  background: #555555;
+  background: var(--scrollbar-thumb-active);
 }
 
 *::-webkit-scrollbar-corner {
-  background: #121212;
+  background: var(--scrollbar-track);
 }
 
