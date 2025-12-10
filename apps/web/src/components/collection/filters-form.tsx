@@ -47,7 +47,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { authClient } from "@/lib/auth-client";
 import { getCurrencyLocale } from "@/lib/utils";
 import {
   SHIPPING_METHODS,
@@ -59,14 +58,15 @@ import {
 interface FiltersFormProps {
   currentFilters?: CollectionFilters;
   onApplyFilters: (filters: CollectionFilters) => void;
+  currency?: string;
 }
 
 export default function FiltersForm({
   currentFilters,
   onApplyFilters,
+  currency,
 }: FiltersFormProps) {
-  const { data: session } = authClient.useSession();
-  const userCurrency = session?.user?.currency || "USD";
+  const userCurrency = currency || "USD";
   const userLocale = getCurrencyLocale(userCurrency);
 
   const form = useForm({

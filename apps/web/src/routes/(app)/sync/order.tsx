@@ -57,6 +57,8 @@ export const Route = createFileRoute("/(app)/sync/order")({
 function RouteComponent() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { session } = Route.useRouteContext();
+  const userCurrency = session?.user.currency || "USD";
   const [currentStep, setCurrentStep] = useState(2);
   const [jobId, setJobId] = useState<string | null>(null);
   const [status, setStatus] = useState<status>({
@@ -185,6 +187,7 @@ function RouteComponent() {
             <SyncOrderForm
               setCurrentStep={setCurrentStep}
               handleSyncOrderSubmit={handleSyncOrderSubmit}
+              currency={userCurrency}
             />
           </StepperContent>
           <StepperContent

@@ -7,8 +7,11 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import "../index.css";
+import { authClient } from "@/lib/auth-client";
 
-export interface RouterAppContext {} // eslint-disable-line @typescript-eslint/no-empty-object-type
+export interface RouterAppContext {
+  session: Awaited<ReturnType<typeof authClient.getSession>>["data"];
+}
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
   component: RootComponent,

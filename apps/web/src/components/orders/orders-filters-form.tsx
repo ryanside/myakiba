@@ -28,21 +28,21 @@ import {
 import { ChevronDown } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { OrderFilters } from "@/lib/orders/types";
-import { authClient } from "@/lib/auth-client";
 import { getCurrencyLocale } from "@/lib/utils";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/constants";
 
 interface OrdersFiltersFormProps {
   currentFilters?: OrderFilters;
   onApplyFilters: (filters: OrderFilters) => void;
+  currency?: string;
 }
 
 export default function OrdersFiltersForm({
   currentFilters,
   onApplyFilters,
+  currency,
 }: OrdersFiltersFormProps) {
-  const { data: session } = authClient.useSession();
-  const userCurrency = session?.user?.currency || "USD";
+  const userCurrency = currency || "USD";
   const userLocale = getCurrencyLocale(userCurrency);
 
   const form = useForm({

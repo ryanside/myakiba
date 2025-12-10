@@ -13,7 +13,6 @@ import {
   Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ItemDetailSkeleton } from "@/components/items/item-detail-skeleton";
 import {
   Accordion,
   AccordionContent,
@@ -45,7 +44,7 @@ import {
 } from "@/queries/collection";
 import { toast } from "sonner";
 import type { ItemRelatedCollection } from "@/lib/items/types";
-import { authClient } from "@/lib/auth-client";
+import Loader from "@/components/loader";
 
 export const Route = createFileRoute("/(app)/items_/$id")({
   component: RouteComponent,
@@ -103,7 +102,7 @@ async function getItemRelatedCollection(itemId: string) {
 }
 
 function RouteComponent() {
-  const { data: session } = authClient.useSession();
+  const { session } = Route.useRouteContext();
   const userCurrency = session?.user.currency || "USD";
   const queryClient = useQueryClient();
   const { id } = useParams({ from: "/(app)/items_/$id" });
@@ -287,7 +286,7 @@ function RouteComponent() {
   }, [data?.item]);
 
   if (isPending) {
-    return <ItemDetailSkeleton />;
+    return <Loader />;
   }
 
   if (isError) {
@@ -313,13 +312,13 @@ function RouteComponent() {
 
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col h-full">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1">
-        <Card className="lg:col-span-2 border-none bg-background rounded-none">
+        <Card className="lg:col-span-2 border-none bg-background rounded-none shadow-none">
           <CardContent className="space-y-6">
             <div className="flex flex-col md:flex-row gap-6">
               {item.image && (
-                <div className="flex-shrink-0">
+                <div className="">
                   <img
                     src={item.image}
                     alt={item.title}
@@ -451,8 +450,8 @@ function RouteComponent() {
           </CardContent>
         </Card>
 
-        <Card className="flex flex-col">
-          <CardHeader className="flex-shrink-0">
+        <Card className="flex flex-col shadow-none">
+          <CardHeader className="">
             <CardTitle>Personal</CardTitle>
           </CardHeader>
           <CardContent className="flex-1 px-4 overflow-y-auto">
@@ -487,7 +486,7 @@ function RouteComponent() {
             ) : (
               <div className="space-y-4">
                 {collectionItems.map((collectionItem) => (
-                  <Card key={collectionItem.id}>
+                  <Card key={collectionItem.id} className="shadow-none bg-background">
                     <CardHeader>
                       <div className="flex items-center gap-2">
                         <Badge variant="primary">{collectionItem.status}</Badge>

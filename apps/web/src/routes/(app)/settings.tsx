@@ -35,7 +35,6 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2, Trash2 } from "lucide-react";
 import * as z from "zod";
-import type { User } from "better-auth";
 import { MaskInput } from "@/components/ui/mask-input";
 import { getCurrencyLocale } from "@/lib/utils";
 import { client } from "@/lib/hono-client";
@@ -48,6 +47,19 @@ interface Budget {
   createdAt: string;
   updatedAt: string;
 }
+
+type User = {
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  email: string;
+  emailVerified: boolean;
+  name: string;
+  image?: string | null | undefined;
+  username?: string | null | undefined;
+  displayUsername?: string | null | undefined;
+  currency: string | null | undefined;
+};
 
 export const Route = createFileRoute("/(app)/settings")({
   component: RouteComponent,
@@ -73,7 +85,7 @@ export const Route = createFileRoute("/(app)/settings")({
 
 function RouteComponent() {
   const navigate = useNavigate();
-  const { data: session, isPending } = authClient.useSession();
+  const { session } = Route.useRouteContext();
 
   const { data: budgetData, isPending: isBudgetPending } = useQuery({
     queryKey: ["settings"],
@@ -88,7 +100,7 @@ function RouteComponent() {
     retry: false,
   });
 
-  if (isPending || !session || isBudgetPending) {
+  if (isBudgetPending) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="animate-spin" />
@@ -201,7 +213,7 @@ function BudgetForm({ user, budget }: { user: User; budget: Budget | null }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Budget</CardTitle>
+        <CardTitle className="font-medium">Budget</CardTitle>
         <CardDescription>Set your budget limit</CardDescription>
       </CardHeader>
       <CardContent>
@@ -221,8 +233,8 @@ function BudgetForm({ user, budget }: { user: User; budget: Budget | null }) {
                   id={field.name}
                   name={field.name}
                   mask="currency"
-                  currency={user.currency}
-                  locale={getCurrencyLocale(user.currency)}
+                  currency={user.currency ?? "USD"}
+                  locale={getCurrencyLocale(user.currency ?? "USD")}
                   value={field.state.value}
                   onValueChange={(_, unmaskedValue) =>
                     field.handleChange(unmaskedValue)
@@ -332,7 +344,7 @@ function ProfileForm({ user }: { user: User }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Profile Information</CardTitle>
+        <CardTitle className="font-medium">Profile Information</CardTitle>
         <CardDescription>
           Update your profile information and display name
         </CardDescription>
@@ -464,7 +476,7 @@ function PasswordForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Change Password</CardTitle>
+        <CardTitle className="font-medium">Change Password</CardTitle>
         <CardDescription>
           Update your password to keep your account secure
         </CardDescription>
@@ -605,7 +617,7 @@ function PreferencesForm({ user }: { user: User }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Preferences</CardTitle>
+        <CardTitle className="font-medium">Preferences</CardTitle>
         <CardDescription>
           Customize your application preferences
         </CardDescription>
@@ -711,7 +723,7 @@ function DeleteAccountForm({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Delete Account</CardTitle>
+        <CardTitle className="font-medium">Delete Account</CardTitle>
         <CardDescription>
           Permanently delete your account and remove all your data from our
           servers

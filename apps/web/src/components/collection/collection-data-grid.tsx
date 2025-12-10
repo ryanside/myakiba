@@ -558,6 +558,7 @@ export const CollectionDataGrid = ({
                   <CollectionItemForm
                     itemData={item}
                     callbackFn={onEditCollectionItem}
+                    currency={currency}
                   />
                 </Dialog>
                 <DropdownMenuSeparator />
@@ -673,6 +674,7 @@ export const CollectionDataGrid = ({
             onApplyFilters={(newFilters) =>
               onFilterChange({ ...filters, ...newFilters, offset: 0 })
             }
+            currency={currency}
           />
         </Dialog>
         <DataGridSortCombobox

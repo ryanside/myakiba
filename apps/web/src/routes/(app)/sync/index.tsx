@@ -53,7 +53,7 @@ export const Route = createFileRoute("/(app)/sync/")({
 
 function RouteComponent() {
   const navigate = useNavigate();
-  const { data: session } = authClient.useSession();
+  const { session } = Route.useRouteContext();
   const [verificationEmailSent, setVerificationEmailSent] = useState(false);
 
   function handleSyncOption(option: "csv" | "order" | "collection") {

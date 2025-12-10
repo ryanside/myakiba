@@ -29,19 +29,18 @@ import { Rating } from "../ui/rating";
 import { Field, FieldContent, FieldTitle } from "@/components/ui/field";
 import { Badge } from "../ui/badge";
 import { X } from "lucide-react";
-import { authClient } from "@/lib/auth-client";
 import { getCurrencyLocale } from "@/lib/utils";
 
 type CollectionItemFormProps = {
   itemData: CollectionItemFormValues;
   callbackFn: (itemData: CollectionItemFormValues) => void;
+  currency?: string;
 };
 
 export default function CollectionItemForm(props: CollectionItemFormProps) {
-  const { itemData, callbackFn } = props;
+  const { itemData, callbackFn, currency } = props;
 
-  const { data: session } = authClient.useSession();
-  const userCurrency = session?.user?.currency || "USD";
+  const userCurrency = currency || "USD";
   const userLocale = getCurrencyLocale(userCurrency);
 
   const form = useForm({

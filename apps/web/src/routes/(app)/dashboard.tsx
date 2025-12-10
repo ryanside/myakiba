@@ -54,7 +54,7 @@ function RouteComponent() {
 
 function DashboardContent() {
   const navigate = useNavigate();
-  const { data: session } = authClient.useSession();
+  const { session } = Route.useRouteContext();
   const userCurrency = session?.user.currency || "USD";
 
   async function getDashboard() {
