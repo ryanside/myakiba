@@ -6,30 +6,12 @@ export function formatCurrency(
   currency: string = "USD"
 ): string {
   const amount = parseFloat(String(value || 0));
-
-  switch (currency) {
-    case "JPY":
-      return new Intl.NumberFormat("ja-JP", {
-        style: "currency",
-        currency: currency,
-      }).format(amount);
-    case "EUR":
-      return new Intl.NumberFormat("de-DE", {
-        style: "currency",
-        currency: currency,
-      }).format(amount);
-    case "CNY":
-      return new Intl.NumberFormat("zh-CN", {
-        style: "currency",
-        currency: currency,
-      }).format(amount);
-    case "USD":
-    default:
-      return new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: currency,
-      }).format(amount);
-  }
+  const locale = getCurrencyLocale(currency);
+  
+  return new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency: currency,
+    }).format(amount);
 }
 
 /**

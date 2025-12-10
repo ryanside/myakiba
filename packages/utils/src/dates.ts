@@ -41,13 +41,18 @@ export const normalizeDateString = (dateStr: string): string => {
   try {
     const date = new Date(trimmed);
     if (isNaN(date.getTime())) {
-      throw new Error("Invalid date");
+      console.error(
+        `Invalid date format: expected YYYY-MM-DD, got "${dateStr}"`
+      );
+      return "Invalid date";
     }
     return date.toISOString().split("T")[0]!; // Return YYYY-MM-DD format
   } catch {
     // If all else fails, return a default date or throw an error
-    console.warn(`Unable to parse date: "${dateStr}". Using fallback date.`);
-    return "1970-01-01"; // Fallback date
+    console.error(
+      `Invalid date format: expected YYYY-MM-DD, got "${dateStr}"`
+    );
+    return "Invalid date";
   }
 };
 
@@ -57,6 +62,12 @@ export const normalizeDateString = (dateStr: string): string => {
  */
 export function formatDate(dateString: string | null): string {
   if (!dateString) return "n/a";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    console.error(
+      `Invalid date format: expected YYYY-MM-DD, got "${dateString}"`
+    );
+    return "Invalid date";
+  }
   try {
     // Parse date as local date to avoid timezone issues
     // When "2026-04-01" is parsed as new Date(), it's treated as UTC midnight
@@ -65,7 +76,8 @@ export function formatDate(dateString: string | null): string {
     const date = new Date(year!, month! - 1, day);
     return date.toLocaleDateString();
   } catch {
-    return "Invalid Date";
+    console.error(`Failed to parse date: "${dateString}"`);
+    return "Invalid date";
   }
 }
 
@@ -76,4 +88,3 @@ export function parseLocalDate(dateString: string): Date {
   const [year, month, day] = dateString.split("-").map(Number);
   return new Date(year!, month! - 1, day);
 }
-
