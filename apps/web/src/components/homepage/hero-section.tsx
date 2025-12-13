@@ -1,32 +1,39 @@
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { ArrowRightIcon } from "lucide-react";
+import { TextLoop } from "./text-loop";
 
-
-export default function HeroSection({ heroImage, heroBackgroundImage }: { heroImage: string, heroBackgroundImage: string }) {
-
+export default function HeroSection({
+  heroImage,
+  heroBackgroundImage,
+}: {
+  heroImage: string;
+  heroBackgroundImage: string;
+}) {
   return (
     <section className="py-20" id="hero">
       <div className="relative z-10 mx-auto w-full max-w-7xl px-6 xl:px-0">
-        <div className="flex flex-col items-start justify-center relative mt-14">
-          <div className="flex w-fit items-start justify-center gap-2">
-            <div className="flex relative items-center bg-sidebar hover:bg-background transition-all duration-150 border border-foreground/10 gap-2 rounded-3xl p-1 px-2 text-xs shadow-xs">
-              <span className="font-medium text-foreground">
-                v0.1.0 early build out now
-              </span>
-            </div>
+        <div className="flex flex-col items-start justify-center relative w-full max-w-3xl my-18">
+          <div className="flex relative text-sm items-start bg-background">
+            <TextLoop
+              preText="An alternative to"
+              texts={[
+                "MyFigureCollection's Manager",
+                "DIY Spreadsheets",
+              ]}
+            />
           </div>
-          <h1 className="mt-4 max-w-xl text-balance text-black dark:text-white text-2xl font-medium">
+          <h1 className="mt-4 max-w-xl tracking-tight text-balance text-black dark:text-white text-2xl font-medium">
             Built to provide a better collecting experience.
           </h1>
 
-          <p className="text-muted-foreground mb-6 mt-2 text-start text-lg max-w-2xl">
-            the community-powered catalog from{" "}
+          <p className="text-muted-foreground tracking-tight text-balance mb-6 mt-2 text-start text-lg max-w-2xl">
+            The community-powered catalog from{" "}
             <span className="text-foreground">MyFigureCollection</span> and the{" "}
             <span className="text-foreground">flexibility of spreadsheets</span>
-            , unified into one powerful{" "}
+            , unified into{" "}
             <span className="dark:text-primary text-secondary">
-              collection management tool
+              a modern collection manager
             </span>
             .
           </p>
@@ -34,13 +41,13 @@ export default function HeroSection({ heroImage, heroBackgroundImage }: { heroIm
           <div className="flex flex-row items-center gap-2 sm:flex-row sm:*:w-auto">
             <Button asChild variant="mono" className="p-6 rounded-full">
               <Link to="/login">
-                Get Started <ArrowRightIcon className="w-4 h-4" />
+                Try it out now <ArrowRightIcon className="w-4 h-4" />
               </Link>
             </Button>
           </div>
         </div>
 
-        <div className="flex flex-col items-center justify-center relative mt-12 overflow-hidden rounded-sm bg-black/10 md:mt-16 aspect-video">
+        <div className="flex flex-col items-center justify-center relative overflow-hidden rounded-sm bg-black/10 aspect-video">
           <img
             src={heroBackgroundImage}
             alt="hero background image"
@@ -49,7 +56,7 @@ export default function HeroSection({ heroImage, heroBackgroundImage }: { heroIm
             fetchPriority="high"
           />
 
-          <div className="bg-background relative rounded-lg overflow-hidden shadow-xl shadow-black/15 lg:mx-32">
+          <div className="bg-transparent relative border-black/20 border rounded-md shadow-sm overflow-hidden shadow-black/15 mx-8 md:mx-16 lg:mx-32">
             <img
               src={heroImage}
               alt="app screen"

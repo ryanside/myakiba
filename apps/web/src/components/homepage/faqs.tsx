@@ -54,7 +54,7 @@ export default function FAQs() {
       <div className="mx-auto max-w-7xl px-6">
         <div className="grid gap-8 md:grid-cols-5 md:gap-12">
           <div className="md:col-span-2">
-            <h2 className="text-black dark:text-white text-4xl font-medium">
+            <h2 className="text-black dark:text-white tracking-tight text-4xl font-medium">
               FAQs
             </h2>
             <p className="text-muted-foreground mt-4 text-balance text-lg">
