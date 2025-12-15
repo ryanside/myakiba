@@ -4,12 +4,16 @@ import { routeTree } from "./routeTree.gen";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import type { RouterAppContext } from "./routes/__root";
 
 const queryClient = new QueryClient();
 
 const router = createRouter({
   routeTree,
   defaultPreload: false,
+  context: {
+    session: null,
+  } satisfies RouterAppContext,
   defaultPendingComponent: () => (
     <div className="flex min-h-dvh items-center justify-center pt-8">
       <Loader2 className="animate-spin" />

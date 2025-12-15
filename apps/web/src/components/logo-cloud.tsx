@@ -3,7 +3,7 @@ import { ProgressiveBlur } from "@/components/ui/progressive-blur";
 
 export default function LogoCloud({ images }: { images: string[] }) {
   return (
-    <section className="bg-background overflow-hidden py-8">
+    <section className="bg-background overflow-hidden py-8 px-6 xl:px-0">
       <div className="group relative m-auto max-w-7xl">
         <div className="flex flex-col items-center md:flex-row">
           <div className="md:max-w-44 md:border-r md:pr-6">

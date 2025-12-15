@@ -77,10 +77,10 @@ function FeatureInfo({
       )}
     >
       <div className="flex flex-col">
-        <h2 className="md:text-xl text-base text-black dark:text-white">
+        <h2 className="md:text-xl text-base tracking-tight font-medium text-black dark:text-white">
           {title}
         </h2>
-        <p className="text-muted-foreground md:text-lg text-sm max-w-sm">
+        <p className="text-muted-foreground tracking-tight md:text-lg text-sm max-w-sm">
           {description}
         </p>
       </div>
@@ -109,7 +109,7 @@ function FeatureImage({
         className="absolute inset-0 size-full object-cover opacity-100"
         loading="lazy"
       />
-      <div className="bg-background rounded-lg relative m-4 sm:m-8 md:m-12 overflow-hidden shadow-xl shadow-black/15 ring-1 ring-black/10 ">
+      <div className="bg-transparent border-black/20 border rounded-lg relative m-4 sm:m-8 md:m-12 overflow-hidden shadow-sm shadow-black/15 ring-1 ring-black/10 ">
         <img
           src={featureImage}
           alt="app screen"

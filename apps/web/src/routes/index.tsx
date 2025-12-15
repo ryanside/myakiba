@@ -56,7 +56,7 @@ function HomeComponent() {
     <>
       <HeroHeader />
       <HeroSection
-        heroImage={theme === "dark" ? DashboardDarkImage : DashboardLightImage}
+        heroImage={theme !== "light" ? DashboardDarkImage : DashboardLightImage}
         heroBackgroundImage={HeroBackgroundImage}
       />
       <LogoCloud
@@ -75,32 +75,32 @@ function HomeComponent() {
           imageOrientation="right"
           backgroundImage={FeatureBackground1}
           featureImage={
-            theme === "dark" ? AnalyticsDarkImage : AnalyticsLightImage
+            theme !== "light" ? AnalyticsDarkImage : AnalyticsLightImage
           }
           title="Analytics of your collection"
           description="Get insights into your collection with detailed analytics."
           link="/login"
-          linkText="Get started"
+          linkText="View your analytics"
         />
         <Feature
           imageOrientation="left"
           backgroundImage={FeatureBackground2}
-          featureImage={theme === "dark" ? OrdersDarkImage : OrdersLightImage}
-          title="Manage your orders"
+          featureImage={theme !== "light" ? OrdersDarkImage : OrdersLightImage}
+          title="Track your orders"
           description="Manage pre-orders, track shipments, and monitor order status."
           link="/login"
-          linkText="Get started"
+          linkText="Start tracking"
         />
         <Feature
           imageOrientation="right"
           backgroundImage={FeatureBackground3}
           featureImage={
-            theme === "dark" ? CollectionDarkImage : CollectionLightImage
+            theme !== "light" ? CollectionDarkImage : CollectionLightImage
           }
           title="Manage your collection"
           description="Track your collection with item information from MyFigureCollection."
           link="/login"
-          linkText="Get started"
+          linkText="Import your collection"
         />
       </section>
       <FAQs />

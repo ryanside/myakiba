@@ -134,10 +134,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <SidebarMenuButton
                 asChild
                 tooltip="Add MFC items"
-                className="from-primary to-primary/85 text-primary-foreground border border-zinc-950/25 bg-gradient-to-t shadow-md shadow-zinc-950/20 ring-1 ring-inset ring-white/20 transition-[filter] duration-200 hover:brightness-110 active:brightness-90 dark:border-white/20 dark:ring-transparent"
+                className="text-black hover:text-black from-primary to-primary/85 border border-zinc-950/25 bg-gradient-to-t shadow-md shadow-zinc-950/20 ring-1 ring-inset ring-white/20 transition-[filter] duration-200 hover:brightness-110 active:brightness-90 dark:border-white/20 dark:ring-transparent"
               >
                 <Link to="/sync">
-                  <PlusIcon size={17} className="text-black" />
+                  <PlusIcon size={17} className="" />
                   <span className="">Add MFC items</span>
                 </Link>
               </SidebarMenuButton>
