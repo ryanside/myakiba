@@ -15,28 +15,32 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Scroller } from "./scroller";
 
 export type SortableColumn = {
   id: string;
   label: string;
 };
 
-interface OrdersSortComboboxProps {
+interface SortComboboxProps {
   columns: SortableColumn[];
   currentSort?: {
     columnId: string;
     direction: "asc" | "desc";
   } | null;
-  onSortChange: (columnId: string | null, direction: "asc" | "desc" | null) => void;
+  onSortChange: (
+    columnId: string | null,
+    direction: "asc" | "desc" | null
+  ) => void;
   trigger?: ReactNode;
 }
 
-export function OrdersSortCombobox({
+export function SortCombobox({
   columns,
   currentSort,
   onSortChange,
   trigger,
-}: OrdersSortComboboxProps): React.ReactElement {
+}: SortComboboxProps): React.ReactElement {
   const [open, setOpen] = useState(false);
 
   const handleSort = (columnId: string | null): void => {
@@ -85,7 +89,8 @@ export function OrdersSortCombobox({
   };
 
   const currentColumnName = currentSort
-    ? columns.find((col) => col.id === currentSort.columnId)?.label || currentSort.columnId
+    ? columns.find((col) => col.id === currentSort.columnId)?.label ||
+      currentSort.columnId
     : null;
 
   const defaultTrigger = (
@@ -124,19 +129,21 @@ export function OrdersSortCombobox({
             </CommandGroup>
             <CommandSeparator />
             <CommandGroup>
-              {columns.map((column) => {
-                return (
-                  <CommandItem
-                    key={column.id}
-                    value={column.id}
-                    onSelect={() => handleSort(column.id)}
-                    className="capitalize"
-                  >
-                    {column.label}
-                    {getSortIcon(column.id)}
-                  </CommandItem>
-                );
-              })}
+              <Scroller className="max-h-96">
+                {columns.map((column) => {
+                  return (
+                    <CommandItem
+                      key={column.id}
+                      value={column.id}
+                      onSelect={() => handleSort(column.id)}
+                      className="capitalize"
+                    >
+                      {column.label}
+                      {getSortIcon(column.id)}
+                    </CommandItem>
+                  );
+                })}
+              </Scroller>
             </CommandGroup>
           </CommandList>
         </Command>

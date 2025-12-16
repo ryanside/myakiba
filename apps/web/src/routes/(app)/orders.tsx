@@ -22,6 +22,7 @@ import {
   createOptimisticDeleteUpdate,
   createOptimisticEditItemUpdate,
   createOptimisticDeleteItemUpdate,
+  createOptimisticDeleteItemsUpdate,
   createOptimisticMoveItemUpdate,
 } from "@/lib/orders/utils";
 import {
@@ -31,6 +32,7 @@ import {
   splitOrders,
   deleteOrders,
   deleteOrderItem,
+  deleteOrderItems,
   moveItem,
 } from "@/queries/orders";
 import { searchSchema } from "@/lib/validations";
@@ -344,6 +346,42 @@ function RouteComponent() {
     },
   });
 
+  const deleteItemsMutation = useMutation({
+    mutationFn: (collectionIds: Set<string>) =>
+      deleteOrderItems(collectionIds),
+    onMutate: async (collectionIds) => {
+      await queryClient.cancelQueries({ queryKey: ["orders", filters] });
+      const previousData = queryClient.getQueryData(["orders", filters]);
+      queryClient.setQueryData(
+        ["orders", filters],
+        (old: OrdersQueryResponse) => {
+          return createOptimisticDeleteItemsUpdate(old, collectionIds);
+        }
+      );
+      return { previousData };
+    },
+    onError: (error, _, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(["orders", filters], context.previousData);
+      }
+      toast.error("Failed to delete items. Please try again.", {
+        description: `Error: ${error.message}`,
+      });
+    },
+    onSuccess: () => {
+    },
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["order"] }),
+        queryClient.invalidateQueries({ queryKey: ["collection"] }),
+        queryClient.invalidateQueries({ queryKey: ["item"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
+        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
+      ]);
+    },
+  });
+
   const moveItemMutation = useMutation({
     mutationFn: ({
       targetOrderId,
@@ -448,6 +486,13 @@ function RouteComponent() {
     [deleteItemMutation]
   );
 
+  const handleDeleteItems = useCallback(
+    async (collectionIds: Set<string>, orderIds: Set<string>) => {
+      deleteItemsMutation.mutate(collectionIds);
+    },
+    [deleteItemsMutation]
+  );
+
   const handleMoveItem = useCallback(
     async (
       targetOrderId: string,
@@ -548,6 +593,7 @@ function RouteComponent() {
           onDeleteOrders={handleDeleteOrders}
           onEditItem={handleEditItem}
           onDeleteItem={handleDeleteItem}
+          onDeleteItems={handleDeleteItems}
           onMoveItem={handleMoveItem}
           currency={userCurrency}
         />

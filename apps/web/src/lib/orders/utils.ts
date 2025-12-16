@@ -518,6 +518,52 @@ export function createOptimisticDeleteItemUpdate(
   };
 }
 
+export function createOptimisticDeleteItemsUpdate(
+  old: OrdersQueryResponse,
+  collectionIds: Set<string>
+) {
+  if (!old) return old;
+
+  // Update all orders by removing items that match any of the collectionIds
+  const updatedOrders = old.orders.map((order: Order) => {
+    const remainingItems = order.items.filter(
+      (item: OrderItem) => !collectionIds.has(item.id)
+    );
+
+    if (remainingItems.length === order.items.length) {
+      return order;
+    }
+
+    const remainingItemsPriceTotal = remainingItems.reduce(
+      (sum: number, item: OrderItem) => {
+        return sum + parseFloat(item.price);
+      },
+      0
+    );
+
+    const additionalFees =
+      parseFloat(order.shippingFee) +
+      parseFloat(order.taxes) +
+      parseFloat(order.duties) +
+      parseFloat(order.tariffs) +
+      parseFloat(order.miscFees);
+    const newOrderTotal = remainingItemsPriceTotal + additionalFees;
+
+    return {
+      ...order,
+      items: remainingItems,
+      total: newOrderTotal.toFixed(2),
+      itemCount: remainingItems.length,
+    };
+  });
+
+  return {
+    ...old,
+    orders: updatedOrders,
+    orderStats: old.orderStats,
+  };
+}
+
 export function createOptimisticMoveItemUpdate(
   old: OrdersQueryResponse,
   targetOrderId: string,

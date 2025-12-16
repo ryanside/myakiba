@@ -562,6 +562,24 @@ class OrdersService {
     return {};
   }
 
+  async deleteOrderItems(userId: string, collectionIds: string[]) {
+    const deleted = await db
+      .delete(collection)
+      .where(
+        and(
+          eq(collection.userId, userId),
+          inArray(collection.id, collectionIds),
+          ne(collection.status, "Owned")
+        )
+      ).returning();
+
+    if (!deleted || deleted.length === 0) {
+      throw new Error("ORDER_ITEMS_NOT_FOUND");
+    }
+
+    return {};
+  }
+
   async getOrderIdsAndTitles(userId: string, title?: string) {
     const orderIdsAndTitles = await db
       .select({ id: order.id, title: order.title })

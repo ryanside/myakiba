@@ -91,6 +91,10 @@ interface OrdersDataGridProps {
   onDeleteOrders: (orderIds: Set<string>) => Promise<void>;
   onEditItem: (values: CollectionItemFormValues) => Promise<void>;
   onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
+  onDeleteItems: (
+    collectionIds: Set<string>,
+    orderIds: Set<string>
+  ) => Promise<void>;
   onMoveItem: (
     targetOrderId: string,
     collectionIds: Set<string>,
@@ -115,6 +119,7 @@ export default function OrdersDataGrid({
   onDeleteOrders,
   onEditItem,
   onDeleteItem,
+  onDeleteItems,
   onMoveItem,
   currency = "USD",
 }: OrdersDataGridProps) {
@@ -1049,6 +1054,7 @@ export default function OrdersDataGrid({
           onSplit={onSplit}
           onDeleteOrders={onDeleteOrders}
           onMoveItem={onMoveItem}
+          onDeleteItems={onDeleteItems}
         />
         <DataGridColumnCombobox table={table} />
       </div>
