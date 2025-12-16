@@ -8,6 +8,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+  SheetClose,
+} from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { MaskInput } from "@/components/ui/mask-input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +41,7 @@ import type { CascadeOptions } from "@/lib/orders/types";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import { Textarea } from "../ui/textarea";
 import { getCurrencyLocale } from "@/lib/utils";
+import { Scroller } from "../ui/scroller";
 
 type MergeOrderFormProps = {
   orderIds: Set<string>;
@@ -195,6 +204,467 @@ export function OrderForm(props: OrderFormProps) {
     },
   });
 
+  if (type === "edit-order") {
+    return (
+      <SheetContent side="right" className="w-full sm:max-w-lg h-full">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            form.handleSubmit();
+          }}
+        >
+          <SheetHeader>
+            <SheetTitle>Edit Order</SheetTitle>
+            <SheetDescription>
+              {orderData ? orderData.title : "Edit the selected order."}
+            </SheetDescription>
+          </SheetHeader>
+          <Scroller className="max-h-[70vh] px-2">
+            <div className="grid gap-4 p-2">
+              <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label>Cascade Order Details to Items</Label>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="max-w-66 truncate justify-between  hover:bg-background active:bg-background data-[state=open]:bg-background"
+                  >
+                    {cascadeDisplayText}
+                    <ChevronDown className="h-4 w-4 z-10" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
+                  <div className="flex gap-2 py-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="flex-1 h-8 text-xs"
+                      onClick={handleSelectAll}
+                      type="button"
+                    >
+                      Select All
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="flex-1 h-8 text-xs"
+                      onClick={handleSelectNone}
+                      type="button"
+                    >
+                      Select None
+                    </Button>
+                  </div>
+                  <DropdownMenuSeparator />
+                  {cascadeOptionsList.map((option) => (
+                    <DropdownMenuCheckboxItem
+                      key={option}
+                      onSelect={(e) => {
+                        e.preventDefault();
+                      }}
+                      checked={cascadeOptions.includes(
+                        option as CascadeOptions[number]
+                      )}
+                      onCheckedChange={(checked) =>
+                        handleCascadeOptionChange(
+                          option as CascadeOptions[number],
+                          checked
+                        )
+                      }
+                    >
+                      {option}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            <form.Field
+              name="status"
+              validators={{
+                onChange: z.enum(
+                  ["Ordered", "Paid", "Shipped", "Owned"],
+                  "Status is required"
+                ),
+              }}
+              children={(field) => (
+                <div className="grid gap-2">
+                  <Label htmlFor={field.name}>Status</Label>
+                  <Select
+                    value={field.state.value}
+                    onValueChange={(value) =>
+                      field.handleChange(value as typeof field.state.value)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Ordered">Ordered</SelectItem>
+                      <SelectItem value="Owned">Owned</SelectItem>
+                      <SelectItem value="Paid">Paid</SelectItem>
+                      <SelectItem value="Shipped">Shipped</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {field.state.meta.errors &&
+                  field.state.meta.errors.length > 0 ? (
+                    <p className="text-sm text-red-500">
+                      {String(field.state.meta.errors[0])}
+                    </p>
+                  ) : null}
+                </div>
+              )}
+            />
+          </div>
+
+          <form.Field
+            name="title"
+            validators={{
+              onChange: z.string().nonempty("Title is required"),
+            }}
+            children={(field) => (
+              <div className="grid gap-2">
+                <Label htmlFor={field.name}>Title</Label>
+                <Input
+                  id={field.name}
+                  name={field.name}
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  type="text"
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder="Enter order title"
+                />
+                {!field.state.meta.isValid && (
+                  <em role="alert">{field.state.meta.errors.join(", ")}</em>
+                )}
+              </div>
+            )}
+          />
+
+          <form.Field
+            name="shop"
+            children={(field) => (
+              <div className="grid gap-2">
+                <Label htmlFor={field.name}>Shop</Label>
+                <Input
+                  id={field.name}
+                  name={field.name}
+                  value={field.state.value ?? ""}
+                  onBlur={field.handleBlur}
+                  type="text"
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder="Enter shop name"
+                />
+              </div>
+            )}
+          />
+
+          <div className="grid grid-cols-2 gap-4">
+            <form.Field
+              name="orderDate"
+              children={(field) => (
+                <div className="grid gap-2">
+                  <Label htmlFor={field.name}>Order Date</Label>
+                  <DatePicker
+                    id={field.name}
+                    name={field.name}
+                    value={field.state.value ?? null}
+                    onBlur={field.handleBlur}
+                    onChange={(value) => field.handleChange(value)}
+                    placeholder="Select order date"
+                  />
+                </div>
+              )}
+            />
+
+            <form.Field
+              name="releaseMonthYear"
+              children={(field) => (
+                <div className="grid gap-2">
+                  <Label htmlFor={field.name}>Release</Label>
+                  <DatePicker
+                    id={field.name}
+                    name={field.name}
+                    value={field.state.value ?? null}
+                    onBlur={field.handleBlur}
+                    onChange={(value) => field.handleChange(value)}
+                    placeholder="Select release date"
+                  />
+                </div>
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <form.Field
+              name="paymentDate"
+              children={(field) => (
+                <div className="grid gap-2">
+                  <Label htmlFor={field.name}>Payment Date</Label>
+                  <DatePicker
+                    id={field.name}
+                    name={field.name}
+                    value={field.state.value ?? null}
+                    onBlur={field.handleBlur}
+                    onChange={(value) => field.handleChange(value)}
+                    placeholder="Select payment date"
+                  />
+                </div>
+              )}
+            />
+
+            <form.Field
+              name="shippingDate"
+              children={(field) => (
+                <div className="grid gap-2">
+                  <Label htmlFor={field.name}>Shipping Date</Label>
+                  <DatePicker
+                    id={field.name}
+                    name={field.name}
+                    value={field.state.value ?? null}
+                    onBlur={field.handleBlur}
+                    onChange={(value) => field.handleChange(value)}
+                    placeholder="Select shipping date"
+                  />
+                </div>
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <form.Field
+              name="collectionDate"
+              children={(field) => (
+                <div className="grid gap-2">
+                  <Label htmlFor={field.name}>Collection Date</Label>
+                  <DatePicker
+                    id={field.name}
+                    name={field.name}
+                    value={field.state.value ?? null}
+                    onBlur={field.handleBlur}
+                    onChange={(value) => field.handleChange(value)}
+                    placeholder="Select collection date"
+                  />
+                </div>
+              )}
+            />
+
+            <form.Field
+              name="shippingMethod"
+              validators={{
+                onChange: z.enum(
+                  [
+                    "n/a",
+                    "EMS",
+                    "SAL",
+                    "AIRMAIL",
+                    "SURFACE",
+                    "FEDEX",
+                    "DHL",
+                    "Colissimo",
+                    "UPS",
+                    "Domestic",
+                  ],
+                  "Shipping method is required"
+                ),
+              }}
+              children={(field) => (
+                <div className="grid gap-2">
+                  <Label htmlFor={field.name}>Shipping Method</Label>
+                  <Select
+                    value={field.state.value ?? ""}
+                    onValueChange={(value) =>
+                      field.handleChange(value as typeof field.state.value)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select shipping method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="n/a">n/a</SelectItem>
+                      <SelectItem value="EMS">EMS</SelectItem>
+                      <SelectItem value="SAL">SAL</SelectItem>
+                      <SelectItem value="AIRMAIL">AIRMAIL</SelectItem>
+                      <SelectItem value="SURFACE">SURFACE</SelectItem>
+                      <SelectItem value="FEDEX">FEDEX</SelectItem>
+                      <SelectItem value="DHL">DHL</SelectItem>
+                      <SelectItem value="Colissimo">Colissimo</SelectItem>
+                      <SelectItem value="UPS">UPS</SelectItem>
+                      <SelectItem value="Domestic">Domestic</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <form.Field
+              name="shippingFee"
+              children={(field) => (
+                <div className="grid gap-2">
+                  <Label htmlFor={field.name}>Shipping Fee</Label>
+                  <MaskInput
+                    id={field.name}
+                    name={field.name}
+                    mask="currency"
+                    currency={userCurrency}
+                    locale={userLocale}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onValueChange={(maskedValue, unmaskedValue) =>
+                      field.handleChange(unmaskedValue)
+                    }
+                    placeholder="0.00"
+                  />
+                </div>
+              )}
+            />
+
+            <form.Field
+              name="taxes"
+              children={(field) => (
+                <div className="grid gap-2">
+                  <Label htmlFor={field.name}>Taxes</Label>
+                  <MaskInput
+                    id={field.name}
+                    name={field.name}
+                    mask="currency"
+                    currency={userCurrency}
+                    locale={userLocale}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onValueChange={(maskedValue, unmaskedValue) =>
+                      field.handleChange(unmaskedValue)
+                    }
+                    placeholder="0.00"
+                  />
+                </div>
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <form.Field
+              name="duties"
+              children={(field) => (
+                <div className="grid gap-2">
+                  <Label htmlFor={field.name}>Duties</Label>
+                  <MaskInput
+                    id={field.name}
+                    name={field.name}
+                    mask="currency"
+                    currency={userCurrency}
+                    locale={userLocale}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onValueChange={(maskedValue, unmaskedValue) =>
+                      field.handleChange(unmaskedValue)
+                    }
+                    placeholder="0.00"
+                  />
+                </div>
+              )}
+            />
+
+            <form.Field
+              name="tariffs"
+              children={(field) => (
+                <div className="grid gap-2">
+                  <Label htmlFor={field.name}>Tariffs</Label>
+                  <MaskInput
+                    id={field.name}
+                    name={field.name}
+                    mask="currency"
+                    currency={userCurrency}
+                    locale={userLocale}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onValueChange={(maskedValue, unmaskedValue) =>
+                      field.handleChange(unmaskedValue)
+                    }
+                    placeholder="0.00"
+                  />
+                </div>
+              )}
+            />
+          </div>
+
+          <form.Field
+            name="miscFees"
+            children={(field) => (
+              <div className="grid gap-2">
+                <Label htmlFor={field.name}>Miscellaneous Fees</Label>
+                <MaskInput
+                  id={field.name}
+                  name={field.name}
+                  mask="currency"
+                  currency={userCurrency}
+                  locale={userLocale}
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onValueChange={(maskedValue, unmaskedValue) =>
+                    field.handleChange(unmaskedValue)
+                  }
+                  placeholder="0.00"
+                />
+              </div>
+            )}
+          />
+
+          {/* Notes */}
+          <form.Field
+            name="notes"
+            children={(field) => (
+              <div className="grid gap-2">
+                <Label htmlFor={field.name}>Notes</Label>
+                <Textarea
+                  id={field.name}
+                  name={field.name}
+                  value={field.state.value ?? ""}
+                  onBlur={field.handleBlur}
+                  maxLength={1000}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  placeholder="Enter additional notes..."
+                />
+              </div>
+            )}
+          />
+            </div>
+          </Scroller>
+          <SheetFooter className="flex flex-row w-full">
+            <SheetClose asChild>
+              <Button type="button" variant="outline" className="w-full flex-1">
+                Cancel
+              </Button>
+            </SheetClose>
+            <form.Subscribe
+              selector={(state) => [state.canSubmit, state.isSubmitting]}
+              children={([canSubmit, isSubmitting]) => (
+                <SheetClose asChild>
+                  <Button
+                    type="submit"
+                    disabled={!canSubmit || isSubmitting}
+                    variant="primary"
+                    className="w-full flex-1"
+                  >
+                    {isSubmitting ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      "Update"
+                    )}
+                  </Button>
+                </SheetClose>
+              )}
+            />
+          </SheetFooter>
+      </form>
+    </SheetContent>
+  );
+}
+
   return (
     <DialogContent className="max-w-2xl">
       <form
@@ -206,24 +676,18 @@ export function OrderForm(props: OrderFormProps) {
       >
         <DialogHeader>
           <DialogTitle>
-            {type === "merge"
-              ? "Merge Orders"
-              : type === "split"
-                ? "Split Items"
-                : "Edit Order"}
+            {type === "merge" ? "Merge Orders" : "Split Items"}
           </DialogTitle>
           {selectedCount && (
             <DialogDescription>
               {type === "merge"
                 ? `Merge the selected ${selectedCount} orders into a new order.`
-                : type === "split"
-                  ? `Split the selected ${selectedCount} items into a new order.`
-                  : `Edit the selected order.`}
+                : `Split the selected ${selectedCount} items into a new order.`}
             </DialogDescription>
           )}
         </DialogHeader>
 
-        <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto">
+        <Scroller className="flex flex-col gap-4 max-h-[70vh] py-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label>Cascade Order Details to Items</Label>
@@ -634,7 +1098,7 @@ export function OrderForm(props: OrderFormProps) {
               </div>
             )}
           />
-        </div>
+        </Scroller>
 
         <DialogFooter>
           <DialogClose asChild>
@@ -651,10 +1115,8 @@ export function OrderForm(props: OrderFormProps) {
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : type === "merge" ? (
                     "Merge"
-                  ) : type === "split" ? (
-                    "Split"
                   ) : (
-                    "Update"
+                    "Split"
                   )}
                 </Button>
               </DialogClose>

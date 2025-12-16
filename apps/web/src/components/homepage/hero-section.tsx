@@ -56,7 +56,7 @@ export default function HeroSection({
             fetchPriority="high"
           />
 
-          <div className="bg-transparent relative border-black/20 border rounded-md shadow-sm overflow-hidden shadow-black/15 mx-8 md:mx-16 lg:mx-32">
+          <div className="bg-transparent relative border-black/20 border-2 rounded-md shadow-sm overflow-hidden shadow-black/15 mx-8 md:mx-16 lg:mx-32">
             <img
               src={heroImage}
               alt="app screen"

@@ -8,10 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Plus,
-  User,
-} from "lucide-react";
+import { Plus, User } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { CollectionBreakdown } from "@/components/dashboard/collection-breakdown";
 import { BudgetControlCard } from "@/components/dashboard/budget-control-card";
@@ -105,7 +102,7 @@ function DashboardContent() {
   return (
     <div className="">
       <div className="flex flex-col lg:flex-row items-start mb-6 gap-4">
-        <h1 className="text-2xl tracking-tight ">
+        <h1 className="text-2xl tracking-tight font-medium">
           Welcome,{" "}
           <span className="text-muted-foreground">
             {session?.user.username} (づ｡◕‿‿◕｡)づ
@@ -250,7 +247,7 @@ function DashboardContent() {
                 Unpaid Orders
               </CardTitle>
               <Badge variant="outline">{unpaidOrders.length}</Badge>
-              <Badge variant="warning" appearance="outline">
+              <Badge variant="info" appearance="outline">
                 {formatCurrency(
                   unpaidOrders.reduce(
                     (acc, order) => acc + parseFloat(order.total),

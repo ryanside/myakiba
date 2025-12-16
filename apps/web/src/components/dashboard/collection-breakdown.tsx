@@ -1,6 +1,9 @@
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn, formatCurrency, getCategoryColor } from "@/lib/utils";
+import { ScrollArea } from "../ui/scroll-area";
+import { Scroller } from "../ui/scroller";
+import { Separator } from "../ui/separator";
 
 export function CollectionBreakdown({
   data,
@@ -62,9 +65,9 @@ export function CollectionBreakdown({
           Collection Breakdown
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 px-0">
         {/* Horizontal Stacked Bar */}
-        <div className="relative">
+        <div className="relative px-6">
           <div className="flex h-4 w-full rounded-xs">
             {chartDataWithPercentages.map((item, index) => {
               const isHovered = hoveredIndex === index;
@@ -128,16 +131,20 @@ export function CollectionBreakdown({
           </div>
         </div>
 
+        <div className="px-6 my-0">
+          <Separator />
+        </div>
+
         {/* Total Items Section */}
-        <div className="flex flex-col gap-2 pt-4 border-t">
+        <div className="flex flex-col gap-2 pt-4 px-6">
           <div className="flex justify-between items-center">
-            <span className="text-lg ">Total Items</span>
+            <span className="text-lg tracking-tight">Total Items</span>
             <span className="text-lg ">{totalItems}</span>
           </div>
         </div>
 
         {/* Legend */}
-        <div className="flex flex-col overflow-auto max-h-34">
+        <Scroller className="h-34 px-6">
           {chartDataWithPercentages.map((item, index) => {
             const isHovered = hoveredIndex === index;
             const isOtherHovered =
@@ -173,7 +180,7 @@ export function CollectionBreakdown({
               </div>
             );
           })}
-        </div>
+        </Scroller>
       </CardContent>
     </Card>
   );

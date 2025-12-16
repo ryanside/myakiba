@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/table";
 import { cn, getCategoryColor } from "@/lib/utils";
 import { Progress } from "../ui/progress";
-import { ArrowUpDown } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "../ui/button";
 import { formatCurrency } from "@/lib/utils";
 import { useMemo, useState, Fragment } from "react";
@@ -76,7 +76,13 @@ export function RankingCard({
           className="text-xs -ms-2 px-2 h-7 hover:bg-muted data-[state=open]:bg-muted data-[state=open]:text-white"
         >
           {col.label}
-          <ArrowUpDown className="size-3" />
+          {column.getIsSorted() === "desc" ? (
+            <ArrowDown className="size-3" />
+          ) : column.getIsSorted() === "asc" ? (
+            <ArrowUp className="size-3" />
+          ) : (
+            <ArrowUpDown className="size-3" />
+          )}
         </Button>
       ),
       cell: ({ row }) => {
@@ -104,7 +110,7 @@ export function RankingCard({
     }));
   }, [columns, currency]);
 
-  const [sorting, setSorting] = useState<SortingState>([]);
+  const [sorting, setSorting] = useState<SortingState>([{ id: "count", desc: true }]);
   const table = useReactTable({
     data,
     columns: tableColumns,

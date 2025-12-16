@@ -11,12 +11,14 @@ import {
   KanbanItemHandle,
   KanbanOverlay,
 } from "@/components/ui/kanban";
-import { GripVertical, CalendarIcon } from "lucide-react";
+import { GripVertical, CalendarIcon, Check } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateOrderStatus } from "@/queries/orders";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { getStatusVariant } from "@/lib/orders/utils";
 
 interface KanbanOrder {
   orderId: string;
@@ -45,11 +47,36 @@ interface OrderCardProps
   order: KanbanOrder;
   currency: string;
   asHandle?: boolean;
+  onMarkOwned: (orderId: string) => void;
 }
 
-function OrderCard({ order, currency, asHandle, ...props }: OrderCardProps) {
+function OrderCard({
+  order,
+  currency,
+  asHandle,
+  onMarkOwned,
+  ...props
+}: OrderCardProps) {
   const cardContent = (
-    <div className="rounded-md border bg-card p-3 shadow-xs hover:shadow-sm transition-shadow">
+    <div className="rounded-md border bg-card p-3 shadow-xs hover:shadow-sm transition-shadow relative">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="dim"
+            size="icon"
+            className="absolute top-2 right-2"
+            onClick={(e) => {
+              e.stopPropagation();
+              onMarkOwned(order.orderId);
+            }}
+          >
+            <Check className="h-4 w-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Mark as collected</p>
+        </TooltipContent>
+      </Tooltip>
       <div className="flex flex-col gap-2.5">
         {/* Item Images */}
         {order.itemImages && order.itemImages.length > 0 && (
@@ -137,6 +164,7 @@ interface OrderColumnProps
   orders: KanbanOrder[];
   currency: string;
   isOverlay?: boolean;
+  onMarkOwned: (orderId: string) => void;
 }
 
 function OrderColumn({
@@ -144,6 +172,7 @@ function OrderColumn({
   orders,
   currency,
   isOverlay,
+  onMarkOwned,
   ...props
 }: OrderColumnProps) {
   return (
@@ -154,7 +183,9 @@ function OrderColumn({
     >
       <div className="flex items-center justify-between mb-2.5">
         <div className="flex items-center gap-2.5">
-          <span className="font-medium text-sm">{COLUMN_TITLES[value]}</span>
+          <Badge asChild variant={getStatusVariant(value)} appearance="outline">
+            <span className="font-medium text-sm">{COLUMN_TITLES[value]}</span>
+          </Badge>
           <Badge variant="outline">{orders.length}</Badge>
         </div>
         <KanbanColumnHandle asChild>
@@ -173,6 +204,7 @@ function OrderColumn({
             order={order}
             currency={currency}
             asHandle={!isOverlay}
+            onMarkOwned={onMarkOwned}
           />
         ))}
       </KanbanColumnContent>
@@ -217,7 +249,10 @@ export default function OrderKanban({ orders, currency }: OrdersKanbanProps) {
       orderId: string;
       status: "Ordered" | "Paid" | "Shipped" | "Owned";
     }) => updateOrderStatus(orderId, status),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      if (variables.status === "Owned") {
+        toast.success("Order marked as collected");
+      }
       Promise.all([
         queryClient.invalidateQueries({ queryKey: ["orders"] }),
         queryClient.invalidateQueries({ queryKey: ["order"] }),
@@ -241,6 +276,40 @@ export default function OrderKanban({ orders, currency }: OrdersKanbanProps) {
       setColumns(initialColumns);
     },
   });
+
+  const handleMarkOwned = React.useCallback(
+    (orderId: string) => {
+      // Find which column contains this order
+      let foundColumn: string | null = null;
+      let foundIndex = -1;
+
+      for (const [columnValue, columnOrders] of Object.entries(columns)) {
+        const index = columnOrders.findIndex((o) => o.orderId === orderId);
+        if (index !== -1) {
+          foundColumn = columnValue;
+          foundIndex = index;
+          break;
+        }
+      }
+
+      if (foundColumn === null) return;
+
+      // Optimistically remove the order from its column
+      const updatedItems = [...columns[foundColumn]];
+      updatedItems.splice(foundIndex, 1);
+
+      setColumns({
+        ...columns,
+        [foundColumn]: updatedItems,
+      });
+
+      mutation.mutate({
+        orderId,
+        status: "Owned",
+      });
+    },
+    [columns, mutation]
+  );
 
   // Handle item moves between columns
   const handleMove = React.useCallback(
@@ -301,6 +370,7 @@ export default function OrderKanban({ orders, currency }: OrdersKanbanProps) {
             value={columnValue}
             orders={columnOrders}
             currency={currency}
+            onMarkOwned={handleMarkOwned}
             className="max-h-[300px] overflow-auto"
           />
         ))}

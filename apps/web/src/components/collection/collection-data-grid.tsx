@@ -46,7 +46,8 @@ import { DataGrid, DataGridContainer } from "../ui/data-grid";
 import { ScrollArea, ScrollBar } from "../ui/scroll-area";
 import { DataGridTable } from "../ui/data-grid-table";
 import { toast } from "sonner";
-import { Dialog, DialogTrigger } from "../ui/dialog";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import { Sheet, SheetTrigger } from "../ui/sheet";
 import FiltersForm from "./filters-form";
 import {
   Popover,
@@ -548,19 +549,19 @@ export const CollectionDataGrid = ({
                   <Copy className="mr-2 h-4 w-4" />
                   Copy MFC item ID
                 </DropdownMenuItem>
-                <Dialog>
-                  <DialogTrigger asChild>
+                <Sheet>
+                  <SheetTrigger asChild>
                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                       <Edit className="mr-2 h-4 w-4" />
                       Edit item
                     </DropdownMenuItem>
-                  </DialogTrigger>
+                  </SheetTrigger>
                   <CollectionItemForm
                     itemData={item}
                     callbackFn={onEditCollectionItem}
                     currency={currency}
                   />
-                </Dialog>
+                </Sheet>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   variant="destructive"

@@ -32,13 +32,6 @@ import {
   Eye,
   Edit,
   Trash2,
-  ListRestart,
-  Merge,
-  Trash,
-  Info,
-  Move,
-  Filter,
-  Columns,
 } from "lucide-react";
 import { cn, formatCurrency, getCurrencyLocale } from "@/lib/utils";
 import type {
@@ -51,29 +44,15 @@ import type {
 import { OrderItemSubDataGrid } from "./order-item-sub-data-grid";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { OrderForm } from "./order-form";
-import { DebouncedInput } from "@/components/debounced-input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  PopoverClose,
-} from "@/components/ui/popover";
 import { useSelection } from "@/hooks/use-selection";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import UnifiedItemMoveForm from "./unified-item-move-form";
 import type { CollectionItemFormValues } from "@/lib/collection/types";
-import OrdersFiltersForm from "./orders-filters-form";
 import { PopoverMultiInputCell } from "../cells/popover-multi-input-cell";
 import { SelectCell } from "../cells/select-cell";
 import { InlineTextCell } from "../cells/inline-text-cell";
 import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
 import { DataGridColumnCombobox } from "../ui/data-grid-column-combobox";
-import { DataGridSortCombobox } from "../ui/data-grid-sort-combobox";
+import { OrdersToolbar } from "./orders-toolbar";
 import { DEFAULT_PAGE_INDEX, DEFAULT_PAGE_SIZE } from "@myakiba/constants";
 
 export { DEFAULT_PAGE_INDEX, DEFAULT_PAGE_SIZE };
@@ -890,9 +869,6 @@ export default function OrdersDataGrid({
         cell: ({ row }) => {
           const status = row.original.status;
           return (
-            // <Badge variant={getStatusVariant(status)} appearance="outline">
-            //   {status}
-            // </Badge>
             <SelectCell
               value={status}
               options={["Ordered", "Paid", "Shipped", "Owned"]}
@@ -1059,154 +1035,22 @@ export default function OrdersDataGrid({
   return (
     <>
       <div className="flex items-center justify-start gap-2">
-        <DebouncedInput
-          value={search ?? ""}
-          onChange={(e) => onSearchChange(e.toString())}
-          placeholder="Search"
-          className="max-w-xs"
+        <OrdersToolbar
+          search={search}
+          filters={filters}
+          onSearchChange={onSearchChange}
+          onFilterChange={onFilterChange}
+          onResetFilters={onResetFilters}
+          currency={currency}
+          selectedOrderIds={getSelectedOrderIds}
+          selectedItemData={getSelectedItemData}
+          clearSelections={clearSelections}
+          onMerge={onMerge}
+          onSplit={onSplit}
+          onDeleteOrders={onDeleteOrders}
+          onMoveItem={onMoveItem}
         />
-        <Dialog key={JSON.stringify(filters)}>
-          <DialogTrigger asChild>
-            <Button variant="outline">
-              <Filter className="" />
-              <span className="hidden md:block">Filters</span>
-            </Button>
-          </DialogTrigger>
-          <OrdersFiltersForm
-            currentFilters={{
-              ...filters,
-            }}
-            onApplyFilters={(newFilters) =>
-              onFilterChange({ ...filters, ...newFilters, offset: 0 })
-            }
-            currency={currency}
-          />
-        </Dialog>
-        <DataGridSortCombobox
-          table={table}
-          onSortChange={(columnId, direction) => {
-            if (columnId === null || direction === null) {
-              // Clear sorting - use default sort
-              onFilterChange({
-                sort: "createdAt",
-                order: "desc",
-                offset: 0,
-              });
-            } else {
-              onFilterChange({
-                sort: columnId as
-                  | "title"
-                  | "shop"
-                  | "orderDate"
-                  | "paymentDate"
-                  | "shippingDate"
-                  | "collectionDate"
-                  | "releaseMonthYear"
-                  | "shippingMethod"
-                  | "total"
-                  | "shippingFee"
-                  | "taxes"
-                  | "duties"
-                  | "tariffs"
-                  | "miscFees"
-                  | "itemCount"
-                  | "status"
-                  | "createdAt",
-                order: direction,
-                offset: 0,
-              });
-            }
-          }}
-        />
-        <Button onClick={onResetFilters} variant="outline">
-          <ListRestart />
-          <span className="hidden md:block">Reset Filters</span>
-        </Button>
         <DataGridColumnCombobox table={table} />
-
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button variant="outline" disabled={getSelectedOrderIds.size < 2}>
-              <Merge />
-              <span className="hidden md:block">Merge</span>
-            </Button>
-          </DialogTrigger>
-          <OrderForm
-            orderIds={getSelectedOrderIds}
-            callbackFn={onMerge}
-            type="merge"
-            clearSelections={clearSelections}
-            currency={currency}
-          />
-        </Dialog>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button
-              variant="outline"
-              disabled={getSelectedItemData.collectionIds.size === 0}
-            >
-              <Move />
-              <span className="hidden md:block">Move Item</span>
-            </Button>
-          </DialogTrigger>
-          <UnifiedItemMoveForm
-            selectedItemData={getSelectedItemData}
-            onMoveToExisting={onMoveItem}
-            onMoveToNew={onSplit}
-            clearSelections={clearSelections}
-            currency={currency}
-          />
-        </Dialog>
-        <Popover>
-          <PopoverTrigger asChild disabled={getSelectedOrderIds.size === 0}>
-            <Button
-              variant="outline"
-              disabled={getSelectedOrderIds.size === 0}
-              size="icon"
-            >
-              <Trash className="" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent>
-            <div className="flex flex-col items-center gap-2 text-sm text-pretty">
-              <div className="flex flex-row items-center gap-2 mr-auto">
-                <p>Delete the selected orders and their items?</p>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="w-4 h-4" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-h-40">
-                    <p>
-                      Items with "Owned" status will not be deleted. You can
-                      delete owned items in the collection tab.
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <div className="flex flex-row items-center gap-2 max-w-16 mr-auto">
-                <PopoverClose asChild>
-                  <Button
-                    variant="outline"
-                    disabled={getSelectedOrderIds.size === 0}
-                    className="block"
-                  >
-                    Cancel
-                  </Button>
-                </PopoverClose>
-                <PopoverClose asChild>
-                  <Button
-                    variant="destructive"
-                    disabled={getSelectedOrderIds.size === 0}
-                    className="block"
-                    onClick={() => onDeleteOrders(getSelectedOrderIds)}
-                  >
-                    Delete
-                  </Button>
-                </PopoverClose>
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
       </div>
       <div className="space-y-4">
         <DataGrid

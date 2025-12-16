@@ -1,12 +1,12 @@
 import type { CollectionItemFormValues } from "@/lib/collection/types";
 import {
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog";
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+  SheetClose,
+} from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "../ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,7 @@ import { Field, FieldContent, FieldTitle } from "@/components/ui/field";
 import { Badge } from "../ui/badge";
 import { X } from "lucide-react";
 import { getCurrencyLocale } from "@/lib/utils";
+import { Scroller } from "../ui/scroller";
 
 type CollectionItemFormProps = {
   itemData: CollectionItemFormValues;
@@ -64,7 +65,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
   });
 
   return (
-    <DialogContent className="max-w-2xl">
+    <SheetContent side="right" className="w-full sm:max-w-lg h-full">
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -72,11 +73,11 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
           form.handleSubmit();
         }}
       >
-        <DialogHeader>
-          <DialogTitle>Edit Item</DialogTitle>
-          <DialogDescription>{itemData.itemTitle}</DialogDescription>
-        </DialogHeader>
-        <ScrollArea className="max-h-[70vh] overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>Edit Item</SheetTitle>
+          <SheetDescription>{itemData.itemTitle}</SheetDescription>
+        </SheetHeader>
+        <Scroller className="max-h-[70vh] px-2">
           <div className="grid gap-4 p-2">
             {/* Price, Count, Score */}
             <div className="grid grid-cols-2 gap-4">
@@ -551,25 +552,25 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
               )}
             />
           </div>
-        </ScrollArea>
-        <DialogFooter className="">
-          <DialogClose asChild>
-            <Button type="button" variant="outline">
+        </Scroller>
+        <SheetFooter className="flex flex-row w-full">
+          <SheetClose asChild>
+            <Button type="button" variant="outline" className="w-full flex-1">
               Cancel
             </Button>
-          </DialogClose>
+          </SheetClose>
           <form.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
             children={([canSubmit, isSubmitting]) => (
-              <DialogClose asChild>
-                <Button type="submit" disabled={!canSubmit || isSubmitting}>
+              <SheetClose asChild>
+                <Button type="submit" disabled={!canSubmit || isSubmitting} className="w-full flex-1">
                   {isSubmitting ? "Updating..." : "Update"}
                 </Button>
-              </DialogClose>
+              </SheetClose>
             )}
           />
-        </DialogFooter>
+        </SheetFooter>
       </form>
-    </DialogContent>
+    </SheetContent>
   );
 }
