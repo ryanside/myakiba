@@ -24,6 +24,13 @@ import {
 import { useCallback } from "react";
 import { KPICard } from "@/components/ui/kpi-card";
 import { formatCurrency } from "@/lib/utils";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Grid, TableOfContents } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export const Route = createFileRoute("/(app)/collection")({
   component: RouteComponent,
@@ -219,6 +226,26 @@ function RouteComponent() {
           }
         />
       </div>
+      <Tabs
+        defaultValue="table"
+        className="w-[375px] text-sm text-muted-foreground"
+      >
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="table">
+            <TableOfContents /> Table
+          </TabsTrigger>
+          <Tooltip>
+            <TooltipTrigger>
+              <TabsTrigger value="grid" disabled>
+                <Grid /> Grid
+              </TabsTrigger>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>More views coming soon! Grid, Masonry, Gallery, etc.</p>
+            </TooltipContent>
+          </Tooltip>
+        </TabsList>
+      </Tabs>
       {isPending ? (
         <CollectionDataGridSkeleton />
       ) : (
