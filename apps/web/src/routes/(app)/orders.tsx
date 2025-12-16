@@ -210,7 +210,7 @@ function RouteComponent() {
       queryClient.setQueryData(
         ["orders", filters],
         (old: OrdersQueryResponse) => {
-          return createOptimisticEditUpdate(old, values, cascadeOptions);
+          return createOptimisticEditUpdate(old, values, filters, cascadeOptions);
         }
       );
       return { previousData };
@@ -245,7 +245,7 @@ function RouteComponent() {
       queryClient.setQueryData(
         ["orders", filters],
         (old: OrdersQueryResponse) => {
-          return createOptimisticDeleteUpdate(old, orderIds);
+          return createOptimisticDeleteUpdate(old, orderIds, filters);
         }
       );
       return { previousData };
@@ -282,7 +282,7 @@ function RouteComponent() {
       queryClient.setQueryData(
         ["orders", filters],
         (old: OrdersQueryResponse) => {
-          return createOptimisticEditItemUpdate(old, values);
+          return createOptimisticEditItemUpdate(old, values, filters);
         }
       );
 
@@ -319,7 +319,7 @@ function RouteComponent() {
       queryClient.setQueryData(
         ["orders", filters],
         (old: OrdersQueryResponse) => {
-          return createOptimisticDeleteItemUpdate(old, orderId, itemId);
+          return createOptimisticDeleteItemUpdate(old, orderId, itemId, filters);
         }
       );
       return { previousData };
@@ -355,7 +355,7 @@ function RouteComponent() {
       queryClient.setQueryData(
         ["orders", filters],
         (old: OrdersQueryResponse) => {
-          return createOptimisticDeleteItemsUpdate(old, collectionIds);
+          return createOptimisticDeleteItemsUpdate(old, collectionIds, filters);
         }
       );
       return { previousData };

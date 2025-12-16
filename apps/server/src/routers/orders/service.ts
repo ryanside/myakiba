@@ -1,6 +1,22 @@
 import { db } from "@myakiba/db";
-import { order, collection, item, item_release } from "@myakiba/db/schema/figure";
-import { eq, and, inArray, sql, desc, asc, ilike, ne, gte, lte } from "drizzle-orm";
+import {
+  order,
+  collection,
+  item,
+  item_release,
+} from "@myakiba/db/schema/figure";
+import {
+  eq,
+  and,
+  inArray,
+  sql,
+  desc,
+  asc,
+  ilike,
+  ne,
+  gte,
+  lte,
+} from "drizzle-orm";
 import type { orderInsertType, orderUpdateType } from "./model";
 
 type OrderItem = {
@@ -95,17 +111,23 @@ class OrdersService {
       releaseMonthYearEnd
         ? lte(order.releaseMonthYear, releaseMonthYearEnd)
         : undefined,
-      shippingMethod ? inArray(order.shippingMethod, shippingMethod) : undefined,
+      shippingMethod
+        ? inArray(order.shippingMethod, shippingMethod)
+        : undefined,
       orderDateStart ? gte(order.orderDate, orderDateStart) : undefined,
       orderDateEnd ? lte(order.orderDate, orderDateEnd) : undefined,
       paymentDateStart ? gte(order.paymentDate, paymentDateStart) : undefined,
       paymentDateEnd ? lte(order.paymentDate, paymentDateEnd) : undefined,
-      shippingDateStart ? gte(order.shippingDate, shippingDateStart) : undefined,
+      shippingDateStart
+        ? gte(order.shippingDate, shippingDateStart)
+        : undefined,
       shippingDateEnd ? lte(order.shippingDate, shippingDateEnd) : undefined,
       collectionDateStart
         ? gte(order.collectionDate, collectionDateStart)
         : undefined,
-      collectionDateEnd ? lte(order.collectionDate, collectionDateEnd) : undefined,
+      collectionDateEnd
+        ? lte(order.collectionDate, collectionDateEnd)
+        : undefined,
       status ? inArray(order.status, status) : undefined,
       shippingFeeMin ? gte(order.shippingFee, shippingFeeMin) : undefined,
       shippingFeeMax ? lte(order.shippingFee, shippingFeeMax) : undefined,
@@ -124,7 +146,7 @@ class OrdersService {
         case "title":
           return order.title;
         case "shop":
-          return order.shop;
+          return sql`LOWER(${order.shop})`;
         case "orderDate":
           return order.orderDate;
         case "paymentDate":
@@ -266,7 +288,10 @@ class OrdersService {
         collectionDate: order.collectionDate,
         paymentDate: order.paymentDate,
         status: order.status,
-        total: sql<string>`COALESCE(SUM(${collection.price}::numeric), 0) + COALESCE(${order.shippingFee}::numeric, 0) + COALESCE(${order.taxes}::numeric, 0) + COALESCE(${order.duties}::numeric, 0) + COALESCE(${order.tariffs}::numeric, 0) + COALESCE(${order.miscFees}::numeric, 0)`.as('total'),
+        total:
+          sql<string>`COALESCE(SUM(${collection.price}::numeric), 0) + COALESCE(${order.shippingFee}::numeric, 0) + COALESCE(${order.taxes}::numeric, 0) + COALESCE(${order.duties}::numeric, 0) + COALESCE(${order.tariffs}::numeric, 0) + COALESCE(${order.miscFees}::numeric, 0)`.as(
+            "total"
+          ),
       })
       .from(order)
       .leftJoin(collection, eq(order.id, collection.orderId))
@@ -543,26 +568,51 @@ class OrdersService {
   }
 
   async deleteOrderItem(userId: string, orderId: string, collectionId: string) {
+    // TODO: Refactor data sent to the server to reduce this to a single query
+    const updated = await db
+      .update(collection)
+      .set({ orderId: null })
+      .where(
+        and(
+          eq(collection.userId, userId),
+          eq(collection.id, collectionId),
+          eq(collection.status, "Owned")
+        )
+      )
+      .returning();
+
     const deleted = await db
       .delete(collection)
       .where(
         and(
           eq(collection.userId, userId),
-          eq(collection.orderId, orderId),
           eq(collection.id, collectionId),
           ne(collection.status, "Owned")
         )
       )
       .returning();
 
-    if (!deleted || deleted.length === 0) {
-      throw new Error("ORDER_ITEM_NOT_FOUND");
+    if (updated.length === 0 && deleted.length === 0) {
+      throw new Error("ORDER_ITEMS_NOT_FOUND");
     }
 
     return {};
   }
 
   async deleteOrderItems(userId: string, collectionIds: string[]) {
+    // TODO: Refactor data sent to the server to reduce this to a single query
+    const updated = await db
+      .update(collection)
+      .set({ orderId: null })
+      .where(
+        and(
+          eq(collection.userId, userId),
+          inArray(collection.id, collectionIds),
+          eq(collection.status, "Owned")
+        )
+      )
+      .returning();
+
     const deleted = await db
       .delete(collection)
       .where(
@@ -571,9 +621,10 @@ class OrdersService {
           inArray(collection.id, collectionIds),
           ne(collection.status, "Owned")
         )
-      ).returning();
+      )
+      .returning();
 
-    if (!deleted || deleted.length === 0) {
+    if (updated.length === 0 && deleted.length === 0) {
       throw new Error("ORDER_ITEMS_NOT_FOUND");
     }
 

@@ -26,6 +26,11 @@ export function InlineCurrencyCell({
       setIsEditing(false);
       return;
     }
+    if (newValue === "") {
+      setNewValue(value);
+      setIsEditing(false);
+      return;
+    }
     const { error } = await tryCatch(onSubmit(newValue));
     if (error) {
       setNewValue(value);
@@ -69,7 +74,7 @@ export function InlineCurrencyCell({
       variant="ghost"
       disabled={disabled}
     >
-      {formatCurrency(value, currency)}
+      {formatCurrency(newValue, currency)}
     </Button>
   );
 }

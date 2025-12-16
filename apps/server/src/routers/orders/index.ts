@@ -420,6 +420,10 @@ const ordersRouter = new Hono<{ Variables: Variables }>()
       );
 
       if (error) {
+        if (error.message === "ORDER_ITEMS_NOT_FOUND") {
+          return c.text("One or more order items not found", 404);
+        }
+
         console.error("Error deleting order items:", error, {
           userId: user.id,
           collectionIds: validatedJSON.collectionIds,

@@ -53,69 +53,119 @@ export function filterAndSortOrders(
   const sortOrder = filters.order || "desc";
 
   filteredOrders.sort((a, b) => {
-    let aValue: string | number | Date;
-    let bValue: string | number | Date;
+    let aRaw: string | number | Date | null | undefined;
+    let bRaw: string | number | Date | null | undefined;
+    let aValue: string | number | Date | null | undefined;
+    let bValue: string | number | Date | null | undefined;
 
     switch (sortField) {
       case "title":
-        aValue = a.title.toLowerCase();
-        bValue = b.title.toLowerCase();
+        aRaw = a.title;
+        bRaw = b.title;
+        aValue = aRaw ? aRaw.toLowerCase() : null;
+        bValue = bRaw ? bRaw.toLowerCase() : null;
         break;
       case "shop":
-        aValue = (a.shop || "").toLowerCase();
-        bValue = (b.shop || "").toLowerCase();
+        aRaw = a.shop;
+        bRaw = b.shop;
+        aValue = aRaw ? aRaw.toLowerCase() : null;
+        bValue = bRaw ? bRaw.toLowerCase() : null;
+        break;
+      case "status":
+        aRaw = a.status;
+        bRaw = b.status;
+        aValue = aRaw ? aRaw.toLowerCase() : null;
+        bValue = bRaw ? bRaw.toLowerCase() : null;
         break;
       case "orderDate":
-        aValue = a.orderDate ? new Date(a.orderDate) : new Date(0);
-        bValue = b.orderDate ? new Date(b.orderDate) : new Date(0);
+        aRaw = a.orderDate;
+        bRaw = b.orderDate;
+        aValue = aRaw ? new Date(aRaw) : null;
+        bValue = bRaw ? new Date(bRaw) : null;
         break;
       case "paymentDate":
-        aValue = a.paymentDate ? new Date(a.paymentDate) : new Date(0);
-        bValue = b.paymentDate ? new Date(b.paymentDate) : new Date(0);
+        aRaw = a.paymentDate;
+        bRaw = b.paymentDate;
+        aValue = aRaw ? new Date(aRaw) : null;
+        bValue = bRaw ? new Date(bRaw) : null;
         break;
       case "shippingDate":
-        aValue = a.shippingDate ? new Date(a.shippingDate) : new Date(0);
-        bValue = b.shippingDate ? new Date(b.shippingDate) : new Date(0);
+        aRaw = a.shippingDate;
+        bRaw = b.shippingDate;
+        aValue = aRaw ? new Date(aRaw) : null;
+        bValue = bRaw ? new Date(bRaw) : null;
         break;
       case "collectionDate":
-        aValue = a.collectionDate ? new Date(a.collectionDate) : new Date(0);
-        bValue = b.collectionDate ? new Date(b.collectionDate) : new Date(0);
+        aRaw = a.collectionDate;
+        bRaw = b.collectionDate;
+        aValue = aRaw ? new Date(aRaw) : null;
+        bValue = bRaw ? new Date(bRaw) : null;
         break;
       case "releaseMonthYear":
-        aValue = a.releaseMonthYear || "";
-        bValue = b.releaseMonthYear || "";
+        aRaw = a.releaseMonthYear;
+        bRaw = b.releaseMonthYear;
+        aValue = aRaw || null;
+        bValue = bRaw || null;
         break;
       case "shippingMethod":
-        aValue = a.shippingMethod || "";
-        bValue = b.shippingMethod || "";
+        aRaw = a.shippingMethod;
+        bRaw = b.shippingMethod;
+        aValue = aRaw || null;
+        bValue = bRaw || null;
         break;
       case "total":
-        aValue = parseFloat(a.total) || 0;
-        bValue = parseFloat(b.total) || 0;
+        aRaw = a.total;
+        bRaw = b.total;
+        aValue = aRaw ? parseFloat(aRaw) : null;
+        bValue = bRaw ? parseFloat(bRaw) : null;
+        if (aValue !== null && isNaN(aValue)) aValue = null;
+        if (bValue !== null && isNaN(bValue)) bValue = null;
         break;
       case "shippingFee":
-        aValue = parseFloat(a.shippingFee) || 0;
-        bValue = parseFloat(b.shippingFee) || 0;
+        aRaw = a.shippingFee;
+        bRaw = b.shippingFee;
+        aValue = aRaw ? parseFloat(aRaw) : null;
+        bValue = bRaw ? parseFloat(bRaw) : null;
+        if (aValue !== null && isNaN(aValue)) aValue = null;
+        if (bValue !== null && isNaN(bValue)) bValue = null;
         break;
       case "taxes":
-        aValue = parseFloat(a.taxes) || 0;
-        bValue = parseFloat(b.taxes) || 0;
+        aRaw = a.taxes;
+        bRaw = b.taxes;
+        aValue = aRaw ? parseFloat(aRaw) : null;
+        bValue = bRaw ? parseFloat(bRaw) : null;
+        if (aValue !== null && isNaN(aValue)) aValue = null;
+        if (bValue !== null && isNaN(bValue)) bValue = null;
         break;
       case "duties":
-        aValue = parseFloat(a.duties) || 0;
-        bValue = parseFloat(b.duties) || 0;
+        aRaw = a.duties;
+        bRaw = b.duties;
+        aValue = aRaw ? parseFloat(aRaw) : null;
+        bValue = bRaw ? parseFloat(bRaw) : null;
+        if (aValue !== null && isNaN(aValue)) aValue = null;
+        if (bValue !== null && isNaN(bValue)) bValue = null;
         break;
       case "tariffs":
-        aValue = parseFloat(a.tariffs) || 0;
-        bValue = parseFloat(b.tariffs) || 0;
+        aRaw = a.tariffs;
+        bRaw = b.tariffs;
+        aValue = aRaw ? parseFloat(aRaw) : null;
+        bValue = bRaw ? parseFloat(bRaw) : null;
+        if (aValue !== null && isNaN(aValue)) aValue = null;
+        if (bValue !== null && isNaN(bValue)) bValue = null;
         break;
       case "miscFees":
-        aValue = parseFloat(a.miscFees) || 0;
-        bValue = parseFloat(b.miscFees) || 0;
+        aRaw = a.miscFees;
+        bRaw = b.miscFees;
+        aValue = aRaw ? parseFloat(aRaw) : null;
+        bValue = bRaw ? parseFloat(bRaw) : null;
+        if (aValue !== null && isNaN(aValue)) aValue = null;
+        if (bValue !== null && isNaN(bValue)) bValue = null;
         break;
       case "itemCount":
-        aValue = a.itemCount || 0;
-        bValue = b.itemCount || 0;
+        aRaw = a.itemCount;
+        bRaw = b.itemCount;
+        aValue = aRaw ?? null;
+        bValue = bRaw ?? null;
         break;
       case "createdAt":
       default:
@@ -124,7 +174,33 @@ export function filterAndSortOrders(
         break;
     }
 
-    // Handle different data types for comparison
+    // Handle NULL comparisons (PostgreSQL behavior: ASC = NULLS LAST, DESC = NULLS FIRST)
+    const aIsNull = aValue === null || aValue === undefined;
+    const bIsNull = bValue === null || bValue === undefined;
+
+    if (aIsNull && bIsNull) {
+      // Both null - equal, use createdAt as tiebreaker
+      const aCreatedAt = new Date(a.createdAt).getTime();
+      const bCreatedAt = new Date(b.createdAt).getTime();
+      const secondaryComparison = aCreatedAt - bCreatedAt;
+      return sortOrder === "asc" ? secondaryComparison : -secondaryComparison;
+    }
+
+    if (aIsNull) {
+      // a is null, b is not
+      // ASC: nulls last (a after b) = return 1
+      // DESC: nulls first (a before b) = return -1
+      return sortOrder === "asc" ? 1 : -1;
+    }
+
+    if (bIsNull) {
+      // b is null, a is not
+      // ASC: nulls last (b after a) = return -1
+      // DESC: nulls first (b before a) = return 1
+      return sortOrder === "asc" ? -1 : 1;
+    }
+
+    // Both non-null - normal comparison
     let comparison = 0;
     if (aValue instanceof Date && bValue instanceof Date) {
       comparison = aValue.getTime() - bValue.getTime();
@@ -342,6 +418,7 @@ export function createOptimisticSplitUpdate(
 export function createOptimisticEditUpdate(
   old: OrdersQueryResponse,
   values: EditedOrder,
+  filters: OrderFilters,
   cascadeOptions: CascadeOptions = []
 ): OrdersQueryResponse {
   if (!old) return old;
@@ -383,16 +460,23 @@ export function createOptimisticEditUpdate(
       : order
   );
 
+  const sortedOrders = filterAndSortOrders(updatedOrders, {
+    search: filters.search,
+    sort: filters.sort,
+    order: filters.order,
+  });
+
   return {
     ...old,
-    orders: updatedOrders,
+    orders: sortedOrders,
     orderStats: old.orderStats,
   };
 }
 
 export function createOptimisticDeleteUpdate(
   old: OrdersQueryResponse,
-  orderIds: Set<string>
+  orderIds: Set<string>,
+  filters: OrderFilters
 ) {
   if (!old) return old;
 
@@ -410,9 +494,15 @@ export function createOptimisticDeleteUpdate(
 
   const totalCount = old.totalCount - deletedOrders.length;
 
+  const filteredAndSortedOrders = filterAndSortOrders(remainingOrders, {
+    search: filters.search,
+    sort: filters.sort,
+    order: filters.order,
+  });
+
   return {
     ...old,
-    orders: remainingOrders,
+    orders: filteredAndSortedOrders,
     orderStats: old.orderStats,
     totalCount,
   };
@@ -420,7 +510,8 @@ export function createOptimisticDeleteUpdate(
 
 export function createOptimisticEditItemUpdate(
   old: OrdersQueryResponse,
-  values: CollectionItemFormValues
+  values: CollectionItemFormValues,
+  filters: OrderFilters
 ) {
   const order = old.orders.find((order: Order) => order.orderId === values.orderId);
   if (!order) return old;
@@ -463,9 +554,15 @@ export function createOptimisticEditItemUpdate(
       : order
   );
 
+  const sortedOrders = filterAndSortOrders(updatedOrders, {
+    search: filters.search,
+    sort: filters.sort,
+    order: filters.order,
+  });
+
   return {
     ...old,
-    orders: updatedOrders,
+    orders: sortedOrders,
     orderStats: old.orderStats,
   };
 }
@@ -473,7 +570,8 @@ export function createOptimisticEditItemUpdate(
 export function createOptimisticDeleteItemUpdate(
   old: OrdersQueryResponse,
   orderId: string,
-  collectionId: string
+  collectionId: string,
+  filters: OrderFilters
 ) {
   const order = old.orders.find((order: Order) => order.orderId === orderId);
   if (!order) return old;
@@ -511,16 +609,23 @@ export function createOptimisticDeleteItemUpdate(
       : order
   );
 
+  const sortedOrders = filterAndSortOrders(updatedOrders, {
+    search: filters.search,
+    sort: filters.sort,
+    order: filters.order,
+  });
+
   return {
     ...old,
-    orders: updatedOrders,
+    orders: sortedOrders,
     orderStats: old.orderStats,
   };
 }
 
 export function createOptimisticDeleteItemsUpdate(
   old: OrdersQueryResponse,
-  collectionIds: Set<string>
+  collectionIds: Set<string>,
+  filters: OrderFilters
 ) {
   if (!old) return old;
 
@@ -557,9 +662,15 @@ export function createOptimisticDeleteItemsUpdate(
     };
   });
 
+  const sortedOrders = filterAndSortOrders(updatedOrders, {
+    search: filters.search,
+    sort: filters.sort,
+    order: filters.order,
+  });
+
   return {
     ...old,
-    orders: updatedOrders,
+    orders: sortedOrders,
     orderStats: old.orderStats,
   };
 }

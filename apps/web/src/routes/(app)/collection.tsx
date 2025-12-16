@@ -78,7 +78,7 @@ function RouteComponent() {
       queryClient.setQueryData(
         ["collection", filters],
         (old: CollectionQueryResponse) => {
-          return createOptimisticDeleteUpdate(old, collectionIds);
+          return createOptimisticDeleteUpdate(old, collectionIds, filters);
         }
       );
       return { previousData };
@@ -113,7 +113,7 @@ function RouteComponent() {
       queryClient.setQueryData(
         ["collection", filters],
         (old: CollectionQueryResponse) => {
-          return createOptimisticEditUpdate(old, values);
+          return createOptimisticEditUpdate(old, values, filters);
         }
       );
       return { previousData };

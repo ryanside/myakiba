@@ -45,24 +45,15 @@ export function SortCombobox({
 
   const handleSort = (columnId: string | null): void => {
     if (columnId === null) {
-      // Clear sorting
       onSortChange(null, null);
       return;
     }
 
-    const isCurrentColumn = currentSort?.columnId === columnId;
-    const isAsc = isCurrentColumn && currentSort?.direction === "asc";
-    const isDesc = isCurrentColumn && currentSort?.direction === "desc";
-
-    // Toggle logic: none -> asc -> desc -> none
-    if (!isCurrentColumn) {
-      // Not currently sorted, set to ascending
+    if (!currentSort || currentSort.columnId !== columnId) {
       onSortChange(columnId, "asc");
-    } else if (isAsc) {
-      // Currently ascending, toggle to descending
+    } else if (currentSort.direction === "asc") {
       onSortChange(columnId, "desc");
-    } else if (isDesc) {
-      // Currently descending, clear sort
+    } else {
       onSortChange(null, null);
     }
   };
@@ -78,7 +69,7 @@ export function SortCombobox({
   };
 
   const getSortButtonIcon = (): React.ReactElement => {
-    if (!currentSort || currentSort.columnId === "createdAt") {
+    if (!currentSort) {
       return <ArrowUpDown className="h-4 w-4" />;
     }
     return currentSort.direction === "desc" ? (
@@ -102,9 +93,7 @@ export function SortCombobox({
     >
       {getSortButtonIcon()}
       <span className="hidden md:block">
-        {currentColumnName && currentColumnName !== "createdAt"
-          ? `${currentColumnName}`
-          : "Sort By"}
+        {currentColumnName ? currentColumnName : "Sort By"}
       </span>
     </Button>
   );
