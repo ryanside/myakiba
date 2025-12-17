@@ -25,42 +25,24 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DataGridColumnHeader } from "@/components/ui/data-grid-column-header";
-import {
-  MoreHorizontal,
-  Eye,
-  Edit,
-  Trash2,
-  ListRestart,
-  Package,
-  Copy,
-  Filter,
-  Trash,
-} from "lucide-react";
+import { MoreHorizontal, Eye, Edit, Trash2, Package, Copy } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link } from "@tanstack/react-router";
 import { cn, getCurrencyLocale, getCategoryColor } from "@/lib/utils";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import { DebouncedInput } from "../debounced-input";
 import { DataGridPagination } from "../ui/data-grid-pagination";
 import { DataGrid, DataGridContainer } from "../ui/data-grid";
 import { ScrollArea, ScrollBar } from "../ui/scroll-area";
 import { DataGridTable } from "../ui/data-grid-table";
 import { toast } from "sonner";
-import { Dialog, DialogTrigger } from "../ui/dialog";
-import FiltersForm from "./filters-form";
-import {
-  Popover,
-  PopoverClose,
-  PopoverContent,
-  PopoverTrigger,
-} from "../ui/popover";
+import { Sheet, SheetTrigger } from "../ui/sheet";
 import CollectionItemForm from "./collection-item-form";
 import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import { PopoverRatingCell } from "../cells/popover-rating-cell";
 import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
 import { InlineCountCell } from "../cells/inline-count-cell";
 import { DataGridColumnCombobox } from "../ui/data-grid-column-combobox";
-import { DataGridSortCombobox } from "../ui/data-grid-sort-combobox";
+import { CollectionToolbar } from "./collection-toolbar";
 import { DEFAULT_PAGE_INDEX, DEFAULT_PAGE_SIZE } from "@myakiba/constants";
 
 export { DEFAULT_PAGE_INDEX, DEFAULT_PAGE_SIZE };
@@ -81,7 +63,7 @@ interface CollectionDataGridProps {
   onFilterChange: (filters: CollectionFilters) => void;
   onSearchChange: (search: string) => void;
   onResetFilters: () => void;
-  onDeleteCollectionItems: (collectionIds: Set<string>) => void;
+  onDeleteCollectionItems: (collectionIds: Set<string>) => Promise<void>;
   onEditCollectionItem: (values: CollectionItemFormValues) => void;
   currency?: string;
 }
@@ -122,6 +104,7 @@ export const CollectionDataGrid = ({
     rowSelection: collectionSelection,
     setRowSelection: setCollectionSelection,
     getSelectedOrderIds: getSelectedCollectionIds,
+    clearSelections,
   } = useSelection();
 
   const [expandedRows, setExpandedRows] = useState<ExpandedState>({});
@@ -548,19 +531,23 @@ export const CollectionDataGrid = ({
                   <Copy className="mr-2 h-4 w-4" />
                   Copy MFC item ID
                 </DropdownMenuItem>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <DropdownMenuItem
+                      onSelect={(e) => {
+                        e.preventDefault();
+                      }}
+                    >
                       <Edit className="mr-2 h-4 w-4" />
                       Edit item
                     </DropdownMenuItem>
-                  </DialogTrigger>
+                  </SheetTrigger>
                   <CollectionItemForm
                     itemData={item}
                     callbackFn={onEditCollectionItem}
                     currency={currency}
                   />
-                </Dialog>
+                </Sheet>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   variant="destructive"
@@ -654,109 +641,18 @@ export const CollectionDataGrid = ({
   return (
     <>
       <div className="flex items-center justify-start gap-2">
-        <DebouncedInput
-          value={search ?? ""}
-          onChange={(e) => onSearchChange(e.toString())}
-          placeholder="Search"
-          className="max-w-xs"
+        <CollectionToolbar
+          search={search}
+          filters={filters}
+          onSearchChange={onSearchChange}
+          onFilterChange={onFilterChange}
+          onResetFilters={onResetFilters}
+          currency={currency}
+          selectedCollectionIds={getSelectedCollectionIds}
+          clearSelections={clearSelections}
+          onDeleteCollectionItems={onDeleteCollectionItems}
         />
-        <Dialog key={JSON.stringify(filters)}>
-          <DialogTrigger asChild>
-            <Button variant="outline">
-              <Filter className="" />
-              <span className="hidden md:block">Filters</span>
-            </Button>
-          </DialogTrigger>
-          <FiltersForm
-            currentFilters={{
-              ...filters,
-            }}
-            onApplyFilters={(newFilters) =>
-              onFilterChange({ ...filters, ...newFilters, offset: 0 })
-            }
-            currency={currency}
-          />
-        </Dialog>
-        <DataGridSortCombobox
-          table={table}
-          onSortChange={(columnId, direction) => {
-            if (columnId === null || direction === null) {
-              // Clear sorting - use default sort
-              onFilterChange({
-                sort: "createdAt",
-                order: "desc",
-                offset: 0,
-              });
-            } else {
-              onFilterChange({
-                sort: columnId as
-                  | "itemTitle"
-                  | "itemScale"
-                  | "count"
-                  | "score"
-                  | "price"
-                  | "shop"
-                  | "orderDate"
-                  | "paymentDate"
-                  | "shippingDate"
-                  | "collectionDate"
-                  | "createdAt",
-                order: direction,
-                offset: 0,
-              });
-            }
-          }}
-        />
-        <Button onClick={onResetFilters} variant="outline">
-          <ListRestart className="" />
-          <span className="hidden md:block">Reset Filters</span>
-        </Button>
         <DataGridColumnCombobox table={table} />
-
-        <Popover>
-          <PopoverTrigger
-            asChild
-            disabled={getSelectedCollectionIds.size === 0}
-          >
-            <Button
-              variant="outline"
-              size="icon"
-              disabled={getSelectedCollectionIds.size === 0}
-            >
-              <Trash className="" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent>
-            <div className="flex flex-col items-center gap-2 text-sm text-pretty">
-              <div className="flex flex-row items-center gap-2 mr-auto">
-                <p>Delete the selected collection items?</p>
-              </div>
-              <div className="flex flex-row items-center gap-2 max-w-16 mr-auto">
-                <PopoverClose asChild>
-                  <Button
-                    variant="outline"
-                    disabled={getSelectedCollectionIds.size === 0}
-                    className="block"
-                  >
-                    Cancel
-                  </Button>
-                </PopoverClose>
-                <PopoverClose asChild>
-                  <Button
-                    variant="destructive"
-                    disabled={getSelectedCollectionIds.size === 0}
-                    className="block"
-                    onClick={() =>
-                      onDeleteCollectionItems(getSelectedCollectionIds)
-                    }
-                  >
-                    Delete
-                  </Button>
-                </PopoverClose>
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
       </div>
       <div className="space-y-4">
         <DataGrid

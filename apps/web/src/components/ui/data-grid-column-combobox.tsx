@@ -16,6 +16,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Scroller } from "./scroller";
 
 interface DataGridColumnComboboxProps<TData> {
   table: Table<TData>;
@@ -56,30 +57,32 @@ export function DataGridColumnCombobox<TData>({
           <CommandList>
             <CommandEmpty>No column found.</CommandEmpty>
             <CommandGroup>
-              {columns.map((column) => {
-                const isVisible = column.getIsVisible();
-                const columnName =
-                  column.columnDef.meta?.headerTitle || column.id;
+              <Scroller className="max-h-96">
+                {columns.map((column) => {
+                  const isVisible = column.getIsVisible();
+                  const columnName =
+                    column.columnDef.meta?.headerTitle || column.id;
 
-                return (
-                  <CommandItem
-                    key={column.id}
-                    value={column.id}
-                    onSelect={() => {
-                      column.toggleVisibility(!isVisible);
-                    }}
-                    className="capitalize"
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        isVisible ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    {columnName}
-                  </CommandItem>
-                );
-              })}
+                  return (
+                    <CommandItem
+                      key={column.id}
+                      value={column.id}
+                      onSelect={() => {
+                        column.toggleVisibility(!isVisible);
+                      }}
+                      className="capitalize"
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          isVisible ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      {columnName}
+                    </CommandItem>
+                  );
+                })}
+              </Scroller>
             </CommandGroup>
           </CommandList>
         </Command>
@@ -87,4 +90,3 @@ export function DataGridColumnCombobox<TData>({
     </Popover>
   );
 }
-

@@ -17,10 +17,7 @@ export default function HeroSection({
           <div className="flex relative text-sm items-start bg-background">
             <TextLoop
               preText="An alternative to"
-              texts={[
-                "MyFigureCollection's Manager",
-                "DIY Spreadsheets",
-              ]}
+              texts={["MyFigureCollection's Manager", "DIY Spreadsheets"]}
             />
           </div>
           <h1 className="mt-4 max-w-xl tracking-tight text-balance text-black dark:text-white text-2xl font-medium">
@@ -44,6 +41,9 @@ export default function HeroSection({
                 Try it out now <ArrowRightIcon className="w-4 h-4" />
               </Link>
             </Button>
+            <div className="px-2 text-start text-xs text-muted-foreground italic">
+              <p>*in early development</p>
+            </div>
           </div>
         </div>
 
@@ -56,7 +56,7 @@ export default function HeroSection({
             fetchPriority="high"
           />
 
-          <div className="bg-transparent relative border-black/20 border rounded-md shadow-sm overflow-hidden shadow-black/15 mx-8 md:mx-16 lg:mx-32">
+          <div className="bg-transparent relative border-black/20 border-2 rounded-md shadow-sm overflow-hidden shadow-black/15 mx-8 md:mx-16 lg:mx-32">
             <img
               src={heroImage}
               alt="app screen"

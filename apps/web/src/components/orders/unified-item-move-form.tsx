@@ -50,6 +50,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { ScrollArea } from "../ui/scroll-area";
+import { Scroller } from "../ui/scroller";
 
 type UnifiedItemMoveFormProps = {
   selectedItemData: {
@@ -169,7 +170,7 @@ export default function UnifiedItemMoveForm({
   const selectedCount = selectedItemData.collectionIds.size;
 
   return (
-    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <DialogContent className="max-w-2xl max-h-[90vh]">
       <DialogHeader>
         <DialogTitle>Move Items</DialogTitle>
         <DialogDescription>
@@ -208,7 +209,7 @@ export default function UnifiedItemMoveForm({
               existingOrderForm.handleSubmit();
             }}
           >
-            <ScrollArea className="gap-4 py-4 w-full overflow-auto max-h-[60vh]">
+            <ScrollArea className="gap-4 py-4 w-full overflow-auto">
               <existingOrderForm.Field
                 name="targetOrderId"
                 validators={{
@@ -325,7 +326,7 @@ export default function UnifiedItemMoveForm({
               newOrderForm.handleSubmit();
             }}
           >
-            <ScrollArea className="gap-4 py-4 w-full overflow-auto max-h-[60vh]">
+            <Scroller className="gap-4 py-4 w-full max-h-[60vh]">
               <div className="grid gap-4 pr-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
@@ -737,7 +738,7 @@ export default function UnifiedItemMoveForm({
                   )}
                 />
               </div>
-            </ScrollArea>
+            </Scroller>
             <DialogFooter>
               <DialogClose asChild>
                 <Button variant="outline" type="button">

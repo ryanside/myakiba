@@ -1,5 +1,5 @@
 import { MaskInput } from "@/components/ui/mask-input";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "../ui/button";
 interface InlineCurrencyCellProps {
@@ -21,8 +21,18 @@ export function InlineCurrencyCell({
   const [isEditing, setIsEditing] = useState(false);
   const [newValue, setNewValue] = useState(value);
 
+  // temporary workaround to ensure no stale data when the prop changes 
+  useEffect(() => {
+    setNewValue(value);
+  }, [value]);
+
   const handleSubmit = useCallback(async () => {
     if (newValue === value) {
+      setIsEditing(false);
+      return;
+    }
+    if (newValue === "") {
+      setNewValue(value);
       setIsEditing(false);
       return;
     }
@@ -69,7 +79,7 @@ export function InlineCurrencyCell({
       variant="ghost"
       disabled={disabled}
     >
-      {formatCurrency(value, currency)}
+      {formatCurrency(newValue, currency)}
     </Button>
   );
 }

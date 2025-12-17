@@ -8,7 +8,7 @@ interface UnpaidOrder {
   title: string;
   shop: string | null;
   releaseMonthYear: string | null;
-  itemImages: string[];
+  itemImages: string[] | null;
   itemIds: number[];
   total: string;
 }
@@ -50,7 +50,7 @@ function UnpaidOrderCard({
   order: UnpaidOrder;
   currency: string;
 }): React.ReactElement {
-  const images = order.itemImages;
+  const images = order.itemImages ?? [];
   const imageCount = images.length;
   const displayImages = images.slice(0, 4);
   const remainingCount = imageCount > 4 ? imageCount - 4 : 0;
@@ -67,7 +67,7 @@ function UnpaidOrderCard({
             <img
               src={images[0]}
               alt={order.title}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover object-top"
             />
           ) : imageCount === 2 ? (
             <div className="grid grid-cols-2 gap-px w-full h-full">
@@ -76,7 +76,7 @@ function UnpaidOrderCard({
                   <img
                     src={img}
                     alt={`${order.title} ${idx + 1}`}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover object-top"
                   />
                 </div>
               ))}
@@ -87,21 +87,21 @@ function UnpaidOrderCard({
                 <img
                   src={displayImages[0]}
                   alt={`${order.title} 1`}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover object-top"
                 />
               </div>
               <div className="w-full h-full overflow-hidden">
                 <img
                   src={displayImages[1]}
                   alt={`${order.title} 2`}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover object-top"
                 />
               </div>
               <div className="w-full h-full overflow-hidden">
                 <img
                   src={displayImages[2]}
                   alt={`${order.title} 3`}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover object-top"
                 />
               </div>
             </div>
@@ -112,7 +112,7 @@ function UnpaidOrderCard({
                   <img
                     src={img}
                     alt={`${order.title} ${idx + 1}`}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover object-top"
                   />
                 </div>
               ))}

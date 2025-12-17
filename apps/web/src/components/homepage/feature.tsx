@@ -109,7 +109,7 @@ function FeatureImage({
         className="absolute inset-0 size-full object-cover opacity-100"
         loading="lazy"
       />
-      <div className="bg-transparent border-black/20 border rounded-lg relative m-4 sm:m-8 md:m-12 overflow-hidden shadow-sm shadow-black/15 ring-1 ring-black/10 ">
+      <div className="bg-transparent border-black/20 border-2 rounded-lg relative m-4 sm:m-8 md:m-12 overflow-hidden shadow-sm shadow-black/15 ring-1 ring-black/10 ">
         <img
           src={featureImage}
           alt="app screen"

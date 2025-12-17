@@ -130,7 +130,7 @@ class CollectionService {
         case "price":
           return collection.price;
         case "shop":
-          return collection.shop;
+          return sql`LOWER(${collection.shop})`;
         case "orderDate":
           return collection.orderDate;
         case "paymentDate":
@@ -220,7 +220,10 @@ class CollectionService {
       .innerJoin(item, eq(collection.itemId, item.id))
       .leftJoin(item_release, eq(collection.releaseId, item_release.id))
       .where(filters)
-      .orderBy(orderBy === "asc" ? asc(sortByColumn) : desc(sortByColumn))
+      .orderBy(
+        orderBy === "asc" ? asc(sortByColumn) : desc(sortByColumn),
+        orderBy === "asc" ? asc(collection.createdAt) : desc(collection.createdAt)
+      )
       .limit(limit)
       .offset(offset);
 

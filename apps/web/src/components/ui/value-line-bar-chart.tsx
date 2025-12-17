@@ -1,4 +1,3 @@
-import { TrendingUp } from "lucide-react";
 import { Bar, BarChart, Cell, XAxis, ReferenceLine } from "recharts";
 import React from "react";
 import { AnimatePresence } from "motion/react";
@@ -10,9 +9,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { type ChartConfig, ChartContainer } from "@/components/ui/chart";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useMotionValueEvent, useSpring } from "motion/react";
+import { useNavigate } from "@tanstack/react-router";
 
 const CHART_MARGIN = 35;
 
@@ -48,6 +47,8 @@ interface ValueLineBarChartProps {
 }
 
 export function ValueLineBarChart({ data }: ValueLineBarChartProps) {
+  const navigate = useNavigate();
+
   // Transform data to include all 12 months with 0 for missing months
   const chartData = React.useMemo(() => {
     const monthMap = new Map(
@@ -64,6 +65,40 @@ export function ValueLineBarChart({ data }: ValueLineBarChartProps) {
 
   const [activeIndex, setActiveIndex] = React.useState<number | undefined>(
     currentMonthIndex
+  );
+
+  // Calculate date range for a given month index (0-11)
+  const getMonthDateRange = React.useCallback((monthIndex: number) => {
+    const currentYear = new Date().getFullYear();
+    // monthIndex is 0-11, but Date constructor expects 0-11 for months
+    const startDate = new Date(currentYear, monthIndex, 1);
+    // Get last day of the month by going to the first day of next month and subtracting 1 day
+    const endDate = new Date(currentYear, monthIndex + 1, 0);
+    
+    // Format as YYYY-MM-DD
+    const formatDate = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    return {
+      releaseMonthYearStart: formatDate(startDate),
+      releaseMonthYearEnd: formatDate(endDate),
+    };
+  }, []);
+
+  // Handle bar click to navigate to orders page with filters
+  const handleBarClick = React.useCallback(
+    (monthIndex: number) => {
+      const dateRange = getMonthDateRange(monthIndex);
+      navigate({
+        to: "/orders",
+        search: dateRange,
+      });
+    },
+    [navigate, getMonthDateRange]
   );
 
   const maxValueIndex = React.useMemo(() => {
@@ -127,10 +162,11 @@ export function ValueLineBarChart({ data }: ValueLineBarChartProps) {
               <Bar dataKey="desktop" fill="var(--secondary)" radius={4}>
                 {chartData.map((_, index) => (
                   <Cell
-                    className="duration-200"
+                    className="duration-200 cursor-pointer"
                     opacity={index === maxValueIndex.index ? 1 : 0.2}
                     key={index}
                     onMouseEnter={() => setActiveIndex(index)}
+                    onClick={() => handleBarClick(index)}
                   />
                 ))}
               </Bar>

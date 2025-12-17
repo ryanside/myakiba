@@ -22,6 +22,7 @@ import {
   createOptimisticDeleteUpdate,
   createOptimisticEditItemUpdate,
   createOptimisticDeleteItemUpdate,
+  createOptimisticDeleteItemsUpdate,
   createOptimisticMoveItemUpdate,
 } from "@/lib/orders/utils";
 import {
@@ -31,6 +32,7 @@ import {
   splitOrders,
   deleteOrders,
   deleteOrderItem,
+  deleteOrderItems,
   moveItem,
 } from "@/queries/orders";
 import { searchSchema } from "@/lib/validations";
@@ -40,6 +42,13 @@ import { OrdersDataGridSkeleton } from "@/components/orders/orders-data-grid-ske
 import { useCallback } from "react";
 import { KPICard } from "@/components/ui/kpi-card";
 import { formatCurrency } from "@/lib/utils";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Grid, TableOfContents } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export const Route = createFileRoute("/(app)/orders")({
   component: RouteComponent,
@@ -208,7 +217,12 @@ function RouteComponent() {
       queryClient.setQueryData(
         ["orders", filters],
         (old: OrdersQueryResponse) => {
-          return createOptimisticEditUpdate(old, values, cascadeOptions);
+          return createOptimisticEditUpdate(
+            old,
+            values,
+            filters,
+            cascadeOptions
+          );
         }
       );
       return { previousData };
@@ -221,8 +235,7 @@ function RouteComponent() {
         description: `Error: ${error.message}`,
       });
     },
-    onSuccess: () => {
-    },
+    onSuccess: () => {},
     onSettled: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["orders"] }),
@@ -243,7 +256,7 @@ function RouteComponent() {
       queryClient.setQueryData(
         ["orders", filters],
         (old: OrdersQueryResponse) => {
-          return createOptimisticDeleteUpdate(old, orderIds);
+          return createOptimisticDeleteUpdate(old, orderIds, filters);
         }
       );
       return { previousData };
@@ -257,8 +270,7 @@ function RouteComponent() {
         description: `Error: ${error.message}`,
       });
     },
-    onSuccess: () => {
-    },
+    onSuccess: () => {},
     onSettled: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["orders"] }),
@@ -280,7 +292,7 @@ function RouteComponent() {
       queryClient.setQueryData(
         ["orders", filters],
         (old: OrdersQueryResponse) => {
-          return createOptimisticEditItemUpdate(old, values);
+          return createOptimisticEditItemUpdate(old, values, filters);
         }
       );
 
@@ -294,8 +306,7 @@ function RouteComponent() {
         description: `Error: ${error.message}`,
       });
     },
-    onSuccess: () => {
-    },
+    onSuccess: () => {},
     onSettled: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["orders"] }),
@@ -317,7 +328,12 @@ function RouteComponent() {
       queryClient.setQueryData(
         ["orders", filters],
         (old: OrdersQueryResponse) => {
-          return createOptimisticDeleteItemUpdate(old, orderId, itemId);
+          return createOptimisticDeleteItemUpdate(
+            old,
+            orderId,
+            itemId,
+            filters
+          );
         }
       );
       return { previousData };
@@ -330,8 +346,41 @@ function RouteComponent() {
         description: `Error: ${error.message}`,
       });
     },
-    onSuccess: () => {
+    onSuccess: () => {},
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["order"] }),
+        queryClient.invalidateQueries({ queryKey: ["collection"] }),
+        queryClient.invalidateQueries({ queryKey: ["item"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
+        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
+      ]);
     },
+  });
+
+  const deleteItemsMutation = useMutation({
+    mutationFn: (collectionIds: Set<string>) => deleteOrderItems(collectionIds),
+    onMutate: async (collectionIds) => {
+      await queryClient.cancelQueries({ queryKey: ["orders", filters] });
+      const previousData = queryClient.getQueryData(["orders", filters]);
+      queryClient.setQueryData(
+        ["orders", filters],
+        (old: OrdersQueryResponse) => {
+          return createOptimisticDeleteItemsUpdate(old, collectionIds, filters);
+        }
+      );
+      return { previousData };
+    },
+    onError: (error, _, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(["orders", filters], context.previousData);
+      }
+      toast.error("Failed to delete items. Please try again.", {
+        description: `Error: ${error.message}`,
+      });
+    },
+    onSuccess: () => {},
     onSettled: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["orders"] }),
@@ -379,8 +428,7 @@ function RouteComponent() {
         description: `Error: ${error.message}`,
       });
     },
-    onSuccess: () => {
-    },
+    onSuccess: () => {},
     onSettled: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["orders"] }),
@@ -448,6 +496,13 @@ function RouteComponent() {
     [deleteItemMutation]
   );
 
+  const handleDeleteItems = useCallback(
+    async (collectionIds: Set<string>, orderIds: Set<string>) => {
+      deleteItemsMutation.mutate(collectionIds);
+    },
+    [deleteItemsMutation]
+  );
+
   const handleMoveItem = useCallback(
     async (
       targetOrderId: string,
@@ -509,7 +564,11 @@ function RouteComponent() {
         <KPICard
           title="Total Spent"
           subtitle="all time, including all fees"
-          value={orderStats ? formatCurrency(orderStats.totalSpent, userCurrency) : undefined}
+          value={
+            orderStats
+              ? formatCurrency(orderStats.totalSpent, userCurrency)
+              : undefined
+          }
         />
         <KPICard
           title="Active Orders"
@@ -519,9 +578,33 @@ function RouteComponent() {
         <KPICard
           title="Unpaid Costs"
           subtitle="costs with status 'Ordered'"
-          value={orderStats ? formatCurrency(orderStats.unpaidCosts, userCurrency) : undefined}
+          value={
+            orderStats
+              ? formatCurrency(orderStats.unpaidCosts, userCurrency)
+              : undefined
+          }
         />
       </div>
+      <Tabs
+        defaultValue="table"
+        className="w-[375px] text-sm text-muted-foreground"
+      >
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="table">
+            <TableOfContents /> Table
+          </TabsTrigger>
+          <Tooltip>
+            <TooltipTrigger>
+              <TabsTrigger value="grid" disabled>
+                <Grid /> Grid
+              </TabsTrigger>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>More views coming soon! Grid, Kanban, Gallery, etc.</p>
+            </TooltipContent>
+          </Tooltip>
+        </TabsList>
+      </Tabs>
       {isPending ? (
         <OrdersDataGridSkeleton />
       ) : (
@@ -548,6 +631,7 @@ function RouteComponent() {
           onDeleteOrders={handleDeleteOrders}
           onEditItem={handleEditItem}
           onDeleteItem={handleDeleteItem}
+          onDeleteItems={handleDeleteItems}
           onMoveItem={handleMoveItem}
           currency={userCurrency}
         />

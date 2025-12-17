@@ -35,8 +35,11 @@ export const cleanEmptyParams = <T extends Record<string, unknown>>(
   if (search.pageSize === DEFAULT_PAGE_SIZE) delete newSearch.pageSize;
   if (search.limit === 10) delete newSearch.limit;
   if (search.offset === 0) delete newSearch.offset;
-  if (search.sort === "createdAt") delete newSearch.sort;
-  if (search.order === "desc") delete newSearch.order;
+  // Only remove default sort when both sort and order are at their defaults
+  if (search.sort === "createdAt" && search.order === "desc") {
+    delete newSearch.sort;
+    delete newSearch.order;
+  }
 
   return newSearch;
 };

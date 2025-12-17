@@ -141,6 +141,19 @@ export async function deleteOrderItem(orderId: string, collectionId: string) {
   }
 }
 
+export async function deleteOrderItems(collectionIds: Set<string>) {
+  const response = await client.api.orders.items.$delete({
+    json: {
+      collectionIds: Array.from(collectionIds),
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || `HTTP ${response.status}`);
+  }
+}
+
 export async function getItemReleases(itemId: number) {
   const response = await client.api.items[":itemId"].releases.$get({
     param: {
