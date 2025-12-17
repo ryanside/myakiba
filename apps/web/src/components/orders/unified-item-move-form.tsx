@@ -170,7 +170,7 @@ export default function UnifiedItemMoveForm({
   const selectedCount = selectedItemData.collectionIds.size;
 
   return (
-    <DialogContent className="max-w-2xl h-[90vh]">
+    <DialogContent className="max-w-2xl max-h-[90vh]">
       <DialogHeader>
         <DialogTitle>Move Items</DialogTitle>
         <DialogDescription>

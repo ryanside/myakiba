@@ -647,11 +647,11 @@ export function createOptimisticDeleteItemsUpdate(
     );
 
     const additionalFees =
-      parseFloat(order.shippingFee) +
-      parseFloat(order.taxes) +
-      parseFloat(order.duties) +
-      parseFloat(order.tariffs) +
-      parseFloat(order.miscFees);
+      (parseFloat(order.shippingFee) || 0) +
+      (parseFloat(order.taxes) || 0) +
+      (parseFloat(order.duties) || 0) +
+      (parseFloat(order.tariffs) || 0) +
+      (parseFloat(order.miscFees) || 0);
     const newOrderTotal = remainingItemsPriceTotal + additionalFees;
 
     return {

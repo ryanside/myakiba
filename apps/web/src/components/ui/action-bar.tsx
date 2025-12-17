@@ -151,7 +151,7 @@ function ActionBar(props: ActionBarProps) {
 
   const dir = useDirection(dirProp);
 
-  React.useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     setMounted(true);
   }, []);
 

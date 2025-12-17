@@ -65,6 +65,7 @@ function OrderCard({
             variant="dim"
             size="icon"
             className="absolute top-2 right-2"
+            aria-label="Mark as collected"
             onClick={(e) => {
               e.stopPropagation();
               onMarkOwned(order.orderId);
