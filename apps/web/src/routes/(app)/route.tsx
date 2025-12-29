@@ -41,7 +41,7 @@ function RouteComponent() {
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset className="">
+      <SidebarInset className="!shadow-none border-border">
         <header className="flex h-12 shrink-0 items-center justify-between gap-2 px-4">
           <div className="flex items-center gap-0.5">
             <SidebarTrigger className="-ml-1" />
