@@ -1,5 +1,9 @@
 import * as z from "zod";
-import { SHIPPING_METHODS, ORDER_STATUSES, CONDITIONS } from "@myakiba/constants";
+import {
+  SHIPPING_METHODS,
+  ORDER_STATUSES,
+  CONDITIONS,
+} from "@myakiba/constants";
 
 export const syncOrderSchema = z.object({
   id: z.string(),
@@ -64,15 +68,24 @@ export const csvItemSchema = z.object({
   price: z.string(),
   scale: z.string(),
   barcode: z.string(),
-  status: z.enum(["Owned", "Ordered"]),
-  count: z.string(),
+  status: z
+    .string()
+    .transform((val) => val === "" ? undefined : val)
+    .pipe(z.enum(["Owned", "Ordered", "Wished"]).default("Owned")),
+  count: z
+    .string()
+    .transform((val) => val === "" ? undefined : val)
+    .pipe(z.string().default("1")),
   score: z.string(),
   payment_date: z.string(),
   shipping_date: z.string(),
   collecting_date: z.string(),
   price_1: z.string(),
   shop: z.string(),
-  shipping_method: z.enum(SHIPPING_METHODS),
+  shipping_method: z
+    .string()
+    .transform((val) => val === "" ? undefined : val)
+    .pipe(z.enum(SHIPPING_METHODS).default("n/a")),
   tracking_number: z.string(),
   wishibility: z.string().optional(),
   note: z.string(),
@@ -129,4 +142,3 @@ export type UpdatedSyncOrder = z.infer<typeof syncOrderSchema>;
 export type UpdatedSyncOrderItem = z.infer<typeof syncOrderItemSchema>;
 export type UpdatedSyncCollection = z.infer<typeof syncCollectionItemSchema>;
 export type JobData = z.infer<typeof jobDataSchema>;
-

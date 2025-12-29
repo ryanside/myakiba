@@ -15,15 +15,13 @@ import {
 import SyncService from "./service";
 import { tryCatch } from "@/lib/utils";
 import { createId } from "@paralleldrive/cuid2";
-import { createBunWebSocket } from "hono/bun";
+import { upgradeWebSocket, websocket } from "hono/bun";
 import type { WSContext } from "hono/ws";
 import {
   csvRateLimit,
   orderRateLimit,
   collectionRateLimit,
 } from "@/middleware/sync-rate-limit";
-
-const { upgradeWebSocket, websocket } = createBunWebSocket();
 
 // WeakMap to store intervals associated with WebSocket connections
 const wsIntervals = new WeakMap<WSContext, NodeJS.Timeout>();
