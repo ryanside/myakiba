@@ -133,21 +133,6 @@ function DashboardContent() {
             <Plus className="h-4 w-4" />
             Add Order
           </Button>
-          <Button
-            className="bg-gradient-to-br from-background via-muted to-background text-foreground dark:!border-border"
-            size="md"
-            onClick={() => {
-              navigate({
-                to: "/profile/$username",
-                params: {
-                  username: session?.user.username ?? "",
-                },
-              });
-            }}
-          >
-            <User className="h-4 w-4" />
-            View Profile
-          </Button>
         </div>
       </div>
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-4">

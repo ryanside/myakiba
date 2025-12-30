@@ -23,7 +23,9 @@ export function BudgetControlCard({
 }: BudgetControlCardProps) {
   const hasBudget = limit !== undefined && limit > 0;
   const percentageUsed = hasBudget ? (currentSpent / limit) * 100 : 0;
-  const showWarning = hasBudget && percentageUsed >= warningThreshold;
+  const showWarning =
+    hasBudget && percentageUsed >= warningThreshold && percentageUsed < 100;
+  const showOverflow = hasBudget && percentageUsed >= 100;
 
   return (
     <Card className="">
@@ -68,9 +70,20 @@ export function BudgetControlCard({
             variant="destructive"
             className="bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900 py-2"
           >
-            <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-500" />
+            <AlertTriangle className="size-3 text-red-600 dark:text-red-500" />
             <AlertDescription className="text-red-800 dark:text-red-400 text-xs ">
               You're nearing the top of your spending limit
+            </AlertDescription>
+          </Alert>
+        )}
+        {showOverflow && (
+          <Alert
+            variant="destructive"
+            className="bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900"
+          >
+            <AlertTriangle className="size-3 text-red-600 dark:text-red-500" />
+            <AlertDescription className="text-red-800 dark:text-red-400 text-xs ">
+              You've exceeded your spending limit!
             </AlertDescription>
           </Alert>
         )}
