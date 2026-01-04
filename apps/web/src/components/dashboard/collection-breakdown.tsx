@@ -4,6 +4,7 @@ import { cn, formatCurrency, getCategoryColor } from "@/lib/utils";
 import { ScrollArea } from "../ui/scroll-area";
 import { Scroller } from "../ui/scroller";
 import { Separator } from "../ui/separator";
+import { Link } from "@tanstack/react-router";
 
 export function CollectionBreakdown({
   data,
@@ -151,9 +152,11 @@ export function CollectionBreakdown({
               hoveredIndex !== null && hoveredIndex !== index;
 
             return (
-              <div
+              <Link
+                to="/collection"
+                search={{ category: [item.name] }}
                 key={item.name}
-                className="flex flex-row gap-2 items-center font-light  cursor-pointer transition-opacity py-1 duration-200"
+                className="flex flex-row gap-2 items-center font-light transition-opacity py-1 duration-200"
                 style={{ opacity: isOtherHovered ? 0.4 : 1 }}
                 onMouseEnter={() => setHoveredIndex(index)}
                 onMouseLeave={() => setHoveredIndex(null)}
@@ -177,7 +180,7 @@ export function CollectionBreakdown({
                 <span className="ml-auto text-sm text-foreground">
                   {formatCurrency(item.value.toString(), currency)}
                 </span>
-              </div>
+              </Link>
             );
           })}
         </Scroller>
