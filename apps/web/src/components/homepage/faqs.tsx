@@ -13,13 +13,13 @@ export default function FAQs() {
     {
       id: "item-1",
       question: "Does myakiba use MyFigureCollection's data?",
-      answer: `Yes, we use MyFigureCollection's core item information. Since MyFigureCollection does not provide an API, myakiba scrapes and stores item information from MyFigureCollection item links (https://myfigurecollection.net/item/xxxxx) that the user provides. Items are periodically rescraped to ensure the item information is accurate and up to date.`,
+      answer: `Yes, we use MyFigureCollection's item information. Since MyFigureCollection does not have a public API, myakiba scrapes and stores item information from MyFigureCollection item links (https://myfigurecollection.net/item/xxxxx) that the user provides. Items are periodically rescraped to ensure the item information is accurate and up to date.`,
     },
     {
       id: "item-2",
       question: "How does myakiba compare to MyFigureCollection?",
       answer:
-        "myakiba was built to realize the features that I thought were missing from MyFigureCollection. It currently offers a dashboard, analytics, comprehensive order management, and collection management, with expense tracking and a sharable analytics-focused profile page (complements your MyFigureCollection profile!) in development.",
+        "myakiba is built to realize the features that I thought were missing from MyFigureCollection. It currently offers a dashboard, analytics, order management, and collection management. It is still in early development.",
     },
 
     {
@@ -33,16 +33,10 @@ export default function FAQs() {
       id: "item-4",   
       question: "Who is myakiba for?",
       answer:
-        "Collectors who want a viable alternative to MyFigureCollection/Spreadsheets. Collectors who also want to see a Spotify-wrapped like experience for their collection.",
+        "Collectors who want an alternative to MyFigureCollection/Spreadsheets.",
     },
     {
       id: "item-5",
-      question: "Why build this?",
-      answer:
-        "The other tools were either too simple (like Spreadsheets) or lacked the features I wanted (like MyFigureCollection), so I build this for myself and decided to share it with the community. It's also a fun project to work on and learn new things as a developer.",
-    },
-    {
-      id: "item-6",
       question: "I'm a developer. Can I contribute to the project?",
       answer:
         "Yes! Contributions are welcome. Please check out the GitHub repository and feel free to join our Discord server.",
