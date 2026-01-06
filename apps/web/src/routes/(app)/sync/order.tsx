@@ -44,13 +44,6 @@ export const Route = createFileRoute("/(app)/sync/order")({
         title: "Sync Order — myakiba",
       },
     ],
-    links: [
-      {
-        rel: "icon",
-        href: "/favicon.ico",
-      },
-    ],
-    scripts: [],
   }),
 });
 

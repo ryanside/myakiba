@@ -13,13 +13,6 @@ export const Route = createFileRoute("/(app)/gallery")({
         title: `Gallery — myakiba`,
       },
     ],
-    links: [
-      {
-        rel: "icon",
-        href: "/favicon.ico",
-      },
-    ],
-    scripts: [],
   }),
 });
 

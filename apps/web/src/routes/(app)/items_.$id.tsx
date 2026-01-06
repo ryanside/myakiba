@@ -58,13 +58,6 @@ export const Route = createFileRoute("/(app)/items_/$id")({
         title: `Item ${params.id} — myakiba`,
       },
     ],
-    links: [
-      {
-        rel: "icon",
-        href: "/favicon.ico",
-      },
-    ],
-    scripts: [],
   }),
 });
 

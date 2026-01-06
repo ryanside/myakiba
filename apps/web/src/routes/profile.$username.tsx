@@ -13,13 +13,6 @@ export const Route = createFileRoute("/profile/$username")({
         title: `${params.username} — myakiba`,
       },
     ],
-    links: [
-      {
-        rel: "icon",
-        href: "/favicon.ico",
-      },
-    ],
-    scripts: [],
   }),
 });
 

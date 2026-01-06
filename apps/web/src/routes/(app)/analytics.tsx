@@ -30,13 +30,6 @@ export const Route = createFileRoute("/(app)/analytics")({
         title: "Analytics — myakiba",
       },
     ],
-    links: [
-      {
-        rel: "icon",
-        href: "/favicon.ico",
-      },
-    ],
-    scripts: [],
   }),
 });
 
