@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { DebouncedInput } from "@/components/debounced-input";
-import { Filter, ListRestart, Merge, Move, Trash, Info, X } from "lucide-react";
+import { Filter, ListRestart, Merge, Move, Trash, X } from "lucide-react";
 import OrdersFiltersForm from "./orders-filters-form";
 import {
   SortCombobox,
@@ -9,17 +8,7 @@ import {
 } from "@/components/ui/sort-combobox";
 import { OrderForm } from "./order-form";
 import UnifiedItemMoveForm from "./unified-item-move-form";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  PopoverClose,
-} from "@/components/ui/popover";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { ConfirmationPopover } from "@/components/ui/confirmation-popover";
 import {
   ActionBar,
   ActionBarSelection,
@@ -185,23 +174,21 @@ export function OrdersToolbar({
           placeholder="Search"
           className="max-w-xs"
         />
-        <Dialog key={JSON.stringify(filters)}>
-          <DialogTrigger asChild>
+        <OrdersFiltersForm
+          renderTrigger={
             <Button variant="outline">
               <Filter className="" />
               <span className="hidden md:block">Filters</span>
             </Button>
-          </DialogTrigger>
-          <OrdersFiltersForm
-            currentFilters={{
-              ...filters,
-            }}
-            onApplyFilters={(newFilters) =>
-              onFilterChange({ ...filters, ...newFilters, offset: 0 })
-            }
-            currency={currency}
-          />
-        </Dialog>
+          }
+          currentFilters={{
+            ...filters,
+          }}
+          onApplyFilters={(newFilters) =>
+            onFilterChange({ ...filters, ...newFilters, offset: 0 })
+          }
+          currency={currency}
+        />
         <SortCombobox
           columns={SORTABLE_COLUMNS}
           currentSort={currentSort}
@@ -225,8 +212,8 @@ export function OrdersToolbar({
         </ActionBarSelection>
         <ActionBarSeparator />
         <ActionBarGroup>
-          <Dialog>
-            <DialogTrigger asChild>
+          <OrderForm
+            renderTrigger={
               <ActionBarItem
                 disabled={selectedOrderIds.size < 2}
                 onSelect={(e) => e.preventDefault()}
@@ -235,17 +222,15 @@ export function OrdersToolbar({
                 <Merge />
                 <span className="hidden md:block">Merge</span>
               </ActionBarItem>
-            </DialogTrigger>
-            <OrderForm
-              orderIds={selectedOrderIds}
-              callbackFn={onMerge}
-              type="merge"
-              clearSelections={clearSelections}
-              currency={currency}
-            />
-          </Dialog>
-          <Dialog>
-            <DialogTrigger asChild>
+            }
+            orderIds={selectedOrderIds}
+            callbackFn={onMerge}
+            type="merge"
+            clearSelections={clearSelections}
+            currency={currency}
+          />
+          <UnifiedItemMoveForm
+            renderTrigger={
               <ActionBarItem
                 disabled={selectedItemData.collectionIds.size === 0}
                 onSelect={(e) => e.preventDefault()}
@@ -254,17 +239,15 @@ export function OrdersToolbar({
                 <Move />
                 <span className="hidden md:block">Move Item</span>
               </ActionBarItem>
-            </DialogTrigger>
-            <UnifiedItemMoveForm
-              selectedItemData={selectedItemData}
-              onMoveToExisting={onMoveItem}
-              onMoveToNew={onSplit}
-              clearSelections={clearSelections}
-              currency={currency}
-            />
-          </Dialog>
-          <Popover>
-            <PopoverTrigger asChild>
+            }
+            selectedItemData={selectedItemData}
+            onMoveToExisting={onMoveItem}
+            onMoveToNew={onSplit}
+            clearSelections={clearSelections}
+            currency={currency}
+          />
+          <ConfirmationPopover
+            trigger={
               <ActionBarItem
                 disabled={selectedOrderIds.size === 0}
                 onSelect={(e) => e.preventDefault()}
@@ -276,52 +259,17 @@ export function OrdersToolbar({
                   Orders
                 </span>
               </ActionBarItem>
-            </PopoverTrigger>
-            <PopoverContent>
-              <div className="flex flex-col items-center gap-2 text-sm text-pretty">
-                <div className="flex flex-row items-center gap-2 mr-auto">
-                  <p>Delete the selected orders and their items?</p>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="w-4 h-4" />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-h-40">
-                      <p>
-                        Items with "Owned" status will not be deleted. You can
-                        delete owned items in the collection tab.
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-                <div className="flex flex-row items-center gap-2 max-w-16 mr-auto">
-                  <PopoverClose asChild>
-                    <Button
-                      variant="outline"
-                      disabled={selectedOrderIds.size === 0}
-                      className="block"
-                    >
-                      Cancel
-                    </Button>
-                  </PopoverClose>
-                  <PopoverClose asChild>
-                    <Button
-                      variant="destructive"
-                      disabled={selectedOrderIds.size === 0}
-                      className="block"
-                      onClick={async () => {
-                        await onDeleteOrders(selectedOrderIds);
-                        clearSelections();
-                      }}
-                    >
-                      Delete
-                    </Button>
-                  </PopoverClose>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-          <Popover>
-            <PopoverTrigger asChild>
+            }
+            title="Delete the selected orders and their items?"
+            tooltipContent='Items with "Owned" status will not be deleted. You can delete owned items in the collection tab.'
+            disabled={selectedOrderIds.size === 0}
+            onConfirm={async () => {
+              await onDeleteOrders(selectedOrderIds);
+              clearSelections();
+            }}
+          />
+          <ConfirmationPopover
+            trigger={
               <ActionBarItem
                 disabled={selectedItemData.collectionIds.size === 0}
                 onSelect={(e) => e.preventDefault()}
@@ -332,53 +280,18 @@ export function OrdersToolbar({
                   <span className="hidden md:inline">Delete </span> Items
                 </span>
               </ActionBarItem>
-            </PopoverTrigger>
-            <PopoverContent>
-              <div className="flex flex-col items-center gap-2 text-sm text-pretty">
-                <div className="flex flex-row items-center gap-2 mr-auto">
-                  <p>Delete the selected items?</p>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="w-4 h-4" />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-h-40">
-                      <p>
-                        Items with "Owned" status will not be deleted. You can
-                        delete owned items in the collection tab.
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-                <div className="flex flex-row items-center gap-2 max-w-16 mr-auto">
-                  <PopoverClose asChild>
-                    <Button
-                      variant="outline"
-                      disabled={selectedItemData.collectionIds.size === 0}
-                      className="block"
-                    >
-                      Cancel
-                    </Button>
-                  </PopoverClose>
-                  <PopoverClose asChild>
-                    <Button
-                      variant="destructive"
-                      disabled={selectedItemData.collectionIds.size === 0}
-                      className="block"
-                      onClick={async () => {
-                        await onDeleteItems(
-                          selectedItemData.collectionIds,
-                          selectedItemData.orderIds
-                        );
-                        clearSelections();
-                      }}
-                    >
-                      Delete
-                    </Button>
-                  </PopoverClose>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
+            }
+            title="Delete the selected items?"
+            tooltipContent='Items with "Owned" status will not be deleted. You can delete owned items in the collection tab.'
+            disabled={selectedItemData.collectionIds.size === 0}
+            onConfirm={async () => {
+              await onDeleteItems(
+                selectedItemData.collectionIds,
+                selectedItemData.orderIds
+              );
+              clearSelections();
+            }}
+          />
         </ActionBarGroup>
         <ActionBarSeparator />
         <ActionBarClose>

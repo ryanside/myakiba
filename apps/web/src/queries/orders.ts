@@ -1,4 +1,3 @@
-import type { CollectionItemFormValues } from "@/lib/collection/types";
 import { client } from "@/lib/hono-client";
 import type {
   CascadeOptions,

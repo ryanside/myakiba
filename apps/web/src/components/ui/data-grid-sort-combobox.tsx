@@ -1,7 +1,6 @@
 import { type ReactNode, useState } from "react";
 import { ArrowUp, ArrowDown, ArrowUpDown, X } from "lucide-react";
 import { type Table } from "@tanstack/react-table";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Command,

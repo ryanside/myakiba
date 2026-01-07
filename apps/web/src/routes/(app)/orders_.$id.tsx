@@ -24,7 +24,6 @@ import {
   FileText,
   Users,
 } from "lucide-react";
-import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { OrderForm } from "@/components/orders/order-form";
 import type { EditedOrder, CascadeOptions } from "@/lib/orders/types";
 import { toast } from "sonner";
@@ -240,19 +239,17 @@ function RouteComponent() {
           </div>
         </div>
         <div className="flex items-center gap-x-2">
-          <Dialog>
-            <DialogTrigger asChild>
+          <OrderForm
+            renderTrigger={
               <Button variant="outline">
                 <Edit className="size-4" />
                 Edit Order
               </Button>
-            </DialogTrigger>
-            <OrderForm
-              type="edit-order"
-              orderData={{ ...order, totalCount: 0 }}
-              callbackFn={handleEditOrder}
-            />
-          </Dialog>
+            }
+            type="edit-order"
+            orderData={{ ...order, totalCount: 0 }}
+            callbackFn={handleEditOrder}
+          />
         </div>
       </div>
 

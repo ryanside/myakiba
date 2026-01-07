@@ -2,14 +2,11 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { authClient } from "@/lib/auth-client";
 import { useNavigate } from "@tanstack/react-router";
-import { Button } from "../ui/button";
-import { Skeleton } from "../ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { LogOut, Settings, User } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";

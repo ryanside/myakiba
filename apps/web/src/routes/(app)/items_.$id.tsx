@@ -30,7 +30,6 @@ import {
 import { formatCurrency, formatDate, getCategoryColor } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import CollectionItemForm from "@/components/collection/collection-item-form";
-import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import {
   Popover,
   PopoverClose,
@@ -175,8 +174,7 @@ function RouteComponent() {
       );
       return { previousData };
     },
-    onSuccess: () => {
-    },
+    onSuccess: () => {},
     onError: (error, _, context) => {
       if (context?.previousData) {
         queryClient.setQueryData(
@@ -240,8 +238,7 @@ function RouteComponent() {
         description: `Error: ${error.message}`,
       });
     },
-    onSuccess: () => {
-    },
+    onSuccess: () => {},
     onSettled: async () => {
       await Promise.all([
         queryClient.invalidateQueries({
@@ -303,7 +300,6 @@ function RouteComponent() {
   const collectionItems = itemRelatedCollection?.collection || [];
   const ordersList = itemRelatedOrders?.orders || [];
 
-
   return (
     <div className="flex flex-col h-full">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1">
@@ -334,7 +330,15 @@ function RouteComponent() {
                   </a>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline" style={{ borderColor: getCategoryColor(item.category), color: getCategoryColor(item.category) }}>{item.category}</Badge>
+                  <Badge
+                    variant="outline"
+                    style={{
+                      borderColor: getCategoryColor(item.category),
+                      color: getCategoryColor(item.category),
+                    }}
+                  >
+                    {item.category}
+                  </Badge>
                   {item.scale && item.scale !== "NON_SCALE" && (
                     <Badge variant="outline">{item.scale}</Badge>
                   )}
@@ -391,16 +395,13 @@ function RouteComponent() {
               </Label>
               <div className="space-y-3">
                 {Object.entries(
-                  item.entries.reduce(
-                    (acc, entry) => {
-                      if (!acc[entry.category]) {
-                        acc[entry.category] = [];
-                      }
-                      acc[entry.category].push(entry);
-                      return acc;
-                    },
-                    {} as Record<string, typeof item.entries>
-                  )
+                  item.entries.reduce((acc, entry) => {
+                    if (!acc[entry.category]) {
+                      acc[entry.category] = [];
+                    }
+                    acc[entry.category].push(entry);
+                    return acc;
+                  }, {} as Record<string, typeof item.entries>)
                 ).map(([category, entries]) => (
                   <div key={category}>
                     <Label className="text-xs font-medium text-muted-foreground uppercase mb-1">
@@ -479,52 +480,53 @@ function RouteComponent() {
             ) : (
               <div className="space-y-4">
                 {collectionItems.map((collectionItem) => (
-                  <Card key={collectionItem.id} className="shadow-none bg-background">
+                  <Card
+                    key={collectionItem.id}
+                    className="shadow-none bg-background"
+                  >
                     <CardHeader>
                       <div className="flex items-center gap-2">
                         <Badge variant="primary">{collectionItem.status}</Badge>
                         <div className="ml-auto">
-                          <Dialog>
-                            <DialogTrigger asChild>
+                          <CollectionItemForm
+                            renderTrigger={
                               <Button variant="ghost" size="icon" className="">
                                 <Edit className="" />
                               </Button>
-                            </DialogTrigger>
-                            <CollectionItemForm
-                              itemData={{
-                                ...collectionItem,
-                                id: collectionItem.id,
-                                itemTitle: data.item.title,
-                                itemImage: data.item.image,
-                                releaseDate:
-                                  data.item.releases.find(
-                                    (release) =>
-                                      release.id === collectionItem.releaseId
-                                  )?.date || null,
-                                releasePrice:
-                                  data.item.releases.find(
-                                    (release) =>
-                                      release.id === collectionItem.releaseId
-                                  )?.price || null,
-                                releaseCurrency:
-                                  data.item.releases.find(
-                                    (release) =>
-                                      release.id === collectionItem.releaseId
-                                  )?.priceCurrency || null,
-                                releaseBarcode:
-                                  data.item.releases.find(
-                                    (release) =>
-                                      release.id === collectionItem.releaseId
-                                  )?.barcode || null,
-                                releaseType:
-                                  data.item.releases.find(
-                                    (release) =>
-                                      release.id === collectionItem.releaseId
-                                  )?.type || null,
-                              }}
-                              callbackFn={handleEditCollectionItem}
-                            />
-                          </Dialog>
+                            }
+                            itemData={{
+                              ...collectionItem,
+                              id: collectionItem.id,
+                              itemTitle: data.item.title,
+                              itemImage: data.item.image,
+                              releaseDate:
+                                data.item.releases.find(
+                                  (release) =>
+                                    release.id === collectionItem.releaseId
+                                )?.date || null,
+                              releasePrice:
+                                data.item.releases.find(
+                                  (release) =>
+                                    release.id === collectionItem.releaseId
+                                )?.price || null,
+                              releaseCurrency:
+                                data.item.releases.find(
+                                  (release) =>
+                                    release.id === collectionItem.releaseId
+                                )?.priceCurrency || null,
+                              releaseBarcode:
+                                data.item.releases.find(
+                                  (release) =>
+                                    release.id === collectionItem.releaseId
+                                )?.barcode || null,
+                              releaseType:
+                                data.item.releases.find(
+                                  (release) =>
+                                    release.id === collectionItem.releaseId
+                                )?.type || null,
+                            }}
+                            callbackFn={handleEditCollectionItem}
+                          />
                           <Popover>
                             <PopoverTrigger asChild>
                               <Button variant="ghost" size="icon">

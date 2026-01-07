@@ -1,21 +1,26 @@
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
   DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetDescription,
   SheetFooter,
   SheetClose,
+  SheetTrigger,
 } from "@/components/ui/sheet";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { MaskInput } from "@/components/ui/mask-input";
 import { Label } from "@/components/ui/label";
@@ -29,21 +34,17 @@ import {
 import { DatePicker } from "@/components/ui/date-picker";
 import * as z from "zod";
 import type { EditedOrder, NewOrder, Order } from "@/lib/orders/types";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ChevronDown, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import type { CascadeOptions } from "@/lib/orders/types";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
+import { CascadeOptionsDropdown } from "@/components/cascade-options-dropdown";
 import { Textarea } from "../ui/textarea";
 import { getCurrencyLocale } from "@/lib/utils";
 import { Scroller } from "../ui/scroller";
+import { SHIPPING_METHODS } from "@myakiba/constants";
 
 type MergeOrderFormProps = {
+  renderTrigger: React.ReactNode;
   orderIds: Set<string>;
   collectionIds?: Set<string>;
   type: "merge";
@@ -57,6 +58,7 @@ type MergeOrderFormProps = {
 };
 
 type SplitOrderFormProps = {
+  renderTrigger: React.ReactNode;
   orderIds: Set<string>;
   collectionIds: Set<string>;
   type: "split";
@@ -71,6 +73,7 @@ type SplitOrderFormProps = {
 };
 
 type EditOrderFormProps = {
+  renderTrigger: React.ReactNode;
   orderIds?: Set<string>;
   collectionIds?: Set<string>;
   type: "edit-order";
@@ -89,7 +92,8 @@ type OrderFormProps =
   | EditOrderFormProps;
 
 export function OrderForm(props: OrderFormProps) {
-  const { callbackFn, type, orderIds, collectionIds, clearSelections, currency } = props;
+  const { callbackFn, type, orderIds, collectionIds, clearSelections, currency, renderTrigger } = props;
+  const [open, setOpen] = useState(false);
 
   const userCurrency = currency || "USD";
   const userLocale = getCurrencyLocale(userCurrency);
@@ -155,6 +159,7 @@ export function OrderForm(props: OrderFormProps) {
           notes: value.notes,
         };
         await callbackFn(transformedValue, cascadeOptions);
+        setOpen(false);
       } else if (type === "split") {
         const transformedValue: NewOrder = {
           title: value.title,
@@ -180,6 +185,7 @@ export function OrderForm(props: OrderFormProps) {
           orderIds
         );
         clearSelections?.();
+        setOpen(false);
       } else {
         const transformedValue: NewOrder = {
           title: value.title,
@@ -200,13 +206,18 @@ export function OrderForm(props: OrderFormProps) {
         };
         await callbackFn(transformedValue, cascadeOptions, orderIds);
         clearSelections?.();
+        setOpen(false);
       }
     },
   });
 
   if (type === "edit-order") {
     return (
-      <SheetContent side="right" className="w-full sm:max-w-lg h-full">
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetTrigger asChild>
+          {renderTrigger}
+        </SheetTrigger>
+        <SheetContent side="right" className="w-full sm:max-w-lg h-full">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -225,59 +236,14 @@ export function OrderForm(props: OrderFormProps) {
               <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label>Cascade Order Details to Items</Label>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="max-w-66 truncate justify-between  hover:bg-background active:bg-background data-[state=open]:bg-background"
-                  >
-                    {cascadeDisplayText}
-                    <ChevronDown className="h-4 w-4 z-10" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
-                  <div className="flex gap-2 py-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="flex-1 h-8 text-xs"
-                      onClick={handleSelectAll}
-                      type="button"
-                    >
-                      Select All
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="flex-1 h-8 text-xs"
-                      onClick={handleSelectNone}
-                      type="button"
-                    >
-                      Select None
-                    </Button>
-                  </div>
-                  <DropdownMenuSeparator />
-                  {cascadeOptionsList.map((option) => (
-                    <DropdownMenuCheckboxItem
-                      key={option}
-                      onSelect={(e) => {
-                        e.preventDefault();
-                      }}
-                      checked={cascadeOptions.includes(
-                        option as CascadeOptions[number]
-                      )}
-                      onCheckedChange={(checked) =>
-                        handleCascadeOptionChange(
-                          option as CascadeOptions[number],
-                          checked
-                        )
-                      }
-                    >
-                      {option}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <CascadeOptionsDropdown
+                cascadeOptions={cascadeOptions}
+                cascadeDisplayText={cascadeDisplayText}
+                cascadeOptionsList={cascadeOptionsList}
+                handleSelectAll={handleSelectAll}
+                handleSelectNone={handleSelectNone}
+                handleCascadeOptionChange={handleCascadeOptionChange}
+              />
             </div>
 
             <form.Field
@@ -454,18 +420,7 @@ export function OrderForm(props: OrderFormProps) {
               name="shippingMethod"
               validators={{
                 onChange: z.enum(
-                  [
-                    "n/a",
-                    "EMS",
-                    "SAL",
-                    "AIRMAIL",
-                    "SURFACE",
-                    "FEDEX",
-                    "DHL",
-                    "Colissimo",
-                    "UPS",
-                    "Domestic",
-                  ],
+                  SHIPPING_METHODS,
                   "Shipping method is required"
                 ),
               }}
@@ -482,16 +437,11 @@ export function OrderForm(props: OrderFormProps) {
                       <SelectValue placeholder="Select shipping method" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="n/a">n/a</SelectItem>
-                      <SelectItem value="EMS">EMS</SelectItem>
-                      <SelectItem value="SAL">SAL</SelectItem>
-                      <SelectItem value="AIRMAIL">AIRMAIL</SelectItem>
-                      <SelectItem value="SURFACE">SURFACE</SelectItem>
-                      <SelectItem value="FEDEX">FEDEX</SelectItem>
-                      <SelectItem value="DHL">DHL</SelectItem>
-                      <SelectItem value="Colissimo">Colissimo</SelectItem>
-                      <SelectItem value="UPS">UPS</SelectItem>
-                      <SelectItem value="Domestic">Domestic</SelectItem>
+                      {SHIPPING_METHODS.map((method) => (
+                        <SelectItem key={method} value={method}>
+                          {method}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -662,11 +612,16 @@ export function OrderForm(props: OrderFormProps) {
           </SheetFooter>
       </form>
     </SheetContent>
+    </Sheet>
   );
 }
 
   return (
-    <DialogContent className="max-w-2xl">
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        {renderTrigger}
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl">
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -691,59 +646,14 @@ export function OrderForm(props: OrderFormProps) {
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label>Cascade Order Details to Items</Label>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="max-w-66 truncate justify-between  hover:bg-background active:bg-background data-[state=open]:bg-background"
-                  >
-                    {cascadeDisplayText}
-                    <ChevronDown className="h-4 w-4 z-10" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
-                  <div className="flex gap-2 py-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="flex-1 h-8 text-xs"
-                      onClick={handleSelectAll}
-                      type="button"
-                    >
-                      Select All
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="flex-1 h-8 text-xs"
-                      onClick={handleSelectNone}
-                      type="button"
-                    >
-                      Select None
-                    </Button>
-                  </div>
-                  <DropdownMenuSeparator />
-                  {cascadeOptionsList.map((option) => (
-                    <DropdownMenuCheckboxItem
-                      key={option}
-                      onSelect={(e) => {
-                        e.preventDefault();
-                      }}
-                      checked={cascadeOptions.includes(
-                        option as CascadeOptions[number]
-                      )}
-                      onCheckedChange={(checked) =>
-                        handleCascadeOptionChange(
-                          option as CascadeOptions[number],
-                          checked
-                        )
-                      }
-                    >
-                      {option}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <CascadeOptionsDropdown
+                cascadeOptions={cascadeOptions}
+                cascadeDisplayText={cascadeDisplayText}
+                cascadeOptionsList={cascadeOptionsList}
+                handleSelectAll={handleSelectAll}
+                handleSelectNone={handleSelectNone}
+                handleCascadeOptionChange={handleCascadeOptionChange}
+              />
             </div>
 
             <form.Field
@@ -920,18 +830,7 @@ export function OrderForm(props: OrderFormProps) {
               name="shippingMethod"
               validators={{
                 onChange: z.enum(
-                  [
-                    "n/a",
-                    "EMS",
-                    "SAL",
-                    "AIRMAIL",
-                    "SURFACE",
-                    "FEDEX",
-                    "DHL",
-                    "Colissimo",
-                    "UPS",
-                    "Domestic",
-                  ],
+                  SHIPPING_METHODS,
                   "Shipping method is required"
                 ),
               }}
@@ -948,16 +847,11 @@ export function OrderForm(props: OrderFormProps) {
                       <SelectValue placeholder="Select shipping method" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="n/a">n/a</SelectItem>
-                      <SelectItem value="EMS">EMS</SelectItem>
-                      <SelectItem value="SAL">SAL</SelectItem>
-                      <SelectItem value="AIRMAIL">AIRMAIL</SelectItem>
-                      <SelectItem value="SURFACE">SURFACE</SelectItem>
-                      <SelectItem value="FEDEX">FEDEX</SelectItem>
-                      <SelectItem value="DHL">DHL</SelectItem>
-                      <SelectItem value="Colissimo">Colissimo</SelectItem>
-                      <SelectItem value="UPS">UPS</SelectItem>
-                      <SelectItem value="Domestic">Domestic</SelectItem>
+                      {SHIPPING_METHODS.map((method) => (
+                        <SelectItem key={method} value={method}>
+                          {method}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1125,5 +1019,6 @@ export function OrderForm(props: OrderFormProps) {
         </DialogFooter>
       </form>
     </DialogContent>
+    </Dialog>
   );
 }

@@ -165,7 +165,7 @@ export default function SignUpForm({
                 } else if (value.length > 30) {
                   return;
                 } else {
-                  const { data, error } = await authClient.isUsernameAvailable({
+                  const { data } = await authClient.isUsernameAvailable({
                     username: value,
                   });
                   if (data?.available === false) {

@@ -1,12 +1,15 @@
 import {
+  Dialog,
   DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { useForm } from "@tanstack/react-form";
+import { useState } from "react";
 import {
   Field,
   FieldContent,
@@ -32,16 +35,19 @@ import { getCurrencyLocale } from "@/lib/utils";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/constants";
 
 interface OrdersFiltersFormProps {
+  renderTrigger: React.ReactNode;
   currentFilters?: OrderFilters;
   onApplyFilters: (filters: OrderFilters) => void;
   currency?: string;
 }
 
 export default function OrdersFiltersForm({
+  renderTrigger,
   currentFilters,
   onApplyFilters,
   currency,
 }: OrdersFiltersFormProps) {
+  const [open, setOpen] = useState(false);
   const userCurrency = currency || "USD";
   const userLocale = getCurrencyLocale(userCurrency);
 
@@ -107,6 +113,7 @@ export default function OrdersFiltersForm({
       };
 
       onApplyFilters(filters);
+      setOpen(false);
     },
   });
 
@@ -120,20 +127,24 @@ export default function OrdersFiltersForm({
   };
 
   return (
-    <DialogContent className="max-w-2xl max-h-[100vh]">
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          form.handleSubmit();
-        }}
-      >
-        <DialogHeader>
-          <DialogTitle>Filters</DialogTitle>
-          <DialogDescription>
-            Apply filters to narrow down your orders
-          </DialogDescription>
-        </DialogHeader>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        {renderTrigger}
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl max-h-[100vh]">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            form.handleSubmit();
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>Filters</DialogTitle>
+            <DialogDescription>
+              Apply filters to narrow down your orders
+            </DialogDescription>
+          </DialogHeader>
 
         <ScrollArea className="overflow-auto max-h-[70vh]">
           <div className="grid gap-4 p-2">
@@ -662,6 +673,7 @@ export default function OrdersFiltersForm({
         </DialogFooter>
       </form>
     </DialogContent>
+    </Dialog>
   );
 }
 
