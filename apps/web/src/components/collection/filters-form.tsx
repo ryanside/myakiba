@@ -70,7 +70,6 @@ export default function FiltersForm({
   onApplyFilters,
   currency,
 }: FiltersFormProps) {
-  const [open, setOpen] = useState(false);
   const userCurrency = currency || "USD";
   const userLocale = getCurrencyLocale(userCurrency);
 
@@ -135,7 +134,6 @@ export default function FiltersForm({
       };
 
       onApplyFilters(filters);
-      setOpen(false);
     },
   });
 
@@ -164,7 +162,7 @@ export default function FiltersForm({
   });
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog>
       <DialogTrigger asChild>{renderTrigger}</DialogTrigger>
       <DialogContent className="max-w-2xl">
         <form
@@ -387,12 +385,11 @@ export default function FiltersForm({
                         ))}
                       </div>
                       <div className="flex gap-2">
-                        <Popover open={open} onOpenChange={setOpen}>
+                        <Popover>
                           <PopoverTrigger asChild>
                             <Button
                               variant="outline"
                               role="combobox"
-                              aria-expanded={open}
                               className="w-full justify-between"
                             >
                               Select entries...

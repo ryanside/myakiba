@@ -56,7 +56,7 @@ export function ConfirmationPopover({
           </div>
           <div className="flex flex-row items-center gap-2 max-w-16 mr-auto">
             <PopoverClose asChild>
-              <Button variant="outline" disabled={disabled} className="block">
+              <Button variant="outline" className="block">
                 {cancelLabel}
               </Button>
             </PopoverClose>
@@ -76,4 +76,3 @@ export function ConfirmationPopover({
     </Popover>
   );
 }
-

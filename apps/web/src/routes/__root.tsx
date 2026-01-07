@@ -37,11 +37,11 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
       {
         property: "og:description",
         content:
-          "The modern collection management tool for Japanese pop-culture (anime, manga, video-games, etc.) collectables (figures, artbooks, CDs, cups, collectibles, dakimakura, etc.). Track your collection, manage orders, view insightful analytics, and stay organized.",
+          "Modern collection management for anime figures and Japanese pop-culture goods. Track your collection, manage orders, view analytics, and stay organized.",
       },
       {
         property: "og:image",
-        content: "/og-image.png",
+        content: "https://myakiba.app/og-image.png",
       },
       {
         property: "og:image:width",
@@ -53,24 +53,24 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
       },
       // Twitter
       {
-        property: "twitter:card",
+        name: "twitter:card",
         content: "summary_large_image",
       },
       {
-        property: "twitter:url",
+        name: "twitter:url",
         content: "https://myakiba.app",
       },
       {
-        property: "twitter:title",
+        name: "twitter:title",
         content: "myakiba",
       },
       {
-        property: "twitter:description",
+        name: "twitter:description",
         content:
-          "The modern collection management tool for Japanese pop-culture (anime, manga, video-games, etc.) collectables (figures, artbooks, CDs, cups, collectibles, dakimakura, etc.). Track your collection, manage orders, view insightful analytics, and stay organized.",
+          "Modern collection management for anime figures and Japanese pop-culture goods. Track your collection, manage orders, view analytics, and stay organized.",
       },
       {
-        property: "twitter:image",
+        name: "twitter:image",
         content: "https://myakiba.app/og-image.png",
       },
     ],

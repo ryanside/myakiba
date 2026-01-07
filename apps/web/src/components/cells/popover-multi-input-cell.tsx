@@ -9,6 +9,8 @@ import { MaskInput } from "@/components/ui/mask-input";
 import { useForm } from "@tanstack/react-form";
 import * as Portal from "@radix-ui/react-portal";
 import { useState } from "react";
+import { tryCatch } from "@myakiba/utils";
+import { toast } from "sonner";
 
 interface PopoverInput {
   title: string;
@@ -43,7 +45,10 @@ export function PopoverMultiInputCell({
       {} as Record<string, string>
     ),
     onSubmit: async ({ value }) => {
-      await onSubmit(value);
+      const { error } = await tryCatch(onSubmit(value));
+      if (error) {
+        toast.error(error.message);
+      }
     },
   });
 
