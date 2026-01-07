@@ -1,4 +1,4 @@
-import { createFileRoute, RouterContextProvider } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
 import {
   Breadcrumb,

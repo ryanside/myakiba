@@ -18,13 +18,6 @@ export const Route = createFileRoute("/(auth)/login")({
         title: "Login — myakiba",
       },
     ],
-    links: [
-      {
-        rel: "icon",
-        href: "/favicon.ico",
-      },
-    ],
-    scripts: [],
   }),
   beforeLoad: async () => {
     const { data: session } = await authClient.getSession();

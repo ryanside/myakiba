@@ -1,20 +1,9 @@
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { DebouncedInput } from "@/components/debounced-input";
 import { Filter, ListRestart, Trash, X } from "lucide-react";
 import FiltersForm from "./filters-form";
 import { SortCombobox, type SortableColumn } from "@/components/ui/sort-combobox";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  PopoverClose,
-} from "@/components/ui/popover";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { ConfirmationPopover } from "@/components/ui/confirmation-popover";
 import {
   ActionBar,
   ActionBarSelection,
@@ -116,23 +105,21 @@ export function CollectionToolbar({
           placeholder="Search"
           className="max-w-xs"
         />
-        <Dialog key={JSON.stringify(filters)}>
-          <DialogTrigger asChild>
+        <FiltersForm
+          renderTrigger={
             <Button variant="outline">
               <Filter className="" />
               <span className="hidden md:block">Filters</span>
             </Button>
-          </DialogTrigger>
-          <FiltersForm
-            currentFilters={{
-              ...filters,
-            }}
-            onApplyFilters={(newFilters) =>
-              onFilterChange({ ...filters, ...newFilters, offset: 0 })
-            }
-            currency={currency}
-          />
-        </Dialog>
+          }
+          currentFilters={{
+            ...filters,
+          }}
+          onApplyFilters={(newFilters) =>
+            onFilterChange({ ...filters, ...newFilters, offset: 0 })
+          }
+          currency={currency}
+        />
         <SortCombobox
           columns={SORTABLE_COLUMNS}
           currentSort={currentSort}
@@ -154,8 +141,8 @@ export function CollectionToolbar({
         <ActionBarSelection className="border-none">{selectionText} selected</ActionBarSelection>
         <ActionBarSeparator />
         <ActionBarGroup>
-          <Popover>
-            <PopoverTrigger asChild>
+          <ConfirmationPopover
+            trigger={
               <ActionBarItem
                 disabled={selectedCollectionIds.size === 0}
                 onSelect={(e) => e.preventDefault()}
@@ -164,39 +151,14 @@ export function CollectionToolbar({
                 <Trash />
                 <span>Delete</span>
               </ActionBarItem>
-            </PopoverTrigger>
-            <PopoverContent>
-              <div className="flex flex-col items-center gap-2 text-sm text-pretty">
-                <div className="flex flex-row items-center gap-2 mr-auto">
-                  <p>Delete the selected collection items?</p>
-                </div>
-                <div className="flex flex-row items-center gap-2 max-w-16 mr-auto">
-                  <PopoverClose asChild>
-                    <Button
-                      variant="outline"
-                      disabled={selectedCollectionIds.size === 0}
-                      className="block"
-                    >
-                      Cancel
-                    </Button>
-                  </PopoverClose>
-                  <PopoverClose asChild>
-                    <Button
-                      variant="destructive"
-                      disabled={selectedCollectionIds.size === 0}
-                      className="block"
-                      onClick={async () => {
-                        await onDeleteCollectionItems(selectedCollectionIds);
-                        clearSelections();
-                      }}
-                    >
-                      Delete
-                    </Button>
-                  </PopoverClose>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
+            }
+            title="Delete the selected collection items?"
+            disabled={selectedCollectionIds.size === 0}
+            onConfirm={async () => {
+              await onDeleteCollectionItems(selectedCollectionIds);
+              clearSelections();
+            }}
+          />
         </ActionBarGroup>
         <ActionBarSeparator />
         <ActionBarClose>

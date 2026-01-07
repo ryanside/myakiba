@@ -45,13 +45,6 @@ export const Route = createFileRoute("/(app)/collection")({
         title: `Collection — myakiba`,
       },
     ],
-    links: [
-      {
-        rel: "icon",
-        href: "/favicon.ico",
-      },
-    ],
-    scripts: [],
   }),
 });
 

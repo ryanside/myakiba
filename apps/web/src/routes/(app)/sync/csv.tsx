@@ -41,13 +41,6 @@ export const Route = createFileRoute("/(app)/sync/csv")({
         title: "Sync CSV — myakiba",
       },
     ],
-    links: [
-      {
-        rel: "icon",
-        href: "/favicon.ico",
-      },
-    ],
-    scripts: [],
   }),
 });
 

@@ -43,14 +43,7 @@ export const Route = createFileRoute("/(app)/sync/collection")({
       {
         title: "Sync Collection — myakiba",
       },
-    ],
-    links: [
-      {
-        rel: "icon",
-        href: "/favicon.ico",
-      },
-    ],
-    scripts: [],
+      ],
   }),
 });
 

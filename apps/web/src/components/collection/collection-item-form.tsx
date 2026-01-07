@@ -1,13 +1,15 @@
 import type { CollectionItemFormValues } from "@/lib/collection/types";
 import {
+  Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetDescription,
   SheetFooter,
   SheetClose,
+  SheetTrigger,
 } from "@/components/ui/sheet";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { useState } from "react";
 import { Button } from "../ui/button";
 import { Input } from "@/components/ui/input";
 import { MaskInput } from "@/components/ui/mask-input";
@@ -31,15 +33,18 @@ import { Badge } from "../ui/badge";
 import { X } from "lucide-react";
 import { getCurrencyLocale } from "@/lib/utils";
 import { Scroller } from "../ui/scroller";
+import { SHIPPING_METHODS } from "@myakiba/constants";
 
 type CollectionItemFormProps = {
+  renderTrigger: React.ReactNode;
   itemData: CollectionItemFormValues;
   callbackFn: (itemData: CollectionItemFormValues) => void;
   currency?: string;
 };
 
 export default function CollectionItemForm(props: CollectionItemFormProps) {
-  const { itemData, callbackFn, currency } = props;
+  const { itemData, callbackFn, currency, renderTrigger } = props;
+  const [open, setOpen] = useState(false);
 
   const userCurrency = currency || "USD";
   const userLocale = getCurrencyLocale(userCurrency);
@@ -48,6 +53,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
     defaultValues: itemData,
     onSubmit: ({ value }) => {
       callbackFn(value);
+      setOpen(false);
     },
   });
 
@@ -65,7 +71,11 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
   });
 
   return (
-    <SheetContent side="right" className="w-full sm:max-w-lg h-full">
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        {renderTrigger}
+      </SheetTrigger>
+      <SheetContent side="right" className="w-full sm:max-w-lg h-full">
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -183,7 +193,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                     <div>
                       <Rating
                         size="md"
-                        rating={Number(field.state.value) ?? 0}
+                        rating={Number(field.state.value) || 0}
                         onRatingChange={(value) =>
                           field.handleChange(value.toString())
                         }
@@ -430,18 +440,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
               name="shippingMethod"
               validators={{
                 onChange: z.enum(
-                  [
-                    "n/a",
-                    "EMS",
-                    "SAL",
-                    "AIRMAIL",
-                    "SURFACE",
-                    "FEDEX",
-                    "DHL",
-                    "Colissimo",
-                    "UPS",
-                    "Domestic",
-                  ],
+                  SHIPPING_METHODS,
                   "Shipping method is required"
                 ),
               }}
@@ -458,16 +457,11 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                       <SelectValue placeholder="Select shipping method" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="n/a">n/a</SelectItem>
-                      <SelectItem value="EMS">EMS</SelectItem>
-                      <SelectItem value="SAL">SAL</SelectItem>
-                      <SelectItem value="AIRMAIL">AIRMAIL</SelectItem>
-                      <SelectItem value="SURFACE">SURFACE</SelectItem>
-                      <SelectItem value="FEDEX">FEDEX</SelectItem>
-                      <SelectItem value="DHL">DHL</SelectItem>
-                      <SelectItem value="Colissimo">Colissimo</SelectItem>
-                      <SelectItem value="UPS">UPS</SelectItem>
-                      <SelectItem value="Domestic">Domestic</SelectItem>
+                      {SHIPPING_METHODS.map((method) => (
+                        <SelectItem key={method} value={method}>
+                          {method}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   {!field.state.meta.isValid && (
@@ -572,5 +566,6 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
         </SheetFooter>
       </form>
     </SheetContent>
+    </Sheet>
   );
 }

@@ -144,7 +144,7 @@ export function RankingCard({
                 key={headerGroup.id}
                 className="border-b border-border hover:bg-transparent"
               >
-                {headerGroup.headers.map((header, headerIndex) => (
+                {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
                     className={cn(
@@ -165,7 +165,7 @@ export function RankingCard({
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row, rowIndex) => {
+              table.getRowModel().rows.map((row) => {
                 const rowNav = getRowNavigation?.(row.original);
                 return (
                 <Fragment key={row.id}>
@@ -181,7 +181,7 @@ export function RankingCard({
                       }
                     }}
                   >
-                    {row.getVisibleCells().map((cell, cellIndex) => (
+                    {row.getVisibleCells().map((cell) => (
                       <TableCell
                         key={cell.id}
                         className={cn(

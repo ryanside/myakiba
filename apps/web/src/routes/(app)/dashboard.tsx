@@ -35,13 +35,6 @@ export const Route = createFileRoute("/(app)/dashboard")({
         title: `Dashboard — myakiba`,
       },
     ],
-    links: [
-      {
-        rel: "icon",
-        href: "/favicon.ico",
-      },
-    ],
-    scripts: [],
   }),
 });
 

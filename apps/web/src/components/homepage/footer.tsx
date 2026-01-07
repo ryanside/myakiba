@@ -1,5 +1,3 @@
-import { Link } from "@tanstack/react-router";
-import { MyAkibaLogo } from "@/components/myakiba-logo";
 import { ArrowUp } from "lucide-react";
 import { ModeToggle } from "../mode-toggle";
 

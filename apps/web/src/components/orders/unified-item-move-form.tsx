@@ -1,13 +1,16 @@
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
   DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { MaskInput } from "@/components/ui/mask-input";
 import { Label } from "@/components/ui/label";
@@ -21,19 +24,12 @@ import {
 import { DatePicker } from "@/components/ui/date-picker";
 import * as z from "zod";
 import type { NewOrder, CascadeOptions } from "@/lib/orders/types";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ChevronDown, Loader2, ChevronsUpDownIcon, CheckIcon } from "lucide-react";
+import { Loader2, ChevronsUpDownIcon, CheckIcon } from "lucide-react";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
+import { CascadeOptionsDropdown } from "@/components/cascade-options-dropdown";
 import { Textarea } from "../ui/textarea";
 import { getCurrencyLocale, cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getOrderIdsAndTitles } from "@/queries/orders";
 import { DebouncedInput } from "@/components/debounced-input";
@@ -51,8 +47,10 @@ import {
 } from "@/components/ui/command";
 import { ScrollArea } from "../ui/scroll-area";
 import { Scroller } from "../ui/scroller";
+import { SHIPPING_METHODS } from "@myakiba/constants";
 
 type UnifiedItemMoveFormProps = {
+  renderTrigger: React.ReactNode;
   selectedItemData: {
     orderIds: Set<string>;
     collectionIds: Set<string>;
@@ -73,12 +71,14 @@ type UnifiedItemMoveFormProps = {
 };
 
 export default function UnifiedItemMoveForm({
+  renderTrigger,
   selectedItemData,
   onMoveToExisting,
   onMoveToNew,
   clearSelections,
   currency,
 }: UnifiedItemMoveFormProps) {
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [moveMode, setMoveMode] = useState<"existing" | "new">("existing");
 
   const userCurrency = currency || "USD";
@@ -97,7 +97,7 @@ export default function UnifiedItemMoveForm({
     title: "",
   });
 
-  const [open, setOpen] = useState(false);
+  const [popoverOpen, setPopoverOpen] = useState(false);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["orderIdsAndTitles", filters],
@@ -118,6 +118,7 @@ export default function UnifiedItemMoveForm({
         selectedItemData.orderIds
       );
       clearSelections();
+      setDialogOpen(false);
     },
   });
 
@@ -164,13 +165,18 @@ export default function UnifiedItemMoveForm({
         selectedItemData.orderIds
       );
       clearSelections();
+      setDialogOpen(false);
     },
   });
 
   const selectedCount = selectedItemData.collectionIds.size;
 
   return (
-    <DialogContent className="max-w-2xl max-h-[90vh]">
+    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <DialogTrigger asChild>
+        {renderTrigger}
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl max-h-[90vh]">
       <DialogHeader>
         <DialogTitle>Move Items</DialogTitle>
         <DialogDescription>
@@ -218,12 +224,12 @@ export default function UnifiedItemMoveForm({
                 children={(field) => (
                   <div className="grid gap-2">
                     <Label htmlFor={field.name}>Select Order:</Label>
-                    <Popover open={open} onOpenChange={setOpen}>
+                    <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
                           role="combobox"
-                          aria-expanded={open}
+                          aria-expanded={popoverOpen}
                           className="w-full justify-between"
                           type="button"
                         >
@@ -266,13 +272,13 @@ export default function UnifiedItemMoveForm({
                                       value={order.id}
                                       onSelect={() => {
                                         field.handleChange(order.id);
-                                        setOpen(false);
+                                        setPopoverOpen(false);
                                       }}
                                       onKeyDown={(e) => {
                                         if (e.key === "Enter") {
                                           e.preventDefault();
                                           field.handleChange(order.id);
-                                          setOpen(false);
+                                          setPopoverOpen(false);
                                         }
                                       }}
                                     >
@@ -331,59 +337,14 @@ export default function UnifiedItemMoveForm({
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
                     <Label>Cascade Order Details to Items</Label>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="max-w-66 truncate justify-between hover:bg-background active:bg-background data-[state=open]:bg-background"
-                        >
-                          {cascadeDisplayText}
-                          <ChevronDown className="h-4 w-4 z-10" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
-                        <div className="flex gap-2 py-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="flex-1 h-8 text-xs"
-                            onClick={handleSelectAll}
-                            type="button"
-                          >
-                            Select All
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="flex-1 h-8 text-xs"
-                            onClick={handleSelectNone}
-                            type="button"
-                          >
-                            Select None
-                          </Button>
-                        </div>
-                        <DropdownMenuSeparator />
-                        {cascadeOptionsList.map((option) => (
-                          <DropdownMenuCheckboxItem
-                            key={option}
-                            onSelect={(e) => {
-                              e.preventDefault();
-                            }}
-                            checked={cascadeOptions.includes(
-                              option as CascadeOptions[number]
-                            )}
-                            onCheckedChange={(checked) =>
-                              handleCascadeOptionChange(
-                                option as CascadeOptions[number],
-                                checked
-                              )
-                            }
-                          >
-                            {option}
-                          </DropdownMenuCheckboxItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <CascadeOptionsDropdown
+                      cascadeOptions={cascadeOptions}
+                      cascadeDisplayText={cascadeDisplayText}
+                      cascadeOptionsList={cascadeOptionsList}
+                      handleSelectAll={handleSelectAll}
+                      handleSelectNone={handleSelectNone}
+                      handleCascadeOptionChange={handleCascadeOptionChange}
+                    />
                   </div>
 
                   <newOrderForm.Field
@@ -560,18 +521,7 @@ export default function UnifiedItemMoveForm({
                     name="shippingMethod"
                     validators={{
                       onChange: z.enum(
-                        [
-                          "n/a",
-                          "EMS",
-                          "SAL",
-                          "AIRMAIL",
-                          "SURFACE",
-                          "FEDEX",
-                          "DHL",
-                          "Colissimo",
-                          "UPS",
-                          "Domestic",
-                        ],
+                        SHIPPING_METHODS,
                         "Shipping method is required"
                       ),
                     }}
@@ -588,16 +538,11 @@ export default function UnifiedItemMoveForm({
                             <SelectValue placeholder="Select shipping method" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="n/a">n/a</SelectItem>
-                            <SelectItem value="EMS">EMS</SelectItem>
-                            <SelectItem value="SAL">SAL</SelectItem>
-                            <SelectItem value="AIRMAIL">AIRMAIL</SelectItem>
-                            <SelectItem value="SURFACE">SURFACE</SelectItem>
-                            <SelectItem value="FEDEX">FEDEX</SelectItem>
-                            <SelectItem value="DHL">DHL</SelectItem>
-                            <SelectItem value="Colissimo">Colissimo</SelectItem>
-                            <SelectItem value="UPS">UPS</SelectItem>
-                            <SelectItem value="Domestic">Domestic</SelectItem>
+                            {SHIPPING_METHODS.map((method) => (
+                              <SelectItem key={method} value={method}>
+                                {method}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
@@ -764,6 +709,7 @@ export default function UnifiedItemMoveForm({
         )}
       </div>
     </DialogContent>
+    </Dialog>
   );
 }
 

@@ -1,7 +1,6 @@
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn, formatCurrency, getCategoryColor } from "@/lib/utils";
-import { ScrollArea } from "../ui/scroll-area";
 import { Scroller } from "../ui/scroller";
 import { Separator } from "../ui/separator";
 import { Link } from "@tanstack/react-router";
@@ -10,7 +9,6 @@ export function CollectionBreakdown({
   data,
   currency = "USD",
   className,
-  ...props
 }: {
   data: { name: string | null; count: number; totalValue: string | null }[];
   className?: string;
@@ -29,10 +27,6 @@ export function CollectionBreakdown({
 
   const totalItems = React.useMemo(() => {
     return chartData.reduce((acc, curr) => acc + curr.count, 0);
-  }, [chartData]);
-
-  const totalValue = React.useMemo(() => {
-    return chartData.reduce((acc, curr) => acc + curr.value, 0);
   }, [chartData]);
 
   const chartDataWithPercentages = React.useMemo(() => {
