@@ -6,7 +6,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import { useState } from "react";
 import { getStatusVariant } from "@/lib/orders/utils";
 
 interface SelectCellProps {
@@ -16,14 +15,11 @@ interface SelectCellProps {
 }
 
 export function SelectCell({ value, options, onSubmit }: SelectCellProps) {
-  const [isOpen, setIsOpen] = useState(false);
 
   return (
     <Select
       value={value}
       onValueChange={(value) => onSubmit(value as string)}
-      open={isOpen}
-      onOpenChange={setIsOpen}
     >
       <Badge asChild variant={getStatusVariant(value)} appearance="outline" className="py-4">
         <SelectTrigger className="!justify-between">

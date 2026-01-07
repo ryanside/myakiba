@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode } from "react";
 import { ArrowUp, ArrowDown, ArrowUpDown, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,7 +41,6 @@ export function SortCombobox({
   onSortChange,
   trigger,
 }: SortComboboxProps): React.ReactElement {
-  const [open, setOpen] = useState(false);
 
   const handleSort = (columnId: string | null): void => {
     if (columnId === null) {
@@ -88,7 +87,6 @@ export function SortCombobox({
     <Button
       variant="outline"
       role="combobox"
-      aria-expanded={open}
       className="justify-between"
     >
       {getSortButtonIcon()}
@@ -99,7 +97,7 @@ export function SortCombobox({
   );
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover>
       <PopoverTrigger asChild>{trigger || defaultTrigger}</PopoverTrigger>
       <PopoverContent className="w-[200px] p-0" align="start">
         <Command>
