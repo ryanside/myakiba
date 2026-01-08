@@ -35,6 +35,9 @@ RUN bun build --compile --minify --sourcemap --packages bundle ./apps/server/src
 # Our application runner
 FROM gcr.io/distroless/base-debian12:nonroot AS runner
 
+# Copy wget from busybox for health checks
+COPY --from=busybox:1.36-musl /bin/wget /usr/bin/wget
+
 ENV NODE_ENV=production
 
 ARG BUILD_APP_PORT=3000
