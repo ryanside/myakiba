@@ -27,7 +27,7 @@ import {
   EmptyDescription,
   EmptyMedia,
 } from "@/components/ui/empty";
-import { formatCurrency, formatDate, getCategoryColor } from "@/lib/utils";
+import { formatCurrency, formatDate, getCategoryColor } from "@myakiba/utils";
 import { Label } from "@/components/ui/label";
 import CollectionItemForm from "@/components/collection/collection-item-form";
 import {

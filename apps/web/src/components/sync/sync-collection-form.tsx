@@ -27,7 +27,7 @@ import { DatePicker } from "../ui/date-picker";
 import * as z from "zod";
 import { Rating } from "../ui/rating";
 import { Textarea } from "../ui/textarea";
-import { getCurrencyLocale } from "@/lib/utils";
+import { getCurrencyLocale } from "@myakiba/utils";
 import { extractMfcItemId } from "@/lib/sync/utils";
 
 export default function SyncCollectionForm({

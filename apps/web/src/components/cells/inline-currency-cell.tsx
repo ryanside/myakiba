@@ -1,6 +1,6 @@
 import { MaskInput } from "@/components/ui/mask-input";
 import { useCallback, useEffect, useState } from "react";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, tryCatch } from "@myakiba/utils";
 import { Button } from "../ui/button";
 interface InlineCurrencyCellProps {
   value: string;
@@ -9,7 +9,6 @@ interface InlineCurrencyCellProps {
   locale: string;
   disabled?: boolean;
 }
-import { tryCatch } from "@/lib/utils";
 
 export function InlineCurrencyCell({
   value,

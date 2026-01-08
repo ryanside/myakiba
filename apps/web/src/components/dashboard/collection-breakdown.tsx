@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn, formatCurrency, getCategoryColor } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { formatCurrency, getCategoryColor } from "@myakiba/utils";
 import { Scroller } from "../ui/scroller";
 import { Separator } from "../ui/separator";
 import { Link } from "@tanstack/react-router";

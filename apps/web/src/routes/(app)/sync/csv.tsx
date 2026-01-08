@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/stepper";
 import { useState, useEffect } from "react";
 import { Check, Loader2, LoaderCircleIcon } from "lucide-react";
-import { tryCatch } from "@/lib/utils";
+import { tryCatch } from "@myakiba/utils";
 import { ShimmeringText } from "@/components/ui/shimmering-text";
 import { transformCSVData } from "@/lib/sync/utils";
 import { type userItem, type status } from "@/lib/sync/types";

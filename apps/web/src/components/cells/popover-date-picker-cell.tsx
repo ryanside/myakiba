@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/popover";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { parseLocalDate, formatDate } from "@/lib/utils";
+import { parseLocalDate, formatDate } from "@myakiba/utils";
 import { format } from "date-fns";
 import * as Portal from "@radix-ui/react-portal";
 

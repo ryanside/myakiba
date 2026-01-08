@@ -1,11 +1,11 @@
-import { dbHttp } from "@myakiba/db";
+import { db } from "@myakiba/db";
 import { collection, item } from "@myakiba/db/schema/figure";
 import { eq, count, and, sql, desc, not } from "drizzle-orm";
 import { entry, entry_to_item } from "@myakiba/db/schema/figure";
 
 class AnalyticsService {
   async getAnalytics(userId: string) {
-    const getPriceRangeDistribution = dbHttp
+    const getPriceRangeDistribution = db
       .select({
         priceRange: sql<string>`
           CASE 
@@ -34,7 +34,7 @@ class AnalyticsService {
       )
       .orderBy(sql`MIN(${collection.price}::numeric)`);
 
-    const getScaleDistribution = dbHttp
+    const getScaleDistribution = db
       .select({
         scale: item.scale,
         count: count(),
@@ -53,7 +53,7 @@ class AnalyticsService {
       .orderBy(sql`COUNT(*) DESC`)
       .limit(10);
 
-    const getMostExpensiveCollectionItems = dbHttp
+    const getMostExpensiveCollectionItems = db
       .select({
         itemId: item.id,
         itemTitle: item.title,
@@ -67,7 +67,7 @@ class AnalyticsService {
       .orderBy(desc(collection.price))
       .limit(10);
 
-    const getTopShops = dbHttp
+    const getTopShops = db
       .select({
         shop: collection.shop,
         count: count(),
@@ -82,7 +82,7 @@ class AnalyticsService {
       )
       .limit(10);
 
-    const getTotalOwned = dbHttp
+    const getTotalOwned = db
       .select({
         count: count(),
       })
@@ -102,7 +102,7 @@ class AnalyticsService {
     ];
 
     const topEntriesByCategoryQueries = allCategories.map((category) =>
-      dbHttp
+      db
         .select({
           entryId: entry.id,
           originName: entry.name,
@@ -135,7 +135,7 @@ class AnalyticsService {
       topShops,
       totalOwned,
       ...topEntriesResults
-    ] = await dbHttp.batch([
+    ] = await Promise.all([
       getPriceRangeDistribution,
       getScaleDistribution,
       getMostExpensiveCollectionItems,

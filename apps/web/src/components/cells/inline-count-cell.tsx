@@ -1,7 +1,7 @@
 import { Input } from "../ui/input";
 import { useCallback, useState } from "react";
 import { Button } from "../ui/button";
-import { tryCatch } from "@/lib/utils";
+import { tryCatch } from "@myakiba/utils";
 
 interface InlineCountCellProps {
   value: number;

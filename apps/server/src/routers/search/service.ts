@@ -1,11 +1,11 @@
-import { dbHttp } from "@myakiba/db";
+import { db } from "@myakiba/db";
 import { collection, item, order } from "@myakiba/db/schema/figure";
 import { eq, sql, and, ilike } from "drizzle-orm";
 
 class SearchService {
   async getSearchResults(search: string, userId: string) {
-    const [collectionResults, orderResults] = await dbHttp.batch([
-      dbHttp
+    const [collectionResults, orderResults] = await Promise.all([
+      db
         .select({
           collectionId: collection.id,
           itemId: item.id,
@@ -22,7 +22,7 @@ class SearchService {
             eq(collection.userId, userId)
           )
         ),
-      dbHttp
+      db
         .select({
           orderId: order.id,
           orderTitle: order.title,

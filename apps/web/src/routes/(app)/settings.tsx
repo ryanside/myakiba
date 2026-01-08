@@ -36,7 +36,7 @@ import {
 import { Loader2, Trash2 } from "lucide-react";
 import * as z from "zod";
 import { MaskInput } from "@/components/ui/mask-input";
-import { getCurrencyLocale } from "@/lib/utils";
+import { getCurrencyLocale } from "@myakiba/utils";
 import { client } from "@/lib/hono-client";
 
 interface Budget {

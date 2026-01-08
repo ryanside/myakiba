@@ -9,7 +9,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate } from "@myakiba/utils";
 import { getStatusVariant } from "@/lib/orders/utils";
 import { OrderItemSubDataGrid } from "@/components/orders/order-item-sub-data-grid";
 import { useState, useEffect } from "react";

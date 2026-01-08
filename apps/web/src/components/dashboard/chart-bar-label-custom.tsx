@@ -15,7 +15,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { ChartNoAxesColumn } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency } from "@myakiba/utils";
 
 const chartConfig = {
   cost: {

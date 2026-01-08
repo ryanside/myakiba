@@ -1,6 +1,7 @@
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
-import { cn, parseLocalDate } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { parseLocalDate } from "@myakiba/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
