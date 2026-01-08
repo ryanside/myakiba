@@ -175,7 +175,6 @@
       "name": "@myakiba/db",
       "version": "0.0.0",
       "dependencies": {
-        "@neondatabase/serverless": "^1.0.2",
         "@paralleldrive/cuid2": "^2.3.1",
         "drizzle-zod": "^0.8.3",
         "postgres": "^3.4.7",
