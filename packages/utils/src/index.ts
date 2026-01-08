@@ -4,6 +4,7 @@ export {
   normalizeDateString,
   formatDate,
   parseLocalDate,
+  formatMonthYear,
 } from "./dates";
 export { formatCurrency, getCurrencyLocale } from "./currency";
 export { getCategoryColor } from "./categories";
