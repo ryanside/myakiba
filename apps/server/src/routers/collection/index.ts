@@ -8,7 +8,7 @@ import {
   collectionUpdateSchema,
   collectionDeleteSchema,
 } from "./model";
-import { tryCatch } from "@/lib/utils";
+import { tryCatch } from "@myakiba/utils";
 
 const collectionRouter = new Hono<{
   Variables: Variables;

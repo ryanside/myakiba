@@ -78,7 +78,6 @@ export default function UnifiedItemMoveForm({
   clearSelections,
   currency,
 }: UnifiedItemMoveFormProps) {
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [moveMode, setMoveMode] = useState<"existing" | "new">("existing");
 
   const userCurrency = currency || "USD";
@@ -118,7 +117,6 @@ export default function UnifiedItemMoveForm({
         selectedItemData.orderIds
       );
       clearSelections();
-      setDialogOpen(false);
     },
   });
 
@@ -165,14 +163,13 @@ export default function UnifiedItemMoveForm({
         selectedItemData.orderIds
       );
       clearSelections();
-      setDialogOpen(false);
     },
   });
 
   const selectedCount = selectedItemData.collectionIds.size;
 
   return (
-    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+    <Dialog>
       <DialogTrigger asChild>
         {renderTrigger}
       </DialogTrigger>

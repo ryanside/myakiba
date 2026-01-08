@@ -3,7 +3,7 @@ import type { Variables } from "hono/types";
 import * as z from "zod";
 import { zValidator } from "@hono/zod-validator";
 import EntriesService from "./service";
-import { tryCatch } from "@/lib/utils";
+import { tryCatch } from "@myakiba/utils";
 
 const entriesRouter = new Hono<{
   Variables: Variables;

@@ -10,7 +10,7 @@ import type {
   UpdatedSyncOrder,
   UpdatedSyncOrderItem,
 } from "./model";
-import { sanitizeDate } from "@/lib/utils";
+import { sanitizeDate } from "@myakiba/utils";
 
 import { Queue } from "bullmq";
 import Redis from "ioredis";

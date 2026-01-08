@@ -20,7 +20,6 @@ import {
   SheetClose,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { MaskInput } from "@/components/ui/mask-input";
 import { Label } from "@/components/ui/label";
@@ -93,7 +92,6 @@ type OrderFormProps =
 
 export function OrderForm(props: OrderFormProps) {
   const { callbackFn, type, orderIds, collectionIds, clearSelections, currency, renderTrigger } = props;
-  const [open, setOpen] = useState(false);
 
   const userCurrency = currency || "USD";
   const userLocale = getCurrencyLocale(userCurrency);
@@ -159,7 +157,6 @@ export function OrderForm(props: OrderFormProps) {
           notes: value.notes,
         };
         await callbackFn(transformedValue, cascadeOptions);
-        setOpen(false);
       } else if (type === "split") {
         const transformedValue: NewOrder = {
           title: value.title,
@@ -185,7 +182,6 @@ export function OrderForm(props: OrderFormProps) {
           orderIds
         );
         clearSelections?.();
-        setOpen(false);
       } else {
         const transformedValue: NewOrder = {
           title: value.title,
@@ -206,14 +202,13 @@ export function OrderForm(props: OrderFormProps) {
         };
         await callbackFn(transformedValue, cascadeOptions, orderIds);
         clearSelections?.();
-        setOpen(false);
       }
     },
   });
 
   if (type === "edit-order") {
     return (
-      <Sheet open={open} onOpenChange={setOpen}>
+      <Sheet>
         <SheetTrigger asChild>
           {renderTrigger}
         </SheetTrigger>
@@ -617,7 +612,7 @@ export function OrderForm(props: OrderFormProps) {
 }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog>
       <DialogTrigger asChild>
         {renderTrigger}
       </DialogTrigger>

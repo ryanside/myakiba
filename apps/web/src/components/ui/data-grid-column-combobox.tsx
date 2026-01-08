@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode } from "react";
 import { Check, Settings2 } from "lucide-react";
 import { type Table } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
@@ -27,7 +27,6 @@ export function DataGridColumnCombobox<TData>({
   table,
   trigger,
 }: DataGridColumnComboboxProps<TData>): React.ReactElement {
-  const [open, setOpen] = useState(false);
 
   const columns = table
     .getAllColumns()
@@ -40,7 +39,6 @@ export function DataGridColumnCombobox<TData>({
     <Button
       variant="outline"
       role="combobox"
-      aria-expanded={open}
       className="justify-between"
     >
       <Settings2 className="h-4 w-4" />
@@ -49,7 +47,7 @@ export function DataGridColumnCombobox<TData>({
   );
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover>
       <PopoverTrigger asChild>{trigger || defaultTrigger}</PopoverTrigger>
       <PopoverContent className="w-[200px] p-0" align="start">
         <Command>

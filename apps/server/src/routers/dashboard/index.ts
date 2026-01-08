@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import type { Variables } from "../..";
 import DashboardService from "./service";
-import { tryCatch } from "@/lib/utils";
+import { tryCatch } from "@myakiba/utils";
 import { zValidator } from "@hono/zod-validator";
 import * as z from "zod";
 const dashboardRouter = new Hono<{

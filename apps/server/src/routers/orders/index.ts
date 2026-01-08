@@ -8,7 +8,7 @@ import {
   orderUpdateSchema,
   ordersQuerySchema,
 } from "./model";
-import { tryCatch } from "@/lib/utils";
+import { tryCatch } from "@myakiba/utils";
 
 const ordersRouter = new Hono<{ Variables: Variables }>()
   .get(

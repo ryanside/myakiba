@@ -9,7 +9,6 @@ import {
   SheetClose,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { useState } from "react";
 import { Button } from "../ui/button";
 import { Input } from "@/components/ui/input";
 import { MaskInput } from "@/components/ui/mask-input";
@@ -44,7 +43,6 @@ type CollectionItemFormProps = {
 
 export default function CollectionItemForm(props: CollectionItemFormProps) {
   const { itemData, callbackFn, currency, renderTrigger } = props;
-  const [open, setOpen] = useState(false);
 
   const userCurrency = currency || "USD";
   const userLocale = getCurrencyLocale(userCurrency);
@@ -53,7 +51,6 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
     defaultValues: itemData,
     onSubmit: ({ value }) => {
       callbackFn(value);
-      setOpen(false);
     },
   });
 
@@ -71,7 +68,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
   });
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet>
       <SheetTrigger asChild>
         {renderTrigger}
       </SheetTrigger>

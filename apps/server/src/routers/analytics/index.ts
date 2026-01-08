@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import type { Variables } from "../..";
 import AnalyticsService from "./service";
-import { tryCatch } from "@/lib/utils";
+import { tryCatch } from "@myakiba/utils";
 
 const analyticsRouter = new Hono<{
   Variables: Variables;

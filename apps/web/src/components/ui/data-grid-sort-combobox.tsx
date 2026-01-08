@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode } from "react";
 import { ArrowUp, ArrowDown, ArrowUpDown, X } from "lucide-react";
 import { type Table } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,6 @@ export function DataGridSortCombobox<TData>({
   onSortChange,
   trigger,
 }: DataGridSortComboboxProps<TData>): React.ReactElement {
-  const [open, setOpen] = useState(false);
 
   const columns = table
     .getAllColumns()
@@ -90,7 +89,6 @@ export function DataGridSortCombobox<TData>({
     <Button
       variant="outline"
       role="combobox"
-      aria-expanded={open}
       className="justify-between"
     >
       {getSortButtonIcon()}
@@ -103,7 +101,7 @@ export function DataGridSortCombobox<TData>({
   );
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover>
       <PopoverTrigger asChild>{trigger || defaultTrigger}</PopoverTrigger>
       <PopoverContent className="w-[200px] p-0" align="start">
         <Command>
