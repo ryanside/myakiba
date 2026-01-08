@@ -39,7 +39,7 @@ export const item_release = pgTable(
     itemId: integer("item_id")
       .notNull()
       .references(() => item.id, { onDelete: "cascade" }),
-    date: date("date").notNull(),
+    date: date("date", { mode: "string" }).notNull(),
     type: text("type"), // "original", "rerelease", "limited", etc.
     price: decimal("price", { scale: 2 }),
     priceCurrency: text("price_currency"),
@@ -112,10 +112,10 @@ export const collection = pgTable(
     score: decimal("score", { precision: 3, scale: 1 }).default("0.0").notNull(),
     price: decimal("price", { scale: 2 }).default("0.00").notNull(),
     shop: text("shop").default("").notNull(),
-    orderDate: date("order_date"),
-    paymentDate: date("payment_date"),
-    shippingDate: date("shipping_date"),
-    collectionDate: date("collection_date"),
+    orderDate: date("order_date", { mode: "string" }),
+    paymentDate: date("payment_date", { mode: "string" }),
+    shippingDate: date("shipping_date", { mode: "string" }),
+    collectionDate: date("collection_date", { mode: "string" }),
     shippingMethod: text("shipping_method", {
       enum: [
         "n/a",
@@ -133,7 +133,7 @@ export const collection = pgTable(
       .default("n/a")
       .notNull(),
     soldFor: decimal("sold_for", { scale: 2 }),
-    soldDate: date("sold_date"),
+    soldDate: date("sold_date", { mode: "string" }),
     tags: text("tags").array().default([]).notNull(),
     condition: text("condition", {
       enum: ["New", "Pre-Owned"],
@@ -165,11 +165,11 @@ export const order = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     shop: text("shop").default("").notNull(),
-    orderDate: date("order_date"),
-    releaseMonthYear: date("release_month_year"),
-    paymentDate: date("payment_date"),
-    shippingDate: date("shipping_date"),
-    collectionDate: date("collection_date"),
+    orderDate: date("order_date", { mode: "string" }),
+    releaseMonthYear: date("release_month_year", { mode: "string" }),
+    paymentDate: date("payment_date", { mode: "string" }),
+    shippingDate: date("shipping_date", { mode: "string" }),
+    collectionDate: date("collection_date", { mode: "string" }),
     shippingMethod: text("shipping_method", {
       enum: [
         "n/a",
