@@ -8,10 +8,8 @@ import { serveStatic } from "hono/bun";
 import syncRouter, { websocket } from "./routers/sync";
 import dashboardRouter from "./routers/dashboard";
 import analyticsRouter from "./routers/analytics";
-import galleryRouter from "./routers/gallery";
 import ordersRouter from "./routers/orders";
 import collectionRouter from "./routers/collection";
-import wrappedRouter from "./routers/wrapped";
 import itemsRouter from "./routers/items";
 import entriesRouter from "./routers/entries";
 import searchRouter from "./routers/search";
@@ -25,7 +23,8 @@ app.use(logger());
 app.use(
   "/*",
   cors({
-    origin: process.env.CORS_ORIGIN?.split(',').map(origin => origin.trim()) || [],
+    origin:
+      process.env.CORS_ORIGIN?.split(",").map((origin) => origin.trim()) || [],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization", "x-captcha-response"],
     credentials: true,
@@ -34,7 +33,8 @@ app.use(
 
 app.use(
   csrf({
-    origin: process.env.CORS_ORIGIN?.split(',').map(origin => origin.trim()) || [],
+    origin:
+      process.env.CORS_ORIGIN?.split(",").map((origin) => origin.trim()) || [],
   })
 );
 
@@ -59,10 +59,8 @@ const routes = app
   .route("/sync", syncRouter)
   .route("/dashboard", dashboardRouter)
   .route("/analytics", analyticsRouter)
-  .route("/gallery", galleryRouter)
   .route("/orders", ordersRouter)
   .route("/collection", collectionRouter)
-  .route("/wrapped", wrappedRouter)
   .route("/items", itemsRouter)
   .route("/entries", entriesRouter)
   .route("/search", searchRouter)

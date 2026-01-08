@@ -13,7 +13,7 @@ import {
   type UpdatedSyncOrderItem,
 } from "./model";
 import SyncService from "./service";
-import { tryCatch } from "@/lib/utils";
+import { tryCatch } from "@myakiba/utils";
 import { createId } from "@paralleldrive/cuid2";
 import { upgradeWebSocket, websocket } from "hono/bun";
 import type { WSContext } from "hono/ws";

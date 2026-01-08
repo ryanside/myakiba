@@ -3,7 +3,7 @@ import type { Variables } from "../..";
 import SearchService from "./service";
 import { zValidator } from "@hono/zod-validator";
 import * as z from "zod";
-import { tryCatch } from "@/lib/utils";
+import { tryCatch } from "@myakiba/utils";
 
 const searchRouter = new Hono<{
   Variables: Variables;
