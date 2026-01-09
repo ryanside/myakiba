@@ -26,7 +26,7 @@ import {
 import { ChevronDown } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { OrderFilters } from "@/lib/orders/types";
-import { getCurrencyLocale } from "@/lib/utils";
+import { getCurrencyLocale } from "@myakiba/utils";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/constants";
 
 interface OrdersFiltersFormProps {

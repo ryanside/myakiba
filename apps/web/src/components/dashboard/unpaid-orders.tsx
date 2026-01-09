@@ -1,6 +1,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { formatCurrency } from "@/lib/utils";
+import { formatDate, formatCurrency } from "@myakiba/utils";
 import { Link } from "@tanstack/react-router";
 
 interface UnpaidOrder {
@@ -138,7 +138,7 @@ function UnpaidOrderCard({
           {order.releaseMonthYear && (
             <>
               {order.shop && <span>•</span>}
-              <span>{order.releaseMonthYear}</span>
+              <span>{formatDate(order.releaseMonthYear)}</span>
             </>
           )}
           {order.total && (

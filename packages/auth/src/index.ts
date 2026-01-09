@@ -9,16 +9,21 @@ import { Resend } from "resend";
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const auth = betterAuth({
+  experimental: {
+    joins: true,
+  },
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: schema,
   }),
-  trustedOrigins: process.env.CORS_ORIGIN?.split(',').map(origin => origin.trim()) || [],
+  trustedOrigins:
+    process.env.CORS_ORIGIN?.split(",").map((origin) => origin.trim()) || [],
   emailAndPassword: {
     enabled: true,
     sendResetPassword: async ({ user, url }) => {
       await resend.emails.send({
-        from: process.env.RESEND_FROM_EMAIL || "myakiba <onboarding@resend.dev>",
+        from:
+          process.env.RESEND_FROM_EMAIL || "myakiba <onboarding@resend.dev>",
         to: user.email,
         subject: "Reset your password",
         text: `Click the link to reset your password: ${url}`,
@@ -32,7 +37,8 @@ export const auth = betterAuth({
     autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, url }) => {
       await resend.emails.send({
-        from: process.env.RESEND_FROM_EMAIL || "myakiba <onboarding@resend.dev>",
+        from:
+          process.env.RESEND_FROM_EMAIL || "myakiba <onboarding@resend.dev>",
         to: user.email,
         subject: "Verify your email address",
         text: `Click the link to verify your email: ${url}`,
@@ -76,4 +82,3 @@ export const auth = betterAuth({
     },
   },
 });
-

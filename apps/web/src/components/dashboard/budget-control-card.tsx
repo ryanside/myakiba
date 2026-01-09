@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Settings, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency } from "@myakiba/utils";
 import { Progress } from "../ui/progress";
 import { Link } from "@tanstack/react-router";
 

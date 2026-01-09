@@ -1,4 +1,4 @@
-import { db, dbHttp } from "@myakiba/db";
+import { db } from "@myakiba/db";
 import {
   item,
   collection,
@@ -46,9 +46,9 @@ class DashboardService {
       budgetSummary,
       unpaidOrders,
       monthlyOrders,
-    ] = await dbHttp.batch([
+    ] = await Promise.all([
       // Total Items, Total Spent, Total Spent This Month (Items only)
-      dbHttp
+      db
         .select({
           totalItems: count(
             sql`CASE WHEN ${collection.status} = 'Owned' THEN 1 END`
@@ -64,7 +64,7 @@ class DashboardService {
         .where(eq(collection.userId, userId)),
 
       // Categories Owned
-      dbHttp
+      db
         .select({
           name: item.category,
           count: count(),
@@ -80,7 +80,7 @@ class DashboardService {
 
       // Order Kanban
       // Contains "Ordered", "Paid", "Shipped" Orders
-      dbHttp
+      db
         .select({
           orderId: order.id,
           title: order.title,
@@ -110,7 +110,7 @@ class DashboardService {
       // Total Active Orders Count,
       // Total Shipping, Taxes, Duties, Tariffs, Misc Fees
       // This Month Order Count, Shipping, Taxes, Duties, Tariffs, Misc Fees
-      dbHttp
+      db
         .select({
           totalActiveOrderCount: sql<string>`COALESCE(${sum(
             sql`CASE WHEN ${order.status} != 'Owned'
@@ -156,10 +156,10 @@ class DashboardService {
         .where(eq(order.userId, userId)),
 
       // Budget Summary
-      dbHttp.select().from(budget).where(eq(budget.userId, userId)),
+      db.select().from(budget).where(eq(budget.userId, userId)),
 
       // Unpaid Orders
-      dbHttp
+      db
         .select({
           orderId: order.id,
           title: order.title,
@@ -184,7 +184,7 @@ class DashboardService {
         .groupBy(order.id, order.title, order.shop, order.releaseMonthYear),
 
       // Monthly Orders - Order counts grouped by release month for current year
-      dbHttp
+      db
         .select({
           month: sql<number>`EXTRACT(MONTH FROM ${order.releaseMonthYear})`,
           orderCount: count(),

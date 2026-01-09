@@ -49,7 +49,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { getCurrencyLocale } from "@/lib/utils";
+import { getCurrencyLocale } from "@myakiba/utils";
 import {
   SHIPPING_METHODS,
   CONDITIONS,

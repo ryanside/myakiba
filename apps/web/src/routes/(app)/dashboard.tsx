@@ -14,7 +14,7 @@ import { CollectionBreakdown } from "@/components/dashboard/collection-breakdown
 import { BudgetControlCard } from "@/components/dashboard/budget-control-card";
 import { ReleaseCalendar } from "@/components/dashboard/release-calendar";
 import { UnpaidOrders } from "@/components/dashboard/unpaid-orders";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency } from "@myakiba/utils";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import OrderKanban from "@/components/dashboard/order-kanban";

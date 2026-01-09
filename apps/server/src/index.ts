@@ -38,6 +38,8 @@ app.use(
   })
 );
 
+app.get("/health", (c) => c.json({ status: "ok" }));
+
 app.use("*", async (c, next) => {
   const session = await auth.api.getSession({ headers: c.req.raw.headers });
 

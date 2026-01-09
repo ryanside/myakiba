@@ -23,7 +23,8 @@ import {
   Edit,
   Trash2,
 } from "lucide-react";
-import { cn, formatCurrency, getCurrencyLocale } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { formatCurrency, getCurrencyLocale } from "@myakiba/utils";
 import type {
   CascadeOptions,
   EditedOrder,

@@ -87,34 +87,14 @@ export function filterAndSortCollectionItems(
         bValue = bRaw ? bRaw.toLowerCase() : null;
         break;
       case "orderDate":
-        aRaw = a.orderDate;
-        bRaw = b.orderDate;
-        aValue = aRaw ? new Date(aRaw) : null;
-        bValue = bRaw ? new Date(bRaw) : null;
-        break;
       case "paymentDate":
-        aRaw = a.paymentDate;
-        bRaw = b.paymentDate;
-        aValue = aRaw ? new Date(aRaw) : null;
-        bValue = bRaw ? new Date(bRaw) : null;
-        break;
       case "shippingDate":
-        aRaw = a.shippingDate;
-        bRaw = b.shippingDate;
-        aValue = aRaw ? new Date(aRaw) : null;
-        bValue = bRaw ? new Date(bRaw) : null;
-        break;
       case "releaseDate":
-        aRaw = a.releaseDate;
-        bRaw = b.releaseDate;
-        aValue = aRaw ? new Date(aRaw) : null;
-        bValue = bRaw ? new Date(bRaw) : null;
-        break;
       case "collectionDate":
-        aRaw = a.collectionDate;
-        bRaw = b.collectionDate;
-        aValue = aRaw ? new Date(aRaw) : null;
-        bValue = bRaw ? new Date(bRaw) : null;
+        aRaw = a[sortField as keyof typeof a] as string | null;
+        bRaw = b[sortField as keyof typeof b] as string | null;
+        aValue = aRaw || null;
+        bValue = bRaw || null;
         break;
       case "createdAt":
       default:
@@ -151,12 +131,10 @@ export function filterAndSortCollectionItems(
 
     // Both non-null - normal comparison
     let comparison = 0;
-    if (aValue instanceof Date && bValue instanceof Date) {
-      comparison = aValue.getTime() - bValue.getTime();
-    } else if (typeof aValue === "number" && typeof bValue === "number") {
+    if (typeof aValue === "number" && typeof bValue === "number") {
       comparison = aValue - bValue;
     } else {
-      // String comparison
+      // String comparison (works correctly for YYYY-MM-DD dates)
       const aStr = String(aValue);
       const bStr = String(bValue);
       comparison = aStr.localeCompare(bStr);

@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { formatCurrency } from "@myakiba/utils";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "../ui/badge";
 

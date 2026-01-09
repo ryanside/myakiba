@@ -13,9 +13,14 @@
   },
   "scripts": {
     "db:push": "drizzle-kit push",
+    "db:push:force": "drizzle-kit push --force",
     "db:studio": "drizzle-kit studio",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "db:start": "docker compose up -d",
+    "db:watch": "docker compose up",
+    "db:stop": "docker compose stop",
+    "db:down": "docker compose down"
   },
   "devDependencies": {
     "@myakiba/config": "workspace:*",
@@ -27,7 +32,6 @@
     "drizzle-orm": "^0.44.7"
   },
   "dependencies": {
-    "@neondatabase/serverless": "^1.0.2",
     "@paralleldrive/cuid2": "^2.3.1",
     "drizzle-zod": "^0.8.3",
     "postgres": "^3.4.7",

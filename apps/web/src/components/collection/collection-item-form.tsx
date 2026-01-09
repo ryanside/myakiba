@@ -30,7 +30,7 @@ import { Rating } from "../ui/rating";
 import { Field, FieldContent, FieldTitle } from "@/components/ui/field";
 import { Badge } from "../ui/badge";
 import { X } from "lucide-react";
-import { getCurrencyLocale } from "@/lib/utils";
+import { formatDate, formatCurrency, getCurrencyLocale } from "@myakiba/utils";
 import { Scroller } from "../ui/scroller";
 import { SHIPPING_METHODS } from "@myakiba/constants";
 
@@ -294,57 +294,67 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                             };
 
                             return (
-                              <div className="flex items-center truncate text-xs gap-2 justify-between">
-                                <div className="font-medium">
-                                  {displayData.date}
-                                </div>
-                                <div className="text-muted-foreground">
-                                  {displayData.type && (
-                                    <span>{displayData.type}</span>
+                              <div className="flex items-center gap-3 text-sm">
+                                <span className="font-medium">
+                                  {formatDate(displayData.date)}
+                                </span>
+                                {displayData.type && (
+                                  <span className="text-muted-foreground">
+                                    {displayData.type}
+                                  </span>
+                                )}
+                                {displayData.price &&
+                                  displayData.priceCurrency && (
+                                    <span className="text-muted-foreground">
+                                      {formatCurrency(displayData.price, displayData.priceCurrency)}
+                                    </span>
                                   )}
-                                  {displayData.price &&
-                                    displayData.priceCurrency && (
-                                      <span>
-                                        {displayData.priceCurrency}{" "}
-                                        {displayData.price}
-                                      </span>
-                                    )}
-                                  {displayData.barcode && (
-                                    <span>#{displayData.barcode}</span>
-                                  )}
-                                </div>
                               </div>
                             );
                           })()}
                       </SelectValue>
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="min-w-(--radix-select-trigger-width)">
                       {releasesLoading && (
-                        <div className="flex items-center justify-center py-2">
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+                        <div className="flex items-center justify-center py-4">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
                           <span className="ml-2 text-sm text-muted-foreground">
                             Loading releases...
                           </span>
                         </div>
                       )}
                       {releasesError && (
-                        <div className="py-2 px-3 text-sm text-red-500">
+                        <div className="py-3 px-3 text-sm text-destructive">
                           {releasesError.message}
                         </div>
                       )}
                       {releasesData?.releases.map((release) => (
-                        <SelectItem key={release.id} value={release.id}>
-                          <div className="flex items-center truncate text-xs gap-2 justify-between">
-                            <div className="font-medium">{release.date}</div>
-                            <div className="text-muted-foreground">
-                              {release.type && <span>{release.type}</span>}
+                        <SelectItem
+                          key={release.id}
+                          value={release.id}
+                          className="py-2.5"
+                        >
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm">
+                                {formatDate(release.date)}
+                              </span>
+                              {release.type && (
+                                <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                                  {release.type}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
                               {release.price && release.priceCurrency && (
                                 <span>
-                                  {release.priceCurrency} {release.price}
+                                  {formatCurrency(release.price, release.priceCurrency)}
                                 </span>
                               )}
                               {release.barcode && (
-                                <span>#{release.barcode}</span>
+                                <span className="font-mono">
+                                  #{release.barcode}
+                                </span>
                               )}
                             </div>
                           </div>
@@ -352,7 +362,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                       ))}
                       {releasesData?.releases.length === 0 &&
                         !releasesLoading && (
-                          <div className="py-2 px-3 text-sm text-muted-foreground">
+                          <div className="py-4 px-3 text-sm text-muted-foreground text-center">
                             No releases found
                           </div>
                         )}

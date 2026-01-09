@@ -11,7 +11,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DataGridColumnHeader } from "@/components/ui/data-grid-column-header";
 import { Package, MoreHorizontal, Copy, Edit, Trash2 } from "lucide-react";
-import { cn, formatDate, getCurrencyLocale } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { formatDate, getCurrencyLocale } from "@myakiba/utils";
 import type { OrderItem } from "@/lib/orders/types";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";

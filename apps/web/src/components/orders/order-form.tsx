@@ -38,7 +38,7 @@ import type { CascadeOptions } from "@/lib/orders/types";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import { CascadeOptionsDropdown } from "@/components/cascade-options-dropdown";
 import { Textarea } from "../ui/textarea";
-import { getCurrencyLocale } from "@/lib/utils";
+import { getCurrencyLocale } from "@myakiba/utils";
 import { Scroller } from "../ui/scroller";
 import { SHIPPING_METHODS } from "@myakiba/constants";
 

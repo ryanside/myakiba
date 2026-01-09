@@ -12,7 +12,7 @@ import {
   KanbanOverlay,
 } from "@/components/ui/kanban";
 import { GripVertical, CalendarIcon, Check } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatMonthYear } from "@myakiba/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateOrderStatus } from "@/queries/orders";
 import { toast } from "sonner";
@@ -130,13 +130,7 @@ function OrderCard({
               <>
                 <CalendarIcon className="h-3 w-3" />
                 <time className="text-[10px] tabular-nums">
-                  {new Date(order.releaseMonthYear).toLocaleDateString(
-                    "en-US",
-                    {
-                      month: "short",
-                      year: "numeric",
-                    }
-                  )}
+                  {formatMonthYear(order.releaseMonthYear)}
                 </time>
               </>
             )}

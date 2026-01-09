@@ -59,21 +59,33 @@ export const normalizeDateString = (dateStr: string): string => {
 /**
  * Formats a date string for display in the user's locale.
  * Parses the date as local time to avoid timezone issues.
+ * Handles both YYYY-MM-DD and ISO 8601 formats (YYYY-MM-DDTHH:mm:ss.sssZ).
  */
 export function formatDate(dateString: string | null): string {
   if (!dateString) return "n/a";
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-    console.error(
-      `Invalid date format: expected YYYY-MM-DD, got "${dateString}"`
-    );
-    return "Invalid date";
-  }
+  
   try {
+    // Extract just the date part if it's in ISO 8601 format
+    const datePart = dateString.split("T")[0];
+    
+    if (!datePart || !/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+      console.error(
+        `Invalid date format: expected YYYY-MM-DD or ISO 8601, got "${dateString}"`
+      );
+      return "Invalid date";
+    }
+    
     // Parse date as local date to avoid timezone issues
     // When "2026-04-01" is parsed as new Date(), it's treated as UTC midnight
     // which gets converted to the previous day in timezones behind UTC
-    const [year, month, day] = dateString.split("-").map(Number);
+    const [year, month, day] = datePart.split("-").map(Number);
     const date = new Date(year!, month! - 1, day);
+    
+    if (isNaN(date.getTime())) {
+      console.error(`Failed to parse date: "${dateString}"`);
+      return "Invalid date";
+    }
+    
     return date.toLocaleDateString();
   } catch {
     console.error(`Failed to parse date: "${dateString}"`);
@@ -82,9 +94,47 @@ export function formatDate(dateString: string | null): string {
 }
 
 /**
- * Parses a YYYY-MM-DD string to a Date object in the local timezone.
+ * Parses a YYYY-MM-DD or ISO 8601 string to a Date object in the local timezone.
  */
 export function parseLocalDate(dateString: string): Date {
-  const [year, month, day] = dateString.split("-").map(Number);
+  // Extract just the date part if it's in ISO 8601 format
+  const datePart = dateString.split("T")[0]!;
+  const [year, month, day] = datePart.split("-").map(Number);
   return new Date(year!, month! - 1, day);
+}
+
+/**
+ * Formats a YYYY-MM-DD date string as "Month Year" (e.g., "Mar 2024").
+ * Avoids timezone issues by parsing the date string directly.
+ */
+export function formatMonthYear(dateString: string | null): string {
+  if (!dateString) return "n/a";
+  
+  try {
+    // Extract just the date part if it's in ISO 8601 format
+    const datePart = dateString.split("T")[0];
+    
+    if (!datePart || !/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+      console.error(
+        `Invalid date format: expected YYYY-MM-DD or ISO 8601, got "${dateString}"`
+      );
+      return "Invalid date";
+    }
+    
+    const [year, month] = datePart.split("-").map(Number);
+    const monthNames = [
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    ];
+    
+    if (month! < 1 || month! > 12) {
+      console.error(`Invalid month: ${month}`);
+      return "Invalid date";
+    }
+    
+    return `${monthNames[month! - 1]} ${year}`;
+  } catch {
+    console.error(`Failed to parse date: "${dateString}"`);
+    return "Invalid date";
+  }
 }
