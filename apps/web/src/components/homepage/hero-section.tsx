@@ -21,7 +21,7 @@ export default function HeroSection({
             />
           </div>
           <h1 className="mt-4 max-w-xl tracking-tight text-balance text-black dark:text-white text-2xl font-medium">
-            Built to provide a better collecting experience.
+            Built to provide a modern collecting experience.
           </h1>
 
           <p className="text-muted-foreground tracking-tight text-balance mb-6 mt-2 text-start text-lg max-w-2xl">
