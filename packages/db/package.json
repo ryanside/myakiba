@@ -24,6 +24,7 @@
   },
   "devDependencies": {
     "@myakiba/config": "workspace:*",
+    "@myakiba/constants": "workspace:*",
     "drizzle-kit": "^0.31.8",
     "@types/bun": "^1.3.3"
   },

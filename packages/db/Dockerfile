@@ -18,6 +18,7 @@ RUN bun install --frozen-lockfile --ignore-scripts
 
 COPY packages/db ./packages/db
 COPY packages/config ./packages/config
+COPY packages/constants ./packages/constants
 
 WORKDIR /app/packages/db
 CMD ["bun", "run", "db:push:force"]

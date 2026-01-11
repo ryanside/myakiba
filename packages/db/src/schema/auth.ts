@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
 import { pgTable, text, timestamp, boolean, index } from "drizzle-orm/pg-core";
+import { CURRENCIES } from "@myakiba/constants";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -12,10 +13,16 @@ export const user = pgTable("user", {
     .defaultNow()
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
-  username: text("username").unique(),
+  username: text("username")
+    .unique()
+    .notNull(),
   displayUsername: text("display_username"),
   normalizedEmail: text("normalized_email").unique(),
-  currency: text("currency").default("USD"),
+  currency: text("currency", {
+    enum: CURRENCIES,
+  })
+    .default("USD")
+    .notNull(),
 });
 
 export const session = pgTable(

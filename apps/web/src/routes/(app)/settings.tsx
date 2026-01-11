@@ -80,7 +80,7 @@ function RouteComponent() {
   const navigate = useNavigate();
   const { session } = Route.useRouteContext();
 
-  const { data: budgetData, isPending: isBudgetPending } = useQuery({
+  const { data: budgetData, isPending: isBudgetPending, isError: isBudgetError } = useQuery({
     queryKey: ["settings"],
     queryFn: async () => {
       const response = await client.api.settings.$get();
@@ -93,13 +93,36 @@ function RouteComponent() {
     retry: false,
   });
 
-  if (isBudgetPending) {
+  const { data: accountTypeData, isPending: isAccountTypePending, isError: isAccountTypeError } = useQuery({
+    queryKey: ["account-type"],
+    queryFn: async () => {
+      const response = await client.api.settings["account-type"].$get();
+      if (!response.ok) {
+        throw new Error("Failed to get account type");
+      }
+      return response.json();
+    },
+    staleTime: 1000 * 60 * 5,
+    retry: false,
+  });
+
+  if (isBudgetPending || isAccountTypePending) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="animate-spin" />
       </div>
     );
   }
+
+  if (isBudgetError || isAccountTypeError) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-destructive">Failed to load settings</p>
+      </div>
+    );
+  }
+
+  const hasCredentialAccount = accountTypeData.hasCredentialAccount
 
   return (
     <div className="container max-w-4xl mx-auto py-8 space-y-8">
@@ -116,8 +139,11 @@ function RouteComponent() {
         <BudgetForm user={session.user} budget={budgetData?.budget || null} />
         <PreferencesForm user={session.user} />
         <ProfileForm user={session.user} />
-        <PasswordForm />
-        <DeleteAccountForm navigate={navigate} />
+        {hasCredentialAccount && <PasswordForm />}
+        <DeleteAccountForm
+          navigate={navigate}
+          hasCredentialAccount={hasCredentialAccount}
+        />
       </div>
     </div>
   );
@@ -681,35 +707,72 @@ function PreferencesForm({ user }: { user: User }) {
 
 function DeleteAccountForm({
   navigate,
+  hasCredentialAccount,
 }: {
   navigate: UseNavigateResult<string>;
+  hasCredentialAccount: boolean;
 }) {
-  const form = useForm({
-    defaultValues: {
-      password: "",
+  const deleteAccountMutation = useMutation({
+    mutationFn: async (confirmationPhrase: string) => {
+      const response = await client.api.settings.account.$delete({
+        json: { confirmationPhrase },
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `HTTP ${response.status}`);
+      }
     },
-    onSubmit: async ({ value }) => {
-      await authClient.deleteUser(
-        {
-          password: value.password,
-        },
-        {
+    onSuccess: async () => {
+      toast.success("Account deleted successfully");
+      await authClient.signOut({
+        fetchOptions: {
           onSuccess: () => {
-            toast.success("Account deleted successfully");
             navigate({
               to: "/login",
             });
           },
-          onError: (error) => {
-            toast.error(error.error.message || "Failed to delete account");
-          },
-        }
-      );
+        },
+      });
     },
-    validators: {
-      onSubmit: z.object({
-        password: z.string().min(8, "Password must be at least 8 characters"),
-      }),
+    onError: (error) => {
+      toast.error(error.message || "Failed to delete account");
+    },
+  });
+
+  const form = useForm({
+    defaultValues: {
+      password: "",
+      confirmationPhrase: "",
+    },
+    onSubmit: async ({ value }) => {
+      if (hasCredentialAccount) {
+        // Use password-based deletion for credential accounts
+        await authClient.deleteUser(
+          {
+            password: value.password,
+          },
+          {
+            onSuccess: async () => {
+              toast.success("Account deleted successfully");
+              await authClient.signOut({
+                fetchOptions: {
+                  onSuccess: () => {
+                    navigate({
+                      to: "/login",
+                    });
+                  },
+                },
+              });
+            },
+            onError: (error) => {
+              toast.error(error.error.message || "Failed to delete account");
+            },
+          }
+        );
+      } else {
+        // Use confirmation phrase for OAuth accounts
+        deleteAccountMutation.mutate(value.confirmationPhrase);
+      }
     },
   });
 
@@ -746,27 +809,72 @@ function DeleteAccountForm({
               }}
               className="space-y-4"
             >
-              <form.Field name="password">
-                {(field) => (
-                  <div className="space-y-2">
-                    <Label htmlFor={field.name}>Password</Label>
-                    <Input
-                      id={field.name}
-                      name={field.name}
-                      type="password"
-                      value={field.state.value}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      placeholder="Enter your password"
-                    />
-                    {field.state.meta.errors.length > 0 && (
-                      <p className="text-sm text-destructive">
-                        {field.state.meta.errors[0]?.message}
+              {hasCredentialAccount ? (
+                <form.Field
+                  name="password"
+                  validators={{
+                    onChange: z
+                      .string()
+                      .min(8, "Password must be at least 8 characters"),
+                  }}
+                >
+                  {(field) => (
+                    <div className="space-y-2">
+                      <Label htmlFor={field.name}>Password</Label>
+                      <Input
+                        id={field.name}
+                        name={field.name}
+                        type="password"
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        placeholder="Enter your password"
+                      />
+                      {field.state.meta.errors.length > 0 && (
+                        <p className="text-sm text-destructive">
+                          {field.state.meta.errors[0]?.message}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </form.Field>
+              ) : (
+                <form.Field
+                  name="confirmationPhrase"
+                  validators={{
+                    onChange: z
+                      .string()
+                      .refine(
+                        (val) => val === "delete my account",
+                        "Please type 'delete my account' to confirm"
+                      ),
+                  }}
+                >
+                  {(field) => (
+                    <div className="space-y-2">
+                      <Label htmlFor={field.name}>Confirmation</Label>
+                      <Input
+                        id={field.name}
+                        name={field.name}
+                        type="text"
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        placeholder="Type 'delete my account' to confirm"
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        Please type &quot;delete my account&quot; to confirm
+                        account deletion.
                       </p>
-                    )}
-                  </div>
-                )}
-              </form.Field>
+                      {field.state.meta.errors.length > 0 && (
+                        <p className="text-sm text-destructive">
+                          {field.state.meta.errors[0]?.message}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </form.Field>
+              )}
 
               <DialogFooter>
                 <form.Subscribe>
@@ -774,9 +882,13 @@ function DeleteAccountForm({
                     <Button
                       type="submit"
                       variant="destructive"
-                      disabled={!state.canSubmit || state.isSubmitting}
+                      disabled={
+                        !state.canSubmit ||
+                        state.isSubmitting ||
+                        deleteAccountMutation.isPending
+                      }
                     >
-                      {state.isSubmitting ? (
+                      {state.isSubmitting || deleteAccountMutation.isPending ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           Deleting...
