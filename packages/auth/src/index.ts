@@ -5,6 +5,7 @@ import * as schema from "@myakiba/db/schema/auth";
 import { captcha, username } from "better-auth/plugins";
 import { emailHarmony } from "better-auth-harmony";
 import { Resend } from "resend";
+import { createId } from "@paralleldrive/cuid2";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -16,6 +17,24 @@ export const auth = betterAuth({
     provider: "pg",
     schema: schema,
   }),
+  databaseHooks: {
+    user: {
+      create: {
+        async before(user) {
+          if (!user.username) {
+            const generatedUsername = "user" + createId();
+            return {
+              data: {
+                ...user,
+                username: generatedUsername,
+              },
+            };
+          }
+          return { data: user };
+        },
+      },
+    },
+  },
   trustedOrigins:
     process.env.CORS_ORIGIN?.split(",").map((origin) => origin.trim()) || [],
   emailAndPassword: {
