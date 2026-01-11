@@ -37,7 +37,7 @@ export const Route = createFileRoute("/")({
           "The modern collection management tool for Japanese pop-culture (anime, manga, video-games, etc.) collectables (figures, artbooks, CDs, cups, collectibles, dakimakura, etc.). Track your collection, manage orders, view insightful analytics, and stay organized.",
       },
       {
-        title: "Modern Collection Manager - myakiba | Track your Japanese collectables",
+        title: "MyAkiba - A Modern Collection Manager for Japanese Collectables",
       },
     ],
   }),
