@@ -4,8 +4,12 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { csvSchema } from "@/lib/sync/types";
 import Papa from "papaparse";
 import { Label } from "../ui/label";
-import { Input } from "../ui/input";
 import { useNavigate } from "@tanstack/react-router";
+import {
+  Dropzone,
+  DropzoneContent,
+  DropzoneEmptyState,
+} from "@/components/kibo-ui/dropzone";
 
 export default function SyncCsvForm({
   setCurrentStep,
@@ -107,16 +111,16 @@ export default function SyncCsvForm({
                     )}
                   />
                 </div>
-                <Input
-                  id="csv-file"
-                  type="file"
-                  accept=".csv,text/csv"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    field.handleChange(file);
-                  }}
-                  className="h-48 border-dashed border-2 p-2"
-                />
+                <Dropzone
+                  accept={{ "text/csv": [".csv"] }}
+                  maxFiles={1}
+                  src={field.state.value ? [field.state.value] : undefined}
+                  onDrop={(files) => field.handleChange(files[0])}
+                  onError={(error) => console.error("Dropzone error:", error)}
+                >
+                  <DropzoneEmptyState />
+                  <DropzoneContent />
+                </Dropzone>
                 {!field.state.meta.isValid && (
                   <em role="alert" className="text-red-500 text-xs">
                     {field.state.meta.errors.join(", ")}
