@@ -80,7 +80,7 @@ function RouteComponent() {
   const navigate = useNavigate();
   const { session } = Route.useRouteContext();
 
-  const { data: budgetData, isPending: isBudgetPending } = useQuery({
+  const { data: budgetData, isPending: isBudgetPending, isError: isBudgetError } = useQuery({
     queryKey: ["settings"],
     queryFn: async () => {
       const response = await client.api.settings.$get();
@@ -93,13 +93,36 @@ function RouteComponent() {
     retry: false,
   });
 
-  if (isBudgetPending) {
+  const { data: accountTypeData, isPending: isAccountTypePending, isError: isAccountTypeError } = useQuery({
+    queryKey: ["account-type"],
+    queryFn: async () => {
+      const response = await client.api.settings["account-type"].$get();
+      if (!response.ok) {
+        throw new Error("Failed to get account type");
+      }
+      return response.json();
+    },
+    staleTime: 1000 * 60 * 5,
+    retry: false,
+  });
+
+  if (isBudgetPending || isAccountTypePending) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="animate-spin" />
       </div>
     );
   }
+
+  if (isBudgetError || isAccountTypeError) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-destructive">Failed to load settings</p>
+      </div>
+    );
+  }
+
+  const hasCredentialAccount = accountTypeData.hasCredentialAccount
 
   return (
     <div className="container max-w-4xl mx-auto py-8 space-y-8">
@@ -116,8 +139,11 @@ function RouteComponent() {
         <BudgetForm user={session.user} budget={budgetData?.budget || null} />
         <PreferencesForm user={session.user} />
         <ProfileForm user={session.user} />
-        <PasswordForm />
-        <DeleteAccountForm navigate={navigate} />
+        {hasCredentialAccount && <PasswordForm />}
+        <DeleteAccountForm
+          navigate={navigate}
+          hasCredentialAccount={hasCredentialAccount}
+        />
       </div>
     </div>
   );
@@ -681,24 +707,11 @@ function PreferencesForm({ user }: { user: User }) {
 
 function DeleteAccountForm({
   navigate,
+  hasCredentialAccount,
 }: {
   navigate: UseNavigateResult<string>;
+  hasCredentialAccount: boolean;
 }) {
-  const { data: accountTypeData, isPending: isAccountTypePending } = useQuery({
-    queryKey: ["account-type"],
-    queryFn: async () => {
-      const response = await client.api.settings["account-type"].$get();
-      if (!response.ok) {
-        throw new Error("Failed to get account type");
-      }
-      return response.json();
-    },
-    staleTime: 1000 * 60 * 5,
-    retry: false,
-  });
-
-  const hasCredentialAccount = accountTypeData?.hasCredentialAccount ?? false;
-
   const deleteAccountMutation = useMutation({
     mutationFn: async (confirmationPhrase: string) => {
       const response = await client.api.settings.account.$delete({
@@ -709,10 +722,16 @@ function DeleteAccountForm({
         throw new Error(errorText || `HTTP ${response.status}`);
       }
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Account deleted successfully");
-      navigate({
-        to: "/login",
+      await authClient.signOut({
+        fetchOptions: {
+          onSuccess: () => {
+            navigate({
+              to: "/login",
+            });
+          },
+        },
       });
     },
     onError: (error) => {
@@ -733,10 +752,16 @@ function DeleteAccountForm({
             password: value.password,
           },
           {
-            onSuccess: () => {
+            onSuccess: async () => {
               toast.success("Account deleted successfully");
-              navigate({
-                to: "/login",
+              await authClient.signOut({
+                fetchOptions: {
+                  onSuccess: () => {
+                    navigate({
+                      to: "/login",
+                    });
+                  },
+                },
               });
             },
             onError: (error) => {
@@ -750,25 +775,6 @@ function DeleteAccountForm({
       }
     },
   });
-
-  if (isAccountTypePending) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-medium">Delete Account</CardTitle>
-          <CardDescription>
-            Permanently delete your account and remove all your data from our
-            servers
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-4">
-            <Loader2 className="animate-spin" />
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card>
