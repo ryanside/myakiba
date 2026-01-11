@@ -6,10 +6,27 @@ import { captcha, username } from "better-auth/plugins";
 import { emailHarmony } from "better-auth-harmony";
 import { Resend } from "resend";
 import { createId } from "@paralleldrive/cuid2";
+import Redis from "ioredis";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+const redis = new Redis({
+  host: process.env.REDIS_HOST,
+  port: parseInt(process.env.REDIS_PORT!),
+});
 
 export const auth = betterAuth({
+  secondaryStorage: {
+    get: async (key) => {
+      return await redis.get(key);
+    },
+    set: async (key, value, ttl) => {
+      if (ttl) await redis.set(key, value, "EX", ttl);
+      else await redis.set(key, value);
+    },
+    delete: async (key) => {
+      await redis.del(key);
+    },
+  },
   experimental: {
     joins: true,
   },
