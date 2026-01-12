@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
   SidebarProvider,
+  SidebarRail,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Outlet, redirect, useLocation } from "@tanstack/react-router";

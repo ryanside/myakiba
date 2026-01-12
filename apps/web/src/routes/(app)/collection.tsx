@@ -42,7 +42,7 @@ export const Route = createFileRoute("/(app)/collection")({
         content: `your collection`,
       },
       {
-        title: `Collection — myakiba`,
+        title: `Collection - myakiba`,
       },
     ],
   }),

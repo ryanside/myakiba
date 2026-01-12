@@ -38,7 +38,7 @@ export const Route = createFileRoute("/(app)/sync/csv")({
         content: "sync MyFigureCollection CSV to myakiba",
       },
       {
-        title: "Sync CSV — myakiba",
+        title: "Sync CSV - myakiba",
       },
     ],
   }),

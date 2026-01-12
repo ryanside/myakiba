@@ -10,7 +10,7 @@ export const Route = createFileRoute("/(app)/expenses")({
         content: `your expenses`,
       },
       {
-        title: `Expenses — myakiba`,
+        title: `Expenses - myakiba`,
       },
     ],
   }),

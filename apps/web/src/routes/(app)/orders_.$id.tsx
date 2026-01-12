@@ -40,7 +40,7 @@ export const Route = createFileRoute("/(app)/orders_/$id")({
         content: `order ${params.id} details`,
       },
       {
-        title: `Order ${params.id} — myakiba`,
+        title: `Order ${params.id} - myakiba`,
       },
     ],
   }),

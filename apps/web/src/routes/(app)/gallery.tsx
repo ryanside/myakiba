@@ -10,7 +10,7 @@ export const Route = createFileRoute("/(app)/gallery")({
         content: `your gallery`,
       },
       {
-        title: `Gallery — myakiba`,
+        title: `Gallery - myakiba`,
       },
     ],
   }),

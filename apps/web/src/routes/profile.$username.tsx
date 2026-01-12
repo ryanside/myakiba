@@ -10,7 +10,7 @@ export const Route = createFileRoute("/profile/$username")({
         content: `${params.username}'s myakiba profile`,
       },
       {
-        title: `${params.username} — myakiba`,
+        title: `${params.username} - myakiba`,
       },
     ],
   }),
