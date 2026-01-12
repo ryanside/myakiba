@@ -115,7 +115,7 @@ export default function SyncCsvForm({
                   accept={{ "text/csv": [".csv"] }}
                   maxFiles={1}
                   src={field.state.value ? [field.state.value] : undefined}
-                  onDrop={(files) => field.handleChange(files[0])}
+                  onDrop={(files) => field.handleChange(files[0] ?? undefined)}
                   onError={(error) => console.error("Dropzone error:", error)}
                 >
                   <DropzoneEmptyState />
