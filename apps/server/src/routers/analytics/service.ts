@@ -1,11 +1,24 @@
 import { db } from "@myakiba/db";
-import { collection, item } from "@myakiba/db/schema/figure";
+import { collection, item, entry, entry_to_item } from "@myakiba/db/schema/figure";
 import { eq, count, and, sql, desc, not } from "drizzle-orm";
-import { entry, entry_to_item } from "@myakiba/db/schema/figure";
 
 class AnalyticsService {
-  async getAnalytics(userId: string) {
-    const getPriceRangeDistribution = db
+  private priceRangeDistributionPrepared;
+  private scaleDistributionPrepared;
+  private mostExpensiveCollectionItemsPrepared;
+  private topShopsPrepared;
+  private totalOwnedPrepared;
+  private topCharactersPrepared;
+  private topOriginsPrepared;
+  private topCompaniesPrepared;
+  private topArtistsPrepared;
+  private topMaterialsPrepared;
+  private topClassificationsPrepared;
+  private topEventsPrepared;
+
+  constructor() {
+    // Price Range Distribution
+    this.priceRangeDistributionPrepared = db
       .select({
         priceRange: sql<string>`
           CASE 
@@ -20,7 +33,12 @@ class AnalyticsService {
         totalValue: sql<string>`SUM(${collection.price}::numeric)`,
       })
       .from(collection)
-      .where(and(eq(collection.userId, userId), eq(collection.status, "Owned")))
+      .where(
+        and(
+          eq(collection.userId, sql.placeholder("userId")),
+          eq(collection.status, "Owned")
+        )
+      )
       .groupBy(
         sql`
         CASE 
@@ -32,9 +50,11 @@ class AnalyticsService {
         END
       `
       )
-      .orderBy(sql`MIN(${collection.price}::numeric)`);
+      .orderBy(sql`MIN(${collection.price}::numeric)`)
+      .prepare("price_range_distribution");
 
-    const getScaleDistribution = db
+    // Scale Distribution
+    this.scaleDistributionPrepared = db
       .select({
         scale: item.scale,
         count: count(),
@@ -44,16 +64,18 @@ class AnalyticsService {
       .innerJoin(item, eq(collection.itemId, item.id))
       .where(
         and(
-          eq(collection.userId, userId),
+          eq(collection.userId, sql.placeholder("userId")),
           eq(collection.status, "Owned"),
           eq(item.category, "Prepainted")
         )
       )
       .groupBy(item.scale)
       .orderBy(sql`COUNT(*) DESC`)
-      .limit(10);
+      .limit(10)
+      .prepare("scale_distribution");
 
-    const getMostExpensiveCollectionItems = db
+    // Most Expensive Collection Items
+    this.mostExpensiveCollectionItemsPrepared = db
       .select({
         itemId: item.id,
         itemTitle: item.title,
@@ -63,95 +85,273 @@ class AnalyticsService {
       })
       .from(collection)
       .innerJoin(item, eq(collection.itemId, item.id))
-      .where(and(eq(collection.userId, userId), eq(collection.status, "Owned")))
+      .where(
+        and(
+          eq(collection.userId, sql.placeholder("userId")),
+          eq(collection.status, "Owned")
+        )
+      )
       .orderBy(desc(collection.price))
-      .limit(10);
+      .limit(10)
+      .prepare("most_expensive_items");
 
-    const getTopShops = db
+    // Top Shops
+    this.topShopsPrepared = db
       .select({
         shop: collection.shop,
         count: count(),
         totalSpent: sql<string>`SUM(${collection.price}::numeric)`,
       })
       .from(collection)
-      .where(and(eq(collection.userId, userId), not(eq(collection.shop, ""))))
+      .where(
+        and(
+          eq(collection.userId, sql.placeholder("userId")),
+          not(eq(collection.shop, ""))
+        )
+      )
       .groupBy(collection.shop)
       .orderBy(
         desc(count()),
         desc(sql<string>`SUM(${collection.price}::numeric)`)
       )
-      .limit(10);
+      .limit(10)
+      .prepare("top_shops");
 
-    const getTotalOwned = db
+    // Total Owned
+    this.totalOwnedPrepared = db
       .select({
         count: count(),
       })
       .from(collection)
       .where(
-        and(eq(collection.userId, userId), eq(collection.status, "Owned"))
-      );
-
-    const allCategories = [
-      "Characters",
-      "Origins",
-      "Companies",
-      "Artists",
-      "Materials",
-      "Classifications",
-      "Event",
-    ];
-
-    const topEntriesByCategoryQueries = allCategories.map((category) =>
-      db
-        .select({
-          entryId: entry.id,
-          originName: entry.name,
-          itemCount: count(),
-          totalValue: sql<string>`SUM(${collection.price}::numeric)`,
-          category: sql<string>`${category}`,
-        })
-        .from(collection)
-        .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
-        .innerJoin(entry, eq(entry_to_item.entryId, entry.id))
-        .where(
-          and(
-            eq(collection.userId, userId),
-            eq(collection.status, "Owned"),
-            eq(entry.category, category)
-          )
+        and(
+          eq(collection.userId, sql.placeholder("userId")),
+          eq(collection.status, "Owned")
         )
-        .groupBy(entry.id, entry.name)
-        .orderBy(
-          desc(count()),
-          desc(sql<string>`SUM(${collection.price}::numeric)`)
-        )
-        .limit(10)
-    );
+      )
+      .prepare("total_owned");
 
+    // Top Characters
+    this.topCharactersPrepared = db
+      .select({
+        entryId: entry.id,
+        originName: entry.name,
+        itemCount: count(),
+        totalValue: sql<string>`SUM(${collection.price}::numeric)`,
+      })
+      .from(collection)
+      .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
+      .innerJoin(entry, eq(entry_to_item.entryId, entry.id))
+      .where(
+        and(
+          eq(collection.userId, sql.placeholder("userId")),
+          eq(collection.status, "Owned"),
+          eq(entry.category, "Characters")
+        )
+      )
+      .groupBy(entry.id, entry.name)
+      .orderBy(
+        desc(count()),
+        desc(sql<string>`SUM(${collection.price}::numeric)`)
+      )
+      .limit(10)
+      .prepare("top_characters");
+
+    // Top Origins
+    this.topOriginsPrepared = db
+      .select({
+        entryId: entry.id,
+        originName: entry.name,
+        itemCount: count(),
+        totalValue: sql<string>`SUM(${collection.price}::numeric)`,
+      })
+      .from(collection)
+      .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
+      .innerJoin(entry, eq(entry_to_item.entryId, entry.id))
+      .where(
+        and(
+          eq(collection.userId, sql.placeholder("userId")),
+          eq(collection.status, "Owned"),
+          eq(entry.category, "Origins")
+        )
+      )
+      .groupBy(entry.id, entry.name)
+      .orderBy(
+        desc(count()),
+        desc(sql<string>`SUM(${collection.price}::numeric)`)
+      )
+      .limit(10)
+      .prepare("top_origins");
+
+    // Top Companies
+    this.topCompaniesPrepared = db
+      .select({
+        entryId: entry.id,
+        originName: entry.name,
+        itemCount: count(),
+        totalValue: sql<string>`SUM(${collection.price}::numeric)`,
+      })
+      .from(collection)
+      .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
+      .innerJoin(entry, eq(entry_to_item.entryId, entry.id))
+      .where(
+        and(
+          eq(collection.userId, sql.placeholder("userId")),
+          eq(collection.status, "Owned"),
+          eq(entry.category, "Companies")
+        )
+      )
+      .groupBy(entry.id, entry.name)
+      .orderBy(
+        desc(count()),
+        desc(sql<string>`SUM(${collection.price}::numeric)`)
+      )
+      .limit(10)
+      .prepare("top_companies");
+
+    // Top Artists
+    this.topArtistsPrepared = db
+      .select({
+        entryId: entry.id,
+        originName: entry.name,
+        itemCount: count(),
+        totalValue: sql<string>`SUM(${collection.price}::numeric)`,
+      })
+      .from(collection)
+      .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
+      .innerJoin(entry, eq(entry_to_item.entryId, entry.id))
+      .where(
+        and(
+          eq(collection.userId, sql.placeholder("userId")),
+          eq(collection.status, "Owned"),
+          eq(entry.category, "Artists")
+        )
+      )
+      .groupBy(entry.id, entry.name)
+      .orderBy(
+        desc(count()),
+        desc(sql<string>`SUM(${collection.price}::numeric)`)
+      )
+      .limit(10)
+      .prepare("top_artists");
+
+    // Top Materials
+    this.topMaterialsPrepared = db
+      .select({
+        entryId: entry.id,
+        originName: entry.name,
+        itemCount: count(),
+        totalValue: sql<string>`SUM(${collection.price}::numeric)`,
+      })
+      .from(collection)
+      .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
+      .innerJoin(entry, eq(entry_to_item.entryId, entry.id))
+      .where(
+        and(
+          eq(collection.userId, sql.placeholder("userId")),
+          eq(collection.status, "Owned"),
+          eq(entry.category, "Materials")
+        )
+      )
+      .groupBy(entry.id, entry.name)
+      .orderBy(
+        desc(count()),
+        desc(sql<string>`SUM(${collection.price}::numeric)`)
+      )
+      .limit(10)
+      .prepare("top_materials");
+
+    // Top Classifications
+    this.topClassificationsPrepared = db
+      .select({
+        entryId: entry.id,
+        originName: entry.name,
+        itemCount: count(),
+        totalValue: sql<string>`SUM(${collection.price}::numeric)`,
+      })
+      .from(collection)
+      .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
+      .innerJoin(entry, eq(entry_to_item.entryId, entry.id))
+      .where(
+        and(
+          eq(collection.userId, sql.placeholder("userId")),
+          eq(collection.status, "Owned"),
+          eq(entry.category, "Classifications")
+        )
+      )
+      .groupBy(entry.id, entry.name)
+      .orderBy(
+        desc(count()),
+        desc(sql<string>`SUM(${collection.price}::numeric)`)
+      )
+      .limit(10)
+      .prepare("top_classifications");
+
+    // Top Events
+    this.topEventsPrepared = db
+      .select({
+        entryId: entry.id,
+        originName: entry.name,
+        itemCount: count(),
+        totalValue: sql<string>`SUM(${collection.price}::numeric)`,
+      })
+      .from(collection)
+      .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
+      .innerJoin(entry, eq(entry_to_item.entryId, entry.id))
+      .where(
+        and(
+          eq(collection.userId, sql.placeholder("userId")),
+          eq(collection.status, "Owned"),
+          eq(entry.category, "Event")
+        )
+      )
+      .groupBy(entry.id, entry.name)
+      .orderBy(
+        desc(count()),
+        desc(sql<string>`SUM(${collection.price}::numeric)`)
+      )
+      .limit(10)
+      .prepare("top_events");
+  }
+
+  async getAnalytics(userId: string) {
     const [
       priceRangeDistribution,
       scaleDistribution,
       mostExpensiveCollectionItems,
       topShops,
       totalOwned,
-      ...topEntriesResults
+      topCharacters,
+      topOrigins,
+      topCompanies,
+      topArtists,
+      topMaterials,
+      topClassifications,
+      topEvents,
     ] = await Promise.all([
-      getPriceRangeDistribution,
-      getScaleDistribution,
-      getMostExpensiveCollectionItems,
-      getTopShops,
-      getTotalOwned,
-      ...topEntriesByCategoryQueries,
+      this.priceRangeDistributionPrepared.execute({ userId }),
+      this.scaleDistributionPrepared.execute({ userId }),
+      this.mostExpensiveCollectionItemsPrepared.execute({ userId }),
+      this.topShopsPrepared.execute({ userId }),
+      this.totalOwnedPrepared.execute({ userId }),
+      this.topCharactersPrepared.execute({ userId }),
+      this.topOriginsPrepared.execute({ userId }),
+      this.topCompaniesPrepared.execute({ userId }),
+      this.topArtistsPrepared.execute({ userId }),
+      this.topMaterialsPrepared.execute({ userId }),
+      this.topClassificationsPrepared.execute({ userId }),
+      this.topEventsPrepared.execute({ userId }),
     ]);
 
-    // Structure the top entries by category
-    const topEntriesByAllCategories = allCategories.reduce(
-      (acc, category, index) => {
-        acc[category] = topEntriesResults[index];
-        return acc;
-      },
-      {} as Record<string, typeof topEntriesResults[0]>
-    );
+    const topEntriesByAllCategories = {
+      Characters: topCharacters,
+      Origins: topOrigins,
+      Companies: topCompanies,
+      Artists: topArtists,
+      Materials: topMaterials,
+      Classifications: topClassifications,
+      Event: topEvents,
+    };
 
     return {
       priceRangeDistribution,
