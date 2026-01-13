@@ -19,6 +19,7 @@
     "@hookform/resolvers": "^5.2.2",
     "@marsidev/react-turnstile": "^1.3.1",
     "@myakiba/constants": "workspace:*",
+    "@myakiba/env": "workspace:*",
     "@myakiba/types": "workspace:*",
     "@myakiba/utils": "workspace:*",
     "@myakiba/validations": "workspace:*",

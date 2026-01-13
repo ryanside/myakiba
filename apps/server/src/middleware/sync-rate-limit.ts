@@ -1,10 +1,11 @@
 import Redis from "ioredis";
 import { createMiddleware } from "hono/factory";
 import type { Variables } from "../index";
+import { env } from "@myakiba/env/server";
 
 const redis = new Redis({
-  host: process.env.REDIS_HOST,
-  port: parseInt(process.env.REDIS_PORT!),
+  host: env.REDIS_HOST,
+  port: env.REDIS_PORT,
 });
 
 interface RateLimitOptions {

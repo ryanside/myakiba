@@ -13,12 +13,14 @@ COPY /packages/config/package.json ./packages/config/package.json
 COPY /packages/types/package.json ./packages/types/package.json
 COPY /packages/utils/package.json ./packages/utils/package.json
 COPY /packages/validations/package.json ./packages/validations/package.json
+COPY /packages/env/package.json ./packages/env/package.json
 
 RUN bun install --frozen-lockfile --ignore-scripts
 
 COPY packages/db ./packages/db
 COPY packages/config ./packages/config
 COPY packages/constants ./packages/constants
+COPY packages/env ./packages/env
 
 WORKDIR /app/packages/db
 CMD ["bun", "run", "db:push:force"]

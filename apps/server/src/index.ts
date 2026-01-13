@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { auth } from "@myakiba/auth";
+import { env } from "@myakiba/env/server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
@@ -24,7 +25,7 @@ app.use(
   "/*",
   cors({
     origin:
-      process.env.CORS_ORIGIN?.split(",").map((origin) => origin.trim()) || [],
+      env.CORS_ORIGIN.split(",").map((origin: string) => origin.trim()),
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization", "x-captcha-response"],
     credentials: true,
@@ -34,7 +35,7 @@ app.use(
 app.use(
   csrf({
     origin:
-      process.env.CORS_ORIGIN?.split(",").map((origin) => origin.trim()) || [],
+      env.CORS_ORIGIN.split(",").map((origin: string) => origin.trim()),
   })
 );
 

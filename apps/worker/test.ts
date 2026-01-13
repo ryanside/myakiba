@@ -16,14 +16,15 @@ import {
 import { createFetchOptions, normalizeDateString } from "./lib/utils";
 import { v5 as uuidv5 } from "uuid";
 import type { scrapedItem } from "./lib/types";
+import { env } from "@myakiba/env/worker";
 
 const redis = new Redis({
-  host: process.env.REDIS_HOST || "localhost",
-  port: parseInt(process.env.REDIS_PORT || "6379"),
+  host: env.REDIS_HOST,
+  port: env.REDIS_PORT,
 });
 
 const s3Client = new S3Client({
-  region: process.env.AWS_BUCKET_REGION,
+  region: env.AWS_BUCKET_REGION,
 });
 
 const scrapeImage = async (
@@ -56,7 +57,7 @@ const scrapeImage = async (
 
       console.log("Uploading to S3...");
       const command = new PutObjectCommand({
-        Bucket: process.env.AWS_BUCKET_NAME,
+        Bucket: env.AWS_BUCKET_NAME,
         Key: filename,
         Body: imageBuffer,
         ContentType: contentType,
@@ -67,7 +68,7 @@ const scrapeImage = async (
         throw new Error("Failed to upload image to S3");
       }
 
-      const imageS3Url = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_BUCKET_REGION}.amazonaws.com/${filename}`;
+      const imageS3Url = `https://${env.AWS_BUCKET_NAME}.s3.${env.AWS_BUCKET_REGION}.amazonaws.com/${filename}`;
       console.timeEnd("Scraping Image Duration");
 
       return imageS3Url;

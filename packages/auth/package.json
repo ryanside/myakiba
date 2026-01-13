@@ -19,13 +19,15 @@
     "typescript": "catalog:"
   },
   "dependencies": {
+    "@myakiba/db": "workspace:*",
+    "@myakiba/env": "workspace:*",
     "@paralleldrive/cuid2": "catalog:",
     "better-auth": "catalog:",
     "better-auth-harmony": "^1.2.5",
+    "dotenv": "catalog:",
     "ioredis": "catalog:",
     "resend": "^6.5.2",
-    "zod": "catalog:",
-    "@myakiba/db": "workspace:*"
+    "zod": "catalog:"
   }
 }
 
