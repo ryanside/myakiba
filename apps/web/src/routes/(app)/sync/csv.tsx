@@ -70,7 +70,7 @@ function RouteComponent() {
   const csvMutation = useMutation({
     mutationFn: (userItems: userItem[]) => sendItems(userItems),
     onError: (error) => {
-      toast.error("Failed to submit CSV. Please try again.", {
+      toast.error("Failed to submit CSV.", {
         description: `Error: ${error.message}`,
       });
     },
@@ -191,7 +191,7 @@ function RouteComponent() {
                   </>
                 )}
               </div>
-              <div className="flex flex-row gap-2">
+              <div className="flex flex-col gap-2">
                 <p className="text-sm text-pretty">
                   {status.existingItems} already in myakiba database
                 </p>
@@ -232,4 +232,3 @@ function RouteComponent() {
     </div>
   );
 }
-

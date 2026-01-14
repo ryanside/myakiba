@@ -713,6 +713,8 @@ function DeleteAccountForm({
   navigate: UseNavigateResult<string>;
   hasCredentialAccount: boolean;
 }) {
+  const queryClient = useQueryClient();
+
   const deleteAccountMutation = useMutation({
     mutationFn: async (confirmationPhrase: string) => {
       const response = await client.api.settings.account.$delete({
@@ -728,6 +730,8 @@ function DeleteAccountForm({
       await authClient.signOut({
         fetchOptions: {
           onSuccess: () => {
+            // Clear all React Query cache
+            queryClient.clear();
             clearRecentItems();
             navigate({
               to: "/login",
@@ -759,6 +763,8 @@ function DeleteAccountForm({
               await authClient.signOut({
                 fetchOptions: {
                   onSuccess: () => {
+                    // Clear all React Query cache
+                    queryClient.clear();
                     clearRecentItems();
                     navigate({
                       to: "/login",

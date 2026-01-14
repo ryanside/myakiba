@@ -29,8 +29,10 @@ export default function UserMenu({ session }: { session: RouterAppContext["sessi
   const handleSignOut = async () => {
     authClient.signOut({
       fetchOptions: {
-        onSuccess: async () => {
-          await queryClient.invalidateQueries();
+        onSuccess: () => {
+          // Clear all React Query cache (not just invalidate)
+          queryClient.clear();
+          // Clear localStorage
           clearRecentItems();
           navigate({
             to: "/login",
