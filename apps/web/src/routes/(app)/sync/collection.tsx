@@ -41,7 +41,7 @@ export const Route = createFileRoute("/(app)/sync/collection")({
         content: "sync MyFigureCollection collection to myakiba",
       },
       {
-        title: "Sync Collection — myakiba",
+        title: "Sync Collection - myakiba",
       },
       ],
   }),

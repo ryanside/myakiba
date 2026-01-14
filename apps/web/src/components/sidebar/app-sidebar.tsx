@@ -18,6 +18,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarRail,
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "@tanstack/react-router";
 import { PlusIcon } from "@/components/ui/plus";
@@ -95,6 +96,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar variant="inset" collapsible="icon" {...props}>
+      <SidebarRail className="hover:after:bg-transparent"/>
       <SidebarHeader className="pb-0">
         <SidebarMenu>
           <SidebarMenuItem>
@@ -133,7 +135,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                tooltip="Add MFC items" 
+                tooltip="Add MFC items"
                 className="text-black hover:text-black active:text-black from-primary to-primary/85 border border-zinc-950/25 bg-gradient-to-t shadow-md shadow-zinc-950/20 ring-1 ring-inset ring-white/20 transition-[filter] duration-200 hover:brightness-110 active:brightness-90 dark:border-white/20 dark:ring-transparent"
               >
                 <Link to="/sync">

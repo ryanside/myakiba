@@ -10,6 +10,7 @@ import { Turnstile } from "@marsidev/react-turnstile";
 import { ArrowLeft, Loader2, Mail } from "lucide-react";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
 import { useState } from "react";
+import { env } from "@myakiba/env/web";
 
 export const Route = createFileRoute("/(auth)/forgot-password")({
   component: RouteComponent,
@@ -170,7 +171,7 @@ function RouteComponent() {
                 {(field) => (
                   <div className="space-y-2">
                     <Turnstile
-                      siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                      siteKey={env.VITE_TURNSTILE_SITE_KEY}
                       onSuccess={field.handleChange}
                     />
                   </div>

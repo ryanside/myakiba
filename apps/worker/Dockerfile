@@ -11,6 +11,7 @@ COPY /apps/worker/package.json ./apps/worker/package.json
 COPY /packages/auth/package.json ./packages/auth/package.json
 COPY /packages/constants/package.json ./packages/constants/package.json
 COPY /packages/db/package.json ./packages/db/package.json
+COPY /packages/env/package.json ./packages/env/package.json
 COPY /packages/eslint-config/package.json ./packages/eslint-config/package.json
 COPY /packages/config/package.json ./packages/config/package.json
 COPY /packages/types/package.json ./packages/types/package.json

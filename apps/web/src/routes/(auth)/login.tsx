@@ -15,7 +15,7 @@ export const Route = createFileRoute("/(auth)/login")({
         content: "login to your myakiba account",
       },
       {
-        title: "Login — myakiba",
+        title: "Login - myakiba",
       },
     ],
   }),

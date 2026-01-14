@@ -33,6 +33,7 @@
     "drizzle-orm": "catalog:"
   },
   "dependencies": {
+    "@myakiba/env": "workspace:*",
     "@paralleldrive/cuid2": "catalog:",
     "dotenv": "catalog:",
     "drizzle-zod": "catalog:",

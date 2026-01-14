@@ -15,15 +15,16 @@ import { sanitizeDate } from "@myakiba/utils";
 import { Queue } from "bullmq";
 import Redis from "ioredis";
 import { createId } from "@paralleldrive/cuid2";
+import { env } from "@myakiba/env/server";
 
 const redis = new Redis({
-  host: process.env.REDIS_HOST,
-  port: parseInt(process.env.REDIS_PORT!),
+  host: env.REDIS_HOST,
+  port: env.REDIS_PORT,
 });
 const syncQueue = new Queue("sync-queue", {
   connection: {
-    host: process.env.REDIS_HOST,
-    port: parseInt(process.env.REDIS_PORT!),
+    host: env.REDIS_HOST,
+    port: env.REDIS_PORT,
   },
 });
 

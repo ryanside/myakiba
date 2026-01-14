@@ -1,9 +1,10 @@
 import Redis from "ioredis";
 
 export { normalizeDateString, tryCatch, type Result } from "@myakiba/utils";
+import { env } from "@myakiba/env/worker";
 
 export const createFetchOptions = (image: boolean = false) => ({
-  proxy: process.env.HTTP_PROXY,
+  proxy: env.HTTP_PROXY,
   tls: {
     rejectUnauthorized: false,
   },

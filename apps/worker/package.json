@@ -20,6 +20,7 @@
     "@aws-sdk/client-s3": "^3.946.0",
     "@myakiba/constants": "workspace:*",
     "@myakiba/db": "workspace:*",
+    "@myakiba/env": "workspace:*",
     "@myakiba/types": "workspace:*",
     "@myakiba/utils": "workspace:*",
     "@myakiba/validations": "workspace:*",

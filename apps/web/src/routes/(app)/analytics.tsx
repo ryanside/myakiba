@@ -27,7 +27,7 @@ export const Route = createFileRoute("/(app)/analytics")({
         content: "your analytics",
       },
       {
-        title: "Analytics — myakiba",
+        title: "Analytics - myakiba",
       },
     ],
   }),

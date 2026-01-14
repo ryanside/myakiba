@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "@myakiba/db";
@@ -7,11 +8,12 @@ import { emailHarmony } from "better-auth-harmony";
 import { Resend } from "resend";
 import { createId } from "@paralleldrive/cuid2";
 import Redis from "ioredis";
+import { env } from "@myakiba/env/server";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(env.RESEND_API_KEY);
 const redis = new Redis({
-  host: process.env.REDIS_HOST,
-  port: parseInt(process.env.REDIS_PORT!),
+  host: env.REDIS_HOST,
+  port: env.REDIS_PORT,
 });
 
 export const auth = betterAuth({
@@ -53,13 +55,12 @@ export const auth = betterAuth({
     },
   },
   trustedOrigins:
-    process.env.CORS_ORIGIN?.split(",").map((origin) => origin.trim()) || [],
+    env.CORS_ORIGIN.split(",").map((origin) => origin.trim()) || [],
   emailAndPassword: {
     enabled: true,
     sendResetPassword: async ({ user, url }) => {
       await resend.emails.send({
-        from:
-          process.env.RESEND_FROM_EMAIL || "myakiba <onboarding@resend.dev>",
+        from: env.RESEND_FROM_EMAIL,
         to: user.email,
         subject: "Reset your password",
         text: `Click the link to reset your password: ${url}`,
@@ -73,8 +74,7 @@ export const auth = betterAuth({
     autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, url }) => {
       await resend.emails.send({
-        from:
-          process.env.RESEND_FROM_EMAIL || "myakiba <onboarding@resend.dev>",
+        from: env.RESEND_FROM_EMAIL,
         to: user.email,
         subject: "Verify your email address",
         text: `Click the link to verify your email: ${url}`,
@@ -83,20 +83,20 @@ export const auth = betterAuth({
   },
   socialProviders: {
     google: {
-      clientId: process.env.GOOGLE_CLIENT_ID as string,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+      clientId: env.GOOGLE_CLIENT_ID,
+      clientSecret: env.GOOGLE_CLIENT_SECRET,
     },
   },
   plugins: [
     captcha({
       provider: "cloudflare-turnstile",
-      secretKey: process.env.TURNSTILE_SECRET_KEY!,
+      secretKey: env.TURNSTILE_SECRET_KEY,
     }),
     username(),
     emailHarmony({}),
   ],
-  secret: process.env.BETTER_AUTH_SECRET,
-  baseURL: process.env.BETTER_AUTH_URL,
+  secret: env.BETTER_AUTH_SECRET,
+  baseURL: env.BETTER_AUTH_URL,
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24, // 1 day (every 1 day the session expiration is updated)

@@ -60,7 +60,7 @@ export const Route = createFileRoute("/(app)/orders")({
         content: "your orders",
       },
       {
-        title: "Orders — myakiba",
+        title: "Orders - myakiba",
       },
     ],
   }),

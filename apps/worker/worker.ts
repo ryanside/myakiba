@@ -6,10 +6,11 @@ import { jobDataSchema, type jobData } from "./lib/types";
 import { finalizeCollectionSync } from "./lib/collection/utils";
 import { finalizeOrderSync } from "./lib/order/utils";
 import { finalizeCsvSync } from "./lib/csv/utils";
+import { env } from "@myakiba/env/worker";
 
 const redis = new Redis({
-  host: process.env.REDIS_HOST || "localhost",
-  port: parseInt(process.env.REDIS_PORT || "6379"),
+  host: env.REDIS_HOST,
+  port: env.REDIS_PORT,
 });
 
 const myWorker = new Worker(
@@ -191,8 +192,8 @@ const myWorker = new Worker(
   },
   {
     connection: {
-      host: process.env.REDIS_HOST || "localhost",
-      port: parseInt(process.env.REDIS_PORT || "6379"),
+      host: env.REDIS_HOST,
+      port: env.REDIS_PORT,
     },
     concurrency: 2,
   }

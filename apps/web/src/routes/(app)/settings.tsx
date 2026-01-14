@@ -38,6 +38,7 @@ import * as z from "zod";
 import { MaskInput } from "@/components/ui/mask-input";
 import { getCurrencyLocale } from "@myakiba/utils";
 import { client } from "@/lib/hono-client";
+import { clearRecentItems } from "@/lib/recent-items";
 
 interface Budget {
   id: string;
@@ -70,7 +71,7 @@ export const Route = createFileRoute("/(app)/settings")({
         content: "your settings",
       },
       {
-        title: "Settings — myakiba",
+        title: "Settings - myakiba",
       },
     ],
   }),
@@ -727,6 +728,7 @@ function DeleteAccountForm({
       await authClient.signOut({
         fetchOptions: {
           onSuccess: () => {
+            clearRecentItems();
             navigate({
               to: "/login",
             });
@@ -757,6 +759,7 @@ function DeleteAccountForm({
               await authClient.signOut({
                 fetchOptions: {
                   onSuccess: () => {
+                    clearRecentItems();
                     navigate({
                       to: "/login",
                     });

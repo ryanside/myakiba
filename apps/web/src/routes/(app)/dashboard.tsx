@@ -32,7 +32,7 @@ export const Route = createFileRoute("/(app)/dashboard")({
         content: `your dashboard`,
       },
       {
-        title: `Dashboard — myakiba`,
+        title: `Dashboard - myakiba`,
       },
     ],
   }),

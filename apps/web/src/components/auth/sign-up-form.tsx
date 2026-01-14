@@ -9,6 +9,7 @@ import { Label } from "../ui/label";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { Loader2 } from "lucide-react";
 import { MyAkibaLogo } from "../myakiba-logo";
+import { env } from "@myakiba/env/web";
 
 function GoogleIcon() {
   return (
@@ -273,7 +274,7 @@ export default function SignUpForm({
             {(field) => (
               <div className="space-y-2">
                 <Turnstile
-                  siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                  siteKey={env.VITE_TURNSTILE_SITE_KEY}
                   onSuccess={field.handleChange}
                 />
               </div>

@@ -15,6 +15,7 @@
     "@myakiba/auth": "workspace:*",
     "@myakiba/constants": "workspace:*",
     "@myakiba/db": "workspace:*",
+    "@myakiba/env": "workspace:*",
     "@myakiba/types": "workspace:*",
     "@myakiba/utils": "workspace:*",
     "@myakiba/validations": "workspace:*",

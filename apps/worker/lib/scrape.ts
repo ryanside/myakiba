@@ -13,14 +13,15 @@ import {
 import { createFetchOptions, setJobStatus } from "./utils";
 import type { scrapedItem } from "./types";
 import Redis from "ioredis";
+import { env } from "@myakiba/env/worker";
 
 const redis = new Redis({
-  host: process.env.REDIS_HOST || "localhost",
-  port: parseInt(process.env.REDIS_PORT || "6379"),
+  host: env.REDIS_HOST,
+  port: env.REDIS_PORT,
 });
 
 const s3Client = new S3Client({
-  region: process.env.AWS_BUCKET_REGION,
+  region: env.AWS_BUCKET_REGION,
 });
 
 export const scrapeImage = async (
@@ -53,7 +54,7 @@ export const scrapeImage = async (
 
       console.log("Uploading to S3...");
       const command = new PutObjectCommand({
-        Bucket: process.env.AWS_BUCKET_NAME,
+        Bucket: env.AWS_BUCKET_NAME,
         Key: filename,
         Body: imageBuffer,
         ContentType: contentType,
@@ -65,9 +66,9 @@ export const scrapeImage = async (
       }
 
       const imageS3Url =
-        process.env.NODE_ENV === "production"
+        env.NODE_ENV === "production"
           ? `https://static.myakiba.app/${filename}`
-          : `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_BUCKET_REGION}.amazonaws.com/${filename}`;
+          : `https://${env.AWS_BUCKET_NAME}.s3.${env.AWS_BUCKET_REGION}.amazonaws.com/${filename}`;
       console.timeEnd("Scraping Image Duration");
 
       return imageS3Url;
