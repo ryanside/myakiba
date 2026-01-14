@@ -25,6 +25,8 @@ RUN bun install --frozen-lockfile --verbose --ignore-scripts
 COPY . .
 
 # Build the frontend
+ARG SOURCE_COMMIT
+ENV VITE_BUILD_ID=${SOURCE_COMMIT:-dev}
 WORKDIR /app/apps/web
 RUN bun run build
 
@@ -41,6 +43,9 @@ FROM gcr.io/distroless/base-debian12:nonroot AS runner
 COPY --from=busybox:1.36-musl /bin/busybox /usr/bin/wget
 
 ENV NODE_ENV=production
+
+ARG SOURCE_COMMIT
+ENV BUILD_ID=${SOURCE_COMMIT:-dev}
 
 ARG BUILD_APP_PORT=3000
 ENV APP_PORT=${BUILD_APP_PORT}

@@ -110,12 +110,10 @@ const settingsRouter = new Hono<{
 
       const validatedBody = c.req.valid("json");
 
-      // Verify confirmation phrase
       if (validatedBody.confirmationPhrase !== "delete my account") {
         return c.text("Invalid confirmation phrase", 400);
       }
 
-      // Check if user has credential account (should not use this endpoint)
       const { data: hasCredential, error: checkError } = await tryCatch(
         SettingsService.hasCredentialAccount(user.id)
       );
@@ -134,7 +132,6 @@ const settingsRouter = new Hono<{
         );
       }
 
-      // Delete user account (cascade deletes will handle accounts and sessions)
       const { error: deleteError } = await tryCatch(
         SettingsService.deleteUser(user.id)
       );

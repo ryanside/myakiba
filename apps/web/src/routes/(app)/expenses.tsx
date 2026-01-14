@@ -3,7 +3,7 @@ import { Construction } from "lucide-react";
 
 export const Route = createFileRoute("/(app)/expenses")({
   component: RouteComponent,
-  head: ({ params }) => ({
+  head: () => ({
     meta: [
       {
         name: "description",

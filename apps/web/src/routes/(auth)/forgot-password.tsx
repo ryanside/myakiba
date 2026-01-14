@@ -37,7 +37,7 @@ function RouteComponent() {
   });
 
   const handleForgotPassword = async (email: string, turnstileToken: string) => {
-    const { data, error } = await authClient.requestPasswordReset(
+    await authClient.requestPasswordReset(
       {
         email: email,
         redirectTo: import.meta.env.PROD

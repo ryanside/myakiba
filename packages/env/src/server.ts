@@ -14,6 +14,8 @@ export const env = createEnv({
     TURNSTILE_SECRET_KEY: z.string().min(1),
     BETTER_AUTH_SECRET: z.string().min(1),
     BETTER_AUTH_URL: z.url(),
+    EARLY_ACCESS_PASSWORD: z.string().min(1),
+    BUILD_ID: z.string().optional().default("dev"),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

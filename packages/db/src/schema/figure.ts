@@ -223,3 +223,10 @@ export const budget = pgTable("budget", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+export const waitlist = pgTable("waitlist", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  email: text("email").notNull().unique(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});

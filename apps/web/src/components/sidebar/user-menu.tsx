@@ -29,8 +29,10 @@ export default function UserMenu({ session }: { session: RouterAppContext["sessi
   const handleSignOut = async () => {
     authClient.signOut({
       fetchOptions: {
-        onSuccess: async () => {
-          await queryClient.invalidateQueries();
+        onSuccess: () => {
+          // Clear all React Query cache (not just invalidate)
+          queryClient.clear();
+          // Clear localStorage
           clearRecentItems();
           navigate({
             to: "/login",
@@ -45,13 +47,13 @@ export default function UserMenu({ session }: { session: RouterAppContext["sessi
       <DropdownMenuTrigger asChild>
         <Avatar className="h-8 w-8">
           {session.user.image && <AvatarImage src={session.user.image} />}
-          <AvatarFallback className="bg-gradient-to-br from-background via-muted to-background">
+          <AvatarFallback className="bg-linear-to-br from-background via-muted to-background">
             <User className="size-4" />
           </AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="min-w-48">
-        <div className="flex bg-gradient-to-br from-background via-muted to-background rounded-sm outline outline-border items-center gap-2 px-2 py-1.5 text-sm">
+        <div className="flex bg-linear-to-br from-background via-muted to-background rounded-sm outline outline-border items-center gap-2 px-2 py-1.5 text-sm">
           {session.user.username}
         </div>
         <DropdownMenuSeparator />

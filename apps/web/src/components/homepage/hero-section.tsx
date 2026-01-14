@@ -1,7 +1,5 @@
-import { Link } from "@tanstack/react-router";
-import { Button } from "@/components/ui/button";
-import { ArrowRightIcon } from "lucide-react";
 import { TextLoop } from "./text-loop";
+import { WaitlistForm } from "./waitlist-form";
 
 export default function HeroSection({
   heroImage,
@@ -35,12 +33,8 @@ export default function HeroSection({
             .
           </p>
 
-          <div className="flex flex-row items-center gap-2 sm:flex-row sm:*:w-auto">
-            <Button asChild variant="mono" className="p-6 rounded-full">
-              <Link to="/login">
-                Try it out now <ArrowRightIcon className="w-4 h-4" />
-              </Link>
-            </Button>
+          <div className="flex flex-col gap-3">
+            <WaitlistForm />
             <div className="px-2 text-start text-xs text-muted-foreground italic">
               <p>*in early development</p>
             </div>

@@ -8,14 +8,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Plus, User } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { CollectionBreakdown } from "@/components/dashboard/collection-breakdown";
 import { BudgetControlCard } from "@/components/dashboard/budget-control-card";
 import { ReleaseCalendar } from "@/components/dashboard/release-calendar";
 import { UnpaidOrders } from "@/components/dashboard/unpaid-orders";
 import { formatCurrency } from "@myakiba/utils";
-import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import OrderKanban from "@/components/dashboard/order-kanban";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +24,7 @@ import Loader from "@/components/loader";
 
 export const Route = createFileRoute("/(app)/dashboard")({
   component: RouteComponent,
-  head: ({ params }) => ({
+  head: () => ({
     meta: [
       {
         name: "description",

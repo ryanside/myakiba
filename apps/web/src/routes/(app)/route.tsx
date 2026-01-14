@@ -10,13 +10,13 @@ import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
   SidebarProvider,
-  SidebarRail,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Outlet, redirect, useLocation } from "@tanstack/react-router";
 import UserMenu from "@/components/sidebar/user-menu";
 import { authClient } from "@/lib/auth-client";
 import { SearchCommand } from "@/components/sidebar/search-command";
+import { useVersionCheck } from "@/hooks/use-version-check";
 
 export const Route = createFileRoute("/(app)")({
   component: RouteComponent,
@@ -37,12 +37,13 @@ export const Route = createFileRoute("/(app)")({
 });
 
 function RouteComponent() {
+  useVersionCheck();
   const location = useLocation();
   const { session } = Route.useRouteContext();
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset className="!shadow-none border-border">
+      <SidebarInset className="shadow-none! border-border">
         <header className="flex h-12 shrink-0 items-center justify-between gap-2 px-4">
           <div className="flex items-center gap-0.5">
             <SidebarTrigger className="-ml-1" />

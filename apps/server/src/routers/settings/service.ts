@@ -65,7 +65,6 @@ class SettingsService {
 
   async deleteUser(userId: string): Promise<void> {
     await db.delete(user).where(eq(user.id, userId));
-    // Cascade deletes will handle accounts and sessions
   }
 }
 
