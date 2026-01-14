@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "@tanstack/react-form";
 import { toast } from "sonner";
-import { Loader2, Lock } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,

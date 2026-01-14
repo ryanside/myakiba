@@ -393,6 +393,9 @@ function ProfileForm({ user }: { user: User }) {
                   if (data?.available === false) {
                     return "Username is already taken";
                   }
+                  if (error) {
+                    return error.message;
+                  }
                 }
               },
               onBlur: z
@@ -461,7 +464,7 @@ function PasswordForm() {
         return;
       }
 
-      const { data, error } = await authClient.changePassword(
+      await authClient.changePassword(
         {
           newPassword: value.newPassword,
           currentPassword: value.currentPassword,
@@ -605,7 +608,7 @@ function PreferencesForm({ user }: { user: User }) {
       currency: user.currency || "USD",
     },
     onSubmit: async ({ value }) => {
-      const { data, error } = await authClient.updateUser({
+      const { error } = await authClient.updateUser({
         currency: value.currency,
       });
 
@@ -752,7 +755,6 @@ function DeleteAccountForm({
     },
     onSubmit: async ({ value }) => {
       if (hasCredentialAccount) {
-        // Use password-based deletion for credential accounts
         await authClient.deleteUser(
           {
             password: value.password,
@@ -779,7 +781,6 @@ function DeleteAccountForm({
           }
         );
       } else {
-        // Use confirmation phrase for OAuth accounts
         deleteAccountMutation.mutate(value.confirmationPhrase);
       }
     },

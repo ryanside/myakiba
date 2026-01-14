@@ -40,7 +40,7 @@ function RouteComponent() {
   const handleResetPassword = async (password: string) => {
     if (!token) return;
 
-    const { data, error } = await authClient.resetPassword(
+    await authClient.resetPassword(
       {
         newPassword: password,
         token,

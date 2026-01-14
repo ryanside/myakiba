@@ -178,7 +178,7 @@ export function createOrdersColumns({
         <InlineTextCell
           value={row.original.shop}
           onSubmit={async (newValue) => {
-            const { createdAt, updatedAt, ...orderWithoutTimestamps } =
+            const { ...orderWithoutTimestamps } =
               row.original;
             await onEditOrder(
               {

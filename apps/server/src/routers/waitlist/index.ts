@@ -15,7 +15,6 @@ const redis = new Redis({
   port: env.REDIS_PORT,
 });
 
-// Verify Turnstile token
 async function verifyTurnstile(token: string): Promise<boolean> {
   const response = await fetch(
     "https://challenges.cloudflare.com/turnstile/v0/siteverify",
@@ -50,7 +49,6 @@ function getClientIdentifier(c: {
   return createHash("sha256").update(fingerprint).digest("hex").slice(0, 16);
 }
 
-// Rate limiters
 const waitlistRateLimit = rateLimiter<{ Variables: Variables }>({
   windowMs: 60 * 60 * 1000, // 1 hour
   limit: 5,
@@ -74,7 +72,6 @@ const verifyAccessRateLimit = rateLimiter<{ Variables: Variables }>({
 });
 
 const waitlistRouter = new Hono<{ Variables: Variables }>()
-  // Join waitlist
   .post(
     "/",
     waitlistRateLimit,
@@ -86,7 +83,6 @@ const waitlistRouter = new Hono<{ Variables: Variables }>()
     async (c) => {
       const { email, turnstileToken } = c.req.valid("json");
 
-      // Verify Turnstile
       const { data: isValidCaptcha, error: captchaError } = await tryCatch(
         verifyTurnstile(turnstileToken)
       );
@@ -99,7 +95,6 @@ const waitlistRouter = new Hono<{ Variables: Variables }>()
         return c.text("Captcha verification failed", 400);
       }
 
-      // Add to waitlist
       const { error } = await tryCatch(WaitlistService.addToWaitlist(email));
 
       if (error) {
@@ -113,7 +108,6 @@ const waitlistRouter = new Hono<{ Variables: Variables }>()
       });
     }
   )
-  // Verify early access password
   .post(
     "/verify-access",
     verifyAccessRateLimit,
@@ -125,7 +119,6 @@ const waitlistRouter = new Hono<{ Variables: Variables }>()
     async (c) => {
       const { password } = c.req.valid("json");
 
-      // Constant-time comparison
       const expectedPassword = env.EARLY_ACCESS_PASSWORD;
       const passwordBuffer = Buffer.from(password);
       const expectedBuffer = Buffer.from(expectedPassword);

@@ -467,7 +467,7 @@ const syncRouter = new Hono<{
 
           wsIntervals.set(ws, interval);
         },
-        onMessage(_event, _ws) {},
+        // onMessage(_event, _ws) {},
         onClose(_event, ws) {
           console.log("WebSocket connection closed for job:", jobId);
           const interval = wsIntervals.get(ws);
