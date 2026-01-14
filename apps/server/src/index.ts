@@ -15,6 +15,7 @@ import itemsRouter from "./routers/items";
 import entriesRouter from "./routers/entries";
 import searchRouter from "./routers/search";
 import settingsRouter from "./routers/settings";
+import waitlistRouter from "./routers/waitlist";
 
 const app = new Hono<{
   Variables: Variables;
@@ -59,6 +60,7 @@ app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
 const routes = app
   .basePath("/api")
+  .get("/version", (c) => c.json({ buildId: env.BUILD_ID }))
   .route("/sync", syncRouter)
   .route("/dashboard", dashboardRouter)
   .route("/analytics", analyticsRouter)
@@ -67,7 +69,8 @@ const routes = app
   .route("/items", itemsRouter)
   .route("/entries", entriesRouter)
   .route("/search", searchRouter)
-  .route("/settings", settingsRouter);
+  .route("/settings", settingsRouter)
+  .route("/waitlist", waitlistRouter);
 
 app.get("*", serveStatic({ root: "./dist" }));
 app.get("*", serveStatic({ path: "./dist/index.html" }));
