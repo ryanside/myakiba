@@ -10,13 +10,13 @@ import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
   SidebarProvider,
-  SidebarRail,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Outlet, redirect, useLocation } from "@tanstack/react-router";
 import UserMenu from "@/components/sidebar/user-menu";
 import { authClient } from "@/lib/auth-client";
 import { SearchCommand } from "@/components/sidebar/search-command";
+import { useVersionCheck } from "@/hooks/use-version-check";
 
 export const Route = createFileRoute("/(app)")({
   component: RouteComponent,
@@ -37,6 +37,7 @@ export const Route = createFileRoute("/(app)")({
 });
 
 function RouteComponent() {
+  useVersionCheck();
   const location = useLocation();
   const { session } = Route.useRouteContext();
   return (
