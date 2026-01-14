@@ -83,6 +83,8 @@ const syncRouter = new Hono<{
       }
 
       let jobId: string | null | undefined = null;
+      let statusMessage: string;
+
       if (itemsToScrape.length > 0) {
         const { data: jobIdData, error: queueCSVSyncJobError } = await tryCatch(
           SyncService.queueCSVSyncJob(itemsToScrape, user.id)
@@ -109,10 +111,15 @@ const syncRouter = new Hono<{
         }
 
         jobId = jobIdData;
+        statusMessage = jobId ? "Job added to queue." : "Sync completed";
+      } else if (collectionItems.length === 0 && itemsToScrape.length === 0) {
+        statusMessage = "All items already synced to your collection. If you want to add duplicates, use Collection/Order Sync.";
+      } else {
+        statusMessage = "Sync completed - All items already in myakiba database, no scraping needed";
       }
 
       return c.json({
-        status: jobId ? "Job added to queue." : "Sync completed",
+        status: statusMessage,
         isFinished: jobId ? false : true,
         existingItemsToInsert: collectionItems.length,
         newItems: itemsToScrape.length,
