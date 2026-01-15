@@ -1,6 +1,11 @@
 import { TextLoop } from "./text-loop";
 import { WaitlistForm } from "./waitlist-form";
 
+const HERO_TEXT_LOOP_TEXTS: readonly string[] = [
+  "MyFigureCollection's Manager",
+  "DIY Spreadsheets",
+];
+
 export default function HeroSection({
   heroImage,
   heroBackgroundImage,
@@ -15,7 +20,7 @@ export default function HeroSection({
           <div className="flex relative text-sm items-start bg-background">
             <TextLoop
               preText="An alternative to"
-              texts={["MyFigureCollection's Manager", "DIY Spreadsheets"]}
+              texts={HERO_TEXT_LOOP_TEXTS}
             />
           </div>
           <h1 className="mt-4 max-w-xl tracking-tight text-balance text-black dark:text-white text-2xl font-medium">

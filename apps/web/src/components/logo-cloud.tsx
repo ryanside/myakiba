@@ -1,7 +1,7 @@
 import { InfiniteSlider } from "@/components/ui/infinite-slider";
 import { ProgressiveBlur } from "@/components/ui/progressive-blur";
 
-export default function LogoCloud({ images }: { images: string[] }) {
+export default function LogoCloud({ images }: { images: readonly string[] }) {
   return (
     <section className="bg-background overflow-hidden py-8 px-6 xl:px-0">
       <div className="group relative m-auto max-w-7xl">

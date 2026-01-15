@@ -43,11 +43,11 @@
     "db:down": "turbo -F @myakiba/db db:down"
   },
   "devDependencies": {
-    "@eslint/js": "catalog:",
-    "eslint": "catalog:",
-    "turbo": "^2.6.3",
-    "typescript": "catalog:",
-    "typescript-eslint": "catalog:"
+    "@eslint/js": "^9.39.2",
+    "eslint": "^9.39.2",
+    "turbo": "^2.7.4",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.53.0"
   },
   "packageManager": "bun@1.3.0",
   "dependencies": {

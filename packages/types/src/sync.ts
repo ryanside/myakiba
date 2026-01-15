@@ -1,8 +1,8 @@
 import type { ShippingMethod, OrderStatus, Condition } from "./enums";
 
 export type SyncStatus = {
-  existingItems?: number;
-  newItems?: number;
+  existingItems: number;
+  newItems: number;
   isFinished: boolean;
   status: string;
 };

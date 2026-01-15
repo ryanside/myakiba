@@ -13,23 +13,21 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ModeToggle } from "../mode-toggle";
 import { type RouterAppContext } from "@/routes/__root";
 import { clearRecentItems } from "@/lib/recent-items";
+import { toast } from "sonner";
 
-export default function UserMenu({ session }: { session: RouterAppContext["session"] }) {
+export default function UserMenu({
+  session,
+}: {
+  session: RouterAppContext["session"];
+}) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-
-  if (!session) {
-    navigate({
-      to: "/login",
-    });
-
-    return null;
-  }
 
   const handleSignOut = async () => {
     authClient.signOut({
       fetchOptions: {
         onSuccess: () => {
+          toast.success("Signed out successfully");
           // Clear all React Query cache (not just invalidate)
           queryClient.clear();
           // Clear localStorage
@@ -57,7 +55,7 @@ export default function UserMenu({ session }: { session: RouterAppContext["sessi
           {session.user.username}
         </div>
         <DropdownMenuSeparator />
-        <ModeToggle className="mb-1"/>
+        <ModeToggle className="mb-1" />
 
         <DropdownMenuItem
           onClick={() => {

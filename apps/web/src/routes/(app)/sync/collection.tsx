@@ -17,7 +17,7 @@ import { Check, Loader2, LoaderCircleIcon } from "lucide-react";
 import { ShimmeringText } from "@/components/ui/shimmering-text";
 import { extractMfcItemId } from "@/lib/sync/utils";
 import {
-  type status,
+  type SyncStatus,
   type SyncFormCollectionItem,
   type SyncCollectionItem,
 } from "@/lib/sync/types";
@@ -54,7 +54,7 @@ function RouteComponent() {
   const userCurrency = session?.user.currency || "USD";
   const [currentStep, setCurrentStep] = useState(2);
   const [jobId, setJobId] = useState<string | null>(null);
-  const [status, setStatus] = useState<status>({
+  const [status, setStatus] = useState<SyncStatus>({
     existingItems: 0,
     newItems: 0,
     isFinished: true,
@@ -64,7 +64,7 @@ function RouteComponent() {
 
   useEffect(() => {
     if (jobId && jobStatus.status) {
-      setStatus((prev) => ({
+      setStatus((prev: SyncStatus) => ({
         ...prev,
         status: jobStatus.status,
         isFinished: jobStatus.isFinished,

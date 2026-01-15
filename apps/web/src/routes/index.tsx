@@ -27,6 +27,49 @@ import FAQs from "@/components/homepage/faqs";
 import LogoCloud from "@/components/logo-cloud";
 import { useTheme } from "@/components/theme-provider";
 
+const LOGO_CLOUD_IMAGES: readonly string[] = [
+  ExampleItemImage1,
+  ExampleItemImage2,
+  ExampleItemImage3,
+  ExampleItemImage4,
+  ExampleItemImage5,
+  ExampleItemImage6,
+  ExampleItemImage7,
+];
+
+type FeatureSection = {
+  readonly imageOrientation: "left" | "right";
+  readonly backgroundImage: string;
+  readonly featureImage: { readonly light: string; readonly dark: string };
+  readonly title: string;
+  readonly description: string;
+};
+
+const FEATURE_SECTIONS: readonly FeatureSection[] = [
+  {
+    imageOrientation: "right",
+    backgroundImage: FeatureBackground1,
+    featureImage: { dark: AnalyticsDarkImage, light: AnalyticsLightImage },
+    title: "Analytics of your collection",
+    description: "Get insights into your collection with detailed analytics.",
+  },
+  {
+    imageOrientation: "left",
+    backgroundImage: FeatureBackground2,
+    featureImage: { dark: OrdersDarkImage, light: OrdersLightImage },
+    title: "Track your orders",
+    description: "Manage pre-orders, track shipments, and monitor order status.",
+  },
+  {
+    imageOrientation: "right",
+    backgroundImage: FeatureBackground3,
+    featureImage: { dark: CollectionDarkImage, light: CollectionLightImage },
+    title: "Manage your collection",
+    description:
+      "Track your collection with item information from MyFigureCollection.",
+  },
+];
+
 export const Route = createFileRoute("/")({
   component: HomeComponent,
   head: () => ({
@@ -45,57 +88,29 @@ export const Route = createFileRoute("/")({
 
 function HomeComponent() {
   const { theme } = useTheme();
+  const isDarkTheme = theme !== "light";
 
   return (
     <>
       <HeroHeader />
       <HeroSection
-        heroImage={theme !== "light" ? DashboardDarkImage : DashboardLightImage}
+        heroImage={isDarkTheme ? DashboardDarkImage : DashboardLightImage}
         heroBackgroundImage={HeroBackgroundImage}
       />
-      <LogoCloud
-        images={[
-          ExampleItemImage1,
-          ExampleItemImage2,
-          ExampleItemImage3,
-          ExampleItemImage4,
-          ExampleItemImage5,
-          ExampleItemImage6,
-          ExampleItemImage7,
-        ]}
-      />
+      <LogoCloud images={LOGO_CLOUD_IMAGES} />
       <section id="features" className="mx-auto">
-        <Feature
-          imageOrientation="right"
-          backgroundImage={FeatureBackground1}
-          featureImage={
-            theme !== "light" ? AnalyticsDarkImage : AnalyticsLightImage
-          }
-          title="Analytics of your collection"
-          description="Get insights into your collection with detailed analytics."
-          link="/login"
-          linkText="View your analytics"
-        />
-        <Feature
-          imageOrientation="left"
-          backgroundImage={FeatureBackground2}
-          featureImage={theme !== "light" ? OrdersDarkImage : OrdersLightImage}
-          title="Track your orders"
-          description="Manage pre-orders, track shipments, and monitor order status."
-          link="/login"
-          linkText="Start tracking"
-        />
-        <Feature
-          imageOrientation="right"
-          backgroundImage={FeatureBackground3}
-          featureImage={
-            theme !== "light" ? CollectionDarkImage : CollectionLightImage
-          }
-          title="Manage your collection"
-          description="Track your collection with item information from MyFigureCollection."
-          link="/login"
-          linkText="Import your collection"
-        />
+        {FEATURE_SECTIONS.map((feature) => (
+          <Feature
+            key={feature.title}
+            imageOrientation={feature.imageOrientation}
+            backgroundImage={feature.backgroundImage}
+            featureImage={
+              isDarkTheme ? feature.featureImage.dark : feature.featureImage.light
+            }
+            title={feature.title}
+            description={feature.description}
+          />
+        ))}
       </section>
       <FAQs />
       <CallToAction />
