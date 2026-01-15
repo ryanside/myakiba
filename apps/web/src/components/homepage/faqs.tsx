@@ -8,41 +8,43 @@ import {
 } from "@/components/ui/accordion";
 import { Link } from "@tanstack/react-router";
 
+const FAQ_ITEMS: readonly {
+  readonly id: string;
+  readonly question: string;
+  readonly answer: string;
+}[] = [
+  {
+    id: "item-1",
+    question: "Does myakiba use MyFigureCollection's data?",
+    answer: `Yes, we use MyFigureCollection's item information. Since MyFigureCollection does not have a public API, myakiba scrapes and stores item information from MyFigureCollection item links (https://myfigurecollection.net/item/xxxxx) that the user provides. Items are periodically rescraped to ensure the item information is accurate and up to date.`,
+  },
+  {
+    id: "item-2",
+    question: "How does myakiba compare to MyFigureCollection?",
+    answer:
+      "myakiba is built to realize the features that I thought were missing from MyFigureCollection. It currently offers a dashboard, analytics, order management, and collection management. It is still in early development.",
+  },
+  {
+    id: "item-3",
+    question:
+      "Is myakiba safe to use since it scrapes data from MyFigureCollection?",
+    answer:
+      "Yes. MyFigureCollection's terms of service do not prohibit scraping. We also don't mass scrape MyFigureCollection, only scraping core item data from the user's provided MyFigureCollection item links. The scraper is heavily rate limited and throttled to prevent overloading MyFigureCollection, item data is cached so we don't need to scrape the same item data multiple times, and users are limited to syncing a few times per hour to prevent abuse.",
+  },
+  {
+    id: "item-4",
+    question: "Who is myakiba for?",
+    answer: "Collectors who want an alternative to MyFigureCollection/Spreadsheets.",
+  },
+  {
+    id: "item-5",
+    question: "I'm a developer. Can I contribute to the project?",
+    answer:
+      "Yes! Contributions are welcome. Please check out the GitHub repository and feel free to join our Discord server.",
+  },
+];
+
 export default function FAQs() {
-  const faqItems = [
-    {
-      id: "item-1",
-      question: "Does myakiba use MyFigureCollection's data?",
-      answer: `Yes, we use MyFigureCollection's item information. Since MyFigureCollection does not have a public API, myakiba scrapes and stores item information from MyFigureCollection item links (https://myfigurecollection.net/item/xxxxx) that the user provides. Items are periodically rescraped to ensure the item information is accurate and up to date.`,
-    },
-    {
-      id: "item-2",
-      question: "How does myakiba compare to MyFigureCollection?",
-      answer:
-        "myakiba is built to realize the features that I thought were missing from MyFigureCollection. It currently offers a dashboard, analytics, order management, and collection management. It is still in early development.",
-    },
-
-    {
-      id: "item-3",
-      question:
-        "Is myakiba safe to use since it scrapes data from MyFigureCollection?",
-      answer:
-        "Yes. MyFigureCollection's terms of service do not prohibit scraping. We also don't mass scrape MyFigureCollection, only scraping core item data from the user's provided MyFigureCollection item links. The scraper is heavily rate limited and throttled to prevent overloading MyFigureCollection, item data is cached so we don't need to scrape the same item data multiple times, and users are limited to syncing a few times per hour to prevent abuse.",
-    },
-    {
-      id: "item-4",   
-      question: "Who is myakiba for?",
-      answer:
-        "Collectors who want an alternative to MyFigureCollection/Spreadsheets.",
-    },
-    {
-      id: "item-5",
-      question: "I'm a developer. Can I contribute to the project?",
-      answer:
-        "Yes! Contributions are welcome. Please check out the GitHub repository and feel free to join our Discord server.",
-    },
-  ];
-
   return (
     <section id="faqs" className="py-16 md:py-24 bg-sidebar">
       <div className="mx-auto max-w-7xl px-6">
@@ -59,6 +61,7 @@ export default function FAQs() {
               <a
                 href="https://discord.gg/VKHVvhcC2z"
                 target="_blank"
+                rel="noopener noreferrer"
                 className="text-foreground font-medium hover:underline"
               >
                 Discord
@@ -68,7 +71,7 @@ export default function FAQs() {
 
           <div className="md:col-span-3">
             <Accordion type="single" collapsible>
-              {faqItems.map((item) => (
+              {FAQ_ITEMS.map((item) => (
                 <AccordionItem key={item.id} value={item.id}>
                   <AccordionTrigger className="cursor-pointer text-base hover:no-underline">
                     {item.question}

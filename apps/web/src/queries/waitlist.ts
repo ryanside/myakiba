@@ -23,11 +23,10 @@ export async function verifyEarlyAccess(
     json: { password },
   });
 
-  const data = await response.json();
-  
   if (!response.ok) {
-    throw new Error((data as { error?: string }).error || "Verification failed");
+    const errorText = await response.text();
+    throw new Error(errorText || `HTTP ${response.status}`);
   }
 
-  return data;
+  return response.json();
 }

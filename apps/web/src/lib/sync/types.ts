@@ -1,5 +1,5 @@
 export type {
-  SyncStatus as status,
+  SyncStatus,
   SyncFormOrderItem,
   SyncOrderItem,
   SyncFormOrder,

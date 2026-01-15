@@ -20,7 +20,10 @@ interface EarlyAccessModalProps {
   onAccessGranted: () => void;
 }
 
-export function EarlyAccessModal({ open, onAccessGranted }: EarlyAccessModalProps) {
+export function EarlyAccessModal({
+  open,
+  onAccessGranted,
+}: EarlyAccessModalProps) {
   const mutation = useMutation({
     mutationFn: verifyEarlyAccess,
     onSuccess: (data) => {
@@ -29,8 +32,8 @@ export function EarlyAccessModal({ open, onAccessGranted }: EarlyAccessModalProp
         onAccessGranted();
       }
     },
-    onError: (error: Error) => {
-      toast.error(error.message || "Invalid password. Please try again.");
+    onError: (error: { message: string }) => {
+      toast.error(error.message || "Invalid password");
       form.reset();
     },
   });
@@ -98,7 +101,9 @@ export function EarlyAccessModal({ open, onAccessGranted }: EarlyAccessModalProp
               <Button
                 type="submit"
                 className="w-full"
-                disabled={!state.canSubmit || state.isSubmitting || mutation.isPending}
+                disabled={
+                  !state.canSubmit || state.isSubmitting || mutation.isPending
+                }
               >
                 {state.isSubmitting || mutation.isPending ? (
                   <>

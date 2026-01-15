@@ -34,6 +34,7 @@ export default function FooterSection() {
               <a
                 href="https://github.com/ryanside"
                 target="_blank"
+                rel="noopener noreferrer"
                 className="text-foreground hover:text-secondary duration-150 hover:underline underline-offset-2"
               >
                 @ryanside
@@ -42,11 +43,12 @@ export default function FooterSection() {
           </div>
 
           <div className="flex flex-col gap-x-6 gap-y-4">
-            {links.map((link, index) => (
+            {links.map((link) => (
               <a
-                key={index}
+                key={link.title}
                 href={link.href}
                 target="_blank"
+                rel="noopener noreferrer"
                 className=" duration-150"
               >
                 <div className="flex flex-row items-center gap-2">
@@ -60,8 +62,8 @@ export default function FooterSection() {
         </div>
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-x-6 gap-y-4">
-            {navigation.map((link, index) => (
-              <a key={index} href={link.href} className=" duration-150">
+            {navigation.map((link) => (
+              <a key={link.title} href={link.href} className=" duration-150">
                 <div className="flex flex-row items-center gap-2">
                   <span className="hover:underline underline-offset-2 text-foreground hover:text-secondary text-sm">
                     {link.title}

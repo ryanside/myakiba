@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "motion/react";
 
 interface TextLoopProps {
   preText: string;
-  texts: string[];
+  texts: readonly string[];
   interval?: number;
 }
 

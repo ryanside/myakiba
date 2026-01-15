@@ -17,7 +17,6 @@ import { Route as authLoginRouteImport } from './routes/(auth)/login'
 import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-password'
 import { Route as appSettingsRouteImport } from './routes/(app)/settings'
 import { Route as appOrdersRouteImport } from './routes/(app)/orders'
-import { Route as appGalleryRouteImport } from './routes/(app)/gallery'
 import { Route as appExpensesRouteImport } from './routes/(app)/expenses'
 import { Route as appDashboardRouteImport } from './routes/(app)/dashboard'
 import { Route as appCollectionRouteImport } from './routes/(app)/collection'
@@ -67,11 +66,6 @@ const appSettingsRoute = appSettingsRouteImport.update({
 const appOrdersRoute = appOrdersRouteImport.update({
   id: '/orders',
   path: '/orders',
-  getParentRoute: () => appRouteRoute,
-} as any)
-const appGalleryRoute = appGalleryRouteImport.update({
-  id: '/gallery',
-  path: '/gallery',
   getParentRoute: () => appRouteRoute,
 } as any)
 const appExpensesRoute = appExpensesRouteImport.update({
@@ -137,7 +131,6 @@ export interface FileRoutesByFullPath {
   '/collection': typeof appCollectionRoute
   '/dashboard': typeof appDashboardRoute
   '/expenses': typeof appExpensesRoute
-  '/gallery': typeof appGalleryRoute
   '/orders': typeof appOrdersRoute
   '/settings': typeof appSettingsRoute
   '/forgot-password': typeof authForgotPasswordRoute
@@ -157,7 +150,6 @@ export interface FileRoutesByTo {
   '/collection': typeof appCollectionRoute
   '/dashboard': typeof appDashboardRoute
   '/expenses': typeof appExpensesRoute
-  '/gallery': typeof appGalleryRoute
   '/orders': typeof appOrdersRoute
   '/settings': typeof appSettingsRoute
   '/forgot-password': typeof authForgotPasswordRoute
@@ -180,7 +172,6 @@ export interface FileRoutesById {
   '/(app)/collection': typeof appCollectionRoute
   '/(app)/dashboard': typeof appDashboardRoute
   '/(app)/expenses': typeof appExpensesRoute
-  '/(app)/gallery': typeof appGalleryRoute
   '/(app)/orders': typeof appOrdersRoute
   '/(app)/settings': typeof appSettingsRoute
   '/(auth)/forgot-password': typeof authForgotPasswordRoute
@@ -203,7 +194,6 @@ export interface FileRouteTypes {
     | '/collection'
     | '/dashboard'
     | '/expenses'
-    | '/gallery'
     | '/orders'
     | '/settings'
     | '/forgot-password'
@@ -223,7 +213,6 @@ export interface FileRouteTypes {
     | '/collection'
     | '/dashboard'
     | '/expenses'
-    | '/gallery'
     | '/orders'
     | '/settings'
     | '/forgot-password'
@@ -245,7 +234,6 @@ export interface FileRouteTypes {
     | '/(app)/collection'
     | '/(app)/dashboard'
     | '/(app)/expenses'
-    | '/(app)/gallery'
     | '/(app)/orders'
     | '/(app)/settings'
     | '/(auth)/forgot-password'
@@ -325,13 +313,6 @@ declare module '@tanstack/react-router' {
       path: '/orders'
       fullPath: '/orders'
       preLoaderRoute: typeof appOrdersRouteImport
-      parentRoute: typeof appRouteRoute
-    }
-    '/(app)/gallery': {
-      id: '/(app)/gallery'
-      path: '/gallery'
-      fullPath: '/gallery'
-      preLoaderRoute: typeof appGalleryRouteImport
       parentRoute: typeof appRouteRoute
     }
     '/(app)/expenses': {
@@ -438,7 +419,6 @@ interface appRouteRouteChildren {
   appCollectionRoute: typeof appCollectionRoute
   appDashboardRoute: typeof appDashboardRoute
   appExpensesRoute: typeof appExpensesRoute
-  appGalleryRoute: typeof appGalleryRoute
   appOrdersRoute: typeof appOrdersRoute
   appSettingsRoute: typeof appSettingsRoute
   appItemsIdRoute: typeof appItemsIdRoute
@@ -451,7 +431,6 @@ const appRouteRouteChildren: appRouteRouteChildren = {
   appCollectionRoute: appCollectionRoute,
   appDashboardRoute: appDashboardRoute,
   appExpensesRoute: appExpensesRoute,
-  appGalleryRoute: appGalleryRoute,
   appOrdersRoute: appOrdersRoute,
   appSettingsRoute: appSettingsRoute,
   appItemsIdRoute: appItemsIdRoute,

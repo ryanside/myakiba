@@ -14,13 +14,33 @@ const menuItems = [
 export const HeroHeader = () => {
   const [menuState, setMenuState] = React.useState(false);
   const [isScrolled, setIsScrolled] = React.useState(false);
+
   React.useEffect(() => {
+    const SCROLL_Y_THRESHOLD_PX = 50;
+    const scrollYRef: { current: number } = { current: window.scrollY };
+    let rafId: number | null = null;
+
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
+      scrollYRef.current = window.scrollY;
+      if (rafId !== null) return;
+
+      rafId = window.requestAnimationFrame(() => {
+        const nextIsScrolled = scrollYRef.current > SCROLL_Y_THRESHOLD_PX;
+        setIsScrolled((prev) => (prev === nextIsScrolled ? prev : nextIsScrolled));
+        rafId = null;
+      });
     };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (rafId !== null) {
+        window.cancelAnimationFrame(rafId);
+      }
+    };
   }, []);
+
   return (
     <header>
       <nav
@@ -47,7 +67,7 @@ export const HeroHeader = () => {
               </Link>
 
               <button
-                onClick={() => setMenuState(!menuState)}
+                onClick={() => setMenuState((prev) => !prev)}
                 aria-label={menuState == true ? "Close Menu" : "Open Menu"}
                 className="relative z-20 -m-2.5 -mr-4 block cursor-pointer p-2.5 lg:hidden"
               >
@@ -57,8 +77,8 @@ export const HeroHeader = () => {
 
               <div className="m-auto hidden size-fit lg:block">
                 <ul className="flex gap-1">
-                  {menuItems.map((item, index) => (
-                    <li key={index}>
+                  {menuItems.map((item) => (
+                    <li key={item.name}>
                       <Button asChild variant="ghost" size="sm">
                         <Link to={item.href} className="text-base">
                           <span>{item.name}</span>
@@ -73,8 +93,8 @@ export const HeroHeader = () => {
             <div className="bg-background in-data-[state=active]:block lg:in-data-[state=active]:flex mb-6 hidden w-full flex-wrap items-center justify-end space-y-8 rounded-3xl border p-6 shadow-2xl shadow-zinc-300/20 md:flex-nowrap lg:m-0 lg:flex lg:w-fit lg:gap-6 lg:space-y-0 lg:border-transparent lg:bg-transparent lg:p-0 lg:shadow-none dark:shadow-none dark:lg:bg-transparent">
               <div className="lg:hidden">
                 <ul className="space-y-6 text-base">
-                  {menuItems.map((item, index) => (
-                    <li key={index}>
+                  {menuItems.map((item) => (
+                    <li key={item.name}>
                       <Link
                         to={item.href}
                         className="text-muted-foreground hover:text-accent-foreground block duration-150"
@@ -90,6 +110,7 @@ export const HeroHeader = () => {
                   <a
                     href="https://discord.gg/VKHVvhcC2z"
                     target="_blank"
+                    rel="noopener noreferrer"
                     className="flex items-center gap-2"
                   >
                     <DiscordIcon />
@@ -99,21 +120,22 @@ export const HeroHeader = () => {
                   <a
                     href="https://github.com/ryanside/myakiba"
                     target="_blank"
+                    rel="noopener noreferrer"
                     className="flex items-center gap-2"
                   >
                     <GithubIcon />
                   </a>
                 </Button>
-                <Button asChild variant="ghost" size="sm">
+                <Button asChild variant="primary" size="sm">
                   <Link to="/login">
                     <span>Login</span>
                   </Link>
                 </Button>
-                <Button asChild size="sm">
+                {/* <Button asChild size="sm">
                   <Link to="/login">
                     <span>Sign Up</span>
                   </Link>
-                </Button>
+                </Button> */}
               </div>
             </div>
           </div>
