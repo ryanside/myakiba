@@ -10,7 +10,7 @@ import type {
   UpdatedSyncOrder,
   UpdatedSyncOrderItem,
 } from "./model";
-import { sanitizeDate } from "@myakiba/utils";
+import { sanitizeDate, normalizeDbDate } from "@myakiba/utils";
 
 import { Queue } from "bullmq";
 import Redis from "ioredis";
@@ -64,7 +64,7 @@ class SyncService {
     const releaseResult = await db.execute<{
       itemId: number;
       releaseId: string;
-      releaseDate: string;
+      releaseDate: string | null;
     }>(sql`
         SELECT DISTINCT ON (${item_release.itemId})
           ${item_release.itemId} AS "itemId",
@@ -77,7 +77,8 @@ class SyncService {
 
     for (const row of releaseResult) {
       releases.set(row.itemId, row.releaseId);
-      releaseDates.set(row.itemId, row.releaseDate);
+      const normalized = normalizeDbDate(row.releaseDate);
+      if (normalized) releaseDates.set(row.itemId, normalized);
     }
 
     return { items, releases, releaseDates };
@@ -153,7 +154,7 @@ class SyncService {
           title: itemTitle ? itemTitle : `Order ${item.orderId}`,
           shop: item.shop,
           orderDate: item.orderDate,
-          releaseMonthYear: existingItemsReleaseDates.get(item.id),
+          releaseMonthYear: existingItemsReleaseDates.get(item.id) ?? null,
           paymentDate: item.payment_date,
           shippingDate: item.shipping_date,
           collectionDate: item.collecting_date,

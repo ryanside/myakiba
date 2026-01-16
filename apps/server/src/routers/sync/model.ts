@@ -1,6 +1,7 @@
 import * as z from "zod";
 import { createInsertSchema } from "drizzle-zod";
 import { collection, order } from "@myakiba/db/schema/figure";
+import { ORDER_STATUSES, CONDITIONS, SHIPPING_METHODS } from "@myakiba/constants";
 
 export const csvItemSchema = z.object({
   id: z.int(),
@@ -12,18 +13,7 @@ export const csvItemSchema = z.object({
   collecting_date: z.string().nullable(),
   price: z.string(),
   shop: z.string(),
-  shipping_method: z.enum([
-    "n/a",
-    "EMS",
-    "SAL",
-    "AIRMAIL",
-    "SURFACE",
-    "FEDEX",
-    "DHL",
-    "Colissimo",
-    "UPS",
-    "Domestic",
-  ]),
+  shipping_method: z.enum(SHIPPING_METHODS),
   note: z.string(),
   orderId: z.string().nullable(),
   orderDate: z.string().nullable(),
@@ -51,20 +41,9 @@ export const orderItemSyncSchema = z.object({
   itemId: z.int(),
   price: z.string(),
   count: z.number(),
-  status: z.enum(["Ordered", "Paid", "Shipped", "Owned"]),
-  condition: z.enum(["New", "Pre-Owned"]),
-  shippingMethod: z.enum([
-    "n/a",
-    "EMS",
-    "SAL",
-    "AIRMAIL",
-    "SURFACE",
-    "FEDEX",
-    "DHL",
-    "Colissimo",
-    "UPS",
-    "Domestic",
-  ]),
+  status: z.enum(ORDER_STATUSES),
+  condition: z.enum(CONDITIONS),
+  shippingMethod: z.enum(SHIPPING_METHODS),
   orderDate: z.string().nullable(),
   paymentDate: z.string().nullable(),
   shippingDate: z.string().nullable(),
@@ -74,7 +53,7 @@ export const orderItemSyncSchema = z.object({
 export type orderItemSyncType = z.infer<typeof orderItemSyncSchema>;
 
 export const orderSyncSchema = z.object({
-  status: z.enum(["Ordered", "Paid", "Shipped", "Owned"]),
+  status: z.enum(ORDER_STATUSES),
   title: z.string(),
   shop: z.string(),
   orderDate: z.string().nullable(),
@@ -82,18 +61,7 @@ export const orderSyncSchema = z.object({
   paymentDate: z.string().nullable(),
   shippingDate: z.string().nullable(),
   collectionDate: z.string().nullable(),
-  shippingMethod: z.enum([
-    "n/a",
-    "EMS",
-    "SAL",
-    "AIRMAIL",
-    "SURFACE",
-    "FEDEX",
-    "DHL",
-    "Colissimo",
-    "UPS",
-    "Domestic",
-  ]),
+  shippingMethod: z.enum(SHIPPING_METHODS),
   shippingFee: z.string(),
   taxes: z.string(),
   duties: z.string(),
@@ -115,20 +83,9 @@ export const collectionSyncSchema = z.object({
   paymentDate: z.string().nullable(),
   shippingDate: z.string().nullable(),
   collectionDate: z.string().nullable(),
-  shippingMethod: z.enum([
-    "n/a",
-    "EMS",
-    "SAL",
-    "AIRMAIL",
-    "SURFACE",
-    "FEDEX",
-    "DHL",
-    "Colissimo",
-    "UPS",
-    "Domestic",
-  ]),
+  shippingMethod: z.enum(SHIPPING_METHODS),
   tags: z.array(z.string()),
-  condition: z.enum(["New", "Pre-Owned"]),
+  condition: z.enum(CONDITIONS),
   notes: z.string(),
 });
 
