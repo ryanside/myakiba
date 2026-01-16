@@ -55,11 +55,9 @@ import { extractMfcItemId } from "@/lib/sync/utils";
 import { SHIPPING_METHODS, ORDER_STATUSES, CONDITIONS } from "@myakiba/constants";
 
 export default function SyncOrderForm({
-  setCurrentStep,
   handleSyncOrderSubmit,
   currency,
 }: {
-  setCurrentStep: (step: number) => void;
   handleSyncOrderSubmit: (values: SyncFormOrder) => void;
   currency?: string;
 }) {

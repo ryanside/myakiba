@@ -35,7 +35,7 @@ import {
 export const Route = createFileRoute("/(app)/collection")({
   component: RouteComponent,
   validateSearch: collectionSearchSchema,
-  head: ({ params }) => ({
+  head: () => ({
     meta: [
       {
         name: "description",

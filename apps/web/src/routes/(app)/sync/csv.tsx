@@ -181,7 +181,6 @@ function RouteComponent() {
             className="flex items-center justify-center"
           >
             <SyncCsvForm
-              setCurrentStep={setCurrentStep}
               handleSyncCsvSubmit={handleSyncCsvSubmit}
             />
           </StepperContent>

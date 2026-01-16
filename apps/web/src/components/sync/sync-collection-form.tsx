@@ -32,11 +32,9 @@ import { extractMfcItemId } from "@/lib/sync/utils";
 import { CONDITIONS, SHIPPING_METHODS } from "@myakiba/constants";
 
 export default function SyncCollectionForm({
-  setCurrentStep,
   handleSyncCollectionSubmit,
   currency,
 }: {
-  setCurrentStep: (step: number) => void;
   handleSyncCollectionSubmit: (values: SyncFormCollectionItem[]) => void;
   currency?: string;
 }) {

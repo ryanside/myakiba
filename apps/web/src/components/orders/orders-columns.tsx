@@ -215,6 +215,8 @@ export function createOrdersColumns({
               onSubmit={async (value) => {
                 const { createdAt, updatedAt, ...orderWithoutTimestamps } =
                   row.original;
+                void createdAt;
+                void updatedAt;
                 await onEditOrder(
                   {
                     ...orderWithoutTimestamps,
@@ -250,6 +252,8 @@ export function createOrdersColumns({
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } =
                 row.original;
+              void createdAt;
+              void updatedAt;
               await onEditOrder(
                 {
                   ...orderWithoutTimestamps,
@@ -284,6 +288,8 @@ export function createOrdersColumns({
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } =
                 row.original;
+              void createdAt;
+              void updatedAt;
               await onEditOrder(
                 {
                   ...orderWithoutTimestamps,
@@ -321,6 +327,8 @@ export function createOrdersColumns({
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } =
                 row.original;
+              void createdAt;
+              void updatedAt;
               await onEditOrder(
                 {
                   ...orderWithoutTimestamps,
@@ -358,6 +366,8 @@ export function createOrdersColumns({
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } =
                 row.original;
+              void createdAt;
+              void updatedAt;
               await onEditOrder(
                 {
                   ...orderWithoutTimestamps,
@@ -395,6 +405,8 @@ export function createOrdersColumns({
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } =
                 row.original;
+              void createdAt;
+              void updatedAt;
               await onEditOrder(
                 {
                   ...orderWithoutTimestamps,
@@ -494,6 +506,8 @@ export function createOrdersColumns({
             onSubmit={async (newValues) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } =
                 order;
+              void createdAt;
+              void updatedAt;
               await onEditOrder(
                 {
                   ...orderWithoutTimestamps,
@@ -534,6 +548,8 @@ export function createOrdersColumns({
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } =
                 row.original;
+              void createdAt;
+              void updatedAt;
               await onEditOrder(
                 {
                   ...orderWithoutTimestamps,
@@ -575,6 +591,8 @@ export function createOrdersColumns({
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } =
                 row.original;
+              void createdAt;
+              void updatedAt;
               await onEditOrder(
                 {
                   ...orderWithoutTimestamps,
@@ -616,6 +634,8 @@ export function createOrdersColumns({
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } =
                 row.original;
+              void createdAt;
+              void updatedAt;
               await onEditOrder(
                 {
                   ...orderWithoutTimestamps,
@@ -657,6 +677,8 @@ export function createOrdersColumns({
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } =
                 row.original;
+              void createdAt;
+              void updatedAt;
               await onEditOrder(
                 {
                   ...orderWithoutTimestamps,
@@ -698,6 +720,8 @@ export function createOrdersColumns({
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } =
                 row.original;
+              void createdAt;
+              void updatedAt;
               await onEditOrder(
                 {
                   ...orderWithoutTimestamps,
@@ -737,6 +761,8 @@ export function createOrdersColumns({
             onSubmit={async (value) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } =
                 row.original;
+              void createdAt;
+              void updatedAt;
               await onEditOrder(
                 {
                   ...orderWithoutTimestamps,

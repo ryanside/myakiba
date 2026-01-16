@@ -12,10 +12,8 @@ import {
 } from "@/components/kibo-ui/dropzone";
 
 export default function SyncCsvForm({
-  setCurrentStep,
   handleSyncCsvSubmit,
 }: {
-  setCurrentStep: (step: number) => void;
   handleSyncCsvSubmit: (values: File | undefined) => void;
 }) {
   const navigate = useNavigate();

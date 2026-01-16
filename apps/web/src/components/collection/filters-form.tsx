@@ -838,7 +838,7 @@ export default function FiltersForm({
           <DialogFooter className="">
             <form.Subscribe
               selector={(state) => [state.canSubmit, state.isSubmitting]}
-              children={([canSubmit, isSubmitting]) => (
+              children={([, isSubmitting]) => (
                 <>
                   <DialogClose asChild>
                     <Button type="button" variant="outline">

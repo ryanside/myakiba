@@ -490,7 +490,7 @@ function RouteComponent() {
   );
 
   const handleDeleteItems = useCallback(
-    async (collectionIds: Set<string>, orderIds: Set<string>) => {
+    async (collectionIds: Set<string>) => {
       deleteItemsMutation.mutate(collectionIds);
     },
     [deleteItemsMutation]

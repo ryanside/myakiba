@@ -198,7 +198,6 @@ function RouteComponent() {
             className="flex items-center justify-center"
           >
             <SyncOrderForm
-              setCurrentStep={setCurrentStep}
               handleSyncOrderSubmit={handleSyncOrderSubmit}
               currency={userCurrency}
             />
