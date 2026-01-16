@@ -48,7 +48,8 @@ import {
 } from "@/components/ui/command";
 import { ScrollArea } from "../ui/scroll-area";
 import { Scroller } from "../ui/scroller";
-import { SHIPPING_METHODS } from "@myakiba/constants";
+import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/constants";
+import type { OrderStatus, ShippingMethod } from "@myakiba/types";
 
 type UnifiedItemMoveFormProps = {
   renderTrigger: React.ReactNode;
@@ -123,7 +124,7 @@ export default function UnifiedItemMoveForm({
 
   const newOrderForm = useForm({
     defaultValues: {
-      status: "Ordered",
+      status: "Ordered" as OrderStatus,
       title: "New Order",
       shop: "",
       orderDate: "",
@@ -131,7 +132,7 @@ export default function UnifiedItemMoveForm({
       paymentDate: "",
       shippingDate: "",
       collectionDate: "",
-      shippingMethod: "n/a",
+      shippingMethod: "n/a" as ShippingMethod,
       shippingFee: "0.00",
       taxes: "0.00",
       duties: "0.00",
@@ -148,8 +149,8 @@ export default function UnifiedItemMoveForm({
         paymentDate: value.paymentDate || null,
         shippingDate: value.shippingDate || null,
         collectionDate: value.collectionDate || null,
-        status: value.status as "Ordered" | "Paid" | "Shipped" | "Owned",
-        shippingMethod: (value.shippingMethod || "n/a") as "n/a" | "EMS" | "SAL" | "AIRMAIL" | "SURFACE" | "FEDEX" | "DHL" | "Colissimo" | "UPS" | "Domestic",
+        status: value.status,
+        shippingMethod: value.shippingMethod,
         shippingFee: value.shippingFee,
         taxes: value.taxes,
         duties: value.duties,
@@ -349,7 +350,7 @@ export default function UnifiedItemMoveForm({
                     name="status"
                     validators={{
                       onChange: z.enum(
-                        ["Ordered", "Paid", "Shipped", "Owned"],
+                        ORDER_STATUSES,
                         "Status is required"
                       ),
                     }}
@@ -366,10 +367,11 @@ export default function UnifiedItemMoveForm({
                             <SelectValue placeholder="Select status" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Ordered">Ordered</SelectItem>
-                            <SelectItem value="Owned">Owned</SelectItem>
-                            <SelectItem value="Paid">Paid</SelectItem>
-                            <SelectItem value="Shipped">Shipped</SelectItem>
+                            {ORDER_STATUSES.map((status) => (
+                              <SelectItem key={status} value={status}>
+                                {status}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         {field.state.meta.errors &&

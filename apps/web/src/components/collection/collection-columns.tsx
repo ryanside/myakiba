@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import { getCurrencyLocale, getCategoryColor } from "@myakiba/utils";
-import { type ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
 import CollectionItemForm from "./collection-item-form";
 import { InlineCurrencyCell } from "../cells/inline-currency-cell";

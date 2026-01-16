@@ -32,7 +32,7 @@ import { Badge } from "../ui/badge";
 import { X } from "lucide-react";
 import { formatDate, formatCurrency, getCurrencyLocale } from "@myakiba/utils";
 import { Scroller } from "../ui/scroller";
-import { SHIPPING_METHODS } from "@myakiba/constants";
+import { COLLECTION_STATUSES, SHIPPING_METHODS, CONDITIONS } from "@myakiba/constants";
 
 type CollectionItemFormProps = {
   renderTrigger: React.ReactNode;
@@ -153,7 +153,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                 name="condition"
                 validators={{
                   onChange: z.enum(
-                    ["New", "Pre-Owned"],
+                    CONDITIONS,
                     "Condition is required"
                   ),
                 }}
@@ -170,8 +170,11 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                         <SelectValue placeholder="Select condition" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="New">New</SelectItem>
-                        <SelectItem value="Pre-Owned">Pre-Owned</SelectItem>
+                        {CONDITIONS.map((condition) => (
+                          <SelectItem key={condition} value={condition}>
+                            {condition}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     {!field.state.meta.isValid && (
@@ -210,7 +213,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                 name="status"
                 validators={{
                   onChange: z.enum(
-                    ["Owned", "Ordered", "Paid", "Shipped", "Sold"],
+                    COLLECTION_STATUSES,
                     "Status is required"
                   ),
                 }}
@@ -227,11 +230,11 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Owned">Owned</SelectItem>
-                        <SelectItem value="Ordered">Ordered</SelectItem>
-                        <SelectItem value="Paid">Paid</SelectItem>
-                        <SelectItem value="Shipped">Shipped</SelectItem>
-                        <SelectItem value="Sold">Sold</SelectItem>
+                        {COLLECTION_STATUSES.map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {status}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     {!field.state.meta.isValid && (

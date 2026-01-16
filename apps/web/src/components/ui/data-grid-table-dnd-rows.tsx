@@ -1,4 +1,5 @@
-import { type CSSProperties, useId } from 'react';
+import { useId } from 'react';
+import type { CSSProperties } from 'react';
 import { Button } from '@/components/ui/button';
 import { useDataGrid } from '@/components/ui/data-grid';
 import {
@@ -29,7 +30,8 @@ import {
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { type Cell, flexRender, type HeaderGroup, type Row } from '@tanstack/react-table';
+import { flexRender } from '@tanstack/react-table';
+import type { Cell, HeaderGroup, Row } from '@tanstack/react-table';
 import { GripHorizontal } from 'lucide-react';
 
 function DataGridTableDndRowHandle({ rowId }: { rowId: string }) {

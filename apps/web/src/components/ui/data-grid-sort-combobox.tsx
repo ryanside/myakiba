@@ -1,6 +1,6 @@
-import { type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { ArrowUp, ArrowDown, ArrowUpDown, X } from "lucide-react";
-import { type Table } from "@tanstack/react-table";
+import type { Table } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import {
   Command,

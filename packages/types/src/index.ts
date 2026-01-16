@@ -1,6 +1,7 @@
 export type {
   ShippingMethod,
   OrderStatus,
+  CollectionStatus,
   Condition,
   Currency,
   Category,

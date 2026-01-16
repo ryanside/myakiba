@@ -28,13 +28,11 @@
     "hono-rate-limiter": "^0.5.3",
     "ioredis": "catalog:",
     "rate-limit-redis": "^4.3.1",
-    "ws": "^8.18.3",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@myakiba/eslint-config": "workspace:*",
     "@types/bun": "catalog:",
-    "@types/ws": "^8.18.1",
     "tsdown": "^0.12.9",
     "typescript": "catalog:"
   }

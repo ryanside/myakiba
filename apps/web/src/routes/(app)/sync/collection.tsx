@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +12,7 @@ import {
   StepperSeparator,
   StepperTitle,
 } from "@/components/ui/stepper";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Check, Loader2, LoaderCircleIcon } from "lucide-react";
 import { ShimmeringText } from "@/components/ui/shimmering-text";
 import { extractMfcItemId } from "@/lib/sync/utils";
@@ -22,9 +22,8 @@ import {
   type SyncCollectionItem,
 } from "@/lib/sync/types";
 import { toast } from "sonner";
-import { sendCollection } from "@/queries/sync";
+import { getJobStatus, sendCollection } from "@/queries/sync";
 import SyncCollectionForm from "@/components/sync/sync-collection-form";
-import { useJobStatus } from "@/hooks/use-job-status";
 
 const steps = [
   { title: "Choose sync option" },
@@ -60,21 +59,57 @@ function RouteComponent() {
     isFinished: true,
     status: "",
   });
-  const jobStatus = useJobStatus(jobId);
+  const jobStatusQuery = useQuery({
+    queryKey: ["syncJobStatus", jobId] as const,
+    enabled: jobId !== null,
+    queryFn: async () => {
+      if (!jobId) {
+        throw new Error("jobId is required");
+      }
+      return await getJobStatus(jobId);
+    },
+    refetchInterval: (query) => {
+      if (query.state.data?.finished === true) {
+        return false;
+      }
+      return 2000;
+    },
+  });
 
-  useEffect(() => {
-    if (jobId && jobStatus.status) {
-      setStatus((prev: SyncStatus) => ({
-        ...prev,
-        status: jobStatus.status,
-        isFinished: jobStatus.isFinished,
-      }));
-    }
-  }, [jobId, jobStatus]);
+  const isPollingError = jobId !== null && jobStatusQuery.isError;
+  const resolvedStatus: SyncStatus = {
+    ...status,
+    isFinished:
+      jobId === null
+        ? status.isFinished
+        : isPollingError
+          ? true
+          : (jobStatusQuery.data?.finished ?? false),
+    status:
+      jobId === null
+        ? status.status
+        : isPollingError
+          ? "Connection error occurred"
+          : jobStatusQuery.isLoading
+            ? "Connecting..."
+            : (jobStatusQuery.data?.status ?? status.status),
+  };
 
   const collectionMutation = useMutation({
     mutationFn: (collection: SyncCollectionItem[]) =>
       sendCollection(collection),
+    onSuccess: (data) => {
+      setCurrentStep(3);
+
+      setStatus({
+        existingItems: data.existingItemsToInsert,
+        newItems: data.newItems,
+        isFinished: data.isFinished,
+        status: data.status,
+      });
+
+      setJobId(data.jobId ?? null);
+    },
     onError: (error) => {
       toast.error("Failed to submit collection. Please try again.", {
         description: `Error: ${error.message}`,
@@ -108,20 +143,7 @@ function RouteComponent() {
         score: item.score.toString(),
       };
     });
-    const data = await collectionMutation.mutateAsync(updatedValues);
-    setCurrentStep(3);
-
-    setStatus({
-      existingItems: data.existingItemsToInsert,
-      newItems: data.newItems,
-      isFinished: data.isFinished,
-      status: data.status,
-    });
-
-    // Set jobId to trigger WebSocket connection
-    if (data.jobId) {
-      setJobId(data.jobId);
-    }
+    await collectionMutation.mutateAsync(updatedValues);
   }
 
   return (
@@ -172,7 +194,6 @@ function RouteComponent() {
             className="flex items-center justify-center"
           >
             <SyncCollectionForm
-              setCurrentStep={setCurrentStep}
               handleSyncCollectionSubmit={handleSyncCollectionSubmit}
               currency={userCurrency}
             />
@@ -184,15 +205,15 @@ function RouteComponent() {
             <div className="rounded-lg border p-4 space-y-4 gap4 w-full">
               <Label className="text-lg text-foreground">Status</Label>
               <div className="flex flex-row gap-2 items-center">
-                {status.isFinished ? (
+                {resolvedStatus.isFinished ? (
                   <p className="text-md text-pretty text-primary">
-                    {status.status}
+                    {resolvedStatus.status}
                   </p>
                 ) : (
                   <>
                     <Loader2 className="animate-spin w-4 h-4" />
                     <ShimmeringText
-                      text={status.status}
+                      text={resolvedStatus.status}
                       className="text-md"
                       color="var(--color-primary)"
                       shimmerColor="var(--color-white)"
@@ -213,7 +234,7 @@ function RouteComponent() {
               <div className="flex flex-row gap-2">
                 <Button
                   variant="outline"
-                  disabled={!status.isFinished}
+                  disabled={!resolvedStatus.isFinished}
                   onClick={() => {
                     navigate({ to: "/sync" });
                   }}
@@ -221,17 +242,17 @@ function RouteComponent() {
                   Back to Sync Options
                 </Button>
                 <Link to="/orders">
-                  <Button variant="primary" disabled={!status.isFinished}>
+                  <Button variant="primary" disabled={!resolvedStatus.isFinished}>
                     Go to Orders
                   </Button>
                 </Link>
                 <Link to="/collection">
-                  <Button variant="primary" disabled={!status.isFinished}>
+                  <Button variant="primary" disabled={!resolvedStatus.isFinished}>
                     Go to Collection
                   </Button>
                 </Link>
                 <Link to="/dashboard">
-                  <Button variant="primary" disabled={!status.isFinished}>
+                  <Button variant="primary" disabled={!resolvedStatus.isFinished}>
                     Go to Dashboard
                   </Button>
                 </Link>

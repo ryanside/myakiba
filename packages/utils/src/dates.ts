@@ -138,3 +138,26 @@ export function formatMonthYear(dateString: string | null): string {
     return "Invalid date";
   }
 }
+
+/**
+ * Normalizes a date string from a database to a YYYY-MM-DD format.
+ */
+export function normalizeDbDate(value: string | null | undefined): string | null {
+  if (value == null) return null;
+
+  if (typeof value === "string") {
+    // Already a date-only string from Postgres DATE
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+
+    // ISO string (or similar)
+    if (value.includes("T")) return value.split("T")[0] ?? null;
+
+    // Fallback: try parsing and normalizing
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime())
+      ? null
+      : (parsed.toISOString().split("T")[0] ?? null);
+  }
+
+  return null;
+}

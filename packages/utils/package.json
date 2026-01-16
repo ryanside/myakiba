@@ -13,6 +13,7 @@
   },
   "devDependencies": {
     "@myakiba/config": "workspace:*",
+    "@myakiba/types": "workspace:*",
     "@types/bun": "catalog:"
   },
   "peerDependencies": {

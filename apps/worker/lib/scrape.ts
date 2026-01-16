@@ -128,9 +128,9 @@ export const scrapeSingleItem = async (
       const title = $("h1.title").text().trim();
 
       let category = "";
-      let classification: Array<{ id: number; name: string; role: string }> =
+      const classification: Array<{ id: number; name: string; role: string }> =
         [];
-      let version: string[] = [];
+      const version: string[] = [];
       let scale = "";
       let height = 0;
       let width = 0;
@@ -146,7 +146,7 @@ export const scrapeSingleItem = async (
         priceCurrency: string;
         barcode: string;
       }> = [];
-      let event: Array<{ id: number; name: string; role: string }> = [];
+      const event: Array<{ id: number; name: string; role: string }> = [];
       const materials: Array<{ id: number; name: string }> = [];
 
       const dataFields = $(".data-field");
@@ -157,7 +157,6 @@ export const scrapeSingleItem = async (
         const label = $label.text().trim();
 
         const $dataValue = $element.find(".data-value");
-        const $itemEntries = $element.find(".item-entries");
 
         switch (label) {
           case "Category":

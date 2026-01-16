@@ -122,7 +122,7 @@ export default function OrdersFiltersForm({
   return (
     <Dialog>
       <DialogTrigger asChild>{renderTrigger}</DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[100vh]">
+      <DialogContent className="max-w-2xl max-h-screen">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -156,7 +156,7 @@ export default function OrdersFiltersForm({
                           <ChevronDown className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
+                      <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width)">
                         {ORDER_STATUSES.map((status) => (
                           <DropdownMenuCheckboxItem
                             key={status}
@@ -199,7 +199,7 @@ export default function OrdersFiltersForm({
                           <ChevronDown className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
+                      <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width)">
                         <ScrollArea className="h-[200px]">
                           {SHIPPING_METHODS.map((method) => (
                             <DropdownMenuCheckboxItem
@@ -646,7 +646,7 @@ export default function OrdersFiltersForm({
           <DialogFooter className="">
             <form.Subscribe
               selector={(state) => [state.canSubmit, state.isSubmitting]}
-              children={([canSubmit, isSubmitting]) => (
+              children={([, isSubmitting]) => (
                 <>
                   <DialogClose asChild>
                     <Button type="button" variant="outline">

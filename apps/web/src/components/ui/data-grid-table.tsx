@@ -1,8 +1,10 @@
 import * as React from 'react';
-import { type CSSProperties, Fragment, type ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
+import type { CSSProperties } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useDataGrid } from '@/components/ui/data-grid';
-import { type Cell, type Column, flexRender, type Header, type HeaderGroup, type Row } from '@tanstack/react-table';
+import { flexRender } from '@tanstack/react-table';
+import type { Cell, Column, Header, HeaderGroup, Row } from '@tanstack/react-table';
 import { cva } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 

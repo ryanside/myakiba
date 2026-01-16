@@ -1,4 +1,4 @@
-import type { ShippingMethod, OrderStatus, Condition } from "./enums";
+import type { ShippingMethod, Condition, CollectionStatus, Category } from "./enums";
 
 export type CollectionFilters = {
   limit?: number | undefined;
@@ -36,7 +36,7 @@ export type CollectionFilters = {
   relPriceMin?: string | undefined;
   relPriceMax?: string | undefined;
   relCurrency?: string[] | undefined;
-  category?: string[] | undefined;
+  category?: Category[] | undefined;
   entries?: number[] | undefined;
   scale?: string[] | undefined;
   tags?: string[] | undefined;
@@ -49,9 +49,9 @@ export type CollectionItem = {
   itemId: number;
   itemTitle: string;
   itemImage: string | null;
-  itemCategory: string | null;
+  itemCategory: Category | null;
   itemScale: string | null;
-  status: OrderStatus | "Sold";
+  status: CollectionStatus;
   count: number;
   score: string;
   price: string;

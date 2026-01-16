@@ -6,6 +6,7 @@ import {
   order,
   budget,
 } from "@myakiba/db/schema/figure";
+import type { Category } from "@myakiba/types";
 import {
   eq,
   count,
@@ -50,7 +51,7 @@ class DashboardService {
     // Categories Owned
     this.categoriesOwnedPrepared = db
       .select({
-        name: item.category,
+        name: sql<Category>`${item.category}::text`,
         count: count(),
         totalValue: sum(sql`COALESCE(${collection.price}, 0)`),
       })

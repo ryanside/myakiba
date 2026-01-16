@@ -1,5 +1,5 @@
 import * as z from "zod";
-import { SHIPPING_METHODS, ORDER_STATUSES, CONDITIONS } from "@myakiba/constants";
+import { SHIPPING_METHODS, ORDER_STATUSES, CONDITIONS, CATEGORIES } from "@myakiba/constants";
 
 export const searchSchema = z.object({
   limit: z.coerce.number().optional(),
@@ -92,7 +92,7 @@ export const collectionSearchSchema = z.object({
   relPriceMin: z.string().optional(),
   relPriceMax: z.string().optional(),
   relCurrency: z.array(z.string()).optional(),
-  category: z.array(z.string()).optional(),
+  category: z.array(z.enum(CATEGORIES)).optional(),
   entries: z.array(z.coerce.number()).optional(),
   scale: z.array(z.string()).optional(),
   tags: z.array(z.string()).optional(),

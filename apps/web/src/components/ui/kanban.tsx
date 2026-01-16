@@ -41,6 +41,8 @@ interface KanbanContextProps<T> {
   isColumn: (id: UniqueIdentifier) => boolean;
 }
 
+// ReUI fix this plz.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const KanbanContext = React.createContext<KanbanContextProps<any>>({
   columns: {},
   setColumns: () => {},

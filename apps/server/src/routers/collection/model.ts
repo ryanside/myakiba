@@ -1,4 +1,10 @@
 import * as z from "zod";
+import {
+  CATEGORIES,
+  COLLECTION_STATUSES,
+  CONDITIONS,
+  SHIPPING_METHODS,
+} from "@myakiba/constants";
 
 const commaSeparatedStringArray = z.preprocess((val) => {
   if (typeof val === "string" && val.length > 0) {
@@ -21,22 +27,7 @@ const commaSeparatedShipMethodArray = z.preprocess(
     }
     return undefined;
   },
-  z
-    .array(
-      z.enum([
-        "n/a",
-        "EMS",
-        "SAL",
-        "AIRMAIL",
-        "SURFACE",
-        "FEDEX",
-        "DHL",
-        "Colissimo",
-        "UPS",
-        "Domestic",
-      ])
-    )
-    .optional()
+  z.array(z.enum(SHIPPING_METHODS)).optional()
 );
 
 const commaSeparatedConditionArray = z.preprocess(
@@ -46,7 +37,17 @@ const commaSeparatedConditionArray = z.preprocess(
     }
     return undefined;
   },
-  z.array(z.enum(["New", "Pre-Owned"])).optional()
+  z.array(z.enum(CONDITIONS)).optional()
+);
+
+const commaSeparatedCategoryArray = z.preprocess(
+  (val) => {
+    if (typeof val === "string" && val.length > 0) {
+      return val.split(",");
+    }
+    return undefined;
+  },
+  z.array(z.enum(CATEGORIES)).optional()
 );
 
 export const collectionQuerySchema = z.object({
@@ -88,7 +89,7 @@ export const collectionQuerySchema = z.object({
   relPriceMin: z.string().optional(),
   relPriceMax: z.string().optional(),
   relCurrency: commaSeparatedStringArray,
-  category: commaSeparatedStringArray,
+  category: commaSeparatedCategoryArray,
   entries: commaSeparatedNumberArray,
   scale: commaSeparatedStringArray,
   tags: commaSeparatedStringArray,
@@ -100,7 +101,7 @@ export const collectionParamSchema = z.object({
 });
 
 export const collectionUpdateSchema = z.object({
-  status: z.enum(["Owned", "Ordered", "Sold", "Paid", "Shipped"]),
+  status: z.enum(COLLECTION_STATUSES),
   count: z.number(),
   score: z.string(),
   price: z.string(),
@@ -109,18 +110,7 @@ export const collectionUpdateSchema = z.object({
   paymentDate: z.string().nullable(),
   shippingDate: z.string().nullable(),
   collectionDate: z.string().nullable(),
-  shippingMethod: z.enum([
-    "n/a",
-    "EMS",
-    "SAL",
-    "AIRMAIL",
-    "SURFACE",
-    "FEDEX",
-    "DHL",
-    "Colissimo",
-    "UPS",
-    "Domestic",
-  ]),
+  shippingMethod: z.enum(SHIPPING_METHODS),
   tags: z.array(z.string()),
   notes: z.string(),
   releaseId: z.string().nullable(),
@@ -129,7 +119,7 @@ export const collectionUpdateSchema = z.object({
   releaseCurrency: z.string().nullable(),
   releaseBarcode: z.string().nullable(),
   releaseType: z.string().nullable(),
-  condition: z.enum(["New", "Pre-Owned"]),
+  condition: z.enum(CONDITIONS),
 });
 
 export type collectionUpdateType = z.infer<typeof collectionUpdateSchema>;

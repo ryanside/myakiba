@@ -21,6 +21,7 @@ import { Progress } from "../ui/progress";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "../ui/button";
 import { useMemo, useState, Fragment } from "react";
+import type { Category } from "@myakiba/types";
 
 interface RowNavigation {
   to: string;
@@ -97,7 +98,7 @@ export function RankingCard({
               col.cellClassName,
             )}
             style={{
-              color: col.key === "category" ? getCategoryColor(value as string) : undefined,
+              color: col.key === "category" ? getCategoryColor(value as Category) : undefined,
             }}
           >
             {col.type === "currency"
@@ -130,7 +131,7 @@ export function RankingCard({
       <div className="flex items-center justify-between px-5 py-4 border-b border-border">
         <div className="flex items-center gap-2.5">
           {icon && (
-            <span className="text-muted-foreground flex-shrink-0">{icon}</span>
+            <span className="text-muted-foreground shrink-0">{icon}</span>
           )}
           <h3 className="text-base font-medium text-foreground">{title}</h3>
         </div>

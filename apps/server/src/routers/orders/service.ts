@@ -1,3 +1,4 @@
+import type { ShippingMethod } from "@myakiba/types";
 import { db } from "@myakiba/db";
 import {
   order,
@@ -18,13 +19,14 @@ import {
   lte,
 } from "drizzle-orm";
 import type { orderInsertType, orderUpdateType } from "./model";
+import type { OrderStatus, Condition } from "@myakiba/types";
 
 type OrderItem = {
   id: string;
   orderId: string | null;
   itemId: number;
   releaseId: string;
-  status: "Owned" | "Ordered" | "Paid" | "Shipped" | "Sold";
+  status: OrderStatus;
   itemTitle: string;
   itemImage: string | null;
   price: string;
@@ -35,23 +37,13 @@ type OrderItem = {
   paymentDate: string | null;
   shippingDate: string | null;
   collectionDate: string | null;
-  shippingMethod:
-    | "n/a"
-    | "EMS"
-    | "SAL"
-    | "AIRMAIL"
-    | "SURFACE"
-    | "FEDEX"
-    | "DHL"
-    | "Colissimo"
-    | "UPS"
-    | "Domestic";
+  shippingMethod: ShippingMethod;
   releaseDate: string | null;
   releaseType: string | null;
   releasePrice: string | null;
   releaseCurrency: string | null;
   releaseBarcode: string | null;
-  condition: "New" | "Pre-Owned";
+  condition: Condition;
   tags: string[];
   notes: string;
 };
@@ -67,18 +59,7 @@ class OrdersService {
     shop?: Array<string>,
     releaseMonthYearStart?: string,
     releaseMonthYearEnd?: string,
-    shippingMethod?: Array<
-      | "n/a"
-      | "EMS"
-      | "SAL"
-      | "AIRMAIL"
-      | "SURFACE"
-      | "FEDEX"
-      | "DHL"
-      | "Colissimo"
-      | "UPS"
-      | "Domestic"
-    >,
+    shippingMethod?: ReadonlyArray<ShippingMethod>,
     orderDateStart?: string,
     orderDateEnd?: string,
     paymentDateStart?: string,
@@ -87,7 +68,7 @@ class OrdersService {
     shippingDateEnd?: string,
     collectionDateStart?: string,
     collectionDateEnd?: string,
-    status?: Array<"Ordered" | "Paid" | "Shipped" | "Owned">,
+    status?: Array<OrderStatus>,
     totalMin?: string,
     totalMax?: string,
     shippingFeeMin?: string,

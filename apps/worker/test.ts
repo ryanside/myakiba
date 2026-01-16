@@ -17,6 +17,7 @@ import { createFetchOptions, normalizeDateString } from "./lib/utils";
 import { v5 as uuidv5 } from "uuid";
 import type { scrapedItem } from "./lib/types";
 import { env } from "@myakiba/env/worker";
+import type { Category } from "@myakiba/types";
 
 const redis = new Redis({
   host: env.REDIS_HOST,
@@ -123,9 +124,9 @@ const scrapeSingleItem = async (
       const title = $("h1.title").text().trim();
 
       let category = "";
-      let classification: Array<{ id: number; name: string; role: string }> =
+      const classification: Array<{ id: number; name: string; role: string }> =
         [];
-      let version: string[] = [];
+      const version: string[] = [];
       let scale = "";
       let height = 0;
       let width = 0;
@@ -141,7 +142,7 @@ const scrapeSingleItem = async (
         priceCurrency: string;
         barcode: string;
       }> = [];
-      let event: Array<{ id: number; name: string; role: string }> = [];
+      const event: Array<{ id: number; name: string; role: string }> = [];
       const materials: Array<{ id: number; name: string }> = [];
 
       const dataFields = $(".data-field");
@@ -152,7 +153,6 @@ const scrapeSingleItem = async (
         const label = $label.text().trim();
 
         const $dataValue = $element.find(".data-value");
-        const $itemEntries = $element.find(".item-entries");
 
         switch (label) {
           case "Category":
@@ -406,7 +406,7 @@ scrapeMethod(itemIds, 3, 1000, userId, undefined).then(
     const items = successfulResults.map((item) => ({
       id: item.id,
       title: item.title,
-      category: item.category,
+      category: item.category as Category,
       version: item.version,
       scale: item.scale,
       height: item.height,
@@ -434,13 +434,6 @@ scrapeMethod(itemIds, 3, 1000, userId, undefined).then(
       itemId: number;
       role: string;
     }> = [];
-    const collectionItems = successfulResults.map((item) => ({
-      userId,
-      itemId: item.id,
-      status: "owned",
-      score: 0,
-      notes: "",
-    }));
 
     for (const item of successfulResults) {
       for (const classification of item.classification) {

@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { LogOut, Settings, User } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ModeToggle } from "../mode-toggle";
-import { type RouterAppContext } from "@/routes/__root";
+import type { RouterAppContext } from "@/routes/__root";
 import { clearRecentItems } from "@/lib/recent-items";
 import { toast } from "sonner";
 

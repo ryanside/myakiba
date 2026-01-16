@@ -1,4 +1,5 @@
-import { rateLimiter, type Store } from "hono-rate-limiter";
+import { rateLimiter } from "hono-rate-limiter";
+import type { Store } from "hono-rate-limiter";
 import RedisStore from "rate-limit-redis";
 import Redis from "ioredis";
 import type { Variables } from "../index";

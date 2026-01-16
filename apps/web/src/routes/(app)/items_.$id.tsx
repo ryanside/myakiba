@@ -108,9 +108,9 @@ function RouteComponent() {
 
   const {
     data: itemRelatedOrders,
-    isPending: isPendingItemRelatedOrders,
-    isError: isErrorItemRelatedOrders,
-    error: errorItemRelatedOrders,
+    // isPending: isPendingItemRelatedOrders,
+    // isError: isErrorItemRelatedOrders,
+    // error: errorItemRelatedOrders,
   } = useQuery({
     queryKey: ["item", id, "itemRelatedOrders"],
     queryFn: () => getItemRelatedOrders(id),

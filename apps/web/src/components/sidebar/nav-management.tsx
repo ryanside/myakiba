@@ -1,4 +1,4 @@
-import { type LucideIcon } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 import { Collapsible } from "@/components/ui/collapsible";
 import {
@@ -8,7 +8,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { Link, type ParsedLocation } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
+import type { ParsedLocation } from "@tanstack/react-router";
 
 export function NavManagement({
   items,

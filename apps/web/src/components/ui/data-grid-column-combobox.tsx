@@ -1,6 +1,6 @@
-import { type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Check, Settings2 } from "lucide-react";
-import { type Table } from "@tanstack/react-table";
+import type { Table } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {

@@ -5,13 +5,14 @@ import { formatCurrency, getCategoryColor } from "@myakiba/utils";
 import { Scroller } from "../ui/scroller";
 import { Separator } from "../ui/separator";
 import { Link } from "@tanstack/react-router";
+import type { Category } from "@myakiba/types";
 
 export function CollectionBreakdown({
   data,
   currency = "USD",
   className,
 }: {
-  data: { name: string | null; count: number; totalValue: string | null }[];
+  data: { name: Category | null; count: number; totalValue: string | null }[];
   className?: string;
   currency?: string;
 }) {

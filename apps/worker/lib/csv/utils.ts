@@ -1,3 +1,4 @@
+import type { ShippingMethod } from "@myakiba/types";
 import type { scrapedItem, CsvItem } from "../types";
 import Redis from "ioredis";
 import type { jobData } from "../types";
@@ -70,17 +71,7 @@ export async function finalizeCsvSync(
     collectionDate: string | null;
     price: string;
     shop: string;
-    shippingMethod:
-      | "n/a"
-      | "EMS"
-      | "SAL"
-      | "AIRMAIL"
-      | "SURFACE"
-      | "FEDEX"
-      | "DHL"
-      | "Colissimo"
-      | "UPS"
-      | "Domestic";
+    shippingMethod: ShippingMethod;
     notes: string;
     releaseId?: string | null;
     orderId: string | null;
@@ -95,17 +86,7 @@ export async function finalizeCsvSync(
     paymentDate: string | null;
     shippingDate: string | null;
     collectionDate: string | null;
-    shippingMethod:
-      | "n/a"
-      | "EMS"
-      | "SAL"
-      | "AIRMAIL"
-      | "SURFACE"
-      | "FEDEX"
-      | "DHL"
-      | "Colissimo"
-      | "UPS"
-      | "Domestic";
+    shippingMethod: ShippingMethod;
     releaseMonthYear: string | null;
   }> = [];
 
@@ -246,17 +227,7 @@ export async function finalizeCsvSync(
     collectionDate: ci.collecting_date,
     price: ci.price && ci.price.trim() !== "" ? ci.price.toString() : "0.00",
     shop: ci.shop,
-    shippingMethod: ci.shipping_method as
-      | "n/a"
-      | "EMS"
-      | "SAL"
-      | "AIRMAIL"
-      | "SURFACE"
-      | "FEDEX"
-      | "DHL"
-      | "Colissimo"
-      | "UPS"
-      | "Domestic",
+    shippingMethod: ci.shipping_method,
     notes: ci.note,
     releaseId: latestReleaseIdByItem.get(ci.id)?.releaseId ?? null,
     orderId: ci.orderId,
@@ -276,17 +247,7 @@ export async function finalizeCsvSync(
       paymentDate: ci.payment_date,
       shippingDate: ci.shipping_date,
       collectionDate: ci.collecting_date,
-      shippingMethod: ci.shipping_method as
-        | "n/a"
-        | "EMS"
-        | "SAL"
-        | "AIRMAIL"
-        | "SURFACE"
-        | "FEDEX"
-        | "DHL"
-        | "Colissimo"
-        | "UPS"
-        | "Domestic",
+      shippingMethod: ci.shipping_method,
       releaseMonthYear: latestReleaseIdByItem.get(ci.id)?.date ?? null,
     }));
 

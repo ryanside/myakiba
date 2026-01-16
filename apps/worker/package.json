@@ -26,6 +26,7 @@
     "@myakiba/validations": "workspace:*",
     "bullmq": "catalog:",
     "cheerio": "^1.1.2",
+    "domhandler": "^5.0.3",
     "drizzle-orm": "catalog:",
     "ioredis": "catalog:",
     "uuid": "catalog:",

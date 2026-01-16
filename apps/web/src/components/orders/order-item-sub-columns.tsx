@@ -22,7 +22,9 @@ import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
 import { InlineCountCell } from "../cells/inline-count-cell";
 import { SelectCell } from "../cells/select-cell";
 import { InlineCurrencyCell } from "../cells/inline-currency-cell";
-import { type ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
+import { ORDER_STATUSES } from "@myakiba/constants";
+import type { OrderStatus } from "@myakiba/types";
 
 interface OrderItemSubColumnsParams {
   orderId: string;
@@ -200,11 +202,11 @@ export function createOrderItemSubColumns({
         return (
           <SelectCell
             value={item.status}
-            options={["Ordered", "Paid", "Shipped", "Owned"]}
+            options={[...ORDER_STATUSES]}
             onSubmit={async (value) => {
               await onEditItem({
                 ...item,
-                status: value as "Ordered" | "Paid" | "Shipped" | "Owned",
+                status: value as OrderStatus,
               });
             }}
           />

@@ -74,17 +74,7 @@ export async function transformCSVData(value: { file: File | undefined }) {
       collecting_date: item.collecting_date,
       price: item.price_1,
       shop: item.shop,
-      shipping_method: item.shipping_method as
-        | "n/a"
-        | "EMS"
-        | "SAL"
-        | "AIRMAIL"
-        | "SURFACE"
-        | "FEDEX"
-        | "DHL"
-        | "Colissimo"
-        | "UPS"
-        | "Domestic",
+      shipping_method: item.shipping_method,
       note: item.note,
       orderId: null,
       orderDate: item.payment_date,

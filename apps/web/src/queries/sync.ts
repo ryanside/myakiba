@@ -33,3 +33,21 @@ export async function sendCollection(collection: SyncCollectionItem[]) {
   }
   return response.json();
 }
+
+export async function getJobStatus(jobId: string) {
+  const response = await client.api.sync["job-status"].$get({
+    query: { jobId },
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      return { status: "Unauthorized", finished: true };
+    }
+    if (response.status === 404) {
+      return { status: "Job not found", finished: true };
+    }
+    return { status: "Error fetching job status", finished: true };
+  }
+
+  return response.json();
+}

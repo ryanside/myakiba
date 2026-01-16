@@ -40,7 +40,7 @@ import { CascadeOptionsDropdown } from "@/components/cascade-options-dropdown";
 import { Textarea } from "../ui/textarea";
 import { getCurrencyLocale } from "@myakiba/utils";
 import { Scroller } from "../ui/scroller";
-import { SHIPPING_METHODS } from "@myakiba/constants";
+import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/constants";
 
 type MergeOrderFormProps = {
   renderTrigger: React.ReactNode;
@@ -245,7 +245,7 @@ export function OrderForm(props: OrderFormProps) {
               name="status"
               validators={{
                 onChange: z.enum(
-                  ["Ordered", "Paid", "Shipped", "Owned"],
+                  ORDER_STATUSES,
                   "Status is required"
                 ),
               }}
@@ -262,10 +262,11 @@ export function OrderForm(props: OrderFormProps) {
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Ordered">Ordered</SelectItem>
-                      <SelectItem value="Owned">Owned</SelectItem>
-                      <SelectItem value="Paid">Paid</SelectItem>
-                      <SelectItem value="Shipped">Shipped</SelectItem>
+                      {ORDER_STATUSES.map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {status}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   {field.state.meta.errors &&
@@ -655,7 +656,7 @@ export function OrderForm(props: OrderFormProps) {
               name="status"
               validators={{
                 onChange: z.enum(
-                  ["Ordered", "Paid", "Shipped", "Owned"],
+                  ORDER_STATUSES,
                   "Status is required"
                 ),
               }}
@@ -672,10 +673,11 @@ export function OrderForm(props: OrderFormProps) {
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Ordered">Ordered</SelectItem>
-                      <SelectItem value="Owned">Owned</SelectItem>
-                      <SelectItem value="Paid">Paid</SelectItem>
-                      <SelectItem value="Shipped">Shipped</SelectItem>
+                      {ORDER_STATUSES.map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {status}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   {field.state.meta.errors &&
