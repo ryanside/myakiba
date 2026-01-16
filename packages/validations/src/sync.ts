@@ -104,7 +104,7 @@ const internalCsvItemSchema = z.object({
   collecting_date: z.string().nullable(),
   price: z.string(),
   shop: z.string(),
-  shipping_method: z.string(),
+  shipping_method: z.enum(SHIPPING_METHODS),
   note: z.string(),
   orderId: z.string().nullable(),
   orderDate: z.string().nullable(),

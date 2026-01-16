@@ -5,6 +5,7 @@ import type {
   NewOrder,
   OrderFilters,
 } from "@/lib/orders/types";
+import type { OrderStatus } from "@myakiba/types";
 
 export async function getOrders(filters: OrderFilters) {
   const queryParams = {
@@ -222,7 +223,7 @@ export async function getOrder(orderId: string) {
 
 export async function updateOrderStatus(
   orderId: string,
-  status: "Ordered" | "Paid" | "Shipped" | "Owned"
+  status: OrderStatus
 ): Promise<void> {
   const response = await client.api.orders[":orderId"].$put({
     param: {

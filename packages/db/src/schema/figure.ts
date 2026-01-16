@@ -11,13 +11,22 @@ import {
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 import { createId } from "@paralleldrive/cuid2";
+import {
+  COLLECTION_STATUSES,
+  SHIPPING_METHODS,
+  ORDER_STATUSES,
+  CONDITIONS,
+} from "@myakiba/constants/enums";
+import { CATEGORIES } from "@myakiba/constants/categories";
 
 export const item = pgTable(
   "item",
   {
     id: integer("id").primaryKey(), // integer id from MFC
     title: text("title").notNull(),
-    category: text("category"),
+    category: text("category", {
+      enum: CATEGORIES,
+    }),
     version: text("version").array(),
     scale: text("scale").default("NON_SCALE"),
     height: integer("height"),
@@ -27,9 +36,7 @@ export const item = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
-  (t) => [
-    index("item_title_idx").on(t.title),
-  ]
+  (t) => [index("item_title_idx").on(t.title)]
 );
 
 export const item_release = pgTable(
@@ -41,15 +48,13 @@ export const item_release = pgTable(
       .references(() => item.id, { onDelete: "cascade" }),
     date: date("date", { mode: "string" }).notNull(),
     type: text("type"), // "original", "rerelease", "limited", etc.
-    price: decimal("price", { scale: 2 }),
+    price: decimal("price", { precision: 14, scale: 2 }),
     priceCurrency: text("price_currency"),
     barcode: text("barcode"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
-  (t) => [
-    index("item_release_item_id_date_idx").on(t.itemId, t.date.desc()),
-  ]
+  (t) => [index("item_release_item_id_date_idx").on(t.itemId, t.date.desc())]
 );
 
 export const entry = pgTable(
@@ -61,9 +66,7 @@ export const entry = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
-  (t) => [
-    index("entry_name_idx").on(t.name),
-  ]
+  (t) => [index("entry_name_idx").on(t.name)]
 );
 
 export const entry_to_item = pgTable(
@@ -101,7 +104,7 @@ export const collection = pgTable(
       onDelete: "set null",
     }),
     status: text("status", {
-      enum: ["Owned", "Ordered", "Paid", "Shipped", "Sold"],
+      enum: COLLECTION_STATUSES,
     })
       .notNull()
       .default("Owned"),
@@ -109,35 +112,28 @@ export const collection = pgTable(
     releaseId: uuid("release_id").references(() => item_release.id, {
       onDelete: "set null",
     }),
-    score: decimal("score", { precision: 3, scale: 1 }).default("0.0").notNull(),
-    price: decimal("price", { scale: 2 }).default("0.00").notNull(),
+    score: decimal("score", { precision: 3, scale: 1 })
+      .default("0.0")
+      .notNull(),
+    price: decimal("price", { precision: 14, scale: 2 }).default("0.00").notNull(),
     shop: text("shop").default("").notNull(),
     orderDate: date("order_date", { mode: "string" }),
     paymentDate: date("payment_date", { mode: "string" }),
     shippingDate: date("shipping_date", { mode: "string" }),
     collectionDate: date("collection_date", { mode: "string" }),
     shippingMethod: text("shipping_method", {
-      enum: [
-        "n/a",
-        "EMS",
-        "SAL",
-        "AIRMAIL",
-        "SURFACE",
-        "FEDEX",
-        "DHL",
-        "Colissimo",
-        "UPS",
-        "Domestic",
-      ],
+      enum: SHIPPING_METHODS,
     })
       .default("n/a")
       .notNull(),
-    soldFor: decimal("sold_for", { scale: 2 }),
+    soldFor: decimal("sold_for", { precision: 14, scale: 2 }),
     soldDate: date("sold_date", { mode: "string" }),
     tags: text("tags").array().default([]).notNull(),
     condition: text("condition", {
-      enum: ["New", "Pre-Owned"],
-    }).default("New").notNull(),
+      enum: CONDITIONS,
+    })
+      .default("New")
+      .notNull(),
     notes: text("notes").default("").notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -171,31 +167,22 @@ export const order = pgTable(
     shippingDate: date("shipping_date", { mode: "string" }),
     collectionDate: date("collection_date", { mode: "string" }),
     shippingMethod: text("shipping_method", {
-      enum: [
-        "n/a",
-        "EMS",
-        "SAL",
-        "AIRMAIL",
-        "SURFACE",
-        "FEDEX",
-        "DHL",
-        "Colissimo",
-        "UPS",
-        "Domestic",
-      ],
+      enum: SHIPPING_METHODS,
     })
       .default("n/a")
       .notNull(),
     status: text("status", {
-      enum: ["Ordered", "Paid", "Shipped", "Owned"],
+      enum: ORDER_STATUSES,
     })
       .default("Ordered")
       .notNull(),
-    shippingFee: decimal("shipping_fee", { scale: 2 }).default("0.00").notNull(),
-    taxes: decimal("taxes", { scale: 2 }).default("0.00").notNull(),
-    duties: decimal("duties", { scale: 2 }).default("0.00").notNull(),
-    tariffs: decimal("tariffs", { scale: 2 }).default("0.00").notNull(),
-    miscFees: decimal("misc_fees", { scale: 2 }).default("0.00").notNull(),
+    shippingFee: decimal("shipping_fee", { precision: 14, scale: 2 })
+      .default("0.00")
+      .notNull(),
+    taxes: decimal("taxes", { precision: 14, scale: 2 }).default("0.00").notNull(),
+    duties: decimal("duties", { precision: 14, scale: 2 }).default("0.00").notNull(),
+    tariffs: decimal("tariffs", { precision: 14, scale: 2 }).default("0.00").notNull(),
+    miscFees: decimal("misc_fees", { precision: 14, scale: 2 }).default("0.00").notNull(),
     notes: text("notes").default("").notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -218,7 +205,7 @@ export const budget = pgTable("budget", {
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
   period: text("period").$type<"monthly" | "annual" | "allocated">().notNull(),
-  amount: decimal("amount", { scale: 2 }).notNull(),
+  amount: decimal("amount", { precision: 14, scale: 2 }).notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

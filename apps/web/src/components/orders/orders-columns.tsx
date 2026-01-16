@@ -38,8 +38,8 @@ import { InlineTextCell } from "../cells/inline-text-cell";
 import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
 import type { CollectionItemFormValues } from "@/lib/collection/types";
-import { SHIPPING_METHODS } from "@myakiba/constants";
-import type { ShippingMethod } from "@myakiba/types";
+import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/constants";
+import type { ShippingMethod, OrderStatus } from "@myakiba/types";
 
 interface OrdersColumnsParams {
   onEditOrder: (
@@ -733,14 +733,14 @@ export function createOrdersColumns({
         return (
           <SelectCell
             value={status}
-            options={["Ordered", "Paid", "Shipped", "Owned"]}
+            options={[...ORDER_STATUSES]}
             onSubmit={async (value) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } =
                 row.original;
               await onEditOrder(
                 {
                   ...orderWithoutTimestamps,
-                  status: value as "Ordered" | "Paid" | "Shipped" | "Owned",
+                  status: value as OrderStatus,
                 },
                 ["status"] as CascadeOptions
               );

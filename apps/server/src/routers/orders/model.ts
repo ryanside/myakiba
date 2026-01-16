@@ -1,6 +1,7 @@
 import * as z from "zod";
 import { createInsertSchema, createUpdateSchema } from "drizzle-zod";
 import { order } from "@myakiba/db/schema/figure";
+import { ORDER_STATUSES, SHIPPING_METHODS } from "@myakiba/constants";
 
 const commaSeparatedStringArray = z.preprocess((val) => {
   if (typeof val === "string" && val.length > 0) {
@@ -16,22 +17,7 @@ const commaSeparatedShipMethodArray = z.preprocess(
     }
     return undefined;
   },
-  z
-    .array(
-      z.enum([
-        "n/a",
-        "EMS",
-        "SAL",
-        "AIRMAIL",
-        "SURFACE",
-        "FEDEX",
-        "DHL",
-        "Colissimo",
-        "UPS",
-        "Domestic",
-      ])
-    )
-    .optional()
+  z.array(z.enum(SHIPPING_METHODS)).optional()
 );
 
 const commaSeparatedStatusArray = z.preprocess(
@@ -41,7 +27,7 @@ const commaSeparatedStatusArray = z.preprocess(
     }
     return undefined;
   },
-  z.array(z.enum(["Ordered", "Paid", "Shipped", "Owned"])).optional()
+  z.array(z.enum(ORDER_STATUSES)).optional()
 );
 
 export const ordersQuerySchema = z.object({

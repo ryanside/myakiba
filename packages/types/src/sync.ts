@@ -1,4 +1,4 @@
-import type { ShippingMethod, OrderStatus, Condition } from "./enums";
+import type { ShippingMethod, OrderStatus, Condition, Category } from "./enums";
 
 export type SyncStatus = {
   existingItems: number;
@@ -119,7 +119,7 @@ export type UserItem = {
 export type ScrapedItem = {
   id: number;
   title: string;
-  category: string;
+  category: Category;
   classification: {
     id: number;
     name: string;

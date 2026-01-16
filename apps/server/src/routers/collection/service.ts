@@ -20,6 +20,11 @@ import {
   sum,
 } from "drizzle-orm";
 import type { collectionUpdateType } from "./model";
+import type {
+  Category,
+  Condition,
+  ShippingMethod,
+} from "@myakiba/types";
 
 class CollectionService {
   async getCollection(
@@ -37,28 +42,17 @@ class CollectionService {
     shippingDateEnd?: string,
     collectionDateStart?: string,
     collectionDateEnd?: string,
-    shippingMethod?: Array<
-      | "n/a"
-      | "EMS"
-      | "SAL"
-      | "AIRMAIL"
-      | "SURFACE"
-      | "FEDEX"
-      | "DHL"
-      | "Colissimo"
-      | "UPS"
-      | "Domestic"
-    >,
+    shippingMethod?: Array<ShippingMethod>,
     releaseDateStart?: string,
     releaseDateEnd?: string,
     releasePriceMin?: string,
     releasePriceMax?: string,
     releaseCurrency?: Array<string>,
-    category?: Array<string>,
+    category?: Array<Category>,
     entries?: Array<number>,
     scale?: Array<string>,
     tags?: Array<string>,
-    condition?: Array<"New" | "Pre-Owned">,
+    condition?: Array<Condition>,
     search?: string
   ) {
     let itemIdsWithEntries: number[] | undefined;
@@ -109,7 +103,9 @@ class CollectionService {
       releaseCurrency && releaseCurrency.length > 0
         ? inArray(item_release.priceCurrency, releaseCurrency)
         : undefined,
-      itemIdsWithEntries && itemIdsWithEntries.length > 0 ? inArray(item.id, itemIdsWithEntries) : undefined,
+      itemIdsWithEntries && itemIdsWithEntries.length > 0
+        ? inArray(item.id, itemIdsWithEntries)
+        : undefined,
       search ? ilike(item.title, `%${search}%`) : undefined
     );
 
@@ -222,7 +218,9 @@ class CollectionService {
       .where(filters)
       .orderBy(
         orderBy === "asc" ? asc(sortByColumn) : desc(sortByColumn),
-        orderBy === "asc" ? asc(collection.createdAt) : desc(collection.createdAt)
+        orderBy === "asc"
+          ? asc(collection.createdAt)
+          : desc(collection.createdAt)
       )
       .limit(limit)
       .offset(offset);
@@ -301,7 +299,7 @@ class CollectionService {
       .delete(collection)
       .where(
         and(eq(collection.userId, userId), eq(collection.id, collectionId))
-      );
+      ).returning();
 
     if (!deleted || deleted.length === 0) {
       throw new Error("COLLECTION_ITEM_NOT_FOUND");

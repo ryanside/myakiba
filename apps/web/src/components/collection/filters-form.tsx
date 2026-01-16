@@ -201,7 +201,7 @@ export default function FiltersForm({
                           <ChevronDown className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
+                      <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width)">
                         <ScrollArea className="h-[200px]">
                           {SHIPPING_METHODS.map((method) => (
                             <DropdownMenuCheckboxItem
@@ -246,7 +246,7 @@ export default function FiltersForm({
                           <ChevronDown className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
+                      <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width)">
                         {CONDITIONS.map((condition) => (
                           <DropdownMenuCheckboxItem
                             key={condition}
@@ -286,7 +286,7 @@ export default function FiltersForm({
                           <ChevronDown className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
+                      <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width)">
                         <ScrollArea className="h-[200px]">
                           {CATEGORIES.map((category) => (
                             <DropdownMenuCheckboxItem
@@ -396,7 +396,7 @@ export default function FiltersForm({
                               <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                          <PopoverContent className="w-(--radix-popover-trigger-width) p-0">
                             <Command>
                               <DebouncedInput
                                 value={filters}
@@ -808,7 +808,7 @@ export default function FiltersForm({
                           <ChevronDown className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
+                      <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width)">
                         <ScrollArea className="h-[200px]">
                           {CURRENCIES.map((currency) => (
                             <DropdownMenuCheckboxItem

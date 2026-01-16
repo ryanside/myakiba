@@ -10,24 +10,17 @@ import type {
 import type { VariantProps } from "class-variance-authority";
 import { badgeVariants } from "@/components/ui/badge";
 import type { CollectionItemFormValues } from "@/lib/collection/types";
+import { COLLECTION_STATUSES, ORDER_STATUSES } from "@myakiba/constants";
+
+const STATUS_VARIANT_MAP: Record<string, VariantProps<typeof badgeVariants>["variant"]> = {
+  ...Object.fromEntries(COLLECTION_STATUSES.map((status) => [status.toLowerCase(), status === "Owned" ? "success" : status === "Shipped" ? "primary" : status === "Paid" ? "warning" : "info"])),
+  ...Object.fromEntries(ORDER_STATUSES.map((status) => [status.toLowerCase(), status === "Owned" ? "success" : status === "Shipped" ? "primary" : status === "Paid" ? "warning" : "info"])),
+};
 
 export function getStatusVariant(
   status: string
 ): VariantProps<typeof badgeVariants>["variant"] {
-  switch (status.toLowerCase()) {
-    case "owned":
-      return "success";
-    case "shipped":
-      return "primary";
-    case "paid":
-      return "warning";
-    case "ordered":
-      return "info";
-    case "sold":
-      return "destructive";
-    default:
-      return "outline";
-  }
+  return STATUS_VARIANT_MAP[status.toLowerCase()] || "outline";
 }
 
 export function filterAndSortOrders(
@@ -491,11 +484,11 @@ export function createOptimisticEditItemUpdate(
   values: CollectionItemFormValues,
   filters: OrderFilters
 ) {
-  const order = old.orders.find((order: Order) => order.orderId === values.orderId);
-  if (!order) return old;
-  const item = order.items.find(
-    (item: OrderItem) => item.id === values.id
+  const order = old.orders.find(
+    (order: Order) => order.orderId === values.orderId
   );
+  if (!order) return old;
+  const item = order.items.find((item: OrderItem) => item.id === values.id);
   if (!item) return old;
 
   const updatedItem = {
@@ -553,9 +546,7 @@ export function createOptimisticDeleteItemUpdate(
 ) {
   const order = old.orders.find((order: Order) => order.orderId === orderId);
   if (!order) return old;
-  const item = order.items.find(
-    (item: OrderItem) => item.id === collectionId
-  );
+  const item = order.items.find((item: OrderItem) => item.id === collectionId);
   if (!item) return old;
 
   const remainingItems = order.items.filter(
@@ -677,9 +668,7 @@ export function createOptimisticMoveItemUpdate(
 
   // Extract items to move from source orders
   const itemsToMove = sourceOrders.flatMap((order: Order) =>
-    order.items.filter((item: OrderItem) =>
-      collectionIds.has(item.id)
-    )
+    order.items.filter((item: OrderItem) => collectionIds.has(item.id))
   );
 
   if (!itemsToMove.length) return old;
