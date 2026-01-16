@@ -6,7 +6,7 @@ import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
 import { logger } from "hono/logger";
 import { serveStatic } from "hono/bun";
-import syncRouter, { websocket } from "./routers/sync";
+import syncRouter from "./routers/sync";
 import dashboardRouter from "./routers/dashboard";
 import analyticsRouter from "./routers/analytics";
 import ordersRouter from "./routers/orders";
@@ -25,8 +25,7 @@ app.use(logger());
 app.use(
   "/*",
   cors({
-    origin:
-      env.CORS_ORIGIN.split(",").map((origin: string) => origin.trim()),
+    origin: env.CORS_ORIGIN.split(",").map((origin: string) => origin.trim()),
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization", "x-captcha-response"],
     credentials: true,
@@ -35,8 +34,7 @@ app.use(
 
 app.use(
   csrf({
-    origin:
-      env.CORS_ORIGIN.split(",").map((origin: string) => origin.trim()),
+    origin: env.CORS_ORIGIN.split(",").map((origin: string) => origin.trim()),
   })
 );
 
@@ -58,6 +56,7 @@ app.use("*", async (c, next) => {
 
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const routes = app
   .basePath("/api")
   .get("/version", (c) => c.json({ buildId: env.BUILD_ID }))
@@ -77,7 +76,6 @@ app.get("*", serveStatic({ path: "./dist/index.html" }));
 
 export default {
   fetch: app.fetch,
-  websocket,
 };
 
 export type AppType = typeof routes;

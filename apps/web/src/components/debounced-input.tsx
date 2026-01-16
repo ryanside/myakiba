@@ -1,4 +1,5 @@
-import { type InputHTMLAttributes, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import type { InputHTMLAttributes } from "react";
 import { Input } from "./ui/input";
 import { CommandInput } from "./ui/command";
 

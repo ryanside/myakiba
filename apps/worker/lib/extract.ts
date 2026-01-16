@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import type { Element } from "domhandler";
 
 export const REGEX_PATTERNS = {
   height: /H=(\d+)mm/,
@@ -6,14 +7,14 @@ export const REGEX_PATTERNS = {
   depth: /D=(\d+)mm/,
   price: /(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s+(?:<small>)?([A-Z]{3})(?:<\/small>)?/,
   priceCurrency: /(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s+(?:<small>)?([A-Z]{3})(?:<\/small>)?/,
-  barcode: /([A-Z0-9\-]+)$/,
+  barcode: /([A-Z0-9-]+)$/,
   typeEnd: /\d{2,}|•|JPY|USD|EUR|CNY/,
   trailingSpace: /\s+$/,
   entryId: /\/entry\/(\d+)/,
 } as const;
 
 export const extractArrayData = (
-  $element: cheerio.Cheerio<any>,
+  $element: cheerio.Cheerio<Element>,
   selector: string,
   $: cheerio.CheerioAPI
 ): string[] => {
@@ -27,7 +28,7 @@ export const extractArrayData = (
 };
 
 export const extractArrayDataWithIds = (
-  $element: cheerio.Cheerio<any>,
+  $element: cheerio.Cheerio<Element>,
   $: cheerio.CheerioAPI
 ): Array<{ id: number; name: string }> => {
   const items: Array<{ id: number; name: string }> = [];
@@ -47,7 +48,7 @@ export const extractArrayDataWithIds = (
 };
 
 export const extractEntitiesWithRoles = (
-  $element: cheerio.Cheerio<any>,
+  $element: cheerio.Cheerio<Element>,
   $: cheerio.CheerioAPI
 ): Array<{ id: number; name: string; role: string }> => {
   const entities: Array<{ id: number; name: string; role: string }> = [];
@@ -96,7 +97,7 @@ export const extractEntitiesWithRoles = (
 
 export const extractDimensions = (
   dimensionText: string,
-  $element: cheerio.Cheerio<any>
+  $element: cheerio.Cheerio<Element>
 ) => {
   let scale = "";
   let height = 0;
@@ -121,7 +122,7 @@ export const extractDimensions = (
 };
 
 export const extractReleaseData = (
-  $element: cheerio.Cheerio<any>,
+  $element: cheerio.Cheerio<Element>,
   $: cheerio.CheerioAPI
 ) => {
   const releaseDate: Array<{
@@ -186,7 +187,7 @@ export const extractReleaseData = (
 };
 
 export const extractMaterialsData = (
-  $element: cheerio.Cheerio<any>,
+  $element: cheerio.Cheerio<Element>,
   $: cheerio.CheerioAPI
 ): Array<{ id: number; name: string }> => {
   const materials: Array<{ id: number; name: string }> = [];

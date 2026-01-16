@@ -62,7 +62,7 @@ function UnpaidOrderCard({
       className="flex items-center gap-3 p-2 border rounded-md bg-background hover:bg-accent transition-colors cursor-pointer"
     >
       {imageCount > 0 ? (
-        <div className="w-12 h-12 rounded flex-shrink-0 relative overflow-hidden">
+        <div className="w-12 h-12 rounded shrink-0 relative overflow-hidden">
           {imageCount === 1 ? (
             <img
               src={images[0]}
@@ -127,7 +127,7 @@ function UnpaidOrderCard({
           )}
         </div>
       ) : (
-        <div className="w-12 h-12 bg-muted rounded flex-shrink-0 flex items-center justify-center">
+        <div className="w-12 h-12 bg-muted rounded shrink-0 flex items-center justify-center">
           <span className="text-xs text-muted-foreground">No img</span>
         </div>
       )}

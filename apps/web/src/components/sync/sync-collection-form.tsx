@@ -1,6 +1,6 @@
 import { useForm } from "@tanstack/react-form";
 import { Button } from "../ui/button";
-import { type SyncFormCollectionItem } from "@/lib/sync/types";
+import type { SyncFormCollectionItem } from "@/lib/sync/types";
 import { ArrowLeft, Edit, Loader2, Plus, X } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { Label } from "../ui/label";
@@ -29,6 +29,7 @@ import { Rating } from "../ui/rating";
 import { Textarea } from "../ui/textarea";
 import { getCurrencyLocale } from "@myakiba/utils";
 import { extractMfcItemId } from "@/lib/sync/utils";
+import { CONDITIONS, SHIPPING_METHODS } from "@myakiba/constants";
 
 export default function SyncCollectionForm({
   setCurrentStep,
@@ -297,12 +298,11 @@ export default function SyncCollectionForm({
                                                 <SelectValue placeholder="Select condition" />
                                               </SelectTrigger>
                                               <SelectContent>
-                                                <SelectItem value="New">
-                                                  New
-                                                </SelectItem>
-                                                <SelectItem value="Pre-Owned">
-                                                  Pre-Owned
-                                                </SelectItem>
+                                                {CONDITIONS.map((condition) => (
+                                                  <SelectItem key={condition} value={condition}>
+                                                    {condition}
+                                                  </SelectItem>
+                                                ))}
                                               </SelectContent>
                                             </Select>
                                           </div>
@@ -361,18 +361,7 @@ export default function SyncCollectionForm({
                                       name={`items[${i}].shippingMethod`}
                                       validators={{
                                         onChange: z.enum(
-                                          [
-                                            "n/a",
-                                            "EMS",
-                                            "SAL",
-                                            "AIRMAIL",
-                                            "SURFACE",
-                                            "FEDEX",
-                                            "DHL",
-                                            "Colissimo",
-                                            "UPS",
-                                            "Domestic",
-                                          ],
+                                          SHIPPING_METHODS,
                                           "Shipping method is required"
                                         ),
                                       }}
@@ -394,38 +383,13 @@ export default function SyncCollectionForm({
                                             <SelectTrigger>
                                               <SelectValue placeholder="Select shipping method" />
                                             </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="n/a">
-                                                n/a
-                                              </SelectItem>
-                                              <SelectItem value="EMS">
-                                                EMS
-                                              </SelectItem>
-                                              <SelectItem value="SAL">
-                                                SAL
-                                              </SelectItem>
-                                              <SelectItem value="AIRMAIL">
-                                                AIRMAIL
-                                              </SelectItem>
-                                              <SelectItem value="SURFACE">
-                                                SURFACE
-                                              </SelectItem>
-                                              <SelectItem value="FEDEX">
-                                                FEDEX
-                                              </SelectItem>
-                                              <SelectItem value="DHL">
-                                                DHL
-                                              </SelectItem>
-                                              <SelectItem value="Colissimo">
-                                                Colissimo
-                                              </SelectItem>
-                                              <SelectItem value="UPS">
-                                                UPS
-                                              </SelectItem>
-                                              <SelectItem value="Domestic">
-                                                Domestic
-                                              </SelectItem>
-                                            </SelectContent>
+                                              <SelectContent>
+                                                {SHIPPING_METHODS.map((method) => (
+                                                  <SelectItem key={method} value={method}>
+                                                    {method}
+                                                  </SelectItem>
+                                                ))}
+                                              </SelectContent>
                                           </Select>
                                         </div>
                                       )}

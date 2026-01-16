@@ -151,10 +151,10 @@ function ReleaseCard({
         <img
           src={item.image}
           alt={item.title}
-          className="w-12 h-12 object-cover object-top rounded flex-shrink-0"
+          className="w-12 h-12 object-cover object-top rounded shrink-0"
         />
       ) : (
-        <div className="w-12 h-12 bg-muted rounded flex-shrink-0 flex items-center justify-center">
+        <div className="w-12 h-12 bg-muted rounded shrink-0 flex items-center justify-center">
           <span className="text-xs text-muted-foreground">No img</span>
         </div>
       )}

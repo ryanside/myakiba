@@ -52,6 +52,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { extractMfcItemId } from "@/lib/sync/utils";
+import { SHIPPING_METHODS, ORDER_STATUSES, CONDITIONS } from "@myakiba/constants";
 
 export default function SyncOrderForm({
   setCurrentStep,
@@ -195,7 +196,7 @@ export default function SyncOrderForm({
                 <ChevronDown className="h-4 w-4 z-10" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
+            <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width)">
               <div className="flex gap-2 py-1">
                 <Button
                   variant="ghost"
@@ -288,7 +289,7 @@ export default function SyncOrderForm({
             name="status"
             validators={{
               onChange: z.enum(
-                ["Ordered", "Paid", "Shipped", "Owned"],
+                ORDER_STATUSES,
                 "Status is required"
               ),
             }}
@@ -305,10 +306,11 @@ export default function SyncOrderForm({
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Ordered">Ordered</SelectItem>
-                    <SelectItem value="Owned">Owned</SelectItem>
-                    <SelectItem value="Paid">Paid</SelectItem>
-                    <SelectItem value="Shipped">Shipped</SelectItem>
+                    {ORDER_STATUSES.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {status}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 {field.state.meta.errors &&
@@ -323,21 +325,7 @@ export default function SyncOrderForm({
           <orderForm.Field
             name="shippingMethod"
             validators={{
-              onChange: z.enum(
-                [
-                  "n/a",
-                  "EMS",
-                  "SAL",
-                  "AIRMAIL",
-                  "SURFACE",
-                  "FEDEX",
-                  "DHL",
-                  "Colissimo",
-                  "UPS",
-                  "Domestic",
-                ],
-                "Shipping method is required"
-              ),
+              onChange: z.enum(SHIPPING_METHODS, "Shipping method is required"),
             }}
             children={(field) => (
               <div className="grid gap-2">
@@ -352,16 +340,11 @@ export default function SyncOrderForm({
                     <SelectValue placeholder="Select shipping method" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="n/a">n/a</SelectItem>
-                    <SelectItem value="EMS">EMS</SelectItem>
-                    <SelectItem value="SAL">SAL</SelectItem>
-                    <SelectItem value="AIRMAIL">AIRMAIL</SelectItem>
-                    <SelectItem value="SURFACE">SURFACE</SelectItem>
-                    <SelectItem value="FEDEX">FEDEX</SelectItem>
-                    <SelectItem value="DHL">DHL</SelectItem>
-                    <SelectItem value="Colissimo">Colissimo</SelectItem>
-                    <SelectItem value="UPS">UPS</SelectItem>
-                    <SelectItem value="Domestic">Domestic</SelectItem>
+                    {SHIPPING_METHODS.map((method) => (
+                      <SelectItem key={method} value={method}>
+                        {method}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -754,12 +737,11 @@ export default function SyncOrderForm({
                                                 <SelectValue placeholder="Select condition" />
                                               </SelectTrigger>
                                               <SelectContent>
-                                                <SelectItem value="New">
-                                                  New
-                                                </SelectItem>
-                                                <SelectItem value="Pre-Owned">
-                                                  Pre-Owned
-                                                </SelectItem>
+                                                {CONDITIONS.map((condition) => (
+                                                  <SelectItem key={condition} value={condition}>
+                                                    {condition}
+                                                  </SelectItem>
+                                                ))}
                                               </SelectContent>
                                             </Select>
                                           </div>
@@ -769,12 +751,7 @@ export default function SyncOrderForm({
                                         name={`items[${i}].status`}
                                         validators={{
                                           onChange: z.enum(
-                                            [
-                                              "Owned",
-                                              "Ordered",
-                                              "Paid",
-                                              "Shipped",
-                                            ],
+                                            ORDER_STATUSES,
                                             "Status is required"
                                           ),
                                         }}
@@ -797,18 +774,11 @@ export default function SyncOrderForm({
                                                 <SelectValue placeholder="Select status" />
                                               </SelectTrigger>
                                               <SelectContent>
-                                                <SelectItem value="Owned">
-                                                  Owned
-                                                </SelectItem>
-                                                <SelectItem value="Ordered">
-                                                  Ordered
-                                                </SelectItem>
-                                                <SelectItem value="Paid">
-                                                  Paid
-                                                </SelectItem>
-                                                <SelectItem value="Shipped">
-                                                  Shipped
-                                                </SelectItem>
+                                                {ORDER_STATUSES.map((status) => (
+                                                  <SelectItem key={status} value={status}>
+                                                    {status}
+                                                  </SelectItem>
+                                                ))}
                                               </SelectContent>
                                             </Select>
                                             {!statusField.state.meta
@@ -829,23 +799,12 @@ export default function SyncOrderForm({
 
                                     <orderForm.Field
                                       name={`items[${i}].shippingMethod`}
-                                      validators={{
-                                        onChange: z.enum(
-                                          [
-                                            "n/a",
-                                            "EMS",
-                                            "SAL",
-                                            "AIRMAIL",
-                                            "SURFACE",
-                                            "FEDEX",
-                                            "DHL",
-                                            "Colissimo",
-                                            "UPS",
-                                            "Domestic",
-                                          ],
-                                          "Shipping method is required"
-                                        ),
-                                      }}
+                                        validators={{
+                                          onChange: z.enum(
+                                            SHIPPING_METHODS,
+                                            "Shipping method is required"
+                                          ),
+                                        }}
                                       children={(shippingField) => (
                                         <div className="grid gap-2">
                                           <Label htmlFor={`shipping-${i}`}>
@@ -864,38 +823,13 @@ export default function SyncOrderForm({
                                             <SelectTrigger>
                                               <SelectValue placeholder="Select shipping method" />
                                             </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="n/a">
-                                                n/a
-                                              </SelectItem>
-                                              <SelectItem value="EMS">
-                                                EMS
-                                              </SelectItem>
-                                              <SelectItem value="SAL">
-                                                SAL
-                                              </SelectItem>
-                                              <SelectItem value="AIRMAIL">
-                                                AIRMAIL
-                                              </SelectItem>
-                                              <SelectItem value="SURFACE">
-                                                SURFACE
-                                              </SelectItem>
-                                              <SelectItem value="FEDEX">
-                                                FEDEX
-                                              </SelectItem>
-                                              <SelectItem value="DHL">
-                                                DHL
-                                              </SelectItem>
-                                              <SelectItem value="Colissimo">
-                                                Colissimo
-                                              </SelectItem>
-                                              <SelectItem value="UPS">
-                                                UPS
-                                              </SelectItem>
-                                              <SelectItem value="Domestic">
-                                                Domestic
-                                              </SelectItem>
-                                            </SelectContent>
+                                              <SelectContent>
+                                                {SHIPPING_METHODS.map((method) => (
+                                                  <SelectItem key={method} value={method}>
+                                                    {method}
+                                                  </SelectItem>
+                                                ))}
+                                              </SelectContent>
                                           </Select>
                                         </div>
                                       )}
