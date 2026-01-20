@@ -34,6 +34,7 @@ RUN bun run build
 WORKDIR /app
 
 RUN bun build --compile --minify --sourcemap --packages bundle ./apps/server/src/index.ts --outfile server
+RUN bun build --compile --minify-whitespace --minify-syntax ./apps/server/src/index.ts --outfile server
 
 # Our application runner
 FROM gcr.io/distroless/base-debian12:nonroot AS runner

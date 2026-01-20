@@ -1,6 +1,4 @@
-import { Hono } from "hono";
-import type { Variables } from "../..";
-import { zValidator } from "@hono/zod-validator";
+import { Elysia, status } from "elysia";
 import CollectionService from "./service";
 import {
   collectionQuerySchema,
@@ -9,217 +7,166 @@ import {
   collectionDeleteSchema,
 } from "./model";
 import { tryCatch } from "@myakiba/utils";
+import { betterAuth } from "@/middleware/better-auth";
 
-const collectionRouter = new Hono<{
-  Variables: Variables;
-}>()
+const collectionRouter = new Elysia({ prefix: "/collection" })
+  .use(betterAuth)
   .get(
     "/",
-    zValidator("query", collectionQuerySchema, (result, c) => {
-      if (!result.success) {
-        console.log(result.error);
-        return c.text("Invalid request!", 400);
-      }
-    }),
-    async (c) => {
-      const user = c.get("user");
-      if (!user) return c.text("Unauthorized", 401);
-
-      const validatedQuery = c.req.valid("query");
+    async ({ query, user }) => {
+      if (!user) return status(401, "Unauthorized");
 
       const { data: collection, error } = await tryCatch(
         CollectionService.getCollection(
           user.id,
-          validatedQuery.limit,
-          validatedQuery.offset,
-          validatedQuery.sort,
-          validatedQuery.order,
-          validatedQuery.paidMin,
-          validatedQuery.paidMax,
-          validatedQuery.shop,
-          validatedQuery.payDateStart,
-          validatedQuery.payDateEnd,
-          validatedQuery.shipDateStart,
-          validatedQuery.shipDateEnd,
-          validatedQuery.colDateStart,
-          validatedQuery.colDateEnd,
-          validatedQuery.shipMethod,
-          validatedQuery.relDateStart,
-          validatedQuery.relDateEnd,
-          validatedQuery.relPriceMin,
-          validatedQuery.relPriceMax,
-          validatedQuery.relCurrency,
-          validatedQuery.category,
-          validatedQuery.entries,
-          validatedQuery.scale,
-          validatedQuery.tags,
-          validatedQuery.condition,
-          validatedQuery.search
+          query.limit,
+          query.offset,
+          query.sort,
+          query.order,
+          query.paidMin,
+          query.paidMax,
+          query.shop,
+          query.payDateStart,
+          query.payDateEnd,
+          query.shipDateStart,
+          query.shipDateEnd,
+          query.colDateStart,
+          query.colDateEnd,
+          query.shipMethod,
+          query.relDateStart,
+          query.relDateEnd,
+          query.relPriceMin,
+          query.relPriceMax,
+          query.relCurrency,
+          query.category,
+          query.entries,
+          query.scale,
+          query.tags,
+          query.condition,
+          query.search
         )
       );
 
       if (error) {
         console.error("Error fetching collection table:", error, {
           userId: user.id,
-          limit: validatedQuery.limit,
-          offset: validatedQuery.offset,
-          sort: validatedQuery.sort,
-          order: validatedQuery.order,
+          limit: query.limit,
+          offset: query.offset,
+          sort: query.sort,
+          order: query.order,
         });
 
-        return c.text("Failed to get collection table", 500);
+        return status(500, "Failed to get collection table");
       }
 
-      return c.json({ collection });
-    }
+      return { collection };
+    },
+    { query: collectionQuerySchema, auth: true }
   )
   .get(
     "/:id",
-    zValidator("param", collectionParamSchema, (result, c) => {
-      if (!result.success) {
-        console.log(result.error);
-        return c.text("Invalid request param!", 400);
-      }
-    }),
-    async (c) => {
-      const user = c.get("user");
-      if (!user) return c.text("Unauthorized", 401);
-
-      const validatedParam = c.req.valid("param");
+    async ({ params, user }) => {
+      if (!user) return status(401, "Unauthorized");
 
       const { data: collectionItem, error } = await tryCatch(
-        CollectionService.getCollectionItem(user.id, validatedParam.id)
+        CollectionService.getCollectionItem(user.id, params.id)
       );
 
       if (error) {
         if (error.message === "COLLECTION_ITEM_NOT_FOUND") {
-          return c.text("Collection item not found", 404);
+          return status(404, "Collection item not found");
         }
 
         console.error("Error fetching collection item:", error, {
           userId: user.id,
-          collectionId: validatedParam.id,
+          collectionId: params.id,
         });
 
-        return c.text("Failed to get collection item", 500);
+        return status(500, "Failed to get collection item");
       }
 
-      return c.json({ collectionItem });
-    }
+      return { collectionItem };
+    },
+    { params: collectionParamSchema, auth: true }
   )
   .put(
     "/:id",
-    zValidator("param", collectionParamSchema, (result, c) => {
-      if (!result.success) {
-        console.log(result.error);
-        return c.text("Invalid request param!", 400);
-      }
-    }),
-    zValidator("json", collectionUpdateSchema, (result, c) => {
-      if (!result.success) {
-        console.log(result.error);
-        return c.text("Invalid request!", 400);
-      }
-    }),
-    async (c) => {
-      const user = c.get("user");
-      if (!user) return c.text("Unauthorized", 401);
-
-      const validatedJSON = c.req.valid("json");
-      const validatedParam = c.req.valid("param");
+    async ({ params, body, user }) => {
+      if (!user) return status(401, "Unauthorized");
 
       const { data: update, error } = await tryCatch(
-        CollectionService.updateCollectionItem(
-          user.id,
-          validatedParam.id,
-          validatedJSON
-        )
+        CollectionService.updateCollectionItem(user.id, params.id, body)
       );
 
       if (error) {
         if (error.message === "COLLECTION_ITEM_NOT_FOUND") {
-          return c.text("Collection item not found", 404);
+          return status;
         }
 
         console.error("Error updating collection item:", error, {
           userId: user.id,
-          collectionId: validatedParam.id,
-          updateData: validatedJSON,
+          collectionId: params.id,
+          updateData: body,
         });
 
-        return c.text("Failed to update collection item", 500);
+        return status(500, "Failed to update collection item");
       }
 
-      return c.json({ update });
-    }
+      return { update };
+    },
+    { body: collectionUpdateSchema, params: collectionParamSchema, auth: true }
   )
   .delete(
     "/:id",
-    zValidator("param", collectionParamSchema, (result, c) => {
-      if (!result.success) {
-        console.log(result.error);
-        return c.text("Invalid request param!", 400);
-      }
-    }),
-    async (c) => {
-      const user = c.get("user");
-      if (!user) return c.text("Unauthorized", 401);
-
-      const validatedParam = c.req.valid("param");
+    async ({ params, user }) => {
+      if (!user) return status(401, "Unauthorized");
 
       const { data: deleted, error } = await tryCatch(
-        CollectionService.deleteCollectionItem(user.id, validatedParam.id)
+        CollectionService.deleteCollectionItem(user.id, params.id)
       );
 
       if (error) {
         if (error.message === "COLLECTION_ITEM_NOT_FOUND") {
-          return c.text("Collection item not found", 404);
+          return status(404, "Collection item not found");
         }
 
         console.error("Error deleting collection item:", error, {
           userId: user.id,
-          collectionId: validatedParam.id,
+          collectionId: params.id,
         });
 
-        return c.text("Failed to delete collection item", 500);
+        return status(500, "Failed to delete collection item");
       }
 
-      return c.json({ deleted });
-    }
+      return { deleted };
+    },
+    { params: collectionParamSchema, auth: true }
   )
   .delete(
     "/",
-    zValidator("json", collectionDeleteSchema, (result, c) => {
-      if (!result.success) {
-        console.log(result.error);
-        return c.text("Invalid request!", 400);
-      }
-    }),
-    async (c) => {
-      const user = c.get("user");
-      if (!user) return c.text("Unauthorized", 401);
-
-      const validatedJSON = c.req.valid("json");
+    async ({ body, user }) => {
+      if (!user) return status(401, "Unauthorized");
 
       const { error } = await tryCatch(
-        CollectionService.deleteCollectionItems(user.id, validatedJSON.ids)
+        CollectionService.deleteCollectionItems(user.id, body.ids)
       );
 
       if (error) {
         if (error.message === "COLLECTION_ITEMS_NOT_FOUND") {
-          return c.text("Collection item(s) not found", 404);
+          return status(404, "Collection item(s) not found");
         }
 
         console.error("Error deleting collection item(s):", error, {
           userId: user.id,
-          collectionIds: validatedJSON.ids,
+          collectionIds: body.ids,
         });
 
-        return c.text("Failed to delete collection item(s)", 500);
+        return status(500, "Failed to delete collection item(s)");
       }
 
-      return c.text("Collection item(s) deleted successfully");
-    }
+      return "Collection item(s) deleted successfully";
+    },
+    { body: collectionDeleteSchema, auth: true }
   );
 
 export default collectionRouter;

@@ -18,6 +18,7 @@ import { v5 as uuidv5 } from "uuid";
 import type { scrapedItem } from "./lib/types";
 import { env } from "@myakiba/env/worker";
 import type { Category } from "@myakiba/types";
+import { CATEGORIES } from "@myakiba/constants";
 
 const redis = new Redis({
   host: env.REDIS_HOST,
@@ -123,7 +124,7 @@ const scrapeSingleItem = async (
 
       const title = $("h1.title").text().trim();
 
-      let category = "";
+      let category: Category | null = null;
       const classification: Array<{ id: number; name: string; role: string }> =
         [];
       const version: string[] = [];
@@ -156,7 +157,10 @@ const scrapeSingleItem = async (
 
         switch (label) {
           case "Category":
-            category = $element.find("span").text().trim();
+            const rawCategory = $element.find("span").text().trim();
+            if (CATEGORIES.includes(rawCategory as Category)) {
+              category = rawCategory as Category;
+            }
             break;
           case "Classification":
           case "Classifications":
@@ -204,6 +208,10 @@ const scrapeSingleItem = async (
             }
             break;
         }
+      }
+
+      if (!category) {
+        throw new Error(`Invalid or missing category for ID ${id}`);
       }
 
       let image = "";

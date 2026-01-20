@@ -1,120 +1,78 @@
-import { Hono } from "hono";
-import type { Variables } from "../..";
-import { zValidator } from "@hono/zod-validator";
-import * as z from "zod";
+import { Elysia, status } from "elysia";
 import ItemService from "./service";
 import { tryCatch } from "@myakiba/utils";
+import { betterAuth } from "@/middleware/better-auth";
+import { itemParamSchema } from "./model";
 
-const itemsRouter = new Hono<{ Variables: Variables }>()
+const itemsRouter = new Elysia({ prefix: "/items" })
+  .use(betterAuth)
   .get(
     "/:itemId",
-    zValidator(
-      "param",
-      z.object({ itemId: z.coerce.number() }),
-      (result, c) => {
-        if (!result.success) {
-          console.error(result.error);
-          return c.text("Invalid request!", 400);
-        }
-      }
-    ),
-    async (c) => {
-      const { itemId } = c.req.valid("param");
-      const { data: item, error } = await tryCatch(ItemService.getItem(itemId));
+    async ({ params }) => {
+      const { data: item, error } = await tryCatch(
+        ItemService.getItem(params.itemId)
+      );
       if (error) {
         console.error("Error fetching item:", error, {
-          itemId,
+          itemId: params.itemId,
         });
-        return c.text("Failed to get item", 500);
+        return status(500, "Failed to get item");
       }
-      return c.json({ item });
-    }
+      return { item };
+    },
+    { params: itemParamSchema }
   )
   .get(
     "/:itemId/orders",
-    zValidator(
-      "param",
-      z.object({ itemId: z.coerce.number() }),
-      (result, c) => {
-        if (!result.success) {
-          console.error(result.error);
-          return c.text("Invalid request!", 400);
-        }
-      }
-    ),
-    async (c) => {
-      const user = c.get("user");
-      if (!user) return c.text("Unauthorized", 401);
+    async ({ params, user }) => {
+      if (!user) return status(401, "Unauthorized");
 
-      const { itemId } = c.req.valid("param");
       const { data: orders, error } = await tryCatch(
-        ItemService.getItemRelatedOrders(user.id, itemId)
+        ItemService.getItemRelatedOrders(user.id, params.itemId)
       );
       if (error) {
-        return c.text("Failed to get item related orders", 500);
+        return status(500, "Failed to get item related orders");
       }
-      return c.json({ orders });
-    }
+      return { orders };
+    },
+    { params: itemParamSchema, auth: true }
   )
   .get(
     "/:itemId/collection",
-    zValidator(
-      "param",
-      z.object({ itemId: z.coerce.number() }),
-      (result, c) => {
-        if (!result.success) {
-          console.error(result.error);
-          return c.text("Invalid request!", 400);
-        }
-      }
-    ),
-    async (c) => {
-      const user = c.get("user");
-      if (!user) return c.text("Unauthorized", 401);
+    async ({ params, user }) => {
+      if (!user) return status(401, "Unauthorized");
 
-      const { itemId } = c.req.valid("param");
       const { data: collection, error } = await tryCatch(
-        ItemService.getItemRelatedCollection(user.id, itemId)
+        ItemService.getItemRelatedCollection(user.id, params.itemId)
       );
       if (error) {
-        return c.text("Failed to get item related collections", 500);
+        return status(500, "Failed to get item related collections");
       }
-      return c.json({ collection });
-    }
+      return { collection };
+    },
+    { params: itemParamSchema, auth: true }
   )
   .get(
     "/:itemId/releases",
-    zValidator(
-      "param",
-      z.object({
-        itemId: z.coerce.number(),
-      }),
-      (result, c) => {
-        if (!result.success) {
-          console.error(result.error);
-          return c.text("Invalid request!", 400);
-        }
-      }
-    ),
-    async (c) => {
-      const { itemId } = c.req.valid("param");
-
+    async ({ params }) => {
       const { data: releases, error } = await tryCatch(
-        ItemService.getItemReleases(itemId)
+        ItemService.getItemReleases(params.itemId)
       );
 
       if (error) {
         if (error.message === "FAILED_TO_GET_ITEM_RELEASES") {
-          return c.text("Failed to get item releases", 500);
+          return status(500, "Failed to get item releases");
         }
 
         console.error("Error fetching item releases:", error, {
-          itemId,
+          itemId: params.itemId,
         });
-        return c.text("Failed to get item releases", 500);
+        return status(500, "Failed to get item releases");
       }
 
-      return c.json(releases);
-    }
+      return releases;
+    },
+    { params: itemParamSchema }
   );
+
 export default itemsRouter;

@@ -52,6 +52,7 @@ export default function HeroSection({
             alt="hero background image"
             className="absolute inset-0 size-full object-cover opacity-100"
             loading="eager"
+            rel="preload"
             fetchPriority="high"
           />
 
@@ -61,6 +62,7 @@ export default function HeroSection({
               alt="app screen"
               className="object-top-left size-full object-cover"
               loading="eager"
+              rel="preload"
               fetchPriority="high"
             />
           </div>

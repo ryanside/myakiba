@@ -12,6 +12,8 @@ import {
 } from "./extract";
 import { createFetchOptions, setJobStatus } from "./utils";
 import type { scrapedItem } from "./types";
+import type { Category } from "@myakiba/types";
+import { CATEGORIES } from "@myakiba/constants";
 import Redis from "ioredis";
 import { env } from "@myakiba/env/worker";
 
@@ -127,7 +129,7 @@ export const scrapeSingleItem = async (
 
       const title = $("h1.title").text().trim();
 
-      let category = "";
+      let category: Category | null = null;
       const classification: Array<{ id: number; name: string; role: string }> =
         [];
       const version: string[] = [];
@@ -159,9 +161,13 @@ export const scrapeSingleItem = async (
         const $dataValue = $element.find(".data-value");
 
         switch (label) {
-          case "Category":
-            category = $element.find("span").text().trim();
+          case "Category": {
+            const rawCategory = $element.find("span").text().trim();
+            if (CATEGORIES.includes(rawCategory as Category)) {
+              category = rawCategory as Category;
+            }
             break;
+          }
           case "Classification":
           case "Classifications":
             classification.push(...extractEntitiesWithRoles($element, $));
@@ -208,6 +214,10 @@ export const scrapeSingleItem = async (
             }
             break;
         }
+      }
+
+      if (!category) {
+        throw new Error(`Invalid or missing category for ID ${id}`);
       }
 
       let image = "";

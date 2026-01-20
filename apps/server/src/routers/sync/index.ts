@@ -1,7 +1,6 @@
-import { Hono } from "hono";
+import { Elysia, status } from "elysia";
 import * as z from "zod";
-import { zValidator } from "@hono/zod-validator";
-import type { Variables } from "../..";
+import { betterAuth } from "@/middleware/better-auth";
 import {
   collectionSyncSchema,
   csvItemSchema,
@@ -16,29 +15,19 @@ import SyncService from "./service";
 import { tryCatch } from "@myakiba/utils";
 import { createId } from "@paralleldrive/cuid2";
 import {
-  csvRateLimit,
-  orderRateLimit,
-  collectionRateLimit,
+  csvRateLimitHandler,
+  orderRateLimitHandler,
+  collectionRateLimitHandler,
 } from "@/middleware/sync-rate-limit";
 
-const syncRouter = new Hono<{
-  Variables: Variables;
-}>()
+const syncRouter = new Elysia({ prefix: "/sync" })
+  .use(betterAuth)
   .post(
     "/csv",
-    csvRateLimit,
-    zValidator("json", z.array(csvItemSchema), (result, c) => {
-      if (!result.success) {
-        return c.text("Invalid request!", 400);
-      }
-    }),
-    async (c) => {
-      const user = c.get("user");
-      if (!user) return c.text("Unauthorized", 401);
+    async ({ body, user }) => {
+      if (!user) return status(401, "Unauthorized");
 
-      const validatedJSON = c.req.valid("json");
-
-      const items = SyncService.assignOrderIdsAndSanitizeDates(validatedJSON);
+      const items = SyncService.assignOrderIdsAndSanitizeDates(body);
 
       const { data: result, error: processItemsError } = await tryCatch(
         SyncService.processItems(items, user.id)
@@ -49,7 +38,7 @@ const syncRouter = new Hono<{
           userId: user.id,
           collectionItems: items,
         });
-        return c.text("Failed to process sync request", 500);
+        return status(500, "Failed to process sync request");
       }
 
       const {
@@ -73,7 +62,7 @@ const syncRouter = new Hono<{
               orderItems: orderItems,
             }
           );
-          return c.text("Failed to insert to collection and orders", 500);
+          return status(500, "Failed to insert to collection and orders");
         }
       }
 
@@ -87,12 +76,12 @@ const syncRouter = new Hono<{
 
         if (queueCSVSyncJobError) {
           if (queueCSVSyncJobError.message === "FAILED_TO_QUEUE_CSV_SYNC_JOB") {
-            return c.text("Failed to queue CSV sync job", 500);
+            return status(500, "Failed to queue CSV sync job");
           }
           if (
             queueCSVSyncJobError.message === "FAILED_TO_SET_JOB_STATUS_IN_REDIS"
           ) {
-            return c.text("Failed to set job status", 500);
+            return status(500, "Failed to set job status");
           }
           console.error(
             "Error during queueCSVSyncJob():",
@@ -102,42 +91,41 @@ const syncRouter = new Hono<{
               itemsToScrape: itemsToScrape,
             }
           );
-          return c.text("Failed to queue CSV sync job", 500);
+          return status(500, "Failed to queue CSV sync job");
         }
 
         jobId = jobIdData;
         statusMessage = jobId ? "Job added to queue." : "Sync completed";
       } else if (collectionItems.length === 0 && itemsToScrape.length === 0) {
-        statusMessage = "All items already synced to your collection. If you want to add duplicates, use Collection/Order Sync.";
+        statusMessage =
+          "All items already synced to your collection. If you want to add duplicates, use Collection/Order Sync.";
       } else {
-        statusMessage = "Sync completed - All items already in myakiba database, no scraping needed";
+        statusMessage =
+          "Sync completed - All items already in myakiba database, no scraping needed";
       }
 
-      return c.json({
+      return {
         status: statusMessage,
         isFinished: jobId ? false : true,
         existingItemsToInsert: collectionItems.length,
         newItems: itemsToScrape.length,
         jobId,
-      });
+      };
+    },
+    {
+      body: z.array(csvItemSchema),
+      auth: true,
+      beforeHandle: [csvRateLimitHandler],
     }
   )
   .post(
     "/order",
-    orderRateLimit,
-    zValidator("json", orderSyncSchema, (result, c) => {
-      if (!result.success) {
-        return c.text("Invalid request!", 400);
-      }
-    }),
-    async (c) => {
-      const user = c.get("user");
-      if (!user) return c.text("Unauthorized", 401);
+    async ({ body, user }) => {
+      if (!user) return status(401, "Unauthorized");
 
-      const validatedJSON = c.req.valid("json");
       const orderId = createId();
 
-      const itemIds = validatedJSON.items.map(
+      const itemIds = body.items.map(
         (item: orderItemSyncType) => item.itemId
       );
 
@@ -154,10 +142,10 @@ const syncRouter = new Hono<{
             itemIds: itemIds,
           }
         );
-        return c.text("Failed to check for existing items with releases", 500);
+        return status(500, "Failed to check for existing items with releases");
       }
 
-      const releaseDates = validatedJSON.items
+      const releaseDates = body.items
         .map((item: orderItemSyncType) =>
           existingItems.releaseDates.get(item.itemId)
         )
@@ -171,7 +159,7 @@ const syncRouter = new Hono<{
           : null;
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { items, ...orderData } = validatedJSON;
+      const { items, ...orderData } = body;
       const order: UpdatedSyncOrder = {
         ...orderData,
         userId: user.id,
@@ -179,7 +167,7 @@ const syncRouter = new Hono<{
         releaseMonthYear: latestReleaseDate,
       };
 
-      const itemsToScrape: UpdatedSyncOrderItem[] = validatedJSON.items
+      const itemsToScrape: UpdatedSyncOrderItem[] = body.items
         .filter(
           (item: orderItemSyncType) => !existingItems.releases.get(item.itemId)
         )
@@ -190,7 +178,7 @@ const syncRouter = new Hono<{
           userId: user.id,
         }));
 
-      const itemsToInsert: UpdatedSyncOrderItem[] = validatedJSON.items
+      const itemsToInsert: UpdatedSyncOrderItem[] = body.items
         .filter((item: orderItemSyncType) =>
           existingItems.releases.get(item.itemId)
         )
@@ -217,13 +205,13 @@ const syncRouter = new Hono<{
           if (
             queueOrderSyncJobError.message === "FAILED_TO_QUEUE_ORDER_SYNC_JOB"
           ) {
-            return c.text("Failed to queue order sync job", 500);
+            return status(500, "Failed to queue order sync job");
           }
           if (
             queueOrderSyncJobError.message ===
             "FAILED_TO_SET_JOB_STATUS_IN_REDIS"
           ) {
-            return c.text("Failed to set job status", 500);
+            return status(500, "Failed to set job status");
           }
           console.error(
             "Error during queueOrderSyncJob():",
@@ -235,7 +223,7 @@ const syncRouter = new Hono<{
               itemsToInsert: itemsToInsert,
             }
           );
-          return c.text("Failed to queue order sync job", 500);
+          return status(500, "Failed to queue order sync job");
         }
 
         jobId = jobIdData;
@@ -254,36 +242,30 @@ const syncRouter = new Hono<{
               orderItems: [order],
             }
           );
-          return c.text("Failed to insert to collection and orders", 500);
+          return status(500, "Failed to insert to collection and orders");
         }
       }
 
-      return c.json({
+      return {
         status: jobId ? "Job added to queue." : "Sync completed",
         isFinished: jobId ? false : true,
         existingItemsToInsert: itemsToInsert.length,
         newItems: itemsToScrape.length,
         jobId,
-      });
+      };
+    },
+    {
+      body: orderSyncSchema,
+      auth: true,
+      beforeHandle: [orderRateLimitHandler],
     }
   )
   .post(
     "/collection",
-    collectionRateLimit,
-    zValidator("json", z.array(collectionSyncSchema), (result, c) => {
-      if (!result.success) {
-        return c.text("Invalid request!", 400);
-      }
-    }),
-    async (c) => {
-      const user = c.get("user");
-      if (!user) return c.text("Unauthorized", 401);
+    async ({ body, user }) => {
+      if (!user) return status(401, "Unauthorized");
 
-      const validatedJSON = c.req.valid("json");
-
-      const itemIds = validatedJSON.map(
-        (item: collectionSyncType) => item.itemId
-      );
+      const itemIds = body.map((item: collectionSyncType) => item.itemId);
 
       const { data: existingItems, error: existingItemsError } = await tryCatch(
         SyncService.getExistingItemsWithReleases(itemIds)
@@ -298,10 +280,10 @@ const syncRouter = new Hono<{
             itemIds: itemIds,
           }
         );
-        return c.text("Failed to check for existing items with releases", 500);
+        return status(500, "Failed to check for existing items with releases");
       }
 
-      const itemsToScrape: UpdatedSyncCollection[] = validatedJSON
+      const itemsToScrape: UpdatedSyncCollection[] = body
         .filter(
           (item: collectionSyncType) => !existingItems.releases.get(item.itemId)
         )
@@ -311,7 +293,7 @@ const syncRouter = new Hono<{
           userId: user.id,
         }));
 
-      const itemsToInsert: UpdatedSyncCollection[] = validatedJSON
+      const itemsToInsert: UpdatedSyncCollection[] = body
         .filter((item: collectionSyncType) =>
           existingItems.releases.get(item.itemId)
         )
@@ -337,13 +319,13 @@ const syncRouter = new Hono<{
             queueCollectionSyncJobError.message ===
             "FAILED_TO_QUEUE_COLLECTION_SYNC_JOB"
           ) {
-            return c.text("Failed to queue collection sync job", 500);
+            return status(500, "Failed to queue collection sync job");
           }
           if (
             queueCollectionSyncJobError.message ===
             "FAILED_TO_SET_JOB_STATUS_IN_REDIS"
           ) {
-            return c.text("Failed to set job status", 500);
+            return status(500, "Failed to set job status");
           }
           console.error(
             "Error during queueCollectionSyncJob():",
@@ -354,7 +336,7 @@ const syncRouter = new Hono<{
               itemsToInsert: itemsToInsert,
             }
           );
-          return c.text("Failed to queue collection sync job", 500);
+          return status(500, "Failed to queue collection sync job");
         }
 
         jobId = jobIdData;
@@ -372,47 +354,36 @@ const syncRouter = new Hono<{
               itemsToInsert: itemsToInsert,
             }
           );
-          return c.text("Failed to insert to collection and orders", 500);
+          return status(500, "Failed to insert to collection and orders");
         }
       }
 
-      return c.json({
+      return {
         status: jobId ? "Job added to queue." : "Sync completed",
         isFinished: jobId ? false : true,
         existingItemsToInsert: itemsToInsert.length,
         newItems: itemsToScrape.length,
         jobId,
-      });
+      };
+    },
+    {
+      body: z.array(collectionSyncSchema),
+      auth: true,
+      beforeHandle: [collectionRateLimitHandler],
     }
   )
   .get(
     "/job-status",
-    zValidator("query", z.object({ jobId: z.string().min(1) }), (result, c) => {
-      if (!result.success) {
-        return c.json(
-          {
-            status: "Missing jobId query parameter",
-            finished: true,
-            createdAt: new Date().toISOString(),
-          },
-          400
-        );
-      }
-    }),
-    async (c) => {
-      const user = c.get("user");
+    async ({ query, user }) => {
       if (!user) {
-        return c.json(
-          {
-            status: "Unauthorized",
-            finished: true,
-            createdAt: new Date().toISOString(),
-          },
-          401
-        );
+        return status(401, {
+          status: "Unauthorized",
+          finished: true,
+          createdAt: new Date().toISOString(),
+        });
       }
 
-      const { jobId } = c.req.valid("query");
+      const { jobId } = query;
 
       const { data: jobStatus, error } = await tryCatch(
         SyncService.getJobStatus(jobId)
@@ -420,14 +391,11 @@ const syncRouter = new Hono<{
 
       if (error) {
         if (error.message === "SYNC_JOB_NOT_FOUND") {
-          return c.json(
-            {
-              status: "Job not found",
-              finished: true,
-              createdAt: new Date().toISOString(),
-            },
-            404
-          );
+          return status(404, {
+            status: "Job not found",
+            finished: true,
+            createdAt: new Date().toISOString(),
+          });
         }
 
         console.error("Error fetching job status:", error, {
@@ -435,21 +403,22 @@ const syncRouter = new Hono<{
           userId: user.id,
         });
 
-        return c.json(
-          {
-            status: "Error fetching job status",
-            finished: true,
-            createdAt: new Date().toISOString(),
-          },
-          500
-        );
+        return status(500, {
+          status: "Error fetching job status",
+          finished: true,
+          createdAt: new Date().toISOString(),
+        });
       }
 
-      return c.json({
+      return {
         status: jobStatus.status,
         finished: jobStatus.finished,
         createdAt: jobStatus.createdAt,
-      });
+      };
+    },
+    {
+      query: z.object({ jobId: z.string().min(1) }),
+      auth: true,
     }
   );
 

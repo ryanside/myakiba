@@ -1,53 +1,44 @@
-import { client } from "@/lib/hono-client";
+import { app, getErrorMessage } from "@/lib/treaty-client";
 import type { userItem, SyncOrder, SyncCollectionItem } from "@/lib/sync/types";
 
 export async function sendItems(userItems: userItem[]) {
-  const response = await client.api.sync.csv.$post({
-    json: userItems,
-  });
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `HTTP ${response.status}`);
+  const { data, error } = await app.api.sync.csv.post(userItems);
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to send items"));
   }
-  return response.json();
+  return data;
 }
 
 export async function sendOrder(order: SyncOrder) {
-  const response = await client.api.sync.order.$post({
-    json: order,
-  });
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `HTTP ${response.status}`);
+  const { data, error } = await app.api.sync.order.post(order);
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to send order"));
   }
-  return response.json();
+  return data;
 }
 
 export async function sendCollection(collection: SyncCollectionItem[]) {
-  const response = await client.api.sync.collection.$post({
-    json: collection,
-  });
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `HTTP ${response.status}`);
+  const { data, error } = await app.api.sync.collection.post(collection);
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to send collection"));
   }
-  return response.json();
+  return data;
 }
 
 export async function getJobStatus(jobId: string) {
-  const response = await client.api.sync["job-status"].$get({
+  const { data, error } = await app.api.sync["job-status"].get({
     query: { jobId },
   });
 
-  if (!response.ok) {
-    if (response.status === 401) {
+  if (error) {
+    if (error.status === 401) {
       return { status: "Unauthorized", finished: true };
     }
-    if (response.status === 404) {
+    if (error.status === 404) {
       return { status: "Job not found", finished: true };
     }
     return { status: "Error fetching job status", finished: true };
   }
 
-  return response.json();
+  return data;
 }

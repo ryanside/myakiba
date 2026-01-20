@@ -48,7 +48,7 @@ I wasn’t satisfied with any of these options as a collector, so I built my own
 - **React (Vite)** - Frontend
 - **TanStack Router, Query, Table, Form** - Major frontend tools
 - **TailwindCSS & shadcn/ui** - Styling
-- **Hono** - Backend
+- **Elysia** - Backend
 - **Bun** - Runtime + package manager
 - **Drizzle** - ORM
 - **PostgreSQL** - Database
@@ -161,7 +161,7 @@ The API is running at [http://localhost:3000](http://localhost:3000).
 myakiba/
 ├── apps/
 │   ├── web/         # Frontend application (Vite-React + TanStack Router)
-│   ├── server/      # Backend API (Hono + Bun)
+│   ├── server/      # Backend API (Elysia + Bun)
 │   └── worker/      # Background worker for scraping and jobs
 ├── packages/
 │   └── eslint-config/  # Shared ESLint configuration

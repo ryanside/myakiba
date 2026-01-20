@@ -1,85 +1,122 @@
-import "dotenv/config";
+import { Elysia } from "elysia";
+import { cors } from "@elysiajs/cors";
+import { logixlysia } from "logixlysia";
 import { auth } from "@myakiba/auth";
 import { env } from "@myakiba/env/server";
-import { Hono } from "hono";
-import { cors } from "hono/cors";
-import { csrf } from "hono/csrf";
-import { logger } from "hono/logger";
-import { serveStatic } from "hono/bun";
-import syncRouter from "./routers/sync";
-import dashboardRouter from "./routers/dashboard";
+import { openapi } from "@elysiajs/openapi";
+import { OpenAPI } from "@myakiba/auth";
+import { staticPlugin } from "@elysiajs/static";
+import { resolve } from "path";
+import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
+import * as z from "zod";
 import analyticsRouter from "./routers/analytics";
-import ordersRouter from "./routers/orders";
 import collectionRouter from "./routers/collection";
-import itemsRouter from "./routers/items";
+import dashboardRouter from "./routers/dashboard";
 import entriesRouter from "./routers/entries";
+import itemsRouter from "./routers/items";
+import ordersRouter from "./routers/orders";
 import searchRouter from "./routers/search";
 import settingsRouter from "./routers/settings";
+import syncRouter from "./routers/sync";
 import waitlistRouter from "./routers/waitlist";
 
-const app = new Hono<{
-  Variables: Variables;
-}>();
+const resolveServerDistPath = (): string => {
+  const fromEnv: string | undefined = process.env.STATIC_ASSETS_DIR;
 
-app.use(logger());
-app.use(
-  "/*",
-  cors({
-    origin: env.CORS_ORIGIN.split(",").map((origin: string) => origin.trim()),
-    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization", "x-captcha-response"],
-    credentials: true,
-  })
-);
+  const candidates: readonly string[] = [
+    ...(fromEnv ? [fromEnv] : []),
+    resolve(process.cwd(), "dist"),
+    resolve(process.cwd(), "apps/server/dist"),
+  ];
 
-app.use(
-  csrf({
-    origin: env.CORS_ORIGIN.split(",").map((origin: string) => origin.trim()),
-  })
-);
-
-app.get("/health", (c) => c.json({ status: "ok" }));
-
-app.use("*", async (c, next) => {
-  const session = await auth.api.getSession({ headers: c.req.raw.headers });
-
-  if (!session) {
-    c.set("user", null);
-    c.set("session", null);
-    return next();
+  for (const candidate of candidates) {
+    if (existsSync(resolve(candidate, "index.html"))) return candidate;
   }
 
-  c.set("user", session.user);
-  c.set("session", session.session);
-  return next();
-});
+  // Fall back to the most common runtime layout.
+  return resolve(process.cwd(), "dist");
+};
 
-app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
+const serverDistPath = resolveServerDistPath();
+
+const isHtmlNavigationRequest = (request: Request): boolean => {
+  const acceptHeader: string = request.headers.get("accept") ?? "";
+  return acceptHeader.includes("text/html");
+};
+
+const isAssetPath = (pathname: string): boolean => pathname.includes(".");
+
+const serveIndexHtml = async (distDir: string): Promise<Response> => {
+  const indexHtmlPath: string = resolve(distDir, "index.html");
+  const indexHtml: string = await readFile(indexHtmlPath, "utf8");
+  return new Response(indexHtml, {
+    headers: { "content-type": "text/html; charset=utf-8" },
+  });
+};
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const routes = app
-  .basePath("/api")
-  .get("/version", (c) => c.json({ buildId: env.BUILD_ID }))
-  .route("/sync", syncRouter)
-  .route("/dashboard", dashboardRouter)
-  .route("/analytics", analyticsRouter)
-  .route("/orders", ordersRouter)
-  .route("/collection", collectionRouter)
-  .route("/items", itemsRouter)
-  .route("/entries", entriesRouter)
-  .route("/search", searchRouter)
-  .route("/settings", settingsRouter)
-  .route("/waitlist", waitlistRouter);
+const app = new Elysia()
+  .use(logixlysia())
+  .use(
+    cors({
+      origin: env.CORS_ORIGIN,
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization", "x-captcha-response"],
+      credentials: true,
+    })
+  )
+  .use(
+    openapi({
+      mapJsonSchema: {
+        zod: z.toJSONSchema,
+      },
+      documentation: {
+        components: await OpenAPI.components,
+        paths: await OpenAPI.getPaths(),
+      },
+    })
+  )
+  .get("/api/auth/*", ({ request }) => auth.handler(request))
+  .post("/api/auth/*", ({ request }) => auth.handler(request))
+  .get("/health", () => ({ status: "ok" }))
+  .group("/api", (app) =>
+    app
+      .get("/version", () => ({ buildId: env.BUILD_ID }), {
+        response: z.object({ buildId: z.string() }),
+      })
+      .use(analyticsRouter)
+      .use(collectionRouter)
+      .use(dashboardRouter)
+      .use(entriesRouter)
+      .use(itemsRouter)
+      .use(ordersRouter)
+      .use(searchRouter)
+      .use(settingsRouter)
+      .use(syncRouter)
+      .use(waitlistRouter)
+  )
+  .get("/", () => serveIndexHtml(serverDistPath))
+  .use(
+    staticPlugin({
+      assets: serverDistPath,
+      prefix: "/",
+      ignorePatterns: ["index.html"],
+    })
+  )
+  // SPA fallback (TanStack Router) for deep links, but only for real HTML navigations.
+  .onError(({ code, request }) => {
+    if (code !== "NOT_FOUND") return;
 
-app.get("*", serveStatic({ root: "./dist" }));
-app.get("*", serveStatic({ path: "./dist/index.html" }));
+    const pathname: string = new URL(request.url).pathname;
+    if (pathname.startsWith("/api")) return;
+    if (isAssetPath(pathname)) return;
+    if (!isHtmlNavigationRequest(request)) return;
 
-export default {
-  fetch: app.fetch,
-};
+    return serveIndexHtml(serverDistPath);
+  })
+  .listen(3000, () => {
+    console.log("Server is running on http://localhost:3000");
+  });
 
-export type AppType = typeof routes;
-export type Variables = {
-  user: typeof auth.$Infer.Session.user | null;
-  session: typeof auth.$Infer.Session.session | null;
-};
+export type App = typeof app;

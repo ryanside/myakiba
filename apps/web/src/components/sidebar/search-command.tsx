@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/command";
 import * as React from "react";
 import { useEffect, useState } from "react";
-import { client } from "@/lib/hono-client";
+import { app } from "@/lib/treaty-client";
 import { useQuery } from "@tanstack/react-query";
 import { DebouncedInput } from "../debounced-input";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -131,14 +131,19 @@ export function SearchCommand() {
   }, [open]);
 
   async function getSearchResults({ search }: { search: string }) {
-    const response = await client.api.search.$get({
+    const { data, error } = await app.api.search.get({
       query: { search },
     });
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(errorText || `HTTP ${response.status}`);
+
+    if (error) {
+      if (error.status === 422) {
+        throw new Error(error.value?.message || "Invalid search query");
+      }
+
+      throw new Error(error.value || "Failed to search");
     }
-    return response.json();
+
+    return data;
   }
 
   const { data } = useQuery({
@@ -182,12 +187,15 @@ export function SearchCommand() {
                       key={order.orderId}
                       value={order.orderId}
                       onSelect={() => {
-                        navigate({ to: "/orders/$id", params: { id: order.orderId } });
+                        navigate({
+                          to: "/orders/$id",
+                          params: { id: order.orderId },
+                        });
                         setOpen(false);
                       }}
                     >
                       <ImageThumbnail
-                        images={order.itemImages || []}
+                        images={order.itemImages}
                         title={order.orderTitle}
                         fallbackIcon={
                           <Package className="h-5 w-5 text-muted-foreground" />
@@ -235,7 +243,10 @@ export function SearchCommand() {
                       value={item.id}
                       onSelect={() => {
                         navigate({
-                          to: item.type === "order" ? "/orders/$id" : "/items/$id",
+                          to:
+                            item.type === "order"
+                              ? "/orders/$id"
+                              : "/items/$id",
                           params: { id: item.id },
                         });
                         setOpen(false);

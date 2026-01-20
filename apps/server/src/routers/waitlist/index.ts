@@ -1,19 +1,13 @@
-import { Hono } from "hono";
-import { zValidator } from "@hono/zod-validator";
-import { rateLimiter, type Store } from "hono-rate-limiter";
-import RedisStore from "rate-limit-redis";
-import Redis from "ioredis";
-import { createHash, timingSafeEqual } from "crypto";
-import type { Variables } from "../..";
+import { Elysia, status } from "elysia";
+import { timingSafeEqual } from "crypto";
 import { env } from "@myakiba/env/server";
 import { tryCatch } from "@myakiba/utils";
 import WaitlistService from "./service";
 import { joinWaitlistSchema, verifyAccessSchema } from "./model";
-
-const redis = new Redis({
-  host: env.REDIS_HOST,
-  port: env.REDIS_PORT,
-});
+import {
+  waitlistRateLimitHandler,
+  verifyAccessRateLimitHandler,
+} from "@/middleware/waitlist-rate-limit";
 
 async function verifyTurnstile(token: string): Promise<boolean> {
   const response = await fetch(
@@ -34,54 +28,11 @@ async function verifyTurnstile(token: string): Promise<boolean> {
   return data.success;
 }
 
-function getClientIdentifier(c: {
-  req: { header: (name: string) => string | undefined };
-}): string {
-  const ip =
-    c.req.header("cf-connecting-ip") ||
-    c.req.header("x-forwarded-for")?.split(",")[0]?.trim();
-  const userAgent = c.req.header("user-agent");
-  const acceptLanguage = c.req.header("accept-language");
-
-  const fingerprint = `${ip}:${userAgent}:${acceptLanguage}`;
-
-  // Hash for privacy - enables rate limiting without storing identifying info
-  return createHash("sha256").update(fingerprint).digest("hex").slice(0, 16);
-}
-
-const waitlistRateLimit = rateLimiter<{ Variables: Variables }>({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  limit: 5,
-  keyGenerator: getClientIdentifier,
-  store: new RedisStore({
-    sendCommand: (command: string, ...args: string[]) =>
-      redis.call(command, ...args) as never,
-    prefix: "waitlist_rate_limit:",
-  }) as unknown as Store<{ Variables: Variables }>,
-});
-
-const verifyAccessRateLimit = rateLimiter<{ Variables: Variables }>({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  limit: 5,
-  keyGenerator: getClientIdentifier,
-  store: new RedisStore({
-    sendCommand: (command: string, ...args: string[]) =>
-      redis.call(command, ...args) as never,
-    prefix: "verify_access_rate_limit:",
-  }) as unknown as Store<{ Variables: Variables }>,
-});
-
-const waitlistRouter = new Hono<{ Variables: Variables }>()
+const waitlistRouter = new Elysia({ prefix: "/waitlist" })
   .post(
     "/",
-    waitlistRateLimit,
-    zValidator("json", joinWaitlistSchema, (result, c) => {
-      if (!result.success) {
-        return c.json({ error: "Invalid request" }, 400);
-      }
-    }),
-    async (c) => {
-      const { email, turnstileToken } = c.req.valid("json");
+    async ({ body }) => {
+      const { email, turnstileToken } = body;
 
       const { data: isValidCaptcha, error: captchaError } = await tryCatch(
         verifyTurnstile(turnstileToken)
@@ -92,32 +43,30 @@ const waitlistRouter = new Hono<{ Variables: Variables }>()
           email,
           turnstileToken,
         });
-        return c.text("Captcha verification failed", 400);
+        return status(400, "Captcha verification failed");
       }
 
       const { error } = await tryCatch(WaitlistService.addToWaitlist(email));
 
       if (error) {
         console.error("Error adding to waitlist:", error);
-        return c.text("Failed to join waitlist", 500);
+        return status(500, "Failed to join waitlist");
       }
 
-      return c.json({
+      return {
         success: true,
         message: "Successfully joined the waitlist!",
-      });
+      };
+    },
+    {
+      body: joinWaitlistSchema,
+      beforeHandle: [waitlistRateLimitHandler],
     }
   )
   .post(
     "/verify-access",
-    verifyAccessRateLimit,
-    zValidator("json", verifyAccessSchema, (result, c) => {
-      if (!result.success) {
-        return c.json({ error: "Invalid request" }, 400);
-      }
-    }),
-    async (c) => {
-      const { password } = c.req.valid("json");
+    async ({ body }) => {
+      const { password } = body;
 
       const expectedPassword = env.EARLY_ACCESS_PASSWORD;
       const passwordBuffer = Buffer.from(password);
@@ -129,10 +78,14 @@ const waitlistRouter = new Hono<{ Variables: Variables }>()
       }
 
       if (!isValid) {
-        return c.text("Invalid password", 401);
+        return status(401, "Invalid password");
       }
 
-      return c.json({ success: true });
+      return { success: true };
+    },
+    {
+      body: verifyAccessSchema,
+      beforeHandle: [verifyAccessRateLimitHandler],
     }
   );
 

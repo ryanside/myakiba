@@ -10,25 +10,19 @@ const commaSeparatedStringArray = z.preprocess((val) => {
   return undefined;
 }, z.array(z.string()).optional());
 
-const commaSeparatedShipMethodArray = z.preprocess(
-  (val) => {
-    if (typeof val === "string" && val.length > 0) {
-      return val.split(",");
-    }
-    return undefined;
-  },
-  z.array(z.enum(SHIPPING_METHODS)).optional()
-);
+const commaSeparatedShipMethodArray = z.preprocess((val) => {
+  if (typeof val === "string" && val.length > 0) {
+    return val.split(",");
+  }
+  return undefined;
+}, z.array(z.enum(SHIPPING_METHODS)).optional());
 
-const commaSeparatedStatusArray = z.preprocess(
-  (val) => {
-    if (typeof val === "string" && val.length > 0) {
-      return val.split(",");
-    }
-    return undefined;
-  },
-  z.array(z.enum(ORDER_STATUSES)).optional()
-);
+const commaSeparatedStatusArray = z.preprocess((val) => {
+  if (typeof val === "string" && val.length > 0) {
+    return val.split(",");
+  }
+  return undefined;
+}, z.array(z.enum(ORDER_STATUSES)).optional());
 
 export const ordersQuerySchema = z.object({
   limit: z.coerce.number().optional().default(10),
@@ -86,6 +80,8 @@ export const ordersQuerySchema = z.object({
 
 export const orderInsertSchema = createInsertSchema(order);
 export const orderUpdateSchema = createUpdateSchema(order);
+
+export const orderIdParamSchema = z.object({ orderId: z.string() });
 
 export type orderInsertType = z.infer<typeof orderInsertSchema>;
 export type orderUpdateType = z.infer<typeof orderUpdateSchema>;

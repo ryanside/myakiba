@@ -1,32 +1,26 @@
-import { client } from "@/lib/hono-client";
+import { app, getErrorMessage } from "@/lib/treaty-client";
 
 export async function joinWaitlist(data: {
   email: string;
   turnstileToken: string;
 }): Promise<{ success: boolean; message?: string; error?: string }> {
-  const response = await client.api.waitlist.$post({
-    json: data,
-  });
+  const { data: responseData, error } = await app.api.waitlist.post(data);
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `HTTP ${response.status}`);
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to join waitlist"));
   }
 
-  return response.json();
+  return responseData;
 }
 
 export async function verifyEarlyAccess(
   password: string
 ): Promise<{ success: boolean; error?: string }> {
-  const response = await client.api.waitlist["verify-access"].$post({
-    json: { password },
-  });
+  const { data: responseData, error } = await app.api.waitlist["verify-access"].post({ password });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `HTTP ${response.status}`);
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to verify early access"));
   }
 
-  return response.json();
+  return responseData;
 }

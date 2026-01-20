@@ -1,57 +1,41 @@
-import { Hono } from "hono";
-import type { Variables } from "../..";
+import { Elysia, status } from "elysia";
+import { betterAuth } from "@/middleware/better-auth";
 import DashboardService from "./service";
 import { tryCatch } from "@myakiba/utils";
-import { zValidator } from "@hono/zod-validator";
 import * as z from "zod";
-const dashboardRouter = new Hono<{
-  Variables: Variables;
-}>()
-  .get("/", async (c) => {
-    const user = c.get("user");
-    if (!user) return c.text("Unauthorized", 401);
 
-    const { data: dashboard, error } = await tryCatch(
-      DashboardService.getDashboard(user.id)
-    );
+const releaseCalendarQuerySchema = z.object({ month: z.coerce.number(), year: z.coerce.number() });
 
-    if (error) {
-      console.error("Error fetching dashboard data:", error, {
-        userId: user.id,
-      });
+const dashboardRouter = new Elysia({ prefix: "/dashboard" })
+  .use(betterAuth)
+  .get(
+    "/",
+    async ({ user }) => {
+      if (!user) return status(401, "Unauthorized");
 
-      return c.text("Failed to get dashboard data", 500);
-    }
+      const { data: dashboard, error } = await tryCatch(
+        DashboardService.getDashboard(user.id)
+      );
 
-    return c.json({ dashboard });
-  })
+      if (error) {
+        console.error("Error fetching dashboard data:", error, {
+          userId: user.id,
+        });
+
+        return status(500, "Failed to get dashboard data");
+      }
+
+      return dashboard;
+    },
+    { auth: true }
+  )
   .get(
     "/release-calendar",
-    zValidator(
-      "query",
-      z.object({
-        month: z.coerce.number(),
-        year: z.coerce.number(),
-      }),
-      (result, c) => {
-        if (!result.success) {
-          console.log(result.error);
-          return c.text("Invalid request!", 400);
-        }
-      }
-    ),
-    async (c) => {
-      const user = c.get("user");
-      if (!user) return c.text("Unauthorized", 401);
-
-      const validatedQuery = c.req.valid("query");
+    async ({ query, user }) => {
+    if (!user) return status(401, "Unauthorized");
 
       const { data: releaseCalendar, error } = await tryCatch(
-        DashboardService.getReleaseCalendar(
-          user.id,
-          validatedQuery.month,
-          validatedQuery.year
-        )
+        DashboardService.getReleaseCalendar(user.id, query.month, query.year)
       );
 
       if (error) {
@@ -59,11 +43,13 @@ const dashboardRouter = new Hono<{
           userId: user.id,
         });
 
-        return c.text("Failed to get release calendar data", 500);
+        return status(500, "Failed to get release calendar data");
       }
 
-      return c.json({ releaseCalendar });
-    }
+      return { releaseCalendar };
+    },
+    { query: releaseCalendarQuerySchema, auth: true }
   );
 
 export default dashboardRouter;
+
