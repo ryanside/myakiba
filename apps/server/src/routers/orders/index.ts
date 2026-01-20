@@ -1,480 +1,406 @@
-import { Hono } from "hono";
-import type { Variables } from "../..";
+import { Elysia, status } from "elysia";
 import OrdersService from "./service";
-import { zValidator } from "@hono/zod-validator";
 import * as z from "zod";
 import {
   orderInsertSchema,
   orderUpdateSchema,
   ordersQuerySchema,
+  orderIdParamSchema,
 } from "./model";
 import { tryCatch } from "@myakiba/utils";
+import { betterAuth } from "@/middleware/better-auth";
+import type { Order, OrderQueryResponse, OrdersQueryResponse } from "@myakiba/types";
 
-const ordersRouter = new Hono<{ Variables: Variables }>()
+const ordersRouter = new Elysia({ prefix: "/orders" })
+  .use(betterAuth)
   .get(
     "/",
-    zValidator("query", ordersQuerySchema, (result, c) => {
-      if (!result.success) {
-        console.log(result.error);
-        return c.text("Invalid request!", 400);
-      }
-    }),
-    async (c) => {
-      const user = c.get("user");
-      if (!user) return c.text("Unauthorized", 401);
-
-      const validatedQuery = c.req.valid("query");
+    async ({ query, user }) => {
+      if (!user) return status(401, "Unauthorized");
 
       const { data: result, error } = await tryCatch(
         OrdersService.getOrders(
           user.id,
-          validatedQuery.limit,
-          validatedQuery.offset,
-          validatedQuery.sort,
-          validatedQuery.order,
-          validatedQuery.search,
-          validatedQuery.shop,
-          validatedQuery.releaseMonthYearStart,
-          validatedQuery.releaseMonthYearEnd,
-          validatedQuery.shipMethod,
-          validatedQuery.orderDateStart,
-          validatedQuery.orderDateEnd,
-          validatedQuery.payDateStart,
-          validatedQuery.payDateEnd,
-          validatedQuery.shipDateStart,
-          validatedQuery.shipDateEnd,
-          validatedQuery.colDateStart,
-          validatedQuery.colDateEnd,
-          validatedQuery.status,
-          validatedQuery.totalMin,
-          validatedQuery.totalMax,
-          validatedQuery.shippingFeeMin,
-          validatedQuery.shippingFeeMax,
-          validatedQuery.taxesMin,
-          validatedQuery.taxesMax,
-          validatedQuery.dutiesMin,
-          validatedQuery.dutiesMax,
-          validatedQuery.tariffsMin,
-          validatedQuery.tariffsMax,
-          validatedQuery.miscFeesMin,
-          validatedQuery.miscFeesMax
+          query.limit,
+          query.offset,
+          query.sort,
+          query.order,
+          query.search,
+          query.shop,
+          query.releaseMonthYearStart,
+          query.releaseMonthYearEnd,
+          query.shipMethod,
+          query.orderDateStart,
+          query.orderDateEnd,
+          query.payDateStart,
+          query.payDateEnd,
+          query.shipDateStart,
+          query.shipDateEnd,
+          query.colDateStart,
+          query.colDateEnd,
+          query.status,
+          query.totalMin,
+          query.totalMax,
+          query.shippingFeeMin,
+          query.shippingFeeMax,
+          query.taxesMin,
+          query.taxesMax,
+          query.dutiesMin,
+          query.dutiesMax,
+          query.tariffsMin,
+          query.tariffsMax,
+          query.miscFeesMin,
+          query.miscFeesMax
         )
       );
 
       if (error) {
         console.error("Error fetching orders:", error, {
           userId: user.id,
-          limit: validatedQuery.limit,
-          offset: validatedQuery.offset,
-          sort: validatedQuery.sort,
-          order: validatedQuery.order,
+          limit: query.limit,
+          offset: query.offset,
+          sort: query.sort,
+          order: query.order,
         });
 
-        return c.text("Failed to get orders", 500);
+        return status(500, "Failed to get orders");
       }
 
       const totalCount =
         result.orders.length > 0 ? result.orders[0].totalCount : 0;
 
-      return c.json({
-        orders: result.orders,
+      const orders: readonly Order[] = result.orders.map((order) => ({
+        ...order,
+        createdAt: order.createdAt.toISOString(),
+        updatedAt: order.updatedAt.toISOString(),
+      }));
+
+      const response: OrdersQueryResponse = {
+        orders: [...orders],
         orderStats: result.orderStats,
         totalCount,
         pagination: {
-          limit: validatedQuery.limit,
-          offset: validatedQuery.offset,
-          pageCount: Math.ceil(totalCount / validatedQuery.limit),
+          limit: query.limit,
+          offset: query.offset,
+          pageCount: Math.ceil(totalCount / query.limit),
         },
-      });
-    }
+      };
+
+      return response;
+    },
+    { query: ordersQuerySchema, auth: true }
   )
   .get(
     "/ids-and-titles",
-    zValidator(
-      "query",
-      z.object({ title: z.string().optional() }),
-      (result, c) => {
-        if (!result.success) {
-          return c.text("Invalid request!", 400);
-        }
-      }
-    ),
-    async (c) => {
-      const user = c.get("user");
-      if (!user) return c.text("Unauthorized", 401);
-
-      const validatedQuery = c.req.valid("query");
+    async ({ query, user }) => {
+      if (!user) return status(401, "Unauthorized");
 
       const { data: result, error } = await tryCatch(
-        OrdersService.getOrderIdsAndTitles(user.id, validatedQuery.title)
+        OrdersService.getOrderIdsAndTitles(user.id, query.title)
       );
 
       if (error) {
         if (error.message === "FAILED_TO_GET_ORDER_IDS_AND_TITLES") {
-          return c.text("Failed to get order ids and titles", 500);
+          return status(500, "Failed to get order ids and titles");
         }
       }
 
-      return c.json({ orderIdsAndTitles: result });
-    }
+      return { orderIdsAndTitles: result };
+    },
+    { query: z.object({ title: z.string().optional() }), auth: true }
   )
   .get(
     "/:orderId",
-    zValidator("param", z.object({ orderId: z.string() }), (result, c) => {
-      if (!result.success) {
-        console.log(result.error);
-        return c.text("Invalid request param!", 400);
-      }
-    }),
-    async (c) => {
-      const user = c.get("user");
-      if (!user) return c.text("Unauthorized", 401);
-
-      const validatedParam = c.req.valid("param");
+    async ({ params, user }) => {
+      if (!user) return status(401, "Unauthorized");
 
       const { data: order, error } = await tryCatch(
-        OrdersService.getOrder(user.id, validatedParam.orderId)
+        OrdersService.getOrder(user.id, params.orderId)
       );
 
       if (error) {
         if (error.message === "ORDER_NOT_FOUND") {
-          return c.text("Order not found", 404);
+          return status(404, "Order not found");
         }
 
         console.error("Error fetching order:", error, {
           userId: user.id,
-          orderId: validatedParam.orderId,
+          orderId: params.orderId,
         });
 
-        return c.text("Failed to get order", 500);
+        return status(500, "Failed to get order");
       }
 
-      return c.json({ order });
-    }
+      const serializedOrder: OrderQueryResponse = {
+        ...order,
+        createdAt: order.createdAt.toISOString(),
+        updatedAt: order.updatedAt.toISOString(),
+      };
+
+      return { order: serializedOrder };
+    },
+    { params: orderIdParamSchema, auth: true }
   )
   .post(
     "/merge",
-    zValidator(
-      "json",
-      z.object({
-        orderIds: z.array(z.string()),
-        newOrder: orderInsertSchema.omit({ userId: true }),
-        cascadeOptions: z.array(z.string()),
-      }),
-      (result, c) => {
-        if (!result.success) {
-          return c.text("Invalid request!", 400);
-        }
-      }
-    ),
-    async (c) => {
-      const user = c.get("user");
-      if (!user) return c.text("Unauthorized", 401);
-
-      const validatedJSON = c.req.valid("json");
+    async ({ body, user }) => {
+      if (!user) return status(401, "Unauthorized");
 
       const { error } = await tryCatch(
         OrdersService.mergeOrders(
           user.id,
-          validatedJSON.orderIds,
-          validatedJSON.newOrder,
-          validatedJSON.cascadeOptions
+          body.orderIds,
+          body.newOrder,
+          body.cascadeOptions
         )
       );
 
       if (error) {
         if (error.message === "FAILED_TO_INSERT_NEW_ORDER") {
-          return c.text("Failed to insert new order", 500);
+          return status(500, "Failed to insert new order");
         }
         if (error.message === "ORDER_ITEMS_NOT_FOUND") {
-          return c.text("Order items not found", 404);
+          return status(404, "Order items not found");
         }
         if (error.message === "ORDERS_NOT_FOUND") {
-          return c.text("One or more orders not found", 404);
+          return status(404, "One or more orders not found");
         }
         if (error.message === "FAILED_TO_FETCH_NEW_ORDER") {
-          return c.text("Failed to fetch new order details", 500);
+          return status(500, "Failed to fetch new order details");
         }
 
         console.error("Error merging orders:", error, {
           userId: user.id,
-          orderIds: validatedJSON.orderIds,
-          newOrder: validatedJSON.newOrder,
-          cascadeOptions: validatedJSON.cascadeOptions,
+          orderIds: body.orderIds,
+          newOrder: body.newOrder,
+          cascadeOptions: body.cascadeOptions,
         });
 
-        return c.text("Failed to merge orders", 500);
+        return status(500, "Failed to merge orders");
       }
 
-      return c.text("Orders merged successfully");
+      return "Orders merged successfully";
+    },
+    {
+      body: z.object({
+        orderIds: z.array(z.string()),
+        newOrder: orderInsertSchema.omit({ userId: true }),
+        cascadeOptions: z.array(z.string()),
+      }),
+      auth: true,
     }
   )
   .post(
     "/split",
-    zValidator(
-      "json",
-      z.object({
-        collectionIds: z.array(z.string()),
-        newOrder: orderInsertSchema.omit({ userId: true }),
-        cascadeOptions: z.array(z.string()),
-      }),
-      (result, c) => {
-        if (!result.success) {
-          return c.text("Invalid request!", 400);
-        }
-      }
-    ),
-    async (c) => {
-      const user = c.get("user");
-      if (!user) return c.text("Unauthorized", 401);
-
-      const validatedJSON = c.req.valid("json");
+    async ({ body, user }) => {
+      if (!user) return status(401, "Unauthorized");
 
       const { error } = await tryCatch(
         OrdersService.splitOrders(
           user.id,
-          validatedJSON.collectionIds,
-          validatedJSON.newOrder,
-          validatedJSON.cascadeOptions
+          body.collectionIds,
+          body.newOrder,
+          body.cascadeOptions
         )
       );
 
       if (error) {
         if (error.message === "COLLECTION_IDS_REQUIRED") {
-          return c.text("Collection ids are required", 400);
+          return status(400, "Collection ids are required");
         }
         if (error.message === "FAILED_TO_INSERT_NEW_ORDER") {
-          return c.text("Failed to insert new order", 500);
+          return status(500, "Failed to insert new order");
         }
         if (error.message === "ORDER_ITEMS_NOT_FOUND") {
-          return c.text("Order items not found", 404);
+          return status(404, "Order items not found");
         }
 
         console.error("Error splitting orders:", error, {
           userId: user.id,
-          collectionIds: validatedJSON.collectionIds,
-          newOrder: validatedJSON.newOrder,
-          cascadeOptions: validatedJSON.cascadeOptions,
+          collectionIds: body.collectionIds,
+          newOrder: body.newOrder,
+          cascadeOptions: body.cascadeOptions,
         });
 
-        return c.text("Failed to split orders", 500);
+        return status(500, "Failed to split orders");
       }
 
-      return c.text("Items split successfully");
+      return "Items split successfully";
+    },
+    {
+      body: z.object({
+        collectionIds: z.array(z.string()),
+        newOrder: orderInsertSchema.omit({ userId: true }),
+        cascadeOptions: z.array(z.string()),
+      }),
+      auth: true,
     }
   )
   .put(
     "/move-items",
-    zValidator(
-      "json",
-      z.object({
-        targetOrderId: z.string(),
-        collectionIds: z.array(z.string()),
-        orderIds: z.array(z.string()),
-      }),
-      (result, c) => {
-        if (!result.success) {
-          console.log("Validation error on /move-items:", result.error);
-          return c.text("Invalid request!", 400);
-        }
-      }
-    ),
-    async (c) => {
-      const user = c.get("user");
-      if (!user) return c.text("Unauthorized", 401);
-
-      const validatedJSON = c.req.valid("json");
+    async ({ body, user }) => {
+      if (!user) return status(401, "Unauthorized");
 
       const { error } = await tryCatch(
         OrdersService.moveItems(
           user.id,
-          validatedJSON.targetOrderId,
-          validatedJSON.collectionIds,
-          validatedJSON.orderIds
+          body.targetOrderId,
+          body.collectionIds,
+          body.orderIds
         )
       );
 
       if (error) {
         if (error.message === "FAILED_TO_MOVE_ITEMS") {
-          return c.text("Failed to move items", 500);
+          return status(500, "Failed to move items");
         }
       }
 
-      return c.text("Items moved successfully");
+      return "Items moved successfully";
+    },
+    {
+      body: z.object({
+        targetOrderId: z.string(),
+        collectionIds: z.array(z.string()),
+        orderIds: z.array(z.string()),
+      }),
+      auth: true,
     }
   )
   .put(
     "/:orderId",
-    zValidator("param", z.object({ orderId: z.string() }), (result, c) => {
-      if (!result.success) {
-        return c.text("Invalid order id!", 400);
-      }
-    }),
-    zValidator(
-      "json",
-      z.object({
-        order: orderUpdateSchema,
-        cascadeOptions: z.array(z.string()),
-      }),
-      (result, c) => {
-        if (!result.success) {
-          console.log(result.error);
-          return c.text("Invalid request!", 400);
-        }
-      }
-    ),
-    async (c) => {
-      const user = c.get("user");
-      if (!user) return c.text("Unauthorized", 401);
-
-      const validatedJSON = c.req.valid("json");
-      const validatedParam = c.req.valid("param");
+    async ({ params, body, user }) => {
+      if (!user) return status(401, "Unauthorized");
 
       const { error } = await tryCatch(
         OrdersService.updateOrder(
           user.id,
-          validatedParam.orderId,
-          validatedJSON.order,
-          validatedJSON.cascadeOptions
+          params.orderId,
+          body.order,
+          body.cascadeOptions
         )
       );
 
       if (error) {
         if (error.message === "ORDER_NOT_FOUND") {
-          return c.text("Order not found", 404);
+          return status(404, "Order not found");
         }
 
         console.error("Error updating order:", error, {
           userId: user.id,
-          orderId: validatedParam.orderId,
-          order: validatedJSON.order,
-          cascadeOptions: validatedJSON.cascadeOptions,
+          orderId: params.orderId,
+          order: body.order,
+          cascadeOptions: body.cascadeOptions,
         });
 
-        return c.text("Failed to update order", 500);
+        return status(500, "Failed to update order");
       }
 
-      return c.text("Order updated successfully");
+      return "Order updated successfully";
+    },
+    {
+      params: orderIdParamSchema,
+      body: z.object({
+        order: orderUpdateSchema,
+        cascadeOptions: z.array(z.string()),
+      }),
+      auth: true,
     }
   )
   .delete(
     "/",
-    zValidator(
-      "json",
-      z.object({ orderIds: z.array(z.string()) }),
-      (result, c) => {
-        if (!result.success) {
-          return c.text("Invalid request!", 400);
-        }
-      }
-    ),
-    async (c) => {
-      const user = c.get("user");
-      if (!user) return c.text("Unauthorized", 401);
-
-      const validatedJSON = c.req.valid("json");
+    async ({ body, user }) => {
+      if (!user) return status(401, "Unauthorized");
 
       const { error } = await tryCatch(
-        OrdersService.deleteOrders(user.id, validatedJSON.orderIds)
+        OrdersService.deleteOrders(user.id, body.orderIds)
       );
 
       if (error) {
         if (error.message === "ORDERS_ITEMS_NOT_FOUND") {
-          return c.text("One or more orders items not found", 404);
+          return status(404, "One or more orders items not found");
         }
 
         if (error.message === "ORDERS_NOT_FOUND") {
-          return c.text("One or more orders not found", 404);
+          return status(404, "One or more orders not found");
         }
 
         console.error("Error deleting orders:", error, {
           userId: user.id,
-          orderIds: validatedJSON.orderIds,
+          orderIds: body.orderIds,
         });
 
-        return c.text("Failed to delete orders", 500);
+        return status(500, "Failed to delete orders");
       }
 
-      return c.text("Orders deleted successfully");
+      return "Orders deleted successfully";
+    },
+    {
+      body: z.object({ orderIds: z.array(z.string()) }),
+      auth: true,
     }
   )
   .delete(
     "/items",
-    zValidator(
-      "json",
-      z.object({ collectionIds: z.array(z.string()) }),
-      (result, c) => {
-        if (!result.success) {
-          return c.text("Invalid request!", 400);
-        }
-      }
-    ),
-    async (c) => {
-      const user = c.get("user");
-      if (!user) return c.text("Unauthorized", 401);
-
-      const validatedJSON = c.req.valid("json");
+    async ({ body, user }) => {
+      if (!user) return status(401, "Unauthorized");
 
       const { error } = await tryCatch(
-        OrdersService.deleteOrderItems(user.id, validatedJSON.collectionIds)
+        OrdersService.deleteOrderItems(user.id, body.collectionIds)
       );
 
       if (error) {
         if (error.message === "ORDER_ITEMS_NOT_FOUND") {
-          return c.text("One or more order items not found", 404);
+          return status(404, "One or more order items not found");
         }
 
         console.error("Error deleting order items:", error, {
           userId: user.id,
-          collectionIds: validatedJSON.collectionIds,
+          collectionIds: body.collectionIds,
         });
 
-        return c.text("Failed to delete order items", 500);
+        return status(500, "Failed to delete order items");
       }
 
-      return c.text("Order items deleted successfully");
+      return "Order items deleted successfully";
+    },
+    {
+      body: z.object({ collectionIds: z.array(z.string()) }),
+      auth: true,
     }
   )
   .delete(
     "/:orderId/items/:collectionId",
-    zValidator(
-      "param",
-      z.object({ orderId: z.string(), collectionId: z.string() }),
-      (result, c) => {
-        if (!result.success) {
-          return c.text("Invalid order id!", 400);
-        }
-      }
-    ),
-    async (c) => {
-      const user = c.get("user");
-      if (!user) return c.text("Unauthorized", 401);
-
-      const validatedParam = c.req.valid("param");
+    async ({ params, user }) => {
+      if (!user) return status(401, "Unauthorized");
 
       const { error } = await tryCatch(
         OrdersService.deleteOrderItem(
           user.id,
-          validatedParam.orderId,
-          validatedParam.collectionId
+          params.orderId,
+          params.collectionId
         )
       );
 
       if (error) {
         if (error.message === "ORDER_ITEM_NOT_FOUND") {
-          return c.text("Order item not found", 404);
+          return status(404, "Order item not found");
         }
 
         console.error("Error deleting order item:", error, {
           userId: user.id,
-          orderId: validatedParam.orderId,
-          collectionId: validatedParam.collectionId,
+          orderId: params.orderId,
+          collectionId: params.collectionId,
         });
 
-        return c.text("Failed to delete order item", 500);
+        return status(500, "Failed to delete order item");
       }
 
-      return c.text("Order item deleted successfully");
+      return "Order item deleted successfully";
+    },
+    {
+      params: z.object({ orderId: z.string(), collectionId: z.string() }),
+      auth: true,
     }
   );
 

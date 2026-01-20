@@ -37,7 +37,6 @@
     "@paralleldrive/cuid2": "catalog:",
     "dotenv": "catalog:",
     "drizzle-zod": "catalog:",
-    "postgres": "^3.4.7",
     "uuid": "catalog:",
     "zod": "catalog:"
   }

@@ -1,40 +1,23 @@
-import { Hono } from "hono";
-import type { Variables } from "hono/types";
+import { Elysia, status } from "elysia";
 import * as z from "zod";
-import { zValidator } from "@hono/zod-validator";
 import EntriesService from "./service";
 import { tryCatch } from "@myakiba/utils";
 
-const entriesRouter = new Hono<{
-  Variables: Variables;
-}>().get(
+const entriesRouter = new Elysia({ prefix: "/entries" }).get(
   "/search",
-  zValidator(
-    "query",
-    z.object({
-      search: z.string(),
-    }),
-    (result, c) => {
-      if (!result.success) {
-        console.error(result.error);
-        return c.text("Invalid request!", 400);
-      }
-    }
-  ),
-  async (c) => {
-    const { search } = c.req.valid("query");
-
+  async ({ query }) => {
     const { data: entries, error } = await tryCatch(
-      EntriesService.getEntries(search)
+      EntriesService.getEntries(query.search)
     );
 
     if (error) {
       console.error("Error fetching entries:", error);
-      return c.text("Failed to get entries", 500);
+      return status(500, "Failed to get entries");
     }
 
-    return c.json({ entries });
-  }
+    return { entries };
+  },
+  { query: z.object({ search: z.string() }) }
 );
 
 export default entriesRouter;

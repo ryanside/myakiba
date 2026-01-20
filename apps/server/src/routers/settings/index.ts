@@ -1,48 +1,40 @@
-import { Hono } from "hono";
-import type { Variables } from "../..";
+import { Elysia, status } from "elysia";
 import SettingsService from "./service";
 import { tryCatch } from "@myakiba/utils";
-import { zValidator } from "@hono/zod-validator";
 import { budgetUpsertSchema } from "./model";
 import { z } from "zod";
+import { betterAuth } from "@/middleware/better-auth";
 
-const settingsRouter = new Hono<{
-  Variables: Variables;
-}>()
-  .get("/", async (c) => {
-    const user = c.get("user");
-    if (!user) return c.text("Unauthorized", 401);
-
-    const { data: budget, error } = await tryCatch(
-      SettingsService.getBudget(user.id)
-    );
-
-    if (error) {
-      console.error("Error fetching budget:", error, {
-        userId: user.id,
-      });
-
-      return c.text("Failed to get budget", 500);
-    }
-
-    return c.json({ budget });
-  })
-  .put(
+const settingsRouter = new Elysia({ prefix: "/settings" })
+  .use(betterAuth)
+  .get(
     "/",
-    zValidator("json", budgetUpsertSchema, (result, c) => {
-      if (!result.success) {
-        console.log(result.error);
-        return c.text("Invalid request!", 400);
-      }
-    }),
-    async (c) => {
-      const user = c.get("user");
-      if (!user) return c.text("Unauthorized", 401);
-
-      const validatedBody = c.req.valid("json");
+    async ({ user }) => {
+      if (!user) return status(401, "Unauthorized");
 
       const { data: budget, error } = await tryCatch(
-        SettingsService.upsertBudget(user.id, validatedBody)
+        SettingsService.getBudget(user.id)
+      );
+
+      if (error) {
+        console.error("Error fetching budget:", error, {
+          userId: user.id,
+        });
+
+        return status(500, "Failed to get budget");
+      }
+
+      return { budget };
+    },
+    { auth: true }
+  )
+  .put(
+    "/",
+    async ({ body, user }) => {
+      if (!user) return status(401, "Unauthorized");
+
+      const { data: budget, error } = await tryCatch(
+        SettingsService.upsertBudget(user.id, body)
       );
 
       if (error) {
@@ -50,68 +42,60 @@ const settingsRouter = new Hono<{
           userId: user.id,
         });
 
-        return c.text("Failed to upsert budget", 500);
+        return status(500, "Failed to upsert budget");
       }
 
-      return c.json({ budget });
-    }
+      return { budget };
+    },
+    { body: budgetUpsertSchema, auth: true }
   )
+  .delete(
+    "/",
+    async ({ user }) => {
+      if (!user) return status(401, "Unauthorized");
 
-  .delete("/", async (c) => {
-    const user = c.get("user");
-    if (!user) return c.text("Unauthorized", 401);
+      const { error } = await tryCatch(SettingsService.deleteBudget(user.id));
 
-    const { error } = await tryCatch(SettingsService.deleteBudget(user.id));
+      if (error) {
+        console.error("Error deleting budget:", error, {
+          userId: user.id,
+        });
 
-    if (error) {
-      console.error("Error deleting budget:", error, {
-        userId: user.id,
-      });
+        return status(500, "Failed to delete budget");
+      }
 
-      return c.text("Failed to delete budget", 500);
-    }
+      return "Budget deleted successfully";
+    },
+    { auth: true }
+  )
+  .get(
+    "/account-type",
+    async ({ user }) => {
+      if (!user) return status(401, "Unauthorized");
 
-    return c.text("Budget deleted successfully");
-  })
-  .get("/account-type", async (c) => {
-    const user = c.get("user");
-    if (!user) return c.text("Unauthorized", 401);
+      const { data: hasCredential, error } = await tryCatch(
+        SettingsService.hasCredentialAccount(user.id)
+      );
 
-    const { data: hasCredential, error } = await tryCatch(
-      SettingsService.hasCredentialAccount(user.id)
-    );
+      if (error) {
+        console.error("Error checking account type:", error, {
+          userId: user.id,
+        });
 
-    if (error) {
-      console.error("Error checking account type:", error, {
-        userId: user.id,
-      });
+        return status(500, "Failed to check account type");
+      }
 
-      return c.text("Failed to check account type", 500);
-    }
-
-    return c.json({ hasCredentialAccount: hasCredential });
-  })
+      return { hasCredentialAccount: hasCredential };
+    },
+    { auth: true }
+  )
   .delete(
     "/account",
-    zValidator(
-      "json",
-      z.object({
-        confirmationPhrase: z.string(),
-      }),
-      (result, c) => {
-        if (!result.success) {
-          return c.text("Invalid request!", 400);
-        }
-      }
-    ),
-    async (c) => {
-      const user = c.get("user");
-      if (!user) return c.text("Unauthorized", 401);
+    async ({ body, user }) => {
+      if (!user) return status(401, "Unauthorized");
 
-      const validatedBody = c.req.valid("json");
-
-      if (validatedBody.confirmationPhrase !== "delete my account") {
-        return c.text("Invalid confirmation phrase", 400);
+      if (body.confirmationPhrase !== "delete my account") {
+        return status(400, "Invalid confirmation phrase");
       }
 
       const { data: hasCredential, error: checkError } = await tryCatch(
@@ -122,13 +106,13 @@ const settingsRouter = new Hono<{
         console.error("Error checking account type:", checkError, {
           userId: user.id,
         });
-        return c.text("Failed to check account type", 500);
+        return status(500, "Failed to check account type");
       }
 
       if (hasCredential) {
-        return c.text(
-          "This endpoint is only for OAuth users. Please use password deletion.",
-          400
+        return status(
+          400,
+          "This endpoint is only for OAuth users. Please use password deletion."
         );
       }
 
@@ -140,10 +124,15 @@ const settingsRouter = new Hono<{
         console.error("Error deleting account:", deleteError, {
           userId: user.id,
         });
-        return c.text("Failed to delete account", 500);
+        return status(500, "Failed to delete account");
       }
 
-      return c.text("Account deleted successfully");
+      return "Account deleted successfully";
+    },
+    {
+      body: z.object({ confirmationPhrase: z.string() }),
+      auth: true,
     }
   );
+
 export default settingsRouter;

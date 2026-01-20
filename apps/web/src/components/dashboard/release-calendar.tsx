@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDate } from "@myakiba/utils";
 import { useQuery } from "@tanstack/react-query";
-import { client } from "@/lib/hono-client";
+import { app } from "@/lib/treaty-client";
 import { Link } from "@tanstack/react-router";
 import { Badge } from "../ui/badge";
 
@@ -33,16 +33,18 @@ function ReleaseCalendar({
     const apiMonth = currentMonth.getMonth() + 1;
     const apiYear = currentMonth.getFullYear();
 
-    const response = await client.api.dashboard["release-calendar"].$get({
+    const { data, error } = await app.api.dashboard["release-calendar"].get({
       query: {
-        month: apiMonth.toString(),
-        year: apiYear.toString(),
+        month: apiMonth,
+        year: apiYear,
       },
     });
-    if (!response.ok) {
-      throw new Error("Failed to get release calendar");
+    if (error) {
+      if (error.status === 422) {
+        throw new Error(error.value?.message || "Invalid month or year");
+      }
+      throw new Error(error.value || "Failed to get release calendar");
     }
-    const data = await response.json();
     return data;
   }
 

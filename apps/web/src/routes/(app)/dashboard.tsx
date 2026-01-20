@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { client } from "@/lib/hono-client";
+import { app } from "@/lib/treaty-client";
 import {
   Card,
   CardContent,
@@ -47,12 +47,11 @@ function DashboardContent() {
   const userCurrency = session?.user.currency || "USD";
 
   async function getDashboard() {
-    const response = await client.api.dashboard.$get();
+    const { data, error } = await app.api.dashboard.get();
 
-    if (!response.ok) {
-      throw new Error("Failed to get dashboard");
+    if (error) {
+      throw new Error(error.value || "Failed to get dashboard");
     }
-    const data = await response.json();
     return data;
   }
 
@@ -80,7 +79,6 @@ function DashboardContent() {
     );
   }
 
-  const { dashboard } = data;
   const {
     collectionStats,
     categoriesOwned,
@@ -89,7 +87,7 @@ function DashboardContent() {
     budgetSummary,
     unpaidOrders,
     monthlyOrders,
-  } = dashboard;
+  } = data;
 
   return (
     <div className="">

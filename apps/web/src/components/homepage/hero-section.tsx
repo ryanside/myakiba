@@ -61,6 +61,7 @@ export default function HeroSection({
               alt="app screen"
               className="object-top-left size-full object-cover"
               loading="eager"
+              rel="preload"
               fetchPriority="high"
             />
           </div>

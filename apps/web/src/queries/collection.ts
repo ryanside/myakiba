@@ -1,77 +1,73 @@
-import { client } from "@/lib/hono-client";
+import { app, getErrorMessage } from "@/lib/treaty-client";
 import type {
   CollectionFilters,
   CollectionItemFormValues,
+  CollectionQueryResponse,
 } from "@/lib/collection/types";
 
-export async function getCollection(filters: CollectionFilters) {
+export async function getCollection(
+  filters: CollectionFilters
+): Promise<CollectionQueryResponse> {
   const queryParams = {
-    limit: filters.limit?.toString(),
-    offset: filters.offset?.toString(),
-    sort: filters.sort,
-    order: filters.order,
+    limit: filters.limit ?? 10,
+    offset: filters.offset ?? 0,
+    sort: filters.sort ?? "createdAt",
+    order: filters.order ?? "desc",
     search: filters.search,
     paidMin: filters.paidMin,
     paidMax: filters.paidMax,
-    shop: filters.shop?.join(",") || [],
+    shop: filters.shop,
     payDateStart: filters.payDateStart,
     payDateEnd: filters.payDateEnd,
     shipDateStart: filters.shipDateStart,
     shipDateEnd: filters.shipDateEnd,
     colDateStart: filters.colDateStart,
     colDateEnd: filters.colDateEnd,
-    shipMethod: filters.shipMethod?.join(",") || [],
+    shipMethod: filters.shipMethod,
     relDateStart: filters.relDateStart,
     relDateEnd: filters.relDateEnd,
     relPriceMin: filters.relPriceMin,
     relPriceMax: filters.relPriceMax,
-    relCurrency: filters.relCurrency?.join(",") || [],
-    category: filters.category?.join(",") || [],
-    entries: filters.entries?.join(",") || [],
-    scale: filters.scale?.join(",") || [],
-    tags: filters.tags?.join(",") || [],
-    condition: filters.condition?.join(",") || [],
+    relCurrency: filters.relCurrency,
+    category: filters.category,
+    entries: filters.entries,
+    scale: filters.scale,
+    tags: filters.tags,
+    condition: filters.condition,
   };
 
-  const response = await client.api.collection.$get({
+  const { data, error } = await app.api.collection.get({
     query: queryParams,
   });
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `HTTP ${response.status}`);
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to get collection"));
   }
-  const data = await response.json();
+  if (!data) {
+    throw new Error("Failed to get collection");
+  }
   return data;
 }
 
 export async function deleteCollectionItems(ids: string[]) {
-  const response = await client.api.collection.$delete({
-    json: { ids },
-  });
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `HTTP ${response.status}`);
+  const { error } = await app.api.collection.delete({ ids });
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to delete collection items"));
   }
 }
 
 export async function searchEntries(search: string) {
-  const response = await client.api.entries.search.$get({
+  const { data, error } = await app.api.entries.search.get({
     query: { search },
   });
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `HTTP ${response.status}`);
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to search entries"));
   }
-  return response.json();
+  return data;
 }
 
 export async function updateCollectionItem(values: CollectionItemFormValues) {
-  const response = await client.api.collection[":id"].$put({
-    param: { id: values.id },
-    json: values,
-  });
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `HTTP ${response.status}`);
+  const { error } = await app.api.collection({ id: values.id }).put(values);
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to update collection item"));
   }
 }

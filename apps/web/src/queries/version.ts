@@ -1,11 +1,10 @@
-import type { InferResponseType } from "hono/client";
-import { client } from "@/lib/hono-client";
+import { app } from "@/lib/treaty-client";
 
-const $get = client.api.version.$get;
-export type VersionResponse = InferResponseType<typeof $get>;
 
-export async function getVersion(): Promise<VersionResponse> {
-  const res = await $get();
-  if (!res.ok) throw new Error("Failed to fetch version");
-  return res.json();
+export async function getVersion() {
+  const { data, error } = await app.api.version.get();
+  if (error) {
+    throw new Error(error.value?.message || "Failed to get version");
+  }
+  return data;
 }

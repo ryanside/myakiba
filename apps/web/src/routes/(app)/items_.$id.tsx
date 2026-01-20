@@ -1,7 +1,7 @@
 import { createFileRoute, useParams, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { client } from "@/lib/hono-client";
+import { app, getErrorMessage } from "@/lib/treaty-client";
 import { addRecentItem } from "@/lib/recent-items";
 import { Button } from "@/components/ui/button";
 import {
@@ -61,36 +61,27 @@ export const Route = createFileRoute("/(app)/items_/$id")({
 });
 
 async function getItem(itemId: string) {
-  const response = await client.api.items[":itemId"].$get({
-    param: { itemId },
-  });
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `HTTP ${response.status}`);
+  const { data, error } = await app.api.items({ itemId }).get();
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to get item"));
   }
-  return response.json();
+  return data;
 }
 
 async function getItemRelatedOrders(itemId: string) {
-  const response = await client.api.items[":itemId"].orders.$get({
-    param: { itemId },
-  });
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `HTTP ${response.status}`);
+  const { data, error } = await app.api.items({ itemId }).orders.get();
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to get item related orders"));
   }
-  return response.json();
+  return data;
 }
 
 async function getItemRelatedCollection(itemId: string) {
-  const response = await client.api.items[":itemId"].collection.$get({
-    param: { itemId },
-  });
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `HTTP ${response.status}`);
+  const { data, error } = await app.api.items({ itemId }).collection.get();
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to get item related collection"));
   }
-  return response.json();
+  return data;
 }
 
 function RouteComponent() {

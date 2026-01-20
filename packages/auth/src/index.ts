@@ -3,7 +3,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "@myakiba/db";
 import * as schema from "@myakiba/db/schema/auth";
-import { captcha, username } from "better-auth/plugins";
+import { captcha, username, openAPI } from "better-auth/plugins";
 import { emailHarmony } from "better-auth-harmony";
 import { Resend } from "resend";
 import { createId } from "@paralleldrive/cuid2";
@@ -94,6 +94,7 @@ export const auth = betterAuth({
     }),
     username(),
     emailHarmony({}),
+    openAPI(),
   ],
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
@@ -118,3 +119,27 @@ export const auth = betterAuth({
     },
   },
 });
+
+let _schema: ReturnType<typeof auth.api.generateOpenAPISchema>;
+const getSchema = async () => (_schema ??= auth.api.generateOpenAPISchema());
+
+export const OpenAPI = {
+  getPaths: (prefix = "/auth/api") =>
+    getSchema().then(({ paths }) => {
+      const reference: typeof paths = Object.create(null);
+
+      for (const path of Object.keys(paths)) {
+        const key = prefix + path;
+        reference[key] = paths[path];
+
+        for (const method of Object.keys(paths[path])) {
+          const operation = (reference[key] as any)[method];
+
+          operation.tags = ["Better Auth"];
+        }
+      }
+
+      return reference;
+    }) as Promise<any>,
+  components: getSchema().then(({ components }) => components) as Promise<any>,
+} as const;

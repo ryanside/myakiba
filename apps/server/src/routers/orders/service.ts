@@ -548,7 +548,11 @@ class OrdersService {
     return deleted;
   }
 
-  async deleteOrderItem(userId: string, orderId: string, collectionId: string) {
+  async deleteOrderItem(
+    userId: string,
+    _orderId: string,
+    collectionId: string
+  ) {
     // TODO: Refactor data sent to the server to reduce this to a single query
     const updated = await db
       .update(collection)

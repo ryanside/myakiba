@@ -1,23 +1,26 @@
-import { client } from "@/lib/hono-client";
+import { app, getErrorMessage } from "@/lib/treaty-client";
 import type {
   CascadeOptions,
   EditedOrder,
   NewOrder,
   OrderFilters,
+  OrdersQueryResponse,
 } from "@/lib/orders/types";
 import type { OrderStatus } from "@myakiba/types";
 
-export async function getOrders(filters: OrderFilters) {
+export async function getOrders(
+  filters: OrderFilters
+): Promise<OrdersQueryResponse> {
   const queryParams = {
-    limit: filters.limit?.toString(),
-    offset: filters.offset?.toString(),
-    sort: filters.sort,
-    order: filters.order,
+    limit: filters.limit ?? 10,
+    offset: filters.offset ?? 0,
+    sort: filters.sort ?? "createdAt",
+    order: filters.order ?? "desc",
     search: filters.search,
-    shop: filters.shop?.join(",") || [],
+    shop: filters.shop,
     releaseMonthYearStart: filters.releaseMonthYearStart,
     releaseMonthYearEnd: filters.releaseMonthYearEnd,
-    shipMethod: filters.shipMethod?.join(",") || [],
+    shipMethod: filters.shipMethod,
     orderDateStart: filters.orderDateStart,
     orderDateEnd: filters.orderDateEnd,
     payDateStart: filters.payDateStart,
@@ -26,7 +29,7 @@ export async function getOrders(filters: OrderFilters) {
     shipDateEnd: filters.shipDateEnd,
     colDateStart: filters.colDateStart,
     colDateEnd: filters.colDateEnd,
-    status: filters.status?.join(",") || [],
+    status: filters.status,
     totalMin: filters.totalMin,
     totalMax: filters.totalMax,
     shippingFeeMin: filters.shippingFeeMin,
@@ -41,12 +44,13 @@ export async function getOrders(filters: OrderFilters) {
     miscFeesMax: filters.miscFeesMax,
   };
 
-  const response = await client.api.orders.$get({ query: queryParams });
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `HTTP ${response.status}`);
+  const { data, error } = await app.api.orders.get({ query: queryParams });
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to get orders"));
   }
-  const data = await response.json();
+  if (!data) {
+    throw new Error("Failed to get orders");
+  }
   return data;
 }
 
@@ -55,20 +59,17 @@ export async function mergeOrders(
   orderIds: Set<string>,
   cascadeOptions: CascadeOptions
 ) {
-  const response = await client.api.orders.merge.$post({
-    json: {
-      orderIds: Array.from(orderIds),
-      newOrder: values,
-      cascadeOptions,
-    },
+  const { data, error } = await app.api.orders.merge.post({
+    orderIds: Array.from(orderIds),
+    newOrder: values,
+    cascadeOptions,
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `HTTP ${response.status}`);
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to merge orders"));
   }
 
-  return response;
+  return data;
 }
 
 export async function splitOrders(
@@ -76,113 +77,82 @@ export async function splitOrders(
   collectionIds: Set<string>,
   cascadeOptions: CascadeOptions
 ) {
-  const response = await client.api.orders.split.$post({
-    json: {
-      collectionIds: Array.from(collectionIds),
-      newOrder: values,
-      cascadeOptions,
-    },
+  const { data, error } = await app.api.orders.split.post({
+    collectionIds: Array.from(collectionIds),
+    newOrder: values,
+    cascadeOptions,
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `HTTP ${response.status}`);
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to split orders"));
   }
 
-  return response;
+  return data;
 }
 
 export async function editOrder(
   values: EditedOrder,
   cascadeOptions: CascadeOptions
 ) {
-  const response = await client.api.orders[":orderId"].$put({
-    param: {
-      orderId: values.orderId,
-    },
-    json: {
-      order: values,
-      cascadeOptions,
-    },
+  const { error } = await app.api.orders({ orderId: values.orderId }).put({
+    order: values,
+    cascadeOptions,
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `HTTP ${response.status}`);
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to edit order"));
   }
 }
 
 export async function deleteOrders(orderIds: Set<string>) {
-  const response = await client.api.orders.$delete({
-    json: {
-      orderIds: Array.from(orderIds),
-    },
+  const { error } = await app.api.orders.delete({
+    orderIds: Array.from(orderIds),
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `HTTP ${response.status}`);
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to delete orders"));
   }
 }
 
 export async function deleteOrderItem(orderId: string, collectionId: string) {
-  const response = await client.api.orders[":orderId"].items[
-    ":collectionId"
-  ].$delete({
-    param: {
-      orderId,
-      collectionId,
-    },
-  });
+  const { error } = await app.api.orders({ orderId }).items({ collectionId }).delete();
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `HTTP ${response.status}`);
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to delete order item"));
   }
 }
 
 export async function deleteOrderItems(collectionIds: Set<string>) {
-  const response = await client.api.orders.items.$delete({
-    json: {
-      collectionIds: Array.from(collectionIds),
-    },
+  const { error } = await app.api.orders.items.delete({
+    collectionIds: Array.from(collectionIds),
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `HTTP ${response.status}`);
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to delete order items"));
   }
 }
 
 export async function getItemReleases(itemId: number) {
-  const response = await client.api.items[":itemId"].releases.$get({
-    param: {
-      itemId: itemId.toString(),
-    },
-  });
+  const { data, error } = await app.api.items({ itemId: itemId.toString() }).releases.get();
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `HTTP ${response.status}`);
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to get item releases"));
   }
 
-  const data = await response.json();
   return data;
 }
 
 export async function getOrderIdsAndTitles(filters: { title?: string }) {
-  const response = await client.api.orders["ids-and-titles"].$get({
+  const { data, error } = await app.api.orders["ids-and-titles"].get({
     query: {
       title: filters.title?.toString(),
     },
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `HTTP ${response.status}`);
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to get order IDs and titles"));
   }
 
-  const data = await response.json();
   return data;
 }
 
@@ -191,33 +161,27 @@ export async function moveItem(
   collectionIds: Set<string>,
   orderIds: Set<string>
 ) {
-  const response = await client.api.orders["move-items"].$put({
-    json: {
-      targetOrderId,
-      collectionIds: Array.from(collectionIds),
-      orderIds: Array.from(orderIds),
-    },
+  const { error } = await app.api.orders["move-items"].put({
+    targetOrderId,
+    collectionIds: Array.from(collectionIds),
+    orderIds: Array.from(orderIds),
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `HTTP ${response.status}`);
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to move items"));
   }
 }
 
 export async function getOrder(orderId: string) {
-  const response = await client.api.orders[":orderId"].$get({
-    param: {
-      orderId,
-    },
-  });
+  const { data, error } = await app.api.orders({ orderId }).get();
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `HTTP ${response.status}`);
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to get order"));
   }
 
-  const data = await response.json();
+  if (!data) {
+    throw new Error("Failed to get order");
+  }
   return data;
 }
 
@@ -225,20 +189,14 @@ export async function updateOrderStatus(
   orderId: string,
   status: OrderStatus
 ): Promise<void> {
-  const response = await client.api.orders[":orderId"].$put({
-    param: {
-      orderId,
+  const { error } = await app.api.orders({ orderId }).put({
+    order: {
+      status,
     },
-    json: {
-      order: {
-        status,
-      },
-      cascadeOptions: ["status"],
-    },
+    cascadeOptions: ["status"],
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `HTTP ${response.status}`);
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to update order status"));
   }
 }

@@ -37,7 +37,7 @@ import { Loader2, Trash2 } from "lucide-react";
 import * as z from "zod";
 import { MaskInput } from "@/components/ui/mask-input";
 import { getCurrencyLocale } from "@myakiba/utils";
-import { client } from "@/lib/hono-client";
+import { app } from "@/lib/treaty-client";
 import { clearRecentItems } from "@/lib/recent-items";
 
 interface Budget {
@@ -45,8 +45,8 @@ interface Budget {
   userId: string;
   period: "monthly" | "annual" | "allocated";
   amount: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 type User = {
@@ -81,27 +81,35 @@ function RouteComponent() {
   const navigate = useNavigate();
   const { session } = Route.useRouteContext();
 
-  const { data: budgetData, isPending: isBudgetPending, isError: isBudgetError } = useQuery({
+  const {
+    data: budgetData,
+    isPending: isBudgetPending,
+    isError: isBudgetError,
+  } = useQuery({
     queryKey: ["settings"],
     queryFn: async () => {
-      const response = await client.api.settings.$get();
-      if (!response.ok) {
-        throw new Error("Failed to get settings");
+      const { data, error } = await app.api.settings.get();
+      if (error) {
+        throw new Error(error.value || "Failed to get settings");
       }
-      return response.json();
+      return data;
     },
     staleTime: 1000 * 60 * 5,
     retry: false,
   });
 
-  const { data: accountTypeData, isPending: isAccountTypePending, isError: isAccountTypeError } = useQuery({
+  const {
+    data: accountTypeData,
+    isPending: isAccountTypePending,
+    isError: isAccountTypeError,
+  } = useQuery({
     queryKey: ["account-type"],
     queryFn: async () => {
-      const response = await client.api.settings["account-type"].$get();
-      if (!response.ok) {
-        throw new Error("Failed to get account type");
+      const { data, error } = await app.api.settings["account-type"].get();
+      if (error) {
+        throw new Error(error.value || "Failed to get account type");
       }
-      return response.json();
+      return data;
     },
     staleTime: 1000 * 60 * 5,
     retry: false,
@@ -123,7 +131,7 @@ function RouteComponent() {
     );
   }
 
-  const hasCredentialAccount = accountTypeData.hasCredentialAccount
+  const hasCredentialAccount = accountTypeData.hasCredentialAccount;
 
   return (
     <div className="container max-w-4xl mx-auto py-8 space-y-8">
@@ -137,7 +145,7 @@ function RouteComponent() {
       </div>
 
       <div className="space-y-6">
-        <BudgetForm user={session.user} budget={budgetData?.budget || null} />
+        <BudgetForm user={session.user} budget={budgetData.budget} />
         <PreferencesForm user={session.user} />
         <ProfileForm user={session.user} />
         {hasCredentialAccount && <PasswordForm />}
@@ -150,7 +158,7 @@ function RouteComponent() {
   );
 }
 
-function BudgetForm({ user, budget }: { user: User; budget: Budget | null }) {
+function BudgetForm({ user, budget }: { user: User; budget: Budget }) {
   const queryClient = useQueryClient();
 
   const upsertBudgetMutation = useMutation({
@@ -161,13 +169,17 @@ function BudgetForm({ user, budget }: { user: User; budget: Budget | null }) {
       amount: number;
       period: "monthly" | "annual" | "allocated";
     }) => {
-      const response = await client.api.settings.$put({
-        json: { amount, period },
+      const { data, error } = await app.api.settings.put({
+        amount,
+        period,
       });
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || `HTTP ${response.status}`);
+      if (error) {
+        if (error.status === 422) {
+          throw new Error(error.value.message || "Failed to update budget");
+        }
+        throw new Error(error.value || "Failed to update budget");
       }
+      return data;
     },
     onError: (error) => {
       toast.error("Failed to update budget", {
@@ -185,11 +197,11 @@ function BudgetForm({ user, budget }: { user: User; budget: Budget | null }) {
 
   const deleteBudgetMutation = useMutation({
     mutationFn: async () => {
-      const response = await client.api.settings.$delete();
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || `HTTP ${response.status}`);
+      const { data, error } = await app.api.settings.delete();
+      if (error) {
+        throw new Error(error.value || "Failed to delete budget");
       }
+      return data;
     },
     onError: (error) => {
       toast.error("Failed to delete budget", {
@@ -720,13 +732,16 @@ function DeleteAccountForm({
 
   const deleteAccountMutation = useMutation({
     mutationFn: async (confirmationPhrase: string) => {
-      const response = await client.api.settings.account.$delete({
-        json: { confirmationPhrase },
+      const { data, error } = await app.api.settings.account.delete({
+        confirmationPhrase,
       });
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || `HTTP ${response.status}`);
+      if (error) {
+        if (error.status === 422) {
+          throw new Error(error.value.message || "Failed to delete account");
+        }
+        throw new Error(error.value || "Failed to delete account");
       }
+      return data;
     },
     onSuccess: async () => {
       toast.success("Account deleted successfully");
