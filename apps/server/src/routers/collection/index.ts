@@ -121,7 +121,7 @@ const collectionRouter = new Elysia({ prefix: "/collection" })
 
       if (error) {
         if (error.message === "COLLECTION_ITEM_NOT_FOUND") {
-          return status;
+          return status(404, "Collection item not found");
         }
 
         console.error("Error updating collection item:", error, {
