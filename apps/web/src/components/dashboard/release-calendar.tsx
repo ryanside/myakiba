@@ -35,7 +35,7 @@ function ReleaseCalendar({
 
     const { data, error } = await app.api.dashboard["release-calendar"].get({
       query: {
-        month: apiMonth.toString(),
+        month: apiMonth,
         year: apiYear,
       },
     });

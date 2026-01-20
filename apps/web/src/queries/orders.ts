@@ -4,10 +4,13 @@ import type {
   EditedOrder,
   NewOrder,
   OrderFilters,
+  OrdersQueryResponse,
 } from "@/lib/orders/types";
 import type { OrderStatus } from "@myakiba/types";
 
-export async function getOrders(filters: OrderFilters) {
+export async function getOrders(
+  filters: OrderFilters
+): Promise<OrdersQueryResponse> {
   const queryParams = {
     limit: filters.limit ?? 10,
     offset: filters.offset ?? 0,
@@ -44,6 +47,9 @@ export async function getOrders(filters: OrderFilters) {
   const { data, error } = await app.api.orders.get({ query: queryParams });
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to get orders"));
+  }
+  if (!data) {
+    throw new Error("Failed to get orders");
   }
   return data;
 }
@@ -173,6 +179,9 @@ export async function getOrder(orderId: string) {
     throw new Error(getErrorMessage(error, "Failed to get order"));
   }
 
+  if (!data) {
+    throw new Error("Failed to get order");
+  }
   return data;
 }
 

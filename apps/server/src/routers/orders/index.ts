@@ -9,6 +9,7 @@ import {
 } from "./model";
 import { tryCatch } from "@myakiba/utils";
 import { betterAuth } from "@/middleware/better-auth";
+import type { Order, OrderQueryResponse, OrdersQueryResponse } from "@myakiba/types";
 
 const ordersRouter = new Elysia({ prefix: "/orders" })
   .use(betterAuth)
@@ -68,8 +69,14 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
       const totalCount =
         result.orders.length > 0 ? result.orders[0].totalCount : 0;
 
-      return {
-        orders: result.orders,
+      const orders: readonly Order[] = result.orders.map((order) => ({
+        ...order,
+        createdAt: order.createdAt.toISOString(),
+        updatedAt: order.updatedAt.toISOString(),
+      }));
+
+      const response: OrdersQueryResponse = {
+        orders: [...orders],
         orderStats: result.orderStats,
         totalCount,
         pagination: {
@@ -78,6 +85,8 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
           pageCount: Math.ceil(totalCount / query.limit),
         },
       };
+
+      return response;
     },
     { query: ordersQuerySchema, auth: true }
   )
@@ -122,7 +131,13 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
         return status(500, "Failed to get order");
       }
 
-      return { order };
+      const serializedOrder: OrderQueryResponse = {
+        ...order,
+        createdAt: order.createdAt.toISOString(),
+        updatedAt: order.updatedAt.toISOString(),
+      };
+
+      return { order: serializedOrder };
     },
     { params: orderIdParamSchema, auth: true }
   )

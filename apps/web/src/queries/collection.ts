@@ -2,9 +2,12 @@ import { app, getErrorMessage } from "@/lib/treaty-client";
 import type {
   CollectionFilters,
   CollectionItemFormValues,
+  CollectionQueryResponse,
 } from "@/lib/collection/types";
 
-export async function getCollection(filters: CollectionFilters) {
+export async function getCollection(
+  filters: CollectionFilters
+): Promise<CollectionQueryResponse> {
   const queryParams = {
     limit: filters.limit ?? 10,
     offset: filters.offset ?? 0,
@@ -38,6 +41,9 @@ export async function getCollection(filters: CollectionFilters) {
   });
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to get collection"));
+  }
+  if (!data) {
+    throw new Error("Failed to get collection");
   }
   return data;
 }

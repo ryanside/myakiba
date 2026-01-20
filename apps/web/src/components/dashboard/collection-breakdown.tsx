@@ -12,7 +12,7 @@ export function CollectionBreakdown({
   currency = "USD",
   className,
 }: {
-  data: { name: Category | null; count: number; totalValue: string | null }[];
+  data: { name: Category; count: number; totalValue: string | null }[];
   className?: string;
   currency?: string;
 }) {
@@ -20,7 +20,7 @@ export function CollectionBreakdown({
 
   const chartData = React.useMemo(() => {
     return data.map((item) => ({
-      name: item.name || "other",
+      name: item.name,
       count: item.count,
       value: parseFloat(item.totalValue || "0"),
       fill: getCategoryColor(item.name),
