@@ -4,7 +4,10 @@ import DashboardService from "./service";
 import { tryCatch } from "@myakiba/utils";
 import * as z from "zod";
 
-const releaseCalendarQuerySchema = z.object({ month: z.coerce.number(), year: z.coerce.number() });
+const releaseCalendarQuerySchema = z.object({
+  month: z.coerce.number(),
+  year: z.coerce.number(),
+});
 
 const dashboardRouter = new Elysia({ prefix: "/dashboard" })
   .use(betterAuth)
@@ -32,7 +35,7 @@ const dashboardRouter = new Elysia({ prefix: "/dashboard" })
   .get(
     "/release-calendar",
     async ({ query, user }) => {
-    if (!user) return status(401, "Unauthorized");
+      if (!user) return status(401, "Unauthorized");
 
       const { data: releaseCalendar, error } = await tryCatch(
         DashboardService.getReleaseCalendar(user.id, query.month, query.year)
@@ -52,4 +55,3 @@ const dashboardRouter = new Elysia({ prefix: "/dashboard" })
   );
 
 export default dashboardRouter;
-

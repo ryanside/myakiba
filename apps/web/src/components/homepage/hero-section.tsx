@@ -52,7 +52,6 @@ export default function HeroSection({
             alt="hero background image"
             className="absolute inset-0 size-full object-cover opacity-100"
             loading="eager"
-            rel="preload"
             fetchPriority="high"
           />
 
