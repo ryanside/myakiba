@@ -4,10 +4,7 @@ import { env } from "@myakiba/env/server";
 import { tryCatch } from "@myakiba/utils";
 import WaitlistService from "./service";
 import { joinWaitlistSchema, verifyAccessSchema } from "./model";
-import {
-  waitlistRateLimitHandler,
-  verifyAccessRateLimitHandler,
-} from "@/middleware/waitlist-rate-limit";
+import { rateLimit } from "@/middleware/rate-limit";
 
 async function verifyTurnstile(token: string): Promise<boolean> {
   const response = await fetch(
@@ -29,6 +26,7 @@ async function verifyTurnstile(token: string): Promise<boolean> {
 }
 
 const waitlistRouter = new Elysia({ prefix: "/waitlist" })
+  .use(rateLimit)
   .post(
     "/",
     async ({ body }) => {
@@ -60,7 +58,7 @@ const waitlistRouter = new Elysia({ prefix: "/waitlist" })
     },
     {
       body: joinWaitlistSchema,
-      beforeHandle: [waitlistRateLimitHandler],
+      rateLimit: "waitlist",
     }
   )
   .post(
@@ -85,7 +83,7 @@ const waitlistRouter = new Elysia({ prefix: "/waitlist" })
     },
     {
       body: verifyAccessSchema,
-      beforeHandle: [verifyAccessRateLimitHandler],
+      rateLimit: "verifyAccess",
     }
   );
 

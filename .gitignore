@@ -1,6 +1,7 @@
 node_modules
 .turbo
 .DS_Store
+*.csv
 
 # prod
 dist/

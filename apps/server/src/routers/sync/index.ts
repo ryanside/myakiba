@@ -1,6 +1,7 @@
 import { Elysia, status } from "elysia";
 import * as z from "zod";
 import { betterAuth } from "@/middleware/better-auth";
+import { rateLimit } from "@/middleware/rate-limit";
 import {
   collectionSyncSchema,
   csvItemSchema,
@@ -14,14 +15,10 @@ import {
 import SyncService from "./service";
 import { tryCatch } from "@myakiba/utils";
 import { createId } from "@paralleldrive/cuid2";
-import {
-  csvRateLimitHandler,
-  orderRateLimitHandler,
-  collectionRateLimitHandler,
-} from "@/middleware/sync-rate-limit";
 
 const syncRouter = new Elysia({ prefix: "/sync" })
   .use(betterAuth)
+  .use(rateLimit)
   .post(
     "/csv",
     async ({ body, user }) => {
@@ -115,7 +112,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
     {
       body: z.array(csvItemSchema),
       auth: true,
-      beforeHandle: [csvRateLimitHandler],
+      rateLimit: "csv",
     }
   )
   .post(
@@ -257,7 +254,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
     {
       body: orderSyncSchema,
       auth: true,
-      beforeHandle: [orderRateLimitHandler],
+      rateLimit: "order",
     }
   )
   .post(
@@ -369,7 +366,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
     {
       body: z.array(collectionSyncSchema),
       auth: true,
-      beforeHandle: [collectionRateLimitHandler],
+      rateLimit: "collection",
     }
   )
   .get(
