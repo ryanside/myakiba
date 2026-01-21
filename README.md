@@ -114,18 +114,18 @@ myakiba is actively being developed with more features on the horizon:
 
 ### Prerequisites
 
-- Bun
-- PostgreSQL database
-- Redis
-- IP Proxy (Recommended)
-- AWS S3
+- **Bun** (runtime + package manager)
+- **PostgreSQL** (local install or Docker)
+- **Redis** (Redis Stack recommended if you want the UI at `http://localhost:8001`)
+- **AWS S3** (required for the worker’s image/object uploads)
+- **HTTP proxy** (optional, used by the worker for scraping)
 
-### Installation
+### Run locally 
 
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/myakiba.git
+git clone https://github.com/ryanside/myakiba.git
 cd myakiba
 ```
 
@@ -137,15 +137,42 @@ bun install
 
 3. Set up your environment variables:
 
-Create a `.env` file in `apps/server/`, `apps/web`, `apps/worker` with your environment variables. Check `.env.example` in these directories for environment variables you need.
+- Create a `.env` file in each app directory based on its `.env.example`:
+  - `apps/server/.env` (API/auth/email/redis/db)
+  - `apps/web/.env` (Vite client env, `VITE_*`)
+  - `apps/worker/.env` (scraping/jobs/s3/redis/db)
+- The typed env schemas live in `packages/env/src/*.ts`. At a minimum, you’ll need:
+  - **Database**: `DATABASE_URL`
+  - **Redis**: `REDIS_HOST`, `REDIS_PORT`
+  - **Server**: `CORS_ORIGIN`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (typically your API URL, e.g. `http://localhost:3000`), `TURNSTILE_SECRET_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `EARLY_ACCESS_PASSWORD`
+  - **Web**: `VITE_SERVER_URL` (typically `http://localhost:3000`), `VITE_TURNSTILE_SITE_KEY`
+  - **Worker**: `AWS_BUCKET_NAME`, `AWS_BUCKET_REGION`, plus credentials via `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` (and optional `HTTP_PROXY`)
 
 4. Apply the database schema:
+
+Start Postgres first (choose one):
+
+- **Docker (provided)**:
+
+```bash
+bun db:start
+```
+
+- **Your own Postgres**: set `DATABASE_URL` accordingly.
+
+Start Redis (example using Redis Stack):
+
+```bash
+docker run -d --name redis-stack -p 6379:6379 -p 8001:8001 redis/redis-stack:latest
+```
+
+Then push the schema:
 
 ```bash
 bun db:push
 ```
 
-5. Start the development server:
+5. Start the dev processes:
 
 ```bash
 bun dev
@@ -155,16 +182,38 @@ bun dev
 
 The API is running at [http://localhost:3000](http://localhost:3000).
 
+### Self-host (Docker Compose)
+
+The root `docker-compose.yml` can run Postgres + Redis + API + workers.
+
+1. Create a root `.env` file (used by Docker Compose) based on `.env.example`.
+
+2. Build and start the stack:
+
+```bash
+docker compose up -d --build
+```
+
 ## Project Structure
 
 ```
 myakiba/
 ├── apps/
-│   ├── web/         # Frontend application (Vite-React + TanStack Router)
-│   ├── server/      # Backend API (Elysia + Bun)
-│   └── worker/      # Background worker for scraping and jobs
+│   ├── web/            # Frontend (Vite + React + TanStack Router)
+│   ├── server/         # Backend API (Elysia + Bun)
+│   └── worker/         # Background jobs/scraping (BullMQ)
 ├── packages/
-│   └── eslint-config/  # Shared ESLint configuration
+│   ├── auth/           # Better Auth config + adapters/plugins
+│   ├── config/         # Shared TS config
+│   ├── constants/      # Shared constants (categories/currencies/etc.)
+│   ├── db/             # Drizzle schema + migrations + db scripts
+│   ├── env/            # Typed env schemas (server/web/worker)
+│   ├── eslint-config/  # Shared ESLint configuration
+│   ├── types/          # Shared TS types
+│   ├── utils/          # Shared utilities
+│   └── validations/    # Shared zod validations
+├── docker-compose.yml  # Self-host stack (API + workers + Postgres + Redis)
+└── turbo.json          # Turborepo task pipeline
 ```
 
 ## Contributors
