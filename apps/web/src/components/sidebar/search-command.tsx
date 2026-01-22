@@ -214,7 +214,7 @@ export function SearchCommand() {
                       onSelect={() => {
                         navigate({
                           to: "/items/$id",
-                          params: { id: collection.itemId.toString() },
+                          params: { id: collection.itemId },
                         });
                         setOpen(false);
                       }}

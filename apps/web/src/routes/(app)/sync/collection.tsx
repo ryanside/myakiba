@@ -129,13 +129,13 @@ function RouteComponent() {
 
   async function handleSyncCollectionSubmit(values: SyncFormCollectionItem[]) {
     const updatedValues: SyncCollectionItem[] = values.map((item) => {
-      const extractedId = extractMfcItemId(item.itemId);
+      const extractedId = extractMfcItemId(item.itemExternalId);
       if (!extractedId) {
-        throw new Error(`Invalid item ID: ${item.itemId}`);
+        throw new Error(`Invalid item ID: ${item.itemExternalId}`);
       }
       return {
         ...item,
-        itemId: parseInt(extractedId),
+        itemExternalId: parseInt(extractedId),
         orderDate: item.orderDate || null,
         paymentDate: item.paymentDate || null,
         shippingDate: item.shippingDate || null,

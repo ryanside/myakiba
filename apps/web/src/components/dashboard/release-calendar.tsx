@@ -9,7 +9,7 @@ import { Link } from "@tanstack/react-router";
 import { Badge } from "../ui/badge";
 
 interface ReleaseItem {
-  itemId: number;
+  itemId: string;
   title: string;
   image: string | null;
   category: string | null;
@@ -146,7 +146,7 @@ function ReleaseCard({
   return (
     <Link
       to="/items/$id"
-      params={{ id: item.itemId.toString() }}
+      params={{ id: item.itemId }}
       className="flex items-center gap-3 p-2 border rounded-md bg-background hover:bg-accent transition-colors cursor-pointer"
     >
       {item.image ? (

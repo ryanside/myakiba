@@ -75,7 +75,7 @@ class DashboardService {
         itemImages: sql<
           string[]
         >`array_agg(DISTINCT ${item.image}) FILTER (WHERE ${item.image} IS NOT NULL)`,
-        itemIds: sql<number[]>`array_agg(DISTINCT ${item.id})`,
+        itemIds: sql<string[]>`array_agg(DISTINCT ${item.id})`,
         total: sql<string>`COALESCE(${sum(collection.price)}, 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`,
       })
       .from(order)
@@ -158,7 +158,7 @@ class DashboardService {
         itemImages: sql<
           string[]
         >`array_agg(DISTINCT ${item.image}) FILTER (WHERE ${item.image} IS NOT NULL)`,
-        itemIds: sql<number[]>`array_agg(DISTINCT ${item.id})`,
+        itemIds: sql<string[]>`array_agg(DISTINCT ${item.id})`,
         total: sql<string>`COALESCE(${sum(collection.price)}, 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`,
       })
       .from(order)

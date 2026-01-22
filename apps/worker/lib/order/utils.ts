@@ -7,6 +7,7 @@ import Redis from "ioredis";
 import type { jobData } from "../types";
 import { normalizeDateString } from "../utils";
 import { v5 as uuidv5 } from "uuid";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@myakiba/db";
 import { setJobStatus } from "../utils";
 import {
@@ -27,7 +28,8 @@ export async function finalizeOrderSync(
   itemsToInsert: UpdatedSyncOrderItem[]
 ) {
   const items = successfulResults.map((item) => ({
-    id: item.id,
+    externalId: item.id,
+    source: "mfc" as const,
     title: item.title,
     category: item.category,
     version: item.version,
@@ -39,7 +41,7 @@ export async function finalizeOrderSync(
   }));
   const itemReleases: Array<{
     id: string;
-    itemId: number;
+    itemExternalId: number;
     date: string;
     type: string;
     price: string;
@@ -47,32 +49,34 @@ export async function finalizeOrderSync(
     barcode: string;
   }> = [];
   const entries: Array<{
-    id: number;
+    externalId: number;
+    source: "mfc";
     category: string;
     name: string;
   }> = [];
   const entryToItems: Array<{
-    entryId: number;
-    itemId: number;
+    entryExternalId: number;
+    itemExternalId: number;
     role: string;
   }> = [];
-  const latestReleaseIdByItem: Map<
+  const latestReleaseIdByExternalId: Map<
     number,
     { releaseId: string | null; date: string | null }
   > = new Map();
   const successfulOrderItems = itemsToScrape.filter((item) =>
-    successfulResults.some((result) => result.id === item.itemId)
+    successfulResults.some((result) => result.id === item.itemExternalId)
   );
 
   for (const scraped of successfulResults) {
     for (const classification of scraped.classification) {
       entryToItems.push({
-        entryId: classification.id,
-        itemId: scraped.id,
+        entryExternalId: classification.id,
+        itemExternalId: scraped.id,
         role: classification.role,
       });
       entries.push({
-        id: classification.id,
+        externalId: classification.id,
+        source: "mfc",
         category: "Classifications",
         name: classification.name,
       });
@@ -80,12 +84,13 @@ export async function finalizeOrderSync(
 
     for (const origin of scraped.origin) {
       entryToItems.push({
-        entryId: origin.id,
-        itemId: scraped.id,
+        entryExternalId: origin.id,
+        itemExternalId: scraped.id,
         role: "",
       });
       entries.push({
-        id: origin.id,
+        externalId: origin.id,
+        source: "mfc",
         category: "Origins",
         name: origin.name,
       });
@@ -93,12 +98,13 @@ export async function finalizeOrderSync(
 
     for (const character of scraped.character) {
       entryToItems.push({
-        entryId: character.id,
-        itemId: scraped.id,
+        entryExternalId: character.id,
+        itemExternalId: scraped.id,
         role: "",
       });
       entries.push({
-        id: character.id,
+        externalId: character.id,
+        source: "mfc",
         category: "Characters",
         name: character.name,
       });
@@ -106,12 +112,13 @@ export async function finalizeOrderSync(
 
     for (const company of scraped.company) {
       entryToItems.push({
-        entryId: company.id,
-        itemId: scraped.id,
+        entryExternalId: company.id,
+        itemExternalId: scraped.id,
         role: company.role,
       });
       entries.push({
-        id: company.id,
+        externalId: company.id,
+        source: "mfc",
         category: "Companies",
         name: company.name,
       });
@@ -119,12 +126,13 @@ export async function finalizeOrderSync(
 
     for (const artist of scraped.artist) {
       entryToItems.push({
-        entryId: artist.id,
-        itemId: scraped.id,
+        entryExternalId: artist.id,
+        itemExternalId: scraped.id,
         role: artist.role,
       });
       entries.push({
-        id: artist.id,
+        externalId: artist.id,
+        source: "mfc",
         category: "Artists",
         name: artist.name,
       });
@@ -132,12 +140,13 @@ export async function finalizeOrderSync(
 
     for (const event of scraped.event) {
       entryToItems.push({
-        entryId: event.id,
-        itemId: scraped.id,
+        entryExternalId: event.id,
+        itemExternalId: scraped.id,
         role: event.role,
       });
       entries.push({
-        id: event.id,
+        externalId: event.id,
+        source: "mfc",
         category: "Events",
         name: event.name,
       });
@@ -145,12 +154,13 @@ export async function finalizeOrderSync(
 
     for (const material of scraped.materials) {
       entryToItems.push({
-        entryId: material.id,
-        itemId: scraped.id,
+        entryExternalId: material.id,
+        itemExternalId: scraped.id,
         role: "",
       });
       entries.push({
-        id: material.id,
+        externalId: material.id,
+        source: "mfc",
         category: "Materials",
         name: material.name,
       });
@@ -163,7 +173,7 @@ export async function finalizeOrderSync(
           `${scraped.id}-${normalizedDate}-${release.type}-${release.price}-${release.priceCurrency}-${release.barcode}`,
           "2c8ed313-3f54-4401-a280-2410ce639ef3"
         ),
-        itemId: scraped.id,
+        itemExternalId: scraped.id,
         date: normalizedDate,
         type: release.type,
         price: release.price.toString(),
@@ -176,12 +186,12 @@ export async function finalizeOrderSync(
       const latest = [...releasesForItem].sort((a, b) =>
         a.date.localeCompare(b.date)
       )[releasesForItem.length - 1];
-      latestReleaseIdByItem.set(scraped.id, {
+      latestReleaseIdByExternalId.set(scraped.id, {
         releaseId: latest.id,
         date: latest.date,
       });
     } else {
-      latestReleaseIdByItem.set(scraped.id, {
+      latestReleaseIdByExternalId.set(scraped.id, {
         releaseId: "",
         date: "",
       });
@@ -191,14 +201,10 @@ export async function finalizeOrderSync(
   }
 
   // assign latest release id to successfulOrderItems
-  successfulOrderItems.forEach((item) => {
-    item.releaseId = latestReleaseIdByItem.get(item.itemId)?.releaseId ?? "";
-  });
-
-  // determine the latest release date from latestReleaseIdByItem
-  const latestReleaseDate = [...latestReleaseIdByItem.values()].sort(
+  // determine the latest release date from scraped items
+  const latestReleaseDate = [...latestReleaseIdByExternalId.values()].sort(
     (a, b) => a.date?.localeCompare(b.date ?? "") ?? 0
-  )[latestReleaseIdByItem.size - 1].date;
+  )[latestReleaseIdByExternalId.size - 1]?.date;
 
   // compare current order.releaseMonthYear with latestReleaseDate
   // if latestReleaseDate is after order.releaseMonthYear, update order.releaseMonthYear
@@ -209,34 +215,163 @@ export async function finalizeOrderSync(
     details.releaseMonthYear = latestReleaseDate;
   }
 
-  const orderItems = [...itemsToInsert, ...successfulOrderItems];
-
   try {
     await db.transaction(async (tx) => {
-      await tx
-        .insert(item)
-        .values(items)
-        .onConflictDoNothing({ target: [item.id] });
-      if (itemReleases.length > 0) {
+      if (items.length > 0) {
         await tx
-          .insert(item_release)
-          .values(itemReleases)
-          .onConflictDoNothing({ target: [item_release.id] });
+          .insert(item)
+          .values(items)
+          .onConflictDoNothing({ target: [item.source, item.externalId] });
       }
+
+      const itemExternalIds = items
+        .map((dbItem) => dbItem.externalId)
+        .filter((externalId): externalId is number => externalId !== null);
+      const dbItems =
+        itemExternalIds.length > 0
+          ? await tx
+              .select({ id: item.id, externalId: item.externalId })
+              .from(item)
+              .where(
+                and(eq(item.source, "mfc"), inArray(item.externalId, itemExternalIds))
+              )
+          : [];
+      const externalIdToInternalId = new Map(
+        dbItems.map((dbItem) => [dbItem.externalId, dbItem.id])
+      );
+
       if (entries.length > 0) {
         await tx
           .insert(entry)
           .values(entries)
-          .onConflictDoNothing({ target: [entry.id] });
+          .onConflictDoNothing({ target: [entry.source, entry.externalId] });
       }
-      if (entryToItems.length > 0) {
+
+      const entryExternalIds = entries
+        .map((dbEntry) => dbEntry.externalId)
+        .filter((externalId): externalId is number => externalId !== null);
+      const dbEntries =
+        entryExternalIds.length > 0
+          ? await tx
+              .select({ id: entry.id, externalId: entry.externalId })
+              .from(entry)
+              .where(
+                and(
+                  eq(entry.source, "mfc"),
+                  inArray(entry.externalId, entryExternalIds)
+                )
+              )
+          : [];
+      const externalIdToEntryId = new Map(
+        dbEntries.map((dbEntry) => [dbEntry.externalId, dbEntry.id])
+      );
+
+      const itemReleasesToInsert = itemReleases
+        .map((release) => {
+          const internalItemId = externalIdToInternalId.get(release.itemExternalId);
+          if (!internalItemId) {
+            return null;
+          }
+          return {
+            id: release.id,
+            itemId: internalItemId,
+            date: release.date,
+            type: release.type,
+            price: release.price,
+            priceCurrency: release.priceCurrency,
+            barcode: release.barcode,
+          };
+        })
+        .filter(
+          (
+            release
+          ): release is {
+            id: string;
+            itemId: string;
+            date: string;
+            type: string;
+            price: string;
+            priceCurrency: string;
+            barcode: string;
+          } => release !== null
+        );
+
+      if (itemReleasesToInsert.length > 0) {
+        await tx
+          .insert(item_release)
+          .values(itemReleasesToInsert)
+          .onConflictDoNothing({ target: [item_release.id] });
+      }
+
+      const entryToItemsToInsert = entryToItems
+        .map((link) => {
+          const entryId = externalIdToEntryId.get(link.entryExternalId);
+          const itemId = externalIdToInternalId.get(link.itemExternalId);
+          if (!entryId || !itemId) {
+            return null;
+          }
+          return {
+            entryId,
+            itemId,
+            role: link.role,
+          };
+        })
+        .filter(
+          (
+            link
+          ): link is {
+            entryId: string;
+            itemId: string;
+            role: string;
+          } => link !== null
+        );
+
+      if (entryToItemsToInsert.length > 0) {
         await tx
           .insert(entry_to_item)
-          .values(entryToItems)
+          .values(entryToItemsToInsert)
           .onConflictDoNothing({
             target: [entry_to_item.entryId, entry_to_item.itemId],
           });
       }
+
+      const latestReleaseIdByInternalId = new Map<
+        string,
+        { releaseId: string | null; date: string | null }
+      >();
+      for (const [externalId, releaseInfo] of latestReleaseIdByExternalId) {
+        const internalItemId = externalIdToInternalId.get(externalId);
+        if (internalItemId) {
+          latestReleaseIdByInternalId.set(internalItemId, releaseInfo);
+        }
+      }
+
+      successfulOrderItems.forEach((orderItem) => {
+        const internalItemId = externalIdToInternalId.get(orderItem.itemExternalId);
+        if (!internalItemId) {
+          return;
+        }
+        orderItem.itemId = internalItemId;
+        orderItem.releaseId =
+          latestReleaseIdByInternalId.get(internalItemId)?.releaseId ?? "";
+      });
+
+      const orderItems = [...itemsToInsert, ...successfulOrderItems]
+        .filter(
+          (
+            orderItem
+          ): orderItem is UpdatedSyncOrderItem & { itemId: string } =>
+            orderItem.itemId !== null
+        )
+        .map((orderItem) => ({
+          ...orderItem,
+          itemId: orderItem.itemId,
+          releaseId:
+            orderItem.releaseId && orderItem.releaseId !== ""
+              ? orderItem.releaseId
+              : null,
+        }));
+
       await tx.insert(order).values(details);
       await tx.insert(collection).values(orderItems);
     });

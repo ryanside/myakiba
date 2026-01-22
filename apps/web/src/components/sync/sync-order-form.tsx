@@ -93,7 +93,7 @@ export default function SyncOrderForm({
       notes: "",
       items: [
         {
-          itemId: "",
+          itemExternalId: "",
           price: "0.00",
           count: 1,
           status: "Ordered" as SyncFormOrderItem["status"],
@@ -579,7 +579,7 @@ export default function SyncOrderForm({
                   return (
                     <orderForm.Field
                       key={i}
-                      name={`items[${i}].itemId`}
+                      name={`items[${i}].itemExternalId`}
                       validators={{
                         onChange: ({ value }: { value: string }) => {
                           if (
@@ -986,7 +986,7 @@ export default function SyncOrderForm({
                     e.preventDefault();
                     e.stopPropagation();
                     field.pushValue({
-                      itemId: "",
+                      itemExternalId: "",
                       price: "0.00",
                       count: 1,
                       status: "Ordered",

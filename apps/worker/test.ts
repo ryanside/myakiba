@@ -6,6 +6,7 @@ import {
   item,
   item_release,
 } from "@myakiba/db/schema/figure";
+import { and, eq, inArray } from "drizzle-orm";
 import Redis from "ioredis";
 import path from "path";
 import { URL } from "url";
@@ -416,9 +417,9 @@ const scrapeMethod =
 
 scrapeMethod(itemIds, 3, 1000, userId, undefined).then(
   async (successfulResults) => {
-    // prepare for db insert (item, item_release, entry, entry_to_item, collection)
     const items = successfulResults.map((item) => ({
-      id: item.id,
+      externalId: item.id,
+      source: "mfc" as const,
       title: item.title,
       category: item.category as Category,
       version: item.version,
@@ -431,7 +432,7 @@ scrapeMethod(itemIds, 3, 1000, userId, undefined).then(
 
     const itemReleases: Array<{
       id: string;
-      itemId: number;
+      itemExternalId: number;
       date: string;
       type: string;
       price: string;
@@ -439,117 +440,125 @@ scrapeMethod(itemIds, 3, 1000, userId, undefined).then(
       barcode: string;
     }> = [];
     const entries: Array<{
-      id: number;
+      externalId: number;
+      source: "mfc";
       category: string;
       name: string;
     }> = [];
     const entryToItems: Array<{
-      entryId: number;
-      itemId: number;
+      entryExternalId: number;
+      itemExternalId: number;
       role: string;
     }> = [];
 
-    for (const item of successfulResults) {
-      for (const classification of item.classification) {
+    for (const scraped of successfulResults) {
+      for (const classification of scraped.classification) {
         entryToItems.push({
-          entryId: classification.id,
-          itemId: item.id,
+          entryExternalId: classification.id,
+          itemExternalId: scraped.id,
           role: classification.role,
         });
         entries.push({
-          id: classification.id,
+          externalId: classification.id,
+          source: "mfc",
           category: "Classifications",
           name: classification.name,
         });
       }
 
-      for (const origin of item.origin) {
+      for (const origin of scraped.origin) {
         entryToItems.push({
-          entryId: origin.id,
-          itemId: item.id,
+          entryExternalId: origin.id,
+          itemExternalId: scraped.id,
           role: "",
         });
         entries.push({
-          id: origin.id,
+          externalId: origin.id,
+          source: "mfc",
           category: "Origins",
           name: origin.name,
         });
       }
 
-      for (const character of item.character) {
+      for (const character of scraped.character) {
         entryToItems.push({
-          entryId: character.id,
-          itemId: item.id,
+          entryExternalId: character.id,
+          itemExternalId: scraped.id,
           role: "",
         });
         entries.push({
-          id: character.id,
+          externalId: character.id,
+          source: "mfc",
           category: "Characters",
           name: character.name,
         });
       }
 
-      for (const company of item.company) {
+      for (const company of scraped.company) {
         entryToItems.push({
-          entryId: company.id,
-          itemId: item.id,
+          entryExternalId: company.id,
+          itemExternalId: scraped.id,
           role: company.role,
         });
         entries.push({
-          id: company.id,
+          externalId: company.id,
+          source: "mfc",
           category: "Companies",
           name: company.name,
         });
       }
 
-      for (const artist of item.artist) {
+      for (const artist of scraped.artist) {
         entryToItems.push({
-          entryId: artist.id,
-          itemId: item.id,
+          entryExternalId: artist.id,
+          itemExternalId: scraped.id,
           role: artist.role,
         });
         entries.push({
-          id: artist.id,
+          externalId: artist.id,
+          source: "mfc",
           category: "Artists",
           name: artist.name,
         });
       }
 
-      for (const event of item.event) {
+      for (const event of scraped.event) {
         entryToItems.push({
-          entryId: event.id,
-          itemId: item.id,
+          entryExternalId: event.id,
+          itemExternalId: scraped.id,
           role: event.role,
         });
         entries.push({
-          id: event.id,
+          externalId: event.id,
+          source: "mfc",
           category: "Events",
           name: event.name,
         });
       }
 
-      for (const material of item.materials) {
+      for (const material of scraped.materials) {
         entryToItems.push({
-          entryId: material.id,
-          itemId: item.id,
+          entryExternalId: material.id,
+          itemExternalId: scraped.id,
           role: "",
         });
         entries.push({
-          id: material.id,
+          externalId: material.id,
+          source: "mfc",
           category: "Materials",
           name: material.name,
         });
       }
 
-      for (const release of item.releaseDate) {
+      for (const release of scraped.releaseDate) {
         itemReleases.push({
           id: uuidv5(
-            `${item.id}-${normalizeDateString(release.date)}-${release.type}-${
+            `${scraped.id}-${normalizeDateString(release.date)}-${release.type}-${
               release.price
             }-${release.priceCurrency}-${release.barcode}`,
             "2c8ed313-3f54-4401-a280-2410ce639ef3"
           ),
-          itemId: item.id,
+          itemExternalId: scraped.id,
           date: normalizeDateString(release.date),
           type: release.type,
           price: release.price.toString(),
@@ -565,24 +574,123 @@ scrapeMethod(itemIds, 3, 1000, userId, undefined).then(
     console.log("Entry to Items to be inserted:", entryToItems);
 
     const batchInsert = await db.transaction(async (tx) => {
-      await tx
-        .insert(item)
-        .values(items)
-        .onConflictDoNothing({ target: [item.id] });
-      await tx
-        .insert(item_release)
-        .values(itemReleases)
-        .onConflictDoNothing({ target: [item_release.id] });
-      await tx
-        .insert(entry)
-        .values(entries)
-        .onConflictDoNothing({ target: [entry.id] });
-      await tx
-        .insert(entry_to_item)
-        .values(entryToItems)
-        .onConflictDoNothing({
-          target: [entry_to_item.entryId, entry_to_item.itemId],
-        });
+      if (items.length > 0) {
+        await tx
+          .insert(item)
+          .values(items)
+          .onConflictDoNothing({ target: [item.source, item.externalId] });
+      }
+
+      const itemExternalIds = items
+        .map((dbItem) => dbItem.externalId)
+        .filter((externalId): externalId is number => externalId !== null);
+      const dbItems =
+        itemExternalIds.length > 0
+          ? await tx
+              .select({ id: item.id, externalId: item.externalId })
+              .from(item)
+              .where(
+                and(eq(item.source, "mfc"), inArray(item.externalId, itemExternalIds))
+              )
+          : [];
+      const externalIdToInternalId = new Map(
+        dbItems.map((dbItem) => [dbItem.externalId, dbItem.id])
+      );
+
+      if (entries.length > 0) {
+        await tx
+          .insert(entry)
+          .values(entries)
+          .onConflictDoNothing({ target: [entry.source, entry.externalId] });
+      }
+
+      const entryExternalIds = entries
+        .map((dbEntry) => dbEntry.externalId)
+        .filter((externalId): externalId is number => externalId !== null);
+      const dbEntries =
+        entryExternalIds.length > 0
+          ? await tx
+              .select({ id: entry.id, externalId: entry.externalId })
+              .from(entry)
+              .where(
+                and(
+                  eq(entry.source, "mfc"),
+                  inArray(entry.externalId, entryExternalIds)
+                )
+              )
+          : [];
+      const externalIdToEntryId = new Map(
+        dbEntries.map((dbEntry) => [dbEntry.externalId, dbEntry.id])
+      );
+
+      const itemReleasesToInsert = itemReleases
+        .map((release) => {
+          const internalItemId = externalIdToInternalId.get(release.itemExternalId);
+          if (!internalItemId) {
+            return null;
+          }
+          return {
+            id: release.id,
+            itemId: internalItemId,
+            date: release.date,
+            type: release.type,
+            price: release.price,
+            priceCurrency: release.priceCurrency,
+            barcode: release.barcode,
+          };
+        })
+        .filter(
+          (
+            release
+          ): release is {
+            id: string;
+            itemId: string;
+            date: string;
+            type: string;
+            price: string;
+            priceCurrency: string;
+            barcode: string;
+          } => release !== null
+        );
+
+      if (itemReleasesToInsert.length > 0) {
+        await tx
+          .insert(item_release)
+          .values(itemReleasesToInsert)
+          .onConflictDoNothing({ target: [item_release.id] });
+      }
+
+      const entryToItemsToInsert = entryToItems
+        .map((link) => {
+          const entryId = externalIdToEntryId.get(link.entryExternalId);
+          const itemId = externalIdToInternalId.get(link.itemExternalId);
+          if (!entryId || !itemId) {
+            return null;
+          }
+          return {
+            entryId,
+            itemId,
+            role: link.role,
+          };
+        })
+        .filter(
+          (
+            link
+          ): link is {
+            entryId: string;
+            itemId: string;
+            role: string;
+          } => link !== null
+        );
+
+      if (entryToItemsToInsert.length > 0) {
+        await tx
+          .insert(entry_to_item)
+          .values(entryToItemsToInsert)
+          .onConflictDoNothing({
+            target: [entry_to_item.entryId, entry_to_item.itemId],
+          });
+      }
     });
     console.log(batchInsert);
     await redis.quit();

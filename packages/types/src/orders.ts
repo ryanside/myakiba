@@ -141,7 +141,7 @@ export type CascadeOptions = Array<
 
 export type ItemRelease = {
   id: string;
-  itemId: number;
+  itemId: string;
   date: string;
   type: string | null;
   price: string | null;

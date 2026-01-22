@@ -425,7 +425,7 @@ export default function FiltersForm({
                                     {entries.entries.map((entry) => (
                                       <CommandItem
                                         key={entry.id}
-                                        value={entry.id.toString()}
+                                        value={entry.id}
                                         onSelect={() => {
                                           field.handleChange([
                                             ...field.state.value,

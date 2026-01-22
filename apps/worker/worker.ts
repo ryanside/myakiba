@@ -41,7 +41,7 @@ const myWorker = new Worker(
           : scrapedItemsWithRateLimit;
 
       const itemIds = Array.from(
-        new Set(validatedData.data.items.map((item) => item.id))
+        new Set(validatedData.data.items.map((item) => item.itemExternalId))
       );
 
       await setJobStatus(
@@ -95,7 +95,9 @@ const myWorker = new Worker(
 
       const itemIds = Array.from(
         new Set(
-          validatedData.data.order.itemsToScrape.map((item) => item.itemId)
+          validatedData.data.order.itemsToScrape.map(
+            (item) => item.itemExternalId
+          )
         )
       );
 
@@ -150,7 +152,9 @@ const myWorker = new Worker(
 
       const itemIds = Array.from(
         new Set(
-          validatedData.data.collection.itemsToScrape.map((item) => item.itemId)
+          validatedData.data.collection.itemsToScrape.map(
+            (item) => item.itemExternalId
+          )
         )
       );
 

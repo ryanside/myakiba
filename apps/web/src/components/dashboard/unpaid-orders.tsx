@@ -9,7 +9,7 @@ interface UnpaidOrder {
   shop: string | null;
   releaseMonthYear: string | null;
   itemImages: string[] | null;
-  itemIds: number[];
+  itemIds: string[];
   total: string;
 }
 

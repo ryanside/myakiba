@@ -93,7 +93,7 @@ export const collectionSearchSchema = z.object({
   relPriceMax: z.string().optional(),
   relCurrency: z.array(z.string()).optional(),
   category: z.array(z.enum(CATEGORIES)).optional(),
-  entries: z.array(z.coerce.number()).optional(),
+  entries: z.array(z.string()).optional(),
   scale: z.array(z.string()).optional(),
   tags: z.array(z.string()).optional(),
   condition: z.array(z.enum(CONDITIONS)).optional(),

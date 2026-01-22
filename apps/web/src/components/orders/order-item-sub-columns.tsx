@@ -104,19 +104,23 @@ export function createOrderItemSubColumns({
               <Link
                 className="font-medium text-foreground truncate"
                 to="/items/$id"
-                params={{ id: item.itemId.toString() }}
+                params={{ id: item.itemId }}
               >
                 {item.itemTitle}
               </Link>
               <div className="flex items-center gap-1 font-light">
-                <a
-                  href={`https://myfigurecollection.net/item/${item.itemId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-muted-foreground font-light hover:text-foreground transition-colors underline-offset-4 hover:underline"
-                >
-                  https://myfigurecollection.net/item/{item.itemId}
-                </a>
+                {item.itemExternalId ? (
+                  <a
+                    href={`https://myfigurecollection.net/item/${item.itemExternalId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-muted-foreground font-light hover:text-foreground transition-colors underline-offset-4 hover:underline"
+                  >
+                    https://myfigurecollection.net/item/{item.itemExternalId}
+                  </a>
+                ) : (
+                  <span className="text-xs text-muted-foreground">Custom</span>
+                )}
               </div>
             </div>
           </div>
@@ -259,8 +263,12 @@ export function createOrderItemSubColumns({
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuItem
                 onClick={() => {
-                  navigator.clipboard.writeText(item.itemId.toString());
-                  toast.success("Copied MFC item ID to clipboard");
+                  if (item.itemExternalId) {
+                    navigator.clipboard.writeText(item.itemExternalId.toString());
+                    toast.success("Copied MFC item ID to clipboard");
+                  } else {
+                    toast.error("No MFC item ID for custom items");
+                  }
                 }}
               >
                 <Copy className="mr-2 h-4 w-4" />
