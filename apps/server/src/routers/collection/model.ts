@@ -13,12 +13,6 @@ const commaSeparatedStringArray = z.preprocess((val) => {
   return undefined;
 }, z.array(z.string()).optional());
 
-const commaSeparatedNumberArray = z.preprocess((val) => {
-  if (typeof val === "string" && val.length > 0) {
-    return val.split(",").map((v) => Number(v));
-  }
-  return undefined;
-}, z.array(z.number()).optional());
 
 const commaSeparatedShipMethodArray = z.preprocess(
   (val) => {
@@ -90,7 +84,7 @@ export const collectionQuerySchema = z.object({
   relPriceMax: z.string().optional(),
   relCurrency: commaSeparatedStringArray,
   category: commaSeparatedCategoryArray,
-  entries: commaSeparatedNumberArray,
+  entries: commaSeparatedStringArray,
   scale: commaSeparatedStringArray,
   tags: commaSeparatedStringArray,
   condition: commaSeparatedConditionArray,

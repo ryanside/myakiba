@@ -4,7 +4,7 @@ import { collection, order } from "@myakiba/db/schema/figure";
 import { ORDER_STATUSES, CONDITIONS, SHIPPING_METHODS } from "@myakiba/constants";
 
 export const csvItemSchema = z.object({
-  id: z.int(),
+  itemExternalId: z.int(),
   status: z.enum(["Owned", "Ordered"]),
   count: z.int(),
   score: z.string(),
@@ -38,7 +38,7 @@ export const statusSchema = z.object({
 export type status = z.infer<typeof statusSchema>;
 
 export const orderItemSyncSchema = z.object({
-  itemId: z.int(),
+  itemExternalId: z.int(),
   price: z.string(),
   count: z.number(),
   status: z.enum(ORDER_STATUSES),
@@ -74,7 +74,7 @@ export const orderSyncSchema = z.object({
 export type orderSyncType = z.infer<typeof orderSyncSchema>;
 
 export const collectionSyncSchema = z.object({
-  itemId: z.int(),
+  itemExternalId: z.int(),
   price: z.string(),
   count: z.number(),
   score: z.string(),
@@ -93,7 +93,8 @@ export type collectionSyncType = z.infer<typeof collectionSyncSchema>;
 
 export type UpdatedSyncCollection = collectionSyncType & {
   userId: string;
-  releaseId: string;
+  releaseId: string | null;
+  itemId: string | null;
 };
 
 export type UpdatedSyncOrder = Omit<orderSyncType, "items"> & {
@@ -105,5 +106,6 @@ export type UpdatedSyncOrder = Omit<orderSyncType, "items"> & {
 export type UpdatedSyncOrderItem = orderItemSyncType & {
   userId: string;
   orderId: string;
-  releaseId: string;
+  releaseId: string | null;
+  itemId: string | null;
 };

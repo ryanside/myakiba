@@ -5,4 +5,4 @@ export type EntryCategory =
   | "Artists"
   | "Materials"
   | "Classifications"
-  | "Event";
+  | "Events";

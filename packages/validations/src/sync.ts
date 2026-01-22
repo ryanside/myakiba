@@ -28,8 +28,9 @@ export const syncOrderSchema = z.object({
 export const syncOrderItemSchema = z.object({
   userId: z.string(),
   orderId: z.string(),
-  releaseId: z.string(),
-  itemId: z.number(),
+  releaseId: z.string().nullable(),
+  itemId: z.string().nullable(),
+  itemExternalId: z.number(),
   price: z.string(),
   count: z.number(),
   status: z.enum(ORDER_STATUSES),
@@ -43,8 +44,9 @@ export const syncOrderItemSchema = z.object({
 
 export const syncCollectionItemSchema = z.object({
   userId: z.string(),
-  releaseId: z.string(),
-  itemId: z.number(),
+  releaseId: z.string().nullable(),
+  itemId: z.string().nullable(),
+  itemExternalId: z.number(),
   price: z.string(),
   count: z.number(),
   score: z.string(),
@@ -95,7 +97,7 @@ export const csvSchema = z.array(csvItemSchema);
 
 // Internal CSV item schema for worker processing
 const internalCsvItemSchema = z.object({
-  id: z.number(),
+  itemExternalId: z.number(),
   status: z.string(),
   count: z.number(),
   score: z.string(),

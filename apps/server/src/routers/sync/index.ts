@@ -11,6 +11,7 @@ import {
   type collectionSyncType,
   type UpdatedSyncCollection,
   type UpdatedSyncOrderItem,
+  type collectionInsertType,
 } from "./model";
 import SyncService from "./service";
 import { tryCatch } from "@myakiba/utils";
@@ -122,30 +123,59 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       const orderId = createId();
 
-      const itemIds = body.items.map(
-        (item: orderItemSyncType) => item.itemId
+      const itemExternalIds = body.items.map(
+        (item: orderItemSyncType) => item.itemExternalId
       );
 
       const { data: existingItems, error: existingItemsError } = await tryCatch(
-        SyncService.getExistingItemsWithReleases(itemIds)
+        SyncService.getExistingItemsByExternalIds(itemExternalIds)
       );
 
       if (existingItemsError) {
         console.error(
-          "Error during getExistingItemsWithReleases():",
+          "Error during getExistingItemsByExternalIds():",
           existingItemsError,
           {
             userId: user.id,
-            itemIds: itemIds,
+            itemExternalIds: itemExternalIds,
+          }
+        );
+        return status(500, "Failed to check for existing items");
+      }
+
+      const existingItemIds = existingItems.map((existingItem) => existingItem.id);
+      const {
+        data: existingItemsWithReleases,
+        error: existingItemsWithReleasesError,
+      } = await tryCatch(SyncService.getExistingItemsWithReleases(existingItemIds));
+
+      if (existingItemsWithReleasesError) {
+        console.error(
+          "Error during getExistingItemsWithReleases():",
+          existingItemsWithReleasesError,
+          {
+            userId: user.id,
+            itemIds: existingItemIds,
           }
         );
         return status(500, "Failed to check for existing items with releases");
       }
 
+      const externalIdToInternalId = new Map(
+        existingItems.map((existingItem) => [
+          existingItem.externalId,
+          existingItem.id,
+        ])
+      );
+
       const releaseDates = body.items
-        .map((item: orderItemSyncType) =>
-          existingItems.releaseDates.get(item.itemId)
-        )
+        .map((item: orderItemSyncType) => {
+          const internalId = externalIdToInternalId.get(item.itemExternalId);
+          if (!internalId) {
+            return undefined;
+          }
+          return existingItemsWithReleases.releaseDates.get(internalId);
+        })
         .filter((date): date is string => date !== undefined);
 
       const latestReleaseDate =
@@ -166,25 +196,35 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       const itemsToScrape: UpdatedSyncOrderItem[] = body.items
         .filter(
-          (item: orderItemSyncType) => !existingItems.releases.get(item.itemId)
+          (item: orderItemSyncType) =>
+            !externalIdToInternalId.has(item.itemExternalId)
         )
         .map((item: orderItemSyncType) => ({
           ...item,
+          itemId: null,
           orderId: orderId,
-          releaseId: "",
+          releaseId: null,
           userId: user.id,
         }));
 
-      const itemsToInsert: UpdatedSyncOrderItem[] = body.items
-        .filter((item: orderItemSyncType) =>
-          existingItems.releases.get(item.itemId)
-        )
-        .map((item: orderItemSyncType) => ({
-          ...item,
-          orderId: orderId,
-          releaseId: existingItems.releases.get(item.itemId) ?? "",
-          userId: user.id,
-        }));
+      const itemsToInsert: UpdatedSyncOrderItem[] = body.items.flatMap(
+        (item: orderItemSyncType) => {
+          const internalItemId = externalIdToInternalId.get(item.itemExternalId);
+          if (!internalItemId) {
+            return [];
+          }
+          return [
+            {
+              ...item,
+              itemId: internalItemId,
+              orderId: orderId,
+              releaseId:
+                existingItemsWithReleases.releases.get(internalItemId) ?? null,
+              userId: user.id,
+            },
+          ];
+        }
+      );
 
       let jobId: string | null | undefined = null;
       if (itemsToScrape.length > 0) {
@@ -225,8 +265,32 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
         jobId = jobIdData;
       } else {
+        const collectionItemsToInsert: collectionInsertType[] = itemsToInsert
+          .filter(
+            (item): item is UpdatedSyncOrderItem & { itemId: string } =>
+              item.itemId !== null
+          )
+          .map((item) => ({
+            userId: item.userId,
+            itemId: item.itemId,
+            orderId: item.orderId,
+            status: item.status,
+            count: item.count,
+            score: "0.0",
+            price: item.price,
+            shop: order.shop,
+            orderDate: item.orderDate,
+            paymentDate: item.paymentDate,
+            shippingDate: item.shippingDate,
+            collectionDate: item.collectionDate,
+            shippingMethod: item.shippingMethod,
+            condition: item.condition,
+            notes: "",
+            tags: [],
+            releaseId: item.releaseId,
+          }));
         const { error: insertToCollectionAndOrdersError } = await tryCatch(
-          SyncService.insertToCollectionAndOrders(itemsToInsert, [order])
+          SyncService.insertToCollectionAndOrders(collectionItemsToInsert, [order])
         );
 
         if (insertToCollectionAndOrdersError) {
@@ -262,43 +326,80 @@ const syncRouter = new Elysia({ prefix: "/sync" })
     async ({ body, user }) => {
       if (!user) return status(401, "Unauthorized");
 
-      const itemIds = body.map((item: collectionSyncType) => item.itemId);
+      const itemExternalIds = body.map(
+        (item: collectionSyncType) => item.itemExternalId
+      );
 
       const { data: existingItems, error: existingItemsError } = await tryCatch(
-        SyncService.getExistingItemsWithReleases(itemIds)
+        SyncService.getExistingItemsByExternalIds(itemExternalIds)
       );
 
       if (existingItemsError) {
         console.error(
-          "Error during getExistingItemsWithReleases():",
+          "Error during getExistingItemsByExternalIds():",
           existingItemsError,
           {
             userId: user.id,
-            itemIds: itemIds,
+            itemExternalIds: itemExternalIds,
+          }
+        );
+        return status(500, "Failed to check for existing items");
+      }
+
+      const existingItemIds = existingItems.map((existingItem) => existingItem.id);
+      const {
+        data: existingItemsWithReleases,
+        error: existingItemsWithReleasesError,
+      } = await tryCatch(SyncService.getExistingItemsWithReleases(existingItemIds));
+
+      if (existingItemsWithReleasesError) {
+        console.error(
+          "Error during getExistingItemsWithReleases():",
+          existingItemsWithReleasesError,
+          {
+            userId: user.id,
+            itemIds: existingItemIds,
           }
         );
         return status(500, "Failed to check for existing items with releases");
       }
 
+      const externalIdToInternalId = new Map(
+        existingItems.map((existingItem) => [
+          existingItem.externalId,
+          existingItem.id,
+        ])
+      );
+
       const itemsToScrape: UpdatedSyncCollection[] = body
         .filter(
-          (item: collectionSyncType) => !existingItems.releases.get(item.itemId)
+          (item: collectionSyncType) =>
+            !externalIdToInternalId.has(item.itemExternalId)
         )
         .map((item: collectionSyncType) => ({
           ...item,
-          releaseId: "",
+          itemId: null,
+          releaseId: null,
           userId: user.id,
         }));
 
-      const itemsToInsert: UpdatedSyncCollection[] = body
-        .filter((item: collectionSyncType) =>
-          existingItems.releases.get(item.itemId)
-        )
-        .map((item: collectionSyncType) => ({
-          ...item,
-          releaseId: existingItems.releases.get(item.itemId) ?? "",
-          userId: user.id,
-        }));
+      const itemsToInsert: UpdatedSyncCollection[] = body.flatMap(
+        (item: collectionSyncType) => {
+          const internalItemId = externalIdToInternalId.get(item.itemExternalId);
+          if (!internalItemId) {
+            return [];
+          }
+          return [
+            {
+              ...item,
+              itemId: internalItemId,
+              releaseId:
+                existingItemsWithReleases.releases.get(internalItemId) ?? null,
+              userId: user.id,
+            },
+          ];
+        }
+      );
 
       let jobId: string | null | undefined = null;
       if (itemsToScrape.length > 0) {
@@ -338,8 +439,30 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
         jobId = jobIdData;
       } else {
+        const collectionItemsToInsert: collectionInsertType[] = itemsToInsert
+          .filter(
+            (item): item is UpdatedSyncCollection & { itemId: string } =>
+              item.itemId !== null
+          )
+          .map((item) => ({
+            userId: item.userId,
+            itemId: item.itemId,
+            releaseId: item.releaseId,
+            price: item.price,
+            count: item.count,
+            score: item.score,
+            shop: item.shop,
+            orderDate: item.orderDate,
+            paymentDate: item.paymentDate,
+            shippingDate: item.shippingDate,
+            collectionDate: item.collectionDate,
+            shippingMethod: item.shippingMethod,
+            tags: item.tags,
+            condition: item.condition,
+            notes: item.notes,
+          }));
         const { error: insertToCollectionAndOrdersError } = await tryCatch(
-          SyncService.insertToCollectionAndOrders(itemsToInsert)
+          SyncService.insertToCollectionAndOrders(collectionItemsToInsert)
         );
 
         if (insertToCollectionAndOrdersError) {

@@ -8,6 +8,7 @@ import {
   uuid,
   decimal,
   index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 import { createId } from "@paralleldrive/cuid2";
@@ -22,7 +23,14 @@ import { CATEGORIES } from "@myakiba/constants/categories";
 export const item = pgTable(
   "item",
   {
-    id: integer("id").primaryKey(), // integer id from MFC
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    externalId: integer("external_id"),
+    source: text("source")
+      .$type<"mfc" | "custom">()
+      .notNull()
+      .default("mfc"),
     title: text("title").notNull(),
     category: text("category", {
       enum: CATEGORIES,
@@ -36,14 +44,17 @@ export const item = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
-  (t) => [index("item_title_idx").on(t.title)]
+  (t) => [
+    index("item_title_idx").on(t.title),
+    uniqueIndex("item_source_external_id_idx").on(t.source, t.externalId),
+  ]
 );
 
 export const item_release = pgTable(
   "item_release",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    itemId: integer("item_id")
+    itemId: text("item_id")
       .notNull()
       .references(() => item.id, { onDelete: "cascade" }),
     date: date("date", { mode: "string" }).notNull(),
@@ -60,22 +71,32 @@ export const item_release = pgTable(
 export const entry = pgTable(
   "entry",
   {
-    id: integer("id").primaryKey(),
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    externalId: integer("external_id"),
+    source: text("source")
+      .$type<"mfc" | "custom">()
+      .notNull()
+      .default("mfc"),
     category: text("category").notNull(), // classifications, origin, character, company, artist, material, event
     name: text("name").notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
-  (t) => [index("entry_name_idx").on(t.name)]
+  (t) => [
+    index("entry_name_idx").on(t.name),
+    uniqueIndex("entry_source_external_id_idx").on(t.source, t.externalId),
+  ]
 );
 
 export const entry_to_item = pgTable(
   "entry_to_item",
   {
-    entryId: integer("entry_id")
+    entryId: text("entry_id")
       .notNull()
       .references(() => entry.id, { onDelete: "cascade" }),
-    itemId: integer("item_id")
+    itemId: text("item_id")
       .notNull()
       .references(() => item.id, { onDelete: "cascade" }),
     role: text("role"), // "manufacturer", "sculptor", "exhibition", "etc."
@@ -97,7 +118,7 @@ export const collection = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    itemId: integer("item_id")
+    itemId: text("item_id")
       .notNull()
       .references(() => item.id, { onDelete: "cascade" }),
     orderId: text("order_id").references(() => order.id, {

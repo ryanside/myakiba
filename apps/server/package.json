@@ -23,6 +23,7 @@
     "@myakiba/validations": "workspace:*",
     "@paralleldrive/cuid2": "catalog:",
     "bullmq": "catalog:",
+    "date-fns": "catalog:",
     "dotenv": "catalog:",
     "drizzle-orm": "catalog:",
     "drizzle-zod": "catalog:",

@@ -302,7 +302,7 @@ class AnalyticsService {
         and(
           eq(collection.userId, sql.placeholder("userId")),
           eq(collection.status, "Owned"),
-          eq(entry.category, "Event")
+          eq(entry.category, "Events")
         )
       )
       .groupBy(entry.id, entry.name)

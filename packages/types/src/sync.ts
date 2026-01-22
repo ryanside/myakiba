@@ -8,7 +8,7 @@ export type SyncStatus = {
 };
 
 export type SyncFormOrderItem = {
-  itemId: string;
+  itemExternalId: string;
   price: string;
   count: number;
   status: OrderStatus;
@@ -22,9 +22,9 @@ export type SyncFormOrderItem = {
 
 export type SyncOrderItem = Omit<
   SyncFormOrderItem,
-  "itemId" | "orderDate" | "paymentDate" | "shippingDate" | "collectionDate"
+  "itemExternalId" | "orderDate" | "paymentDate" | "shippingDate" | "collectionDate"
 > & {
-  itemId: number;
+  itemExternalId: number;
   orderDate: string | null;
   paymentDate: string | null;
   shippingDate: string | null;
@@ -68,7 +68,7 @@ export type SyncOrder = Omit<
 };
 
 export type SyncFormCollectionItem = {
-  itemId: string;
+  itemExternalId: string;
   price: string;
   count: number;
   score: number;
@@ -85,14 +85,14 @@ export type SyncFormCollectionItem = {
 
 export type SyncCollectionItem = Omit<
   SyncFormCollectionItem,
-  | "itemId"
+  | "itemExternalId"
   | "orderDate"
   | "paymentDate"
   | "shippingDate"
   | "collectionDate"
   | "score"
 > & {
-  itemId: number;
+  itemExternalId: number;
   orderDate: string | null;
   paymentDate: string | null;
   shippingDate: string | null;
@@ -101,7 +101,7 @@ export type SyncCollectionItem = Omit<
 };
 
 export type UserItem = {
-  id: number;
+  itemExternalId: number;
   status: "Owned" | "Ordered";
   count: number;
   score: string;

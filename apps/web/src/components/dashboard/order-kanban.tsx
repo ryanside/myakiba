@@ -27,7 +27,7 @@ interface KanbanOrder {
   status: "Ordered" | "Paid" | "Shipped" | "Owned";
   releaseMonthYear: string | null;
   itemImages: string[];
-  itemIds: number[];
+  itemIds: string[];
   total: string;
 }
 

@@ -49,13 +49,13 @@ class CollectionService {
     releasePriceMax?: string,
     releaseCurrency?: Array<string>,
     category?: Array<Category>,
-    entries?: Array<number>,
+    entries?: Array<string>,
     scale?: Array<string>,
     tags?: Array<string>,
     condition?: Array<Condition>,
     search?: string
   ) {
-    let itemIdsWithEntries: number[] | undefined;
+    let itemIdsWithEntries: string[] | undefined;
     if (entries && entries.length > 0) {
       const itemsWithEntries = await db
         .select({
@@ -184,6 +184,7 @@ class CollectionService {
         id: collection.id,
         orderId: collection.orderId,
         itemId: item.id,
+        itemExternalId: item.externalId,
         itemTitle: item.title,
         itemImage: item.image,
         itemCategory: item.category,
@@ -234,6 +235,7 @@ class CollectionService {
         id: collection.id,
         orderId: collection.orderId,
         itemId: item.id,
+        itemExternalId: item.externalId,
         itemTitle: item.title,
         itemImage: item.image,
         itemCategory: item.category,

@@ -258,7 +258,7 @@ function RouteComponent() {
   useEffect(() => {
     if (data?.item) {
       addRecentItem({
-        id: data.item.id.toString(),
+        id: data.item.id,
         type: "collection",
         title: data.item.title,
         images: data.item.image ? [data.item.image] : [],
@@ -311,14 +311,20 @@ function RouteComponent() {
               <div className="flex-1 h-full space-y-2">
                 <div className="flex flex-col gap-y-0.5">
                   <h1 className="text-xl font-semibold ">{item.title}</h1>
-                  <a
-                    href={`https://myfigurecollection.net/item/${item.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-muted-foreground font-light hover:text-foreground transition-colors underline-offset-4 hover:underline"
-                  >
-                    https://myfigurecollection.net/item/{item.id}
-                  </a>
+                  {item.externalId ? (
+                    <a
+                      href={`https://myfigurecollection.net/item/${item.externalId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-muted-foreground font-light hover:text-foreground transition-colors underline-offset-4 hover:underline"
+                    >
+                      https://myfigurecollection.net/item/{item.externalId}
+                    </a>
+                  ) : (
+                    <span className="text-xs text-muted-foreground font-light">
+                      Custom item
+                    </span>
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Badge
@@ -470,11 +476,21 @@ function RouteComponent() {
               </Empty>
             ) : (
               <div className="space-y-4">
-                {collectionItems.map((collectionItem) => (
-                  <Card
-                    key={collectionItem.id}
-                    className="shadow-none bg-background"
-                  >
+                {collectionItems.map((collectionItem) => {
+                  const release = data.item.releases.find(
+                    (releaseItem) => releaseItem.id === collectionItem.releaseId
+                  );
+                  const relatedOrder = collectionItem.orderId
+                    ? ordersList.find(
+                        (order) => order.id === collectionItem.orderId
+                      )
+                    : undefined;
+
+                  return (
+                    <Card
+                      key={collectionItem.id}
+                      className="shadow-none bg-background"
+                    >
                     <CardHeader>
                       <div className="flex items-center gap-2">
                         <Badge variant="primary">{collectionItem.status}</Badge>
@@ -488,33 +504,14 @@ function RouteComponent() {
                             itemData={{
                               ...collectionItem,
                               id: collectionItem.id,
+                              itemExternalId: data.item.externalId ?? null,
                               itemTitle: data.item.title,
                               itemImage: data.item.image,
-                              releaseDate:
-                                data.item.releases.find(
-                                  (release) =>
-                                    release.id === collectionItem.releaseId
-                                )?.date || null,
-                              releasePrice:
-                                data.item.releases.find(
-                                  (release) =>
-                                    release.id === collectionItem.releaseId
-                                )?.price || null,
-                              releaseCurrency:
-                                data.item.releases.find(
-                                  (release) =>
-                                    release.id === collectionItem.releaseId
-                                )?.priceCurrency || null,
-                              releaseBarcode:
-                                data.item.releases.find(
-                                  (release) =>
-                                    release.id === collectionItem.releaseId
-                                )?.barcode || null,
-                              releaseType:
-                                data.item.releases.find(
-                                  (release) =>
-                                    release.id === collectionItem.releaseId
-                                )?.type || null,
+                              releaseDate: release?.date ?? null,
+                              releasePrice: release?.price ?? null,
+                              releaseCurrency: release?.priceCurrency ?? null,
+                              releaseBarcode: release?.barcode ?? null,
+                              releaseType: release?.type ?? null,
                             }}
                             callbackFn={handleEditCollectionItem}
                           />
@@ -590,34 +587,31 @@ function RouteComponent() {
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
                           <span>Release</span>
                           <span className="text-foreground font-medium">
-                            {data.item.releases.find(
-                              (release) =>
-                                release.id === collectionItem.releaseId
-                            )?.date || "n/a"}
+                            {formatDate(release?.date)}
                           </span>
                         </div>
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
                           <span>Order Date</span>
                           <span className="text-foreground font-medium">
-                            {collectionItem.orderDate || "n/a"}
+                            {formatDate(collectionItem.orderDate)}
                           </span>
                         </div>
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
                           <span>Payment Date</span>
                           <span className="text-foreground font-medium">
-                            {collectionItem.paymentDate || "n/a"}
+                            {formatDate(collectionItem.paymentDate)}
                           </span>
                         </div>
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
                           <span>Shipping Date</span>
                           <span className="text-foreground font-medium">
-                            {collectionItem.shippingDate || "n/a"}
+                            {formatDate(collectionItem.shippingDate)}
                           </span>
                         </div>
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
                           <span>Collection Date</span>
                           <span className="text-foreground font-medium">
-                            {collectionItem.collectionDate || "n/a"}
+                            {formatDate(collectionItem.collectionDate)}
                           </span>
                         </div>
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
@@ -657,133 +651,75 @@ function RouteComponent() {
                                       }}
                                       className="text-primary hover:underline"
                                     >
-                                      {
-                                        ordersList.find(
-                                          (order) =>
-                                            order.id === collectionItem.orderId
-                                        )?.title
-                                      }
+                                      {relatedOrder?.title}
                                     </Link>
                                   </div>
-                                  {ordersList.find(
-                                    (order) =>
-                                      order.id === collectionItem.orderId
-                                  )?.shop && (
+                                  {relatedOrder?.shop && (
                                     <div className="flex justify-between text-muted-foreground text-sm items-center">
                                       <span>Shop</span>
                                       <span className="text-foreground font-medium">
-                                        {
-                                          ordersList.find(
-                                            (order) =>
-                                              order.id ===
-                                              collectionItem.orderId
-                                          )?.shop
-                                        }
+                                        {relatedOrder.shop}
                                       </span>
                                     </div>
                                   )}
-                                  {ordersList.find(
-                                    (order) =>
-                                      order.id === collectionItem.orderId
-                                  )?.releaseMonthYear && (
+                                  {relatedOrder?.releaseMonthYear && (
                                     <div className="flex justify-between text-muted-foreground text-sm items-center">
                                       <span>Release</span>
                                       <span className="text-foreground font-medium">
-                                        {
-                                          ordersList.find(
-                                            (order) =>
-                                              order.id ===
-                                              collectionItem.orderId
-                                          )?.releaseMonthYear
-                                        }
+                                        {formatDate(relatedOrder.releaseMonthYear)}
                                       </span>
                                     </div>
                                   )}
-                                  {ordersList.find(
-                                    (order) =>
-                                      order.id === collectionItem.orderId
-                                  )?.shippingFee && (
+                                  {relatedOrder?.shippingFee && (
                                     <div className="flex justify-between text-muted-foreground text-sm items-center">
                                       <span>Shipping Fee</span>
                                       <span className="text-foreground font-medium">
                                         {formatCurrency(
-                                          ordersList.find(
-                                            (order) =>
-                                              order.id ===
-                                              collectionItem.orderId
-                                          )?.shippingFee || 0,
+                                          relatedOrder.shippingFee || 0,
                                           userCurrency
                                         )}
                                       </span>
                                     </div>
                                   )}
-                                  {ordersList.find(
-                                    (order) =>
-                                      order.id === collectionItem.orderId
-                                  )?.taxes && (
+                                  {relatedOrder?.taxes && (
                                     <div className="flex justify-between text-muted-foreground text-sm items-center">
                                       <span>Taxes</span>
                                       <span className="text-foreground font-medium">
                                         {formatCurrency(
-                                          ordersList.find(
-                                            (order) =>
-                                              order.id ===
-                                              collectionItem.orderId
-                                          )?.taxes || 0,
+                                          relatedOrder.taxes || 0,
                                           userCurrency
                                         )}
                                       </span>
                                     </div>
                                   )}
-                                  {ordersList.find(
-                                    (order) =>
-                                      order.id === collectionItem.orderId
-                                  )?.duties && (
+                                  {relatedOrder?.duties && (
                                     <div className="flex justify-between text-muted-foreground text-sm items-center">
                                       <span>Duties</span>
                                       <span className="text-foreground font-medium">
                                         {formatCurrency(
-                                          ordersList.find(
-                                            (order) =>
-                                              order.id ===
-                                              collectionItem.orderId
-                                          )?.duties || 0,
+                                          relatedOrder.duties || 0,
                                           userCurrency
                                         )}
                                       </span>
                                     </div>
                                   )}
-                                  {ordersList.find(
-                                    (order) =>
-                                      order.id === collectionItem.orderId
-                                  )?.tariffs && (
+                                  {relatedOrder?.tariffs && (
                                     <div className="flex justify-between text-muted-foreground text-sm items-center">
                                       <span>Tariffs</span>
                                       <span className="text-foreground font-medium">
                                         {formatCurrency(
-                                          ordersList.find(
-                                            (order) =>
-                                              order.id ===
-                                              collectionItem.orderId
-                                          )?.tariffs || 0,
+                                          relatedOrder.tariffs || 0,
                                           userCurrency
                                         )}
                                       </span>
                                     </div>
                                   )}
-                                  {ordersList.find(
-                                    (order) =>
-                                      order.id === collectionItem.orderId
-                                  )?.miscFees && (
+                                  {relatedOrder?.miscFees && (
                                     <div className="flex justify-between text-muted-foreground text-sm items-center">
                                       <span>Misc Fees</span>
                                       <span className="text-foreground font-medium">
                                         {formatCurrency(
-                                          ordersList.find(
-                                            (order) =>
-                                              order.id ===
-                                              collectionItem.orderId
-                                          )?.miscFees || 0,
+                                          relatedOrder.miscFees || 0,
                                           userCurrency
                                         )}
                                       </span>
@@ -797,7 +733,8 @@ function RouteComponent() {
                       )}
                     </CardContent>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>

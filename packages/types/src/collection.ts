@@ -37,7 +37,7 @@ export type CollectionFilters = {
   relPriceMax?: string | undefined;
   relCurrency?: string[] | undefined;
   category?: Category[] | undefined;
-  entries?: number[] | undefined;
+  entries?: string[] | undefined;
   scale?: string[] | undefined;
   tags?: string[] | undefined;
   condition?: Condition[] | undefined;
@@ -46,7 +46,8 @@ export type CollectionFilters = {
 export type CollectionItem = {
   id: string;
   orderId: string | null;
-  itemId: number;
+  itemId: string;
+  itemExternalId: number | null;
   itemTitle: string;
   itemImage: string | null;
   itemCategory: Category | null;

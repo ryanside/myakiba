@@ -173,7 +173,7 @@ function RouteComponent(): React.ReactNode {
   ];
 
   const getEntryNavigation = (row: Record<string, string | number>) => {
-    const entryId = row.entryId as number;
+    const entryId = row.entryId as string;
     if (!entryId) return undefined;
     return {
       to: "/collection",
@@ -200,7 +200,7 @@ function RouteComponent(): React.ReactNode {
   };
 
   const getItemNavigation = (row: Record<string, string | number>) => {
-    const itemId = row.itemId as number;
+    const itemId = row.itemId as string;
     if (!itemId) return undefined;
     return {
       to: `/items/${itemId}`,

@@ -24,7 +24,8 @@ import type { OrderStatus, Condition } from "@myakiba/types";
 type OrderItem = {
   id: string;
   orderId: string | null;
-  itemId: number;
+  itemId: string;
+  itemExternalId: number | null;
   releaseId: string;
   status: OrderStatus;
   itemTitle: string;
@@ -192,6 +193,7 @@ class OrdersService {
                 'id', ${collection.id},
                 'orderId', ${collection.orderId},
                 'itemId', ${item.id},
+                'itemExternalId', ${item.externalId},
                 'releaseId', ${collection.releaseId},
                 'status', ${collection.status},
                 'itemTitle', ${item.title},
@@ -327,6 +329,7 @@ class OrdersService {
                 'id', ${collection.id},
                 'orderId', ${collection.orderId},
                 'itemId', ${item.id},
+                'itemExternalId', ${item.externalId},
                 'releaseId', ${collection.releaseId},
                 'status', ${collection.status},
                 'itemTitle', ${item.title},

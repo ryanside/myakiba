@@ -107,20 +107,24 @@ export function createCollectionColumns({
             <div className="space-y-px">
               <Link
                 to="/items/$id"
-                params={{ id: item.itemId.toString() }}
+                params={{ id: item.itemId }}
                 className="font-medium text-foreground truncate"
               >
                 {item.itemTitle}
               </Link>
               <div className="flex items-center gap-1 font-light">
-                <a
-                  href={`https://myfigurecollection.net/item/${item.itemId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline"
-                >
-                  https://myfigurecollection.net/item/{item.itemId}
-                </a>
+                {item.itemExternalId ? (
+                  <a
+                    href={`https://myfigurecollection.net/item/${item.itemExternalId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline"
+                  >
+                    https://myfigurecollection.net/item/{item.itemExternalId}
+                  </a>
+                ) : (
+                  <span className="text-xs text-muted-foreground">Custom</span>
+                )}
                 <p
                   className="text-xs"
                   style={{ color: getCategoryColor(item.itemCategory) }}
@@ -426,15 +430,19 @@ export function createCollectionColumns({
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuItem asChild>
-                <Link to="/items/$id" params={{ id: item.itemId.toString() }}>
+                <Link to="/items/$id" params={{ id: item.itemId }}>
                   <Eye className="mr-2 h-4 w-4" />
                   View details
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {
-                  navigator.clipboard.writeText(item.itemId.toString());
-                  toast.success("Copied MFC item ID to clipboard");
+                  if (item.itemExternalId) {
+                    navigator.clipboard.writeText(item.itemExternalId.toString());
+                    toast.success("Copied MFC item ID to clipboard");
+                  } else {
+                    toast.error("No MFC item ID for custom items");
+                  }
                 }}
               >
                 <Copy className="mr-2 h-4 w-4" />

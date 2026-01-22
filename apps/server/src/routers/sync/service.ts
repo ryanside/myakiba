@@ -30,9 +30,9 @@ const syncQueue = new Queue("sync-queue", {
 
 class SyncService {
   async getExistingItemIdsInCollection(
-    itemIds: number[],
+    itemIds: string[],
     userId: string
-  ): Promise<{ itemId: number }[]> {
+  ): Promise<{ itemId: string }[]> {
     if (!itemIds || itemIds.length === 0) {
       return [];
     }
@@ -45,10 +45,32 @@ class SyncService {
       );
   }
 
-  async getExistingItemsWithReleases(itemIds: number[]): Promise<{
-    items: { id: number; title: string }[];
-    releases: Map<number, string>;
-    releaseDates: Map<number, string>;
+  async getExistingItemsByExternalIds(
+    externalIds: number[]
+  ): Promise<{ id: string; externalId: number; title: string }[]> {
+    if (!externalIds || externalIds.length === 0) {
+      return [];
+    }
+
+    const existingItems = await db
+      .select({ id: item.id, externalId: item.externalId, title: item.title })
+      .from(item)
+      .where(
+        and(eq(item.source, "mfc"), inArray(item.externalId, externalIds))
+      );
+
+    return existingItems.filter(
+      (
+        existingItem
+      ): existingItem is { id: string; externalId: number; title: string } =>
+        existingItem.externalId !== null
+    );
+  }
+
+  async getExistingItemsWithReleases(itemIds: string[]): Promise<{
+    items: { id: string; title: string }[];
+    releases: Map<string, string>;
+    releaseDates: Map<string, string>;
   }> {
     if (!itemIds || itemIds.length === 0) {
       return { items: [], releases: new Map(), releaseDates: new Map() };
@@ -59,10 +81,10 @@ class SyncService {
       .from(item)
       .where(inArray(item.id, itemIds));
 
-    const releases = new Map<number, string>();
-    const releaseDates = new Map<number, string>();
+    const releases = new Map<string, string>();
+    const releaseDates = new Map<string, string>();
     const releaseResult = await db.execute<{
-      itemId: number;
+      itemId: string;
       releaseId: string;
       releaseDate: string | null;
     }>(sql`
@@ -110,76 +132,107 @@ class SyncService {
   }
 
   async processItems(items: csvItem[], userId: string) {
-    const itemIds: number[] = items.map((item: csvItem) => item.id);
+    const itemExternalIds = items.map((item: csvItem) => item.itemExternalId);
+
+    const existingItems = await this.getExistingItemsByExternalIds(
+      itemExternalIds
+    );
+    const existingItemIds = existingItems.map((existingItem) => existingItem.id);
 
     const idsInCollection = await this.getExistingItemIdsInCollection(
-      itemIds,
+      existingItemIds,
       userId
     );
 
-    const idsRequiringItemLookup = itemIds.filter(
-      (itemId) =>
-        !idsInCollection.some(
-          (collectionItem) => collectionItem.itemId === itemId
-        )
+    const idsInCollectionSet = new Set(
+      idsInCollection.map((collectionItem) => collectionItem.itemId)
+    );
+
+    const externalIdToInternalId = new Map(
+      existingItems.map((existingItem) => [
+        existingItem.externalId,
+        existingItem.id,
+      ])
+    );
+
+    const itemsNeedingInsert = existingItems.filter(
+      (existingItem) => !idsInCollectionSet.has(existingItem.id)
+    );
+
+    const itemIdsNeedingInsert = itemsNeedingInsert.map(
+      (existingItem) => existingItem.id
     );
 
     const {
-      items: existingItems,
-      releases: existingItemsReleases, // release ids
-      releaseDates: existingItemsReleaseDates, // release dates
-    } = await this.getExistingItemsWithReleases(idsRequiringItemLookup);
+      releases: existingItemsReleases,
+      releaseDates: existingItemsReleaseDates,
+    } = await this.getExistingItemsWithReleases(itemIdsNeedingInsert);
 
     const csvItemsToInsert = items.filter((item: csvItem) =>
-      existingItems.some((existingItem) => existingItem.id === item.id)
+      itemsNeedingInsert.some(
+        (existingItem) => existingItem.externalId === item.itemExternalId
+      )
     );
 
-    const idsToScrape = idsRequiringItemLookup.filter(
-      (id) => !existingItems.some((existingItem) => existingItem.id === id)
+    const idsToScrape = itemExternalIds.filter(
+      (externalId) =>
+        !existingItems.some((existingItem) => existingItem.externalId === externalId)
     );
     const csvItemsToScrape = items.filter((item: csvItem) =>
-      idsToScrape.includes(item.id)
+      idsToScrape.includes(item.itemExternalId)
     );
 
     const orderItems: orderInsertType[] = [];
     csvItemsToInsert.forEach((item) => {
       if (item.status === "Ordered") {
         const itemTitle = existingItems.find(
-          (existingItem) => existingItem.id === item.id
+          (existingItem) => existingItem.externalId === item.itemExternalId
         )?.title;
+        const itemId = externalIdToInternalId.get(item.itemExternalId);
 
-        orderItems.push({
-          id: item.orderId!,
-          userId: userId,
-          title: itemTitle ? itemTitle : `Order ${item.orderId}`,
-          shop: item.shop,
-          orderDate: item.orderDate,
-          releaseMonthYear: existingItemsReleaseDates.get(item.id) ?? null,
-          paymentDate: item.payment_date,
-          shippingDate: item.shipping_date,
-          collectionDate: item.collecting_date,
-          shippingMethod: item.shipping_method,
-        });
+        if (itemId) {
+          orderItems.push({
+            id: item.orderId!,
+            userId: userId,
+            title: itemTitle ? itemTitle : `Order ${item.orderId}`,
+            shop: item.shop,
+            orderDate: item.orderDate,
+            releaseMonthYear: existingItemsReleaseDates.get(itemId) ?? null,
+            paymentDate: item.payment_date,
+            shippingDate: item.shipping_date,
+            collectionDate: item.collecting_date,
+            shippingMethod: item.shipping_method,
+          });
+        }
       }
     });
 
-    const collectionItems = csvItemsToInsert.map((i) => ({
-      userId: userId,
-      itemId: i.id,
-      status: i.status,
-      count: i.count,
-      score: i.score && i.score.trim() !== "" ? i.score : "0.0",
-      paymentDate: i.payment_date,
-      shippingDate: i.shipping_date,
-      collectionDate: sanitizeDate(i.collecting_date),
-      price: i.price && i.price.trim() !== "" ? i.price : "0.00",
-      shop: i.shop,
-      shippingMethod: i.shipping_method,
-      notes: i.note,
-      releaseId: existingItemsReleases.get(i.id) ?? null,
-      orderId: i.orderId,
-      orderDate: i.orderDate,
-    }));
+    const collectionItems = csvItemsToInsert
+      .map((i): collectionInsertType | null => {
+        const internalItemId = externalIdToInternalId.get(i.itemExternalId);
+        if (!internalItemId) {
+          return null;
+        }
+
+        return {
+          userId: userId,
+          itemId: internalItemId,
+          status: i.status,
+          count: i.count,
+          score: i.score && i.score.trim() !== "" ? i.score : "0.0",
+          paymentDate: i.payment_date,
+          shippingDate: i.shipping_date,
+          collectionDate: sanitizeDate(i.collecting_date),
+          price: i.price && i.price.trim() !== "" ? i.price : "0.00",
+          shop: i.shop,
+          shippingMethod: i.shipping_method,
+          notes: i.note,
+          releaseId: existingItemsReleases.get(internalItemId) ?? null,
+          orderId: i.orderId,
+          orderDate: i.orderDate,
+        };
+      })
+      .filter((item): item is collectionInsertType => item !== null);
 
     return {
       collectionItems,

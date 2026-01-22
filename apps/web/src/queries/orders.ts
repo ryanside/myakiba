@@ -132,8 +132,8 @@ export async function deleteOrderItems(collectionIds: Set<string>) {
   }
 }
 
-export async function getItemReleases(itemId: number) {
-  const { data, error } = await app.api.items({ itemId: itemId.toString() }).releases.get();
+export async function getItemReleases(itemId: string) {
+  const { data, error } = await app.api.items({ itemId }).releases.get();
 
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to get item releases"));

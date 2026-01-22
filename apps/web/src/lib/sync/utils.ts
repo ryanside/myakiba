@@ -65,7 +65,7 @@ export async function transformCSVData(value: { file: File | undefined }) {
   console.log("Filtered data:", filteredData);
   const userItems: userItem[] = filteredData.map((item) => {
     return {
-      id: Number(item.id),
+      itemExternalId: Number(item.id),
       status: item.status as "Owned" | "Ordered",
       count: Number(item.count),
       score: item.score.split("/")[0],

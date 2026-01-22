@@ -46,7 +46,7 @@ export default function SyncCollectionForm({
     defaultValues: {
       items: [
         {
-          itemId: "",
+          itemExternalId: "",
           price: "0.00",
           count: 1,
           score: 0,
@@ -137,7 +137,7 @@ export default function SyncCollectionForm({
                   return (
                     <collectionForm.Field
                       key={i}
-                      name={`items[${i}].itemId`}
+                      name={`items[${i}].itemExternalId`}
                       validators={{
                         onChange: ({ value }: { value: string }) => {
                           if (
@@ -642,7 +642,7 @@ export default function SyncCollectionForm({
                     e.preventDefault();
                     e.stopPropagation();
                     field.pushValue({
-                      itemId: "",
+                      itemExternalId: "",
                       price: "0.00",
                       count: 1,
                       score: 0,

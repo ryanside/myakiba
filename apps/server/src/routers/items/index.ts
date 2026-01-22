@@ -2,10 +2,40 @@ import { Elysia, status } from "elysia";
 import ItemService from "./service";
 import { tryCatch } from "@myakiba/utils";
 import { betterAuth } from "@/middleware/better-auth";
-import { itemParamSchema } from "./model";
+import { itemParamSchema, customItemSchema } from "./model";
 
 const itemsRouter = new Elysia({ prefix: "/items" })
   .use(betterAuth)
+  .post(
+    "/custom",
+    async ({ body, user }) => {
+      if (!user) return status(401, "Unauthorized");
+
+      const { data: customItem, error } = await tryCatch(
+        ItemService.createCustomItem(body)
+      );
+
+      if (error) {
+        if (error.message === "ENTRY_NOT_FOUND") {
+          return status(404, "Entry not found");
+        }
+        if (error.message === "ENTRY_CATEGORY_MISMATCH") {
+          return status(400, "Entry category mismatch");
+        }
+        if (error.message === "FAILED_TO_CREATE_CUSTOM_ITEM") {
+          return status(500, "Failed to create custom item");
+        }
+
+        console.error("Error creating custom item:", error, {
+          userId: user.id,
+        });
+        return status(500, "Failed to create custom item");
+      }
+
+      return customItem;
+    },
+    { body: customItemSchema, auth: true }
+  )
   .get(
     "/:itemId",
     async ({ params }) => {
