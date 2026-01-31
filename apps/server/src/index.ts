@@ -64,7 +64,7 @@ const app = new Elysia()
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization", "x-captcha-response"],
       credentials: true,
-    })
+    }),
   )
   .use(
     openapi({
@@ -75,7 +75,7 @@ const app = new Elysia()
         components: await OpenAPI.components,
         paths: await OpenAPI.getPaths(),
       },
-    })
+    }),
   )
   .get("/api/auth/*", ({ request }) => auth.handler(request))
   .post("/api/auth/*", ({ request }) => auth.handler(request))
@@ -94,7 +94,7 @@ const app = new Elysia()
       .use(searchRouter)
       .use(settingsRouter)
       .use(syncRouter)
-      .use(waitlistRouter)
+      .use(waitlistRouter),
   )
   .get("/", () => serveIndexHtml(serverDistPath))
   .use(
@@ -102,7 +102,7 @@ const app = new Elysia()
       assets: serverDistPath,
       prefix: "/",
       ignorePatterns: ["index.html"],
-    })
+    }),
   )
   // SPA fallback (TanStack Router) for deep links, but only for real HTML navigations.
   .onError(({ code, request }) => {

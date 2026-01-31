@@ -1,11 +1,6 @@
 import * as cheerio from "cheerio";
 import { db } from "@myakiba/db";
-import {
-  entry,
-  entry_to_item,
-  item,
-  item_release,
-} from "@myakiba/db/schema/figure";
+import { entry, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
 import { and, eq, inArray } from "drizzle-orm";
 import Redis from "ioredis";
 import path from "path";
@@ -38,14 +33,12 @@ const s3Client = new S3Client({
 const scrapeImage = async (
   imageUrl: string,
   maxRetries: number = 3,
-  baseDelayMs: number = 1000
+  baseDelayMs: number = 1000,
 ) => {
   console.time("Scraping Image Duration");
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(
-        `Scraping image ${imageUrl} (attempt ${attempt}/${maxRetries})`
-      );
+      console.log(`Scraping image ${imageUrl} (attempt ${attempt}/${maxRetries})`);
       const response = await fetch(imageUrl, createFetchOptions(true));
 
       if (!response.ok) {
@@ -81,15 +74,10 @@ const scrapeImage = async (
 
       return imageS3Url;
     } catch (error) {
-      console.error(
-        `Error scraping image ${imageUrl} (attempt ${attempt}/${maxRetries}):`,
-        error
-      );
+      console.error(`Error scraping image ${imageUrl} (attempt ${attempt}/${maxRetries}):`, error);
 
       if (attempt === maxRetries) {
-        console.error(
-          `Failed to scrape image ${imageUrl} after ${maxRetries} attempts`
-        );
+        console.error(`Failed to scrape image ${imageUrl} after ${maxRetries} attempts`);
         throw error;
       }
 
@@ -109,7 +97,7 @@ const scrapeSingleItem = async (
   userId: string,
   jobId?: string,
   overallIndex: number = 0,
-  totalItems: number = 1
+  totalItems: number = 1,
 ): Promise<scrapedItem | null> => {
   console.time("Scraping Duration");
   console.log(`Processing item ${overallIndex + 1}/${totalItems}`);
@@ -131,8 +119,7 @@ const scrapeSingleItem = async (
       const title = $("h1.title").text().trim();
 
       let category: Category | null = null;
-      const classification: Array<{ id: number; name: string; role: string }> =
-        [];
+      const classification: Array<{ id: number; name: string; role: string }> = [];
       const version: string[] = [];
       let scale = "";
       let height = 0;
@@ -227,11 +214,7 @@ const scrapeSingleItem = async (
 
       if (imageUrl) {
         console.log(`Scraping image for ID ${id}`);
-        const imageResponse = await scrapeImage(
-          imageUrl,
-          maxRetries,
-          baseDelayMs
-        );
+        const imageResponse = await scrapeImage(imageUrl, maxRetries, baseDelayMs);
         if (!imageResponse || imageResponse === null) {
           throw new Error(`Failed to scrape image for ID ${id}`);
         }
@@ -264,10 +247,7 @@ const scrapeSingleItem = async (
 
       return scrapedItem;
     } catch (error) {
-      console.error(
-        `Error scraping item ${id} (attempt ${attempt}/${maxRetries}):`,
-        error
-      );
+      console.error(`Error scraping item ${id} (attempt ${attempt}/${maxRetries}):`, error);
 
       if (attempt === maxRetries) {
         console.error(`Failed to scrape ID ${id} after ${maxRetries} attempts`);
@@ -292,24 +272,14 @@ const scrapedItems = async (
   userId: string,
   jobId?: string,
   startingIndex: number = 0,
-  totalItems: number = itemIds.length
+  totalItems: number = itemIds.length,
 ): Promise<scrapedItem[]> => {
   console.time("Scraping Duration");
 
-  console.log(
-    `Starting to scrape ${itemIds.length} items with up to ${maxRetries} retries each`
-  );
+  console.log(`Starting to scrape ${itemIds.length} items with up to ${maxRetries} retries each`);
 
   const promises = itemIds.map((id, index) =>
-    scrapeSingleItem(
-      id,
-      maxRetries,
-      baseDelayMs,
-      userId,
-      jobId,
-      startingIndex + index,
-      totalItems
-    )
+    scrapeSingleItem(id, maxRetries, baseDelayMs, userId, jobId, startingIndex + index, totalItems),
   );
   const results = await Promise.allSettled(promises);
 
@@ -317,22 +287,18 @@ const scrapedItems = async (
   const successfulResults = results
     .filter(
       (result): result is PromiseFulfilledResult<scrapedItem> =>
-        result.status === "fulfilled" && result.value !== null
+        result.status === "fulfilled" && result.value !== null,
     )
     .map((result) => result.value);
 
   const failures = results.filter((result) => result.status === "rejected");
   if (failures.length > 0) {
-    console.warn(
-      `Failed to scrape ${failures.length} out of ${itemIds.length} items`
-    );
+    console.warn(`Failed to scrape ${failures.length} out of ${itemIds.length} items`);
   }
 
   console.timeEnd("Scraping Duration");
 
-  console.log(
-    `Successfully scraped ${successfulResults.length} out of ${itemIds.length} items`
-  );
+  console.log(`Successfully scraped ${successfulResults.length} out of ${itemIds.length} items`);
 
   return successfulResults;
 };
@@ -343,7 +309,7 @@ const scrapedItemsWithRateLimit = async (
   maxRetries: number = 3,
   baseDelayMs: number = 1000,
   userId: string,
-  jobId?: string
+  jobId?: string,
 ): Promise<scrapedItem[]> => {
   console.time("Rate-Limited Scraping Duration");
   const startTime = Date.now();
@@ -355,9 +321,7 @@ const scrapedItemsWithRateLimit = async (
 
   console.log(`Batch size: ${batchSize}, Delay between batches: ${delayMs}ms`);
 
-  console.log(
-    `Max retries per item: ${maxRetries}, Base retry delay: ${baseDelayMs}ms`
-  );
+  console.log(`Max retries per item: ${maxRetries}, Base retry delay: ${baseDelayMs}ms`);
 
   const allResults: scrapedItem[] = [];
   const totalBatches = Math.ceil(itemIds.length / batchSize);
@@ -369,7 +333,7 @@ const scrapedItemsWithRateLimit = async (
     console.log(
       `Processing batch ${batchNumber}/${totalBatches} (${
         batch.length
-      } items): [${batch.join(", ")}]`
+      } items): [${batch.join(", ")}]`,
     );
 
     const batchResults = await scrapedItems(
@@ -379,12 +343,12 @@ const scrapedItemsWithRateLimit = async (
       userId,
       jobId,
       i, // starting index for this batch
-      itemIds.length // total items across all batches
+      itemIds.length, // total items across all batches
     );
     allResults.push(...batchResults);
 
     console.log(
-      `Batch ${batchNumber} completed: ${batchResults.length}/${batch.length} successful`
+      `Batch ${batchNumber} completed: ${batchResults.length}/${batch.length} successful`,
     );
     if (i + batchSize < itemIds.length) {
       console.log(`Waiting ${delayMs}ms before next batch...`);
@@ -396,305 +360,287 @@ const scrapedItemsWithRateLimit = async (
   const endTime = Date.now();
   const duration = endTime - startTime;
   console.log(
-    `Rate-limited scraping completed in ${duration}ms (${(
-      duration / 1000
-    ).toFixed(2)}s)`
+    `Rate-limited scraping completed in ${duration}ms (${(duration / 1000).toFixed(2)}s)`,
   );
-  console.log(
-    `Successfully scraped ${allResults.length} out of ${itemIds.length} items`
-  );
-  console.log(
-    `Average time per item: ${(duration / itemIds.length).toFixed(0)}ms`
-  );
+  console.log(`Successfully scraped ${allResults.length} out of ${itemIds.length} items`);
+  console.log(`Average time per item: ${(duration / itemIds.length).toFixed(0)}ms`);
   return allResults;
 };
 
 const itemIds: number[] = [1049502];
 const userId = "";
 
-const scrapeMethod =
-  itemIds.length <= 5 ? scrapedItems : scrapedItemsWithRateLimit;
+const scrapeMethod = itemIds.length <= 5 ? scrapedItems : scrapedItemsWithRateLimit;
 
-scrapeMethod(itemIds, 3, 1000, userId, undefined).then(
-  async (successfulResults) => {
-    const items = successfulResults.map((item) => ({
-      externalId: item.id,
-      source: "mfc" as const,
-      title: item.title,
-      category: item.category as Category,
-      version: item.version,
-      scale: item.scale,
-      height: item.height,
-      width: item.width,
-      depth: item.depth,
-      image: item.image,
-    }));
+scrapeMethod(itemIds, 3, 1000, userId, undefined).then(async (successfulResults) => {
+  const items = successfulResults.map((item) => ({
+    externalId: item.id,
+    source: "mfc" as const,
+    title: item.title,
+    category: item.category as Category,
+    version: item.version,
+    scale: item.scale,
+    height: item.height,
+    width: item.width,
+    depth: item.depth,
+    image: item.image,
+  }));
 
-    const itemReleases: Array<{
-      id: string;
-      itemExternalId: number;
-      date: string;
-      type: string;
-      price: string;
-      priceCurrency: string;
-      barcode: string;
-    }> = [];
-    const entries: Array<{
-      externalId: number;
-      source: "mfc";
-      category: string;
-      name: string;
-    }> = [];
-    const entryToItems: Array<{
-      entryExternalId: number;
-      itemExternalId: number;
-      role: string;
-    }> = [];
+  const itemReleases: Array<{
+    id: string;
+    itemExternalId: number;
+    date: string;
+    type: string;
+    price: string;
+    priceCurrency: string;
+    barcode: string;
+  }> = [];
+  const entries: Array<{
+    externalId: number;
+    source: "mfc";
+    category: string;
+    name: string;
+  }> = [];
+  const entryToItems: Array<{
+    entryExternalId: number;
+    itemExternalId: number;
+    role: string;
+  }> = [];
 
-    for (const scraped of successfulResults) {
-      for (const classification of scraped.classification) {
-        entryToItems.push({
-          entryExternalId: classification.id,
-          itemExternalId: scraped.id,
-          role: classification.role,
-        });
-        entries.push({
-          externalId: classification.id,
-          source: "mfc",
-          category: "Classifications",
-          name: classification.name,
-        });
-      }
-
-      for (const origin of scraped.origin) {
-        entryToItems.push({
-          entryExternalId: origin.id,
-          itemExternalId: scraped.id,
-          role: "",
-        });
-        entries.push({
-          externalId: origin.id,
-          source: "mfc",
-          category: "Origins",
-          name: origin.name,
-        });
-      }
-
-      for (const character of scraped.character) {
-        entryToItems.push({
-          entryExternalId: character.id,
-          itemExternalId: scraped.id,
-          role: "",
-        });
-        entries.push({
-          externalId: character.id,
-          source: "mfc",
-          category: "Characters",
-          name: character.name,
-        });
-      }
-
-      for (const company of scraped.company) {
-        entryToItems.push({
-          entryExternalId: company.id,
-          itemExternalId: scraped.id,
-          role: company.role,
-        });
-        entries.push({
-          externalId: company.id,
-          source: "mfc",
-          category: "Companies",
-          name: company.name,
-        });
-      }
-
-      for (const artist of scraped.artist) {
-        entryToItems.push({
-          entryExternalId: artist.id,
-          itemExternalId: scraped.id,
-          role: artist.role,
-        });
-        entries.push({
-          externalId: artist.id,
-          source: "mfc",
-          category: "Artists",
-          name: artist.name,
-        });
-      }
-
-      for (const event of scraped.event) {
-        entryToItems.push({
-          entryExternalId: event.id,
-          itemExternalId: scraped.id,
-          role: event.role,
-        });
-        entries.push({
-          externalId: event.id,
-          source: "mfc",
-          category: "Events",
-          name: event.name,
-        });
-      }
-
-      for (const material of scraped.materials) {
-        entryToItems.push({
-          entryExternalId: material.id,
-          itemExternalId: scraped.id,
-          role: "",
-        });
-        entries.push({
-          externalId: material.id,
-          source: "mfc",
-          category: "Materials",
-          name: material.name,
-        });
-      }
-
-      for (const release of scraped.releaseDate) {
-        itemReleases.push({
-          id: uuidv5(
-            `${scraped.id}-${normalizeDateString(release.date)}-${release.type}-${
-              release.price
-            }-${release.priceCurrency}-${release.barcode}`,
-            "2c8ed313-3f54-4401-a280-2410ce639ef3"
-          ),
-          itemExternalId: scraped.id,
-          date: normalizeDateString(release.date),
-          type: release.type,
-          price: release.price.toString(),
-          priceCurrency: release.priceCurrency,
-          barcode: release.barcode,
-        });
-      }
+  for (const scraped of successfulResults) {
+    for (const classification of scraped.classification) {
+      entryToItems.push({
+        entryExternalId: classification.id,
+        itemExternalId: scraped.id,
+        role: classification.role,
+      });
+      entries.push({
+        externalId: classification.id,
+        source: "mfc",
+        category: "Classifications",
+        name: classification.name,
+      });
     }
 
-    console.log("Items to be inserted:", items);
-    console.log("Releases to be inserted:", itemReleases);
-    console.log("Entries to be inserted:", entries);
-    console.log("Entry to Items to be inserted:", entryToItems);
+    for (const origin of scraped.origin) {
+      entryToItems.push({
+        entryExternalId: origin.id,
+        itemExternalId: scraped.id,
+        role: "",
+      });
+      entries.push({
+        externalId: origin.id,
+        source: "mfc",
+        category: "Origins",
+        name: origin.name,
+      });
+    }
 
-    const batchInsert = await db.transaction(async (tx) => {
-      if (items.length > 0) {
-        await tx
-          .insert(item)
-          .values(items)
-          .onConflictDoNothing({ target: [item.source, item.externalId] });
-      }
+    for (const character of scraped.character) {
+      entryToItems.push({
+        entryExternalId: character.id,
+        itemExternalId: scraped.id,
+        role: "",
+      });
+      entries.push({
+        externalId: character.id,
+        source: "mfc",
+        category: "Characters",
+        name: character.name,
+      });
+    }
 
-      const itemExternalIds = items
-        .map((dbItem) => dbItem.externalId)
-        .filter((externalId): externalId is number => externalId !== null);
-      const dbItems =
-        itemExternalIds.length > 0
-          ? await tx
-              .select({ id: item.id, externalId: item.externalId })
-              .from(item)
-              .where(
-                and(eq(item.source, "mfc"), inArray(item.externalId, itemExternalIds))
-              )
-          : [];
-      const externalIdToInternalId = new Map(
-        dbItems.map((dbItem) => [dbItem.externalId, dbItem.id])
-      );
+    for (const company of scraped.company) {
+      entryToItems.push({
+        entryExternalId: company.id,
+        itemExternalId: scraped.id,
+        role: company.role,
+      });
+      entries.push({
+        externalId: company.id,
+        source: "mfc",
+        category: "Companies",
+        name: company.name,
+      });
+    }
 
-      if (entries.length > 0) {
-        await tx
-          .insert(entry)
-          .values(entries)
-          .onConflictDoNothing({ target: [entry.source, entry.externalId] });
-      }
+    for (const artist of scraped.artist) {
+      entryToItems.push({
+        entryExternalId: artist.id,
+        itemExternalId: scraped.id,
+        role: artist.role,
+      });
+      entries.push({
+        externalId: artist.id,
+        source: "mfc",
+        category: "Artists",
+        name: artist.name,
+      });
+    }
 
-      const entryExternalIds = entries
-        .map((dbEntry) => dbEntry.externalId)
-        .filter((externalId): externalId is number => externalId !== null);
-      const dbEntries =
-        entryExternalIds.length > 0
-          ? await tx
-              .select({ id: entry.id, externalId: entry.externalId })
-              .from(entry)
-              .where(
-                and(
-                  eq(entry.source, "mfc"),
-                  inArray(entry.externalId, entryExternalIds)
-                )
-              )
-          : [];
-      const externalIdToEntryId = new Map(
-        dbEntries.map((dbEntry) => [dbEntry.externalId, dbEntry.id])
-      );
+    for (const event of scraped.event) {
+      entryToItems.push({
+        entryExternalId: event.id,
+        itemExternalId: scraped.id,
+        role: event.role,
+      });
+      entries.push({
+        externalId: event.id,
+        source: "mfc",
+        category: "Events",
+        name: event.name,
+      });
+    }
 
-      const itemReleasesToInsert = itemReleases
-        .map((release) => {
-          const internalItemId = externalIdToInternalId.get(release.itemExternalId);
-          if (!internalItemId) {
-            return null;
-          }
-          return {
-            id: release.id,
-            itemId: internalItemId,
-            date: release.date,
-            type: release.type,
-            price: release.price,
-            priceCurrency: release.priceCurrency,
-            barcode: release.barcode,
-          };
-        })
-        .filter(
-          (
-            release
-          ): release is {
-            id: string;
-            itemId: string;
-            date: string;
-            type: string;
-            price: string;
-            priceCurrency: string;
-            barcode: string;
-          } => release !== null
-        );
+    for (const material of scraped.materials) {
+      entryToItems.push({
+        entryExternalId: material.id,
+        itemExternalId: scraped.id,
+        role: "",
+      });
+      entries.push({
+        externalId: material.id,
+        source: "mfc",
+        category: "Materials",
+        name: material.name,
+      });
+    }
 
-      if (itemReleasesToInsert.length > 0) {
-        await tx
-          .insert(item_release)
-          .values(itemReleasesToInsert)
-          .onConflictDoNothing({ target: [item_release.id] });
-      }
-
-      const entryToItemsToInsert = entryToItems
-        .map((link) => {
-          const entryId = externalIdToEntryId.get(link.entryExternalId);
-          const itemId = externalIdToInternalId.get(link.itemExternalId);
-          if (!entryId || !itemId) {
-            return null;
-          }
-          return {
-            entryId,
-            itemId,
-            role: link.role,
-          };
-        })
-        .filter(
-          (
-            link
-          ): link is {
-            entryId: string;
-            itemId: string;
-            role: string;
-          } => link !== null
-        );
-
-      if (entryToItemsToInsert.length > 0) {
-        await tx
-          .insert(entry_to_item)
-          .values(entryToItemsToInsert)
-          .onConflictDoNothing({
-            target: [entry_to_item.entryId, entry_to_item.itemId],
-          });
-      }
-    });
-    console.log(batchInsert);
-    await redis.quit();
-
-    return;
+    for (const release of scraped.releaseDate) {
+      itemReleases.push({
+        id: uuidv5(
+          `${scraped.id}-${normalizeDateString(release.date)}-${release.type}-${
+            release.price
+          }-${release.priceCurrency}-${release.barcode}`,
+          "2c8ed313-3f54-4401-a280-2410ce639ef3",
+        ),
+        itemExternalId: scraped.id,
+        date: normalizeDateString(release.date),
+        type: release.type,
+        price: release.price.toString(),
+        priceCurrency: release.priceCurrency,
+        barcode: release.barcode,
+      });
+    }
   }
-);
+
+  console.log("Items to be inserted:", items);
+  console.log("Releases to be inserted:", itemReleases);
+  console.log("Entries to be inserted:", entries);
+  console.log("Entry to Items to be inserted:", entryToItems);
+
+  const batchInsert = await db.transaction(async (tx) => {
+    if (items.length > 0) {
+      await tx
+        .insert(item)
+        .values(items)
+        .onConflictDoNothing({ target: [item.source, item.externalId] });
+    }
+
+    const itemExternalIds = items
+      .map((dbItem) => dbItem.externalId)
+      .filter((externalId): externalId is number => externalId !== null);
+    const dbItems =
+      itemExternalIds.length > 0
+        ? await tx
+            .select({ id: item.id, externalId: item.externalId })
+            .from(item)
+            .where(and(eq(item.source, "mfc"), inArray(item.externalId, itemExternalIds)))
+        : [];
+    const externalIdToInternalId = new Map(dbItems.map((dbItem) => [dbItem.externalId, dbItem.id]));
+
+    if (entries.length > 0) {
+      await tx
+        .insert(entry)
+        .values(entries)
+        .onConflictDoNothing({ target: [entry.source, entry.externalId] });
+    }
+
+    const entryExternalIds = entries
+      .map((dbEntry) => dbEntry.externalId)
+      .filter((externalId): externalId is number => externalId !== null);
+    const dbEntries =
+      entryExternalIds.length > 0
+        ? await tx
+            .select({ id: entry.id, externalId: entry.externalId })
+            .from(entry)
+            .where(and(eq(entry.source, "mfc"), inArray(entry.externalId, entryExternalIds)))
+        : [];
+    const externalIdToEntryId = new Map(
+      dbEntries.map((dbEntry) => [dbEntry.externalId, dbEntry.id]),
+    );
+
+    const itemReleasesToInsert = itemReleases
+      .map((release) => {
+        const internalItemId = externalIdToInternalId.get(release.itemExternalId);
+        if (!internalItemId) {
+          return null;
+        }
+        return {
+          id: release.id,
+          itemId: internalItemId,
+          date: release.date,
+          type: release.type,
+          price: release.price,
+          priceCurrency: release.priceCurrency,
+          barcode: release.barcode,
+        };
+      })
+      .filter(
+        (
+          release,
+        ): release is {
+          id: string;
+          itemId: string;
+          date: string;
+          type: string;
+          price: string;
+          priceCurrency: string;
+          barcode: string;
+        } => release !== null,
+      );
+
+    if (itemReleasesToInsert.length > 0) {
+      await tx
+        .insert(item_release)
+        .values(itemReleasesToInsert)
+        .onConflictDoNothing({ target: [item_release.id] });
+    }
+
+    const entryToItemsToInsert = entryToItems
+      .map((link) => {
+        const entryId = externalIdToEntryId.get(link.entryExternalId);
+        const itemId = externalIdToInternalId.get(link.itemExternalId);
+        if (!entryId || !itemId) {
+          return null;
+        }
+        return {
+          entryId,
+          itemId,
+          role: link.role,
+        };
+      })
+      .filter(
+        (
+          link,
+        ): link is {
+          entryId: string;
+          itemId: string;
+          role: string;
+        } => link !== null,
+      );
+
+    if (entryToItemsToInsert.length > 0) {
+      await tx
+        .insert(entry_to_item)
+        .values(entryToItemsToInsert)
+        .onConflictDoNothing({
+          target: [entry_to_item.entryId, entry_to_item.itemId],
+        });
+    }
+  });
+  console.log(batchInsert);
+  await redis.quit();
+
+  return;
+});

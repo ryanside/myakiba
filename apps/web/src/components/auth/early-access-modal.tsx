@@ -20,10 +20,7 @@ interface EarlyAccessModalProps {
   onAccessGranted: () => void;
 }
 
-export function EarlyAccessModal({
-  open,
-  onAccessGranted,
-}: EarlyAccessModalProps) {
+export function EarlyAccessModal({ open, onAccessGranted }: EarlyAccessModalProps) {
   const mutation = useMutation({
     mutationFn: verifyEarlyAccess,
     onSuccess: (data) => {
@@ -60,8 +57,7 @@ export function EarlyAccessModal({
             <DialogTitle className="font-medium">Early Access</DialogTitle>
           </div>
           <DialogDescription>
-            myakiba is currently in early development. Enter the early access
-            password to continue.
+            myakiba is currently in early development. Enter the early access password to continue.
           </DialogDescription>
         </DialogHeader>
 
@@ -101,9 +97,7 @@ export function EarlyAccessModal({
               <Button
                 type="submit"
                 className="w-full"
-                disabled={
-                  !state.canSubmit || state.isSubmitting || mutation.isPending
-                }
+                disabled={!state.canSubmit || state.isSubmitting || mutation.isPending}
               >
                 {state.isSubmitting || mutation.isPending ? (
                   <>

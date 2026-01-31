@@ -1,10 +1,4 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface KPICardProps {
@@ -26,9 +20,9 @@ export function KPICard({
     <Card className="flex-1 flex flex-col ">
       <CardHeader className="flex flex-col items-start gap-2">
         <CardTitle className="text-md font-medium">{title}</CardTitle>
-        {subtitle && <CardDescription className="text-xs text-muted-foreground">
-          {subtitle}
-        </CardDescription>}
+        {subtitle && (
+          <CardDescription className="text-xs text-muted-foreground">{subtitle}</CardDescription>
+        )}
       </CardHeader>
       <CardContent className="mt-auto">
         <div className="flex flex-row items-baseline w-full">
@@ -37,14 +31,10 @@ export function KPICard({
           ) : (
             <p className="text-2xl font-mono tracking-tighter">{value}</p>
           )}
-          {value != null && subvalueTitle && (subvalue !== undefined) && (
+          {value != null && subvalueTitle && subvalue !== undefined && (
             <div className="flex-row gap-1 ml-2 flex">
-              <p className="text-xs text-muted-foreground font-light">
-                {subvalue}
-              </p>
-              <p className="text-xs text-muted-foreground font-light">
-                {subvalueTitle}
-              </p>
+              <p className="text-xs text-muted-foreground font-light">{subvalue}</p>
+              <p className="text-xs text-muted-foreground font-light">{subvalueTitle}</p>
             </div>
           )}
         </div>
@@ -52,4 +42,3 @@ export function KPICard({
     </Card>
   );
 }
-

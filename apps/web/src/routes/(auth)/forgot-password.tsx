@@ -53,11 +53,9 @@ function RouteComponent() {
           setEmailSent(true);
         },
         onError: (error) => {
-          toast.error(
-            error.error.message || "Failed to send password reset email"
-          );
+          toast.error(error.error.message || "Failed to send password reset email");
         },
-      }
+      },
     );
   };
 
@@ -91,16 +89,13 @@ function RouteComponent() {
                 <span className="font-medium text-foreground">{sentEmail}</span>
               </p>
               <p className="text-sm text-muted-foreground">
-                Click the link in the email to reset your password. If you don't see the email, check your spam folder.
+                Click the link in the email to reset your password. If you don't see the email,
+                check your spam folder.
               </p>
             </div>
             <div className="text-center text-sm">
               <Link to="/login">
-                <Button
-                  className="underline underline-offset-4"
-                  variant="primary"
-                  mode="link"
-                >
+                <Button className="underline underline-offset-4" variant="primary" mode="link">
                   Back to Login
                 </Button>
               </Link>
@@ -186,11 +181,7 @@ function RouteComponent() {
                   className="w-full"
                   disabled={!state.canSubmit || state.isSubmitting}
                 >
-                  {state.isSubmitting ? (
-                    <Loader2 className="animate-spin" />
-                  ) : (
-                    "Send Reset Link"
-                  )}
+                  {state.isSubmitting ? <Loader2 className="animate-spin" /> : "Send Reset Link"}
                 </Button>
               )}
             </form.Subscribe>
@@ -198,11 +189,7 @@ function RouteComponent() {
           <div className="text-center text-sm">
             Remember your password?{" "}
             <Link to="/login">
-              <Button
-                className="underline underline-offset-4"
-                variant="primary"
-                mode="link"
-              >
+              <Button className="underline underline-offset-4" variant="primary" mode="link">
                 Back to Login
               </Button>
             </Link>

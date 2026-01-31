@@ -1,35 +1,23 @@
 import { createFileRoute, useParams, Link } from "@tanstack/react-router";
 import { getOrder, editOrder, deleteOrderItem } from "@/queries/orders";
-import {
-  keepPreviousData,
-  useQuery,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatCurrency, formatDate } from "@myakiba/utils";
+import { formatCurrency, formatDate, formatTimestamp } from "@myakiba/utils";
 import { getStatusVariant } from "@/lib/orders/utils";
 import { OrderItemSubDataGrid } from "@/components/orders/order-item-sub-data-grid";
 import { useState, useEffect } from "react";
 import type { RowSelectionState } from "@tanstack/react-table";
 import { addRecentItem } from "@/lib/recent-items";
-import {
-  Calendar,
-  Package,
-  CreditCard,
-  ArrowLeft,
-  Edit,
-  FileText,
-  Users,
-} from "lucide-react";
+import { Calendar, Package, CreditCard, ArrowLeft, Edit, FileText, Users } from "lucide-react";
 import { OrderForm } from "@/components/orders/order-form";
 import type { EditedOrder, CascadeOptions } from "@/lib/orders/types";
 import { toast } from "sonner";
 import type { CollectionItemFormValues } from "@/lib/collection/types";
 import { updateCollectionItem } from "@/queries/collection";
 import Loader from "@/components/loader";
+import type { DateFormat } from "@myakiba/types";
 
 export const Route = createFileRoute("/(app)/orders_/$id")({
   component: RouteComponent,
@@ -48,7 +36,8 @@ export const Route = createFileRoute("/(app)/orders_/$id")({
 
 function RouteComponent() {
   const { session } = Route.useRouteContext();
-  const userCurrency = session?.user.currency || "USD";
+  const userCurrency = session?.user.currency;
+  const dateFormat = session?.user.dateFormat as DateFormat;
   const { id } = useParams({ from: "/(app)/orders_/$id" });
   const queryClient = useQueryClient();
   const [itemSelection, setItemSelection] = useState<RowSelectionState>({});
@@ -135,13 +124,7 @@ function RouteComponent() {
   });
 
   const deleteItemMutation = useMutation({
-    mutationFn: async ({
-      orderId,
-      collectionId,
-    }: {
-      orderId: string;
-      collectionId: string;
-    }) => {
+    mutationFn: async ({ orderId, collectionId }: { orderId: string; collectionId: string }) => {
       return await deleteOrderItem(orderId, collectionId);
     },
     // TODO: add optimistic update
@@ -164,10 +147,7 @@ function RouteComponent() {
     },
   });
 
-  const handleEditOrder = async (
-    values: EditedOrder,
-    cascadeOptions: CascadeOptions
-  ) => {
+  const handleEditOrder = async (values: EditedOrder, cascadeOptions: CascadeOptions) => {
     await editOrderMutation.mutateAsync({ values, cascadeOptions });
   };
 
@@ -186,9 +166,7 @@ function RouteComponent() {
   if (isError) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-y-4">
-        <div className="text-lg font-medium text-destructive">
-          Error: {error.message}
-        </div>
+        <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
         <Button asChild variant="outline">
           <Link to="/orders">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -204,7 +182,7 @@ function RouteComponent() {
   // Calculate financial details
   const itemsTotal = order.items.reduce(
     (sum, item) => sum + parseFloat(item.price) * item.count,
-    0
+    0,
   );
   const shippingFee = parseFloat(order.shippingFee || "0");
   const taxes = parseFloat(order.taxes || "0");
@@ -225,9 +203,7 @@ function RouteComponent() {
             </Link>
           </Button>
           <div className="flex flex-row items-center gap-x-2">
-            <h1 className="text-2xl font-semibold text-foreground">
-              {order.title}
-            </h1>
+            <h1 className="text-2xl font-semibold text-foreground">{order.title}</h1>
             <Badge
               variant={getStatusVariant(order.status)}
               appearance="outline"
@@ -259,9 +235,7 @@ function RouteComponent() {
           <CardHeader className="flex flex-row items-center gap-2 pb-2">
             <div className="flex items-center gap-x-2">
               <Package className="size-4 text-muted-foreground" />
-              <CardTitle className="text-sm font-medium">
-                Order Details
-              </CardTitle>
+              <CardTitle className="text-sm font-medium">Order Details</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -278,35 +252,25 @@ function RouteComponent() {
               <span className="text-sm font-medium">{order.itemCount}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">
-                Shipping Method:
-              </span>
-              <span className="text-sm font-medium">
-                {order.shippingMethod}
-              </span>
+              <span className="text-sm text-muted-foreground">Shipping Method:</span>
+              <span className="text-sm font-medium">{order.shippingMethod}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">
-                Release Period:
-              </span>
+              <span className="text-sm text-muted-foreground">Release Period:</span>
               <span className="text-sm font-medium">
-                {order.releaseMonthYear
-                  ? formatDate(order.releaseMonthYear)
-                  : "N/A"}
+                {order.releaseMonthYear ? formatDate(order.releaseMonthYear, dateFormat) : "N/A"}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Created:</span>
               <span className="text-sm font-medium">
-                {formatDate(order.createdAt)}
+                {formatTimestamp(order.createdAt, dateFormat)}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">
-                Last Updated:
-              </span>
+              <span className="text-sm text-muted-foreground">Last Updated:</span>
               <span className="text-sm font-medium">
-                {formatDate(order.updatedAt)}
+                {formatTimestamp(order.updatedAt, dateFormat)}
               </span>
             </div>
           </CardContent>
@@ -324,27 +288,25 @@ function RouteComponent() {
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Ordered:</span>
               <span className="text-sm font-medium">
-                {order.orderDate ? formatDate(order.orderDate) : "N/A"}
+                {order.orderDate ? formatDate(order.orderDate, dateFormat) : "N/A"}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Paid:</span>
               <span className="text-sm font-medium">
-                {order.paymentDate ? formatDate(order.paymentDate) : "N/A"}
+                {order.paymentDate ? formatDate(order.paymentDate, dateFormat) : "N/A"}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Shipped:</span>
               <span className="text-sm font-medium">
-                {order.shippingDate ? formatDate(order.shippingDate) : "N/A"}
+                {order.shippingDate ? formatDate(order.shippingDate, dateFormat) : "N/A"}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Collected:</span>
               <span className="text-sm font-medium">
-                {order.collectionDate
-                  ? formatDate(order.collectionDate)
-                  : "N/A"}
+                {order.collectionDate ? formatDate(order.collectionDate, dateFormat) : "N/A"}
               </span>
             </div>
           </CardContent>
@@ -355,16 +317,12 @@ function RouteComponent() {
           <CardHeader className="flex flex-row items-center gap-2 pb-2">
             <div className="flex items-center gap-x-2">
               <CreditCard className="size-4 text-muted-foreground" />
-              <CardTitle className="text-sm font-medium">
-                Financial Summary
-              </CardTitle>
+              <CardTitle className="text-sm font-medium">Financial Summary</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">
-                Items Total:
-              </span>
+              <span className="text-sm text-muted-foreground">Items Total:</span>
               <span className="text-sm font-medium">
                 {formatCurrency(itemsTotal.toString(), userCurrency)}
               </span>
@@ -419,9 +377,7 @@ function RouteComponent() {
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-              {order.notes}
-            </p>
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{order.notes}</p>
           </CardContent>
         </Card>
       )}
@@ -431,9 +387,7 @@ function RouteComponent() {
         <CardHeader className="flex flex-row items-center gap-2 pb-2">
           <div className="flex items-center gap-x-2">
             <Users className="size-4 text-muted-foreground" />
-            <CardTitle className="text-sm font-medium">
-              Order Items ({order.itemCount})
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Order Items ({order.itemCount})</CardTitle>
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -446,6 +400,7 @@ function RouteComponent() {
               onEditItem={handleEditItem}
               onDeleteItem={handleDeleteItem}
               currency={userCurrency}
+              dateFormat={dateFormat}
             />
           ) : (
             <div className="flex items-center justify-center py-8 text-muted-foreground">

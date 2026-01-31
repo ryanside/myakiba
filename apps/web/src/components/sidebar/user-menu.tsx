@@ -15,11 +15,7 @@ import type { RouterAppContext } from "@/routes/__root";
 import { clearRecentItems } from "@/lib/recent-items";
 import { toast } from "sonner";
 
-export default function UserMenu({
-  session,
-}: {
-  session: RouterAppContext["session"];
-}) {
+export default function UserMenu({ session }: { session: RouterAppContext["session"] }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 

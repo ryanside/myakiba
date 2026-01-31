@@ -5,11 +5,7 @@ import { csvSchema } from "@/lib/sync/types";
 import Papa from "papaparse";
 import { Label } from "../ui/label";
 import { useNavigate } from "@tanstack/react-router";
-import {
-  Dropzone,
-  DropzoneContent,
-  DropzoneEmptyState,
-} from "@/components/kibo-ui/dropzone";
+import { Dropzone, DropzoneContent, DropzoneEmptyState } from "@/components/kibo-ui/dropzone";
 
 export default function SyncCsvForm({
   handleSyncCsvSubmit,
@@ -38,9 +34,7 @@ export default function SyncCsvForm({
         >
           <ArrowLeft />
         </Button>
-        <h1 className="text-lg text-black dark:text-white">
-          Upload MyFigureCollection CSV
-        </h1>
+        <h1 className="text-lg text-black dark:text-white">Upload MyFigureCollection CSV</h1>
       </div>
       <form
         onSubmit={(e) => {
@@ -62,8 +56,7 @@ export default function SyncCsvForm({
               const parsedCSV = Papa.parse(text, {
                 header: true,
                 skipEmptyLines: true,
-                transformHeader: (header: string) =>
-                  header.trim().toLowerCase().replace(/ /g, "_"),
+                transformHeader: (header: string) => header.trim().toLowerCase().replace(/ /g, "_"),
               });
 
               const validatedCSV = csvSchema.safeParse(parsedCSV.data);
@@ -100,11 +93,7 @@ export default function SyncCsvForm({
                         className="ml-auto"
                         size="md"
                       >
-                        {isSubmitting ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          "Submit CSV"
-                        )}
+                        {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Submit CSV"}
                       </Button>
                     )}
                   />

@@ -22,8 +22,8 @@ class SearchService {
         and(
           ilike(item.title, sql.placeholder("search")),
           eq(collection.status, "Owned"),
-          eq(collection.userId, sql.placeholder("userId"))
-        )
+          eq(collection.userId, sql.placeholder("userId")),
+        ),
       )
       .prepare("search_collection");
 
@@ -55,8 +55,8 @@ class SearchService {
       .where(
         and(
           ilike(order.title, sql.placeholder("search")),
-          eq(collection.userId, sql.placeholder("userId"))
-        )
+          eq(collection.userId, sql.placeholder("userId")),
+        ),
       )
       .groupBy(order.id)
       .prepare("search_orders");

@@ -55,7 +55,7 @@ function RouteComponent() {
         onError: (error) => {
           toast.error(error.error.message || "Failed to reset password");
         },
-      }
+      },
     );
   };
 
@@ -122,9 +122,7 @@ function RouteComponent() {
             </Link>
             <div className="text-center">
               <h1 className="text-2xl font-semibold">Reset your password</h1>
-              <p className="text-sm text-muted-foreground mt-2">
-                Enter your new password below.
-              </p>
+              <p className="text-sm text-muted-foreground mt-2">Enter your new password below.</p>
             </div>
           </div>
           <form
@@ -139,9 +137,7 @@ function RouteComponent() {
               <form.Field
                 name="password"
                 validators={{
-                  onBlur: z
-                    .string()
-                    .min(8, "Password must be at least 8 characters"),
+                  onBlur: z.string().min(8, "Password must be at least 8 characters"),
                 }}
               >
                 {(field) => (
@@ -199,9 +195,7 @@ function RouteComponent() {
                     />
                     {field.state.meta.errors.map((err) => {
                       const errorMessage =
-                        typeof err === "string"
-                          ? err
-                          : err?.message || "Invalid input";
+                        typeof err === "string" ? err : err?.message || "Invalid input";
                       return (
                         <p key={errorMessage} className="text-red-500 text-sm">
                           {errorMessage}
@@ -220,11 +214,7 @@ function RouteComponent() {
                   className="w-full"
                   disabled={!state.canSubmit || state.isSubmitting}
                 >
-                  {state.isSubmitting ? (
-                    <Loader2 className="animate-spin" />
-                  ) : (
-                    "Reset Password"
-                  )}
+                  {state.isSubmitting ? <Loader2 className="animate-spin" /> : "Reset Password"}
                 </Button>
               )}
             </form.Subscribe>
@@ -232,11 +222,7 @@ function RouteComponent() {
           <div className="text-center text-sm">
             Remember your password?{" "}
             <Link to="/login">
-              <Button
-                className="underline underline-offset-4"
-                variant="primary"
-                mode="link"
-              >
+              <Button className="underline underline-offset-4" variant="primary" mode="link">
                 Back to Login
               </Button>
             </Link>

@@ -73,7 +73,7 @@ function FeatureInfo({
     <div
       className={cn(
         "md:col-span-1 col-span-3 flex flex-col justify-center items-start gap-2 relative",
-        imageOrientation === "right" ? "md:px-2" : "md:pl-6 md:pr-2"
+        imageOrientation === "right" ? "md:px-2" : "md:pl-6 md:pr-2",
       )}
     >
       <div className="flex flex-col">

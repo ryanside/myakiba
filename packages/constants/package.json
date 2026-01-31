@@ -1,8 +1,8 @@
 {
   "name": "@myakiba/constants",
   "version": "0.0.0",
-  "type": "module",
   "private": true,
+  "type": "module",
   "exports": {
     ".": {
       "default": "./src/index.ts"
@@ -19,4 +19,3 @@
     "typescript": "catalog:"
   }
 }
-

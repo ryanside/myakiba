@@ -27,10 +27,7 @@ export const item = pgTable(
       .primaryKey()
       .$defaultFn(() => createId()),
     externalId: integer("external_id"),
-    source: text("source")
-      .$type<"mfc" | "custom">()
-      .notNull()
-      .default("mfc"),
+    source: text("source").$type<"mfc" | "custom">().notNull().default("mfc"),
     title: text("title").notNull(),
     category: text("category", {
       enum: CATEGORIES,
@@ -47,7 +44,7 @@ export const item = pgTable(
   (t) => [
     index("item_title_idx").on(t.title),
     uniqueIndex("item_source_external_id_idx").on(t.source, t.externalId),
-  ]
+  ],
 );
 
 export const item_release = pgTable(
@@ -65,7 +62,7 @@ export const item_release = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
-  (t) => [index("item_release_item_id_date_idx").on(t.itemId, t.date.desc())]
+  (t) => [index("item_release_item_id_date_idx").on(t.itemId, t.date.desc())],
 );
 
 export const entry = pgTable(
@@ -75,10 +72,7 @@ export const entry = pgTable(
       .primaryKey()
       .$defaultFn(() => createId()),
     externalId: integer("external_id"),
-    source: text("source")
-      .$type<"mfc" | "custom">()
-      .notNull()
-      .default("mfc"),
+    source: text("source").$type<"mfc" | "custom">().notNull().default("mfc"),
     category: text("category").notNull(), // classifications, origin, character, company, artist, material, event
     name: text("name").notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -87,7 +81,7 @@ export const entry = pgTable(
   (t) => [
     index("entry_name_idx").on(t.name),
     uniqueIndex("entry_source_external_id_idx").on(t.source, t.externalId),
-  ]
+  ],
 );
 
 export const entry_to_item = pgTable(
@@ -106,7 +100,7 @@ export const entry_to_item = pgTable(
   (t) => [
     primaryKey({ columns: [t.entryId, t.itemId] }),
     index("entry_to_item_entry_id_idx").on(t.entryId),
-  ]
+  ],
 );
 
 export const collection = pgTable(
@@ -133,9 +127,7 @@ export const collection = pgTable(
     releaseId: uuid("release_id").references(() => item_release.id, {
       onDelete: "set null",
     }),
-    score: decimal("score", { precision: 3, scale: 1 })
-      .default("0.0")
-      .notNull(),
+    score: decimal("score", { precision: 3, scale: 1 }).default("0.0").notNull(),
     price: decimal("price", { precision: 14, scale: 2 }).default("0.00").notNull(),
     shop: text("shop").default("").notNull(),
     orderDate: date("order_date", { mode: "string" }),
@@ -168,7 +160,7 @@ export const collection = pgTable(
     index("collection_collection_date_idx").on(t.collectionDate),
     index("collection_payment_date_idx").on(t.paymentDate),
     index("collection_created_at_idx").on(t.createdAt),
-  ]
+  ],
 );
 
 export const order = pgTable(
@@ -197,9 +189,7 @@ export const order = pgTable(
     })
       .default("Ordered")
       .notNull(),
-    shippingFee: decimal("shipping_fee", { precision: 14, scale: 2 })
-      .default("0.00")
-      .notNull(),
+    shippingFee: decimal("shipping_fee", { precision: 14, scale: 2 }).default("0.00").notNull(),
     taxes: decimal("taxes", { precision: 14, scale: 2 }).default("0.00").notNull(),
     duties: decimal("duties", { precision: 14, scale: 2 }).default("0.00").notNull(),
     tariffs: decimal("tariffs", { precision: 14, scale: 2 }).default("0.00").notNull(),
@@ -215,7 +205,7 @@ export const order = pgTable(
     index("order_release_month_year_idx").on(t.releaseMonthYear),
     // Text search index
     index("order_title_idx").on(t.title),
-  ]
+  ],
 );
 
 export const budget = pgTable("budget", {

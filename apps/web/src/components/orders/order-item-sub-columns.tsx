@@ -13,6 +13,7 @@ import { DataGridColumnHeader } from "@/components/ui/data-grid-column-header";
 import { Package, MoreHorizontal, Copy, Edit, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDate, getCurrencyLocale } from "@myakiba/utils";
+import type { DateFormat } from "@myakiba/types";
 import type { OrderItem } from "@/lib/orders/types";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
@@ -31,6 +32,7 @@ interface OrderItemSubColumnsParams {
   onEditItem: (values: CollectionItemFormValues) => Promise<void>;
   onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
   currency: string;
+  dateFormat: DateFormat;
 }
 
 export function createOrderItemSubColumns({
@@ -38,6 +40,7 @@ export function createOrderItemSubColumns({
   onEditItem,
   onDeleteItem,
   currency,
+  dateFormat,
 }: OrderItemSubColumnsParams): ColumnDef<OrderItem>[] {
   return [
     {
@@ -60,7 +63,7 @@ export function createOrderItemSubColumns({
           <div
             className={cn(
               "hidden absolute top-0 bottom-0 start-0 w-[2px] bg-primary",
-              row.getIsSelected() && "block"
+              row.getIsSelected() && "block",
             )}
           ></div>
           <Checkbox
@@ -134,17 +137,14 @@ export function createOrderItemSubColumns({
     {
       accessorKey: "orderDate",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Order Date"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Order Date" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
         const item = row.original;
         return (
           <PopoverDatePickerCell
             value={item.orderDate}
+            dateFormat={dateFormat}
             onSubmit={async (newValue) => {
               await onEditItem({ ...item, orderDate: newValue });
             }}
@@ -159,13 +159,9 @@ export function createOrderItemSubColumns({
     {
       accessorKey: "releaseDate",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Release"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Release" visibility={true} column={column} />
       ),
-      cell: (info) => formatDate(info.getValue() as string),
+      cell: (info) => formatDate(info.getValue() as string, dateFormat),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -195,11 +191,7 @@ export function createOrderItemSubColumns({
     {
       accessorKey: "status",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Status"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Status" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
         const item = row.original;
@@ -283,6 +275,8 @@ export function createOrderItemSubColumns({
                 }
                 itemData={item}
                 callbackFn={onEditItem}
+                currency={currency}
+                dateFormat={dateFormat}
               />
               <DropdownMenuSeparator />
               <DropdownMenuItem

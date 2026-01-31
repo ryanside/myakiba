@@ -11,11 +11,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Scroller } from "./scroller";
 
 interface DataGridColumnComboboxProps<TData> {
@@ -27,20 +23,12 @@ export function DataGridColumnCombobox<TData>({
   table,
   trigger,
 }: DataGridColumnComboboxProps<TData>): React.ReactElement {
-
   const columns = table
     .getAllColumns()
-    .filter(
-      (column) =>
-        typeof column.accessorFn !== "undefined" && column.getCanHide()
-    );
+    .filter((column) => typeof column.accessorFn !== "undefined" && column.getCanHide());
 
   const defaultTrigger = (
-    <Button
-      variant="outline"
-      role="combobox"
-      className="justify-between"
-    >
+    <Button variant="outline" role="combobox" className="justify-between">
       <Settings2 className="h-4 w-4" />
       <span className="hidden md:block">Columns</span>
     </Button>
@@ -58,8 +46,7 @@ export function DataGridColumnCombobox<TData>({
               <Scroller className="max-h-96">
                 {columns.map((column) => {
                   const isVisible = column.getIsVisible();
-                  const columnName =
-                    column.columnDef.meta?.headerTitle || column.id;
+                  const columnName = column.columnDef.meta?.headerTitle || column.id;
 
                   return (
                     <CommandItem
@@ -71,10 +58,7 @@ export function DataGridColumnCombobox<TData>({
                       className="capitalize"
                     >
                       <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          isVisible ? "opacity-100" : "opacity-0"
-                        )}
+                        className={cn("mr-2 h-4 w-4", isVisible ? "opacity-100" : "opacity-0")}
                       />
                       {columnName}
                     </CommandItem>

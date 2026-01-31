@@ -125,14 +125,12 @@ export function RankingCard({
     <div
       className={cn(
         "flex flex-col rounded-xl border border-border bg-card overflow-hidden",
-        className
+        className,
       )}
     >
       <div className="flex items-center justify-between px-5 py-4 border-b border-border">
         <div className="flex items-center gap-2.5">
-          {icon && (
-            <span className="text-muted-foreground shrink-0">{icon}</span>
-          )}
+          {icon && <span className="text-muted-foreground shrink-0">{icon}</span>}
           <h3 className="text-base font-medium text-foreground">{title}</h3>
         </div>
       </div>
@@ -148,17 +146,11 @@ export function RankingCard({
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className={cn(
-                      "h-auto py-3 px-5",
-                      header.column.id === "rank" && "w-12",
-                    )}
+                    className={cn("h-auto py-3 px-5", header.column.id === "rank" && "w-12")}
                   >
                     {header.isPlaceholder
                       ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                      : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
                 ))}
               </TableRow>
@@ -169,47 +161,39 @@ export function RankingCard({
               table.getRowModel().rows.map((row) => {
                 const rowNav = getRowNavigation?.(row.original);
                 return (
-                <Fragment key={row.id}>
-                  <TableRow
-                    className={cn(
-                      "border-b border-border last:border-b-0 hover:bg-muted/30",
-                      progressKey && progressMax && "border-none",
-                      rowNav && "cursor-pointer"
-                    )}
-                    onClick={() => {
-                      if (rowNav) {
-                        navigate({ to: rowNav.to, search: rowNav.search });
-                      }
-                    }}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell
-                        key={cell.id}
-                        className={cn(
-                          "py-3.5 px-5",
-                        )}
-                      >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                  {progressKey && progressMax && (
-                    <TableRow className="border-b border-border last:border-b-0 hover:bg-transparent">
-                      <TableCell colSpan={columns.length} className="p-0">
-                        <Progress
-                          value={Number(row.original[progressKey])}
-                          max={progressMax}
-                          className="h-0.5 bg-sidebar rounded-none"
-                          indicatorClassName="bg-secondary"
-                        />
-                      </TableCell>
+                  <Fragment key={row.id}>
+                    <TableRow
+                      className={cn(
+                        "border-b border-border last:border-b-0 hover:bg-muted/30",
+                        progressKey && progressMax && "border-none",
+                        rowNav && "cursor-pointer",
+                      )}
+                      onClick={() => {
+                        if (rowNav) {
+                          navigate({ to: rowNav.to, search: rowNav.search });
+                        }
+                      }}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id} className={cn("py-3.5 px-5")}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      ))}
                     </TableRow>
-                  )}
-                </Fragment>
-              );
+                    {progressKey && progressMax && (
+                      <TableRow className="border-b border-border last:border-b-0 hover:bg-transparent">
+                        <TableCell colSpan={columns.length} className="p-0">
+                          <Progress
+                            value={Number(row.original[progressKey])}
+                            max={progressMax}
+                            className="h-0.5 bg-sidebar rounded-none"
+                            indicatorClassName="bg-secondary"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </Fragment>
+                );
               })
             ) : (
               <TableRow>

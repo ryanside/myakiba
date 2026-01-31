@@ -1,5 +1,3 @@
-;
-
 import { Slot } from "@radix-ui/react-slot";
 import * as React from "react";
 import { useComposedRefs } from "@/lib/compose-refs";
@@ -107,10 +105,7 @@ function useStoreContext(consumerName: string) {
 function useStore<T>(selector: (state: StoreState) => T): T {
   const store = useStoreContext("useStore");
 
-  const getSnapshot = React.useCallback(
-    () => selector(store.getState()),
-    [store, selector],
-  );
+  const getSnapshot = React.useCallback(() => selector(store.getState()), [store, selector]);
 
   return React.useSyncExternalStore(store.subscribe, getSnapshot, getSnapshot);
 }
@@ -148,8 +143,7 @@ function useEditableContext(consumerName: string) {
 
 type RootElement = React.ComponentRef<typeof EditableRoot>;
 
-interface EditableRootProps
-  extends Omit<React.ComponentProps<"div">, "onSubmit"> {
+interface EditableRootProps extends Omit<React.ComponentProps<"div">, "onSubmit"> {
   id?: string;
   defaultValue?: string;
   value?: string;
@@ -209,9 +203,7 @@ function EditableRoot(props: EditableRootProps) {
   );
 }
 
-function EditableRootImpl(
-  props: Omit<EditableRootProps, "onValueChange" | "onEditingChange">,
-) {
+function EditableRootImpl(props: Omit<EditableRootProps, "onValueChange" | "onEditingChange">) {
   const {
     defaultValue = "",
     value: valueProp,
@@ -261,9 +253,7 @@ function EditableRootImpl(
     }
   }, [editingProp, store]);
 
-  const [formTrigger, setFormTrigger] = React.useState<RootElement | null>(
-    null,
-  );
+  const [formTrigger, setFormTrigger] = React.useState<RootElement | null>(null);
   const composedRef = useComposedRefs(ref, (node) => setFormTrigger(node));
   const isFormControl = formTrigger ? !!formTrigger.closest("form") : true;
 
@@ -521,16 +511,7 @@ interface EditableInputProps extends React.ComponentProps<"input"> {
 }
 
 function EditableInput(props: EditableInputProps) {
-  const {
-    asChild,
-    className,
-    disabled,
-    readOnly,
-    required,
-    maxLength,
-    ref,
-    ...inputProps
-  } = props;
+  const { asChild, className, disabled, readOnly, required, maxLength, ref, ...inputProps } = props;
   const context = useEditableContext(INPUT_NAME);
   const store = useStoreContext(INPUT_NAME);
   const value = useStore((state) => state.value);
@@ -709,13 +690,7 @@ interface EditableToolbarProps extends React.ComponentProps<"div"> {
 }
 
 function EditableToolbar(props: EditableToolbarProps) {
-  const {
-    asChild,
-    className,
-    orientation = "horizontal",
-    ref,
-    ...toolbarProps
-  } = props;
+  const { asChild, className, orientation = "horizontal", ref, ...toolbarProps } = props;
   const context = useEditableContext(TOOLBAR_NAME);
 
   const ToolbarPrimitive = asChild ? Slot : "div";
@@ -729,11 +704,7 @@ function EditableToolbar(props: EditableToolbarProps) {
       dir={context.dir}
       {...toolbarProps}
       ref={ref}
-      className={cn(
-        "flex items-center gap-2",
-        orientation === "vertical" && "flex-col",
-        className,
-      )}
+      className={cn("flex items-center gap-2", orientation === "vertical" && "flex-col", className)}
     />
   );
 }
@@ -794,13 +765,7 @@ function EditableSubmit(props: EditableSubmitProps) {
 
       context.onSubmit(value);
     },
-    [
-      submitProps.onClick,
-      context.onSubmit,
-      value,
-      context.disabled,
-      context.readOnly,
-    ],
+    [submitProps.onClick, context.onSubmit, value, context.disabled, context.readOnly],
   );
 
   const SubmitPrimitive = asChild ? Slot : "button";

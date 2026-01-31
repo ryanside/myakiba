@@ -1,8 +1,8 @@
 {
   "name": "@myakiba/utils",
   "version": "0.0.0",
-  "type": "module",
   "private": true,
+  "type": "module",
   "exports": {
     ".": {
       "default": "./src/index.ts"
@@ -11,6 +11,9 @@
       "default": "./src/*.ts"
     }
   },
+  "dependencies": {
+    "@myakiba/constants": "workspace:*"
+  },
   "devDependencies": {
     "@myakiba/config": "workspace:*",
     "@myakiba/types": "workspace:*",
@@ -18,9 +21,5 @@
   },
   "peerDependencies": {
     "typescript": "catalog:"
-  },
-  "dependencies": {
-    "@myakiba/constants": "workspace:*"
   }
 }
-

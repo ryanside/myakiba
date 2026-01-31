@@ -1,10 +1,5 @@
 import * as z from "zod";
-import {
-  CATEGORIES,
-  COLLECTION_STATUSES,
-  CONDITIONS,
-  SHIPPING_METHODS,
-} from "@myakiba/constants";
+import { CATEGORIES, COLLECTION_STATUSES, CONDITIONS, SHIPPING_METHODS } from "@myakiba/constants";
 
 const commaSeparatedStringArray = z.preprocess((val) => {
   if (typeof val === "string" && val.length > 0) {
@@ -13,36 +8,26 @@ const commaSeparatedStringArray = z.preprocess((val) => {
   return undefined;
 }, z.array(z.string()).optional());
 
+const commaSeparatedShipMethodArray = z.preprocess((val) => {
+  if (typeof val === "string" && val.length > 0) {
+    return val.split(",");
+  }
+  return undefined;
+}, z.array(z.enum(SHIPPING_METHODS)).optional());
 
-const commaSeparatedShipMethodArray = z.preprocess(
-  (val) => {
-    if (typeof val === "string" && val.length > 0) {
-      return val.split(",");
-    }
-    return undefined;
-  },
-  z.array(z.enum(SHIPPING_METHODS)).optional()
-);
+const commaSeparatedConditionArray = z.preprocess((val) => {
+  if (typeof val === "string" && val.length > 0) {
+    return val.split(",");
+  }
+  return undefined;
+}, z.array(z.enum(CONDITIONS)).optional());
 
-const commaSeparatedConditionArray = z.preprocess(
-  (val) => {
-    if (typeof val === "string" && val.length > 0) {
-      return val.split(",");
-    }
-    return undefined;
-  },
-  z.array(z.enum(CONDITIONS)).optional()
-);
-
-const commaSeparatedCategoryArray = z.preprocess(
-  (val) => {
-    if (typeof val === "string" && val.length > 0) {
-      return val.split(",");
-    }
-    return undefined;
-  },
-  z.array(z.enum(CATEGORIES)).optional()
-);
+const commaSeparatedCategoryArray = z.preprocess((val) => {
+  if (typeof val === "string" && val.length > 0) {
+    return val.split(",");
+  }
+  return undefined;
+}, z.array(z.enum(CATEGORIES)).optional());
 
 export const collectionQuerySchema = z.object({
   limit: z.coerce.number().optional().default(10),
@@ -71,15 +56,15 @@ export const collectionQuerySchema = z.object({
   paidMin: z.string().optional(),
   paidMax: z.string().optional(),
   shop: commaSeparatedStringArray,
-  payDateStart: z.string().optional(),
-  payDateEnd: z.string().optional(),
-  shipDateStart: z.string().optional(),
-  shipDateEnd: z.string().optional(),
-  colDateStart: z.string().optional(),
-  colDateEnd: z.string().optional(),
+  payDateStart: z.iso.date().optional(),
+  payDateEnd: z.iso.date().optional(),
+  shipDateStart: z.iso.date().optional(),
+  shipDateEnd: z.iso.date().optional(),
+  colDateStart: z.iso.date().optional(),
+  colDateEnd: z.iso.date().optional(),
   shipMethod: commaSeparatedShipMethodArray,
-  relDateStart: z.string().optional(),
-  relDateEnd: z.string().optional(),
+  relDateStart: z.iso.date().optional(),
+  relDateEnd: z.iso.date().optional(),
   relPriceMin: z.string().optional(),
   relPriceMax: z.string().optional(),
   relCurrency: commaSeparatedStringArray,
@@ -100,15 +85,15 @@ export const collectionUpdateSchema = z.object({
   score: z.string(),
   price: z.string(),
   shop: z.string(),
-  orderDate: z.string().nullable(),
-  paymentDate: z.string().nullable(),
-  shippingDate: z.string().nullable(),
-  collectionDate: z.string().nullable(),
+  orderDate: z.iso.date().nullable(),
+  paymentDate: z.iso.date().nullable(),
+  shippingDate: z.iso.date().nullable(),
+  collectionDate: z.iso.date().nullable(),
   shippingMethod: z.enum(SHIPPING_METHODS),
   tags: z.array(z.string()),
   notes: z.string(),
   releaseId: z.string().nullable(),
-  releaseDate: z.string().nullable(),
+  releaseDate: z.iso.date().nullable(),
   releasePrice: z.string().nullable(),
   releaseCurrency: z.string().nullable(),
   releaseBarcode: z.string().nullable(),

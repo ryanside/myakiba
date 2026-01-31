@@ -1,7 +1,7 @@
 import { app, getErrorMessage } from "@/lib/treaty-client";
-import type { userItem, SyncOrder, SyncCollectionItem } from "@/lib/sync/types";
+import type { UserItem, SyncOrder, SyncCollectionItem } from "@/lib/sync/types";
 
-export async function sendItems(userItems: userItem[]) {
+export async function sendItems(userItems: UserItem[]) {
   const { data, error } = await app.api.sync.csv.post(userItems);
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to send items"));

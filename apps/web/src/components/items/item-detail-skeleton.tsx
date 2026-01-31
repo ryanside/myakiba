@@ -32,10 +32,7 @@ export function ItemDetailSkeleton() {
               <Skeleton className="h-4 w-20 mb-3" />
               <div className="space-y-2">
                 {[...Array(3)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex flex-wrap items-center gap-2 p-3 border rounded-lg"
-                  >
+                  <div key={i} className="flex flex-wrap items-center gap-2 p-3 border rounded-lg">
                     <Skeleton className="h-4 w-4" />
                     <Skeleton className="h-4 w-24" />
                     <Skeleton className="h-5 w-16 rounded-full" />
@@ -95,10 +92,7 @@ export function ItemDetailSkeleton() {
                   <CardContent>
                     <div className="space-y-2">
                       {[...Array(8)].map((_, j) => (
-                        <div
-                          key={j}
-                          className="flex justify-between items-center"
-                        >
+                        <div key={j} className="flex justify-between items-center">
                           <Skeleton className="h-4 w-24" />
                           <Skeleton className="h-4 w-20" />
                         </div>
@@ -114,4 +108,3 @@ export function ItemDetailSkeleton() {
     </div>
   );
 }
-

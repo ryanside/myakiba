@@ -53,7 +53,7 @@ export function InlineTextCell({
         console.error("Failed to submit edit:", err);
       }
     },
-    [onSubmit, resetToPreviousValue, validate, value]
+    [onSubmit, resetToPreviousValue, validate, value],
   );
 
   const handleEdit = React.useCallback(() => {
@@ -85,9 +85,7 @@ export function InlineTextCell({
           e.stopPropagation();
         }}
       >
-        <Editable.Preview
-          className={cn("w-full cursor-text", previewClassName)}
-        />
+        <Editable.Preview className={cn("w-full cursor-text", previewClassName)} />
         <Editable.Input
           className={cn("w-full", inputClassName)}
           onClick={(e) => {

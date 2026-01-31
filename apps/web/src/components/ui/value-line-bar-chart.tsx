@@ -1,13 +1,7 @@
 import { Bar, BarChart, Cell, XAxis, ReferenceLine } from "recharts";
 import React from "react";
 import { AnimatePresence } from "motion/react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer } from "@/components/ui/chart";
 import type { ChartConfig } from "@/components/ui/chart";
 import { cn } from "@/lib/utils";
@@ -52,9 +46,7 @@ export function ValueLineBarChart({ data }: ValueLineBarChartProps) {
 
   // Transform data to include all 12 months with 0 for missing months
   const chartData = React.useMemo(() => {
-    const monthMap = new Map(
-      data.map((item) => [Number(item.month), Number(item.orderCount)])
-    );
+    const monthMap = new Map(data.map((item) => [Number(item.month), Number(item.orderCount)]));
     return MONTH_NAMES.map((monthName, index) => ({
       month: monthName,
       desktop: monthMap.get(index + 1) || 0,
@@ -64,9 +56,7 @@ export function ValueLineBarChart({ data }: ValueLineBarChartProps) {
   // Get current month index (0-11)
   const currentMonthIndex = React.useMemo(() => new Date().getMonth(), []);
 
-  const [activeIndex, setActiveIndex] = React.useState<number | undefined>(
-    currentMonthIndex
-  );
+  const [activeIndex, setActiveIndex] = React.useState<number | undefined>(currentMonthIndex);
 
   // Calculate date range for a given month index (0-11)
   const getMonthDateRange = React.useCallback((monthIndex: number) => {
@@ -75,12 +65,12 @@ export function ValueLineBarChart({ data }: ValueLineBarChartProps) {
     const startDate = new Date(currentYear, monthIndex, 1);
     // Get last day of the month by going to the first day of next month and subtracting 1 day
     const endDate = new Date(currentYear, monthIndex + 1, 0);
-    
+
     // Format as YYYY-MM-DD
     const formatDate = (date: Date) => {
       const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
       return `${year}-${month}-${day}`;
     };
 
@@ -99,7 +89,7 @@ export function ValueLineBarChart({ data }: ValueLineBarChartProps) {
         search: dateRange,
       });
     },
-    [navigate, getMonthDateRange]
+    [navigate, getMonthDateRange],
   );
 
   const maxValueIndex = React.useMemo(() => {
@@ -112,7 +102,7 @@ export function ValueLineBarChart({ data }: ValueLineBarChartProps) {
       (max, data, index) => {
         return data.desktop > max.value ? { index, value: data.desktop } : max;
       },
-      { index: 0, value: 0 }
+      { index: 0, value: 0 },
     );
   }, [activeIndex, chartData]);
 
@@ -132,13 +122,9 @@ export function ValueLineBarChart({ data }: ValueLineBarChartProps) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <span className={cn("font-mono text-2xl tracking-tighter")}>
-            {maxValueIndex.value}
-          </span>
+          <span className={cn("font-mono text-2xl tracking-tighter")}>{maxValueIndex.value}</span>
         </CardTitle>
-        <CardDescription>
-          orders in {chartData[maxValueIndex.index].month}
-        </CardDescription>
+        <CardDescription>orders in {chartData[maxValueIndex.index].month}</CardDescription>
       </CardHeader>
       <CardContent className="">
         <AnimatePresence mode="wait">
@@ -217,12 +203,7 @@ const CustomReferenceLabel: React.FC<CustomReferenceLabelProps> = (props) => {
         fill="var(--foreground)"
         rx={4}
       />
-      <text
-        fontWeight={600}
-        x={x - CHART_MARGIN + 6}
-        y={y + 4}
-        fill="var(--background)"
-      >
+      <text fontWeight={600} x={x - CHART_MARGIN + 6} y={y + 4} fill="var(--background)">
         {value}
       </text>
     </>

@@ -42,14 +42,10 @@ export function CollectionBreakdown({
     return (
       <Card className={cn("flex flex-col", className)}>
         <CardHeader className="flex flex-row items-center gap-2">
-          <CardTitle className="text-md font-medium">
-            Collection Breakdown
-          </CardTitle>
+          <CardTitle className="text-md font-medium">Collection Breakdown</CardTitle>
         </CardHeader>
         <CardContent className="flex-1 pb-0">
-          <p className="text-sm text-muted-foreground text-center py-8">
-            No items in collection
-          </p>
+          <p className="text-sm text-muted-foreground text-center py-8">No items in collection</p>
         </CardContent>
       </Card>
     );
@@ -58,9 +54,7 @@ export function CollectionBreakdown({
   return (
     <Card className={cn("flex flex-col h-full", className)}>
       <CardHeader className="flex flex-row items-center gap-2">
-        <CardTitle className="text-md font-medium">
-          Collection Breakdown
-        </CardTitle>
+        <CardTitle className="text-md font-medium">Collection Breakdown</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4 px-0">
         {/* Horizontal Stacked Bar */}
@@ -68,12 +62,8 @@ export function CollectionBreakdown({
           <div className="flex h-4 w-full rounded-xs">
             {chartDataWithPercentages.map((item, index) => {
               const isHovered = hoveredIndex === index;
-              const isOtherHovered =
-                hoveredIndex !== null && hoveredIndex !== index;
-              const minWidth =
-                item.percentage < 2 && item.percentage > 0
-                  ? 2
-                  : item.percentage;
+              const isOtherHovered = hoveredIndex !== null && hoveredIndex !== index;
+              const minWidth = item.percentage < 2 && item.percentage > 0 ? 2 : item.percentage;
 
               return (
                 <div
@@ -94,28 +84,18 @@ export function CollectionBreakdown({
                       <div className="flex flex-col gap-1">
                         <p className="text-sm font-medium">{item.name}</p>
                         <div className="flex justify-between items-center gap-2">
-                          <span className="text-xs text-muted-foreground">
-                            Spent:
-                          </span>
+                          <span className="text-xs text-muted-foreground">Spent:</span>
                           <span className="text-xs font-medium">
                             {formatCurrency(item.value.toString(), currency)}
                           </span>
                         </div>
                         <div className="flex justify-between items-center gap-2">
-                          <span className="text-xs text-muted-foreground">
-                            Percentage:
-                          </span>
-                          <span className="text-xs font-medium">
-                            {item.percentage.toFixed(1)}%
-                          </span>
+                          <span className="text-xs text-muted-foreground">Percentage:</span>
+                          <span className="text-xs font-medium">{item.percentage.toFixed(1)}%</span>
                         </div>
                         <div className="flex justify-between items-center gap-2">
-                          <span className="text-xs text-muted-foreground">
-                            Items:
-                          </span>
-                          <span className="text-xs font-medium">
-                            {item.count}
-                          </span>
+                          <span className="text-xs text-muted-foreground">Items:</span>
+                          <span className="text-xs font-medium">{item.count}</span>
                         </div>
                       </div>
                       {/* Tooltip arrow */}
@@ -144,8 +124,7 @@ export function CollectionBreakdown({
         <Scroller className="h-34 px-6">
           {chartDataWithPercentages.map((item, index) => {
             const isHovered = hoveredIndex === index;
-            const isOtherHovered =
-              hoveredIndex !== null && hoveredIndex !== index;
+            const isOtherHovered = hoveredIndex !== null && hoveredIndex !== index;
 
             return (
               <Link
@@ -164,12 +143,8 @@ export function CollectionBreakdown({
                     width: isHovered ? "0.5rem" : "0.25rem",
                   }}
                 />
-                <span className="text-sm text-muted-foreground">
-                  {item.name}
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  {item.count}
-                </span>
+                <span className="text-sm text-muted-foreground">{item.name}</span>
+                <span className="text-sm text-muted-foreground">{item.count}</span>
                 <span className="text-xs text-muted-foreground">
                   ({item.percentage.toFixed(1)}%)
                 </span>

@@ -1,19 +1,10 @@
-import {
-  createFileRoute,
-  type UseNavigateResult,
-} from "@tanstack/react-router";
+import { createFileRoute, type UseNavigateResult } from "@tanstack/react-router";
 import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
 import { useForm } from "@tanstack/react-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,6 +30,7 @@ import { MaskInput } from "@/components/ui/mask-input";
 import { getCurrencyLocale } from "@myakiba/utils";
 import { app } from "@/lib/treaty-client";
 import { clearRecentItems } from "@/lib/recent-items";
+import { DATE_FORMATS } from "@myakiba/constants";
 
 interface Budget {
   id: string;
@@ -59,7 +51,8 @@ type User = {
   image?: string | null | undefined;
   username?: string | null | undefined;
   displayUsername?: string | null | undefined;
-  currency: string | null | undefined;
+  currency: string;
+  dateFormat: string;
 };
 
 export const Route = createFileRoute("/(app)/settings")({
@@ -149,10 +142,7 @@ function RouteComponent() {
         <PreferencesForm user={session.user} />
         <ProfileForm user={session.user} />
         {hasCredentialAccount && <PasswordForm />}
-        <DeleteAccountForm
-          navigate={navigate}
-          hasCredentialAccount={hasCredentialAccount}
-        />
+        <DeleteAccountForm navigate={navigate} hasCredentialAccount={hasCredentialAccount} />
       </div>
     </div>
   );
@@ -220,10 +210,7 @@ function BudgetForm({ user, budget }: { user: User; budget: Budget }) {
   const form = useForm({
     defaultValues: {
       amount: budget?.amount || "0",
-      period: (budget?.period || "monthly") as
-        | "monthly"
-        | "annual"
-        | "allocated",
+      period: (budget?.period || "monthly") as "monthly" | "annual" | "allocated",
     },
     onSubmit: async ({ value }) => {
       upsertBudgetMutation.mutate({
@@ -268,14 +255,10 @@ function BudgetForm({ user, budget }: { user: User; budget: Budget }) {
                   currency={user.currency ?? "USD"}
                   locale={getCurrencyLocale(user.currency ?? "USD")}
                   value={field.state.value}
-                  onValueChange={(_, unmaskedValue) =>
-                    field.handleChange(unmaskedValue)
-                  }
+                  onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
                 />
                 {field.state.meta.errors.length > 0 && (
-                  <p className="text-sm text-destructive">
-                    {String(field.state.meta.errors[0])}
-                  </p>
+                  <p className="text-sm text-destructive">{String(field.state.meta.errors[0])}</p>
                 )}
               </div>
             )}
@@ -287,9 +270,7 @@ function BudgetForm({ user, budget }: { user: User; budget: Budget }) {
                 <Select
                   value={field.state.value}
                   onValueChange={(value) =>
-                    field.handleChange(
-                      value as "monthly" | "annual" | "allocated"
-                    )
+                    field.handleChange(value as "monthly" | "annual" | "allocated")
                   }
                 >
                   <SelectTrigger>
@@ -302,9 +283,7 @@ function BudgetForm({ user, budget }: { user: User; budget: Budget }) {
                   </SelectContent>
                 </Select>
                 {field.state.meta.errors.length > 0 && (
-                  <p className="text-sm text-destructive">
-                    {String(field.state.meta.errors[0])}
-                  </p>
+                  <p className="text-sm text-destructive">{String(field.state.meta.errors[0])}</p>
                 )}
               </div>
             )}
@@ -312,10 +291,7 @@ function BudgetForm({ user, budget }: { user: User; budget: Budget }) {
           <div className="flex flex-row gap-2">
             <form.Subscribe>
               {(state) => (
-                <Button
-                  type="submit"
-                  disabled={!state.canSubmit || state.isSubmitting}
-                >
+                <Button type="submit" disabled={!state.canSubmit || state.isSubmitting}>
                   {state.isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -377,9 +353,7 @@ function ProfileForm({ user }: { user: User }) {
     <Card>
       <CardHeader>
         <CardTitle className="font-medium">Profile Information</CardTitle>
-        <CardDescription>
-          Update your profile information and display name
-        </CardDescription>
+        <CardDescription>Update your profile information and display name</CardDescription>
       </CardHeader>
       <CardContent>
         <form
@@ -442,10 +416,7 @@ function ProfileForm({ user }: { user: User }) {
 
           <form.Subscribe>
             {(state) => (
-              <Button
-                type="submit"
-                disabled={!state.canSubmit || state.isSubmitting}
-              >
+              <Button type="submit" disabled={!state.canSubmit || state.isSubmitting}>
                 {state.isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -490,20 +461,14 @@ function PasswordForm() {
           onError: (error) => {
             toast.error(error.error.message || "Failed to change password");
           },
-        }
+        },
       );
     },
     validators: {
       onSubmit: z.object({
-        currentPassword: z
-          .string()
-          .min(8, "Password must be at least 8 characters"),
-        newPassword: z
-          .string()
-          .min(8, "Password must be at least 8 characters"),
-        confirmPassword: z
-          .string()
-          .min(8, "Password must be at least 8 characters"),
+        currentPassword: z.string().min(8, "Password must be at least 8 characters"),
+        newPassword: z.string().min(8, "Password must be at least 8 characters"),
+        confirmPassword: z.string().min(8, "Password must be at least 8 characters"),
       }),
     },
   });
@@ -512,9 +477,7 @@ function PasswordForm() {
     <Card>
       <CardHeader>
         <CardTitle className="font-medium">Change Password</CardTitle>
-        <CardDescription>
-          Update your password to keep your account secure
-        </CardDescription>
+        <CardDescription>Update your password to keep your account secure</CardDescription>
       </CardHeader>
       <CardContent>
         <form
@@ -539,9 +502,7 @@ function PasswordForm() {
                   placeholder="Enter current password"
                 />
                 {field.state.meta.errors.length > 0 && (
-                  <p className="text-sm text-destructive">
-                    {field.state.meta.errors[0]?.message}
-                  </p>
+                  <p className="text-sm text-destructive">{field.state.meta.errors[0]?.message}</p>
                 )}
               </div>
             )}
@@ -561,9 +522,7 @@ function PasswordForm() {
                   placeholder="Enter new password"
                 />
                 {field.state.meta.errors.length > 0 && (
-                  <p className="text-sm text-destructive">
-                    {field.state.meta.errors[0]?.message}
-                  </p>
+                  <p className="text-sm text-destructive">{field.state.meta.errors[0]?.message}</p>
                 )}
               </div>
             )}
@@ -583,9 +542,7 @@ function PasswordForm() {
                   placeholder="Confirm new password"
                 />
                 {field.state.meta.errors.length > 0 && (
-                  <p className="text-sm text-destructive">
-                    {field.state.meta.errors[0]?.message}
-                  </p>
+                  <p className="text-sm text-destructive">{field.state.meta.errors[0]?.message}</p>
                 )}
               </div>
             )}
@@ -593,10 +550,7 @@ function PasswordForm() {
 
           <form.Subscribe>
             {(state) => (
-              <Button
-                type="submit"
-                disabled={!state.canSubmit || state.isSubmitting}
-              >
+              <Button type="submit" disabled={!state.canSubmit || state.isSubmitting}>
                 {state.isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -617,11 +571,13 @@ function PasswordForm() {
 function PreferencesForm({ user }: { user: User }) {
   const form = useForm({
     defaultValues: {
-      currency: user.currency || "USD",
+      currency: user.currency,
+      dateFormat: user.dateFormat,
     },
     onSubmit: async ({ value }) => {
       const { error } = await authClient.updateUser({
         currency: value.currency,
+        dateFormat: value.dateFormat,
       });
 
       if (error) {
@@ -634,6 +590,7 @@ function PreferencesForm({ user }: { user: User }) {
     validators: {
       onSubmit: z.object({
         currency: z.string().min(1, "Currency is required"),
+        dateFormat: z.enum(DATE_FORMATS),
       }),
     },
   });
@@ -653,9 +610,7 @@ function PreferencesForm({ user }: { user: User }) {
     <Card>
       <CardHeader>
         <CardTitle className="font-medium">Preferences</CardTitle>
-        <CardDescription>
-          Customize your application preferences
-        </CardDescription>
+        <CardDescription>Customize your application preferences</CardDescription>
       </CardHeader>
       <CardContent>
         <form
@@ -686,13 +641,39 @@ function PreferencesForm({ user }: { user: User }) {
                   </SelectContent>
                 </Select>
                 <p className="text-sm text-muted-foreground">
-                  Choose your preferred currency for displaying and inputting
-                  prices
+                  Choose your preferred currency for displaying and inputting prices
                 </p>
                 {field.state.meta.errors.length > 0 && (
-                  <p className="text-sm text-destructive">
-                    {field.state.meta.errors[0]?.message}
-                  </p>
+                  <p className="text-sm text-destructive">{field.state.meta.errors[0]?.message}</p>
+                )}
+              </div>
+            )}
+          </form.Field>
+
+          <form.Field name="dateFormat">
+            {(field) => (
+              <div className="space-y-2">
+                <Label htmlFor={field.name}>Date Format</Label>
+                <Select
+                  value={field.state.value}
+                  onValueChange={(value) => field.handleChange(value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={field.state.value} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DATE_FORMATS.map((dateFormat) => (
+                      <SelectItem key={dateFormat} value={dateFormat}>
+                        {dateFormat}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  Choose your preferred date format for displaying and inputting dates
+                </p>
+                {field.state.meta.errors.length > 0 && (
+                  <p className="text-sm text-destructive">{field.state.meta.errors[0]?.message}</p>
                 )}
               </div>
             )}
@@ -700,10 +681,7 @@ function PreferencesForm({ user }: { user: User }) {
 
           <form.Subscribe>
             {(state) => (
-              <Button
-                type="submit"
-                disabled={!state.canSubmit || state.isSubmitting}
-              >
+              <Button type="submit" disabled={!state.canSubmit || state.isSubmitting}>
                 {state.isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -793,7 +771,7 @@ function DeleteAccountForm({
             onError: (error) => {
               toast.error(error.error.message || "Failed to delete account");
             },
-          }
+          },
         );
       } else {
         deleteAccountMutation.mutate(value.confirmationPhrase);
@@ -806,8 +784,7 @@ function DeleteAccountForm({
       <CardHeader>
         <CardTitle className="font-medium">Delete Account</CardTitle>
         <CardDescription>
-          Permanently delete your account and remove all your data from our
-          servers
+          Permanently delete your account and remove all your data from our servers
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -822,8 +799,8 @@ function DeleteAccountForm({
             <DialogHeader>
               <DialogTitle>Are you absolutely sure?</DialogTitle>
               <DialogDescription>
-                This action cannot be undone. This will permanently delete your
-                account and remove all your data from our servers.
+                This action cannot be undone. This will permanently delete your account and remove
+                all your data from our servers.
               </DialogDescription>
             </DialogHeader>
             <form
@@ -838,9 +815,7 @@ function DeleteAccountForm({
                 <form.Field
                   name="password"
                   validators={{
-                    onChange: z
-                      .string()
-                      .min(8, "Password must be at least 8 characters"),
+                    onChange: z.string().min(8, "Password must be at least 8 characters"),
                   }}
                 >
                   {(field) => (
@@ -871,7 +846,7 @@ function DeleteAccountForm({
                       .string()
                       .refine(
                         (val) => val === "delete my account",
-                        "Please type 'delete my account' to confirm"
+                        "Please type 'delete my account' to confirm",
                       ),
                   }}
                 >
@@ -888,8 +863,7 @@ function DeleteAccountForm({
                         placeholder="Type 'delete my account' to confirm"
                       />
                       <p className="text-sm text-muted-foreground">
-                        Please type &quot;delete my account&quot; to confirm
-                        account deletion.
+                        Please type &quot;delete my account&quot; to confirm account deletion.
                       </p>
                       {field.state.meta.errors.length > 0 && (
                         <p className="text-sm text-destructive">
@@ -908,9 +882,7 @@ function DeleteAccountForm({
                       type="submit"
                       variant="destructive"
                       disabled={
-                        !state.canSubmit ||
-                        state.isSubmitting ||
-                        deleteAccountMutation.isPending
+                        !state.canSubmit || state.isSubmitting || deleteAccountMutation.isPending
                       }
                     >
                       {state.isSubmitting || deleteAccountMutation.isPending ? (

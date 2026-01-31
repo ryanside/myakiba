@@ -116,10 +116,7 @@ export function OrderDetailSkeleton() {
 
             {/* Table rows */}
             {[...Array(5)].map((_, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-4 p-4 border-b"
-              >
+              <div key={i} className="flex items-center gap-4 p-4 border-b">
                 <Skeleton className="h-4 w-8" />
                 <Skeleton className="h-12 w-12 rounded-md" />
                 <div className="flex-1 space-y-2">
@@ -137,4 +134,3 @@ export function OrderDetailSkeleton() {
     </div>
   );
 }
-

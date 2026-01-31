@@ -1,6 +1,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { formatDate, formatCurrency } from "@myakiba/utils";
+import type { DateFormat } from "@myakiba/types";
 import { Link } from "@tanstack/react-router";
 
 interface UnpaidOrder {
@@ -16,12 +17,14 @@ interface UnpaidOrder {
 interface UnpaidOrdersProps {
   className?: string;
   currency: string;
+  dateFormat: DateFormat;
   orders: UnpaidOrder[];
 }
 
 function UnpaidOrders({
   className,
   currency,
+  dateFormat,
   orders,
 }: UnpaidOrdersProps): React.ReactElement {
   return (
@@ -32,12 +35,11 @@ function UnpaidOrders({
             key={order.orderId}
             order={order}
             currency={currency}
+            dateFormat={dateFormat}
           />
         ))
       ) : (
-        <div className="text-center text-muted-foreground py-8 text-sm">
-          No unpaid orders
-        </div>
+        <div className="text-center text-muted-foreground py-8 text-sm">No unpaid orders</div>
       )}
     </div>
   );
@@ -46,9 +48,11 @@ function UnpaidOrders({
 function UnpaidOrderCard({
   order,
   currency,
+  dateFormat,
 }: {
   order: UnpaidOrder;
   currency: string;
+  dateFormat: DateFormat;
 }): React.ReactElement {
   const images = order.itemImages ?? [];
   const imageCount = images.length;
@@ -118,9 +122,7 @@ function UnpaidOrderCard({
               ))}
               {remainingCount > 0 && (
                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                  <span className="text-xs font-medium text-white">
-                    +{remainingCount}
-                  </span>
+                  <span className="text-xs font-medium text-white">+{remainingCount}</span>
                 </div>
               )}
             </div>
@@ -138,7 +140,7 @@ function UnpaidOrderCard({
           {order.releaseMonthYear && (
             <>
               {order.shop && <span>•</span>}
-              <span>{formatDate(order.releaseMonthYear)}</span>
+              <span>{formatDate(order.releaseMonthYear, dateFormat)}</span>
             </>
           )}
           {order.total && (
@@ -154,4 +156,3 @@ function UnpaidOrderCard({
 }
 
 export { UnpaidOrders, type UnpaidOrder };
-

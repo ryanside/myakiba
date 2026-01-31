@@ -16,13 +16,7 @@ import {
 } from "../ui/dialog";
 import { DialogFooter, DialogClose } from "../ui/dialog";
 import { Badge } from "../ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { DatePicker } from "../ui/date-picker";
 import * as z from "zod";
 import { Rating } from "../ui/rating";
@@ -79,9 +73,7 @@ export default function SyncCollectionForm({
         >
           <ArrowLeft />
         </Button>
-        <h1 className="text-lg text-black dark:text-white">
-          Add Collection Items
-        </h1>
+        <h1 className="text-lg text-black dark:text-white">Add Collection Items</h1>
       </div>
       <form
         onSubmit={(e) => {
@@ -106,12 +98,9 @@ export default function SyncCollectionForm({
             return (
               <div className="flex flex-col gap-4">
                 <div className="flex flex-row gap-3 items-center">
-                  <Label className="text-lg text-black dark:text-white">
-                    Collection Items
-                  </Label>
+                  <Label className="text-lg text-black dark:text-white">Collection Items</Label>
                   <Badge size="sm">
-                    {field.state.value.length}{" "}
-                    {field.state.value.length === 1 ? "item" : "items"}
+                    {field.state.value.length} {field.state.value.length === 1 ? "item" : "items"}
                   </Badge>
                   <collectionForm.Subscribe
                     selector={(state) => [state.canSubmit, state.isSubmitting]}
@@ -140,11 +129,7 @@ export default function SyncCollectionForm({
                       name={`items[${i}].itemExternalId`}
                       validators={{
                         onChange: ({ value }: { value: string }) => {
-                          if (
-                            !value ||
-                            typeof value !== "string" ||
-                            value.trim() === ""
-                          ) {
+                          if (!value || typeof value !== "string" || value.trim() === "") {
                             return "MyFigureCollection Item URL or ID is required";
                           }
                           const extractedId = extractMfcItemId(value);
@@ -160,9 +145,7 @@ export default function SyncCollectionForm({
                             <div className="flex flex-row gap-2">
                               <Input
                                 value={subField.state.value}
-                                onChange={(e) =>
-                                  subField.handleChange(e.target.value)
-                                }
+                                onChange={(e) => subField.handleChange(e.target.value)}
                                 type="text"
                                 placeholder="MyFigureCollection Item URL or ID"
                                 className="max-w-sm"
@@ -170,22 +153,15 @@ export default function SyncCollectionForm({
 
                               <Dialog>
                                 <DialogTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    type="button"
-                                  >
+                                  <Button variant="ghost" size="icon" type="button">
                                     <Edit />
                                   </Button>
                                 </DialogTrigger>
                                 <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
                                   <DialogHeader>
-                                    <DialogTitle>
-                                      Edit Collection Item
-                                    </DialogTitle>
+                                    <DialogTitle>Edit Collection Item</DialogTitle>
                                     <DialogDescription>
-                                      MFC Item: {" "}
-                                      {subField.state.value || "Not set"}
+                                      MFC Item: {subField.state.value || "Not set"}
                                     </DialogDescription>
                                   </DialogHeader>
                                   <div className="grid gap-4 py-4">
@@ -193,15 +169,11 @@ export default function SyncCollectionForm({
                                       <collectionForm.Field
                                         name={`items[${i}].price`}
                                         validators={{
-                                          onChange: z
-                                            .string()
-                                            .nonempty("Price is required"),
+                                          onChange: z.string().nonempty("Price is required"),
                                         }}
                                         children={(priceField) => (
                                           <div className="grid gap-2">
-                                            <Label htmlFor={`price-${i}`}>
-                                              Price
-                                            </Label>
+                                            <Label htmlFor={`price-${i}`}>Price</Label>
                                             <MaskInput
                                               id={`price-${i}`}
                                               name={priceField.name}
@@ -210,24 +182,14 @@ export default function SyncCollectionForm({
                                               locale={userLocale}
                                               value={priceField.state.value}
                                               onBlur={priceField.handleBlur}
-                                              onValueChange={(
-                                                maskedValue,
-                                                unmaskedValue
-                                              ) =>
-                                                priceField.handleChange(
-                                                  unmaskedValue
-                                                )
+                                              onValueChange={(maskedValue, unmaskedValue) =>
+                                                priceField.handleChange(unmaskedValue)
                                               }
                                               placeholder="0.00"
                                             />
                                             {!priceField.state.meta.isValid && (
-                                              <em
-                                                role="alert"
-                                                className="text-red-500 text-xs"
-                                              >
-                                                {priceField.state.meta.errors.join(
-                                                  ", "
-                                                )}
+                                              <em role="alert" className="text-red-500 text-xs">
+                                                {priceField.state.meta.errors.join(", ")}
                                               </em>
                                             )}
                                           </div>
@@ -236,15 +198,11 @@ export default function SyncCollectionForm({
                                       <collectionForm.Field
                                         name={`items[${i}].count`}
                                         validators={{
-                                          onChange: z
-                                            .number()
-                                            .min(1, "Count must be at least 1"),
+                                          onChange: z.number().min(1, "Count must be at least 1"),
                                         }}
                                         children={(countField) => (
                                           <div className="grid gap-2">
-                                            <Label htmlFor={`count-${i}`}>
-                                              Count
-                                            </Label>
+                                            <Label htmlFor={`count-${i}`}>Count</Label>
                                             <Input
                                               id={`count-${i}`}
                                               name={countField.name}
@@ -254,19 +212,14 @@ export default function SyncCollectionForm({
                                               min="1"
                                               onChange={(e) =>
                                                 countField.handleChange(
-                                                  parseInt(e.target.value) || 1
+                                                  parseInt(e.target.value) || 1,
                                                 )
                                               }
                                               placeholder="1"
                                             />
                                             {!countField.state.meta.isValid && (
-                                              <em
-                                                role="alert"
-                                                className="text-red-500 text-xs"
-                                              >
-                                                {countField.state.meta.errors.join(
-                                                  ", "
-                                                )}
+                                              <em role="alert" className="text-red-500 text-xs">
+                                                {countField.state.meta.errors.join(", ")}
                                               </em>
                                             )}
                                           </div>
@@ -279,16 +232,12 @@ export default function SyncCollectionForm({
                                         name={`items[${i}].condition`}
                                         children={(conditionField) => (
                                           <div className="grid gap-2">
-                                            <Label htmlFor={`condition-${i}`}>
-                                              Condition
-                                            </Label>
+                                            <Label htmlFor={`condition-${i}`}>Condition</Label>
                                             <Select
-                                              value={
-                                                conditionField.state.value ?? ""
-                                              }
+                                              value={conditionField.state.value ?? ""}
                                               onValueChange={(value) =>
                                                 conditionField.handleChange(
-                                                  value as typeof conditionField.state.value
+                                                  value as typeof conditionField.state.value,
                                                 )
                                               }
                                             >
@@ -310,18 +259,12 @@ export default function SyncCollectionForm({
                                         name={`items[${i}].score`}
                                         children={(scoreField) => (
                                           <div className="grid gap-2">
-                                            <Label htmlFor={`score-${i}`}>
-                                              Score
-                                            </Label>
+                                            <Label htmlFor={`score-${i}`}>Score</Label>
                                             <div className="my-auto">
                                               <Rating
-                                                rating={
-                                                  scoreField.state.value ?? 0
-                                                }
+                                                rating={scoreField.state.value ?? 0}
                                                 editable={true}
-                                                onRatingChange={
-                                                  scoreField.handleChange
-                                                }
+                                                onRatingChange={scoreField.handleChange}
                                                 showValue={true}
                                                 maxRating={10}
                                               />
@@ -335,20 +278,14 @@ export default function SyncCollectionForm({
                                       name={`items[${i}].shop`}
                                       children={(shopField) => (
                                         <div className="grid gap-2">
-                                          <Label htmlFor={`shop-${i}`}>
-                                            Shop
-                                          </Label>
+                                          <Label htmlFor={`shop-${i}`}>Shop</Label>
                                           <Input
                                             id={`shop-${i}`}
                                             name={shopField.name}
                                             value={shopField.state.value ?? ""}
                                             onBlur={shopField.handleBlur}
                                             type="text"
-                                            onChange={(e) =>
-                                              shopField.handleChange(
-                                                e.target.value
-                                              )
-                                            }
+                                            onChange={(e) => shopField.handleChange(e.target.value)}
                                             placeholder="e.g., AmiAmi"
                                           />
                                         </div>
@@ -360,34 +297,30 @@ export default function SyncCollectionForm({
                                       validators={{
                                         onChange: z.enum(
                                           SHIPPING_METHODS,
-                                          "Shipping method is required"
+                                          "Shipping method is required",
                                         ),
                                       }}
                                       children={(shippingField) => (
                                         <div className="grid gap-2">
-                                          <Label htmlFor={`shipping-${i}`}>
-                                            Shipping Method
-                                          </Label>
+                                          <Label htmlFor={`shipping-${i}`}>Shipping Method</Label>
                                           <Select
-                                            value={
-                                              shippingField.state.value ?? ""
-                                            }
+                                            value={shippingField.state.value ?? ""}
                                             onValueChange={(value) =>
                                               shippingField.handleChange(
-                                                value as typeof shippingField.state.value
+                                                value as typeof shippingField.state.value,
                                               )
                                             }
                                           >
                                             <SelectTrigger>
                                               <SelectValue placeholder="Select shipping method" />
                                             </SelectTrigger>
-                                              <SelectContent>
-                                                {SHIPPING_METHODS.map((method) => (
-                                                  <SelectItem key={method} value={method}>
-                                                    {method}
-                                                  </SelectItem>
-                                                ))}
-                                              </SelectContent>
+                                            <SelectContent>
+                                              {SHIPPING_METHODS.map((method) => (
+                                                <SelectItem key={method} value={method}>
+                                                  {method}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
                                           </Select>
                                         </div>
                                       )}
@@ -398,21 +331,14 @@ export default function SyncCollectionForm({
                                         name={`items[${i}].orderDate`}
                                         children={(orderDateField) => (
                                           <div className="grid gap-2">
-                                            <Label htmlFor={`orderDate-${i}`}>
-                                              Order Date
-                                            </Label>
+                                            <Label htmlFor={`orderDate-${i}`}>Order Date</Label>
                                             <DatePicker
                                               id={`orderDate-${i}`}
                                               name={orderDateField.name}
-                                              value={
-                                                orderDateField.state.value ??
-                                                null
-                                              }
+                                              value={orderDateField.state.value ?? null}
                                               onBlur={orderDateField.handleBlur}
                                               onChange={(value) =>
-                                                orderDateField.handleChange(
-                                                  value ?? ""
-                                                )
+                                                orderDateField.handleChange(value ?? "")
                                               }
                                               placeholder="Select order date"
                                             />
@@ -423,23 +349,14 @@ export default function SyncCollectionForm({
                                         name={`items[${i}].paymentDate`}
                                         children={(paymentDateField) => (
                                           <div className="grid gap-2">
-                                            <Label htmlFor={`paymentDate-${i}`}>
-                                              Payment Date
-                                            </Label>
+                                            <Label htmlFor={`paymentDate-${i}`}>Payment Date</Label>
                                             <DatePicker
                                               id={`paymentDate-${i}`}
                                               name={paymentDateField.name}
-                                              value={
-                                                paymentDateField.state.value ??
-                                                null
-                                              }
-                                              onBlur={
-                                                paymentDateField.handleBlur
-                                              }
+                                              value={paymentDateField.state.value ?? null}
+                                              onBlur={paymentDateField.handleBlur}
                                               onChange={(value) =>
-                                                paymentDateField.handleChange(
-                                                  value ?? ""
-                                                )
+                                                paymentDateField.handleChange(value ?? "")
                                               }
                                               placeholder="Select payment date"
                                             />
@@ -453,25 +370,16 @@ export default function SyncCollectionForm({
                                         name={`items[${i}].shippingDate`}
                                         children={(shippingDateField) => (
                                           <div className="grid gap-2">
-                                            <Label
-                                              htmlFor={`shippingDate-${i}`}
-                                            >
+                                            <Label htmlFor={`shippingDate-${i}`}>
                                               Shipping Date
                                             </Label>
                                             <DatePicker
                                               id={`shippingDate-${i}`}
                                               name={shippingDateField.name}
-                                              value={
-                                                shippingDateField.state.value ??
-                                                null
-                                              }
-                                              onBlur={
-                                                shippingDateField.handleBlur
-                                              }
+                                              value={shippingDateField.state.value ?? null}
+                                              onBlur={shippingDateField.handleBlur}
                                               onChange={(value) =>
-                                                shippingDateField.handleChange(
-                                                  value ?? ""
-                                                )
+                                                shippingDateField.handleChange(value ?? "")
                                               }
                                               placeholder="Select shipping date"
                                             />
@@ -482,25 +390,16 @@ export default function SyncCollectionForm({
                                         name={`items[${i}].collectionDate`}
                                         children={(collectionDateField) => (
                                           <div className="grid gap-2">
-                                            <Label
-                                              htmlFor={`collectionDate-${i}`}
-                                            >
+                                            <Label htmlFor={`collectionDate-${i}`}>
                                               Collection Date
                                             </Label>
                                             <DatePicker
                                               id={`collectionDate-${i}`}
                                               name={collectionDateField.name}
-                                              value={
-                                                collectionDateField.state
-                                                  .value ?? null
-                                              }
-                                              onBlur={
-                                                collectionDateField.handleBlur
-                                              }
+                                              value={collectionDateField.state.value ?? null}
+                                              onBlur={collectionDateField.handleBlur}
                                               onChange={(value) =>
-                                                collectionDateField.handleChange(
-                                                  value ?? ""
-                                                )
+                                                collectionDateField.handleChange(value ?? "")
                                               }
                                               placeholder="Select collection date"
                                             />
@@ -516,28 +415,22 @@ export default function SyncCollectionForm({
                                         <div className="grid gap-2">
                                           <Label>Tags</Label>
                                           <div className="flex flex-wrap gap-2">
-                                            {tagsField.state.value.map(
-                                              (tag, tagIndex) => (
-                                                <Badge
-                                                  key={tagIndex}
-                                                  variant="outline"
-                                                  className="flex items-center gap-1 text-foreground"
+                                            {tagsField.state.value.map((tag, tagIndex) => (
+                                              <Badge
+                                                key={tagIndex}
+                                                variant="outline"
+                                                className="flex items-center gap-1 text-foreground"
+                                              >
+                                                {tag}
+                                                <button
+                                                  type="button"
+                                                  onClick={() => tagsField.removeValue(tagIndex)}
+                                                  className="ml-1 hover:text-red-500"
                                                 >
-                                                  {tag}
-                                                  <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                      tagsField.removeValue(
-                                                        tagIndex
-                                                      )
-                                                    }
-                                                    className="ml-1 hover:text-red-500"
-                                                  >
-                                                    <X className="w-3 h-3" />
-                                                  </button>
-                                                </Badge>
-                                              )
-                                            )}
+                                                  <X className="w-3 h-3" />
+                                                </button>
+                                              </Badge>
+                                            ))}
                                           </div>
                                           <div className="flex gap-2">
                                             <Input
@@ -548,8 +441,7 @@ export default function SyncCollectionForm({
                                                 if (e.key === "Enter") {
                                                   e.preventDefault();
                                                   const input = e.currentTarget;
-                                                  const value =
-                                                    input.value.trim();
+                                                  const value = input.value.trim();
                                                   if (value) {
                                                     tagsField.pushValue(value);
                                                     input.value = "";
@@ -561,12 +453,10 @@ export default function SyncCollectionForm({
                                               type="button"
                                               variant="outline"
                                               onClick={() => {
-                                                const input =
-                                                  document.getElementById(
-                                                    `tag-input-${i}`
-                                                  ) as HTMLInputElement;
-                                                const value =
-                                                  input.value.trim();
+                                                const input = document.getElementById(
+                                                  `tag-input-${i}`,
+                                                ) as HTMLInputElement;
+                                                const value = input.value.trim();
                                                 if (value) {
                                                   tagsField.pushValue(value);
                                                   input.value = "";
@@ -584,18 +474,14 @@ export default function SyncCollectionForm({
                                       name={`items[${i}].notes`}
                                       children={(notesField) => (
                                         <div className="grid gap-2">
-                                          <Label htmlFor={`notes-${i}`}>
-                                            Notes
-                                          </Label>
+                                          <Label htmlFor={`notes-${i}`}>Notes</Label>
                                           <Textarea
                                             id={`notes-${i}`}
                                             name={notesField.name}
                                             value={notesField.state.value ?? ""}
                                             onBlur={notesField.handleBlur}
                                             onChange={(e) =>
-                                              notesField.handleChange(
-                                                e.target.value
-                                              )
+                                              notesField.handleChange(e.target.value)
                                             }
                                             placeholder="Additional notes..."
                                             className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"

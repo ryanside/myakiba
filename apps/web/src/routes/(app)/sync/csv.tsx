@@ -17,16 +17,12 @@ import { Check, Loader2, LoaderCircleIcon } from "lucide-react";
 import { tryCatch } from "@myakiba/utils";
 import { ShimmeringText } from "@/components/ui/shimmering-text";
 import { transformCSVData } from "@/lib/sync/utils";
-import type { userItem, SyncStatus } from "@/lib/sync/types";
+import type { UserItem, SyncStatus } from "@/lib/sync/types";
 import { toast } from "sonner";
 import { getJobStatus, sendItems } from "@/queries/sync";
 import SyncCsvForm from "@/components/sync/sync-csv-form";
 
-const steps = [
-  { title: "Choose sync option" },
-  { title: "Enter Information" },
-  { title: "Sync" },
-];
+const steps = [{ title: "Choose sync option" }, { title: "Enter Information" }, { title: "Sync" }];
 
 export const Route = createFileRoute("/(app)/sync/csv")({
   component: RouteComponent,
@@ -91,7 +87,7 @@ function RouteComponent() {
   };
 
   const csvMutation = useMutation({
-    mutationFn: (userItems: userItem[]) => sendItems(userItems),
+    mutationFn: (userItems: UserItem[]) => sendItems(userItems),
     onSuccess: (data) => {
       setCurrentStep(3);
       setStatus({
@@ -121,7 +117,7 @@ function RouteComponent() {
 
   async function handleSyncCsvSubmit(value: File | undefined) {
     const { data: userItems, error: transformCSVDataError } = await tryCatch(
-      transformCSVData({ file: value })
+      transformCSVData({ file: value }),
     );
     if (transformCSVDataError) {
       console.error("Error transforming CSV data", transformCSVDataError);
@@ -176,25 +172,15 @@ function RouteComponent() {
         </StepperNav>
 
         <StepperPanel className="text-sm">
-          <StepperContent
-            value={2}
-            className="flex items-center justify-center"
-          >
-            <SyncCsvForm
-              handleSyncCsvSubmit={handleSyncCsvSubmit}
-            />
+          <StepperContent value={2} className="flex items-center justify-center">
+            <SyncCsvForm handleSyncCsvSubmit={handleSyncCsvSubmit} />
           </StepperContent>
-          <StepperContent
-            value={3}
-            className="flex items-center justify-center"
-          >
+          <StepperContent value={3} className="flex items-center justify-center">
             <div className="rounded-lg border p-4 space-y-4 gap4 w-full">
               <Label className="text-lg text-foreground">Status</Label>
               <div className="flex flex-row gap-2 items-center">
                 {resolvedStatus.isFinished ? (
-                  <p className="text-md text-pretty text-primary">
-                    {resolvedStatus.status}
-                  </p>
+                  <p className="text-md text-pretty text-primary">{resolvedStatus.status}</p>
                 ) : (
                   <>
                     <Loader2 className="animate-spin w-4 h-4" />

@@ -34,11 +34,7 @@ function GoogleIcon() {
   );
 }
 
-export default function SignUpForm({
-  onSwitchToSignIn,
-}: {
-  onSwitchToSignIn: () => void;
-}) {
+export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () => void }) {
   const navigate = useNavigate({
     from: "/",
   });
@@ -46,9 +42,7 @@ export default function SignUpForm({
     await authClient.signIn.social(
       {
         provider: "google",
-        callbackURL: import.meta.env.PROD
-          ? "/dashboard"
-          : "http://localhost:3001/dashboard",
+        callbackURL: import.meta.env.PROD ? "/dashboard" : "http://localhost:3001/dashboard",
       },
       {
         onSuccess: () => {
@@ -59,7 +53,7 @@ export default function SignUpForm({
         onError: (error) => {
           toast.error(error.error.message || error.error.statusText);
         },
-      }
+      },
     );
   };
 
@@ -96,7 +90,7 @@ export default function SignUpForm({
           onError: (error) => {
             toast.error(error.error.message || error.error.statusText);
           },
-        }
+        },
       );
     },
     validators: {
@@ -132,20 +126,13 @@ export default function SignUpForm({
         </div>
       </div>
       <div className="grid gap-4">
-        <Button
-          variant="outline"
-          type="button"
-          className="w-full"
-          onClick={handleGoogleAuth}
-        >
+        <Button variant="outline" type="button" className="w-full" onClick={handleGoogleAuth}>
           <GoogleIcon />
           Continue with Google
         </Button>
       </div>
       <div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
-        <span className="bg-background text-muted-foreground relative z-10 px-2">
-          Or
-        </span>
+        <span className="bg-background text-muted-foreground relative z-10 px-2">Or</span>
       </div>
       <form
         onSubmit={(e) => {
@@ -235,9 +222,7 @@ export default function SignUpForm({
           <form.Field
             name="password"
             validators={{
-              onBlur: z
-                .string()
-                .min(8, "Password must be at least 8 characters"),
+              onBlur: z.string().min(8, "Password must be at least 8 characters"),
             }}
           >
             {(field) => (
@@ -273,10 +258,7 @@ export default function SignUpForm({
           <form.Field name="turnstileToken">
             {(field) => (
               <div className="space-y-2">
-                <Turnstile
-                  siteKey={env.VITE_TURNSTILE_SITE_KEY}
-                  onSuccess={field.handleChange}
-                />
+                <Turnstile siteKey={env.VITE_TURNSTILE_SITE_KEY} onSuccess={field.handleChange} />
               </div>
             )}
           </form.Field>
@@ -289,11 +271,7 @@ export default function SignUpForm({
               className="w-full"
               disabled={!state.canSubmit || state.isSubmitting}
             >
-              {state.isSubmitting ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                "Register"
-              )}
+              {state.isSubmitting ? <Loader2 className="animate-spin" /> : "Register"}
             </Button>
           )}
         </form.Subscribe>

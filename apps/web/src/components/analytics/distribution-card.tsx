@@ -43,13 +43,11 @@ export function DistributionCard({
     <div
       className={cn(
         "flex flex-col rounded-xl border border-border bg-card overflow-hidden",
-        className
+        className,
       )}
     >
       <div className="flex items-center gap-2.5 px-5 py-4 border-b border-border">
-        {icon && (
-          <span className="text-muted-foreground flex-shrink-0">{icon}</span>
-        )}
+        {icon && <span className="text-muted-foreground flex-shrink-0">{icon}</span>}
         <h3 className="text-base font-medium text-foreground">{title}</h3>
       </div>
 
@@ -62,7 +60,7 @@ export function DistributionCard({
                 key={index}
                 className={cn(
                   "space-y-2 rounded-lg p-2 -mx-2 transition-colors",
-                  rowNav && "cursor-pointer hover:bg-muted/30"
+                  rowNav && "cursor-pointer hover:bg-muted/30",
                 )}
                 onClick={() => {
                   if (rowNav) {
@@ -71,9 +69,7 @@ export function DistributionCard({
                 }}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-foreground">
-                    {item.label}
-                  </span>
+                  <span className="text-sm font-medium text-foreground">{item.label}</span>
                   <div className="flex items-center gap-3">
                     <Badge variant="outline">{item.count} items</Badge>
                     {item.value && (
@@ -83,11 +79,7 @@ export function DistributionCard({
                     )}
                   </div>
                 </div>
-                <Progress
-                  value={item.count}
-                  max={maxValue}
-                  className="h-1.5 bg-muted/30"
-                />
+                <Progress value={item.count} max={maxValue} className="h-1.5 bg-muted/30" />
               </div>
             );
           })

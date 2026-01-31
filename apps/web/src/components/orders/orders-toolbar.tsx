@@ -2,10 +2,7 @@ import { Button } from "@/components/ui/button";
 import { DebouncedInput } from "@/components/debounced-input";
 import { Filter, ListRestart, Merge, Move, Trash, X } from "lucide-react";
 import OrdersFiltersForm from "./orders-filters-form";
-import {
-  SortCombobox,
-  type SortableColumn,
-} from "@/components/ui/sort-combobox";
+import { SortCombobox, type SortableColumn } from "@/components/ui/sort-combobox";
 import { OrderForm } from "./order-form";
 import UnifiedItemMoveForm from "./unified-item-move-form";
 import { ConfirmationPopover } from "@/components/ui/confirmation-popover";
@@ -17,11 +14,7 @@ import {
   ActionBarClose,
   ActionBarSeparator,
 } from "@/components/ui/action-bar";
-import type {
-  OrderFilters,
-  CascadeOptions,
-  NewOrder,
-} from "@/lib/orders/types";
+import type { OrderFilters, CascadeOptions, NewOrder } from "@/lib/orders/types";
 
 // Define sortable columns configuration
 const SORTABLE_COLUMNS: SortableColumn[] = [
@@ -62,24 +55,21 @@ interface OrdersToolbarProps {
   onMerge: (
     values: NewOrder,
     cascadeOptions: CascadeOptions,
-    orderIds: Set<string>
+    orderIds: Set<string>,
   ) => Promise<void>;
   onSplit: (
     values: NewOrder,
     cascadeOptions: CascadeOptions,
     collectionIds: Set<string>,
-    orderIds: Set<string>
+    orderIds: Set<string>,
   ) => Promise<void>;
   onDeleteOrders: (orderIds: Set<string>) => Promise<void>;
   onMoveItem: (
     targetOrderId: string,
     collectionIds: Set<string>,
-    orderIds: Set<string>
+    orderIds: Set<string>,
   ) => Promise<void>;
-  onDeleteItems: (
-    collectionIds: Set<string>,
-    orderIds: Set<string>
-  ) => Promise<void>;
+  onDeleteItems: (collectionIds: Set<string>, orderIds: Set<string>) => Promise<void>;
 }
 
 export function OrdersToolbar({
@@ -106,10 +96,7 @@ export function OrdersToolbar({
         }
       : null;
 
-  const handleSortChange = (
-    columnId: string | null,
-    direction: "asc" | "desc" | null
-  ): void => {
+  const handleSortChange = (columnId: string | null, direction: "asc" | "desc" | null): void => {
     if (columnId === null || direction === null) {
       // Clear sorting - use default sort
       onFilterChange({
@@ -143,23 +130,18 @@ export function OrdersToolbar({
     }
   };
 
-  const isActionBarOpen =
-    selectedOrderIds.size > 0 || selectedItemData.collectionIds.size > 0;
+  const isActionBarOpen = selectedOrderIds.size > 0 || selectedItemData.collectionIds.size > 0;
 
   const selectionText = (() => {
     const parts: string[] = [];
     if (selectedOrderIds.size > 0) {
-      parts.push(
-        `${selectedOrderIds.size} ${
-          selectedOrderIds.size === 1 ? "order" : "orders"
-        }`
-      );
+      parts.push(`${selectedOrderIds.size} ${selectedOrderIds.size === 1 ? "order" : "orders"}`);
     }
     if (selectedItemData.collectionIds.size > 0) {
       parts.push(
         `${selectedItemData.collectionIds.size} ${
           selectedItemData.collectionIds.size === 1 ? "item" : "items"
-        }`
+        }`,
       );
     }
     return parts.join(", ");
@@ -184,9 +166,7 @@ export function OrdersToolbar({
           currentFilters={{
             ...filters,
           }}
-          onApplyFilters={(newFilters) =>
-            onFilterChange({ ...filters, ...newFilters, offset: 0 })
-          }
+          onApplyFilters={(newFilters) => onFilterChange({ ...filters, ...newFilters, offset: 0 })}
           currency={currency}
         />
         <SortCombobox
@@ -207,9 +187,7 @@ export function OrdersToolbar({
           }
         }}
       >
-        <ActionBarSelection className="border-none">
-          {selectionText} selected
-        </ActionBarSelection>
+        <ActionBarSelection className="border-none">{selectionText} selected</ActionBarSelection>
         <ActionBarSeparator />
         <ActionBarGroup>
           <OrderForm
@@ -285,10 +263,7 @@ export function OrdersToolbar({
             tooltipContent='Items with "Owned" status will not be deleted. You can delete owned items in the collection tab.'
             disabled={selectedItemData.collectionIds.size === 0}
             onConfirm={async () => {
-              await onDeleteItems(
-                selectedItemData.collectionIds,
-                selectedItemData.orderIds
-              );
+              await onDeleteItems(selectedItemData.collectionIds, selectedItemData.orderIds);
               clearSelections();
             }}
           />

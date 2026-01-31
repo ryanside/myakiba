@@ -3,12 +3,7 @@
 import { Slot } from "@radix-ui/react-slot";
 import { cva } from "class-variance-authority";
 import type { VariantProps } from "class-variance-authority";
-import {
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronUp,
-} from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from "lucide-react";
 import * as React from "react";
 import { useComposedRefs } from "@/lib/compose-refs";
 import { cn } from "@/lib/utils";
@@ -53,9 +48,7 @@ type ScrollVisibility = {
   [key in ScrollDirection]: boolean;
 };
 
-interface ScrollerProps
-  extends VariantProps<typeof scrollerVariants>,
-    React.ComponentProps<"div"> {
+interface ScrollerProps extends VariantProps<typeof scrollerVariants>, React.ComponentProps<"div"> {
   size?: number;
   offset?: number;
   asChild?: boolean;
@@ -82,13 +75,12 @@ function Scroller(props: ScrollerProps) {
 
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const composedRef = useComposedRefs(ref, containerRef);
-  const [scrollVisibility, setScrollVisibility] =
-    React.useState<ScrollVisibility>({
-      up: false,
-      down: false,
-      left: false,
-      right: false,
-    });
+  const [scrollVisibility, setScrollVisibility] = React.useState<ScrollVisibility>({
+    up: false,
+    down: false,
+    left: false,
+    right: false,
+  });
 
   const onScrollBy = React.useCallback(
     (direction: ScrollDirection) => {
@@ -148,8 +140,7 @@ function Scroller(props: ScrollerProps) {
         }
 
         const hasTopScroll = scrollTop > offset;
-        const hasBottomScroll =
-          scrollTop + clientHeight + offset < scrollHeight;
+        const hasBottomScroll = scrollTop + clientHeight + offset < scrollHeight;
         const isVerticallyScrollable = scrollHeight > clientHeight;
 
         if (hasTopScroll && hasBottomScroll && isVerticallyScrollable) {
@@ -235,9 +226,7 @@ function Scroller(props: ScrollerProps) {
       {...scrollerProps}
       ref={composedRef}
       style={composedStyle}
-      className={cn(
-        scrollerVariants({ orientation, hideScrollbar, className }),
-      )}
+      className={cn(scrollerVariants({ orientation, hideScrollbar, className }))}
     />
   );
 
@@ -255,13 +244,7 @@ function Scroller(props: ScrollerProps) {
           triggerMode={scrollTriggerMode}
         />
       ));
-  }, [
-    activeDirections,
-    scrollVisibility,
-    scrollHandlers,
-    scrollTriggerMode,
-    withNavigation,
-  ]);
+  }, [activeDirections, scrollVisibility, scrollHandlers, scrollTriggerMode, withNavigation]);
 
   if (withNavigation) {
     return (
@@ -305,18 +288,9 @@ interface ScrollButtonProps extends React.ComponentProps<"button"> {
 }
 
 function ScrollButton(props: ScrollButtonProps) {
-  const {
-    direction,
-    className,
-    triggerMode = "press",
-    onClick,
-    ref,
-    ...buttonProps
-  } = props;
+  const { direction, className, triggerMode = "press", onClick, ref, ...buttonProps } = props;
 
-  const [autoScrollTimer, setAutoScrollTimer] = React.useState<number | null>(
-    null,
-  );
+  const [autoScrollTimer, setAutoScrollTimer] = React.useState<number | null>(null);
 
   const onAutoScrollStart = React.useCallback(
     (event?: React.MouseEvent<HTMLButtonElement>) => {

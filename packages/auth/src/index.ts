@@ -54,8 +54,7 @@ export const auth = betterAuth({
       },
     },
   },
-  trustedOrigins:
-    env.CORS_ORIGIN.split(",").map((origin) => origin.trim()) || [],
+  trustedOrigins: env.CORS_ORIGIN.split(",").map((origin) => origin.trim()) || [],
   emailAndPassword: {
     enabled: true,
     sendResetPassword: async ({ user, url }) => {
@@ -113,8 +112,13 @@ export const auth = betterAuth({
     additionalFields: {
       currency: {
         type: "string",
-        required: false,
+        required: true,
         defaultValue: "USD",
+      },
+      dateFormat: {
+        type: "string",
+        required: true,
+        defaultValue: "MM/DD/YYYY",
       },
     },
   },

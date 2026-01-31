@@ -11,11 +11,7 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface DataGridSortComboboxProps<TData> {
   table: Table<TData>;
@@ -28,18 +24,14 @@ export function DataGridSortCombobox<TData>({
   onSortChange,
   trigger,
 }: DataGridSortComboboxProps<TData>): React.ReactElement {
-
   const columns = table
     .getAllColumns()
-    .filter(
-      (column) =>
-        column.getCanSort() && typeof column.accessorFn !== "undefined"
-    );
+    .filter((column) => column.getCanSort() && typeof column.accessorFn !== "undefined");
 
   const currentSort = table.getState().sorting[0];
   const currentColumnName = currentSort
-    ? columns.find((col) => col.id === currentSort.id)?.columnDef.meta
-        ?.headerTitle || currentSort.id
+    ? columns.find((col) => col.id === currentSort.id)?.columnDef.meta?.headerTitle ||
+      currentSort.id
     : null;
 
   const handleSort = (columnId: string | null): void => {
@@ -77,20 +69,13 @@ export function DataGridSortCombobox<TData>({
   };
 
   const getSortButtonIcon = (): React.ReactElement => {
-    if (!currentSort || currentColumnName === "createdAt") return <ArrowUpDown className="h-4 w-4" />;
-    return currentSort.desc ? (
-      <ArrowDown className="h-4 w-4" />
-    ) : (
-      <ArrowUp className="h-4 w-4" />
-    );
+    if (!currentSort || currentColumnName === "createdAt")
+      return <ArrowUpDown className="h-4 w-4" />;
+    return currentSort.desc ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />;
   };
 
   const defaultTrigger = (
-    <Button
-      variant="outline"
-      role="combobox"
-      className="justify-between"
-    >
+    <Button variant="outline" role="combobox" className="justify-between">
       {getSortButtonIcon()}
       <span className="hidden md:block">
         {currentColumnName && currentColumnName !== "createdAt"
@@ -121,8 +106,7 @@ export function DataGridSortCombobox<TData>({
             <CommandSeparator />
             <CommandGroup>
               {columns.map((column) => {
-                const columnName =
-                  column.columnDef.meta?.headerTitle || column.id;
+                const columnName = column.columnDef.meta?.headerTitle || column.id;
 
                 return (
                   <CommandItem
@@ -143,4 +127,3 @@ export function DataGridSortCombobox<TData>({
     </Popover>
   );
 }
-

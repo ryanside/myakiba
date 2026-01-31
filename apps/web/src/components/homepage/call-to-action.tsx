@@ -10,7 +10,7 @@ export default function CallToAction() {
               Join the waitlist.
             </h2>
             <p className="text-muted-foreground text-lg max-w-xl">
-              Be the first to know when myakiba launches. 
+              Be the first to know when myakiba launches.
             </p>
             <WaitlistForm />
           </div>

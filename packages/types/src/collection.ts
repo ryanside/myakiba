@@ -79,12 +79,7 @@ export type CollectionItem = {
 
 export type CollectionItemFormValues = Omit<
   CollectionItem,
-  | "createdAt"
-  | "updatedAt"
-  | "totalCount"
-  | "totalValue"
-  | "itemCategory"
-  | "itemScale"
+  "createdAt" | "updatedAt" | "totalCount" | "totalValue" | "itemCategory" | "itemScale"
 >;
 
 export type CollectionStats = {
@@ -100,4 +95,3 @@ export type CollectionQueryResponse = {
     collectionStats: CollectionStats;
   };
 };
-

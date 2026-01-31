@@ -25,6 +25,7 @@ import { DataGridColumnCombobox } from "../ui/data-grid-column-combobox";
 import { OrdersToolbar } from "./orders-toolbar";
 import { DEFAULT_PAGE_INDEX, DEFAULT_PAGE_SIZE } from "@myakiba/constants";
 import { createOrdersColumns } from "./orders-columns";
+import type { DateFormat } from "@myakiba/types";
 
 export { DEFAULT_PAGE_INDEX, DEFAULT_PAGE_SIZE };
 
@@ -47,31 +48,26 @@ interface OrdersDataGridProps {
   onMerge: (
     values: NewOrder,
     cascadeOptions: CascadeOptions,
-    orderIds: Set<string>
+    orderIds: Set<string>,
   ) => Promise<void>;
   onSplit: (
     values: NewOrder,
     cascadeOptions: CascadeOptions,
     collectionIds: Set<string>,
-    orderIds: Set<string>
+    orderIds: Set<string>,
   ) => Promise<void>;
-  onEditOrder: (
-    values: EditedOrder,
-    cascadeOptions: CascadeOptions
-  ) => Promise<void>;
+  onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
   onDeleteOrders: (orderIds: Set<string>) => Promise<void>;
   onEditItem: (values: CollectionItemFormValues) => Promise<void>;
   onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
-  onDeleteItems: (
-    collectionIds: Set<string>,
-    orderIds: Set<string>
-  ) => Promise<void>;
+  onDeleteItems: (collectionIds: Set<string>, orderIds: Set<string>) => Promise<void>;
   onMoveItem: (
     targetOrderId: string,
     collectionIds: Set<string>,
-    orderIds: Set<string>
+    orderIds: Set<string>,
   ) => Promise<void>;
   currency?: string;
+  dateFormat: DateFormat;
 }
 
 export default function OrdersDataGrid({
@@ -93,13 +89,14 @@ export default function OrdersDataGrid({
   onDeleteItems,
   onMoveItem,
   currency = "USD",
+  dateFormat,
 }: OrdersDataGridProps) {
   const pagination = useMemo<PaginationState>(
     () => ({
       pageIndex: Math.floor(serverPagination.offset / serverPagination.limit),
       pageSize: serverPagination.limit,
     }),
-    [serverPagination.offset, serverPagination.limit]
+    [serverPagination.offset, serverPagination.limit],
   );
 
   const sorting = useMemo<SortingState>(
@@ -109,7 +106,7 @@ export default function OrdersDataGrid({
         desc: serverSorting.order === "desc",
       },
     ],
-    [serverSorting.sort, serverSorting.order]
+    [serverSorting.sort, serverSorting.order],
   );
 
   const {
@@ -165,6 +162,7 @@ export default function OrdersDataGrid({
         currency,
         itemSelection,
         setItemSelection,
+        dateFormat,
       }),
     [
       onEditItem,
@@ -174,13 +172,13 @@ export default function OrdersDataGrid({
       currency,
       itemSelection,
       setItemSelection,
-    ]
+      dateFormat,
+    ],
   );
 
   const handlePaginationChange = useCallback(
     (updater: Updater<PaginationState>) => {
-      const newPagination =
-        typeof updater === "function" ? updater(pagination) : updater;
+      const newPagination = typeof updater === "function" ? updater(pagination) : updater;
 
       const newOffset = newPagination.pageIndex * newPagination.pageSize;
       onFilterChange({
@@ -188,13 +186,12 @@ export default function OrdersDataGrid({
         offset: newOffset,
       });
     },
-    [pagination, onFilterChange]
+    [pagination, onFilterChange],
   );
 
   const handleSortingChange = useCallback(
     (updater: Updater<SortingState>) => {
-      const newSorting =
-        typeof updater === "function" ? updater(sorting) : updater;
+      const newSorting = typeof updater === "function" ? updater(sorting) : updater;
 
       if (newSorting.length > 0) {
         const sortConfig = newSorting[0];
@@ -222,7 +219,7 @@ export default function OrdersDataGrid({
         });
       }
     },
-    [sorting, onFilterChange]
+    [sorting, onFilterChange],
   );
 
   const table = useReactTable({

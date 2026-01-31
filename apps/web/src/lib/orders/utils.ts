@@ -13,13 +13,33 @@ import type { CollectionItemFormValues } from "@/lib/collection/types";
 import { COLLECTION_STATUSES, ORDER_STATUSES } from "@myakiba/constants";
 
 const STATUS_VARIANT_MAP: Record<string, VariantProps<typeof badgeVariants>["variant"]> = {
-  ...Object.fromEntries(COLLECTION_STATUSES.map((status) => [status.toLowerCase(), status === "Owned" ? "success" : status === "Shipped" ? "primary" : status === "Paid" ? "warning" : "info"])),
-  ...Object.fromEntries(ORDER_STATUSES.map((status) => [status.toLowerCase(), status === "Owned" ? "success" : status === "Shipped" ? "primary" : status === "Paid" ? "warning" : "info"])),
+  ...Object.fromEntries(
+    COLLECTION_STATUSES.map((status) => [
+      status.toLowerCase(),
+      status === "Owned"
+        ? "success"
+        : status === "Shipped"
+          ? "primary"
+          : status === "Paid"
+            ? "warning"
+            : "info",
+    ]),
+  ),
+  ...Object.fromEntries(
+    ORDER_STATUSES.map((status) => [
+      status.toLowerCase(),
+      status === "Owned"
+        ? "success"
+        : status === "Shipped"
+          ? "primary"
+          : status === "Paid"
+            ? "warning"
+            : "info",
+    ]),
+  ),
 };
 
-export function getStatusVariant(
-  status: string
-): VariantProps<typeof badgeVariants>["variant"] {
+export function getStatusVariant(status: string): VariantProps<typeof badgeVariants>["variant"] {
   return STATUS_VARIANT_MAP[status.toLowerCase()] || "outline";
 }
 
@@ -29,7 +49,7 @@ export function filterAndSortOrders(
     search?: string;
     sort?: string;
     order?: string;
-  }
+  },
 ): Order[] {
   let filteredOrders = [...orders];
 
@@ -37,7 +57,7 @@ export function filterAndSortOrders(
   if (filters.search && filters.search.trim()) {
     const searchTerm = filters.search.toLowerCase();
     filteredOrders = filteredOrders.filter((order) =>
-      order.title.toLowerCase().includes(searchTerm)
+      order.title.toLowerCase().includes(searchTerm),
     );
   }
 
@@ -207,32 +227,25 @@ export function createOptimisticMergeUpdate(
   values: NewOrder,
   orderIds: Set<string>,
   filters: OrderFilters,
-  cascadeOptions: CascadeOptions = []
+  cascadeOptions: CascadeOptions = [],
 ): OrdersQueryResponse {
   if (!old) return old;
 
-  const ordersToMerge = old.orders.filter((order: Order) =>
-    orderIds.has(order.orderId)
-  );
+  const ordersToMerge = old.orders.filter((order: Order) => orderIds.has(order.orderId));
 
   if (!ordersToMerge) return old;
 
-  const remainingOrders = old.orders.filter(
-    (order: Order) => !orderIds.has(order.orderId)
-  );
+  const remainingOrders = old.orders.filter((order: Order) => !orderIds.has(order.orderId));
 
   const cascadeProperties = Object.fromEntries(
-    cascadeOptions.map((option) => [
-      option,
-      values[option as keyof typeof values],
-    ])
+    cascadeOptions.map((option) => [option, values[option as keyof typeof values]]),
   );
 
   const combinedItems = ordersToMerge.flatMap((order: Order) =>
     (order.items || []).map((item: OrderItem) => ({
       ...item,
       ...cascadeProperties,
-    }))
+    })),
   );
 
   const ordersTotal = ordersToMerge.reduce((sum: number, order: Order) => {
@@ -293,25 +306,18 @@ export function createOptimisticSplitUpdate(
   orderIds: Set<string>,
   collectionIds: Set<string>,
   filters: OrderFilters,
-  cascadeOptions: CascadeOptions = []
+  cascadeOptions: CascadeOptions = [],
 ): OrdersQueryResponse {
   if (!old) return old;
 
-  const ordersToSplit = old.orders.filter((order: Order) =>
-    orderIds.has(order.orderId)
-  );
+  const ordersToSplit = old.orders.filter((order: Order) => orderIds.has(order.orderId));
 
   if (!ordersToSplit) return old;
 
-  const remainingOrders = old.orders.filter(
-    (order: Order) => !orderIds.has(order.orderId)
-  );
+  const remainingOrders = old.orders.filter((order: Order) => !orderIds.has(order.orderId));
 
   const cascadeProperties = Object.fromEntries(
-    cascadeOptions.map((option) => [
-      option,
-      values[option as keyof typeof values],
-    ])
+    cascadeOptions.map((option) => [option, values[option as keyof typeof values]]),
   );
 
   const splitItems = ordersToSplit.flatMap((order: Order) =>
@@ -320,7 +326,7 @@ export function createOptimisticSplitUpdate(
       .map((item: OrderItem) => ({
         ...item,
         ...cascadeProperties,
-      }))
+      })),
   );
 
   const splitItemsTotal = splitItems.reduce((sum: number, item: OrderItem) => {
@@ -347,21 +353,14 @@ export function createOptimisticSplitUpdate(
 
   // edit the effected orders by removing the split items
   const updatedOrders = ordersToSplit.map((order: Order) => {
-    const remainingItems = order.items.filter(
-      (item: OrderItem) => !collectionIds.has(item.id)
-    );
+    const remainingItems = order.items.filter((item: OrderItem) => !collectionIds.has(item.id));
 
     // get the items that were split from this specific order
-    const orderSplitItems = order.items.filter((item: OrderItem) =>
-      collectionIds.has(item.id)
-    );
+    const orderSplitItems = order.items.filter((item: OrderItem) => collectionIds.has(item.id));
 
-    const orderSplitItemsTotal = orderSplitItems.reduce(
-      (sum: number, item: OrderItem) => {
-        return sum + parseFloat(item.price);
-      },
-      0
-    );
+    const orderSplitItemsTotal = orderSplitItems.reduce((sum: number, item: OrderItem) => {
+      return sum + parseFloat(item.price);
+    }, 0);
 
     return {
       ...order,
@@ -390,20 +389,18 @@ export function createOptimisticEditUpdate(
   old: OrdersQueryResponse,
   values: EditedOrder,
   filters: OrderFilters,
-  cascadeOptions: CascadeOptions = []
+  cascadeOptions: CascadeOptions = [],
 ): OrdersQueryResponse {
   if (!old) return old;
 
-  const editedOrder = old.orders.find(
-    (order: Order) => order.orderId === values.orderId
-  );
+  const editedOrder = old.orders.find((order: Order) => order.orderId === values.orderId);
 
   if (!editedOrder) {
     return old;
   }
 
   const cascadedProperties = Object.fromEntries(
-    cascadeOptions.map((option) => [option, values[option]])
+    cascadeOptions.map((option) => [option, values[option]]),
   );
   const items = editedOrder.items.map((item: OrderItem) => {
     return {
@@ -426,9 +423,7 @@ export function createOptimisticEditUpdate(
   ).toFixed(2);
 
   const updatedOrders = old.orders.map((order: Order) =>
-    order.orderId === values.orderId
-      ? { ...order, ...values, items, total }
-      : order
+    order.orderId === values.orderId ? { ...order, ...values, items, total } : order,
   );
 
   const sortedOrders = filterAndSortOrders(updatedOrders, {
@@ -447,20 +442,18 @@ export function createOptimisticEditUpdate(
 export function createOptimisticDeleteUpdate(
   old: OrdersQueryResponse,
   orderIds: Set<string>,
-  filters: OrderFilters
+  filters: OrderFilters,
 ) {
   if (!old) return old;
 
-  const deletedOrders = old.orders.filter((order: Order) =>
-    orderIds.has(order.orderId)
-  );
+  const deletedOrders = old.orders.filter((order: Order) => orderIds.has(order.orderId));
 
   if (!deletedOrders) return old;
 
   const deletedOrdersIds = deletedOrders.map((order: Order) => order.orderId);
 
   const remainingOrders = old.orders.filter(
-    (order: Order) => !deletedOrdersIds.includes(order.orderId)
+    (order: Order) => !deletedOrdersIds.includes(order.orderId),
   );
 
   const totalCount = old.totalCount - deletedOrders.length;
@@ -482,11 +475,9 @@ export function createOptimisticDeleteUpdate(
 export function createOptimisticEditItemUpdate(
   old: OrdersQueryResponse,
   values: CollectionItemFormValues,
-  filters: OrderFilters
+  filters: OrderFilters,
 ) {
-  const order = old.orders.find(
-    (order: Order) => order.orderId === values.orderId
-  );
+  const order = old.orders.find((order: Order) => order.orderId === values.orderId);
   if (!order) return old;
   const item = order.items.find((item: OrderItem) => item.id === values.id);
   if (!item) return old;
@@ -496,16 +487,11 @@ export function createOptimisticEditItemUpdate(
     ...values,
   };
 
-  const remainingItems = order.items.filter(
-    (item: OrderItem) => item.id !== values.id
-  );
+  const remainingItems = order.items.filter((item: OrderItem) => item.id !== values.id);
 
-  const remainingItemsPriceTotal = remainingItems.reduce(
-    (sum: number, item: OrderItem) => {
-      return sum + parseFloat(item.price);
-    },
-    0
-  );
+  const remainingItemsPriceTotal = remainingItems.reduce((sum: number, item: OrderItem) => {
+    return sum + parseFloat(item.price);
+  }, 0);
 
   const additionalFees =
     parseFloat(order.shippingFee) +
@@ -513,16 +499,15 @@ export function createOptimisticEditItemUpdate(
     parseFloat(order.duties) +
     parseFloat(order.tariffs) +
     parseFloat(order.miscFees);
-  const newOrderTotal =
-    parseFloat(updatedItem.price) + remainingItemsPriceTotal + additionalFees;
+  const newOrderTotal = parseFloat(updatedItem.price) + remainingItemsPriceTotal + additionalFees;
   const itemsUpdated = order.items.map((item: OrderItem) =>
-    item.id === values.id ? updatedItem : item
+    item.id === values.id ? updatedItem : item,
   );
 
   const updatedOrders = old.orders.map((order: Order) =>
     order.orderId === values.orderId
       ? { ...order, items: itemsUpdated, total: newOrderTotal.toFixed(2) }
-      : order
+      : order,
   );
 
   const sortedOrders = filterAndSortOrders(updatedOrders, {
@@ -542,22 +527,17 @@ export function createOptimisticDeleteItemUpdate(
   old: OrdersQueryResponse,
   orderId: string,
   collectionId: string,
-  filters: OrderFilters
+  filters: OrderFilters,
 ) {
   const order = old.orders.find((order: Order) => order.orderId === orderId);
   if (!order) return old;
   const item = order.items.find((item: OrderItem) => item.id === collectionId);
   if (!item) return old;
 
-  const remainingItems = order.items.filter(
-    (item: OrderItem) => item.id !== collectionId
-  );
-  const remainingItemsPriceTotal = remainingItems.reduce(
-    (sum: number, item: OrderItem) => {
-      return sum + parseFloat(item.price);
-    },
-    0
-  );
+  const remainingItems = order.items.filter((item: OrderItem) => item.id !== collectionId);
+  const remainingItemsPriceTotal = remainingItems.reduce((sum: number, item: OrderItem) => {
+    return sum + parseFloat(item.price);
+  }, 0);
 
   const additionalFees =
     parseFloat(order.shippingFee) +
@@ -575,7 +555,7 @@ export function createOptimisticDeleteItemUpdate(
           total: newOrderTotal.toFixed(2),
           itemCount: remainingItems.length,
         }
-      : order
+      : order,
   );
 
   const sortedOrders = filterAndSortOrders(updatedOrders, {
@@ -594,26 +574,21 @@ export function createOptimisticDeleteItemUpdate(
 export function createOptimisticDeleteItemsUpdate(
   old: OrdersQueryResponse,
   collectionIds: Set<string>,
-  filters: OrderFilters
+  filters: OrderFilters,
 ) {
   if (!old) return old;
 
   // Update all orders by removing items that match any of the collectionIds
   const updatedOrders = old.orders.map((order: Order) => {
-    const remainingItems = order.items.filter(
-      (item: OrderItem) => !collectionIds.has(item.id)
-    );
+    const remainingItems = order.items.filter((item: OrderItem) => !collectionIds.has(item.id));
 
     if (remainingItems.length === order.items.length) {
       return order;
     }
 
-    const remainingItemsPriceTotal = remainingItems.reduce(
-      (sum: number, item: OrderItem) => {
-        return sum + parseFloat(item.price);
-      },
-      0
-    );
+    const remainingItemsPriceTotal = remainingItems.reduce((sum: number, item: OrderItem) => {
+      return sum + parseFloat(item.price);
+    }, 0);
 
     const additionalFees =
       (parseFloat(order.shippingFee) || 0) +
@@ -649,26 +624,22 @@ export function createOptimisticMoveItemUpdate(
   targetOrderId: string,
   collectionIds: Set<string>,
   orderIds: Set<string>,
-  filters: OrderFilters
+  filters: OrderFilters,
 ): OrdersQueryResponse {
   if (!old) return old;
 
   // Find the target order
-  const targetOrder = old.orders.find(
-    (order: Order) => order.orderId === targetOrderId
-  );
+  const targetOrder = old.orders.find((order: Order) => order.orderId === targetOrderId);
   if (!targetOrder) return old;
 
   // Find source orders that contain items to move
-  const sourceOrders = old.orders.filter((order: Order) =>
-    orderIds.has(order.orderId)
-  );
+  const sourceOrders = old.orders.filter((order: Order) => orderIds.has(order.orderId));
 
   if (!sourceOrders.length) return old;
 
   // Extract items to move from source orders
   const itemsToMove = sourceOrders.flatMap((order: Order) =>
-    order.items.filter((item: OrderItem) => collectionIds.has(item.id))
+    order.items.filter((item: OrderItem) => collectionIds.has(item.id)),
   );
 
   if (!itemsToMove.length) return old;
@@ -687,28 +658,21 @@ export function createOptimisticMoveItemUpdate(
     parseFloat(targetOrder.miscFees);
 
   // Calculate target order's current items total
-  const targetItemsTotal = targetOrder.items.reduce(
-    (sum: number, item: OrderItem) => {
-      return sum + parseFloat(item.price);
-    },
-    0
-  );
+  const targetItemsTotal = targetOrder.items.reduce((sum: number, item: OrderItem) => {
+    return sum + parseFloat(item.price);
+  }, 0);
 
   // Update target order with moved items
   const updatedTargetOrder = {
     ...targetOrder,
     items: [...targetOrder.items, ...itemsToMove],
     itemCount: targetOrder.items.length + itemsToMove.length,
-    total: (targetItemsTotal + movedItemsTotal + targetAdditionalFees).toFixed(
-      2
-    ),
+    total: (targetItemsTotal + movedItemsTotal + targetAdditionalFees).toFixed(2),
   };
 
   // Update source orders by removing moved items
   const updatedSourceOrders = sourceOrders.map((order: Order) => {
-    const remainingItems = order.items.filter(
-      (item: OrderItem) => !collectionIds.has(item.id)
-    );
+    const remainingItems = order.items.filter((item: OrderItem) => !collectionIds.has(item.id));
 
     // Calculate this order's additional fees
     const orderAdditionalFees =
@@ -718,12 +682,9 @@ export function createOptimisticMoveItemUpdate(
       parseFloat(order.tariffs) +
       parseFloat(order.miscFees);
 
-    const remainingItemsTotal = remainingItems.reduce(
-      (sum: number, item: OrderItem) => {
-        return sum + parseFloat(item.price);
-      },
-      0
-    );
+    const remainingItemsTotal = remainingItems.reduce((sum: number, item: OrderItem) => {
+      return sum + parseFloat(item.price);
+    }, 0);
 
     return {
       ...order,
@@ -735,16 +696,11 @@ export function createOptimisticMoveItemUpdate(
 
   // Get orders that weren't affected
   const unaffectedOrders = old.orders.filter(
-    (order: Order) =>
-      !orderIds.has(order.orderId) && order.orderId !== targetOrderId
+    (order: Order) => !orderIds.has(order.orderId) && order.orderId !== targetOrderId,
   );
 
   // Combine all orders
-  const allOrders = [
-    updatedTargetOrder,
-    ...updatedSourceOrders,
-    ...unaffectedOrders,
-  ];
+  const allOrders = [updatedTargetOrder, ...updatedSourceOrders, ...unaffectedOrders];
 
   const filteredAndSortedOrders = filterAndSortOrders(allOrders, {
     search: filters.search,

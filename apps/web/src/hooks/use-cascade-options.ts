@@ -38,12 +38,9 @@ export function useCascadeOptions() {
     setCascadeOptions([]);
   };
 
-  const handleCascadeOptionChange = (
-    option: CascadeOptions[number],
-    checked: boolean
-  ) => {
+  const handleCascadeOptionChange = (option: CascadeOptions[number], checked: boolean) => {
     setCascadeOptions((prev) =>
-      checked ? [...prev, option] : prev.filter((item) => item !== option)
+      checked ? [...prev, option] : prev.filter((item) => item !== option),
     );
   };
 

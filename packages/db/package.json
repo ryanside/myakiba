@@ -1,8 +1,8 @@
 {
   "name": "@myakiba/db",
   "version": "0.0.0",
-  "type": "module",
   "private": true,
+  "type": "module",
   "exports": {
     ".": {
       "default": "./src/index.ts"
@@ -22,16 +22,6 @@
     "db:stop": "docker compose stop",
     "db:down": "docker compose down"
   },
-  "devDependencies": {
-    "@myakiba/config": "workspace:*",
-    "@myakiba/constants": "workspace:*",
-    "drizzle-kit": "^0.31.8",
-    "@types/bun": "catalog:"
-  },
-  "peerDependencies": {
-    "typescript": "catalog:",
-    "drizzle-orm": "catalog:"
-  },
   "dependencies": {
     "@myakiba/env": "workspace:*",
     "@paralleldrive/cuid2": "catalog:",
@@ -39,5 +29,15 @@
     "drizzle-zod": "catalog:",
     "uuid": "catalog:",
     "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@myakiba/config": "workspace:*",
+    "@myakiba/constants": "workspace:*",
+    "@types/bun": "catalog:",
+    "drizzle-kit": "^0.31.8"
+  },
+  "peerDependencies": {
+    "drizzle-orm": "catalog:",
+    "typescript": "catalog:"
   }
 }

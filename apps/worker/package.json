@@ -1,20 +1,13 @@
 {
   "name": "worker",
-  "module": "index.ts",
-  "type": "module",
   "private": true,
+  "type": "module",
+  "module": "index.ts",
   "scripts": {
     "dev": "bun run --hot index.ts",
     "start": "bun run index.ts",
     "check-types": "tsc --noEmit",
     "lint": "eslint ."
-  },
-  "devDependencies": {
-    "@myakiba/eslint-config": "workspace:*",
-    "@types/bun": "catalog:"
-  },
-  "peerDependencies": {
-    "typescript": "catalog:"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.946.0",
@@ -31,5 +24,12 @@
     "ioredis": "catalog:",
     "uuid": "catalog:",
     "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@myakiba/eslint-config": "workspace:*",
+    "@types/bun": "catalog:"
+  },
+  "peerDependencies": {
+    "typescript": "catalog:"
   }
 }

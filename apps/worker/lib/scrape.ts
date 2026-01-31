@@ -29,14 +29,12 @@ const s3Client = new S3Client({
 export const scrapeImage = async (
   imageUrl: string,
   maxRetries: number = 3,
-  baseDelayMs: number = 1000
+  baseDelayMs: number = 1000,
 ) => {
   console.time("Scraping Image Duration");
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(
-        `Scraping image ${imageUrl} (attempt ${attempt}/${maxRetries})`
-      );
+      console.log(`Scraping image ${imageUrl} (attempt ${attempt}/${maxRetries})`);
       const response = await fetch(imageUrl, createFetchOptions(true));
 
       if (!response.ok) {
@@ -75,15 +73,10 @@ export const scrapeImage = async (
 
       return imageS3Url;
     } catch (error) {
-      console.error(
-        `Error scraping image ${imageUrl} (attempt ${attempt}/${maxRetries}):`,
-        error
-      );
+      console.error(`Error scraping image ${imageUrl} (attempt ${attempt}/${maxRetries}):`, error);
 
       if (attempt === maxRetries) {
-        console.error(
-          `Failed to scrape image ${imageUrl} after ${maxRetries} attempts`
-        );
+        console.error(`Failed to scrape image ${imageUrl} after ${maxRetries} attempts`);
         throw error;
       }
 
@@ -103,15 +96,10 @@ export const scrapeSingleItem = async (
   userId: string,
   jobId: string,
   overallIndex: number,
-  totalItems: number
+  totalItems: number,
 ): Promise<scrapedItem | null> => {
   console.time("Scraping Duration");
-  await setJobStatus(
-    redis,
-    jobId,
-    `Syncing...${overallIndex + 1}/${totalItems}`,
-    false
-  );
+  await setJobStatus(redis, jobId, `Syncing...${overallIndex + 1}/${totalItems}`, false);
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
@@ -130,8 +118,7 @@ export const scrapeSingleItem = async (
       const title = $("h1.title").text().trim();
 
       let category: Category | null = null;
-      const classification: Array<{ id: number; name: string; role: string }> =
-        [];
+      const classification: Array<{ id: number; name: string; role: string }> = [];
       const version: string[] = [];
       let scale = "";
       let height = 0;
@@ -226,11 +213,7 @@ export const scrapeSingleItem = async (
 
       if (imageUrl) {
         console.log(`Scraping image for ID ${id}`);
-        const imageResponse = await scrapeImage(
-          imageUrl,
-          maxRetries,
-          baseDelayMs
-        );
+        const imageResponse = await scrapeImage(imageUrl, maxRetries, baseDelayMs);
         if (!imageResponse || imageResponse === null) {
           throw new Error(`Failed to scrape image for ID ${id}`);
         }
@@ -263,10 +246,7 @@ export const scrapeSingleItem = async (
 
       return scrapedItem;
     } catch (error) {
-      console.error(
-        `Error scraping item ${id} (attempt ${attempt}/${maxRetries}):`,
-        error
-      );
+      console.error(`Error scraping item ${id} (attempt ${attempt}/${maxRetries}):`, error);
 
       if (attempt === maxRetries) {
         console.error(`Failed to scrape ID ${id} after ${maxRetries} attempts`);
@@ -291,46 +271,32 @@ export const scrapedItems = async (
   userId: string,
   jobId: string,
   startingIndex: number = 0,
-  totalItems: number = itemIds.length
+  totalItems: number = itemIds.length,
 ): Promise<scrapedItem[]> => {
   console.time("Scraping Duration");
 
-  console.log(
-    `Starting to scrape ${itemIds.length} items with up to ${maxRetries} retries each`
-  );
+  console.log(`Starting to scrape ${itemIds.length} items with up to ${maxRetries} retries each`);
 
   const promises = itemIds.map((id, index) =>
-    scrapeSingleItem(
-      id,
-      maxRetries,
-      baseDelayMs,
-      userId,
-      jobId,
-      startingIndex + index,
-      totalItems
-    )
+    scrapeSingleItem(id, maxRetries, baseDelayMs, userId, jobId, startingIndex + index, totalItems),
   );
   const results = await Promise.allSettled(promises);
 
   const successfulResults = results
     .filter(
       (result): result is PromiseFulfilledResult<scrapedItem> =>
-        result.status === "fulfilled" && result.value !== null
+        result.status === "fulfilled" && result.value !== null,
     )
     .map((result) => result.value);
 
   const failures = results.filter((result) => result.status === "rejected");
   if (failures.length > 0) {
-    console.warn(
-      `Failed to scrape ${failures.length} out of ${itemIds.length} items`
-    );
+    console.warn(`Failed to scrape ${failures.length} out of ${itemIds.length} items`);
   }
 
   console.timeEnd("Scraping Duration");
 
-  console.log(
-    `Successfully scraped ${successfulResults.length} out of ${itemIds.length} items`
-  );
+  console.log(`Successfully scraped ${successfulResults.length} out of ${itemIds.length} items`);
   return successfulResults;
 };
 
@@ -339,7 +305,7 @@ export const scrapedItemsWithRateLimit = async (
   maxRetries: number = 3,
   baseDelayMs: number = 1000,
   userId: string,
-  jobId: string
+  jobId: string,
 ): Promise<scrapedItem[]> => {
   console.time("Rate-Limited Scraping Duration");
   const startTime = Date.now();
@@ -351,9 +317,7 @@ export const scrapedItemsWithRateLimit = async (
 
   console.log(`Batch size: ${batchSize}, Delay between batches: ${delayMs}ms`);
 
-  console.log(
-    `Max retries per item: ${maxRetries}, Base retry delay: ${baseDelayMs}ms`
-  );
+  console.log(`Max retries per item: ${maxRetries}, Base retry delay: ${baseDelayMs}ms`);
 
   const allResults: scrapedItem[] = [];
   const totalBatches = Math.ceil(itemIds.length / batchSize);
@@ -363,7 +327,7 @@ export const scrapedItemsWithRateLimit = async (
     const batchNumber = Math.floor(i / batchSize) + 1;
 
     console.log(
-      `Processing batch ${batchNumber}/${totalBatches} (${batch.length} items): [${batch.join(", ")}]`
+      `Processing batch ${batchNumber}/${totalBatches} (${batch.length} items): [${batch.join(", ")}]`,
     );
 
     const batchResults = await scrapedItems(
@@ -373,12 +337,12 @@ export const scrapedItemsWithRateLimit = async (
       userId,
       jobId,
       i,
-      itemIds.length
+      itemIds.length,
     );
     allResults.push(...batchResults);
 
     console.log(
-      `Batch ${batchNumber} completed: ${batchResults.length}/${batch.length} successful`
+      `Batch ${batchNumber} completed: ${batchResults.length}/${batch.length} successful`,
     );
     if (i + batchSize < itemIds.length) {
       console.log(`Waiting ${delayMs}ms before next batch...`);
@@ -390,13 +354,9 @@ export const scrapedItemsWithRateLimit = async (
   const endTime = Date.now();
   const duration = endTime - startTime;
   console.log(
-    `Rate-limited scraping completed in ${duration}ms (${(duration / 1000).toFixed(2)}s)`
+    `Rate-limited scraping completed in ${duration}ms (${(duration / 1000).toFixed(2)}s)`,
   );
-  console.log(
-    `Successfully scraped ${allResults.length} out of ${itemIds.length} items`
-  );
-  console.log(
-    `Average time per item: ${(duration / itemIds.length).toFixed(0)}ms`
-  );
+  console.log(`Successfully scraped ${allResults.length} out of ${itemIds.length} items`);
+  console.log(`Average time per item: ${(duration / itemIds.length).toFixed(0)}ms`);
   return allResults;
 };

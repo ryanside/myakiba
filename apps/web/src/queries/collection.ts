@@ -5,9 +5,7 @@ import type {
   CollectionQueryResponse,
 } from "@/lib/collection/types";
 
-export async function getCollection(
-  filters: CollectionFilters
-): Promise<CollectionQueryResponse> {
+export async function getCollection(filters: CollectionFilters): Promise<CollectionQueryResponse> {
   const queryParams = {
     limit: filters.limit ?? 10,
     offset: filters.offset ?? 0,
@@ -45,6 +43,7 @@ export async function getCollection(
   if (!data) {
     throw new Error("Failed to get collection");
   }
+
   return data;
 }
 

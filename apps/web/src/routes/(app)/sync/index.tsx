@@ -23,11 +23,7 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 
-const steps = [
-  { title: "Choose sync option" },
-  { title: "Enter Information" },
-  { title: "Sync" },
-];
+const steps = [{ title: "Choose sync option" }, { title: "Enter Information" }, { title: "Sync" }];
 
 export const Route = createFileRoute("/(app)/sync/")({
   component: RouteComponent,
@@ -56,9 +52,7 @@ function RouteComponent() {
   async function handleResendVerificationEmail() {
     await authClient.sendVerificationEmail({
       email: session?.user.email ?? "",
-      callbackURL: import.meta.env.PROD
-        ? "https://myakiba.app/sync"
-        : "http://localhost:3001/sync",
+      callbackURL: import.meta.env.PROD ? "https://myakiba.app/sync" : "http://localhost:3001/sync",
     });
     setVerificationEmailSent(true);
     toast.success("Verification email sent");
@@ -80,11 +74,7 @@ function RouteComponent() {
       >
         <StepperNav>
           {steps.map((step, index) => (
-            <StepperItem
-              key={index}
-              step={index + 1}
-              className="relative flex-1 items-start"
-            >
+            <StepperItem key={index} step={index + 1} className="relative flex-1 items-start">
               <div className="flex flex-col gap-3 items-center rounded-full outline-none">
                 <StepperIndicator>{index + 1}</StepperIndicator>
                 <StepperTitle>{step.title}</StepperTitle>
@@ -103,8 +93,8 @@ function RouteComponent() {
             <AlertTitle>Email not verified!</AlertTitle>
             <AlertDescription>
               <div className="flex flex-row gap-2">
-                Please verify your email address via the link in the email we
-                sent to you to access features of myakiba.
+                Please verify your email address via the link in the email we sent to you to access
+                features of myakiba.
               </div>
             </AlertDescription>
             <AlertDescription className="flex flex-row gap-2 italic text-xs">
@@ -116,9 +106,7 @@ function RouteComponent() {
                 onClick={handleResendVerificationEmail}
                 disabled={verificationEmailSent}
               >
-                {verificationEmailSent
-                  ? "Verification email sent."
-                  : "Resend verification email"}
+                {verificationEmailSent ? "Verification email sent." : "Resend verification email"}
               </Button>
             </AlertDescription>
             <AlertDescription className="italic text-xs">
@@ -136,42 +124,30 @@ function RouteComponent() {
               />
               <Accordion type="single" collapsible className="px-2">
                 <AccordionItem value="item-1">
-                  <AccordionTrigger>
-                    How are items synced from MyFigureCollection?
-                  </AccordionTrigger>
+                  <AccordionTrigger>How are items synced from MyFigureCollection?</AccordionTrigger>
                   <AccordionContent>
-                    Since MyFigureCollection does not provide an API, myakiba
-                    scrapes the item(s) information from MyFigureCollection on
-                    user request. Our scraper is{" "}
-                    <span className="font-bold text-primary">
-                      heavily rate limited/throttled
-                    </span>{" "}
-                    to prevent MyFigureCollection's servers from ever being
-                    overwhelmed by us. From what we can tell, this adheres to
-                    MyFigureCollection's terms of service. Users are also
-                    limited to syncing a few times per hour to prevent abuse.
+                    Since MyFigureCollection does not provide an API, myakiba scrapes the item(s)
+                    information from MyFigureCollection on user request. Our scraper is{" "}
+                    <span className="font-bold text-primary">heavily rate limited/throttled</span>{" "}
+                    to prevent MyFigureCollection's servers from ever being overwhelmed by us. From
+                    what we can tell, this adheres to MyFigureCollection's terms of service. Users
+                    are also limited to syncing a few times per hour to prevent abuse.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="item-2">
-                  <AccordionTrigger>
-                    Why does it take a while to sync?
-                  </AccordionTrigger>
+                  <AccordionTrigger>Why does it take a while to sync?</AccordionTrigger>
                   <AccordionContent>
-                    To prevent MyFigureCollection's servers from being
-                    overwhelmed, we heavily rate limit/throttle our scraper.
-                    This means that it may take a while to sync your items,
-                    especially if you have a lot of items to scrape. We
-                    appreciate your patience and understanding.
+                    To prevent MyFigureCollection's servers from being overwhelmed, we heavily rate
+                    limit/throttle our scraper. This means that it may take a while to sync your
+                    items, especially if you have a lot of items to scrape. We appreciate your
+                    patience and understanding.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="item-3">
-                  <AccordionTrigger>
-                    Why are some items not syncing?
-                  </AccordionTrigger>
+                  <AccordionTrigger>Why are some items not syncing?</AccordionTrigger>
                   <AccordionContent>
-                    Only SFW items are synced. NSFW items are not synced as
-                    those are locked behind authentication on
-                    MyFigureCollection's website, and cannot be scraped by our
+                    Only SFW items are synced. NSFW items are not synced as those are locked behind
+                    authentication on MyFigureCollection's website, and cannot be scraped by our
                     scraper currently.
                   </AccordionContent>
                 </AccordionItem>
@@ -183,4 +159,3 @@ function RouteComponent() {
     </div>
   );
 }
-

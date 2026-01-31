@@ -1,24 +1,7 @@
 import { db } from "@myakiba/db";
-import {
-  item,
-  collection,
-  item_release,
-  order,
-  budget,
-} from "@myakiba/db/schema/figure";
+import { item, collection, item_release, order, budget } from "@myakiba/db/schema/figure";
 import type { Category } from "@myakiba/types";
-import {
-  eq,
-  count,
-  and,
-  sum,
-  asc,
-  sql,
-  desc,
-  ne,
-  gte,
-  lte,
-} from "drizzle-orm";
+import { eq, count, and, sum, asc, sql, desc, ne, gte, lte } from "drizzle-orm";
 
 class DashboardService {
   private collectionStatsPrepared;
@@ -34,18 +17,16 @@ class DashboardService {
     // Total Items, Total Spent, Total Spent This Month (Items only)
     this.collectionStatsPrepared = db
       .select({
-        totalItems: count(
-          sql`CASE WHEN ${collection.status} = 'Owned' THEN 1 END`
-        ),
+        totalItems: count(sql`CASE WHEN ${collection.status} = 'Owned' THEN 1 END`),
         totalSpent: sql<string>`COALESCE(${sum(collection.price)}, 0)`,
         totalSpentThisMonth: sql<string>`COALESCE(${sum(
-          sql`CASE WHEN ${collection.paymentDate} >= ${sql.placeholder('currentMonth')}
-              AND ${collection.paymentDate} < ${sql.placeholder('nextMonth')}
-              THEN ${collection.price} ELSE 0 END`
+          sql`CASE WHEN ${collection.paymentDate} >= ${sql.placeholder("currentMonth")}
+              AND ${collection.paymentDate} < ${sql.placeholder("nextMonth")}
+              THEN ${collection.price} ELSE 0 END`,
         )}, 0)`,
       })
       .from(collection)
-      .where(eq(collection.userId, sql.placeholder('userId')))
+      .where(eq(collection.userId, sql.placeholder("userId")))
       .prepare("collection_stats");
 
     // Categories Owned
@@ -57,9 +38,7 @@ class DashboardService {
       })
       .from(collection)
       .innerJoin(item, eq(collection.itemId, item.id))
-      .where(
-        and(eq(collection.userId, sql.placeholder('userId')), eq(collection.status, "Owned"))
-      )
+      .where(and(eq(collection.userId, sql.placeholder("userId")), eq(collection.status, "Owned")))
       .groupBy(item.category)
       .orderBy(desc(count()))
       .prepare("categories_owned");
@@ -81,14 +60,8 @@ class DashboardService {
       .from(order)
       .leftJoin(collection, and(eq(order.id, collection.orderId)))
       .leftJoin(item, eq(collection.itemId, item.id))
-      .where(and(eq(order.userId, sql.placeholder('userId')), ne(order.status, "Owned")))
-      .groupBy(
-        order.id,
-        order.title,
-        order.shop,
-        order.status,
-        order.releaseMonthYear
-      )
+      .where(and(eq(order.userId, sql.placeholder("userId")), ne(order.status, "Owned")))
+      .groupBy(order.id, order.title, order.shop, order.status, order.releaseMonthYear)
       .orderBy(asc(order.releaseMonthYear))
       .limit(10)
       .prepare("orders_kanban");
@@ -99,7 +72,7 @@ class DashboardService {
       .select({
         totalActiveOrderCount: sql<string>`COALESCE(${sum(
           sql`CASE WHEN ${order.status} != 'Owned'
-              THEN 1 ELSE 0 END`
+              THEN 1 ELSE 0 END`,
         )}, 0)`,
         totalShippingAllTime: sql<string>`COALESCE(${sum(order.shippingFee)}, 0)`,
         totalTaxesAllTime: sql<string>`COALESCE(${sum(order.taxes)}, 0)`,
@@ -107,45 +80,45 @@ class DashboardService {
         totalTariffsAllTime: sql<string>`COALESCE(${sum(order.tariffs)}, 0)`,
         totalMiscFeesAllTime: sql<string>`COALESCE(${sum(order.miscFees)}, 0)`,
         thisMonthOrderCount: sql<string>`COALESCE(${sum(
-          sql`CASE WHEN ${order.releaseMonthYear} >= ${sql.placeholder('currentMonth')}
-              AND ${order.releaseMonthYear} < ${sql.placeholder('nextMonth')}
-              THEN 1 ELSE 0 END`
+          sql`CASE WHEN ${order.releaseMonthYear} >= ${sql.placeholder("currentMonth")}
+              AND ${order.releaseMonthYear} < ${sql.placeholder("nextMonth")}
+              THEN 1 ELSE 0 END`,
         )}, 0)`,
         thisMonthShipping: sql<string>`COALESCE(${sum(
-          sql`CASE WHEN ${order.paymentDate} >= ${sql.placeholder('currentMonth')}
-              AND ${order.paymentDate} < ${sql.placeholder('nextMonth')}
-              THEN ${order.shippingFee} ELSE 0 END`
+          sql`CASE WHEN ${order.paymentDate} >= ${sql.placeholder("currentMonth")}
+              AND ${order.paymentDate} < ${sql.placeholder("nextMonth")}
+              THEN ${order.shippingFee} ELSE 0 END`,
         )}, 0)`,
         thisMonthTaxes: sql<string>`COALESCE(${sum(
-          sql`CASE WHEN ${order.paymentDate} >= ${sql.placeholder('currentMonth')}
-              AND ${order.paymentDate} < ${sql.placeholder('nextMonth')}
-              THEN ${order.taxes} ELSE 0 END`
+          sql`CASE WHEN ${order.paymentDate} >= ${sql.placeholder("currentMonth")}
+              AND ${order.paymentDate} < ${sql.placeholder("nextMonth")}
+              THEN ${order.taxes} ELSE 0 END`,
         )}, 0)`,
         thisMonthDuties: sql<string>`COALESCE(${sum(
-          sql`CASE WHEN ${order.paymentDate} >= ${sql.placeholder('currentMonth')}
-              AND ${order.paymentDate} < ${sql.placeholder('nextMonth')}
-              THEN ${order.duties} ELSE 0 END`
+          sql`CASE WHEN ${order.paymentDate} >= ${sql.placeholder("currentMonth")}
+              AND ${order.paymentDate} < ${sql.placeholder("nextMonth")}
+              THEN ${order.duties} ELSE 0 END`,
         )}, 0)`,
         thisMonthTariffs: sql<string>`COALESCE(${sum(
-          sql`CASE WHEN ${order.paymentDate} >= ${sql.placeholder('currentMonth')}
-              AND ${order.paymentDate} < ${sql.placeholder('nextMonth')}
-              THEN ${order.tariffs} ELSE 0 END`
+          sql`CASE WHEN ${order.paymentDate} >= ${sql.placeholder("currentMonth")}
+              AND ${order.paymentDate} < ${sql.placeholder("nextMonth")}
+              THEN ${order.tariffs} ELSE 0 END`,
         )}, 0)`,
         thisMonthMiscFees: sql<string>`COALESCE(${sum(
-          sql`CASE WHEN ${order.paymentDate} >= ${sql.placeholder('currentMonth')}
-              AND ${order.paymentDate} < ${sql.placeholder('nextMonth')}
-              THEN ${order.miscFees} ELSE 0 END`
+          sql`CASE WHEN ${order.paymentDate} >= ${sql.placeholder("currentMonth")}
+              AND ${order.paymentDate} < ${sql.placeholder("nextMonth")}
+              THEN ${order.miscFees} ELSE 0 END`,
         )}, 0)`,
       })
       .from(order)
-      .where(eq(order.userId, sql.placeholder('userId')))
+      .where(eq(order.userId, sql.placeholder("userId")))
       .prepare("orders_summary");
 
     // Budget Summary
     this.budgetSummaryPrepared = db
       .select()
       .from(budget)
-      .where(eq(budget.userId, sql.placeholder('userId')))
+      .where(eq(budget.userId, sql.placeholder("userId")))
       .prepare("budget_summary");
 
     // Unpaid Orders
@@ -164,12 +137,7 @@ class DashboardService {
       .from(order)
       .leftJoin(collection, and(eq(order.id, collection.orderId)))
       .leftJoin(item, eq(collection.itemId, item.id))
-      .where(
-        and(
-          eq(order.userId, sql.placeholder('userId')),
-          eq(order.status, "Ordered")
-        )
-      )
+      .where(and(eq(order.userId, sql.placeholder("userId")), eq(order.status, "Ordered")))
       .orderBy(asc(order.releaseMonthYear))
       .groupBy(order.id, order.title, order.shop, order.releaseMonthYear)
       .prepare("unpaid_orders");
@@ -183,10 +151,10 @@ class DashboardService {
       .from(order)
       .where(
         and(
-          eq(order.userId, sql.placeholder('userId')),
-          gte(order.releaseMonthYear, sql.placeholder('startOfYear')),
-          lte(order.releaseMonthYear, sql.placeholder('endOfYear'))
-        )
+          eq(order.userId, sql.placeholder("userId")),
+          gte(order.releaseMonthYear, sql.placeholder("startOfYear")),
+          lte(order.releaseMonthYear, sql.placeholder("endOfYear")),
+        ),
       )
       .groupBy(sql`EXTRACT(MONTH FROM ${order.releaseMonthYear})`)
       .orderBy(sql`EXTRACT(MONTH FROM ${order.releaseMonthYear})`)
@@ -209,37 +177,29 @@ class DashboardService {
         collection,
         and(
           eq(item.id, collection.itemId),
-          eq(collection.userId, sql.placeholder('userId')),
-          ne(collection.status, "Owned")
-        )
+          eq(collection.userId, sql.placeholder("userId")),
+          ne(collection.status, "Owned"),
+        ),
       )
       .where(
         and(
-          gte(item_release.date, sql.placeholder('startDate')),
-          lte(item_release.date, sql.placeholder('endDate'))
-        )
+          gte(item_release.date, sql.placeholder("startDate")),
+          lte(item_release.date, sql.placeholder("endDate")),
+        ),
       )
       .orderBy(asc(item_release.date))
       .prepare("release_calendar");
   }
 
   async getDashboard(userId: string) {
-    const currentMonth = new Date(
-      new Date().getFullYear(),
-      new Date().getMonth(),
-      1
-    ).toISOString();
+    const currentMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
     const nextMonth = new Date(
       new Date().getFullYear(),
       new Date().getMonth() + 1,
-      1
+      1,
     ).toISOString();
     const startOfYear = new Date(new Date().getFullYear(), 0, 1).toISOString();
-    const endOfYear = new Date(
-      new Date().getFullYear() + 1,
-      0,
-      1
-    ).toISOString();
+    const endOfYear = new Date(new Date().getFullYear() + 1, 0, 1).toISOString();
 
     const [
       collectionStats,

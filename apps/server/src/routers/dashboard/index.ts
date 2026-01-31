@@ -16,9 +16,7 @@ const dashboardRouter = new Elysia({ prefix: "/dashboard" })
     async ({ user }) => {
       if (!user) return status(401, "Unauthorized");
 
-      const { data: dashboard, error } = await tryCatch(
-        DashboardService.getDashboard(user.id)
-      );
+      const { data: dashboard, error } = await tryCatch(DashboardService.getDashboard(user.id));
 
       if (error) {
         console.error("Error fetching dashboard data:", error, {
@@ -30,7 +28,7 @@ const dashboardRouter = new Elysia({ prefix: "/dashboard" })
 
       return dashboard;
     },
-    { auth: true }
+    { auth: true },
   )
   .get(
     "/release-calendar",
@@ -38,7 +36,7 @@ const dashboardRouter = new Elysia({ prefix: "/dashboard" })
       if (!user) return status(401, "Unauthorized");
 
       const { data: releaseCalendar, error } = await tryCatch(
-        DashboardService.getReleaseCalendar(user.id, query.month, query.year)
+        DashboardService.getReleaseCalendar(user.id, query.month, query.year),
       );
 
       if (error) {
@@ -51,7 +49,7 @@ const dashboardRouter = new Elysia({ prefix: "/dashboard" })
 
       return { releaseCalendar };
     },
-    { query: releaseCalendarQuerySchema, auth: true }
+    { query: releaseCalendarQuerySchema, auth: true },
   );
 
 export default dashboardRouter;

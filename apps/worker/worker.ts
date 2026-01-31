@@ -18,12 +18,7 @@ const myWorker = new Worker(
   async (job: jobData) => {
     const validatedData = jobDataSchema.safeParse(job.data);
     if (validatedData.error) {
-      await setJobStatus(
-        redis,
-        job.id!,
-        `Sync failed: Invalid data. Please try again.`,
-        true
-      );
+      await setJobStatus(redis, job.id!, `Sync failed: Invalid data. Please try again.`, true);
       throw new Error("Invalid data", { cause: validatedData.error });
     }
     const userId = validatedData.data.userId;
@@ -36,56 +31,34 @@ const myWorker = new Worker(
       console.log("🎯 Worker: UserId", userId);
 
       const scrapeMethod =
-        validatedData.data.items.length <= 5
-          ? scrapedItems
-          : scrapedItemsWithRateLimit;
+        validatedData.data.items.length <= 5 ? scrapedItems : scrapedItemsWithRateLimit;
 
       const itemIds = Array.from(
-        new Set(validatedData.data.items.map((item) => item.itemExternalId))
+        new Set(validatedData.data.items.map((item) => item.itemExternalId)),
       );
 
-      await setJobStatus(
-        redis,
-        job.id!,
-        `Starting to sync ${itemIds.length} items`,
-        false
-      );
+      await setJobStatus(redis, job.id!, `Starting to sync ${itemIds.length} items`, false);
 
-      const successfulResults = await scrapeMethod(
-        itemIds,
-        3,
-        1000,
-        userId,
-        job.id!
-      );
+      const successfulResults = await scrapeMethod(itemIds, 3, 1000, userId, job.id!);
 
       if (successfulResults.length === 0) {
         await setJobStatus(
           redis,
           job.id!,
           `Sync failed: Failed to scrape items. Please try again. MFC might be down, or the MFC item IDs may be invalid.`,
-          true
+          true,
         );
         throw new Error("Failed to scrape items.");
       }
 
-      await finalizeCsvSync(
-        successfulResults,
-        job,
-        userId,
-        redis,
-        validatedData.data.items
-      );
+      await finalizeCsvSync(successfulResults, job, userId, redis, validatedData.data.items);
 
       return successfulResults;
     } else if (type === "order") {
       console.log("🎯 Worker: Processing Order sync job", job.name);
       console.log("🎯 Worker: Job ID", job.id);
       console.log("🎯 Worker: Details", validatedData.data.order.details);
-      console.log(
-        "🎯 Worker: Items to scrape",
-        validatedData.data.order.itemsToScrape
-      );
+      console.log("🎯 Worker: Items to scrape", validatedData.data.order.itemsToScrape);
       console.log("🎯 Worker: UserId", userId);
 
       const scrapeMethod =
@@ -94,34 +67,19 @@ const myWorker = new Worker(
           : scrapedItemsWithRateLimit;
 
       const itemIds = Array.from(
-        new Set(
-          validatedData.data.order.itemsToScrape.map(
-            (item) => item.itemExternalId
-          )
-        )
+        new Set(validatedData.data.order.itemsToScrape.map((item) => item.itemExternalId)),
       );
 
-      await setJobStatus(
-        redis,
-        job.id!,
-        `Starting to scrape ${itemIds.length} items`,
-        false
-      );
+      await setJobStatus(redis, job.id!, `Starting to scrape ${itemIds.length} items`, false);
 
-      const successfulResults = await scrapeMethod(
-        itemIds,
-        3,
-        1000,
-        userId,
-        job.id!
-      );
+      const successfulResults = await scrapeMethod(itemIds, 3, 1000, userId, job.id!);
 
       if (successfulResults.length === 0) {
         await setJobStatus(
           redis,
           job.id!,
           `Sync failed: Failed to scrape items. Please try again. MFC might be down, or the MFC item IDs may be invalid.`,
-          true
+          true,
         );
         throw new Error("Failed to scrape items.");
       }
@@ -132,17 +90,14 @@ const myWorker = new Worker(
         redis,
         validatedData.data.order.details,
         validatedData.data.order.itemsToScrape,
-        validatedData.data.order.itemsToInsert
+        validatedData.data.order.itemsToInsert,
       );
 
       return successfulResults;
     } else {
       console.log("🎯 Worker: Processing Collection sync job", job.name);
       console.log("🎯 Worker: Job ID", job.id);
-      console.log(
-        "🎯 Worker: Items to scrape",
-        validatedData.data.collection.itemsToScrape
-      );
+      console.log("🎯 Worker: Items to scrape", validatedData.data.collection.itemsToScrape);
       console.log("🎯 Worker: UserId", userId);
 
       const scrapeMethod =
@@ -151,34 +106,19 @@ const myWorker = new Worker(
           : scrapedItemsWithRateLimit;
 
       const itemIds = Array.from(
-        new Set(
-          validatedData.data.collection.itemsToScrape.map(
-            (item) => item.itemExternalId
-          )
-        )
+        new Set(validatedData.data.collection.itemsToScrape.map((item) => item.itemExternalId)),
       );
 
-      await setJobStatus(
-        redis,
-        job.id!,
-        `Starting to scrape ${itemIds.length} items`,
-        false
-      );
+      await setJobStatus(redis, job.id!, `Starting to scrape ${itemIds.length} items`, false);
 
-      const successfulResults = await scrapeMethod(
-        itemIds,
-        3,
-        1000,
-        userId,
-        job.id!
-      );
+      const successfulResults = await scrapeMethod(itemIds, 3, 1000, userId, job.id!);
 
       if (successfulResults.length === 0) {
         await setJobStatus(
           redis,
           job.id!,
           `Sync failed: Failed to scrape items. Please try again. MFC might be down, or the MFC item IDs may be invalid.`,
-          true
+          true,
         );
         throw new Error("Failed to scrape items.");
       }
@@ -188,7 +128,7 @@ const myWorker = new Worker(
         job,
         redis,
         validatedData.data.collection.itemsToScrape,
-        validatedData.data.collection.itemsToInsert
+        validatedData.data.collection.itemsToInsert,
       );
 
       return successfulResults;
@@ -200,7 +140,7 @@ const myWorker = new Worker(
       port: env.REDIS_PORT,
     },
     concurrency: 2,
-  }
+  },
 );
 
 myWorker.on("ready", () => {

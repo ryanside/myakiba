@@ -1,10 +1,6 @@
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
-import {
-  HeadContent,
-  Outlet,
-  createRootRouteWithContext,
-} from "@tanstack/react-router";
+import { HeadContent, Outlet, createRootRouteWithContext } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import "../index.css";
 import { authClient } from "@/lib/auth-client";
@@ -116,9 +112,7 @@ function RootComponent() {
         </div>
         <Toaster richColors position="top-center" />
       </ThemeProvider>
-      {import.meta.env.DEV && (
-        <TanStackRouterDevtools position="bottom-right" />
-      )}{" "}
+      {import.meta.env.DEV && <TanStackRouterDevtools position="bottom-right" />}{" "}
     </>
   );
 }

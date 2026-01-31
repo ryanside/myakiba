@@ -1,5 +1,3 @@
-;
-
 import React, { useMemo, useRef } from "react";
 import { motion, useInView } from "motion/react";
 import type { UseInViewOptions } from "motion/react";
@@ -66,7 +64,7 @@ export function ShimmeringText({
         "[background-repeat:no-repeat,padding-box]",
         "[--shimmer-bg:linear-gradient(90deg,transparent_calc(50%-var(--spread)),var(--shimmer-color),transparent_calc(50%+var(--spread)))]",
         "dark:[--base-color:var(--color-zinc-600)] dark:[--shimmer-color:var(--color-white)]",
-        className
+        className,
       )}
       style={
         {

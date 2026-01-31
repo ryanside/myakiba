@@ -17,3 +17,14 @@ export const COLLECTION_STATUSES = ["Ordered", "Paid", "Shipped", "Owned"] as co
 
 export const CONDITIONS = ["New", "Pre-Owned"] as const;
 
+export const ENTRY_CATEGORIES = [
+  "Classifications",
+  "Origins",
+  "Characters",
+  "Companies",
+  "Artists",
+  "Materials",
+  "Events",
+] as const;
+
+export const DATE_FORMATS = ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY/MM/DD", "YYYY/DD/MM"] as const;

@@ -8,15 +8,15 @@ export const csvItemSchema = z.object({
   status: z.enum(["Owned", "Ordered"]),
   count: z.int(),
   score: z.string(),
-  payment_date: z.string().nullable(),
-  shipping_date: z.string().nullable(),
-  collecting_date: z.string().nullable(),
+  payment_date: z.iso.date().nullable(),
+  shipping_date: z.iso.date().nullable(),
+  collecting_date: z.iso.date().nullable(),
   price: z.string(),
   shop: z.string(),
   shipping_method: z.enum(SHIPPING_METHODS),
   note: z.string(),
   orderId: z.string().nullable(),
-  orderDate: z.string().nullable(),
+  orderDate: z.iso.date().nullable(),
 });
 
 export type csvItem = z.infer<typeof csvItemSchema>;
@@ -32,7 +32,7 @@ export type collectionInsertType = z.infer<typeof collectionInsertSchema>;
 export const statusSchema = z.object({
   status: z.string(),
   finished: z.boolean(),
-  createdAt: z.string(),
+  createdAt: z.iso.datetime(),
 });
 
 export type status = z.infer<typeof statusSchema>;
@@ -44,10 +44,10 @@ export const orderItemSyncSchema = z.object({
   status: z.enum(ORDER_STATUSES),
   condition: z.enum(CONDITIONS),
   shippingMethod: z.enum(SHIPPING_METHODS),
-  orderDate: z.string().nullable(),
-  paymentDate: z.string().nullable(),
-  shippingDate: z.string().nullable(),
-  collectionDate: z.string().nullable(),
+  orderDate: z.iso.date().nullable(),
+  paymentDate: z.iso.date().nullable(),
+  shippingDate: z.iso.date().nullable(),
+  collectionDate: z.iso.date().nullable(),
 });
 
 export type orderItemSyncType = z.infer<typeof orderItemSyncSchema>;
@@ -56,11 +56,11 @@ export const orderSyncSchema = z.object({
   status: z.enum(ORDER_STATUSES),
   title: z.string(),
   shop: z.string(),
-  orderDate: z.string().nullable(),
-  releaseMonthYear: z.string().nullable(),
-  paymentDate: z.string().nullable(),
-  shippingDate: z.string().nullable(),
-  collectionDate: z.string().nullable(),
+  orderDate: z.iso.date().nullable(),
+  releaseMonthYear: z.iso.date().nullable(),
+  paymentDate: z.iso.date().nullable(),
+  shippingDate: z.iso.date().nullable(),
+  collectionDate: z.iso.date().nullable(),
   shippingMethod: z.enum(SHIPPING_METHODS),
   shippingFee: z.string(),
   taxes: z.string(),
@@ -79,10 +79,10 @@ export const collectionSyncSchema = z.object({
   count: z.number(),
   score: z.string(),
   shop: z.string(),
-  orderDate: z.string().nullable(),
-  paymentDate: z.string().nullable(),
-  shippingDate: z.string().nullable(),
-  collectionDate: z.string().nullable(),
+  orderDate: z.iso.date().nullable(),
+  paymentDate: z.iso.date().nullable(),
+  shippingDate: z.iso.date().nullable(),
+  collectionDate: z.iso.date().nullable(),
   shippingMethod: z.enum(SHIPPING_METHODS),
   tags: z.array(z.string()),
   condition: z.enum(CONDITIONS),

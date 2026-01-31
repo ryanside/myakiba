@@ -11,7 +11,7 @@ export function ModeToggle({ className }: { className?: string }) {
     <div
       className={cn(
         "inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 py-0.5 px-1 overflow-hidden",
-        className
+        className,
       )}
     >
       <Button
@@ -21,7 +21,7 @@ export function ModeToggle({ className }: { className?: string }) {
           "size-6 rounded-lg transition-all hover:bg-transparent",
           theme === "system" || theme === undefined
             ? "bg-card text-card-foreground border hover:bg-card"
-            : ""
+            : "",
         )}
         onClick={() => setTheme("system")}
         aria-label="System theme"
@@ -33,9 +33,7 @@ export function ModeToggle({ className }: { className?: string }) {
         size="icon"
         className={cn(
           "size-6 rounded-full transition-all hover:bg-transparent",
-          theme === "light"
-            ? "bg-card text-card-foreground border hover:bg-card"
-            : ""
+          theme === "light" ? "bg-card text-card-foreground border hover:bg-card" : "",
         )}
         onClick={() => setTheme("light")}
         aria-label="Light theme"
@@ -47,9 +45,7 @@ export function ModeToggle({ className }: { className?: string }) {
         size="icon"
         className={cn(
           "size-6 rounded-full transition-all hover:bg-transparent",
-          theme === "dark"
-            ? "bg-card text-card-foreground border hover:bg-card"
-            : ""
+          theme === "dark" ? "bg-card text-card-foreground border hover:bg-card" : "",
         )}
         onClick={() => setTheme("dark")}
         aria-label="Dark theme"

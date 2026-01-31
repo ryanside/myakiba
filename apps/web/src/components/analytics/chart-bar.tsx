@@ -69,31 +69,21 @@ function processMonthlyData(monthlyBreakdown?: MonthlyBreakdownData[]) {
     return {
       month: monthName,
       itemsAdded: monthData?.itemsAdded || 0,
-      amountSpent: monthData?.amountSpent
-        ? parseFloat(monthData.amountSpent)
-        : 0,
+      amountSpent: monthData?.amountSpent ? parseFloat(monthData.amountSpent) : 0,
     };
   });
 }
 
-export function ChartBarLabel({
-  monthlyBreakdown,
-  ...props
-}: ChartBarLabelProps) {
+export function ChartBarLabel({ monthlyBreakdown, ...props }: ChartBarLabelProps) {
   const chartData = processMonthlyData(monthlyBreakdown);
-  const totalItems = chartData.reduce(
-    (sum, month) => sum + month.itemsAdded,
-    0
-  );
+  const totalItems = chartData.reduce((sum, month) => sum + month.itemsAdded, 0);
   const currentYear = new Date().getFullYear();
 
   return (
     <Card className="col-span-2">
       <CardHeader>
         <CardTitle>Monthly Collection Activity</CardTitle>
-        <CardDescription>
-          Items added to collection - {currentYear}
-        </CardDescription>
+        <CardDescription>Items added to collection - {currentYear}</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} {...props}>
@@ -112,17 +102,9 @@ export function ChartBarLabel({
               axisLine={false}
               tickFormatter={(value) => value.slice(0, 3)}
             />
-            <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent hideLabel />}
-            />
+            <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
             <Bar dataKey="itemsAdded" fill="var(--color-itemsAdded)" radius={8}>
-              <LabelList
-                position="top"
-                offset={12}
-                className="fill-foreground"
-                fontSize={12}
-              />
+              <LabelList position="top" offset={12} className="fill-foreground" fontSize={12} />
             </Bar>
           </BarChart>
         </ChartContainer>

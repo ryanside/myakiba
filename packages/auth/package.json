@@ -1,8 +1,8 @@
 {
   "name": "@myakiba/auth",
   "version": "0.0.0",
-  "type": "module",
   "private": true,
+  "type": "module",
   "exports": {
     ".": {
       "default": "./src/index.ts"
@@ -10,13 +10,6 @@
     "./*": {
       "default": "./src/*.ts"
     }
-  },
-  "devDependencies": {
-    "@myakiba/config": "workspace:*",
-    "@types/bun": "catalog:"
-  },
-  "peerDependencies": {
-    "typescript": "catalog:"
   },
   "dependencies": {
     "@myakiba/db": "workspace:*",
@@ -28,6 +21,12 @@
     "ioredis": "catalog:",
     "resend": "^6.5.2",
     "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@myakiba/config": "workspace:*",
+    "@types/bun": "catalog:"
+  },
+  "peerDependencies": {
+    "typescript": "catalog:"
   }
 }
-

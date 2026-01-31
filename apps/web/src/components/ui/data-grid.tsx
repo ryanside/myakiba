@@ -1,5 +1,3 @@
-;
-
 import { createContext, useContext } from "react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
@@ -123,11 +121,7 @@ function DataGridProvider<TData extends object>({
   );
 }
 
-function DataGrid<TData extends object>({
-  children,
-  table,
-  ...props
-}: DataGridProps<TData>) {
+function DataGrid<TData extends object>({ children, table, ...props }: DataGridProps<TData>) {
   const defaultProps: Partial<DataGridProps<TData>> = {
     loadingMode: "skeleton",
     tableLayout: {
@@ -198,7 +192,7 @@ function DataGridContainer({
       className={cn(
         "grid w-full",
         border && "border border-border rounded-lg overflow-hidden",
-        className
+        className,
       )}
     >
       {children}

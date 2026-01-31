@@ -8,9 +8,7 @@ import type {
 } from "@/lib/orders/types";
 import type { OrderStatus } from "@myakiba/types";
 
-export async function getOrders(
-  filters: OrderFilters
-): Promise<OrdersQueryResponse> {
+export async function getOrders(filters: OrderFilters): Promise<OrdersQueryResponse> {
   const queryParams = {
     limit: filters.limit ?? 10,
     offset: filters.offset ?? 0,
@@ -51,13 +49,14 @@ export async function getOrders(
   if (!data) {
     throw new Error("Failed to get orders");
   }
+
   return data;
 }
 
 export async function mergeOrders(
   values: NewOrder,
   orderIds: Set<string>,
-  cascadeOptions: CascadeOptions
+  cascadeOptions: CascadeOptions,
 ) {
   const { data, error } = await app.api.orders.merge.post({
     orderIds: Array.from(orderIds),
@@ -75,7 +74,7 @@ export async function mergeOrders(
 export async function splitOrders(
   values: NewOrder,
   collectionIds: Set<string>,
-  cascadeOptions: CascadeOptions
+  cascadeOptions: CascadeOptions,
 ) {
   const { data, error } = await app.api.orders.split.post({
     collectionIds: Array.from(collectionIds),
@@ -90,10 +89,7 @@ export async function splitOrders(
   return data;
 }
 
-export async function editOrder(
-  values: EditedOrder,
-  cascadeOptions: CascadeOptions
-) {
+export async function editOrder(values: EditedOrder, cascadeOptions: CascadeOptions) {
   const { error } = await app.api.orders({ orderId: values.orderId }).put({
     order: values,
     cascadeOptions,
@@ -159,7 +155,7 @@ export async function getOrderIdsAndTitles(filters: { title?: string }) {
 export async function moveItem(
   targetOrderId: string,
   collectionIds: Set<string>,
-  orderIds: Set<string>
+  orderIds: Set<string>,
 ) {
   const { error } = await app.api.orders["move-items"].put({
     targetOrderId,
@@ -182,13 +178,11 @@ export async function getOrder(orderId: string) {
   if (!data) {
     throw new Error("Failed to get order");
   }
+
   return data;
 }
 
-export async function updateOrderStatus(
-  orderId: string,
-  status: OrderStatus
-): Promise<void> {
+export async function updateOrderStatus(orderId: string, status: OrderStatus): Promise<void> {
   const { error } = await app.api.orders({ orderId }).put({
     order: {
       status,

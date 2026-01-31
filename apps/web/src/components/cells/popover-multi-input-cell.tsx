@@ -1,10 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { MaskInput } from "@/components/ui/mask-input";
 import { useForm } from "@tanstack/react-form";
 import * as Portal from "@radix-ui/react-portal";
@@ -42,7 +38,7 @@ export function PopoverMultiInputCell({
         ...acc,
         [input.name]: input.value,
       }),
-      {} as Record<string, string>
+      {} as Record<string, string>,
     ),
     onSubmit: async ({ value }) => {
       const { error } = await tryCatch(onSubmit(value));

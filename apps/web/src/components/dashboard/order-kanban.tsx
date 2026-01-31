@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/kanban";
 import { GripVertical, CalendarIcon, Check } from "lucide-react";
 import { formatCurrency, formatMonthYear } from "@myakiba/utils";
+import type { DateFormat } from "@myakiba/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateOrderStatus } from "@/queries/orders";
 import { toast } from "sonner";
@@ -34,6 +35,7 @@ interface KanbanOrder {
 interface OrdersKanbanProps {
   orders: KanbanOrder[];
   currency: string;
+  dateFormat: DateFormat;
 }
 
 const COLUMN_TITLES: Record<string, string> = {
@@ -42,10 +44,13 @@ const COLUMN_TITLES: Record<string, string> = {
   Shipped: "Shipped",
 };
 
-interface OrderCardProps
-  extends Omit<React.ComponentProps<typeof KanbanItem>, "value" | "children"> {
+interface OrderCardProps extends Omit<
+  React.ComponentProps<typeof KanbanItem>,
+  "value" | "children"
+> {
   order: KanbanOrder;
   currency: string;
+  dateFormat: DateFormat;
   asHandle?: boolean;
   onMarkOwned: (orderId: string) => void;
 }
@@ -53,6 +58,7 @@ interface OrderCardProps
 function OrderCard({
   order,
   currency,
+  dateFormat,
   asHandle,
   onMarkOwned,
   ...props
@@ -87,11 +93,7 @@ function OrderCard({
                 key={idx}
                 className="relative w-12 h-12 rounded-md overflow-hidden border bg-muted shrink-0"
               >
-                <img
-                  src={image}
-                  alt=""
-                  className="w-full h-full object-cover object-top"
-                />
+                <img src={image} alt="" className="w-full h-full object-cover object-top" />
               </div>
             ))}
             {order.itemImages.length > 3 && (
@@ -114,10 +116,7 @@ function OrderCard({
             {order.title}
           </Link>
           {order.shop && (
-            <Badge
-              variant="outline"
-              className="pointer-events-none w-fit text-[10px] px-1.5 py-0"
-            >
+            <Badge variant="outline" className="pointer-events-none w-fit text-[10px] px-1.5 py-0">
               {order.shop}
             </Badge>
           )}
@@ -130,7 +129,7 @@ function OrderCard({
               <>
                 <CalendarIcon className="h-3 w-3" />
                 <time className="text-[10px] tabular-nums">
-                  {formatMonthYear(order.releaseMonthYear)}
+                  {formatMonthYear(order.releaseMonthYear, dateFormat)}
                 </time>
               </>
             )}
@@ -145,19 +144,15 @@ function OrderCard({
 
   return (
     <KanbanItem value={order.orderId} {...props}>
-      {asHandle ? (
-        <KanbanItemHandle>{cardContent}</KanbanItemHandle>
-      ) : (
-        cardContent
-      )}
+      {asHandle ? <KanbanItemHandle>{cardContent}</KanbanItemHandle> : cardContent}
     </KanbanItem>
   );
 }
 
-interface OrderColumnProps
-  extends Omit<React.ComponentProps<typeof KanbanColumn>, "children"> {
+interface OrderColumnProps extends Omit<React.ComponentProps<typeof KanbanColumn>, "children"> {
   orders: KanbanOrder[];
   currency: string;
+  dateFormat: DateFormat;
   isOverlay?: boolean;
   onMarkOwned: (orderId: string) => void;
 }
@@ -166,6 +161,7 @@ function OrderColumn({
   value,
   orders,
   currency,
+  dateFormat,
   isOverlay,
   onMarkOwned,
   ...props
@@ -189,15 +185,13 @@ function OrderColumn({
           </Button>
         </KanbanColumnHandle>
       </div>
-      <KanbanColumnContent
-        value={value}
-        className="flex flex-col gap-2.5 p-0.5"
-      >
+      <KanbanColumnContent value={value} className="flex flex-col gap-2.5 p-0.5">
         {orders.map((order) => (
           <OrderCard
             key={order.orderId}
             order={order}
             currency={currency}
+            dateFormat={dateFormat}
             asHandle={!isOverlay}
             onMarkOwned={onMarkOwned}
           />
@@ -207,7 +201,7 @@ function OrderColumn({
   );
 }
 
-export default function OrderKanban({ orders, currency }: OrdersKanbanProps) {
+export default function OrderKanban({ orders, currency, dateFormat }: OrdersKanbanProps) {
   const queryClient = useQueryClient();
 
   // Transform orders array into column structure grouped by status
@@ -227,8 +221,7 @@ export default function OrderKanban({ orders, currency }: OrdersKanbanProps) {
     return grouped;
   }, [orders]);
 
-  const [columns, setColumns] =
-    React.useState<Record<string, KanbanOrder[]>>(initialColumns);
+  const [columns, setColumns] = React.useState<Record<string, KanbanOrder[]>>(initialColumns);
 
   // Update columns when orders prop changes
   React.useEffect(() => {
@@ -260,14 +253,11 @@ export default function OrderKanban({ orders, currency }: OrdersKanbanProps) {
     onError: (error: Error, variables) => {
       console.error(
         `Failed to update order ${variables.orderId} to status ${variables.status}:`,
-        error
+        error,
       );
-      toast.error(
-        `Failed to update order ${variables.orderId} to status ${variables.status}:`,
-        {
-          description: `Error: ${error.message}`,
-        }
-      );
+      toast.error(`Failed to update order ${variables.orderId} to status ${variables.status}:`, {
+        description: `Error: ${error.message}`,
+      });
       setColumns(initialColumns);
     },
   });
@@ -303,7 +293,7 @@ export default function OrderKanban({ orders, currency }: OrdersKanbanProps) {
         status: "Owned",
       });
     },
-    [columns, mutation]
+    [columns, mutation],
   );
 
   // Handle item moves between columns
@@ -314,8 +304,7 @@ export default function OrderKanban({ orders, currency }: OrdersKanbanProps) {
       overContainer: string;
       overIndex: number;
     }) => {
-      const { activeContainer, activeIndex, overContainer, overIndex } =
-        moveEvent;
+      const { activeContainer, activeIndex, overContainer, overIndex } = moveEvent;
 
       // Get the moved order
       const movedOrder = columns[activeContainer][activeIndex];
@@ -347,7 +336,7 @@ export default function OrderKanban({ orders, currency }: OrdersKanbanProps) {
         });
       }
     },
-    [columns, mutation]
+    [columns, mutation],
   );
 
   return (
@@ -365,6 +354,7 @@ export default function OrderKanban({ orders, currency }: OrdersKanbanProps) {
             value={columnValue}
             orders={columnOrders}
             currency={currency}
+            dateFormat={dateFormat}
             onMarkOwned={handleMarkOwned}
             className="max-h-[300px] overflow-auto"
           />

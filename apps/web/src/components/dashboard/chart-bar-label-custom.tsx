@@ -1,11 +1,4 @@
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  LabelList,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Bar, BarChart, CartesianGrid, LabelList, XAxis, YAxis } from "recharts";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -77,16 +70,8 @@ export function ChartBarLabelCustom({
               hide
             />
             <XAxis dataKey="cost" type="number" hide />
-            <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent indicator="line" />}
-            />
-            <Bar
-              dataKey="cost"
-              layout="vertical"
-              fill="var(--color-cost)"
-              radius={4}
-            >
+            <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="line" />} />
+            <Bar dataKey="cost" layout="vertical" fill="var(--color-cost)" radius={4}>
               <LabelList
                 dataKey="expense"
                 position="insideLeft"
@@ -110,39 +95,27 @@ export function ChartBarLabelCustom({
         <div className="grid grid-cols-2 gap-2">
           <div className="flex justify-between">
             <span>Item Costs</span>
-            <span className="text-foreground">
-              {formatCurrency(data.totalSpent, currency)}
-            </span>
+            <span className="text-foreground">{formatCurrency(data.totalSpent, currency)}</span>
           </div>
           <div className="flex justify-between">
             <span>Shipping</span>
-            <span className="text-foreground">
-              {formatCurrency(data.totalShipping, currency)}
-            </span>
+            <span className="text-foreground">{formatCurrency(data.totalShipping, currency)}</span>
           </div>
           <div className="flex justify-between">
             <span>Taxes</span>
-            <span className="text-foreground">
-              {formatCurrency(data.totalTaxes, currency)}
-            </span>
+            <span className="text-foreground">{formatCurrency(data.totalTaxes, currency)}</span>
           </div>
           <div className="flex justify-between">
             <span>Duties</span>
-            <span className="text-foreground">
-              {formatCurrency(data.totalDuties, currency)}
-            </span>
+            <span className="text-foreground">{formatCurrency(data.totalDuties, currency)}</span>
           </div>
           <div className="flex justify-between">
             <span>Tariffs</span>
-            <span className="text-foreground">
-              {formatCurrency(data.totalTariffs, currency)}
-            </span>
+            <span className="text-foreground">{formatCurrency(data.totalTariffs, currency)}</span>
           </div>
           <div className="flex justify-between">
             <span>Misc Fees</span>
-            <span className="text-foreground">
-              {formatCurrency(data.totalMiscFees, currency)}
-            </span>
+            <span className="text-foreground">{formatCurrency(data.totalMiscFees, currency)}</span>
           </div>
         </div>
         <div className="flex justify-between text-foreground font-medium text-sm mt-2.5">
@@ -155,7 +128,7 @@ export function ChartBarLabelCustom({
                 Number(data.totalDuties) +
                 Number(data.totalTariffs) +
                 Number(data.totalMiscFees),
-              currency
+              currency,
             )}
           </span>
         </div>
