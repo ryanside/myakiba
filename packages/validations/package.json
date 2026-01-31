@@ -1,8 +1,8 @@
 {
   "name": "@myakiba/validations",
   "version": "0.0.0",
-  "type": "module",
   "private": true,
+  "type": "module",
   "exports": {
     ".": {
       "default": "./src/index.ts"
@@ -11,16 +11,15 @@
       "default": "./src/*.ts"
     }
   },
+  "dependencies": {
+    "@myakiba/constants": "workspace:*",
+    "zod": "catalog:"
+  },
   "devDependencies": {
     "@myakiba/config": "workspace:*",
     "@types/bun": "catalog:"
   },
   "peerDependencies": {
     "typescript": "catalog:"
-  },
-  "dependencies": {
-    "@myakiba/constants": "workspace:*",
-    "zod": "catalog:"
   }
 }
-

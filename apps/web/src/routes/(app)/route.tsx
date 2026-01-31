@@ -7,11 +7,7 @@ import {
   BreadcrumbList,
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Outlet, redirect, useLocation } from "@tanstack/react-router";
 import UserMenu from "@/components/sidebar/user-menu";
 import { authClient } from "@/lib/auth-client";
@@ -48,16 +44,12 @@ function RouteComponent() {
           <div className="flex items-center gap-0.5">
             <SidebarTrigger className="-ml-1" />
             <SearchCommand />
-            <Separator
-              orientation="vertical"
-              className="mr-2 data-[orientation=vertical]:h-4"
-            />
+            <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem>
                   <BreadcrumbLink className="text-foreground">
-                    {location.pathname.charAt(1).toUpperCase() +
-                      location.pathname.slice(2)}
+                    {location.pathname.charAt(1).toUpperCase() + location.pathname.slice(2)}
                   </BreadcrumbLink>
                 </BreadcrumbItem>
               </BreadcrumbList>

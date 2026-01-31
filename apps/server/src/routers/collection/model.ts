@@ -1,10 +1,5 @@
 import * as z from "zod";
-import {
-  CATEGORIES,
-  COLLECTION_STATUSES,
-  CONDITIONS,
-  SHIPPING_METHODS,
-} from "@myakiba/constants";
+import { CATEGORIES, COLLECTION_STATUSES, CONDITIONS, SHIPPING_METHODS } from "@myakiba/constants";
 
 const commaSeparatedStringArray = z.preprocess((val) => {
   if (typeof val === "string" && val.length > 0) {
@@ -13,36 +8,26 @@ const commaSeparatedStringArray = z.preprocess((val) => {
   return undefined;
 }, z.array(z.string()).optional());
 
+const commaSeparatedShipMethodArray = z.preprocess((val) => {
+  if (typeof val === "string" && val.length > 0) {
+    return val.split(",");
+  }
+  return undefined;
+}, z.array(z.enum(SHIPPING_METHODS)).optional());
 
-const commaSeparatedShipMethodArray = z.preprocess(
-  (val) => {
-    if (typeof val === "string" && val.length > 0) {
-      return val.split(",");
-    }
-    return undefined;
-  },
-  z.array(z.enum(SHIPPING_METHODS)).optional()
-);
+const commaSeparatedConditionArray = z.preprocess((val) => {
+  if (typeof val === "string" && val.length > 0) {
+    return val.split(",");
+  }
+  return undefined;
+}, z.array(z.enum(CONDITIONS)).optional());
 
-const commaSeparatedConditionArray = z.preprocess(
-  (val) => {
-    if (typeof val === "string" && val.length > 0) {
-      return val.split(",");
-    }
-    return undefined;
-  },
-  z.array(z.enum(CONDITIONS)).optional()
-);
-
-const commaSeparatedCategoryArray = z.preprocess(
-  (val) => {
-    if (typeof val === "string" && val.length > 0) {
-      return val.split(",");
-    }
-    return undefined;
-  },
-  z.array(z.enum(CATEGORIES)).optional()
-);
+const commaSeparatedCategoryArray = z.preprocess((val) => {
+  if (typeof val === "string" && val.length > 0) {
+    return val.split(",");
+  }
+  return undefined;
+}, z.array(z.enum(CATEGORIES)).optional());
 
 export const collectionQuerySchema = z.object({
   limit: z.coerce.number().optional().default(10),

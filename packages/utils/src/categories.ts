@@ -9,4 +9,3 @@ export function getCategoryColor(category: Category | null | undefined): string 
 
   return CATEGORY_COLORS[category] || "var(--muted-foreground)";
 }
-

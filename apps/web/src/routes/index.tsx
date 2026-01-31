@@ -65,8 +65,7 @@ const FEATURE_SECTIONS: readonly FeatureSection[] = [
     backgroundImage: FeatureBackground3,
     featureImage: { dark: CollectionDarkImage, light: CollectionLightImage },
     title: "Manage your collection",
-    description:
-      "Track your collection with item information from MyFigureCollection.",
+    description: "Track your collection with item information from MyFigureCollection.",
   },
 ];
 
@@ -104,9 +103,7 @@ function HomeComponent() {
             key={feature.title}
             imageOrientation={feature.imageOrientation}
             backgroundImage={feature.backgroundImage}
-            featureImage={
-              isDarkTheme ? feature.featureImage.dark : feature.featureImage.light
-            }
+            featureImage={isDarkTheme ? feature.featureImage.dark : feature.featureImage.light}
             title={feature.title}
             description={feature.description}
           />

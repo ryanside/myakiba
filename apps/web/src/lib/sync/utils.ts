@@ -5,7 +5,7 @@ import { csvSchema, type UserItem } from "./types";
  * Extracts the MyFigureCollection item ID from a URL or returns the ID if it's already a number.
  * Handles URLs like: https://myfigurecollection.net/item/998271
  * Also handles trailing slashes, query parameters, and fragments.
- * 
+ *
  * @param input - Either a MyFigureCollection URL or a numeric ID string
  * @returns The extracted item ID as a string, or null if invalid
  */
@@ -43,8 +43,7 @@ export async function transformCSVData(value: { file: File | undefined }) {
   const parsedCSV = Papa.parse(text, {
     header: true,
     skipEmptyLines: true,
-    transformHeader: (header: string) =>
-      header.trim().toLowerCase().replace(/ /g, "_"),
+    transformHeader: (header: string) => header.trim().toLowerCase().replace(/ /g, "_"),
   });
 
   const validatedCSV = csvSchema.safeParse(parsedCSV.data);
@@ -55,8 +54,7 @@ export async function transformCSVData(value: { file: File | undefined }) {
 
   const filteredData = validatedCSV.data.filter((item) => {
     return (
-      (item.status === "Owned" || item.status === "Ordered") &&
-      !item.title.startsWith("[NSFW")
+      (item.status === "Owned" || item.status === "Ordered") && !item.title.startsWith("[NSFW")
     );
   });
   if (filteredData.length === 0) {

@@ -1,9 +1,5 @@
 import * as z from "zod";
-import {
-  SHIPPING_METHODS,
-  ORDER_STATUSES,
-  CONDITIONS,
-} from "@myakiba/constants";
+import { SHIPPING_METHODS, ORDER_STATUSES, CONDITIONS } from "@myakiba/constants";
 
 /**
  * Schema for CSV date fields that handles MFC export quirks.
@@ -88,11 +84,11 @@ export const csvItemSchema = z.object({
   barcode: z.string(),
   status: z
     .string()
-    .transform((val) => val === "" ? undefined : val)
+    .transform((val) => (val === "" ? undefined : val))
     .pipe(z.enum(["Owned", "Ordered", "Wished"]).default("Owned")),
   count: z
     .string()
-    .transform((val) => val === "" ? undefined : val)
+    .transform((val) => (val === "" ? undefined : val))
     .pipe(z.string().default("1")),
   score: z.string(),
   payment_date: csvDateSchema,
@@ -102,7 +98,7 @@ export const csvItemSchema = z.object({
   shop: z.string(),
   shipping_method: z
     .string()
-    .transform((val) => val === "" ? undefined : val)
+    .transform((val) => (val === "" ? undefined : val))
     .pipe(z.enum(SHIPPING_METHODS).default("n/a")),
   tracking_number: z.string(),
   wishibility: z.string().optional(),

@@ -9,10 +9,7 @@ export function MyAkibaLogo({ size = "full", className }: MyAkibaLogoProps) {
   if (size === "full") {
     return (
       <svg
-        className={cn(
-          className,
-          "dark:fill-white dark:stroke-white fill-black stroke-black -my-9"
-        )}
+        className={cn(className, "dark:fill-white dark:stroke-white fill-black stroke-black -my-9")}
         viewBox="0 0 154 30"
         xmlns="http://www.w3.org/2000/svg"
       >
@@ -23,10 +20,7 @@ export function MyAkibaLogo({ size = "full", className }: MyAkibaLogoProps) {
 
   return (
     <svg
-      className={cn(
-        className,
-        "dark:fill-white dark:stroke-white fill-black stroke-black -my-9"
-      )}
+      className={cn(className, "dark:fill-white dark:stroke-white fill-black stroke-black -my-9")}
       viewBox="0 0 53 18"
       xmlns="http://www.w3.org/2000/svg"
     >

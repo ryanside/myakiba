@@ -40,11 +40,7 @@ function ImageThumbnail({
   return (
     <div className="w-12 h-12 rounded shrink-0 relative overflow-hidden">
       {imageCount === 1 ? (
-        <img
-          src={images[0]}
-          alt={title}
-          className="w-full h-full object-cover object-top"
-        />
+        <img src={images[0]} alt={title} className="w-full h-full object-cover object-top" />
       ) : imageCount === 2 ? (
         <div className="grid grid-cols-2 gap-px w-full h-full">
           {displayImages.map((img, idx) => (
@@ -94,9 +90,7 @@ function ImageThumbnail({
           ))}
           {remainingCount > 0 && (
             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <span className="text-xs font-medium text-white">
-                +{remainingCount}
-              </span>
+              <span className="text-xs font-medium text-white">+{remainingCount}</span>
             </div>
           )}
         </div>
@@ -156,12 +150,7 @@ export function SearchCommand() {
 
   return (
     <>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="size-7"
-        onClick={() => setOpen(true)}
-      >
+      <Button variant="ghost" size="icon" className="size-7" onClick={() => setOpen(true)}>
         <Search className="h-4 w-4" />
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
@@ -197,9 +186,7 @@ export function SearchCommand() {
                       <ImageThumbnail
                         images={order.itemImages}
                         title={order.orderTitle}
-                        fallbackIcon={
-                          <Package className="h-5 w-5 text-muted-foreground" />
-                        }
+                        fallbackIcon={<Package className="h-5 w-5 text-muted-foreground" />}
                       />
                       <span>{order.orderTitle}</span>
                     </CommandItem>
@@ -220,13 +207,9 @@ export function SearchCommand() {
                       }}
                     >
                       <ImageThumbnail
-                        images={
-                          collection.itemImage ? [collection.itemImage] : []
-                        }
+                        images={collection.itemImage ? [collection.itemImage] : []}
                         title={collection.itemTitle}
-                        fallbackIcon={
-                          <Images className="h-5 w-5 text-muted-foreground" />
-                        }
+                        fallbackIcon={<Images className="h-5 w-5 text-muted-foreground" />}
                       />
                       <span>{collection.itemTitle}</span>
                     </CommandItem>
@@ -243,10 +226,7 @@ export function SearchCommand() {
                       value={item.id}
                       onSelect={() => {
                         navigate({
-                          to:
-                            item.type === "order"
-                              ? "/orders/$id"
-                              : "/items/$id",
+                          to: item.type === "order" ? "/orders/$id" : "/items/$id",
                           params: { id: item.id },
                         });
                         setOpen(false);

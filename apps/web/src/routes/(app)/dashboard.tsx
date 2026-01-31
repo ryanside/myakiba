@@ -1,13 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { app } from "@/lib/treaty-client";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { CollectionBreakdown } from "@/components/dashboard/collection-breakdown";
@@ -73,9 +67,7 @@ function DashboardContent() {
       <Card>
         <CardHeader>
           <CardTitle className="text-destructive">Error</CardTitle>
-          <CardDescription>
-            Failed to load dashboard data: {error.message}
-          </CardDescription>
+          <CardDescription>Failed to load dashboard data: {error.message}</CardDescription>
         </CardHeader>
       </Card>
     );
@@ -96,9 +88,7 @@ function DashboardContent() {
       <div className="flex flex-col lg:flex-row items-start mb-6 gap-4">
         <h1 className="text-2xl tracking-tight font-medium">
           Welcome,{" "}
-          <span className="text-muted-foreground">
-            {session?.user.username} (づ｡◕‿‿◕｡)づ
-          </span>
+          <span className="text-muted-foreground">{session?.user.username} (づ｡◕‿‿◕｡)づ</span>
         </h1>
         <div className="flex flex-row flex-wrap items-center gap-2 lg:ml-auto">
           <Button
@@ -131,19 +121,13 @@ function DashboardContent() {
         <div className="col-span-1 lg:col-span-3 border-dashed space-y-4 flex flex-col">
           <div className="grid gap-4 grid-cols-1 lg:grid-cols-3 border-dashed">
             <div className="col-span-1 lg:col-span-3 grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <CollectionBreakdown
-                data={categoriesOwned}
-                currency={userCurrency}
-              />
+              <CollectionBreakdown data={categoriesOwned} currency={userCurrency} />
               <ValueLineBarChart data={monthlyOrders} />
               <div className="flex flex-col gap-4 col-span-1 h-full">
                 <KPICard
                   title="Total Spent"
                   subtitle="based on paid collection & order items"
-                  value={formatCurrency(
-                    collectionStats[0].totalSpent,
-                    userCurrency
-                  )}
+                  value={formatCurrency(collectionStats[0].totalSpent, userCurrency)}
                   subvalueTitle="this month"
                   subvalue={formatCurrency(
                     Number(collectionStats[0].totalSpentThisMonth) +
@@ -152,7 +136,7 @@ function DashboardContent() {
                       Number(ordersSummary[0].thisMonthDuties) +
                       Number(ordersSummary[0].thisMonthTariffs) +
                       Number(ordersSummary[0].thisMonthMiscFees),
-                    userCurrency
+                    userCurrency,
                   )}
                 />
                 <KPICard
@@ -168,9 +152,7 @@ function DashboardContent() {
           <Card className="col-span-1 lg:col-span-3 h-full">
             <CardHeader className="flex flex-row items-center gap-2">
               <div className="flex flex-col items-start gap-2">
-                <CardTitle className="text-md font-medium">
-                  Orders Board
-                </CardTitle>
+                <CardTitle className="text-md font-medium">Orders Board</CardTitle>
                 <CardDescription className="text-xs text-muted-foreground">
                   Quickly manage upcoming active orders
                 </CardDescription>
@@ -190,9 +172,7 @@ function DashboardContent() {
           <BudgetControlCard
             currentSpent={
               budgetSummary.length > 0
-                ? parseFloat(
-                    collectionStats[0].totalSpentThisMonth.toString()
-                  ) +
+                ? parseFloat(collectionStats[0].totalSpentThisMonth.toString()) +
                   parseFloat(ordersSummary[0].thisMonthShipping.toString()) +
                   parseFloat(ordersSummary[0].thisMonthTaxes.toString()) +
                   parseFloat(ordersSummary[0].thisMonthDuties.toString()) +
@@ -201,18 +181,14 @@ function DashboardContent() {
                 : undefined
             }
             limit={
-              budgetSummary.length > 0
-                ? parseFloat(budgetSummary[0].amount.toString())
-                : undefined
+              budgetSummary.length > 0 ? parseFloat(budgetSummary[0].amount.toString()) : undefined
             }
             currency={userCurrency}
             warningThreshold={75}
           />
           <Card className="min-h-[210px]">
             <CardHeader className="flex flex-row items-center gap-2">
-              <CardTitle className="text-md font-medium">
-                Release Calendar
-              </CardTitle>
+              <CardTitle className="text-md font-medium">Release Calendar</CardTitle>
             </CardHeader>
             <CardContent>
               <ReleaseCalendar currency={userCurrency} dateFormat={dateFormat} />
@@ -220,17 +196,12 @@ function DashboardContent() {
           </Card>
           <Card className="flex-1">
             <CardHeader className="flex flex-row items-center gap-2">
-              <CardTitle className="text-md font-medium">
-                Unpaid Orders
-              </CardTitle>
+              <CardTitle className="text-md font-medium">Unpaid Orders</CardTitle>
               <Badge variant="outline">{unpaidOrders.length}</Badge>
               <Badge variant="info" appearance="outline">
                 {formatCurrency(
-                  unpaidOrders.reduce(
-                    (acc, order) => acc + parseFloat(order.total),
-                    0
-                  ),
-                  userCurrency
+                  unpaidOrders.reduce((acc, order) => acc + parseFloat(order.total), 0),
+                  userCurrency,
                 )}
               </Badge>
             </CardHeader>

@@ -6,4 +6,3 @@ export const budgetUpsertSchema = z.object({
 });
 
 export type BudgetUpsertType = z.infer<typeof budgetUpsertSchema>;
-

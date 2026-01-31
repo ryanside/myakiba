@@ -18,7 +18,7 @@ export const setJobStatus = async (
   redis: Redis,
   jobId: string,
   status: string,
-  finished: boolean
+  finished: boolean,
 ) => {
   await redis.set(
     `job:${jobId}:status`,
@@ -28,6 +28,6 @@ export const setJobStatus = async (
       createdAt: new Date().toISOString(),
     }),
     "EX",
-    60
+    60,
   );
 };

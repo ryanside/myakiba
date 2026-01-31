@@ -54,17 +54,15 @@ export function CollectionToolbar({
   clearSelections,
   onDeleteCollectionItems,
 }: CollectionToolbarProps): React.ReactElement {
-  const currentSort = filters.sort && filters.order
-    ? {
-        columnId: filters.sort,
-        direction: filters.order as "asc" | "desc",
-      }
-    : null;
+  const currentSort =
+    filters.sort && filters.order
+      ? {
+          columnId: filters.sort,
+          direction: filters.order as "asc" | "desc",
+        }
+      : null;
 
-  const handleSortChange = (
-    columnId: string | null,
-    direction: "asc" | "desc" | null
-  ): void => {
+  const handleSortChange = (columnId: string | null, direction: "asc" | "desc" | null): void => {
     if (columnId === null || direction === null) {
       // Clear sorting - use default sort
       onFilterChange({
@@ -115,9 +113,7 @@ export function CollectionToolbar({
           currentFilters={{
             ...filters,
           }}
-          onApplyFilters={(newFilters) =>
-            onFilterChange({ ...filters, ...newFilters, offset: 0 })
-          }
+          onApplyFilters={(newFilters) => onFilterChange({ ...filters, ...newFilters, offset: 0 })}
           currency={currency}
         />
         <SortCombobox
@@ -168,4 +164,3 @@ export function CollectionToolbar({
     </>
   );
 }
-

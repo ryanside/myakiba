@@ -8,12 +8,7 @@ import {
   order,
 } from "@myakiba/db/schema/figure";
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
-import type {
-  ItemReleasesResponse,
-  ItemRelease,
-  EntriesWithRoles,
-  CustomItemInput,
-} from "./model";
+import type { ItemReleasesResponse, ItemRelease, EntriesWithRoles, CustomItemInput } from "./model";
 
 class ItemService {
   async createCustomItem(input: CustomItemInput) {
@@ -55,7 +50,7 @@ class ItemService {
         ...new Set(
           entryLinks
             .map((entryLink) => entryLink.entryId)
-            .filter((entryId): entryId is string => Boolean(entryId))
+            .filter((entryId): entryId is string => Boolean(entryId)),
         ),
       ];
 
@@ -72,7 +67,7 @@ class ItemService {
           : [];
 
       const existingEntriesById = new Map(
-        existingEntries.map((existingEntry) => [existingEntry.id, existingEntry])
+        existingEntries.map((existingEntry) => [existingEntry.id, existingEntry]),
       );
 
       if (entryIds.length > existingEntries.length) {
@@ -93,14 +88,14 @@ class ItemService {
       }
 
       const namedEntryLinks = entryLinks.filter(
-        (entryLink) => !entryLink.entryId && entryLink.name
+        (entryLink) => !entryLink.entryId && entryLink.name,
       );
       const uniqueNamedEntries = [
         ...new Map(
           namedEntryLinks.map((entryLink) => [
             `${entryLink.name}|${entryLink.category}`,
             entryLink,
-          ])
+          ]),
         ).values(),
       ];
 
@@ -118,10 +113,10 @@ class ItemService {
                   ...uniqueNamedEntries.map((entryLink) =>
                     and(
                       eq(entry.name, entryLink.name ?? ""),
-                      eq(entry.category, entryLink.category)
-                    )
-                  )
-                )
+                      eq(entry.category, entryLink.category),
+                    ),
+                  ),
+                ),
               )
           : [];
 
@@ -129,44 +124,36 @@ class ItemService {
         existingNamedEntries.map((existingEntry) => [
           `${existingEntry.name}|${existingEntry.category}`,
           existingEntry,
-        ])
+        ]),
       );
 
       const entriesToCreate = uniqueNamedEntries.filter(
-        (entryLink) =>
-          !existingNamedEntriesByKey.has(
-            `${entryLink.name}|${entryLink.category}`
-          )
+        (entryLink) => !existingNamedEntriesByKey.has(`${entryLink.name}|${entryLink.category}`),
       );
 
-      const entriesToInsert: Array<typeof entry.$inferInsert> =
-        entriesToCreate.map((entryLink) => ({
+      const entriesToInsert: Array<typeof entry.$inferInsert> = entriesToCreate.map(
+        (entryLink) => ({
           name: entryLink.name ?? "",
           category: entryLink.category,
           source: "custom",
           externalId: null,
-        }));
+        }),
+      );
 
       const createdEntries =
         entriesToInsert.length > 0
-          ? await tx
-              .insert(entry)
-              .values(entriesToInsert)
-              .returning({
-                id: entry.id,
-                name: entry.name,
-                category: entry.category,
-              })
+          ? await tx.insert(entry).values(entriesToInsert).returning({
+              id: entry.id,
+              name: entry.name,
+              category: entry.category,
+            })
           : [];
 
       const entriesByNameCategory = new Map(
-        [
-          ...existingNamedEntries,
-          ...createdEntries,
-        ].map((entryRecord) => [
+        [...existingNamedEntries, ...createdEntries].map((entryRecord) => [
           `${entryRecord.name}|${entryRecord.category}`,
           entryRecord,
-        ])
+        ]),
       );
 
       const entryToItemLinks = entryLinks
@@ -194,13 +181,13 @@ class ItemService {
         })
         .filter(
           (
-            entryLink
+            entryLink,
           ): entryLink is {
             entryId: string;
             role: string;
             category: string;
             name: string;
-          } => entryLink !== null
+          } => entryLink !== null,
         );
 
       if (entryToItemLinks.length > 0) {
@@ -211,7 +198,7 @@ class ItemService {
               entryId: entryLink.entryId,
               itemId: createdItem.id,
               role: entryLink.role,
-            }))
+            })),
           )
           .onConflictDoNothing({
             target: [entry_to_item.entryId, entry_to_item.itemId],
@@ -229,18 +216,15 @@ class ItemService {
 
       const createdReleases =
         releasesToInsert.length > 0
-          ? await tx
-              .insert(item_release)
-              .values(releasesToInsert)
-              .returning({
-                id: item_release.id,
-                itemId: item_release.itemId,
-                date: item_release.date,
-                type: item_release.type,
-                price: item_release.price,
-                priceCurrency: item_release.priceCurrency,
-                barcode: item_release.barcode,
-              })
+          ? await tx.insert(item_release).values(releasesToInsert).returning({
+              id: item_release.id,
+              itemId: item_release.itemId,
+              date: item_release.date,
+              type: item_release.type,
+              price: item_release.price,
+              priceCurrency: item_release.priceCurrency,
+              barcode: item_release.barcode,
+            })
           : [];
 
       const entrySummary = entryToItemLinks.map((entryLink) => ({

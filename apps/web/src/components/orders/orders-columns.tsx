@@ -10,26 +10,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Link } from "@tanstack/react-router";
 import { DataGridColumnHeader } from "@/components/ui/data-grid-column-header";
-import {
-  type ColumnDef,
-  type RowSelectionState,
-  type OnChangeFn,
-} from "@tanstack/react-table";
-import {
-  SquareMinus,
-  SquarePlus,
-  MoreHorizontal,
-  Eye,
-  Edit,
-  Trash2,
-} from "lucide-react";
+import { type ColumnDef, type RowSelectionState, type OnChangeFn } from "@tanstack/react-table";
+import { SquareMinus, SquarePlus, MoreHorizontal, Eye, Edit, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency, getCurrencyLocale } from "@myakiba/utils";
-import type {
-  CascadeOptions,
-  EditedOrder,
-  Order,
-} from "@/lib/orders/types";
+import type { CascadeOptions, EditedOrder, Order } from "@/lib/orders/types";
 import { OrderForm } from "./order-form";
 import { OrderItemSubDataGrid } from "./order-item-sub-data-grid";
 import { PopoverMultiInputCell } from "../cells/popover-multi-input-cell";
@@ -42,10 +27,7 @@ import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/constants";
 import type { ShippingMethod, OrderStatus, DateFormat } from "@myakiba/types";
 
 interface OrdersColumnsParams {
-  onEditOrder: (
-    values: EditedOrder,
-    cascadeOptions: CascadeOptions
-  ) => Promise<void>;
+  onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
   onDeleteOrders: (orderIds: Set<string>) => Promise<void>;
   onEditItem: (values: CollectionItemFormValues) => Promise<void>;
   onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
@@ -74,9 +56,7 @@ export function createOrdersColumns({
             table.getIsAllPageRowsSelected() ||
             (table.getIsSomePageRowsSelected() && "indeterminate")
           }
-          onCheckedChange={(value) =>
-            table.toggleAllPageRowsSelected(!!value)
-          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           onClick={(e) => e.stopPropagation()}
           aria-label="Select all"
           size="sm"
@@ -88,7 +68,7 @@ export function createOrdersColumns({
           <div
             className={cn(
               "hidden absolute top-0 bottom-0 start-0 w-[2px] bg-primary",
-              row.getIsSelected() && "block"
+              row.getIsSelected() && "block",
             )}
           ></div>
           <Checkbox
@@ -111,12 +91,7 @@ export function createOrdersColumns({
       header: () => null,
       cell: ({ row }) => {
         return row.getCanExpand() ? (
-          <Button
-            onClick={row.getToggleExpandedHandler()}
-            mode="icon"
-            size="sm"
-            variant="ghost"
-          >
+          <Button onClick={row.getToggleExpandedHandler()} mode="icon" size="sm" variant="ghost">
             {row.getIsExpanded() ? <SquareMinus /> : <SquarePlus />}
           </Button>
         ) : null;
@@ -142,11 +117,7 @@ export function createOrdersColumns({
       accessorKey: "title",
       id: "title",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Order"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Order" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
         const order = row.original;
@@ -171,24 +142,19 @@ export function createOrdersColumns({
       accessorKey: "shop",
       id: "shop",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Shop"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Shop" visibility={true} column={column} />
       ),
       cell: ({ row }) => (
         <InlineTextCell
           value={row.original.shop}
           onSubmit={async (newValue) => {
-            const { ...orderWithoutTimestamps } =
-              row.original;
+            const { ...orderWithoutTimestamps } = row.original;
             await onEditOrder(
               {
                 ...orderWithoutTimestamps,
                 shop: newValue,
               },
-              ["shop"] as CascadeOptions
+              ["shop"] as CascadeOptions,
             );
           }}
         />
@@ -202,11 +168,7 @@ export function createOrdersColumns({
       accessorKey: "shippingMethod",
       id: "shippingMethod",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Shipping Method"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Shipping Method" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
         const order = row.original;
@@ -216,8 +178,7 @@ export function createOrdersColumns({
               value={order.shippingMethod}
               options={[...SHIPPING_METHODS]}
               onSubmit={async (value) => {
-                const { createdAt, updatedAt, ...orderWithoutTimestamps } =
-                  row.original;
+                const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
                 void createdAt;
                 void updatedAt;
                 await onEditOrder(
@@ -225,7 +186,7 @@ export function createOrdersColumns({
                     ...orderWithoutTimestamps,
                     shippingMethod: value as ShippingMethod,
                   },
-                  ["shippingMethod"] as CascadeOptions
+                  ["shippingMethod"] as CascadeOptions,
                 );
               }}
             />
@@ -241,11 +202,7 @@ export function createOrdersColumns({
       accessorKey: "releaseMonthYear",
       id: "releaseMonthYear",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Release"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Release" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
         const order = row.original;
@@ -254,8 +211,7 @@ export function createOrdersColumns({
             value={order.releaseMonthYear}
             dateFormat={dateFormat}
             onSubmit={async (newValue) => {
-              const { createdAt, updatedAt, ...orderWithoutTimestamps } =
-                row.original;
+              const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
               void updatedAt;
               await onEditOrder(
@@ -263,7 +219,7 @@ export function createOrdersColumns({
                   ...orderWithoutTimestamps,
                   releaseMonthYear: newValue,
                 },
-                [] as CascadeOptions
+                [] as CascadeOptions,
               );
             }}
           />
@@ -278,11 +234,7 @@ export function createOrdersColumns({
       accessorKey: "orderDate",
       id: "orderDate",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Order Date"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Order Date" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
         const order = row.original;
@@ -291,8 +243,7 @@ export function createOrdersColumns({
             value={order.orderDate}
             dateFormat={dateFormat}
             onSubmit={async (newValue) => {
-              const { createdAt, updatedAt, ...orderWithoutTimestamps } =
-                row.original;
+              const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
               void updatedAt;
               await onEditOrder(
@@ -300,7 +251,7 @@ export function createOrdersColumns({
                   ...orderWithoutTimestamps,
                   orderDate: newValue,
                 },
-                ["orderDate"] as CascadeOptions
+                ["orderDate"] as CascadeOptions,
               );
             }}
           />
@@ -318,11 +269,7 @@ export function createOrdersColumns({
       accessorKey: "paymentDate",
       id: "paymentDate",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Payment Date"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Payment Date" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
         const order = row.original;
@@ -331,8 +278,7 @@ export function createOrdersColumns({
             value={order.paymentDate}
             dateFormat={dateFormat}
             onSubmit={async (newValue) => {
-              const { createdAt, updatedAt, ...orderWithoutTimestamps } =
-                row.original;
+              const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
               void updatedAt;
               await onEditOrder(
@@ -340,7 +286,7 @@ export function createOrdersColumns({
                   ...orderWithoutTimestamps,
                   paymentDate: newValue,
                 },
-                ["paymentDate"] as CascadeOptions
+                ["paymentDate"] as CascadeOptions,
               );
             }}
           />
@@ -358,11 +304,7 @@ export function createOrdersColumns({
       accessorKey: "shippingDate",
       id: "shippingDate",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Shipping Date"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Shipping Date" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
         const order = row.original;
@@ -371,8 +313,7 @@ export function createOrdersColumns({
             value={order.shippingDate}
             dateFormat={dateFormat}
             onSubmit={async (newValue) => {
-              const { createdAt, updatedAt, ...orderWithoutTimestamps } =
-                row.original;
+              const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
               void updatedAt;
               await onEditOrder(
@@ -380,7 +321,7 @@ export function createOrdersColumns({
                   ...orderWithoutTimestamps,
                   shippingDate: newValue,
                 },
-                ["shippingDate"] as CascadeOptions
+                ["shippingDate"] as CascadeOptions,
               );
             }}
           />
@@ -398,11 +339,7 @@ export function createOrdersColumns({
       accessorKey: "collectionDate",
       id: "collectionDate",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Collection Date"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Collection Date" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
         const order = row.original;
@@ -411,8 +348,7 @@ export function createOrdersColumns({
             value={order.collectionDate}
             dateFormat={dateFormat}
             onSubmit={async (newValue) => {
-              const { createdAt, updatedAt, ...orderWithoutTimestamps } =
-                row.original;
+              const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
               void updatedAt;
               await onEditOrder(
@@ -420,7 +356,7 @@ export function createOrdersColumns({
                   ...orderWithoutTimestamps,
                   collectionDate: newValue,
                 },
-                ["collectionDate"] as CascadeOptions
+                ["collectionDate"] as CascadeOptions,
               );
             }}
           />
@@ -438,11 +374,7 @@ export function createOrdersColumns({
       accessorKey: "itemCount",
       id: "itemCount",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Items"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Items" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
         const itemCount = row.original.itemCount;
@@ -464,11 +396,7 @@ export function createOrdersColumns({
       accessorKey: "total",
       id: "total",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Total"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Total" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
         const order = row.original;
@@ -512,8 +440,7 @@ export function createOrdersColumns({
             currency={currency}
             locale={locale}
             onSubmit={async (newValues) => {
-              const { createdAt, updatedAt, ...orderWithoutTimestamps } =
-                order;
+              const { createdAt, updatedAt, ...orderWithoutTimestamps } = order;
               void createdAt;
               void updatedAt;
               await onEditOrder(
@@ -521,7 +448,7 @@ export function createOrdersColumns({
                   ...orderWithoutTimestamps,
                   ...newValues,
                 },
-                [] as CascadeOptions
+                [] as CascadeOptions,
               );
             }}
           />
@@ -540,11 +467,7 @@ export function createOrdersColumns({
       accessorFn: (row) => Number(row.shippingFee),
       id: "shippingFee",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Shipping Fee"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Shipping Fee" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
         const order = row.original;
@@ -554,8 +477,7 @@ export function createOrdersColumns({
             currency={currency}
             locale={getCurrencyLocale(currency)}
             onSubmit={async (newValue) => {
-              const { createdAt, updatedAt, ...orderWithoutTimestamps } =
-                row.original;
+              const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
               void updatedAt;
               await onEditOrder(
@@ -563,7 +485,7 @@ export function createOrdersColumns({
                   ...orderWithoutTimestamps,
                   shippingFee: newValue,
                 },
-                [] as CascadeOptions
+                [] as CascadeOptions,
               );
             }}
             disabled={false}
@@ -583,11 +505,7 @@ export function createOrdersColumns({
       accessorFn: (row) => Number(row.taxes),
       id: "taxes",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Taxes"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Taxes" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
         const order = row.original;
@@ -597,8 +515,7 @@ export function createOrdersColumns({
             currency={currency}
             locale={getCurrencyLocale(currency)}
             onSubmit={async (newValue) => {
-              const { createdAt, updatedAt, ...orderWithoutTimestamps } =
-                row.original;
+              const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
               void updatedAt;
               await onEditOrder(
@@ -606,7 +523,7 @@ export function createOrdersColumns({
                   ...orderWithoutTimestamps,
                   taxes: newValue,
                 },
-                [] as CascadeOptions
+                [] as CascadeOptions,
               );
             }}
             disabled={false}
@@ -626,11 +543,7 @@ export function createOrdersColumns({
       accessorFn: (row) => Number(row.duties),
       id: "duties",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Duties"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Duties" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
         const order = row.original;
@@ -640,8 +553,7 @@ export function createOrdersColumns({
             currency={currency}
             locale={getCurrencyLocale(currency)}
             onSubmit={async (newValue) => {
-              const { createdAt, updatedAt, ...orderWithoutTimestamps } =
-                row.original;
+              const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
               void updatedAt;
               await onEditOrder(
@@ -649,7 +561,7 @@ export function createOrdersColumns({
                   ...orderWithoutTimestamps,
                   duties: newValue,
                 },
-                [] as CascadeOptions
+                [] as CascadeOptions,
               );
             }}
             disabled={false}
@@ -669,11 +581,7 @@ export function createOrdersColumns({
       accessorFn: (row) => Number(row.tariffs),
       id: "tariffs",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Tariffs"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Tariffs" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
         const order = row.original;
@@ -683,8 +591,7 @@ export function createOrdersColumns({
             currency={currency}
             locale={getCurrencyLocale(currency)}
             onSubmit={async (newValue) => {
-              const { createdAt, updatedAt, ...orderWithoutTimestamps } =
-                row.original;
+              const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
               void updatedAt;
               await onEditOrder(
@@ -692,7 +599,7 @@ export function createOrdersColumns({
                   ...orderWithoutTimestamps,
                   tariffs: newValue,
                 },
-                [] as CascadeOptions
+                [] as CascadeOptions,
               );
             }}
             disabled={false}
@@ -712,11 +619,7 @@ export function createOrdersColumns({
       accessorFn: (row) => Number(row.miscFees),
       id: "miscFees",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Misc Fees"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Misc Fees" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
         const order = row.original;
@@ -726,8 +629,7 @@ export function createOrdersColumns({
             currency={currency}
             locale={getCurrencyLocale(currency)}
             onSubmit={async (newValue) => {
-              const { createdAt, updatedAt, ...orderWithoutTimestamps } =
-                row.original;
+              const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
               void updatedAt;
               await onEditOrder(
@@ -735,7 +637,7 @@ export function createOrdersColumns({
                   ...orderWithoutTimestamps,
                   miscFees: newValue,
                 },
-                [] as CascadeOptions
+                [] as CascadeOptions,
               );
             }}
             disabled={false}
@@ -754,11 +656,7 @@ export function createOrdersColumns({
       accessorKey: "status",
       id: "status",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Status"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Status" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
         const status = row.original.status;
@@ -767,8 +665,7 @@ export function createOrdersColumns({
             value={status}
             options={[...ORDER_STATUSES]}
             onSubmit={async (value) => {
-              const { createdAt, updatedAt, ...orderWithoutTimestamps } =
-                row.original;
+              const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
               void updatedAt;
               await onEditOrder(
@@ -776,7 +673,7 @@ export function createOrdersColumns({
                   ...orderWithoutTimestamps,
                   status: value as OrderStatus,
                 },
-                ["status"] as CascadeOptions
+                ["status"] as CascadeOptions,
               );
             }}
           />
@@ -840,4 +737,3 @@ export function createOrdersColumns({
     },
   ];
 }
-

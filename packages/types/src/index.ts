@@ -5,7 +5,7 @@ export type {
   Condition,
   Currency,
   Category,
-  DateFormat
+  DateFormat,
 } from "./enums";
 
 export type {
@@ -41,4 +41,3 @@ export type {
   UserItem,
   ScrapedItem,
 } from "./sync";
-

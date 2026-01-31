@@ -10,11 +10,7 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Scroller } from "./scroller";
 
 export type SortableColumn = {
@@ -28,10 +24,7 @@ interface SortComboboxProps {
     columnId: string;
     direction: "asc" | "desc";
   } | null;
-  onSortChange: (
-    columnId: string | null,
-    direction: "asc" | "desc" | null
-  ) => void;
+  onSortChange: (columnId: string | null, direction: "asc" | "desc" | null) => void;
   trigger?: ReactNode;
 }
 
@@ -41,7 +34,6 @@ export function SortCombobox({
   onSortChange,
   trigger,
 }: SortComboboxProps): React.ReactElement {
-
   const handleSort = (columnId: string | null): void => {
     if (columnId === null) {
       onSortChange(null, null);
@@ -79,20 +71,13 @@ export function SortCombobox({
   };
 
   const currentColumnName = currentSort
-    ? columns.find((col) => col.id === currentSort.columnId)?.label ||
-      currentSort.columnId
+    ? columns.find((col) => col.id === currentSort.columnId)?.label || currentSort.columnId
     : null;
 
   const defaultTrigger = (
-    <Button
-      variant="outline"
-      role="combobox"
-      className="justify-between"
-    >
+    <Button variant="outline" role="combobox" className="justify-between">
       {getSortButtonIcon()}
-      <span className="hidden md:block">
-        {currentColumnName ? currentColumnName : "Sort By"}
-      </span>
+      <span className="hidden md:block">{currentColumnName ? currentColumnName : "Sort By"}</span>
     </Button>
   );
 
@@ -138,4 +123,3 @@ export function SortCombobox({
     </Popover>
   );
 }
-

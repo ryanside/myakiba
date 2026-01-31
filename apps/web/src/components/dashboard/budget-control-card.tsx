@@ -23,8 +23,7 @@ export function BudgetControlCard({
 }: BudgetControlCardProps) {
   const hasBudget = limit !== undefined && limit > 0;
   const percentageUsed = hasBudget ? (currentSpent / limit) * 100 : 0;
-  const showWarning =
-    hasBudget && percentageUsed >= warningThreshold && percentageUsed < 100;
+  const showWarning = hasBudget && percentageUsed >= warningThreshold && percentageUsed < 100;
   const showOverflow = hasBudget && percentageUsed >= 100;
 
   return (
@@ -39,9 +38,7 @@ export function BudgetControlCard({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-3">
-          <p className="text-muted-foreground text-xs">
-            {period} transaction limit
-          </p>
+          <p className="text-muted-foreground text-xs">{period} transaction limit</p>
 
           <div className="space-y-1">
             {hasBudget ? (

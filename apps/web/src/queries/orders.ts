@@ -8,9 +8,7 @@ import type {
 } from "@/lib/orders/types";
 import type { OrderStatus } from "@myakiba/types";
 
-export async function getOrders(
-  filters: OrderFilters,
-): Promise<OrdersQueryResponse> {
+export async function getOrders(filters: OrderFilters): Promise<OrdersQueryResponse> {
   const queryParams = {
     limit: filters.limit ?? 10,
     offset: filters.offset ?? 0,
@@ -91,10 +89,7 @@ export async function splitOrders(
   return data;
 }
 
-export async function editOrder(
-  values: EditedOrder,
-  cascadeOptions: CascadeOptions,
-) {
+export async function editOrder(values: EditedOrder, cascadeOptions: CascadeOptions) {
   const { error } = await app.api.orders({ orderId: values.orderId }).put({
     order: values,
     cascadeOptions,
@@ -116,10 +111,7 @@ export async function deleteOrders(orderIds: Set<string>) {
 }
 
 export async function deleteOrderItem(orderId: string, collectionId: string) {
-  const { error } = await app.api
-    .orders({ orderId })
-    .items({ collectionId })
-    .delete();
+  const { error } = await app.api.orders({ orderId }).items({ collectionId }).delete();
 
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to delete order item"));
@@ -154,9 +146,7 @@ export async function getOrderIdsAndTitles(filters: { title?: string }) {
   });
 
   if (error) {
-    throw new Error(
-      getErrorMessage(error, "Failed to get order IDs and titles"),
-    );
+    throw new Error(getErrorMessage(error, "Failed to get order IDs and titles"));
   }
 
   return data;
@@ -192,10 +182,7 @@ export async function getOrder(orderId: string) {
   return data;
 }
 
-export async function updateOrderStatus(
-  orderId: string,
-  status: OrderStatus,
-): Promise<void> {
+export async function updateOrderStatus(orderId: string, status: OrderStatus): Promise<void> {
   const { error } = await app.api.orders({ orderId }).put({
     order: {
       status,

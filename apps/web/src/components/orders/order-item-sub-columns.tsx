@@ -63,7 +63,7 @@ export function createOrderItemSubColumns({
           <div
             className={cn(
               "hidden absolute top-0 bottom-0 start-0 w-[2px] bg-primary",
-              row.getIsSelected() && "block"
+              row.getIsSelected() && "block",
             )}
           ></div>
           <Checkbox
@@ -137,11 +137,7 @@ export function createOrderItemSubColumns({
     {
       accessorKey: "orderDate",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Order Date"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Order Date" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
         const item = row.original;
@@ -163,11 +159,7 @@ export function createOrderItemSubColumns({
     {
       accessorKey: "releaseDate",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Release"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Release" visibility={true} column={column} />
       ),
       cell: (info) => formatDate(info.getValue() as string, dateFormat),
       enableSorting: true,
@@ -199,11 +191,7 @@ export function createOrderItemSubColumns({
     {
       accessorKey: "status",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Status"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Status" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
         const item = row.original;

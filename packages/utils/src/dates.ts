@@ -6,9 +6,7 @@ import type { DateFormat } from "@myakiba/types";
  * so we need to convert them back for consistent handling.
  * Elysia needs to fix this in order for me to use stricter validation like z.iso.date().
  */
-export const dateToString = (
-  value: Date | string | null | undefined,
-): string | null => {
+export const dateToString = (value: Date | string | null | undefined): string | null => {
   if (!value) return null;
   if (value instanceof Date) {
     return value.toISOString().split("T")[0] ?? null;
@@ -109,8 +107,7 @@ const extractDateParts = (value: string | Date): DateParts | null => {
   return { year, month, day };
 };
 
-const isYearFirstFormat = (format: DateFormat): boolean =>
-  YEAR_FIRST_FORMATS.includes(format);
+const isYearFirstFormat = (format: DateFormat): boolean => YEAR_FIRST_FORMATS.includes(format);
 
 /**
  * Formats DateParts according to the user's preferred date format.
@@ -173,9 +170,7 @@ export function formatDate(
 
   const parts = extractDateParts(value);
   if (!parts) {
-    console.error(
-      `Invalid date format: expected ISO 8601, got "${String(value)}"`,
-    );
+    console.error(`Invalid date format: expected ISO 8601, got "${String(value)}"`);
     return "Invalid date";
   }
 
@@ -202,9 +197,7 @@ export function formatMonthYear(
 
   const parts = extractDateParts(value);
   if (!parts) {
-    console.error(
-      `Invalid date format: expected ISO 8601, got "${String(value)}"`,
-    );
+    console.error(`Invalid date format: expected ISO 8601, got "${String(value)}"`);
     return "Invalid date";
   }
 
@@ -242,9 +235,7 @@ export function formatTimestamp(
 
   const parts = extractDateParts(value);
   if (!parts) {
-    console.error(
-      `Invalid date format: expected ISO 8601, got "${String(value)}"`,
-    );
+    console.error(`Invalid date format: expected ISO 8601, got "${String(value)}"`);
     return "Invalid date";
   }
 
@@ -274,9 +265,7 @@ export function formatTimestamp(
  * @param value - ISO 8601 string, Date object, or null/undefined
  * @returns Date object at local midnight, or undefined if invalid
  */
-export function parseLocalDate(
-  value: string | Date | null | undefined,
-): Date | undefined {
+export function parseLocalDate(value: string | Date | null | undefined): Date | undefined {
   if (!value) return undefined;
 
   // Extract date parts (uses UTC for Date objects, string parsing for strings)

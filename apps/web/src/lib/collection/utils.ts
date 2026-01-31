@@ -11,7 +11,7 @@ export function filterAndSortCollectionItems(
     search?: string;
     sort?: string;
     order?: string;
-  }
+  },
 ): CollectionItem[] {
   let filteredItems = [...items];
 
@@ -19,7 +19,7 @@ export function filterAndSortCollectionItems(
   if (filters.search && filters.search.trim()) {
     const searchTerm = filters.search.toLowerCase();
     filteredItems = filteredItems.filter((item) =>
-      item.itemTitle.toLowerCase().includes(searchTerm)
+      item.itemTitle.toLowerCase().includes(searchTerm),
     );
   }
 
@@ -160,12 +160,12 @@ export function filterAndSortCollectionItems(
 export function createOptimisticDeleteUpdate(
   old: CollectionQueryResponse,
   collectionIds: Set<string>,
-  filters: CollectionFilters
+  filters: CollectionFilters,
 ) {
   if (!old) return old;
 
   const updatedItems = old.collection.collectionItems.filter(
-    (item: CollectionItem) => !collectionIds.has(item.id)
+    (item: CollectionItem) => !collectionIds.has(item.id),
   );
 
   const sortedItems = filterAndSortCollectionItems(updatedItems, {
@@ -187,15 +187,15 @@ export function createOptimisticDeleteUpdate(
 export function createOptimisticEditUpdate(
   old: CollectionQueryResponse,
   values: CollectionItemFormValues,
-  filters: CollectionFilters
+  filters: CollectionFilters,
 ) {
   const collectionItem = old.collection.collectionItems.find(
-    (item: CollectionItem) => item.id === values.id
+    (item: CollectionItem) => item.id === values.id,
   );
   if (!collectionItem) return old;
 
   const updatedItems = old.collection.collectionItems.map((item: CollectionItem) =>
-    item.id === values.id ? { ...item, ...values } : item
+    item.id === values.id ? { ...item, ...values } : item,
   );
 
   const sortedItems = filterAndSortCollectionItems(updatedItems, {

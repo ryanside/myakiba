@@ -5,9 +5,7 @@ import type {
   CollectionQueryResponse,
 } from "@/lib/collection/types";
 
-export async function getCollection(
-  filters: CollectionFilters,
-): Promise<CollectionQueryResponse> {
+export async function getCollection(filters: CollectionFilters): Promise<CollectionQueryResponse> {
   const queryParams = {
     limit: filters.limit ?? 10,
     offset: filters.offset ?? 0,
@@ -52,9 +50,7 @@ export async function getCollection(
 export async function deleteCollectionItems(ids: string[]) {
   const { error } = await app.api.collection.delete({ ids });
   if (error) {
-    throw new Error(
-      getErrorMessage(error, "Failed to delete collection items"),
-    );
+    throw new Error(getErrorMessage(error, "Failed to delete collection items"));
   }
 }
 

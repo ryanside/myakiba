@@ -21,9 +21,7 @@ export function WaitlistForm() {
       form.reset();
     },
     onError: (error: Error) => {
-      toast.error(
-        error.message || "Failed to join waitlist. Please try again."
-      );
+      toast.error(error.message || "Failed to join waitlist. Please try again.");
     },
   });
 
@@ -79,10 +77,7 @@ export function WaitlistForm() {
               className="h-12 px-5 rounded-full w-full sm:w-72 border-2 focus-visible:ring-offset-0"
             />
             {field.state.meta.errors.map((error) => (
-              <p
-                key={error?.message}
-                className="text-sm text-destructive mt-1 ml-3"
-              >
+              <p key={error?.message} className="text-sm text-destructive mt-1 ml-3">
                 {error?.message}
               </p>
             ))}
@@ -94,9 +89,7 @@ export function WaitlistForm() {
           <Button
             type="submit"
             variant="mono"
-            disabled={
-              !state.canSubmit || state.isSubmitting || mutation.isPending
-            }
+            disabled={!state.canSubmit || state.isSubmitting || mutation.isPending}
             className="h-12 px-6 rounded-full"
           >
             {state.isSubmitting || mutation.isPending ? (

@@ -6,9 +6,7 @@ import { tryCatch } from "@myakiba/utils";
 const entriesRouter = new Elysia({ prefix: "/entries" }).get(
   "/search",
   async ({ query }) => {
-    const { data: entries, error } = await tryCatch(
-      EntriesService.getEntries(query.search)
-    );
+    const { data: entries, error } = await tryCatch(EntriesService.getEntries(query.search));
 
     if (error) {
       console.error("Error fetching entries:", error);
@@ -17,7 +15,7 @@ const entriesRouter = new Elysia({ prefix: "/entries" }).get(
 
     return { entries };
   },
-  { query: z.object({ search: z.string() }) }
+  { query: z.object({ search: z.string() }) },
 );
 
 export default entriesRouter;

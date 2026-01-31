@@ -34,20 +34,14 @@ function GoogleIcon() {
   );
 }
 
-export default function SignInForm({
-  onSwitchToSignUp,
-}: {
-  onSwitchToSignUp: () => void;
-}) {
+export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () => void }) {
   const navigate = useNavigate();
 
   const handleGoogleAuth = async () => {
     await authClient.signIn.social(
       {
         provider: "google",
-        callbackURL: import.meta.env.PROD
-          ? "/dashboard"
-          : "http://localhost:3001/dashboard",
+        callbackURL: import.meta.env.PROD ? "/dashboard" : "http://localhost:3001/dashboard",
       },
       {
         onSuccess: () => {
@@ -58,7 +52,7 @@ export default function SignInForm({
         onError: (error) => {
           toast.error(error.error.message || error.error.statusText);
         },
-      }
+      },
     );
   };
 
@@ -86,13 +80,13 @@ export default function SignInForm({
           onError: (error) => {
             if (error.error.status === 403) {
               toast.error(
-                "Please verify your email address. Check your inbox for a verification email."
+                "Please verify your email address. Check your inbox for a verification email.",
               );
               return;
             }
             toast.error(error.error.message || error.error.statusText);
           },
-        }
+        },
       );
     },
     validators: {
@@ -124,20 +118,13 @@ export default function SignInForm({
         </div>
       </div>
       <div className="grid gap-4">
-        <Button
-          variant="outline"
-          type="button"
-          className="w-full"
-          onClick={handleGoogleAuth}
-        >
+        <Button variant="outline" type="button" className="w-full" onClick={handleGoogleAuth}>
           <GoogleIcon />
           Continue with Google
         </Button>
       </div>
       <div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
-        <span className="bg-background text-muted-foreground relative z-10 px-2">
-          Or
-        </span>
+        <span className="bg-background text-muted-foreground relative z-10 px-2">Or</span>
       </div>
       <form
         onSubmit={(e) => {
@@ -205,10 +192,7 @@ export default function SignInForm({
           <form.Field name="turnstileToken">
             {(field) => (
               <div className="space-y-2 ">
-                <Turnstile
-                  siteKey={env.VITE_TURNSTILE_SITE_KEY}
-                  onSuccess={field.handleChange}
-                />
+                <Turnstile siteKey={env.VITE_TURNSTILE_SITE_KEY} onSuccess={field.handleChange} />
               </div>
             )}
           </form.Field>
@@ -221,11 +205,7 @@ export default function SignInForm({
               className="w-full"
               disabled={!state.canSubmit || state.isSubmitting}
             >
-              {state.isSubmitting ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                "Login"
-              )}
+              {state.isSubmitting ? <Loader2 className="animate-spin" /> : "Login"}
             </Button>
           )}
         </form.Subscribe>

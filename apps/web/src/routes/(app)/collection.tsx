@@ -1,8 +1,4 @@
-import {
-  keepPreviousData,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useFilters } from "@/hooks/use-filters";
 import type {
@@ -17,20 +13,13 @@ import { CollectionDataGridSkeleton } from "@/components/collection/collection-d
 import { deleteCollectionItems } from "@/queries/collection";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import {
-  createOptimisticDeleteUpdate,
-  createOptimisticEditUpdate,
-} from "@/lib/collection/utils";
+import { createOptimisticDeleteUpdate, createOptimisticEditUpdate } from "@/lib/collection/utils";
 import { useCallback } from "react";
 import { KPICard } from "@/components/ui/kpi-card";
 import { formatCurrency } from "@myakiba/utils";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Grid, TableOfContents } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { DateFormat } from "@myakiba/types";
 
 export const Route = createFileRoute("/(app)/collection")({
@@ -60,7 +49,7 @@ function RouteComponent() {
     (filters: CollectionFilters) => {
       setFilters(filters);
     },
-    [setFilters]
+    [setFilters],
   );
 
   const { isPending, isError, data, error } = useQuery({
@@ -77,12 +66,9 @@ function RouteComponent() {
     onMutate: async ({ collectionIds }) => {
       await queryClient.cancelQueries({ queryKey: ["collection", filters] });
       const previousData = queryClient.getQueryData(["collection", filters]);
-      queryClient.setQueryData(
-        ["collection", filters],
-        (old: CollectionQueryResponse) => {
-          return createOptimisticDeleteUpdate(old, collectionIds, filters);
-        }
-      );
+      queryClient.setQueryData(["collection", filters], (old: CollectionQueryResponse) => {
+        return createOptimisticDeleteUpdate(old, collectionIds, filters);
+      });
       return { previousData };
     },
     onError: (error, _, context) => {
@@ -107,17 +93,13 @@ function RouteComponent() {
   });
 
   const editCollectionItemMutation = useMutation({
-    mutationFn: (values: CollectionItemFormValues) =>
-      updateCollectionItem(values),
+    mutationFn: (values: CollectionItemFormValues) => updateCollectionItem(values),
     onMutate: async (values) => {
       await queryClient.cancelQueries({ queryKey: ["collection", filters] });
       const previousData = queryClient.getQueryData(["collection", filters]);
-      queryClient.setQueryData(
-        ["collection", filters],
-        (old: CollectionQueryResponse) => {
-          return createOptimisticEditUpdate(old, values, filters);
-        }
-      );
+      queryClient.setQueryData(["collection", filters], (old: CollectionQueryResponse) => {
+        return createOptimisticEditUpdate(old, values, filters);
+      });
       return { previousData };
     },
     onError: (error, _, context) => {
@@ -145,14 +127,14 @@ function RouteComponent() {
     async (collectionIds: Set<string>) => {
       await deleteCollectionItemsMutation.mutateAsync({ collectionIds });
     },
-    [deleteCollectionItemsMutation]
+    [deleteCollectionItemsMutation],
   );
 
   const handleEditCollectionItem = useCallback(
     async (values: CollectionItemFormValues) => {
       await editCollectionItemMutation.mutateAsync(values);
     },
-    [editCollectionItemMutation]
+    [editCollectionItemMutation],
   );
 
   if (isError) {
@@ -167,9 +149,7 @@ function RouteComponent() {
           </p>
         </div>
         <div className="flex flex-col items-center justify-center h-64 gap-y-4">
-          <div className="text-lg font-medium text-destructive">
-            Error: {error.message}
-          </div>
+          <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
         </div>
       </div>
     );
@@ -198,9 +178,7 @@ function RouteComponent() {
           title="Total Spent"
           subtitle="based on total item prices"
           value={
-            collectionStats
-              ? formatCurrency(collectionStats.totalSpent, userCurrency)
-              : undefined
+            collectionStats ? formatCurrency(collectionStats.totalSpent, userCurrency) : undefined
           }
         />
         <KPICard
@@ -213,18 +191,12 @@ function RouteComponent() {
           subtitle="based on payment date"
           value={
             collectionStats
-              ? formatCurrency(
-                  collectionStats.totalSpentThisMonth,
-                  userCurrency
-                )
+              ? formatCurrency(collectionStats.totalSpentThisMonth, userCurrency)
               : undefined
           }
         />
       </div>
-      <Tabs
-        defaultValue="table"
-        className="w-[375px] text-sm text-muted-foreground"
-      >
+      <Tabs defaultValue="table" className="w-[375px] text-sm text-muted-foreground">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="table">
             <TableOfContents /> Table
@@ -259,9 +231,7 @@ function RouteComponent() {
           search={filters.search ?? ""}
           filters={filters}
           onFilterChange={handleFilterChange}
-          onSearchChange={(search) =>
-            handleFilterChange({ ...filters, search })
-          }
+          onSearchChange={(search) => handleFilterChange({ ...filters, search })}
           onResetFilters={resetFilters}
           onDeleteCollectionItems={handleDeleteCollectionItems}
           onEditCollectionItem={handleEditCollectionItem}

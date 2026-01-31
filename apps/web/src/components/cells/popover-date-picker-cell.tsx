@@ -1,9 +1,5 @@
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { parseLocalDate, formatDate } from "@myakiba/utils";
@@ -40,11 +36,7 @@ export function PopoverDatePickerCell({
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          data-empty={!dateValue}
-          className="text-foreground pl-0"
-        >
+        <Button variant="ghost" data-empty={!dateValue} className="text-foreground pl-0">
           {value ? formatDate(value, dateFormat) : "n/a"}
         </Button>
       </PopoverTrigger>
@@ -59,12 +51,7 @@ export function PopoverDatePickerCell({
               captionLayout="dropdown"
             />
             <div className="border-t p-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={handleClear}
-              >
+              <Button variant="outline" size="sm" className="w-full" onClick={handleClear}>
                 Clear
               </Button>
             </div>

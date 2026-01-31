@@ -16,7 +16,7 @@ export const REGEX_PATTERNS = {
 export const extractArrayData = (
   $element: cheerio.Cheerio<Element>,
   selector: string,
-  $: cheerio.CheerioAPI
+  $: cheerio.CheerioAPI,
 ): string[] => {
   const items: string[] = [];
   const elements = $element.find(selector);
@@ -29,7 +29,7 @@ export const extractArrayData = (
 
 export const extractArrayDataWithIds = (
   $element: cheerio.Cheerio<Element>,
-  $: cheerio.CheerioAPI
+  $: cheerio.CheerioAPI,
 ): Array<{ id: number; name: string }> => {
   const items: Array<{ id: number; name: string }> = [];
   const links = $element.find(".item-entry");
@@ -49,7 +49,7 @@ export const extractArrayDataWithIds = (
 
 export const extractEntitiesWithRoles = (
   $element: cheerio.Cheerio<Element>,
-  $: cheerio.CheerioAPI
+  $: cheerio.CheerioAPI,
 ): Array<{ id: number; name: string; role: string }> => {
   const entities: Array<{ id: number; name: string; role: string }> = [];
   const entries = $element.find(".item-entries");
@@ -95,10 +95,7 @@ export const extractEntitiesWithRoles = (
   return entities;
 };
 
-export const extractDimensions = (
-  dimensionText: string,
-  $element: cheerio.Cheerio<Element>
-) => {
+export const extractDimensions = (dimensionText: string, $element: cheerio.Cheerio<Element>) => {
   let scale = "";
   let height = 0;
   let width = 0;
@@ -121,10 +118,7 @@ export const extractDimensions = (
   return { scale, height, width, depth };
 };
 
-export const extractReleaseData = (
-  $element: cheerio.Cheerio<Element>,
-  $: cheerio.CheerioAPI
-) => {
+export const extractReleaseData = ($element: cheerio.Cheerio<Element>, $: cheerio.CheerioAPI) => {
   const releaseDate: Array<{
     date: string;
     type: string;
@@ -136,11 +130,8 @@ export const extractReleaseData = (
   const allReleaseFields = $element.add(
     $element.nextAll(".data-field").filter((_, field) => {
       const $field = $(field);
-      return (
-        $field.find(".data-label").length === 0 ||
-        $field.hasClass("item-extra-release")
-      );
-    })
+      return $field.find(".data-label").length === 0 || $field.hasClass("item-extra-release");
+    }),
   );
 
   for (let i = 0; i < allReleaseFields.length; i++) {
@@ -169,9 +160,7 @@ export const extractReleaseData = (
       }
 
       const priceMatch = valueText.match(REGEX_PATTERNS.price);
-      const price = priceMatch
-        ? parseFloat(priceMatch[1].replace(/,/g, ""))
-        : 0;
+      const price = priceMatch ? parseFloat(priceMatch[1].replace(/,/g, "")) : 0;
 
       const priceCurrencyMatch = valueText.match(REGEX_PATTERNS.priceCurrency);
       const priceCurrency = priceCurrencyMatch ? priceCurrencyMatch[2] : "JPY";
@@ -188,7 +177,7 @@ export const extractReleaseData = (
 
 export const extractMaterialsData = (
   $element: cheerio.Cheerio<Element>,
-  $: cheerio.CheerioAPI
+  $: cheerio.CheerioAPI,
 ): Array<{ id: number; name: string }> => {
   const materials: Array<{ id: number; name: string }> = [];
   const entries = $element.find(".item-entry");

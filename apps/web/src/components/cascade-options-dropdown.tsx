@@ -15,10 +15,7 @@ interface CascadeOptionsDropdownProps {
   cascadeOptionsList: readonly string[];
   handleSelectAll: () => void;
   handleSelectNone: () => void;
-  handleCascadeOptionChange: (
-    option: CascadeOptions[number],
-    checked: boolean
-  ) => void;
+  handleCascadeOptionChange: (option: CascadeOptions[number], checked: boolean) => void;
 }
 
 export function CascadeOptionsDropdown({
@@ -68,14 +65,9 @@ export function CascadeOptionsDropdown({
             onSelect={(e) => {
               e.preventDefault();
             }}
-            checked={cascadeOptions.includes(
-              option as CascadeOptions[number]
-            )}
+            checked={cascadeOptions.includes(option as CascadeOptions[number])}
             onCheckedChange={(checked) =>
-              handleCascadeOptionChange(
-                option as CascadeOptions[number],
-                checked
-              )
+              handleCascadeOptionChange(option as CascadeOptions[number], checked)
             }
           >
             {option}
@@ -85,4 +77,3 @@ export function CascadeOptionsDropdown({
     </DropdownMenu>
   );
 }
-

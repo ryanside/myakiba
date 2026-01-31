@@ -21,7 +21,7 @@ export async function finalizeCsvSync(
   job: jobData,
   userId: string,
   redis: Redis,
-  csvItems: CsvItem[]
+  csvItems: CsvItem[],
 ) {
   const items = successfulResults.map((item) => ({
     externalId: item.id,
@@ -61,7 +61,7 @@ export async function finalizeCsvSync(
     { releaseId: string | null; date: string | null }
   > = new Map();
   const successfulCollectionItems = csvItems.filter((i) =>
-    successfulResults.some((result) => result.id === i.itemExternalId)
+    successfulResults.some((result) => result.id === i.itemExternalId),
   );
   let collectionItems: Array<{
     userId: string;
@@ -198,7 +198,7 @@ export async function finalizeCsvSync(
       return {
         id: uuidv5(
           `${scraped.id}-${normalizedDate}-${release.type}-${release.price}-${release.priceCurrency}-${release.barcode}`,
-          "2c8ed313-3f54-4401-a280-2410ce639ef3"
+          "2c8ed313-3f54-4401-a280-2410ce639ef3",
         ),
         itemExternalId: scraped.id,
         date: normalizedDate,
@@ -210,9 +210,9 @@ export async function finalizeCsvSync(
     });
 
     if (releasesForItem.length > 0) {
-      const latest = [...releasesForItem].sort((a, b) =>
-        a.date.localeCompare(b.date)
-      )[releasesForItem.length - 1];
+      const latest = [...releasesForItem].sort((a, b) => a.date.localeCompare(b.date))[
+        releasesForItem.length - 1
+      ];
       latestReleaseIdByExternalId.set(scraped.id, {
         releaseId: latest.id,
         date: latest.date,
@@ -260,8 +260,7 @@ export async function finalizeCsvSync(
       shippingDate: ci.shipping_date,
       collectionDate: ci.collecting_date,
       shippingMethod: ci.shipping_method,
-      releaseMonthYear:
-        latestReleaseIdByExternalId.get(ci.itemExternalId)?.date ?? null,
+      releaseMonthYear: latestReleaseIdByExternalId.get(ci.itemExternalId)?.date ?? null,
     }));
 
   console.log("Items to be inserted:", items);
@@ -288,12 +287,10 @@ export async function finalizeCsvSync(
           ? await tx
               .select({ id: item.id, externalId: item.externalId })
               .from(item)
-              .where(
-                and(eq(item.source, "mfc"), inArray(item.externalId, itemExternalIds))
-              )
+              .where(and(eq(item.source, "mfc"), inArray(item.externalId, itemExternalIds)))
           : [];
       const externalIdToInternalId = new Map(
-        dbItems.map((dbItem) => [dbItem.externalId, dbItem.id])
+        dbItems.map((dbItem) => [dbItem.externalId, dbItem.id]),
       );
 
       if (entries.length > 0) {
@@ -311,15 +308,10 @@ export async function finalizeCsvSync(
           ? await tx
               .select({ id: entry.id, externalId: entry.externalId })
               .from(entry)
-              .where(
-                and(
-                  eq(entry.source, "mfc"),
-                  inArray(entry.externalId, entryExternalIds)
-                )
-              )
+              .where(and(eq(entry.source, "mfc"), inArray(entry.externalId, entryExternalIds)))
           : [];
       const externalIdToEntryId = new Map(
-        dbEntries.map((dbEntry) => [dbEntry.externalId, dbEntry.id])
+        dbEntries.map((dbEntry) => [dbEntry.externalId, dbEntry.id]),
       );
 
       const itemReleasesToInsert = itemReleases
@@ -340,7 +332,7 @@ export async function finalizeCsvSync(
         })
         .filter(
           (
-            release
+            release,
           ): release is {
             id: string;
             itemId: string;
@@ -349,7 +341,7 @@ export async function finalizeCsvSync(
             price: string;
             priceCurrency: string;
             barcode: string;
-          } => release !== null
+          } => release !== null,
         );
 
       if (itemReleasesToInsert.length > 0) {
@@ -374,12 +366,12 @@ export async function finalizeCsvSync(
         })
         .filter(
           (
-            link
+            link,
           ): link is {
             entryId: string;
             itemId: string;
             role: string;
-          } => link !== null
+          } => link !== null,
         );
 
       if (entryToItemsToInsert.length > 0) {
@@ -404,9 +396,7 @@ export async function finalizeCsvSync(
 
       const collectionItemsToInsert: Array<typeof collection.$inferInsert> =
         collectionItems.flatMap((collectionItem) => {
-          const internalItemId = externalIdToInternalId.get(
-            collectionItem.itemExternalId
-          );
+          const internalItemId = externalIdToInternalId.get(collectionItem.itemExternalId);
           if (!internalItemId) {
             return [];
           }
@@ -425,8 +415,7 @@ export async function finalizeCsvSync(
               shop: collectionItem.shop,
               shippingMethod: collectionItem.shippingMethod,
               notes: collectionItem.notes,
-              releaseId:
-                latestReleaseIdByInternalId.get(internalItemId)?.releaseId ?? null,
+              releaseId: latestReleaseIdByInternalId.get(internalItemId)?.releaseId ?? null,
               orderDate: collectionItem.orderDate,
             },
           ];
@@ -440,12 +429,7 @@ export async function finalizeCsvSync(
 
     console.log("Successfully inserted data to database.");
   } catch (error) {
-    await setJobStatus(
-      redis,
-      job.id!,
-      `Sync failed: Failed to insert items to database.`,
-      true
-    );
+    await setJobStatus(redis, job.id!, `Sync failed: Failed to insert items to database.`, true);
     console.error("Failed to insert data to database.", error);
     throw error;
   }
@@ -454,7 +438,7 @@ export async function finalizeCsvSync(
     redis,
     job.id!,
     `Sync completed: Synced ${successfulResults.length} out of ${csvItems.length} items`,
-    true
+    true,
   );
   return {
     status: "Sync Job completed",

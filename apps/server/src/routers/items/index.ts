@@ -11,9 +11,7 @@ const itemsRouter = new Elysia({ prefix: "/items" })
     async ({ body, user }) => {
       if (!user) return status(401, "Unauthorized");
 
-      const { data: customItem, error } = await tryCatch(
-        ItemService.createCustomItem(body)
-      );
+      const { data: customItem, error } = await tryCatch(ItemService.createCustomItem(body));
 
       if (error) {
         if (error.message === "ENTRY_NOT_FOUND") {
@@ -34,14 +32,12 @@ const itemsRouter = new Elysia({ prefix: "/items" })
 
       return customItem;
     },
-    { body: customItemSchema, auth: true }
+    { body: customItemSchema, auth: true },
   )
   .get(
     "/:itemId",
     async ({ params }) => {
-      const { data: item, error } = await tryCatch(
-        ItemService.getItem(params.itemId)
-      );
+      const { data: item, error } = await tryCatch(ItemService.getItem(params.itemId));
       if (error) {
         console.error("Error fetching item:", error, {
           itemId: params.itemId,
@@ -50,7 +46,7 @@ const itemsRouter = new Elysia({ prefix: "/items" })
       }
       return { item };
     },
-    { params: itemParamSchema }
+    { params: itemParamSchema },
   )
   .get(
     "/:itemId/orders",
@@ -58,14 +54,14 @@ const itemsRouter = new Elysia({ prefix: "/items" })
       if (!user) return status(401, "Unauthorized");
 
       const { data: orders, error } = await tryCatch(
-        ItemService.getItemRelatedOrders(user.id, params.itemId)
+        ItemService.getItemRelatedOrders(user.id, params.itemId),
       );
       if (error) {
         return status(500, "Failed to get item related orders");
       }
       return { orders };
     },
-    { params: itemParamSchema, auth: true }
+    { params: itemParamSchema, auth: true },
   )
   .get(
     "/:itemId/collection",
@@ -73,21 +69,19 @@ const itemsRouter = new Elysia({ prefix: "/items" })
       if (!user) return status(401, "Unauthorized");
 
       const { data: collection, error } = await tryCatch(
-        ItemService.getItemRelatedCollection(user.id, params.itemId)
+        ItemService.getItemRelatedCollection(user.id, params.itemId),
       );
       if (error) {
         return status(500, "Failed to get item related collections");
       }
       return { collection };
     },
-    { params: itemParamSchema, auth: true }
+    { params: itemParamSchema, auth: true },
   )
   .get(
     "/:itemId/releases",
     async ({ params }) => {
-      const { data: releases, error } = await tryCatch(
-        ItemService.getItemReleases(params.itemId)
-      );
+      const { data: releases, error } = await tryCatch(ItemService.getItemReleases(params.itemId));
 
       if (error) {
         if (error.message === "FAILED_TO_GET_ITEM_RELEASES") {
@@ -102,7 +96,7 @@ const itemsRouter = new Elysia({ prefix: "/items" })
 
       return releases;
     },
-    { params: itemParamSchema }
+    { params: itemParamSchema },
   );
 
 export default itemsRouter;

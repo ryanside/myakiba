@@ -29,18 +29,12 @@ const renderBytes = (bytes: number) => {
   return `${size.toFixed(2)}${units[unitIndex]}`;
 };
 
-const DropzoneContext = createContext<DropzoneContextType | undefined>(
-  undefined
-);
+const DropzoneContext = createContext<DropzoneContextType | undefined>(undefined);
 
 export type DropzoneProps = Omit<DropzoneOptions, "onDrop"> & {
   src?: File[];
   className?: string;
-  onDrop?: (
-    acceptedFiles: File[],
-    fileRejections: FileRejection[],
-    event: DropEvent
-  ) => void;
+  onDrop?: (acceptedFiles: File[], fileRejections: FileRejection[], event: DropEvent) => void;
   children?: ReactNode;
 };
 
@@ -85,7 +79,7 @@ export const Dropzone = ({
         className={cn(
           "relative h-auto w-full flex-col overflow-hidden p-8",
           isDragActive && "outline-none ring-1 ring-ring",
-          className
+          className,
         )}
         disabled={disabled}
         type="button"
@@ -116,10 +110,7 @@ export type DropzoneContentProps = {
 
 const maxLabelItems = 3;
 
-export const DropzoneContent = ({
-  children,
-  className,
-}: DropzoneContentProps) => {
+export const DropzoneContent = ({ children, className }: DropzoneContentProps) => {
   const { src } = useDropzoneContext();
 
   if (!src) {
@@ -138,7 +129,7 @@ export const DropzoneContent = ({
       <p className="my-2 w-full truncate font-medium text-sm">
         {src.length > maxLabelItems
           ? `${new Intl.ListFormat("en").format(
-              src.slice(0, maxLabelItems).map((file) => file.name)
+              src.slice(0, maxLabelItems).map((file) => file.name),
             )} and ${src.length - maxLabelItems} more`
           : new Intl.ListFormat("en").format(src.map((file) => file.name))}
       </p>
@@ -154,10 +145,7 @@ export type DropzoneEmptyStateProps = {
   className?: string;
 };
 
-export const DropzoneEmptyState = ({
-  children,
-  className,
-}: DropzoneEmptyStateProps) => {
+export const DropzoneEmptyState = ({ children, className }: DropzoneEmptyStateProps) => {
   const { src, accept, maxSize, minSize, maxFiles } = useDropzoneContext();
 
   if (src) {
@@ -194,9 +182,7 @@ export const DropzoneEmptyState = ({
       <p className="w-full truncate text-wrap text-muted-foreground text-xs">
         Drag and drop or click to upload
       </p>
-      {caption && (
-        <p className="text-wrap text-muted-foreground text-xs">{caption}.</p>
-      )}
+      {caption && <p className="text-wrap text-muted-foreground text-xs">{caption}.</p>}
     </div>
   );
 };

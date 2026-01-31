@@ -4,11 +4,7 @@ import { cn } from "@/lib/utils";
 import { parseLocalDate } from "@myakiba/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface DatePickerProps {
   id?: string;
@@ -54,7 +50,7 @@ export function DatePicker({
           onBlur={onBlur}
           className={cn(
             "data-[empty=true]:text-muted-foreground w-full justify-start text-left font-normal",
-            className
+            className,
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />

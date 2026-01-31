@@ -62,7 +62,7 @@ export function OrderItemSubDataGrid({
         currency,
         dateFormat,
       }),
-    [currency, dateFormat, onDeleteItem, onEditItem, orderId]
+    [currency, dateFormat, onDeleteItem, onEditItem, orderId],
   );
 
   const subTable = useReactTable({

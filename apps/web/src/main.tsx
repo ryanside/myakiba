@@ -40,6 +40,6 @@ if (!rootElement.innerHTML) {
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
       {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 }

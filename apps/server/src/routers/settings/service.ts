@@ -6,11 +6,7 @@ import type { BudgetUpsertType } from "./model";
 
 class SettingsService {
   async getBudget(userId: string) {
-    const [userBudget] = await db
-      .select()
-      .from(budget)
-      .where(eq(budget.userId, userId))
-      .limit(1);
+    const [userBudget] = await db.select().from(budget).where(eq(budget.userId, userId)).limit(1);
 
     return userBudget;
   }
@@ -45,10 +41,7 @@ class SettingsService {
   }
 
   async deleteBudget(userId: string) {
-    const deleted = await db
-      .delete(budget)
-      .where(eq(budget.userId, userId))
-      .returning();
+    const deleted = await db.delete(budget).where(eq(budget.userId, userId)).returning();
 
     return deleted;
   }

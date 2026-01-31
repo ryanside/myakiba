@@ -1,10 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Rating } from "../ui/rating";
 import * as Portal from "@radix-ui/react-portal";
 import { useState } from "react";
@@ -14,10 +10,7 @@ interface PopoverRatingCellProps {
   onSubmit: (newValue: string) => Promise<void>;
 }
 
-export function PopoverRatingCell({
-  value,
-  onSubmit,
-}: PopoverRatingCellProps) {
+export function PopoverRatingCell({ value, onSubmit }: PopoverRatingCellProps) {
   const [isOpen, setIsOpen] = useState(false);
   const handleSubmit = async (newValue: string) => {
     if (Number(newValue) === Number(value)) {

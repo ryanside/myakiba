@@ -39,9 +39,7 @@ function UnpaidOrders({
           />
         ))
       ) : (
-        <div className="text-center text-muted-foreground py-8 text-sm">
-          No unpaid orders
-        </div>
+        <div className="text-center text-muted-foreground py-8 text-sm">No unpaid orders</div>
       )}
     </div>
   );
@@ -124,9 +122,7 @@ function UnpaidOrderCard({
               ))}
               {remainingCount > 0 && (
                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                  <span className="text-xs font-medium text-white">
-                    +{remainingCount}
-                  </span>
+                  <span className="text-xs font-medium text-white">+{remainingCount}</span>
                 </div>
               )}
             </div>
@@ -160,4 +156,3 @@ function UnpaidOrderCard({
 }
 
 export { UnpaidOrders, type UnpaidOrder };
-

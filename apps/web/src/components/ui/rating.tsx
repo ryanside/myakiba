@@ -1,47 +1,47 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { cn } from '@/lib/utils';
-import { cva } from 'class-variance-authority';
-import type { VariantProps } from 'class-variance-authority';
-import { Star } from 'lucide-react';
+import * as React from "react";
+import { cn } from "@/lib/utils";
+import { cva } from "class-variance-authority";
+import type { VariantProps } from "class-variance-authority";
+import { Star } from "lucide-react";
 
-const ratingVariants = cva('flex items-center', {
+const ratingVariants = cva("flex items-center", {
   variants: {
     size: {
-      sm: 'gap-2',
-      md: 'gap-2.5',
-      lg: 'gap-3',
+      sm: "gap-2",
+      md: "gap-2.5",
+      lg: "gap-3",
     },
   },
   defaultVariants: {
-    size: 'md',
+    size: "md",
   },
 });
 
-const starVariants = cva('', {
+const starVariants = cva("", {
   variants: {
     size: {
-      sm: 'w-4 h-4',
-      md: 'w-5 h-5',
-      lg: 'w-6 h-6',
+      sm: "w-4 h-4",
+      md: "w-5 h-5",
+      lg: "w-6 h-6",
     },
   },
   defaultVariants: {
-    size: 'md',
+    size: "md",
   },
 });
 
-const valueVariants = cva('text-muted-foreground w-5', {
+const valueVariants = cva("text-muted-foreground w-5", {
   variants: {
     size: {
-      sm: 'text-xs',
-      md: 'text-sm',
-      lg: 'text-base',
+      sm: "text-xs",
+      md: "text-sm",
+      lg: "text-base",
     },
   },
   defaultVariants: {
-    size: 'md',
+    size: "md",
   },
 });
 
@@ -55,7 +55,7 @@ function Rating({
   editable = false,
   onRatingChange,
   ...props
-}: React.ComponentProps<'div'> &
+}: React.ComponentProps<"div"> &
   VariantProps<typeof ratingVariants> & {
     /**
      * Current rating value (supports decimal values for partial stars)
@@ -114,24 +114,27 @@ function Rating({
       stars.push(
         <div
           key={i}
-          className={cn('relative', editable && 'cursor-pointer')}
+          className={cn("relative", editable && "cursor-pointer")}
           onClick={() => handleStarClick(i)}
           onMouseEnter={() => handleStarMouseEnter(i)}
           onMouseLeave={handleStarMouseLeave}
         >
           {/* Background star (empty) */}
-          <Star data-slot="rating-star-empty" className={cn(starVariants({ size }), 'text-muted-foreground/30')} />
+          <Star
+            data-slot="rating-star-empty"
+            className={cn(starVariants({ size }), "text-muted-foreground/30")}
+          />
 
           {/* Filled star */}
           <div
             className="absolute inset-0 overflow-hidden"
             style={{
-              width: filled ? '100%' : `${fillPercentage}%`,
+              width: filled ? "100%" : `${fillPercentage}%`,
             }}
           >
             <Star
               data-slot="rating-star-filled"
-              className={cn(starVariants({ size }), 'text-yellow-400 fill-yellow-400')}
+              className={cn(starVariants({ size }), "text-yellow-400 fill-yellow-400")}
             />
           </div>
         </div>,

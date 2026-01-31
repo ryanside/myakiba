@@ -36,10 +36,7 @@ function RouteComponent() {
 
   return (
     <div className="bg-background flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
-      <EarlyAccessModal
-        open={!hasAccess}
-        onAccessGranted={() => setHasAccess(true)}
-      />
+      <EarlyAccessModal open={!hasAccess} onAccessGranted={() => setHasAccess(true)} />
 
       <div className="absolute top-4 left-4">
         <Link to="/">

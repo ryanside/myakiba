@@ -10,4 +10,3 @@ export {
 } from "./dates";
 export { formatCurrency, getCurrencyLocale } from "./currency";
 export { getCategoryColor } from "./categories";
-

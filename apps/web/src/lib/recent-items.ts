@@ -12,16 +12,14 @@ const MAX_RECENT_ITEMS = 8;
 export function addRecentItem(item: Omit<RecentItem, "timestamp">): void {
   const recent = getRecentItems();
 
-  const filtered = recent.filter(
-    (i) => !(i.id === item.id && i.type === item.type)
-  );
+  const filtered = recent.filter((i) => !(i.id === item.id && i.type === item.type));
 
   const images = (item.images || []).slice(0, 4);
 
-  const updated = [
-    { ...item, images, timestamp: Date.now() },
-    ...filtered,
-  ].slice(0, MAX_RECENT_ITEMS);
+  const updated = [{ ...item, images, timestamp: Date.now() }, ...filtered].slice(
+    0,
+    MAX_RECENT_ITEMS,
+  );
 
   localStorage.setItem(RECENT_ITEMS_KEY, JSON.stringify(updated));
 }

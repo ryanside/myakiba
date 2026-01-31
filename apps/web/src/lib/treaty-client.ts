@@ -9,9 +9,7 @@ import {
 
 type RequestBodyCandidate = RequestInit["body"] | EdenDateNormalizable | null;
 
-const isPlainObjectValue = (
-  value: RequestBodyCandidate,
-): value is EdenDateNormalizableObject => {
+const isPlainObjectValue = (value: RequestBodyCandidate): value is EdenDateNormalizableObject => {
   if (!value || typeof value !== "object") return false;
   if (Array.isArray(value)) return false;
   if (value instanceof Date) return false;
@@ -19,10 +17,7 @@ const isPlainObjectValue = (
 };
 
 const isJsonResponse = (response: Response): boolean => {
-  const contentType = response.headers
-    .get("Content-Type")
-    ?.split(";")[0]
-    ?.trim();
+  const contentType = response.headers.get("Content-Type")?.split(";")[0]?.trim();
   return contentType === "application/json";
 };
 

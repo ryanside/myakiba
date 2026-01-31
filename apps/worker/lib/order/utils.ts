@@ -1,8 +1,4 @@
-import type {
-  scrapedItem,
-  UpdatedSyncOrder,
-  UpdatedSyncOrderItem,
-} from "../types";
+import type { scrapedItem, UpdatedSyncOrder, UpdatedSyncOrderItem } from "../types";
 import Redis from "ioredis";
 import type { jobData } from "../types";
 import { normalizeDateString } from "../utils";
@@ -25,7 +21,7 @@ export async function finalizeOrderSync(
   redis: Redis,
   details: UpdatedSyncOrder,
   itemsToScrape: UpdatedSyncOrderItem[],
-  itemsToInsert: UpdatedSyncOrderItem[]
+  itemsToInsert: UpdatedSyncOrderItem[],
 ) {
   const items = successfulResults.map((item) => ({
     externalId: item.id,
@@ -64,7 +60,7 @@ export async function finalizeOrderSync(
     { releaseId: string | null; date: string | null }
   > = new Map();
   const successfulOrderItems = itemsToScrape.filter((item) =>
-    successfulResults.some((result) => result.id === item.itemExternalId)
+    successfulResults.some((result) => result.id === item.itemExternalId),
   );
 
   for (const scraped of successfulResults) {
@@ -171,7 +167,7 @@ export async function finalizeOrderSync(
       return {
         id: uuidv5(
           `${scraped.id}-${normalizedDate}-${release.type}-${release.price}-${release.priceCurrency}-${release.barcode}`,
-          "2c8ed313-3f54-4401-a280-2410ce639ef3"
+          "2c8ed313-3f54-4401-a280-2410ce639ef3",
         ),
         itemExternalId: scraped.id,
         date: normalizedDate,
@@ -183,9 +179,9 @@ export async function finalizeOrderSync(
     });
 
     if (releasesForItem.length > 0) {
-      const latest = [...releasesForItem].sort((a, b) =>
-        a.date.localeCompare(b.date)
-      )[releasesForItem.length - 1];
+      const latest = [...releasesForItem].sort((a, b) => a.date.localeCompare(b.date))[
+        releasesForItem.length - 1
+      ];
       latestReleaseIdByExternalId.set(scraped.id, {
         releaseId: latest.id,
         date: latest.date,
@@ -203,7 +199,7 @@ export async function finalizeOrderSync(
   // assign latest release id to successfulOrderItems
   // determine the latest release date from scraped items
   const latestReleaseDate = [...latestReleaseIdByExternalId.values()].sort(
-    (a, b) => a.date?.localeCompare(b.date ?? "") ?? 0
+    (a, b) => a.date?.localeCompare(b.date ?? "") ?? 0,
   )[latestReleaseIdByExternalId.size - 1]?.date;
 
   // compare current order.releaseMonthYear with latestReleaseDate
@@ -232,12 +228,10 @@ export async function finalizeOrderSync(
           ? await tx
               .select({ id: item.id, externalId: item.externalId })
               .from(item)
-              .where(
-                and(eq(item.source, "mfc"), inArray(item.externalId, itemExternalIds))
-              )
+              .where(and(eq(item.source, "mfc"), inArray(item.externalId, itemExternalIds)))
           : [];
       const externalIdToInternalId = new Map(
-        dbItems.map((dbItem) => [dbItem.externalId, dbItem.id])
+        dbItems.map((dbItem) => [dbItem.externalId, dbItem.id]),
       );
 
       if (entries.length > 0) {
@@ -255,15 +249,10 @@ export async function finalizeOrderSync(
           ? await tx
               .select({ id: entry.id, externalId: entry.externalId })
               .from(entry)
-              .where(
-                and(
-                  eq(entry.source, "mfc"),
-                  inArray(entry.externalId, entryExternalIds)
-                )
-              )
+              .where(and(eq(entry.source, "mfc"), inArray(entry.externalId, entryExternalIds)))
           : [];
       const externalIdToEntryId = new Map(
-        dbEntries.map((dbEntry) => [dbEntry.externalId, dbEntry.id])
+        dbEntries.map((dbEntry) => [dbEntry.externalId, dbEntry.id]),
       );
 
       const itemReleasesToInsert = itemReleases
@@ -284,7 +273,7 @@ export async function finalizeOrderSync(
         })
         .filter(
           (
-            release
+            release,
           ): release is {
             id: string;
             itemId: string;
@@ -293,7 +282,7 @@ export async function finalizeOrderSync(
             price: string;
             priceCurrency: string;
             barcode: string;
-          } => release !== null
+          } => release !== null,
         );
 
       if (itemReleasesToInsert.length > 0) {
@@ -318,12 +307,12 @@ export async function finalizeOrderSync(
         })
         .filter(
           (
-            link
+            link,
           ): link is {
             entryId: string;
             itemId: string;
             role: string;
-          } => link !== null
+          } => link !== null,
         );
 
       if (entryToItemsToInsert.length > 0) {
@@ -352,36 +341,25 @@ export async function finalizeOrderSync(
           return;
         }
         orderItem.itemId = internalItemId;
-        orderItem.releaseId =
-          latestReleaseIdByInternalId.get(internalItemId)?.releaseId ?? "";
+        orderItem.releaseId = latestReleaseIdByInternalId.get(internalItemId)?.releaseId ?? "";
       });
 
       const orderItems = [...itemsToInsert, ...successfulOrderItems]
         .filter(
-          (
-            orderItem
-          ): orderItem is UpdatedSyncOrderItem & { itemId: string } =>
-            orderItem.itemId !== null
+          (orderItem): orderItem is UpdatedSyncOrderItem & { itemId: string } =>
+            orderItem.itemId !== null,
         )
         .map((orderItem) => ({
           ...orderItem,
           itemId: orderItem.itemId,
-          releaseId:
-            orderItem.releaseId && orderItem.releaseId !== ""
-              ? orderItem.releaseId
-              : null,
+          releaseId: orderItem.releaseId && orderItem.releaseId !== "" ? orderItem.releaseId : null,
         }));
 
       await tx.insert(order).values(details);
       await tx.insert(collection).values(orderItems);
     });
   } catch (error) {
-    await setJobStatus(
-      redis,
-      job.id!,
-      `Sync failed: Failed to insert items to database.`,
-      true
-    );
+    await setJobStatus(redis, job.id!, `Sync failed: Failed to insert items to database.`, true);
     console.error("Failed to insert data to database.", error);
     throw error;
   }
@@ -390,7 +368,7 @@ export async function finalizeOrderSync(
     redis,
     job.id!,
     `Sync completed: Synced ${successfulOrderItems.length + itemsToInsert.length} out of ${itemsToInsert.length + itemsToScrape.length} items`,
-    true
+    true,
   );
   return {
     status: "Sync Job completed",

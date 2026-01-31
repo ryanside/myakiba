@@ -17,4 +17,3 @@ export type Currency = (typeof CURRENCIES)[number];
 export type Category = (typeof CATEGORIES)[number];
 export type EntryCategory = (typeof ENTRY_CATEGORIES)[number];
 export type DateFormat = (typeof DATE_FORMATS)[number];
-

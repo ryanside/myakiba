@@ -56,11 +56,7 @@ export function InlineCountCell({ value, onSubmit }: InlineCountCellProps) {
   }
 
   return (
-    <Button
-      onClick={() => setIsEditing(true)}
-      className="text-foreground pl-0"
-      variant="ghost"
-    >
+    <Button onClick={() => setIsEditing(true)} className="text-foreground pl-0" variant="ghost">
       {newValue}
     </Button>
   );

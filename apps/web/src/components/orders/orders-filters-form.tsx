@@ -78,10 +78,7 @@ export default function OrdersFiltersForm({
         shop: value.shop && value.shop.length > 0 ? value.shop : undefined,
         releaseMonthYearStart: value.releaseMonthYearStart || undefined,
         releaseMonthYearEnd: value.releaseMonthYearEnd || undefined,
-        shipMethod:
-          value.shipMethod && value.shipMethod.length > 0
-            ? value.shipMethod
-            : undefined,
+        shipMethod: value.shipMethod && value.shipMethod.length > 0 ? value.shipMethod : undefined,
         orderDateStart: value.orderDateStart || undefined,
         orderDateEnd: value.orderDateEnd || undefined,
         payDateStart: value.payDateStart || undefined,
@@ -90,8 +87,7 @@ export default function OrdersFiltersForm({
         shipDateEnd: value.shipDateEnd || undefined,
         colDateStart: value.colDateStart || undefined,
         colDateEnd: value.colDateEnd || undefined,
-        status:
-          value.status && value.status.length > 0 ? value.status : undefined,
+        status: value.status && value.status.length > 0 ? value.status : undefined,
         totalMin: value.totalMin || undefined,
         totalMax: value.totalMax || undefined,
         shippingFeeMin: value.shippingFeeMin || undefined,
@@ -110,10 +106,7 @@ export default function OrdersFiltersForm({
     },
   });
 
-  const getMultiSelectDisplay = (
-    items: string[] | undefined,
-    label: string
-  ): string => {
+  const getMultiSelectDisplay = (items: string[] | undefined, label: string): string => {
     if (!items || items.length === 0) return `Select ${label}`;
     if (items.length === 1) return items[0];
     return `${items.length} selected`;
@@ -132,9 +125,7 @@ export default function OrdersFiltersForm({
         >
           <DialogHeader>
             <DialogTitle>Filters</DialogTitle>
-            <DialogDescription>
-              Apply filters to narrow down your orders
-            </DialogDescription>
+            <DialogDescription>Apply filters to narrow down your orders</DialogDescription>
           </DialogHeader>
 
           <ScrollArea className="overflow-auto max-h-[70vh]">
@@ -147,11 +138,7 @@ export default function OrdersFiltersForm({
                     <FieldTitle>Status</FieldTitle>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="w-full justify-between"
-                          type="button"
-                        >
+                        <Button variant="outline" className="w-full justify-between" type="button">
                           {getMultiSelectDisplay(field.state.value, "status")}
                           <ChevronDown className="h-4 w-4" />
                         </Button>
@@ -187,15 +174,8 @@ export default function OrdersFiltersForm({
                     <FieldTitle>Shipping Method</FieldTitle>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="w-full justify-between"
-                          type="button"
-                        >
-                          {getMultiSelectDisplay(
-                            field.state.value,
-                            "shipping method"
-                          )}
+                        <Button variant="outline" className="w-full justify-between" type="button">
+                          {getMultiSelectDisplay(field.state.value, "shipping method")}
                           <ChevronDown className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -246,9 +226,7 @@ export default function OrdersFiltersForm({
                               size="icon"
                               onClick={() => {
                                 const current = field.state.value || [];
-                                field.handleChange(
-                                  current.filter((_, idx) => idx !== shopIndex)
-                                );
+                                field.handleChange(current.filter((_, idx) => idx !== shopIndex));
                               }}
                               className=" hover:text-red-500 hover:bg-transparent"
                             >

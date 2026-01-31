@@ -12,9 +12,7 @@ const settingsRouter = new Elysia({ prefix: "/settings" })
     async ({ user }) => {
       if (!user) return status(401, "Unauthorized");
 
-      const { data: budget, error } = await tryCatch(
-        SettingsService.getBudget(user.id)
-      );
+      const { data: budget, error } = await tryCatch(SettingsService.getBudget(user.id));
 
       if (error) {
         console.error("Error fetching budget:", error, {
@@ -26,16 +24,14 @@ const settingsRouter = new Elysia({ prefix: "/settings" })
 
       return { budget };
     },
-    { auth: true }
+    { auth: true },
   )
   .put(
     "/",
     async ({ body, user }) => {
       if (!user) return status(401, "Unauthorized");
 
-      const { data: budget, error } = await tryCatch(
-        SettingsService.upsertBudget(user.id, body)
-      );
+      const { data: budget, error } = await tryCatch(SettingsService.upsertBudget(user.id, body));
 
       if (error) {
         console.error("Error upserting budget:", error, {
@@ -47,7 +43,7 @@ const settingsRouter = new Elysia({ prefix: "/settings" })
 
       return { budget };
     },
-    { body: budgetUpsertSchema, auth: true }
+    { body: budgetUpsertSchema, auth: true },
   )
   .delete(
     "/",
@@ -66,7 +62,7 @@ const settingsRouter = new Elysia({ prefix: "/settings" })
 
       return "Budget deleted successfully";
     },
-    { auth: true }
+    { auth: true },
   )
   .get(
     "/account-type",
@@ -74,7 +70,7 @@ const settingsRouter = new Elysia({ prefix: "/settings" })
       if (!user) return status(401, "Unauthorized");
 
       const { data: hasCredential, error } = await tryCatch(
-        SettingsService.hasCredentialAccount(user.id)
+        SettingsService.hasCredentialAccount(user.id),
       );
 
       if (error) {
@@ -87,7 +83,7 @@ const settingsRouter = new Elysia({ prefix: "/settings" })
 
       return { hasCredentialAccount: hasCredential };
     },
-    { auth: true }
+    { auth: true },
   )
   .delete(
     "/account",
@@ -99,7 +95,7 @@ const settingsRouter = new Elysia({ prefix: "/settings" })
       }
 
       const { data: hasCredential, error: checkError } = await tryCatch(
-        SettingsService.hasCredentialAccount(user.id)
+        SettingsService.hasCredentialAccount(user.id),
       );
 
       if (checkError) {
@@ -110,15 +106,10 @@ const settingsRouter = new Elysia({ prefix: "/settings" })
       }
 
       if (hasCredential) {
-        return status(
-          400,
-          "This endpoint is only for OAuth users. Please use password deletion."
-        );
+        return status(400, "This endpoint is only for OAuth users. Please use password deletion.");
       }
 
-      const { error: deleteError } = await tryCatch(
-        SettingsService.deleteUser(user.id)
-      );
+      const { error: deleteError } = await tryCatch(SettingsService.deleteUser(user.id));
 
       if (deleteError) {
         console.error("Error deleting account:", deleteError, {
@@ -132,7 +123,7 @@ const settingsRouter = new Elysia({ prefix: "/settings" })
     {
       body: z.object({ confirmationPhrase: z.string() }),
       auth: true,
-    }
+    },
   );
 
 export default settingsRouter;

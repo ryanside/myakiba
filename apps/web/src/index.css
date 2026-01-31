@@ -78,17 +78,17 @@
   --category-model-kits: maroon;
   --category-trading: orange;
   --category-apparel: magenta;
-  --category-dishes: #e0b7a2;         /* lighter maroon */
-  --category-hanged-up: #ffd280;       /* lighter orange */
-  --category-linens: #b89fff;          /* lighter purple */
+  --category-dishes: #e0b7a2; /* lighter maroon */
+  --category-hanged-up: #ffd280; /* lighter orange */
+  --category-linens: #b89fff; /* lighter purple */
   --category-misc: #338979;
   --category-plushes: #00c8ff;
   --category-stationeries: black;
-  --category-on-walls: #90ee90;        /* lighter green */
+  --category-on-walls: #90ee90; /* lighter green */
   --category-books: #cccccc;
   --category-music: #3d9395;
-  --category-video: #0297D7;
-  --category-games: #EE2A84;
+  --category-video: #0297d7;
+  --category-games: #ee2a84;
 
   --scrollbar-track: #e9e5eb;
   --scrollbar-thumb: #d0cad1;
@@ -156,17 +156,17 @@
   --category-model-kits: maroon;
   --category-trading: orange;
   --category-apparel: magenta;
-  --category-dishes: #e0b7a2;         /* lighter maroon */
-  --category-hanged-up: #ffd280;       /* lighter orange */
-  --category-linens: #b89fff;          /* lighter purple */
+  --category-dishes: #e0b7a2; /* lighter maroon */
+  --category-hanged-up: #ffd280; /* lighter orange */
+  --category-linens: #b89fff; /* lighter purple */
   --category-misc: #338979;
   --category-plushes: #00c8ff;
   --category-stationeries: black;
-  --category-on-walls: #90ee90;        /* lighter green */
+  --category-on-walls: #90ee90; /* lighter green */
   --category-books: #cccccc;
   --category-music: #3d9395;
-  --category-video: #0297D7;
-  --category-games: #EE2A84;
+  --category-video: #0297d7;
+  --category-games: #ee2a84;
 
   --scrollbar-track: #121212;
   --scrollbar-thumb: #333333;
@@ -302,4 +302,3 @@ body {
 *::-webkit-scrollbar-corner {
   background: var(--scrollbar-track);
 }
-

@@ -52,11 +52,7 @@ function ReleaseCalendar({
   }
 
   const { isPending, isError, data, error } = useQuery({
-    queryKey: [
-      "releaseCalendar",
-      currentMonth.getMonth(),
-      currentMonth.getFullYear(),
-    ],
+    queryKey: ["releaseCalendar", currentMonth.getMonth(), currentMonth.getFullYear()],
     queryFn: getReleaseCalendar,
     staleTime: 1000 * 60 * 5,
     retry: false,
@@ -94,11 +90,7 @@ function ReleaseCalendar({
 
         <div className="text-sm font-light select-none flex items-center gap-2">
           {monthYearLabel}{" "}
-          {data && (
-            <Badge variant="outline">
-              {data.releaseCalendar.releases.length}
-            </Badge>
-          )}
+          {data && <Badge variant="outline">{data.releaseCalendar.releases.length}</Badge>}
         </div>
 
         <Button

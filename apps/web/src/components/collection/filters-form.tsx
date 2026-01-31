@@ -10,12 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { useForm } from "@tanstack/react-form";
 import { useState } from "react";
-import {
-  Field,
-  FieldContent,
-  FieldDescription,
-  FieldTitle,
-} from "@/components/ui/field";
+import { Field, FieldContent, FieldDescription, FieldTitle } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { MaskInput } from "@/components/ui/mask-input";
@@ -44,18 +39,9 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { getCurrencyLocale } from "@myakiba/utils";
-import {
-  SHIPPING_METHODS,
-  CONDITIONS,
-  CURRENCIES,
-  CATEGORIES,
-} from "@myakiba/constants";
+import { SHIPPING_METHODS, CONDITIONS, CURRENCIES, CATEGORIES } from "@myakiba/constants";
 
 interface FiltersFormProps {
   renderTrigger: React.ReactNode;
@@ -107,40 +93,25 @@ export default function FiltersForm({
         shipDateEnd: value.shipDateEnd || undefined,
         colDateStart: value.colDateStart || undefined,
         colDateEnd: value.colDateEnd || undefined,
-        shipMethod:
-          value.shipMethod && value.shipMethod.length > 0
-            ? value.shipMethod
-            : undefined,
+        shipMethod: value.shipMethod && value.shipMethod.length > 0 ? value.shipMethod : undefined,
         relDateStart: value.relDateStart || undefined,
         relDateEnd: value.relDateEnd || undefined,
         relPriceMin: value.relPriceMin || undefined,
         relPriceMax: value.relPriceMax || undefined,
         relCurrency:
-          value.relCurrency && value.relCurrency.length > 0
-            ? value.relCurrency
-            : undefined,
-        category:
-          value.category && value.category.length > 0
-            ? value.category
-            : undefined,
-        entries:
-          value.entries && value.entries.length > 0 ? value.entries : undefined,
+          value.relCurrency && value.relCurrency.length > 0 ? value.relCurrency : undefined,
+        category: value.category && value.category.length > 0 ? value.category : undefined,
+        entries: value.entries && value.entries.length > 0 ? value.entries : undefined,
         scale: value.scale && value.scale.length > 0 ? value.scale : undefined,
         tags: value.tags && value.tags.length > 0 ? value.tags : undefined,
-        condition:
-          value.condition && value.condition.length > 0
-            ? value.condition
-            : undefined,
+        condition: value.condition && value.condition.length > 0 ? value.condition : undefined,
       };
 
       onApplyFilters(filters);
     },
   });
 
-  const getMultiSelectDisplay = (
-    items: string[] | undefined,
-    label: string
-  ): string => {
+  const getMultiSelectDisplay = (items: string[] | undefined, label: string): string => {
     if (!items || items.length === 0) return `Select ${label}`;
     if (items.length === 1) return items[0];
     return `${items.length} selected`;
@@ -174,9 +145,7 @@ export default function FiltersForm({
         >
           <DialogHeader>
             <DialogTitle>Filters</DialogTitle>
-            <DialogDescription>
-              Apply filters to narrow down your collection
-            </DialogDescription>
+            <DialogDescription>Apply filters to narrow down your collection</DialogDescription>
           </DialogHeader>
 
           <ScrollArea className="overflow-auto max-h-[70vh]">
@@ -189,15 +158,8 @@ export default function FiltersForm({
                     <FieldTitle>Shipping Method</FieldTitle>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="w-full justify-between"
-                          type="button"
-                        >
-                          {getMultiSelectDisplay(
-                            field.state.value,
-                            "shipping method"
-                          )}
+                        <Button variant="outline" className="w-full justify-between" type="button">
+                          {getMultiSelectDisplay(field.state.value, "shipping method")}
                           <ChevronDown className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -234,15 +196,8 @@ export default function FiltersForm({
                     <FieldTitle>Condition</FieldTitle>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="w-full justify-between"
-                          type="button"
-                        >
-                          {getMultiSelectDisplay(
-                            field.state.value,
-                            "condition"
-                          )}
+                        <Button variant="outline" className="w-full justify-between" type="button">
+                          {getMultiSelectDisplay(field.state.value, "condition")}
                           <ChevronDown className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -277,11 +232,7 @@ export default function FiltersForm({
                     <FieldTitle>Category</FieldTitle>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="w-full justify-between"
-                          type="button"
-                        >
+                        <Button variant="outline" className="w-full justify-between" type="button">
                           {getMultiSelectDisplay(field.state.value, "category")}
                           <ChevronDown className="h-4 w-4" />
                         </Button>
@@ -354,9 +305,7 @@ export default function FiltersForm({
                 children={(field) => (
                   <Field className="gap-2">
                     <FieldTitle>Entries</FieldTitle>
-                    <FieldDescription>
-                      e.g., Companies, Characters, Artists
-                    </FieldDescription>
+                    <FieldDescription>e.g., Companies, Characters, Artists</FieldDescription>
                     <FieldContent>
                       <div className="flex flex-wrap gap-2">
                         {field.state.value?.map((entry, entryIndex) => (
@@ -373,9 +322,7 @@ export default function FiltersForm({
                               size="icon"
                               onClick={() => {
                                 const current = field.state.value || [];
-                                field.handleChange(
-                                  current.filter((_, idx) => idx !== entryIndex)
-                                );
+                                field.handleChange(current.filter((_, idx) => idx !== entryIndex));
                               }}
                               className=" hover:text-red-500 hover:bg-transparent"
                             >
@@ -400,9 +347,7 @@ export default function FiltersForm({
                             <Command>
                               <DebouncedInput
                                 value={filters}
-                                onChange={(value) =>
-                                  setFilters(value.toString())
-                                }
+                                onChange={(value) => setFilters(value.toString())}
                                 placeholder="Search entries..."
                                 debounce={200}
                                 className="rounded-none shadow-none border-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-background"
@@ -414,31 +359,21 @@ export default function FiltersForm({
                                       Error searching entries: {error.message}
                                     </CommandEmpty>
                                   )}
-                                  {entries.entries.length === 0 &&
-                                    !isPending &&
-                                    !isError && (
-                                      <CommandEmpty>
-                                        No entries found.
-                                      </CommandEmpty>
-                                    )}
+                                  {entries.entries.length === 0 && !isPending && !isError && (
+                                    <CommandEmpty>No entries found.</CommandEmpty>
+                                  )}
                                   <CommandGroup className="">
                                     {entries.entries.map((entry) => (
                                       <CommandItem
                                         key={entry.id}
                                         value={entry.id}
                                         onSelect={() => {
-                                          field.handleChange([
-                                            ...field.state.value,
-                                            entry.id,
-                                          ]);
+                                          field.handleChange([...field.state.value, entry.id]);
                                         }}
                                         onKeyDown={(e) => {
                                           if (e.key === "Enter") {
                                             e.preventDefault();
-                                            field.handleChange([
-                                              ...field.state.value,
-                                              entry.id,
-                                            ]);
+                                            field.handleChange([...field.state.value, entry.id]);
                                           }
                                         }}
                                       >
@@ -447,7 +382,7 @@ export default function FiltersForm({
                                             "mr-2 h-4 w-4",
                                             field.state.value.includes(entry.id)
                                               ? "opacity-100"
-                                              : "opacity-0"
+                                              : "opacity-0",
                                           )}
                                         />
                                         {entry.name}
@@ -488,9 +423,7 @@ export default function FiltersForm({
                               size="icon"
                               onClick={() => {
                                 const current = field.state.value || [];
-                                field.handleChange(
-                                  current.filter((_, idx) => idx !== shopIndex)
-                                );
+                                field.handleChange(current.filter((_, idx) => idx !== shopIndex));
                               }}
                               className=" hover:text-red-500 hover:bg-transparent"
                             >
@@ -529,9 +462,7 @@ export default function FiltersForm({
                 children={(field) => (
                   <Field className="gap-2">
                     <FieldTitle>Scale</FieldTitle>
-                    <FieldDescription>
-                      e.g., 1/8, 1/7, NON_SCALE
-                    </FieldDescription>
+                    <FieldDescription>e.g., 1/8, 1/7, NON_SCALE</FieldDescription>
                     <FieldContent>
                       <div className="flex flex-wrap gap-2">
                         {field.state.value?.map((scale, scaleIndex) => (
@@ -548,9 +479,7 @@ export default function FiltersForm({
                               size="icon"
                               onClick={() => {
                                 const current = field.state.value || [];
-                                field.handleChange(
-                                  current.filter((_, idx) => idx !== scaleIndex)
-                                );
+                                field.handleChange(current.filter((_, idx) => idx !== scaleIndex));
                               }}
                               className=" hover:text-red-500 hover:bg-transparent"
                             >
@@ -589,9 +518,7 @@ export default function FiltersForm({
                 children={(field) => (
                   <Field className="gap-2">
                     <FieldTitle>Tags</FieldTitle>
-                    <FieldDescription>
-                      e.g., favorite, limited-edition
-                    </FieldDescription>
+                    <FieldDescription>e.g., favorite, limited-edition</FieldDescription>
                     <FieldContent>
                       <div className="flex flex-wrap gap-2">
                         {field.state.value?.map((tag, tagIndex) => (
@@ -608,9 +535,7 @@ export default function FiltersForm({
                               size="icon"
                               onClick={() => {
                                 const current = field.state.value || [];
-                                field.handleChange(
-                                  current.filter((_, idx) => idx !== tagIndex)
-                                );
+                                field.handleChange(current.filter((_, idx) => idx !== tagIndex));
                               }}
                               className=" hover:text-red-500 hover:bg-transparent"
                             >
@@ -799,11 +724,7 @@ export default function FiltersForm({
                     <FieldTitle>Release Price Currency</FieldTitle>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="w-full justify-between"
-                          type="button"
-                        >
+                        <Button variant="outline" className="w-full justify-between" type="button">
                           {getMultiSelectDisplay(field.state.value, "currency")}
                           <ChevronDown className="h-4 w-4" />
                         </Button>

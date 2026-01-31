@@ -52,12 +52,7 @@ export type SyncFormOrder = {
 
 export type SyncOrder = Omit<
   SyncFormOrder,
-  | "items"
-  | "orderDate"
-  | "releaseMonthYear"
-  | "paymentDate"
-  | "shippingDate"
-  | "collectionDate"
+  "items" | "orderDate" | "releaseMonthYear" | "paymentDate" | "shippingDate" | "collectionDate"
 > & {
   items: SyncOrderItem[];
   orderDate: string | null;
@@ -85,12 +80,7 @@ export type SyncFormCollectionItem = {
 
 export type SyncCollectionItem = Omit<
   SyncFormCollectionItem,
-  | "itemExternalId"
-  | "orderDate"
-  | "paymentDate"
-  | "shippingDate"
-  | "collectionDate"
-  | "score"
+  "itemExternalId" | "orderDate" | "paymentDate" | "shippingDate" | "collectionDate" | "score"
 > & {
   itemExternalId: number;
   orderDate: string | null;
@@ -166,4 +156,3 @@ export type ScrapedItem = {
   depth: number;
   image: string;
 };
-

@@ -1,23 +1,7 @@
 import type { ShippingMethod } from "@myakiba/types";
 import { db } from "@myakiba/db";
-import {
-  order,
-  collection,
-  item,
-  item_release,
-} from "@myakiba/db/schema/figure";
-import {
-  eq,
-  and,
-  inArray,
-  sql,
-  desc,
-  asc,
-  ilike,
-  ne,
-  gte,
-  lte,
-} from "drizzle-orm";
+import { order, collection, item, item_release } from "@myakiba/db/schema/figure";
+import { eq, and, inArray, sql, desc, asc, ilike, ne, gte, lte } from "drizzle-orm";
 import type { orderInsertType, orderUpdateType } from "./model";
 import type { OrderStatus, Condition } from "@myakiba/types";
 
@@ -81,35 +65,23 @@ class OrdersService {
     tariffsMin?: string,
     tariffsMax?: string,
     miscFeesMin?: string,
-    miscFeesMax?: string
+    miscFeesMax?: string,
   ) {
     const whereConditions = and(
       eq(order.userId, userId),
       search ? ilike(order.title, `%${search}%`) : undefined,
       shop ? inArray(order.shop, shop) : undefined,
-      releaseMonthYearStart
-        ? gte(order.releaseMonthYear, releaseMonthYearStart)
-        : undefined,
-      releaseMonthYearEnd
-        ? lte(order.releaseMonthYear, releaseMonthYearEnd)
-        : undefined,
-      shippingMethod
-        ? inArray(order.shippingMethod, shippingMethod)
-        : undefined,
+      releaseMonthYearStart ? gte(order.releaseMonthYear, releaseMonthYearStart) : undefined,
+      releaseMonthYearEnd ? lte(order.releaseMonthYear, releaseMonthYearEnd) : undefined,
+      shippingMethod ? inArray(order.shippingMethod, shippingMethod) : undefined,
       orderDateStart ? gte(order.orderDate, orderDateStart) : undefined,
       orderDateEnd ? lte(order.orderDate, orderDateEnd) : undefined,
       paymentDateStart ? gte(order.paymentDate, paymentDateStart) : undefined,
       paymentDateEnd ? lte(order.paymentDate, paymentDateEnd) : undefined,
-      shippingDateStart
-        ? gte(order.shippingDate, shippingDateStart)
-        : undefined,
+      shippingDateStart ? gte(order.shippingDate, shippingDateStart) : undefined,
       shippingDateEnd ? lte(order.shippingDate, shippingDateEnd) : undefined,
-      collectionDateStart
-        ? gte(order.collectionDate, collectionDateStart)
-        : undefined,
-      collectionDateEnd
-        ? lte(order.collectionDate, collectionDateEnd)
-        : undefined,
+      collectionDateStart ? gte(order.collectionDate, collectionDateStart) : undefined,
+      collectionDateEnd ? lte(order.collectionDate, collectionDateEnd) : undefined,
       status ? inArray(order.status, status) : undefined,
       shippingFeeMin ? gte(order.shippingFee, shippingFeeMin) : undefined,
       shippingFeeMax ? lte(order.shippingFee, shippingFeeMax) : undefined,
@@ -120,7 +92,7 @@ class OrdersService {
       tariffsMin ? gte(order.tariffs, tariffsMin) : undefined,
       tariffsMax ? lte(order.tariffs, tariffsMax) : undefined,
       miscFeesMin ? gte(order.miscFees, miscFeesMin) : undefined,
-      miscFeesMax ? lte(order.miscFees, miscFeesMax) : undefined
+      miscFeesMax ? lte(order.miscFees, miscFeesMax) : undefined,
     );
 
     const sortByColumn = (() => {
@@ -246,7 +218,7 @@ class OrdersService {
         order.miscFees,
         order.notes,
         order.createdAt,
-        order.updatedAt
+        order.updatedAt,
       )
       .having(
         and(
@@ -255,12 +227,12 @@ class OrdersService {
             : undefined,
           totalMax
             ? sql`COALESCE(SUM(${collection.price}::numeric), 0) + COALESCE(${order.shippingFee}::numeric, 0) + COALESCE(${order.taxes}::numeric, 0) + COALESCE(${order.duties}::numeric, 0) + COALESCE(${order.tariffs}::numeric, 0) + COALESCE(${order.miscFees}::numeric, 0) <= ${totalMax}::numeric`
-            : undefined
-        )
+            : undefined,
+        ),
       )
       .orderBy(
         orderBy === "asc" ? asc(sortByColumn) : desc(sortByColumn),
-        orderBy === "asc" ? asc(order.createdAt) : desc(order.createdAt)
+        orderBy === "asc" ? asc(order.createdAt) : desc(order.createdAt),
       )
       .limit(limit)
       .offset(offset);
@@ -273,7 +245,7 @@ class OrdersService {
         status: order.status,
         total:
           sql<string>`COALESCE(SUM(${collection.price}::numeric), 0) + COALESCE(${order.shippingFee}::numeric, 0) + COALESCE(${order.taxes}::numeric, 0) + COALESCE(${order.duties}::numeric, 0) + COALESCE(${order.tariffs}::numeric, 0) + COALESCE(${order.miscFees}::numeric, 0)`.as(
-            "total"
+            "total",
           ),
       })
       .from(order)
@@ -376,7 +348,7 @@ class OrdersService {
     userId: string,
     orderIds: string[],
     newOrder: Omit<orderInsertType, "userId">,
-    cascadeOptions: string[]
+    cascadeOptions: string[],
   ) {
     const merged = await db.transaction(async (tx) => {
       const newOrderInserted = await tx
@@ -394,10 +366,7 @@ class OrdersService {
       const cascadeProperties =
         cascadeOptions.length > 0
           ? Object.fromEntries(
-              cascadeOptions.map((option) => [
-                option,
-                newOrder[option as keyof typeof newOrder],
-              ])
+              cascadeOptions.map((option) => [option, newOrder[option as keyof typeof newOrder]]),
             )
           : {};
 
@@ -407,12 +376,7 @@ class OrdersService {
           orderId: newOrderInserted[0].id,
           ...cascadeProperties,
         })
-        .where(
-          and(
-            eq(collection.userId, userId),
-            inArray(collection.orderId, orderIds)
-          )
-        )
+        .where(and(eq(collection.userId, userId), inArray(collection.orderId, orderIds)))
         .returning({ id: collection.id });
       if (!collectionUpdated || collectionUpdated.length === 0) {
         throw new Error("ORDER_ITEMS_NOT_FOUND");
@@ -436,7 +400,7 @@ class OrdersService {
     userId: string,
     collectionIds: string[],
     newOrder: Omit<orderInsertType, "userId">,
-    cascadeOptions: string[]
+    cascadeOptions: string[],
   ) {
     const splitted = await db.transaction(async (tx) => {
       const newOrderInserted = await tx
@@ -453,10 +417,7 @@ class OrdersService {
       const cascadeProperties =
         cascadeOptions.length > 0
           ? Object.fromEntries(
-              cascadeOptions.map((option) => [
-                option,
-                newOrder[option as keyof typeof newOrder],
-              ])
+              cascadeOptions.map((option) => [option, newOrder[option as keyof typeof newOrder]]),
             )
           : {};
 
@@ -466,12 +427,7 @@ class OrdersService {
           orderId: newOrderInserted[0].id,
           ...cascadeProperties,
         })
-        .where(
-          and(
-            eq(collection.userId, userId),
-            inArray(collection.id, collectionIds)
-          )
-        )
+        .where(and(eq(collection.userId, userId), inArray(collection.id, collectionIds)))
         .returning({ id: collection.id });
 
       if (!collectionUpdated || collectionUpdated.length === 0) {
@@ -488,7 +444,7 @@ class OrdersService {
     userId: string,
     orderId: string,
     updatedOrder: orderUpdateType,
-    cascadeOptions: string[]
+    cascadeOptions: string[],
   ) {
     const updated = await db.transaction(async (tx) => {
       const orderUpdated = await tx
@@ -505,7 +461,7 @@ class OrdersService {
           cascadeOptions.map((option) => [
             option,
             updatedOrder[option as keyof typeof updatedOrder],
-          ])
+          ]),
         );
 
         await tx
@@ -513,9 +469,7 @@ class OrdersService {
           .set({
             ...cascadeProperties,
           })
-          .where(
-            and(eq(collection.userId, userId), eq(collection.orderId, orderId))
-          );
+          .where(and(eq(collection.userId, userId), eq(collection.orderId, orderId)));
       }
 
       return {};
@@ -532,8 +486,8 @@ class OrdersService {
           and(
             eq(collection.userId, userId),
             inArray(collection.orderId, orderIds),
-            ne(collection.status, "Owned")
-          )
+            ne(collection.status, "Owned"),
+          ),
         );
 
       const deletedOrders = await tx
@@ -551,11 +505,7 @@ class OrdersService {
     return deleted;
   }
 
-  async deleteOrderItem(
-    userId: string,
-    _orderId: string,
-    collectionId: string
-  ) {
+  async deleteOrderItem(userId: string, _orderId: string, collectionId: string) {
     // TODO: Refactor data sent to the server to reduce this to a single query
     const updated = await db
       .update(collection)
@@ -564,8 +514,8 @@ class OrdersService {
         and(
           eq(collection.userId, userId),
           eq(collection.id, collectionId),
-          eq(collection.status, "Owned")
-        )
+          eq(collection.status, "Owned"),
+        ),
       )
       .returning();
 
@@ -575,8 +525,8 @@ class OrdersService {
         and(
           eq(collection.userId, userId),
           eq(collection.id, collectionId),
-          ne(collection.status, "Owned")
-        )
+          ne(collection.status, "Owned"),
+        ),
       )
       .returning();
 
@@ -596,8 +546,8 @@ class OrdersService {
         and(
           eq(collection.userId, userId),
           inArray(collection.id, collectionIds),
-          eq(collection.status, "Owned")
-        )
+          eq(collection.status, "Owned"),
+        ),
       )
       .returning();
 
@@ -607,8 +557,8 @@ class OrdersService {
         and(
           eq(collection.userId, userId),
           inArray(collection.id, collectionIds),
-          ne(collection.status, "Owned")
-        )
+          ne(collection.status, "Owned"),
+        ),
       )
       .returning();
 
@@ -623,12 +573,7 @@ class OrdersService {
     const orderIdsAndTitles = await db
       .select({ id: order.id, title: order.title })
       .from(order)
-      .where(
-        and(
-          eq(order.userId, userId),
-          title ? ilike(order.title, `%${title}%`) : undefined
-        )
-      )
+      .where(and(eq(order.userId, userId), title ? ilike(order.title, `%${title}%`) : undefined))
       .groupBy(order.id, order.title);
 
     if (!orderIdsAndTitles) {
@@ -642,7 +587,7 @@ class OrdersService {
     userId: string,
     targetOrderId: string,
     collectionIds: string[],
-    orderIds: string[]
+    orderIds: string[],
   ) {
     const moved = await db
       .update(collection)
@@ -651,8 +596,8 @@ class OrdersService {
         and(
           eq(collection.userId, userId),
           inArray(collection.id, collectionIds),
-          inArray(collection.orderId, orderIds)
-        )
+          inArray(collection.orderId, orderIds),
+        ),
       )
       .returning();
 

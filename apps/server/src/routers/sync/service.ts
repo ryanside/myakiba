@@ -1,10 +1,5 @@
 import { db } from "@myakiba/db";
-import {
-  item,
-  collection,
-  item_release,
-  order,
-} from "@myakiba/db/schema/figure";
+import { item, collection, item_release, order } from "@myakiba/db/schema/figure";
 import { and, inArray, eq, desc } from "drizzle-orm";
 import type {
   collectionInsertType,
@@ -45,9 +40,7 @@ class SyncService {
     return await db
       .select({ itemId: collection.itemId })
       .from(collection)
-      .where(
-        and(inArray(collection.itemId, itemIds), eq(collection.userId, userId)),
-      );
+      .where(and(inArray(collection.itemId, itemIds), eq(collection.userId, userId)));
   }
 
   async getExistingItemsByExternalIds(
@@ -60,14 +53,10 @@ class SyncService {
     const existingItems = await db
       .select({ id: item.id, externalId: item.externalId, title: item.title })
       .from(item)
-      .where(
-        and(eq(item.source, "mfc"), inArray(item.externalId, externalIds)),
-      );
+      .where(and(eq(item.source, "mfc"), inArray(item.externalId, externalIds)));
 
     return existingItems.filter(
-      (
-        existingItem,
-      ): existingItem is { id: string; externalId: number; title: string } =>
+      (existingItem): existingItem is { id: string; externalId: number; title: string } =>
         existingItem.externalId !== null,
     );
   }
@@ -96,11 +85,7 @@ class SyncService {
       })
       .from(item_release)
       .where(inArray(item_release.itemId, itemIds))
-      .orderBy(
-        item_release.itemId,
-        desc(item_release.date),
-        desc(item_release.createdAt),
-      );
+      .orderBy(item_release.itemId, desc(item_release.date), desc(item_release.createdAt));
 
     for (const row of releaseResult) {
       releases.set(row.itemId, row.releaseId);
@@ -137,52 +122,34 @@ class SyncService {
   async processItems(items: csvItem[], userId: string) {
     const itemExternalIds = items.map((item: csvItem) => item.itemExternalId);
 
-    const existingItems =
-      await this.getExistingItemsByExternalIds(itemExternalIds);
-    const existingItemIds = existingItems.map(
-      (existingItem) => existingItem.id,
-    );
+    const existingItems = await this.getExistingItemsByExternalIds(itemExternalIds);
+    const existingItemIds = existingItems.map((existingItem) => existingItem.id);
 
-    const idsInCollection = await this.getExistingItemIdsInCollection(
-      existingItemIds,
-      userId,
-    );
+    const idsInCollection = await this.getExistingItemIdsInCollection(existingItemIds, userId);
 
     const idsInCollectionSet = new Set(
       idsInCollection.map((collectionItem) => collectionItem.itemId),
     );
 
     const externalIdToInternalId = new Map(
-      existingItems.map((existingItem) => [
-        existingItem.externalId,
-        existingItem.id,
-      ]),
+      existingItems.map((existingItem) => [existingItem.externalId, existingItem.id]),
     );
 
     const itemsNeedingInsert = existingItems.filter(
       (existingItem) => !idsInCollectionSet.has(existingItem.id),
     );
 
-    const itemIdsNeedingInsert = itemsNeedingInsert.map(
-      (existingItem) => existingItem.id,
-    );
+    const itemIdsNeedingInsert = itemsNeedingInsert.map((existingItem) => existingItem.id);
 
-    const {
-      releases: existingItemsReleases,
-      releaseDates: existingItemsReleaseDates,
-    } = await this.getExistingItemsWithReleases(itemIdsNeedingInsert);
+    const { releases: existingItemsReleases, releaseDates: existingItemsReleaseDates } =
+      await this.getExistingItemsWithReleases(itemIdsNeedingInsert);
 
     const csvItemsToInsert = items.filter((item: csvItem) =>
-      itemsNeedingInsert.some(
-        (existingItem) => existingItem.externalId === item.itemExternalId,
-      ),
+      itemsNeedingInsert.some((existingItem) => existingItem.externalId === item.itemExternalId),
     );
 
     const idsToScrape = itemExternalIds.filter(
-      (externalId) =>
-        !existingItems.some(
-          (existingItem) => existingItem.externalId === externalId,
-        ),
+      (externalId) => !existingItems.some((existingItem) => existingItem.externalId === externalId),
     );
     const csvItemsToScrape = items.filter((item: csvItem) =>
       idsToScrape.includes(item.itemExternalId),
@@ -359,8 +326,7 @@ class SyncService {
     const setJobStatus = await redis.set(
       `job:${job.id}:status`,
       JSON.stringify({
-        status:
-          "Your collection sync job has been added to queue. Please wait...",
+        status: "Your collection sync job has been added to queue. Please wait...",
         finished: false,
         createdAt: new Date().toISOString(),
       }),

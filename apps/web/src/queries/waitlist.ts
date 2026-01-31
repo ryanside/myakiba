@@ -14,7 +14,7 @@ export async function joinWaitlist(data: {
 }
 
 export async function verifyEarlyAccess(
-  password: string
+  password: string,
 ): Promise<{ success: boolean; error?: string }> {
   const { data: responseData, error } = await app.api.waitlist["verify-access"].post({ password });
 

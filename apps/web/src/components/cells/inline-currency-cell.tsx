@@ -20,7 +20,7 @@ export function InlineCurrencyCell({
   const [isEditing, setIsEditing] = useState(false);
   const [newValue, setNewValue] = useState(value);
 
-  // temporary workaround to ensure no stale data when the prop changes 
+  // temporary workaround to ensure no stale data when the prop changes
   useEffect(() => {
     setNewValue(value);
   }, [value]);

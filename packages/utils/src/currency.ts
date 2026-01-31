@@ -5,7 +5,7 @@
  */
 export function formatCurrencyFromMinorUnits(
   valueMinorUnits: number,
-  currency: string = "USD"
+  currency: string = "USD",
 ): string {
   const locale = getCurrencyLocale(currency);
   const fractionDigits = getCurrencyFractionDigits(currency);
@@ -18,10 +18,7 @@ export function formatCurrencyFromMinorUnits(
   }).format(amountMajorUnits);
 }
 
-export function parseMoneyToMinorUnits(
-  input: string,
-  currency: string = "USD"
-): number {
+export function parseMoneyToMinorUnits(input: string, currency: string = "USD"): number {
   const trimmed = input.trim();
   if (trimmed.length === 0) return 0;
 
@@ -91,4 +88,3 @@ export function formatCurrency(valueMajorUnits: string | number, currency: strin
 
   return new Intl.NumberFormat(locale, { style: "currency", currency }).format(safeAmount);
 }
-

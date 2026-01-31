@@ -1,10 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  keepPreviousData,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import OrdersDataGrid from "@/components/orders/orders-data-grid";
 import { useFilters } from "@/hooks/use-filters";
 import type {
@@ -44,11 +39,7 @@ import { KPICard } from "@/components/ui/kpi-card";
 import { formatCurrency } from "@myakiba/utils";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Grid, TableOfContents } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { DateFormat } from "@myakiba/types";
 
 export const Route = createFileRoute("/(app)/orders")({
@@ -78,7 +69,7 @@ function RouteComponent() {
     (filters: OrderFilters) => {
       setFilters(filters);
     },
-    [setFilters]
+    [setFilters],
   );
 
   const { isPending, isError, data, error } = useQuery({
@@ -102,18 +93,9 @@ function RouteComponent() {
     onMutate: async ({ values, orderIds, cascadeOptions }) => {
       await queryClient.cancelQueries({ queryKey: ["orders", filters] });
       const previousData = queryClient.getQueryData(["orders", filters]);
-      queryClient.setQueryData(
-        ["orders", filters],
-        (old: OrdersQueryResponse) => {
-          return createOptimisticMergeUpdate(
-            old,
-            values,
-            orderIds,
-            filters,
-            cascadeOptions
-          );
-        }
-      );
+      queryClient.setQueryData(["orders", filters], (old: OrdersQueryResponse) => {
+        return createOptimisticMergeUpdate(old, values, orderIds, filters, cascadeOptions);
+      });
       // Return context for rollback
       return { previousData, orderIds };
     },
@@ -127,9 +109,7 @@ function RouteComponent() {
       });
     },
     onSuccess: (_, variables) => {
-      toast.success(
-        `Successfully merged ${variables.orderIds.size} orders into one!`
-      );
+      toast.success(`Successfully merged ${variables.orderIds.size} orders into one!`);
     },
     onSettled: async () => {
       await Promise.all([
@@ -158,19 +138,16 @@ function RouteComponent() {
     onMutate: async ({ values, orderIds, collectionIds, cascadeOptions }) => {
       await queryClient.cancelQueries({ queryKey: ["orders", filters] });
       const previousData = queryClient.getQueryData(["orders", filters]);
-      queryClient.setQueryData(
-        ["orders", filters],
-        (old: OrdersQueryResponse) => {
-          return createOptimisticSplitUpdate(
-            old,
-            values,
-            orderIds,
-            collectionIds,
-            filters,
-            cascadeOptions
-          );
-        }
-      );
+      queryClient.setQueryData(["orders", filters], (old: OrdersQueryResponse) => {
+        return createOptimisticSplitUpdate(
+          old,
+          values,
+          orderIds,
+          collectionIds,
+          filters,
+          cascadeOptions,
+        );
+      });
       return { previousData, orderIds, collectionIds };
     },
     onError: (error, _, context) => {
@@ -182,9 +159,7 @@ function RouteComponent() {
       });
     },
     onSuccess: (_, variables) => {
-      toast.success(
-        `Successfully moved ${variables.collectionIds.size} items to a new order!`
-      );
+      toast.success(`Successfully moved ${variables.collectionIds.size} items to a new order!`);
     },
     onSettled: async () => {
       await Promise.all([
@@ -209,17 +184,9 @@ function RouteComponent() {
     onMutate: async ({ values, cascadeOptions }) => {
       await queryClient.cancelQueries({ queryKey: ["orders", filters] });
       const previousData = queryClient.getQueryData(["orders", filters]);
-      queryClient.setQueryData(
-        ["orders", filters],
-        (old: OrdersQueryResponse) => {
-          return createOptimisticEditUpdate(
-            old,
-            values,
-            filters,
-            cascadeOptions
-          );
-        }
-      );
+      queryClient.setQueryData(["orders", filters], (old: OrdersQueryResponse) => {
+        return createOptimisticEditUpdate(old, values, filters, cascadeOptions);
+      });
       return { previousData };
     },
     onError: (error, _, context) => {
@@ -248,12 +215,9 @@ function RouteComponent() {
     onMutate: async (orderIds) => {
       await queryClient.cancelQueries({ queryKey: ["orders", filters] });
       const previousData = queryClient.getQueryData(["orders", filters]);
-      queryClient.setQueryData(
-        ["orders", filters],
-        (old: OrdersQueryResponse) => {
-          return createOptimisticDeleteUpdate(old, orderIds, filters);
-        }
-      );
+      queryClient.setQueryData(["orders", filters], (old: OrdersQueryResponse) => {
+        return createOptimisticDeleteUpdate(old, orderIds, filters);
+      });
       return { previousData };
     },
     onError: (error, _, context) => {
@@ -279,17 +243,13 @@ function RouteComponent() {
   });
 
   const editItemMutation = useMutation({
-    mutationFn: ({ values }: { values: CollectionItemFormValues }) =>
-      updateCollectionItem(values),
+    mutationFn: ({ values }: { values: CollectionItemFormValues }) => updateCollectionItem(values),
     onMutate: async ({ values }) => {
       await queryClient.cancelQueries({ queryKey: ["orders", filters] });
       const previousData = queryClient.getQueryData(["orders", filters]);
-      queryClient.setQueryData(
-        ["orders", filters],
-        (old: OrdersQueryResponse) => {
-          return createOptimisticEditItemUpdate(old, values, filters);
-        }
-      );
+      queryClient.setQueryData(["orders", filters], (old: OrdersQueryResponse) => {
+        return createOptimisticEditItemUpdate(old, values, filters);
+      });
 
       return { previousData };
     },
@@ -320,17 +280,9 @@ function RouteComponent() {
     onMutate: async ({ orderId, itemId }) => {
       await queryClient.cancelQueries({ queryKey: ["orders", filters] });
       const previousData = queryClient.getQueryData(["orders", filters]);
-      queryClient.setQueryData(
-        ["orders", filters],
-        (old: OrdersQueryResponse) => {
-          return createOptimisticDeleteItemUpdate(
-            old,
-            orderId,
-            itemId,
-            filters
-          );
-        }
-      );
+      queryClient.setQueryData(["orders", filters], (old: OrdersQueryResponse) => {
+        return createOptimisticDeleteItemUpdate(old, orderId, itemId, filters);
+      });
       return { previousData };
     },
     onError: (error, _, context) => {
@@ -359,12 +311,9 @@ function RouteComponent() {
     onMutate: async (collectionIds) => {
       await queryClient.cancelQueries({ queryKey: ["orders", filters] });
       const previousData = queryClient.getQueryData(["orders", filters]);
-      queryClient.setQueryData(
-        ["orders", filters],
-        (old: OrdersQueryResponse) => {
-          return createOptimisticDeleteItemsUpdate(old, collectionIds, filters);
-        }
-      );
+      queryClient.setQueryData(["orders", filters], (old: OrdersQueryResponse) => {
+        return createOptimisticDeleteItemsUpdate(old, collectionIds, filters);
+      });
       return { previousData };
     },
     onError: (error, _, context) => {
@@ -401,18 +350,9 @@ function RouteComponent() {
     onMutate: async ({ targetOrderId, collectionIds, orderIds }) => {
       await queryClient.cancelQueries({ queryKey: ["orders", filters] });
       const previousData = queryClient.getQueryData(["orders", filters]);
-      queryClient.setQueryData(
-        ["orders", filters],
-        (old: OrdersQueryResponse) => {
-          return createOptimisticMoveItemUpdate(
-            old,
-            targetOrderId,
-            collectionIds,
-            orderIds,
-            filters
-          );
-        }
-      );
+      queryClient.setQueryData(["orders", filters], (old: OrdersQueryResponse) => {
+        return createOptimisticMoveItemUpdate(old, targetOrderId, collectionIds, orderIds, filters);
+      });
       return { previousData };
     },
     onError: (error, _, context) => {
@@ -437,21 +377,17 @@ function RouteComponent() {
   });
 
   const handleMerge = useCallback(
-    async (
-      values: NewOrder,
-      cascadeOptions: CascadeOptions,
-      orderIds: Set<string>
-    ) => {
+    async (values: NewOrder, cascadeOptions: CascadeOptions, orderIds: Set<string>) => {
       mergeMutation.mutate({ values, orderIds, cascadeOptions });
     },
-    [mergeMutation]
+    [mergeMutation],
   );
   const handleSplit = useCallback(
     async (
       values: NewOrder,
       cascadeOptions: CascadeOptions,
       collectionIds: Set<string>,
-      orderIds: Set<string>
+      orderIds: Set<string>,
     ) => {
       splitMutation.mutate({
         values,
@@ -460,20 +396,20 @@ function RouteComponent() {
         cascadeOptions,
       });
     },
-    [splitMutation]
+    [splitMutation],
   );
   const handleEditOrder = useCallback(
     async (values: EditedOrder, cascadeOptions: CascadeOptions) => {
       editOrderMutation.mutate({ values, cascadeOptions });
     },
-    [editOrderMutation]
+    [editOrderMutation],
   );
 
   const handleDeleteOrders = useCallback(
     async (orderIds: Set<string>) => {
       deleteOrderMutation.mutate(orderIds);
     },
-    [deleteOrderMutation]
+    [deleteOrderMutation],
   );
 
   const handleEditItem = useCallback(
@@ -481,39 +417,35 @@ function RouteComponent() {
       // console.log(values.releaseId);
       editItemMutation.mutate({ values });
     },
-    [editItemMutation]
+    [editItemMutation],
   );
 
   const handleDeleteItem = useCallback(
     async (orderId: string, itemId: string) => {
       deleteItemMutation.mutate({ orderId, itemId });
     },
-    [deleteItemMutation]
+    [deleteItemMutation],
   );
 
   const handleDeleteItems = useCallback(
     async (collectionIds: Set<string>) => {
       deleteItemsMutation.mutate(collectionIds);
     },
-    [deleteItemsMutation]
+    [deleteItemsMutation],
   );
 
   const handleMoveItem = useCallback(
-    async (
-      targetOrderId: string,
-      collectionIds: Set<string>,
-      orderIds: Set<string>
-    ) => {
+    async (targetOrderId: string, collectionIds: Set<string>, orderIds: Set<string>) => {
       moveItemMutation.mutate({ targetOrderId, collectionIds, orderIds });
     },
-    [moveItemMutation]
+    [moveItemMutation],
   );
 
   const handleSearchChange = useCallback(
     (search: string) => {
       setFilters({ ...filters, search });
     },
-    [filters, setFilters]
+    [filters, setFilters],
   );
 
   const orders = data?.orders ?? [];
@@ -527,14 +459,10 @@ function RouteComponent() {
           <div className="flex flex-row items-start gap-4">
             <h1 className="text-2xl tracking-tight">Orders</h1>
           </div>
-          <p className="text-muted-foreground text-sm font-light">
-            Manage and track your orders
-          </p>
+          <p className="text-muted-foreground text-sm font-light">Manage and track your orders</p>
         </div>
         <div className="flex flex-col items-center justify-center h-64 gap-y-4">
-          <div className="text-lg font-medium text-destructive">
-            Error: {error.message}
-          </div>
+          <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
         </div>
       </div>
     );
@@ -546,24 +474,14 @@ function RouteComponent() {
         <div className="flex flex-row items-start gap-4">
           <h1 className="text-2xl tracking-tight">Orders</h1>
         </div>
-        <p className="text-muted-foreground text-sm font-light">
-          Manage and track your orders
-        </p>
+        <p className="text-muted-foreground text-sm font-light">Manage and track your orders</p>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        <KPICard
-          title="Total Orders"
-          subtitle="all time"
-          value={orderStats?.totalOrders}
-        />
+        <KPICard title="Total Orders" subtitle="all time" value={orderStats?.totalOrders} />
         <KPICard
           title="Total Spent"
           subtitle="all time, including all fees"
-          value={
-            orderStats
-              ? formatCurrency(orderStats.totalSpent, userCurrency)
-              : undefined
-          }
+          value={orderStats ? formatCurrency(orderStats.totalSpent, userCurrency) : undefined}
         />
         <KPICard
           title="Active Orders"
@@ -573,17 +491,10 @@ function RouteComponent() {
         <KPICard
           title="Unpaid Costs"
           subtitle="costs with status 'Ordered'"
-          value={
-            orderStats
-              ? formatCurrency(orderStats.unpaidCosts, userCurrency)
-              : undefined
-          }
+          value={orderStats ? formatCurrency(orderStats.unpaidCosts, userCurrency) : undefined}
         />
       </div>
-      <Tabs
-        defaultValue="table"
-        className="w-[375px] text-sm text-muted-foreground"
-      >
+      <Tabs defaultValue="table" className="w-[375px] text-sm text-muted-foreground">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="table">
             <TableOfContents /> Table

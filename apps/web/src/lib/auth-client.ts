@@ -1,8 +1,5 @@
 import { createAuthClient } from "better-auth/react";
-import {
-  usernameClient,
-  inferAdditionalFields,
-} from "better-auth/client/plugins";
+import { usernameClient, inferAdditionalFields } from "better-auth/client/plugins";
 import { env } from "@myakiba/env/web";
 
 export const authClient = createAuthClient({

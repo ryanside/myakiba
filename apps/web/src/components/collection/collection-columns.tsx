@@ -22,10 +22,7 @@ import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import { PopoverRatingCell } from "../cells/popover-rating-cell";
 import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
 import { InlineCountCell } from "../cells/inline-count-cell";
-import type {
-  CollectionItem,
-  CollectionItemFormValues,
-} from "@/lib/collection/types";
+import type { CollectionItem, CollectionItemFormValues } from "@/lib/collection/types";
 import type { DateFormat } from "@myakiba/types";
 
 interface CollectionColumnsParams {
@@ -50,9 +47,7 @@ export function createCollectionColumns({
             table.getIsAllPageRowsSelected() ||
             (table.getIsSomePageRowsSelected() && "indeterminate")
           }
-          onCheckedChange={(value) =>
-            table.toggleAllPageRowsSelected(!!value)
-          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
           size="sm"
           className="align-[inherit] mb-0.5 rounded-xs"
@@ -63,7 +58,7 @@ export function createCollectionColumns({
           <div
             className={cn(
               "hidden absolute top-0 bottom-0 start-0 w-[2px] bg-primary",
-              row.getIsSelected() && "block"
+              row.getIsSelected() && "block",
             )}
           ></div>
           <Checkbox
@@ -84,11 +79,7 @@ export function createCollectionColumns({
       accessorKey: "itemTitle",
       id: "itemTitle",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Item"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Item" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
         const item = row.original;
@@ -128,12 +119,8 @@ export function createCollectionColumns({
                 ) : (
                   <span className="text-xs text-muted-foreground">Custom</span>
                 )}
-                <p
-                  className="text-xs"
-                  style={{ color: getCategoryColor(item.itemCategory) }}
-                >
-                  <span className="text-muted-foreground">•</span>{" "}
-                  {item.itemCategory}
+                <p className="text-xs" style={{ color: getCategoryColor(item.itemCategory) }}>
+                  <span className="text-muted-foreground">•</span> {item.itemCategory}
                 </p>
               </div>
             </div>
@@ -149,11 +136,7 @@ export function createCollectionColumns({
       accessorKey: "itemScale",
       id: "itemScale",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Scale"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Scale" visibility={true} column={column} />
       ),
       cell: (info) => (info.getValue() as string | null) || "n/a",
       enableSorting: true,
@@ -165,11 +148,7 @@ export function createCollectionColumns({
       accessorKey: "count",
       id: "count",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Count"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Count" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
         const item = row.original;
@@ -194,11 +173,7 @@ export function createCollectionColumns({
       accessorKey: "score",
       id: "score",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Score"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Score" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
         const item = row.original;
@@ -223,11 +198,7 @@ export function createCollectionColumns({
       accessorKey: "shop",
       id: "shop",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Shop"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Shop" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
         const item = row.original;
@@ -260,11 +231,7 @@ export function createCollectionColumns({
       accessorFn: (row) => Number(row.price),
       id: "price",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Price"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Price" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
         const item = row.original;
@@ -292,11 +259,7 @@ export function createCollectionColumns({
       accessorKey: "orderDate",
       id: "orderDate",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Order Date"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Order Date" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
         const orderDate = row.original.orderDate;
@@ -325,11 +288,7 @@ export function createCollectionColumns({
       accessorKey: "paymentDate",
       id: "paymentDate",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Payment Date"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Payment Date" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
         const paymentDate = row.original.paymentDate;
@@ -358,11 +317,7 @@ export function createCollectionColumns({
       accessorKey: "shippingDate",
       id: "shippingDate",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Shipping Date"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Shipping Date" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
         const shippingDate = row.original.shippingDate;
@@ -391,11 +346,7 @@ export function createCollectionColumns({
       accessorKey: "collectionDate",
       id: "collectionDate",
       header: ({ column }) => (
-        <DataGridColumnHeader
-          title="Collected"
-          visibility={true}
-          column={column}
-        />
+        <DataGridColumnHeader title="Collected" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
         const collectionDate = row.original.collectionDate;
@@ -486,4 +437,3 @@ export function createCollectionColumns({
     },
   ];
 }
-

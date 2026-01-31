@@ -1,10 +1,5 @@
 import { db } from "@myakiba/db";
-import {
-  collection,
-  entry_to_item,
-  item,
-  item_release,
-} from "@myakiba/db/schema/figure";
+import { collection, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
 import {
   and,
   eq,
@@ -69,25 +64,13 @@ class CollectionService {
       shop ? inArray(collection.shop, shop) : undefined,
       paidMin ? gte(collection.price, paidMin) : undefined,
       paidMax ? lte(collection.price, paidMax) : undefined,
-      paymentDateStart
-        ? gte(collection.paymentDate, paymentDateStart)
-        : undefined,
+      paymentDateStart ? gte(collection.paymentDate, paymentDateStart) : undefined,
       paymentDateEnd ? lte(collection.paymentDate, paymentDateEnd) : undefined,
-      shippingDateStart
-        ? gte(collection.shippingDate, shippingDateStart)
-        : undefined,
-      shippingDateEnd
-        ? lte(collection.shippingDate, shippingDateEnd)
-        : undefined,
-      collectionDateStart
-        ? gte(collection.collectionDate, collectionDateStart)
-        : undefined,
-      collectionDateEnd
-        ? lte(collection.collectionDate, collectionDateEnd)
-        : undefined,
-      shippingMethod
-        ? inArray(collection.shippingMethod, shippingMethod)
-        : undefined,
+      shippingDateStart ? gte(collection.shippingDate, shippingDateStart) : undefined,
+      shippingDateEnd ? lte(collection.shippingDate, shippingDateEnd) : undefined,
+      collectionDateStart ? gte(collection.collectionDate, collectionDateStart) : undefined,
+      collectionDateEnd ? lte(collection.collectionDate, collectionDateEnd) : undefined,
+      shippingMethod ? inArray(collection.shippingMethod, shippingMethod) : undefined,
       category ? inArray(item.category, category) : undefined,
       scale ? inArray(item.scale, scale) : undefined,
       tags ? arrayContains(collection.tags, tags) : undefined,
@@ -140,11 +123,7 @@ class CollectionService {
       }
     })();
 
-    const currentMonth = new Date(
-      new Date().getFullYear(),
-      new Date().getMonth(),
-      1,
-    ).toISOString();
+    const currentMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
     const nextMonth = new Date(
       new Date().getFullYear(),
       new Date().getMonth() + 1,
@@ -153,9 +132,7 @@ class CollectionService {
 
     const collectionStats = await db
       .select({
-        totalItems: count(
-          sql`CASE WHEN ${collection.status} = 'Owned' THEN 1 END`,
-        ),
+        totalItems: count(sql`CASE WHEN ${collection.status} = 'Owned' THEN 1 END`),
         totalSpent: sql<string>`COALESCE(${sum(collection.price)}, 0)`,
         totalItemsThisMonth: sql<number>`COALESCE(${count(
           sql`CASE WHEN ${collection.status} = 'Owned' 
@@ -171,9 +148,7 @@ class CollectionService {
         )}, 0)`,
       })
       .from(collection)
-      .where(
-        and(eq(collection.userId, userId), eq(collection.status, "Owned")),
-      );
+      .where(and(eq(collection.userId, userId), eq(collection.status, "Owned")));
 
     const collectionItems = await db
       .select({
@@ -215,9 +190,7 @@ class CollectionService {
       .where(filters)
       .orderBy(
         orderBy === "asc" ? asc(sortByColumn) : desc(sortByColumn),
-        orderBy === "asc"
-          ? asc(collection.createdAt)
-          : desc(collection.createdAt),
+        orderBy === "asc" ? asc(collection.createdAt) : desc(collection.createdAt),
       )
       .limit(limit)
       .offset(offset);
@@ -258,9 +231,7 @@ class CollectionService {
       .from(collection)
       .innerJoin(item, eq(collection.itemId, item.id))
       .leftJoin(item_release, eq(collection.releaseId, item_release.id))
-      .where(
-        and(eq(collection.userId, userId), eq(collection.id, collectionId)),
-      );
+      .where(and(eq(collection.userId, userId), eq(collection.id, collectionId)));
 
     if (!collectionItem || collectionItem.length === 0) {
       throw new Error("COLLECTION_ITEM_NOT_FOUND");
@@ -280,9 +251,7 @@ class CollectionService {
         ...updateData,
         updatedAt: new Date(),
       })
-      .where(
-        and(eq(collection.userId, userId), eq(collection.id, collectionId)),
-      )
+      .where(and(eq(collection.userId, userId), eq(collection.id, collectionId)))
       .returning();
 
     if (!updated || updated.length === 0) {
@@ -295,9 +264,7 @@ class CollectionService {
   async deleteCollectionItem(userId: string, collectionId: string) {
     const deleted = await db
       .delete(collection)
-      .where(
-        and(eq(collection.userId, userId), eq(collection.id, collectionId)),
-      )
+      .where(and(eq(collection.userId, userId), eq(collection.id, collectionId)))
       .returning();
 
     if (!deleted || deleted.length === 0) {
@@ -310,12 +277,7 @@ class CollectionService {
   async deleteCollectionItems(userId: string, collectionIds: string[]) {
     const deleted = await db
       .delete(collection)
-      .where(
-        and(
-          eq(collection.userId, userId),
-          inArray(collection.id, collectionIds),
-        ),
-      )
+      .where(and(eq(collection.userId, userId), inArray(collection.id, collectionIds)))
       .returning();
 
     if (!deleted || deleted.length === 0) {

@@ -6,20 +6,14 @@ import { v5 as uuidv5 } from "uuid";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@myakiba/db";
 import { setJobStatus } from "../utils";
-import {
-  item,
-  item_release,
-  entry,
-  entry_to_item,
-  collection,
-} from "@myakiba/db/schema/figure";
+import { item, item_release, entry, entry_to_item, collection } from "@myakiba/db/schema/figure";
 
 export async function finalizeCollectionSync(
   successfulResults: scrapedItem[],
   job: jobData,
   redis: Redis,
   itemsToScrape: UpdatedSyncCollection[],
-  itemsToInsert: UpdatedSyncCollection[]
+  itemsToInsert: UpdatedSyncCollection[],
 ) {
   const items = successfulResults.map((item) => ({
     externalId: item.id,
@@ -58,7 +52,7 @@ export async function finalizeCollectionSync(
     { releaseId: string | null; date: string | null }
   > = new Map();
   const successfulCollectionItems = itemsToScrape.filter((item) =>
-    successfulResults.some((result) => result.id === item.itemExternalId)
+    successfulResults.some((result) => result.id === item.itemExternalId),
   );
 
   for (const scraped of successfulResults) {
@@ -165,7 +159,7 @@ export async function finalizeCollectionSync(
       return {
         id: uuidv5(
           `${scraped.id}-${normalizedDate}-${release.type}-${release.price}-${release.priceCurrency}-${release.barcode}`,
-          "2c8ed313-3f54-4401-a280-2410ce639ef3"
+          "2c8ed313-3f54-4401-a280-2410ce639ef3",
         ),
         itemExternalId: scraped.id,
         date: normalizedDate,
@@ -177,9 +171,9 @@ export async function finalizeCollectionSync(
     });
 
     if (releasesForItem.length > 0) {
-      const latest = [...releasesForItem].sort((a, b) =>
-        a.date.localeCompare(b.date)
-      )[releasesForItem.length - 1];
+      const latest = [...releasesForItem].sort((a, b) => a.date.localeCompare(b.date))[
+        releasesForItem.length - 1
+      ];
       latestReleaseIdByExternalId.set(scraped.id, {
         releaseId: latest.id,
         date: latest.date,
@@ -212,15 +206,10 @@ export async function finalizeCollectionSync(
           ? await tx
               .select({ id: item.id, externalId: item.externalId })
               .from(item)
-              .where(
-                and(
-                  eq(item.source, "mfc"),
-                  inArray(item.externalId, itemExternalIds)
-                )
-              )
+              .where(and(eq(item.source, "mfc"), inArray(item.externalId, itemExternalIds)))
           : [];
       const externalIdToInternalId = new Map(
-        dbItems.map((dbItem) => [dbItem.externalId, dbItem.id])
+        dbItems.map((dbItem) => [dbItem.externalId, dbItem.id]),
       );
 
       if (entries.length > 0) {
@@ -238,22 +227,15 @@ export async function finalizeCollectionSync(
           ? await tx
               .select({ id: entry.id, externalId: entry.externalId })
               .from(entry)
-              .where(
-                and(
-                  eq(entry.source, "mfc"),
-                  inArray(entry.externalId, entryExternalIds)
-                )
-              )
+              .where(and(eq(entry.source, "mfc"), inArray(entry.externalId, entryExternalIds)))
           : [];
       const externalIdToEntryId = new Map(
-        dbEntries.map((dbEntry) => [dbEntry.externalId, dbEntry.id])
+        dbEntries.map((dbEntry) => [dbEntry.externalId, dbEntry.id]),
       );
 
       const itemReleasesToInsert = itemReleases
         .map((release) => {
-          const internalItemId = externalIdToInternalId.get(
-            release.itemExternalId
-          );
+          const internalItemId = externalIdToInternalId.get(release.itemExternalId);
           if (!internalItemId) {
             return null;
           }
@@ -269,7 +251,7 @@ export async function finalizeCollectionSync(
         })
         .filter(
           (
-            release
+            release,
           ): release is {
             id: string;
             itemId: string;
@@ -278,7 +260,7 @@ export async function finalizeCollectionSync(
             price: string;
             priceCurrency: string;
             barcode: string;
-          } => release !== null
+          } => release !== null,
         );
 
       if (itemReleasesToInsert.length > 0) {
@@ -303,12 +285,12 @@ export async function finalizeCollectionSync(
         })
         .filter(
           (
-            link
+            link,
           ): link is {
             entryId: string;
             itemId: string;
             role: string;
-          } => link !== null
+          } => link !== null,
         );
 
       if (entryToItemsToInsert.length > 0) {
@@ -332,23 +314,18 @@ export async function finalizeCollectionSync(
       }
 
       successfulCollectionItems.forEach((collectionItem) => {
-        const internalItemId = externalIdToInternalId.get(
-          collectionItem.itemExternalId
-        );
+        const internalItemId = externalIdToInternalId.get(collectionItem.itemExternalId);
         if (!internalItemId) {
           return;
         }
         collectionItem.itemId = internalItemId;
-        collectionItem.releaseId =
-          latestReleaseIdByInternalId.get(internalItemId)?.releaseId ?? "";
+        collectionItem.releaseId = latestReleaseIdByInternalId.get(internalItemId)?.releaseId ?? "";
       });
 
       const collectionItems = [...itemsToInsert, ...successfulCollectionItems]
         .filter(
-          (
-            collectionItem
-          ): collectionItem is UpdatedSyncCollection & { itemId: string } =>
-            collectionItem.itemId !== null
+          (collectionItem): collectionItem is UpdatedSyncCollection & { itemId: string } =>
+            collectionItem.itemId !== null,
         )
         .map((collectionItem) => ({
           ...collectionItem,
@@ -362,12 +339,7 @@ export async function finalizeCollectionSync(
       await tx.insert(collection).values(collectionItems);
     });
   } catch (error) {
-    await setJobStatus(
-      redis,
-      job.id!,
-      `Sync failed: Failed to insert items to database.`,
-      true
-    );
+    await setJobStatus(redis, job.id!, `Sync failed: Failed to insert items to database.`, true);
     console.error("Failed to insert data to database.", error);
     throw error;
   }
@@ -378,7 +350,7 @@ export async function finalizeCollectionSync(
     `Sync completed: Synced ${
       successfulCollectionItems.length + itemsToInsert.length
     } out of ${itemsToInsert.length + itemsToScrape.length} items`,
-    true
+    true,
   );
   return {
     status: "Sync Job completed",

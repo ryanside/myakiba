@@ -98,4 +98,3 @@ export const collectionSearchSchema = z.object({
   tags: z.array(z.string()).optional(),
   condition: z.array(z.enum(CONDITIONS)).optional(),
 });
-

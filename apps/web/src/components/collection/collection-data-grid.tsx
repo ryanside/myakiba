@@ -67,7 +67,7 @@ export const CollectionDataGrid = ({
       pageIndex: Math.floor(serverPagination.offset / serverPagination.limit),
       pageSize: serverPagination.limit,
     }),
-    [serverPagination.offset, serverPagination.limit]
+    [serverPagination.offset, serverPagination.limit],
   );
 
   const sorting = useMemo<SortingState>(
@@ -77,7 +77,7 @@ export const CollectionDataGrid = ({
         desc: serverSorting.order === "desc",
       },
     ],
-    [serverSorting.sort, serverSorting.order]
+    [serverSorting.sort, serverSorting.order],
   );
 
   const {
@@ -116,12 +116,11 @@ export const CollectionDataGrid = ({
         currency,
         dateFormat,
       }),
-    [currency, dateFormat, onEditCollectionItem, onDeleteCollectionItems]
+    [currency, dateFormat, onEditCollectionItem, onDeleteCollectionItems],
   );
   const handlePaginationChange = useCallback(
     (updater: Updater<PaginationState>) => {
-      const newPagination =
-        typeof updater === "function" ? updater(pagination) : updater;
+      const newPagination = typeof updater === "function" ? updater(pagination) : updater;
 
       const newOffset = newPagination.pageIndex * newPagination.pageSize;
       onFilterChange({
@@ -129,13 +128,12 @@ export const CollectionDataGrid = ({
         offset: newOffset,
       });
     },
-    [pagination, onFilterChange]
+    [pagination, onFilterChange],
   );
 
   const handleSortingChange = useCallback(
     (updater: Updater<SortingState>) => {
-      const newSorting =
-        typeof updater === "function" ? updater(sorting) : updater;
+      const newSorting = typeof updater === "function" ? updater(sorting) : updater;
 
       if (newSorting.length > 0) {
         const sortConfig = newSorting[0];
@@ -157,7 +155,7 @@ export const CollectionDataGrid = ({
         });
       }
     },
-    [sorting, onFilterChange]
+    [sorting, onFilterChange],
   );
 
   const table = useReactTable({

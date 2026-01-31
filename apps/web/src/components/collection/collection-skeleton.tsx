@@ -46,10 +46,7 @@ export function CollectionSkeleton() {
 
             {/* Table rows */}
             {[...Array(7)].map((_, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-4 p-4 hover:bg-muted/50"
-              >
+              <div key={i} className="flex items-center gap-4 p-4 hover:bg-muted/50">
                 <Skeleton className="h-5 w-5 rounded-xs mr-6" />
                 <Skeleton className="h-10 w-10 rounded-md" />
                 <div className="flex-1 space-y-2">

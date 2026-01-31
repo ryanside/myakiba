@@ -26,8 +26,7 @@ const FAQ_ITEMS: readonly {
   },
   {
     id: "item-3",
-    question:
-      "Is myakiba safe to use since it scrapes data from MyFigureCollection?",
+    question: "Is myakiba safe to use since it scrapes data from MyFigureCollection?",
     answer:
       "Yes. MyFigureCollection's terms of service do not prohibit scraping. We also don't mass scrape MyFigureCollection, only scraping core item data from the user's provided MyFigureCollection item links. The scraper is heavily rate limited and throttled to prevent overloading MyFigureCollection, item data is cached so we don't need to scrape the same item data multiple times, and users are limited to syncing a few times per hour to prevent abuse.",
   },
@@ -50,9 +49,7 @@ export default function FAQs() {
       <div className="mx-auto max-w-7xl px-6">
         <div className="grid gap-8 md:grid-cols-5 md:gap-12">
           <div className="md:col-span-2">
-            <h2 className="text-black dark:text-white tracking-tight text-4xl font-medium">
-              FAQs
-            </h2>
+            <h2 className="text-black dark:text-white tracking-tight text-4xl font-medium">FAQs</h2>
             <p className="text-muted-foreground mt-4 text-balance text-lg">
               Your questions answered
             </p>

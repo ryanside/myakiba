@@ -120,7 +120,7 @@ myakiba is actively being developed with more features on the horizon:
 - **AWS S3** (required for the worker’s image/object uploads)
 - **HTTP proxy** (optional, used by the worker for scraping)
 
-### Run locally 
+### Run locally
 
 1. Clone the repository:
 

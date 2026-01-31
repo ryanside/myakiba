@@ -1,10 +1,4 @@
-import {
-  ChartNoAxesCombined,
-  ChartNoAxesGantt,
-  DollarSign,
-  Home,
-  Package,
-} from "lucide-react";
+import { ChartNoAxesCombined, ChartNoAxesGantt, DollarSign, Home, Package } from "lucide-react";
 
 import { NavMain } from "@/components/sidebar/nav-main";
 import { NavManagement } from "@/components/sidebar/nav-management";
@@ -96,7 +90,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar variant="inset" collapsible="icon" {...props}>
-      <SidebarRail className="hover:after:bg-transparent"/>
+      <SidebarRail className="hover:after:bg-transparent" />
       <SidebarHeader className="pb-0">
         <SidebarMenu>
           <SidebarMenuItem>

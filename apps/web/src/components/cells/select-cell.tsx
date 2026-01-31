@@ -1,11 +1,5 @@
 import { Badge } from "../ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { getStatusVariant } from "@/lib/orders/utils";
 
 interface SelectCellProps {
@@ -15,12 +9,8 @@ interface SelectCellProps {
 }
 
 export function SelectCell({ value, options, onSubmit }: SelectCellProps) {
-
   return (
-    <Select
-      value={value}
-      onValueChange={(value) => onSubmit(value as string)}
-    >
+    <Select value={value} onValueChange={(value) => onSubmit(value as string)}>
       <Badge asChild variant={getStatusVariant(value)} appearance="outline" className="py-4">
         <SelectTrigger className="!justify-between">
           <SelectValue />

@@ -91,16 +91,13 @@ async function getUserId(headers: Headers): Promise<string | null> {
   return session?.user.id ?? null;
 }
 
-async function checkRateLimit(
-  key: string,
-  config: RateLimitConfig
-): Promise<RateLimitResult> {
+async function checkRateLimit(key: string, config: RateLimitConfig): Promise<RateLimitResult> {
   const [current, ttl] = (await redis.eval(
     RATE_LIMIT_SCRIPT,
     1,
     key,
     config.maxRequests,
-    config.windowSeconds
+    config.windowSeconds,
   )) as [number, number];
 
   return {
@@ -137,10 +134,7 @@ export const rateLimit = new Elysia({ name: "rate-limit" }).macro({
 
       if (result.limited) {
         set.headers["Retry-After"] = String(result.ttl);
-        return status(
-          429,
-          `Rate limit exceeded, try again in ${result.ttl} seconds`
-        );
+        return status(429, `Rate limit exceeded, try again in ${result.ttl} seconds`);
       }
     },
   }),

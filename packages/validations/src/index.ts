@@ -13,4 +13,3 @@ export {
   type UpdatedSyncCollection,
   type JobData,
 } from "./sync";
-

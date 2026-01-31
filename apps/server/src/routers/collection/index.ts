@@ -44,8 +44,8 @@ const collectionRouter = new Elysia({ prefix: "/collection" })
           query.scale,
           query.tags,
           query.condition,
-          query.search
-        )
+          query.search,
+        ),
       );
 
       if (error) {
@@ -60,12 +60,11 @@ const collectionRouter = new Elysia({ prefix: "/collection" })
         return status(500, "Failed to get collection table");
       }
 
-      const serializedItems: readonly CollectionItem[] =
-        collection.collectionItems.map((item) => ({
-          ...item,
-          createdAt: item.createdAt.toISOString(),
-          updatedAt: item.updatedAt.toISOString(),
-        }));
+      const serializedItems: readonly CollectionItem[] = collection.collectionItems.map((item) => ({
+        ...item,
+        createdAt: item.createdAt.toISOString(),
+        updatedAt: item.updatedAt.toISOString(),
+      }));
 
       const response: CollectionQueryResponse = {
         collection: {
@@ -76,7 +75,7 @@ const collectionRouter = new Elysia({ prefix: "/collection" })
 
       return response;
     },
-    { query: collectionQuerySchema, auth: true }
+    { query: collectionQuerySchema, auth: true },
   )
   .get(
     "/:id",
@@ -84,7 +83,7 @@ const collectionRouter = new Elysia({ prefix: "/collection" })
       if (!user) return status(401, "Unauthorized");
 
       const { data: collectionItem, error } = await tryCatch(
-        CollectionService.getCollectionItem(user.id, params.id)
+        CollectionService.getCollectionItem(user.id, params.id),
       );
 
       if (error) {
@@ -108,7 +107,7 @@ const collectionRouter = new Elysia({ prefix: "/collection" })
         },
       };
     },
-    { params: collectionParamSchema, auth: true }
+    { params: collectionParamSchema, auth: true },
   )
   .put(
     "/:id",
@@ -116,7 +115,7 @@ const collectionRouter = new Elysia({ prefix: "/collection" })
       if (!user) return status(401, "Unauthorized");
 
       const { data: update, error } = await tryCatch(
-        CollectionService.updateCollectionItem(user.id, params.id, body)
+        CollectionService.updateCollectionItem(user.id, params.id, body),
       );
 
       if (error) {
@@ -135,7 +134,7 @@ const collectionRouter = new Elysia({ prefix: "/collection" })
 
       return { update };
     },
-    { body: collectionUpdateSchema, params: collectionParamSchema, auth: true }
+    { body: collectionUpdateSchema, params: collectionParamSchema, auth: true },
   )
   .delete(
     "/:id",
@@ -143,7 +142,7 @@ const collectionRouter = new Elysia({ prefix: "/collection" })
       if (!user) return status(401, "Unauthorized");
 
       const { data: deleted, error } = await tryCatch(
-        CollectionService.deleteCollectionItem(user.id, params.id)
+        CollectionService.deleteCollectionItem(user.id, params.id),
       );
 
       if (error) {
@@ -161,16 +160,14 @@ const collectionRouter = new Elysia({ prefix: "/collection" })
 
       return { deleted };
     },
-    { params: collectionParamSchema, auth: true }
+    { params: collectionParamSchema, auth: true },
   )
   .delete(
     "/",
     async ({ body, user }) => {
       if (!user) return status(401, "Unauthorized");
 
-      const { error } = await tryCatch(
-        CollectionService.deleteCollectionItems(user.id, body.ids)
-      );
+      const { error } = await tryCatch(CollectionService.deleteCollectionItems(user.id, body.ids));
 
       if (error) {
         if (error.message === "COLLECTION_ITEMS_NOT_FOUND") {
@@ -187,7 +184,7 @@ const collectionRouter = new Elysia({ prefix: "/collection" })
 
       return "Collection item(s) deleted successfully";
     },
-    { body: collectionDeleteSchema, auth: true }
+    { body: collectionDeleteSchema, auth: true },
   );
 
 export default collectionRouter;

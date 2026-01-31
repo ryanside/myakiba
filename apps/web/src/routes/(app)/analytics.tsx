@@ -50,9 +50,7 @@ function RouteComponent(): React.ReactNode {
   if (isError) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-y-4">
-        <div className="text-lg font-medium text-destructive">
-          Error: {error.message}
-        </div>
+        <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
       </div>
     );
   }
@@ -160,8 +158,20 @@ function RouteComponent(): React.ReactNode {
 
   const rankingColumns = [
     { key: "rank", label: "Rank", align: "center" as const, type: "number" as const },
-    { key: "name", label: "Name", align: "left" as const, type: "string" as const, cellClassName: "text-foreground" },
-    { key: "count", label: "Count", align: "left" as const, type: "number" as const, cellText: "items" },
+    {
+      key: "name",
+      label: "Name",
+      align: "left" as const,
+      type: "string" as const,
+      cellClassName: "text-foreground",
+    },
+    {
+      key: "count",
+      label: "Count",
+      align: "left" as const,
+      type: "number" as const,
+      cellText: "items",
+    },
     { key: "value", label: "Spent", align: "left" as const, type: "currency" as const },
   ];
 
@@ -207,7 +217,11 @@ function RouteComponent(): React.ReactNode {
     };
   };
 
-  const getPriceRangeNavigation = (item: { label: string; count: number; value?: string | number }) => {
+  const getPriceRangeNavigation = (item: {
+    label: string;
+    count: number;
+    value?: string | number;
+  }) => {
     const label = item.label;
     if (label === "< $50") {
       return { to: "/collection", search: { paidMax: "50" } };

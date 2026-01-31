@@ -7,19 +7,16 @@ import { joinWaitlistSchema, verifyAccessSchema } from "./model";
 import { rateLimit } from "@/middleware/rate-limit";
 
 async function verifyTurnstile(token: string): Promise<boolean> {
-  const response = await fetch(
-    "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({
-        secret: env.TURNSTILE_SECRET_KEY,
-        response: token,
-      }),
-    }
-  );
+  const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      secret: env.TURNSTILE_SECRET_KEY,
+      response: token,
+    }),
+  });
 
   const data = (await response.json()) as { success: boolean };
   return data.success;
@@ -33,7 +30,7 @@ const waitlistRouter = new Elysia({ prefix: "/waitlist" })
       const { email, turnstileToken } = body;
 
       const { data: isValidCaptcha, error: captchaError } = await tryCatch(
-        verifyTurnstile(turnstileToken)
+        verifyTurnstile(turnstileToken),
       );
 
       if (captchaError || !isValidCaptcha) {
@@ -59,7 +56,7 @@ const waitlistRouter = new Elysia({ prefix: "/waitlist" })
     {
       body: joinWaitlistSchema,
       rateLimit: "waitlist",
-    }
+    },
   )
   .post(
     "/verify-access",
@@ -84,7 +81,7 @@ const waitlistRouter = new Elysia({ prefix: "/waitlist" })
     {
       body: verifyAccessSchema,
       rateLimit: "verifyAccess",
-    }
+    },
   );
 
 export default waitlistRouter;

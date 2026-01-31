@@ -35,10 +35,7 @@ export function OrdersDataGridSkeleton() {
 
             {/* Table rows */}
             {[...Array(7)].map((_, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-4 p-4 hover:bg-muted/50"
-              >
+              <div key={i} className="flex items-center gap-4 p-4 hover:bg-muted/50">
                 <Skeleton className="h-5 w-5 rounded-xs" />
                 <Skeleton className="h-4 w-4 rounded-xs mx-2" />
                 <Skeleton className="h-10 w-10 rounded-md" />
@@ -79,4 +76,3 @@ export function OrdersDataGridSkeleton() {
     </>
   );
 }
-

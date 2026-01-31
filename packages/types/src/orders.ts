@@ -48,12 +48,7 @@ export type Order = {
 
 export type OrderItem = Omit<
   CollectionItem,
-  | "itemCategory"
-  | "itemScale"
-  | "createdAt"
-  | "updatedAt"
-  | "totalCount"
-  | "totalValue"
+  "itemCategory" | "itemScale" | "createdAt" | "updatedAt" | "totalCount" | "totalValue"
 >;
 
 export type NewOrder = {
@@ -152,4 +147,3 @@ export type ItemRelease = {
 export type ItemReleasesResponse = {
   releases: ItemRelease[];
 };
-

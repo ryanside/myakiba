@@ -27,21 +27,17 @@ const DATE_ONLY_KEYS = new Set<string>([
   "collecting_date",
   "release_date",
   "release_month_year",
-  "releaseMonthYear"
+  "releaseMonthYear",
 ]);
 
-const isPlainObject = (
-  value: EdenDateNormalizable,
-): value is EdenDateNormalizableObject => {
+const isPlainObject = (value: EdenDateNormalizable): value is EdenDateNormalizableObject => {
   if (!value || typeof value !== "object") return false;
   if (Array.isArray(value)) return false;
   if (value instanceof Date) return false;
   return Object.prototype.toString.call(value) === "[object Object]";
 };
 
-const normalizeDateValue = (
-  value: EdenDateNormalizable,
-): EdenDateNormalizable => {
+const normalizeDateValue = (value: EdenDateNormalizable): EdenDateNormalizable => {
   if (value === undefined) return value;
   if (value === null || value instanceof Date || typeof value === "string") {
     return dateToString(value);
@@ -49,9 +45,7 @@ const normalizeDateValue = (
   return value;
 };
 
-export const normalizeEdenDateFields = (
-  value: EdenDateNormalizable,
-): EdenDateNormalizable => {
+export const normalizeEdenDateFields = (value: EdenDateNormalizable): EdenDateNormalizable => {
   if (Array.isArray(value)) {
     return value.map((entry) => normalizeEdenDateFields(entry));
   }

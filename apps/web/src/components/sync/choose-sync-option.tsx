@@ -40,9 +40,7 @@ export default function ChooseSyncOption({
         <FieldSet className="flex flex-col gap-4 justify-center">
           <div className="flex flex-row">
             <div className="flex flex-col gap-0">
-              <FieldLabel htmlFor="sync-option">
-                Choose a sync option
-              </FieldLabel>
+              <FieldLabel htmlFor="sync-option">Choose a sync option</FieldLabel>
               <FieldDescription>
                 Select an option to add items from MyFigureCollection.
               </FieldDescription>
@@ -57,11 +55,7 @@ export default function ChooseSyncOption({
                   className="ml-auto"
                   size="md"
                 >
-                  {isSubmitting ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    "Next"
-                  )}
+                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Next"}
                 </Button>
               )}
             />
@@ -69,10 +63,7 @@ export default function ChooseSyncOption({
           <form.Field
             name="syncOption"
             validators={{
-              onChange: z.enum(
-                ["csv", "order", "collection"],
-                "Sync option is required"
-              ),
+              onChange: z.enum(["csv", "order", "collection"], "Sync option is required"),
             }}
             children={(field) => (
               <RadioGroup
@@ -86,8 +77,7 @@ export default function ChooseSyncOption({
                     <FieldContent>
                       <FieldTitle>Collection</FieldTitle>
                       <FieldDescription>
-                        Add to your collection using MyFigureCollection Item
-                        IDs.
+                        Add to your collection using MyFigureCollection Item IDs.
                       </FieldDescription>
                     </FieldContent>
                     <RadioGroupItem value="collection" id="collection" />
@@ -98,8 +88,7 @@ export default function ChooseSyncOption({
                     <FieldContent>
                       <FieldTitle>Order</FieldTitle>
                       <FieldDescription>
-                        Create and add an order using MyFigureCollection Item
-                        IDs.
+                        Create and add an order using MyFigureCollection Item IDs.
                       </FieldDescription>
                     </FieldContent>
                     <RadioGroupItem value="order" id="order" />
@@ -116,8 +105,7 @@ export default function ChooseSyncOption({
                       </FieldTitle>
                       <div className="flex flex-col gap-0">
                         <FieldDescription>
-                          Sync your MyFigureCollection and myakiba using
-                          MyFigureCollection CSV.
+                          Sync your MyFigureCollection and myakiba using MyFigureCollection CSV.
                         </FieldDescription>
                         <FieldDescription className="italic font-light">
                           {`You can export your MyFigureCollection

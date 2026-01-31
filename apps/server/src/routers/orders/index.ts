@@ -50,8 +50,8 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
           query.tariffsMin,
           query.tariffsMax,
           query.miscFeesMin,
-          query.miscFeesMax
-        )
+          query.miscFeesMax,
+        ),
       );
 
       if (error) {
@@ -66,8 +66,7 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
         return status(500, "Failed to get orders");
       }
 
-      const totalCount =
-        result.orders.length > 0 ? result.orders[0].totalCount : 0;
+      const totalCount = result.orders.length > 0 ? result.orders[0].totalCount : 0;
 
       const orders: readonly Order[] = result.orders.map((order) => ({
         ...order,
@@ -88,7 +87,7 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
 
       return response;
     },
-    { query: ordersQuerySchema, auth: true }
+    { query: ordersQuerySchema, auth: true },
   )
   .get(
     "/ids-and-titles",
@@ -96,7 +95,7 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
       if (!user) return status(401, "Unauthorized");
 
       const { data: result, error } = await tryCatch(
-        OrdersService.getOrderIdsAndTitles(user.id, query.title)
+        OrdersService.getOrderIdsAndTitles(user.id, query.title),
       );
 
       if (error) {
@@ -107,7 +106,7 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
 
       return { orderIdsAndTitles: result };
     },
-    { query: z.object({ title: z.string().optional() }), auth: true }
+    { query: z.object({ title: z.string().optional() }), auth: true },
   )
   .get(
     "/:orderId",
@@ -115,7 +114,7 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
       if (!user) return status(401, "Unauthorized");
 
       const { data: order, error } = await tryCatch(
-        OrdersService.getOrder(user.id, params.orderId)
+        OrdersService.getOrder(user.id, params.orderId),
       );
 
       if (error) {
@@ -139,7 +138,7 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
 
       return { order: serializedOrder };
     },
-    { params: orderIdParamSchema, auth: true }
+    { params: orderIdParamSchema, auth: true },
   )
   .post(
     "/merge",
@@ -147,12 +146,7 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
       if (!user) return status(401, "Unauthorized");
 
       const { error } = await tryCatch(
-        OrdersService.mergeOrders(
-          user.id,
-          body.orderIds,
-          body.newOrder,
-          body.cascadeOptions
-        )
+        OrdersService.mergeOrders(user.id, body.orderIds, body.newOrder, body.cascadeOptions),
       );
 
       if (error) {
@@ -188,7 +182,7 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
         cascadeOptions: z.array(z.string()),
       }),
       auth: true,
-    }
+    },
   )
   .post(
     "/split",
@@ -196,12 +190,7 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
       if (!user) return status(401, "Unauthorized");
 
       const { error } = await tryCatch(
-        OrdersService.splitOrders(
-          user.id,
-          body.collectionIds,
-          body.newOrder,
-          body.cascadeOptions
-        )
+        OrdersService.splitOrders(user.id, body.collectionIds, body.newOrder, body.cascadeOptions),
       );
 
       if (error) {
@@ -234,7 +223,7 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
         cascadeOptions: z.array(z.string()),
       }),
       auth: true,
-    }
+    },
   )
   .put(
     "/move-items",
@@ -242,12 +231,7 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
       if (!user) return status(401, "Unauthorized");
 
       const { error } = await tryCatch(
-        OrdersService.moveItems(
-          user.id,
-          body.targetOrderId,
-          body.collectionIds,
-          body.orderIds
-        )
+        OrdersService.moveItems(user.id, body.targetOrderId, body.collectionIds, body.orderIds),
       );
 
       if (error) {
@@ -265,7 +249,7 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
         orderIds: z.array(z.string()),
       }),
       auth: true,
-    }
+    },
   )
   .put(
     "/:orderId",
@@ -273,12 +257,7 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
       if (!user) return status(401, "Unauthorized");
 
       const { error } = await tryCatch(
-        OrdersService.updateOrder(
-          user.id,
-          params.orderId,
-          body.order,
-          body.cascadeOptions
-        )
+        OrdersService.updateOrder(user.id, params.orderId, body.order, body.cascadeOptions),
       );
 
       if (error) {
@@ -305,16 +284,14 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
         cascadeOptions: z.array(z.string()),
       }),
       auth: true,
-    }
+    },
   )
   .delete(
     "/",
     async ({ body, user }) => {
       if (!user) return status(401, "Unauthorized");
 
-      const { error } = await tryCatch(
-        OrdersService.deleteOrders(user.id, body.orderIds)
-      );
+      const { error } = await tryCatch(OrdersService.deleteOrders(user.id, body.orderIds));
 
       if (error) {
         if (error.message === "ORDERS_ITEMS_NOT_FOUND") {
@@ -338,16 +315,14 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
     {
       body: z.object({ orderIds: z.array(z.string()) }),
       auth: true,
-    }
+    },
   )
   .delete(
     "/items",
     async ({ body, user }) => {
       if (!user) return status(401, "Unauthorized");
 
-      const { error } = await tryCatch(
-        OrdersService.deleteOrderItems(user.id, body.collectionIds)
-      );
+      const { error } = await tryCatch(OrdersService.deleteOrderItems(user.id, body.collectionIds));
 
       if (error) {
         if (error.message === "ORDER_ITEMS_NOT_FOUND") {
@@ -367,7 +342,7 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
     {
       body: z.object({ collectionIds: z.array(z.string()) }),
       auth: true,
-    }
+    },
   )
   .delete(
     "/:orderId/items/:collectionId",
@@ -375,11 +350,7 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
       if (!user) return status(401, "Unauthorized");
 
       const { error } = await tryCatch(
-        OrdersService.deleteOrderItem(
-          user.id,
-          params.orderId,
-          params.collectionId
-        )
+        OrdersService.deleteOrderItem(user.id, params.orderId, params.collectionId),
       );
 
       if (error) {
@@ -401,7 +372,7 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
     {
       params: z.object({ orderId: z.string(), collectionId: z.string() }),
       auth: true,
-    }
+    },
   );
 
 export default ordersRouter;

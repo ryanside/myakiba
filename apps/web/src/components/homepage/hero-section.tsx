@@ -18,10 +18,7 @@ export default function HeroSection({
       <div className="relative z-10 mx-auto w-full max-w-7xl px-6 xl:px-0">
         <div className="flex flex-col items-start justify-center relative w-full max-w-3xl my-18">
           <div className="flex relative text-sm items-start bg-background">
-            <TextLoop
-              preText="An alternative to"
-              texts={HERO_TEXT_LOOP_TEXTS}
-            />
+            <TextLoop preText="An alternative to" texts={HERO_TEXT_LOOP_TEXTS} />
           </div>
           <h1 className="mt-4 max-w-xl tracking-tight text-balance text-black dark:text-white text-2xl font-medium">
             Built to provide a modern collecting experience.
@@ -30,12 +27,8 @@ export default function HeroSection({
           <p className="text-muted-foreground tracking-tight text-balance mb-6 mt-2 text-start text-lg max-w-2xl">
             The community-powered catalog from{" "}
             <span className="text-foreground">MyFigureCollection</span> and the{" "}
-            <span className="text-foreground">flexibility of spreadsheets</span>
-            , unified into{" "}
-            <span className="dark:text-primary text-secondary">
-              a modern collection manager
-            </span>
-            .
+            <span className="text-foreground">flexibility of spreadsheets</span>, unified into{" "}
+            <span className="dark:text-primary text-secondary">a modern collection manager</span>.
           </p>
 
           <div className="flex flex-col gap-3">
