@@ -9,7 +9,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatCurrency, formatDate } from "@myakiba/utils";
+import { formatCurrency, formatDate, formatTimestamp } from "@myakiba/utils";
 import { getStatusVariant } from "@/lib/orders/utils";
 import { OrderItemSubDataGrid } from "@/components/orders/order-item-sub-data-grid";
 import { useState, useEffect } from "react";
@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import type { CollectionItemFormValues } from "@/lib/collection/types";
 import { updateCollectionItem } from "@/queries/collection";
 import Loader from "@/components/loader";
+import type { DateFormat } from "@myakiba/types";
 
 export const Route = createFileRoute("/(app)/orders_/$id")({
   component: RouteComponent,
@@ -48,7 +49,8 @@ export const Route = createFileRoute("/(app)/orders_/$id")({
 
 function RouteComponent() {
   const { session } = Route.useRouteContext();
-  const userCurrency = session?.user.currency || "USD";
+  const userCurrency = session?.user.currency;
+  const dateFormat = session?.user.dateFormat as DateFormat;
   const { id } = useParams({ from: "/(app)/orders_/$id" });
   const queryClient = useQueryClient();
   const [itemSelection, setItemSelection] = useState<RowSelectionState>({});
@@ -291,14 +293,14 @@ function RouteComponent() {
               </span>
               <span className="text-sm font-medium">
                 {order.releaseMonthYear
-                  ? formatDate(order.releaseMonthYear)
+                  ? formatDate(order.releaseMonthYear, dateFormat)
                   : "N/A"}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Created:</span>
               <span className="text-sm font-medium">
-                {formatDate(order.createdAt)}
+                {formatTimestamp(order.createdAt, dateFormat)}
               </span>
             </div>
             <div className="flex items-center justify-between">
@@ -306,7 +308,7 @@ function RouteComponent() {
                 Last Updated:
               </span>
               <span className="text-sm font-medium">
-                {formatDate(order.updatedAt)}
+                {formatTimestamp(order.updatedAt, dateFormat)}
               </span>
             </div>
           </CardContent>
@@ -324,26 +326,26 @@ function RouteComponent() {
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Ordered:</span>
               <span className="text-sm font-medium">
-                {order.orderDate ? formatDate(order.orderDate) : "N/A"}
+                {order.orderDate ? formatDate(order.orderDate, dateFormat) : "N/A"}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Paid:</span>
               <span className="text-sm font-medium">
-                {order.paymentDate ? formatDate(order.paymentDate) : "N/A"}
+                {order.paymentDate ? formatDate(order.paymentDate, dateFormat) : "N/A"}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Shipped:</span>
               <span className="text-sm font-medium">
-                {order.shippingDate ? formatDate(order.shippingDate) : "N/A"}
+                {order.shippingDate ? formatDate(order.shippingDate, dateFormat) : "N/A"}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Collected:</span>
               <span className="text-sm font-medium">
                 {order.collectionDate
-                  ? formatDate(order.collectionDate)
+                  ? formatDate(order.collectionDate, dateFormat)
                   : "N/A"}
               </span>
             </div>
@@ -446,6 +448,7 @@ function RouteComponent() {
               onEditItem={handleEditItem}
               onDeleteItem={handleDeleteItem}
               currency={userCurrency}
+              dateFormat={dateFormat}
             />
           ) : (
             <div className="flex items-center justify-center py-8 text-muted-foreground">

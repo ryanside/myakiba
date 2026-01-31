@@ -7,16 +7,19 @@ import {
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { parseLocalDate, formatDate } from "@myakiba/utils";
+import type { DateFormat } from "@myakiba/types";
 import { format } from "date-fns";
 import * as Portal from "@radix-ui/react-portal";
 
 interface PopoverDatePickerCellProps {
   value: string | null;
+  dateFormat?: DateFormat;
   onSubmit: (newValue: string | null) => Promise<void>;
 }
 
 export function PopoverDatePickerCell({
   value,
+  dateFormat = "MM/DD/YYYY",
   onSubmit,
 }: PopoverDatePickerCellProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -42,7 +45,7 @@ export function PopoverDatePickerCell({
           data-empty={!dateValue}
           className="text-foreground pl-0"
         >
-          {value ? formatDate(value) : "n/a"}
+          {value ? formatDate(value, dateFormat) : "n/a"}
         </Button>
       </PopoverTrigger>
       {isOpen && (

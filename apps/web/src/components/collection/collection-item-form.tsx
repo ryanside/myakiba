@@ -31,6 +31,7 @@ import { Field, FieldContent, FieldTitle } from "@/components/ui/field";
 import { Badge } from "../ui/badge";
 import { X } from "lucide-react";
 import { formatDate, formatCurrency, getCurrencyLocale } from "@myakiba/utils";
+import type { DateFormat } from "@myakiba/types";
 import { Scroller } from "../ui/scroller";
 import { COLLECTION_STATUSES, SHIPPING_METHODS, CONDITIONS } from "@myakiba/constants";
 
@@ -39,10 +40,11 @@ type CollectionItemFormProps = {
   itemData: CollectionItemFormValues;
   callbackFn: (itemData: CollectionItemFormValues) => void;
   currency?: string;
+  dateFormat?: DateFormat;
 };
 
 export default function CollectionItemForm(props: CollectionItemFormProps) {
-  const { itemData, callbackFn, currency, renderTrigger } = props;
+  const { itemData, callbackFn, currency, dateFormat, renderTrigger } = props;
 
   const userCurrency = currency || "USD";
   const userLocale = getCurrencyLocale(userCurrency);
@@ -299,7 +301,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                             return (
                               <div className="flex items-center gap-3 text-sm">
                                 <span className="font-medium">
-                                  {formatDate(displayData.date)}
+                                  {formatDate(displayData.date, dateFormat)}
                                 </span>
                                 {displayData.type && (
                                   <span className="text-muted-foreground">
@@ -340,7 +342,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                           <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-sm">
-                                {formatDate(release.date)}
+                                {formatDate(release.date, dateFormat)}
                               </span>
                               {release.type && (
                                 <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">

@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { ValueLineBarChart } from "@/components/ui/value-line-bar-chart";
 import { KPICard } from "@/components/ui/kpi-card";
 import Loader from "@/components/loader";
+import type { DateFormat } from "@myakiba/types";
 
 export const Route = createFileRoute("/(app)/dashboard")({
   component: RouteComponent,
@@ -44,7 +45,8 @@ function RouteComponent() {
 function DashboardContent() {
   const navigate = useNavigate();
   const { session } = Route.useRouteContext();
-  const userCurrency = session?.user.currency || "USD";
+  const userCurrency = session?.user.currency;
+  const dateFormat = session?.user.dateFormat as DateFormat;
 
   async function getDashboard() {
     const { data, error } = await app.api.dashboard.get();
@@ -180,7 +182,7 @@ function DashboardContent() {
               </Link>
             </CardHeader>
             <CardContent className="h-full">
-              <OrderKanban orders={orders} currency={userCurrency} />
+              <OrderKanban orders={orders} currency={userCurrency} dateFormat={dateFormat} />
             </CardContent>
           </Card>
         </div>
@@ -213,7 +215,7 @@ function DashboardContent() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ReleaseCalendar currency={userCurrency} />
+              <ReleaseCalendar currency={userCurrency} dateFormat={dateFormat} />
             </CardContent>
           </Card>
           <Card className="flex-1">
@@ -233,7 +235,7 @@ function DashboardContent() {
               </Badge>
             </CardHeader>
             <CardContent>
-              <UnpaidOrders orders={unpaidOrders} currency={userCurrency} />
+              <UnpaidOrders orders={unpaidOrders} currency={userCurrency} dateFormat={dateFormat} />
             </CardContent>
           </Card>
         </div>

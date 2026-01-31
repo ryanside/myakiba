@@ -25,6 +25,7 @@ import { DataGridColumnCombobox } from "../ui/data-grid-column-combobox";
 import { OrdersToolbar } from "./orders-toolbar";
 import { DEFAULT_PAGE_INDEX, DEFAULT_PAGE_SIZE } from "@myakiba/constants";
 import { createOrdersColumns } from "./orders-columns";
+import type { DateFormat } from "@myakiba/types";
 
 export { DEFAULT_PAGE_INDEX, DEFAULT_PAGE_SIZE };
 
@@ -72,6 +73,7 @@ interface OrdersDataGridProps {
     orderIds: Set<string>
   ) => Promise<void>;
   currency?: string;
+  dateFormat: DateFormat;
 }
 
 export default function OrdersDataGrid({
@@ -93,6 +95,7 @@ export default function OrdersDataGrid({
   onDeleteItems,
   onMoveItem,
   currency = "USD",
+  dateFormat,
 }: OrdersDataGridProps) {
   const pagination = useMemo<PaginationState>(
     () => ({
@@ -165,6 +168,7 @@ export default function OrdersDataGrid({
         currency,
         itemSelection,
         setItemSelection,
+        dateFormat,
       }),
     [
       onEditItem,
@@ -174,6 +178,7 @@ export default function OrdersDataGrid({
       currency,
       itemSelection,
       setItemSelection,
+      dateFormat,
     ]
   );
 

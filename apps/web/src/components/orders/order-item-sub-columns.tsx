@@ -13,6 +13,7 @@ import { DataGridColumnHeader } from "@/components/ui/data-grid-column-header";
 import { Package, MoreHorizontal, Copy, Edit, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDate, getCurrencyLocale } from "@myakiba/utils";
+import type { DateFormat } from "@myakiba/types";
 import type { OrderItem } from "@/lib/orders/types";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
@@ -31,6 +32,7 @@ interface OrderItemSubColumnsParams {
   onEditItem: (values: CollectionItemFormValues) => Promise<void>;
   onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
   currency: string;
+  dateFormat: DateFormat;
 }
 
 export function createOrderItemSubColumns({
@@ -38,6 +40,7 @@ export function createOrderItemSubColumns({
   onEditItem,
   onDeleteItem,
   currency,
+  dateFormat,
 }: OrderItemSubColumnsParams): ColumnDef<OrderItem>[] {
   return [
     {
@@ -145,6 +148,7 @@ export function createOrderItemSubColumns({
         return (
           <PopoverDatePickerCell
             value={item.orderDate}
+            dateFormat={dateFormat}
             onSubmit={async (newValue) => {
               await onEditItem({ ...item, orderDate: newValue });
             }}
@@ -165,7 +169,7 @@ export function createOrderItemSubColumns({
           column={column}
         />
       ),
-      cell: (info) => formatDate(info.getValue() as string),
+      cell: (info) => formatDate(info.getValue() as string, dateFormat),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -283,6 +287,8 @@ export function createOrderItemSubColumns({
                 }
                 itemData={item}
                 callbackFn={onEditItem}
+                currency={currency}
+                dateFormat={dateFormat}
               />
               <DropdownMenuSeparator />
               <DropdownMenuItem

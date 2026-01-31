@@ -16,6 +16,7 @@ import {
 import type { OrderItem } from "@/lib/orders/types";
 import type { CollectionItemFormValues } from "@/lib/collection/types";
 import { createOrderItemSubColumns } from "./order-item-sub-columns";
+import type { DateFormat } from "@myakiba/types";
 
 export function OrderItemSubDataGrid({
   items,
@@ -25,6 +26,7 @@ export function OrderItemSubDataGrid({
   onEditItem,
   onDeleteItem,
   currency = "USD",
+  dateFormat = "MM/DD/YYYY",
 }: {
   items: OrderItem[];
   orderId: string;
@@ -33,6 +35,7 @@ export function OrderItemSubDataGrid({
   onEditItem: (values: CollectionItemFormValues) => Promise<void>;
   onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
   currency?: string;
+  dateFormat?: DateFormat;
 }) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
@@ -57,8 +60,9 @@ export function OrderItemSubDataGrid({
         onEditItem,
         onDeleteItem,
         currency,
+        dateFormat,
       }),
-    [currency, onDeleteItem, onEditItem, orderId]
+    [currency, dateFormat, onDeleteItem, onEditItem, orderId]
   );
 
   const subTable = useReactTable({

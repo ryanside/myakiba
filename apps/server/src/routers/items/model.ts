@@ -1,20 +1,9 @@
 import * as z from "zod";
 import { CATEGORIES } from "@myakiba/constants/categories";
-
-const ENTRY_CATEGORIES = [
-  "Classifications",
-  "Origins",
-  "Characters",
-  "Companies",
-  "Artists",
-  "Materials",
-  "Events",
-] as const;
-
-const entryCategorySchema = z.enum(ENTRY_CATEGORIES);
+import { ENTRY_CATEGORIES } from "@myakiba/constants/enums";
 
 export const customItemReleaseSchema = z.object({
-  date: z.string().min(1),
+  date: z.iso.date(),
   type: z.string().nullable().optional(),
   price: z.string().nullable().optional(),
   priceCurrency: z.string().nullable().optional(),
@@ -25,7 +14,7 @@ export const customItemEntrySchema = z
   .object({
     entryId: z.string().min(1).optional(),
     name: z.string().min(1).optional(),
-    category: entryCategorySchema,
+    category: z.enum(ENTRY_CATEGORIES),
     role: z.string().optional(),
   })
   .refine((value) => Boolean(value.entryId || value.name), {
@@ -51,7 +40,7 @@ export type CustomItemInput = z.infer<typeof customItemSchema>;
 export const itemReleaseSchema = z.object({
   id: z.string(),
   itemId: z.string(),
-  date: z.string(),
+  date: z.iso.date(),
   type: z.string().nullable(),
   price: z.string().nullable(),
   priceCurrency: z.string().nullable(),

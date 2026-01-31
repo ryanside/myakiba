@@ -113,8 +113,13 @@ export const auth = betterAuth({
     additionalFields: {
       currency: {
         type: "string",
-        required: false,
+        required: true,
         defaultValue: "USD",
+      },
+      dateFormat: {
+        type: "string",
+        required: true,
+        defaultValue: "MM/DD/YYYY",
       },
     },
   },

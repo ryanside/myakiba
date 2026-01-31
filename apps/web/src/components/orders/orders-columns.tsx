@@ -39,7 +39,7 @@ import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
 import type { CollectionItemFormValues } from "@/lib/collection/types";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/constants";
-import type { ShippingMethod, OrderStatus } from "@myakiba/types";
+import type { ShippingMethod, OrderStatus, DateFormat } from "@myakiba/types";
 
 interface OrdersColumnsParams {
   onEditOrder: (
@@ -52,6 +52,7 @@ interface OrdersColumnsParams {
   currency: string;
   itemSelection: RowSelectionState;
   setItemSelection: OnChangeFn<RowSelectionState>;
+  dateFormat: DateFormat;
 }
 
 export function createOrdersColumns({
@@ -62,6 +63,7 @@ export function createOrdersColumns({
   currency,
   itemSelection,
   setItemSelection,
+  dateFormat,
 }: OrdersColumnsParams): ColumnDef<Order>[] {
   return [
     {
@@ -131,6 +133,7 @@ export function createOrdersColumns({
             onEditItem={onEditItem}
             onDeleteItem={onDeleteItem}
             currency={currency}
+            dateFormat={dateFormat}
           />
         ),
       },
@@ -249,6 +252,7 @@ export function createOrdersColumns({
         return (
           <PopoverDatePickerCell
             value={order.releaseMonthYear}
+            dateFormat={dateFormat}
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } =
                 row.original;
@@ -285,6 +289,7 @@ export function createOrdersColumns({
         return (
           <PopoverDatePickerCell
             value={order.orderDate}
+            dateFormat={dateFormat}
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } =
                 row.original;
@@ -324,6 +329,7 @@ export function createOrdersColumns({
         return (
           <PopoverDatePickerCell
             value={order.paymentDate}
+            dateFormat={dateFormat}
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } =
                 row.original;
@@ -363,6 +369,7 @@ export function createOrdersColumns({
         return (
           <PopoverDatePickerCell
             value={order.shippingDate}
+            dateFormat={dateFormat}
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } =
                 row.original;
@@ -402,6 +409,7 @@ export function createOrdersColumns({
         return (
           <PopoverDatePickerCell
             value={order.collectionDate}
+            dateFormat={dateFormat}
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } =
                 row.original;

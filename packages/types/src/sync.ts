@@ -105,15 +105,15 @@ export type UserItem = {
   status: "Owned" | "Ordered";
   count: number;
   score: string;
-  payment_date: string;
-  shipping_date: string;
-  collecting_date: string;
+  payment_date: string | null;
+  shipping_date: string | null;
+  collecting_date: string | null;
   price: string;
   shop: string;
   shipping_method: ShippingMethod;
   note: string;
   orderId: null;
-  orderDate: string;
+  orderDate: string | null;
 };
 
 export type ScrapedItem = {

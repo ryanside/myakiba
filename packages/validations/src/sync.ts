@@ -5,17 +5,33 @@ import {
   CONDITIONS,
 } from "@myakiba/constants";
 
+/**
+ * Schema for CSV date fields that handles MFC export quirks.
+ * - Returns null for placeholder dates (0000-00-00)
+ * - Normalizes dates with 00 values (e.g., "2002-00-00" → "2002-01-01")
+ */
+const csvDateSchema = z
+  .string()
+  .transform((val): string | null => {
+    if (val.trim() === "") return null;
+    // Handle all-zeros placeholder date
+    if (val === "0000-00-00") return null;
+    // Replace 00 month/day with 01: 2002-00-00 → 2002-01-01
+    return val.replace(/-00/g, "-01");
+  })
+  .pipe(z.iso.date().nullable());
+
 export const syncOrderSchema = z.object({
   id: z.string(),
   userId: z.string(),
   status: z.enum(ORDER_STATUSES),
   title: z.string(),
   shop: z.string(),
-  orderDate: z.string().nullable(),
-  releaseMonthYear: z.string().nullable(),
-  paymentDate: z.string().nullable(),
-  shippingDate: z.string().nullable(),
-  collectionDate: z.string().nullable(),
+  orderDate: z.iso.date().nullable(),
+  releaseMonthYear: z.iso.date().nullable(),
+  paymentDate: z.iso.date().nullable(),
+  shippingDate: z.iso.date().nullable(),
+  collectionDate: z.iso.date().nullable(),
   shippingMethod: z.enum(SHIPPING_METHODS),
   shippingFee: z.string(),
   taxes: z.string(),
@@ -36,10 +52,10 @@ export const syncOrderItemSchema = z.object({
   status: z.enum(ORDER_STATUSES),
   condition: z.enum(CONDITIONS),
   shippingMethod: z.enum(SHIPPING_METHODS),
-  orderDate: z.string().nullable(),
-  paymentDate: z.string().nullable(),
-  shippingDate: z.string().nullable(),
-  collectionDate: z.string().nullable(),
+  orderDate: z.iso.date().nullable(),
+  paymentDate: z.iso.date().nullable(),
+  shippingDate: z.iso.date().nullable(),
+  collectionDate: z.iso.date().nullable(),
 });
 
 export const syncCollectionItemSchema = z.object({
@@ -51,10 +67,10 @@ export const syncCollectionItemSchema = z.object({
   count: z.number(),
   score: z.string(),
   shop: z.string(),
-  orderDate: z.string().nullable(),
-  paymentDate: z.string().nullable(),
-  shippingDate: z.string().nullable(),
-  collectionDate: z.string().nullable(),
+  orderDate: z.iso.date().nullable(),
+  paymentDate: z.iso.date().nullable(),
+  shippingDate: z.iso.date().nullable(),
+  collectionDate: z.iso.date().nullable(),
   shippingMethod: z.enum(SHIPPING_METHODS),
   tags: z.array(z.string()),
   condition: z.enum(CONDITIONS),
@@ -66,7 +82,7 @@ export const csvItemSchema = z.object({
   title: z.string(),
   root: z.string(),
   category: z.string(),
-  release_date: z.string(),
+  release_date: csvDateSchema,
   price: z.string(),
   scale: z.string(),
   barcode: z.string(),
@@ -79,9 +95,9 @@ export const csvItemSchema = z.object({
     .transform((val) => val === "" ? undefined : val)
     .pipe(z.string().default("1")),
   score: z.string(),
-  payment_date: z.string(),
-  shipping_date: z.string(),
-  collecting_date: z.string(),
+  payment_date: csvDateSchema,
+  shipping_date: csvDateSchema,
+  collecting_date: csvDateSchema,
   price_1: z.string(),
   shop: z.string(),
   shipping_method: z
@@ -101,15 +117,15 @@ const internalCsvItemSchema = z.object({
   status: z.string(),
   count: z.number(),
   score: z.string(),
-  payment_date: z.string().nullable(),
-  shipping_date: z.string().nullable(),
-  collecting_date: z.string().nullable(),
+  payment_date: z.iso.date().nullable(),
+  shipping_date: z.iso.date().nullable(),
+  collecting_date: z.iso.date().nullable(),
   price: z.string(),
   shop: z.string(),
   shipping_method: z.enum(SHIPPING_METHODS),
   note: z.string(),
   orderId: z.string().nullable(),
-  orderDate: z.string().nullable(),
+  orderDate: z.iso.date().nullable(),
 });
 
 export type CsvItem = z.infer<typeof csvItemSchema>;

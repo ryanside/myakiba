@@ -25,7 +25,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
     async ({ body, user }) => {
       if (!user) return status(401, "Unauthorized");
 
-      const items = SyncService.assignOrderIdsAndSanitizeDates(body);
+      const items = SyncService.assignOrderIds(body);
 
       const { data: result, error: processItemsError } = await tryCatch(
         SyncService.processItems(items, user.id)
@@ -143,11 +143,15 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         return status(500, "Failed to check for existing items");
       }
 
-      const existingItemIds = existingItems.map((existingItem) => existingItem.id);
+      const existingItemIds = existingItems.map(
+        (existingItem) => existingItem.id
+      );
       const {
         data: existingItemsWithReleases,
         error: existingItemsWithReleasesError,
-      } = await tryCatch(SyncService.getExistingItemsWithReleases(existingItemIds));
+      } = await tryCatch(
+        SyncService.getExistingItemsWithReleases(existingItemIds)
+      );
 
       if (existingItemsWithReleasesError) {
         console.error(
@@ -209,7 +213,9 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       const itemsToInsert: UpdatedSyncOrderItem[] = body.items.flatMap(
         (item: orderItemSyncType) => {
-          const internalItemId = externalIdToInternalId.get(item.itemExternalId);
+          const internalItemId = externalIdToInternalId.get(
+            item.itemExternalId
+          );
           if (!internalItemId) {
             return [];
           }
@@ -290,7 +296,9 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             releaseId: item.releaseId,
           }));
         const { error: insertToCollectionAndOrdersError } = await tryCatch(
-          SyncService.insertToCollectionAndOrders(collectionItemsToInsert, [order])
+          SyncService.insertToCollectionAndOrders(collectionItemsToInsert, [
+            order,
+          ])
         );
 
         if (insertToCollectionAndOrdersError) {
@@ -346,11 +354,15 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         return status(500, "Failed to check for existing items");
       }
 
-      const existingItemIds = existingItems.map((existingItem) => existingItem.id);
+      const existingItemIds = existingItems.map(
+        (existingItem) => existingItem.id
+      );
       const {
         data: existingItemsWithReleases,
         error: existingItemsWithReleasesError,
-      } = await tryCatch(SyncService.getExistingItemsWithReleases(existingItemIds));
+      } = await tryCatch(
+        SyncService.getExistingItemsWithReleases(existingItemIds)
+      );
 
       if (existingItemsWithReleasesError) {
         console.error(
@@ -385,7 +397,9 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       const itemsToInsert: UpdatedSyncCollection[] = body.flatMap(
         (item: collectionSyncType) => {
-          const internalItemId = externalIdToInternalId.get(item.itemExternalId);
+          const internalItemId = externalIdToInternalId.get(
+            item.itemExternalId
+          );
           if (!internalItemId) {
             return [];
           }

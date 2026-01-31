@@ -39,6 +39,7 @@ import { MaskInput } from "@/components/ui/mask-input";
 import { getCurrencyLocale } from "@myakiba/utils";
 import { app } from "@/lib/treaty-client";
 import { clearRecentItems } from "@/lib/recent-items";
+import { DATE_FORMATS } from "@myakiba/constants";
 
 interface Budget {
   id: string;
@@ -59,7 +60,8 @@ type User = {
   image?: string | null | undefined;
   username?: string | null | undefined;
   displayUsername?: string | null | undefined;
-  currency: string | null | undefined;
+  currency: string;
+  dateFormat: string;
 };
 
 export const Route = createFileRoute("/(app)/settings")({
@@ -617,11 +619,13 @@ function PasswordForm() {
 function PreferencesForm({ user }: { user: User }) {
   const form = useForm({
     defaultValues: {
-      currency: user.currency || "USD",
+      currency: user.currency,
+      dateFormat: user.dateFormat,
     },
     onSubmit: async ({ value }) => {
       const { error } = await authClient.updateUser({
         currency: value.currency,
+        dateFormat: value.dateFormat,
       });
 
       if (error) {
@@ -634,6 +638,7 @@ function PreferencesForm({ user }: { user: User }) {
     validators: {
       onSubmit: z.object({
         currency: z.string().min(1, "Currency is required"),
+        dateFormat: z.enum(DATE_FORMATS),
       }),
     },
   });
@@ -688,6 +693,38 @@ function PreferencesForm({ user }: { user: User }) {
                 <p className="text-sm text-muted-foreground">
                   Choose your preferred currency for displaying and inputting
                   prices
+                </p>
+                {field.state.meta.errors.length > 0 && (
+                  <p className="text-sm text-destructive">
+                    {field.state.meta.errors[0]?.message}
+                  </p>
+                )}
+              </div>
+            )}
+          </form.Field>
+
+          <form.Field name="dateFormat">
+            {(field) => (
+              <div className="space-y-2">
+                <Label htmlFor={field.name}>Date Format</Label>
+                <Select
+                  value={field.state.value}
+                  onValueChange={(value) => field.handleChange(value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={field.state.value} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DATE_FORMATS.map((dateFormat) => (
+                      <SelectItem key={dateFormat} value={dateFormat}>
+                        {dateFormat}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  Choose your preferred date format for displaying and inputting
+                  dates
                 </p>
                 {field.state.meta.errors.length > 0 && (
                   <p className="text-sm text-destructive">

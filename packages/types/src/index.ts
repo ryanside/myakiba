@@ -5,6 +5,7 @@ export type {
   Condition,
   Currency,
   Category,
+  DateFormat
 } from "./enums";
 
 export type {

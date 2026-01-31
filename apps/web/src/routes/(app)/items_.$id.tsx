@@ -44,6 +44,7 @@ import {
 import { toast } from "sonner";
 import type { ItemRelatedCollection } from "@/lib/items/types";
 import Loader from "@/components/loader";
+import type { DateFormat } from "@myakiba/types";
 
 export const Route = createFileRoute("/(app)/items_/$id")({
   component: RouteComponent,
@@ -86,7 +87,8 @@ async function getItemRelatedCollection(itemId: string) {
 
 function RouteComponent() {
   const { session } = Route.useRouteContext();
-  const userCurrency = session?.user.currency || "USD";
+  const userCurrency = session?.user.currency;
+  const dateFormat = session?.user.dateFormat as DateFormat;
   const queryClient = useQueryClient();
   const { id } = useParams({ from: "/(app)/items_/$id" });
 
@@ -358,7 +360,7 @@ function RouteComponent() {
                     >
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">
-                        {formatDate(release.date)}
+                        {formatDate(release.date, dateFormat)}
                       </span>
                       {release.type && (
                         <Badge variant="outline" className="text-xs">
@@ -514,6 +516,8 @@ function RouteComponent() {
                               releaseType: release?.type ?? null,
                             }}
                             callbackFn={handleEditCollectionItem}
+                            currency={userCurrency}
+                            dateFormat={dateFormat}
                           />
                           <Popover>
                             <PopoverTrigger asChild>
@@ -587,31 +591,31 @@ function RouteComponent() {
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
                           <span>Release</span>
                           <span className="text-foreground font-medium">
-                            {formatDate(release?.date)}
+                            {formatDate(release?.date, dateFormat)}
                           </span>
                         </div>
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
                           <span>Order Date</span>
                           <span className="text-foreground font-medium">
-                            {formatDate(collectionItem.orderDate)}
+                            {formatDate(collectionItem.orderDate, dateFormat)}
                           </span>
                         </div>
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
                           <span>Payment Date</span>
                           <span className="text-foreground font-medium">
-                            {formatDate(collectionItem.paymentDate)}
+                            {formatDate(collectionItem.paymentDate, dateFormat)}
                           </span>
                         </div>
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
                           <span>Shipping Date</span>
                           <span className="text-foreground font-medium">
-                            {formatDate(collectionItem.shippingDate)}
+                            {formatDate(collectionItem.shippingDate, dateFormat)}
                           </span>
                         </div>
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
                           <span>Collection Date</span>
                           <span className="text-foreground font-medium">
-                            {formatDate(collectionItem.collectionDate)}
+                            {formatDate(collectionItem.collectionDate, dateFormat)}
                           </span>
                         </div>
                         <div className="flex justify-between text-muted-foreground text-sm items-center">
@@ -666,7 +670,7 @@ function RouteComponent() {
                                     <div className="flex justify-between text-muted-foreground text-sm items-center">
                                       <span>Release</span>
                                       <span className="text-foreground font-medium">
-                                        {formatDate(relatedOrder.releaseMonthYear)}
+                                        {formatDate(relatedOrder.releaseMonthYear, dateFormat)}
                                       </span>
                                     </div>
                                   )}

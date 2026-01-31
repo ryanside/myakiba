@@ -17,7 +17,7 @@ import { Check, Loader2, LoaderCircleIcon } from "lucide-react";
 import { tryCatch } from "@myakiba/utils";
 import { ShimmeringText } from "@/components/ui/shimmering-text";
 import { transformCSVData } from "@/lib/sync/utils";
-import type { userItem, SyncStatus } from "@/lib/sync/types";
+import type { UserItem, SyncStatus } from "@/lib/sync/types";
 import { toast } from "sonner";
 import { getJobStatus, sendItems } from "@/queries/sync";
 import SyncCsvForm from "@/components/sync/sync-csv-form";
@@ -91,7 +91,7 @@ function RouteComponent() {
   };
 
   const csvMutation = useMutation({
-    mutationFn: (userItems: userItem[]) => sendItems(userItems),
+    mutationFn: (userItems: UserItem[]) => sendItems(userItems),
     onSuccess: (data) => {
       setCurrentStep(3);
       setStatus({

@@ -1,5 +1,5 @@
 import Papa from "papaparse";
-import { csvSchema, type userItem } from "./types";
+import { csvSchema, type UserItem } from "./types";
 
 /**
  * Extracts the MyFigureCollection item ID from a URL or returns the ID if it's already a number.
@@ -63,7 +63,7 @@ export async function transformCSVData(value: { file: File | undefined }) {
     throw new Error("No Owned or Ordered items to sync");
   }
   console.log("Filtered data:", filteredData);
-  const userItems: userItem[] = filteredData.map((item) => {
+  const userItems: UserItem[] = filteredData.map((item) => {
     return {
       itemExternalId: Number(item.id),
       status: item.status as "Owned" | "Ordered",

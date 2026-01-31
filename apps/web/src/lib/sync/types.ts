@@ -6,7 +6,7 @@ export type {
   SyncOrder,
   SyncFormCollectionItem,
   SyncCollectionItem,
-  UserItem as userItem,
+  UserItem,
 } from "@myakiba/types";
 
 export { csvItemSchema, csvSchema } from "@myakiba/validations";

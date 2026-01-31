@@ -26,17 +26,20 @@ import type {
   CollectionItem,
   CollectionItemFormValues,
 } from "@/lib/collection/types";
+import type { DateFormat } from "@myakiba/types";
 
 interface CollectionColumnsParams {
   onEditCollectionItem: (values: CollectionItemFormValues) => void;
   onDeleteCollectionItems: (collectionIds: Set<string>) => Promise<void>;
   currency: string;
+  dateFormat: DateFormat;
 }
 
 export function createCollectionColumns({
   onEditCollectionItem,
   onDeleteCollectionItems,
   currency,
+  dateFormat,
 }: CollectionColumnsParams): ColumnDef<CollectionItem>[] {
   return [
     {
@@ -300,6 +303,7 @@ export function createCollectionColumns({
         return (
           <PopoverDatePickerCell
             value={orderDate}
+            dateFormat={dateFormat}
             onSubmit={async (newValue) => {
               await onEditCollectionItem({
                 ...row.original,
@@ -332,6 +336,7 @@ export function createCollectionColumns({
         return (
           <PopoverDatePickerCell
             value={paymentDate}
+            dateFormat={dateFormat}
             onSubmit={async (newValue) => {
               await onEditCollectionItem({
                 ...row.original,
@@ -364,6 +369,7 @@ export function createCollectionColumns({
         return (
           <PopoverDatePickerCell
             value={shippingDate}
+            dateFormat={dateFormat}
             onSubmit={async (newValue) => {
               await onEditCollectionItem({
                 ...row.original,
@@ -396,6 +402,7 @@ export function createCollectionColumns({
         return (
           <PopoverDatePickerCell
             value={collectionDate}
+            dateFormat={dateFormat}
             onSubmit={async (newValue) => {
               await onEditCollectionItem({
                 ...row.original,
@@ -458,6 +465,7 @@ export function createCollectionColumns({
                 itemData={item}
                 callbackFn={onEditCollectionItem}
                 currency={currency}
+                dateFormat={dateFormat}
               />
               <DropdownMenuSeparator />
               <DropdownMenuItem

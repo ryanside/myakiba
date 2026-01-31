@@ -13,8 +13,13 @@ export const authClient = createAuthClient({
       user: {
         currency: {
           type: "string",
-          required: false,
+          required: true,
           defaultValue: "USD",
+        },
+        dateFormat: {
+          type: "string",
+          required: true,
+          defaultValue: "MM/DD/YYYY",
         },
       },
     }),

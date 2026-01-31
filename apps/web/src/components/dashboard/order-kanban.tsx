@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/kanban";
 import { GripVertical, CalendarIcon, Check } from "lucide-react";
 import { formatCurrency, formatMonthYear } from "@myakiba/utils";
+import type { DateFormat } from "@myakiba/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateOrderStatus } from "@/queries/orders";
 import { toast } from "sonner";
@@ -34,6 +35,7 @@ interface KanbanOrder {
 interface OrdersKanbanProps {
   orders: KanbanOrder[];
   currency: string;
+  dateFormat: DateFormat;
 }
 
 const COLUMN_TITLES: Record<string, string> = {
@@ -46,6 +48,7 @@ interface OrderCardProps
   extends Omit<React.ComponentProps<typeof KanbanItem>, "value" | "children"> {
   order: KanbanOrder;
   currency: string;
+  dateFormat: DateFormat;
   asHandle?: boolean;
   onMarkOwned: (orderId: string) => void;
 }
@@ -53,6 +56,7 @@ interface OrderCardProps
 function OrderCard({
   order,
   currency,
+  dateFormat,
   asHandle,
   onMarkOwned,
   ...props
@@ -130,7 +134,7 @@ function OrderCard({
               <>
                 <CalendarIcon className="h-3 w-3" />
                 <time className="text-[10px] tabular-nums">
-                  {formatMonthYear(order.releaseMonthYear)}
+                  {formatMonthYear(order.releaseMonthYear, dateFormat)}
                 </time>
               </>
             )}
@@ -158,6 +162,7 @@ interface OrderColumnProps
   extends Omit<React.ComponentProps<typeof KanbanColumn>, "children"> {
   orders: KanbanOrder[];
   currency: string;
+  dateFormat: DateFormat;
   isOverlay?: boolean;
   onMarkOwned: (orderId: string) => void;
 }
@@ -166,6 +171,7 @@ function OrderColumn({
   value,
   orders,
   currency,
+  dateFormat,
   isOverlay,
   onMarkOwned,
   ...props
@@ -198,6 +204,7 @@ function OrderColumn({
             key={order.orderId}
             order={order}
             currency={currency}
+            dateFormat={dateFormat}
             asHandle={!isOverlay}
             onMarkOwned={onMarkOwned}
           />
@@ -207,7 +214,7 @@ function OrderColumn({
   );
 }
 
-export default function OrderKanban({ orders, currency }: OrdersKanbanProps) {
+export default function OrderKanban({ orders, currency, dateFormat }: OrdersKanbanProps) {
   const queryClient = useQueryClient();
 
   // Transform orders array into column structure grouped by status
@@ -365,6 +372,7 @@ export default function OrderKanban({ orders, currency }: OrdersKanbanProps) {
             value={columnValue}
             orders={columnOrders}
             currency={currency}
+            dateFormat={dateFormat}
             onMarkOwned={handleMarkOwned}
             className="max-h-[300px] overflow-auto"
           />

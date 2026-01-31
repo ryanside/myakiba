@@ -350,7 +350,7 @@ class AnalyticsService {
       Artists: topArtists,
       Materials: topMaterials,
       Classifications: topClassifications,
-      Event: topEvents,
+      Events: topEvents,
     };
 
     return {

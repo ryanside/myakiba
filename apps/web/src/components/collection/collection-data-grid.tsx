@@ -21,6 +21,7 @@ import { DataGridColumnCombobox } from "../ui/data-grid-column-combobox";
 import { CollectionToolbar } from "./collection-toolbar";
 import { DEFAULT_PAGE_INDEX, DEFAULT_PAGE_SIZE } from "@myakiba/constants";
 import { createCollectionColumns } from "./collection-columns";
+import type { DateFormat } from "@myakiba/types";
 
 export { DEFAULT_PAGE_INDEX, DEFAULT_PAGE_SIZE };
 
@@ -43,6 +44,7 @@ interface CollectionDataGridProps {
   onDeleteCollectionItems: (collectionIds: Set<string>) => Promise<void>;
   onEditCollectionItem: (values: CollectionItemFormValues) => void;
   currency?: string;
+  dateFormat: DateFormat;
 }
 
 export const CollectionDataGrid = ({
@@ -58,6 +60,7 @@ export const CollectionDataGrid = ({
   onDeleteCollectionItems,
   onEditCollectionItem,
   currency = "USD",
+  dateFormat,
 }: CollectionDataGridProps) => {
   const pagination = useMemo<PaginationState>(
     () => ({
@@ -111,8 +114,9 @@ export const CollectionDataGrid = ({
         onEditCollectionItem,
         onDeleteCollectionItems,
         currency,
+        dateFormat,
       }),
-    [currency, onEditCollectionItem, onDeleteCollectionItems]
+    [currency, dateFormat, onEditCollectionItem, onDeleteCollectionItems]
   );
   const handlePaginationChange = useCallback(
     (updater: Updater<PaginationState>) => {

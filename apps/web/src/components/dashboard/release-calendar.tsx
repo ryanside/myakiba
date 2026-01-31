@@ -3,6 +3,7 @@ import { ChevronLeftIcon, ChevronRightIcon, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDate } from "@myakiba/utils";
+import type { DateFormat } from "@myakiba/types";
 import { useQuery } from "@tanstack/react-query";
 import { app } from "@/lib/treaty-client";
 import { Link } from "@tanstack/react-router";
@@ -21,11 +22,13 @@ interface ReleaseItem {
 interface ReleaseCalendarProps {
   className?: string;
   currency: string;
+  dateFormat: DateFormat;
 }
 
 function ReleaseCalendar({
   className,
   currency,
+  dateFormat,
 }: ReleaseCalendarProps): React.ReactElement {
   const [currentMonth, setCurrentMonth] = React.useState(new Date());
 
@@ -124,6 +127,7 @@ function ReleaseCalendar({
               key={item.itemId}
               item={item}
               currency={item.priceCurrency || currency}
+              dateFormat={dateFormat}
             />
           ))
         ) : (
@@ -139,9 +143,11 @@ function ReleaseCalendar({
 function ReleaseCard({
   item,
   currency,
+  dateFormat,
 }: {
   item: ReleaseItem;
   currency: string;
+  dateFormat: DateFormat;
 }): React.ReactElement {
   return (
     <Link
@@ -163,7 +169,7 @@ function ReleaseCard({
       <div className="flex-1 min-w-0">
         <h4 className="font-medium text-sm truncate">{item.title}</h4>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>{formatDate(item.releaseDate)}</span>
+          <span>{formatDate(item.releaseDate, dateFormat)}</span>
           {item.price && (
             <>
               <span>•</span>

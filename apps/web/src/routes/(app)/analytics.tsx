@@ -143,7 +143,7 @@ function RouteComponent(): React.ReactNode {
     })) || [];
 
   const eventsData =
-    analytics.topEntriesByAllCategories.Event?.map((entry, idx) => ({
+    analytics.topEntriesByAllCategories.Events?.map((entry, idx) => ({
       rank: idx + 1,
       entryId: entry.entryId,
       name: entry.originName,

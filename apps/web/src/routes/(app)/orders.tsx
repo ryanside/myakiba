@@ -49,6 +49,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import type { DateFormat } from "@myakiba/types";
 
 export const Route = createFileRoute("/(app)/orders")({
   component: RouteComponent,
@@ -68,7 +69,8 @@ export const Route = createFileRoute("/(app)/orders")({
 
 function RouteComponent() {
   const { session } = Route.useRouteContext();
-  const userCurrency = session?.user.currency || "USD";
+  const userCurrency = session?.user.currency;
+  const dateFormat = session?.user.dateFormat as DateFormat;
   const queryClient = useQueryClient();
   const { filters, setFilters, resetFilters } = useFilters(Route.id);
 
@@ -627,6 +629,7 @@ function RouteComponent() {
           onDeleteItems={handleDeleteItems}
           onMoveItem={handleMoveItem}
           currency={userCurrency}
+          dateFormat={dateFormat}
         />
       )}
     </div>

@@ -20,11 +20,7 @@ import {
   sum,
 } from "drizzle-orm";
 import type { collectionUpdateType } from "./model";
-import type {
-  Category,
-  Condition,
-  ShippingMethod,
-} from "@myakiba/types";
+import type { Category, Condition, ShippingMethod } from "@myakiba/types";
 
 class CollectionService {
   async getCollection(
@@ -53,7 +49,7 @@ class CollectionService {
     scale?: Array<string>,
     tags?: Array<string>,
     condition?: Array<Condition>,
-    search?: string
+    search?: string,
   ) {
     let itemIdsWithEntries: string[] | undefined;
     if (entries && entries.length > 0) {
@@ -106,7 +102,7 @@ class CollectionService {
       itemIdsWithEntries && itemIdsWithEntries.length > 0
         ? inArray(item.id, itemIdsWithEntries)
         : undefined,
-      search ? ilike(item.title, `%${search}%`) : undefined
+      search ? ilike(item.title, `%${search}%`) : undefined,
     );
 
     const sortByColumn = (() => {
@@ -147,36 +143,36 @@ class CollectionService {
     const currentMonth = new Date(
       new Date().getFullYear(),
       new Date().getMonth(),
-      1
+      1,
     ).toISOString();
     const nextMonth = new Date(
       new Date().getFullYear(),
       new Date().getMonth() + 1,
-      1
+      1,
     ).toISOString();
 
     const collectionStats = await db
       .select({
         totalItems: count(
-          sql`CASE WHEN ${collection.status} = 'Owned' THEN 1 END`
+          sql`CASE WHEN ${collection.status} = 'Owned' THEN 1 END`,
         ),
         totalSpent: sql<string>`COALESCE(${sum(collection.price)}, 0)`,
         totalItemsThisMonth: sql<number>`COALESCE(${count(
           sql`CASE WHEN ${collection.status} = 'Owned' 
               AND ${collection.collectionDate} >= ${currentMonth} 
               AND ${collection.collectionDate} < ${nextMonth}
-              THEN 1 END`
+              THEN 1 END`,
         )}, 0)`,
         totalSpentThisMonth: sql<string>`COALESCE(${sum(
           sql`CASE WHEN ${collection.status} = 'Owned'
               AND ${collection.paymentDate} >= ${currentMonth} 
               AND ${collection.paymentDate} < ${nextMonth}
-              THEN ${collection.price} ELSE 0 END`
+              THEN ${collection.price} ELSE 0 END`,
         )}, 0)`,
       })
       .from(collection)
       .where(
-        and(eq(collection.userId, userId), eq(collection.status, "Owned"))
+        and(eq(collection.userId, userId), eq(collection.status, "Owned")),
       );
 
     const collectionItems = await db
@@ -221,7 +217,7 @@ class CollectionService {
         orderBy === "asc" ? asc(sortByColumn) : desc(sortByColumn),
         orderBy === "asc"
           ? asc(collection.createdAt)
-          : desc(collection.createdAt)
+          : desc(collection.createdAt),
       )
       .limit(limit)
       .offset(offset);
@@ -263,7 +259,7 @@ class CollectionService {
       .innerJoin(item, eq(collection.itemId, item.id))
       .leftJoin(item_release, eq(collection.releaseId, item_release.id))
       .where(
-        and(eq(collection.userId, userId), eq(collection.id, collectionId))
+        and(eq(collection.userId, userId), eq(collection.id, collectionId)),
       );
 
     if (!collectionItem || collectionItem.length === 0) {
@@ -276,7 +272,7 @@ class CollectionService {
   async updateCollectionItem(
     userId: string,
     collectionId: string,
-    updateData: collectionUpdateType
+    updateData: collectionUpdateType,
   ) {
     const updated = await db
       .update(collection)
@@ -285,7 +281,7 @@ class CollectionService {
         updatedAt: new Date(),
       })
       .where(
-        and(eq(collection.userId, userId), eq(collection.id, collectionId))
+        and(eq(collection.userId, userId), eq(collection.id, collectionId)),
       )
       .returning();
 
@@ -300,8 +296,9 @@ class CollectionService {
     const deleted = await db
       .delete(collection)
       .where(
-        and(eq(collection.userId, userId), eq(collection.id, collectionId))
-      ).returning();
+        and(eq(collection.userId, userId), eq(collection.id, collectionId)),
+      )
+      .returning();
 
     if (!deleted || deleted.length === 0) {
       throw new Error("COLLECTION_ITEM_NOT_FOUND");
@@ -316,8 +313,8 @@ class CollectionService {
       .where(
         and(
           eq(collection.userId, userId),
-          inArray(collection.id, collectionIds)
-        )
+          inArray(collection.id, collectionIds),
+        ),
       )
       .returning();
 
