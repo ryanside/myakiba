@@ -62,7 +62,7 @@ export default function SyncOrderForm({
       title: "New Order",
       shop: "",
       orderDate: "",
-      releaseMonthYear: "",
+      releaseDate: "",
       paymentDate: "",
       shippingDate: "",
       collectionDate: "",

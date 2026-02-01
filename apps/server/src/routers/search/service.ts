@@ -34,7 +34,7 @@ class SearchService {
         orderTitle: order.title,
         orderStatus: order.status,
         orderShop: order.shop,
-        orderReleaseMonthYear: order.releaseMonthYear,
+        orderReleaseDate: order.releaseDate,
         itemImages: sql<string[]>`COALESCE(
             (
               SELECT array_agg(DISTINCT img)

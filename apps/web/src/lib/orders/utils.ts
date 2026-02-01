@@ -94,7 +94,7 @@ export function filterAndSortOrders(
       case "paymentDate":
       case "shippingDate":
       case "collectionDate":
-      case "releaseMonthYear":
+      case "releaseDate":
         aRaw = a[sortField as keyof typeof a] as string | null;
         bRaw = b[sortField as keyof typeof b] as string | null;
         aValue = aRaw || null;
@@ -264,7 +264,7 @@ export function createOptimisticMergeUpdate(
     orderId: `temp-${Date.now()}`, // Temporary ID for optimistic update
     title: values.title,
     shop: values.shop,
-    releaseMonthYear: values.releaseMonthYear,
+    releaseDate: values.releaseDate,
     shippingMethod: values.shippingMethod,
     orderDate: values.orderDate,
     paymentDate: values.paymentDate,

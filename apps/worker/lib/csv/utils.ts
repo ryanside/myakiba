@@ -91,7 +91,7 @@ export async function finalizeCsvSync(
     shippingDate: string | null;
     collectionDate: string | null;
     shippingMethod: ShippingMethod;
-    releaseMonthYear: string | null;
+    releaseDate: string | null;
   }> = [];
 
   for (const scraped of successfulResults) {
@@ -260,7 +260,7 @@ export async function finalizeCsvSync(
       shippingDate: ci.shipping_date,
       collectionDate: ci.collecting_date,
       shippingMethod: ci.shipping_method,
-      releaseMonthYear: latestReleaseIdByExternalId.get(ci.itemExternalId)?.date ?? null,
+      releaseDate: latestReleaseIdByExternalId.get(ci.itemExternalId)?.date ?? null,
     }));
 
   console.log("Items to be inserted:", items);

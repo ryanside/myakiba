@@ -120,7 +120,7 @@ function RouteComponent() {
     const updatedValues: SyncOrder = {
       ...values,
       orderDate: values.orderDate || null,
-      releaseMonthYear: values.releaseMonthYear || null,
+      releaseDate: values.releaseDate || null,
       paymentDate: values.paymentDate || null,
       shippingDate: values.shippingDate || null,
       collectionDate: values.collectionDate || null,

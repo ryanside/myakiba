@@ -25,7 +25,7 @@ export type Order = {
   orderId: string;
   title: string;
   shop: string;
-  releaseMonthYear: string | null;
+  releaseDate: string | null;
   shippingMethod: ShippingMethod;
   orderDate: string | null;
   paymentDate: string | null;
@@ -54,7 +54,7 @@ export type OrderItem = Omit<
 export type NewOrder = {
   title: string;
   shop: string;
-  releaseMonthYear: string | null;
+  releaseDate: string | null;
   shippingMethod: ShippingMethod;
   orderDate: string | null;
   paymentDate: string | null;
@@ -83,7 +83,7 @@ export type OrderFilters = {
     | "paymentDate"
     | "shippingDate"
     | "collectionDate"
-    | "releaseMonthYear"
+    | "releaseDate"
     | "shippingMethod"
     | "total"
     | "shippingFee"
@@ -98,8 +98,8 @@ export type OrderFilters = {
   order?: "asc" | "desc" | undefined;
   search?: string | undefined;
   shop?: string[] | undefined;
-  releaseMonthYearStart?: string | undefined;
-  releaseMonthYearEnd?: string | undefined;
+  releaseDateStart?: string | undefined;
+  releaseDateEnd?: string | undefined;
   shipMethod?: ShippingMethod[] | undefined;
   orderDateStart?: string | undefined;
   orderDateEnd?: string | undefined;

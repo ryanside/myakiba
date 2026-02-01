@@ -608,11 +608,11 @@ function RouteComponent() {
                                         </span>
                                       </div>
                                     )}
-                                    {relatedOrder?.releaseMonthYear && (
+                                    {relatedOrder?.releaseDate && (
                                       <div className="flex justify-between text-muted-foreground text-sm items-center">
                                         <span>Release</span>
                                         <span className="text-foreground font-medium">
-                                          {formatDate(relatedOrder.releaseMonthYear, dateFormat)}
+                                          {formatDate(relatedOrder.releaseDate, dateFormat)}
                                         </span>
                                       </div>
                                     )}

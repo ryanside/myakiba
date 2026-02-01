@@ -115,7 +115,7 @@ export function OrderForm(props: OrderFormProps) {
         type === "merge" ? "New Merged Order" : type === "split" ? "New Split Order" : "Edit Order",
       shop: "",
       orderDate: "",
-      releaseMonthYear: "",
+      releaseDate: "",
       paymentDate: "",
       shippingDate: "",
       collectionDate: "",
@@ -134,7 +134,7 @@ export function OrderForm(props: OrderFormProps) {
           title: value.title,
           shop: value.shop,
           orderDate: value.orderDate || null,
-          releaseMonthYear: value.releaseMonthYear || null,
+          releaseDate: value.releaseDate || null,
           paymentDate: value.paymentDate || null,
           shippingDate: value.shippingDate || null,
           collectionDate: value.collectionDate || null,
@@ -153,7 +153,7 @@ export function OrderForm(props: OrderFormProps) {
           title: value.title,
           shop: value.shop,
           orderDate: value.orderDate || null,
-          releaseMonthYear: value.releaseMonthYear || null,
+          releaseDate: value.releaseDate || null,
           paymentDate: value.paymentDate || null,
           shippingDate: value.shippingDate || null,
           collectionDate: value.collectionDate || null,
@@ -173,7 +173,7 @@ export function OrderForm(props: OrderFormProps) {
           title: value.title,
           shop: value.shop,
           orderDate: value.orderDate || null,
-          releaseMonthYear: value.releaseMonthYear || null,
+          releaseDate: value.releaseDate || null,
           paymentDate: value.paymentDate || null,
           shippingDate: value.shippingDate || null,
           collectionDate: value.collectionDate || null,
@@ -321,7 +321,7 @@ export function OrderForm(props: OrderFormProps) {
                   />
 
                   <form.Field
-                    name="releaseMonthYear"
+                    name="releaseDate"
                     children={(field) => (
                       <div className="grid gap-2">
                         <Label htmlFor={field.name}>Release</Label>
@@ -715,7 +715,7 @@ export function OrderForm(props: OrderFormProps) {
               />
 
               <form.Field
-                name="releaseMonthYear"
+                name="releaseDate"
                 children={(field) => (
                   <div className="grid gap-2">
                     <Label htmlFor={field.name}>Release</Label>

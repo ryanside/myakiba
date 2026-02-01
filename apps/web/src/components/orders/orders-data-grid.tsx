@@ -136,7 +136,7 @@ export default function OrdersDataGrid({
     "title",
     "shop",
     "shippingMethod",
-    "releaseMonthYear",
+    "releaseDate",
     "orderDate",
     "paymentDate",
     "shippingDate",
@@ -203,7 +203,7 @@ export default function OrdersDataGrid({
             | "paymentDate"
             | "shippingDate"
             | "collectionDate"
-            | "releaseMonthYear"
+            | "releaseDate"
             | "shippingMethod"
             | "total"
             | "shippingFee"

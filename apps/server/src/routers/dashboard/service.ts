@@ -50,7 +50,7 @@ class DashboardService {
         title: order.title,
         shop: order.shop,
         status: order.status,
-        releaseMonthYear: order.releaseMonthYear,
+        releaseDate: order.releaseDate,
         itemImages: sql<
           string[]
         >`array_agg(DISTINCT ${item.image}) FILTER (WHERE ${item.image} IS NOT NULL)`,
@@ -61,8 +61,8 @@ class DashboardService {
       .leftJoin(collection, and(eq(order.id, collection.orderId)))
       .leftJoin(item, eq(collection.itemId, item.id))
       .where(and(eq(order.userId, sql.placeholder("userId")), ne(order.status, "Owned")))
-      .groupBy(order.id, order.title, order.shop, order.status, order.releaseMonthYear)
-      .orderBy(asc(order.releaseMonthYear))
+      .groupBy(order.id, order.title, order.shop, order.status, order.releaseDate)
+      .orderBy(asc(order.releaseDate))
       .limit(10)
       .prepare("orders_kanban");
 
@@ -80,8 +80,8 @@ class DashboardService {
         totalTariffsAllTime: sql<string>`COALESCE(${sum(order.tariffs)}, 0)`,
         totalMiscFeesAllTime: sql<string>`COALESCE(${sum(order.miscFees)}, 0)`,
         thisMonthOrderCount: sql<string>`COALESCE(${sum(
-          sql`CASE WHEN ${order.releaseMonthYear} >= ${sql.placeholder("currentMonth")}
-              AND ${order.releaseMonthYear} < ${sql.placeholder("nextMonth")}
+          sql`CASE WHEN ${order.releaseDate} >= ${sql.placeholder("currentMonth")}
+              AND ${order.releaseDate} < ${sql.placeholder("nextMonth")}
               THEN 1 ELSE 0 END`,
         )}, 0)`,
         thisMonthShipping: sql<string>`COALESCE(${sum(
@@ -127,7 +127,7 @@ class DashboardService {
         orderId: order.id,
         title: order.title,
         shop: order.shop,
-        releaseMonthYear: order.releaseMonthYear,
+        releaseDate: order.releaseDate,
         itemImages: sql<
           string[]
         >`array_agg(DISTINCT ${item.image}) FILTER (WHERE ${item.image} IS NOT NULL)`,
@@ -138,26 +138,26 @@ class DashboardService {
       .leftJoin(collection, and(eq(order.id, collection.orderId)))
       .leftJoin(item, eq(collection.itemId, item.id))
       .where(and(eq(order.userId, sql.placeholder("userId")), eq(order.status, "Ordered")))
-      .orderBy(asc(order.releaseMonthYear))
-      .groupBy(order.id, order.title, order.shop, order.releaseMonthYear)
+      .orderBy(asc(order.releaseDate))
+      .groupBy(order.id, order.title, order.shop, order.releaseDate)
       .prepare("unpaid_orders");
 
     // Monthly Orders - Order counts grouped by release month for current year
     this.monthlyOrdersPrepared = db
       .select({
-        month: sql<number>`EXTRACT(MONTH FROM ${order.releaseMonthYear})`,
+        month: sql<number>`EXTRACT(MONTH FROM ${order.releaseDate})`,
         orderCount: count(),
       })
       .from(order)
       .where(
         and(
           eq(order.userId, sql.placeholder("userId")),
-          gte(order.releaseMonthYear, sql.placeholder("startOfYear")),
-          lte(order.releaseMonthYear, sql.placeholder("endOfYear")),
+          gte(order.releaseDate, sql.placeholder("startOfYear")),
+          lte(order.releaseDate, sql.placeholder("endOfYear")),
         ),
       )
-      .groupBy(sql`EXTRACT(MONTH FROM ${order.releaseMonthYear})`)
-      .orderBy(sql`EXTRACT(MONTH FROM ${order.releaseMonthYear})`)
+      .groupBy(sql`EXTRACT(MONTH FROM ${order.releaseDate})`)
+      .orderBy(sql`EXTRACT(MONTH FROM ${order.releaseDate})`)
       .prepare("monthly_orders");
 
     // Release Calendar

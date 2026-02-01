@@ -168,7 +168,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         ...orderData,
         userId: user.id,
         id: orderId,
-        releaseMonthYear: latestReleaseDate,
+        releaseDate: latestReleaseDate,
       };
 
       const itemsToScrape: UpdatedSyncOrderItem[] = body.items

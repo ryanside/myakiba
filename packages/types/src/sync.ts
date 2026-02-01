@@ -36,7 +36,7 @@ export type SyncFormOrder = {
   title: string;
   shop: string;
   orderDate: string;
-  releaseMonthYear: string;
+  releaseDate: string;
   paymentDate: string;
   shippingDate: string;
   collectionDate: string;
@@ -52,11 +52,11 @@ export type SyncFormOrder = {
 
 export type SyncOrder = Omit<
   SyncFormOrder,
-  "items" | "orderDate" | "releaseMonthYear" | "paymentDate" | "shippingDate" | "collectionDate"
+  "items" | "orderDate" | "releaseDate" | "paymentDate" | "shippingDate" | "collectionDate"
 > & {
   items: SyncOrderItem[];
   orderDate: string | null;
-  releaseMonthYear: string | null;
+  releaseDate: string | null;
   paymentDate: string | null;
   shippingDate: string | null;
   collectionDate: string | null;

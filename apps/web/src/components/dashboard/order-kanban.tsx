@@ -26,7 +26,7 @@ interface KanbanOrder {
   title: string;
   shop: string;
   status: "Ordered" | "Paid" | "Shipped" | "Owned";
-  releaseMonthYear: string | null;
+  releaseDate: string | null;
   itemImages: string[];
   itemIds: string[];
   total: string;
@@ -125,11 +125,11 @@ function OrderCard({
         {/* Bottom Info */}
         <div className="flex items-center justify-between text-xs pt-1 border-t">
           <div className="flex items-center gap-1 text-muted-foreground">
-            {order.releaseMonthYear && (
+            {order.releaseDate && (
               <>
                 <CalendarIcon className="h-3 w-3" />
                 <time className="text-[10px] tabular-nums">
-                  {formatMonthYear(order.releaseMonthYear, dateFormat)}
+                  {formatMonthYear(order.releaseDate, dateFormat)}
                 </time>
               </>
             )}

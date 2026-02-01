@@ -124,7 +124,7 @@ export default function UnifiedItemMoveForm({
       title: "New Order",
       shop: "",
       orderDate: "",
-      releaseMonthYear: "",
+      releaseDate: "",
       paymentDate: "",
       shippingDate: "",
       collectionDate: "",
@@ -141,7 +141,7 @@ export default function UnifiedItemMoveForm({
         title: value.title,
         shop: value.shop,
         orderDate: value.orderDate || null,
-        releaseMonthYear: value.releaseMonthYear || null,
+        releaseDate: value.releaseDate || null,
         paymentDate: value.paymentDate || null,
         shippingDate: value.shippingDate || null,
         collectionDate: value.collectionDate || null,
@@ -431,7 +431,7 @@ export default function UnifiedItemMoveForm({
                     />
 
                     <newOrderForm.Field
-                      name="releaseMonthYear"
+                      name="releaseDate"
                       children={(field) => (
                         <div className="grid gap-2">
                           <Label htmlFor={field.name}>Release</Label>

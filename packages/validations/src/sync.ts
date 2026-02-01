@@ -24,7 +24,7 @@ export const syncOrderSchema = z.object({
   title: z.string(),
   shop: z.string(),
   orderDate: z.iso.date().nullable(),
-  releaseMonthYear: z.iso.date().nullable(),
+  releaseDate: z.iso.date().nullable(),
   paymentDate: z.iso.date().nullable(),
   shippingDate: z.iso.date().nullable(),
   collectionDate: z.iso.date().nullable(),

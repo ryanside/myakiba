@@ -258,7 +258,7 @@ function RouteComponent() {
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Release Period:</span>
               <span className="text-sm font-medium">
-                {order.releaseMonthYear ? formatDate(order.releaseMonthYear, dateFormat) : "N/A"}
+                {order.releaseDate ? formatDate(order.releaseDate, dateFormat) : "N/A"}
               </span>
             </div>
             <div className="flex items-center justify-between">

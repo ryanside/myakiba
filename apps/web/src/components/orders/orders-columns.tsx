@@ -199,8 +199,8 @@ export function createOrdersColumns({
       size: 140,
     },
     {
-      accessorKey: "releaseMonthYear",
-      id: "releaseMonthYear",
+      accessorKey: "releaseDate",
+      id: "releaseDate",
       header: ({ column }) => (
         <DataGridColumnHeader title="Release" visibility={true} column={column} />
       ),
@@ -208,7 +208,7 @@ export function createOrdersColumns({
         const order = row.original;
         return (
           <PopoverDatePickerCell
-            value={order.releaseMonthYear}
+            value={order.releaseDate}
             dateFormat={dateFormat}
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
@@ -217,7 +217,7 @@ export function createOrdersColumns({
               await onEditOrder(
                 {
                   ...orderWithoutTimestamps,
-                  releaseMonthYear: newValue,
+                  releaseDate: newValue,
                 },
                 [] as CascadeOptions,
               );

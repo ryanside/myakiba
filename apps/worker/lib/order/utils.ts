@@ -202,13 +202,10 @@ export async function finalizeOrderSync(
     (a, b) => a.date?.localeCompare(b.date ?? "") ?? 0,
   )[latestReleaseIdByExternalId.size - 1]?.date;
 
-  // compare current order.releaseMonthYear with latestReleaseDate
-  // if latestReleaseDate is after order.releaseMonthYear, update order.releaseMonthYear
-  if (
-    latestReleaseDate &&
-    (!details.releaseMonthYear || latestReleaseDate > details.releaseMonthYear)
-  ) {
-    details.releaseMonthYear = latestReleaseDate;
+  // compare current order.releaseDate with latestReleaseDate
+  // if latestReleaseDate is after order.releaseDate, update order.releaseDate
+  if (latestReleaseDate && (!details.releaseDate || latestReleaseDate > details.releaseDate)) {
+    details.releaseDate = latestReleaseDate;
   }
 
   try {

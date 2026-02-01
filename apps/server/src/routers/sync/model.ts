@@ -57,7 +57,7 @@ export const orderSyncSchema = z.object({
   title: z.string(),
   shop: z.string(),
   orderDate: z.iso.date().nullable(),
-  releaseMonthYear: z.iso.date().nullable(),
+  releaseDate: z.iso.date().nullable(),
   paymentDate: z.iso.date().nullable(),
   shippingDate: z.iso.date().nullable(),
   collectionDate: z.iso.date().nullable(),
@@ -100,7 +100,7 @@ export type UpdatedSyncCollection = collectionSyncType & {
 export type UpdatedSyncOrder = Omit<orderSyncType, "items"> & {
   userId: string;
   id: string;
-  releaseMonthYear: string | null;
+  releaseDate: string | null;
 };
 
 export type UpdatedSyncOrderItem = orderItemSyncType & {

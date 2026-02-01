@@ -170,7 +170,7 @@ class SyncService {
             title: itemTitle ? itemTitle : `Order ${item.orderId}`,
             shop: item.shop,
             orderDate: item.orderDate,
-            releaseMonthYear: existingItemsReleaseDates.get(itemId) ?? null,
+            releaseDate: existingItemsReleaseDates.get(itemId) ?? null,
             paymentDate: item.payment_date,
             shippingDate: item.shipping_date,
             collectionDate: item.collecting_date,

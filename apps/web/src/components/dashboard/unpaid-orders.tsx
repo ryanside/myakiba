@@ -8,7 +8,7 @@ interface UnpaidOrder {
   orderId: string;
   title: string;
   shop: string | null;
-  releaseMonthYear: string | null;
+  releaseDate: string | null;
   itemImages: string[] | null;
   itemIds: string[];
   total: string;
@@ -137,15 +137,15 @@ function UnpaidOrderCard({
         <h4 className="font-medium text-sm truncate">{order.title}</h4>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           {order.shop && <span>{order.shop}</span>}
-          {order.releaseMonthYear && (
+          {order.releaseDate && (
             <>
               {order.shop && <span>•</span>}
-              <span>{formatDate(order.releaseMonthYear, dateFormat)}</span>
+              <span>{formatDate(order.releaseDate, dateFormat)}</span>
             </>
           )}
           {order.total && (
             <>
-              {(order.shop || order.releaseMonthYear) && <span>•</span>}
+              {(order.shop || order.releaseDate) && <span>•</span>}
               <span>{formatCurrency(order.total, currency)}</span>
             </>
           )}

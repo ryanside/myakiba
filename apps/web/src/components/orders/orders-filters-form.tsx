@@ -48,8 +48,8 @@ export default function OrdersFiltersForm({
   const form = useForm({
     defaultValues: {
       shop: currentFilters?.shop ?? [],
-      releaseMonthYearStart: currentFilters?.releaseMonthYearStart ?? "",
-      releaseMonthYearEnd: currentFilters?.releaseMonthYearEnd ?? "",
+      releaseDateStart: currentFilters?.releaseDateStart ?? "",
+      releaseDateEnd: currentFilters?.releaseDateEnd ?? "",
       shipMethod: currentFilters?.shipMethod ?? [],
       orderDateStart: currentFilters?.orderDateStart ?? "",
       orderDateEnd: currentFilters?.orderDateEnd ?? "",
@@ -76,8 +76,8 @@ export default function OrdersFiltersForm({
     onSubmit: async ({ value }) => {
       const filters: OrderFilters = {
         shop: value.shop && value.shop.length > 0 ? value.shop : undefined,
-        releaseMonthYearStart: value.releaseMonthYearStart || undefined,
-        releaseMonthYearEnd: value.releaseMonthYearEnd || undefined,
+        releaseDateStart: value.releaseDateStart || undefined,
+        releaseDateEnd: value.releaseDateEnd || undefined,
         shipMethod: value.shipMethod && value.shipMethod.length > 0 ? value.shipMethod : undefined,
         orderDateStart: value.orderDateStart || undefined,
         orderDateEnd: value.orderDateEnd || undefined,
@@ -266,7 +266,7 @@ export default function OrdersFiltersForm({
                   <Label>Release Date</Label>
                   <div className="grid grid-cols-2 gap-2">
                     <form.Field
-                      name="releaseMonthYearStart"
+                      name="releaseDateStart"
                       children={(field) => (
                         <DatePicker
                           placeholder="From"
@@ -276,7 +276,7 @@ export default function OrdersFiltersForm({
                       )}
                     />
                     <form.Field
-                      name="releaseMonthYearEnd"
+                      name="releaseDateEnd"
                       children={(field) => (
                         <DatePicker
                           placeholder="To"

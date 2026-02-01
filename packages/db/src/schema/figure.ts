@@ -175,7 +175,7 @@ export const order = pgTable(
     title: text("title").notNull(),
     shop: text("shop").default("").notNull(),
     orderDate: date("order_date", { mode: "string" }),
-    releaseMonthYear: date("release_month_year", { mode: "string" }),
+    releaseDate: date("release_date", { mode: "string" }),
     paymentDate: date("payment_date", { mode: "string" }),
     shippingDate: date("shipping_date", { mode: "string" }),
     collectionDate: date("collection_date", { mode: "string" }),
@@ -202,7 +202,7 @@ export const order = pgTable(
     // High-priority composite index
     index("order_user_id_status_idx").on(t.userId, t.status),
     // Medium-priority single-column index
-    index("order_release_month_year_idx").on(t.releaseMonthYear),
+    index("order_release_date_idx").on(t.releaseDate),
     // Text search index
     index("order_title_idx").on(t.title),
   ],

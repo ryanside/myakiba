@@ -42,8 +42,8 @@ class OrdersService {
     orderBy: string,
     search?: string,
     shop?: Array<string>,
-    releaseMonthYearStart?: string,
-    releaseMonthYearEnd?: string,
+    releaseDateStart?: string,
+    releaseDateEnd?: string,
     shippingMethod?: ReadonlyArray<ShippingMethod>,
     orderDateStart?: string,
     orderDateEnd?: string,
@@ -71,8 +71,8 @@ class OrdersService {
       eq(order.userId, userId),
       search ? ilike(order.title, `%${search}%`) : undefined,
       shop ? inArray(order.shop, shop) : undefined,
-      releaseMonthYearStart ? gte(order.releaseMonthYear, releaseMonthYearStart) : undefined,
-      releaseMonthYearEnd ? lte(order.releaseMonthYear, releaseMonthYearEnd) : undefined,
+      releaseDateStart ? gte(order.releaseDate, releaseDateStart) : undefined,
+      releaseDateEnd ? lte(order.releaseDate, releaseDateEnd) : undefined,
       shippingMethod ? inArray(order.shippingMethod, shippingMethod) : undefined,
       orderDateStart ? gte(order.orderDate, orderDateStart) : undefined,
       orderDateEnd ? lte(order.orderDate, orderDateEnd) : undefined,
@@ -109,8 +109,8 @@ class OrdersService {
           return order.shippingDate;
         case "collectionDate":
           return order.collectionDate;
-        case "releaseMonthYear":
-          return order.releaseMonthYear;
+        case "releaseDate":
+          return order.releaseDate;
         case "shippingMethod":
           return order.shippingMethod;
         case "total":
@@ -141,7 +141,7 @@ class OrdersService {
         orderId: order.id,
         title: order.title,
         shop: order.shop,
-        releaseMonthYear: order.releaseMonthYear,
+        releaseDate: order.releaseDate,
         shippingMethod: order.shippingMethod,
         orderDate: order.orderDate,
         paymentDate: order.paymentDate,
@@ -204,7 +204,7 @@ class OrdersService {
         order.id,
         order.title,
         order.shop,
-        order.releaseMonthYear,
+        order.releaseDate,
         order.shippingMethod,
         order.orderDate,
         order.paymentDate,
@@ -278,7 +278,7 @@ class OrdersService {
         title: order.title,
         shop: order.shop,
         orderDate: order.orderDate,
-        releaseMonthYear: order.releaseMonthYear,
+        releaseDate: order.releaseDate,
         paymentDate: order.paymentDate,
         shippingDate: order.shippingDate,
         collectionDate: order.collectionDate,
