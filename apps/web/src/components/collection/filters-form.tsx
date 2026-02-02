@@ -40,7 +40,11 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { getCurrencyLocale } from "@myakiba/utils";
+import {
+  getCurrencyLocale,
+  majorStringToMinorUnits,
+  minorUnitsToMajorString,
+} from "@myakiba/utils";
 import { SHIPPING_METHODS, CONDITIONS, CURRENCIES, CATEGORIES } from "@myakiba/constants";
 
 interface FiltersFormProps {
@@ -61,8 +65,14 @@ export default function FiltersForm({
 
   const form = useForm({
     defaultValues: {
-      paidMin: currentFilters?.paidMin ?? "",
-      paidMax: currentFilters?.paidMax ?? "",
+      paidMin:
+        currentFilters?.paidMin !== undefined
+          ? minorUnitsToMajorString(currentFilters.paidMin)
+          : "",
+      paidMax:
+        currentFilters?.paidMax !== undefined
+          ? minorUnitsToMajorString(currentFilters.paidMax)
+          : "",
       shop: currentFilters?.shop ?? [],
       payDateStart: currentFilters?.payDateStart ?? "",
       payDateEnd: currentFilters?.payDateEnd ?? "",
@@ -73,8 +83,14 @@ export default function FiltersForm({
       shipMethod: currentFilters?.shipMethod ?? [],
       relDateStart: currentFilters?.relDateStart ?? "",
       relDateEnd: currentFilters?.relDateEnd ?? "",
-      relPriceMin: currentFilters?.relPriceMin ?? "",
-      relPriceMax: currentFilters?.relPriceMax ?? "",
+      relPriceMin:
+        currentFilters?.relPriceMin !== undefined
+          ? minorUnitsToMajorString(currentFilters.relPriceMin)
+          : "",
+      relPriceMax:
+        currentFilters?.relPriceMax !== undefined
+          ? minorUnitsToMajorString(currentFilters.relPriceMax)
+          : "",
       relCurrency: currentFilters?.relCurrency ?? [],
       category: currentFilters?.category ?? [],
       entries: currentFilters?.entries ?? [],
@@ -83,9 +99,11 @@ export default function FiltersForm({
       condition: currentFilters?.condition ?? [],
     },
     onSubmit: async ({ value }) => {
+      const toMinorUnits = (amount: string): number | undefined =>
+        amount.trim() === "" ? undefined : majorStringToMinorUnits(amount);
       const filters: CollectionFilters = {
-        paidMin: value.paidMin || undefined,
-        paidMax: value.paidMax || undefined,
+        paidMin: toMinorUnits(value.paidMin),
+        paidMax: toMinorUnits(value.paidMax),
         shop: value.shop && value.shop.length > 0 ? value.shop : undefined,
         payDateStart: value.payDateStart || undefined,
         payDateEnd: value.payDateEnd || undefined,
@@ -96,8 +114,8 @@ export default function FiltersForm({
         shipMethod: value.shipMethod && value.shipMethod.length > 0 ? value.shipMethod : undefined,
         relDateStart: value.relDateStart || undefined,
         relDateEnd: value.relDateEnd || undefined,
-        relPriceMin: value.relPriceMin || undefined,
-        relPriceMax: value.relPriceMax || undefined,
+        relPriceMin: toMinorUnits(value.relPriceMin),
+        relPriceMax: toMinorUnits(value.relPriceMax),
         relCurrency:
           value.relCurrency && value.relCurrency.length > 0 ? value.relCurrency : undefined,
         category: value.category && value.category.length > 0 ? value.category : undefined,

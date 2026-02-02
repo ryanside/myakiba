@@ -8,7 +8,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { ChartNoAxesColumn } from "lucide-react";
-import { formatCurrency } from "@myakiba/utils";
+import { formatCurrencyFromMinorUnits } from "@myakiba/utils";
 
 const chartConfig = {
   cost: {
@@ -25,22 +25,22 @@ export function ChartBarLabelCustom({
   currency = "USD",
 }: {
   data: {
-    totalSpent: string;
-    totalShipping: string;
-    totalTaxes: string;
-    totalDuties: string;
-    totalTariffs: string;
-    totalMiscFees: string;
+    totalSpent: number;
+    totalShipping: number;
+    totalTaxes: number;
+    totalDuties: number;
+    totalTariffs: number;
+    totalMiscFees: number;
   };
   currency?: string;
 }) {
   const chartData = [
-    { expense: "Item Costs", cost: parseFloat(data.totalSpent) },
-    { expense: "Shipping", cost: parseFloat(data.totalShipping) },
-    { expense: "Taxes", cost: parseFloat(data.totalTaxes) },
-    { expense: "Duties", cost: parseFloat(data.totalDuties) },
-    { expense: "Tariffs", cost: parseFloat(data.totalTariffs) },
-    { expense: "Misc Fees", cost: parseFloat(data.totalMiscFees) },
+    { expense: "Item Costs", cost: data.totalSpent },
+    { expense: "Shipping", cost: data.totalShipping },
+    { expense: "Taxes", cost: data.totalTaxes },
+    { expense: "Duties", cost: data.totalDuties },
+    { expense: "Tariffs", cost: data.totalTariffs },
+    { expense: "Misc Fees", cost: data.totalMiscFees },
   ];
 
   return (
@@ -85,7 +85,7 @@ export function ChartBarLabelCustom({
                 offset={8}
                 className="fill-foreground"
                 fontSize={12}
-                formatter={(value: number) => formatCurrency(value, currency)}
+                formatter={(value: number) => formatCurrencyFromMinorUnits(value, currency)}
               />
             </Bar>
           </BarChart>
@@ -95,39 +95,51 @@ export function ChartBarLabelCustom({
         <div className="grid grid-cols-2 gap-2">
           <div className="flex justify-between">
             <span>Item Costs</span>
-            <span className="text-foreground">{formatCurrency(data.totalSpent, currency)}</span>
+            <span className="text-foreground">
+              {formatCurrencyFromMinorUnits(data.totalSpent, currency)}
+            </span>
           </div>
           <div className="flex justify-between">
             <span>Shipping</span>
-            <span className="text-foreground">{formatCurrency(data.totalShipping, currency)}</span>
+            <span className="text-foreground">
+              {formatCurrencyFromMinorUnits(data.totalShipping, currency)}
+            </span>
           </div>
           <div className="flex justify-between">
             <span>Taxes</span>
-            <span className="text-foreground">{formatCurrency(data.totalTaxes, currency)}</span>
+            <span className="text-foreground">
+              {formatCurrencyFromMinorUnits(data.totalTaxes, currency)}
+            </span>
           </div>
           <div className="flex justify-between">
             <span>Duties</span>
-            <span className="text-foreground">{formatCurrency(data.totalDuties, currency)}</span>
+            <span className="text-foreground">
+              {formatCurrencyFromMinorUnits(data.totalDuties, currency)}
+            </span>
           </div>
           <div className="flex justify-between">
             <span>Tariffs</span>
-            <span className="text-foreground">{formatCurrency(data.totalTariffs, currency)}</span>
+            <span className="text-foreground">
+              {formatCurrencyFromMinorUnits(data.totalTariffs, currency)}
+            </span>
           </div>
           <div className="flex justify-between">
             <span>Misc Fees</span>
-            <span className="text-foreground">{formatCurrency(data.totalMiscFees, currency)}</span>
+            <span className="text-foreground">
+              {formatCurrencyFromMinorUnits(data.totalMiscFees, currency)}
+            </span>
           </div>
         </div>
         <div className="flex justify-between text-foreground font-medium text-sm mt-2.5">
           <span>Total</span>
           <span className="text-foreground">
-            {formatCurrency(
-              Number(data.totalSpent) +
-                Number(data.totalShipping) +
-                Number(data.totalTaxes) +
-                Number(data.totalDuties) +
-                Number(data.totalTariffs) +
-                Number(data.totalMiscFees),
+            {formatCurrencyFromMinorUnits(
+              data.totalSpent +
+                data.totalShipping +
+                data.totalTaxes +
+                data.totalDuties +
+                data.totalTariffs +
+                data.totalMiscFees,
               currency,
             )}
           </span>

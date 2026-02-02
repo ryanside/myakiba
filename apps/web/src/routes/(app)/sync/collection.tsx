@@ -15,12 +15,7 @@ import {
 import { useState } from "react";
 import { Check, Loader2, LoaderCircleIcon } from "lucide-react";
 import { ShimmeringText } from "@/components/ui/shimmering-text";
-import { extractMfcItemId } from "@/lib/sync/utils";
-import {
-  type SyncStatus,
-  type SyncFormCollectionItem,
-  type SyncCollectionItem,
-} from "@/lib/sync/types";
+import { type SyncStatus, type SyncCollectionItem } from "@/lib/sync/types";
 import { toast } from "sonner";
 import { getJobStatus, sendCollection } from "@/queries/sync";
 import SyncCollectionForm from "@/components/sync/sync-collection-form";
@@ -122,23 +117,8 @@ function RouteComponent() {
     },
   });
 
-  async function handleSyncCollectionSubmit(values: SyncFormCollectionItem[]) {
-    const updatedValues: SyncCollectionItem[] = values.map((item) => {
-      const extractedId = extractMfcItemId(item.itemExternalId);
-      if (!extractedId) {
-        throw new Error(`Invalid item ID: ${item.itemExternalId}`);
-      }
-      return {
-        ...item,
-        itemExternalId: parseInt(extractedId),
-        orderDate: item.orderDate || null,
-        paymentDate: item.paymentDate || null,
-        shippingDate: item.shippingDate || null,
-        collectionDate: item.collectionDate || null,
-        score: item.score.toString(),
-      };
-    });
-    await collectionMutation.mutateAsync(updatedValues);
+  async function handleSyncCollectionSubmit(values: SyncCollectionItem[]) {
+    await collectionMutation.mutateAsync(values);
   }
 
   return (

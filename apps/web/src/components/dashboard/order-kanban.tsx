@@ -12,7 +12,7 @@ import {
   KanbanOverlay,
 } from "@/components/ui/kanban";
 import { GripVertical, CalendarIcon, Check } from "lucide-react";
-import { formatCurrency, formatMonthYear } from "@myakiba/utils";
+import { formatCurrencyFromMinorUnits, formatMonthYear } from "@myakiba/utils";
 import type { DateFormat } from "@myakiba/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateOrderStatus } from "@/queries/orders";
@@ -29,7 +29,7 @@ interface KanbanOrder {
   releaseDate: string | null;
   itemImages: string[];
   itemIds: string[];
-  total: string;
+  total: number;
 }
 
 interface OrdersKanbanProps {
@@ -135,7 +135,7 @@ function OrderCard({
             )}
           </div>
           <span className="font-normal text-sm">
-            {formatCurrency(parseFloat(order.total), currency)}
+            {formatCurrencyFromMinorUnits(order.total, currency)}
           </span>
         </div>
       </div>

@@ -15,7 +15,7 @@ import { Queue } from "bullmq";
 import Redis from "ioredis";
 import { createId } from "@paralleldrive/cuid2";
 import { env } from "@myakiba/env/server";
-import { dateToString } from "@myakiba/utils";
+import { dateToString, parseMoneyToMinorUnits } from "@myakiba/utils";
 
 const redis = new Redis({
   host: env.REDIS_HOST,
@@ -196,7 +196,7 @@ class SyncService {
           paymentDate: i.payment_date,
           shippingDate: i.shipping_date,
           collectionDate: i.collecting_date,
-          price: i.price && i.price.trim() !== "" ? i.price : "0.00",
+          price: i.price && i.price.trim() !== "" ? parseMoneyToMinorUnits(i.price) : 0,
           shop: i.shop,
           shippingMethod: i.shipping_method,
           notes: i.note,

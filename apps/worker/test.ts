@@ -391,7 +391,7 @@ scrapeMethod(itemIds, 3, 1000, userId, undefined).then(async (successfulResults)
     itemExternalId: number;
     date: string;
     type: string;
-    price: string;
+    price: number;
     priceCurrency: string;
     barcode: string;
   }> = [];
@@ -517,7 +517,7 @@ scrapeMethod(itemIds, 3, 1000, userId, undefined).then(async (successfulResults)
         itemExternalId: scraped.id,
         date: normalizeDateString(release.date),
         type: release.type,
-        price: release.price.toString(),
+        price: release.price,
         priceCurrency: release.priceCurrency,
         barcode: release.barcode,
       });
@@ -594,7 +594,7 @@ scrapeMethod(itemIds, 3, 1000, userId, undefined).then(async (successfulResults)
           itemId: string;
           date: string;
           type: string;
-          price: string;
+          price: number;
           priceCurrency: string;
           barcode: string;
         } => release !== null,

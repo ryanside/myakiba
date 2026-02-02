@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Settings, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { formatCurrency } from "@myakiba/utils";
+import { formatCurrencyFromMinorUnits } from "@myakiba/utils";
 import { Progress } from "../ui/progress";
 import { Link } from "@tanstack/react-router";
 
@@ -44,10 +44,10 @@ export function BudgetControlCard({
             {hasBudget ? (
               <div className="flex items-baseline gap-1.5">
                 <span className="text-xl font-medium tracking-tight">
-                  {formatCurrency(currentSpent, currency)}
+                  {formatCurrencyFromMinorUnits(currentSpent, currency)}
                 </span>
                 <span className="text-muted-foreground text-sm">
-                  of {formatCurrency(limit, currency)}
+                  of {formatCurrencyFromMinorUnits(limit, currency)}
                 </span>
               </div>
             ) : (

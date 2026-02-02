@@ -13,7 +13,7 @@ import { DataGridColumnHeader } from "@/components/ui/data-grid-column-header";
 import { type ColumnDef, type RowSelectionState, type OnChangeFn } from "@tanstack/react-table";
 import { SquareMinus, SquarePlus, MoreHorizontal, Eye, Edit, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatCurrency, getCurrencyLocale } from "@myakiba/utils";
+import { formatCurrencyFromMinorUnits, getCurrencyLocale } from "@myakiba/utils";
 import type { CascadeOptions, EditedOrder, Order } from "@/lib/orders/types";
 import { OrderForm } from "./order-form";
 import { OrderItemSubDataGrid } from "./order-item-sub-data-grid";
@@ -436,7 +436,7 @@ export function createOrdersColumns({
         return (
           <PopoverMultiInputCell
             inputs={inputs}
-            total={formatCurrency(order.total, currency)}
+            total={formatCurrencyFromMinorUnits(order.total, currency)}
             currency={currency}
             locale={locale}
             onSubmit={async (newValues) => {

@@ -75,10 +75,8 @@ export function filterAndSortCollectionItems(
       case "price":
         aRaw = a.price;
         bRaw = b.price;
-        aValue = aRaw ? parseFloat(aRaw) : null;
-        bValue = bRaw ? parseFloat(bRaw) : null;
-        if (aValue !== null && isNaN(aValue)) aValue = null;
-        if (bValue !== null && isNaN(bValue)) bValue = null;
+        aValue = aRaw ?? null;
+        bValue = bRaw ?? null;
         break;
       case "shop":
         aRaw = a.shop;

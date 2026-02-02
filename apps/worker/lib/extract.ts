@@ -1,5 +1,6 @@
 import * as cheerio from "cheerio";
 import type { Element } from "domhandler";
+import { parseMoneyToMinorUnits } from "@myakiba/utils";
 
 export const REGEX_PATTERNS = {
   height: /H=(\d+)mm/,
@@ -160,7 +161,7 @@ export const extractReleaseData = ($element: cheerio.Cheerio<Element>, $: cheeri
       }
 
       const priceMatch = valueText.match(REGEX_PATTERNS.price);
-      const price = priceMatch ? parseFloat(priceMatch[1].replace(/,/g, "")) : 0;
+      const price = priceMatch ? parseMoneyToMinorUnits(priceMatch[1]) : 0;
 
       const priceCurrencyMatch = valueText.match(REGEX_PATTERNS.priceCurrency);
       const priceCurrency = priceCurrencyMatch ? priceCurrencyMatch[2] : "JPY";

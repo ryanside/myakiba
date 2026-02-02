@@ -35,7 +35,7 @@ const MONTH_NAMES = [
 interface MonthlyBreakdownData {
   month: number;
   itemsAdded: number;
-  amountSpent: string | null;
+  amountSpent: number | null;
 }
 
 interface ChartBarLabelProps extends React.ComponentProps<typeof Card> {
@@ -69,7 +69,7 @@ function processMonthlyData(monthlyBreakdown?: MonthlyBreakdownData[]) {
     return {
       month: monthName,
       itemsAdded: monthData?.itemsAdded || 0,
-      amountSpent: monthData?.amountSpent ? parseFloat(monthData.amountSpent) : 0,
+      amountSpent: monthData?.amountSpent ?? 0,
     };
   });
 }

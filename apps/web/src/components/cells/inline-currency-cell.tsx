@@ -1,11 +1,16 @@
 import { MaskInput } from "@/components/ui/mask-input";
 import { useCallback, useEffect, useState } from "react";
-import { formatCurrency, tryCatch } from "@myakiba/utils";
+import {
+  formatCurrencyFromMinorUnits,
+  majorStringToMinorUnits,
+  minorUnitsToMajorString,
+  tryCatch,
+} from "@myakiba/utils";
 import { Button } from "../ui/button";
 interface InlineCurrencyCellProps {
-  value: string;
+  value: number;
   currency: string;
-  onSubmit: (newValue: string) => Promise<void>;
+  onSubmit: (newValue: number) => Promise<void>;
   locale: string;
   disabled?: boolean;
 }
@@ -18,32 +23,33 @@ export function InlineCurrencyCell({
   disabled,
 }: InlineCurrencyCellProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [newValue, setNewValue] = useState(value);
+  const [newValue, setNewValue] = useState<string>(minorUnitsToMajorString(value));
+  const currentValue = minorUnitsToMajorString(value);
 
   // temporary workaround to ensure no stale data when the prop changes
   useEffect(() => {
-    setNewValue(value);
+    setNewValue(currentValue);
   }, [value]);
 
   const handleSubmit = useCallback(async () => {
-    if (newValue === value) {
+    if (newValue === currentValue) {
       setIsEditing(false);
       return;
     }
     if (newValue === "") {
-      setNewValue(value);
+      setNewValue(currentValue);
       setIsEditing(false);
       return;
     }
-    const { error } = await tryCatch(onSubmit(newValue));
+    const { error } = await tryCatch(onSubmit(majorStringToMinorUnits(newValue)));
     if (error) {
-      setNewValue(value);
+      setNewValue(currentValue);
     }
     setIsEditing(false);
-  }, [newValue, value, onSubmit]);
+  }, [newValue, currentValue, onSubmit]);
 
   const handleCancel = () => {
-    setNewValue(value);
+    setNewValue(currentValue);
     setIsEditing(false);
   };
 
@@ -78,7 +84,7 @@ export function InlineCurrencyCell({
       variant="ghost"
       disabled={disabled}
     >
-      {formatCurrency(newValue, currency)}
+      {formatCurrencyFromMinorUnits(value, currency)}
     </Button>
   );
 }

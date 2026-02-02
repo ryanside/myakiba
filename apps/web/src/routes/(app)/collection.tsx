@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { createOptimisticDeleteUpdate, createOptimisticEditUpdate } from "@/lib/collection/utils";
 import { useCallback } from "react";
 import { KPICard } from "@/components/ui/kpi-card";
-import { formatCurrency } from "@myakiba/utils";
+import { formatCurrencyFromMinorUnits } from "@myakiba/utils";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Grid, TableOfContents } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -178,7 +178,9 @@ function RouteComponent() {
           title="Total Spent"
           subtitle="based on total item prices"
           value={
-            collectionStats ? formatCurrency(collectionStats.totalSpent, userCurrency) : undefined
+            collectionStats
+              ? formatCurrencyFromMinorUnits(collectionStats.totalSpent, userCurrency)
+              : undefined
           }
         />
         <KPICard
@@ -191,7 +193,7 @@ function RouteComponent() {
           subtitle="based on payment date"
           value={
             collectionStats
-              ? formatCurrency(collectionStats.totalSpentThisMonth, userCurrency)
+              ? formatCurrencyFromMinorUnits(collectionStats.totalSpentThisMonth, userCurrency)
               : undefined
           }
         />

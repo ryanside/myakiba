@@ -293,7 +293,7 @@ class ItemService {
                   'itemId', ir.item_id,
                   'date', ir.date,
                   'type', ir.type,
-                  'price', ir.price::text,
+                  'price', ir.price,
                   'priceCurrency', ir.price_currency,
                   'barcode', ir.barcode
                 )

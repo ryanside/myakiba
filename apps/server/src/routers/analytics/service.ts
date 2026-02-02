@@ -22,30 +22,30 @@ class AnalyticsService {
       .select({
         priceRange: sql<string>`
           CASE 
-            WHEN ${collection.price}::numeric < 50 THEN '< $50'
-            WHEN ${collection.price}::numeric < 100 THEN '$50-$100'
-            WHEN ${collection.price}::numeric < 200 THEN '$100-$200'
-            WHEN ${collection.price}::numeric < 500 THEN '$200-$500'
+            WHEN ${collection.price} < 5000 THEN '< $50'
+            WHEN ${collection.price} < 10000 THEN '$50-$100'
+            WHEN ${collection.price} < 20000 THEN '$100-$200'
+            WHEN ${collection.price} < 50000 THEN '$200-$500'
             ELSE '> $500'
           END
         `,
         count: count(),
-        totalValue: sql<string>`SUM(${collection.price}::numeric)`,
+        totalValue: sql<number>`SUM(${collection.price})`,
       })
       .from(collection)
       .where(and(eq(collection.userId, sql.placeholder("userId")), eq(collection.status, "Owned")))
       .groupBy(
         sql`
         CASE 
-          WHEN ${collection.price}::numeric < 50 THEN '< $50'
-          WHEN ${collection.price}::numeric < 100 THEN '$50-$100'
-          WHEN ${collection.price}::numeric < 200 THEN '$100-$200'
-          WHEN ${collection.price}::numeric < 500 THEN '$200-$500'
+          WHEN ${collection.price} < 5000 THEN '< $50'
+          WHEN ${collection.price} < 10000 THEN '$50-$100'
+          WHEN ${collection.price} < 20000 THEN '$100-$200'
+          WHEN ${collection.price} < 50000 THEN '$200-$500'
           ELSE '> $500'
         END
       `,
       )
-      .orderBy(sql`MIN(${collection.price}::numeric)`)
+      .orderBy(sql`MIN(${collection.price})`)
       .prepare("price_range_distribution");
 
     // Scale Distribution
@@ -53,7 +53,7 @@ class AnalyticsService {
       .select({
         scale: item.scale,
         count: count(),
-        totalValue: sql<string>`SUM(${collection.price}::numeric)`,
+        totalValue: sql<number>`SUM(${collection.price})`,
       })
       .from(collection)
       .innerJoin(item, eq(collection.itemId, item.id))
@@ -90,12 +90,12 @@ class AnalyticsService {
       .select({
         shop: collection.shop,
         count: count(),
-        totalSpent: sql<string>`SUM(${collection.price}::numeric)`,
+        totalSpent: sql<number>`SUM(${collection.price})`,
       })
       .from(collection)
       .where(and(eq(collection.userId, sql.placeholder("userId")), not(eq(collection.shop, ""))))
       .groupBy(collection.shop)
-      .orderBy(desc(count()), desc(sql<string>`SUM(${collection.price}::numeric)`))
+      .orderBy(desc(count()), desc(sql<number>`SUM(${collection.price})`))
       .limit(10)
       .prepare("top_shops");
 
@@ -114,7 +114,7 @@ class AnalyticsService {
         entryId: entry.id,
         originName: entry.name,
         itemCount: count(),
-        totalValue: sql<string>`SUM(${collection.price}::numeric)`,
+        totalValue: sql<number>`SUM(${collection.price})`,
       })
       .from(collection)
       .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
@@ -127,7 +127,7 @@ class AnalyticsService {
         ),
       )
       .groupBy(entry.id, entry.name)
-      .orderBy(desc(count()), desc(sql<string>`SUM(${collection.price}::numeric)`))
+      .orderBy(desc(count()), desc(sql<number>`SUM(${collection.price})`))
       .limit(10)
       .prepare("top_characters");
 
@@ -137,7 +137,7 @@ class AnalyticsService {
         entryId: entry.id,
         originName: entry.name,
         itemCount: count(),
-        totalValue: sql<string>`SUM(${collection.price}::numeric)`,
+        totalValue: sql<number>`SUM(${collection.price})`,
       })
       .from(collection)
       .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
@@ -150,7 +150,7 @@ class AnalyticsService {
         ),
       )
       .groupBy(entry.id, entry.name)
-      .orderBy(desc(count()), desc(sql<string>`SUM(${collection.price}::numeric)`))
+      .orderBy(desc(count()), desc(sql<number>`SUM(${collection.price})`))
       .limit(10)
       .prepare("top_origins");
 
@@ -160,7 +160,7 @@ class AnalyticsService {
         entryId: entry.id,
         originName: entry.name,
         itemCount: count(),
-        totalValue: sql<string>`SUM(${collection.price}::numeric)`,
+        totalValue: sql<number>`SUM(${collection.price})`,
       })
       .from(collection)
       .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
@@ -173,7 +173,7 @@ class AnalyticsService {
         ),
       )
       .groupBy(entry.id, entry.name)
-      .orderBy(desc(count()), desc(sql<string>`SUM(${collection.price}::numeric)`))
+      .orderBy(desc(count()), desc(sql<number>`SUM(${collection.price})`))
       .limit(10)
       .prepare("top_companies");
 
@@ -183,7 +183,7 @@ class AnalyticsService {
         entryId: entry.id,
         originName: entry.name,
         itemCount: count(),
-        totalValue: sql<string>`SUM(${collection.price}::numeric)`,
+        totalValue: sql<number>`SUM(${collection.price})`,
       })
       .from(collection)
       .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
@@ -196,7 +196,7 @@ class AnalyticsService {
         ),
       )
       .groupBy(entry.id, entry.name)
-      .orderBy(desc(count()), desc(sql<string>`SUM(${collection.price}::numeric)`))
+      .orderBy(desc(count()), desc(sql<number>`SUM(${collection.price})`))
       .limit(10)
       .prepare("top_artists");
 
@@ -206,7 +206,7 @@ class AnalyticsService {
         entryId: entry.id,
         originName: entry.name,
         itemCount: count(),
-        totalValue: sql<string>`SUM(${collection.price}::numeric)`,
+        totalValue: sql<number>`SUM(${collection.price})`,
       })
       .from(collection)
       .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
@@ -219,7 +219,7 @@ class AnalyticsService {
         ),
       )
       .groupBy(entry.id, entry.name)
-      .orderBy(desc(count()), desc(sql<string>`SUM(${collection.price}::numeric)`))
+      .orderBy(desc(count()), desc(sql<number>`SUM(${collection.price})`))
       .limit(10)
       .prepare("top_materials");
 
@@ -229,7 +229,7 @@ class AnalyticsService {
         entryId: entry.id,
         originName: entry.name,
         itemCount: count(),
-        totalValue: sql<string>`SUM(${collection.price}::numeric)`,
+        totalValue: sql<number>`SUM(${collection.price})`,
       })
       .from(collection)
       .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
@@ -242,7 +242,7 @@ class AnalyticsService {
         ),
       )
       .groupBy(entry.id, entry.name)
-      .orderBy(desc(count()), desc(sql<string>`SUM(${collection.price}::numeric)`))
+      .orderBy(desc(count()), desc(sql<number>`SUM(${collection.price})`))
       .limit(10)
       .prepare("top_classifications");
 
@@ -252,7 +252,7 @@ class AnalyticsService {
         entryId: entry.id,
         originName: entry.name,
         itemCount: count(),
-        totalValue: sql<string>`SUM(${collection.price}::numeric)`,
+        totalValue: sql<number>`SUM(${collection.price})`,
       })
       .from(collection)
       .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
@@ -265,7 +265,7 @@ class AnalyticsService {
         ),
       )
       .groupBy(entry.id, entry.name)
-      .orderBy(desc(count()), desc(sql<string>`SUM(${collection.price}::numeric)`))
+      .orderBy(desc(count()), desc(sql<number>`SUM(${collection.price})`))
       .limit(10)
       .prepare("top_events");
   }

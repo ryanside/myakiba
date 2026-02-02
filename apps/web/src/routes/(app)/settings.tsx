@@ -27,7 +27,11 @@ import {
 import { Loader2, Trash2 } from "lucide-react";
 import * as z from "zod";
 import { MaskInput } from "@/components/ui/mask-input";
-import { getCurrencyLocale } from "@myakiba/utils";
+import {
+  getCurrencyLocale,
+  majorStringToMinorUnits,
+  minorUnitsToMajorString,
+} from "@myakiba/utils";
 import { app } from "@/lib/treaty-client";
 import { clearRecentItems } from "@/lib/recent-items";
 import { DATE_FORMATS } from "@myakiba/constants";
@@ -36,7 +40,7 @@ interface Budget {
   id: string;
   userId: string;
   period: "monthly" | "annual" | "allocated";
-  amount: string;
+  amount: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -209,20 +213,20 @@ function BudgetForm({ user, budget }: { user: User; budget: Budget }) {
 
   const form = useForm({
     defaultValues: {
-      amount: budget?.amount || "0",
+      amount: budget ? minorUnitsToMajorString(budget.amount) : "0.00",
       period: (budget?.period || "monthly") as "monthly" | "annual" | "allocated",
     },
     onSubmit: async ({ value }) => {
       upsertBudgetMutation.mutate({
-        amount: parseFloat(value.amount),
+        amount: majorStringToMinorUnits(value.amount),
         period: value.period,
       });
     },
     validators: {
       onSubmit: z.object({
         amount: z.string().refine((val) => {
-          const num = parseFloat(val);
-          return !isNaN(num) && num >= 0;
+          const num = majorStringToMinorUnits(val);
+          return Number.isFinite(num) && num >= 0;
         }, "Amount must be at least 0"),
         period: z.enum(["monthly", "annual", "allocated"]),
       }),
@@ -244,7 +248,7 @@ function BudgetForm({ user, budget }: { user: User; budget: Budget }) {
           }}
           className="space-y-4"
         >
-          <form.Field name="amount">
+          <form.Field name="amount" >
             {(field) => (
               <div className="space-y-2">
                 <Label htmlFor={field.name}>Budget Limit</Label>
@@ -258,7 +262,7 @@ function BudgetForm({ user, budget }: { user: User; budget: Budget }) {
                   onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
                 />
                 {field.state.meta.errors.length > 0 && (
-                  <p className="text-sm text-destructive">{String(field.state.meta.errors[0])}</p>
+                  <p className="text-sm text-destructive">{field.state.meta.errors[0]?.message}</p>
                 )}
               </div>
             )}
@@ -283,7 +287,7 @@ function BudgetForm({ user, budget }: { user: User; budget: Budget }) {
                   </SelectContent>
                 </Select>
                 {field.state.meta.errors.length > 0 && (
-                  <p className="text-sm text-destructive">{String(field.state.meta.errors[0])}</p>
+                  <p className="text-sm text-destructive">{field.state.meta.errors[0]?.message}</p>
                 )}
               </div>
             )}

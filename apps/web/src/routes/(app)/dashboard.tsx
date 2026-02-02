@@ -8,7 +8,7 @@ import { CollectionBreakdown } from "@/components/dashboard/collection-breakdown
 import { BudgetControlCard } from "@/components/dashboard/budget-control-card";
 import { ReleaseCalendar } from "@/components/dashboard/release-calendar";
 import { UnpaidOrders } from "@/components/dashboard/unpaid-orders";
-import { formatCurrency } from "@myakiba/utils";
+import { formatCurrencyFromMinorUnits } from "@myakiba/utils";
 import { Button } from "@/components/ui/button";
 import OrderKanban from "@/components/dashboard/order-kanban";
 import { Badge } from "@/components/ui/badge";
@@ -127,9 +127,9 @@ function DashboardContent() {
                 <KPICard
                   title="Total Spent"
                   subtitle="based on paid collection & order items"
-                  value={formatCurrency(collectionStats[0].totalSpent, userCurrency)}
+                  value={formatCurrencyFromMinorUnits(Number(collectionStats[0].totalSpent), userCurrency)}
                   subvalueTitle="this month"
-                  subvalue={formatCurrency(
+                  subvalue={formatCurrencyFromMinorUnits(
                     Number(collectionStats[0].totalSpentThisMonth) +
                       Number(ordersSummary[0].thisMonthShipping) +
                       Number(ordersSummary[0].thisMonthTaxes) +
@@ -172,17 +172,15 @@ function DashboardContent() {
           <BudgetControlCard
             currentSpent={
               budgetSummary.length > 0
-                ? parseFloat(collectionStats[0].totalSpentThisMonth.toString()) +
-                  parseFloat(ordersSummary[0].thisMonthShipping.toString()) +
-                  parseFloat(ordersSummary[0].thisMonthTaxes.toString()) +
-                  parseFloat(ordersSummary[0].thisMonthDuties.toString()) +
-                  parseFloat(ordersSummary[0].thisMonthTariffs.toString()) +
-                  parseFloat(ordersSummary[0].thisMonthMiscFees.toString())
+                ? Number(collectionStats[0].totalSpentThisMonth) +
+                  Number(ordersSummary[0].thisMonthShipping) +
+                  Number(ordersSummary[0].thisMonthTaxes) +
+                  Number(ordersSummary[0].thisMonthDuties) +
+                  Number(ordersSummary[0].thisMonthTariffs) +
+                  Number(ordersSummary[0].thisMonthMiscFees)
                 : undefined
             }
-            limit={
-              budgetSummary.length > 0 ? parseFloat(budgetSummary[0].amount.toString()) : undefined
-            }
+            limit={budgetSummary.length > 0 ? budgetSummary[0].amount : undefined}
             currency={userCurrency}
             warningThreshold={75}
           />
@@ -199,8 +197,8 @@ function DashboardContent() {
               <CardTitle className="text-md font-medium">Unpaid Orders</CardTitle>
               <Badge variant="outline">{unpaidOrders.length}</Badge>
               <Badge variant="info" appearance="outline">
-                {formatCurrency(
-                  unpaidOrders.reduce((acc, order) => acc + parseFloat(order.total), 0),
+                {formatCurrencyFromMinorUnits(
+                  unpaidOrders.reduce((acc, order) => acc + Number(order.total), 0),
                   userCurrency,
                 )}
               </Badge>

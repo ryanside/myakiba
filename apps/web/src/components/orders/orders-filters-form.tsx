@@ -26,7 +26,11 @@ import {
 import { ChevronDown } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { OrderFilters } from "@/lib/orders/types";
-import { getCurrencyLocale } from "@myakiba/utils";
+import {
+  getCurrencyLocale,
+  majorStringToMinorUnits,
+  minorUnitsToMajorString,
+} from "@myakiba/utils";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/constants";
 
 interface OrdersFiltersFormProps {
@@ -60,20 +64,58 @@ export default function OrdersFiltersForm({
       colDateStart: currentFilters?.colDateStart ?? "",
       colDateEnd: currentFilters?.colDateEnd ?? "",
       status: currentFilters?.status ?? [],
-      totalMin: currentFilters?.totalMin ?? "",
-      totalMax: currentFilters?.totalMax ?? "",
-      shippingFeeMin: currentFilters?.shippingFeeMin ?? "",
-      shippingFeeMax: currentFilters?.shippingFeeMax ?? "",
-      taxesMin: currentFilters?.taxesMin ?? "",
-      taxesMax: currentFilters?.taxesMax ?? "",
-      dutiesMin: currentFilters?.dutiesMin ?? "",
-      dutiesMax: currentFilters?.dutiesMax ?? "",
-      tariffsMin: currentFilters?.tariffsMin ?? "",
-      tariffsMax: currentFilters?.tariffsMax ?? "",
-      miscFeesMin: currentFilters?.miscFeesMin ?? "",
-      miscFeesMax: currentFilters?.miscFeesMax ?? "",
+      totalMin:
+        currentFilters?.totalMin !== undefined
+          ? minorUnitsToMajorString(currentFilters.totalMin)
+          : "",
+      totalMax:
+        currentFilters?.totalMax !== undefined
+          ? minorUnitsToMajorString(currentFilters.totalMax)
+          : "",
+      shippingFeeMin:
+        currentFilters?.shippingFeeMin !== undefined
+          ? minorUnitsToMajorString(currentFilters.shippingFeeMin)
+          : "",
+      shippingFeeMax:
+        currentFilters?.shippingFeeMax !== undefined
+          ? minorUnitsToMajorString(currentFilters.shippingFeeMax)
+          : "",
+      taxesMin:
+        currentFilters?.taxesMin !== undefined
+          ? minorUnitsToMajorString(currentFilters.taxesMin)
+          : "",
+      taxesMax:
+        currentFilters?.taxesMax !== undefined
+          ? minorUnitsToMajorString(currentFilters.taxesMax)
+          : "",
+      dutiesMin:
+        currentFilters?.dutiesMin !== undefined
+          ? minorUnitsToMajorString(currentFilters.dutiesMin)
+          : "",
+      dutiesMax:
+        currentFilters?.dutiesMax !== undefined
+          ? minorUnitsToMajorString(currentFilters.dutiesMax)
+          : "",
+      tariffsMin:
+        currentFilters?.tariffsMin !== undefined
+          ? minorUnitsToMajorString(currentFilters.tariffsMin)
+          : "",
+      tariffsMax:
+        currentFilters?.tariffsMax !== undefined
+          ? minorUnitsToMajorString(currentFilters.tariffsMax)
+          : "",
+      miscFeesMin:
+        currentFilters?.miscFeesMin !== undefined
+          ? minorUnitsToMajorString(currentFilters.miscFeesMin)
+          : "",
+      miscFeesMax:
+        currentFilters?.miscFeesMax !== undefined
+          ? minorUnitsToMajorString(currentFilters.miscFeesMax)
+          : "",
     },
     onSubmit: async ({ value }) => {
+      const toMinorUnits = (amount: string): number | undefined =>
+        amount.trim() === "" ? undefined : majorStringToMinorUnits(amount);
       const filters: OrderFilters = {
         shop: value.shop && value.shop.length > 0 ? value.shop : undefined,
         releaseDateStart: value.releaseDateStart || undefined,
@@ -88,18 +130,18 @@ export default function OrdersFiltersForm({
         colDateStart: value.colDateStart || undefined,
         colDateEnd: value.colDateEnd || undefined,
         status: value.status && value.status.length > 0 ? value.status : undefined,
-        totalMin: value.totalMin || undefined,
-        totalMax: value.totalMax || undefined,
-        shippingFeeMin: value.shippingFeeMin || undefined,
-        shippingFeeMax: value.shippingFeeMax || undefined,
-        taxesMin: value.taxesMin || undefined,
-        taxesMax: value.taxesMax || undefined,
-        dutiesMin: value.dutiesMin || undefined,
-        dutiesMax: value.dutiesMax || undefined,
-        tariffsMin: value.tariffsMin || undefined,
-        tariffsMax: value.tariffsMax || undefined,
-        miscFeesMin: value.miscFeesMin || undefined,
-        miscFeesMax: value.miscFeesMax || undefined,
+        totalMin: toMinorUnits(value.totalMin),
+        totalMax: toMinorUnits(value.totalMax),
+        shippingFeeMin: toMinorUnits(value.shippingFeeMin),
+        shippingFeeMax: toMinorUnits(value.shippingFeeMax),
+        taxesMin: toMinorUnits(value.taxesMin),
+        taxesMax: toMinorUnits(value.taxesMax),
+        dutiesMin: toMinorUnits(value.dutiesMin),
+        dutiesMax: toMinorUnits(value.dutiesMax),
+        tariffsMin: toMinorUnits(value.tariffsMin),
+        tariffsMax: toMinorUnits(value.tariffsMax),
+        miscFeesMin: toMinorUnits(value.miscFeesMin),
+        miscFeesMax: toMinorUnits(value.miscFeesMax),
       };
 
       onApplyFilters(filters);

@@ -3,9 +3,9 @@ import type { CollectionItem } from "./collection";
 
 export type OrderStats = {
   totalOrders: number;
-  totalSpent: string;
+  totalSpent: number;
   activeOrders: number;
-  unpaidCosts: string;
+  unpaidCosts: number;
 };
 
 export type OrdersQueryResponse = {
@@ -32,12 +32,12 @@ export type Order = {
   shippingDate: string | null;
   collectionDate: string | null;
   status: OrderStatus;
-  total: string;
-  shippingFee: string;
-  taxes: string;
-  duties: string;
-  tariffs: string;
-  miscFees: string;
+  total: number;
+  shippingFee: number;
+  taxes: number;
+  duties: number;
+  tariffs: number;
+  miscFees: number;
   notes: string;
   itemCount: number;
   createdAt: string;
@@ -61,11 +61,11 @@ export type NewOrder = {
   shippingDate: string | null;
   collectionDate: string | null;
   status: OrderStatus;
-  shippingFee: string;
-  taxes: string;
-  duties: string;
-  tariffs: string;
-  miscFees: string;
+  shippingFee: number;
+  taxes: number;
+  duties: number;
+  tariffs: number;
+  miscFees: number;
   notes: string;
 };
 
@@ -110,18 +110,18 @@ export type OrderFilters = {
   colDateStart?: string | undefined;
   colDateEnd?: string | undefined;
   status?: OrderStatus[] | undefined;
-  totalMin?: string | undefined;
-  totalMax?: string | undefined;
-  shippingFeeMin?: string | undefined;
-  shippingFeeMax?: string | undefined;
-  taxesMin?: string | undefined;
-  taxesMax?: string | undefined;
-  dutiesMin?: string | undefined;
-  dutiesMax?: string | undefined;
-  tariffsMin?: string | undefined;
-  tariffsMax?: string | undefined;
-  miscFeesMin?: string | undefined;
-  miscFeesMax?: string | undefined;
+  totalMin?: number | undefined;
+  totalMax?: number | undefined;
+  shippingFeeMin?: number | undefined;
+  shippingFeeMax?: number | undefined;
+  taxesMin?: number | undefined;
+  taxesMax?: number | undefined;
+  dutiesMin?: number | undefined;
+  dutiesMax?: number | undefined;
+  tariffsMin?: number | undefined;
+  tariffsMax?: number | undefined;
+  miscFeesMin?: number | undefined;
+  miscFeesMax?: number | undefined;
 };
 
 export type CascadeOptions = Array<
@@ -139,7 +139,7 @@ export type ItemRelease = {
   itemId: string;
   date: string;
   type: string | null;
-  price: string | null;
+  price: number | null;
   priceCurrency: string | null;
   barcode: string | null;
 };

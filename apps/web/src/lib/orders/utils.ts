@@ -109,50 +109,38 @@ export function filterAndSortOrders(
       case "total":
         aRaw = a.total;
         bRaw = b.total;
-        aValue = aRaw ? parseFloat(aRaw) : null;
-        bValue = bRaw ? parseFloat(bRaw) : null;
-        if (aValue !== null && isNaN(aValue)) aValue = null;
-        if (bValue !== null && isNaN(bValue)) bValue = null;
+        aValue = aRaw ?? null;
+        bValue = bRaw ?? null;
         break;
       case "shippingFee":
         aRaw = a.shippingFee;
         bRaw = b.shippingFee;
-        aValue = aRaw ? parseFloat(aRaw) : null;
-        bValue = bRaw ? parseFloat(bRaw) : null;
-        if (aValue !== null && isNaN(aValue)) aValue = null;
-        if (bValue !== null && isNaN(bValue)) bValue = null;
+        aValue = aRaw ?? null;
+        bValue = bRaw ?? null;
         break;
       case "taxes":
         aRaw = a.taxes;
         bRaw = b.taxes;
-        aValue = aRaw ? parseFloat(aRaw) : null;
-        bValue = bRaw ? parseFloat(bRaw) : null;
-        if (aValue !== null && isNaN(aValue)) aValue = null;
-        if (bValue !== null && isNaN(bValue)) bValue = null;
+        aValue = aRaw ?? null;
+        bValue = bRaw ?? null;
         break;
       case "duties":
         aRaw = a.duties;
         bRaw = b.duties;
-        aValue = aRaw ? parseFloat(aRaw) : null;
-        bValue = bRaw ? parseFloat(bRaw) : null;
-        if (aValue !== null && isNaN(aValue)) aValue = null;
-        if (bValue !== null && isNaN(bValue)) bValue = null;
+        aValue = aRaw ?? null;
+        bValue = bRaw ?? null;
         break;
       case "tariffs":
         aRaw = a.tariffs;
         bRaw = b.tariffs;
-        aValue = aRaw ? parseFloat(aRaw) : null;
-        bValue = bRaw ? parseFloat(bRaw) : null;
-        if (aValue !== null && isNaN(aValue)) aValue = null;
-        if (bValue !== null && isNaN(bValue)) bValue = null;
+        aValue = aRaw ?? null;
+        bValue = bRaw ?? null;
         break;
       case "miscFees":
         aRaw = a.miscFees;
         bRaw = b.miscFees;
-        aValue = aRaw ? parseFloat(aRaw) : null;
-        bValue = bRaw ? parseFloat(bRaw) : null;
-        if (aValue !== null && isNaN(aValue)) aValue = null;
-        if (bValue !== null && isNaN(bValue)) bValue = null;
+        aValue = aRaw ?? null;
+        bValue = bRaw ?? null;
         break;
       case "itemCount":
         aRaw = a.itemCount;
@@ -248,17 +236,10 @@ export function createOptimisticMergeUpdate(
     })),
   );
 
-  const ordersTotal = ordersToMerge.reduce((sum: number, order: Order) => {
-    const total = parseFloat(order.total) || 0;
-    return sum + total;
-  }, 0);
+  const ordersTotal = ordersToMerge.reduce((sum: number, order: Order) => sum + order.total, 0);
   const additionalFees =
-    parseFloat(values.shippingFee) +
-    parseFloat(values.taxes) +
-    parseFloat(values.duties) +
-    parseFloat(values.tariffs) +
-    parseFloat(values.miscFees);
-  const combinedTotal = (ordersTotal + additionalFees).toFixed(2);
+    values.shippingFee + values.taxes + values.duties + values.tariffs + values.miscFees;
+  const combinedTotal = ordersTotal + additionalFees;
 
   const mergedOrder = {
     orderId: `temp-${Date.now()}`, // Temporary ID for optimistic update
@@ -329,16 +310,10 @@ export function createOptimisticSplitUpdate(
       })),
   );
 
-  const splitItemsTotal = splitItems.reduce((sum: number, item: OrderItem) => {
-    return sum + parseFloat(item.price);
-  }, 0);
+  const splitItemsTotal = splitItems.reduce((sum: number, item: OrderItem) => sum + item.price, 0);
   const additionalFees =
-    parseFloat(values.shippingFee) +
-    parseFloat(values.taxes) +
-    parseFloat(values.duties) +
-    parseFloat(values.tariffs) +
-    parseFloat(values.miscFees);
-  const combinedTotal = (splitItemsTotal + additionalFees).toFixed(2);
+    values.shippingFee + values.taxes + values.duties + values.tariffs + values.miscFees;
+  const combinedTotal = splitItemsTotal + additionalFees;
 
   const newOrder = {
     ...values,
@@ -358,13 +333,14 @@ export function createOptimisticSplitUpdate(
     // get the items that were split from this specific order
     const orderSplitItems = order.items.filter((item: OrderItem) => collectionIds.has(item.id));
 
-    const orderSplitItemsTotal = orderSplitItems.reduce((sum: number, item: OrderItem) => {
-      return sum + parseFloat(item.price);
-    }, 0);
+    const orderSplitItemsTotal = orderSplitItems.reduce(
+      (sum: number, item: OrderItem) => sum + item.price,
+      0,
+    );
 
     return {
       ...order,
-      total: (parseFloat(order.total) - orderSplitItemsTotal).toFixed(2),
+      total: order.total - orderSplitItemsTotal,
       items: remainingItems,
       itemCount: remainingItems.length,
     };
@@ -409,18 +385,15 @@ export function createOptimisticEditUpdate(
     };
   });
 
-  const itemsTotal = items.reduce((sum: number, item: OrderItem) => {
-    return sum + parseFloat(item.price);
-  }, 0);
+  const itemsTotal = items.reduce((sum: number, item: OrderItem) => sum + item.price, 0);
 
-  const total = (
+  const total =
     itemsTotal +
-    parseFloat(values.shippingFee) +
-    parseFloat(values.taxes) +
-    parseFloat(values.duties) +
-    parseFloat(values.tariffs) +
-    parseFloat(values.miscFees)
-  ).toFixed(2);
+    values.shippingFee +
+    values.taxes +
+    values.duties +
+    values.tariffs +
+    values.miscFees;
 
   const updatedOrders = old.orders.map((order: Order) =>
     order.orderId === values.orderId ? { ...order, ...values, items, total } : order,
@@ -489,24 +462,21 @@ export function createOptimisticEditItemUpdate(
 
   const remainingItems = order.items.filter((item: OrderItem) => item.id !== values.id);
 
-  const remainingItemsPriceTotal = remainingItems.reduce((sum: number, item: OrderItem) => {
-    return sum + parseFloat(item.price);
-  }, 0);
+  const remainingItemsPriceTotal = remainingItems.reduce(
+    (sum: number, item: OrderItem) => sum + item.price,
+    0,
+  );
 
   const additionalFees =
-    parseFloat(order.shippingFee) +
-    parseFloat(order.taxes) +
-    parseFloat(order.duties) +
-    parseFloat(order.tariffs) +
-    parseFloat(order.miscFees);
-  const newOrderTotal = parseFloat(updatedItem.price) + remainingItemsPriceTotal + additionalFees;
+    order.shippingFee + order.taxes + order.duties + order.tariffs + order.miscFees;
+  const newOrderTotal = updatedItem.price + remainingItemsPriceTotal + additionalFees;
   const itemsUpdated = order.items.map((item: OrderItem) =>
     item.id === values.id ? updatedItem : item,
   );
 
   const updatedOrders = old.orders.map((order: Order) =>
     order.orderId === values.orderId
-      ? { ...order, items: itemsUpdated, total: newOrderTotal.toFixed(2) }
+      ? { ...order, items: itemsUpdated, total: newOrderTotal }
       : order,
   );
 
@@ -535,16 +505,13 @@ export function createOptimisticDeleteItemUpdate(
   if (!item) return old;
 
   const remainingItems = order.items.filter((item: OrderItem) => item.id !== collectionId);
-  const remainingItemsPriceTotal = remainingItems.reduce((sum: number, item: OrderItem) => {
-    return sum + parseFloat(item.price);
-  }, 0);
+  const remainingItemsPriceTotal = remainingItems.reduce(
+    (sum: number, item: OrderItem) => sum + item.price,
+    0,
+  );
 
   const additionalFees =
-    parseFloat(order.shippingFee) +
-    parseFloat(order.taxes) +
-    parseFloat(order.duties) +
-    parseFloat(order.tariffs) +
-    parseFloat(order.miscFees);
+    order.shippingFee + order.taxes + order.duties + order.tariffs + order.miscFees;
   const newOrderTotal = remainingItemsPriceTotal + additionalFees;
 
   const updatedOrders = old.orders.map((order: Order) =>
@@ -552,7 +519,7 @@ export function createOptimisticDeleteItemUpdate(
       ? {
           ...order,
           items: remainingItems,
-          total: newOrderTotal.toFixed(2),
+          total: newOrderTotal,
           itemCount: remainingItems.length,
         }
       : order,
@@ -586,22 +553,19 @@ export function createOptimisticDeleteItemsUpdate(
       return order;
     }
 
-    const remainingItemsPriceTotal = remainingItems.reduce((sum: number, item: OrderItem) => {
-      return sum + parseFloat(item.price);
-    }, 0);
+    const remainingItemsPriceTotal = remainingItems.reduce(
+      (sum: number, item: OrderItem) => sum + item.price,
+      0,
+    );
 
     const additionalFees =
-      (parseFloat(order.shippingFee) || 0) +
-      (parseFloat(order.taxes) || 0) +
-      (parseFloat(order.duties) || 0) +
-      (parseFloat(order.tariffs) || 0) +
-      (parseFloat(order.miscFees) || 0);
+      order.shippingFee + order.taxes + order.duties + order.tariffs + order.miscFees;
     const newOrderTotal = remainingItemsPriceTotal + additionalFees;
 
     return {
       ...order,
       items: remainingItems,
-      total: newOrderTotal.toFixed(2),
+      total: newOrderTotal,
       itemCount: remainingItems.length,
     };
   });
@@ -645,29 +609,28 @@ export function createOptimisticMoveItemUpdate(
   if (!itemsToMove.length) return old;
 
   // Calculate total value of items being moved
-  const movedItemsTotal = itemsToMove.reduce((sum: number, item: OrderItem) => {
-    return sum + parseFloat(item.price);
-  }, 0);
+  const movedItemsTotal = itemsToMove.reduce((sum: number, item: OrderItem) => sum + item.price, 0);
 
   // Calculate target order's additional fees
   const targetAdditionalFees =
-    parseFloat(targetOrder.shippingFee) +
-    parseFloat(targetOrder.taxes) +
-    parseFloat(targetOrder.duties) +
-    parseFloat(targetOrder.tariffs) +
-    parseFloat(targetOrder.miscFees);
+    targetOrder.shippingFee +
+    targetOrder.taxes +
+    targetOrder.duties +
+    targetOrder.tariffs +
+    targetOrder.miscFees;
 
   // Calculate target order's current items total
-  const targetItemsTotal = targetOrder.items.reduce((sum: number, item: OrderItem) => {
-    return sum + parseFloat(item.price);
-  }, 0);
+  const targetItemsTotal = targetOrder.items.reduce(
+    (sum: number, item: OrderItem) => sum + item.price,
+    0,
+  );
 
   // Update target order with moved items
   const updatedTargetOrder = {
     ...targetOrder,
     items: [...targetOrder.items, ...itemsToMove],
     itemCount: targetOrder.items.length + itemsToMove.length,
-    total: (targetItemsTotal + movedItemsTotal + targetAdditionalFees).toFixed(2),
+    total: targetItemsTotal + movedItemsTotal + targetAdditionalFees,
   };
 
   // Update source orders by removing moved items
@@ -676,21 +639,18 @@ export function createOptimisticMoveItemUpdate(
 
     // Calculate this order's additional fees
     const orderAdditionalFees =
-      parseFloat(order.shippingFee) +
-      parseFloat(order.taxes) +
-      parseFloat(order.duties) +
-      parseFloat(order.tariffs) +
-      parseFloat(order.miscFees);
+      order.shippingFee + order.taxes + order.duties + order.tariffs + order.miscFees;
 
-    const remainingItemsTotal = remainingItems.reduce((sum: number, item: OrderItem) => {
-      return sum + parseFloat(item.price);
-    }, 0);
+    const remainingItemsTotal = remainingItems.reduce(
+      (sum: number, item: OrderItem) => sum + item.price,
+      0,
+    );
 
     return {
       ...order,
       items: remainingItems,
       itemCount: remainingItems.length,
-      total: (remainingItemsTotal + orderAdditionalFees).toFixed(2),
+      total: remainingItemsTotal + orderAdditionalFees,
     };
   });
 

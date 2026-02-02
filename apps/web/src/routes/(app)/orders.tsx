@@ -36,7 +36,7 @@ import { updateCollectionItem } from "@/queries/collection";
 import { OrdersDataGridSkeleton } from "@/components/orders/orders-data-grid-skeleton";
 import { useCallback } from "react";
 import { KPICard } from "@/components/ui/kpi-card";
-import { formatCurrency } from "@myakiba/utils";
+import { formatCurrencyFromMinorUnits } from "@myakiba/utils";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Grid, TableOfContents } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -481,7 +481,11 @@ function RouteComponent() {
         <KPICard
           title="Total Spent"
           subtitle="all time, including all fees"
-          value={orderStats ? formatCurrency(orderStats.totalSpent, userCurrency) : undefined}
+          value={
+            orderStats
+              ? formatCurrencyFromMinorUnits(orderStats.totalSpent, userCurrency)
+              : undefined
+          }
         />
         <KPICard
           title="Active Orders"
@@ -491,7 +495,11 @@ function RouteComponent() {
         <KPICard
           title="Unpaid Costs"
           subtitle="costs with status 'Ordered'"
-          value={orderStats ? formatCurrency(orderStats.unpaidCosts, userCurrency) : undefined}
+          value={
+            orderStats
+              ? formatCurrencyFromMinorUnits(orderStats.unpaidCosts, userCurrency)
+              : undefined
+          }
         />
       </div>
       <Tabs defaultValue="table" className="w-[375px] text-sm text-muted-foreground">

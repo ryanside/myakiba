@@ -224,15 +224,15 @@ function RouteComponent(): React.ReactNode {
   }) => {
     const label = item.label;
     if (label === "< $50") {
-      return { to: "/collection", search: { paidMax: "50" } };
+      return { to: "/collection", search: { paidMax: 5000 } };
     } else if (label === "$50-$100") {
-      return { to: "/collection", search: { paidMin: "50", paidMax: "100" } };
+      return { to: "/collection", search: { paidMin: 5000, paidMax: 10000 } };
     } else if (label === "$100-$200") {
-      return { to: "/collection", search: { paidMin: "100", paidMax: "200" } };
+      return { to: "/collection", search: { paidMin: 10000, paidMax: 20000 } };
     } else if (label === "$200-$500") {
-      return { to: "/collection", search: { paidMin: "200", paidMax: "500" } };
+      return { to: "/collection", search: { paidMin: 20000, paidMax: 50000 } };
     } else if (label === "> $500") {
-      return { to: "/collection", search: { paidMin: "500" } };
+      return { to: "/collection", search: { paidMin: 50000 } };
     }
     return undefined;
   };

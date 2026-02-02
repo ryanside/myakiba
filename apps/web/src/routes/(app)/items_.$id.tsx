@@ -20,7 +20,7 @@ import {
   EmptyDescription,
   EmptyMedia,
 } from "@/components/ui/empty";
-import { formatCurrency, formatDate, getCategoryColor } from "@myakiba/utils";
+import { formatCurrencyFromMinorUnits, formatDate, getCategoryColor } from "@myakiba/utils";
 import { Label } from "@/components/ui/label";
 import CollectionItemForm from "@/components/collection/collection-item-form";
 import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -338,7 +338,7 @@ function RouteComponent() {
                       )}
                       {release.price && release.priceCurrency && (
                         <span className="ml-auto font-medium">
-                          {formatCurrency(release.price, release.priceCurrency)}
+                          {formatCurrencyFromMinorUnits(release.price, release.priceCurrency)}
                         </span>
                       )}
                     </div>
@@ -509,7 +509,7 @@ function RouteComponent() {
                           <div className="flex justify-between text-muted-foreground text-sm items-center">
                             <span>Price</span>
                             <span className="text-foreground font-medium">
-                              {formatCurrency(collectionItem.price, userCurrency)}
+                              {formatCurrencyFromMinorUnits(collectionItem.price, userCurrency)}
                             </span>
                           </div>
                           <div className="flex justify-between text-muted-foreground text-sm items-center">
@@ -620,7 +620,7 @@ function RouteComponent() {
                                       <div className="flex justify-between text-muted-foreground text-sm items-center">
                                         <span>Shipping Fee</span>
                                         <span className="text-foreground font-medium">
-                                          {formatCurrency(
+                                          {formatCurrencyFromMinorUnits(
                                             relatedOrder.shippingFee || 0,
                                             userCurrency,
                                           )}
@@ -631,7 +631,10 @@ function RouteComponent() {
                                       <div className="flex justify-between text-muted-foreground text-sm items-center">
                                         <span>Taxes</span>
                                         <span className="text-foreground font-medium">
-                                          {formatCurrency(relatedOrder.taxes || 0, userCurrency)}
+                                          {formatCurrencyFromMinorUnits(
+                                            relatedOrder.taxes || 0,
+                                            userCurrency,
+                                          )}
                                         </span>
                                       </div>
                                     )}
@@ -639,7 +642,10 @@ function RouteComponent() {
                                       <div className="flex justify-between text-muted-foreground text-sm items-center">
                                         <span>Duties</span>
                                         <span className="text-foreground font-medium">
-                                          {formatCurrency(relatedOrder.duties || 0, userCurrency)}
+                                          {formatCurrencyFromMinorUnits(
+                                            relatedOrder.duties || 0,
+                                            userCurrency,
+                                          )}
                                         </span>
                                       </div>
                                     )}
@@ -647,7 +653,10 @@ function RouteComponent() {
                                       <div className="flex justify-between text-muted-foreground text-sm items-center">
                                         <span>Tariffs</span>
                                         <span className="text-foreground font-medium">
-                                          {formatCurrency(relatedOrder.tariffs || 0, userCurrency)}
+                                          {formatCurrencyFromMinorUnits(
+                                            relatedOrder.tariffs || 0,
+                                            userCurrency,
+                                          )}
                                         </span>
                                       </div>
                                     )}
@@ -655,7 +664,10 @@ function RouteComponent() {
                                       <div className="flex justify-between text-muted-foreground text-sm items-center">
                                         <span>Misc Fees</span>
                                         <span className="text-foreground font-medium">
-                                          {formatCurrency(relatedOrder.miscFees || 0, userCurrency)}
+                                          {formatCurrencyFromMinorUnits(
+                                            relatedOrder.miscFees || 0,
+                                            userCurrency,
+                                          )}
                                         </span>
                                       </div>
                                     )}

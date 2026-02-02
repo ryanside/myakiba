@@ -39,7 +39,7 @@ export type status = z.infer<typeof statusSchema>;
 
 export const orderItemSyncSchema = z.object({
   itemExternalId: z.int(),
-  price: z.string(),
+  price: z.number().int(),
   count: z.number(),
   status: z.enum(ORDER_STATUSES),
   condition: z.enum(CONDITIONS),
@@ -62,11 +62,11 @@ export const orderSyncSchema = z.object({
   shippingDate: z.iso.date().nullable(),
   collectionDate: z.iso.date().nullable(),
   shippingMethod: z.enum(SHIPPING_METHODS),
-  shippingFee: z.string(),
-  taxes: z.string(),
-  duties: z.string(),
-  tariffs: z.string(),
-  miscFees: z.string(),
+  shippingFee: z.number().int(),
+  taxes: z.number().int(),
+  duties: z.number().int(),
+  tariffs: z.number().int(),
+  miscFees: z.number().int(),
   notes: z.string(),
   items: z.array(orderItemSyncSchema),
 });
@@ -75,7 +75,7 @@ export type orderSyncType = z.infer<typeof orderSyncSchema>;
 
 export const collectionSyncSchema = z.object({
   itemExternalId: z.int(),
-  price: z.string(),
+  price: z.number().int(),
   count: z.number(),
   score: z.string(),
   shop: z.string(),

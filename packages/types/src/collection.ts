@@ -21,8 +21,8 @@ export type CollectionFilters = {
     | undefined;
   order?: "asc" | "desc" | undefined;
   search?: string | undefined;
-  paidMin?: string | undefined;
-  paidMax?: string | undefined;
+  paidMin?: number | undefined;
+  paidMax?: number | undefined;
   shop?: string[] | undefined;
   payDateStart?: string | undefined;
   payDateEnd?: string | undefined;
@@ -33,8 +33,8 @@ export type CollectionFilters = {
   shipMethod?: ShippingMethod[] | undefined;
   relDateStart?: string | undefined;
   relDateEnd?: string | undefined;
-  relPriceMin?: string | undefined;
-  relPriceMax?: string | undefined;
+  relPriceMin?: number | undefined;
+  relPriceMax?: number | undefined;
   relCurrency?: string[] | undefined;
   category?: Category[] | undefined;
   entries?: string[] | undefined;
@@ -55,7 +55,7 @@ export type CollectionItem = {
   status: CollectionStatus;
   count: number;
   score: string;
-  price: string;
+  price: number;
   shop: string;
   condition: Condition;
   orderDate: string | null;
@@ -67,14 +67,14 @@ export type CollectionItem = {
   notes: string;
   releaseId: string | null;
   releaseDate: string | null;
-  releasePrice: string | null;
+  releasePrice: number | null;
   releaseType: string | null;
   releaseCurrency: string | null;
   releaseBarcode: string | null;
   createdAt: string;
   updatedAt: string;
   totalCount: number;
-  totalValue: string;
+  totalValue: number;
 };
 
 export type CollectionItemFormValues = Omit<
@@ -84,9 +84,9 @@ export type CollectionItemFormValues = Omit<
 
 export type CollectionStats = {
   totalItems: number;
-  totalSpent: string;
+  totalSpent: number;
   totalItemsThisMonth: number;
-  totalSpentThisMonth: string;
+  totalSpentThisMonth: number;
 };
 
 export type CollectionQueryResponse = {

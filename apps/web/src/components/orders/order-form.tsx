@@ -38,7 +38,11 @@ import type { CascadeOptions } from "@/lib/orders/types";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import { CascadeOptionsDropdown } from "@/components/cascade-options-dropdown";
 import { Textarea } from "../ui/textarea";
-import { getCurrencyLocale } from "@myakiba/utils";
+import {
+  getCurrencyLocale,
+  majorStringToMinorUnits,
+  minorUnitsToMajorString,
+} from "@myakiba/utils";
 import { Scroller } from "../ui/scroller";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/constants";
 
@@ -108,25 +112,42 @@ export function OrderForm(props: OrderFormProps) {
         : undefined;
   const orderData = type === "edit-order" ? props.orderData : undefined;
 
+  const formatMoneyForInput = (value: number | null | undefined): string =>
+    minorUnitsToMajorString(value ?? 0);
+  const toMinorUnits = (value: string): number => majorStringToMinorUnits(value);
+
   const form = useForm({
-    defaultValues: orderData || {
-      status: "Ordered" as const,
-      title:
-        type === "merge" ? "New Merged Order" : type === "split" ? "New Split Order" : "Edit Order",
-      shop: "",
-      orderDate: "",
-      releaseDate: "",
-      paymentDate: "",
-      shippingDate: "",
-      collectionDate: "",
-      shippingMethod: "n/a" as const,
-      shippingFee: "0.00",
-      taxes: "0.00",
-      duties: "0.00",
-      tariffs: "0.00",
-      miscFees: "0.00",
-      notes: "",
-    },
+    defaultValues: orderData
+      ? {
+          ...orderData,
+          shippingFee: formatMoneyForInput(orderData.shippingFee),
+          taxes: formatMoneyForInput(orderData.taxes),
+          duties: formatMoneyForInput(orderData.duties),
+          tariffs: formatMoneyForInput(orderData.tariffs),
+          miscFees: formatMoneyForInput(orderData.miscFees),
+        }
+      : {
+          status: "Ordered" as const,
+          title:
+            type === "merge"
+              ? "New Merged Order"
+              : type === "split"
+                ? "New Split Order"
+                : "Edit Order",
+          shop: "",
+          orderDate: "",
+          releaseDate: "",
+          paymentDate: "",
+          shippingDate: "",
+          collectionDate: "",
+          shippingMethod: "n/a" as const,
+          shippingFee: "0.00",
+          taxes: "0.00",
+          duties: "0.00",
+          tariffs: "0.00",
+          miscFees: "0.00",
+          notes: "",
+        },
     onSubmit: async ({ value }) => {
       if (type === "edit-order") {
         const transformedValue: EditedOrder = {
@@ -140,11 +161,11 @@ export function OrderForm(props: OrderFormProps) {
           collectionDate: value.collectionDate || null,
           status: value.status,
           shippingMethod: value.shippingMethod || "n/a",
-          shippingFee: value.shippingFee,
-          taxes: value.taxes,
-          duties: value.duties,
-          tariffs: value.tariffs,
-          miscFees: value.miscFees,
+          shippingFee: toMinorUnits(value.shippingFee),
+          taxes: toMinorUnits(value.taxes),
+          duties: toMinorUnits(value.duties),
+          tariffs: toMinorUnits(value.tariffs),
+          miscFees: toMinorUnits(value.miscFees),
           notes: value.notes,
         };
         await callbackFn(transformedValue, cascadeOptions);
@@ -159,11 +180,11 @@ export function OrderForm(props: OrderFormProps) {
           collectionDate: value.collectionDate || null,
           status: value.status,
           shippingMethod: value.shippingMethod || "n/a",
-          shippingFee: value.shippingFee,
-          taxes: value.taxes,
-          duties: value.duties,
-          tariffs: value.tariffs,
-          miscFees: value.miscFees,
+          shippingFee: toMinorUnits(value.shippingFee),
+          taxes: toMinorUnits(value.taxes),
+          duties: toMinorUnits(value.duties),
+          tariffs: toMinorUnits(value.tariffs),
+          miscFees: toMinorUnits(value.miscFees),
           notes: value.notes,
         };
         await callbackFn(transformedValue, cascadeOptions, collectionIds, orderIds);
@@ -179,11 +200,11 @@ export function OrderForm(props: OrderFormProps) {
           collectionDate: value.collectionDate || null,
           status: value.status,
           shippingMethod: value.shippingMethod || "n/a",
-          shippingFee: value.shippingFee,
-          taxes: value.taxes,
-          duties: value.duties,
-          tariffs: value.tariffs,
-          miscFees: value.miscFees,
+          shippingFee: toMinorUnits(value.shippingFee),
+          taxes: toMinorUnits(value.taxes),
+          duties: toMinorUnits(value.duties),
+          tariffs: toMinorUnits(value.tariffs),
+          miscFees: toMinorUnits(value.miscFees),
           notes: value.notes,
         };
         await callbackFn(transformedValue, cascadeOptions, orderIds);
@@ -278,7 +299,7 @@ export function OrderForm(props: OrderFormProps) {
                         placeholder="Enter order title"
                       />
                       {!field.state.meta.isValid && (
-                        <em role="alert">{field.state.meta.errors.join(", ")}</em>
+                        <em role="alert" className="text-red-500 text-xs">{field.state.meta.errors[0]?.message}</em>
                       )}
                     </div>
                   )}

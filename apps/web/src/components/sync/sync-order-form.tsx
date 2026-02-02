@@ -29,9 +29,9 @@ import { X, ChevronDown, Loader2, ArrowLeft, Plus, Edit, Info } from "lucide-rea
 import * as z from "zod";
 import type { CascadeOptions } from "@/lib/orders/types";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
-import type { SyncFormOrder, SyncFormOrderItem } from "@/lib/sync/types";
+import type { SyncFormOrder, SyncFormOrderItem, SyncOrder } from "@/lib/sync/types";
 import { Textarea } from "../ui/textarea";
-import { getCurrencyLocale } from "@myakiba/utils";
+import { getCurrencyLocale, majorStringToMinorUnits } from "@myakiba/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { extractMfcItemId } from "@/lib/sync/utils";
 import { SHIPPING_METHODS, ORDER_STATUSES, CONDITIONS } from "@myakiba/constants";
@@ -40,7 +40,7 @@ export default function SyncOrderForm({
   handleSyncOrderSubmit,
   currency,
 }: {
-  handleSyncOrderSubmit: (values: SyncFormOrder) => void;
+  handleSyncOrderSubmit: (values: SyncOrder) => void;
   currency?: string;
 }) {
   const navigate = useNavigate();
@@ -89,30 +89,56 @@ export default function SyncOrderForm({
       ] as SyncFormOrderItem[],
     },
     onSubmit: async ({ value }) => {
-      const updatedValue = {
+      const toMinorUnits = (amount: string): number => majorStringToMinorUnits(amount);
+      const updatedItems = value.items.map((item) => {
+        const updatedItem = { ...item };
+
+        cascadeOptions.forEach((option: CascadeOptions[number]) => {
+          if (option === "status" && value.status) {
+            updatedItem.status = value.status as SyncFormOrderItem["status"];
+          } else if (option === "orderDate" && value.orderDate) {
+            updatedItem.orderDate = value.orderDate;
+          } else if (option === "paymentDate" && value.paymentDate) {
+            updatedItem.paymentDate = value.paymentDate;
+          } else if (option === "shippingDate" && value.shippingDate) {
+            updatedItem.shippingDate = value.shippingDate;
+          } else if (option === "collectionDate" && value.collectionDate) {
+            updatedItem.collectionDate = value.collectionDate;
+          } else if (option === "shippingMethod" && value.shippingMethod) {
+            updatedItem.shippingMethod =
+              value.shippingMethod as SyncFormOrderItem["shippingMethod"];
+          }
+        });
+
+        const extractedId = extractMfcItemId(updatedItem.itemExternalId);
+        if (!extractedId) {
+          throw new Error(`Invalid item ID: ${updatedItem.itemExternalId}`);
+        }
+
+        return {
+          ...updatedItem,
+          itemExternalId: parseInt(extractedId, 10),
+          price: toMinorUnits(updatedItem.price),
+          orderDate: updatedItem.orderDate || null,
+          paymentDate: updatedItem.paymentDate || null,
+          shippingDate: updatedItem.shippingDate || null,
+          collectionDate: updatedItem.collectionDate || null,
+        };
+      });
+
+      const updatedValue: SyncOrder = {
         ...value,
-        items: value.items.map((item) => {
-          const updatedItem = { ...item };
-
-          cascadeOptions.forEach((option: CascadeOptions[number]) => {
-            if (option === "status" && value.status) {
-              updatedItem.status = value.status as SyncFormOrderItem["status"];
-            } else if (option === "orderDate" && value.orderDate) {
-              updatedItem.orderDate = value.orderDate;
-            } else if (option === "paymentDate" && value.paymentDate) {
-              updatedItem.paymentDate = value.paymentDate;
-            } else if (option === "shippingDate" && value.shippingDate) {
-              updatedItem.shippingDate = value.shippingDate;
-            } else if (option === "collectionDate" && value.collectionDate) {
-              updatedItem.collectionDate = value.collectionDate;
-            } else if (option === "shippingMethod" && value.shippingMethod) {
-              updatedItem.shippingMethod =
-                value.shippingMethod as SyncFormOrderItem["shippingMethod"];
-            }
-          });
-
-          return updatedItem;
-        }),
+        orderDate: value.orderDate || null,
+        releaseDate: value.releaseDate || null,
+        paymentDate: value.paymentDate || null,
+        shippingDate: value.shippingDate || null,
+        collectionDate: value.collectionDate || null,
+        shippingFee: toMinorUnits(value.shippingFee),
+        taxes: toMinorUnits(value.taxes),
+        duties: toMinorUnits(value.duties),
+        tariffs: toMinorUnits(value.tariffs),
+        miscFees: toMinorUnits(value.miscFees),
+        items: updatedItems,
       };
 
       await handleSyncOrderSubmit(updatedValue);
