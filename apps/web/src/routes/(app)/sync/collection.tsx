@@ -20,11 +20,7 @@ import { toast } from "sonner";
 import { getJobStatus, sendCollection } from "@/queries/sync";
 import SyncCollectionForm from "@/components/sync/sync-collection-form";
 
-const steps = [
-  { title: "Choose sync option" },
-  { title: "Enter Information" },
-  { title: "Sync" },
-];
+const steps = [{ title: "Choose sync option" }, { title: "Enter Information" }, { title: "Sync" }];
 
 export const Route = createFileRoute("/(app)/sync/collection")({
   component: RouteComponent,
@@ -78,21 +74,20 @@ function RouteComponent() {
       jobId === null
         ? status.isFinished
         : isPollingError
-        ? true
-        : jobStatusQuery.data?.finished ?? false,
+          ? true
+          : (jobStatusQuery.data?.finished ?? false),
     status:
       jobId === null
         ? status.status
         : isPollingError
-        ? "Connection error occurred"
-        : jobStatusQuery.isLoading
-        ? "Connecting..."
-        : jobStatusQuery.data?.status ?? status.status,
+          ? "Connection error occurred"
+          : jobStatusQuery.isLoading
+            ? "Connecting..."
+            : (jobStatusQuery.data?.status ?? status.status),
   };
 
   const collectionMutation = useMutation({
-    mutationFn: (collection: SyncCollectionItem[]) =>
-      sendCollection(collection),
+    mutationFn: (collection: SyncCollectionItem[]) => sendCollection(collection),
     onSuccess: (data) => {
       setCurrentStep(3);
 
@@ -162,26 +157,18 @@ function RouteComponent() {
         </StepperNav>
 
         <StepperPanel className="text-sm">
-          <StepperContent
-            value={2}
-            className="flex items-center justify-center"
-          >
+          <StepperContent value={2} className="flex items-center justify-center">
             <SyncCollectionForm
               handleSyncCollectionSubmit={handleSyncCollectionSubmit}
               currency={userCurrency}
             />
           </StepperContent>
-          <StepperContent
-            value={3}
-            className="flex items-center justify-center"
-          >
+          <StepperContent value={3} className="flex items-center justify-center">
             <div className="rounded-lg border p-4 space-y-4 gap4 w-full">
               <Label className="text-lg text-foreground">Status</Label>
               <div className="flex flex-row gap-2 items-center">
                 {resolvedStatus.isFinished ? (
-                  <p className="text-md text-pretty text-primary">
-                    {resolvedStatus.status}
-                  </p>
+                  <p className="text-md text-pretty text-primary">{resolvedStatus.status}</p>
                 ) : (
                   <>
                     <Loader2 className="animate-spin w-4 h-4" />
@@ -215,26 +202,17 @@ function RouteComponent() {
                   Back to Sync Options
                 </Button>
                 <Link to="/orders">
-                  <Button
-                    variant="primary"
-                    disabled={!resolvedStatus.isFinished}
-                  >
+                  <Button variant="primary" disabled={!resolvedStatus.isFinished}>
                     Go to Orders
                   </Button>
                 </Link>
                 <Link to="/collection">
-                  <Button
-                    variant="primary"
-                    disabled={!resolvedStatus.isFinished}
-                  >
+                  <Button variant="primary" disabled={!resolvedStatus.isFinished}>
                     Go to Collection
                   </Button>
                 </Link>
                 <Link to="/dashboard">
-                  <Button
-                    variant="primary"
-                    disabled={!resolvedStatus.isFinished}
-                  >
+                  <Button variant="primary" disabled={!resolvedStatus.isFinished}>
                     Go to Dashboard
                   </Button>
                 </Link>

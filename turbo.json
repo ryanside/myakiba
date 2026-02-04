@@ -19,6 +19,9 @@
       "cache": false,
       "persistent": true
     },
+    "stop": {
+      "cache": false
+    },
     "db:push": {
       "cache": false,
       "persistent": true
@@ -46,6 +49,15 @@
       "cache": false
     },
     "db:down": {
+      "cache": false
+    },
+    "redis:start": {
+      "cache": false
+    },
+    "redis:stop": {
+      "cache": false
+    },
+    "redis:down": {
       "cache": false
     }
   }

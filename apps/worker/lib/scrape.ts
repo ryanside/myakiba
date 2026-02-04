@@ -14,13 +14,8 @@ import { createFetchOptions, setJobStatus } from "./utils";
 import type { scrapedItem } from "./types";
 import type { Category } from "@myakiba/types";
 import { CATEGORIES } from "@myakiba/constants";
-import Redis from "ioredis";
+import { redis } from "@myakiba/redis";
 import { env } from "@myakiba/env/worker";
-
-const redis = new Redis({
-  host: env.REDIS_HOST,
-  port: env.REDIS_PORT,
-});
 
 const s3Client = new S3Client({
   region: env.AWS_BUCKET_REGION,

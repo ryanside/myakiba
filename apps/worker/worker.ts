@@ -1,5 +1,4 @@
 import { Worker } from "bullmq";
-import Redis from "ioredis";
 import { scrapedItems, scrapedItemsWithRateLimit } from "./lib/scrape";
 import { setJobStatus } from "./lib/utils";
 import { jobDataSchema, type jobData } from "./lib/types";
@@ -7,11 +6,7 @@ import { finalizeCollectionSync } from "./lib/collection/utils";
 import { finalizeOrderSync } from "./lib/order/utils";
 import { finalizeCsvSync } from "./lib/csv/utils";
 import { env } from "@myakiba/env/worker";
-
-const redis = new Redis({
-  host: env.REDIS_HOST,
-  port: env.REDIS_PORT,
-});
+import { redis } from "@myakiba/redis";
 
 const myWorker = new Worker(
   "sync-queue",

@@ -2,7 +2,6 @@ import * as cheerio from "cheerio";
 import { db } from "@myakiba/db";
 import { entry, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
 import { and, eq, inArray } from "drizzle-orm";
-import Redis from "ioredis";
 import path from "path";
 import { URL } from "url";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
@@ -20,11 +19,7 @@ import type { scrapedItem } from "./lib/types";
 import { env } from "@myakiba/env/worker";
 import type { Category } from "@myakiba/types";
 import { CATEGORIES } from "@myakiba/constants";
-
-const redis = new Redis({
-  host: env.REDIS_HOST,
-  port: env.REDIS_PORT,
-});
+import { redis } from "@myakiba/redis";
 
 const s3Client = new S3Client({
   region: env.AWS_BUCKET_REGION,

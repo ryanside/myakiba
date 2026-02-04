@@ -12,15 +12,11 @@ import type {
 } from "./model";
 
 import { Queue } from "bullmq";
-import Redis from "ioredis";
 import { createId } from "@paralleldrive/cuid2";
 import { env } from "@myakiba/env/server";
 import { dateToString, parseMoneyToMinorUnits } from "@myakiba/utils";
+import { redis } from "@myakiba/redis";
 
-const redis = new Redis({
-  host: env.REDIS_HOST,
-  port: env.REDIS_PORT,
-});
 const syncQueue = new Queue("sync-queue", {
   connection: {
     host: env.REDIS_HOST,

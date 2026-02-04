@@ -44,8 +44,10 @@ const COLUMN_TITLES: Record<string, string> = {
   Shipped: "Shipped",
 };
 
-interface OrderCardProps
-  extends Omit<React.ComponentProps<typeof KanbanItem>, "value" | "children"> {
+interface OrderCardProps extends Omit<
+  React.ComponentProps<typeof KanbanItem>,
+  "value" | "children"
+> {
   order: KanbanOrder;
   currency: string;
   dateFormat: DateFormat;
@@ -91,11 +93,7 @@ function OrderCard({
                 key={idx}
                 className="relative w-12 h-12 rounded-md overflow-hidden border bg-muted shrink-0"
               >
-                <img
-                  src={image}
-                  alt=""
-                  className="w-full h-full object-cover object-top"
-                />
+                <img src={image} alt="" className="w-full h-full object-cover object-top" />
               </div>
             ))}
             {order.itemImages.length > 3 && (
@@ -118,10 +116,7 @@ function OrderCard({
             {order.title}
           </Link>
           {order.shop && (
-            <Badge
-              variant="outline"
-              className="pointer-events-none w-fit text-[10px] px-1.5 py-0"
-            >
+            <Badge variant="outline" className="pointer-events-none w-fit text-[10px] px-1.5 py-0">
               {order.shop}
             </Badge>
           )}
@@ -149,17 +144,12 @@ function OrderCard({
 
   return (
     <KanbanItem value={order.orderId} {...props}>
-      {asHandle ? (
-        <KanbanItemHandle>{cardContent}</KanbanItemHandle>
-      ) : (
-        cardContent
-      )}
+      {asHandle ? <KanbanItemHandle>{cardContent}</KanbanItemHandle> : cardContent}
     </KanbanItem>
   );
 }
 
-interface OrderColumnProps
-  extends Omit<React.ComponentProps<typeof KanbanColumn>, "children"> {
+interface OrderColumnProps extends Omit<React.ComponentProps<typeof KanbanColumn>, "children"> {
   orders: KanbanOrder[];
   currency: string;
   dateFormat: DateFormat;
@@ -195,10 +185,7 @@ function OrderColumn({
           </Button>
         </KanbanColumnHandle>
       </div>
-      <KanbanColumnContent
-        value={value}
-        className="flex flex-col gap-2.5 p-0.5"
-      >
+      <KanbanColumnContent value={value} className="flex flex-col gap-2.5 p-0.5">
         {orders.map((order) => (
           <OrderCard
             key={order.orderId}
@@ -214,11 +201,7 @@ function OrderColumn({
   );
 }
 
-export default function OrderKanban({
-  orders,
-  currency,
-  dateFormat,
-}: OrdersKanbanProps) {
+export default function OrderKanban({ orders, currency, dateFormat }: OrdersKanbanProps) {
   const queryClient = useQueryClient();
 
   // Transform orders array into column structure grouped by status
@@ -238,8 +221,7 @@ export default function OrderKanban({
     return grouped;
   }, [orders]);
 
-  const [columns, setColumns] =
-    React.useState<Record<string, KanbanOrder[]>>(initialColumns);
+  const [columns, setColumns] = React.useState<Record<string, KanbanOrder[]>>(initialColumns);
 
   // Update columns when orders prop changes
   React.useEffect(() => {
@@ -264,14 +246,11 @@ export default function OrderKanban({
     onError: (error: Error, variables) => {
       console.error(
         `Failed to update order ${variables.orderId} to status ${variables.status}:`,
-        error
+        error,
       );
-      toast.error(
-        `Failed to update order ${variables.orderId} to status ${variables.status}:`,
-        {
-          description: `Error: ${error.message}`,
-        }
-      );
+      toast.error(`Failed to update order ${variables.orderId} to status ${variables.status}:`, {
+        description: `Error: ${error.message}`,
+      });
       setColumns(initialColumns);
     },
   });
@@ -307,7 +286,7 @@ export default function OrderKanban({
         status: "Owned",
       });
     },
-    [columns, mutation]
+    [columns, mutation],
   );
 
   // Handle item moves between columns
@@ -318,8 +297,7 @@ export default function OrderKanban({
       overContainer: string;
       overIndex: number;
     }) => {
-      const { activeContainer, activeIndex, overContainer, overIndex } =
-        moveEvent;
+      const { activeContainer, activeIndex, overContainer, overIndex } = moveEvent;
 
       // Get the moved order
       const movedOrder = columns[activeContainer][activeIndex];
@@ -351,7 +329,7 @@ export default function OrderKanban({
         });
       }
     },
-    [columns, mutation]
+    [columns, mutation],
   );
 
   return (

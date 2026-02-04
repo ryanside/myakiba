@@ -1,5 +1,5 @@
 {
-  "name": "@myakiba/auth",
+  "name": "@myakiba/redis",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -11,17 +11,15 @@
       "default": "./src/*.ts"
     }
   },
+  "scripts": {
+    "dev": "docker compose up -d",
+    "redis:start": "docker compose up -d",
+    "redis:stop": "docker compose stop",
+    "redis:down": "docker compose down"
+  },
   "dependencies": {
-    "@myakiba/db": "workspace:*",
     "@myakiba/env": "workspace:*",
-    "@myakiba/redis": "workspace:*",
-    "@paralleldrive/cuid2": "catalog:",
-    "better-auth": "catalog:",
-    "better-auth-harmony": "^1.2.5",
-    "dotenv": "catalog:",
-    "ioredis": "catalog:",
-    "resend": "^6.5.2",
-    "zod": "catalog:"
+    "ioredis": "catalog:"
   },
   "devDependencies": {
     "@myakiba/config": "workspace:*",
