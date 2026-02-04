@@ -193,7 +193,6 @@ class OrdersService {
             '[]'::json
           )
         `,
-        totalCount: sql<number>`COUNT(*) OVER()`,
       })
       .from(order)
       .leftJoin(collection, eq(order.id, collection.orderId))
@@ -237,38 +236,7 @@ class OrdersService {
       .limit(limit)
       .offset(offset);
 
-    const orderTotalsSubquery = db
-      .select({
-        orderId: order.id,
-        collectionDate: order.collectionDate,
-        paymentDate: order.paymentDate,
-        status: order.status,
-        total:
-          sql<number>`COALESCE(SUM(${collection.price}), 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`.as(
-            "total",
-          ),
-      })
-      .from(order)
-      .leftJoin(collection, eq(order.id, collection.orderId))
-      .where(eq(order.userId, userId))
-      .groupBy(order.id, order.collectionDate, order.paymentDate, order.status)
-      .as("order_totals");
-
-    const [orderStatsResult] = await db
-      .select({
-        totalOrders: sql<number>`COUNT(*)`,
-        totalSpent: sql<number>`COALESCE(SUM(${orderTotalsSubquery.total}), 0)`,
-        activeOrders: sql<number>`COUNT(CASE WHEN ${orderTotalsSubquery.status} != 'Owned' THEN 1 END)`,
-        unpaidCosts: sql<number>`COALESCE(SUM(
-          CASE WHEN ${orderTotalsSubquery.status} = 'Ordered'
-            THEN ${orderTotalsSubquery.total}
-            ELSE 0 
-          END
-        ), 0)`,
-      })
-      .from(orderTotalsSubquery);
-
-    return { orders, orderStats: orderStatsResult };
+    return orders;
   }
 
   async getOrder(userId: string, orderId: string) {

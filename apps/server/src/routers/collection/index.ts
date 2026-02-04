@@ -8,7 +8,6 @@ import {
 } from "./model";
 import { tryCatch } from "@myakiba/utils";
 import { betterAuth } from "@/middleware/better-auth";
-import type { CollectionItem, CollectionQueryResponse } from "@myakiba/types";
 
 const collectionRouter = new Elysia({ prefix: "/collection" })
   .use(betterAuth)
@@ -60,20 +59,13 @@ const collectionRouter = new Elysia({ prefix: "/collection" })
         return status(500, "Failed to get collection table");
       }
 
-      const serializedItems: readonly CollectionItem[] = collection.collectionItems.map((item) => ({
+      const serializedItems = collection.map((item) => ({
         ...item,
         createdAt: item.createdAt.toISOString(),
         updatedAt: item.updatedAt.toISOString(),
       }));
 
-      const response: CollectionQueryResponse = {
-        collection: {
-          collectionItems: [...serializedItems],
-          collectionStats: collection.collectionStats,
-        },
-      };
-
-      return response;
+      return serializedItems;
     },
     { query: collectionQuerySchema, auth: true },
   )

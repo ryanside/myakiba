@@ -1,9 +1,5 @@
 import { useSelection } from "@/hooks/use-selection";
-import type {
-  CollectionFilters,
-  CollectionItem,
-  CollectionItemFormValues,
-} from "@/lib/collection/types";
+import type { CollectionFilters, CollectionItem, CollectionItemFormValues } from "@myakiba/types";
 import type {
   Updater,
   ExpandedState,

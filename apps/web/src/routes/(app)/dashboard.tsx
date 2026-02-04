@@ -127,7 +127,10 @@ function DashboardContent() {
                 <KPICard
                   title="Total Spent"
                   subtitle="based on paid collection & order items"
-                  value={formatCurrencyFromMinorUnits(Number(collectionStats[0].totalSpent), userCurrency)}
+                  value={formatCurrencyFromMinorUnits(
+                    Number(collectionStats[0].totalSpent),
+                    userCurrency,
+                  )}
                   subvalueTitle="this month"
                   subvalue={formatCurrencyFromMinorUnits(
                     Number(collectionStats[0].totalSpentThisMonth) +

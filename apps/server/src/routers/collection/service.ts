@@ -1,19 +1,6 @@
 import { db } from "@myakiba/db";
 import { collection, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
-import {
-  and,
-  eq,
-  gte,
-  lte,
-  inArray,
-  arrayContains,
-  desc,
-  asc,
-  ilike,
-  sql,
-  count,
-  sum,
-} from "drizzle-orm";
+import { and, eq, gte, lte, inArray, arrayContains, desc, asc, ilike, sql } from "drizzle-orm";
 import type { collectionUpdateType } from "./model";
 import type { Category, Condition, ShippingMethod } from "@myakiba/types";
 
@@ -123,33 +110,6 @@ class CollectionService {
       }
     })();
 
-    const currentMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-    const nextMonth = new Date(
-      new Date().getFullYear(),
-      new Date().getMonth() + 1,
-      1,
-    ).toISOString();
-
-    const collectionStats = await db
-      .select({
-        totalItems: count(sql`CASE WHEN ${collection.status} = 'Owned' THEN 1 END`),
-        totalSpent: sql<number>`COALESCE(${sum(collection.price)}, 0)`,
-        totalItemsThisMonth: sql<number>`COALESCE(${count(
-          sql`CASE WHEN ${collection.status} = 'Owned' 
-              AND ${collection.collectionDate} >= ${currentMonth} 
-              AND ${collection.collectionDate} < ${nextMonth}
-              THEN 1 END`,
-        )}, 0)`,
-        totalSpentThisMonth: sql<number>`COALESCE(${sum(
-          sql`CASE WHEN ${collection.status} = 'Owned'
-              AND ${collection.paymentDate} >= ${currentMonth} 
-              AND ${collection.paymentDate} < ${nextMonth}
-              THEN ${collection.price} ELSE 0 END`,
-        )}, 0)`,
-      })
-      .from(collection)
-      .where(and(eq(collection.userId, userId), eq(collection.status, "Owned")));
-
     const collectionItems = await db
       .select({
         id: collection.id,
@@ -195,7 +155,7 @@ class CollectionService {
       .limit(limit)
       .offset(offset);
 
-    return { collectionItems, collectionStats: collectionStats[0] };
+    return collectionItems;
   }
 
   async getCollectionItem(userId: string, collectionId: string) {

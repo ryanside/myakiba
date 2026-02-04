@@ -1,4 +1,4 @@
-import type { CollectionItemFormValues } from "@/lib/collection/types";
+import type { CollectionItemFormValues } from "@myakiba/types";
 import {
   Sheet,
   SheetContent,

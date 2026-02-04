@@ -1,46 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import OrdersDataGrid from "@/components/orders/orders-data-grid";
 import { useFilters } from "@/hooks/use-filters";
 import type {
   EditedOrder,
   NewOrder,
-  OrdersQueryResponse,
+  OrderStats,
   CascadeOptions,
   OrderFilters,
 } from "@/lib/orders/types";
 import { toast } from "sonner";
-import {
-  createOptimisticMergeUpdate,
-  createOptimisticSplitUpdate,
-  createOptimisticEditUpdate,
-  createOptimisticDeleteUpdate,
-  createOptimisticEditItemUpdate,
-  createOptimisticDeleteItemUpdate,
-  createOptimisticDeleteItemsUpdate,
-  createOptimisticMoveItemUpdate,
-} from "@/lib/orders/utils";
-import {
-  editOrder,
-  getOrders,
-  mergeOrders,
-  splitOrders,
-  deleteOrders,
-  deleteOrderItem,
-  deleteOrderItems,
-  moveItem,
-} from "@/queries/orders";
 import { searchSchema } from "@/lib/validations";
-import type { CollectionItemFormValues } from "@/lib/collection/types";
-import { updateCollectionItem } from "@/queries/collection";
+import type { CollectionItemFormValues, Order } from "@myakiba/types";
 import { OrdersDataGridSkeleton } from "@/components/orders/orders-data-grid-skeleton";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { KPICard } from "@/components/ui/kpi-card";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Grid, TableOfContents } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { DateFormat } from "@myakiba/types";
+import { createBaseOrders, createOrdersActions, useOrdersLiveQuery } from "@/tanstack-db/db-orders";
 
 export const Route = createFileRoute("/(app)/orders")({
   component: RouteComponent,
@@ -72,315 +52,37 @@ function RouteComponent() {
     [setFilters],
   );
 
-  const { isPending, isError, data, error } = useQuery({
-    queryKey: ["orders", filters],
-    queryFn: () => getOrders(filters),
-    placeholderData: keepPreviousData,
-    staleTime: 1000 * 60 * 5,
-    retry: false,
-  });
+  const baseOrders = useMemo(
+    (): ReturnType<typeof createBaseOrders> => createBaseOrders(queryClient),
+    [queryClient],
+  );
 
-  const mergeMutation = useMutation({
-    mutationFn: ({
-      values,
-      orderIds,
-      cascadeOptions,
-    }: {
-      values: NewOrder;
-      orderIds: Set<string>;
-      cascadeOptions: CascadeOptions;
-    }) => mergeOrders(values, orderIds, cascadeOptions),
-    onMutate: async ({ values, orderIds, cascadeOptions }) => {
-      await queryClient.cancelQueries({ queryKey: ["orders", filters] });
-      const previousData = queryClient.getQueryData(["orders", filters]);
-      queryClient.setQueryData(["orders", filters], (old: OrdersQueryResponse) => {
-        return createOptimisticMergeUpdate(old, values, orderIds, filters, cascadeOptions);
-      });
-      // Return context for rollback
-      return { previousData, orderIds };
-    },
-    onError: (error, _, context) => {
-      // Rollback to previous data on error
-      if (context?.previousData) {
-        queryClient.setQueryData(["orders", filters], context.previousData);
-      }
-      toast.error("Failed to merge orders. Please try again.", {
-        description: `Error: ${error.message}`,
-      });
-    },
-    onSuccess: (_, variables) => {
-      toast.success(`Successfully merged ${variables.orderIds.size} orders into one!`);
-    },
-    onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["order"] }),
-        queryClient.invalidateQueries({ queryKey: ["collection"] }),
-        queryClient.invalidateQueries({ queryKey: ["item"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
-        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
-      ]);
-    },
-  });
+  const ordersActions = useMemo(
+    () => createOrdersActions(baseOrders, queryClient),
+    [baseOrders, queryClient],
+  );
 
-  const splitMutation = useMutation({
-    mutationFn: ({
-      values,
-      orderIds, // eslint-disable-line @typescript-eslint/no-unused-vars
-      collectionIds,
-      cascadeOptions,
-    }: {
-      values: NewOrder;
-      orderIds: Set<string>;
-      collectionIds: Set<string>;
-      cascadeOptions: CascadeOptions;
-    }) => splitOrders(values, collectionIds, cascadeOptions),
-    onMutate: async ({ values, orderIds, collectionIds, cascadeOptions }) => {
-      await queryClient.cancelQueries({ queryKey: ["orders", filters] });
-      const previousData = queryClient.getQueryData(["orders", filters]);
-      queryClient.setQueryData(["orders", filters], (old: OrdersQueryResponse) => {
-        return createOptimisticSplitUpdate(
-          old,
-          values,
-          orderIds,
-          collectionIds,
-          filters,
-          cascadeOptions,
-        );
-      });
-      return { previousData, orderIds, collectionIds };
-    },
-    onError: (error, _, context) => {
-      if (context?.previousData) {
-        queryClient.setQueryData(["orders", filters], context.previousData);
-      }
-      toast.error("Failed to move items to a new order. Please try again.", {
-        description: `Error: ${error.message}`,
-      });
-    },
-    onSuccess: (_, variables) => {
-      toast.success(`Successfully moved ${variables.collectionIds.size} items to a new order!`);
-    },
-    onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["order"] }),
-        queryClient.invalidateQueries({ queryKey: ["collection"] }),
-        queryClient.invalidateQueries({ queryKey: ["item"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
-        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
-      ]);
-    },
-  });
-
-  const editOrderMutation = useMutation({
-    mutationFn: ({
-      values,
-      cascadeOptions,
-    }: {
-      values: EditedOrder;
-      cascadeOptions: CascadeOptions;
-    }) => editOrder(values, cascadeOptions),
-    onMutate: async ({ values, cascadeOptions }) => {
-      await queryClient.cancelQueries({ queryKey: ["orders", filters] });
-      const previousData = queryClient.getQueryData(["orders", filters]);
-      queryClient.setQueryData(["orders", filters], (old: OrdersQueryResponse) => {
-        return createOptimisticEditUpdate(old, values, filters, cascadeOptions);
-      });
-      return { previousData };
-    },
-    onError: (error, _, context) => {
-      if (context?.previousData) {
-        queryClient.setQueryData(["orders", filters], context.previousData);
-      }
-      toast.error("Failed to update order. Please try again.", {
-        description: `Error: ${error.message}`,
-      });
-    },
-    onSuccess: () => {},
-    onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["order"] }),
-        queryClient.invalidateQueries({ queryKey: ["collection"] }),
-        queryClient.invalidateQueries({ queryKey: ["item"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
-        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
-      ]);
-    },
-  });
-
-  const deleteOrderMutation = useMutation({
-    mutationFn: (orderIds: Set<string>) => deleteOrders(orderIds),
-    onMutate: async (orderIds) => {
-      await queryClient.cancelQueries({ queryKey: ["orders", filters] });
-      const previousData = queryClient.getQueryData(["orders", filters]);
-      queryClient.setQueryData(["orders", filters], (old: OrdersQueryResponse) => {
-        return createOptimisticDeleteUpdate(old, orderIds, filters);
-      });
-      return { previousData };
-    },
-    onError: (error, _, context) => {
-      // Rollback to previous data on error
-      if (context?.previousData) {
-        queryClient.setQueryData(["orders", filters], context.previousData);
-      }
-      toast.error("Failed to delete order(s). Please try again.", {
-        description: `Error: ${error.message}`,
-      });
-    },
-    onSuccess: () => {},
-    onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["order"] }),
-        queryClient.invalidateQueries({ queryKey: ["collection"] }),
-        queryClient.invalidateQueries({ queryKey: ["item"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
-        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
-      ]);
-    },
-  });
-
-  const editItemMutation = useMutation({
-    mutationFn: ({ values }: { values: CollectionItemFormValues }) => updateCollectionItem(values),
-    onMutate: async ({ values }) => {
-      await queryClient.cancelQueries({ queryKey: ["orders", filters] });
-      const previousData = queryClient.getQueryData(["orders", filters]);
-      queryClient.setQueryData(["orders", filters], (old: OrdersQueryResponse) => {
-        return createOptimisticEditItemUpdate(old, values, filters);
-      });
-
-      return { previousData };
-    },
-    onError: (error, _, context) => {
-      if (context?.previousData) {
-        queryClient.setQueryData(["orders", filters], context.previousData);
-      }
-      toast.error("Failed to update item. Please try again.", {
-        description: `Error: ${error.message}`,
-      });
-    },
-    onSuccess: () => {},
-    onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["order"] }),
-        queryClient.invalidateQueries({ queryKey: ["collection"] }),
-        queryClient.invalidateQueries({ queryKey: ["item"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
-        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
-      ]);
-    },
-  });
-
-  const deleteItemMutation = useMutation({
-    mutationFn: ({ orderId, itemId }: { orderId: string; itemId: string }) =>
-      deleteOrderItem(orderId, itemId),
-    onMutate: async ({ orderId, itemId }) => {
-      await queryClient.cancelQueries({ queryKey: ["orders", filters] });
-      const previousData = queryClient.getQueryData(["orders", filters]);
-      queryClient.setQueryData(["orders", filters], (old: OrdersQueryResponse) => {
-        return createOptimisticDeleteItemUpdate(old, orderId, itemId, filters);
-      });
-      return { previousData };
-    },
-    onError: (error, _, context) => {
-      if (context?.previousData) {
-        queryClient.setQueryData(["orders", filters], context.previousData);
-      }
-      toast.error("Failed to delete item. Please try again.", {
-        description: `Error: ${error.message}`,
-      });
-    },
-    onSuccess: () => {},
-    onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["order"] }),
-        queryClient.invalidateQueries({ queryKey: ["collection"] }),
-        queryClient.invalidateQueries({ queryKey: ["item"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
-        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
-      ]);
-    },
-  });
-
-  const deleteItemsMutation = useMutation({
-    mutationFn: (collectionIds: Set<string>) => deleteOrderItems(collectionIds),
-    onMutate: async (collectionIds) => {
-      await queryClient.cancelQueries({ queryKey: ["orders", filters] });
-      const previousData = queryClient.getQueryData(["orders", filters]);
-      queryClient.setQueryData(["orders", filters], (old: OrdersQueryResponse) => {
-        return createOptimisticDeleteItemsUpdate(old, collectionIds, filters);
-      });
-      return { previousData };
-    },
-    onError: (error, _, context) => {
-      if (context?.previousData) {
-        queryClient.setQueryData(["orders", filters], context.previousData);
-      }
-      toast.error("Failed to delete items. Please try again.", {
-        description: `Error: ${error.message}`,
-      });
-    },
-    onSuccess: () => {},
-    onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["order"] }),
-        queryClient.invalidateQueries({ queryKey: ["collection"] }),
-        queryClient.invalidateQueries({ queryKey: ["item"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
-        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
-      ]);
-    },
-  });
-
-  const moveItemMutation = useMutation({
-    mutationFn: ({
-      targetOrderId,
-      collectionIds,
-      orderIds,
-    }: {
-      targetOrderId: string;
-      collectionIds: Set<string>;
-      orderIds: Set<string>;
-    }) => moveItem(targetOrderId, collectionIds, orderIds),
-    onMutate: async ({ targetOrderId, collectionIds, orderIds }) => {
-      await queryClient.cancelQueries({ queryKey: ["orders", filters] });
-      const previousData = queryClient.getQueryData(["orders", filters]);
-      queryClient.setQueryData(["orders", filters], (old: OrdersQueryResponse) => {
-        return createOptimisticMoveItemUpdate(old, targetOrderId, collectionIds, orderIds, filters);
-      });
-      return { previousData };
-    },
-    onError: (error, _, context) => {
-      if (context?.previousData) {
-        queryClient.setQueryData(["orders", filters], context.previousData);
-      }
-      toast.error("Failed to move items. Please try again.", {
-        description: `Error: ${error.message}`,
-      });
-    },
-    onSuccess: () => {},
-    onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["order"] }),
-        queryClient.invalidateQueries({ queryKey: ["collection"] }),
-        queryClient.invalidateQueries({ queryKey: ["item"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
-        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
-      ]);
-    },
-  });
+  const { data, isLoading: isPending, isError, status } = useOrdersLiveQuery(baseOrders, filters);
 
   const handleMerge = useCallback(
     async (values: NewOrder, cascadeOptions: CascadeOptions, orderIds: Set<string>) => {
-      mergeMutation.mutate({ values, orderIds, cascadeOptions });
+      const transaction = ordersActions.mergeOrders({
+        values,
+        orderIds,
+        cascadeOptions,
+      });
+      await transaction.isPersisted.promise.then(
+        () => {
+          toast.success(`Successfully merged ${orderIds.size} orders into one!`);
+        },
+        (error: Error) => {
+          toast.error("Failed to merge orders. Please try again.", {
+            description: `Error: ${error.message}`,
+          });
+        },
+      );
     },
-    [mergeMutation],
+    [ordersActions],
   );
   const handleSplit = useCallback(
     async (
@@ -389,56 +91,99 @@ function RouteComponent() {
       collectionIds: Set<string>,
       orderIds: Set<string>,
     ) => {
-      splitMutation.mutate({
+      const transaction = ordersActions.splitOrders({
         values,
         orderIds,
         collectionIds,
         cascadeOptions,
       });
+      await transaction.isPersisted.promise.then(
+        () => {
+          toast.success(`Successfully moved ${collectionIds.size} items to a new order!`);
+        },
+        (error: Error) => {
+          toast.error("Failed to move items to a new order. Please try again.", {
+            description: `Error: ${error.message}`,
+          });
+        },
+      );
     },
-    [splitMutation],
+    [ordersActions],
   );
   const handleEditOrder = useCallback(
     async (values: EditedOrder, cascadeOptions: CascadeOptions) => {
-      editOrderMutation.mutate({ values, cascadeOptions });
+      const transaction = ordersActions.editOrder({ values, cascadeOptions });
+      await transaction.isPersisted.promise.catch((error: Error) => {
+        toast.error("Failed to update order. Please try again.", {
+          description: `Error: ${error.message}`,
+        });
+      });
     },
-    [editOrderMutation],
+    [ordersActions],
   );
 
   const handleDeleteOrders = useCallback(
     async (orderIds: Set<string>) => {
-      deleteOrderMutation.mutate(orderIds);
+      const transaction = ordersActions.deleteOrders({ orderIds });
+      await transaction.isPersisted.promise.catch((error: Error) => {
+        toast.error("Failed to delete order(s). Please try again.", {
+          description: `Error: ${error.message}`,
+        });
+      });
     },
-    [deleteOrderMutation],
+    [ordersActions],
   );
 
   const handleEditItem = useCallback(
     async (values: CollectionItemFormValues) => {
-      // console.log(values.releaseId);
-      editItemMutation.mutate({ values });
+      const transaction = ordersActions.editItem({ values });
+      await transaction.isPersisted.promise.catch((error: Error) => {
+        toast.error("Failed to update item. Please try again.", {
+          description: `Error: ${error.message}`,
+        });
+      });
     },
-    [editItemMutation],
+    [ordersActions],
   );
 
   const handleDeleteItem = useCallback(
     async (orderId: string, itemId: string) => {
-      deleteItemMutation.mutate({ orderId, itemId });
+      const transaction = ordersActions.deleteItem({ orderId, itemId });
+      await transaction.isPersisted.promise.catch((error: Error) => {
+        toast.error("Failed to delete item. Please try again.", {
+          description: `Error: ${error.message}`,
+        });
+      });
     },
-    [deleteItemMutation],
+    [ordersActions],
   );
 
   const handleDeleteItems = useCallback(
     async (collectionIds: Set<string>) => {
-      deleteItemsMutation.mutate(collectionIds);
+      const transaction = ordersActions.deleteItems({ collectionIds });
+      await transaction.isPersisted.promise.catch((error: Error) => {
+        toast.error("Failed to delete items. Please try again.", {
+          description: `Error: ${error.message}`,
+        });
+      });
     },
-    [deleteItemsMutation],
+    [ordersActions],
   );
 
   const handleMoveItem = useCallback(
     async (targetOrderId: string, collectionIds: Set<string>, orderIds: Set<string>) => {
-      moveItemMutation.mutate({ targetOrderId, collectionIds, orderIds });
+      const transaction = ordersActions.moveItem({
+        targetOrderId,
+        collectionIds,
+        orderIds,
+      });
+      await transaction.isPersisted.promise.catch((error: Error) => {
+        toast.error("Failed to move items. Please try again.", {
+          description: `Error: ${error.message}`,
+        });
+      });
     },
-    [moveItemMutation],
+    [ordersActions],
   );
 
   const handleSearchChange = useCallback(
@@ -448,9 +193,32 @@ function RouteComponent() {
     [filters, setFilters],
   );
 
-  const orders = data?.orders ?? [];
-  const orderStats = data?.orderStats;
-  const totalCount = data?.totalCount ?? 0;
+  const orders = data ?? [];
+  const limit = filters.limit ?? 10;
+  const offset = filters.offset ?? 0;
+  const pagedOrders = useMemo((): Order[] => {
+    if (orders.length === 0) return [];
+    return orders.slice(offset, offset + limit);
+  }, [orders, offset, limit]);
+  const totalCount = isPending ? undefined : orders.length;
+  const orderStats = useMemo((): OrderStats | undefined => {
+    if (isPending) return undefined;
+
+    const totalOrders = orders.length;
+    const totalSpent = orders.reduce((sum, order) => sum + Number(order.total), 0);
+    const activeOrders = orders.reduce((sum, order) => sum + (order.status !== "Owned" ? 1 : 0), 0);
+    const unpaidCosts = orders.reduce(
+      (sum, order) => sum + (order.status === "Ordered" ? Number(order.total) : 0),
+      0,
+    );
+
+    return {
+      totalOrders,
+      totalSpent,
+      activeOrders,
+      unpaidCosts,
+    };
+  }, [orders, isPending]);
 
   if (isError) {
     return (
@@ -462,7 +230,7 @@ function RouteComponent() {
           <p className="text-muted-foreground text-sm font-light">Manage and track your orders</p>
         </div>
         <div className="flex flex-col items-center justify-center h-64 gap-y-4">
-          <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
+          <div className="text-lg font-medium text-destructive">Error: {status}</div>
         </div>
       </div>
     );
@@ -524,11 +292,11 @@ function RouteComponent() {
       ) : (
         <OrdersDataGrid
           key="orders-data-grid"
-          orders={orders}
-          totalCount={totalCount}
+          orders={pagedOrders}
+          totalCount={totalCount ?? 0}
           pagination={{
-            limit: filters.limit ?? 10,
-            offset: filters.offset ?? 0,
+            limit,
+            offset,
           }}
           sorting={{
             sort: filters.sort ?? "createdAt",

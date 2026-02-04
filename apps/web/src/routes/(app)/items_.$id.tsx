@@ -24,12 +24,18 @@ import { formatCurrencyFromMinorUnits, formatDate, getCategoryColor } from "@mya
 import { Label } from "@/components/ui/label";
 import CollectionItemForm from "@/components/collection/collection-item-form";
 import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import type { CollectionItemFormValues } from "@/lib/collection/types";
+import type { CollectionItemFormValues, CollectionItem } from "@myakiba/types";
 import { deleteCollectionItems, updateCollectionItem } from "@/queries/collection";
 import { toast } from "sonner";
-import type { ItemRelatedCollection } from "@/lib/items/types";
 import Loader from "@/components/loader";
 import type { DateFormat } from "@myakiba/types";
+
+type ItemRelatedCollection = {
+  collection: Omit<
+    CollectionItem,
+    "itemCategory" | "itemScale" | "createdAt" | "updatedAt" | "totalCount" | "totalValue"
+  >[];
+};
 
 export const Route = createFileRoute("/(app)/items_/$id")({
   component: RouteComponent,
@@ -157,19 +163,7 @@ function RouteComponent() {
       });
     },
     onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: ["item", id, "itemRelatedCollection"],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ["item", id, "itemRelatedOrders"],
-        }),
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["order"] }),
-        queryClient.invalidateQueries({ queryKey: ["collection"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
-        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
-      ]);
+      await queryClient.invalidateQueries();
     },
   });
 
@@ -203,19 +197,7 @@ function RouteComponent() {
     },
     onSuccess: () => {},
     onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: ["item", id, "itemRelatedCollection"],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ["item", id, "itemRelatedOrders"],
-        }),
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["order"] }),
-        queryClient.invalidateQueries({ queryKey: ["collection"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
-        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
-      ]);
+      await queryClient.invalidateQueries();
     },
   });
 

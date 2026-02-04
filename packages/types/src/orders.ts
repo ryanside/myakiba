@@ -8,18 +8,7 @@ export type OrderStats = {
   unpaidCosts: number;
 };
 
-export type OrdersQueryResponse = {
-  orders: Order[];
-  orderStats: OrderStats;
-  totalCount: number;
-  pagination: {
-    limit: number;
-    offset: number;
-    pageCount: number;
-  };
-};
-
-export type OrderQueryResponse = Omit<Order, "totalCount">;
+export type OrderQueryResponse = Order;
 
 export type Order = {
   orderId: string;
@@ -43,7 +32,6 @@ export type Order = {
   createdAt: string;
   updatedAt: string;
   items: OrderItem[];
-  totalCount: number;
 };
 
 export type OrderItem = Omit<

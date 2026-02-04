@@ -1,26 +1,19 @@
-import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useFilters } from "@/hooks/use-filters";
-import type {
-  CollectionFilters,
-  CollectionQueryResponse,
-  CollectionItemFormValues,
-} from "@/lib/collection/types";
-import { getCollection, updateCollectionItem } from "@/queries/collection";
+import type { CollectionItem, CollectionFilters, CollectionItemFormValues } from "@myakiba/types";
 import { CollectionDataGrid } from "@/components/collection/collection-data-grid";
 import { collectionSearchSchema } from "@/lib/validations";
 import { CollectionDataGridSkeleton } from "@/components/collection/collection-data-grid-skeleton";
-import { deleteCollectionItems } from "@/queries/collection";
-import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { createOptimisticDeleteUpdate, createOptimisticEditUpdate } from "@/lib/collection/utils";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { KPICard } from "@/components/ui/kpi-card";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Grid, TableOfContents } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { DateFormat } from "@myakiba/types";
+import { createBaseCollection, useCollectionLiveQuery } from "@/tanstack-db/db-collections";
 
 export const Route = createFileRoute("/(app)/collection")({
   component: RouteComponent,
@@ -52,89 +45,38 @@ function RouteComponent() {
     [setFilters],
   );
 
-  const { isPending, isError, data, error } = useQuery({
-    queryKey: ["collection", filters],
-    queryFn: () => getCollection(filters),
-    placeholderData: keepPreviousData,
-    staleTime: 1000 * 60 * 5,
-    retry: false,
-  });
+  const baseCollection = useMemo(
+    () => createBaseCollection(filters, queryClient),
+    [filters, queryClient],
+  );
 
-  const deleteCollectionItemsMutation = useMutation({
-    mutationFn: ({ collectionIds }: { collectionIds: Set<string> }) =>
-      deleteCollectionItems(Array.from(collectionIds)),
-    onMutate: async ({ collectionIds }) => {
-      await queryClient.cancelQueries({ queryKey: ["collection", filters] });
-      const previousData = queryClient.getQueryData(["collection", filters]);
-      queryClient.setQueryData(["collection", filters], (old: CollectionQueryResponse) => {
-        return createOptimisticDeleteUpdate(old, collectionIds, filters);
-      });
-      return { previousData };
-    },
-    onError: (error, _, context) => {
-      if (context?.previousData) {
-        queryClient.setQueryData(["collection", filters], context.previousData);
-      }
-      toast.error("Failed to delete collection item(s). Please try again.", {
-        description: `Error: ${error.message}`,
-      });
-    },
-    onSuccess: () => {},
-    onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["order"] }),
-        queryClient.invalidateQueries({ queryKey: ["collection"] }),
-        queryClient.invalidateQueries({ queryKey: ["item"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
-        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
-      ]);
-    },
-  });
-
-  const editCollectionItemMutation = useMutation({
-    mutationFn: (values: CollectionItemFormValues) => updateCollectionItem(values),
-    onMutate: async (values) => {
-      await queryClient.cancelQueries({ queryKey: ["collection", filters] });
-      const previousData = queryClient.getQueryData(["collection", filters]);
-      queryClient.setQueryData(["collection", filters], (old: CollectionQueryResponse) => {
-        return createOptimisticEditUpdate(old, values, filters);
-      });
-      return { previousData };
-    },
-    onError: (error, _, context) => {
-      if (context?.previousData) {
-        queryClient.setQueryData(["collection", filters], context.previousData);
-      }
-      toast.error("Failed to update collection item. Please try again.", {
-        description: `Error: ${error.message}`,
-      });
-    },
-    onSuccess: () => {},
-    onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["order"] }),
-        queryClient.invalidateQueries({ queryKey: ["collection"] }),
-        queryClient.invalidateQueries({ queryKey: ["item"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
-        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
-      ]);
-    },
-  });
+  const {
+    data,
+    isLoading: isPending,
+    isError,
+    status,
+  } = useCollectionLiveQuery(baseCollection, filters);
 
   const handleDeleteCollectionItems = useCallback(
-    async (collectionIds: Set<string>) => {
-      await deleteCollectionItemsMutation.mutateAsync({ collectionIds });
+    async (collectionIds: Set<string>): Promise<void> => {
+      const transaction = baseCollection.delete(Array.from(collectionIds));
+      await transaction.isPersisted.promise.catch(() => {
+        toast.error("Failed to delete collection item(s). Please try again.");
+      });
     },
-    [deleteCollectionItemsMutation],
+    [baseCollection],
   );
 
   const handleEditCollectionItem = useCallback(
-    async (values: CollectionItemFormValues) => {
-      await editCollectionItemMutation.mutateAsync(values);
+    async (values: CollectionItemFormValues): Promise<void> => {
+      const transaction = baseCollection.update(values.id, (draft) => {
+        Object.assign(draft, values);
+      });
+      await transaction.isPersisted.promise.catch(() => {
+        toast.error("Failed to update collection item. Please try again.");
+      });
     },
-    [editCollectionItemMutation],
+    [baseCollection],
   );
 
   if (isError) {
@@ -149,14 +91,27 @@ function RouteComponent() {
           </p>
         </div>
         <div className="flex flex-col items-center justify-center h-64 gap-y-4">
-          <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
+          <div className="text-lg font-medium text-destructive">Error: {status}</div>
         </div>
       </div>
     );
   }
 
-  const collectionItems = data?.collection?.collectionItems ?? [];
-  const collectionStats = data?.collection?.collectionStats;
+  const collectionItems = data ?? [];
+  const limit = filters.limit ?? 10;
+  const offset = filters.offset ?? 0;
+  const pagedItems = useMemo((): CollectionItem[] => {
+    if (collectionItems.length === 0) return [];
+    return collectionItems.slice(offset, offset + limit);
+  }, [collectionItems, offset, limit]);
+
+  const totalItems = isPending ? undefined : collectionItems.length;
+  const totalSpent = useMemo((): number | undefined => {
+    if (isPending) return undefined;
+    return collectionItems.reduce((sum, item) => sum + item.price, 0);
+  }, [collectionItems, isPending]);
+  // const totalItemsThisMonth = undefined;
+  // const totalSpentThisMonth = undefined;
 
   return (
     <div className="w-full space-y-8">
@@ -169,34 +124,30 @@ function RouteComponent() {
         </p>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        <KPICard
-          title="Total Items"
-          subtitle="all collection items"
-          value={collectionStats?.totalItems}
-        />
+        <KPICard title="Total Items" subtitle="all collection items" value={totalItems} />
         <KPICard
           title="Total Spent"
           subtitle="based on total item prices"
           value={
-            collectionStats
-              ? formatCurrencyFromMinorUnits(collectionStats.totalSpent, userCurrency)
+            totalSpent !== undefined
+              ? formatCurrencyFromMinorUnits(totalSpent, userCurrency)
               : undefined
           }
         />
-        <KPICard
+        {/* <KPICard
           title="Total Items This Month"
           subtitle="based on collection date"
-          value={collectionStats?.totalItemsThisMonth}
+          value={totalItemsThisMonth}
         />
         <KPICard
           title="Total Spent This Month"
           subtitle="based on payment date"
           value={
-            collectionStats
-              ? formatCurrencyFromMinorUnits(collectionStats.totalSpentThisMonth, userCurrency)
+            totalSpentThisMonth !== undefined
+              ? formatCurrencyFromMinorUnits(totalSpentThisMonth, userCurrency)
               : undefined
           }
-        />
+        /> */}
       </div>
       <Tabs defaultValue="table" className="w-[375px] text-sm text-muted-foreground">
         <TabsList className="grid w-full grid-cols-2">
@@ -220,11 +171,11 @@ function RouteComponent() {
       ) : (
         <CollectionDataGrid
           key="collection-data-grid"
-          collection={collectionItems}
-          totalCount={collectionItems?.[0]?.totalCount ?? 0}
+          collection={pagedItems}
+          totalCount={totalItems ?? 0}
           pagination={{
-            limit: filters.limit ?? 10,
-            offset: filters.offset ?? 0,
+            limit,
+            offset,
           }}
           sorting={{
             sort: filters.sort ?? "createdAt",

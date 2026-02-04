@@ -22,7 +22,7 @@ import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import { PopoverRatingCell } from "../cells/popover-rating-cell";
 import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
 import { InlineCountCell } from "../cells/inline-count-cell";
-import type { CollectionItem, CollectionItemFormValues } from "@/lib/collection/types";
+import type { CollectionItem, CollectionItemFormValues } from "@myakiba/types";
 import type { DateFormat } from "@myakiba/types";
 
 interface CollectionColumnsParams {

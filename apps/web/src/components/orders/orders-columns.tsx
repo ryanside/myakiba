@@ -22,7 +22,7 @@ import { SelectCell } from "../cells/select-cell";
 import { InlineTextCell } from "../cells/inline-text-cell";
 import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
-import type { CollectionItemFormValues } from "@/lib/collection/types";
+import type { CollectionItemFormValues } from "@myakiba/types";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/constants";
 import type { ShippingMethod, OrderStatus, DateFormat } from "@myakiba/types";
 

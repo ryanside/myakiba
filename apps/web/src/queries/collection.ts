@@ -1,11 +1,7 @@
 import { app, getErrorMessage } from "@/lib/treaty-client";
-import type {
-  CollectionFilters,
-  CollectionItemFormValues,
-  CollectionQueryResponse,
-} from "@/lib/collection/types";
+import type { CollectionFilters, CollectionItemFormValues } from "@myakiba/types";
 
-export async function getCollection(filters: CollectionFilters): Promise<CollectionQueryResponse> {
+export async function getCollection(filters: CollectionFilters) {
   const queryParams = {
     limit: filters.limit ?? 10,
     offset: filters.offset ?? 0,

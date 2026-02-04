@@ -299,7 +299,9 @@ export function OrderForm(props: OrderFormProps) {
                         placeholder="Enter order title"
                       />
                       {!field.state.meta.isValid && (
-                        <em role="alert" className="text-red-500 text-xs">{field.state.meta.errors[0]?.message}</em>
+                        <em role="alert" className="text-red-500 text-xs">
+                          {field.state.meta.errors[0]?.message}
+                        </em>
                       )}
                     </div>
                   )}

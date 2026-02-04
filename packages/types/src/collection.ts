@@ -89,9 +89,4 @@ export type CollectionStats = {
   totalSpentThisMonth: number;
 };
 
-export type CollectionQueryResponse = {
-  collection: {
-    collectionItems: CollectionItem[];
-    collectionStats: CollectionStats;
-  };
-};
+export type CollectionQueryResponse = CollectionItem[];

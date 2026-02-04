@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { CollectionFilters } from "@/lib/collection/types";
+import type { CollectionFilters } from "@myakiba/types";
 import { useQuery } from "@tanstack/react-query";
 import { searchEntries } from "@/queries/collection";
 import { DebouncedInput } from "@/components/debounced-input";

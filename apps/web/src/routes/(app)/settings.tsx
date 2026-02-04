@@ -182,10 +182,7 @@ function BudgetForm({ user, budget }: { user: User; budget: Budget }) {
     },
     onSuccess: async () => {
       toast.success("Budget updated successfully");
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["settings"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
-      ]);
+      await queryClient.invalidateQueries();
     },
   });
 
@@ -204,10 +201,7 @@ function BudgetForm({ user, budget }: { user: User; budget: Budget }) {
     },
     onSuccess: async () => {
       toast.success("Budget deleted successfully");
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["settings"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
-      ]);
+      await queryClient.invalidateQueries();
     },
   });
 
@@ -248,7 +242,7 @@ function BudgetForm({ user, budget }: { user: User; budget: Budget }) {
           }}
           className="space-y-4"
         >
-          <form.Field name="amount" >
+          <form.Field name="amount">
             {(field) => (
               <div className="space-y-2">
                 <Label htmlFor={field.name}>Budget Limit</Label>
