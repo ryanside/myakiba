@@ -14,6 +14,7 @@ COPY /packages/types/package.json ./packages/types/package.json
 COPY /packages/utils/package.json ./packages/utils/package.json
 COPY /packages/validations/package.json ./packages/validations/package.json
 COPY /packages/env/package.json ./packages/env/package.json
+COPY /packages/redis/package.json ./packages/redis/package.json
 
 RUN bun install --frozen-lockfile --ignore-scripts
 
