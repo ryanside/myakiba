@@ -15,7 +15,7 @@
 
 <br />
 
-**[myakiba](https://myakiba.app)** is a collection management tool for collectors of Japanese pop-culture goods. Track your collection, manage orders, view analytics, and stay organized with a modern interface.
+**[myakiba](https://myakiba.app)** is a collection management tool for Japanese pop-culture goods. Track your collection, orders, and analytics with a modern interface.
 
 Early in development.
 

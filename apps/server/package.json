@@ -31,6 +31,7 @@
     "elysia": "catalog:",
     "ioredis": "catalog:",
     "logixlysia": "^6.1.0",
+    "web": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {
