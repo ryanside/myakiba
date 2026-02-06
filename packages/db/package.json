@@ -24,21 +24,22 @@
     "db:down": "docker compose down"
   },
   "dependencies": {
+    "@myakiba/constants": "workspace:*",
     "@myakiba/env": "workspace:*",
     "@paralleldrive/cuid2": "catalog:",
     "dotenv": "catalog:",
+    "drizzle-kit": "^0.31.8",
+    "drizzle-orm": "catalog:",
     "drizzle-zod": "catalog:",
+    "postgres": "catalog:",
     "uuid": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@myakiba/config": "workspace:*",
-    "@myakiba/constants": "workspace:*",
-    "@types/bun": "catalog:",
-    "drizzle-kit": "^0.31.8"
+    "@types/bun": "catalog:"
   },
   "peerDependencies": {
-    "drizzle-orm": "catalog:",
     "typescript": "catalog:"
   }
 }

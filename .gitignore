@@ -24,6 +24,7 @@ dist/
 /.next/
 .vercel
 .cursor/
+.agents/
 
 # deps
 node_modules/
