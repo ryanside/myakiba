@@ -17,6 +17,7 @@ COPY /packages/config/package.json ./packages/config/package.json
 COPY /packages/types/package.json ./packages/types/package.json
 COPY /packages/utils/package.json ./packages/utils/package.json
 COPY /packages/validations/package.json ./packages/validations/package.json
+COPY /packages/redis/package.json ./packages/redis/package.json
 
 # Install dependencies (--ignore-scripts skips native compilation for optional deps like msgpackr-extract)
 RUN bun install --frozen-lockfile --verbose --ignore-scripts
