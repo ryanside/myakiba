@@ -1,16 +1,14 @@
 /**
  * Currency helpers.
  *
- * All persisted monetary values are stored as integer minor units (e.g. cents for USD).
+ * All persisted monetary values are stored as integer minor units with fixed 2 decimals.
  */
 export function formatCurrencyFromMinorUnits(
   valueMinorUnits: number,
   currency: string = "USD",
 ): string {
   const locale = getCurrencyLocale(currency);
-  const fractionDigits = getCurrencyFractionDigits(currency);
-  const divisor = Math.pow(10, fractionDigits);
-  const amountMajorUnits = valueMinorUnits / divisor;
+  const amountMajorUnits = valueMinorUnits / 100;
 
   return new Intl.NumberFormat(locale, {
     style: "currency",
@@ -18,11 +16,9 @@ export function formatCurrencyFromMinorUnits(
   }).format(amountMajorUnits);
 }
 
-export function parseMoneyToMinorUnits(input: string, currency: string = "USD"): number {
+export function parseMoneyToMinorUnits(input: string): number {
   const trimmed = input.trim();
   if (trimmed.length === 0) return 0;
-
-  const fractionDigits = getCurrencyFractionDigits(currency);
 
   // Keep digits, minus sign, and dot. Strip commas/spaces/currency symbols.
   const normalized = trimmed.replace(/[^\d.-]/g, "");
@@ -35,29 +31,11 @@ export function parseMoneyToMinorUnits(input: string, currency: string = "USD"):
 
   const safeWhole = whole.length === 0 ? "0" : whole;
 
-  if (fractionDigits === 0) {
-    const value = Number(safeWhole);
-    return isNegative ? -value : value;
-  }
-
-  const paddedFraction = fraction.padEnd(fractionDigits, "0").slice(0, fractionDigits);
+  const paddedFraction = fraction.padEnd(2, "0").slice(0, 2);
   const minorUnitsString = `${safeWhole}${paddedFraction}`;
   const minorUnits = Number(minorUnitsString.length === 0 ? "0" : minorUnitsString);
 
   return isNegative ? -minorUnits : minorUnits;
-}
-
-export function getCurrencyFractionDigits(currency: string = "USD"): number {
-  try {
-    const resolved = new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency,
-    }).resolvedOptions();
-    return resolved.maximumFractionDigits ?? 2;
-  } catch {
-    // Invalid currency code or missing ICU data; default to typical 2 decimals.
-    return 2;
-  }
 }
 
 /**
@@ -75,6 +53,19 @@ export function getCurrencyLocale(currency: string = "USD"): string {
     USD: "en-US",
   };
   return localeMap[currency] || "en-US";
+}
+
+export function minorUnitsToMajorString(valueMinorUnits: number): string {
+  const isNegative = valueMinorUnits < 0;
+  const absValue = Math.abs(valueMinorUnits);
+  const whole = Math.floor(absValue / 100);
+  const fraction = absValue % 100;
+  const major = `${whole}.${fraction.toString().padStart(2, "0")}`;
+  return isNegative ? `-${major}` : major;
+}
+
+export function majorStringToMinorUnits(input: string): number {
+  return parseMoneyToMinorUnits(input);
 }
 
 /**

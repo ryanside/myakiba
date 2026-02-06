@@ -3,6 +3,7 @@ import type { scrapedItem, CsvItem } from "../types";
 import Redis from "ioredis";
 import type { jobData } from "../types";
 import { normalizeDateString } from "../utils";
+import { parseMoneyToMinorUnits } from "@myakiba/utils";
 import { v5 as uuidv5 } from "uuid";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@myakiba/db";
@@ -41,7 +42,7 @@ export async function finalizeCsvSync(
     itemExternalId: number;
     date: string;
     type: string;
-    price: string;
+    price: number;
     priceCurrency: string;
     barcode: string;
   }> = [];
@@ -73,7 +74,7 @@ export async function finalizeCsvSync(
     paymentDate: string | null;
     shippingDate: string | null;
     collectionDate: string | null;
-    price: string;
+    price: number;
     shop: string;
     shippingMethod: ShippingMethod;
     notes: string;
@@ -91,7 +92,7 @@ export async function finalizeCsvSync(
     shippingDate: string | null;
     collectionDate: string | null;
     shippingMethod: ShippingMethod;
-    releaseMonthYear: string | null;
+    releaseDate: string | null;
   }> = [];
 
   for (const scraped of successfulResults) {
@@ -203,7 +204,7 @@ export async function finalizeCsvSync(
         itemExternalId: scraped.id,
         date: normalizedDate,
         type: release.type,
-        price: release.price.toString(),
+        price: release.price,
         priceCurrency: release.priceCurrency,
         barcode: release.barcode,
       };
@@ -237,7 +238,7 @@ export async function finalizeCsvSync(
     paymentDate: ci.payment_date,
     shippingDate: ci.shipping_date,
     collectionDate: ci.collecting_date,
-    price: ci.price && ci.price.trim() !== "" ? ci.price.toString() : "0.00",
+    price: ci.price && ci.price.trim() !== "" ? parseMoneyToMinorUnits(ci.price) : 0,
     shop: ci.shop,
     shippingMethod: ci.shipping_method,
     notes: ci.note,
@@ -260,7 +261,7 @@ export async function finalizeCsvSync(
       shippingDate: ci.shipping_date,
       collectionDate: ci.collecting_date,
       shippingMethod: ci.shipping_method,
-      releaseMonthYear: latestReleaseIdByExternalId.get(ci.itemExternalId)?.date ?? null,
+      releaseDate: latestReleaseIdByExternalId.get(ci.itemExternalId)?.date ?? null,
     }));
 
   console.log("Items to be inserted:", items);
@@ -338,7 +339,7 @@ export async function finalizeCsvSync(
             itemId: string;
             date: string;
             type: string;
-            price: string;
+            price: number;
             priceCurrency: string;
             barcode: string;
           } => release !== null,

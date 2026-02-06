@@ -32,7 +32,7 @@ export async function finalizeCollectionSync(
     itemExternalId: number;
     date: string;
     type: string;
-    price: string;
+    price: number;
     priceCurrency: string;
     barcode: string;
   }> = [];
@@ -164,7 +164,7 @@ export async function finalizeCollectionSync(
         itemExternalId: scraped.id,
         date: normalizedDate,
         type: release.type,
-        price: release.price.toString(),
+        price: release.price,
         priceCurrency: release.priceCurrency,
         barcode: release.barcode,
       };
@@ -257,7 +257,7 @@ export async function finalizeCollectionSync(
             itemId: string;
             date: string;
             type: string;
-            price: string;
+            price: number;
             priceCurrency: string;
             barcode: string;
           } => release !== null,

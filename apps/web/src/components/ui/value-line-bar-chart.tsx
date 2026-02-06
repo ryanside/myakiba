@@ -75,8 +75,8 @@ export function ValueLineBarChart({ data }: ValueLineBarChartProps) {
     };
 
     return {
-      releaseMonthYearStart: formatDate(startDate),
-      releaseMonthYearEnd: formatDate(endDate),
+      releaseDateStart: formatDate(startDate),
+      releaseDateEnd: formatDate(endDate),
     };
   }, []);
 

@@ -13,7 +13,7 @@ import { DataGridColumnHeader } from "@/components/ui/data-grid-column-header";
 import { type ColumnDef, type RowSelectionState, type OnChangeFn } from "@tanstack/react-table";
 import { SquareMinus, SquarePlus, MoreHorizontal, Eye, Edit, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatCurrency, getCurrencyLocale } from "@myakiba/utils";
+import { formatCurrencyFromMinorUnits, getCurrencyLocale } from "@myakiba/utils";
 import type { CascadeOptions, EditedOrder, Order } from "@/lib/orders/types";
 import { OrderForm } from "./order-form";
 import { OrderItemSubDataGrid } from "./order-item-sub-data-grid";
@@ -22,7 +22,7 @@ import { SelectCell } from "../cells/select-cell";
 import { InlineTextCell } from "../cells/inline-text-cell";
 import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
-import type { CollectionItemFormValues } from "@/lib/collection/types";
+import type { CollectionItemFormValues } from "@myakiba/types";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/constants";
 import type { ShippingMethod, OrderStatus, DateFormat } from "@myakiba/types";
 
@@ -199,8 +199,8 @@ export function createOrdersColumns({
       size: 140,
     },
     {
-      accessorKey: "releaseMonthYear",
-      id: "releaseMonthYear",
+      accessorKey: "releaseDate",
+      id: "releaseDate",
       header: ({ column }) => (
         <DataGridColumnHeader title="Release" visibility={true} column={column} />
       ),
@@ -208,7 +208,7 @@ export function createOrdersColumns({
         const order = row.original;
         return (
           <PopoverDatePickerCell
-            value={order.releaseMonthYear}
+            value={order.releaseDate}
             dateFormat={dateFormat}
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
@@ -217,7 +217,7 @@ export function createOrdersColumns({
               await onEditOrder(
                 {
                   ...orderWithoutTimestamps,
-                  releaseMonthYear: newValue,
+                  releaseDate: newValue,
                 },
                 [] as CascadeOptions,
               );
@@ -436,7 +436,7 @@ export function createOrdersColumns({
         return (
           <PopoverMultiInputCell
             inputs={inputs}
-            total={formatCurrency(order.total, currency)}
+            total={formatCurrencyFromMinorUnits(order.total, currency)}
             currency={currency}
             locale={locale}
             onSubmit={async (newValues) => {

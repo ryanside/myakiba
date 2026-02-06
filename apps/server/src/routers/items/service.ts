@@ -293,7 +293,7 @@ class ItemService {
                   'itemId', ir.item_id,
                   'date', ir.date,
                   'type', ir.type,
-                  'price', ir.price::text,
+                  'price', ir.price,
                   'priceCurrency', ir.price_currency,
                   'barcode', ir.barcode
                 )
@@ -339,7 +339,7 @@ class ItemService {
         id: order.id,
         title: order.title,
         shop: order.shop,
-        releaseMonthYear: order.releaseMonthYear,
+        releaseDate: order.releaseDate,
         shippingFee: order.shippingFee,
         taxes: order.taxes,
         duties: order.duties,
@@ -350,7 +350,7 @@ class ItemService {
       .leftJoin(collection, eq(order.id, collection.orderId))
       .where(and(eq(collection.itemId, itemId), eq(order.userId, userId)))
       .groupBy(order.id)
-      .orderBy(desc(order.releaseMonthYear));
+      .orderBy(desc(order.releaseDate));
 
     if (!orders) {
       throw new Error("FAILED_TO_GET_ITEM_RELATED_ORDERS");

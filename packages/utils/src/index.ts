@@ -8,5 +8,12 @@ export {
   parseLocalDate,
   dateToString,
 } from "./dates";
-export { formatCurrency, getCurrencyLocale } from "./currency";
+export {
+  formatCurrency,
+  formatCurrencyFromMinorUnits,
+  getCurrencyLocale,
+  parseMoneyToMinorUnits,
+  minorUnitsToMajorString,
+  majorStringToMinorUnits,
+} from "./currency";
 export { getCategoryColor } from "./categories";

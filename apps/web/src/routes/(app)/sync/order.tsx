@@ -15,8 +15,7 @@ import {
 import { useState } from "react";
 import { Check, Loader2, LoaderCircleIcon } from "lucide-react";
 import { ShimmeringText } from "@/components/ui/shimmering-text";
-import { extractMfcItemId } from "@/lib/sync/utils";
-import { type SyncStatus, type SyncOrder, type SyncFormOrder } from "@/lib/sync/types";
+import { type SyncStatus, type SyncOrder } from "@/lib/sync/types";
 import { toast } from "sonner";
 import { getJobStatus, sendOrder } from "@/queries/sync";
 import SyncOrderForm from "@/components/sync/sync-order-form";
@@ -105,41 +104,12 @@ function RouteComponent() {
       });
     },
     onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["collection"] }),
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["order"] }),
-        queryClient.invalidateQueries({ queryKey: ["item"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
-        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
-      ]);
+      await queryClient.invalidateQueries();
     },
   });
 
-  async function handleSyncOrderSubmit(values: SyncFormOrder) {
-    const updatedValues: SyncOrder = {
-      ...values,
-      orderDate: values.orderDate || null,
-      releaseMonthYear: values.releaseMonthYear || null,
-      paymentDate: values.paymentDate || null,
-      shippingDate: values.shippingDate || null,
-      collectionDate: values.collectionDate || null,
-      items: values.items.map((item) => {
-        const extractedId = extractMfcItemId(item.itemExternalId);
-        if (!extractedId) {
-          throw new Error(`Invalid item ID: ${item.itemExternalId}`);
-        }
-        return {
-          ...item,
-          itemExternalId: parseInt(extractedId),
-          orderDate: item.orderDate || null,
-          paymentDate: item.paymentDate || null,
-          shippingDate: item.shippingDate || null,
-          collectionDate: item.collectionDate || null,
-        };
-      }),
-    };
-    await orderMutation.mutateAsync(updatedValues);
+  async function handleSyncOrderSubmit(values: SyncOrder) {
+    await orderMutation.mutateAsync(values);
   }
 
   return (

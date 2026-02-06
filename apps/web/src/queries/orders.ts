@@ -3,12 +3,12 @@ import type {
   CascadeOptions,
   EditedOrder,
   NewOrder,
+  Order,
   OrderFilters,
-  OrdersQueryResponse,
 } from "@/lib/orders/types";
 import type { OrderStatus } from "@myakiba/types";
 
-export async function getOrders(filters: OrderFilters): Promise<OrdersQueryResponse> {
+export async function getOrders(filters: OrderFilters): Promise<Order[]> {
   const queryParams = {
     limit: filters.limit ?? 10,
     offset: filters.offset ?? 0,
@@ -16,8 +16,8 @@ export async function getOrders(filters: OrderFilters): Promise<OrdersQueryRespo
     order: filters.order ?? "desc",
     search: filters.search,
     shop: filters.shop,
-    releaseMonthYearStart: filters.releaseMonthYearStart,
-    releaseMonthYearEnd: filters.releaseMonthYearEnd,
+    releaseDateStart: filters.releaseDateStart,
+    releaseDateEnd: filters.releaseDateEnd,
     shipMethod: filters.shipMethod,
     orderDateStart: filters.orderDateStart,
     orderDateEnd: filters.orderDateEnd,

@@ -12,7 +12,7 @@ import {
   ActionBarClose,
   ActionBarSeparator,
 } from "@/components/ui/action-bar";
-import type { CollectionFilters } from "@/lib/collection/types";
+import type { CollectionFilters } from "@myakiba/types";
 
 // Define sortable columns configuration
 const SORTABLE_COLUMNS: SortableColumn[] = [

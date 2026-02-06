@@ -21,6 +21,7 @@ export default function LogoCloud({ images }: { images: readonly string[] }) {
                     alt="MyFigureCollection Item Image"
                     className="w-full h-full object-top object-cover"
                     loading="lazy"
+                    decoding="async"
                   />
                 </div>
               ))}

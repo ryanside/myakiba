@@ -20,7 +20,7 @@ import type {
   Order,
 } from "@/lib/orders/types";
 import { useSelection } from "@/hooks/use-selection";
-import type { CollectionItemFormValues } from "@/lib/collection/types";
+import type { CollectionItemFormValues } from "@myakiba/types";
 import { DataGridColumnCombobox } from "../ui/data-grid-column-combobox";
 import { OrdersToolbar } from "./orders-toolbar";
 import { DEFAULT_PAGE_INDEX, DEFAULT_PAGE_SIZE } from "@myakiba/constants";
@@ -136,7 +136,7 @@ export default function OrdersDataGrid({
     "title",
     "shop",
     "shippingMethod",
-    "releaseMonthYear",
+    "releaseDate",
     "orderDate",
     "paymentDate",
     "shippingDate",
@@ -203,7 +203,7 @@ export default function OrdersDataGrid({
             | "paymentDate"
             | "shippingDate"
             | "collectionDate"
-            | "releaseMonthYear"
+            | "releaseDate"
             | "shippingMethod"
             | "total"
             | "shippingFee"

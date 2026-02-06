@@ -19,7 +19,7 @@ class SettingsService {
         .update(budget)
         .set({
           period: budgetData.period,
-          amount: budgetData.amount.toString(),
+          amount: budgetData.amount,
           updatedAt: new Date(),
         })
         .where(eq(budget.userId, userId))
@@ -32,7 +32,7 @@ class SettingsService {
         .values({
           userId,
           period: budgetData.period,
-          amount: budgetData.amount.toString(),
+          amount: budgetData.amount,
         })
         .returning();
 

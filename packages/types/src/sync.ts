@@ -22,9 +22,10 @@ export type SyncFormOrderItem = {
 
 export type SyncOrderItem = Omit<
   SyncFormOrderItem,
-  "itemExternalId" | "orderDate" | "paymentDate" | "shippingDate" | "collectionDate"
+  "itemExternalId" | "orderDate" | "paymentDate" | "shippingDate" | "collectionDate" | "price"
 > & {
   itemExternalId: number;
+  price: number;
   orderDate: string | null;
   paymentDate: string | null;
   shippingDate: string | null;
@@ -36,7 +37,7 @@ export type SyncFormOrder = {
   title: string;
   shop: string;
   orderDate: string;
-  releaseMonthYear: string;
+  releaseDate: string;
   paymentDate: string;
   shippingDate: string;
   collectionDate: string;
@@ -52,11 +53,26 @@ export type SyncFormOrder = {
 
 export type SyncOrder = Omit<
   SyncFormOrder,
-  "items" | "orderDate" | "releaseMonthYear" | "paymentDate" | "shippingDate" | "collectionDate"
+  | "items"
+  | "orderDate"
+  | "releaseDate"
+  | "paymentDate"
+  | "shippingDate"
+  | "collectionDate"
+  | "shippingFee"
+  | "taxes"
+  | "duties"
+  | "tariffs"
+  | "miscFees"
 > & {
   items: SyncOrderItem[];
+  shippingFee: number;
+  taxes: number;
+  duties: number;
+  tariffs: number;
+  miscFees: number;
   orderDate: string | null;
-  releaseMonthYear: string | null;
+  releaseDate: string | null;
   paymentDate: string | null;
   shippingDate: string | null;
   collectionDate: string | null;
@@ -80,9 +96,16 @@ export type SyncFormCollectionItem = {
 
 export type SyncCollectionItem = Omit<
   SyncFormCollectionItem,
-  "itemExternalId" | "orderDate" | "paymentDate" | "shippingDate" | "collectionDate" | "score"
+  | "itemExternalId"
+  | "orderDate"
+  | "paymentDate"
+  | "shippingDate"
+  | "collectionDate"
+  | "score"
+  | "price"
 > & {
   itemExternalId: number;
+  price: number;
   orderDate: string | null;
   paymentDate: string | null;
   shippingDate: string | null;

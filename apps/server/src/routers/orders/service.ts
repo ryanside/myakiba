@@ -14,7 +14,7 @@ type OrderItem = {
   status: OrderStatus;
   itemTitle: string;
   itemImage: string | null;
-  price: string;
+  price: number;
   count: number;
   shop: string;
   score: string;
@@ -25,7 +25,7 @@ type OrderItem = {
   shippingMethod: ShippingMethod;
   releaseDate: string | null;
   releaseType: string | null;
-  releasePrice: string | null;
+  releasePrice: number | null;
   releaseCurrency: string | null;
   releaseBarcode: string | null;
   condition: Condition;
@@ -42,8 +42,8 @@ class OrdersService {
     orderBy: string,
     search?: string,
     shop?: Array<string>,
-    releaseMonthYearStart?: string,
-    releaseMonthYearEnd?: string,
+    releaseDateStart?: string,
+    releaseDateEnd?: string,
     shippingMethod?: ReadonlyArray<ShippingMethod>,
     orderDateStart?: string,
     orderDateEnd?: string,
@@ -54,25 +54,25 @@ class OrdersService {
     collectionDateStart?: string,
     collectionDateEnd?: string,
     status?: Array<OrderStatus>,
-    totalMin?: string,
-    totalMax?: string,
-    shippingFeeMin?: string,
-    shippingFeeMax?: string,
-    taxesMin?: string,
-    taxesMax?: string,
-    dutiesMin?: string,
-    dutiesMax?: string,
-    tariffsMin?: string,
-    tariffsMax?: string,
-    miscFeesMin?: string,
-    miscFeesMax?: string,
+    totalMin?: number,
+    totalMax?: number,
+    shippingFeeMin?: number,
+    shippingFeeMax?: number,
+    taxesMin?: number,
+    taxesMax?: number,
+    dutiesMin?: number,
+    dutiesMax?: number,
+    tariffsMin?: number,
+    tariffsMax?: number,
+    miscFeesMin?: number,
+    miscFeesMax?: number,
   ) {
     const whereConditions = and(
       eq(order.userId, userId),
       search ? ilike(order.title, `%${search}%`) : undefined,
       shop ? inArray(order.shop, shop) : undefined,
-      releaseMonthYearStart ? gte(order.releaseMonthYear, releaseMonthYearStart) : undefined,
-      releaseMonthYearEnd ? lte(order.releaseMonthYear, releaseMonthYearEnd) : undefined,
+      releaseDateStart ? gte(order.releaseDate, releaseDateStart) : undefined,
+      releaseDateEnd ? lte(order.releaseDate, releaseDateEnd) : undefined,
       shippingMethod ? inArray(order.shippingMethod, shippingMethod) : undefined,
       orderDateStart ? gte(order.orderDate, orderDateStart) : undefined,
       orderDateEnd ? lte(order.orderDate, orderDateEnd) : undefined,
@@ -83,16 +83,16 @@ class OrdersService {
       collectionDateStart ? gte(order.collectionDate, collectionDateStart) : undefined,
       collectionDateEnd ? lte(order.collectionDate, collectionDateEnd) : undefined,
       status ? inArray(order.status, status) : undefined,
-      shippingFeeMin ? gte(order.shippingFee, shippingFeeMin) : undefined,
-      shippingFeeMax ? lte(order.shippingFee, shippingFeeMax) : undefined,
-      taxesMin ? gte(order.taxes, taxesMin) : undefined,
-      taxesMax ? lte(order.taxes, taxesMax) : undefined,
-      dutiesMin ? gte(order.duties, dutiesMin) : undefined,
-      dutiesMax ? lte(order.duties, dutiesMax) : undefined,
-      tariffsMin ? gte(order.tariffs, tariffsMin) : undefined,
-      tariffsMax ? lte(order.tariffs, tariffsMax) : undefined,
-      miscFeesMin ? gte(order.miscFees, miscFeesMin) : undefined,
-      miscFeesMax ? lte(order.miscFees, miscFeesMax) : undefined,
+      shippingFeeMin !== undefined ? gte(order.shippingFee, shippingFeeMin) : undefined,
+      shippingFeeMax !== undefined ? lte(order.shippingFee, shippingFeeMax) : undefined,
+      taxesMin !== undefined ? gte(order.taxes, taxesMin) : undefined,
+      taxesMax !== undefined ? lte(order.taxes, taxesMax) : undefined,
+      dutiesMin !== undefined ? gte(order.duties, dutiesMin) : undefined,
+      dutiesMax !== undefined ? lte(order.duties, dutiesMax) : undefined,
+      tariffsMin !== undefined ? gte(order.tariffs, tariffsMin) : undefined,
+      tariffsMax !== undefined ? lte(order.tariffs, tariffsMax) : undefined,
+      miscFeesMin !== undefined ? gte(order.miscFees, miscFeesMin) : undefined,
+      miscFeesMax !== undefined ? lte(order.miscFees, miscFeesMax) : undefined,
     );
 
     const sortByColumn = (() => {
@@ -109,12 +109,12 @@ class OrdersService {
           return order.shippingDate;
         case "collectionDate":
           return order.collectionDate;
-        case "releaseMonthYear":
-          return order.releaseMonthYear;
+        case "releaseDate":
+          return order.releaseDate;
         case "shippingMethod":
           return order.shippingMethod;
         case "total":
-          return sql<string>`COALESCE(SUM(${collection.price}::numeric), 0) + COALESCE(${order.shippingFee}::numeric, 0) + COALESCE(${order.taxes}::numeric, 0) + COALESCE(${order.duties}::numeric, 0) + COALESCE(${order.tariffs}::numeric, 0) + COALESCE(${order.miscFees}::numeric, 0)`;
+          return sql<number>`COALESCE(SUM(${collection.price}), 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`;
         case "shippingFee":
           return order.shippingFee;
         case "taxes":
@@ -141,14 +141,14 @@ class OrdersService {
         orderId: order.id,
         title: order.title,
         shop: order.shop,
-        releaseMonthYear: order.releaseMonthYear,
+        releaseDate: order.releaseDate,
         shippingMethod: order.shippingMethod,
         orderDate: order.orderDate,
         paymentDate: order.paymentDate,
         shippingDate: order.shippingDate,
         collectionDate: order.collectionDate,
         status: order.status,
-        total: sql<string>`COALESCE(SUM(${collection.price}::numeric), 0) + COALESCE(${order.shippingFee}::numeric, 0) + COALESCE(${order.taxes}::numeric, 0) + COALESCE(${order.duties}::numeric, 0) + COALESCE(${order.tariffs}::numeric, 0) + COALESCE(${order.miscFees}::numeric, 0)`,
+        total: sql<number>`COALESCE(SUM(${collection.price}), 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`,
         shippingFee: order.shippingFee,
         taxes: order.taxes,
         duties: order.duties,
@@ -170,7 +170,7 @@ class OrdersService {
                 'status', ${collection.status},
                 'itemTitle', ${item.title},
                 'itemImage', ${item.image},
-                'price', ${collection.price}::text,
+                'price', ${collection.price},
                 'count', ${collection.count},
                 'shop', ${collection.shop},
                 'score', ${collection.score}::text, 
@@ -181,7 +181,7 @@ class OrdersService {
                 'shippingMethod', ${collection.shippingMethod},
                 'releaseDate', ${item_release.date},
                 'releaseType', ${item_release.type},
-                'releasePrice', ${item_release.price}::text,
+                'releasePrice', ${item_release.price},
                 'releaseCurrency', ${item_release.priceCurrency},
                 'releaseBarcode', ${item_release.barcode},
                 'condition', ${collection.condition},
@@ -193,7 +193,6 @@ class OrdersService {
             '[]'::json
           )
         `,
-        totalCount: sql<number>`COUNT(*) OVER()`,
       })
       .from(order)
       .leftJoin(collection, eq(order.id, collection.orderId))
@@ -204,7 +203,7 @@ class OrdersService {
         order.id,
         order.title,
         order.shop,
-        order.releaseMonthYear,
+        order.releaseDate,
         order.shippingMethod,
         order.orderDate,
         order.paymentDate,
@@ -222,11 +221,11 @@ class OrdersService {
       )
       .having(
         and(
-          totalMin
-            ? sql`COALESCE(SUM(${collection.price}::numeric), 0) + COALESCE(${order.shippingFee}::numeric, 0) + COALESCE(${order.taxes}::numeric, 0) + COALESCE(${order.duties}::numeric, 0) + COALESCE(${order.tariffs}::numeric, 0) + COALESCE(${order.miscFees}::numeric, 0) >= ${totalMin}::numeric`
+          totalMin !== undefined
+            ? sql`COALESCE(SUM(${collection.price}), 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0) >= ${totalMin}`
             : undefined,
-          totalMax
-            ? sql`COALESCE(SUM(${collection.price}::numeric), 0) + COALESCE(${order.shippingFee}::numeric, 0) + COALESCE(${order.taxes}::numeric, 0) + COALESCE(${order.duties}::numeric, 0) + COALESCE(${order.tariffs}::numeric, 0) + COALESCE(${order.miscFees}::numeric, 0) <= ${totalMax}::numeric`
+          totalMax !== undefined
+            ? sql`COALESCE(SUM(${collection.price}), 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0) <= ${totalMax}`
             : undefined,
         ),
       )
@@ -237,38 +236,7 @@ class OrdersService {
       .limit(limit)
       .offset(offset);
 
-    const orderTotalsSubquery = db
-      .select({
-        orderId: order.id,
-        collectionDate: order.collectionDate,
-        paymentDate: order.paymentDate,
-        status: order.status,
-        total:
-          sql<string>`COALESCE(SUM(${collection.price}::numeric), 0) + COALESCE(${order.shippingFee}::numeric, 0) + COALESCE(${order.taxes}::numeric, 0) + COALESCE(${order.duties}::numeric, 0) + COALESCE(${order.tariffs}::numeric, 0) + COALESCE(${order.miscFees}::numeric, 0)`.as(
-            "total",
-          ),
-      })
-      .from(order)
-      .leftJoin(collection, eq(order.id, collection.orderId))
-      .where(eq(order.userId, userId))
-      .groupBy(order.id, order.collectionDate, order.paymentDate, order.status)
-      .as("order_totals");
-
-    const [orderStatsResult] = await db
-      .select({
-        totalOrders: sql<number>`COUNT(*)`,
-        totalSpent: sql<string>`COALESCE(SUM(${orderTotalsSubquery.total}::numeric), 0)`,
-        activeOrders: sql<number>`COUNT(CASE WHEN ${orderTotalsSubquery.status} != 'Owned' THEN 1 END)`,
-        unpaidCosts: sql<string>`COALESCE(SUM(
-          CASE WHEN ${orderTotalsSubquery.status} = 'Ordered'
-            THEN ${orderTotalsSubquery.total}::numeric
-            ELSE 0 
-          END
-        ), 0)`,
-      })
-      .from(orderTotalsSubquery);
-
-    return { orders, orderStats: orderStatsResult };
+    return orders;
   }
 
   async getOrder(userId: string, orderId: string) {
@@ -278,13 +246,13 @@ class OrdersService {
         title: order.title,
         shop: order.shop,
         orderDate: order.orderDate,
-        releaseMonthYear: order.releaseMonthYear,
+        releaseDate: order.releaseDate,
         paymentDate: order.paymentDate,
         shippingDate: order.shippingDate,
         collectionDate: order.collectionDate,
         shippingMethod: order.shippingMethod,
         status: order.status,
-        total: sql<string>`COALESCE(SUM(${collection.price}::numeric), 0) + COALESCE(${order.shippingFee}::numeric, 0) + COALESCE(${order.taxes}::numeric, 0) + COALESCE(${order.duties}::numeric, 0) + COALESCE(${order.tariffs}::numeric, 0) + COALESCE(${order.miscFees}::numeric, 0)`,
+        total: sql<number>`COALESCE(SUM(${collection.price}), 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`,
         shippingFee: order.shippingFee,
         taxes: order.taxes,
         duties: order.duties,
@@ -306,7 +274,7 @@ class OrdersService {
                 'status', ${collection.status},
                 'itemTitle', ${item.title},
                 'itemImage', ${item.image},
-                'price', ${collection.price}::text,
+                'price', ${collection.price},
                 'count', ${collection.count},
                 'shop', ${collection.shop},
                 'score', ${collection.score}::text,
@@ -317,7 +285,7 @@ class OrdersService {
                 'shippingMethod', ${collection.shippingMethod},
                 'releaseDate', ${item_release.date},
                 'releaseType', ${item_release.type},
-                'releasePrice', ${item_release.price}::text,
+                'releasePrice', ${item_release.price},
                 'releaseCurrency', ${item_release.priceCurrency},
                 'releaseBarcode', ${item_release.barcode},
                 'condition', ${collection.condition},

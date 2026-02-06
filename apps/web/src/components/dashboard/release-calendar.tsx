@@ -2,7 +2,7 @@ import * as React from "react";
 import { ChevronLeftIcon, ChevronRightIcon, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { formatCurrency, formatDate } from "@myakiba/utils";
+import { formatCurrencyFromMinorUnits, formatDate } from "@myakiba/utils";
 import type { DateFormat } from "@myakiba/types";
 import { useQuery } from "@tanstack/react-query";
 import { app } from "@/lib/treaty-client";
@@ -15,7 +15,7 @@ interface ReleaseItem {
   image: string | null;
   category: string | null;
   releaseDate: string;
-  price: string | null;
+  price: number | null;
   priceCurrency: string | null;
 }
 
@@ -162,10 +162,10 @@ function ReleaseCard({
         <h4 className="font-medium text-sm truncate">{item.title}</h4>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>{formatDate(item.releaseDate, dateFormat)}</span>
-          {item.price && (
+          {item.price !== null && item.price !== undefined && (
             <>
               <span>•</span>
-              <span>{formatCurrency(item.price, currency)}</span>
+              <span>{formatCurrencyFromMinorUnits(item.price, currency)}</span>
             </>
           )}
         </div>

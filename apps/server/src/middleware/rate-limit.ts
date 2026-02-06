@@ -1,13 +1,7 @@
 import { Elysia, status } from "elysia";
-import Redis from "ioredis";
 import { createHash } from "crypto";
-import { env } from "@myakiba/env/server";
+import { redis } from "@myakiba/redis";
 import { auth } from "@myakiba/auth";
-
-const redis = new Redis({
-  host: env.REDIS_HOST,
-  port: env.REDIS_PORT,
-});
 
 const RATE_LIMIT_SCRIPT = `
 local key = KEYS[1]

@@ -29,7 +29,7 @@ import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import { CascadeOptionsDropdown } from "@/components/cascade-options-dropdown";
 import { Textarea } from "../ui/textarea";
 import { cn } from "@/lib/utils";
-import { getCurrencyLocale } from "@myakiba/utils";
+import { getCurrencyLocale, majorStringToMinorUnits } from "@myakiba/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useQuery } from "@tanstack/react-query";
 import { getOrderIdsAndTitles } from "@/queries/orders";
@@ -124,7 +124,7 @@ export default function UnifiedItemMoveForm({
       title: "New Order",
       shop: "",
       orderDate: "",
-      releaseMonthYear: "",
+      releaseDate: "",
       paymentDate: "",
       shippingDate: "",
       collectionDate: "",
@@ -141,17 +141,17 @@ export default function UnifiedItemMoveForm({
         title: value.title,
         shop: value.shop,
         orderDate: value.orderDate || null,
-        releaseMonthYear: value.releaseMonthYear || null,
+        releaseDate: value.releaseDate || null,
         paymentDate: value.paymentDate || null,
         shippingDate: value.shippingDate || null,
         collectionDate: value.collectionDate || null,
         status: value.status,
         shippingMethod: value.shippingMethod,
-        shippingFee: value.shippingFee,
-        taxes: value.taxes,
-        duties: value.duties,
-        tariffs: value.tariffs,
-        miscFees: value.miscFees,
+        shippingFee: majorStringToMinorUnits(value.shippingFee),
+        taxes: majorStringToMinorUnits(value.taxes),
+        duties: majorStringToMinorUnits(value.duties),
+        tariffs: majorStringToMinorUnits(value.tariffs),
+        miscFees: majorStringToMinorUnits(value.miscFees),
         notes: value.notes,
       };
       await onMoveToNew(
@@ -431,7 +431,7 @@ export default function UnifiedItemMoveForm({
                     />
 
                     <newOrderForm.Field
-                      name="releaseMonthYear"
+                      name="releaseDate"
                       children={(field) => (
                         <div className="grid gap-2">
                           <Label htmlFor={field.name}>Release</Label>

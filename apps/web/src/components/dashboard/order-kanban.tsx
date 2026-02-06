@@ -12,7 +12,7 @@ import {
   KanbanOverlay,
 } from "@/components/ui/kanban";
 import { GripVertical, CalendarIcon, Check } from "lucide-react";
-import { formatCurrency, formatMonthYear } from "@myakiba/utils";
+import { formatCurrencyFromMinorUnits, formatMonthYear } from "@myakiba/utils";
 import type { DateFormat } from "@myakiba/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateOrderStatus } from "@/queries/orders";
@@ -26,10 +26,10 @@ interface KanbanOrder {
   title: string;
   shop: string;
   status: "Ordered" | "Paid" | "Shipped" | "Owned";
-  releaseMonthYear: string | null;
+  releaseDate: string | null;
   itemImages: string[];
   itemIds: string[];
-  total: string;
+  total: number;
 }
 
 interface OrdersKanbanProps {
@@ -125,17 +125,17 @@ function OrderCard({
         {/* Bottom Info */}
         <div className="flex items-center justify-between text-xs pt-1 border-t">
           <div className="flex items-center gap-1 text-muted-foreground">
-            {order.releaseMonthYear && (
+            {order.releaseDate && (
               <>
                 <CalendarIcon className="h-3 w-3" />
                 <time className="text-[10px] tabular-nums">
-                  {formatMonthYear(order.releaseMonthYear, dateFormat)}
+                  {formatMonthYear(order.releaseDate, dateFormat)}
                 </time>
               </>
             )}
           </div>
           <span className="font-normal text-sm">
-            {formatCurrency(parseFloat(order.total), currency)}
+            {formatCurrencyFromMinorUnits(order.total, currency)}
           </span>
         </div>
       </div>
@@ -237,18 +237,11 @@ export default function OrderKanban({ orders, currency, dateFormat }: OrdersKanb
       orderId: string;
       status: "Ordered" | "Paid" | "Shipped" | "Owned";
     }) => updateOrderStatus(orderId, status),
-    onSuccess: (_data, variables) => {
+    onSuccess: async (_data, variables) => {
       if (variables.status === "Owned") {
         toast.success("Order marked as collected");
       }
-      Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["order"] }),
-        queryClient.invalidateQueries({ queryKey: ["collection"] }),
-        queryClient.invalidateQueries({ queryKey: ["item"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
-        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
-      ]);
+      await queryClient.invalidateQueries();
     },
     onError: (error: Error, variables) => {
       console.error(

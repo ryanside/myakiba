@@ -1,4 +1,4 @@
-import type { CollectionItemFormValues } from "@/lib/collection/types";
+import type { CollectionItemFormValues } from "@myakiba/types";
 import {
   Sheet,
   SheetContent,
@@ -30,7 +30,13 @@ import { Rating } from "../ui/rating";
 import { Field, FieldContent, FieldTitle } from "@/components/ui/field";
 import { Badge } from "../ui/badge";
 import { X } from "lucide-react";
-import { formatDate, formatCurrency, getCurrencyLocale } from "@myakiba/utils";
+import {
+  formatDate,
+  formatCurrencyFromMinorUnits,
+  getCurrencyLocale,
+  majorStringToMinorUnits,
+  minorUnitsToMajorString,
+} from "@myakiba/utils";
 import type { DateFormat } from "@myakiba/types";
 import { Scroller } from "../ui/scroller";
 import { COLLECTION_STATUSES, SHIPPING_METHODS, CONDITIONS } from "@myakiba/constants";
@@ -50,9 +56,16 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
   const userLocale = getCurrencyLocale(userCurrency);
 
   const form = useForm({
-    defaultValues: itemData,
+    defaultValues: {
+      ...itemData,
+      price: minorUnitsToMajorString(itemData.price ?? 0),
+    },
     onSubmit: ({ value }) => {
-      callbackFn(value);
+      const transformedValue: CollectionItemFormValues = {
+        ...value,
+        price: majorStringToMinorUnits(value.price),
+      };
+      callbackFn(transformedValue);
     },
   });
 
@@ -296,11 +309,16 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                                       {displayData.type}
                                     </span>
                                   )}
-                                  {displayData.price && displayData.priceCurrency && (
-                                    <span className="text-muted-foreground">
-                                      {formatCurrency(displayData.price, displayData.priceCurrency)}
-                                    </span>
-                                  )}
+                                  {displayData.price !== null &&
+                                    displayData.price !== undefined &&
+                                    displayData.priceCurrency && (
+                                      <span className="text-muted-foreground">
+                                        {formatCurrencyFromMinorUnits(
+                                          displayData.price,
+                                          displayData.priceCurrency,
+                                        )}
+                                      </span>
+                                    )}
                                 </div>
                               );
                             })()}
@@ -334,11 +352,16 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                                 )}
                               </div>
                               <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                {release.price && release.priceCurrency && (
-                                  <span>
-                                    {formatCurrency(release.price, release.priceCurrency)}
-                                  </span>
-                                )}
+                                {release.price !== null &&
+                                  release.price !== undefined &&
+                                  release.priceCurrency && (
+                                    <span>
+                                      {formatCurrencyFromMinorUnits(
+                                        release.price,
+                                        release.priceCurrency,
+                                      )}
+                                    </span>
+                                  )}
                                 {release.barcode && (
                                   <span className="font-mono">#{release.barcode}</span>
                                 )}

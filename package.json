@@ -30,6 +30,7 @@
     "build": "turbo build",
     "check-types": "turbo check-types",
     "lint": "turbo lint",
+    "stop": "turbo -F @myakiba/db db:stop && turbo -F @myakiba/redis redis:stop",
     "dev:native": "turbo -F native dev",
     "dev:web": "turbo -F web dev",
     "dev:server": "turbo -F server dev",
@@ -42,6 +43,9 @@
     "db:watch": "turbo -F @myakiba/db db:watch",
     "db:stop": "turbo -F @myakiba/db db:stop",
     "db:down": "turbo -F @myakiba/db db:down",
+    "redis:start": "turbo -F @myakiba/redis start",
+    "redis:stop": "turbo -F @myakiba/redis stop",
+    "redis:down": "turbo -F @myakiba/redis down",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check"
   },

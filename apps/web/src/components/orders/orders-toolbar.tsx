@@ -24,7 +24,7 @@ const SORTABLE_COLUMNS: SortableColumn[] = [
   { id: "paymentDate", label: "Payment Date" },
   { id: "shippingDate", label: "Shipping Date" },
   { id: "collectionDate", label: "Collection Date" },
-  { id: "releaseMonthYear", label: "Release" },
+  { id: "releaseDate", label: "Release" },
   { id: "shippingMethod", label: "Shipping Method" },
   { id: "total", label: "Total" },
   { id: "shippingFee", label: "Shipping Fee" },
@@ -113,7 +113,7 @@ export function OrdersToolbar({
           | "paymentDate"
           | "shippingDate"
           | "collectionDate"
-          | "releaseMonthYear"
+          | "releaseDate"
           | "shippingMethod"
           | "total"
           | "shippingFee"

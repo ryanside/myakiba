@@ -5,7 +5,6 @@ export type {
   EditedOrder,
   OrderFilters,
   OrderStats,
-  OrdersQueryResponse,
   OrderQueryResponse,
   CascadeOptions,
   ItemRelease,

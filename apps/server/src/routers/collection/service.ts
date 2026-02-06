@@ -1,19 +1,6 @@
 import { db } from "@myakiba/db";
 import { collection, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
-import {
-  and,
-  eq,
-  gte,
-  lte,
-  inArray,
-  arrayContains,
-  desc,
-  asc,
-  ilike,
-  sql,
-  count,
-  sum,
-} from "drizzle-orm";
+import { and, eq, gte, lte, inArray, arrayContains, desc, asc, ilike, sql } from "drizzle-orm";
 import type { collectionUpdateType } from "./model";
 import type { Category, Condition, ShippingMethod } from "@myakiba/types";
 
@@ -24,8 +11,8 @@ class CollectionService {
     offset: number,
     sortBy: string,
     orderBy: string,
-    paidMin?: string,
-    paidMax?: string,
+    paidMin?: number,
+    paidMax?: number,
     shop?: Array<string>,
     paymentDateStart?: string,
     paymentDateEnd?: string,
@@ -36,8 +23,8 @@ class CollectionService {
     shippingMethod?: Array<ShippingMethod>,
     releaseDateStart?: string,
     releaseDateEnd?: string,
-    releasePriceMin?: string,
-    releasePriceMax?: string,
+    releasePriceMin?: number,
+    releasePriceMax?: number,
     releaseCurrency?: Array<string>,
     category?: Array<Category>,
     entries?: Array<string>,
@@ -62,8 +49,8 @@ class CollectionService {
       eq(collection.userId, userId),
       eq(collection.status, "Owned"),
       shop ? inArray(collection.shop, shop) : undefined,
-      paidMin ? gte(collection.price, paidMin) : undefined,
-      paidMax ? lte(collection.price, paidMax) : undefined,
+      paidMin !== undefined ? gte(collection.price, paidMin) : undefined,
+      paidMax !== undefined ? lte(collection.price, paidMax) : undefined,
       paymentDateStart ? gte(collection.paymentDate, paymentDateStart) : undefined,
       paymentDateEnd ? lte(collection.paymentDate, paymentDateEnd) : undefined,
       shippingDateStart ? gte(collection.shippingDate, shippingDateStart) : undefined,
@@ -77,8 +64,8 @@ class CollectionService {
       condition ? inArray(collection.condition, condition) : undefined,
       releaseDateStart ? gte(item_release.date, releaseDateStart) : undefined,
       releaseDateEnd ? lte(item_release.date, releaseDateEnd) : undefined,
-      releasePriceMin ? gte(item_release.price, releasePriceMin) : undefined,
-      releasePriceMax ? lte(item_release.price, releasePriceMax) : undefined,
+      releasePriceMin !== undefined ? gte(item_release.price, releasePriceMin) : undefined,
+      releasePriceMax !== undefined ? lte(item_release.price, releasePriceMax) : undefined,
       releaseCurrency && releaseCurrency.length > 0
         ? inArray(item_release.priceCurrency, releaseCurrency)
         : undefined,
@@ -123,33 +110,6 @@ class CollectionService {
       }
     })();
 
-    const currentMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-    const nextMonth = new Date(
-      new Date().getFullYear(),
-      new Date().getMonth() + 1,
-      1,
-    ).toISOString();
-
-    const collectionStats = await db
-      .select({
-        totalItems: count(sql`CASE WHEN ${collection.status} = 'Owned' THEN 1 END`),
-        totalSpent: sql<string>`COALESCE(${sum(collection.price)}, 0)`,
-        totalItemsThisMonth: sql<number>`COALESCE(${count(
-          sql`CASE WHEN ${collection.status} = 'Owned' 
-              AND ${collection.collectionDate} >= ${currentMonth} 
-              AND ${collection.collectionDate} < ${nextMonth}
-              THEN 1 END`,
-        )}, 0)`,
-        totalSpentThisMonth: sql<string>`COALESCE(${sum(
-          sql`CASE WHEN ${collection.status} = 'Owned'
-              AND ${collection.paymentDate} >= ${currentMonth} 
-              AND ${collection.paymentDate} < ${nextMonth}
-              THEN ${collection.price} ELSE 0 END`,
-        )}, 0)`,
-      })
-      .from(collection)
-      .where(and(eq(collection.userId, userId), eq(collection.status, "Owned")));
-
     const collectionItems = await db
       .select({
         id: collection.id,
@@ -182,7 +142,7 @@ class CollectionService {
         createdAt: collection.createdAt,
         updatedAt: collection.updatedAt,
         totalCount: sql<number>`COUNT(*) OVER()`,
-        totalValue: sql<string>`COALESCE(SUM(${collection.price}) OVER(), 0)`,
+        totalValue: sql<number>`COALESCE(SUM(${collection.price}) OVER(), 0)`,
       })
       .from(collection)
       .innerJoin(item, eq(collection.itemId, item.id))
@@ -195,7 +155,7 @@ class CollectionService {
       .limit(limit)
       .offset(offset);
 
-    return { collectionItems, collectionStats: collectionStats[0] };
+    return collectionItems;
   }
 
   async getCollectionItem(userId: string, collectionId: string) {

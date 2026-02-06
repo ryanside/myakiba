@@ -14,6 +14,7 @@
     "@myakiba/constants": "workspace:*",
     "@myakiba/db": "workspace:*",
     "@myakiba/env": "workspace:*",
+    "@myakiba/redis": "workspace:*",
     "@myakiba/types": "workspace:*",
     "@myakiba/utils": "workspace:*",
     "@myakiba/validations": "workspace:*",

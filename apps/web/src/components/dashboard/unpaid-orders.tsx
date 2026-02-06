@@ -1,6 +1,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { formatDate, formatCurrency } from "@myakiba/utils";
+import { formatDate, formatCurrencyFromMinorUnits } from "@myakiba/utils";
 import type { DateFormat } from "@myakiba/types";
 import { Link } from "@tanstack/react-router";
 
@@ -8,10 +8,10 @@ interface UnpaidOrder {
   orderId: string;
   title: string;
   shop: string | null;
-  releaseMonthYear: string | null;
+  releaseDate: string | null;
   itemImages: string[] | null;
   itemIds: string[];
-  total: string;
+  total: number;
 }
 
 interface UnpaidOrdersProps {
@@ -137,16 +137,16 @@ function UnpaidOrderCard({
         <h4 className="font-medium text-sm truncate">{order.title}</h4>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           {order.shop && <span>{order.shop}</span>}
-          {order.releaseMonthYear && (
+          {order.releaseDate && (
             <>
               {order.shop && <span>•</span>}
-              <span>{formatDate(order.releaseMonthYear, dateFormat)}</span>
+              <span>{formatDate(order.releaseDate, dateFormat)}</span>
             </>
           )}
-          {order.total && (
+          {order.total !== null && order.total !== undefined && (
             <>
-              {(order.shop || order.releaseMonthYear) && <span>•</span>}
-              <span>{formatCurrency(order.total, currency)}</span>
+              {(order.shop || order.releaseDate) && <span>•</span>}
+              <span>{formatCurrencyFromMinorUnits(order.total, currency)}</span>
             </>
           )}
         </div>

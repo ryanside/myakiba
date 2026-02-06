@@ -1,4 +1,4 @@
-name: myakiba
+name: myakiba-postgres
 
 services:
   postgres:

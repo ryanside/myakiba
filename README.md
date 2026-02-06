@@ -29,7 +29,7 @@ The community-powered catalog from **MyFigureCollection** and the flexibility of
 - Spreadsheets are flexible and easy to edit, but they’re fragmented and don’t provide real item data or a unified platform.
 - New collection tools have appeared, but most still rely on users manually entering item information.
 
-I wasn’t satisfied with any of these options as a collector, so I built my own.
+myakiba is being created in hopes to be a useful alternative, as well as a fun/learning/hobby project for myself.
 
 ## Features
 
@@ -104,23 +104,20 @@ Dive deep into your collection data with comprehensive analytics. Visualize spen
 
 myakiba is actively being developed with more features on the horizon:
 
-- [ ] **Syncing with MFC simply by username**
+- [ ] **Refining existing features**
 - [ ] **Profile page**
 - [ ] **Expense tracking**
-- [ ] **More analytics**
-- [ ] **Refining existing features**
 
-## Self-host/Run Locally
+## Run Locally
 
 ### Prerequisites
 
 - **Bun** (runtime + package manager)
-- **PostgreSQL** (local install or Docker)
-- **Redis** (Redis Stack recommended if you want the UI at `http://localhost:8001`)
+- **Docker**
 - **AWS S3** (required for the worker’s image/object uploads)
 - **HTTP proxy** (optional, used by the worker for scraping)
 
-### Run locally
+### Run w/ dev
 
 1. Clone the repository:
 
@@ -141,32 +138,8 @@ bun install
   - `apps/server/.env` (API/auth/email/redis/db)
   - `apps/web/.env` (Vite client env, `VITE_*`)
   - `apps/worker/.env` (scraping/jobs/s3/redis/db)
-- The typed env schemas live in `packages/env/src/*.ts`. At a minimum, you’ll need:
-  - **Database**: `DATABASE_URL`
-  - **Redis**: `REDIS_HOST`, `REDIS_PORT`
-  - **Server**: `CORS_ORIGIN`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (typically your API URL, e.g. `http://localhost:3000`), `TURNSTILE_SECRET_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `EARLY_ACCESS_PASSWORD`
-  - **Web**: `VITE_SERVER_URL` (typically `http://localhost:3000`), `VITE_TURNSTILE_SITE_KEY`
-  - **Worker**: `AWS_BUCKET_NAME`, `AWS_BUCKET_REGION`, plus credentials via `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` (and optional `HTTP_PROXY`)
 
 4. Apply the database schema:
-
-Start Postgres first (choose one):
-
-- **Docker (provided)**:
-
-```bash
-bun db:start
-```
-
-- **Your own Postgres**: set `DATABASE_URL` accordingly.
-
-Start Redis (example using Redis Stack):
-
-```bash
-docker run -d --name redis-stack -p 6379:6379 -p 8001:8001 redis/redis-stack:latest
-```
-
-Then push the schema:
 
 ```bash
 bun db:push
@@ -182,7 +155,7 @@ bun dev
 
 The API is running at [http://localhost:3000](http://localhost:3000).
 
-### Self-host (Docker Compose)
+### Run w/ docker compose
 
 The root `docker-compose.yml` can run Postgres + Redis + API + workers.
 
@@ -209,10 +182,11 @@ myakiba/
 │   ├── db/             # Drizzle schema + migrations + db scripts
 │   ├── env/            # Typed env schemas (server/web/worker)
 │   ├── eslint-config/  # Shared ESLint configuration
+│   ├── redis /         # Redis
 │   ├── types/          # Shared TS types
 │   ├── utils/          # Shared utilities
 │   └── validations/    # Shared zod validations
-├── docker-compose.yml  # Self-host stack (API + workers + Postgres + Redis)
+├── docker-compose.yml  # Docker Compose (API + workers + Postgres + Redis)
 └── turbo.json          # Turborepo task pipeline
 ```
 

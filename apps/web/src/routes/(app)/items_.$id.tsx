@@ -20,16 +20,22 @@ import {
   EmptyDescription,
   EmptyMedia,
 } from "@/components/ui/empty";
-import { formatCurrency, formatDate, getCategoryColor } from "@myakiba/utils";
+import { formatCurrencyFromMinorUnits, formatDate, getCategoryColor } from "@myakiba/utils";
 import { Label } from "@/components/ui/label";
 import CollectionItemForm from "@/components/collection/collection-item-form";
 import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import type { CollectionItemFormValues } from "@/lib/collection/types";
+import type { CollectionItemFormValues, CollectionItem } from "@myakiba/types";
 import { deleteCollectionItems, updateCollectionItem } from "@/queries/collection";
 import { toast } from "sonner";
-import type { ItemRelatedCollection } from "@/lib/items/types";
 import Loader from "@/components/loader";
 import type { DateFormat } from "@myakiba/types";
+
+type ItemRelatedCollection = {
+  collection: Omit<
+    CollectionItem,
+    "itemCategory" | "itemScale" | "createdAt" | "updatedAt" | "totalCount" | "totalValue"
+  >[];
+};
 
 export const Route = createFileRoute("/(app)/items_/$id")({
   component: RouteComponent,
@@ -157,19 +163,7 @@ function RouteComponent() {
       });
     },
     onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: ["item", id, "itemRelatedCollection"],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ["item", id, "itemRelatedOrders"],
-        }),
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["order"] }),
-        queryClient.invalidateQueries({ queryKey: ["collection"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
-        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
-      ]);
+      await queryClient.invalidateQueries();
     },
   });
 
@@ -203,19 +197,7 @@ function RouteComponent() {
     },
     onSuccess: () => {},
     onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: ["item", id, "itemRelatedCollection"],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ["item", id, "itemRelatedOrders"],
-        }),
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["order"] }),
-        queryClient.invalidateQueries({ queryKey: ["collection"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
-        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
-      ]);
+      await queryClient.invalidateQueries();
     },
   });
 
@@ -338,7 +320,7 @@ function RouteComponent() {
                       )}
                       {release.price && release.priceCurrency && (
                         <span className="ml-auto font-medium">
-                          {formatCurrency(release.price, release.priceCurrency)}
+                          {formatCurrencyFromMinorUnits(release.price, release.priceCurrency)}
                         </span>
                       )}
                     </div>
@@ -509,7 +491,7 @@ function RouteComponent() {
                           <div className="flex justify-between text-muted-foreground text-sm items-center">
                             <span>Price</span>
                             <span className="text-foreground font-medium">
-                              {formatCurrency(collectionItem.price, userCurrency)}
+                              {formatCurrencyFromMinorUnits(collectionItem.price, userCurrency)}
                             </span>
                           </div>
                           <div className="flex justify-between text-muted-foreground text-sm items-center">
@@ -608,11 +590,11 @@ function RouteComponent() {
                                         </span>
                                       </div>
                                     )}
-                                    {relatedOrder?.releaseMonthYear && (
+                                    {relatedOrder?.releaseDate && (
                                       <div className="flex justify-between text-muted-foreground text-sm items-center">
                                         <span>Release</span>
                                         <span className="text-foreground font-medium">
-                                          {formatDate(relatedOrder.releaseMonthYear, dateFormat)}
+                                          {formatDate(relatedOrder.releaseDate, dateFormat)}
                                         </span>
                                       </div>
                                     )}
@@ -620,7 +602,7 @@ function RouteComponent() {
                                       <div className="flex justify-between text-muted-foreground text-sm items-center">
                                         <span>Shipping Fee</span>
                                         <span className="text-foreground font-medium">
-                                          {formatCurrency(
+                                          {formatCurrencyFromMinorUnits(
                                             relatedOrder.shippingFee || 0,
                                             userCurrency,
                                           )}
@@ -631,7 +613,10 @@ function RouteComponent() {
                                       <div className="flex justify-between text-muted-foreground text-sm items-center">
                                         <span>Taxes</span>
                                         <span className="text-foreground font-medium">
-                                          {formatCurrency(relatedOrder.taxes || 0, userCurrency)}
+                                          {formatCurrencyFromMinorUnits(
+                                            relatedOrder.taxes || 0,
+                                            userCurrency,
+                                          )}
                                         </span>
                                       </div>
                                     )}
@@ -639,7 +624,10 @@ function RouteComponent() {
                                       <div className="flex justify-between text-muted-foreground text-sm items-center">
                                         <span>Duties</span>
                                         <span className="text-foreground font-medium">
-                                          {formatCurrency(relatedOrder.duties || 0, userCurrency)}
+                                          {formatCurrencyFromMinorUnits(
+                                            relatedOrder.duties || 0,
+                                            userCurrency,
+                                          )}
                                         </span>
                                       </div>
                                     )}
@@ -647,7 +635,10 @@ function RouteComponent() {
                                       <div className="flex justify-between text-muted-foreground text-sm items-center">
                                         <span>Tariffs</span>
                                         <span className="text-foreground font-medium">
-                                          {formatCurrency(relatedOrder.tariffs || 0, userCurrency)}
+                                          {formatCurrencyFromMinorUnits(
+                                            relatedOrder.tariffs || 0,
+                                            userCurrency,
+                                          )}
                                         </span>
                                       </div>
                                     )}
@@ -655,7 +646,10 @@ function RouteComponent() {
                                       <div className="flex justify-between text-muted-foreground text-sm items-center">
                                         <span>Misc Fees</span>
                                         <span className="text-foreground font-medium">
-                                          {formatCurrency(relatedOrder.miscFees || 0, userCurrency)}
+                                          {formatCurrencyFromMinorUnits(
+                                            relatedOrder.miscFees || 0,
+                                            userCurrency,
+                                          )}
                                         </span>
                                       </div>
                                     )}

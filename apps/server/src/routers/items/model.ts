@@ -5,7 +5,7 @@ import { ENTRY_CATEGORIES } from "@myakiba/constants/enums";
 export const customItemReleaseSchema = z.object({
   date: z.iso.date(),
   type: z.string().nullable().optional(),
-  price: z.string().nullable().optional(),
+  price: z.number().int().nullable().optional(),
   priceCurrency: z.string().nullable().optional(),
   barcode: z.string().nullable().optional(),
 });
@@ -42,7 +42,7 @@ export const itemReleaseSchema = z.object({
   itemId: z.string(),
   date: z.iso.date(),
   type: z.string().nullable(),
-  price: z.string().nullable(),
+  price: z.number().int().nullable(),
   priceCurrency: z.string().nullable(),
   barcode: z.string().nullable(),
 });

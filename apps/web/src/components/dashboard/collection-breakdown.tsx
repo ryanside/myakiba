@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { formatCurrency, getCategoryColor } from "@myakiba/utils";
+import { formatCurrencyFromMinorUnits, getCategoryColor } from "@myakiba/utils";
 import { Scroller } from "../ui/scroller";
 import { Separator } from "../ui/separator";
 import { Link } from "@tanstack/react-router";
@@ -12,7 +12,7 @@ export function CollectionBreakdown({
   currency = "USD",
   className,
 }: {
-  data: { name: Category; count: number; totalValue: string | null }[];
+  data: { name: Category; count: number; totalValue: number | null }[];
   className?: string;
   currency?: string;
 }) {
@@ -22,7 +22,7 @@ export function CollectionBreakdown({
     return data.map((item) => ({
       name: item.name,
       count: item.count,
-      value: parseFloat(item.totalValue || "0"),
+      value: item.totalValue ?? 0,
       fill: getCategoryColor(item.name),
     }));
   }, [data]);
@@ -86,7 +86,7 @@ export function CollectionBreakdown({
                         <div className="flex justify-between items-center gap-2">
                           <span className="text-xs text-muted-foreground">Spent:</span>
                           <span className="text-xs font-medium">
-                            {formatCurrency(item.value.toString(), currency)}
+                            {formatCurrencyFromMinorUnits(item.value, currency)}
                           </span>
                         </div>
                         <div className="flex justify-between items-center gap-2">
@@ -149,7 +149,7 @@ export function CollectionBreakdown({
                   ({item.percentage.toFixed(1)}%)
                 </span>
                 <span className="ml-auto text-sm text-foreground">
-                  {formatCurrency(item.value.toString(), currency)}
+                  {formatCurrencyFromMinorUnits(item.value, currency)}
                 </span>
               </Link>
             );

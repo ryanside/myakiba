@@ -4,7 +4,7 @@ import { keepPreviousData, useQuery, useMutation, useQueryClient } from "@tansta
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatCurrency, formatDate, formatTimestamp } from "@myakiba/utils";
+import { formatCurrencyFromMinorUnits, formatDate, formatTimestamp } from "@myakiba/utils";
 import { getStatusVariant } from "@/lib/orders/utils";
 import { OrderItemSubDataGrid } from "@/components/orders/order-item-sub-data-grid";
 import { useState, useEffect } from "react";
@@ -14,7 +14,7 @@ import { Calendar, Package, CreditCard, ArrowLeft, Edit, FileText, Users } from 
 import { OrderForm } from "@/components/orders/order-form";
 import type { EditedOrder, CascadeOptions } from "@/lib/orders/types";
 import { toast } from "sonner";
-import type { CollectionItemFormValues } from "@/lib/collection/types";
+import type { CollectionItemFormValues } from "@myakiba/types";
 import { updateCollectionItem } from "@/queries/collection";
 import Loader from "@/components/loader";
 import type { DateFormat } from "@myakiba/types";
@@ -87,15 +87,7 @@ function RouteComponent() {
       });
     },
     onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["order", id] }),
-        queryClient.invalidateQueries({ queryKey: ["item"] }),
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["order"] }),
-        queryClient.invalidateQueries({ queryKey: ["collection"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
-        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
-      ]);
+      await queryClient.invalidateQueries();
     },
   });
 
@@ -111,15 +103,7 @@ function RouteComponent() {
       });
     },
     onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["order", id] }),
-        queryClient.invalidateQueries({ queryKey: ["item"] }),
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["order"] }),
-        queryClient.invalidateQueries({ queryKey: ["collection"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
-        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
-      ]);
+      await queryClient.invalidateQueries();
     },
   });
 
@@ -135,15 +119,7 @@ function RouteComponent() {
       });
     },
     onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["order", id] }),
-        queryClient.invalidateQueries({ queryKey: ["item"] }),
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["order"] }),
-        queryClient.invalidateQueries({ queryKey: ["collection"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
-        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
-      ]);
+      await queryClient.invalidateQueries();
     },
   });
 
@@ -180,16 +156,13 @@ function RouteComponent() {
   const { order } = data;
 
   // Calculate financial details
-  const itemsTotal = order.items.reduce(
-    (sum, item) => sum + parseFloat(item.price) * item.count,
-    0,
-  );
-  const shippingFee = parseFloat(order.shippingFee || "0");
-  const taxes = parseFloat(order.taxes || "0");
-  const duties = parseFloat(order.duties || "0");
-  const tariffs = parseFloat(order.tariffs || "0");
-  const miscFees = parseFloat(order.miscFees || "0");
-  const totalAmount = parseFloat(order.total);
+  const itemsTotal = order.items.reduce((sum, item) => sum + item.price * item.count, 0);
+  const shippingFee = order.shippingFee ?? 0;
+  const taxes = order.taxes ?? 0;
+  const duties = order.duties ?? 0;
+  const tariffs = order.tariffs ?? 0;
+  const miscFees = order.miscFees ?? 0;
+  const totalAmount = order.total ?? 0;
 
   return (
     <div className="flex flex-col gap-6 min-h-full">
@@ -223,7 +196,7 @@ function RouteComponent() {
               </Button>
             }
             type="edit-order"
-            orderData={{ ...order, totalCount: 0 }}
+            orderData={order}
             callbackFn={handleEditOrder}
           />
         </div>
@@ -258,7 +231,7 @@ function RouteComponent() {
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Release Period:</span>
               <span className="text-sm font-medium">
-                {order.releaseMonthYear ? formatDate(order.releaseMonthYear, dateFormat) : "N/A"}
+                {order.releaseDate ? formatDate(order.releaseDate, dateFormat) : "N/A"}
               </span>
             </div>
             <div className="flex items-center justify-between">
@@ -324,43 +297,43 @@ function RouteComponent() {
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Items Total:</span>
               <span className="text-sm font-medium">
-                {formatCurrency(itemsTotal.toString(), userCurrency)}
+                {formatCurrencyFromMinorUnits(itemsTotal, userCurrency)}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Shipping:</span>
               <span className="text-sm font-medium">
-                {formatCurrency(shippingFee.toString(), userCurrency)}
+                {formatCurrencyFromMinorUnits(shippingFee, userCurrency)}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Taxes:</span>
               <span className="text-sm font-medium">
-                {formatCurrency(taxes.toString(), userCurrency)}
+                {formatCurrencyFromMinorUnits(taxes, userCurrency)}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Duties:</span>
               <span className="text-sm font-medium">
-                {formatCurrency(duties.toString(), userCurrency)}
+                {formatCurrencyFromMinorUnits(duties, userCurrency)}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Tariffs:</span>
               <span className="text-sm font-medium">
-                {formatCurrency(tariffs.toString(), userCurrency)}
+                {formatCurrencyFromMinorUnits(tariffs, userCurrency)}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Misc Fees:</span>
               <span className="text-sm font-medium">
-                {formatCurrency(miscFees.toString(), userCurrency)}
+                {formatCurrencyFromMinorUnits(miscFees, userCurrency)}
               </span>
             </div>
             <div className="flex items-center justify-between font-semibold">
               <span className="text-sm">Total Amount:</span>
               <span className="text-sm">
-                {formatCurrency(totalAmount.toString(), userCurrency)}
+                {formatCurrencyFromMinorUnits(totalAmount, userCurrency)}
               </span>
             </div>
           </CardContent>

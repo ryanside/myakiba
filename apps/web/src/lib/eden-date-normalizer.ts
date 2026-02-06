@@ -26,8 +26,6 @@ const DATE_ONLY_KEYS = new Set<string>([
   "shipping_date",
   "collecting_date",
   "release_date",
-  "release_month_year",
-  "releaseMonthYear",
 ]);
 
 const isPlainObject = (value: EdenDateNormalizable): value is EdenDateNormalizableObject => {

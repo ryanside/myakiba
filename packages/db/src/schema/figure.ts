@@ -7,6 +7,7 @@ import {
   primaryKey,
   uuid,
   decimal,
+  bigint,
   index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
@@ -56,7 +57,7 @@ export const item_release = pgTable(
       .references(() => item.id, { onDelete: "cascade" }),
     date: date("date", { mode: "string" }).notNull(),
     type: text("type"), // "original", "rerelease", "limited", etc.
-    price: decimal("price", { precision: 14, scale: 2 }),
+    price: bigint("price", { mode: "number" }),
     priceCurrency: text("price_currency"),
     barcode: text("barcode"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -128,7 +129,7 @@ export const collection = pgTable(
       onDelete: "set null",
     }),
     score: decimal("score", { precision: 3, scale: 1 }).default("0.0").notNull(),
-    price: decimal("price", { precision: 14, scale: 2 }).default("0.00").notNull(),
+    price: bigint("price", { mode: "number" }).default(0).notNull(),
     shop: text("shop").default("").notNull(),
     orderDate: date("order_date", { mode: "string" }),
     paymentDate: date("payment_date", { mode: "string" }),
@@ -139,7 +140,7 @@ export const collection = pgTable(
     })
       .default("n/a")
       .notNull(),
-    soldFor: decimal("sold_for", { precision: 14, scale: 2 }),
+    soldFor: bigint("sold_for", { mode: "number" }),
     soldDate: date("sold_date", { mode: "string" }),
     tags: text("tags").array().default([]).notNull(),
     condition: text("condition", {
@@ -175,7 +176,7 @@ export const order = pgTable(
     title: text("title").notNull(),
     shop: text("shop").default("").notNull(),
     orderDate: date("order_date", { mode: "string" }),
-    releaseMonthYear: date("release_month_year", { mode: "string" }),
+    releaseDate: date("release_date", { mode: "string" }),
     paymentDate: date("payment_date", { mode: "string" }),
     shippingDate: date("shipping_date", { mode: "string" }),
     collectionDate: date("collection_date", { mode: "string" }),
@@ -189,11 +190,11 @@ export const order = pgTable(
     })
       .default("Ordered")
       .notNull(),
-    shippingFee: decimal("shipping_fee", { precision: 14, scale: 2 }).default("0.00").notNull(),
-    taxes: decimal("taxes", { precision: 14, scale: 2 }).default("0.00").notNull(),
-    duties: decimal("duties", { precision: 14, scale: 2 }).default("0.00").notNull(),
-    tariffs: decimal("tariffs", { precision: 14, scale: 2 }).default("0.00").notNull(),
-    miscFees: decimal("misc_fees", { precision: 14, scale: 2 }).default("0.00").notNull(),
+    shippingFee: bigint("shipping_fee", { mode: "number" }).default(0).notNull(),
+    taxes: bigint("taxes", { mode: "number" }).default(0).notNull(),
+    duties: bigint("duties", { mode: "number" }).default(0).notNull(),
+    tariffs: bigint("tariffs", { mode: "number" }).default(0).notNull(),
+    miscFees: bigint("misc_fees", { mode: "number" }).default(0).notNull(),
     notes: text("notes").default("").notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -202,7 +203,7 @@ export const order = pgTable(
     // High-priority composite index
     index("order_user_id_status_idx").on(t.userId, t.status),
     // Medium-priority single-column index
-    index("order_release_month_year_idx").on(t.releaseMonthYear),
+    index("order_release_date_idx").on(t.releaseDate),
     // Text search index
     index("order_title_idx").on(t.title),
   ],
@@ -216,7 +217,7 @@ export const budget = pgTable("budget", {
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
   period: text("period").$type<"monthly" | "annual" | "allocated">().notNull(),
-  amount: decimal("amount", { precision: 14, scale: 2 }).notNull(),
+  amount: bigint("amount", { mode: "number" }).notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

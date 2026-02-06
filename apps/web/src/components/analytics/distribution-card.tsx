@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
-import { formatCurrency } from "@myakiba/utils";
+import { formatCurrencyFromMinorUnits } from "@myakiba/utils";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "../ui/badge";
 
@@ -72,9 +72,9 @@ export function DistributionCard({
                   <span className="text-sm font-medium text-foreground">{item.label}</span>
                   <div className="flex items-center gap-3">
                     <Badge variant="outline">{item.count} items</Badge>
-                    {item.value && (
+                    {item.value !== null && item.value !== undefined && (
                       <span className="text-sm text-muted-foreground tabular-nums">
-                        {formatCurrency(item.value as number, currency)}
+                        {formatCurrencyFromMinorUnits(item.value as number, currency)}
                       </span>
                     )}
                   </div>

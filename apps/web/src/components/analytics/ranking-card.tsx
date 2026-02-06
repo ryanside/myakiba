@@ -16,7 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { getCategoryColor, formatCurrency } from "@myakiba/utils";
+import { getCategoryColor, formatCurrencyFromMinorUnits } from "@myakiba/utils";
 import { Progress } from "../ui/progress";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "../ui/button";
@@ -102,7 +102,7 @@ export function RankingCard({
             }}
           >
             {col.type === "currency"
-              ? formatCurrency(value as number, currency)
+              ? formatCurrencyFromMinorUnits(value as number, currency)
               : value}{" "}
             {col.cellText && `${col.cellText}`}
           </span>

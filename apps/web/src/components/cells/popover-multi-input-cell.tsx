@@ -5,13 +5,13 @@ import { MaskInput } from "@/components/ui/mask-input";
 import { useForm } from "@tanstack/react-form";
 import * as Portal from "@radix-ui/react-portal";
 import { useState } from "react";
-import { tryCatch } from "@myakiba/utils";
+import { majorStringToMinorUnits, minorUnitsToMajorString, tryCatch } from "@myakiba/utils";
 import { toast } from "sonner";
 
 interface PopoverInput {
   title: string;
   type: "currency";
-  value: string;
+  value: number;
   name: string;
 }
 
@@ -20,7 +20,7 @@ interface PopoverMultiInputCellProps {
   total: string;
   currency: string;
   locale: string;
-  onSubmit: (newValues: Record<string, string>) => Promise<void>;
+  onSubmit: (newValues: Record<string, number>) => Promise<void>;
 }
 
 export function PopoverMultiInputCell({
@@ -36,12 +36,15 @@ export function PopoverMultiInputCell({
     defaultValues: inputs.reduce(
       (acc, input) => ({
         ...acc,
-        [input.name]: input.value,
+        [input.name]: minorUnitsToMajorString(input.value),
       }),
       {} as Record<string, string>,
     ),
     onSubmit: async ({ value }) => {
-      const { error } = await tryCatch(onSubmit(value));
+      const transformedValues = Object.fromEntries(
+        Object.entries(value).map(([key, amount]) => [key, majorStringToMinorUnits(amount)]),
+      ) as Record<string, number>;
+      const { error } = await tryCatch(onSubmit(transformedValues));
       if (error) {
         toast.error(error.message);
       }

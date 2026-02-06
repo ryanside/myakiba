@@ -1,6 +1,6 @@
 import { useForm } from "@tanstack/react-form";
 import { Button } from "../ui/button";
-import type { SyncFormCollectionItem } from "@/lib/sync/types";
+import type { SyncCollectionItem, SyncFormCollectionItem } from "@/lib/sync/types";
 import { ArrowLeft, Edit, Loader2, Plus, X } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { Label } from "../ui/label";
@@ -21,7 +21,7 @@ import { DatePicker } from "../ui/date-picker";
 import * as z from "zod";
 import { Rating } from "../ui/rating";
 import { Textarea } from "../ui/textarea";
-import { getCurrencyLocale } from "@myakiba/utils";
+import { getCurrencyLocale, majorStringToMinorUnits } from "@myakiba/utils";
 import { extractMfcItemId } from "@/lib/sync/utils";
 import { CONDITIONS, SHIPPING_METHODS } from "@myakiba/constants";
 
@@ -29,7 +29,7 @@ export default function SyncCollectionForm({
   handleSyncCollectionSubmit,
   currency,
 }: {
-  handleSyncCollectionSubmit: (values: SyncFormCollectionItem[]) => void;
+  handleSyncCollectionSubmit: (values: SyncCollectionItem[]) => void;
   currency?: string;
 }) {
   const navigate = useNavigate();
@@ -57,7 +57,24 @@ export default function SyncCollectionForm({
       ] as SyncFormCollectionItem[],
     },
     onSubmit: async ({ value }) => {
-      await handleSyncCollectionSubmit(value.items);
+      const toMinorUnits = (amount: string): number => majorStringToMinorUnits(amount);
+      const payload = value.items.map((item) => {
+        const extractedId = extractMfcItemId(item.itemExternalId);
+        if (!extractedId) {
+          throw new Error(`Invalid item ID: ${item.itemExternalId}`);
+        }
+        return {
+          ...item,
+          itemExternalId: parseInt(extractedId, 10),
+          price: toMinorUnits(item.price),
+          orderDate: item.orderDate || null,
+          paymentDate: item.paymentDate || null,
+          shippingDate: item.shippingDate || null,
+          collectionDate: item.collectionDate || null,
+          score: item.score.toString(),
+        };
+      });
+      await handleSyncCollectionSubmit(payload);
       collectionForm.reset();
     },
   });

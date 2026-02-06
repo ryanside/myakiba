@@ -7,14 +7,10 @@ import { captcha, username, openAPI } from "better-auth/plugins";
 import { emailHarmony } from "better-auth-harmony";
 import { Resend } from "resend";
 import { createId } from "@paralleldrive/cuid2";
-import Redis from "ioredis";
+import { redis } from "@myakiba/redis";
 import { env } from "@myakiba/env/server";
 
 const resend = new Resend(env.RESEND_API_KEY);
-const redis = new Redis({
-  host: env.REDIS_HOST,
-  port: env.REDIS_PORT,
-});
 
 export const auth = betterAuth({
   secondaryStorage: {

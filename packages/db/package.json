@@ -12,6 +12,7 @@
     }
   },
   "scripts": {
+    "dev": "docker compose up -d && drizzle-kit studio",
     "db:push": "drizzle-kit push",
     "db:push:force": "drizzle-kit push --force",
     "db:studio": "drizzle-kit studio",

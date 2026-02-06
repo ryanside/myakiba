@@ -18,8 +18,8 @@ class DashboardService {
     this.collectionStatsPrepared = db
       .select({
         totalItems: count(sql`CASE WHEN ${collection.status} = 'Owned' THEN 1 END`),
-        totalSpent: sql<string>`COALESCE(${sum(collection.price)}, 0)`,
-        totalSpentThisMonth: sql<string>`COALESCE(${sum(
+        totalSpent: sql<number>`COALESCE(${sum(collection.price)}, 0)`,
+        totalSpentThisMonth: sql<number>`COALESCE(${sum(
           sql`CASE WHEN ${collection.paymentDate} >= ${sql.placeholder("currentMonth")}
               AND ${collection.paymentDate} < ${sql.placeholder("nextMonth")}
               THEN ${collection.price} ELSE 0 END`,
@@ -34,7 +34,7 @@ class DashboardService {
       .select({
         name: sql<Category>`${item.category}::text`,
         count: count(),
-        totalValue: sum(sql`COALESCE(${collection.price}, 0)`),
+        totalValue: sql<number>`COALESCE(${sum(collection.price)}, 0)`,
       })
       .from(collection)
       .innerJoin(item, eq(collection.itemId, item.id))
@@ -50,19 +50,19 @@ class DashboardService {
         title: order.title,
         shop: order.shop,
         status: order.status,
-        releaseMonthYear: order.releaseMonthYear,
+        releaseDate: order.releaseDate,
         itemImages: sql<
           string[]
         >`array_agg(DISTINCT ${item.image}) FILTER (WHERE ${item.image} IS NOT NULL)`,
         itemIds: sql<string[]>`array_agg(DISTINCT ${item.id})`,
-        total: sql<string>`COALESCE(${sum(collection.price)}, 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`,
+        total: sql<number>`COALESCE(${sum(collection.price)}, 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`,
       })
       .from(order)
       .leftJoin(collection, and(eq(order.id, collection.orderId)))
       .leftJoin(item, eq(collection.itemId, item.id))
       .where(and(eq(order.userId, sql.placeholder("userId")), ne(order.status, "Owned")))
-      .groupBy(order.id, order.title, order.shop, order.status, order.releaseMonthYear)
-      .orderBy(asc(order.releaseMonthYear))
+      .groupBy(order.id, order.title, order.shop, order.status, order.releaseDate)
+      .orderBy(asc(order.releaseDate))
       .limit(10)
       .prepare("orders_kanban");
 
@@ -70,41 +70,41 @@ class DashboardService {
     // This Month Order Count, Shipping, Taxes, Duties, Tariffs, Misc Fees
     this.ordersSummaryPrepared = db
       .select({
-        totalActiveOrderCount: sql<string>`COALESCE(${sum(
+        totalActiveOrderCount: sql<number>`COALESCE(${sum(
           sql`CASE WHEN ${order.status} != 'Owned'
               THEN 1 ELSE 0 END`,
         )}, 0)`,
-        totalShippingAllTime: sql<string>`COALESCE(${sum(order.shippingFee)}, 0)`,
-        totalTaxesAllTime: sql<string>`COALESCE(${sum(order.taxes)}, 0)`,
-        totalDutiesAllTime: sql<string>`COALESCE(${sum(order.duties)}, 0)`,
-        totalTariffsAllTime: sql<string>`COALESCE(${sum(order.tariffs)}, 0)`,
-        totalMiscFeesAllTime: sql<string>`COALESCE(${sum(order.miscFees)}, 0)`,
-        thisMonthOrderCount: sql<string>`COALESCE(${sum(
-          sql`CASE WHEN ${order.releaseMonthYear} >= ${sql.placeholder("currentMonth")}
-              AND ${order.releaseMonthYear} < ${sql.placeholder("nextMonth")}
+        totalShippingAllTime: sql<number>`COALESCE(${sum(order.shippingFee)}, 0)`,
+        totalTaxesAllTime: sql<number>`COALESCE(${sum(order.taxes)}, 0)`,
+        totalDutiesAllTime: sql<number>`COALESCE(${sum(order.duties)}, 0)`,
+        totalTariffsAllTime: sql<number>`COALESCE(${sum(order.tariffs)}, 0)`,
+        totalMiscFeesAllTime: sql<number>`COALESCE(${sum(order.miscFees)}, 0)`,
+        thisMonthOrderCount: sql<number>`COALESCE(${sum(
+          sql`CASE WHEN ${order.releaseDate} >= ${sql.placeholder("currentMonth")}
+              AND ${order.releaseDate} < ${sql.placeholder("nextMonth")}
               THEN 1 ELSE 0 END`,
         )}, 0)`,
-        thisMonthShipping: sql<string>`COALESCE(${sum(
+        thisMonthShipping: sql<number>`COALESCE(${sum(
           sql`CASE WHEN ${order.paymentDate} >= ${sql.placeholder("currentMonth")}
               AND ${order.paymentDate} < ${sql.placeholder("nextMonth")}
               THEN ${order.shippingFee} ELSE 0 END`,
         )}, 0)`,
-        thisMonthTaxes: sql<string>`COALESCE(${sum(
+        thisMonthTaxes: sql<number>`COALESCE(${sum(
           sql`CASE WHEN ${order.paymentDate} >= ${sql.placeholder("currentMonth")}
               AND ${order.paymentDate} < ${sql.placeholder("nextMonth")}
               THEN ${order.taxes} ELSE 0 END`,
         )}, 0)`,
-        thisMonthDuties: sql<string>`COALESCE(${sum(
+        thisMonthDuties: sql<number>`COALESCE(${sum(
           sql`CASE WHEN ${order.paymentDate} >= ${sql.placeholder("currentMonth")}
               AND ${order.paymentDate} < ${sql.placeholder("nextMonth")}
               THEN ${order.duties} ELSE 0 END`,
         )}, 0)`,
-        thisMonthTariffs: sql<string>`COALESCE(${sum(
+        thisMonthTariffs: sql<number>`COALESCE(${sum(
           sql`CASE WHEN ${order.paymentDate} >= ${sql.placeholder("currentMonth")}
               AND ${order.paymentDate} < ${sql.placeholder("nextMonth")}
               THEN ${order.tariffs} ELSE 0 END`,
         )}, 0)`,
-        thisMonthMiscFees: sql<string>`COALESCE(${sum(
+        thisMonthMiscFees: sql<number>`COALESCE(${sum(
           sql`CASE WHEN ${order.paymentDate} >= ${sql.placeholder("currentMonth")}
               AND ${order.paymentDate} < ${sql.placeholder("nextMonth")}
               THEN ${order.miscFees} ELSE 0 END`,
@@ -127,37 +127,37 @@ class DashboardService {
         orderId: order.id,
         title: order.title,
         shop: order.shop,
-        releaseMonthYear: order.releaseMonthYear,
+        releaseDate: order.releaseDate,
         itemImages: sql<
           string[]
         >`array_agg(DISTINCT ${item.image}) FILTER (WHERE ${item.image} IS NOT NULL)`,
         itemIds: sql<string[]>`array_agg(DISTINCT ${item.id})`,
-        total: sql<string>`COALESCE(${sum(collection.price)}, 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`,
+        total: sql<number>`COALESCE(${sum(collection.price)}, 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`,
       })
       .from(order)
       .leftJoin(collection, and(eq(order.id, collection.orderId)))
       .leftJoin(item, eq(collection.itemId, item.id))
       .where(and(eq(order.userId, sql.placeholder("userId")), eq(order.status, "Ordered")))
-      .orderBy(asc(order.releaseMonthYear))
-      .groupBy(order.id, order.title, order.shop, order.releaseMonthYear)
+      .orderBy(asc(order.releaseDate))
+      .groupBy(order.id, order.title, order.shop, order.releaseDate)
       .prepare("unpaid_orders");
 
     // Monthly Orders - Order counts grouped by release month for current year
     this.monthlyOrdersPrepared = db
       .select({
-        month: sql<number>`EXTRACT(MONTH FROM ${order.releaseMonthYear})`,
+        month: sql<number>`EXTRACT(MONTH FROM ${order.releaseDate})`,
         orderCount: count(),
       })
       .from(order)
       .where(
         and(
           eq(order.userId, sql.placeholder("userId")),
-          gte(order.releaseMonthYear, sql.placeholder("startOfYear")),
-          lte(order.releaseMonthYear, sql.placeholder("endOfYear")),
+          gte(order.releaseDate, sql.placeholder("startOfYear")),
+          lte(order.releaseDate, sql.placeholder("endOfYear")),
         ),
       )
-      .groupBy(sql`EXTRACT(MONTH FROM ${order.releaseMonthYear})`)
-      .orderBy(sql`EXTRACT(MONTH FROM ${order.releaseMonthYear})`)
+      .groupBy(sql`EXTRACT(MONTH FROM ${order.releaseDate})`)
+      .orderBy(sql`EXTRACT(MONTH FROM ${order.releaseDate})`)
       .prepare("monthly_orders");
 
     // Release Calendar
