@@ -12,7 +12,7 @@ FROM base AS install
 WORKDIR /app
 COPY --from=prune /app/out/json/ .
 COPY --from=prune /app/out/bun.lock ./bun.lock
-RUN bun install --frozen-lockfile --ignore-scripts
+RUN bun install --frozen-lockfile --ignore-scripts --production --linker=hoisted
 
 # Runtime stage - copy full source and run db:push
 FROM base

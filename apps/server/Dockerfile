@@ -12,7 +12,7 @@ FROM base AS install
 WORKDIR /app
 COPY --from=prune /app/out/json/ .
 COPY --from=prune /app/out/bun.lock ./bun.lock
-RUN bun install --frozen-lockfile --ignore-scripts
+RUN bun install --frozen-lockfile --ignore-scripts --linker=hoisted
 
 # Build stage - compile the application
 FROM base AS build
