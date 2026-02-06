@@ -113,7 +113,7 @@ myakiba is actively being developed with more features on the horizon:
 ### Prerequisites
 
 - **Bun** (runtime + package manager)
-- **Docker** 
+- **Docker**
 - **AWS S3** (required for the worker’s image/object uploads)
 - **HTTP proxy** (optional, used by the worker for scraping)
 
