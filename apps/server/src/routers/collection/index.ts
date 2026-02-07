@@ -8,13 +8,17 @@ import {
 } from "./model";
 import { tryCatch } from "@myakiba/utils";
 import { betterAuth } from "@/middleware/better-auth";
+import { requestContext } from "@/middleware/request-context";
 
 const collectionRouter = new Elysia({ prefix: "/collection" })
   .use(betterAuth)
+  .use(requestContext)
   .get(
     "/",
-    async ({ query, user }) => {
+    async ({ query, user, wideEvent }) => {
       if (!user) return status(401, "Unauthorized");
+
+      wideEvent.set({ userId: user.id });
 
       const { data: collection, error } = await tryCatch(
         CollectionService.getCollection(
@@ -48,14 +52,7 @@ const collectionRouter = new Elysia({ prefix: "/collection" })
       );
 
       if (error) {
-        console.error("Error fetching collection table:", error, {
-          userId: user.id,
-          limit: query.limit,
-          offset: query.offset,
-          sort: query.sort,
-          order: query.order,
-        });
-
+        wideEvent.set({ error, outcome: "error" });
         return status(500, "Failed to get collection table");
       }
 
@@ -65,14 +62,17 @@ const collectionRouter = new Elysia({ prefix: "/collection" })
         updatedAt: item.updatedAt.toISOString(),
       }));
 
+      wideEvent.set({ resultCount: serializedItems.length, outcome: "success" });
       return serializedItems;
     },
     { query: collectionQuerySchema, auth: true },
   )
   .get(
     "/:id",
-    async ({ params, user }) => {
+    async ({ params, user, wideEvent }) => {
       if (!user) return status(401, "Unauthorized");
+
+      wideEvent.set({ userId: user.id, collectionId: params.id });
 
       const { data: collectionItem, error } = await tryCatch(
         CollectionService.getCollectionItem(user.id, params.id),
@@ -80,17 +80,15 @@ const collectionRouter = new Elysia({ prefix: "/collection" })
 
       if (error) {
         if (error.message === "COLLECTION_ITEM_NOT_FOUND") {
+          wideEvent.set({ outcome: "not_found" });
           return status(404, "Collection item not found");
         }
 
-        console.error("Error fetching collection item:", error, {
-          userId: user.id,
-          collectionId: params.id,
-        });
-
+        wideEvent.set({ error, outcome: "error" });
         return status(500, "Failed to get collection item");
       }
 
+      wideEvent.set({ outcome: "success" });
       return {
         collectionItem: {
           ...collectionItem,
@@ -103,8 +101,10 @@ const collectionRouter = new Elysia({ prefix: "/collection" })
   )
   .put(
     "/:id",
-    async ({ params, body, user }) => {
+    async ({ params, body, user, wideEvent }) => {
       if (!user) return status(401, "Unauthorized");
+
+      wideEvent.set({ userId: user.id, collectionId: params.id });
 
       const { data: update, error } = await tryCatch(
         CollectionService.updateCollectionItem(user.id, params.id, body),
@@ -112,26 +112,25 @@ const collectionRouter = new Elysia({ prefix: "/collection" })
 
       if (error) {
         if (error.message === "COLLECTION_ITEM_NOT_FOUND") {
+          wideEvent.set({ outcome: "not_found" });
           return status(404, "Collection item not found");
         }
 
-        console.error("Error updating collection item:", error, {
-          userId: user.id,
-          collectionId: params.id,
-          updateData: body,
-        });
-
+        wideEvent.set({ error, outcome: "error" });
         return status(500, "Failed to update collection item");
       }
 
+      wideEvent.set({ outcome: "success" });
       return { update };
     },
     { body: collectionUpdateSchema, params: collectionParamSchema, auth: true },
   )
   .delete(
     "/:id",
-    async ({ params, user }) => {
+    async ({ params, user, wideEvent }) => {
       if (!user) return status(401, "Unauthorized");
+
+      wideEvent.set({ userId: user.id, collectionId: params.id });
 
       const { data: deleted, error } = await tryCatch(
         CollectionService.deleteCollectionItem(user.id, params.id),
@@ -139,41 +138,39 @@ const collectionRouter = new Elysia({ prefix: "/collection" })
 
       if (error) {
         if (error.message === "COLLECTION_ITEM_NOT_FOUND") {
+          wideEvent.set({ outcome: "not_found" });
           return status(404, "Collection item not found");
         }
 
-        console.error("Error deleting collection item:", error, {
-          userId: user.id,
-          collectionId: params.id,
-        });
-
+        wideEvent.set({ error, outcome: "error" });
         return status(500, "Failed to delete collection item");
       }
 
+      wideEvent.set({ outcome: "success" });
       return { deleted };
     },
     { params: collectionParamSchema, auth: true },
   )
   .delete(
     "/",
-    async ({ body, user }) => {
+    async ({ body, user, wideEvent }) => {
       if (!user) return status(401, "Unauthorized");
+
+      wideEvent.set({ userId: user.id, itemCount: body.ids.length });
 
       const { error } = await tryCatch(CollectionService.deleteCollectionItems(user.id, body.ids));
 
       if (error) {
         if (error.message === "COLLECTION_ITEMS_NOT_FOUND") {
+          wideEvent.set({ outcome: "not_found" });
           return status(404, "Collection item(s) not found");
         }
 
-        console.error("Error deleting collection item(s):", error, {
-          userId: user.id,
-          collectionIds: body.ids,
-        });
-
+        wideEvent.set({ error, outcome: "error" });
         return status(500, "Failed to delete collection item(s)");
       }
 
+      wideEvent.set({ outcome: "success" });
       return "Collection item(s) deleted successfully";
     },
     { body: collectionDeleteSchema, auth: true },

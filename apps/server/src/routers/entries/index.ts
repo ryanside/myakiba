@@ -2,20 +2,26 @@ import { Elysia, status } from "elysia";
 import * as z from "zod";
 import EntriesService from "./service";
 import { tryCatch } from "@myakiba/utils";
+import { requestContext } from "@/middleware/request-context";
 
-const entriesRouter = new Elysia({ prefix: "/entries" }).get(
-  "/search",
-  async ({ query }) => {
-    const { data: entries, error } = await tryCatch(EntriesService.getEntries(query.search));
+const entriesRouter = new Elysia({ prefix: "/entries" })
+  .use(requestContext)
+  .get(
+    "/search",
+    async ({ query, wideEvent }) => {
+      wideEvent.set({ searchQuery: query.search });
 
-    if (error) {
-      console.error("Error fetching entries:", error);
-      return status(500, "Failed to get entries");
-    }
+      const { data: entries, error } = await tryCatch(EntriesService.getEntries(query.search));
 
-    return { entries };
-  },
-  { query: z.object({ search: z.string() }) },
-);
+      if (error) {
+        wideEvent.set({ error, outcome: "error" });
+        return status(500, "Failed to get entries");
+      }
+
+      wideEvent.set({ resultCount: entries.length, outcome: "success" });
+      return { entries };
+    },
+    { query: z.object({ search: z.string() }) },
+  );
 
 export default entriesRouter;

@@ -1,6 +1,7 @@
-import { Elysia, status } from "elysia";
+import { Elysia, status, sse } from "elysia";
 import * as z from "zod";
 import { betterAuth } from "@/middleware/better-auth";
+import { requestContext } from "@/middleware/request-context";
 import { rateLimit } from "@/middleware/rate-limit";
 import {
   collectionSyncSchema,
@@ -19,11 +20,14 @@ import { createId } from "@paralleldrive/cuid2";
 
 const syncRouter = new Elysia({ prefix: "/sync" })
   .use(betterAuth)
+  .use(requestContext)
   .use(rateLimit)
   .post(
     "/csv",
-    async ({ body, user }) => {
+    async ({ body, user, wideEvent }) => {
       if (!user) return status(401, "Unauthorized");
+
+      wideEvent.set({ userId: user.id, itemCount: body.length });
 
       const items = SyncService.assignOrderIds(body);
 
@@ -32,10 +36,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       );
 
       if (processItemsError) {
-        console.error("Error during processItems():", processItemsError, {
-          userId: user.id,
-          collectionItems: items,
-        });
+        wideEvent.set({ error: processItemsError, outcome: "error" });
         return status(500, "Failed to process sync request");
       }
 
@@ -47,15 +48,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         );
 
         if (insertToCollectionAndOrdersError) {
-          console.error(
-            "Error during insertToCollectionAndOrders():",
-            insertToCollectionAndOrdersError,
-            {
-              userId: user.id,
-              collectionItems: collectionItems,
-              orderItems: orderItems,
-            },
-          );
+          wideEvent.set({ error: insertToCollectionAndOrdersError, outcome: "error" });
           return status(500, "Failed to insert to collection and orders");
         }
       }
@@ -70,15 +63,14 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
         if (queueCSVSyncJobError) {
           if (queueCSVSyncJobError.message === "FAILED_TO_QUEUE_CSV_SYNC_JOB") {
+            wideEvent.set({ error: queueCSVSyncJobError, outcome: "error" });
             return status(500, "Failed to queue CSV sync job");
           }
           if (queueCSVSyncJobError.message === "FAILED_TO_SET_JOB_STATUS_IN_REDIS") {
+            wideEvent.set({ error: queueCSVSyncJobError, outcome: "error" });
             return status(500, "Failed to set job status");
           }
-          console.error("Error during queueCSVSyncJob():", queueCSVSyncJobError, {
-            userId: user.id,
-            itemsToScrape: itemsToScrape,
-          });
+          wideEvent.set({ error: queueCSVSyncJobError, outcome: "error" });
           return status(500, "Failed to queue CSV sync job");
         }
 
@@ -91,6 +83,13 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         statusMessage =
           "Sync completed - All items already in myakiba database, no scraping needed";
       }
+
+      wideEvent.set({
+        outcome: "success",
+        existingItemsToInsert: collectionItems.length,
+        newItems: itemsToScrape.length,
+        jobId: jobId ?? null,
+      });
 
       return {
         status: statusMessage,
@@ -108,8 +107,10 @@ const syncRouter = new Elysia({ prefix: "/sync" })
   )
   .post(
     "/order",
-    async ({ body, user }) => {
+    async ({ body, user, wideEvent }) => {
       if (!user) return status(401, "Unauthorized");
+
+      wideEvent.set({ userId: user.id, itemCount: body.items.length });
 
       const orderId = createId();
 
@@ -120,10 +121,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       );
 
       if (existingItemsError) {
-        console.error("Error during getExistingItemsByExternalIds():", existingItemsError, {
-          userId: user.id,
-          itemExternalIds: itemExternalIds,
-        });
+        wideEvent.set({ error: existingItemsError, outcome: "error" });
         return status(500, "Failed to check for existing items");
       }
 
@@ -132,14 +130,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         await tryCatch(SyncService.getExistingItemsWithReleases(existingItemIds));
 
       if (existingItemsWithReleasesError) {
-        console.error(
-          "Error during getExistingItemsWithReleases():",
-          existingItemsWithReleasesError,
-          {
-            userId: user.id,
-            itemIds: existingItemIds,
-          },
-        );
+        wideEvent.set({ error: existingItemsWithReleasesError, outcome: "error" });
         return status(500, "Failed to check for existing items with releases");
       }
 
@@ -207,17 +198,14 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
         if (queueOrderSyncJobError) {
           if (queueOrderSyncJobError.message === "FAILED_TO_QUEUE_ORDER_SYNC_JOB") {
+            wideEvent.set({ error: queueOrderSyncJobError, outcome: "error" });
             return status(500, "Failed to queue order sync job");
           }
           if (queueOrderSyncJobError.message === "FAILED_TO_SET_JOB_STATUS_IN_REDIS") {
+            wideEvent.set({ error: queueOrderSyncJobError, outcome: "error" });
             return status(500, "Failed to set job status");
           }
-          console.error("Error during queueOrderSyncJob():", queueOrderSyncJobError, {
-            userId: user.id,
-            order: order,
-            itemsToScrape: itemsToScrape,
-            itemsToInsert: itemsToInsert,
-          });
+          wideEvent.set({ error: queueOrderSyncJobError, outcome: "error" });
           return status(500, "Failed to queue order sync job");
         }
 
@@ -249,18 +237,18 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         );
 
         if (insertToCollectionAndOrdersError) {
-          console.error(
-            "Error during insertToCollectionAndOrders():",
-            insertToCollectionAndOrdersError,
-            {
-              userId: user.id,
-              collectionItems: itemsToInsert,
-              orderItems: [order],
-            },
-          );
+          wideEvent.set({ error: insertToCollectionAndOrdersError, outcome: "error" });
           return status(500, "Failed to insert to collection and orders");
         }
       }
+
+      wideEvent.set({
+        outcome: "success",
+        orderId,
+        existingItemsToInsert: itemsToInsert.length,
+        newItems: itemsToScrape.length,
+        jobId: jobId ?? null,
+      });
 
       return {
         status: jobId ? "Job added to queue." : "Sync completed",
@@ -278,8 +266,10 @@ const syncRouter = new Elysia({ prefix: "/sync" })
   )
   .post(
     "/collection",
-    async ({ body, user }) => {
+    async ({ body, user, wideEvent }) => {
       if (!user) return status(401, "Unauthorized");
+
+      wideEvent.set({ userId: user.id, itemCount: body.length });
 
       const itemExternalIds = body.map((item: collectionSyncType) => item.itemExternalId);
 
@@ -288,10 +278,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       );
 
       if (existingItemsError) {
-        console.error("Error during getExistingItemsByExternalIds():", existingItemsError, {
-          userId: user.id,
-          itemExternalIds: itemExternalIds,
-        });
+        wideEvent.set({ error: existingItemsError, outcome: "error" });
         return status(500, "Failed to check for existing items");
       }
 
@@ -300,14 +287,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         await tryCatch(SyncService.getExistingItemsWithReleases(existingItemIds));
 
       if (existingItemsWithReleasesError) {
-        console.error(
-          "Error during getExistingItemsWithReleases():",
-          existingItemsWithReleasesError,
-          {
-            userId: user.id,
-            itemIds: existingItemIds,
-          },
-        );
+        wideEvent.set({ error: existingItemsWithReleasesError, outcome: "error" });
         return status(500, "Failed to check for existing items with releases");
       }
 
@@ -347,16 +327,14 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
         if (queueCollectionSyncJobError) {
           if (queueCollectionSyncJobError.message === "FAILED_TO_QUEUE_COLLECTION_SYNC_JOB") {
+            wideEvent.set({ error: queueCollectionSyncJobError, outcome: "error" });
             return status(500, "Failed to queue collection sync job");
           }
           if (queueCollectionSyncJobError.message === "FAILED_TO_SET_JOB_STATUS_IN_REDIS") {
+            wideEvent.set({ error: queueCollectionSyncJobError, outcome: "error" });
             return status(500, "Failed to set job status");
           }
-          console.error("Error during queueCollectionSyncJob():", queueCollectionSyncJobError, {
-            userId: user.id,
-            itemsToScrape: itemsToScrape,
-            itemsToInsert: itemsToInsert,
-          });
+          wideEvent.set({ error: queueCollectionSyncJobError, outcome: "error" });
           return status(500, "Failed to queue collection sync job");
         }
 
@@ -388,17 +366,17 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         );
 
         if (insertToCollectionAndOrdersError) {
-          console.error(
-            "Error during insertToCollectionAndOrders():",
-            insertToCollectionAndOrdersError,
-            {
-              userId: user.id,
-              itemsToInsert: itemsToInsert,
-            },
-          );
+          wideEvent.set({ error: insertToCollectionAndOrdersError, outcome: "error" });
           return status(500, "Failed to insert to collection and orders");
         }
       }
+
+      wideEvent.set({
+        outcome: "success",
+        existingItemsToInsert: itemsToInsert.length,
+        newItems: itemsToScrape.length,
+        jobId: jobId ?? null,
+      });
 
       return {
         status: jobId ? "Job added to queue." : "Sync completed",
@@ -416,45 +394,45 @@ const syncRouter = new Elysia({ prefix: "/sync" })
   )
   .get(
     "/job-status",
-    async ({ query, user }) => {
-      if (!user) {
-        return status(401, {
-          status: "Unauthorized",
-          finished: true,
-          createdAt: new Date().toISOString(),
-        });
-      }
+    async function* ({ query, user, wideEvent }) {
+      if (!user) return status(401, "Unauthorized");
+
+      wideEvent.set({ userId: user.id, jobId: query.jobId });
 
       const { jobId } = query;
 
-      const { data: jobStatus, error } = await tryCatch(SyncService.getJobStatus(jobId));
+      while (true) {
+        const { data: jobStatus, error } = await tryCatch(SyncService.getJobStatus(jobId));
 
-      if (error) {
-        if (error.message === "SYNC_JOB_NOT_FOUND") {
-          return status(404, {
-            status: "Job not found",
-            finished: true,
-            createdAt: new Date().toISOString(),
+        if (error) {
+          const message =
+            error.message === "SYNC_JOB_NOT_FOUND"
+              ? "Job not found"
+              : "Error fetching job status";
+
+          wideEvent.set({ error, outcome: "error" });
+
+          yield sse({
+            data: { status: message, finished: true, createdAt: new Date().toISOString() },
           });
+          return;
         }
 
-        console.error("Error fetching job status:", error, {
-          jobId,
-          userId: user.id,
+        yield sse({
+          data: {
+            status: jobStatus.status,
+            finished: jobStatus.finished,
+            createdAt: jobStatus.createdAt,
+          },
         });
 
-        return status(500, {
-          status: "Error fetching job status",
-          finished: true,
-          createdAt: new Date().toISOString(),
-        });
+        if (jobStatus.finished) {
+          wideEvent.set({ outcome: "success" });
+          return;
+        }
+
+        await Bun.sleep(2000);
       }
-
-      return {
-        status: jobStatus.status,
-        finished: jobStatus.finished,
-        createdAt: jobStatus.createdAt,
-      };
     },
     {
       query: z.object({ jobId: z.string().min(1) }),

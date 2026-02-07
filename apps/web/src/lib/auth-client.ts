@@ -1,11 +1,12 @@
 import { createAuthClient } from "better-auth/react";
-import { usernameClient, inferAdditionalFields } from "better-auth/client/plugins";
+import { adminClient, usernameClient, inferAdditionalFields } from "better-auth/client/plugins";
 import { env } from "@myakiba/env/web";
 
 export const authClient = createAuthClient({
   baseURL: env.VITE_SERVER_URL,
   plugins: [
     usernameClient(),
+    adminClient(),
     inferAdditionalFields({
       user: {
         currency: {

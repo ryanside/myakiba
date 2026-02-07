@@ -14,6 +14,39 @@ export const createFetchOptions = (image: boolean = false) => ({
   signal: AbortSignal.timeout(10000),
 });
 
+export const sendMockScrapeProgress = async (
+  redis: Redis,
+  jobId: string,
+  config: {
+  readonly mockItemCount: number;
+  readonly delayMs: number;
+  readonly simulateFailure: boolean;
+},
+): Promise<void> => {
+  const { mockItemCount, delayMs, simulateFailure } = config;
+
+  for (let i = 1; i <= mockItemCount; i++) {
+    await setJobStatus(redis, jobId, `Syncing...${i}/${mockItemCount}`, false);
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+
+  if (simulateFailure) {
+    await setJobStatus(
+      redis,
+      jobId,
+      `Sync failed: Failed to scrape items. Please try again. MFC might be down, or the MFC item IDs may be invalid.`,
+      true,
+    );
+  } else {
+    await setJobStatus(
+      redis,
+      jobId,
+      `Sync completed: Synced ${mockItemCount} out of ${mockItemCount} items`,
+      true,
+    );
+  }
+};
+
 export const setJobStatus = async (
   redis: Redis,
   jobId: string,

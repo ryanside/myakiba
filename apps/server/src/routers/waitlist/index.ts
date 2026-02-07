@@ -5,6 +5,7 @@ import { tryCatch } from "@myakiba/utils";
 import WaitlistService from "./service";
 import { joinWaitlistSchema, verifyAccessSchema } from "./model";
 import { rateLimit } from "@/middleware/rate-limit";
+import { requestContext } from "@/middleware/request-context";
 
 async function verifyTurnstile(token: string): Promise<boolean> {
   const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
@@ -23,31 +24,33 @@ async function verifyTurnstile(token: string): Promise<boolean> {
 }
 
 const waitlistRouter = new Elysia({ prefix: "/waitlist" })
+  .use(requestContext)
   .use(rateLimit)
   .post(
     "/",
-    async ({ body }) => {
+    async ({ body, wideEvent }) => {
       const { email, turnstileToken } = body;
+
+      const emailDomain = email.split("@")[1] ?? "unknown";
+      wideEvent.set({ email_domain: emailDomain });
 
       const { data: isValidCaptcha, error: captchaError } = await tryCatch(
         verifyTurnstile(turnstileToken),
       );
 
       if (captchaError || !isValidCaptcha) {
-        console.error("Turnstile verification failed:", captchaError, {
-          email,
-          turnstileToken,
-        });
+        wideEvent.set({ error: captchaError ?? null, outcome: "bad_request" });
         return status(400, "Captcha verification failed");
       }
 
       const { error } = await tryCatch(WaitlistService.addToWaitlist(email));
 
       if (error) {
-        console.error("Error adding to waitlist:", error);
+        wideEvent.set({ error, outcome: "error" });
         return status(500, "Failed to join waitlist");
       }
 
+      wideEvent.set({ outcome: "success" });
       return {
         success: true,
         message: "Successfully joined the waitlist!",
@@ -60,7 +63,7 @@ const waitlistRouter = new Elysia({ prefix: "/waitlist" })
   )
   .post(
     "/verify-access",
-    async ({ body }) => {
+    async ({ body, wideEvent }) => {
       const { password } = body;
 
       const expectedPassword = env.EARLY_ACCESS_PASSWORD;
@@ -73,9 +76,11 @@ const waitlistRouter = new Elysia({ prefix: "/waitlist" })
       }
 
       if (!isValid) {
+        wideEvent.set({ outcome: "unauthorized" });
         return status(401, "Invalid password");
       }
 
+      wideEvent.set({ outcome: "success" });
       return { success: true };
     },
     {
