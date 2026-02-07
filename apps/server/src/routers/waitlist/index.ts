@@ -31,7 +31,8 @@ const waitlistRouter = new Elysia({ prefix: "/waitlist" })
     async ({ body, wideEvent }) => {
       const { email, turnstileToken } = body;
 
-      wideEvent.set({ email });
+      const emailDomain = email.split("@")[1] ?? "unknown";
+      wideEvent.set({ email_domain: emailDomain });
 
       const { data: isValidCaptcha, error: captchaError } = await tryCatch(
         verifyTurnstile(turnstileToken),
