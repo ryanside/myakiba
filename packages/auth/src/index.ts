@@ -3,7 +3,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "@myakiba/db";
 import * as schema from "@myakiba/db/schema/auth";
-import { captcha, username, openAPI } from "better-auth/plugins";
+import { admin, captcha, username, openAPI } from "better-auth/plugins";
 import { emailHarmony } from "better-auth-harmony";
 import { Resend } from "resend";
 import { createId } from "@paralleldrive/cuid2";
@@ -90,6 +90,7 @@ export const auth = betterAuth({
     username(),
     emailHarmony({}),
     openAPI(),
+    admin(),
   ],
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,

@@ -71,18 +71,6 @@ const FEATURE_SECTIONS: readonly FeatureSection[] = [
 
 export const Route = createFileRoute("/")({
   component: HomeComponent,
-  head: () => ({
-    meta: [
-      {
-        name: "description",
-        content:
-          "The modern collection management tool for Japanese pop-culture (anime, manga, video-games, etc.) collectables (figures, artbooks, CDs, cups, collectibles, dakimakura, etc.). Track your collection, manage orders, view insightful analytics, and stay organized.",
-      },
-      {
-        title: "myakiba - A Modern Collection Management Tool for Japanese Collectables",
-      },
-    ],
-  }),
 });
 
 function HomeComponent() {

@@ -1,6 +1,6 @@
 import { Worker } from "bullmq";
 import { scrapedItems, scrapedItemsWithRateLimit } from "./lib/scrape";
-import { setJobStatus } from "./lib/utils";
+import { setJobStatus, sendMockScrapeProgress } from "./lib/utils";
 import { jobDataSchema, type jobData } from "./lib/types";
 import { finalizeCollectionSync } from "./lib/collection/utils";
 import { finalizeOrderSync } from "./lib/order/utils";
@@ -34,6 +34,15 @@ const myWorker = new Worker(
 
       await setJobStatus(redis, job.id!, `Starting to sync ${itemIds.length} items`, false);
 
+      if (env.MOCK_SCRAPE_PROGRESS) {
+        await sendMockScrapeProgress(redis, job.id!, {
+          mockItemCount: 50,
+          delayMs: 500,
+          simulateFailure: false,
+        });
+        return [];
+      }
+
       const successfulResults = await scrapeMethod(itemIds, 3, 1000, userId, job.id!);
 
       if (successfulResults.length === 0) {
@@ -66,6 +75,15 @@ const myWorker = new Worker(
       );
 
       await setJobStatus(redis, job.id!, `Starting to scrape ${itemIds.length} items`, false);
+
+      if (env.MOCK_SCRAPE_PROGRESS) {
+        await sendMockScrapeProgress(redis, job.id!, {
+          mockItemCount: 50,
+          delayMs: 500,
+          simulateFailure: false,
+        });
+        return [];
+      }
 
       const successfulResults = await scrapeMethod(itemIds, 3, 1000, userId, job.id!);
 
@@ -105,6 +123,15 @@ const myWorker = new Worker(
       );
 
       await setJobStatus(redis, job.id!, `Starting to scrape ${itemIds.length} items`, false);
+
+      if (env.MOCK_SCRAPE_PROGRESS) {
+        await sendMockScrapeProgress(redis, job.id!, {
+          mockItemCount: 50,
+          delayMs: 500,
+          simulateFailure: false,
+        });
+        return [];
+      }
 
       const successfulResults = await scrapeMethod(itemIds, 3, 1000, userId, job.id!);
 

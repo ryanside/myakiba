@@ -1,6 +1,8 @@
 import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
 import { logixlysia } from "logixlysia";
+import { requestContext } from "@/middleware/request-context";
+import { logger } from "@/lib/logger";
 import { auth } from "@myakiba/auth";
 import { env } from "@myakiba/env/server";
 import { openapi } from "@elysiajs/openapi";
@@ -58,6 +60,7 @@ const serveIndexHtml = async (distDir: string): Promise<Response> => {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const app = new Elysia()
   .use(logixlysia())
+  .use(requestContext)
   .use(
     cors({
       origin: env.CORS_ORIGIN,
@@ -116,7 +119,7 @@ const app = new Elysia()
     return serveIndexHtml(serverDistPath);
   })
   .listen(3000, () => {
-    console.log("Server is running on http://localhost:3000");
+    logger.info({ msg: "server started", port: 3000, url: "http://localhost:3000" });
   });
 
 export type App = typeof app;

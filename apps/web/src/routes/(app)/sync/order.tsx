@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +17,8 @@ import { Check, Loader2, LoaderCircleIcon } from "lucide-react";
 import { ShimmeringText } from "@/components/ui/shimmering-text";
 import { type SyncStatus, type SyncOrder } from "@/lib/sync/types";
 import { toast } from "sonner";
-import { getJobStatus, sendOrder } from "@/queries/sync";
+import { sendOrder } from "@/queries/sync";
+import { useSyncJobStatus } from "@/hooks/use-sync-job-status";
 import SyncOrderForm from "@/components/sync/sync-order-form";
 
 const steps = [{ title: "Choose sync option" }, { title: "Enter Information" }, { title: "Sync" }];
@@ -50,40 +51,22 @@ function RouteComponent() {
     isFinished: true,
     status: "",
   });
-  const jobStatusQuery = useQuery({
-    queryKey: ["syncJobStatus", jobId] as const,
-    enabled: jobId !== null,
-    queryFn: async () => {
-      if (!jobId) {
-        throw new Error("jobId is required");
-      }
-      return await getJobStatus(jobId);
-    },
-    refetchInterval: (query) => {
-      if (query.state.data?.finished === true) {
-        return false;
-      }
-      return 2000;
-    },
-  });
+  const jobStatusQuery = useSyncJobStatus(jobId);
 
-  const isPollingError = jobId !== null && jobStatusQuery.isError;
   const resolvedStatus: SyncStatus = {
     ...status,
     isFinished:
       jobId === null
         ? status.isFinished
-        : isPollingError
+        : jobStatusQuery.isError
           ? true
           : (jobStatusQuery.data?.finished ?? false),
     status:
       jobId === null
         ? status.status
-        : isPollingError
+        : jobStatusQuery.isError
           ? "Connection error occurred"
-          : jobStatusQuery.isLoading
-            ? "Connecting..."
-            : (jobStatusQuery.data?.status ?? status.status),
+          : (jobStatusQuery.data?.status ?? status.status),
   };
 
   const orderMutation = useMutation({
