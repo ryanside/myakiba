@@ -1,4 +1,4 @@
-export { searchSchema, collectionSearchSchema } from "./search";
+export { searchSchema, collectionSearchSchema, syncSearchSchema } from "./search";
 export {
   syncOrderSchema,
   syncOrderItemSchema,
@@ -6,10 +6,16 @@ export {
   csvItemSchema,
   csvSchema,
   jobDataSchema,
+  csvItemMetadataSchema,
+  orderItemMetadataSchema,
+  collectionItemMetadataSchema,
   type CsvItem,
   type InternalCsvItem,
   type UpdatedSyncOrder,
   type UpdatedSyncOrderItem,
   type UpdatedSyncCollection,
   type JobData,
+  type CsvItemMetadata,
+  type OrderItemMetadata,
+  type CollectionItemMetadata,
 } from "./sync";

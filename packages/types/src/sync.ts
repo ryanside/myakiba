@@ -1,4 +1,13 @@
-import type { ShippingMethod, OrderStatus, Condition, Category } from "./enums";
+import type { ShippingMethod, OrderStatus, Condition } from "./enums";
+import { syncSession, syncSessionItem } from "@myakiba/db/schema/figure";
+
+export type SyncSessionRow = typeof syncSession.$inferSelect;
+export type SyncSessionItemRow = typeof syncSessionItem.$inferSelect;
+export type EnrichedSyncSessionItemRow = SyncSessionItemRow & {
+  readonly itemId: string | null;
+  readonly itemTitle: string | null;
+  readonly itemImage: string | null;
+};
 
 export type SyncStatus = {
   existingItems: number;
@@ -127,55 +136,4 @@ export type UserItem = {
   note: string;
   orderId: null;
   orderDate: string | null;
-};
-
-export type ScrapedItem = {
-  id: number;
-  title: string;
-  category: Category;
-  classification: {
-    id: number;
-    name: string;
-    role: string;
-  }[];
-  origin: {
-    id: number;
-    name: string;
-  }[];
-  character: {
-    id: number;
-    name: string;
-  }[];
-  company: {
-    id: number;
-    name: string;
-    role: string;
-  }[];
-  artist: {
-    id: number;
-    name: string;
-    role: string;
-  }[];
-  version: string[];
-  releaseDate: {
-    date: string;
-    type: string;
-    price: number;
-    priceCurrency: string;
-    barcode: string;
-  }[];
-  event: {
-    id: number;
-    name: string;
-    role: string;
-  }[];
-  materials: {
-    id: number;
-    name: string;
-  }[];
-  scale: string;
-  height: number;
-  width: number;
-  depth: number;
-  image: string;
 };

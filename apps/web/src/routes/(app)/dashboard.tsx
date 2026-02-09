@@ -1,8 +1,7 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { app } from "@/lib/treaty-client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { CollectionBreakdown } from "@/components/dashboard/collection-breakdown";
 import { BudgetControlCard } from "@/components/dashboard/budget-control-card";
@@ -37,7 +36,6 @@ function RouteComponent() {
 }
 
 function DashboardContent() {
-  const navigate = useNavigate();
   const { session } = Route.useRouteContext();
   const userCurrency = session?.user.currency;
   const dateFormat = session?.user.dateFormat as DateFormat;
@@ -90,32 +88,6 @@ function DashboardContent() {
           Welcome,{" "}
           <span className="text-muted-foreground">{session?.user.username} (づ｡◕‿‿◕｡)づ</span>
         </h1>
-        <div className="flex flex-row flex-wrap items-center gap-2 lg:ml-auto">
-          <Button
-            variant="outline"
-            size="md"
-            onClick={() => {
-              navigate({
-                to: "/sync/collection",
-              });
-            }}
-          >
-            <Plus className="h-4 w-4" />
-            Add Collection Item
-          </Button>
-          <Button
-            variant="outline"
-            size="md"
-            onClick={() => {
-              navigate({
-                to: "/sync/order",
-              });
-            }}
-          >
-            <Plus className="h-4 w-4" />
-            Add Order
-          </Button>
-        </div>
       </div>
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-4">
         <div className="col-span-1 lg:col-span-3 border-dashed space-y-4 flex flex-col">

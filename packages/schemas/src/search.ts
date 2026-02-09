@@ -1,5 +1,12 @@
 import * as z from "zod";
-import { SHIPPING_METHODS, ORDER_STATUSES, CONDITIONS, CATEGORIES } from "@myakiba/constants";
+import {
+  SHIPPING_METHODS,
+  ORDER_STATUSES,
+  CONDITIONS,
+  CATEGORIES,
+  SYNC_SESSION_STATUSES,
+  SYNC_TYPES,
+} from "@myakiba/constants";
 
 export const searchSchema = z.object({
   limit: z.coerce.number().optional(),
@@ -97,4 +104,11 @@ export const collectionSearchSchema = z.object({
   scale: z.array(z.string()).optional(),
   tags: z.array(z.string()).optional(),
   condition: z.array(z.enum(CONDITIONS)).optional(),
+});
+
+export const syncSearchSchema = z.object({
+  page: z.coerce.number().int().positive().optional(),
+  limit: z.coerce.number().int().positive().optional(),
+  status: z.enum(SYNC_SESSION_STATUSES).optional(),
+  syncType: z.enum(SYNC_TYPES).optional(),
 });

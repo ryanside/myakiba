@@ -470,18 +470,22 @@ function DataGridTable<TData>() {
       {(props.tableLayout?.stripped || !props.tableLayout?.rowBorder) && <DataGridTableRowSpacer />}
 
       <DataGridTableBody>
-        {props.loadingMode === "skeleton" && isLoading && pagination?.pageSize ? (
-          Array.from({ length: pagination.pageSize }).map((_, rowIndex) => (
-            <DataGridTableBodyRowSkeleton key={rowIndex}>
-              {table.getVisibleFlatColumns().map((column, colIndex) => {
-                return (
-                  <DataGridTableBodyRowSkeletonCell column={column} key={colIndex}>
-                    {column.columnDef.meta?.skeleton}
-                  </DataGridTableBodyRowSkeletonCell>
-                );
-              })}
-            </DataGridTableBodyRowSkeleton>
-          ))
+        {props.loadingMode === "skeleton" &&
+        isLoading &&
+        (props.skeletonRowCount ?? pagination?.pageSize) ? (
+          Array.from({ length: props.skeletonRowCount ?? pagination.pageSize }).map(
+            (_, rowIndex) => (
+              <DataGridTableBodyRowSkeleton key={rowIndex}>
+                {table.getVisibleFlatColumns().map((column, colIndex) => {
+                  return (
+                    <DataGridTableBodyRowSkeletonCell column={column} key={colIndex}>
+                      {column.columnDef.meta?.skeleton}
+                    </DataGridTableBodyRowSkeletonCell>
+                  );
+                })}
+              </DataGridTableBodyRowSkeleton>
+            ),
+          )
         ) : table.getRowModel().rows.length ? (
           table.getRowModel().rows.map((row: Row<TData>, index) => {
             return (

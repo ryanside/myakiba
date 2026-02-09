@@ -13,7 +13,7 @@ import {
   useReactTable,
   type OnChangeFn,
 } from "@tanstack/react-table";
-import type { OrderItem } from "@/lib/orders/types";
+import type { OrderItem } from "@myakiba/types";
 import type { CollectionItemFormValues } from "@myakiba/types";
 import { createOrderItemSubColumns } from "./order-item-sub-columns";
 import type { DateFormat } from "@myakiba/types";

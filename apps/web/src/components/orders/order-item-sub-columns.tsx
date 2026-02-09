@@ -14,7 +14,7 @@ import { Package, MoreHorizontal, Copy, Edit, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDate, getCurrencyLocale } from "@myakiba/utils";
 import type { DateFormat } from "@myakiba/types";
-import type { OrderItem } from "@/lib/orders/types";
+import type { OrderItem } from "@myakiba/types";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import CollectionItemForm from "../collection/collection-item-form";

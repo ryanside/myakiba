@@ -28,3 +28,15 @@ export const ENTRY_CATEGORIES = [
 ] as const;
 
 export const DATE_FORMATS = ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY/MM/DD", "YYYY/DD/MM"] as const;
+
+export const SYNC_TYPES = ["csv", "order", "collection"] as const;
+
+export const SYNC_SESSION_STATUSES = [
+  "pending",
+  "processing",
+  "completed",
+  "failed",
+  "partial",
+] as const;
+
+export const SYNC_SESSION_ITEM_STATUSES = ["pending", "scraped", "failed"] as const;

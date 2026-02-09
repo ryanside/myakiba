@@ -6,6 +6,9 @@ export type {
   Currency,
   Category,
   DateFormat,
+  SyncType,
+  SyncSessionStatus,
+  SyncSessionItemStatus,
 } from "./enums";
 
 export type {
@@ -38,5 +41,7 @@ export type {
   SyncFormCollectionItem,
   SyncCollectionItem,
   UserItem,
-  ScrapedItem,
+  SyncSessionRow,
+  SyncSessionItemRow,
+  EnrichedSyncSessionItemRow,
 } from "./sync";

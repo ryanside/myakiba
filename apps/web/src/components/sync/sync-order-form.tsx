@@ -3,7 +3,6 @@ import { Button } from "../ui/button";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { MaskInput } from "../ui/mask-input";
-import { useNavigate } from "@tanstack/react-router";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -25,15 +24,14 @@ import {
   DialogClose,
   DialogTrigger,
 } from "../ui/dialog";
-import { X, ChevronDown, Loader2, ArrowLeft, Plus, Edit, Info } from "lucide-react";
+import { X, ChevronDown, Loader2, Plus, Edit, Info } from "lucide-react";
 import * as z from "zod";
-import type { CascadeOptions } from "@/lib/orders/types";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
-import type { SyncFormOrder, SyncFormOrderItem, SyncOrder } from "@/lib/sync/types";
+import type { CascadeOptions, SyncFormOrder, SyncFormOrderItem, SyncOrder } from "@myakiba/types";
 import { Textarea } from "../ui/textarea";
 import { getCurrencyLocale, majorStringToMinorUnits } from "@myakiba/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { extractMfcItemId } from "@/lib/sync/utils";
+import { extractMfcItemId } from "@/lib/sync";
 import { SHIPPING_METHODS, ORDER_STATUSES, CONDITIONS } from "@myakiba/constants";
 
 export default function SyncOrderForm({
@@ -43,7 +41,6 @@ export default function SyncOrderForm({
   handleSyncOrderSubmit: (values: SyncOrder) => void;
   currency?: string;
 }) {
-  const navigate = useNavigate();
   const userCurrency = currency || "USD";
   const userLocale = getCurrencyLocale(userCurrency);
 
@@ -147,18 +144,6 @@ export default function SyncOrderForm({
   });
   return (
     <div className="">
-      <div className="p-4 pt-0 pl-0 w-full flex flex-row items-center justify-start gap-2">
-        <Button
-          variant="ghost"
-          onClick={() => navigate({ to: "/sync" })}
-          className="text-foreground"
-          aria-label="Back to Sync Options"
-          size="icon"
-        >
-          <ArrowLeft />
-        </Button>
-        <h1 className="text-lg text-black dark:text-white">Add Order</h1>
-      </div>
       <form
         onSubmit={(e) => {
           e.preventDefault();

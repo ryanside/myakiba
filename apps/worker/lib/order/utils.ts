@@ -1,11 +1,10 @@
-import type { scrapedItem, UpdatedSyncOrder, UpdatedSyncOrderItem } from "../types";
-import Redis from "ioredis";
-import type { jobData } from "../types";
-import { normalizeDateString } from "../utils";
+import type { FinalizeOrderSyncParams } from "../types";
+import type { UpdatedSyncOrderItem } from "@myakiba/schemas";
+import { normalizeDateString } from "@myakiba/utils";
 import { v5 as uuidv5 } from "uuid";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@myakiba/db";
-import { setJobStatus } from "../utils";
+import { setJobStatus, updateSyncSessionCounts } from "../utils";
 import {
   item,
   item_release,
@@ -13,16 +12,18 @@ import {
   entry_to_item,
   order,
   collection,
+  syncSession,
 } from "@myakiba/db/schema/figure";
 
-export async function finalizeOrderSync(
-  successfulResults: scrapedItem[],
-  job: jobData,
-  redis: Redis,
-  details: UpdatedSyncOrder,
-  itemsToScrape: UpdatedSyncOrderItem[],
-  itemsToInsert: UpdatedSyncOrderItem[],
-) {
+export async function finalizeOrderSync({
+  successfulResults,
+  job,
+  redis,
+  details,
+  itemsToScrape,
+  itemsToInsert,
+  syncSessionId,
+}: FinalizeOrderSyncParams) {
   const items = successfulResults.map((item) => ({
     externalId: item.id,
     source: "mfc" as const,
@@ -354,19 +355,49 @@ export async function finalizeOrderSync(
 
       await tx.insert(order).values(details);
       await tx.insert(collection).values(orderItems);
+
+      await tx
+        .update(syncSession)
+        .set({ orderId: details.id, updatedAt: new Date() })
+        .where(eq(syncSession.id, syncSessionId));
     });
   } catch (error) {
-    await setJobStatus(redis, job.id!, `Sync failed: Failed to insert items to database.`, true);
+    const uniqueScrapeCount = new Set(itemsToScrape.map((i) => i.itemExternalId)).size;
+    await setJobStatus({
+      redis,
+      jobId: job.id!,
+      statusMessage: `Sync failed: Failed to insert items to database.`,
+      finished: true,
+      syncSessionId,
+      sessionStatus: "failed",
+    });
+    await updateSyncSessionCounts({
+      syncSessionId,
+      successCount: successfulResults.length,
+      failCount: uniqueScrapeCount - successfulResults.length,
+    });
     console.error("Failed to insert data to database.", error);
     throw error;
   }
 
-  await setJobStatus(
+  const uniqueScrapeCount = new Set(itemsToScrape.map((i) => i.itemExternalId)).size;
+  const failCount = uniqueScrapeCount - successfulResults.length;
+  const sessionStatus = failCount === 0 ? ("completed" as const) : ("partial" as const);
+
+  await setJobStatus({
     redis,
-    job.id!,
-    `Sync completed: Synced ${successfulOrderItems.length + itemsToInsert.length} out of ${itemsToInsert.length + itemsToScrape.length} items`,
-    true,
-  );
+    jobId: job.id!,
+    statusMessage: `Sync completed: Synced ${successfulOrderItems.length + itemsToInsert.length} out of ${itemsToInsert.length + itemsToScrape.length} items`,
+    finished: true,
+    syncSessionId,
+    sessionStatus,
+  });
+  await updateSyncSessionCounts({
+    syncSessionId,
+    successCount: successfulResults.length,
+    failCount,
+  });
+
   return {
     status: "Sync Job completed",
     processedAt: new Date().toISOString(),

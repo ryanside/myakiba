@@ -24,9 +24,9 @@
         "@myakiba/db": "workspace:*",
         "@myakiba/env": "workspace:*",
         "@myakiba/redis": "workspace:*",
+        "@myakiba/schemas": "workspace:*",
         "@myakiba/types": "workspace:*",
         "@myakiba/utils": "workspace:*",
-        "@myakiba/validations": "workspace:*",
         "@paralleldrive/cuid2": "catalog:",
         "bullmq": "catalog:",
         "date-fns": "catalog:",
@@ -58,9 +58,9 @@
         "@marsidev/react-turnstile": "^1.3.1",
         "@myakiba/constants": "workspace:*",
         "@myakiba/env": "workspace:*",
+        "@myakiba/schemas": "workspace:*",
         "@myakiba/types": "workspace:*",
         "@myakiba/utils": "workspace:*",
-        "@myakiba/validations": "workspace:*",
         "@radix-ui/react-accordion": "^1.2.12",
         "@radix-ui/react-avatar": "^1.1.11",
         "@radix-ui/react-collapsible": "^1.1.12",
@@ -89,7 +89,7 @@
         "cmdk": "1.1.1",
         "date-fns": "catalog:",
         "lucide-react": "^0.562.0",
-        "motion": "^12.23.26",
+        "motion": "^12.33.0",
         "next-themes": "^0.4.6",
         "papaparse": "^5.5.3",
         "radix-ui": "^1.4.3",
@@ -129,9 +129,9 @@
         "@myakiba/db": "workspace:*",
         "@myakiba/env": "workspace:*",
         "@myakiba/redis": "workspace:*",
+        "@myakiba/schemas": "workspace:*",
         "@myakiba/types": "workspace:*",
         "@myakiba/utils": "workspace:*",
-        "@myakiba/validations": "workspace:*",
         "bullmq": "catalog:",
         "cheerio": "^1.1.2",
         "domhandler": "^5.0.3",
@@ -248,6 +248,21 @@
         "typescript": "catalog:",
       },
     },
+    "packages/schemas": {
+      "name": "@myakiba/schemas",
+      "version": "0.0.0",
+      "dependencies": {
+        "@myakiba/constants": "workspace:*",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@myakiba/config": "workspace:*",
+        "@types/bun": "catalog:",
+      },
+      "peerDependencies": {
+        "typescript": "catalog:",
+      },
+    },
     "packages/types": {
       "name": "@myakiba/types",
       "version": "0.0.0",
@@ -271,21 +286,6 @@
       "devDependencies": {
         "@myakiba/config": "workspace:*",
         "@myakiba/types": "workspace:*",
-        "@types/bun": "catalog:",
-      },
-      "peerDependencies": {
-        "typescript": "catalog:",
-      },
-    },
-    "packages/validations": {
-      "name": "@myakiba/validations",
-      "version": "0.0.0",
-      "dependencies": {
-        "@myakiba/constants": "workspace:*",
-        "zod": "catalog:",
-      },
-      "devDependencies": {
-        "@myakiba/config": "workspace:*",
         "@types/bun": "catalog:",
       },
       "peerDependencies": {
@@ -623,11 +623,11 @@
 
     "@myakiba/redis": ["@myakiba/redis@workspace:packages/redis"],
 
+    "@myakiba/schemas": ["@myakiba/schemas@workspace:packages/schemas"],
+
     "@myakiba/types": ["@myakiba/types@workspace:packages/types"],
 
     "@myakiba/utils": ["@myakiba/utils@workspace:packages/utils"],
-
-    "@myakiba/validations": ["@myakiba/validations@workspace:packages/validations"],
 
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@0.2.12", "", { "dependencies": { "@emnapi/core": "^1.4.3", "@emnapi/runtime": "^1.4.3", "@tybys/wasm-util": "^0.10.0" } }, "sha512-ZVWUcfwY4E/yPitQJl481FjFo3K22D6qF0DuFH6Y/nbnE11GY5uguDxZMGXPQ8WQ0128MXQD7TnfHyK4oWoIJQ=="],
 
@@ -1363,7 +1363,7 @@
 
     "fractional-indexing": ["fractional-indexing@3.2.0", "", {}, "sha512-PcOxmqwYCW7O2ovKRU8OoQQj2yqTfEB/yeTYk4gPid6dN5ODRfU1hXd9tTVZzax/0NkO7AxpHykvZnT1aYp/BQ=="],
 
-    "framer-motion": ["framer-motion@12.23.26", "", { "dependencies": { "motion-dom": "^12.23.23", "motion-utils": "^12.23.6", "tslib": "^2.4.0" }, "peerDependencies": { "@emotion/is-prop-valid": "*", "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0" }, "optionalPeers": ["@emotion/is-prop-valid", "react", "react-dom"] }, "sha512-cPcIhgR42xBn1Uj+PzOyheMtZ73H927+uWPDVhUMqxy8UHt6Okavb6xIz9J/phFUHUj0OncR6UvMfJTXoc/LKA=="],
+    "framer-motion": ["framer-motion@12.33.0", "", { "dependencies": { "motion-dom": "^12.33.0", "motion-utils": "^12.29.2", "tslib": "^2.4.0" }, "peerDependencies": { "@emotion/is-prop-valid": "*", "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0" }, "optionalPeers": ["@emotion/is-prop-valid", "react", "react-dom"] }, "sha512-ca8d+rRPcDP5iIF+MoT3WNc0KHJMjIyFAbtVLvM9eA7joGSpeqDfiNH/kCs1t4CHi04njYvWyj0jS4QlEK/rJQ=="],
 
     "fsevents": ["fsevents@2.3.3", "", { "os": "darwin" }, "sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw=="],
 
@@ -1497,11 +1497,11 @@
 
     "minimist": ["minimist@1.2.8", "", {}, "sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA=="],
 
-    "motion": ["motion@12.23.26", "", { "dependencies": { "framer-motion": "^12.23.26", "tslib": "^2.4.0" }, "peerDependencies": { "@emotion/is-prop-valid": "*", "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0" }, "optionalPeers": ["@emotion/is-prop-valid", "react", "react-dom"] }, "sha512-Ll8XhVxY8LXMVYTCfme27WH2GjBrCIzY4+ndr5QKxsK+YwCtOi2B/oBi5jcIbik5doXuWT/4KKDOVAZJkeY5VQ=="],
+    "motion": ["motion@12.33.0", "", { "dependencies": { "framer-motion": "^12.33.0", "tslib": "^2.4.0" }, "peerDependencies": { "@emotion/is-prop-valid": "*", "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0" }, "optionalPeers": ["@emotion/is-prop-valid", "react", "react-dom"] }, "sha512-TcND7PijsrTeIA9SRVUB8TOJQ+6mJnJ5K4a9oAJZvyI0Zy47Gq5oofU+VkTxbLcvDoKXnHspQcII2mnk3TbFsQ=="],
 
-    "motion-dom": ["motion-dom@12.23.23", "", { "dependencies": { "motion-utils": "^12.23.6" } }, "sha512-n5yolOs0TQQBRUFImrRfs/+6X4p3Q4n1dUEqt/H58Vx7OW6RF+foWEgmTVDhIWJIMXOuNNL0apKH2S16en9eiA=="],
+    "motion-dom": ["motion-dom@12.33.0", "", { "dependencies": { "motion-utils": "^12.29.2" } }, "sha512-XRPebVypsl0UM+7v0Hr8o9UAj0S2djsQWRdHBd5iVouVpMrQqAI0C/rDAT3QaYnXnHuC5hMcwDHCboNeyYjPoQ=="],
 
-    "motion-utils": ["motion-utils@12.23.6", "", {}, "sha512-eAWoPgr4eFEOFfg2WjIsMoqJTW6Z8MTUCgn/GZ3VRpClWBdnbjryiA3ZSNLyxCTmCQx4RmYX6jX1iWHbenUPNQ=="],
+    "motion-utils": ["motion-utils@12.29.2", "", {}, "sha512-G3kc34H2cX2gI63RqU+cZq+zWRRPSsNIOjpdl9TN4AQwC4sgwYPl/Q/Obf/d53nOm569T0fYK+tcoSV50BWx8A=="],
 
     "ms": ["ms@4.0.0-nightly.202508271359", "", {}, "sha512-WC/Eo7NzFrOV/RRrTaI0fxKVbNCzEy76j2VqNV8SxDf9D69gSE2Lh0QwYvDlhiYmheBYExAvEAxVf5NoN0cj2A=="],
 

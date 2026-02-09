@@ -1,5 +1,63 @@
 import Papa from "papaparse";
-import { csvSchema, type UserItem } from "./types";
+import { csvSchema } from "@myakiba/schemas";
+import type { UserItem, SyncType, SyncSessionStatus, SyncSessionItemStatus } from "@myakiba/types";
+
+export const SESSION_STATUS_CONFIG: Record<
+  SyncSessionStatus,
+  {
+    readonly label: string;
+    readonly variant: "success" | "warning" | "destructive" | "info" | "secondary";
+  }
+> = {
+  pending: { label: "Pending", variant: "secondary" },
+  processing: { label: "Processing", variant: "info" },
+  completed: { label: "Completed", variant: "success" },
+  failed: { label: "Failed", variant: "destructive" },
+  partial: { label: "Partial", variant: "warning" },
+};
+
+export const SYNC_TYPE_CONFIG: Record<
+  SyncType,
+  {
+    readonly label: string;
+    readonly variant: "primary" | "info" | "secondary";
+  }
+> = {
+  csv: { label: "CSV", variant: "primary" },
+  order: { label: "Order", variant: "info" },
+  collection: { label: "Collection", variant: "secondary" },
+};
+
+export const ITEM_STATUS_CONFIG: Record<
+  SyncSessionItemStatus,
+  {
+    readonly label: string;
+    readonly variant: "secondary" | "success" | "destructive";
+  }
+> = {
+  pending: { label: "Pending", variant: "secondary" },
+  scraped: { label: "Scraped", variant: "success" },
+  failed: { label: "Failed", variant: "destructive" },
+};
+
+export const SYNC_OPTION_META: Record<
+  SyncType,
+  { readonly title: string; readonly description: string }
+> = {
+  collection: {
+    title: "Sync Collection",
+    description: "Add to your collection using MyFigureCollection Item IDs.",
+  },
+  order: {
+    title: "Sync Order",
+    description: "Create and add an order using MyFigureCollection Item IDs.",
+  },
+  csv: {
+    title: "Sync CSV",
+    description:
+      "Sync your MyFigureCollection and myakiba using MyFigureCollection CSV. You can export your CSV by going to myfigurecollection.net > User Menu > Manager > CSV Export (with all fields checked, Choose ',' (comma) for the settings option).",
+  },
+} as const;
 
 /**
  * Extracts the MyFigureCollection item ID from a URL or returns the ID if it's already a number.

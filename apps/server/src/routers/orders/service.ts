@@ -2,7 +2,7 @@ import type { ShippingMethod } from "@myakiba/types";
 import { db } from "@myakiba/db";
 import { order, collection, item, item_release } from "@myakiba/db/schema/figure";
 import { eq, and, inArray, sql, desc, asc, ilike, ne, gte, lte } from "drizzle-orm";
-import type { orderInsertType, orderUpdateType } from "./model";
+import type { OrderInsertType, OrderUpdateType } from "./model";
 import type { OrderStatus, Condition } from "@myakiba/types";
 
 type OrderItem = {
@@ -315,7 +315,7 @@ class OrdersService {
   async mergeOrders(
     userId: string,
     orderIds: string[],
-    newOrder: Omit<orderInsertType, "userId">,
+    newOrder: Omit<OrderInsertType, "userId">,
     cascadeOptions: string[],
   ) {
     const merged = await db.transaction(async (tx) => {
@@ -367,7 +367,7 @@ class OrdersService {
   async splitOrders(
     userId: string,
     collectionIds: string[],
-    newOrder: Omit<orderInsertType, "userId">,
+    newOrder: Omit<OrderInsertType, "userId">,
     cascadeOptions: string[],
   ) {
     const splitted = await db.transaction(async (tx) => {
@@ -411,7 +411,7 @@ class OrdersService {
   async updateOrder(
     userId: string,
     orderId: string,
-    updatedOrder: orderUpdateType,
+    updatedOrder: OrderUpdateType,
     cascadeOptions: string[],
   ) {
     const updated = await db.transaction(async (tx) => {

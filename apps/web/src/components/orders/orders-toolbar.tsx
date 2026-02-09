@@ -14,7 +14,7 @@ import {
   ActionBarClose,
   ActionBarSeparator,
 } from "@/components/ui/action-bar";
-import type { OrderFilters, CascadeOptions, NewOrder } from "@/lib/orders/types";
+import type { OrderFilters, CascadeOptions, NewOrder } from "@myakiba/types";
 
 // Define sortable columns configuration
 const SORTABLE_COLUMNS: SortableColumn[] = [

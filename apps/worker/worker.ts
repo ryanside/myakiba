@@ -1,22 +1,36 @@
 import { Worker } from "bullmq";
 import { scrapedItems, scrapedItemsWithRateLimit } from "./lib/scrape";
-import { setJobStatus, sendMockScrapeProgress } from "./lib/utils";
-import { jobDataSchema, type jobData } from "./lib/types";
+import {
+  setJobStatus,
+  updateSyncSessionCounts,
+  batchUpdateSyncSessionItemStatuses,
+} from "./lib/utils";
+import type { jobData } from "./lib/types";
+import { jobDataSchema } from "@myakiba/schemas";
 import { finalizeCollectionSync } from "./lib/collection/utils";
 import { finalizeOrderSync } from "./lib/order/utils";
 import { finalizeCsvSync } from "./lib/csv/utils";
 import { env } from "@myakiba/env/worker";
 import { redis } from "@myakiba/redis";
 
+const SCRAPE_FAILED_MESSAGE =
+  "Sync failed: Failed to scrape items. Please try again. MFC might be down, or the MFC item IDs may be invalid.";
+
 const myWorker = new Worker(
   "sync-queue",
   async (job: jobData) => {
     const validatedData = jobDataSchema.safeParse(job.data);
     if (validatedData.error) {
-      await setJobStatus(redis, job.id!, `Sync failed: Invalid data. Please try again.`, true);
+      await setJobStatus({
+        redis,
+        jobId: job.id!,
+        statusMessage: `Sync failed: Invalid data. Please try again.`,
+        finished: true,
+      });
       throw new Error("Invalid data", { cause: validatedData.error });
     }
     const userId = validatedData.data.userId;
+    const syncSessionId = validatedData.data.syncSessionId;
     const type = validatedData.data.type;
 
     if (type === "csv") {
@@ -32,30 +46,56 @@ const myWorker = new Worker(
         new Set(validatedData.data.items.map((item) => item.itemExternalId)),
       );
 
-      await setJobStatus(redis, job.id!, `Starting to sync ${itemIds.length} items`, false);
+      await setJobStatus({
+        redis,
+        jobId: job.id!,
+        statusMessage: `Starting to sync ${itemIds.length} items`,
+        finished: false,
+        syncSessionId,
+        sessionStatus: "processing",
+      });
 
-      if (env.MOCK_SCRAPE_PROGRESS) {
-        await sendMockScrapeProgress(redis, job.id!, {
-          mockItemCount: 50,
-          delayMs: 500,
-          simulateFailure: false,
-        });
-        return [];
-      }
+      const successfulResults = await scrapeMethod({
+        itemIds,
+        maxRetries: 3,
+        baseDelayMs: 1000,
+        userId,
+        jobId: job.id!,
+      });
 
-      const successfulResults = await scrapeMethod(itemIds, 3, 1000, userId, job.id!);
+      const scrapedItemIds = successfulResults.map((r) => r.id);
+      const failedItemIds = itemIds.filter((id) => !scrapedItemIds.includes(id));
+      await batchUpdateSyncSessionItemStatuses({
+        syncSessionId,
+        scrapedItemIds,
+        failedItemIds,
+      });
 
       if (successfulResults.length === 0) {
-        await setJobStatus(
+        await setJobStatus({
           redis,
-          job.id!,
-          `Sync failed: Failed to scrape items. Please try again. MFC might be down, or the MFC item IDs may be invalid.`,
-          true,
-        );
+          jobId: job.id!,
+          statusMessage: SCRAPE_FAILED_MESSAGE,
+          finished: true,
+          syncSessionId,
+          sessionStatus: "failed",
+        });
+        await updateSyncSessionCounts({
+          syncSessionId,
+          successCount: 0,
+          failCount: itemIds.length,
+        });
         throw new Error("Failed to scrape items.");
       }
 
-      await finalizeCsvSync(successfulResults, job, userId, redis, validatedData.data.items);
+      await finalizeCsvSync({
+        successfulResults,
+        job,
+        userId,
+        redis,
+        csvItems: validatedData.data.items,
+        syncSessionId,
+      });
 
       return successfulResults;
     } else if (type === "order") {
@@ -74,37 +114,57 @@ const myWorker = new Worker(
         new Set(validatedData.data.order.itemsToScrape.map((item) => item.itemExternalId)),
       );
 
-      await setJobStatus(redis, job.id!, `Starting to scrape ${itemIds.length} items`, false);
+      await setJobStatus({
+        redis,
+        jobId: job.id!,
+        statusMessage: `Starting to scrape ${itemIds.length} items`,
+        finished: false,
+        syncSessionId,
+        sessionStatus: "processing",
+      });
 
-      if (env.MOCK_SCRAPE_PROGRESS) {
-        await sendMockScrapeProgress(redis, job.id!, {
-          mockItemCount: 50,
-          delayMs: 500,
-          simulateFailure: false,
-        });
-        return [];
-      }
+      const successfulResults = await scrapeMethod({
+        itemIds,
+        maxRetries: 3,
+        baseDelayMs: 1000,
+        userId,
+        jobId: job.id!,
+      });
 
-      const successfulResults = await scrapeMethod(itemIds, 3, 1000, userId, job.id!);
+      const scrapedItemIds = successfulResults.map((r) => r.id);
+      const failedItemIds = itemIds.filter((id) => !scrapedItemIds.includes(id));
+      await batchUpdateSyncSessionItemStatuses({
+        syncSessionId,
+        scrapedItemIds,
+        failedItemIds,
+      });
 
       if (successfulResults.length === 0) {
-        await setJobStatus(
+        await setJobStatus({
           redis,
-          job.id!,
-          `Sync failed: Failed to scrape items. Please try again. MFC might be down, or the MFC item IDs may be invalid.`,
-          true,
-        );
+          jobId: job.id!,
+          statusMessage: SCRAPE_FAILED_MESSAGE,
+          finished: true,
+          syncSessionId,
+          sessionStatus: "failed",
+        });
+        await updateSyncSessionCounts({
+          syncSessionId,
+          successCount: 0,
+          failCount: itemIds.length,
+        });
         throw new Error("Failed to scrape items.");
       }
 
-      await finalizeOrderSync(
+      await finalizeOrderSync({
         successfulResults,
         job,
         redis,
-        validatedData.data.order.details,
-        validatedData.data.order.itemsToScrape,
-        validatedData.data.order.itemsToInsert,
-      );
+        details: validatedData.data.order.details,
+        itemsToScrape: validatedData.data.order.itemsToScrape,
+        itemsToInsert: validatedData.data.order.itemsToInsert,
+        syncSessionId,
+      });
 
       return successfulResults;
     } else {
@@ -122,36 +182,56 @@ const myWorker = new Worker(
         new Set(validatedData.data.collection.itemsToScrape.map((item) => item.itemExternalId)),
       );
 
-      await setJobStatus(redis, job.id!, `Starting to scrape ${itemIds.length} items`, false);
+      await setJobStatus({
+        redis,
+        jobId: job.id!,
+        statusMessage: `Starting to scrape ${itemIds.length} items`,
+        finished: false,
+        syncSessionId,
+        sessionStatus: "processing",
+      });
 
-      if (env.MOCK_SCRAPE_PROGRESS) {
-        await sendMockScrapeProgress(redis, job.id!, {
-          mockItemCount: 50,
-          delayMs: 500,
-          simulateFailure: false,
-        });
-        return [];
-      }
+      const successfulResults = await scrapeMethod({
+        itemIds,
+        maxRetries: 3,
+        baseDelayMs: 1000,
+        userId,
+        jobId: job.id!,
+      });
 
-      const successfulResults = await scrapeMethod(itemIds, 3, 1000, userId, job.id!);
+      const scrapedItemIds = successfulResults.map((r) => r.id);
+      const failedItemIds = itemIds.filter((id) => !scrapedItemIds.includes(id));
+      await batchUpdateSyncSessionItemStatuses({
+        syncSessionId,
+        scrapedItemIds,
+        failedItemIds,
+      });
 
       if (successfulResults.length === 0) {
-        await setJobStatus(
+        await setJobStatus({
           redis,
-          job.id!,
-          `Sync failed: Failed to scrape items. Please try again. MFC might be down, or the MFC item IDs may be invalid.`,
-          true,
-        );
+          jobId: job.id!,
+          statusMessage: SCRAPE_FAILED_MESSAGE,
+          finished: true,
+          syncSessionId,
+          sessionStatus: "failed",
+        });
+        await updateSyncSessionCounts({
+          syncSessionId,
+          successCount: 0,
+          failCount: itemIds.length,
+        });
         throw new Error("Failed to scrape items.");
       }
 
-      await finalizeCollectionSync(
+      await finalizeCollectionSync({
         successfulResults,
         job,
         redis,
-        validatedData.data.collection.itemsToScrape,
-        validatedData.data.collection.itemsToInsert,
-      );
+        itemsToScrape: validatedData.data.collection.itemsToScrape,
+        itemsToInsert: validatedData.data.collection.itemsToInsert,
+        syncSessionId,
+      });
 
       return successfulResults;
     }
@@ -173,8 +253,26 @@ myWorker.on("error", (error) => {
   console.error("❌ Worker error:", error);
 });
 
-myWorker.on("failed", (job, err) => {
+myWorker.on("failed", async (job, err) => {
   console.error("💥 Job failed:", job?.name, "Error:", err);
+
+  if (!job?.id) return;
+
+  const syncSessionId = (job.data as Record<string, unknown>)?.syncSessionId;
+  if (typeof syncSessionId !== "string") return;
+
+  try {
+    await setJobStatus({
+      redis,
+      jobId: job.id,
+      statusMessage: `Sync failed: ${err.message}`,
+      finished: true,
+      syncSessionId,
+      sessionStatus: "failed",
+    });
+  } catch (cleanupError) {
+    console.error("❌ Failed to update sync session on job failure:", cleanupError);
+  }
 });
 
 myWorker.on("completed", (job, result) => {

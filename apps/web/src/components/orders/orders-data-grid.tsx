@@ -12,13 +12,7 @@ import {
   useReactTable,
   type Updater,
 } from "@tanstack/react-table";
-import type {
-  CascadeOptions,
-  EditedOrder,
-  OrderFilters,
-  NewOrder,
-  Order,
-} from "@/lib/orders/types";
+import type { CascadeOptions, EditedOrder, OrderFilters, NewOrder, Order } from "@myakiba/types";
 import { useSelection } from "@/hooks/use-selection";
 import type { CollectionItemFormValues } from "@myakiba/types";
 import { DataGridColumnCombobox } from "../ui/data-grid-column-combobox";

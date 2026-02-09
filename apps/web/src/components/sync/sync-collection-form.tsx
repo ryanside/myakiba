@@ -1,8 +1,7 @@
 import { useForm } from "@tanstack/react-form";
 import { Button } from "../ui/button";
-import type { SyncCollectionItem, SyncFormCollectionItem } from "@/lib/sync/types";
-import { ArrowLeft, Edit, Loader2, Plus, X } from "lucide-react";
-import { useNavigate } from "@tanstack/react-router";
+import type { SyncCollectionItem, SyncFormCollectionItem } from "@myakiba/types";
+import { Edit, Loader2, Plus, X } from "lucide-react";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { MaskInput } from "../ui/mask-input";
@@ -22,7 +21,7 @@ import * as z from "zod";
 import { Rating } from "../ui/rating";
 import { Textarea } from "../ui/textarea";
 import { getCurrencyLocale, majorStringToMinorUnits } from "@myakiba/utils";
-import { extractMfcItemId } from "@/lib/sync/utils";
+import { extractMfcItemId } from "@/lib/sync";
 import { CONDITIONS, SHIPPING_METHODS } from "@myakiba/constants";
 
 export default function SyncCollectionForm({
@@ -32,7 +31,6 @@ export default function SyncCollectionForm({
   handleSyncCollectionSubmit: (values: SyncCollectionItem[]) => void;
   currency?: string;
 }) {
-  const navigate = useNavigate();
   const userCurrency = currency || "USD";
   const userLocale = getCurrencyLocale(userCurrency);
 
@@ -80,18 +78,6 @@ export default function SyncCollectionForm({
   });
   return (
     <div className="w-full">
-      <div className="p-4 pt-0 pl-0 w-full flex flex-row items-center justify-start gap-2">
-        <Button
-          variant="ghost"
-          onClick={() => navigate({ to: "/sync" })}
-          className="text-foreground"
-          aria-label="Back to Sync Options"
-          size="icon"
-        >
-          <ArrowLeft />
-        </Button>
-        <h1 className="text-lg text-black dark:text-white">Add Collection Items</h1>
-      </div>
       <form
         onSubmit={(e) => {
           e.preventDefault();

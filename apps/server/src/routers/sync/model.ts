@@ -1,7 +1,7 @@
 import * as z from "zod";
-import { createInsertSchema } from "drizzle-zod";
-import { collection, order } from "@myakiba/db/schema/figure";
 import { ORDER_STATUSES, CONDITIONS, SHIPPING_METHODS } from "@myakiba/constants";
+import { collection } from "@myakiba/db/schema/figure";
+import { createInsertSchema } from "drizzle-zod";
 
 export const csvItemSchema = z.object({
   itemExternalId: z.int(),
@@ -20,14 +20,6 @@ export const csvItemSchema = z.object({
 });
 
 export type csvItem = z.infer<typeof csvItemSchema>;
-
-export const orderInsertSchema = createInsertSchema(order);
-
-export type orderInsertType = z.infer<typeof orderInsertSchema>;
-
-export const collectionInsertSchema = createInsertSchema(collection);
-
-export type collectionInsertType = z.infer<typeof collectionInsertSchema>;
 
 export const statusSchema = z.object({
   status: z.string(),
@@ -90,6 +82,9 @@ export const collectionSyncSchema = z.object({
 });
 
 export type collectionSyncType = z.infer<typeof collectionSyncSchema>;
+
+export const collectionInsertSchema = createInsertSchema(collection);
+export type CollectionInsertType = z.infer<typeof collectionInsertSchema>;
 
 export type UpdatedSyncCollection = collectionSyncType & {
   userId: string;

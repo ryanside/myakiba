@@ -10,6 +10,7 @@ import {
   bigint,
   index,
   uniqueIndex,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 import { createId } from "@paralleldrive/cuid2";
@@ -18,6 +19,9 @@ import {
   SHIPPING_METHODS,
   ORDER_STATUSES,
   CONDITIONS,
+  SYNC_TYPES,
+  SYNC_SESSION_STATUSES,
+  SYNC_SESSION_ITEM_STATUSES,
 } from "@myakiba/constants/enums";
 import { CATEGORIES } from "@myakiba/constants/categories";
 
@@ -229,3 +233,53 @@ export const waitlist = pgTable("waitlist", {
   email: text("email").notNull().unique(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+export const syncSession = pgTable(
+  "sync_session",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    syncType: text("sync_type", { enum: SYNC_TYPES }).notNull(),
+    jobId: text("job_id"),
+    status: text("status", { enum: SYNC_SESSION_STATUSES }).notNull().default("pending"),
+    statusMessage: text("status_message").notNull().default(""),
+    orderId: text("order_id").references(() => order.id, {
+      onDelete: "set null",
+    }),
+    orderPayload: jsonb("order_payload"),
+    totalItems: integer("total_items").notNull().default(0),
+    successCount: integer("success_count").notNull().default(0),
+    failCount: integer("fail_count").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    completedAt: timestamp("completed_at"),
+  },
+  (t) => [
+    index("sync_session_user_id_status_idx").on(t.userId, t.status),
+    index("sync_session_user_id_created_at_idx").on(t.userId, t.createdAt.desc()),
+  ],
+);
+
+export const syncSessionItem = pgTable(
+  "sync_session_item",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    syncSessionId: text("sync_session_id")
+      .notNull()
+      .references(() => syncSession.id, { onDelete: "cascade" }),
+    itemExternalId: integer("item_external_id").notNull(),
+    metadata: jsonb("metadata"),
+    status: text("status", { enum: SYNC_SESSION_ITEM_STATUSES }).notNull().default("pending"),
+    errorReason: text("error_reason"),
+    retryCount: integer("retry_count").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [index("sync_session_item_session_id_status_idx").on(t.syncSessionId, t.status)],
+);

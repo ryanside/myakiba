@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useFilters } from "@/hooks/use-filters";
 import type { CollectionItem, CollectionFilters, CollectionItemFormValues } from "@myakiba/types";
 import { CollectionDataGrid } from "@/components/collection/collection-data-grid";
-import { collectionSearchSchema } from "@/lib/validations";
+import { collectionSearchSchema } from "@myakiba/schemas";
 import { CollectionDataGridSkeleton } from "@/components/collection/collection-data-grid-skeleton";
 import { toast } from "sonner";
 import { useCallback, useMemo } from "react";

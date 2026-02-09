@@ -1,13 +1,11 @@
 import type { ShippingMethod } from "@myakiba/types";
-import type { scrapedItem, CsvItem } from "../types";
-import Redis from "ioredis";
-import type { jobData } from "../types";
-import { normalizeDateString } from "../utils";
+import type { FinalizeCsvSyncParams } from "../types";
+import { normalizeDateString } from "@myakiba/utils";
 import { parseMoneyToMinorUnits } from "@myakiba/utils";
 import { v5 as uuidv5 } from "uuid";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@myakiba/db";
-import { setJobStatus } from "../utils";
+import { setJobStatus, updateSyncSessionCounts } from "../utils";
 import {
   item,
   item_release,
@@ -17,13 +15,14 @@ import {
   collection,
 } from "@myakiba/db/schema/figure";
 
-export async function finalizeCsvSync(
-  successfulResults: scrapedItem[],
-  job: jobData,
-  userId: string,
-  redis: Redis,
-  csvItems: CsvItem[],
-) {
+export async function finalizeCsvSync({
+  successfulResults,
+  job,
+  userId,
+  redis,
+  csvItems,
+  syncSessionId,
+}: FinalizeCsvSyncParams) {
   const items = successfulResults.map((item) => ({
     externalId: item.id,
     source: "mfc" as const,
@@ -430,17 +429,42 @@ export async function finalizeCsvSync(
 
     console.log("Successfully inserted data to database.");
   } catch (error) {
-    await setJobStatus(redis, job.id!, `Sync failed: Failed to insert items to database.`, true);
+    const uniqueItemCount = new Set(csvItems.map((i) => i.itemExternalId)).size;
+    await setJobStatus({
+      redis,
+      jobId: job.id!,
+      statusMessage: `Sync failed: Failed to insert items to database.`,
+      finished: true,
+      syncSessionId,
+      sessionStatus: "failed",
+    });
+    await updateSyncSessionCounts({
+      syncSessionId,
+      successCount: successfulResults.length,
+      failCount: uniqueItemCount - successfulResults.length,
+    });
     console.error("Failed to insert data to database.", error);
     throw error;
   }
 
-  await setJobStatus(
+  const uniqueItemCount = new Set(csvItems.map((i) => i.itemExternalId)).size;
+  const failCount = uniqueItemCount - successfulResults.length;
+  const sessionStatus = failCount === 0 ? ("completed" as const) : ("partial" as const);
+
+  await setJobStatus({
     redis,
-    job.id!,
-    `Sync completed: Synced ${successfulResults.length} out of ${csvItems.length} items`,
-    true,
-  );
+    jobId: job.id!,
+    statusMessage: `Sync completed: Synced ${successfulResults.length} out of ${uniqueItemCount} items`,
+    finished: true,
+    syncSessionId,
+    sessionStatus,
+  });
+  await updateSyncSessionCounts({
+    syncSessionId,
+    successCount: successfulResults.length,
+    failCount,
+  });
+
   return {
     status: "Sync Job completed",
     processedAt: new Date().toISOString(),

@@ -7,7 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown } from "lucide-react";
-import type { CascadeOptions } from "@/lib/orders/types";
+import type { CascadeOptions } from "@myakiba/types";
 
 interface CascadeOptionsDropdownProps {
   cascadeOptions: CascadeOptions;

@@ -13,9 +13,10 @@ import {
   extractReleaseData,
   extractMaterialsData,
 } from "./lib/extract";
-import { createFetchOptions, normalizeDateString } from "./lib/utils";
+import { createFetchOptions } from "./lib/utils";
+import { normalizeDateString } from "@myakiba/utils";
 import { v5 as uuidv5 } from "uuid";
-import type { scrapedItem } from "./lib/types";
+import type { ScrapedItem } from "./lib/types";
 import { env } from "@myakiba/env/worker";
 import type { Category } from "@myakiba/types";
 import { CATEGORIES } from "@myakiba/constants";
@@ -93,7 +94,7 @@ const scrapeSingleItem = async (
   jobId?: string,
   overallIndex: number = 0,
   totalItems: number = 1,
-): Promise<scrapedItem | null> => {
+): Promise<ScrapedItem | null> => {
   console.time("Scraping Duration");
   console.log(`Processing item ${overallIndex + 1}/${totalItems}`);
 
@@ -217,7 +218,7 @@ const scrapeSingleItem = async (
         image = imageResponse;
       }
 
-      const scrapedItem: scrapedItem = {
+      const scrapedItem: ScrapedItem = {
         id,
         title,
         category,
@@ -268,7 +269,7 @@ const scrapedItems = async (
   jobId?: string,
   startingIndex: number = 0,
   totalItems: number = itemIds.length,
-): Promise<scrapedItem[]> => {
+): Promise<ScrapedItem[]> => {
   console.time("Scraping Duration");
 
   console.log(`Starting to scrape ${itemIds.length} items with up to ${maxRetries} retries each`);
@@ -281,7 +282,7 @@ const scrapedItems = async (
   // Filter out failed requests and extract successful results
   const successfulResults = results
     .filter(
-      (result): result is PromiseFulfilledResult<scrapedItem> =>
+      (result): result is PromiseFulfilledResult<ScrapedItem> =>
         result.status === "fulfilled" && result.value !== null,
     )
     .map((result) => result.value);
@@ -305,7 +306,7 @@ const scrapedItemsWithRateLimit = async (
   baseDelayMs: number = 1000,
   userId: string,
   jobId?: string,
-): Promise<scrapedItem[]> => {
+): Promise<ScrapedItem[]> => {
   console.time("Rate-Limited Scraping Duration");
   const startTime = Date.now();
 
@@ -318,7 +319,7 @@ const scrapedItemsWithRateLimit = async (
 
   console.log(`Max retries per item: ${maxRetries}, Base retry delay: ${baseDelayMs}ms`);
 
-  const allResults: scrapedItem[] = [];
+  const allResults: ScrapedItem[] = [];
   const totalBatches = Math.ceil(itemIds.length / batchSize);
 
   for (let i = 0; i < itemIds.length; i += batchSize) {

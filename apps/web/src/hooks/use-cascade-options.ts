@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import type { CascadeOptions } from "@/lib/orders/types";
+import type { CascadeOptions } from "@myakiba/types";
 
 const cascadeOptionsList = [
   "status",

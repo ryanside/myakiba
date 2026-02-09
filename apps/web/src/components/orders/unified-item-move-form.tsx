@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import * as z from "zod";
-import type { NewOrder, CascadeOptions } from "@/lib/orders/types";
+import type { NewOrder, CascadeOptions } from "@myakiba/types";
 import { Loader2, ChevronsUpDownIcon, CheckIcon } from "lucide-react";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import { CascadeOptionsDropdown } from "@/components/cascade-options-dropdown";

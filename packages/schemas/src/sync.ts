@@ -127,15 +127,44 @@ const internalCsvItemSchema = z.object({
 export type CsvItem = z.infer<typeof csvItemSchema>;
 export type InternalCsvItem = z.infer<typeof internalCsvItemSchema>;
 
+export const csvItemMetadataSchema = internalCsvItemSchema.omit({
+  itemExternalId: true,
+});
+
+export const orderItemMetadataSchema = syncOrderItemSchema.pick({
+  price: true,
+  count: true,
+  status: true,
+  condition: true,
+  shippingMethod: true,
+  orderDate: true,
+  paymentDate: true,
+  shippingDate: true,
+  collectionDate: true,
+});
+
+export const collectionItemMetadataSchema = syncCollectionItemSchema.omit({
+  userId: true,
+  releaseId: true,
+  itemId: true,
+  itemExternalId: true,
+});
+
+export type CsvItemMetadata = z.infer<typeof csvItemMetadataSchema>;
+export type OrderItemMetadata = z.infer<typeof orderItemMetadataSchema>;
+export type CollectionItemMetadata = z.infer<typeof collectionItemMetadataSchema>;
+
 export const jobDataSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("csv"),
     userId: z.string(),
+    syncSessionId: z.string(),
     items: z.array(internalCsvItemSchema),
   }),
   z.object({
     type: z.literal("order"),
     userId: z.string(),
+    syncSessionId: z.string(),
     order: z.object({
       details: syncOrderSchema,
       itemsToScrape: z.array(syncOrderItemSchema),
@@ -145,6 +174,7 @@ export const jobDataSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("collection"),
     userId: z.string(),
+    syncSessionId: z.string(),
     collection: z.object({
       itemsToScrape: z.array(syncCollectionItemSchema),
       itemsToInsert: z.array(syncCollectionItemSchema),

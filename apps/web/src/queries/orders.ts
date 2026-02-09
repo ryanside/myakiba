@@ -1,11 +1,5 @@
 import { app, getErrorMessage } from "@/lib/treaty-client";
-import type {
-  CascadeOptions,
-  EditedOrder,
-  NewOrder,
-  Order,
-  OrderFilters,
-} from "@/lib/orders/types";
+import type { CascadeOptions, EditedOrder, NewOrder, Order, OrderFilters } from "@myakiba/types";
 import type { OrderStatus } from "@myakiba/types";
 
 export async function getOrders(filters: OrderFilters): Promise<Order[]> {
