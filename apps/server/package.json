@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@elysiajs/cors": "^1.4.1",
-    "@elysiajs/openapi": "^1.4.13",
+    "@elysiajs/openapi": "^1.4.14",
     "@elysiajs/static": "^1.4.7",
     "@myakiba/auth": "workspace:*",
     "@myakiba/constants": "workspace:*",
@@ -30,14 +30,14 @@
     "drizzle-zod": "catalog:",
     "elysia": "catalog:",
     "ioredis": "catalog:",
-    "logixlysia": "^6.1.0",
+    "logixlysia": "^6.2.0",
     "web": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@myakiba/eslint-config": "workspace:*",
     "@types/bun": "catalog:",
-    "tsdown": "^0.12.9",
+    "tsdown": "^0.20.3",
     "typescript": "catalog:"
   }
 }
