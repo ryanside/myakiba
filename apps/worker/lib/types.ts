@@ -108,7 +108,6 @@ export type ScrapeSingleItemParams = {
 
 export type ScrapeItemsParams = {
   readonly itemIds: readonly number[];
-  readonly userId: string;
   readonly jobId: string;
   readonly maxRetries?: number;
   readonly baseDelayMs?: number;

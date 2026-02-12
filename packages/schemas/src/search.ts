@@ -47,8 +47,8 @@ export const collectionSearchSortSchema = z.enum([
 ]);
 
 export const searchSchema = z.object({
-  limit: z.coerce.number().optional(),
-  offset: z.coerce.number().optional(),
+  limit: z.coerce.number().int().positive().optional(),
+  offset: z.coerce.number().int().min(0).optional(),
   sort: orderSearchSortSchema.optional(),
   order: sortDirectionSchema.optional(),
   search: z.string().optional(),
@@ -80,8 +80,8 @@ export const searchSchema = z.object({
 });
 
 export const collectionSearchSchema = z.object({
-  limit: z.coerce.number().optional(),
-  offset: z.coerce.number().optional(),
+  limit: z.coerce.number().int().positive().optional(),
+  offset: z.coerce.number().int().min(0).optional(),
   sort: collectionSearchSortSchema.optional(),
   order: sortDirectionSchema.optional(),
   search: z.string().optional(),

@@ -134,7 +134,7 @@ export async function getItemReleases(itemId: string): Promise<ItemReleasesRespo
   const { data, error } = await app.api.items({ itemId }).releases.get();
 
   if (error) {
-    throw new Error("Failed to get item releases");
+    throw new Error(getErrorMessage(error, "Failed to get item releases"));
   }
 
   if (!data) {

@@ -215,7 +215,7 @@ export default function SyncWidget({ session }: { readonly session: RouterAppCon
 type ActiveSessionProps = {
   readonly session: {
     readonly id: string;
-    readonly syncType: string;
+    readonly syncType: SyncType;
     readonly status: SyncSessionStatus;
     readonly jobId: string | null;
     readonly totalItems: number;
@@ -235,7 +235,7 @@ function ActiveSessionItem({ session }: ActiveSessionProps) {
   const displayStatus = isJobError
     ? jobError.message
     : (jobStatus?.status ?? session.statusMessage);
-  const typeConfig = SYNC_TYPE_CONFIG[session.syncType as SyncType];
+  const typeConfig = SYNC_TYPE_CONFIG[session.syncType];
 
   return (
     <PopoverClose asChild>
@@ -293,7 +293,7 @@ function ActiveSessionItem({ session }: ActiveSessionProps) {
 type RecentSessionProps = {
   readonly session: {
     readonly id: string;
-    readonly syncType: string;
+    readonly syncType: SyncType;
     readonly status: SyncSessionStatus;
     readonly totalItems: number;
     readonly successCount: number;
@@ -305,7 +305,7 @@ type RecentSessionProps = {
 
 function RecentSessionItem({ session }: RecentSessionProps) {
   const statusConfig = SESSION_STATUS_CONFIG[session.status];
-  const typeConfig = SYNC_TYPE_CONFIG[session.syncType as SyncType];
+  const typeConfig = SYNC_TYPE_CONFIG[session.syncType];
   const hasItems = session.totalItems > 0;
   const progressPercent = hasItems
     ? Math.round((session.successCount / session.totalItems) * 100)

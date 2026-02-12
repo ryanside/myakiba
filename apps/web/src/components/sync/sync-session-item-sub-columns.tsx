@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@tanstack/react-router";
 import { Package } from "lucide-react";
-import type { EnrichedSyncSessionItemRow, SyncSessionItemStatus } from "@myakiba/types";
+import type { EnrichedSyncSessionItemRow } from "@myakiba/types";
 import { ITEM_STATUS_CONFIG } from "@/lib/sync";
 
 export function createSyncSessionItemSubColumns(): ColumnDef<EnrichedSyncSessionItemRow>[] {
@@ -90,7 +90,7 @@ export function createSyncSessionItemSubColumns(): ColumnDef<EnrichedSyncSession
       id: "status",
       header: () => <span className="text-foreground font-normal text-[0.8125rem]">Status</span>,
       cell: ({ row }) => {
-        const config = ITEM_STATUS_CONFIG[row.original.status as SyncSessionItemStatus];
+        const config = ITEM_STATUS_CONFIG[row.original.status];
         return (
           <Badge variant={config.variant} appearance="light" size="sm">
             {config.label}

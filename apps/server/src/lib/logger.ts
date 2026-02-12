@@ -68,11 +68,15 @@ function createLogger(service: string): Logger {
       ...baseFields,
       ...processFields(fields),
     };
+    const line =
+      process.env.NODE_ENV === "development"
+        ? JSON.stringify(entry, null, 2)
+        : JSON.stringify(entry);
 
     if (level === "error") {
-      console.error(JSON.stringify(entry, null, 2));
+      console.error(line);
     } else {
-      console.log(JSON.stringify(entry, null, 2));
+      console.log(line);
     }
   };
 

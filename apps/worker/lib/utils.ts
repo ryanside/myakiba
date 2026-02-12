@@ -75,36 +75,38 @@ export const batchUpdateSyncSessionItemStatuses = async ({
   scrapedItemIds,
   failedItemIds,
 }: BatchUpdateSyncSessionItemStatusesParams): Promise<void> => {
-  if (scrapedItemIds.length > 0) {
-    await db
-      .update(syncSessionItem)
-      .set({
-        status: "scraped",
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(syncSessionItem.syncSessionId, syncSessionId),
-          inArray(syncSessionItem.itemExternalId, [...scrapedItemIds]),
-        ),
-      );
-  }
+  await db.transaction(async (tx) => {
+    if (scrapedItemIds.length > 0) {
+      await tx
+        .update(syncSessionItem)
+        .set({
+          status: "scraped",
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(syncSessionItem.syncSessionId, syncSessionId),
+            inArray(syncSessionItem.itemExternalId, [...scrapedItemIds]),
+          ),
+        );
+    }
 
-  if (failedItemIds.length > 0) {
-    await db
-      .update(syncSessionItem)
-      .set({
-        status: "failed",
-        errorReason: "Scraping failed after max retries",
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(syncSessionItem.syncSessionId, syncSessionId),
-          inArray(syncSessionItem.itemExternalId, [...failedItemIds]),
-        ),
-      );
-  }
+    if (failedItemIds.length > 0) {
+      await tx
+        .update(syncSessionItem)
+        .set({
+          status: "failed",
+          errorReason: "Scraping failed after max retries",
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(syncSessionItem.syncSessionId, syncSessionId),
+            inArray(syncSessionItem.itemExternalId, [...failedItemIds]),
+          ),
+        );
+    }
+  });
 };
 
 /**

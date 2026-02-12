@@ -268,7 +268,7 @@ export const scrapeSingleItem = async ({
   return null;
 };
 
-export const scrapedItems = async ({
+export const scrapeItems = async ({
   itemIds,
   maxRetries = 3,
   baseDelayMs = 1000,
@@ -314,7 +314,6 @@ export const scrapedItemsWithRateLimit = async ({
   itemIds,
   maxRetries = 3,
   baseDelayMs = 1000,
-  userId,
   jobId,
 }: Omit<ScrapeItemsParams, "startingIndex" | "totalItems">): Promise<ScrapedItem[]> => {
   console.time("Rate-Limited Scraping Duration");
@@ -340,11 +339,10 @@ export const scrapedItemsWithRateLimit = async ({
       `Processing batch ${batchNumber}/${totalBatches} (${batch.length} items): [${batch.join(", ")}]`,
     );
 
-    const batchResults = await scrapedItems({
+    const batchResults = await scrapeItems({
       itemIds: batch,
       maxRetries,
       baseDelayMs,
-      userId,
       jobId,
       startingIndex: i,
       totalItems: itemIds.length,

@@ -148,14 +148,6 @@ export function SearchCommand() {
     retry: false,
   });
 
-  if (isLoading) {
-    return <Loader2 className="animate-spin" />;
-  }
-
-  if (isError) {
-    return <p className="text-destructive">Failed to search: {error?.message}</p>;
-  }
-
   return (
     <>
       <Button variant="ghost" size="icon" className="size-7" onClick={() => setOpen(true)}>
@@ -175,7 +167,15 @@ export function SearchCommand() {
               debounce={200}
               isCommandInput
             />
-            {search.length > 0 && data && (
+            {search.length > 0 && isLoading && (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            )}
+            {search.length > 0 && isError && (
+              <p className="px-2 py-4 text-destructive">Failed to search: {error?.message}</p>
+            )}
+            {search.length > 0 && !isLoading && !isError && data && (
               <CommandList>
                 <CommandGroup heading="Orders">
                   <CommandEmpty>No orders found.</CommandEmpty>

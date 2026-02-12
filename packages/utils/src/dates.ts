@@ -318,6 +318,7 @@ export function formatDuration(start: Date, end: Date | null): string {
 export function formatRelativeTime(date: Date): string {
   const now = Date.now();
   const ms = now - new Date(date).getTime();
+  if (Number.isNaN(ms)) return "-";
   const seconds = Math.floor(ms / 1000);
 
   if (seconds < 60) return "just now";

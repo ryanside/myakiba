@@ -243,14 +243,9 @@ export const syncSession = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    syncType: text("sync_type", { enum: SYNC_TYPES })
-      .$type<(typeof SYNC_TYPES)[number]>()
-      .notNull(),
+    syncType: text("sync_type", { enum: SYNC_TYPES }).notNull(),
     jobId: text("job_id"),
-    status: text("status", { enum: SYNC_SESSION_STATUSES })
-      .$type<(typeof SYNC_SESSION_STATUSES)[number]>()
-      .notNull()
-      .default("pending"),
+    status: text("status", { enum: SYNC_SESSION_STATUSES }).notNull().default("pending"),
     statusMessage: text("status_message").notNull().default(""),
     orderId: text("order_id").references(() => order.id, {
       onDelete: "set null",
@@ -280,10 +275,7 @@ export const syncSessionItem = pgTable(
       .references(() => syncSession.id, { onDelete: "cascade" }),
     itemExternalId: integer("item_external_id").notNull(),
     metadata: jsonb("metadata"),
-    status: text("status", { enum: SYNC_SESSION_ITEM_STATUSES })
-      .$type<(typeof SYNC_SESSION_ITEM_STATUSES)[number]>()
-      .notNull()
-      .default("pending"),
+    status: text("status", { enum: SYNC_SESSION_ITEM_STATUSES }).notNull().default("pending"),
     errorReason: text("error_reason"),
     retryCount: integer("retry_count").notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),

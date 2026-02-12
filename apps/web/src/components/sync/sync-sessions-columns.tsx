@@ -85,7 +85,7 @@ export function createSyncSessionColumns({
       enableHiding: false,
       enableResizing: false,
       meta: {
-        skeleton: <Skeleton className="h-5 w-14 rounded-full" />,
+        skeleton: <Skeleton className="h-7 w-14 rounded-full" />,
       },
     },
     {
@@ -110,7 +110,7 @@ export function createSyncSessionColumns({
       enableHiding: false,
       enableResizing: false,
       meta: {
-        skeleton: <Skeleton className="h-5 w-20 rounded-full" />,
+        skeleton: <Skeleton className="h-7 w-20 rounded-full" />,
       },
     },
     {
@@ -125,7 +125,7 @@ export function createSyncSessionColumns({
       enableHiding: false,
       enableResizing: false,
       meta: {
-        skeleton: <Skeleton className="h-5 w-8" />,
+        skeleton: <Skeleton className="h-7 w-8" />,
       },
     },
     {
@@ -140,7 +140,7 @@ export function createSyncSessionColumns({
       enableHiding: false,
       enableResizing: false,
       meta: {
-        skeleton: <Skeleton className="h-5 w-8" />,
+        skeleton: <Skeleton className="h-7 w-8" />,
       },
     },
     {
@@ -162,7 +162,7 @@ export function createSyncSessionColumns({
       enableHiding: false,
       enableResizing: false,
       meta: {
-        skeleton: <Skeleton className="h-5 w-8" />,
+        skeleton: <Skeleton className="h-7 w-8" />,
       },
     },
     {
@@ -177,11 +177,10 @@ export function createSyncSessionColumns({
       enableHiding: false,
       enableResizing: false,
       meta: {
-        skeleton: <Skeleton className="h-5 w-28" />,
+        skeleton: <Skeleton className="h-7 w-28" />,
       },
     },
     {
-      accessorKey: "completedAt",
       id: "duration",
       header: () => <span className="text-foreground font-normal text-[0.8125rem]">Duration</span>,
       cell: ({ row }) => (
@@ -194,7 +193,7 @@ export function createSyncSessionColumns({
       enableHiding: false,
       enableResizing: false,
       meta: {
-        skeleton: <Skeleton className="h-5 w-16" />,
+        skeleton: <Skeleton className="h-7 w-16" />,
       },
     },
   ];

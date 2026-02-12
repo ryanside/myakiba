@@ -1,13 +1,5 @@
 import * as z from "zod";
 
-export interface RecentItem {
-  id: string;
-  type: "order" | "collection";
-  title: string;
-  images: string[];
-  timestamp: number;
-}
-
 const RECENT_ITEMS_KEY = "recent-items";
 const MAX_RECENT_ITEMS = 8;
 const recentItemSchema = z.object({
@@ -18,6 +10,7 @@ const recentItemSchema = z.object({
   timestamp: z.number(),
 });
 const recentItemsSchema = z.array(recentItemSchema);
+export type RecentItem = z.infer<typeof recentItemSchema>;
 
 export function addRecentItem(item: Omit<RecentItem, "timestamp">): void {
   const recent = getRecentItems();

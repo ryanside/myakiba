@@ -436,7 +436,7 @@ export default function SyncCollectionForm({
                                       mode="array"
                                       children={(tagsField) => (
                                         <div className="grid gap-2">
-                                          <Label>Tags</Label>
+                                          <Label htmlFor={`tags-input-${i}`}>Tags</Label>
                                           <div className="flex flex-wrap gap-2">
                                             {tagsField.state.value.map((tag, tagIndex) => (
                                               <Badge
@@ -457,7 +457,7 @@ export default function SyncCollectionForm({
                                           </div>
                                           <div className="flex gap-2">
                                             <Input
-                                              id="tags-input"
+                                              id={`tags-input-${i}`}
                                               type="text"
                                               placeholder="Press enter after each tag to add"
                                               onKeyDown={(e) => {

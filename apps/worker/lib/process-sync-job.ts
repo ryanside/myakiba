@@ -1,4 +1,4 @@
-import { scrapedItems, scrapedItemsWithRateLimit } from "./scrape";
+import { scrapeItems, scrapedItemsWithRateLimit } from "./scrape";
 import { setJobStatus, updateSyncSessionCounts, batchUpdateSyncSessionItemStatuses } from "./utils";
 import type { ScrapedItem } from "./types";
 import type Redis from "ioredis";
@@ -30,7 +30,7 @@ export async function processSyncJob({
 }: ProcessSyncJobParams): Promise<readonly ScrapedItem[]> {
   const { redis, jobId, syncSessionId } = context;
 
-  const scrapeMethod = itemIds.length <= 5 ? scrapedItems : scrapedItemsWithRateLimit;
+  const scrapeMethod = itemIds.length <= 5 ? scrapeItems : scrapedItemsWithRateLimit;
 
   await setJobStatus({
     redis,
@@ -45,7 +45,6 @@ export async function processSyncJob({
     itemIds: [...itemIds],
     maxRetries: 3,
     baseDelayMs: 1000,
-    userId: context.userId,
     jobId,
   });
 

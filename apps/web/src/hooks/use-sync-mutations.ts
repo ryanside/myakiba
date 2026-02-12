@@ -105,22 +105,6 @@ export function useSyncMutations(
     },
   });
 
-  const mutateCsvAsync = useCallback(
-    (userItems: UserItem[]): Promise<CsvMutationData> => csvMutation.mutateAsync(userItems),
-    [csvMutation],
-  );
-
-  const mutateOrderAsync = useCallback(
-    (order: SyncOrder): Promise<OrderMutationData> => orderMutation.mutateAsync(order),
-    [orderMutation],
-  );
-
-  const mutateCollectionAsync = useCallback(
-    (items: SyncCollectionItem[]): Promise<CollectionMutationData> =>
-      collectionMutation.mutateAsync(items),
-    [collectionMutation],
-  );
-
   const handleSyncCsvSubmit = useCallback(
     async (value: File | undefined): Promise<void> => {
       const { data: userItems, error } = await tryCatch(transformCSVData({ file: value }));
@@ -129,23 +113,23 @@ export function useSyncMutations(
         return;
       }
 
-      await mutateCsvAsync(userItems);
+      await csvMutation.mutateAsync(userItems);
     },
-    [mutateCsvAsync],
+    [csvMutation.mutateAsync],
   );
 
   const handleSyncOrderSubmit = useCallback(
     async (values: SyncOrder): Promise<void> => {
-      await mutateOrderAsync(values);
+      await orderMutation.mutateAsync(values);
     },
-    [mutateOrderAsync],
+    [orderMutation.mutateAsync],
   );
 
   const handleSyncCollectionSubmit = useCallback(
     async (values: SyncCollectionItem[]): Promise<void> => {
-      await mutateCollectionAsync(values);
+      await collectionMutation.mutateAsync(values);
     },
-    [mutateCollectionAsync],
+    [collectionMutation.mutateAsync],
   );
 
   const isSyncing =
@@ -155,9 +139,9 @@ export function useSyncMutations(
     csvMutation,
     orderMutation,
     collectionMutation,
-    mutateCsvAsync,
-    mutateOrderAsync,
-    mutateCollectionAsync,
+    mutateCsvAsync: csvMutation.mutateAsync,
+    mutateOrderAsync: orderMutation.mutateAsync,
+    mutateCollectionAsync: collectionMutation.mutateAsync,
     handleSyncCsvSubmit,
     handleSyncOrderSubmit,
     handleSyncCollectionSubmit,

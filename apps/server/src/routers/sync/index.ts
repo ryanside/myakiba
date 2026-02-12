@@ -672,12 +672,17 @@ const syncRouter = new Elysia({ prefix: "/sync" })
                 ? "Original order not found, please re-submit the sync"
                 : "Failed to retry failed items";
 
-        const statusCode =
+        let statusCode: number;
+        if (
           error.message === "SYNC_SESSION_NOT_FOUND" ||
-          error.message === "NO_FAILED_ITEMS_TO_RETRY" ||
           error.message === "ORDER_NOT_FOUND_FOR_RETRY"
-            ? 400
-            : 500;
+        ) {
+          statusCode = 404;
+        } else if (error.message === "NO_FAILED_ITEMS_TO_RETRY") {
+          statusCode = 409;
+        } else {
+          statusCode = 500;
+        }
 
         wideEvent.set({ error, outcome: "error" });
         return status(statusCode, message);
