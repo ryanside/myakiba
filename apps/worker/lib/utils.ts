@@ -34,7 +34,7 @@ export const setJobStatus = async ({
   sessionStatus,
 }: SetJobStatusParams): Promise<void> => {
   const terminalState =
-    finished === true
+    finished === true && sessionStatus != null
       ? sessionStatus === "completed" || sessionStatus === "partial"
         ? "success"
         : "error"

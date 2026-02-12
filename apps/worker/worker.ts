@@ -1,5 +1,5 @@
 import { Worker } from "bullmq";
-import { setJobStatus } from "./lib/utils";
+import { setJobStatus, updateSyncSessionCounts } from "./lib/utils";
 import type { FullJobData } from "./lib/types";
 import { jobDataSchema } from "@myakiba/schemas";
 import { finalizeCollectionSync } from "./lib/collection/utils";
@@ -138,7 +138,24 @@ myWorker.on("failed", async (job, err) => {
   const parsedJobData = jobDataSchema.safeParse(job.data);
   if (!parsedJobData.success) return;
 
-  const syncSessionId = parsedJobData.data.syncSessionId;
+  const { syncSessionId } = parsedJobData.data;
+  const data = parsedJobData.data;
+  const existingCount =
+    data.type === "csv"
+      ? data.existingCount
+      : data.type === "order"
+        ? data.order.existingCount
+        : data.collection.existingCount;
+  const scrapeRowCount =
+    data.type === "csv"
+      ? data.items.length
+      : data.type === "order"
+        ? data.order.itemsToScrape.length
+        : data.collection.itemsToScrape.length;
+
+  const successCount = existingCount;
+  const failCount = scrapeRowCount;
+  const sessionStatus = successCount > 0 ? ("partial" as const) : ("failed" as const);
 
   try {
     await setJobStatus({
@@ -147,7 +164,12 @@ myWorker.on("failed", async (job, err) => {
       statusMessage: `Sync failed: ${err.message}`,
       finished: true,
       syncSessionId,
-      sessionStatus: "failed",
+      sessionStatus,
+    });
+    await updateSyncSessionCounts({
+      syncSessionId,
+      successCount,
+      failCount,
     });
   } catch (cleanupError) {
     console.error("❌ Failed to update sync session on job failure:", cleanupError);

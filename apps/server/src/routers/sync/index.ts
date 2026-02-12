@@ -46,24 +46,11 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         existingItemExternalIds,
       } = result;
 
-      if (collectionItems.length > 0) {
-        const { error: insertToCollectionAndOrdersError } = await tryCatch(
-          SyncService.insertToCollectionAndOrders(collectionItems, orderItems),
-        );
-
-        if (insertToCollectionAndOrdersError) {
-          wideEvent.set({
-            error: insertToCollectionAndOrdersError,
-            outcome: "error",
-          });
-          return status(500, "Failed to insert to collection and orders");
-        }
-      }
-
       const itemExternalIdsToTrack = itemsToScrape.map((i) => i.itemExternalId);
       const csvItemMetadata = new Map(
         itemsToScrape.map(({ itemExternalId, ...metadata }) => [itemExternalId, metadata]),
       );
+
       const { data: syncSessionId, error: syncSessionError } = await tryCatch(
         SyncService.createSyncSession(user.id, "csv", itemExternalIdsToTrack, {
           itemMetadata: csvItemMetadata,
@@ -74,6 +61,29 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       if (syncSessionError) {
         wideEvent.set({ error: syncSessionError, outcome: "error" });
         return status(500, "Failed to create sync session");
+      }
+
+      if (collectionItems.length > 0) {
+        const { error: insertToCollectionAndOrdersError } = await tryCatch(
+          SyncService.insertToCollectionAndOrders(collectionItems, orderItems),
+        );
+
+        if (insertToCollectionAndOrdersError) {
+          if (syncSessionId) {
+            await tryCatch(
+              SyncService.updateSyncSession(syncSessionId, {
+                status: "failed",
+                statusMessage: "Failed to insert to collection and orders",
+                completedAt: new Date(),
+              }),
+            );
+          }
+          wideEvent.set({
+            error: insertToCollectionAndOrdersError,
+            outcome: "error",
+          });
+          return status(500, "Failed to insert to collection and orders");
+        }
       }
 
       let jobId: string | null | undefined = null;
@@ -278,20 +288,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           releaseId: item.releaseId,
         }));
 
-      if (collectionItemsToInsert.length > 0) {
-        const { error: insertToCollectionAndOrdersError } = await tryCatch(
-          SyncService.insertToCollectionAndOrders(collectionItemsToInsert, [order]),
-        );
-
-        if (insertToCollectionAndOrdersError) {
-          wideEvent.set({
-            error: insertToCollectionAndOrdersError,
-            outcome: "error",
-          });
-          return status(500, "Failed to insert to collection and orders");
-        }
-      }
-
       const { data: syncSessionId, error: syncSessionError } = await tryCatch(
         SyncService.createSyncSession(user.id, "order", orderItemExternalIdsToTrack, {
           orderId: collectionItemsToInsert.length > 0 ? orderId : undefined,
@@ -304,6 +300,29 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       if (syncSessionError) {
         wideEvent.set({ error: syncSessionError, outcome: "error" });
         return status(500, "Failed to create sync session");
+      }
+
+      if (collectionItemsToInsert.length > 0) {
+        const { error: insertToCollectionAndOrdersError } = await tryCatch(
+          SyncService.insertToCollectionAndOrders(collectionItemsToInsert, [order]),
+        );
+
+        if (insertToCollectionAndOrdersError) {
+          if (syncSessionId) {
+            await tryCatch(
+              SyncService.updateSyncSession(syncSessionId, {
+                status: "failed",
+                statusMessage: "Failed to insert to collection and orders",
+                completedAt: new Date(),
+              }),
+            );
+          }
+          wideEvent.set({
+            error: insertToCollectionAndOrdersError,
+            outcome: "error",
+          });
+          return status(500, "Failed to insert to collection and orders");
+        }
       }
 
       let jobId: string | null | undefined = null;
@@ -474,20 +493,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           notes: item.notes,
         }));
 
-      if (collectionItemsToInsert.length > 0) {
-        const { error: insertToCollectionAndOrdersError } = await tryCatch(
-          SyncService.insertToCollectionAndOrders(collectionItemsToInsert),
-        );
-
-        if (insertToCollectionAndOrdersError) {
-          wideEvent.set({
-            error: insertToCollectionAndOrdersError,
-            outcome: "error",
-          });
-          return status(500, "Failed to insert to collection and orders");
-        }
-      }
-
       const { data: syncSessionId, error: syncSessionError } = await tryCatch(
         SyncService.createSyncSession(user.id, "collection", collectionItemExternalIdsToTrack, {
           itemMetadata: collectionItemMetadata,
@@ -498,6 +503,29 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       if (syncSessionError) {
         wideEvent.set({ error: syncSessionError, outcome: "error" });
         return status(500, "Failed to create sync session");
+      }
+
+      if (collectionItemsToInsert.length > 0) {
+        const { error: insertToCollectionAndOrdersError } = await tryCatch(
+          SyncService.insertToCollectionAndOrders(collectionItemsToInsert),
+        );
+
+        if (insertToCollectionAndOrdersError) {
+          if (syncSessionId) {
+            await tryCatch(
+              SyncService.updateSyncSession(syncSessionId, {
+                status: "failed",
+                statusMessage: "Failed to insert to collection and orders",
+                completedAt: new Date(),
+              }),
+            );
+          }
+          wideEvent.set({
+            error: insertToCollectionAndOrdersError,
+            outcome: "error",
+          });
+          return status(500, "Failed to insert to collection and orders");
+        }
       }
 
       let jobId: string | null | undefined = null;
@@ -663,29 +691,20 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       );
 
       if (error) {
-        const message =
-          error.message === "SYNC_SESSION_NOT_FOUND"
-            ? "Sync session not found"
-            : error.message === "NO_FAILED_ITEMS_TO_RETRY"
-              ? "No failed items to retry"
-              : error.message === "ORDER_NOT_FOUND_FOR_RETRY"
-                ? "Original order not found, please re-submit the sync"
-                : "Failed to retry failed items";
-
-        let statusCode: number;
-        if (
-          error.message === "SYNC_SESSION_NOT_FOUND" ||
-          error.message === "ORDER_NOT_FOUND_FOR_RETRY"
-        ) {
-          statusCode = 404;
-        } else if (error.message === "NO_FAILED_ITEMS_TO_RETRY") {
-          statusCode = 409;
-        } else {
-          statusCode = 500;
+        switch (error.message) {
+          case "SYNC_SESSION_NOT_FOUND":
+            wideEvent.set({ error, outcome: "error" });
+            return status(404, "Sync session not found");
+          case "NO_FAILED_ITEMS_TO_RETRY":
+            wideEvent.set({ error, outcome: "error" });
+            return status(409, "No failed items to retry");
+          case "ORDER_NOT_FOUND_FOR_RETRY":
+            wideEvent.set({ error, outcome: "error" });
+            return status(404, "Original order not found, please re-submit the sync");
+          default:
+            wideEvent.set({ error, outcome: "error" });
+            return status(500, "Failed to retry failed items");
         }
-
-        wideEvent.set({ error, outcome: "error" });
-        return status(statusCode, message);
       }
 
       wideEvent.set({ outcome: "success", ...result });
