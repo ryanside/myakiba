@@ -1,10 +1,9 @@
 import { useForm } from "@tanstack/react-form";
 import { Button } from "../ui/button";
-import { ArrowLeft, Loader2 } from "lucide-react";
-import { csvSchema } from "@/lib/sync/types";
+import { Loader2 } from "lucide-react";
+import { csvSchema } from "@myakiba/schemas";
 import Papa from "papaparse";
 import { Label } from "../ui/label";
-import { useNavigate } from "@tanstack/react-router";
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from "@/components/kibo-ui/dropzone";
 
 export default function SyncCsvForm({
@@ -12,7 +11,6 @@ export default function SyncCsvForm({
 }: {
   handleSyncCsvSubmit: (values: File | undefined) => void;
 }) {
-  const navigate = useNavigate();
   const csvForm = useForm({
     defaultValues: {
       file: undefined as File | undefined,
@@ -24,18 +22,6 @@ export default function SyncCsvForm({
   });
   return (
     <div className="w-full">
-      <div className="p-4 pt-0 pl-0 w-full flex flex-row items-center justify-start gap-2">
-        <Button
-          variant="ghost"
-          onClick={() => navigate({ to: "/sync" })}
-          className="text-foreground"
-          aria-label="Back to Sync Options"
-          size="icon"
-        >
-          <ArrowLeft />
-        </Button>
-        <h1 className="text-lg text-black dark:text-white">Upload MyFigureCollection CSV</h1>
-      </div>
       <form
         onSubmit={(e) => {
           e.preventDefault();

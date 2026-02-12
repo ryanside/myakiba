@@ -1,4 +1,4 @@
-import { Images, Search, Package } from "lucide-react";
+import { Images, Search, Package, Loader2 } from "lucide-react";
 import {
   Command,
   CommandEmpty,
@@ -140,7 +140,7 @@ export function SearchCommand() {
     return data;
   }
 
-  const { data } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ["search", search],
     queryFn: () => getSearchResults({ search }),
     enabled: search.length > 0,
@@ -151,7 +151,7 @@ export function SearchCommand() {
   return (
     <>
       <Button variant="ghost" size="icon" className="size-7" onClick={() => setOpen(true)}>
-        <Search className="h-4 w-4" />
+        <Search />
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className={"p-0 shadow-lg max-w-3xl h-[75vh]"}>
@@ -167,7 +167,15 @@ export function SearchCommand() {
               debounce={200}
               isCommandInput
             />
-            {search.length > 0 && data && (
+            {search.length > 0 && isLoading && (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            )}
+            {search.length > 0 && isError && (
+              <p className="px-2 py-4 text-destructive">Failed to search: {error?.message}</p>
+            )}
+            {search.length > 0 && !isLoading && !isError && data && (
               <CommandList>
                 <CommandGroup heading="Orders">
                   <CommandEmpty>No orders found.</CommandEmpty>

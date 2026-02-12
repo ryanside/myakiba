@@ -16,4 +16,3 @@ export {
   minorUnitsToMajorString,
   majorStringToMinorUnits,
 } from "./currency";
-export { getCategoryColor } from "./categories";

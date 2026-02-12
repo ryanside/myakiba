@@ -1,6 +1,7 @@
 import * as authSchema from "./schema/auth";
 import * as figureSchema from "./schema/figure";
 import { drizzle } from "drizzle-orm/bun-sql";
+import { SQL } from "bun";
 import { env } from "@myakiba/env/shared";
 
 const schema = {
@@ -8,4 +9,10 @@ const schema = {
   ...figureSchema,
 };
 
-export const db = drizzle(env.DATABASE_URL, { schema });
+const client = new SQL({
+  url: env.DATABASE_URL,
+  max: 10,
+  idleTimeout: 20,
+});
+
+export const db = drizzle({ client, schema });

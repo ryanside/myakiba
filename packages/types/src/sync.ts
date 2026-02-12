@@ -1,4 +1,49 @@
-import type { ShippingMethod, OrderStatus, Condition, Category } from "./enums";
+import type {
+  ShippingMethod,
+  OrderStatus,
+  Condition,
+  SyncSessionStatus,
+  SyncSessionItemStatus,
+  SyncType,
+} from "./enums";
+import type {
+  InternalCsvItem,
+  SyncTerminalState as SharedSyncTerminalState,
+  SyncJobStatus as SharedSyncJobStatus,
+} from "@myakiba/schemas";
+
+export type SyncSessionRow = {
+  readonly id: string;
+  readonly userId: string;
+  readonly syncType: SyncType;
+  readonly jobId: string | null;
+  readonly status: SyncSessionStatus;
+  readonly statusMessage: string;
+  readonly orderId: string | null;
+  readonly totalItems: number;
+  readonly successCount: number;
+  readonly failCount: number;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+  readonly completedAt: Date | null;
+};
+
+export type SyncSessionItemRow = {
+  readonly id: string;
+  readonly syncSessionId: string;
+  readonly itemExternalId: number;
+  readonly status: SyncSessionItemStatus;
+  readonly errorReason: string | null;
+  readonly retryCount: number;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+};
+
+export type EnrichedSyncSessionItemRow = SyncSessionItemRow & {
+  readonly itemId: string | null;
+  readonly itemTitle: string | null;
+  readonly itemImage: string | null;
+};
 
 export type SyncStatus = {
   existingItems: number;
@@ -6,6 +51,9 @@ export type SyncStatus = {
   isFinished: boolean;
   status: string;
 };
+
+export type SyncTerminalState = SharedSyncTerminalState;
+export type SyncJobStatus = Readonly<SharedSyncJobStatus>;
 
 export type SyncFormOrderItem = {
   itemExternalId: string;
@@ -113,69 +161,4 @@ export type SyncCollectionItem = Omit<
   score: string;
 };
 
-export type UserItem = {
-  itemExternalId: number;
-  status: "Owned" | "Ordered";
-  count: number;
-  score: string;
-  payment_date: string | null;
-  shipping_date: string | null;
-  collecting_date: string | null;
-  price: string;
-  shop: string;
-  shipping_method: ShippingMethod;
-  note: string;
-  orderId: null;
-  orderDate: string | null;
-};
-
-export type ScrapedItem = {
-  id: number;
-  title: string;
-  category: Category;
-  classification: {
-    id: number;
-    name: string;
-    role: string;
-  }[];
-  origin: {
-    id: number;
-    name: string;
-  }[];
-  character: {
-    id: number;
-    name: string;
-  }[];
-  company: {
-    id: number;
-    name: string;
-    role: string;
-  }[];
-  artist: {
-    id: number;
-    name: string;
-    role: string;
-  }[];
-  version: string[];
-  releaseDate: {
-    date: string;
-    type: string;
-    price: number;
-    priceCurrency: string;
-    barcode: string;
-  }[];
-  event: {
-    id: number;
-    name: string;
-    role: string;
-  }[];
-  materials: {
-    id: number;
-    name: string;
-  }[];
-  scale: string;
-  height: number;
-  width: number;
-  depth: number;
-  image: string;
-};
+export type UserItem = InternalCsvItem;

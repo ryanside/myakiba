@@ -1,7 +1,7 @@
 import { db } from "@myakiba/db";
 import { collection, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
 import { and, eq, gte, lte, inArray, arrayContains, desc, asc, ilike, sql } from "drizzle-orm";
-import type { collectionUpdateType } from "./model";
+import type { CollectionUpdateType } from "./model";
 import type { Category, Condition, ShippingMethod } from "@myakiba/types";
 
 class CollectionService {
@@ -203,7 +203,7 @@ class CollectionService {
   async updateCollectionItem(
     userId: string,
     collectionId: string,
-    updateData: collectionUpdateType,
+    updateData: CollectionUpdateType,
   ) {
     const updated = await db
       .update(collection)

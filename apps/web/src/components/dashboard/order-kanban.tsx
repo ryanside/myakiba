@@ -19,7 +19,7 @@ import { updateOrderStatus } from "@/queries/orders";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-import { getStatusVariant } from "@/lib/orders/utils";
+import { getStatusVariant } from "@/lib/orders";
 
 interface KanbanOrder {
   orderId: string;

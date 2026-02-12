@@ -1,5 +1,6 @@
 import * as z from "zod";
 import { SHIPPING_METHODS, ORDER_STATUSES, CONDITIONS } from "@myakiba/constants";
+import { SYNC_CSV_ITEM_STATUSES } from "@myakiba/constants/orders";
 
 /**
  * Schema for CSV date fields that handles MFC export quirks.
@@ -16,6 +17,18 @@ const csvDateSchema = z
     return val.replace(/-00/g, "-01");
   })
   .pipe(z.iso.date().nullable());
+
+export const syncTerminalStateSchema = z.enum(["success", "error", "timeout"]);
+
+export const syncJobStatusSchema = z.object({
+  status: z.string(),
+  finished: z.boolean(),
+  createdAt: z.iso.datetime(),
+  terminalState: syncTerminalStateSchema.nullable().optional().default(null),
+});
+
+export type SyncTerminalState = z.infer<typeof syncTerminalStateSchema>;
+export type SyncJobStatus = z.infer<typeof syncJobStatusSchema>;
 
 export const syncOrderSchema = z.object({
   id: z.string(),
@@ -108,9 +121,9 @@ export const csvItemSchema = z.object({
 export const csvSchema = z.array(csvItemSchema);
 
 // Internal CSV item schema for worker processing
-const internalCsvItemSchema = z.object({
+export const internalCsvItemSchema = z.object({
   itemExternalId: z.number(),
-  status: z.string(),
+  status: z.enum(SYNC_CSV_ITEM_STATUSES),
   count: z.number(),
   score: z.string(),
   payment_date: z.iso.date().nullable(),
@@ -127,27 +140,60 @@ const internalCsvItemSchema = z.object({
 export type CsvItem = z.infer<typeof csvItemSchema>;
 export type InternalCsvItem = z.infer<typeof internalCsvItemSchema>;
 
+export const csvItemMetadataSchema = internalCsvItemSchema.omit({
+  itemExternalId: true,
+});
+
+export const orderItemMetadataSchema = syncOrderItemSchema.pick({
+  price: true,
+  count: true,
+  status: true,
+  condition: true,
+  shippingMethod: true,
+  orderDate: true,
+  paymentDate: true,
+  shippingDate: true,
+  collectionDate: true,
+});
+
+export const collectionItemMetadataSchema = syncCollectionItemSchema.omit({
+  userId: true,
+  releaseId: true,
+  itemId: true,
+  itemExternalId: true,
+});
+
+export type CsvItemMetadata = z.infer<typeof csvItemMetadataSchema>;
+export type OrderItemMetadata = z.infer<typeof orderItemMetadataSchema>;
+export type CollectionItemMetadata = z.infer<typeof collectionItemMetadataSchema>;
+
 export const jobDataSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("csv"),
     userId: z.string(),
+    syncSessionId: z.string(),
+    existingCount: z.number().int().nonnegative(),
     items: z.array(internalCsvItemSchema),
   }),
   z.object({
     type: z.literal("order"),
     userId: z.string(),
+    syncSessionId: z.string(),
     order: z.object({
       details: syncOrderSchema,
       itemsToScrape: z.array(syncOrderItemSchema),
       itemsToInsert: z.array(syncOrderItemSchema),
+      existingCount: z.number().int().nonnegative(),
     }),
   }),
   z.object({
     type: z.literal("collection"),
     userId: z.string(),
+    syncSessionId: z.string(),
     collection: z.object({
       itemsToScrape: z.array(syncCollectionItemSchema),
       itemsToInsert: z.array(syncCollectionItemSchema),
+      existingCount: z.number().int().nonnegative(),
     }),
   }),
 ]);

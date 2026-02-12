@@ -185,7 +185,7 @@ myakiba/
 │   ├── redis /         # Redis
 │   ├── types/          # Shared TS types
 │   ├── utils/          # Shared utilities
-│   └── validations/    # Shared zod validations
+│   └── schemas/    # Shared zod schemas
 ├── docker-compose.yml  # Docker Compose (API + workers + Postgres + Redis)
 └── turbo.json          # Turborepo task pipeline
 ```

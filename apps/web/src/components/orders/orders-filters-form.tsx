@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { OrderFilters } from "@/lib/orders/types";
+import type { OrderFilters } from "@myakiba/types";
 import {
   getCurrencyLocale,
   majorStringToMinorUnits,

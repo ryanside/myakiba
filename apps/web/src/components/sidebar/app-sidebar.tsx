@@ -1,4 +1,4 @@
-import { ChartNoAxesCombined, ChartNoAxesGantt, DollarSign, Home, Package } from "lucide-react";
+import { ChartNoAxesCombined, ChartPie, Home, Library, Package } from "lucide-react";
 
 import { NavMain } from "@/components/sidebar/nav-main";
 import { NavManagement } from "@/components/sidebar/nav-management";
@@ -15,8 +15,9 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "@tanstack/react-router";
-import { PlusIcon } from "@/components/ui/plus";
+import { useRef } from "react";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
+import { GitCompareIcon, type GitCompareIconHandle } from "../ui/git-compare";
 
 const data = {
   navMain: [
@@ -33,7 +34,7 @@ const data = {
     {
       title: "Expenses",
       url: "/expenses",
-      icon: DollarSign,
+      icon: ChartPie,
     },
   ],
   navManagement: [
@@ -45,7 +46,7 @@ const data = {
     {
       title: "Collection",
       url: "/collection",
-      icon: ChartNoAxesGantt,
+      icon: Library,
     },
   ],
   navSecondary: [
@@ -87,6 +88,7 @@ export function GithubIcon() {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const location = useLocation();
+  const syncIconRef = useRef<GitCompareIconHandle>(null);
 
   return (
     <Sidebar variant="inset" collapsible="icon" {...props}>
@@ -100,16 +102,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="flex justify-start items-center hover:bg-transparent group-data-[collapsible=icon]:p-0! focus:bg-transparent! w-full"
             >
               <Link to="/dashboard">
-                {/* <img
-                  src={ma}
-                  alt="myakiba"
-                  className="absolute size-8 opacity-0 group-data-[collapsible=icon]:opacity-100 transition-opacity duration-100 ease-in-out"
-                /> */}
-                {/* <img
-                  src={myakiba}
-                  alt="myakiba"
-                  className="size-24 ml-2 opacity-100 group-data-[collapsible=icon]:opacity-0 transition-opacity duration-100 ease-in-out"
-                /> */}
                 <MyAkibaLogo
                   size="icon"
                   className="ml-2 scale-175 opacity-0 group-data-[collapsible=icon]:opacity-100 transition-opacity duration-100 ease-in-out"
@@ -129,12 +121,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                tooltip="Add MFC items"
-                className="text-black hover:text-black active:text-black from-primary to-primary/85 border border-zinc-950/25 bg-gradient-to-t shadow-md shadow-zinc-950/20 ring-1 ring-inset ring-white/20 transition-[filter] duration-200 hover:brightness-110 active:brightness-90 dark:border-white/20 dark:ring-transparent"
+                tooltip="Sync"
+                className="bg-muted hover:bg-background dark:bg-muted/25 dark:hover:bg-muted/50 dark:border-border inset-shadow-2xs inset-shadow-white dark:inset-shadow-transparent relative flex border border-zinc-300 shadow-sm shadow-zinc-950/10 ring-0 duration-150"
               >
-                <Link to="/sync">
-                  <PlusIcon size={17} className="" />
-                  <span className="">Add MFC items</span>
+                <Link
+                  to="/sync"
+                  onMouseEnter={() => syncIconRef.current?.startAnimation()}
+                  onMouseLeave={() => syncIconRef.current?.stopAnimation()}
+                >
+                  <GitCompareIcon ref={syncIconRef} size={17} className="" />
+                  <span className="">Sync</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

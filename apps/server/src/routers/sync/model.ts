@@ -1,111 +1,59 @@
 import * as z from "zod";
+import { collection } from "@myakiba/db/schema/figure";
 import { createInsertSchema } from "drizzle-zod";
-import { collection, order } from "@myakiba/db/schema/figure";
-import { ORDER_STATUSES, CONDITIONS, SHIPPING_METHODS } from "@myakiba/constants";
+import {
+  internalCsvItemSchema as sharedInternalCsvItemSchema,
+  syncTerminalStateSchema as sharedSyncTerminalStateSchema,
+  syncJobStatusSchema as sharedSyncJobStatusSchema,
+  syncOrderSchema as sharedSyncOrderSchema,
+  syncOrderItemSchema as sharedSyncOrderItemSchema,
+  syncCollectionItemSchema as sharedSyncCollectionItemSchema,
+} from "@myakiba/schemas";
+import type {
+  InternalCsvItem,
+  SyncTerminalState as SharedSyncTerminalState,
+  SyncJobStatus as SharedSyncJobStatus,
+  UpdatedSyncOrder,
+  UpdatedSyncOrderItem,
+  UpdatedSyncCollection,
+} from "@myakiba/schemas";
 
-export const csvItemSchema = z.object({
-  itemExternalId: z.int(),
-  status: z.enum(["Owned", "Ordered"]),
-  count: z.int(),
-  score: z.string(),
-  payment_date: z.iso.date().nullable(),
-  shipping_date: z.iso.date().nullable(),
-  collecting_date: z.iso.date().nullable(),
-  price: z.string(),
-  shop: z.string(),
-  shipping_method: z.enum(SHIPPING_METHODS),
-  note: z.string(),
-  orderId: z.string().nullable(),
-  orderDate: z.iso.date().nullable(),
-});
+export const csvItemSchema = sharedInternalCsvItemSchema;
+export type CsvItem = InternalCsvItem;
 
-export type csvItem = z.infer<typeof csvItemSchema>;
+export const syncTerminalStateSchema = sharedSyncTerminalStateSchema;
+export type SyncTerminalState = SharedSyncTerminalState;
 
-export const orderInsertSchema = createInsertSchema(order);
-
-export type orderInsertType = z.infer<typeof orderInsertSchema>;
+export const statusSchema = sharedSyncJobStatusSchema;
+export type Status = SharedSyncJobStatus;
 
 export const collectionInsertSchema = createInsertSchema(collection);
 
-export type collectionInsertType = z.infer<typeof collectionInsertSchema>;
-
-export const statusSchema = z.object({
-  status: z.string(),
-  finished: z.boolean(),
-  createdAt: z.iso.datetime(),
+export const orderItemSyncSchema = sharedSyncOrderItemSchema.omit({
+  userId: true,
+  orderId: true,
+  releaseId: true,
+  itemId: true,
 });
 
-export type status = z.infer<typeof statusSchema>;
+export type OrderItemSyncType = z.infer<typeof orderItemSyncSchema>;
 
-export const orderItemSyncSchema = z.object({
-  itemExternalId: z.int(),
-  price: z.number().int(),
-  count: z.number(),
-  status: z.enum(ORDER_STATUSES),
-  condition: z.enum(CONDITIONS),
-  shippingMethod: z.enum(SHIPPING_METHODS),
-  orderDate: z.iso.date().nullable(),
-  paymentDate: z.iso.date().nullable(),
-  shippingDate: z.iso.date().nullable(),
-  collectionDate: z.iso.date().nullable(),
+export const orderSyncSchema = sharedSyncOrderSchema
+  .omit({
+    id: true,
+    userId: true,
+  })
+  .extend({
+    items: z.array(orderItemSyncSchema),
+  });
+
+export type OrderSyncType = z.infer<typeof orderSyncSchema>;
+export const collectionSyncSchema = sharedSyncCollectionItemSchema.omit({
+  userId: true,
+  releaseId: true,
+  itemId: true,
 });
 
-export type orderItemSyncType = z.infer<typeof orderItemSyncSchema>;
-
-export const orderSyncSchema = z.object({
-  status: z.enum(ORDER_STATUSES),
-  title: z.string(),
-  shop: z.string(),
-  orderDate: z.iso.date().nullable(),
-  releaseDate: z.iso.date().nullable(),
-  paymentDate: z.iso.date().nullable(),
-  shippingDate: z.iso.date().nullable(),
-  collectionDate: z.iso.date().nullable(),
-  shippingMethod: z.enum(SHIPPING_METHODS),
-  shippingFee: z.number().int(),
-  taxes: z.number().int(),
-  duties: z.number().int(),
-  tariffs: z.number().int(),
-  miscFees: z.number().int(),
-  notes: z.string(),
-  items: z.array(orderItemSyncSchema),
-});
-
-export type orderSyncType = z.infer<typeof orderSyncSchema>;
-
-export const collectionSyncSchema = z.object({
-  itemExternalId: z.int(),
-  price: z.number().int(),
-  count: z.number(),
-  score: z.string(),
-  shop: z.string(),
-  orderDate: z.iso.date().nullable(),
-  paymentDate: z.iso.date().nullable(),
-  shippingDate: z.iso.date().nullable(),
-  collectionDate: z.iso.date().nullable(),
-  shippingMethod: z.enum(SHIPPING_METHODS),
-  tags: z.array(z.string()),
-  condition: z.enum(CONDITIONS),
-  notes: z.string(),
-});
-
-export type collectionSyncType = z.infer<typeof collectionSyncSchema>;
-
-export type UpdatedSyncCollection = collectionSyncType & {
-  userId: string;
-  releaseId: string | null;
-  itemId: string | null;
-};
-
-export type UpdatedSyncOrder = Omit<orderSyncType, "items"> & {
-  userId: string;
-  id: string;
-  releaseDate: string | null;
-};
-
-export type UpdatedSyncOrderItem = orderItemSyncType & {
-  userId: string;
-  orderId: string;
-  releaseId: string | null;
-  itemId: string | null;
-};
+export type CollectionSyncType = z.infer<typeof collectionSyncSchema>;
+export type CollectionInsertType = z.infer<typeof collectionInsertSchema>;
+export type { UpdatedSyncCollection, UpdatedSyncOrder, UpdatedSyncOrderItem };

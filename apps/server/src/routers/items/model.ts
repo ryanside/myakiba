@@ -1,6 +1,11 @@
 import * as z from "zod";
 import { CATEGORIES } from "@myakiba/constants/categories";
 import { ENTRY_CATEGORIES } from "@myakiba/constants/enums";
+import { itemReleaseSchema, itemReleasesResponseSchema } from "@myakiba/schemas";
+import type { ItemRelease, ItemReleasesResponse } from "@myakiba/schemas";
+
+export { itemReleaseSchema, itemReleasesResponseSchema };
+export type { ItemRelease, ItemReleasesResponse };
 
 export const customItemReleaseSchema = z.object({
   date: z.iso.date(),
@@ -36,24 +41,6 @@ export const customItemSchema = z.object({
 });
 
 export type CustomItemInput = z.infer<typeof customItemSchema>;
-
-export const itemReleaseSchema = z.object({
-  id: z.string(),
-  itemId: z.string(),
-  date: z.iso.date(),
-  type: z.string().nullable(),
-  price: z.number().int().nullable(),
-  priceCurrency: z.string().nullable(),
-  barcode: z.string().nullable(),
-});
-
-export type ItemRelease = z.infer<typeof itemReleaseSchema>;
-
-export const itemReleasesResponseSchema = z.object({
-  releases: z.array(itemReleaseSchema),
-});
-
-export type ItemReleasesResponse = z.infer<typeof itemReleasesResponseSchema>;
 
 export const entriesWithRolesSchema = z.object({
   id: z.string(),

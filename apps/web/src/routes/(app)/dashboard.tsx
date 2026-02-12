@@ -1,8 +1,7 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { app } from "@/lib/treaty-client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { CollectionBreakdown } from "@/components/dashboard/collection-breakdown";
 import { BudgetControlCard } from "@/components/dashboard/budget-control-card";
@@ -37,7 +36,6 @@ function RouteComponent() {
 }
 
 function DashboardContent() {
-  const navigate = useNavigate();
   const { session } = Route.useRouteContext();
   const userCurrency = session?.user.currency;
   const dateFormat = session?.user.dateFormat as DateFormat;
@@ -84,38 +82,16 @@ function DashboardContent() {
   } = data;
 
   return (
-    <div className="">
-      <div className="flex flex-col lg:flex-row items-start mb-6 gap-4">
-        <h1 className="text-2xl tracking-tight font-medium">
-          Welcome,{" "}
-          <span className="text-muted-foreground">{session?.user.username} (づ｡◕‿‿◕｡)づ</span>
-        </h1>
-        <div className="flex flex-row flex-wrap items-center gap-2 lg:ml-auto">
-          <Button
-            variant="outline"
-            size="md"
-            onClick={() => {
-              navigate({
-                to: "/sync/collection",
-              });
-            }}
-          >
-            <Plus className="h-4 w-4" />
-            Add Collection Item
-          </Button>
-          <Button
-            variant="outline"
-            size="md"
-            onClick={() => {
-              navigate({
-                to: "/sync/order",
-              });
-            }}
-          >
-            <Plus className="h-4 w-4" />
-            Add Order
-          </Button>
+    <div className="flex flex-col gap-12 mx-auto">
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-row items-start gap-4">
+          <h1 className="text-2xl tracking-tight">Welcome, {session?.user.username}</h1>
         </div>
+        <p className="text-muted-foreground text-sm font-light text-balance ">
+          You have {ordersSummary[0]?.totalActiveOrderCount ?? 0} active orders,{" "}
+          {unpaidOrders.length} unpaid orders, and {ordersSummary[0]?.thisMonthOrderCount ?? 0}{" "}
+          orders this month.
+        </p>
       </div>
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-4">
         <div className="col-span-1 lg:col-span-3 border-dashed space-y-4 flex flex-col">
@@ -128,24 +104,24 @@ function DashboardContent() {
                   title="Total Spent"
                   subtitle="based on paid collection & order items"
                   value={formatCurrencyFromMinorUnits(
-                    Number(collectionStats[0].totalSpent),
+                    Number(collectionStats[0]?.totalSpent ?? 0),
                     userCurrency,
                   )}
                   subvalueTitle="this month"
                   subvalue={formatCurrencyFromMinorUnits(
-                    Number(collectionStats[0].totalSpentThisMonth) +
-                      Number(ordersSummary[0].thisMonthShipping) +
-                      Number(ordersSummary[0].thisMonthTaxes) +
-                      Number(ordersSummary[0].thisMonthDuties) +
-                      Number(ordersSummary[0].thisMonthTariffs) +
-                      Number(ordersSummary[0].thisMonthMiscFees),
+                    Number(collectionStats[0]?.totalSpentThisMonth ?? 0) +
+                      Number(ordersSummary[0]?.thisMonthShipping ?? 0) +
+                      Number(ordersSummary[0]?.thisMonthTaxes ?? 0) +
+                      Number(ordersSummary[0]?.thisMonthDuties ?? 0) +
+                      Number(ordersSummary[0]?.thisMonthTariffs ?? 0) +
+                      Number(ordersSummary[0]?.thisMonthMiscFees ?? 0),
                     userCurrency,
                   )}
                 />
                 <KPICard
                   title="Active Orders"
                   subtitle="orders not yet collected"
-                  value={ordersSummary[0].totalActiveOrderCount}
+                  value={ordersSummary[0]?.totalActiveOrderCount ?? 0}
                   subvalueTitle="unpaid"
                   subvalue={unpaidOrders.length}
                 />
@@ -174,7 +150,7 @@ function DashboardContent() {
         <div className="col-span-1 space-y-4 flex flex-col">
           <BudgetControlCard
             currentSpent={
-              budgetSummary.length > 0
+              budgetSummary.length > 0 && collectionStats.length > 0 && ordersSummary.length > 0
                 ? Number(collectionStats[0].totalSpentThisMonth) +
                   Number(ordersSummary[0].thisMonthShipping) +
                   Number(ordersSummary[0].thisMonthTaxes) +

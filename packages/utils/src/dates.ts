@@ -287,3 +287,45 @@ export function parseLocalDate(value: string | Date | null | undefined): Date | 
 
   return date;
 }
+
+export function formatDateTime(date: Date, locale?: Intl.LocalesArgument): string {
+  return new Intl.DateTimeFormat(locale, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(date));
+}
+
+export function formatDuration(start: Date, end: Date | null): string {
+  if (!end) return "-";
+
+  const ms = new Date(end).getTime() - new Date(start).getTime();
+  if (ms < 1000) return "<1s";
+
+  const seconds = Math.floor(ms / 1000);
+  if (seconds < 60) return `${seconds}s`;
+
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  if (minutes < 60) return `${minutes}m ${remainingSeconds}s`;
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return `${hours}h ${remainingMinutes}m`;
+}
+
+export function formatRelativeTime(date: Date): string {
+  const now = Date.now();
+  const ms = now - new Date(date).getTime();
+  if (Number.isNaN(ms)) return "-";
+  const seconds = Math.floor(ms / 1000);
+
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}

@@ -39,7 +39,7 @@ export default function UserMenu({ session }: { session: RouterAppContext["sessi
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Avatar className="h-8 w-8">
+        <Avatar className="h-7 w-7">
           {session.user.image && <AvatarImage src={session.user.image} />}
           <AvatarFallback className="bg-linear-to-br from-background via-muted to-background">
             <User className="size-4" />

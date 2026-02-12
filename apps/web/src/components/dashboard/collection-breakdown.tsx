@@ -1,11 +1,12 @@
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { formatCurrencyFromMinorUnits, getCategoryColor } from "@myakiba/utils";
+import { formatCurrencyFromMinorUnits } from "@myakiba/utils";
 import { Scroller } from "../ui/scroller";
 import { Separator } from "../ui/separator";
 import { Link } from "@tanstack/react-router";
 import type { Category } from "@myakiba/types";
+import { getCategoryColor } from "@/lib/category-colors";
 
 export function CollectionBreakdown({
   data,

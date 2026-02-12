@@ -10,10 +10,6 @@ export const env = createEnv({
     HTTP_PROXY: z.url().optional(),
     AWS_BUCKET_REGION: z.string().min(1),
     AWS_BUCKET_NAME: z.string().min(1),
-    MOCK_SCRAPE_PROGRESS: z
-      .string()
-      .optional()
-      .transform((val) => val === "true"),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

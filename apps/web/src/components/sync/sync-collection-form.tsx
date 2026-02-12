@@ -1,8 +1,7 @@
 import { useForm } from "@tanstack/react-form";
 import { Button } from "../ui/button";
-import type { SyncCollectionItem, SyncFormCollectionItem } from "@/lib/sync/types";
-import { ArrowLeft, Edit, Loader2, Plus, X } from "lucide-react";
-import { useNavigate } from "@tanstack/react-router";
+import type { SyncCollectionItem, SyncFormCollectionItem } from "@myakiba/types";
+import { Edit, Loader2, Plus, X } from "lucide-react";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { MaskInput } from "../ui/mask-input";
@@ -22,8 +21,24 @@ import * as z from "zod";
 import { Rating } from "../ui/rating";
 import { Textarea } from "../ui/textarea";
 import { getCurrencyLocale, majorStringToMinorUnits } from "@myakiba/utils";
-import { extractMfcItemId } from "@/lib/sync/utils";
+import { extractMfcItemId } from "@/lib/sync";
 import { CONDITIONS, SHIPPING_METHODS } from "@myakiba/constants";
+
+const DEFAULT_COLLECTION_ITEM: SyncFormCollectionItem = {
+  itemExternalId: "",
+  price: "0.00",
+  count: 1,
+  score: 0,
+  shop: "",
+  orderDate: "",
+  paymentDate: "",
+  shippingDate: "",
+  collectionDate: "",
+  shippingMethod: "n/a",
+  tags: [],
+  condition: "New",
+  notes: "",
+};
 
 export default function SyncCollectionForm({
   handleSyncCollectionSubmit,
@@ -32,29 +47,12 @@ export default function SyncCollectionForm({
   handleSyncCollectionSubmit: (values: SyncCollectionItem[]) => void;
   currency?: string;
 }) {
-  const navigate = useNavigate();
   const userCurrency = currency || "USD";
   const userLocale = getCurrencyLocale(userCurrency);
 
   const collectionForm = useForm({
     defaultValues: {
-      items: [
-        {
-          itemExternalId: "",
-          price: "0.00",
-          count: 1,
-          score: 0,
-          shop: "",
-          orderDate: "",
-          paymentDate: "",
-          shippingDate: "",
-          collectionDate: "",
-          shippingMethod: "n/a",
-          tags: [],
-          condition: "New",
-          notes: "",
-        },
-      ] as SyncFormCollectionItem[],
+      items: [{ ...DEFAULT_COLLECTION_ITEM }] as SyncFormCollectionItem[],
     },
     onSubmit: async ({ value }) => {
       const toMinorUnits = (amount: string): number => majorStringToMinorUnits(amount);
@@ -80,18 +78,6 @@ export default function SyncCollectionForm({
   });
   return (
     <div className="w-full">
-      <div className="p-4 pt-0 pl-0 w-full flex flex-row items-center justify-start gap-2">
-        <Button
-          variant="ghost"
-          onClick={() => navigate({ to: "/sync" })}
-          className="text-foreground"
-          aria-label="Back to Sync Options"
-          size="icon"
-        >
-          <ArrowLeft />
-        </Button>
-        <h1 className="text-lg text-black dark:text-white">Add Collection Items</h1>
-      </div>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -163,6 +149,26 @@ export default function SyncCollectionForm({
                               <Input
                                 value={subField.state.value}
                                 onChange={(e) => subField.handleChange(e.target.value)}
+                                onPaste={(e) => {
+                                  const text = e.clipboardData.getData("text/plain");
+                                  const lines = text
+                                    .split(/\r?\n/)
+                                    .map((l) => l.trim())
+                                    .filter(Boolean);
+                                  if (lines.length > 1) {
+                                    e.preventDefault();
+                                    subField.handleChange(lines[0] ?? "");
+                                    const currentLength = field.state.value.length;
+                                    const remainingSlots = 10 - currentLength;
+                                    const toAdd = Math.min(lines.length - 1, remainingSlots);
+                                    for (let j = 1; j <= toAdd; j++) {
+                                      field.pushValue({
+                                        ...DEFAULT_COLLECTION_ITEM,
+                                        itemExternalId: lines[j] ?? "",
+                                      });
+                                    }
+                                  }
+                                }}
                                 type="text"
                                 placeholder="MyFigureCollection Item URL or ID"
                                 className="max-w-sm"
@@ -430,7 +436,7 @@ export default function SyncCollectionForm({
                                       mode="array"
                                       children={(tagsField) => (
                                         <div className="grid gap-2">
-                                          <Label>Tags</Label>
+                                          <Label htmlFor={`tags-input-${i}`}>Tags</Label>
                                           <div className="flex flex-wrap gap-2">
                                             {tagsField.state.value.map((tag, tagIndex) => (
                                               <Badge
@@ -451,9 +457,9 @@ export default function SyncCollectionForm({
                                           </div>
                                           <div className="flex gap-2">
                                             <Input
-                                              id={`tag-input-${i}`}
+                                              id={`tags-input-${i}`}
                                               type="text"
-                                              placeholder="Add a tag"
+                                              placeholder="Press enter after each tag to add"
                                               onKeyDown={(e) => {
                                                 if (e.key === "Enter") {
                                                   e.preventDefault();
@@ -466,22 +472,6 @@ export default function SyncCollectionForm({
                                                 }
                                               }}
                                             />
-                                            <Button
-                                              type="button"
-                                              variant="outline"
-                                              onClick={() => {
-                                                const input = document.getElementById(
-                                                  `tag-input-${i}`,
-                                                ) as HTMLInputElement;
-                                                const value = input.value.trim();
-                                                if (value) {
-                                                  tagsField.pushValue(value);
-                                                  input.value = "";
-                                                }
-                                              }}
-                                            >
-                                              Add
-                                            </Button>
                                           </div>
                                         </div>
                                       )}
@@ -520,7 +510,11 @@ export default function SyncCollectionForm({
                               <Button
                                 variant="outline"
                                 size="icon"
-                                onClick={() => field.removeValue(i)}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  field.removeValue(i);
+                                }}
                                 disabled={field.state.value.length === 1}
                               >
                                 <X className="text-red-500" />
@@ -544,21 +538,7 @@ export default function SyncCollectionForm({
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    field.pushValue({
-                      itemExternalId: "",
-                      price: "0.00",
-                      count: 1,
-                      score: 0,
-                      shop: "",
-                      tags: [],
-                      notes: "",
-                      condition: "New",
-                      shippingMethod: "n/a",
-                      orderDate: "",
-                      paymentDate: "",
-                      shippingDate: "",
-                      collectionDate: "",
-                    });
+                    field.pushValue({ ...DEFAULT_COLLECTION_ITEM });
                   }}
                 >
                   <Plus /> Add Item

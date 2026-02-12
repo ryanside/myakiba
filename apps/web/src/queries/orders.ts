@@ -1,12 +1,14 @@
 import { app, getErrorMessage } from "@/lib/treaty-client";
+import { itemReleasesResponseSchema } from "@myakiba/schemas";
 import type {
   CascadeOptions,
   EditedOrder,
   NewOrder,
   Order,
   OrderFilters,
-} from "@/lib/orders/types";
-import type { OrderStatus } from "@myakiba/types";
+  OrderStatus,
+  ItemReleasesResponse,
+} from "@myakiba/types";
 
 export async function getOrders(filters: OrderFilters): Promise<Order[]> {
   const queryParams = {
@@ -128,14 +130,23 @@ export async function deleteOrderItems(collectionIds: Set<string>) {
   }
 }
 
-export async function getItemReleases(itemId: string) {
+export async function getItemReleases(itemId: string): Promise<ItemReleasesResponse> {
   const { data, error } = await app.api.items({ itemId }).releases.get();
 
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to get item releases"));
   }
 
-  return data;
+  if (!data) {
+    throw new Error("Failed to get item releases");
+  }
+
+  const parsed = itemReleasesResponseSchema.safeParse(data);
+  if (!parsed.success) {
+    throw new Error("Failed to parse item releases response");
+  }
+
+  return parsed.data;
 }
 
 export async function getOrderIdsAndTitles(filters: { title?: string }) {

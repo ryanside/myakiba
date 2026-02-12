@@ -1,77 +1,29 @@
 import * as z from "zod";
 import { CATEGORIES, COLLECTION_STATUSES, CONDITIONS, SHIPPING_METHODS } from "@myakiba/constants";
+import {
+  collectionSearchSchema,
+  collectionSearchSortSchema,
+  commaSeparatedStringArraySchema,
+  createCommaSeparatedEnumArraySchema,
+  sortDirectionSchema,
+} from "@myakiba/schemas";
 
-const commaSeparatedStringArray = z.preprocess((val) => {
-  if (typeof val === "string" && val.length > 0) {
-    return val.split(",");
-  }
-  return undefined;
-}, z.array(z.string()).optional());
+const commaSeparatedShipMethodArray = createCommaSeparatedEnumArraySchema(SHIPPING_METHODS);
+const commaSeparatedConditionArray = createCommaSeparatedEnumArraySchema(CONDITIONS);
+const commaSeparatedCategoryArray = createCommaSeparatedEnumArraySchema(CATEGORIES);
 
-const commaSeparatedShipMethodArray = z.preprocess((val) => {
-  if (typeof val === "string" && val.length > 0) {
-    return val.split(",");
-  }
-  return undefined;
-}, z.array(z.enum(SHIPPING_METHODS)).optional());
-
-const commaSeparatedConditionArray = z.preprocess((val) => {
-  if (typeof val === "string" && val.length > 0) {
-    return val.split(",");
-  }
-  return undefined;
-}, z.array(z.enum(CONDITIONS)).optional());
-
-const commaSeparatedCategoryArray = z.preprocess((val) => {
-  if (typeof val === "string" && val.length > 0) {
-    return val.split(",");
-  }
-  return undefined;
-}, z.array(z.enum(CATEGORIES)).optional());
-
-export const collectionQuerySchema = z.object({
+export const collectionQuerySchema = collectionSearchSchema.extend({
   limit: z.coerce.number().optional().default(10),
   offset: z.coerce.number().optional().default(0),
-  sort: z
-    .enum([
-      "itemTitle",
-      "itemCategory",
-      "itemScale",
-      "status",
-      "count",
-      "score",
-      "price",
-      "shop",
-      "orderDate",
-      "paymentDate",
-      "shippingDate",
-      "releaseDate",
-      "collectionDate",
-      "createdAt",
-    ])
-    .optional()
-    .default("createdAt"),
-  order: z.enum(["asc", "desc"]).optional().default("desc"),
-  search: z.string().optional(),
-  paidMin: z.coerce.number().int().optional(),
-  paidMax: z.coerce.number().int().optional(),
-  shop: commaSeparatedStringArray,
-  payDateStart: z.iso.date().optional(),
-  payDateEnd: z.iso.date().optional(),
-  shipDateStart: z.iso.date().optional(),
-  shipDateEnd: z.iso.date().optional(),
-  colDateStart: z.iso.date().optional(),
-  colDateEnd: z.iso.date().optional(),
+  sort: collectionSearchSortSchema.optional().default("createdAt"),
+  order: sortDirectionSchema.optional().default("desc"),
+  shop: commaSeparatedStringArraySchema,
   shipMethod: commaSeparatedShipMethodArray,
-  relDateStart: z.iso.date().optional(),
-  relDateEnd: z.iso.date().optional(),
-  relPriceMin: z.coerce.number().int().optional(),
-  relPriceMax: z.coerce.number().int().optional(),
-  relCurrency: commaSeparatedStringArray,
+  relCurrency: commaSeparatedStringArraySchema,
   category: commaSeparatedCategoryArray,
-  entries: commaSeparatedStringArray,
-  scale: commaSeparatedStringArray,
-  tags: commaSeparatedStringArray,
+  entries: commaSeparatedStringArraySchema,
+  scale: commaSeparatedStringArraySchema,
+  tags: commaSeparatedStringArraySchema,
   condition: commaSeparatedConditionArray,
 });
 
@@ -101,7 +53,7 @@ export const collectionUpdateSchema = z.object({
   condition: z.enum(CONDITIONS),
 });
 
-export type collectionUpdateType = z.infer<typeof collectionUpdateSchema>;
+export type CollectionUpdateType = z.infer<typeof collectionUpdateSchema>;
 
 export const collectionDeleteSchema = z.object({
   ids: z.array(z.string()),

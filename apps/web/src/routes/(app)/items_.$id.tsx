@@ -20,7 +20,7 @@ import {
   EmptyDescription,
   EmptyMedia,
 } from "@/components/ui/empty";
-import { formatCurrencyFromMinorUnits, formatDate, getCategoryColor } from "@myakiba/utils";
+import { formatCurrencyFromMinorUnits, formatDate } from "@myakiba/utils";
 import { Label } from "@/components/ui/label";
 import CollectionItemForm from "@/components/collection/collection-item-form";
 import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -29,6 +29,7 @@ import { deleteCollectionItems, updateCollectionItem } from "@/queries/collectio
 import { toast } from "sonner";
 import Loader from "@/components/loader";
 import type { DateFormat } from "@myakiba/types";
+import { getCategoryColor } from "@/lib/category-colors";
 
 type ItemRelatedCollection = {
   collection: Omit<

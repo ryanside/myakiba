@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import * as z from "zod";
-import type { NewOrder, CascadeOptions } from "@/lib/orders/types";
+import type { NewOrder, CascadeOptions } from "@myakiba/types";
 import { Loader2, ChevronsUpDownIcon, CheckIcon } from "lucide-react";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import { CascadeOptionsDropdown } from "@/components/cascade-options-dropdown";
@@ -208,7 +208,7 @@ export default function UnifiedItemMoveForm({
                 existingOrderForm.handleSubmit();
               }}
             >
-              <ScrollArea className="gap-4 py-4 w-full overflow-auto">
+              <ScrollArea className="gap-4 py-4 mb-4 w-full overflow-auto">
                 <existingOrderForm.Field
                   name="targetOrderId"
                   validators={{
@@ -243,45 +243,47 @@ export default function UnifiedItemMoveForm({
                               debounce={200}
                               className="rounded-none shadow-none border-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-background"
                             />
-                            {data?.orderIdsAndTitles && data.orderIdsAndTitles.length > 0 && (
+                            {(data?.orderIdsAndTitles ?? error) !== undefined && (
                               <CommandList className="space-y-2 p-1">
                                 {error && (
                                   <CommandEmpty>
                                     Error searching orders: {error.message}
                                   </CommandEmpty>
                                 )}
-                                {data.orderIdsAndTitles.length === 0 && !isLoading && !error && (
+                                {data?.orderIdsAndTitles?.length === 0 && !isLoading && !error && (
                                   <CommandEmpty>No orders found.</CommandEmpty>
                                 )}
-                                <CommandGroup>
-                                  {data.orderIdsAndTitles.map((order) => (
-                                    <CommandItem
-                                      key={order.id}
-                                      value={order.id}
-                                      onSelect={() => {
-                                        field.handleChange(order.id);
-                                        setPopoverOpen(false);
-                                      }}
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter") {
-                                          e.preventDefault();
+                                {(data?.orderIdsAndTitles?.length ?? 0) > 0 && (
+                                  <CommandGroup>
+                                    {data?.orderIdsAndTitles?.map((order) => (
+                                      <CommandItem
+                                        key={order.id}
+                                        value={order.id}
+                                        onSelect={() => {
                                           field.handleChange(order.id);
                                           setPopoverOpen(false);
-                                        }
-                                      }}
-                                    >
-                                      <CheckIcon
-                                        className={cn(
-                                          "mr-2 h-4 w-4",
-                                          field.state.value === order.id
-                                            ? "opacity-100"
-                                            : "opacity-0",
-                                        )}
-                                      />
-                                      {order.title}
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
+                                        }}
+                                        onKeyDown={(e) => {
+                                          if (e.key === "Enter") {
+                                            e.preventDefault();
+                                            field.handleChange(order.id);
+                                            setPopoverOpen(false);
+                                          }
+                                        }}
+                                      >
+                                        <CheckIcon
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            field.state.value === order.id
+                                              ? "opacity-100"
+                                              : "opacity-0",
+                                          )}
+                                        />
+                                        {order.title}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                )}
                               </CommandList>
                             )}
                           </Command>

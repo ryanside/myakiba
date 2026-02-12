@@ -1,5 +1,13 @@
 import type { ShippingMethod, OrderStatus } from "./enums";
 import type { CollectionItem } from "./collection";
+import type {
+  OrderFilters as SchemaOrderFilters,
+  NewOrder as SchemaNewOrder,
+  EditedOrder as SchemaEditedOrder,
+  CascadeOptions as SchemaCascadeOptions,
+  ItemRelease as SchemaItemRelease,
+  ItemReleasesResponse as SchemaItemReleasesResponse,
+} from "@myakiba/schemas";
 
 export type OrderStats = {
   totalOrders: number;
@@ -39,99 +47,14 @@ export type OrderItem = Omit<
   "itemCategory" | "itemScale" | "createdAt" | "updatedAt" | "totalCount" | "totalValue"
 >;
 
-export type NewOrder = {
-  title: string;
-  shop: string;
-  releaseDate: string | null;
-  shippingMethod: ShippingMethod;
-  orderDate: string | null;
-  paymentDate: string | null;
-  shippingDate: string | null;
-  collectionDate: string | null;
-  status: OrderStatus;
-  shippingFee: number;
-  taxes: number;
-  duties: number;
-  tariffs: number;
-  miscFees: number;
-  notes: string;
-};
+export type NewOrder = SchemaNewOrder;
 
-export type EditedOrder = NewOrder & {
-  orderId: string;
-};
+export type EditedOrder = SchemaEditedOrder;
 
-export type OrderFilters = {
-  limit?: number | undefined;
-  offset?: number | undefined;
-  sort?:
-    | "title"
-    | "shop"
-    | "orderDate"
-    | "paymentDate"
-    | "shippingDate"
-    | "collectionDate"
-    | "releaseDate"
-    | "shippingMethod"
-    | "total"
-    | "shippingFee"
-    | "taxes"
-    | "duties"
-    | "tariffs"
-    | "miscFees"
-    | "itemCount"
-    | "status"
-    | "createdAt"
-    | undefined;
-  order?: "asc" | "desc" | undefined;
-  search?: string | undefined;
-  shop?: string[] | undefined;
-  releaseDateStart?: string | undefined;
-  releaseDateEnd?: string | undefined;
-  shipMethod?: ShippingMethod[] | undefined;
-  orderDateStart?: string | undefined;
-  orderDateEnd?: string | undefined;
-  payDateStart?: string | undefined;
-  payDateEnd?: string | undefined;
-  shipDateStart?: string | undefined;
-  shipDateEnd?: string | undefined;
-  colDateStart?: string | undefined;
-  colDateEnd?: string | undefined;
-  status?: OrderStatus[] | undefined;
-  totalMin?: number | undefined;
-  totalMax?: number | undefined;
-  shippingFeeMin?: number | undefined;
-  shippingFeeMax?: number | undefined;
-  taxesMin?: number | undefined;
-  taxesMax?: number | undefined;
-  dutiesMin?: number | undefined;
-  dutiesMax?: number | undefined;
-  tariffsMin?: number | undefined;
-  tariffsMax?: number | undefined;
-  miscFeesMin?: number | undefined;
-  miscFeesMax?: number | undefined;
-};
+export type OrderFilters = SchemaOrderFilters;
 
-export type CascadeOptions = Array<
-  | "status"
-  | "shop"
-  | "orderDate"
-  | "paymentDate"
-  | "shippingDate"
-  | "collectionDate"
-  | "shippingMethod"
->;
+export type CascadeOptions = SchemaCascadeOptions;
 
-export type ItemRelease = {
-  id: string;
-  itemId: string;
-  date: string;
-  type: string | null;
-  price: number | null;
-  priceCurrency: string | null;
-  barcode: string | null;
-};
+export type ItemRelease = SchemaItemRelease;
 
-export type ItemReleasesResponse = {
-  releases: ItemRelease[];
-};
+export type ItemReleasesResponse = SchemaItemReleasesResponse;

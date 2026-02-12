@@ -12,7 +12,8 @@
     }
   },
   "dependencies": {
-    "@myakiba/constants": "workspace:*"
+    "@myakiba/constants": "workspace:*",
+    "@myakiba/schemas": "workspace:*"
   },
   "devDependencies": {
     "@myakiba/config": "workspace:*",

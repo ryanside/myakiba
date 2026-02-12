@@ -11,7 +11,12 @@ import {
   extractMaterialsData,
 } from "./extract";
 import { createFetchOptions, setJobStatus } from "./utils";
-import type { scrapedItem } from "./types";
+import type {
+  ScrapedItem,
+  ScrapeImageParams,
+  ScrapeSingleItemParams,
+  ScrapeItemsParams,
+} from "./types";
 import type { Category } from "@myakiba/types";
 import { CATEGORIES } from "@myakiba/constants";
 import { redis } from "@myakiba/redis";
@@ -21,11 +26,11 @@ const s3Client = new S3Client({
   region: env.AWS_BUCKET_REGION,
 });
 
-export const scrapeImage = async (
-  imageUrl: string,
-  maxRetries: number = 3,
-  baseDelayMs: number = 1000,
-) => {
+export const scrapeImage = async ({
+  imageUrl,
+  maxRetries = 3,
+  baseDelayMs = 1000,
+}: ScrapeImageParams) => {
   console.time("Scraping Image Duration");
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
@@ -84,17 +89,21 @@ export const scrapeImage = async (
   return null;
 };
 
-export const scrapeSingleItem = async (
-  id: number,
-  maxRetries: number = 3,
-  baseDelayMs: number = 1000,
-  userId: string,
-  jobId: string,
-  overallIndex: number,
-  totalItems: number,
-): Promise<scrapedItem | null> => {
+export const scrapeSingleItem = async ({
+  id,
+  maxRetries = 3,
+  baseDelayMs = 1000,
+  jobId,
+  overallIndex,
+  totalItems,
+}: ScrapeSingleItemParams): Promise<ScrapedItem | null> => {
   console.time("Scraping Duration");
-  await setJobStatus(redis, jobId, `Syncing...${overallIndex + 1}/${totalItems}`, false);
+  await setJobStatus({
+    redis,
+    jobId,
+    statusMessage: `Syncing...${overallIndex + 1}/${totalItems}`,
+    finished: false,
+  });
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
@@ -208,7 +217,7 @@ export const scrapeSingleItem = async (
 
       if (imageUrl) {
         console.log(`Scraping image for ID ${id}`);
-        const imageResponse = await scrapeImage(imageUrl, maxRetries, baseDelayMs);
+        const imageResponse = await scrapeImage({ imageUrl, maxRetries, baseDelayMs });
         if (!imageResponse || imageResponse === null) {
           throw new Error(`Failed to scrape image for ID ${id}`);
         }
@@ -216,7 +225,7 @@ export const scrapeSingleItem = async (
         image = imageResponse;
       }
 
-      const scrapedItem: scrapedItem = {
+      const scrapedItem: ScrapedItem = {
         id,
         title,
         category,
@@ -259,27 +268,33 @@ export const scrapeSingleItem = async (
   return null;
 };
 
-export const scrapedItems = async (
-  itemIds: number[],
-  maxRetries: number = 3,
-  baseDelayMs: number = 1000,
-  userId: string,
-  jobId: string,
-  startingIndex: number = 0,
-  totalItems: number = itemIds.length,
-): Promise<scrapedItem[]> => {
+export const scrapeItems = async ({
+  itemIds,
+  maxRetries = 3,
+  baseDelayMs = 1000,
+  jobId,
+  startingIndex = 0,
+  totalItems = itemIds.length,
+}: ScrapeItemsParams): Promise<ScrapedItem[]> => {
   console.time("Scraping Duration");
 
   console.log(`Starting to scrape ${itemIds.length} items with up to ${maxRetries} retries each`);
 
   const promises = itemIds.map((id, index) =>
-    scrapeSingleItem(id, maxRetries, baseDelayMs, userId, jobId, startingIndex + index, totalItems),
+    scrapeSingleItem({
+      id,
+      maxRetries,
+      baseDelayMs,
+      jobId,
+      overallIndex: startingIndex + index,
+      totalItems,
+    }),
   );
   const results = await Promise.allSettled(promises);
 
   const successfulResults = results
     .filter(
-      (result): result is PromiseFulfilledResult<scrapedItem> =>
+      (result): result is PromiseFulfilledResult<ScrapedItem> =>
         result.status === "fulfilled" && result.value !== null,
     )
     .map((result) => result.value);
@@ -295,13 +310,12 @@ export const scrapedItems = async (
   return successfulResults;
 };
 
-export const scrapedItemsWithRateLimit = async (
-  itemIds: number[],
-  maxRetries: number = 3,
-  baseDelayMs: number = 1000,
-  userId: string,
-  jobId: string,
-): Promise<scrapedItem[]> => {
+export const scrapedItemsWithRateLimit = async ({
+  itemIds,
+  maxRetries = 3,
+  baseDelayMs = 1000,
+  jobId,
+}: Omit<ScrapeItemsParams, "startingIndex" | "totalItems">): Promise<ScrapedItem[]> => {
   console.time("Rate-Limited Scraping Duration");
   const startTime = Date.now();
 
@@ -314,7 +328,7 @@ export const scrapedItemsWithRateLimit = async (
 
   console.log(`Max retries per item: ${maxRetries}, Base retry delay: ${baseDelayMs}ms`);
 
-  const allResults: scrapedItem[] = [];
+  const allResults: ScrapedItem[] = [];
   const totalBatches = Math.ceil(itemIds.length / batchSize);
 
   for (let i = 0; i < itemIds.length; i += batchSize) {
@@ -325,15 +339,14 @@ export const scrapedItemsWithRateLimit = async (
       `Processing batch ${batchNumber}/${totalBatches} (${batch.length} items): [${batch.join(", ")}]`,
     );
 
-    const batchResults = await scrapedItems(
-      batch,
+    const batchResults = await scrapeItems({
+      itemIds: batch,
       maxRetries,
       baseDelayMs,
-      userId,
       jobId,
-      i,
-      itemIds.length,
-    );
+      startingIndex: i,
+      totalItems: itemIds.length,
+    });
     allResults.push(...batchResults);
 
     console.log(

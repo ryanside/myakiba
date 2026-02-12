@@ -68,13 +68,15 @@ function createLogger(service: string): Logger {
       ...baseFields,
       ...processFields(fields),
     };
-
-    const line = JSON.stringify(entry) + "\n";
+    const line =
+      process.env.NODE_ENV === "development"
+        ? JSON.stringify(entry, null, 2)
+        : JSON.stringify(entry);
 
     if (level === "error") {
-      process.stderr.write(line);
+      console.error(line);
     } else {
-      process.stdout.write(line);
+      console.log(line);
     }
   };
 

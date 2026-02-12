@@ -82,6 +82,7 @@ function RouteComponent() {
     data: budgetData,
     isPending: isBudgetPending,
     isError: isBudgetError,
+    error: budgetError,
   } = useQuery({
     queryKey: ["settings"],
     queryFn: async () => {
@@ -99,6 +100,7 @@ function RouteComponent() {
     data: accountTypeData,
     isPending: isAccountTypePending,
     isError: isAccountTypeError,
+    error: accountTypeError,
   } = useQuery({
     queryKey: ["account-type"],
     queryFn: async () => {
@@ -123,7 +125,9 @@ function RouteComponent() {
   if (isBudgetError || isAccountTypeError) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-destructive">Failed to load settings</p>
+        <p className="text-destructive">
+          Failed to load settings: {budgetError?.message || accountTypeError?.message}
+        </p>
       </div>
     );
   }
@@ -364,6 +368,7 @@ function ProfileForm({ user }: { user: User }) {
         >
           <form.Field
             name="username"
+            asyncDebounceMs={1000}
             validators={{
               onChangeAsync: async ({ value }) => {
                 if (value.length < 3) {

@@ -1,6 +1,6 @@
 import { Badge } from "../ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { getStatusVariant } from "@/lib/orders/utils";
+import { getStatusVariant } from "@/lib/orders";
 
 interface SelectCellProps {
   value: string;

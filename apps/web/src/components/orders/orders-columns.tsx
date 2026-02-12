@@ -14,7 +14,7 @@ import { type ColumnDef, type RowSelectionState, type OnChangeFn } from "@tansta
 import { SquareMinus, SquarePlus, MoreHorizontal, Eye, Edit, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrencyFromMinorUnits, getCurrencyLocale } from "@myakiba/utils";
-import type { CascadeOptions, EditedOrder, Order } from "@/lib/orders/types";
+import type { CascadeOptions, EditedOrder, Order } from "@myakiba/types";
 import { OrderForm } from "./order-form";
 import { OrderItemSubDataGrid } from "./order-item-sub-data-grid";
 import { PopoverMultiInputCell } from "../cells/popover-multi-input-cell";

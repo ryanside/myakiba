@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function AnalyticsSkeleton() {
   return (
-    <div className="flex flex-col gap-12 max-w-6xl mx-auto">
+    <div className="flex flex-col gap-12 mx-auto">
       {/* Header section */}
       <div className="flex flex-col gap-2">
         <div className="flex flex-row items-start gap-4">

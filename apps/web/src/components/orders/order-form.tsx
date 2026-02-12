@@ -32,9 +32,8 @@ import {
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import * as z from "zod";
-import type { EditedOrder, NewOrder, Order } from "@/lib/orders/types";
+import type { EditedOrder, NewOrder, Order, CascadeOptions } from "@myakiba/types";
 import { Loader2 } from "lucide-react";
-import type { CascadeOptions } from "@/lib/orders/types";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import { CascadeOptionsDropdown } from "@/components/cascade-options-dropdown";
 import { Textarea } from "../ui/textarea";
