@@ -288,8 +288,8 @@ export function parseLocalDate(value: string | Date | null | undefined): Date | 
   return date;
 }
 
-export function formatDateTime(date: Date): string {
-  return new Intl.DateTimeFormat("en-US", {
+export function formatDateTime(date: Date, locale?: Intl.LocalesArgument): string {
+  return new Intl.DateTimeFormat(locale, {
     month: "short",
     day: "numeric",
     hour: "numeric",

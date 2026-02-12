@@ -14,7 +14,7 @@ import { MoreHorizontal, Eye, Edit, Trash2, Package, Copy } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
-import { getCurrencyLocale, getCategoryColor } from "@myakiba/utils";
+import { getCurrencyLocale } from "@myakiba/utils";
 import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
 import CollectionItemForm from "./collection-item-form";
@@ -24,6 +24,7 @@ import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
 import { InlineCountCell } from "../cells/inline-count-cell";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/types";
 import type { DateFormat } from "@myakiba/types";
+import { getCategoryColor } from "@/lib/category-colors";
 
 interface CollectionColumnsParams {
   onEditCollectionItem: (values: CollectionItemFormValues) => void;

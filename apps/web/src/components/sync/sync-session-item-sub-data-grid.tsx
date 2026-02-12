@@ -9,10 +9,9 @@ import { getCoreRowModel, type PaginationState, useReactTable } from "@tanstack/
 import { Loader2, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import type { EnrichedSyncSessionItemRow, SyncSessionStatus } from "@myakiba/types";
+import { SYNC_SESSION_SUBGRID_PAGE_SIZE } from "@myakiba/constants/sync";
 import { fetchSyncSessionDetail, retrySyncFailedItems } from "@/queries/sync";
 import { createSyncSessionItemSubColumns } from "./sync-session-item-sub-columns";
-
-const ITEMS_PAGE_SIZE = 5;
 
 interface SyncSessionItemSubDataGridProps {
   readonly sessionId: string;
@@ -28,14 +27,20 @@ export function SyncSessionItemSubDataGrid({
   const queryClient = useQueryClient();
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
-    pageSize: ITEMS_PAGE_SIZE,
+    pageSize: SYNC_SESSION_SUBGRID_PAGE_SIZE,
   });
 
   const page = pagination.pageIndex + 1;
 
-  const detailQuery = useQuery({
-    queryKey: ["syncSessionDetail", sessionId, page, ITEMS_PAGE_SIZE] as const,
-    queryFn: () => fetchSyncSessionDetail(sessionId, { page, limit: ITEMS_PAGE_SIZE }),
+  const {
+    data: detailData,
+    isPending: isDetailPending,
+    isError: isDetailError,
+    error: detailError,
+  } = useQuery({
+    queryKey: ["syncSessionDetail", sessionId, page, SYNC_SESSION_SUBGRID_PAGE_SIZE] as const,
+    queryFn: () =>
+      fetchSyncSessionDetail(sessionId, { page, limit: SYNC_SESSION_SUBGRID_PAGE_SIZE }),
     staleTime: 30_000,
   });
 
@@ -44,20 +49,18 @@ export function SyncSessionItemSubDataGrid({
     onSuccess: (data) => {
       toast.success(`Retrying ${data.itemCount} failed items...`);
       void queryClient.invalidateQueries({ queryKey: ["syncSessions"] });
-      void queryClient.invalidateQueries({ queryKey: ["syncSessionDetail", sessionId] });
+      void queryClient.invalidateQueries({
+        queryKey: ["syncSessionDetail", sessionId],
+      });
     },
     onError: (error: Error) => {
       toast.error("Failed to retry.", { description: error.message });
     },
   });
 
-  const responseData = detailQuery.data;
-  const items: EnrichedSyncSessionItemRow[] =
-    responseData?.session && "items" in responseData.session
-      ? (responseData.session.items as EnrichedSyncSessionItemRow[])
-      : [];
-  const totalItems: number =
-    responseData && "totalItems" in responseData ? (responseData.totalItems as number) : 0;
+  const responseData = detailData;
+  const items = responseData?.session?.items ?? [];
+  const totalItems = responseData?.totalItems ?? 0;
 
   const isRetryable = (sessionStatus === "failed" || sessionStatus === "partial") && failCount > 0;
 
@@ -66,7 +69,7 @@ export function SyncSessionItemSubDataGrid({
   const subTable = useReactTable({
     columns,
     data: items,
-    pageCount: Math.max(1, Math.ceil(totalItems / ITEMS_PAGE_SIZE)),
+    pageCount: Math.max(1, Math.ceil(totalItems / SYNC_SESSION_SUBGRID_PAGE_SIZE)),
     state: { pagination },
     onPaginationChange: setPagination,
     manualPagination: true,
@@ -74,10 +77,12 @@ export function SyncSessionItemSubDataGrid({
     getRowId: (row: EnrichedSyncSessionItemRow) => row.id,
   });
 
-  if (detailQuery.isError) {
+  if (isDetailError) {
     return (
       <div className="bg-muted/30 p-4">
-        <p className="py-3 text-center text-sm text-destructive">Failed to load session items.</p>
+        <p className="py-3 text-center text-sm text-destructive">
+          Failed to load session items: {detailError.message}
+        </p>
       </div>
     );
   }
@@ -104,7 +109,7 @@ export function SyncSessionItemSubDataGrid({
       <DataGrid
         table={subTable}
         recordCount={totalItems}
-        isLoading={detailQuery.isPending}
+        isLoading={isDetailPending}
         loadingMode="skeleton"
         skeletonRowCount={1}
         tableLayout={{

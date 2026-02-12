@@ -7,6 +7,7 @@ import {
   ordersQuerySchema,
   orderIdParamSchema,
 } from "./model";
+import { cascadeOptionsSchema } from "@myakiba/schemas";
 import { tryCatch } from "@myakiba/utils";
 import { betterAuth } from "@/middleware/better-auth";
 import { requestContext } from "@/middleware/request-context";
@@ -167,7 +168,7 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
       body: z.object({
         orderIds: z.array(z.string()),
         newOrder: orderInsertSchema.omit({ userId: true }),
-        cascadeOptions: z.array(z.string()),
+        cascadeOptions: cascadeOptionsSchema,
       }),
       auth: true,
     },
@@ -208,7 +209,7 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
       body: z.object({
         collectionIds: z.array(z.string()),
         newOrder: orderInsertSchema.omit({ userId: true }),
-        cascadeOptions: z.array(z.string()),
+        cascadeOptions: cascadeOptionsSchema,
       }),
       auth: true,
     },
@@ -269,7 +270,7 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
       params: orderIdParamSchema,
       body: z.object({
         order: orderUpdateSchema,
-        cascadeOptions: z.array(z.string()),
+        cascadeOptions: cascadeOptionsSchema,
       }),
       auth: true,
     },

@@ -60,7 +60,7 @@ export type ScrapedItem = {
   image: string;
 };
 
-export interface jobData extends Job {
+export interface FullJobData extends Job {
   data: JobData;
 }
 
@@ -79,6 +79,12 @@ export type BatchUpdateSyncSessionItemStatusesParams = {
   readonly failedItemIds: readonly number[];
 };
 
+export type MarkPersistFailedSyncSessionItemStatusesParams = {
+  readonly syncSessionId: string;
+  readonly scrapedItemIds: readonly number[];
+  readonly errorReason: string;
+};
+
 export type UpdateSyncSessionCountsParams = {
   readonly syncSessionId: string;
   readonly successCount: number;
@@ -93,7 +99,6 @@ export type ScrapeImageParams = {
 
 export type ScrapeSingleItemParams = {
   readonly id: number;
-  readonly userId: string;
   readonly jobId: string;
   readonly overallIndex: number;
   readonly totalItems: number;
@@ -113,28 +118,78 @@ export type ScrapeItemsParams = {
 
 export type FinalizeCollectionSyncParams = {
   readonly successfulResults: ScrapedItem[];
-  readonly job: jobData;
+  readonly job: FullJobData;
   readonly redis: Redis;
   readonly itemsToScrape: UpdatedSyncCollection[];
-  readonly itemsToInsert: UpdatedSyncCollection[];
+  readonly existingCount: number;
   readonly syncSessionId: string;
 };
 
 export type FinalizeOrderSyncParams = {
   readonly successfulResults: ScrapedItem[];
-  readonly job: jobData;
+  readonly job: FullJobData;
   readonly redis: Redis;
   readonly details: UpdatedSyncOrder;
   readonly itemsToScrape: UpdatedSyncOrderItem[];
-  readonly itemsToInsert: UpdatedSyncOrderItem[];
+  readonly existingCount: number;
   readonly syncSessionId: string;
 };
 
 export type FinalizeCsvSyncParams = {
   readonly successfulResults: ScrapedItem[];
-  readonly job: jobData;
+  readonly job: FullJobData;
   readonly userId: string;
   readonly redis: Redis;
   readonly csvItems: InternalCsvItem[];
+  readonly existingCount: number;
   readonly syncSessionId: string;
+};
+
+export type AssembledItem = {
+  externalId: number;
+  source: "mfc";
+  title: string;
+  category: Category;
+  version: string[];
+  scale: string;
+  height: number;
+  width: number;
+  depth: number;
+  image: string;
+};
+
+export type AssembledItemRelease = {
+  id: string;
+  itemExternalId: number;
+  date: string;
+  type: string;
+  price: number;
+  priceCurrency: string;
+  barcode: string;
+};
+
+export type AssembledEntry = {
+  externalId: number;
+  source: "mfc";
+  category: string;
+  name: string;
+};
+
+export type AssembledEntryToItem = {
+  entryExternalId: number;
+  itemExternalId: number;
+  role: string;
+};
+
+export type LatestReleaseInfo = {
+  releaseId: string | null;
+  date: string | null;
+};
+
+export type AssembledScrapedData = {
+  items: AssembledItem[];
+  entries: AssembledEntry[];
+  entryToItems: AssembledEntryToItem[];
+  itemReleases: AssembledItemRelease[];
+  latestReleaseIdByExternalId: Map<number, LatestReleaseInfo>;
 };

@@ -69,12 +69,10 @@ function createLogger(service: string): Logger {
       ...processFields(fields),
     };
 
-    const line = JSON.stringify(entry) + "\n";
-
     if (level === "error") {
-      process.stderr.write(line);
+      console.error(JSON.stringify(entry, null, 2));
     } else {
-      process.stdout.write(line);
+      console.log(JSON.stringify(entry, null, 2));
     }
   };
 

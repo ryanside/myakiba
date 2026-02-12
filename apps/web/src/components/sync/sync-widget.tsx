@@ -1,10 +1,5 @@
-import { useMemo, useState } from "react";
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-  experimental_streamedQuery as streamedQuery,
-} from "@tanstack/react-query";
+import { useMemo, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,27 +12,19 @@ import {
 import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, ArrowRight, XCircle, Library, ShoppingCart, FileUp } from "lucide-react";
-import { toast } from "sonner";
-import { tryCatch } from "@myakiba/utils";
-import type { SyncType, SyncSessionStatus } from "@myakiba/types";
-import { sendItems, sendOrder, sendCollection, fetchSyncSessions } from "@/queries/sync";
-import { app } from "@/lib/treaty-client";
-import {
-  transformCSVData,
-  SESSION_STATUS_CONFIG,
-  SYNC_TYPE_CONFIG,
-  SYNC_OPTION_META,
-} from "@/lib/sync";
+import { Loader2, ArrowRight, XCircle, Library, Package, FileUp } from "lucide-react";
+import type { SyncSessionStatus, SyncType } from "@myakiba/types";
+import { fetchSyncSessions } from "@/queries/sync";
+import { SESSION_STATUS_CONFIG, SYNC_TYPE_CONFIG, SYNC_OPTION_META } from "@/lib/sync";
 import { formatRelativeTime } from "@myakiba/utils/dates";
 import SyncCsvForm from "@/components/sync/sync-csv-form";
 import SyncOrderForm from "@/components/sync/sync-order-form";
 import SyncCollectionForm from "@/components/sync/sync-collection-form";
 import type { RouterAppContext } from "@/routes/__root";
-import type { SyncOrder, SyncCollectionItem, UserItem } from "@myakiba/types";
-import { PlusIcon } from "@/components/ui/plus";
-
-const ACTIVE_STATUSES: ReadonlySet<SyncSessionStatus> = new Set(["pending", "processing"]);
+import { PlusIcon, type PlusIconHandle } from "@/components/ui/plus";
+import { useSyncMutations } from "@/hooks/use-sync-mutations";
+import { ACTIVE_SYNC_SESSION_STATUS_SET, SYNC_WIDGET_RECENT_LIMIT } from "@myakiba/constants/sync";
+import { useSyncJobStatusQuery } from "@/hooks/use-sync-job-status-query";
 
 const SYNC_OPTIONS: readonly {
   readonly type: SyncType;
@@ -45,23 +32,14 @@ const SYNC_OPTIONS: readonly {
   readonly description: string;
 }[] = [
   { type: "collection", icon: Library, description: "Add items by MFC ID" },
-  { type: "order", icon: ShoppingCart, description: "Create an order with MFC items" },
+  { type: "order", icon: Package, description: "Create an order with MFC items" },
   { type: "csv", icon: FileUp, description: "Import from MFC CSV export" },
 ];
-
-type JobStatusEvent = {
-  readonly status: string;
-  readonly finished: boolean;
-  readonly createdAt: string;
-};
-
-type SSEJobStatusChunk = {
-  readonly data: JobStatusEvent;
-};
 
 export default function SyncWidget({ session }: { readonly session: RouterAppContext["session"] }) {
   const queryClient = useQueryClient();
   const [syncType, setSyncType] = useState<SyncType | null>(null);
+  const addItemsIconRef = useRef<PlusIconHandle>(null);
 
   const userCurrency = session?.user.currency || "USD";
 
@@ -71,8 +49,8 @@ export default function SyncWidget({ session }: { readonly session: RouterAppCon
     isError: isRecentError,
     error: recentError,
   } = useQuery({
-    queryKey: ["syncSessions", 1, 5, undefined] as const,
-    queryFn: () => fetchSyncSessions({ page: 1, limit: 5 }),
+    queryKey: ["syncSessions", 1, SYNC_WIDGET_RECENT_LIMIT, undefined, undefined] as const,
+    queryFn: () => fetchSyncSessions({ page: 1, limit: SYNC_WIDGET_RECENT_LIMIT }),
     staleTime: 30_000,
     refetchOnWindowFocus: true,
   });
@@ -83,7 +61,7 @@ export default function SyncWidget({ session }: { readonly session: RouterAppCon
     const active: typeof sessions = [];
     const finished: typeof sessions = [];
     for (const s of sessions) {
-      if (ACTIVE_STATUSES.has(s.status as SyncSessionStatus)) {
+      if (ACTIVE_SYNC_SESSION_STATUS_SET.has(s.status)) {
         active.push(s);
       } else {
         finished.push(s);
@@ -94,94 +72,28 @@ export default function SyncWidget({ session }: { readonly session: RouterAppCon
 
   const hasActive = activeSessions.length > 0;
 
-  function handleFormResult(data: {
-    readonly syncSessionId: string;
-    readonly jobId: string | null | undefined;
-    readonly isFinished: boolean;
-    readonly status: string;
-  }): void {
-    setSyncType(null);
-    if (data.isFinished) {
-      toast.success(data.status);
-      void queryClient.invalidateQueries();
-      return;
-    }
-    void queryClient.invalidateQueries({
-      queryKey: ["syncSessions"],
+  const { handleSyncCsvSubmit, handleSyncOrderSubmit, handleSyncCollectionSubmit } =
+    useSyncMutations(queryClient, () => {
+      setSyncType(null);
     });
-  }
-
-  const csvMutation = useMutation({
-    mutationFn: (userItems: UserItem[]) => sendItems(userItems),
-    onSuccess: (data) =>
-      handleFormResult({
-        syncSessionId: data.syncSessionId,
-        jobId: data.jobId,
-        isFinished: data.isFinished,
-        status: data.status,
-      }),
-    onError: (error: Error) => {
-      toast.error("Failed to submit CSV.", {
-        description: error.message,
-      });
-    },
-  });
-
-  const orderMutation = useMutation({
-    mutationFn: (order: SyncOrder) => sendOrder(order),
-    onSuccess: (data) =>
-      handleFormResult({
-        syncSessionId: data.syncSessionId,
-        jobId: data.jobId,
-        isFinished: data.isFinished,
-        status: data.status,
-      }),
-    onError: (error: Error) => {
-      toast.error("Failed to submit order.", {
-        description: error.message,
-      });
-    },
-  });
-
-  const collectionMutation = useMutation({
-    mutationFn: (items: SyncCollectionItem[]) => sendCollection(items),
-    onSuccess: (data) =>
-      handleFormResult({
-        syncSessionId: data.syncSessionId,
-        jobId: data.jobId,
-        isFinished: data.isFinished,
-        status: data.status,
-      }),
-    onError: (error: Error) => {
-      toast.error("Failed to submit collection.", {
-        description: error.message,
-      });
-    },
-  });
-
-  async function handleSyncCsvSubmit(value: File | undefined): Promise<void> {
-    const { data: userItems, error } = await tryCatch(transformCSVData({ file: value }));
-    if (error) {
-      toast.error(error instanceof Error ? error.message : "An error occurred");
-      return;
-    }
-    await csvMutation.mutateAsync(userItems);
-  }
-
-  async function handleSyncOrderSubmit(values: SyncOrder): Promise<void> {
-    await orderMutation.mutateAsync(values);
-  }
-
-  async function handleSyncCollectionSubmit(values: SyncCollectionItem[]): Promise<void> {
-    await collectionMutation.mutateAsync(values);
-  }
 
   return (
     <>
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="primary" size="sm" autoHeight={true} aria-label="Add items">
-            {hasActive ? <Loader2 className="size-3 animate-spin" /> : <PlusIcon size={17} />}
+          <Button
+            variant="primary"
+            size="sm"
+            autoHeight={true}
+            aria-label="Add items"
+            onMouseEnter={() => addItemsIconRef.current?.startAnimation()}
+            onMouseLeave={() => addItemsIconRef.current?.stopAnimation()}
+          >
+            {hasActive ? (
+              <Loader2 className="size-3 animate-spin" />
+            ) : (
+              <PlusIcon ref={addItemsIconRef} size={17} />
+            )}
             Add items
           </Button>
         </PopoverTrigger>
@@ -313,54 +225,11 @@ type ActiveSessionProps = {
 };
 
 function ActiveSessionItem({ session }: ActiveSessionProps) {
-  const queryClient = useQueryClient();
-
-  const onFinished = (): void => {
-    void queryClient.invalidateQueries({
-      queryKey: ["syncSessions"],
-    });
-  };
-
   const {
     data: jobStatus,
     isError: isJobError,
     error: jobError,
-  } = useQuery({
-    queryKey: ["syncJobStatus", session.jobId] as const,
-    enabled: session.jobId !== null,
-    queryFn: streamedQuery({
-      streamFn: async ({ signal }) => {
-        const { data, error } = await app.api.sync["job-status"].get({
-          query: { jobId: session.jobId! },
-          fetch: { signal },
-        });
-
-        if (error) throw new Error("Failed to connect to job status stream");
-        if (!data) throw new Error("No data received from job status stream");
-
-        const stream = data as unknown as AsyncIterable<SSEJobStatusChunk>;
-
-        async function* withFinishedCheck(): AsyncGenerator<SSEJobStatusChunk> {
-          for await (const chunk of stream) {
-            yield chunk;
-            if (chunk.data.finished) {
-              onFinished();
-            }
-          }
-        }
-
-        return withFinishedCheck();
-      },
-      reducer: (_prev: JobStatusEvent, chunk: SSEJobStatusChunk) => chunk.data,
-      initialValue: {
-        status: "Connecting...",
-        finished: false,
-        createdAt: "",
-      },
-    }),
-    refetchOnWindowFocus: false,
-    retry: false,
-  });
+  } = useSyncJobStatusQuery(session.jobId);
 
   const isFinished = jobStatus?.finished === true;
   const displayStatus = isJobError
@@ -398,7 +267,7 @@ function ActiveSessionItem({ session }: ActiveSessionProps) {
           <div className="mt-2.5 space-y-1.5">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>
-                {session.successCount} of {session.totalItems} scraped
+                {session.successCount} of {session.totalItems} synced
               </span>
               <span className="tabular-nums">
                 {Math.round((session.successCount / session.totalItems) * 100)}%
@@ -474,7 +343,7 @@ function RecentSessionItem({ session }: RecentSessionProps) {
             <Progress value={session.successCount} max={session.totalItems} className="h-1" />
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>
-                {session.successCount}/{session.totalItems} scraped
+                {session.successCount}/{session.totalItems} synced
                 {session.failCount > 0 && (
                   <span className="text-destructive"> &middot; {session.failCount} failed</span>
                 )}

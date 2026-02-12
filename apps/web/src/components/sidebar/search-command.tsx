@@ -1,4 +1,4 @@
-import { Images, Search, Package } from "lucide-react";
+import { Images, Search, Package, Loader2 } from "lucide-react";
 import {
   Command,
   CommandEmpty,
@@ -140,7 +140,7 @@ export function SearchCommand() {
     return data;
   }
 
-  const { data } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ["search", search],
     queryFn: () => getSearchResults({ search }),
     enabled: search.length > 0,
@@ -148,10 +148,18 @@ export function SearchCommand() {
     retry: false,
   });
 
+  if (isLoading) {
+    return <Loader2 className="animate-spin" />;
+  }
+
+  if (isError) {
+    return <p className="text-destructive">Failed to search: {error?.message}</p>;
+  }
+
   return (
     <>
       <Button variant="ghost" size="icon" className="size-7" onClick={() => setOpen(true)}>
-        <Search className="h-4 w-4" />
+        <Search />
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className={"p-0 shadow-lg max-w-3xl h-[75vh]"}>

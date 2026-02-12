@@ -322,7 +322,7 @@ export default function SyncOrderForm({
           />
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <orderForm.Field
             name="orderDate"
             children={(field) => (
@@ -469,7 +469,7 @@ export default function SyncOrderForm({
             name="miscFees"
             children={(field) => (
               <div className="grid gap-2">
-                <Label htmlFor={field.name}>Miscellaneous Fees</Label>
+                <Label htmlFor={field.name}>Misc. Fees</Label>
                 <MaskInput
                   id={field.name}
                   name={field.name}
@@ -832,7 +832,11 @@ export default function SyncOrderForm({
                               <Button
                                 variant="outline"
                                 size="icon"
-                                onClick={() => field.removeValue(i)}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  field.removeValue(i);
+                                }}
                                 disabled={field.state.value.length === 1}
                               >
                                 <X className="text-red-500" />

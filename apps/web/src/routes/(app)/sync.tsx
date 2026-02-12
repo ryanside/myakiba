@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -9,13 +9,10 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { FileUp, ShoppingCart, Library } from "lucide-react";
-import { toast } from "sonner";
-import { tryCatch } from "@myakiba/utils";
+import { FileUp, Package, Library } from "lucide-react";
 import type { SyncType, SyncSessionStatus, SyncSessionRow } from "@myakiba/types";
-import type { SyncOrder, SyncCollectionItem, UserItem } from "@myakiba/types";
-import { sendItems, sendOrder, sendCollection, fetchSyncSessions } from "@/queries/sync";
-import { transformCSVData, SYNC_OPTION_META } from "@/lib/sync";
+import { fetchSyncSessions } from "@/queries/sync";
+import { SYNC_OPTION_META } from "@/lib/sync";
 import SyncCsvForm from "@/components/sync/sync-csv-form";
 import SyncOrderForm from "@/components/sync/sync-order-form";
 import SyncCollectionForm from "@/components/sync/sync-collection-form";
@@ -23,6 +20,30 @@ import { SyncSessionsDataGrid } from "@/components/sync/sync-sessions-data-grid"
 import { syncSearchSchema } from "@myakiba/schemas";
 import { useFilters } from "@/hooks/use-filters";
 import { Separator } from "@/components/ui/separator";
+import { useSyncMutations } from "@/hooks/use-sync-mutations";
+import { SYNC_WIDGET_RECENT_LIMIT } from "@myakiba/constants/sync";
+
+const STATUS_FILTER_OPTIONS: readonly {
+  readonly value: SyncSessionStatus | "all";
+  readonly label: string;
+}[] = [
+  { value: "all", label: "All" },
+  { value: "processing", label: "Active" },
+  { value: "completed", label: "Completed" },
+  { value: "failed", label: "Failed" },
+  { value: "partial", label: "Partial" },
+  { value: "pending", label: "Pending" },
+] as const;
+
+const SYNC_TYPE_FILTER_OPTIONS: readonly {
+  readonly value: SyncType | "all";
+  readonly label: string;
+}[] = [
+  { value: "all", label: "All" },
+  { value: "csv", label: "CSV" },
+  { value: "order", label: "Order" },
+  { value: "collection", label: "Collection" },
+] as const;
 
 export const Route = createFileRoute("/(app)/sync")({
   component: RouteComponent,
@@ -45,11 +66,11 @@ function RouteComponent() {
   const userCurrency = session?.user.currency || "USD";
   const queryClient = useQueryClient();
   const { filters, setFilters } = useFilters(Route.id, {
-    paginationDefaults: { limit: 5 },
+    paginationDefaults: { limit: SYNC_WIDGET_RECENT_LIMIT },
   });
 
   const page = filters.page ?? 1;
-  const limit = filters.limit ?? 5;
+  const limit = filters.limit ?? SYNC_WIDGET_RECENT_LIMIT;
   const statusFilter: SyncSessionStatus | "all" = filters.status ?? "all";
   const syncTypeFilter: SyncType | "all" = filters.syncType ?? "all";
   const [activeSyncType, setActiveSyncType] = useState<SyncType | null>(null);
@@ -81,81 +102,10 @@ function RouteComponent() {
   const sessions: SyncSessionRow[] = sessionsData?.sessions ?? [];
   const totalCount: number = sessionsData?.total ?? 0;
 
-  function handleFormResult(data: {
-    readonly syncSessionId: string;
-    readonly jobId: string | null | undefined;
-    readonly isFinished: boolean;
-    readonly status: string;
-  }): void {
-    setActiveSyncType(null);
-    if (data.isFinished) {
-      toast.success(data.status);
-      void queryClient.invalidateQueries();
-      return;
-    }
-    void queryClient.invalidateQueries({ queryKey: ["syncSessions"] });
-  }
-
-  const csvMutation = useMutation({
-    mutationFn: (userItems: UserItem[]) => sendItems(userItems),
-    onSuccess: (data) =>
-      handleFormResult({
-        syncSessionId: data.syncSessionId,
-        jobId: data.jobId,
-        isFinished: data.isFinished,
-        status: data.status,
-      }),
-    onError: (error: Error) => {
-      toast.error("Failed to submit CSV.", { description: error.message });
-    },
-  });
-
-  const orderMutation = useMutation({
-    mutationFn: (order: SyncOrder) => sendOrder(order),
-    onSuccess: (data) =>
-      handleFormResult({
-        syncSessionId: data.syncSessionId,
-        jobId: data.jobId,
-        isFinished: data.isFinished,
-        status: data.status,
-      }),
-    onError: (error: Error) => {
-      toast.error("Failed to submit order.", { description: error.message });
-    },
-  });
-
-  const collectionMutation = useMutation({
-    mutationFn: (items: SyncCollectionItem[]) => sendCollection(items),
-    onSuccess: (data) =>
-      handleFormResult({
-        syncSessionId: data.syncSessionId,
-        jobId: data.jobId,
-        isFinished: data.isFinished,
-        status: data.status,
-      }),
-    onError: (error: Error) => {
-      toast.error("Failed to submit collection.", {
-        description: error.message,
-      });
-    },
-  });
-
-  async function handleSyncCsvSubmit(value: File | undefined): Promise<void> {
-    const { data: userItems, error } = await tryCatch(transformCSVData({ file: value }));
-    if (error) {
-      toast.error(error instanceof Error ? error.message : "An error occurred");
-      return;
-    }
-    await csvMutation.mutateAsync(userItems);
-  }
-
-  async function handleSyncOrderSubmit(values: SyncOrder): Promise<void> {
-    await orderMutation.mutateAsync(values);
-  }
-
-  async function handleSyncCollectionSubmit(values: SyncCollectionItem[]): Promise<void> {
-    await collectionMutation.mutateAsync(values);
-  }
+  const { handleSyncCsvSubmit, handleSyncOrderSubmit, handleSyncCollectionSubmit, isSyncing } =
+    useSyncMutations(queryClient, () => {
+      setActiveSyncType(null);
+    });
 
   const handlePaginationChange = useCallback(
     (newPage: number, newLimit: number) => {
@@ -182,37 +132,6 @@ function RouteComponent() {
       });
     },
     [setFilters],
-  );
-
-  const isSyncing =
-    csvMutation.isPending || orderMutation.isPending || collectionMutation.isPending;
-
-  const statusFilterOptions: readonly {
-    readonly value: SyncSessionStatus | "all";
-    readonly label: string;
-  }[] = useMemo(
-    () => [
-      { value: "all" as const, label: "All" },
-      { value: "processing" as const, label: "Active" },
-      { value: "completed" as const, label: "Completed" },
-      { value: "failed" as const, label: "Failed" },
-      { value: "partial" as const, label: "Partial" },
-      { value: "pending" as const, label: "Pending" },
-    ],
-    [],
-  );
-
-  const syncTypeFilterOptions: readonly {
-    readonly value: SyncType | "all";
-    readonly label: string;
-  }[] = useMemo(
-    () => [
-      { value: "all" as const, label: "All" },
-      { value: "csv" as const, label: "CSV" },
-      { value: "order" as const, label: "Order" },
-      { value: "collection" as const, label: "Collection" },
-    ],
-    [],
   );
 
   if (isError) {
@@ -256,7 +175,7 @@ function RouteComponent() {
             onClick={() => setActiveSyncType("order")}
             disabled={isSyncing}
           >
-            <ShoppingCart className="size-3.5" />
+            <Package className="size-3.5" />
             Order
           </Button>
           <Button
@@ -273,7 +192,7 @@ function RouteComponent() {
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="flex items-center">
-          {syncTypeFilterOptions.map((option) => (
+          {SYNC_TYPE_FILTER_OPTIONS.map((option) => (
             <Button
               key={option.value}
               variant={syncTypeFilter === option.value ? "outline" : "dim"}
@@ -286,7 +205,7 @@ function RouteComponent() {
         </div>
         <Separator orientation="vertical" className="h-4" />
         <div className="flex items-center">
-          {statusFilterOptions.map((option) => (
+          {STATUS_FILTER_OPTIONS.map((option) => (
             <Button
               key={option.value}
               variant={statusFilter === option.value ? "outline" : "dim"}

@@ -1,10 +1,13 @@
 import type { FinalizeCollectionSyncParams } from "../types";
 import type { UpdatedSyncCollection } from "@myakiba/schemas";
-import { normalizeDateString } from "@myakiba/utils";
-import { v5 as uuidv5 } from "uuid";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@myakiba/db";
-import { setJobStatus, updateSyncSessionCounts } from "../utils";
+import { assembleScrapedData } from "../assemble-scraped-data";
+import {
+  markPersistFailedSyncSessionItemStatuses,
+  setJobStatus,
+  updateSyncSessionCounts,
+} from "../utils";
 import { item, item_release, entry, entry_to_item, collection } from "@myakiba/db/schema/figure";
 
 export async function finalizeCollectionSync({
@@ -12,181 +15,17 @@ export async function finalizeCollectionSync({
   job,
   redis,
   itemsToScrape,
-  itemsToInsert,
+  existingCount,
   syncSessionId,
 }: FinalizeCollectionSyncParams) {
-  const items = successfulResults.map((item) => ({
-    externalId: item.id,
-    source: "mfc" as const,
-    title: item.title,
-    category: item.category,
-    version: item.version,
-    scale: item.scale,
-    height: item.height,
-    width: item.width,
-    depth: item.depth,
-    image: item.image,
-  }));
-  const itemReleases: Array<{
-    id: string;
-    itemExternalId: number;
-    date: string;
-    type: string;
-    price: number;
-    priceCurrency: string;
-    barcode: string;
-  }> = [];
-  const entries: Array<{
-    externalId: number;
-    source: "mfc";
-    category: string;
-    name: string;
-  }> = [];
-  const entryToItems: Array<{
-    entryExternalId: number;
-    itemExternalId: number;
-    role: string;
-  }> = [];
-  const latestReleaseIdByExternalId: Map<
-    number,
-    { releaseId: string | null; date: string | null }
-  > = new Map();
-  const successfulCollectionItems = itemsToScrape.filter((item) =>
-    successfulResults.some((result) => result.id === item.itemExternalId),
+  const { items, entries, entryToItems, itemReleases, latestReleaseIdByExternalId } =
+    assembleScrapedData(successfulResults);
+  const successfulCollectionItems = itemsToScrape.filter((collectionItem) =>
+    successfulResults.some((result) => result.id === collectionItem.itemExternalId),
   );
-
-  for (const scraped of successfulResults) {
-    for (const classification of scraped.classification) {
-      entryToItems.push({
-        entryExternalId: classification.id,
-        itemExternalId: scraped.id,
-        role: classification.role,
-      });
-      entries.push({
-        externalId: classification.id,
-        source: "mfc",
-        category: "Classifications",
-        name: classification.name,
-      });
-    }
-
-    for (const origin of scraped.origin) {
-      entryToItems.push({
-        entryExternalId: origin.id,
-        itemExternalId: scraped.id,
-        role: "",
-      });
-      entries.push({
-        externalId: origin.id,
-        source: "mfc",
-        category: "Origins",
-        name: origin.name,
-      });
-    }
-
-    for (const character of scraped.character) {
-      entryToItems.push({
-        entryExternalId: character.id,
-        itemExternalId: scraped.id,
-        role: "",
-      });
-      entries.push({
-        externalId: character.id,
-        source: "mfc",
-        category: "Characters",
-        name: character.name,
-      });
-    }
-
-    for (const company of scraped.company) {
-      entryToItems.push({
-        entryExternalId: company.id,
-        itemExternalId: scraped.id,
-        role: company.role,
-      });
-      entries.push({
-        externalId: company.id,
-        source: "mfc",
-        category: "Companies",
-        name: company.name,
-      });
-    }
-
-    for (const artist of scraped.artist) {
-      entryToItems.push({
-        entryExternalId: artist.id,
-        itemExternalId: scraped.id,
-        role: artist.role,
-      });
-      entries.push({
-        externalId: artist.id,
-        source: "mfc",
-        category: "Artists",
-        name: artist.name,
-      });
-    }
-
-    for (const event of scraped.event) {
-      entryToItems.push({
-        entryExternalId: event.id,
-        itemExternalId: scraped.id,
-        role: event.role,
-      });
-      entries.push({
-        externalId: event.id,
-        source: "mfc",
-        category: "Events",
-        name: event.name,
-      });
-    }
-
-    for (const material of scraped.materials) {
-      entryToItems.push({
-        entryExternalId: material.id,
-        itemExternalId: scraped.id,
-        role: "",
-      });
-      entries.push({
-        externalId: material.id,
-        source: "mfc",
-        category: "Materials",
-        name: material.name,
-      });
-    }
-
-    const releasesForItem = scraped.releaseDate.map((release) => {
-      const normalizedDate = normalizeDateString(release.date);
-      return {
-        id: uuidv5(
-          `${scraped.id}-${normalizedDate}-${release.type}-${release.price}-${release.priceCurrency}-${release.barcode}`,
-          "2c8ed313-3f54-4401-a280-2410ce639ef3",
-        ),
-        itemExternalId: scraped.id,
-        date: normalizedDate,
-        type: release.type,
-        price: release.price,
-        priceCurrency: release.priceCurrency,
-        barcode: release.barcode,
-      };
-    });
-
-    if (releasesForItem.length > 0) {
-      const latest = [...releasesForItem].sort((a, b) => a.date.localeCompare(b.date))[
-        releasesForItem.length - 1
-      ];
-      latestReleaseIdByExternalId.set(scraped.id, {
-        releaseId: latest.id,
-        date: latest.date,
-      });
-    } else {
-      latestReleaseIdByExternalId.set(scraped.id, {
-        releaseId: "",
-        date: "",
-      });
-    }
-
-    itemReleases.push(...releasesForItem);
-  }
+  const scrapeRowCount = itemsToScrape.length;
+  const totalRowCount = existingCount + scrapeRowCount;
+  let scrapedPersistedRowCount = 0;
 
   // assign latest release id to successfulCollectionItems
   try {
@@ -322,7 +161,7 @@ export async function finalizeCollectionSync({
         collectionItem.releaseId = latestReleaseIdByInternalId.get(internalItemId)?.releaseId ?? "";
       });
 
-      const collectionItems = [...itemsToInsert, ...successfulCollectionItems]
+      const scrapedCollectionItems = successfulCollectionItems
         .filter(
           (collectionItem): collectionItem is UpdatedSyncCollection & { itemId: string } =>
             collectionItem.itemId !== null,
@@ -336,44 +175,78 @@ export async function finalizeCollectionSync({
               : null,
         }));
 
-      await tx.insert(collection).values(collectionItems);
+      scrapedPersistedRowCount = scrapedCollectionItems.length;
+
+      if (scrapedCollectionItems.length > 0) {
+        await tx.insert(collection).values(scrapedCollectionItems);
+      }
     });
   } catch (error) {
-    const uniqueScrapeCount = new Set(itemsToScrape.map((i) => i.itemExternalId)).size;
+    const scrapedItemIds = successfulResults.map((result) => result.id);
+    const successCount = existingCount;
+    const failCount = scrapeRowCount;
+    const sessionStatus =
+      failCount === 0
+        ? ("completed" as const)
+        : successCount > 0
+          ? ("partial" as const)
+          : ("failed" as const);
+    const statusMessage =
+      sessionStatus === "partial"
+        ? "Sync partially completed: Failed to persist scraped items."
+        : "Sync failed: Failed to persist scraped items.";
+
+    await markPersistFailedSyncSessionItemStatuses({
+      syncSessionId,
+      scrapedItemIds,
+      errorReason: "Persistence failed while saving scraped items",
+    });
     await setJobStatus({
       redis,
       jobId: job.id!,
-      statusMessage: `Sync failed: Failed to insert items to database.`,
+      statusMessage,
       finished: true,
       syncSessionId,
-      sessionStatus: "failed",
+      sessionStatus,
     });
     await updateSyncSessionCounts({
       syncSessionId,
-      successCount: successfulResults.length,
-      failCount: uniqueScrapeCount - successfulResults.length,
+      successCount,
+      failCount,
     });
     console.error("Failed to insert data to database.", error);
-    throw error;
+    return {
+      status: "Sync Job completed",
+      processedAt: new Date().toISOString(),
+    };
   }
 
-  const uniqueScrapeCount = new Set(itemsToScrape.map((i) => i.itemExternalId)).size;
-  const failCount = uniqueScrapeCount - successfulResults.length;
-  const sessionStatus = failCount === 0 ? ("completed" as const) : ("partial" as const);
+  const successCount = existingCount + scrapedPersistedRowCount;
+  const failCount = scrapeRowCount - scrapedPersistedRowCount;
+  const sessionStatus =
+    failCount === 0
+      ? ("completed" as const)
+      : successCount > 0
+        ? ("partial" as const)
+        : ("failed" as const);
+  const statusLabel =
+    sessionStatus === "completed"
+      ? "completed"
+      : sessionStatus === "partial"
+        ? "partially completed"
+        : "failed";
 
   await setJobStatus({
     redis,
     jobId: job.id!,
-    statusMessage: `Sync completed: Synced ${
-      successfulCollectionItems.length + itemsToInsert.length
-    } out of ${itemsToInsert.length + itemsToScrape.length} items`,
+    statusMessage: `Sync ${statusLabel}: Synced ${successCount} out of ${totalRowCount} items`,
     finished: true,
     syncSessionId,
     sessionStatus,
   });
   await updateSyncSessionCounts({
     syncSessionId,
-    successCount: successfulResults.length,
+    successCount,
     failCount,
   });
 

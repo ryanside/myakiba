@@ -208,7 +208,7 @@ export default function UnifiedItemMoveForm({
                 existingOrderForm.handleSubmit();
               }}
             >
-              <ScrollArea className="gap-4 py-4 w-full overflow-auto">
+              <ScrollArea className="gap-4 py-4 mb-4 w-full overflow-auto">
                 <existingOrderForm.Field
                   name="targetOrderId"
                   validators={{

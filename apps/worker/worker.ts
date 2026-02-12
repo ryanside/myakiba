@@ -1,24 +1,17 @@
 import { Worker } from "bullmq";
-import { scrapedItems, scrapedItemsWithRateLimit } from "./lib/scrape";
-import {
-  setJobStatus,
-  updateSyncSessionCounts,
-  batchUpdateSyncSessionItemStatuses,
-} from "./lib/utils";
-import type { jobData } from "./lib/types";
+import { setJobStatus } from "./lib/utils";
+import type { FullJobData } from "./lib/types";
 import { jobDataSchema } from "@myakiba/schemas";
 import { finalizeCollectionSync } from "./lib/collection/utils";
 import { finalizeOrderSync } from "./lib/order/utils";
 import { finalizeCsvSync } from "./lib/csv/utils";
+import { processSyncJob } from "./lib/process-sync-job";
 import { env } from "@myakiba/env/worker";
 import { redis } from "@myakiba/redis";
 
-const SCRAPE_FAILED_MESSAGE =
-  "Sync failed: Failed to scrape items. Please try again. MFC might be down, or the MFC item IDs may be invalid.";
-
 const myWorker = new Worker(
   "sync-queue",
-  async (job: jobData) => {
+  async (job: FullJobData) => {
     const validatedData = jobDataSchema.safeParse(job.data);
     if (validatedData.error) {
       await setJobStatus({
@@ -32,209 +25,93 @@ const myWorker = new Worker(
     const userId = validatedData.data.userId;
     const syncSessionId = validatedData.data.syncSessionId;
     const type = validatedData.data.type;
+    const context = {
+      redis,
+      jobId: job.id!,
+      syncSessionId,
+      userId,
+    };
 
     if (type === "csv") {
+      const data = validatedData.data;
       console.log("🎯 Worker: Processing CSV sync job", job.name);
       console.log("🎯 Worker: Job ID", job.id);
-      console.log("🎯 Worker: Items", validatedData.data.items);
+      console.log("🎯 Worker: Items", data.items);
       console.log("🎯 Worker: UserId", userId);
 
-      const scrapeMethod =
-        validatedData.data.items.length <= 5 ? scrapedItems : scrapedItemsWithRateLimit;
-
-      const itemIds = Array.from(
-        new Set(validatedData.data.items.map((item) => item.itemExternalId)),
-      );
-
-      await setJobStatus({
-        redis,
-        jobId: job.id!,
-        statusMessage: `Starting to sync ${itemIds.length} items`,
-        finished: false,
-        syncSessionId,
-        sessionStatus: "processing",
-      });
-
-      const successfulResults = await scrapeMethod({
+      const itemIds = Array.from(new Set(data.items.map((item) => item.itemExternalId)));
+      return processSyncJob({
         itemIds,
-        maxRetries: 3,
-        baseDelayMs: 1000,
-        userId,
-        jobId: job.id!,
+        scrapeRowCount: data.items.length,
+        existingCount: data.existingCount,
+        context,
+        finalize: async (successfulResults) => {
+          await finalizeCsvSync({
+            successfulResults: [...successfulResults],
+            job,
+            userId,
+            redis,
+            csvItems: data.items,
+            existingCount: data.existingCount,
+            syncSessionId,
+          });
+        },
       });
+    }
 
-      const scrapedItemIds = successfulResults.map((r) => r.id);
-      const failedItemIds = itemIds.filter((id) => !scrapedItemIds.includes(id));
-      await batchUpdateSyncSessionItemStatuses({
-        syncSessionId,
-        scrapedItemIds,
-        failedItemIds,
-      });
-
-      if (successfulResults.length === 0) {
-        await setJobStatus({
-          redis,
-          jobId: job.id!,
-          statusMessage: SCRAPE_FAILED_MESSAGE,
-          finished: true,
-          syncSessionId,
-          sessionStatus: "failed",
-        });
-        await updateSyncSessionCounts({
-          syncSessionId,
-          successCount: 0,
-          failCount: itemIds.length,
-        });
-        throw new Error("Failed to scrape items.");
-      }
-
-      await finalizeCsvSync({
-        successfulResults,
-        job,
-        userId,
-        redis,
-        csvItems: validatedData.data.items,
-        syncSessionId,
-      });
-
-      return successfulResults;
-    } else if (type === "order") {
+    if (type === "order") {
+      const { order } = validatedData.data;
       console.log("🎯 Worker: Processing Order sync job", job.name);
       console.log("🎯 Worker: Job ID", job.id);
-      console.log("🎯 Worker: Details", validatedData.data.order.details);
-      console.log("🎯 Worker: Items to scrape", validatedData.data.order.itemsToScrape);
+      console.log("🎯 Worker: Details", order.details);
+      console.log("🎯 Worker: Items to scrape", order.itemsToScrape);
       console.log("🎯 Worker: UserId", userId);
 
-      const scrapeMethod =
-        validatedData.data.order.itemsToScrape.length <= 5
-          ? scrapedItems
-          : scrapedItemsWithRateLimit;
-
-      const itemIds = Array.from(
-        new Set(validatedData.data.order.itemsToScrape.map((item) => item.itemExternalId)),
-      );
-
-      await setJobStatus({
-        redis,
-        jobId: job.id!,
-        statusMessage: `Starting to scrape ${itemIds.length} items`,
-        finished: false,
-        syncSessionId,
-        sessionStatus: "processing",
-      });
-
-      const successfulResults = await scrapeMethod({
+      const itemIds = Array.from(new Set(order.itemsToScrape.map((item) => item.itemExternalId)));
+      return processSyncJob({
         itemIds,
-        maxRetries: 3,
-        baseDelayMs: 1000,
-        userId,
-        jobId: job.id!,
+        scrapeRowCount: order.itemsToScrape.length,
+        existingCount: order.existingCount,
+        context,
+        finalize: async (successfulResults) => {
+          await finalizeOrderSync({
+            successfulResults: [...successfulResults],
+            job,
+            redis,
+            details: order.details,
+            itemsToScrape: order.itemsToScrape,
+            existingCount: order.existingCount,
+            syncSessionId,
+          });
+        },
       });
-
-      const scrapedItemIds = successfulResults.map((r) => r.id);
-      const failedItemIds = itemIds.filter((id) => !scrapedItemIds.includes(id));
-      await batchUpdateSyncSessionItemStatuses({
-        syncSessionId,
-        scrapedItemIds,
-        failedItemIds,
-      });
-
-      if (successfulResults.length === 0) {
-        await setJobStatus({
-          redis,
-          jobId: job.id!,
-          statusMessage: SCRAPE_FAILED_MESSAGE,
-          finished: true,
-          syncSessionId,
-          sessionStatus: "failed",
-        });
-        await updateSyncSessionCounts({
-          syncSessionId,
-          successCount: 0,
-          failCount: itemIds.length,
-        });
-        throw new Error("Failed to scrape items.");
-      }
-
-      await finalizeOrderSync({
-        successfulResults,
-        job,
-        redis,
-        details: validatedData.data.order.details,
-        itemsToScrape: validatedData.data.order.itemsToScrape,
-        itemsToInsert: validatedData.data.order.itemsToInsert,
-        syncSessionId,
-      });
-
-      return successfulResults;
-    } else {
-      console.log("🎯 Worker: Processing Collection sync job", job.name);
-      console.log("🎯 Worker: Job ID", job.id);
-      console.log("🎯 Worker: Items to scrape", validatedData.data.collection.itemsToScrape);
-      console.log("🎯 Worker: UserId", userId);
-
-      const scrapeMethod =
-        validatedData.data.collection.itemsToScrape.length <= 5
-          ? scrapedItems
-          : scrapedItemsWithRateLimit;
-
-      const itemIds = Array.from(
-        new Set(validatedData.data.collection.itemsToScrape.map((item) => item.itemExternalId)),
-      );
-
-      await setJobStatus({
-        redis,
-        jobId: job.id!,
-        statusMessage: `Starting to scrape ${itemIds.length} items`,
-        finished: false,
-        syncSessionId,
-        sessionStatus: "processing",
-      });
-
-      const successfulResults = await scrapeMethod({
-        itemIds,
-        maxRetries: 3,
-        baseDelayMs: 1000,
-        userId,
-        jobId: job.id!,
-      });
-
-      const scrapedItemIds = successfulResults.map((r) => r.id);
-      const failedItemIds = itemIds.filter((id) => !scrapedItemIds.includes(id));
-      await batchUpdateSyncSessionItemStatuses({
-        syncSessionId,
-        scrapedItemIds,
-        failedItemIds,
-      });
-
-      if (successfulResults.length === 0) {
-        await setJobStatus({
-          redis,
-          jobId: job.id!,
-          statusMessage: SCRAPE_FAILED_MESSAGE,
-          finished: true,
-          syncSessionId,
-          sessionStatus: "failed",
-        });
-        await updateSyncSessionCounts({
-          syncSessionId,
-          successCount: 0,
-          failCount: itemIds.length,
-        });
-        throw new Error("Failed to scrape items.");
-      }
-
-      await finalizeCollectionSync({
-        successfulResults,
-        job,
-        redis,
-        itemsToScrape: validatedData.data.collection.itemsToScrape,
-        itemsToInsert: validatedData.data.collection.itemsToInsert,
-        syncSessionId,
-      });
-
-      return successfulResults;
     }
+
+    const { collection } = validatedData.data;
+    console.log("🎯 Worker: Processing Collection sync job", job.name);
+    console.log("🎯 Worker: Job ID", job.id);
+    console.log("🎯 Worker: Items to scrape", collection.itemsToScrape);
+    console.log("🎯 Worker: UserId", userId);
+
+    const itemIds = Array.from(
+      new Set(collection.itemsToScrape.map((item) => item.itemExternalId)),
+    );
+    return processSyncJob({
+      itemIds,
+      scrapeRowCount: collection.itemsToScrape.length,
+      existingCount: collection.existingCount,
+      context,
+      finalize: async (successfulResults) => {
+        await finalizeCollectionSync({
+          successfulResults: [...successfulResults],
+          job,
+          redis,
+          itemsToScrape: collection.itemsToScrape,
+          existingCount: collection.existingCount,
+          syncSessionId,
+        });
+      },
+    });
   },
   {
     connection: {
@@ -258,8 +135,10 @@ myWorker.on("failed", async (job, err) => {
 
   if (!job?.id) return;
 
-  const syncSessionId = (job.data as Record<string, unknown>)?.syncSessionId;
-  if (typeof syncSessionId !== "string") return;
+  const parsedJobData = jobDataSchema.safeParse(job.data);
+  if (!parsedJobData.success) return;
+
+  const syncSessionId = parsedJobData.data.syncSessionId;
 
   try {
     await setJobStatus({

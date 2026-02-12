@@ -13,7 +13,7 @@ const buttonVariants = cva(
       variant: {
         primary:
           "from-primary to-primary/85 text-primary-foreground border border-zinc-950/25 bg-gradient-to-t shadow-md shadow-zinc-950/20 ring-1 ring-inset ring-white/20 transition-[filter] duration-200 hover:brightness-110 active:brightness-90 dark:border-white/20 dark:ring-transparent",
-        mono: "from-zinc-950 to-zinc-950/85 text-white dark:from-zinc-300 dark:to-zinc-300/85 dark:text-black border border-zinc-950/25 bg-gradient-to-t shadow-md shadow-zinc-950/20 ring-1 ring-inset ring-white/20 transition-[filter] duration-200 hover:brightness-110 active:brightness-90 dark:border-white/20 dark:ring-transparent data-[state=open]:brightness-90",
+        mono: "from-zinc-950 to-zinc-950/85 text-white dark:from-zinc-300 dark:to-zinc-300/85 dark:text-black border border-zinc-950/25 bg-gradient-to-t shadow-md shadow-zinc-950/20 ring-1 ring-inset ring-white/20 transition-[filter] duration-200 hover:brightness-110 hover:text-white active:brightness-90 dark:border-white/20 dark:ring-transparent dark:hover:text-black data-[state=open]:brightness-90",
         destructive:
           "from-destructive to-destructive/85 text-destructive-foreground border border-zinc-950/25 bg-gradient-to-t shadow-md shadow-zinc-950/20 ring-1 ring-inset ring-white/20 transition-[filter] duration-200 hover:brightness-110 active:brightness-90 dark:border-white/15 dark:ring-transparent",
         secondary:

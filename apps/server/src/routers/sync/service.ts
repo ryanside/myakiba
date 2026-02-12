@@ -7,22 +7,23 @@ import {
   syncSession,
   syncSessionItem,
 } from "@myakiba/db/schema/figure";
-import { and, inArray, eq, desc, count, sql } from "drizzle-orm";
 import type {
-  csvItem,
-  status,
+  DbEnrichedSyncSessionItemRow,
+  DbSyncSessionItemRow,
+  DbSyncSessionRow,
+} from "@myakiba/db/schema/figure";
+import { and, inArray, eq, desc, count, sql } from "drizzle-orm";
+import { statusSchema, type SyncTerminalState } from "./model";
+import type {
+  CsvItem,
+  Status,
   UpdatedSyncCollection,
   UpdatedSyncOrder,
   UpdatedSyncOrderItem,
   CollectionInsertType,
 } from "./model";
 import type { OrderInsertType } from "../orders/model";
-import type {
-  SyncSessionRow,
-  EnrichedSyncSessionItemRow,
-  SyncSessionStatus,
-  SyncType,
-} from "@myakiba/types";
+import type { SyncSessionItemStatus, SyncSessionStatus, SyncType } from "@myakiba/types";
 import { Queue } from "bullmq";
 import { createId } from "@paralleldrive/cuid2";
 import { env } from "@myakiba/env/server";
@@ -34,6 +35,7 @@ import {
   collectionItemMetadataSchema,
   syncOrderSchema,
 } from "@myakiba/schemas";
+import { JOB_STATUS_TTL_SECONDS } from "@myakiba/constants";
 
 const syncQueue = new Queue("sync-queue", {
   connection: {
@@ -42,7 +44,31 @@ const syncQueue = new Queue("sync-queue", {
   },
 });
 
+type SyncSessionUpdatePayload = Partial<
+  Pick<
+    typeof syncSession.$inferInsert,
+    "status" | "statusMessage" | "jobId" | "orderId" | "successCount" | "failCount" | "completedAt"
+  >
+>;
+
 class SyncService {
+  private deriveTerminalStateFromSessionStatus(
+    sessionStatus: SyncSessionStatus,
+  ): SyncTerminalState {
+    return sessionStatus === "completed" || sessionStatus === "partial" ? "success" : "error";
+  }
+
+  private async markSyncSessionAsFailed(
+    syncSessionId: string,
+    statusMessage: string,
+  ): Promise<void> {
+    await this.updateSyncSession(syncSessionId, {
+      status: "failed",
+      statusMessage,
+      completedAt: new Date(),
+    });
+  }
+
   async getExistingItemIdsInCollection(
     itemIds: string[],
     userId: string,
@@ -126,15 +152,15 @@ class SyncService {
     });
   }
 
-  assignOrderIds(items: csvItem[]): csvItem[] {
+  assignOrderIds(items: CsvItem[]): CsvItem[] {
     return items.map((item) => ({
       ...item,
       orderId: item.status === "Ordered" ? createId() : item.orderId,
     }));
   }
 
-  async processItems(items: csvItem[], userId: string) {
-    const itemExternalIds = items.map((item: csvItem) => item.itemExternalId);
+  async processItems(items: CsvItem[], userId: string) {
+    const itemExternalIds = items.map((item: CsvItem) => item.itemExternalId);
 
     const existingItems = await this.getExistingItemsByExternalIds(itemExternalIds);
     const existingItemIds = existingItems.map((existingItem) => existingItem.id);
@@ -158,14 +184,14 @@ class SyncService {
     const { releases: existingItemsReleases, releaseDates: existingItemsReleaseDates } =
       await this.getExistingItemsWithReleases(itemIdsNeedingInsert);
 
-    const csvItemsToInsert = items.filter((item: csvItem) =>
+    const csvItemsToInsert = items.filter((item: CsvItem) =>
       itemsNeedingInsert.some((existingItem) => existingItem.externalId === item.itemExternalId),
     );
 
     const idsToScrape = itemExternalIds.filter(
       (externalId) => !existingItems.some((existingItem) => existingItem.externalId === externalId),
     );
-    const csvItemsToScrape = items.filter((item: csvItem) =>
+    const csvItemsToScrape = items.filter((item: CsvItem) =>
       idsToScrape.includes(item.itemExternalId),
     );
 
@@ -229,46 +255,72 @@ class SyncService {
     };
   }
 
-  async queueCSVSyncJob(items: csvItem[], userId: string, syncSessionId: string) {
-    const job = await syncQueue.add(
-      "sync-job",
-      {
-        type: "csv" as const,
-        userId: userId,
-        syncSessionId,
-        items: items,
-      },
-      {
-        removeOnComplete: true,
-        removeOnFail: true,
-        jobId: createId(),
-      },
-    );
+  async queueCSVSyncJob(
+    items: CsvItem[],
+    userId: string,
+    syncSessionId: string,
+    existingCount: number,
+  ) {
+    let queuedJobId: string | null = null;
+    try {
+      const job = await syncQueue.add(
+        "sync-job",
+        {
+          type: "csv" as const,
+          userId: userId,
+          syncSessionId,
+          existingCount,
+          items: items,
+        },
+        {
+          removeOnComplete: true,
+          removeOnFail: true,
+          jobId: createId(),
+        },
+      );
 
-    if (!job) {
-      throw new Error("FAILED_TO_QUEUE_CSV_SYNC_JOB");
+      if (!job?.id) {
+        throw new Error("FAILED_TO_QUEUE_CSV_SYNC_JOB");
+      }
+
+      queuedJobId = job.id;
+      const setJobStatus = await redis.set(
+        `job:${job.id}:status`,
+        JSON.stringify({
+          status: "Your CSV sync job has been added to queue. Please wait...",
+          finished: false,
+          createdAt: new Date().toISOString(),
+          terminalState: null,
+        }),
+        "EX",
+        JOB_STATUS_TTL_SECONDS,
+      );
+
+      if (!setJobStatus) {
+        await job.remove().catch(() => undefined);
+        throw new Error("FAILED_TO_SET_JOB_STATUS_IN_REDIS");
+      }
+
+      const updated = await this.updateSyncSession(syncSessionId, { jobId: job.id });
+      if (!updated) {
+        await job.remove().catch(() => undefined);
+        throw new Error("SYNC_SESSION_NOT_FOUND");
+      }
+
+      return job.id;
+    } catch (error) {
+      const failureMessage =
+        error instanceof Error && error.message === "FAILED_TO_SET_JOB_STATUS_IN_REDIS"
+          ? "Sync failed before processing started: unable to initialize job status."
+          : "Sync failed before processing started: unable to queue job.";
+      await this.markSyncSessionAsFailed(syncSessionId, failureMessage);
+
+      if (queuedJobId) {
+        const queuedJob = await syncQueue.getJob(queuedJobId);
+        await queuedJob?.remove().catch(() => undefined);
+      }
+      throw error;
     }
-
-    const setJobStatus = await redis.set(
-      `job:${job.id}:status`,
-      JSON.stringify({
-        status: "Your CSV sync job has been added to queue. Please wait...",
-        finished: false,
-        createdAt: new Date().toISOString(),
-      }),
-      "EX",
-      60,
-    );
-
-    if (!setJobStatus) {
-      throw new Error("FAILED_TO_SET_JOB_STATUS_IN_REDIS");
-    }
-
-    if (job.id) {
-      await this.updateSyncSession(syncSessionId, { jobId: job.id });
-    }
-
-    return job.id;
   }
 
   async queueOrderSyncJob(
@@ -277,50 +329,72 @@ class SyncService {
     itemsToScrape: UpdatedSyncOrderItem[],
     itemsToInsert: UpdatedSyncOrderItem[],
     syncSessionId: string,
+    existingCount: number,
   ) {
-    const job = await syncQueue.add(
-      "sync-job",
-      {
-        type: "order" as const,
-        userId: userId,
-        syncSessionId,
-        order: {
-          details: order,
-          itemsToScrape: itemsToScrape,
-          itemsToInsert: itemsToInsert,
+    let queuedJobId: string | null = null;
+    try {
+      const job = await syncQueue.add(
+        "sync-job",
+        {
+          type: "order" as const,
+          userId: userId,
+          syncSessionId,
+          order: {
+            details: order,
+            itemsToScrape: itemsToScrape,
+            itemsToInsert: itemsToInsert,
+            existingCount,
+          },
         },
-      },
-      {
-        removeOnComplete: true,
-        removeOnFail: true,
-        jobId: createId(),
-      },
-    );
+        {
+          removeOnComplete: true,
+          removeOnFail: true,
+          jobId: createId(),
+        },
+      );
 
-    if (!job) {
-      throw new Error("FAILED_TO_QUEUE_ORDER_SYNC_JOB");
+      if (!job?.id) {
+        throw new Error("FAILED_TO_QUEUE_ORDER_SYNC_JOB");
+      }
+
+      queuedJobId = job.id;
+      const setJobStatus = await redis.set(
+        `job:${job.id}:status`,
+        JSON.stringify({
+          status: "Your order sync job has been added to queue. Please wait...",
+          finished: false,
+          createdAt: new Date().toISOString(),
+          terminalState: null,
+        }),
+        "EX",
+        JOB_STATUS_TTL_SECONDS,
+      );
+
+      if (!setJobStatus) {
+        await job.remove().catch(() => undefined);
+        throw new Error("FAILED_TO_SET_JOB_STATUS_IN_REDIS");
+      }
+
+      const updated = await this.updateSyncSession(syncSessionId, { jobId: job.id });
+      if (!updated) {
+        await job.remove().catch(() => undefined);
+        throw new Error("SYNC_SESSION_NOT_FOUND");
+      }
+
+      return job.id;
+    } catch (error) {
+      const failureMessage =
+        error instanceof Error && error.message === "FAILED_TO_SET_JOB_STATUS_IN_REDIS"
+          ? "Sync failed before processing started: unable to initialize job status."
+          : "Sync failed before processing started: unable to queue job.";
+      await this.markSyncSessionAsFailed(syncSessionId, failureMessage);
+
+      if (queuedJobId) {
+        const queuedJob = await syncQueue.getJob(queuedJobId);
+        await queuedJob?.remove().catch(() => undefined);
+      }
+      throw error;
     }
-
-    const setJobStatus = await redis.set(
-      `job:${job.id}:status`,
-      JSON.stringify({
-        status: "Your order sync job has been added to queue. Please wait...",
-        finished: false,
-        createdAt: new Date().toISOString(),
-      }),
-      "EX",
-      60,
-    );
-
-    if (!setJobStatus) {
-      throw new Error("FAILED_TO_SET_JOB_STATUS_IN_REDIS");
-    }
-
-    if (job.id) {
-      await this.updateSyncSession(syncSessionId, { jobId: job.id });
-    }
-
-    return job.id;
   }
 
   async queueCollectionSyncJob(
@@ -328,55 +402,95 @@ class SyncService {
     itemsToScrape: UpdatedSyncCollection[],
     itemsToInsert: UpdatedSyncCollection[],
     syncSessionId: string,
+    existingCount: number,
   ) {
-    const job = await syncQueue.add(
-      "sync-job",
-      {
-        type: "collection" as const,
-        userId: userId,
-        syncSessionId,
-        collection: {
-          itemsToScrape: itemsToScrape,
-          itemsToInsert: itemsToInsert,
+    let queuedJobId: string | null = null;
+    try {
+      const job = await syncQueue.add(
+        "sync-job",
+        {
+          type: "collection" as const,
+          userId: userId,
+          syncSessionId,
+          collection: {
+            itemsToScrape: itemsToScrape,
+            itemsToInsert: itemsToInsert,
+            existingCount,
+          },
         },
-      },
-      {
-        removeOnComplete: true,
-        removeOnFail: true,
-        jobId: createId(),
-      },
-    );
+        {
+          removeOnComplete: true,
+          removeOnFail: true,
+          jobId: createId(),
+        },
+      );
 
-    if (!job) {
-      throw new Error("FAILED_TO_QUEUE_COLLECTION_SYNC_JOB");
+      if (!job?.id) {
+        throw new Error("FAILED_TO_QUEUE_COLLECTION_SYNC_JOB");
+      }
+
+      queuedJobId = job.id;
+      const setJobStatus = await redis.set(
+        `job:${job.id}:status`,
+        JSON.stringify({
+          status: "Your collection sync job has been added to queue. Please wait...",
+          finished: false,
+          createdAt: new Date().toISOString(),
+          terminalState: null,
+        }),
+        "EX",
+        JOB_STATUS_TTL_SECONDS,
+      );
+
+      if (!setJobStatus) {
+        await job.remove().catch(() => undefined);
+        throw new Error("FAILED_TO_SET_JOB_STATUS_IN_REDIS");
+      }
+
+      const updated = await this.updateSyncSession(syncSessionId, { jobId: job.id });
+      if (!updated) {
+        await job.remove().catch(() => undefined);
+        throw new Error("SYNC_SESSION_NOT_FOUND");
+      }
+
+      return job.id;
+    } catch (error) {
+      const failureMessage =
+        error instanceof Error && error.message === "FAILED_TO_SET_JOB_STATUS_IN_REDIS"
+          ? "Sync failed before processing started: unable to initialize job status."
+          : "Sync failed before processing started: unable to queue job.";
+      await this.markSyncSessionAsFailed(syncSessionId, failureMessage);
+
+      if (queuedJobId) {
+        const queuedJob = await syncQueue.getJob(queuedJobId);
+        await queuedJob?.remove().catch(() => undefined);
+      }
+      throw error;
     }
-
-    const setJobStatus = await redis.set(
-      `job:${job.id}:status`,
-      JSON.stringify({
-        status: "Your collection sync job has been added to queue. Please wait...",
-        finished: false,
-        createdAt: new Date().toISOString(),
-      }),
-      "EX",
-      60,
-    );
-
-    if (!setJobStatus) {
-      throw new Error("FAILED_TO_SET_JOB_STATUS_IN_REDIS");
-    }
-
-    if (job.id) {
-      await this.updateSyncSession(syncSessionId, { jobId: job.id });
-    }
-
-    return job.id;
   }
 
-  async getJobStatus(jobId: string): Promise<status> {
+  async getJobStatus(jobId: string, userId: string): Promise<Status> {
     const cached = await redis.get(`job:${jobId}:status`);
     if (cached) {
-      return JSON.parse(cached) as status;
+      const parsedStatus = statusSchema.safeParse(JSON.parse(cached));
+      if (parsedStatus.success) {
+        if (parsedStatus.data.finished && parsedStatus.data.terminalState === null) {
+          const [cachedSession] = await db
+            .select({ status: syncSession.status })
+            .from(syncSession)
+            .where(and(eq(syncSession.jobId, jobId), eq(syncSession.userId, userId)));
+
+          if (cachedSession) {
+            return {
+              ...parsedStatus.data,
+              terminalState: this.deriveTerminalStateFromSessionStatus(cachedSession.status),
+            };
+          }
+        }
+
+        return parsedStatus.data;
+      }
+      throw new Error("SYNC_JOB_STATUS_CORRUPT");
     }
 
     // Redis key expired — fall back to the persistent sync session record
@@ -387,24 +501,30 @@ class SyncService {
         createdAt: syncSession.createdAt,
       })
       .from(syncSession)
-      .where(eq(syncSession.jobId, jobId));
+      .where(and(eq(syncSession.jobId, jobId), eq(syncSession.userId, userId)));
 
     if (!session) {
       throw new Error("SYNC_JOB_NOT_FOUND");
     }
 
-    const FINISHED_STATUSES = ["completed", "failed", "partial"] as const;
-    const finished = FINISHED_STATUSES.includes(
-      session.status as (typeof FINISHED_STATUSES)[number],
-    );
+    const finishedStatuses: ReadonlySet<SyncSessionStatus> = new Set([
+      "completed",
+      "failed",
+      "partial",
+    ]);
+    const finished = finishedStatuses.has(session.status);
 
-    const statusMessage =
-      session.statusMessage !== "" ? session.statusMessage : `Sync ${session.status}`;
+    const statusMessage = session.statusMessage ? session.statusMessage : `Sync ${session.status}`;
+
+    const terminalState = finished
+      ? this.deriveTerminalStateFromSessionStatus(session.status)
+      : null;
 
     return {
       status: statusMessage,
       finished,
       createdAt: session.createdAt.toISOString(),
+      terminalState,
     };
   }
 
@@ -412,7 +532,7 @@ class SyncService {
 
   async createSyncSession(
     userId: string,
-    syncType: "csv" | "order" | "collection",
+    syncType: SyncType,
     itemExternalIds: readonly number[],
     options?: {
       readonly orderId?: string;
@@ -463,7 +583,7 @@ class SyncService {
     limit: number,
     statusFilter?: SyncSessionStatus,
     syncTypeFilter?: SyncType,
-  ): Promise<{ sessions: SyncSessionRow[]; total: number }> {
+  ): Promise<{ sessions: DbSyncSessionRow[]; total: number }> {
     const offset = (page - 1) * limit;
 
     const conditions = [eq(syncSession.userId, userId)];
@@ -494,8 +614,8 @@ class SyncService {
     page?: number,
     limit?: number,
   ): Promise<{
-    session: SyncSessionRow;
-    items: EnrichedSyncSessionItemRow[];
+    session: DbSyncSessionRow;
+    items: DbEnrichedSyncSessionItemRow[];
     totalItems: number;
   } | null> {
     const [session] = await db
@@ -541,7 +661,7 @@ class SyncService {
       countQuery,
     ]);
 
-    const items: EnrichedSyncSessionItemRow[] = rows.map((row) => ({
+    const items: DbEnrichedSyncSessionItemRow[] = rows.map((row) => ({
       ...row,
       itemId: row.itemId ?? null,
       itemTitle: row.itemTitle ?? null,
@@ -553,26 +673,20 @@ class SyncService {
 
   async updateSyncSession(
     sessionId: string,
-    updates: {
-      readonly status?: "pending" | "processing" | "completed" | "failed" | "partial";
-      readonly statusMessage?: string;
-      readonly jobId?: string;
-      readonly orderId?: string;
-      readonly successCount?: number;
-      readonly failCount?: number;
-      readonly completedAt?: Date | null;
-    },
-  ): Promise<void> {
-    await db
+    updates: Readonly<SyncSessionUpdatePayload>,
+  ): Promise<boolean> {
+    const result = await db
       .update(syncSession)
       .set({ ...updates, updatedAt: new Date() })
-      .where(eq(syncSession.id, sessionId));
+      .where(eq(syncSession.id, sessionId))
+      .returning({ id: syncSession.id });
+    return result.length > 0;
   }
 
   async updateSyncSessionItem(
     syncSessionId: string,
     itemExternalId: number,
-    itemStatus: "pending" | "scraped" | "failed",
+    itemStatus: SyncSessionItemStatus,
     errorReason?: string,
   ): Promise<void> {
     await db
@@ -594,15 +708,17 @@ class SyncService {
     sessionId: string,
     userId: string,
   ): Promise<{ jobId: string; itemCount: number }> {
-    const sessionDetail = await this.getSyncSessionDetail(sessionId, userId);
-    if (!sessionDetail) throw new Error("SYNC_SESSION_NOT_FOUND");
+    const [sessionData] = await db
+      .select()
+      .from(syncSession)
+      .where(and(eq(syncSession.id, sessionId), eq(syncSession.userId, userId)));
 
-    const { session: sessionData, items: allItems } = sessionDetail;
+    if (!sessionData) throw new Error("SYNC_SESSION_NOT_FOUND");
 
-    // Atomically claim only items that are still "failed" to prevent duplicate retries.
-    // If two requests race, the first UPDATE claims the rows; the second finds none.
-    const claimedItemIds = await db.transaction(async (tx) => {
-      const claimed = await tx
+    // Atomically claim failed rows via UPDATE ... RETURNING. This prevents stale
+    // pre-read snapshots and ensures concurrent retry calls cannot claim the same rows.
+    const itemsToRetry = await db.transaction(async (tx) => {
+      const claimedRows = await tx
         .update(syncSessionItem)
         .set({
           status: "pending",
@@ -613,9 +729,9 @@ class SyncService {
         .where(
           and(eq(syncSessionItem.syncSessionId, sessionId), eq(syncSessionItem.status, "failed")),
         )
-        .returning({ id: syncSessionItem.id });
+        .returning();
 
-      if (claimed.length === 0) throw new Error("NO_FAILED_ITEMS_TO_RETRY");
+      if (claimedRows.length === 0) throw new Error("NO_FAILED_ITEMS_TO_RETRY");
 
       await tx
         .update(syncSession)
@@ -626,55 +742,109 @@ class SyncService {
         })
         .where(eq(syncSession.id, sessionId));
 
-      return new Set(claimed.map((c) => c.id));
+      return [...claimedRows].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
     });
 
-    // Use the claimed IDs to filter the enriched items for building job data
-    const itemsToRetry = allItems.filter((i) => claimedItemIds.has(i.id));
     const retryExternalIds = itemsToRetry.map((i) => i.itemExternalId);
+    let queuedJobId: string | null = null;
 
-    const jobData = await this.buildRetryJobData(
-      sessionData.syncType as "csv" | "order" | "collection",
-      userId,
-      sessionId,
-      itemsToRetry,
-      sessionData.orderId,
-      sessionData.orderPayload,
-    );
+    try {
+      const jobData = await this.buildRetryJobData(
+        sessionData.syncType,
+        userId,
+        sessionId,
+        itemsToRetry,
+        sessionData.orderId,
+        sessionData.orderPayload,
+        sessionData.successCount,
+      );
 
-    const job = await syncQueue.add("sync-job", jobData, {
-      removeOnComplete: true,
-      removeOnFail: true,
-      jobId: createId(),
-    });
+      const job = await syncQueue.add("sync-job", jobData, {
+        removeOnComplete: true,
+        removeOnFail: true,
+        jobId: createId(),
+      });
 
-    if (!job?.id) throw new Error("FAILED_TO_QUEUE_RETRY_JOB");
+      if (!job?.id) throw new Error("FAILED_TO_QUEUE_RETRY_JOB");
+      queuedJobId = job.id;
 
-    const setStatus = await redis.set(
-      `job:${job.id}:status`,
-      JSON.stringify({
-        status: `Retrying ${retryExternalIds.length} failed items...`,
-        finished: false,
-        createdAt: new Date().toISOString(),
-      }),
-      "EX",
-      60,
-    );
+      const setStatus = await redis.set(
+        `job:${job.id}:status`,
+        JSON.stringify({
+          status: `Retrying ${retryExternalIds.length} failed items...`,
+          finished: false,
+          createdAt: new Date().toISOString(),
+          terminalState: null,
+        }),
+        "EX",
+        JOB_STATUS_TTL_SECONDS,
+      );
 
-    if (!setStatus) throw new Error("FAILED_TO_SET_JOB_STATUS_IN_REDIS");
+      if (!setStatus) {
+        await job.remove().catch(() => undefined);
+        throw new Error("FAILED_TO_SET_JOB_STATUS_IN_REDIS");
+      }
 
-    await this.updateSyncSession(sessionId, { jobId: job.id });
+      const updated = await this.updateSyncSession(sessionId, { jobId: job.id });
+      if (!updated) {
+        await job.remove().catch(() => undefined);
+        throw new Error("SYNC_SESSION_NOT_FOUND");
+      }
 
-    return { jobId: job.id, itemCount: retryExternalIds.length };
+      return { jobId: job.id, itemCount: retryExternalIds.length };
+    } catch (error) {
+      await db.transaction(async (tx) => {
+        if (retryExternalIds.length > 0) {
+          await tx
+            .update(syncSessionItem)
+            .set({
+              status: "failed",
+              errorReason: "Retry failed before processing started",
+              updatedAt: new Date(),
+            })
+            .where(
+              and(
+                eq(syncSessionItem.syncSessionId, sessionId),
+                inArray(syncSessionItem.itemExternalId, retryExternalIds),
+                eq(syncSessionItem.status, "pending"),
+              ),
+            );
+        }
+
+        const failureMessage =
+          error instanceof Error && error.message === "ORDER_NOT_FOUND_FOR_RETRY"
+            ? "Retry failed before processing started: original order is no longer available."
+            : error instanceof Error && error.message === "FAILED_TO_SET_JOB_STATUS_IN_REDIS"
+              ? "Retry failed before processing started: unable to initialize job status."
+              : "Retry failed before processing started: unable to queue retry job.";
+
+        await tx
+          .update(syncSession)
+          .set({
+            status: "failed",
+            statusMessage: failureMessage,
+            completedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(syncSession.id, sessionId));
+      });
+
+      if (queuedJobId) {
+        const queuedJob = await syncQueue.getJob(queuedJobId);
+        await queuedJob?.remove().catch(() => undefined);
+      }
+      throw error;
+    }
   }
 
   private async buildRetryJobData(
-    syncType: "csv" | "order" | "collection",
+    syncType: SyncType,
     userId: string,
     syncSessionId: string,
-    itemsToRetry: readonly EnrichedSyncSessionItemRow[],
+    itemsToRetry: readonly DbSyncSessionItemRow[],
     orderId: string | null,
     storedOrderPayload: unknown,
+    existingCount: number,
   ) {
     switch (syncType) {
       case "csv":
@@ -682,6 +852,7 @@ class SyncService {
           type: "csv" as const,
           userId,
           syncSessionId,
+          existingCount,
           items: itemsToRetry.map((item) => {
             const parsed = csvItemMetadataSchema.safeParse(item.metadata);
             if (parsed.success) {
@@ -752,6 +923,7 @@ class SyncService {
           syncSessionId,
           order: {
             details: orderDetails,
+            existingCount,
             itemsToScrape: itemsToRetry.map((item) => {
               const parsed = orderItemMetadataSchema.safeParse(item.metadata);
               if (parsed.success) {
@@ -792,6 +964,7 @@ class SyncService {
           userId,
           syncSessionId,
           collection: {
+            existingCount,
             itemsToScrape: itemsToRetry.map((item) => {
               const parsed = collectionItemMetadataSchema.safeParse(item.metadata);
               if (parsed.success) {

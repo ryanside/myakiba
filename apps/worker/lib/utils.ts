@@ -4,9 +4,11 @@ import { and, eq, inArray } from "drizzle-orm";
 import type {
   SetJobStatusParams,
   BatchUpdateSyncSessionItemStatusesParams,
+  MarkPersistFailedSyncSessionItemStatusesParams,
   UpdateSyncSessionCountsParams,
 } from "./types";
 import { env } from "@myakiba/env/worker";
+import { JOB_STATUS_TTL_SECONDS } from "@myakiba/constants";
 
 export const createFetchOptions = (image: boolean = false) => ({
   proxy: env.HTTP_PROXY,
@@ -31,15 +33,23 @@ export const setJobStatus = async ({
   syncSessionId,
   sessionStatus,
 }: SetJobStatusParams): Promise<void> => {
+  const terminalState =
+    finished === true
+      ? sessionStatus === "completed" || sessionStatus === "partial"
+        ? "success"
+        : "error"
+      : null;
+
   await redis.set(
     `job:${jobId}:status`,
     JSON.stringify({
       status: statusMessage,
       finished: finished,
       createdAt: new Date().toISOString(),
+      terminalState,
     }),
     "EX",
-    60,
+    JOB_STATUS_TTL_SECONDS,
   );
 
   if (syncSessionId && sessionStatus) {
@@ -95,6 +105,35 @@ export const batchUpdateSyncSessionItemStatuses = async ({
         ),
       );
   }
+};
+
+/**
+ * Marks previously scraped sync_session_item rows as failed when persistence fails.
+ * This keeps retry semantics consistent because /sync/retry claims failed rows only.
+ */
+export const markPersistFailedSyncSessionItemStatuses = async ({
+  syncSessionId,
+  scrapedItemIds,
+  errorReason,
+}: MarkPersistFailedSyncSessionItemStatusesParams): Promise<void> => {
+  if (scrapedItemIds.length === 0) {
+    return;
+  }
+
+  await db
+    .update(syncSessionItem)
+    .set({
+      status: "failed",
+      errorReason,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(syncSessionItem.syncSessionId, syncSessionId),
+        eq(syncSessionItem.status, "scraped"),
+        inArray(syncSessionItem.itemExternalId, [...scrapedItemIds]),
+      ),
+    );
 };
 
 /**

@@ -1,8 +1,44 @@
-import type { ShippingMethod, OrderStatus, Condition } from "./enums";
-import { syncSession, syncSessionItem } from "@myakiba/db/schema/figure";
+import type {
+  ShippingMethod,
+  OrderStatus,
+  Condition,
+  SyncSessionStatus,
+  SyncSessionItemStatus,
+  SyncType,
+} from "./enums";
+import type {
+  InternalCsvItem,
+  SyncTerminalState as SharedSyncTerminalState,
+  SyncJobStatus as SharedSyncJobStatus,
+} from "@myakiba/schemas";
 
-export type SyncSessionRow = typeof syncSession.$inferSelect;
-export type SyncSessionItemRow = typeof syncSessionItem.$inferSelect;
+export type SyncSessionRow = {
+  readonly id: string;
+  readonly userId: string;
+  readonly syncType: SyncType;
+  readonly jobId: string | null;
+  readonly status: SyncSessionStatus;
+  readonly statusMessage: string;
+  readonly orderId: string | null;
+  readonly totalItems: number;
+  readonly successCount: number;
+  readonly failCount: number;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+  readonly completedAt: Date | null;
+};
+
+export type SyncSessionItemRow = {
+  readonly id: string;
+  readonly syncSessionId: string;
+  readonly itemExternalId: number;
+  readonly status: SyncSessionItemStatus;
+  readonly errorReason: string | null;
+  readonly retryCount: number;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+};
+
 export type EnrichedSyncSessionItemRow = SyncSessionItemRow & {
   readonly itemId: string | null;
   readonly itemTitle: string | null;
@@ -15,6 +51,9 @@ export type SyncStatus = {
   isFinished: boolean;
   status: string;
 };
+
+export type SyncTerminalState = SharedSyncTerminalState;
+export type SyncJobStatus = Readonly<SharedSyncJobStatus>;
 
 export type SyncFormOrderItem = {
   itemExternalId: string;
@@ -122,18 +161,4 @@ export type SyncCollectionItem = Omit<
   score: string;
 };
 
-export type UserItem = {
-  itemExternalId: number;
-  status: "Owned" | "Ordered";
-  count: number;
-  score: string;
-  payment_date: string | null;
-  shipping_date: string | null;
-  collecting_date: string | null;
-  price: string;
-  shop: string;
-  shipping_method: ShippingMethod;
-  note: string;
-  orderId: null;
-  orderDate: string | null;
-};
+export type UserItem = InternalCsvItem;

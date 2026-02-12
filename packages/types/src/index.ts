@@ -34,6 +34,8 @@ export type {
 
 export type {
   SyncStatus,
+  SyncTerminalState,
+  SyncJobStatus,
   SyncFormOrderItem,
   SyncOrderItem,
   SyncFormOrder,

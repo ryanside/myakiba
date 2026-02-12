@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useAnimation } from "motion/react";
-import type { HTMLAttributes } from "react";
+import type { HTMLAttributes, MouseEvent } from "react";
 import { forwardRef, useCallback, useImperativeHandle, useRef } from "react";
 
 import { cn } from "@/lib/utils";
@@ -37,25 +37,25 @@ const GitCompareIcon = forwardRef<GitCompareIconHandle, GitCompareIconProps>(
     });
 
     const handleMouseEnter = useCallback(
-      (e: React.MouseEvent<HTMLDivElement>) => {
+      (e: MouseEvent<HTMLDivElement>) => {
         if (isControlledRef.current) {
           onMouseEnter?.(e);
         } else {
           controls.start("animate");
         }
       },
-      [controls, onMouseEnter]
+      [controls, onMouseEnter],
     );
 
     const handleMouseLeave = useCallback(
-      (e: React.MouseEvent<HTMLDivElement>) => {
+      (e: MouseEvent<HTMLDivElement>) => {
         if (isControlledRef.current) {
           onMouseLeave?.(e);
         } else {
           controls.start("normal");
         }
       },
-      [controls, onMouseLeave]
+      [controls, onMouseLeave],
     );
 
     return (
@@ -162,7 +162,7 @@ const GitCompareIcon = forwardRef<GitCompareIconHandle, GitCompareIconProps>(
         </svg>
       </div>
     );
-  }
+  },
 );
 
 GitCompareIcon.displayName = "GitCompareIcon";

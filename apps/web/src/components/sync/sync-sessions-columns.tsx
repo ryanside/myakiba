@@ -1,31 +1,19 @@
 import type { ReactNode } from "react";
 import type { ColumnDef, Row } from "@tanstack/react-table";
-import {
-  useQuery,
-  useQueryClient,
-  experimental_streamedQuery as streamedQuery,
-} from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
-import type { SyncSessionRow, SyncSessionStatus } from "@myakiba/types";
+import type { SyncSessionRow } from "@myakiba/types";
 import { SESSION_STATUS_CONFIG, SYNC_TYPE_CONFIG } from "@/lib/sync";
 import { formatDateTime, formatDuration } from "@myakiba/utils/dates";
-import { app } from "@/lib/treaty-client";
 import { fetchSyncSessionDetail } from "@/queries/sync";
-
-const ACTIVE_STATUSES: ReadonlySet<SyncSessionStatus> = new Set(["pending", "processing"]);
-
-type JobStatusEvent = {
-  readonly status: string;
-  readonly finished: boolean;
-  readonly createdAt: string;
-};
-
-type SSEJobStatusChunk = {
-  readonly data: JobStatusEvent;
-};
+import {
+  ACTIVE_SYNC_SESSION_STATUS_SET,
+  SYNC_SESSION_SUBGRID_PAGE_SIZE,
+} from "@myakiba/constants/sync";
+import { useSyncJobStatusQuery } from "@/hooks/use-sync-job-status-query";
 
 interface SyncSessionColumnsParams {
   readonly expandedContent: (session: SyncSessionRow) => ReactNode;
@@ -36,8 +24,9 @@ function ExpandButton({ row }: { readonly row: Row<SyncSessionRow> }) {
 
   const handlePointerEnter = () => {
     void queryClient.prefetchQuery({
-      queryKey: ["syncSessionDetail", row.original.id, 1, 5] as const,
-      queryFn: () => fetchSyncSessionDetail(row.original.id, { page: 1, limit: 5 }),
+      queryKey: ["syncSessionDetail", row.original.id, 1, SYNC_SESSION_SUBGRID_PAGE_SIZE] as const,
+      queryFn: () =>
+        fetchSyncSessionDetail(row.original.id, { page: 1, limit: SYNC_SESSION_SUBGRID_PAGE_SIZE }),
       staleTime: 30_000,
     });
   };
@@ -104,8 +93,8 @@ export function createSyncSessionColumns({
       id: "status",
       header: () => <span className="text-foreground font-normal text-[0.8125rem]">Status</span>,
       cell: ({ row }) => {
-        const status = row.original.status as SyncSessionStatus;
-        const isActive = ACTIVE_STATUSES.has(status);
+        const status = row.original.status;
+        const isActive = ACTIVE_SYNC_SESSION_STATUS_SET.has(status);
         if (isActive) {
           return <ActiveStatusCell session={row.original} />;
         }
@@ -212,46 +201,10 @@ export function createSyncSessionColumns({
 }
 
 function ActiveStatusCell({ session }: { readonly session: SyncSessionRow }) {
-  const queryClient = useQueryClient();
-  const status = session.status as SyncSessionStatus;
+  const status = session.status;
   const config = SESSION_STATUS_CONFIG[status];
 
-  const { data: jobStatus, isError: isJobError } = useQuery({
-    queryKey: ["syncJobStatus", session.jobId] as const,
-    enabled: session.jobId !== null,
-    queryFn: streamedQuery({
-      streamFn: async ({ signal }) => {
-        const { data, error } = await app.api.sync["job-status"].get({
-          query: { jobId: session.jobId! },
-          fetch: { signal },
-        });
-
-        if (error) throw new Error("Failed to connect to job status stream");
-        if (!data) throw new Error("No data received from job status stream");
-
-        const stream = data as unknown as AsyncIterable<SSEJobStatusChunk>;
-
-        async function* withFinishedCheck(): AsyncGenerator<SSEJobStatusChunk> {
-          for await (const chunk of stream) {
-            yield chunk;
-            if (chunk.data.finished) {
-              void queryClient.invalidateQueries({ queryKey: ["syncSessions"] });
-            }
-          }
-        }
-
-        return withFinishedCheck();
-      },
-      reducer: (_prev: JobStatusEvent, chunk: SSEJobStatusChunk) => chunk.data,
-      initialValue: {
-        status: "Connecting...",
-        finished: false,
-        createdAt: "",
-      },
-    }),
-    refetchOnWindowFocus: false,
-    retry: false,
-  });
+  const { data: jobStatus, isError: isJobError } = useSyncJobStatusQuery(session.jobId);
 
   const isFinished = jobStatus?.finished === true;
   const displayStatus = isJobError ? "Stream error" : (jobStatus?.status ?? session.statusMessage);

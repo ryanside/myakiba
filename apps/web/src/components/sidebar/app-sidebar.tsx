@@ -1,10 +1,4 @@
-import {
-  ChartNoAxesCombined,
-  ChartNoAxesGantt,
-  DollarSign,
-  Home,
-  Package,
-} from "lucide-react";
+import { ChartNoAxesCombined, ChartPie, Home, Library, Package } from "lucide-react";
 
 import { NavMain } from "@/components/sidebar/nav-main";
 import { NavManagement } from "@/components/sidebar/nav-management";
@@ -21,8 +15,9 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "@tanstack/react-router";
+import { useRef } from "react";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
-import { GitCompareIcon } from "../ui/git-compare";
+import { GitCompareIcon, type GitCompareIconHandle } from "../ui/git-compare";
 
 const data = {
   navMain: [
@@ -39,7 +34,7 @@ const data = {
     {
       title: "Expenses",
       url: "/expenses",
-      icon: DollarSign,
+      icon: ChartPie,
     },
   ],
   navManagement: [
@@ -51,7 +46,7 @@ const data = {
     {
       title: "Collection",
       url: "/collection",
-      icon: ChartNoAxesGantt,
+      icon: Library,
     },
   ],
   navSecondary: [
@@ -93,6 +88,7 @@ export function GithubIcon() {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const location = useLocation();
+  const syncIconRef = useRef<GitCompareIconHandle>(null);
 
   return (
     <Sidebar variant="inset" collapsible="icon" {...props}>
@@ -128,8 +124,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 tooltip="Sync"
                 className="bg-muted hover:bg-background dark:bg-muted/25 dark:hover:bg-muted/50 dark:border-border inset-shadow-2xs inset-shadow-white dark:inset-shadow-transparent relative flex border border-zinc-300 shadow-sm shadow-zinc-950/10 ring-0 duration-150"
               >
-                <Link to="/sync">
-                  <GitCompareIcon size={17} className="" />
+                <Link
+                  to="/sync"
+                  onMouseEnter={() => syncIconRef.current?.startAnimation()}
+                  onMouseLeave={() => syncIconRef.current?.stopAnimation()}
+                >
+                  <GitCompareIcon ref={syncIconRef} size={17} className="" />
                   <span className="">Sync</span>
                 </Link>
               </SidebarMenuButton>

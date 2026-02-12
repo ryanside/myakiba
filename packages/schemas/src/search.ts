@@ -7,32 +7,50 @@ import {
   SYNC_SESSION_STATUSES,
   SYNC_TYPES,
 } from "@myakiba/constants";
+export const sortDirectionSchema = z.enum(["asc", "desc"]);
+
+export const orderSearchSortSchema = z.enum([
+  "title",
+  "shop",
+  "orderDate",
+  "paymentDate",
+  "shippingDate",
+  "collectionDate",
+  "releaseDate",
+  "shippingMethod",
+  "total",
+  "shippingFee",
+  "taxes",
+  "duties",
+  "tariffs",
+  "miscFees",
+  "itemCount",
+  "status",
+  "createdAt",
+]);
+
+export const collectionSearchSortSchema = z.enum([
+  "itemTitle",
+  "itemCategory",
+  "itemScale",
+  "status",
+  "count",
+  "score",
+  "price",
+  "shop",
+  "orderDate",
+  "paymentDate",
+  "shippingDate",
+  "releaseDate",
+  "collectionDate",
+  "createdAt",
+]);
 
 export const searchSchema = z.object({
   limit: z.coerce.number().optional(),
   offset: z.coerce.number().optional(),
-  sort: z
-    .enum([
-      "title",
-      "shop",
-      "orderDate",
-      "paymentDate",
-      "shippingDate",
-      "collectionDate",
-      "releaseDate",
-      "shippingMethod",
-      "total",
-      "shippingFee",
-      "taxes",
-      "duties",
-      "tariffs",
-      "miscFees",
-      "itemCount",
-      "status",
-      "createdAt",
-    ])
-    .optional(),
-  order: z.enum(["asc", "desc"]).optional(),
+  sort: orderSearchSortSchema.optional(),
+  order: sortDirectionSchema.optional(),
   search: z.string().optional(),
   shop: z.array(z.string()).optional(),
   releaseDateStart: z.iso.date().optional(),
@@ -64,25 +82,8 @@ export const searchSchema = z.object({
 export const collectionSearchSchema = z.object({
   limit: z.coerce.number().optional(),
   offset: z.coerce.number().optional(),
-  sort: z
-    .enum([
-      "itemTitle",
-      "itemCategory",
-      "itemScale",
-      "status",
-      "count",
-      "score",
-      "price",
-      "shop",
-      "orderDate",
-      "paymentDate",
-      "shippingDate",
-      "releaseDate",
-      "collectionDate",
-      "createdAt",
-    ])
-    .optional(),
-  order: z.enum(["asc", "desc"]).optional(),
+  sort: collectionSearchSortSchema.optional(),
+  order: sortDirectionSchema.optional(),
   search: z.string().optional(),
   paidMin: z.coerce.number().int().optional(),
   paidMax: z.coerce.number().int().optional(),
@@ -112,3 +113,6 @@ export const syncSearchSchema = z.object({
   status: z.enum(SYNC_SESSION_STATUSES).optional(),
   syncType: z.enum(SYNC_TYPES).optional(),
 });
+
+export type OrderFilters = z.infer<typeof searchSchema>;
+export type CollectionFilters = z.infer<typeof collectionSearchSchema>;

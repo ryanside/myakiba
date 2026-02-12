@@ -2,80 +2,25 @@ import * as z from "zod";
 import { createInsertSchema, createUpdateSchema } from "drizzle-zod";
 import { order } from "@myakiba/db/schema/figure";
 import { ORDER_STATUSES, SHIPPING_METHODS } from "@myakiba/constants";
+import {
+  createCommaSeparatedEnumArraySchema,
+  commaSeparatedStringArraySchema,
+  orderSearchSortSchema,
+  searchSchema,
+  sortDirectionSchema,
+} from "@myakiba/schemas";
 
-const commaSeparatedStringArray = z.preprocess((val) => {
-  if (typeof val === "string" && val.length > 0) {
-    return val.split(",");
-  }
-  return undefined;
-}, z.array(z.string()).optional());
+const commaSeparatedShipMethodArray = createCommaSeparatedEnumArraySchema(SHIPPING_METHODS);
+const commaSeparatedStatusArray = createCommaSeparatedEnumArraySchema(ORDER_STATUSES);
 
-const commaSeparatedShipMethodArray = z.preprocess((val) => {
-  if (typeof val === "string" && val.length > 0) {
-    return val.split(",");
-  }
-  return undefined;
-}, z.array(z.enum(SHIPPING_METHODS)).optional());
-
-const commaSeparatedStatusArray = z.preprocess((val) => {
-  if (typeof val === "string" && val.length > 0) {
-    return val.split(",");
-  }
-  return undefined;
-}, z.array(z.enum(ORDER_STATUSES)).optional());
-
-export const ordersQuerySchema = z.object({
+export const ordersQuerySchema = searchSchema.extend({
   limit: z.coerce.number().optional().default(10),
   offset: z.coerce.number().optional().default(0),
-  sort: z
-    .enum([
-      "title",
-      "shop",
-      "orderDate",
-      "paymentDate",
-      "shippingDate",
-      "collectionDate",
-      "releaseDate",
-      "shippingMethod",
-      "total",
-      "shippingFee",
-      "taxes",
-      "duties",
-      "tariffs",
-      "miscFees",
-      "itemCount",
-      "status",
-      "createdAt",
-    ])
-    .optional()
-    .default("createdAt"),
-  order: z.enum(["asc", "desc"]).optional().default("desc"),
-  search: z.string().optional(),
-  shop: commaSeparatedStringArray,
-  releaseDateStart: z.iso.date().optional(),
-  releaseDateEnd: z.iso.date().optional(),
+  sort: orderSearchSortSchema.optional().default("createdAt"),
+  order: sortDirectionSchema.optional().default("desc"),
+  shop: commaSeparatedStringArraySchema,
   shipMethod: commaSeparatedShipMethodArray,
-  orderDateStart: z.iso.date().optional(),
-  orderDateEnd: z.iso.date().optional(),
-  payDateStart: z.iso.date().optional(),
-  payDateEnd: z.iso.date().optional(),
-  shipDateStart: z.iso.date().optional(),
-  shipDateEnd: z.iso.date().optional(),
-  colDateStart: z.iso.date().optional(),
-  colDateEnd: z.iso.date().optional(),
   status: commaSeparatedStatusArray,
-  totalMin: z.coerce.number().int().optional(),
-  totalMax: z.coerce.number().int().optional(),
-  shippingFeeMin: z.coerce.number().int().optional(),
-  shippingFeeMax: z.coerce.number().int().optional(),
-  taxesMin: z.coerce.number().int().optional(),
-  taxesMax: z.coerce.number().int().optional(),
-  dutiesMin: z.coerce.number().int().optional(),
-  dutiesMax: z.coerce.number().int().optional(),
-  tariffsMin: z.coerce.number().int().optional(),
-  tariffsMax: z.coerce.number().int().optional(),
-  miscFeesMin: z.coerce.number().int().optional(),
-  miscFeesMax: z.coerce.number().int().optional(),
 });
 
 export const orderInsertSchema = createInsertSchema(order);

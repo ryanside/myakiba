@@ -153,11 +153,14 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
                 } else if (value.length > 30) {
                   return;
                 } else {
-                  const { data } = await authClient.isUsernameAvailable({
+                  const { data, error } = await authClient.isUsernameAvailable({
                     username: value,
                   });
                   if (data?.available === false) {
                     return "Username is already taken";
+                  }
+                  if (error) {
+                    return error.message;
                   }
                 }
               },

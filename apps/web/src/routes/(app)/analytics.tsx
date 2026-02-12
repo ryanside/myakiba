@@ -11,7 +11,7 @@ import {
   Palette,
   Store,
   Sparkles,
-  DollarSign,
+  ChartPie,
   Tag,
   Calendar,
   Boxes,
@@ -366,7 +366,7 @@ function RouteComponent(): React.ReactNode {
         />
         <DistributionCard
           title="Price Range"
-          icon={<DollarSign className="size-4 stroke-foreground" />}
+          icon={<ChartPie className="size-4 stroke-foreground" />}
           data={priceRangeData}
           maxValue={totalCollectionCount}
           emptyMessage="No price range distribution found"

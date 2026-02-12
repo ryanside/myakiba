@@ -1,12 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import {
-  keepPreviousData,
-  useMutation,
-  useQuery,
-  useQueryClient,
-  experimental_streamedQuery as streamedQuery,
-} from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getCoreRowModel, type PaginationState, useReactTable } from "@tanstack/react-table";
 import { DataGrid, DataGridContainer } from "@/components/ui/data-grid";
 import { DataGridPagination } from "@/components/ui/data-grid-pagination";
@@ -21,24 +15,14 @@ import { fetchSyncSessionDetail, retrySyncFailedItems } from "@/queries/sync";
 import { createSyncSessionItemSubColumns } from "@/components/sync/sync-session-item-sub-columns";
 import { SESSION_STATUS_CONFIG, SYNC_TYPE_CONFIG } from "@/lib/sync";
 import { formatDateTime, formatDuration } from "@myakiba/utils/dates";
-import { app } from "@/lib/treaty-client";
 import Loader from "@/components/loader";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-
-const ITEMS_PAGE_SIZE = 10;
-
-const ACTIVE_STATUSES: ReadonlySet<SyncSessionStatus> = new Set(["pending", "processing"]);
-
-type JobStatusEvent = {
-  readonly status: string;
-  readonly finished: boolean;
-  readonly createdAt: string;
-};
-
-type SSEJobStatusChunk = {
-  readonly data: JobStatusEvent;
-};
+import {
+  ACTIVE_SYNC_SESSION_STATUS_SET,
+  SYNC_SESSION_DETAIL_PAGE_SIZE,
+} from "@myakiba/constants/sync";
+import { useSyncJobStatusQuery } from "@/hooks/use-sync-job-status-query";
 
 export const Route = createFileRoute("/(app)/sync_/$id")({
   component: RouteComponent,
@@ -50,50 +34,8 @@ export const Route = createFileRoute("/(app)/sync_/$id")({
   }),
 });
 
-function LiveStatusBanner({
-  jobId,
-  sessionId,
-}: {
-  readonly jobId: string;
-  readonly sessionId: string;
-}) {
-  const queryClient = useQueryClient();
-
-  const { data: jobStatus, isError: isJobError } = useQuery({
-    queryKey: ["syncJobStatus", jobId] as const,
-    queryFn: streamedQuery({
-      streamFn: async ({ signal }) => {
-        const { data, error } = await app.api.sync["job-status"].get({
-          query: { jobId },
-          fetch: { signal },
-        });
-        if (error) throw new Error("Failed to connect to job status stream");
-        if (!data) throw new Error("No data received from job status stream");
-
-        const stream = data as unknown as AsyncIterable<SSEJobStatusChunk>;
-
-        async function* withFinishedCheck(): AsyncGenerator<SSEJobStatusChunk> {
-          for await (const chunk of stream) {
-            yield chunk;
-            if (chunk.data.finished) {
-              void queryClient.invalidateQueries({
-                queryKey: ["syncSessions"],
-              });
-              void queryClient.invalidateQueries({
-                queryKey: ["syncSessionDetail", sessionId],
-              });
-            }
-          }
-        }
-
-        return withFinishedCheck();
-      },
-      reducer: (_prev: JobStatusEvent, chunk: SSEJobStatusChunk) => chunk.data,
-      initialValue: { status: "Connecting...", finished: false, createdAt: "" },
-    }),
-    refetchOnWindowFocus: false,
-    retry: false,
-  });
+function LiveStatusBanner({ jobId }: { readonly jobId: string }) {
+  const { data: jobStatus, isError: isJobError } = useSyncJobStatusQuery(jobId);
 
   const isFinished = jobStatus?.finished === true;
   const displayStatus = isJobError ? "Stream error" : (jobStatus?.status ?? "Connecting...");
@@ -114,32 +56,31 @@ function RouteComponent() {
 
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
-    pageSize: ITEMS_PAGE_SIZE,
+    pageSize: SYNC_SESSION_DETAIL_PAGE_SIZE,
   });
   const page = pagination.pageIndex + 1;
 
   const {
     data: responseData,
     isPending,
+    isFetching,
     isError,
     error,
   } = useQuery({
-    queryKey: ["syncSessionDetail", id, page, ITEMS_PAGE_SIZE] as const,
-    queryFn: () => fetchSyncSessionDetail(id, { page, limit: ITEMS_PAGE_SIZE }),
+    queryKey: ["syncSessionDetail", id, page, SYNC_SESSION_DETAIL_PAGE_SIZE] as const,
+    queryFn: () => fetchSyncSessionDetail(id, { page, limit: SYNC_SESSION_DETAIL_PAGE_SIZE }),
     placeholderData: keepPreviousData,
     staleTime: 15_000,
     refetchOnWindowFocus: true,
   });
 
   const session = responseData?.session;
-  const items: EnrichedSyncSessionItemRow[] =
-    session && "items" in session ? (session.items as EnrichedSyncSessionItemRow[]) : [];
-  const totalItems: number =
-    responseData && "totalItems" in responseData ? (responseData.totalItems as number) : 0;
+  const items = session?.items ?? [];
+  const totalItems = responseData?.totalItems ?? 0;
 
   const sessionStatus = (session?.status ?? "pending") as SyncSessionStatus;
   const sessionSyncType = (session?.syncType ?? "csv") as SyncType;
-  const isActive = session ? ACTIVE_STATUSES.has(sessionStatus) : false;
+  const isActive = session ? ACTIVE_SYNC_SESSION_STATUS_SET.has(sessionStatus) : false;
   const isRetryable =
     (sessionStatus === "failed" || sessionStatus === "partial") && (session?.failCount ?? 0) > 0;
 
@@ -162,7 +103,7 @@ function RouteComponent() {
   const table = useReactTable({
     columns,
     data: items,
-    pageCount: Math.max(1, Math.ceil(totalItems / ITEMS_PAGE_SIZE)),
+    pageCount: Math.max(1, Math.ceil(totalItems / SYNC_SESSION_DETAIL_PAGE_SIZE)),
     state: { pagination },
     onPaginationChange: setPagination,
     manualPagination: true,
@@ -252,13 +193,13 @@ function RouteComponent() {
       <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
         <div className="flex flex-col gap-1">
           <span className="text-sm text-muted-foreground font-light">Total Items</span>
-          <span className="text-2xl font-semibold tabular-nums tracking-tight">
+          <span className="text-2xl font-normal tabular-nums tracking-tight">
             {session.totalItems}
           </span>
         </div>
         <div className="flex flex-col gap-1">
           <span className="text-sm text-muted-foreground font-light">Succeeded</span>
-          <span className="text-2xl font-semibold tabular-nums tracking-tight">
+          <span className="text-2xl font-normal tabular-nums tracking-tight">
             {session.successCount}
           </span>
         </div>
@@ -266,7 +207,7 @@ function RouteComponent() {
           <span className="text-sm text-muted-foreground font-light">Failed</span>
           <span
             className={cn(
-              "text-2xl font-semibold tabular-nums tracking-tight",
+              "text-2xl font-normal tabular-nums tracking-tight",
               session.failCount > 0 && "text-destructive",
             )}
           >
@@ -275,13 +216,13 @@ function RouteComponent() {
         </div>
         <div className="flex flex-col gap-1">
           <span className="text-sm text-muted-foreground font-light">Duration</span>
-          <span className="text-2xl font-semibold tabular-nums tracking-tight">
+          <span className="text-2xl font-normal tabular-nums tracking-tight">
             {formatDuration(session.createdAt, session.completedAt)}
           </span>
         </div>
       </div>
 
-      {isActive && session.jobId && <LiveStatusBanner jobId={session.jobId} sessionId={id} />}
+      {isActive && session.jobId && <LiveStatusBanner jobId={session.jobId} />}
 
       {!isActive && session.statusMessage && (
         <div className="rounded-lg flex items-center gap-2">
@@ -293,7 +234,7 @@ function RouteComponent() {
       <DataGrid
         table={table}
         recordCount={totalItems}
-        isLoading={isPending}
+        isLoading={isFetching}
         loadingMode="skeleton"
         tableLayout={{
           rowBorder: true,

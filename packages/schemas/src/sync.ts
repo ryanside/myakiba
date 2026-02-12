@@ -1,5 +1,6 @@
 import * as z from "zod";
 import { SHIPPING_METHODS, ORDER_STATUSES, CONDITIONS } from "@myakiba/constants";
+import { SYNC_CSV_ITEM_STATUSES } from "@myakiba/constants/orders";
 
 /**
  * Schema for CSV date fields that handles MFC export quirks.
@@ -16,6 +17,18 @@ const csvDateSchema = z
     return val.replace(/-00/g, "-01");
   })
   .pipe(z.iso.date().nullable());
+
+export const syncTerminalStateSchema = z.enum(["success", "error", "timeout"]);
+
+export const syncJobStatusSchema = z.object({
+  status: z.string(),
+  finished: z.boolean(),
+  createdAt: z.iso.datetime(),
+  terminalState: syncTerminalStateSchema.nullable().optional().default(null),
+});
+
+export type SyncTerminalState = z.infer<typeof syncTerminalStateSchema>;
+export type SyncJobStatus = z.infer<typeof syncJobStatusSchema>;
 
 export const syncOrderSchema = z.object({
   id: z.string(),
@@ -108,9 +121,9 @@ export const csvItemSchema = z.object({
 export const csvSchema = z.array(csvItemSchema);
 
 // Internal CSV item schema for worker processing
-const internalCsvItemSchema = z.object({
+export const internalCsvItemSchema = z.object({
   itemExternalId: z.number(),
-  status: z.string(),
+  status: z.enum(SYNC_CSV_ITEM_STATUSES),
   count: z.number(),
   score: z.string(),
   payment_date: z.iso.date().nullable(),
@@ -159,6 +172,7 @@ export const jobDataSchema = z.discriminatedUnion("type", [
     type: z.literal("csv"),
     userId: z.string(),
     syncSessionId: z.string(),
+    existingCount: z.number().int().nonnegative(),
     items: z.array(internalCsvItemSchema),
   }),
   z.object({
@@ -169,6 +183,7 @@ export const jobDataSchema = z.discriminatedUnion("type", [
       details: syncOrderSchema,
       itemsToScrape: z.array(syncOrderItemSchema),
       itemsToInsert: z.array(syncOrderItemSchema),
+      existingCount: z.number().int().nonnegative(),
     }),
   }),
   z.object({
@@ -178,6 +193,7 @@ export const jobDataSchema = z.discriminatedUnion("type", [
     collection: z.object({
       itemsToScrape: z.array(syncCollectionItemSchema),
       itemsToInsert: z.array(syncCollectionItemSchema),
+      existingCount: z.number().int().nonnegative(),
     }),
   }),
 ]);

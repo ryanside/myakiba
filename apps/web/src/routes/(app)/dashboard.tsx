@@ -82,12 +82,15 @@ function DashboardContent() {
   } = data;
 
   return (
-    <div className="">
-      <div className="flex flex-col lg:flex-row items-start mb-6 gap-4">
-        <h1 className="text-2xl tracking-tight font-medium">
-          Welcome,{" "}
-          <span className="text-muted-foreground">{session?.user.username} (づ｡◕‿‿◕｡)づ</span>
-        </h1>
+    <div className="flex flex-col gap-12 mx-auto">
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-row items-start gap-4">
+          <h1 className="text-2xl tracking-tight">Welcome, {session?.user.username}</h1>
+        </div>
+        <p className="text-muted-foreground text-sm font-light text-balance ">
+          You have {ordersSummary[0].totalActiveOrderCount} active orders, {unpaidOrders.length}{" "}
+          unpaid orders, and {ordersSummary[0].thisMonthOrderCount} orders this month.
+        </p>
       </div>
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-4">
         <div className="col-span-1 lg:col-span-3 border-dashed space-y-4 flex flex-col">

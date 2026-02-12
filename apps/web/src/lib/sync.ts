@@ -1,5 +1,6 @@
 import Papa from "papaparse";
 import { csvSchema } from "@myakiba/schemas";
+import { SYNC_CSV_ITEM_STATUSES } from "@myakiba/constants/orders";
 import type { UserItem, SyncType, SyncSessionStatus, SyncSessionItemStatus } from "@myakiba/types";
 
 export const SESSION_STATUS_CONFIG: Record<
@@ -59,6 +60,8 @@ export const SYNC_OPTION_META: Record<
   },
 } as const;
 
+const SYNC_CSV_STATUS_SET: ReadonlySet<string> = new Set(SYNC_CSV_ITEM_STATUSES);
+
 /**
  * Extracts the MyFigureCollection item ID from a URL or returns the ID if it's already a number.
  * Handles URLs like: https://myfigurecollection.net/item/998271
@@ -111,18 +114,19 @@ export async function transformCSVData(value: { file: File | undefined }) {
   }
 
   const filteredData = validatedCSV.data.filter((item) => {
-    return (
-      (item.status === "Owned" || item.status === "Ordered") && !item.title.startsWith("[NSFW")
-    );
+    return SYNC_CSV_STATUS_SET.has(item.status) && !item.title.startsWith("[NSFW");
   });
   if (filteredData.length === 0) {
     throw new Error("No Owned or Ordered items to sync");
   }
-  console.log("Filtered data:", filteredData);
+  if (import.meta.env.DEV) {
+    console.log("Filtered data:", filteredData);
+  }
   const userItems: UserItem[] = filteredData.map((item) => {
+    const normalizedStatus = item.status === "Ordered" ? "Ordered" : "Owned";
     return {
       itemExternalId: Number(item.id),
-      status: item.status as "Owned" | "Ordered",
+      status: normalizedStatus,
       count: Number(item.count),
       score: item.score.split("/")[0],
       payment_date: item.payment_date,

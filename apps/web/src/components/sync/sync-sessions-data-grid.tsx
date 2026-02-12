@@ -11,7 +11,7 @@ import {
   useReactTable,
   type Updater,
 } from "@tanstack/react-table";
-import type { SyncSessionRow, SyncSessionStatus } from "@myakiba/types";
+import type { SyncSessionRow } from "@myakiba/types";
 import { createSyncSessionColumns } from "./sync-sessions-columns";
 import { SyncSessionItemSubDataGrid } from "./sync-session-item-sub-data-grid";
 
@@ -50,7 +50,7 @@ export function SyncSessionsDataGrid({
         expandedContent: (session: SyncSessionRow) => (
           <SyncSessionItemSubDataGrid
             sessionId={session.id}
-            sessionStatus={session.status as SyncSessionStatus}
+            sessionStatus={session.status}
             failCount={session.failCount}
           />
         ),

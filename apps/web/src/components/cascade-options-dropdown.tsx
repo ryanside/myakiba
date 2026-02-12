@@ -10,12 +10,12 @@ import { ChevronDown } from "lucide-react";
 import type { CascadeOptions } from "@myakiba/types";
 
 interface CascadeOptionsDropdownProps {
-  cascadeOptions: CascadeOptions;
-  cascadeDisplayText: string;
-  cascadeOptionsList: readonly string[];
-  handleSelectAll: () => void;
-  handleSelectNone: () => void;
-  handleCascadeOptionChange: (option: CascadeOptions[number], checked: boolean) => void;
+  readonly cascadeOptions: CascadeOptions;
+  readonly cascadeDisplayText: string;
+  readonly cascadeOptionsList: readonly CascadeOptions[number][];
+  readonly handleSelectAll: () => void;
+  readonly handleSelectNone: () => void;
+  readonly handleCascadeOptionChange: (option: CascadeOptions[number], checked: boolean) => void;
 }
 
 export function CascadeOptionsDropdown({
@@ -37,7 +37,7 @@ export function CascadeOptionsDropdown({
           <ChevronDown className="h-4 w-4 z-10" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
+      <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width)">
         <div className="flex gap-2 py-1">
           <Button
             variant="ghost"
@@ -65,10 +65,8 @@ export function CascadeOptionsDropdown({
             onSelect={(e) => {
               e.preventDefault();
             }}
-            checked={cascadeOptions.includes(option as CascadeOptions[number])}
-            onCheckedChange={(checked) =>
-              handleCascadeOptionChange(option as CascadeOptions[number], checked)
-            }
+            checked={cascadeOptions.includes(option)}
+            onCheckedChange={(checked) => handleCascadeOptionChange(option, checked)}
           >
             {option}
           </DropdownMenuCheckboxItem>

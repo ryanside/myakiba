@@ -1,6 +1,6 @@
 import { createFileRoute, useParams, Link } from "@tanstack/react-router";
 import { getOrder, editOrder, deleteOrderItem } from "@/queries/orders";
-import { keepPreviousData, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,7 +45,6 @@ function RouteComponent() {
   const { data, isPending, isError, error } = useQuery({
     queryKey: ["order", id],
     queryFn: () => getOrder(id),
-    placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 5,
     retry: false,
   });

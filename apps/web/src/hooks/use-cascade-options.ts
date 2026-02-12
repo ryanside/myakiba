@@ -1,37 +1,14 @@
 import { useState, useMemo } from "react";
 import type { CascadeOptions } from "@myakiba/types";
+import { ORDER_CASCADE_OPTIONS } from "@myakiba/constants/orders";
 
-const cascadeOptionsList = [
-  "status",
-  "shop",
-  "orderDate",
-  "paymentDate",
-  "shippingDate",
-  "collectionDate",
-  "shippingMethod",
-] as const;
+const cascadeOptionsList: readonly CascadeOptions[number][] = ORDER_CASCADE_OPTIONS;
 
 export function useCascadeOptions() {
-  const [cascadeOptions, setCascadeOptions] = useState<CascadeOptions>([
-    "status",
-    "shop",
-    "orderDate",
-    "paymentDate",
-    "shippingDate",
-    "collectionDate",
-    "shippingMethod",
-  ]);
+  const [cascadeOptions, setCascadeOptions] = useState<CascadeOptions>([...ORDER_CASCADE_OPTIONS]);
 
   const handleSelectAll = () => {
-    setCascadeOptions([
-      "status",
-      "shop",
-      "orderDate",
-      "paymentDate",
-      "shippingDate",
-      "collectionDate",
-      "shippingMethod",
-    ]);
+    setCascadeOptions([...ORDER_CASCADE_OPTIONS]);
   };
 
   const handleSelectNone = () => {
