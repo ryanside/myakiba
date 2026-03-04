@@ -161,6 +161,8 @@ export function createOrdersColumns({
           value={row.original.shop}
           onSubmit={async (newValue) => {
             const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
+            void createdAt;
+            void updatedAt;
             await onEditOrder(
               {
                 ...orderWithoutTimestamps,

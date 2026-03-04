@@ -39,7 +39,6 @@ myakiba is being created in hopes to be a useful alternative, as well as a fun/l
 - **Order Management** - Manage pre-orders, track shipments, and monitor order status
 - **Analytics** - Visualize spending patterns, collection statistics, and trends
 - **Expense Tracking** - See exactly where your money goes: item prices, shipping, taxes, and fees.
-- **Budget Control** - Compare what you’ve spent against the budget you set for yourself
 - **Personalized Profile** - Share your stats, analytics, collection, and orders with your friends through your customizable profile page.
 
 ### Technical Stack

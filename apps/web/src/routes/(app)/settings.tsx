@@ -27,24 +27,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import * as z from "zod";
-import { MaskInput } from "@/components/ui/mask-input";
-import {
-  getCurrencyLocale,
-  majorStringToMinorUnits,
-  minorUnitsToMajorString,
-} from "@myakiba/utils";
 import { app } from "@/lib/treaty-client";
 import { clearRecentItems } from "@/lib/recent-items";
 import { DATE_FORMATS } from "@myakiba/constants";
-
-interface Budget {
-  id: string;
-  userId: string;
-  period: "monthly" | "annual" | "allocated";
-  amount: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
 
 type User = {
   id: string;
@@ -80,24 +65,6 @@ function RouteComponent() {
   const { session } = Route.useRouteContext();
 
   const {
-    data: budgetData,
-    isPending: isBudgetPending,
-    isError: isBudgetError,
-    error: budgetError,
-  } = useQuery({
-    queryKey: ["settings"],
-    queryFn: async () => {
-      const { data, error } = await app.api.settings.get();
-      if (error) {
-        throw new Error(error.value || "Failed to get settings");
-      }
-      return data;
-    },
-    staleTime: 1000 * 60 * 5,
-    retry: false,
-  });
-
-  const {
     data: accountTypeData,
     isPending: isAccountTypePending,
     isError: isAccountTypeError,
@@ -115,7 +82,7 @@ function RouteComponent() {
     retry: false,
   });
 
-  if (isBudgetPending || isAccountTypePending) {
+  if (isAccountTypePending) {
     return (
       <div className="flex items-center justify-center h-full">
         <HugeiconsIcon icon={Loading03Icon} className="animate-spin" />
@@ -123,12 +90,10 @@ function RouteComponent() {
     );
   }
 
-  if (isBudgetError || isAccountTypeError) {
+  if (isAccountTypeError) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-destructive">
-          Failed to load settings: {budgetError?.message || accountTypeError?.message}
-        </p>
+        <p className="text-destructive">Failed to load settings: {accountTypeError?.message}</p>
       </div>
     );
   }
@@ -147,180 +112,12 @@ function RouteComponent() {
       </div>
 
       <div className="space-y-6">
-        <BudgetForm user={session.user} budget={budgetData.budget} />
         <PreferencesForm user={session.user} />
         <ProfileForm user={session.user} />
         {hasCredentialAccount && <PasswordForm />}
         <DeleteAccountForm navigate={navigate} hasCredentialAccount={hasCredentialAccount} />
       </div>
     </div>
-  );
-}
-
-function BudgetForm({ user, budget }: { user: User; budget: Budget }) {
-  const queryClient = useQueryClient();
-
-  const upsertBudgetMutation = useMutation({
-    mutationFn: async ({
-      amount,
-      period,
-    }: {
-      amount: number;
-      period: "monthly" | "annual" | "allocated";
-    }) => {
-      const { data, error } = await app.api.settings.put({
-        amount,
-        period,
-      });
-      if (error) {
-        if (error.status === 422) {
-          throw new Error(error.value.message || "Failed to update budget");
-        }
-        throw new Error(error.value || "Failed to update budget");
-      }
-      return data;
-    },
-    onError: (error) => {
-      toast.error("Failed to update budget", {
-        description: `Error: ${error.message}`,
-      });
-    },
-    onSuccess: async () => {
-      toast.success("Budget updated successfully");
-      await queryClient.invalidateQueries();
-    },
-  });
-
-  const deleteBudgetMutation = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await app.api.settings.delete();
-      if (error) {
-        throw new Error(error.value || "Failed to delete budget");
-      }
-      return data;
-    },
-    onError: (error) => {
-      toast.error("Failed to delete budget", {
-        description: `Error: ${error.message}`,
-      });
-    },
-    onSuccess: async () => {
-      toast.success("Budget deleted successfully");
-      await queryClient.invalidateQueries();
-    },
-  });
-
-  const form = useForm({
-    defaultValues: {
-      amount: budget ? minorUnitsToMajorString(budget.amount) : "0.00",
-      period: (budget?.period || "monthly") as "monthly" | "annual" | "allocated",
-    },
-    onSubmit: async ({ value }) => {
-      upsertBudgetMutation.mutate({
-        amount: majorStringToMinorUnits(value.amount),
-        period: value.period,
-      });
-    },
-    validators: {
-      onSubmit: z.object({
-        amount: z.string().refine((val) => {
-          const num = majorStringToMinorUnits(val);
-          return Number.isFinite(num) && num >= 0;
-        }, "Amount must be at least 0"),
-        period: z.enum(["monthly", "annual", "allocated"]),
-      }),
-    },
-  });
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="font-medium">Budget</CardTitle>
-        <CardDescription>Set your budget limit</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            form.handleSubmit();
-          }}
-          className="space-y-4"
-        >
-          <form.Field name="amount">
-            {(field) => (
-              <div className="space-y-2">
-                <Label htmlFor={field.name}>Budget Limit</Label>
-                <MaskInput
-                  id={field.name}
-                  name={field.name}
-                  mask="currency"
-                  currency={user.currency ?? "USD"}
-                  locale={getCurrencyLocale(user.currency ?? "USD")}
-                  value={field.state.value}
-                  onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-                />
-                {field.state.meta.errors.length > 0 && (
-                  <p className="text-sm text-destructive">{field.state.meta.errors[0]?.message}</p>
-                )}
-              </div>
-            )}
-          </form.Field>
-          <form.Field name="period">
-            {(field) => (
-              <div className="space-y-2">
-                <Label htmlFor={field.name}>Period</Label>
-                <Select
-                  value={field.state.value}
-                  onValueChange={(value) =>
-                    field.handleChange(value as "monthly" | "annual" | "allocated")
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={field.state.value} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                    <SelectItem value="annual">Annual</SelectItem>
-                    <SelectItem value="allocated">Allocated</SelectItem>
-                  </SelectContent>
-                </Select>
-                {field.state.meta.errors.length > 0 && (
-                  <p className="text-sm text-destructive">{field.state.meta.errors[0]?.message}</p>
-                )}
-              </div>
-            )}
-          </form.Field>
-          <div className="flex flex-row gap-2">
-            <form.Subscribe>
-              {(state) => (
-                <Button type="submit" disabled={!state.canSubmit || state.isSubmitting}>
-                  {state.isSubmitting ? (
-                    <>
-                      <HugeiconsIcon icon={Loading03Icon} className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    "Save Changes"
-                  )}
-                </Button>
-              )}
-            </form.Subscribe>
-            <Button
-              variant="ghost"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                deleteBudgetMutation.mutate();
-                form.reset();
-              }}
-            >
-              Clear Budget
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
   );
 }
 
