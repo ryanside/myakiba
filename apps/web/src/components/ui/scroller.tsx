@@ -3,7 +3,13 @@
 import { Slot } from "@radix-ui/react-slot";
 import { cva } from "class-variance-authority";
 import type { VariantProps } from "class-variance-authority";
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  ArrowDown01Icon,
+  ArrowLeft01Icon,
+  ArrowRight01Icon,
+  ArrowUp01Icon,
+} from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { useComposedRefs } from "@/lib/compose-refs";
 import { cn } from "@/lib/utils";
@@ -275,11 +281,11 @@ const scrollButtonVariants = cva(
   },
 );
 
-const directionToIcon: Record<ScrollDirection, React.ElementType> = {
-  up: ChevronUp,
-  down: ChevronDown,
-  left: ChevronLeft,
-  right: ChevronRight,
+const directionToIcon = {
+  up: ArrowUp01Icon,
+  down: ArrowDown01Icon,
+  left: ArrowLeft01Icon,
+  right: ArrowRight01Icon,
 } as const;
 
 interface ScrollButtonProps extends React.ComponentProps<"button"> {
@@ -354,7 +360,7 @@ function ScrollButton(props: ScrollButtonProps) {
       ref={ref}
       className={cn(scrollButtonVariants({ direction, className }))}
     >
-      <Icon />
+      <HugeiconsIcon icon={Icon} />
     </button>
   );
 }

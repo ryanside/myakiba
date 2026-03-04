@@ -1,5 +1,11 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  ArrowDown01Icon,
+  ArrowUp01Icon,
+  ArrowUpDownIcon,
+  Cancel01Icon,
+} from "@hugeicons/core-free-icons";
 import type { ReactNode } from "react";
-import { ArrowUp, ArrowDown, ArrowUpDown, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -53,20 +59,20 @@ export function SortCombobox({
     if (currentSort?.columnId !== columnId) return null;
 
     return currentSort.direction === "desc" ? (
-      <ArrowDown className="h-4 w-4 ml-auto text-primary" />
+      <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4 ml-auto text-primary" />
     ) : (
-      <ArrowUp className="h-4 w-4 ml-auto text-primary" />
+      <HugeiconsIcon icon={ArrowUp01Icon} className="h-4 w-4 ml-auto text-primary" />
     );
   };
 
   const getSortButtonIcon = (): React.ReactElement => {
     if (!currentSort) {
-      return <ArrowUpDown className="h-4 w-4" />;
+      return <HugeiconsIcon icon={ArrowUpDownIcon} className="h-4 w-4" />;
     }
     return currentSort.direction === "desc" ? (
-      <ArrowDown className="h-4 w-4" />
+      <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4" />
     ) : (
-      <ArrowUp className="h-4 w-4" />
+      <HugeiconsIcon icon={ArrowUp01Icon} className="h-4 w-4" />
     );
   };
 
@@ -95,7 +101,7 @@ export function SortCombobox({
                 onSelect={() => handleSort(null)}
                 className="text-muted-foreground"
               >
-                <X className="mr-2 h-4 w-4" />
+                <HugeiconsIcon icon={Cancel01Icon} className="mr-2 h-4 w-4" />
                 Clear sorting
               </CommandItem>
             </CommandGroup>

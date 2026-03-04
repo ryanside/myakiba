@@ -1,3 +1,6 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import type { IconSvgElement } from "@hugeicons/react";
+import { AddCircleIcon, Tick02Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +17,6 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import type { Column } from "@tanstack/react-table";
-import { Check, CirclePlus } from "lucide-react";
 
 interface DataGridColumnFilterProps<TData, TValue> {
   column?: Column<TData, TValue>;
@@ -22,7 +24,7 @@ interface DataGridColumnFilterProps<TData, TValue> {
   options: {
     label: string;
     value: string;
-    icon?: React.ComponentType<{ className?: string }>;
+    icon?: IconSvgElement | React.ComponentType<{ className?: string }>;
   }[];
 }
 
@@ -38,7 +40,7 @@ function DataGridColumnFilter<TData, TValue>({
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm">
-          <CirclePlus className="size-4" />
+          <HugeiconsIcon icon={AddCircleIcon} className="size-4" />
           {title}
           {selectedValues?.size > 0 && (
             <>
@@ -98,12 +100,20 @@ function DataGridColumnFilter<TData, TValue>({
                           : "opacity-50 [&_svg]:invisible",
                       )}
                     >
-                      <Check className={cn("h-4 w-4")} />
+                      <HugeiconsIcon icon={Tick02Icon} className={cn("h-4 w-4")} />
                     </div>
-                    {option.icon && <option.icon className="mr-2 h-4 w-4 text-muted-foreground" />}
+                    {option.icon &&
+                      (typeof option.icon === "function" ? (
+                        <option.icon className="mr-2 h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <HugeiconsIcon
+                          icon={option.icon}
+                          className="mr-2 h-4 w-4 text-muted-foreground"
+                        />
+                      ))}
                     <span>{option.label}</span>
                     {facets?.get(option.value) && (
-                      <span className="ms-auto flex h-4 w-4 items-center justify-center font-mono text-xs">
+                      <span className="ms-auto flex h-4 w-4 items-center justify-center text-xs">
                         {facets.get(option.value)}
                       </span>
                     )}

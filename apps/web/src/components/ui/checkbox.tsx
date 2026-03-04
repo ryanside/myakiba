@@ -1,10 +1,11 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { MinusSignIcon, Tick02Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { cva } from "class-variance-authority";
 import type { VariantProps } from "class-variance-authority";
-import { Check, Minus } from "lucide-react";
 import { Checkbox as CheckboxPrimitive } from "radix-ui";
 
 // Define the variants for the Checkbox using cva.
@@ -44,8 +45,14 @@ function Checkbox({
       <CheckboxPrimitive.Indicator
         className={cn("absolute inset-0 flex items-center justify-center text-current")}
       >
-        <Check className="group-data-[state=indeterminate]:hidden shrink-0" />
-        <Minus className="hidden group-data-[state=indeterminate]:block shrink-0" />
+        <HugeiconsIcon
+          icon={Tick02Icon}
+          className="group-data-[state=indeterminate]:hidden shrink-0"
+        />
+        <HugeiconsIcon
+          icon={MinusSignIcon}
+          className="hidden group-data-[state=indeterminate]:block shrink-0"
+        />
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>
   );

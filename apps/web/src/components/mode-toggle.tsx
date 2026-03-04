@@ -1,5 +1,5 @@
-import { Monitor, Moon, Sun } from "lucide-react";
-
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ComputerIcon, MoonIcon, Sun01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
@@ -26,7 +26,7 @@ export function ModeToggle({ className }: { className?: string }) {
         onClick={() => setTheme("system")}
         aria-label="System theme"
       >
-        <Monitor className="p-0.5" />
+        <HugeiconsIcon icon={ComputerIcon} className="p-0.5" />
       </Button>
       <Button
         variant="ghost"
@@ -38,7 +38,7 @@ export function ModeToggle({ className }: { className?: string }) {
         onClick={() => setTheme("light")}
         aria-label="Light theme"
       >
-        <Sun className="p-0.5" />
+        <HugeiconsIcon icon={Sun01Icon} className="p-0.5" />
       </Button>
       <Button
         variant="ghost"
@@ -50,7 +50,7 @@ export function ModeToggle({ className }: { className?: string }) {
         onClick={() => setTheme("dark")}
         aria-label="Dark theme"
       >
-        <Moon className="p-0.5" />
+        <HugeiconsIcon icon={MoonIcon} className="p-0.5" />
       </Button>
     </div>
   );

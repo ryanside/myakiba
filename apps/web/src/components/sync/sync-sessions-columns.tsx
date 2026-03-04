@@ -1,10 +1,11 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, ArrowRight01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import type { ReactNode } from "react";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import { useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import type { SyncSessionRow } from "@myakiba/types";
 import { SESSION_STATUS_CONFIG, SYNC_TYPE_CONFIG } from "@/lib/sync";
 import { formatDateTime, formatDuration } from "@myakiba/utils/dates";
@@ -43,9 +44,9 @@ function ExpandButton({ row }: { readonly row: Row<SyncSessionRow> }) {
       variant="ghost"
     >
       {row.getIsExpanded() ? (
-        <ChevronDown className="size-4 text-muted-foreground" />
+        <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 text-muted-foreground" />
       ) : (
-        <ChevronRight className="size-4 text-muted-foreground" />
+        <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 text-muted-foreground" />
       )}
     </Button>
   );
@@ -214,7 +215,10 @@ function ActiveStatusCell({ session }: { readonly session: SyncSessionRow }) {
         {config.label}
       </Badge>
       {!isFinished && !isJobError && (
-        <Loader2 className="size-3 shrink-0 animate-spin text-muted-foreground" />
+        <HugeiconsIcon
+          icon={Loading03Icon}
+          className="size-3 shrink-0 animate-spin text-muted-foreground"
+        />
       )}
       {displayStatus && (
         <span className="truncate text-xs text-muted-foreground">{displayStatus}</span>

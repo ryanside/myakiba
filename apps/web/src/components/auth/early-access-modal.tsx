@@ -1,7 +1,8 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "@tanstack/react-form";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -101,7 +102,7 @@ export function EarlyAccessModal({ open, onAccessGranted }: EarlyAccessModalProp
               >
                 {state.isSubmitting || mutation.isPending ? (
                   <>
-                    <Loader2 className="size-4 animate-spin" />
+                    <HugeiconsIcon icon={Loading03Icon} className="size-4 animate-spin" />
                     Verifying...
                   </>
                 ) : (

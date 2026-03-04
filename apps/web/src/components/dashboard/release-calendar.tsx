@@ -1,5 +1,6 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowLeft01Icon, ArrowRight01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
-import { ChevronLeftIcon, ChevronRightIcon, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { formatCurrencyFromMinorUnits, formatDate } from "@myakiba/utils";
@@ -85,7 +86,7 @@ function ReleaseCalendar({
           className="size-7"
           disabled={isPending}
         >
-          <ChevronLeftIcon className="size-4" />
+          <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
         </Button>
 
         <div className="text-sm font-light select-none flex items-center gap-2">
@@ -100,14 +101,14 @@ function ReleaseCalendar({
           className="size-7"
           disabled={isPending}
         >
-          <ChevronRightIcon className="size-4" />
+          <HugeiconsIcon icon={ArrowRight01Icon} className="size-4" />
         </Button>
       </div>
 
       <div className="space-y-2 overflow-y-auto">
         {isPending ? (
           <div className="py-6 text-sm flex items-center gap-2 justify-center">
-            <Loader2 className="size-4 animate-spin" />
+            <HugeiconsIcon icon={Loading03Icon} className="size-4 animate-spin" />
           </div>
         ) : isError ? (
           <div className="text-center text-destructive py-6 text-sm">

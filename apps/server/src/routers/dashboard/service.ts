@@ -1,5 +1,5 @@
 import { db } from "@myakiba/db";
-import { item, collection, item_release, order, budget } from "@myakiba/db/schema/figure";
+import { item, collection, item_release, order } from "@myakiba/db/schema/figure";
 import type { Category } from "@myakiba/types";
 import { eq, count, and, sum, asc, sql, desc, ne, gte, lte } from "drizzle-orm";
 
@@ -8,22 +8,16 @@ class DashboardService {
   private categoriesOwnedPrepared;
   private ordersPrepared;
   private ordersSummaryPrepared;
-  private budgetSummaryPrepared;
   private unpaidOrdersPrepared;
   private monthlyOrdersPrepared;
   private releaseCalendarPrepared;
 
   constructor() {
-    // Total Items, Total Spent, Total Spent This Month (Items only)
+    // Total Items, Total Spent
     this.collectionStatsPrepared = db
       .select({
         totalItems: count(sql`CASE WHEN ${collection.status} = 'Owned' THEN 1 END`),
-        totalSpent: sql<number>`COALESCE(${sum(collection.price)}, 0)`,
-        totalSpentThisMonth: sql<number>`COALESCE(${sum(
-          sql`CASE WHEN ${collection.paymentDate} >= ${sql.placeholder("currentMonth")}
-              AND ${collection.paymentDate} < ${sql.placeholder("nextMonth")}
-              THEN ${collection.price} ELSE 0 END`,
-        )}, 0)`,
+        totalSpent: sql<number>`COALESCE(${sum(sql`CASE WHEN ${collection.status} != 'Ordered' THEN ${collection.price} ELSE 0 END`)}, 0)`,
       })
       .from(collection)
       .where(eq(collection.userId, sql.placeholder("userId")))
@@ -66,62 +60,28 @@ class DashboardService {
       .limit(10)
       .prepare("orders_kanban");
 
-    // Total Active Orders Count, Total Shipping, Taxes, Duties, Tariffs, Misc Fees
-    // This Month Order Count, Shipping, Taxes, Duties, Tariffs, Misc Fees
+    // Total Active Orders Count, This Month Order Count, Total Shipping, Taxes, Duties, Tariffs, Misc Fees
     this.ordersSummaryPrepared = db
       .select({
         totalActiveOrderCount: sql<number>`COALESCE(${sum(
           sql`CASE WHEN ${order.status} != 'Owned'
               THEN 1 ELSE 0 END`,
         )}, 0)`,
-        totalShippingAllTime: sql<number>`COALESCE(${sum(order.shippingFee)}, 0)`,
-        totalTaxesAllTime: sql<number>`COALESCE(${sum(order.taxes)}, 0)`,
-        totalDutiesAllTime: sql<number>`COALESCE(${sum(order.duties)}, 0)`,
-        totalTariffsAllTime: sql<number>`COALESCE(${sum(order.tariffs)}, 0)`,
-        totalMiscFeesAllTime: sql<number>`COALESCE(${sum(order.miscFees)}, 0)`,
+        totalShippingAllTime: sql<number>`COALESCE(${sum(sql`CASE WHEN ${order.status} != 'Ordered' THEN ${order.shippingFee} ELSE 0 END`)}, 0)`,
+        totalTaxesAllTime: sql<number>`COALESCE(${sum(sql`CASE WHEN ${order.status} != 'Ordered' THEN ${order.taxes} ELSE 0 END`)}, 0)`,
+        totalDutiesAllTime: sql<number>`COALESCE(${sum(sql`CASE WHEN ${order.status} != 'Ordered' THEN ${order.duties} ELSE 0 END`)}, 0)`,
+        totalTariffsAllTime: sql<number>`COALESCE(${sum(sql`CASE WHEN ${order.status} != 'Ordered' THEN ${order.tariffs} ELSE 0 END`)}, 0)`,
+        totalMiscFeesAllTime: sql<number>`COALESCE(${sum(sql`CASE WHEN ${order.status} != 'Ordered' THEN ${order.miscFees} ELSE 0 END`)}, 0)`,
         thisMonthOrderCount: sql<number>`COALESCE(${sum(
           sql`CASE WHEN ${order.releaseDate} >= ${sql.placeholder("currentMonth")}
               AND ${order.releaseDate} < ${sql.placeholder("nextMonth")}
               THEN 1 ELSE 0 END`,
-        )}, 0)`,
-        thisMonthShipping: sql<number>`COALESCE(${sum(
-          sql`CASE WHEN ${order.paymentDate} >= ${sql.placeholder("currentMonth")}
-              AND ${order.paymentDate} < ${sql.placeholder("nextMonth")}
-              THEN ${order.shippingFee} ELSE 0 END`,
-        )}, 0)`,
-        thisMonthTaxes: sql<number>`COALESCE(${sum(
-          sql`CASE WHEN ${order.paymentDate} >= ${sql.placeholder("currentMonth")}
-              AND ${order.paymentDate} < ${sql.placeholder("nextMonth")}
-              THEN ${order.taxes} ELSE 0 END`,
-        )}, 0)`,
-        thisMonthDuties: sql<number>`COALESCE(${sum(
-          sql`CASE WHEN ${order.paymentDate} >= ${sql.placeholder("currentMonth")}
-              AND ${order.paymentDate} < ${sql.placeholder("nextMonth")}
-              THEN ${order.duties} ELSE 0 END`,
-        )}, 0)`,
-        thisMonthTariffs: sql<number>`COALESCE(${sum(
-          sql`CASE WHEN ${order.paymentDate} >= ${sql.placeholder("currentMonth")}
-              AND ${order.paymentDate} < ${sql.placeholder("nextMonth")}
-              THEN ${order.tariffs} ELSE 0 END`,
-        )}, 0)`,
-        thisMonthMiscFees: sql<number>`COALESCE(${sum(
-          sql`CASE WHEN ${order.paymentDate} >= ${sql.placeholder("currentMonth")}
-              AND ${order.paymentDate} < ${sql.placeholder("nextMonth")}
-              THEN ${order.miscFees} ELSE 0 END`,
         )}, 0)`,
       })
       .from(order)
       .where(eq(order.userId, sql.placeholder("userId")))
       .prepare("orders_summary");
 
-    // Budget Summary
-    this.budgetSummaryPrepared = db
-      .select()
-      .from(budget)
-      .where(eq(budget.userId, sql.placeholder("userId")))
-      .prepare("budget_summary");
-
-    // Unpaid Orders
     this.unpaidOrdersPrepared = db
       .select({
         orderId: order.id,
@@ -201,58 +161,34 @@ class DashboardService {
     const startOfYear = new Date(new Date().getFullYear(), 0, 1).toISOString();
     const endOfYear = new Date(new Date().getFullYear() + 1, 0, 1).toISOString();
 
-    const [
-      collectionStats,
-      categoriesOwned,
-      orders,
-      ordersSummary,
-      budgetSummary,
-      unpaidOrders,
-      monthlyOrders,
-    ] = await Promise.all([
-      // Total Items, Total Spent, Total Spent This Month (Items only)
-      this.collectionStatsPrepared.execute({
-        userId,
-        currentMonth,
-        nextMonth,
-      }),
+    const [collectionStats, categoriesOwned, orders, ordersSummary, unpaidOrders, monthlyOrders] =
+      await Promise.all([
+        this.collectionStatsPrepared.execute({ userId }),
 
-      // Categories Owned
-      this.categoriesOwnedPrepared.execute({ userId }),
+        this.categoriesOwnedPrepared.execute({ userId }),
 
-      // Order Kanban
-      // Contains "Ordered", "Paid", "Shipped" Orders
-      this.ordersPrepared.execute({ userId }),
+        this.ordersPrepared.execute({ userId }),
 
-      // Total Active Orders Count,
-      // Total Shipping, Taxes, Duties, Tariffs, Misc Fees
-      // This Month Order Count, Shipping, Taxes, Duties, Tariffs, Misc Fees
-      this.ordersSummaryPrepared.execute({
-        userId,
-        currentMonth,
-        nextMonth,
-      }),
+        this.ordersSummaryPrepared.execute({
+          userId,
+          currentMonth,
+          nextMonth,
+        }),
 
-      // Budget Summary
-      this.budgetSummaryPrepared.execute({ userId }),
+        this.unpaidOrdersPrepared.execute({ userId }),
 
-      // Unpaid Orders
-      this.unpaidOrdersPrepared.execute({ userId }),
-
-      // Monthly Orders - Order counts grouped by release month for current year
-      this.monthlyOrdersPrepared.execute({
-        userId,
-        startOfYear,
-        endOfYear,
-      }),
-    ]);
+        this.monthlyOrdersPrepared.execute({
+          userId,
+          startOfYear,
+          endOfYear,
+        }),
+      ]);
 
     return {
       collectionStats,
       categoriesOwned,
       orders,
       ordersSummary,
-      budgetSummary,
       unpaidOrders,
       monthlyOrders,
     };

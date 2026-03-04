@@ -1,22 +1,22 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  Building02Icon,
+  Calendar01Icon,
+  ColorPickerIcon,
+  GlobeIcon,
+  PieChartIcon,
+  SparklesIcon,
+  Store01Icon,
+  Tag01Icon,
+  UserGroupIcon,
+  Edit01Icon,
+} from "@hugeicons/core-free-icons";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { getAnalytics } from "@/queries/analytics";
-import { AnalyticsSkeleton } from "@/components/analytics/analytics-skeleton";
 import { RankingCard } from "@/components/analytics/ranking-card";
 import { DistributionCard } from "@/components/analytics/distribution-card";
-import {
-  Users,
-  Globe,
-  Building2,
-  Palette,
-  Store,
-  Sparkles,
-  ChartPie,
-  Tag,
-  Calendar,
-  Boxes,
-  PencilRuler,
-} from "lucide-react";
+import Loader from "@/components/loader";
 
 export const Route = createFileRoute("/(app)/analytics")({
   component: RouteComponent,
@@ -44,7 +44,7 @@ function RouteComponent(): React.ReactNode {
   });
 
   if (isPending) {
-    return <AnalyticsSkeleton />;
+    return <Loader />;
   }
 
   if (isError) {
@@ -238,10 +238,10 @@ function RouteComponent(): React.ReactNode {
   };
 
   return (
-    <div className="flex flex-col gap-12 mx-auto">
-      <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-6 mx-auto">
+      <div className="flex flex-col gap-2 mb-4">
         <div className="flex flex-row items-start gap-4">
-          <h1 className="text-2xl tracking-tight">Collection Analytics</h1>
+          <h1 className="text-2xl tracking-tight">Analytics</h1>
         </div>
         <p className="text-muted-foreground text-sm font-light">
           See how your collection is distributed across different categories.
@@ -251,7 +251,7 @@ function RouteComponent(): React.ReactNode {
       <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
         <RankingCard
           title="Top Characters"
-          icon={<Users className="size-4 stroke-foreground" />}
+          icon={<HugeiconsIcon icon={UserGroupIcon} className="size-4 stroke-foreground" />}
           progressKey="count"
           progressMax={totalCollectionCount}
           columns={rankingColumns}
@@ -264,7 +264,7 @@ function RouteComponent(): React.ReactNode {
 
         <RankingCard
           title="Top Origins"
-          icon={<Globe className="size-4 stroke-foreground" />}
+          icon={<HugeiconsIcon icon={GlobeIcon} className="size-4 stroke-foreground" />}
           progressKey="count"
           progressMax={totalCollectionCount}
           columns={rankingColumns}
@@ -277,7 +277,7 @@ function RouteComponent(): React.ReactNode {
 
         <RankingCard
           title="Top Companies"
-          icon={<Building2 className="size-4 stroke-foreground" />}
+          icon={<HugeiconsIcon icon={Building02Icon} className="size-4 stroke-foreground" />}
           progressKey="count"
           progressMax={totalCollectionCount}
           columns={rankingColumns}
@@ -290,7 +290,7 @@ function RouteComponent(): React.ReactNode {
 
         <RankingCard
           title="Top Artists"
-          icon={<Palette className="size-4 stroke-foreground" />}
+          icon={<HugeiconsIcon icon={ColorPickerIcon} className="size-4 stroke-foreground" />}
           progressKey="count"
           progressMax={totalCollectionCount}
           columns={rankingColumns}
@@ -303,7 +303,7 @@ function RouteComponent(): React.ReactNode {
 
         <RankingCard
           title="Top Shops"
-          icon={<Store className="size-4 stroke-foreground" />}
+          icon={<HugeiconsIcon icon={Store01Icon} className="size-4 stroke-foreground" />}
           progressKey="count"
           progressMax={totalCollectionCount}
           columns={rankingColumns}
@@ -316,7 +316,7 @@ function RouteComponent(): React.ReactNode {
 
         <RankingCard
           title="Top Materials"
-          icon={<Boxes className="size-4 stroke-foreground" />}
+          icon={<HugeiconsIcon icon={Tag01Icon} className="size-4 stroke-foreground" />}
           progressKey="count"
           progressMax={totalCollectionCount}
           columns={rankingColumns}
@@ -329,7 +329,7 @@ function RouteComponent(): React.ReactNode {
 
         <RankingCard
           title="Top Classifications"
-          icon={<Tag className="size-4 stroke-foreground" />}
+          icon={<HugeiconsIcon icon={Tag01Icon} className="size-4 stroke-foreground" />}
           progressKey="count"
           progressMax={totalCollectionCount}
           columns={rankingColumns}
@@ -342,7 +342,7 @@ function RouteComponent(): React.ReactNode {
 
         <RankingCard
           title="Top Events"
-          icon={<Calendar className="size-4 stroke-foreground" />}
+          icon={<HugeiconsIcon icon={Calendar01Icon} className="size-4 stroke-foreground" />}
           progressKey="count"
           progressMax={totalCollectionCount}
           columns={rankingColumns}
@@ -354,7 +354,7 @@ function RouteComponent(): React.ReactNode {
         />
         <RankingCard
           title="Scale"
-          icon={<PencilRuler className="size-4 stroke-foreground" />}
+          icon={<HugeiconsIcon icon={Edit01Icon} className="size-4 stroke-foreground" />}
           progressKey="count"
           progressMax={totalCollectionCount}
           columns={rankingColumns}
@@ -366,7 +366,7 @@ function RouteComponent(): React.ReactNode {
         />
         <DistributionCard
           title="Price Range"
-          icon={<ChartPie className="size-4 stroke-foreground" />}
+          icon={<HugeiconsIcon icon={PieChartIcon} className="size-4 stroke-foreground" />}
           data={priceRangeData}
           maxValue={totalCollectionCount}
           emptyMessage="No price range distribution found"
@@ -376,7 +376,7 @@ function RouteComponent(): React.ReactNode {
         />
         <RankingCard
           title="Most Expensive Items"
-          icon={<Sparkles className="size-4 stroke-foreground" />}
+          icon={<HugeiconsIcon icon={SparklesIcon} className="size-4 stroke-foreground" />}
           columns={expensiveColumns}
           data={mostExpensiveData}
           emptyMessage="No expensive items found"

@@ -1,6 +1,7 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "../ui/button";
-import { Loader2 } from "lucide-react";
 import { csvSchema } from "@myakiba/schemas";
 import Papa from "papaparse";
 import { Label } from "../ui/label";
@@ -79,7 +80,11 @@ export default function SyncCsvForm({
                         className="ml-auto"
                         size="md"
                       >
-                        {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Submit CSV"}
+                        {isSubmitting ? (
+                          <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />
+                        ) : (
+                          "Submit CSV"
+                        )}
                       </Button>
                     )}
                   />

@@ -1,5 +1,4 @@
-import type { LucideIcon } from "lucide-react";
-
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import { Collapsible } from "@/components/ui/collapsible";
 import {
   SidebarGroup,
@@ -18,7 +17,7 @@ export function NavManagement({
   items: {
     title: string;
     url: string;
-    icon: LucideIcon;
+    icon: IconSvgElement;
     isActive?: boolean;
     items?: {
       title: string;
@@ -43,7 +42,7 @@ export function NavManagement({
                 isActive={location.pathname === `${item.url}`}
               >
                 <Link to={item.url}>
-                  <item.icon />
+                  <HugeiconsIcon icon={item.icon} />
                   <span>{item.title}</span>
                 </Link>
               </SidebarMenuButton>

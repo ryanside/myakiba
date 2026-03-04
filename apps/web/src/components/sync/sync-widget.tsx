@@ -1,3 +1,13 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  ArrowRight01Icon,
+  CancelCircleIcon,
+  FileUploadIcon,
+  LibraryIcon,
+  Loading03Icon,
+  PackageIcon,
+} from "@hugeicons/core-free-icons";
+import type { ComponentType, PropsWithChildren } from "react";
 import { useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
@@ -12,7 +22,6 @@ import {
 import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, ArrowRight, XCircle, Library, Package, FileUp } from "lucide-react";
 import type { SyncSessionStatus, SyncType } from "@myakiba/types";
 import { fetchSyncSessions } from "@/queries/sync";
 import { SESSION_STATUS_CONFIG, SYNC_TYPE_CONFIG, SYNC_OPTION_META } from "@/lib/sync";
@@ -28,15 +37,25 @@ import { useSyncJobStatusQuery } from "@/hooks/use-sync-job-status-query";
 
 const SYNC_OPTIONS: readonly {
   readonly type: SyncType;
-  readonly icon: typeof Library;
+  readonly icon: typeof LibraryIcon;
   readonly description: string;
 }[] = [
-  { type: "collection", icon: Library, description: "Add items by MFC ID" },
-  { type: "order", icon: Package, description: "Create an order with MFC items" },
-  { type: "csv", icon: FileUp, description: "Import from MFC CSV export" },
+  { type: "collection", icon: LibraryIcon, description: "Add items by MFC ID" },
+  { type: "order", icon: PackageIcon, description: "Create an order with MFC items" },
+  { type: "csv", icon: FileUploadIcon, description: "Import from MFC CSV export" },
 ];
 
-export default function SyncWidget({ session }: { readonly session: RouterAppContext["session"] }) {
+type SyncWidgetProps = {
+  readonly session: RouterAppContext["session"];
+  readonly TriggerWrapper?: ComponentType<PropsWithChildren<Record<string, unknown>>>;
+  readonly triggerWrapperProps?: Record<string, unknown>;
+};
+
+export default function SyncWidget({
+  session,
+  TriggerWrapper,
+  triggerWrapperProps = {},
+}: SyncWidgetProps) {
   const queryClient = useQueryClient();
   const [syncType, setSyncType] = useState<SyncType | null>(null);
   const addItemsIconRef = useRef<PlusIconHandle>(null);
@@ -81,21 +100,37 @@ export default function SyncWidget({ session }: { readonly session: RouterAppCon
     <>
       <Popover>
         <PopoverTrigger asChild>
-          <Button
-            variant="primary"
-            size="sm"
-            autoHeight={true}
-            aria-label="Add items"
-            onMouseEnter={() => addItemsIconRef.current?.startAnimation()}
-            onMouseLeave={() => addItemsIconRef.current?.stopAnimation()}
-          >
-            {hasActive ? (
-              <Loader2 className="size-3 animate-spin" />
-            ) : (
-              <PlusIcon ref={addItemsIconRef} size={17} />
-            )}
-            Add items
-          </Button>
+          {TriggerWrapper ? (
+            <TriggerWrapper
+              aria-label="Sync Items"
+              onMouseEnter={() => addItemsIconRef.current?.startAnimation()}
+              onMouseLeave={() => addItemsIconRef.current?.stopAnimation()}
+              {...triggerWrapperProps}
+            >
+              {hasActive ? (
+                <HugeiconsIcon icon={Loading03Icon} className="size-3 animate-spin" />
+              ) : (
+                <PlusIcon ref={addItemsIconRef} size={17} />
+              )}
+              <span>Sync Items</span>
+            </TriggerWrapper>
+          ) : (
+            <Button
+              variant="primary"
+              size="sm"
+              autoHeight={true}
+              aria-label="Add items"
+              onMouseEnter={() => addItemsIconRef.current?.startAnimation()}
+              onMouseLeave={() => addItemsIconRef.current?.stopAnimation()}
+            >
+              {hasActive ? (
+                <HugeiconsIcon icon={Loading03Icon} className="size-3 animate-spin" />
+              ) : (
+                <PlusIcon ref={addItemsIconRef} size={17} />
+              )}
+              Add items
+            </Button>
+          )}
         </PopoverTrigger>
         <PopoverContent align="start" className="w-80 p-0">
           <div className="max-h-[400px] overflow-y-auto">
@@ -112,7 +147,7 @@ export default function SyncWidget({ session }: { readonly session: RouterAppCon
                       className="flex w-full items-center gap-3 rounded-lg cursor-pointer border p-3 text-left transition-colors hover:bg-accent"
                     >
                       <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted">
-                        <Icon className="size-4 text-muted-foreground" />
+                        <HugeiconsIcon icon={Icon} className="size-4 text-muted-foreground" />
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-medium">{config.label}</p>
@@ -125,7 +160,10 @@ export default function SyncWidget({ session }: { readonly session: RouterAppCon
 
               {isRecentPending && (
                 <div className="flex items-center justify-center py-4">
-                  <Loader2 className="size-3 animate-spin text-muted-foreground" />
+                  <HugeiconsIcon
+                    icon={Loading03Icon}
+                    className="size-3 animate-spin text-muted-foreground"
+                  />
                 </div>
               )}
 
@@ -166,7 +204,7 @@ export default function SyncWidget({ session }: { readonly session: RouterAppCon
                   <Link to="/sync">
                     <Button variant="ghost" size="sm" className="w-full justify-between">
                       View all sessions
-                      <ArrowRight className="size-3" />
+                      <HugeiconsIcon icon={ArrowRight01Icon} className="size-3" />
                     </Button>
                   </Link>
                 </PopoverClose>
@@ -259,9 +297,14 @@ function ActiveSessionItem({ session }: ActiveSessionProps) {
             </Badge>
           </div>
           {session.status === "processing" && !isFinished && !isJobError && (
-            <Loader2 className="size-3 animate-spin text-muted-foreground" />
+            <HugeiconsIcon
+              icon={Loading03Icon}
+              className="size-3 animate-spin text-muted-foreground"
+            />
           )}
-          {isJobError && <XCircle className="size-3 text-destructive" />}
+          {isJobError && (
+            <HugeiconsIcon icon={CancelCircleIcon} className="size-3 text-destructive" />
+          )}
         </div>
         {session.totalItems > 0 && (
           <div className="mt-2.5 space-y-1.5">

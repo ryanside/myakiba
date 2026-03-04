@@ -17,6 +17,12 @@
   font-style: normal;
 }
 
+.font-orbitron {
+  font-family: "Orbitron", sans-serif;
+  font-optical-sizing: auto;
+  font-style: normal;
+}
+
 :root {
   --background: #fafafa;
   --foreground: #201127;
@@ -54,21 +60,22 @@
   --font-sans: Instrument Sans, ui-sans-serif, sans-serif, system-ui;
   --font-serif: serif;
   --font-mono: JetBrains Mono, monospace;
-  --radius: 0.5rem;
+  --font-orbitron: "Orbitron", sans-serif;
+  --radius: 0.75rem;
   --shadow-x: 0px;
   --shadow-y: 1px;
   --shadow-blur: 4px;
   --shadow-spread: 0px;
   --shadow-opacity: 0.05;
   --shadow-color: #000000;
-  --shadow-2xs: 0px 1px 4px 0px hsl(0 0% 0% / 0.03);
-  --shadow-xs: 0px 1px 4px 0px hsl(0 0% 0% / 0.03);
-  --shadow-sm: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 1px 2px -1px hsl(0 0% 0% / 0.05);
-  --shadow: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 1px 2px -1px hsl(0 0% 0% / 0.05);
-  --shadow-md: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 2px 4px -1px hsl(0 0% 0% / 0.05);
-  --shadow-lg: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 4px 6px -1px hsl(0 0% 0% / 0.05);
+  --shadow-2xs: 0px 1px 4px 0px hsl(0 0% 0% / 0.0025);
+  --shadow-xs: 0px 1px 4px 0px hsl(0 0% 0% / 0.005);
+  --shadow-sm: 0px 1px 4px 0px hsl(0 0% 0% / 0.01), 0px 1px 2px -1px hsl(0 0% 0% / 0.01);
+  --shadow: 0px 1px 4px 0px hsl(0 0% 0% / 0.015), 0px 1px 2px -1px hsl(0 0% 0% / 0.015);
+  --shadow-md: 0px 1px 4px 0px hsl(0 0% 0% / 0.025), 0px 2px 4px -1px hsl(0 0% 0% / 0.025);
+  --shadow-lg: 0px 1px 4px 0px hsl(0 0% 0% / 0.035), 0px 4px 6px -1px hsl(0 0% 0% / 0.035);
   --shadow-xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 8px 10px -1px hsl(0 0% 0% / 0.05);
-  --shadow-2xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.13);
+  --shadow-2xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.07);
   --spacing: 0.25rem;
 
   --category-accessories: #808080;
@@ -133,21 +140,22 @@
   --font-sans: Instrument Sans, ui-sans-serif, sans-serif, system-ui;
   --font-serif: serif;
   --font-mono: JetBrains Mono, monospace;
-  --radius: 0.5rem;
+  --font-orbitron: "Orbitron", sans-serif;
+  --radius: 0.75rem;
   --shadow-x: 0px;
   --shadow-y: 1px;
   --shadow-blur: 4px;
   --shadow-spread: 0px;
   --shadow-opacity: 0.05;
   --shadow-color: #000000;
-  --shadow-2xs: 0px 1px 4px 0px hsl(0 0% 0% / 0.03);
-  --shadow-xs: 0px 1px 4px 0px hsl(0 0% 0% / 0.03);
-  --shadow-sm: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 1px 2px -1px hsl(0 0% 0% / 0.05);
-  --shadow: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 1px 2px -1px hsl(0 0% 0% / 0.05);
-  --shadow-md: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 2px 4px -1px hsl(0 0% 0% / 0.05);
-  --shadow-lg: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 4px 6px -1px hsl(0 0% 0% / 0.05);
+  --shadow-2xs: 0px 1px 4px 0px hsl(0 0% 0% / 0.0025);
+  --shadow-xs: 0px 1px 4px 0px hsl(0 0% 0% / 0.005);
+  --shadow-sm: 0px 1px 4px 0px hsl(0 0% 0% / 0.01), 0px 1px 2px -1px hsl(0 0% 0% / 0.01);
+  --shadow: 0px 1px 4px 0px hsl(0 0% 0% / 0.015), 0px 1px 2px -1px hsl(0 0% 0% / 0.015);
+  --shadow-md: 0px 1px 4px 0px hsl(0 0% 0% / 0.025), 0px 2px 4px -1px hsl(0 0% 0% / 0.025);
+  --shadow-lg: 0px 1px 4px 0px hsl(0 0% 0% / 0.035), 0px 4px 6px -1px hsl(0 0% 0% / 0.035);
   --shadow-xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 8px 10px -1px hsl(0 0% 0% / 0.05);
-  --shadow-2xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.13);
+  --shadow-2xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.07);
 
   --category-accessories: #808080;
   --category-action-dolls: #0080ff;
@@ -212,6 +220,7 @@
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
   --font-serif: var(--font-serif);
+  --font-orbitron: var(--font-orbitron);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

@@ -1,4 +1,5 @@
-import { Images, Search, Package, Loader2 } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Image02Icon, Loading03Icon, PackageIcon, Search01Icon } from "@hugeicons/core-free-icons";
 import {
   Command,
   CommandEmpty,
@@ -151,7 +152,7 @@ export function SearchCommand() {
   return (
     <>
       <Button variant="ghost" size="icon" className="size-7" onClick={() => setOpen(true)}>
-        <Search />
+        <HugeiconsIcon icon={Search01Icon} />
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className={"p-0 shadow-lg max-w-3xl h-[75vh]"}>
@@ -169,7 +170,10 @@ export function SearchCommand() {
             />
             {search.length > 0 && isLoading && (
               <div className="flex items-center justify-center py-6">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <HugeiconsIcon
+                  icon={Loading03Icon}
+                  className="h-6 w-6 animate-spin text-muted-foreground"
+                />
               </div>
             )}
             {search.length > 0 && isError && (
@@ -194,7 +198,12 @@ export function SearchCommand() {
                       <ImageThumbnail
                         images={order.itemImages}
                         title={order.orderTitle}
-                        fallbackIcon={<Package className="h-5 w-5 text-muted-foreground" />}
+                        fallbackIcon={
+                          <HugeiconsIcon
+                            icon={PackageIcon}
+                            className="h-5 w-5 text-muted-foreground"
+                          />
+                        }
                       />
                       <span>{order.orderTitle}</span>
                     </CommandItem>
@@ -217,7 +226,12 @@ export function SearchCommand() {
                       <ImageThumbnail
                         images={collection.itemImage ? [collection.itemImage] : []}
                         title={collection.itemTitle}
-                        fallbackIcon={<Images className="h-5 w-5 text-muted-foreground" />}
+                        fallbackIcon={
+                          <HugeiconsIcon
+                            icon={Image02Icon}
+                            className="h-5 w-5 text-muted-foreground"
+                          />
+                        }
                       />
                       <span>{collection.itemTitle}</span>
                     </CommandItem>
@@ -245,9 +259,15 @@ export function SearchCommand() {
                         title={item.title}
                         fallbackIcon={
                           item.type === "order" ? (
-                            <Package className="h-5 w-5 text-muted-foreground" />
+                            <HugeiconsIcon
+                              icon={PackageIcon}
+                              className="h-5 w-5 text-muted-foreground"
+                            />
                           ) : (
-                            <Images className="h-5 w-5 text-muted-foreground" />
+                            <HugeiconsIcon
+                              icon={Image02Icon}
+                              className="h-5 w-5 text-muted-foreground"
+                            />
                           )
                         }
                       />{" "}

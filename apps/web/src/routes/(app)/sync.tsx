@@ -1,3 +1,5 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { FileUploadIcon, LibraryIcon, PackageIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -9,7 +11,6 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { FileUp, Package, Library } from "lucide-react";
 import type { SyncType, SyncSessionStatus, SyncSessionRow } from "@myakiba/types";
 import { fetchSyncSessions } from "@/queries/sync";
 import { SYNC_OPTION_META } from "@/lib/sync";
@@ -166,7 +167,7 @@ function RouteComponent() {
             onClick={() => setActiveSyncType("collection")}
             disabled={isSyncing}
           >
-            <Library className="size-3.5" />
+            <HugeiconsIcon icon={LibraryIcon} className="size-3.5" />
             Collection
           </Button>
           <Button
@@ -175,7 +176,7 @@ function RouteComponent() {
             onClick={() => setActiveSyncType("order")}
             disabled={isSyncing}
           >
-            <Package className="size-3.5" />
+            <HugeiconsIcon icon={PackageIcon} className="size-3.5" />
             Order
           </Button>
           <Button
@@ -184,7 +185,7 @@ function RouteComponent() {
             onClick={() => setActiveSyncType("csv")}
             disabled={isSyncing}
           >
-            <FileUp className="size-3.5" />
+            <HugeiconsIcon icon={FileUploadIcon} className="size-3.5" />
             CSV
           </Button>
         </div>

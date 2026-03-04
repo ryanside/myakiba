@@ -1,3 +1,5 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -6,7 +8,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown } from "lucide-react";
 import type { CascadeOptions } from "@myakiba/types";
 
 interface CascadeOptionsDropdownProps {
@@ -34,7 +35,7 @@ export function CascadeOptionsDropdown({
           className="max-w-66 truncate justify-between hover:bg-background active:bg-background data-[state=open]:bg-background"
         >
           {cascadeDisplayText}
-          <ChevronDown className="h-4 w-4 z-10" />
+          <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4 z-10" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width)">

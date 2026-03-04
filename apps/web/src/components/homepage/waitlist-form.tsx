@@ -1,9 +1,10 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowRight01Icon, CheckmarkCircle01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation } from "@tanstack/react-query";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { toast } from "sonner";
-import { Loader2, CheckCircle, ArrowRightIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { joinWaitlist } from "@/queries/waitlist";
@@ -47,7 +48,7 @@ export function WaitlistForm() {
   if (isSuccess) {
     return (
       <div className="flex items-center gap-2 text-primary py-3 rounded-full">
-        <CheckCircle className="size-5" />
+        <HugeiconsIcon icon={CheckmarkCircle01Icon} className="size-5" />
         <span className="font-medium">You're on the waitlist!</span>
       </div>
     );
@@ -94,13 +95,13 @@ export function WaitlistForm() {
           >
             {state.isSubmitting || mutation.isPending ? (
               <>
-                <Loader2 className="size-4 animate-spin" />
+                <HugeiconsIcon icon={Loading03Icon} className="size-4 animate-spin" />
                 Joining...
               </>
             ) : (
               <>
                 Join Waitlist
-                <ArrowRightIcon className="w-4 h-4" />
+                <HugeiconsIcon icon={ArrowRight01Icon} className="w-4 h-4" />
               </>
             )}
           </Button>

@@ -1,9 +1,10 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { PackageIcon } from "@hugeicons/core-free-icons";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@tanstack/react-router";
-import { Package } from "lucide-react";
 import type { EnrichedSyncSessionItemRow } from "@myakiba/types";
 import { ITEM_STATUS_CONFIG } from "@/lib/sync";
 
@@ -29,7 +30,7 @@ export function createSyncSessionItemSubColumns(): ColumnDef<EnrichedSyncSession
                   />
                 ) : null}
                 <AvatarFallback className="rounded-sm">
-                  <Package className="size-4" />
+                  <HugeiconsIcon icon={PackageIcon} className="size-4" />
                 </AvatarFallback>
               </Avatar>
               <div className="space-y-px min-w-0">
@@ -56,13 +57,13 @@ export function createSyncSessionItemSubColumns(): ColumnDef<EnrichedSyncSession
         return (
           <div className="flex items-center gap-3">
             <div className="size-8 rounded-sm bg-muted flex items-center justify-center shrink-0">
-              <Package className="size-4 text-muted-foreground" />
+              <HugeiconsIcon icon={PackageIcon} className="size-4 text-muted-foreground" />
             </div>
             <a
               href={`https://myfigurecollection.net/item/${item.itemExternalId}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-mono tabular-nums text-sm hover:text-foreground transition-colors underline-offset-4 hover:underline"
+              className="tabular-nums text-sm hover:text-foreground transition-colors underline-offset-4 hover:underline"
             >
               MFC #{item.itemExternalId}
             </a>

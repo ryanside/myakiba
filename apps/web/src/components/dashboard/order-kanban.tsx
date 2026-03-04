@@ -1,3 +1,5 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Calendar01Icon, DragDropVerticalIcon, Tick02Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,7 +13,6 @@ import {
   KanbanItemHandle,
   KanbanOverlay,
 } from "@/components/ui/kanban";
-import { GripVertical, CalendarIcon, Check } from "lucide-react";
 import { formatCurrencyFromMinorUnits, formatMonthYear } from "@myakiba/utils";
 import type { DateFormat } from "@myakiba/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -77,7 +78,7 @@ function OrderCard({
               onMarkOwned(order.orderId);
             }}
           >
-            <Check className="h-4 w-4" />
+            <HugeiconsIcon icon={Tick02Icon} className="h-4 w-4" />
           </Button>
         </TooltipTrigger>
         <TooltipContent>
@@ -127,7 +128,7 @@ function OrderCard({
           <div className="flex items-center gap-1 text-muted-foreground">
             {order.releaseDate && (
               <>
-                <CalendarIcon className="h-3 w-3" />
+                <HugeiconsIcon icon={Calendar01Icon} className="h-3 w-3" />
                 <time className="text-[10px] tabular-nums">
                   {formatMonthYear(order.releaseDate, dateFormat)}
                 </time>
@@ -181,7 +182,7 @@ function OrderColumn({
         </div>
         <KanbanColumnHandle asChild>
           <Button variant="dim" size="sm" mode="icon">
-            <GripVertical />
+            <HugeiconsIcon icon={DragDropVerticalIcon} />
           </Button>
         </KanbanColumnHandle>
       </div>
@@ -340,7 +341,7 @@ export default function OrderKanban({ orders, currency, dateFormat }: OrdersKanb
       getItemValue={(item) => item.orderId}
       className="h-full"
     >
-      <KanbanBoard className="grid auto-rows-fr grid-cols-3 h-full">
+      <KanbanBoard className="grid auto-rows-fr grid-cols-3 h-full gap-2.5">
         {Object.entries(columns).map(([columnValue, columnOrders]) => (
           <OrderColumn
             key={columnValue}

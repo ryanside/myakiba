@@ -1,3 +1,5 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Delete02Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { createFileRoute, type UseNavigateResult } from "@tanstack/react-router";
 import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
@@ -24,7 +26,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Loader2, Trash2 } from "lucide-react";
 import * as z from "zod";
 import { MaskInput } from "@/components/ui/mask-input";
 import {
@@ -117,7 +118,7 @@ function RouteComponent() {
   if (isBudgetPending || isAccountTypePending) {
     return (
       <div className="flex items-center justify-center h-full">
-        <Loader2 className="animate-spin" />
+        <HugeiconsIcon icon={Loading03Icon} className="animate-spin" />
       </div>
     );
   }
@@ -296,7 +297,7 @@ function BudgetForm({ user, budget }: { user: User; budget: Budget }) {
                 <Button type="submit" disabled={!state.canSubmit || state.isSubmitting}>
                   {state.isSubmitting ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <HugeiconsIcon icon={Loading03Icon} className="mr-2 h-4 w-4 animate-spin" />
                       Saving...
                     </>
                   ) : (
@@ -422,7 +423,7 @@ function ProfileForm({ user }: { user: User }) {
               <Button type="submit" disabled={!state.canSubmit || state.isSubmitting}>
                 {state.isSubmitting ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <HugeiconsIcon icon={Loading03Icon} className="mr-2 h-4 w-4 animate-spin" />
                     Saving...
                   </>
                 ) : (
@@ -556,7 +557,7 @@ function PasswordForm() {
               <Button type="submit" disabled={!state.canSubmit || state.isSubmitting}>
                 {state.isSubmitting ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <HugeiconsIcon icon={Loading03Icon} className="mr-2 h-4 w-4 animate-spin" />
                     Changing...
                   </>
                 ) : (
@@ -687,7 +688,7 @@ function PreferencesForm({ user }: { user: User }) {
               <Button type="submit" disabled={!state.canSubmit || state.isSubmitting}>
                 {state.isSubmitting ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <HugeiconsIcon icon={Loading03Icon} className="mr-2 h-4 w-4 animate-spin" />
                     Saving...
                   </>
                 ) : (
@@ -794,7 +795,7 @@ function DeleteAccountForm({
         <Dialog>
           <DialogTrigger asChild>
             <Button variant="destructive">
-              <Trash2 className="mr-2 h-4 w-4" />
+              <HugeiconsIcon icon={Delete02Icon} className="mr-2 h-4 w-4" />
               Delete Account
             </Button>
           </DialogTrigger>
@@ -890,7 +891,10 @@ function DeleteAccountForm({
                     >
                       {state.isSubmitting || deleteAccountMutation.isPending ? (
                         <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          <HugeiconsIcon
+                            icon={Loading03Icon}
+                            className="mr-2 h-4 w-4 animate-spin"
+                          />
                           Deleting...
                         </>
                       ) : (

@@ -203,6 +203,7 @@ export const CollectionDataGrid = ({
           table={table}
           recordCount={totalCount}
           tableLayout={{
+            dense: true,
             columnsPinnable: true,
             columnsResizable: true,
             columnsMovable: true,

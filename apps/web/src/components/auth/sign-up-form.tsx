@@ -1,3 +1,5 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { authClient } from "@/lib/auth-client";
 import { useForm } from "@tanstack/react-form";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -7,7 +9,6 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Turnstile } from "@marsidev/react-turnstile";
-import { Loader2 } from "lucide-react";
 import { MyAkibaLogo } from "../myakiba-logo";
 import { env } from "@myakiba/env/web";
 
@@ -274,7 +275,11 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
               className="w-full"
               disabled={!state.canSubmit || state.isSubmitting}
             >
-              {state.isSubmitting ? <Loader2 className="animate-spin" /> : "Register"}
+              {state.isSubmitting ? (
+                <HugeiconsIcon icon={Loading03Icon} className="animate-spin" />
+              ) : (
+                "Register"
+              )}
             </Button>
           )}
         </form.Subscribe>

@@ -1,5 +1,6 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Settings02Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import type { ReactNode } from "react";
-import { Check, Settings2 } from "lucide-react";
 import type { Table } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,7 @@ export function DataGridColumnCombobox<TData>({
 
   const defaultTrigger = (
     <Button variant="outline" role="combobox" className="justify-between">
-      <Settings2 className="h-4 w-4" />
+      <HugeiconsIcon icon={Settings02Icon} className="h-4 w-4" />
       <span className="hidden md:block">Columns</span>
     </Button>
   );
@@ -57,7 +58,8 @@ export function DataGridColumnCombobox<TData>({
                       }}
                       className="capitalize"
                     >
-                      <Check
+                      <HugeiconsIcon
+                        icon={Tick02Icon}
                         className={cn("mr-2 h-4 w-4", isVisible ? "opacity-100" : "opacity-0")}
                       />
                       {columnName}

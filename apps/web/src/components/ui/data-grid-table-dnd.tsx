@@ -1,3 +1,5 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { DragDropVerticalIcon } from "@hugeicons/core-free-icons";
 import { Fragment, useId } from "react";
 import type { CSSProperties } from "react";
 import { Button } from "@/components/ui/button";
@@ -32,7 +34,6 @@ import { horizontalListSortingStrategy, SortableContext, useSortable } from "@dn
 import { CSS } from "@dnd-kit/utilities";
 import { flexRender } from "@tanstack/react-table";
 import type { Cell, Header, HeaderGroup, Row } from "@tanstack/react-table";
-import { GripVertical } from "lucide-react";
 
 function DataGridTableDndHeader<TData>({ header }: { header: Header<TData, unknown> }) {
   const { props } = useDataGrid();
@@ -64,7 +65,7 @@ function DataGridTableDndHeader<TData>({ header }: { header: Header<TData, unkno
           {...listeners}
           aria-label="Drag to reorder"
         >
-          <GripVertical className="opacity-50" aria-hidden="true" />
+          <HugeiconsIcon icon={DragDropVerticalIcon} className="opacity-50" aria-hidden="true" />
         </Button>
         {header.isPlaceholder
           ? null

@@ -1,3 +1,5 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowLeft01Icon, Loading03Icon, RotateLeft01Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -8,7 +10,6 @@ import { DataGridTable } from "@/components/ui/data-grid-table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import type { EnrichedSyncSessionItemRow, SyncSessionStatus, SyncType } from "@myakiba/types";
 import { fetchSyncSessionDetail, retrySyncFailedItems } from "@/queries/sync";
@@ -44,7 +45,12 @@ function LiveStatusBanner({ jobId }: { readonly jobId: string }) {
 
   return (
     <div className="flex items-center gap-3 rounded-lg border bg-muted/40 px-4 py-3">
-      {!isJobError && <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />}
+      {!isJobError && (
+        <HugeiconsIcon
+          icon={Loading03Icon}
+          className="size-4 shrink-0 animate-spin text-muted-foreground"
+        />
+      )}
       <p className="text-sm text-muted-foreground">{displayStatus}</p>
     </div>
   );
@@ -123,7 +129,7 @@ function RouteComponent() {
           <p className="text-lg font-medium text-destructive">Error: {error.message}</p>
           <Button asChild variant="outline">
             <Link to="/sync">
-              <ArrowLeft className="size-4" />
+              <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
               Back to Sync
             </Link>
           </Button>
@@ -138,7 +144,7 @@ function RouteComponent() {
         <p className="text-lg font-medium text-muted-foreground">Session not found</p>
         <Button asChild variant="outline">
           <Link to="/sync">
-            <ArrowLeft className="size-4" />
+            <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
             Back to Sync
           </Link>
         </Button>
@@ -154,7 +160,7 @@ function RouteComponent() {
       <div>
         <Button asChild variant="ghost" size="sm" className="mb-4 -ml-2 text-muted-foreground">
           <Link to="/sync">
-            <ArrowLeft className="size-3.5" />
+            <HugeiconsIcon icon={ArrowLeft01Icon} className="size-3.5" />
             Back to Sync
           </Link>
         </Button>
@@ -180,9 +186,9 @@ function RouteComponent() {
               disabled={retryMutation.isPending}
             >
               {retryMutation.isPending ? (
-                <Loader2 className="size-3.5 animate-spin" />
+                <HugeiconsIcon icon={Loading03Icon} className="size-3.5 animate-spin" />
               ) : (
-                <RotateCcw className="size-3.5" />
+                <HugeiconsIcon icon={RotateLeft01Icon} className="size-3.5" />
               )}
               Retry failed ({session.failCount})
             </Button>

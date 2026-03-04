@@ -1,3 +1,10 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  ArrowDown01Icon,
+  ArrowUpDownIcon,
+  Cancel01Icon,
+  Tick02Icon,
+} from "@hugeicons/core-free-icons";
 import {
   Dialog,
   DialogClose,
@@ -17,20 +24,17 @@ import { MaskInput } from "@/components/ui/mask-input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { CollectionFilters } from "@myakiba/types";
 import { useQuery } from "@tanstack/react-query";
 import { searchEntries } from "@/queries/collection";
 import { DebouncedInput } from "@/components/debounced-input";
-import { CheckIcon, ChevronsUpDownIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Command,
@@ -178,7 +182,7 @@ export default function FiltersForm({
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="w-full justify-between" type="button">
                           {getMultiSelectDisplay(field.state.value, "shipping method")}
-                          <ChevronDown className="h-4 w-4" />
+                          <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width)">
@@ -216,7 +220,7 @@ export default function FiltersForm({
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="w-full justify-between" type="button">
                           {getMultiSelectDisplay(field.state.value, "condition")}
-                          <ChevronDown className="h-4 w-4" />
+                          <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width)">
@@ -252,7 +256,7 @@ export default function FiltersForm({
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="w-full justify-between" type="button">
                           {getMultiSelectDisplay(field.state.value, "category")}
-                          <ChevronDown className="h-4 w-4" />
+                          <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width)">
@@ -344,7 +348,7 @@ export default function FiltersForm({
                               }}
                               className=" hover:text-red-500 hover:bg-transparent"
                             >
-                              <X />
+                              <HugeiconsIcon icon={Cancel01Icon} />
                             </Button>
                           </Badge>
                         ))}
@@ -358,7 +362,10 @@ export default function FiltersForm({
                               className="w-full justify-between"
                             >
                               Select entries...
-                              <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              <HugeiconsIcon
+                                icon={ArrowUpDownIcon}
+                                className="ml-2 h-4 w-4 shrink-0 opacity-50"
+                              />
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-(--radix-popover-trigger-width) p-0">
@@ -395,7 +402,8 @@ export default function FiltersForm({
                                           }
                                         }}
                                       >
-                                        <CheckIcon
+                                        <HugeiconsIcon
+                                          icon={Tick02Icon}
                                           className={cn(
                                             "mr-2 h-4 w-4",
                                             field.state.value.includes(entry.id)
@@ -445,7 +453,7 @@ export default function FiltersForm({
                               }}
                               className=" hover:text-red-500 hover:bg-transparent"
                             >
-                              <X />
+                              <HugeiconsIcon icon={Cancel01Icon} />
                             </Button>
                           </Badge>
                         ))}
@@ -501,7 +509,7 @@ export default function FiltersForm({
                               }}
                               className=" hover:text-red-500 hover:bg-transparent"
                             >
-                              <X />
+                              <HugeiconsIcon icon={Cancel01Icon} />
                             </Button>
                           </Badge>
                         ))}
@@ -557,7 +565,7 @@ export default function FiltersForm({
                               }}
                               className=" hover:text-red-500 hover:bg-transparent"
                             >
-                              <X />
+                              <HugeiconsIcon icon={Cancel01Icon} />
                             </Button>
                           </Badge>
                         ))}
@@ -744,7 +752,7 @@ export default function FiltersForm({
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="w-full justify-between" type="button">
                           {getMultiSelectDisplay(field.state.value, "currency")}
-                          <ChevronDown className="h-4 w-4" />
+                          <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width)">

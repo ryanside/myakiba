@@ -1,6 +1,14 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  Cancel01Icon,
+  Delete01Icon,
+  FilterIcon,
+  GitMergeIcon,
+  FilterResetIcon,
+  MoveIcon,
+} from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { DebouncedInput } from "@/components/debounced-input";
-import { Filter, ListRestart, Merge, Move, Trash, X } from "lucide-react";
 import OrdersFiltersForm from "./orders-filters-form";
 import { SortCombobox, type SortableColumn } from "@/components/ui/sort-combobox";
 import { OrderForm } from "./order-form";
@@ -159,7 +167,7 @@ export function OrdersToolbar({
         <OrdersFiltersForm
           renderTrigger={
             <Button variant="outline">
-              <Filter className="" />
+              <HugeiconsIcon icon={FilterIcon} className="" />
               <span className="hidden md:block">Filters</span>
             </Button>
           }
@@ -175,7 +183,7 @@ export function OrdersToolbar({
           onSortChange={handleSortChange}
         />
         <Button onClick={onResetFilters} variant="outline">
-          <ListRestart />
+          <HugeiconsIcon icon={FilterResetIcon} />
           <span className="hidden md:block">Reset Filters</span>
         </Button>
       </div>
@@ -197,7 +205,7 @@ export function OrdersToolbar({
                 onSelect={(e) => e.preventDefault()}
                 variant="primary"
               >
-                <Merge />
+                <HugeiconsIcon icon={GitMergeIcon} />
                 <span className="hidden md:block">Merge</span>
               </ActionBarItem>
             }
@@ -214,7 +222,7 @@ export function OrdersToolbar({
                 onSelect={(e) => e.preventDefault()}
                 variant="primary"
               >
-                <Move />
+                <HugeiconsIcon icon={MoveIcon} />
                 <span className="hidden md:block">Move Item</span>
               </ActionBarItem>
             }
@@ -231,7 +239,7 @@ export function OrdersToolbar({
                 onSelect={(e) => e.preventDefault()}
                 variant="destructive"
               >
-                <Trash />
+                <HugeiconsIcon icon={Delete01Icon} />
                 <span>
                   <span className="hidden md:inline">Delete </span>
                   Orders
@@ -253,7 +261,7 @@ export function OrdersToolbar({
                 onSelect={(e) => e.preventDefault()}
                 variant="destructive"
               >
-                <Trash />
+                <HugeiconsIcon icon={Delete01Icon} />
                 <span>
                   <span className="hidden md:inline">Delete </span> Items
                 </span>
@@ -270,7 +278,7 @@ export function OrdersToolbar({
         </ActionBarGroup>
         <ActionBarSeparator />
         <ActionBarClose>
-          <X />
+          <HugeiconsIcon icon={Cancel01Icon} />
         </ActionBarClose>
       </ActionBar>
     </>

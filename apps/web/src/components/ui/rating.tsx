@@ -1,11 +1,11 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { StarIcon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { cva } from "class-variance-authority";
 import type { VariantProps } from "class-variance-authority";
-import { Star } from "lucide-react";
-
 const ratingVariants = cva("flex items-center", {
   variants: {
     size: {
@@ -120,7 +120,8 @@ function Rating({
           onMouseLeave={handleStarMouseLeave}
         >
           {/* Background star (empty) */}
-          <Star
+          <HugeiconsIcon
+            icon={StarIcon}
             data-slot="rating-star-empty"
             className={cn(starVariants({ size }), "text-muted-foreground/30")}
           />
@@ -132,7 +133,8 @@ function Rating({
               width: filled ? "100%" : `${fillPercentage}%`,
             }}
           >
-            <Star
+            <HugeiconsIcon
+              icon={StarIcon}
               data-slot="rating-star-filled"
               className={cn(starVariants({ size }), "text-yellow-400 fill-yellow-400")}
             />

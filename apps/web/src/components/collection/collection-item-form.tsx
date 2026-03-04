@@ -1,3 +1,5 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import type { CollectionItemFormValues } from "@myakiba/types";
 import {
   Sheet,
@@ -29,7 +31,6 @@ import { Textarea } from "../ui/textarea";
 import { Rating } from "../ui/rating";
 import { Field, FieldContent, FieldTitle } from "@/components/ui/field";
 import { Badge } from "../ui/badge";
-import { X } from "lucide-react";
 import {
   formatDate,
   formatCurrencyFromMinorUnits,
@@ -362,9 +363,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                                       )}
                                     </span>
                                   )}
-                                {release.barcode && (
-                                  <span className="font-mono">#{release.barcode}</span>
-                                )}
+                                {release.barcode && <span className="">#{release.barcode}</span>}
                               </div>
                             </div>
                           </SelectItem>
@@ -509,7 +508,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                               }}
                               className=" hover:text-red-500 hover:bg-transparent"
                             >
-                              <X />
+                              <HugeiconsIcon icon={Cancel01Icon} />
                             </Button>
                           </Badge>
                         ))}

@@ -1,10 +1,18 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  ArrowLeft01Icon,
+  Calendar01Icon,
+  Delete01Icon,
+  Edit01Icon,
+  Loading03Icon,
+  Package01Icon,
+} from "@hugeicons/core-free-icons";
 import { createFileRoute, useParams, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { app, getErrorMessage } from "@/lib/treaty-client";
 import { addRecentItem } from "@/lib/recent-items";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Package2, Calendar, Edit, Trash, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Accordion,
@@ -231,7 +239,7 @@ function RouteComponent() {
         <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
         <Button asChild variant="outline">
           <Link to="/collection">
-            <ArrowLeft className="mr-2 h-4 w-4" />
+            <HugeiconsIcon icon={ArrowLeft01Icon} className="mr-2 h-4 w-4" />
             Back to Collection
           </Link>
         </Button>
@@ -307,7 +315,10 @@ function RouteComponent() {
                       key={release.id}
                       className="flex flex-wrap items-center gap-2 text-sm p-3 border rounded-lg"
                     >
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <HugeiconsIcon
+                        icon={Calendar01Icon}
+                        className="h-4 w-4 text-muted-foreground"
+                      />
                       <span className="font-medium">{formatDate(release.date, dateFormat)}</span>
                       {release.type && (
                         <Badge variant="outline" className="text-xs">
@@ -386,13 +397,13 @@ function RouteComponent() {
           <CardContent className="flex-1 px-4 overflow-y-auto">
             {isPendingItemRelatedCollection ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="animate-spin" />
+                <HugeiconsIcon icon={Loading03Icon} className="animate-spin" />
               </div>
             ) : isErrorItemRelatedCollection ? (
               <Empty>
                 <EmptyHeader>
                   <EmptyMedia variant="icon">
-                    <Package2 />
+                    <HugeiconsIcon icon={Package01Icon} />
                   </EmptyMedia>
                   <EmptyTitle>Error Loading Collection</EmptyTitle>
                   <EmptyDescription>{errorItemRelatedCollection.message}</EmptyDescription>
@@ -402,7 +413,7 @@ function RouteComponent() {
               <Empty>
                 <EmptyHeader>
                   <EmptyMedia variant="icon">
-                    <Package2 />
+                    <HugeiconsIcon icon={Package01Icon} />
                   </EmptyMedia>
                   <EmptyTitle>No Collection Items</EmptyTitle>
                   <EmptyDescription>
@@ -429,7 +440,7 @@ function RouteComponent() {
                             <CollectionItemForm
                               renderTrigger={
                                 <Button variant="ghost" size="icon" className="">
-                                  <Edit className="" />
+                                  <HugeiconsIcon icon={Edit01Icon} className="" />
                                 </Button>
                               }
                               itemData={{
@@ -451,7 +462,7 @@ function RouteComponent() {
                             <Popover>
                               <PopoverTrigger asChild>
                                 <Button variant="ghost" size="icon">
-                                  <Trash className="" />
+                                  <HugeiconsIcon icon={Delete01Icon} className="" />
                                 </Button>
                               </PopoverTrigger>
                               <PopoverContent>

@@ -4,14 +4,10 @@ import { useFilters } from "@/hooks/use-filters";
 import type { CollectionItem, CollectionFilters, CollectionItemFormValues } from "@myakiba/types";
 import { CollectionDataGrid } from "@/components/collection/collection-data-grid";
 import { collectionSearchSchema } from "@myakiba/schemas";
-import { CollectionDataGridSkeleton } from "@/components/collection/collection-data-grid-skeleton";
 import { toast } from "sonner";
 import { useCallback, useMemo } from "react";
 import { KPICard } from "@/components/ui/kpi-card";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Grid, TableOfContents } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { DateFormat } from "@myakiba/types";
 import { createBaseCollection, useCollectionLiveQuery } from "@/tanstack-db/db-collections";
 
@@ -114,8 +110,8 @@ function RouteComponent() {
   // const totalSpentThisMonth = undefined;
 
   return (
-    <div className="w-full space-y-8">
-      <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-6 mx-auto w-full">
+      <div className="flex flex-col gap-2 mb-4">
         <div className="flex flex-row items-start gap-4">
           <h1 className="text-2xl tracking-tight">Collection</h1>
         </div>
@@ -124,7 +120,12 @@ function RouteComponent() {
         </p>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        <KPICard title="Total Items" subtitle="all collection items" value={totalItems} />
+        <KPICard
+          title="Total Items"
+          subtitle="all collection items"
+          value={totalItems}
+          isLoading={isPending}
+        />
         <KPICard
           title="Total Spent"
           subtitle="based on total item prices"
@@ -133,6 +134,7 @@ function RouteComponent() {
               ? formatCurrencyFromMinorUnits(totalSpent, userCurrency)
               : undefined
           }
+          isLoading={isPending}
         />
         {/* <KPICard
           title="Total Items This Month"
@@ -149,49 +151,28 @@ function RouteComponent() {
           }
         /> */}
       </div>
-      <Tabs defaultValue="table" className="w-[375px] text-sm text-muted-foreground">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="table">
-            <TableOfContents /> Table
-          </TabsTrigger>
-          <Tooltip>
-            <TooltipTrigger>
-              <TabsTrigger value="grid" disabled>
-                <Grid /> Grid
-              </TabsTrigger>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>More views coming soon! Grid, Masonry, Gallery, etc.</p>
-            </TooltipContent>
-          </Tooltip>
-        </TabsList>
-      </Tabs>
-      {isPending ? (
-        <CollectionDataGridSkeleton />
-      ) : (
-        <CollectionDataGrid
-          key="collection-data-grid"
-          collection={pagedItems}
-          totalCount={totalItems ?? 0}
-          pagination={{
-            limit,
-            offset,
-          }}
-          sorting={{
-            sort: filters.sort ?? "createdAt",
-            order: filters.order ?? "desc",
-          }}
-          search={filters.search ?? ""}
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          onSearchChange={(search) => handleFilterChange({ ...filters, search })}
-          onResetFilters={resetFilters}
-          onDeleteCollectionItems={handleDeleteCollectionItems}
-          onEditCollectionItem={handleEditCollectionItem}
-          currency={userCurrency}
-          dateFormat={dateFormat}
-        />
-      )}
+      <CollectionDataGrid
+        key="collection-data-grid"
+        collection={pagedItems}
+        totalCount={totalItems ?? 0}
+        pagination={{
+          limit,
+          offset,
+        }}
+        sorting={{
+          sort: filters.sort ?? "createdAt",
+          order: filters.order ?? "desc",
+        }}
+        search={filters.search ?? ""}
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        onSearchChange={(search) => handleFilterChange({ ...filters, search })}
+        onResetFilters={resetFilters}
+        onDeleteCollectionItems={handleDeleteCollectionItems}
+        onEditCollectionItem={handleEditCollectionItem}
+        currency={userCurrency}
+        dateFormat={dateFormat}
+      />
     </div>
   );
 }

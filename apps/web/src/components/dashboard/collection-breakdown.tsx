@@ -113,11 +113,9 @@ export function CollectionBreakdown({
           <Separator />
         </div>
 
-        {/* Total Items Section */}
         <div className="flex flex-col gap-2 pt-4 px-6">
           <div className="flex justify-between items-center">
-            <span className="text-lg tracking-tight">Total Items</span>
-            <span className="text-lg ">{totalItems}</span>
+            <span className="text-sm tracking-tight">Categories</span>
           </div>
         </div>
 

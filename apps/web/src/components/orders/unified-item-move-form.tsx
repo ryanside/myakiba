@@ -1,3 +1,5 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowUpDownIcon, Loading03Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +26,6 @@ import {
 import { DatePicker } from "@/components/ui/date-picker";
 import * as z from "zod";
 import type { NewOrder, CascadeOptions } from "@myakiba/types";
-import { Loader2, ChevronsUpDownIcon, CheckIcon } from "lucide-react";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import { CascadeOptionsDropdown } from "@/components/cascade-options-dropdown";
 import { Textarea } from "../ui/textarea";
@@ -231,7 +232,10 @@ export default function UnifiedItemMoveForm({
                                   (order) => order.id === field.state.value,
                                 )?.title || "Select target order"
                               : "Select target order"}
-                            <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            <HugeiconsIcon
+                              icon={ArrowUpDownIcon}
+                              className="ml-2 h-4 w-4 shrink-0 opacity-50"
+                            />
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
@@ -271,7 +275,8 @@ export default function UnifiedItemMoveForm({
                                           }
                                         }}
                                       >
-                                        <CheckIcon
+                                        <HugeiconsIcon
+                                          icon={Tick02Icon}
                                           className={cn(
                                             "mr-2 h-4 w-4",
                                             field.state.value === order.id
@@ -680,7 +685,7 @@ export default function UnifiedItemMoveForm({
                     <DialogClose asChild>
                       <Button type="submit" disabled={!canSubmit} variant="primary">
                         {isSubmitting ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />
                         ) : (
                           "Move to New Order"
                         )}
