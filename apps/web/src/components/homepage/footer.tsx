@@ -1,4 +1,5 @@
-import { ArrowUp } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowUp01Icon } from "@hugeicons/core-free-icons";
 import { ModeToggle } from "../mode-toggle";
 
 const links = [
@@ -79,7 +80,7 @@ export default function FooterSection() {
             <a href="/#hero" className="duration-150">
               <div className="flex flex-row items-center gap-2">
                 <span className="hover:underline underline-offset-2  text-muted-foreground hover:text-foreground text-sm">
-                  back to top <ArrowUp className="size-3 inline-block" />
+                  back to top <HugeiconsIcon icon={ArrowUp01Icon} className="size-3 inline-block" />
                 </span>
               </div>
             </a>

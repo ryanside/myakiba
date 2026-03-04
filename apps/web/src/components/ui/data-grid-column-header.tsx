@@ -1,3 +1,14 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  ArrowDown01Icon,
+  ArrowLeft01Icon,
+  ArrowRight01Icon,
+  ArrowUp01Icon,
+  ArrowUpDownIcon,
+  PinOffIcon,
+  Settings02Icon,
+  Tick02Icon,
+} from "@hugeicons/core-free-icons";
 import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -16,18 +27,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { Column } from "@tanstack/react-table";
-import {
-  ArrowDown,
-  ArrowLeft,
-  ArrowLeftToLine,
-  ArrowRight,
-  ArrowRightToLine,
-  ArrowUp,
-  Check,
-  ChevronsUpDown,
-  PinOff,
-  Settings2,
-} from "lucide-react";
 
 interface DataGridColumnHeaderProps<TData, TValue> extends HTMLAttributes<HTMLDivElement> {
   column: Column<TData, TValue>;
@@ -118,11 +117,11 @@ function DataGridColumnHeader<TData, TValue>({
 
         {column.getCanSort() &&
           (column.getIsSorted() === "desc" ? (
-            <ArrowDown className="size-[0.7rem]! mt-px" />
+            <HugeiconsIcon icon={ArrowDown01Icon} className="size-[0.7rem]! mt-px" />
           ) : column.getIsSorted() === "asc" ? (
-            <ArrowUp className="size-[0.7rem]! mt-px" />
+            <HugeiconsIcon icon={ArrowUp01Icon} className="size-[0.7rem]! mt-px" />
           ) : (
-            <ChevronsUpDown className="size-[0.7rem]! mt-px" />
+            <HugeiconsIcon icon={ArrowUpDownIcon} className="size-[0.7rem]! mt-px" />
           ))}
       </Button>
     );
@@ -139,7 +138,7 @@ function DataGridColumnHeader<TData, TValue>({
         aria-label={`Unpin ${title} column`}
         title={`Unpin ${title} column`}
       >
-        <PinOff className="size-3.5! opacity-50!" aria-hidden="true" />
+        <HugeiconsIcon icon={PinOffIcon} className="size-3.5! opacity-50!" aria-hidden="true" />
       </Button>
     );
   };
@@ -168,10 +167,10 @@ function DataGridColumnHeader<TData, TValue>({
                   }}
                   disabled={!column.getCanSort()}
                 >
-                  <ArrowUp className="size-3.5!" />
+                  <HugeiconsIcon icon={ArrowUp01Icon} className="size-3.5!" />
                   <span className="grow">Asc</span>
                   {column.getIsSorted() === "asc" && (
-                    <Check className="size-4 opacity-100! text-primary" />
+                    <HugeiconsIcon icon={Tick02Icon} className="size-4 opacity-100! text-primary" />
                   )}
                 </DropdownMenuItem>
                 <DropdownMenuItem
@@ -184,10 +183,10 @@ function DataGridColumnHeader<TData, TValue>({
                   }}
                   disabled={!column.getCanSort()}
                 >
-                  <ArrowDown className="size-3.5!" />
+                  <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5!" />
                   <span className="grow">Desc</span>
                   {column.getIsSorted() === "desc" && (
-                    <Check className="size-4 opacity-100! text-primary" />
+                    <HugeiconsIcon icon={Tick02Icon} className="size-4 opacity-100! text-primary" />
                   )}
                 </DropdownMenuItem>
               </>
@@ -203,19 +202,19 @@ function DataGridColumnHeader<TData, TValue>({
                 <DropdownMenuItem
                   onClick={() => column.pin(column.getIsPinned() === "left" ? false : "left")}
                 >
-                  <ArrowLeftToLine className="size-3.5!" aria-hidden="true" />
+                  <HugeiconsIcon icon={ArrowLeft01Icon} className="size-3.5!" aria-hidden="true" />
                   <span className="grow">Pin to left</span>
                   {column.getIsPinned() === "left" && (
-                    <Check className="size-4 opacity-100! text-primary" />
+                    <HugeiconsIcon icon={Tick02Icon} className="size-4 opacity-100! text-primary" />
                   )}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => column.pin(column.getIsPinned() === "right" ? false : "right")}
                 >
-                  <ArrowRightToLine className="size-3.5!" aria-hidden="true" />
+                  <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5!" aria-hidden="true" />
                   <span className="grow">Pin to right</span>
                   {column.getIsPinned() === "right" && (
-                    <Check className="size-4 opacity-100! text-primary" />
+                    <HugeiconsIcon icon={Tick02Icon} className="size-4 opacity-100! text-primary" />
                   )}
                 </DropdownMenuItem>
               </>
@@ -228,14 +227,14 @@ function DataGridColumnHeader<TData, TValue>({
                   onClick={() => moveColumn("left")}
                   disabled={!canMove("left") || column.getIsPinned() !== false}
                 >
-                  <ArrowLeft className="size-3.5!" aria-hidden="true" />
+                  <HugeiconsIcon icon={ArrowLeft01Icon} className="size-3.5!" aria-hidden="true" />
                   <span>Move to Left</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => moveColumn("right")}
                   disabled={!canMove("right") || column.getIsPinned() !== false}
                 >
-                  <ArrowRight className="size-3.5!" aria-hidden="true" />
+                  <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5!" aria-hidden="true" />
                   <span>Move to Right</span>
                 </DropdownMenuItem>
               </>
@@ -248,7 +247,7 @@ function DataGridColumnHeader<TData, TValue>({
             {props.tableLayout?.columnsVisibility && visibility && (
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
-                  <Settings2 className="size-3.5!" />
+                  <HugeiconsIcon icon={Settings02Icon} className="size-3.5!" />
                   <span>Columns</span>
                 </DropdownMenuSubTrigger>
                 <DropdownMenuPortal>

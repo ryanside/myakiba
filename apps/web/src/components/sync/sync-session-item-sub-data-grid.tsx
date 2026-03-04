@@ -1,3 +1,5 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Loading03Icon, RedoIcon } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DataGrid, DataGridContainer } from "@/components/ui/data-grid";
@@ -6,7 +8,6 @@ import { DataGridTable } from "@/components/ui/data-grid-table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { getCoreRowModel, type PaginationState, useReactTable } from "@tanstack/react-table";
-import { Loader2, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import type { EnrichedSyncSessionItemRow, SyncSessionStatus } from "@myakiba/types";
 import { SYNC_SESSION_SUBGRID_PAGE_SIZE } from "@myakiba/constants/sync";
@@ -98,9 +99,9 @@ export function SyncSessionItemSubDataGrid({
             disabled={retryAllMutation.isPending}
           >
             {retryAllMutation.isPending ? (
-              <Loader2 className="size-3.5 animate-spin" />
+              <HugeiconsIcon icon={Loading03Icon} className="size-3.5 animate-spin" />
             ) : (
-              <RotateCcw className="size-3.5" />
+              <HugeiconsIcon icon={RedoIcon} className="size-3.5" />
             )}
             Retry all failed ({failCount})
           </Button>

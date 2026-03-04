@@ -1,3 +1,5 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { DragDropHorizontalIcon } from "@hugeicons/core-free-icons";
 import { useId } from "react";
 import type { CSSProperties } from "react";
 import { Button } from "@/components/ui/button";
@@ -32,7 +34,6 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-
 import { CSS } from "@dnd-kit/utilities";
 import { flexRender } from "@tanstack/react-table";
 import type { Cell, HeaderGroup, Row } from "@tanstack/react-table";
-import { GripHorizontal } from "lucide-react";
 
 function DataGridTableDndRowHandle({ rowId }: { rowId: string }) {
   const { attributes, listeners } = useSortable({
@@ -41,7 +42,7 @@ function DataGridTableDndRowHandle({ rowId }: { rowId: string }) {
 
   return (
     <Button variant="dim" size="sm" className="size-7" {...attributes} {...listeners}>
-      <GripHorizontal />
+      <HugeiconsIcon icon={DragDropHorizontalIcon} />
     </Button>
   );
 }

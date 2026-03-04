@@ -1,4 +1,10 @@
-import { ChartNoAxesCombined, ChartPie, Home, Library, Package } from "lucide-react";
+import {
+  Home01Icon,
+  PieChartIcon,
+  ChartColumnIcon,
+  LibraryIcon,
+  PackageIcon,
+} from "@hugeicons/core-free-icons";
 
 import { NavMain } from "@/components/sidebar/nav-main";
 import { NavManagement } from "@/components/sidebar/nav-management";
@@ -18,35 +24,37 @@ import { Link, useLocation } from "@tanstack/react-router";
 import { useRef } from "react";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
 import { GitCompareIcon, type GitCompareIconHandle } from "../ui/git-compare";
+import type { RouterAppContext } from "@/routes/__root";
+import SyncWidget from "../sync/sync-widget";
 
 const data = {
   navMain: [
     {
       title: "Dashboard",
       url: "/dashboard",
-      icon: Home,
+      icon: Home01Icon,
     },
     {
       title: "Analytics",
       url: "/analytics",
-      icon: ChartNoAxesCombined,
+      icon: ChartColumnIcon,
     },
     {
       title: "Expenses",
       url: "/expenses",
-      icon: ChartPie,
+      icon: PieChartIcon,
     },
   ],
   navManagement: [
     {
       title: "Orders",
       url: "/orders",
-      icon: Package,
+      icon: PackageIcon,
     },
     {
       title: "Collection",
       url: "/collection",
-      icon: Library,
+      icon: LibraryIcon,
     },
   ],
   navSecondary: [
@@ -86,7 +94,12 @@ export function GithubIcon() {
   );
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({
+  session,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & {
+  session: RouterAppContext["session"];
+}) {
   const location = useLocation();
   const syncIconRef = useRef<GitCompareIconHandle>(null);
 
@@ -117,11 +130,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent className="gap-0">
         <SidebarGroup>
-          <SidebarMenu>
+          <SidebarMenu className="space-y-2">
+            <SidebarMenuItem>
+              <SyncWidget
+                session={session}
+                TriggerWrapper={SidebarMenuButton}
+                triggerWrapperProps={{
+                  tooltip: "Sync Items",
+                  className:
+                    "text-black hover:text-black active:text-black dark:text-primary-foreground dark:hover:text-primary-foreground dark:data-[state=open]:hover:text-primary-foreground from-primary to-primary/85 border border-zinc-950/25 bg-gradient-to-t shadow-md shadow-zinc-950/20 ring-1 ring-inset ring-white/20 transition-[filter] duration-200 hover:brightness-110 active:brightness-90 dark:border-white/20 dark:ring-transparent",
+                }}
+              />
+            </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                tooltip="Sync"
+                tooltip="Sync History"
                 className="bg-muted hover:bg-background dark:bg-muted/25 dark:hover:bg-muted/50 dark:border-border inset-shadow-2xs inset-shadow-white dark:inset-shadow-transparent relative flex border border-zinc-300 shadow-sm shadow-zinc-950/10 ring-0 duration-150"
               >
                 <Link
@@ -129,8 +153,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   onMouseEnter={() => syncIconRef.current?.startAnimation()}
                   onMouseLeave={() => syncIconRef.current?.stopAnimation()}
                 >
-                  <GitCompareIcon ref={syncIconRef} size={17} className="" />
-                  <span className="">Sync</span>
+                  <GitCompareIcon ref={syncIconRef} size={17} className="text-primary" />
+                  <span className="">Sync History</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

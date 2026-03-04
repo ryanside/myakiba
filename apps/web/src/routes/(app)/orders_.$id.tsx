@@ -1,3 +1,13 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  ArrowLeft01Icon,
+  Calendar01Icon,
+  CreditCardIcon,
+  Edit01Icon,
+  FileAttachmentIcon,
+  PackageIcon,
+  UserGroupIcon,
+} from "@hugeicons/core-free-icons";
 import { createFileRoute, useParams, Link } from "@tanstack/react-router";
 import { getOrder, editOrder, deleteOrderItem } from "@/queries/orders";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -10,7 +20,6 @@ import { OrderItemSubDataGrid } from "@/components/orders/order-item-sub-data-gr
 import { useState, useEffect } from "react";
 import type { RowSelectionState } from "@tanstack/react-table";
 import { addRecentItem } from "@/lib/recent-items";
-import { Calendar, Package, CreditCard, ArrowLeft, Edit, FileText, Users } from "lucide-react";
 import { OrderForm } from "@/components/orders/order-form";
 import type { EditedOrder, CascadeOptions } from "@myakiba/types";
 import { toast } from "sonner";
@@ -144,7 +153,7 @@ function RouteComponent() {
         <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
         <Button asChild variant="outline">
           <Link to="/orders">
-            <ArrowLeft className="mr-2 h-4 w-4" />
+            <HugeiconsIcon icon={ArrowLeft01Icon} className="mr-2 h-4 w-4" />
             Back to Orders
           </Link>
         </Button>
@@ -170,7 +179,7 @@ function RouteComponent() {
         <div className="flex items-center gap-4">
           <Button asChild variant="ghost">
             <Link to="/orders">
-              <ArrowLeft className="size-4" />
+              <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
               Back to Orders
             </Link>
           </Button>
@@ -190,7 +199,7 @@ function RouteComponent() {
           <OrderForm
             renderTrigger={
               <Button variant="outline">
-                <Edit className="size-4" />
+                <HugeiconsIcon icon={Edit01Icon} className="size-4" />
                 Edit Order
               </Button>
             }
@@ -206,7 +215,7 @@ function RouteComponent() {
         <Card className="shadow-none">
           <CardHeader className="flex flex-row items-center gap-2 pb-2">
             <div className="flex items-center gap-x-2">
-              <Package className="size-4 text-muted-foreground" />
+              <HugeiconsIcon icon={PackageIcon} className="size-4 text-muted-foreground" />
               <CardTitle className="text-sm font-medium">Order Details</CardTitle>
             </div>
           </CardHeader>
@@ -252,7 +261,7 @@ function RouteComponent() {
         <Card className="shadow-none">
           <CardHeader className="flex flex-row items-center gap-2 pb-2">
             <div className="flex items-center gap-x-2">
-              <Calendar className="size-4 text-muted-foreground" />
+              <HugeiconsIcon icon={Calendar01Icon} className="size-4 text-muted-foreground" />
               <CardTitle className="text-sm font-medium">Timeline</CardTitle>
             </div>
           </CardHeader>
@@ -288,7 +297,7 @@ function RouteComponent() {
         <Card className="shadow-none">
           <CardHeader className="flex flex-row items-center gap-2 pb-2">
             <div className="flex items-center gap-x-2">
-              <CreditCard className="size-4 text-muted-foreground" />
+              <HugeiconsIcon icon={CreditCardIcon} className="size-4 text-muted-foreground" />
               <CardTitle className="text-sm font-medium">Financial Summary</CardTitle>
             </div>
           </CardHeader>
@@ -344,7 +353,7 @@ function RouteComponent() {
         <Card>
           <CardHeader className="flex flex-row items-center gap-2 pb-2">
             <div className="flex items-center gap-x-2">
-              <FileText className="size-4 text-muted-foreground" />
+              <HugeiconsIcon icon={FileAttachmentIcon} className="size-4 text-muted-foreground" />
               <CardTitle className="text-sm font-medium">Notes</CardTitle>
             </div>
           </CardHeader>
@@ -358,7 +367,7 @@ function RouteComponent() {
       <Card className="shadow-none flex-1">
         <CardHeader className="flex flex-row items-center gap-2 pb-2">
           <div className="flex items-center gap-x-2">
-            <Users className="size-4 text-muted-foreground" />
+            <HugeiconsIcon icon={UserGroupIcon} className="size-4 text-muted-foreground" />
             <CardTitle className="text-sm font-medium">Order Items ({order.itemCount})</CardTitle>
           </div>
         </CardHeader>
@@ -376,7 +385,7 @@ function RouteComponent() {
             />
           ) : (
             <div className="flex items-center justify-center py-8 text-muted-foreground">
-              <Package className="size-5" />
+              <HugeiconsIcon icon={PackageIcon} className="size-5" />
               No items in this order
             </div>
           )}

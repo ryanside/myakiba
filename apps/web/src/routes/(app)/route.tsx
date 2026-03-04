@@ -5,7 +5,6 @@ import { AppSidebar } from "@/components/sidebar/app-sidebar";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Outlet, redirect, useLocation } from "@tanstack/react-router";
 import UserMenu from "@/components/sidebar/user-menu";
-import SyncWidget from "@/components/sync/sync-widget";
 import { authClient } from "@/lib/auth-client";
 import { SearchCommand } from "@/components/sidebar/search-command";
 import { getVersion } from "@/queries/version";
@@ -62,16 +61,15 @@ function RouteComponent() {
     <div className="[--header-height:calc(--spacing(14))]">
       <SidebarProvider className="flex flex-col">
         <div className="flex flex-1">
-          <AppSidebar />
+          <AppSidebar session={session} />
           <SidebarInset className="shadow-none! border-border">
             <header className="flex h-12 shrink-0 items-center justify-between gap-2 px-4">
-              <div className="flex items-center gap-0.5">
+              <div className="flex items-center ">
                 <SidebarTrigger className="-ml-1" />
-                <span className="text-sm font-medium">{location.pathname}</span>
+                <SearchCommand />
+                <span className="text-sm font-normal ml-1">{location.pathname}</span>
               </div>
               <div className="flex items-center gap-4">
-                <SearchCommand />
-                <SyncWidget session={session} />
                 <UserMenu session={session} />
               </div>
             </header>

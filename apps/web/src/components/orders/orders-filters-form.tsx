@@ -1,13 +1,18 @@
+import { useState } from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
+import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useForm } from "@tanstack/react-form";
 import { Field, FieldContent, FieldTitle } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
@@ -16,15 +21,13 @@ import { MaskInput } from "@/components/ui/mask-input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Scroller } from "@/components/ui/scroller";
 import type { OrderFilters } from "@myakiba/types";
 import {
   getCurrencyLocale,
@@ -48,6 +51,8 @@ export default function OrdersFiltersForm({
 }: OrdersFiltersFormProps) {
   const userCurrency = currency || "USD";
   const userLocale = getCurrencyLocale(userCurrency);
+  const [open, setOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const form = useForm({
     defaultValues: {
@@ -145,6 +150,7 @@ export default function OrdersFiltersForm({
       };
 
       onApplyFilters(filters);
+      setOpen(false);
     },
   });
 
@@ -154,536 +160,556 @@ export default function OrdersFiltersForm({
     return `${items.length} selected`;
   };
 
-  return (
-    <Dialog>
-      <DialogTrigger asChild>{renderTrigger}</DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-screen">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            form.handleSubmit();
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle>Filters</DialogTitle>
-            <DialogDescription>Apply filters to narrow down your orders</DialogDescription>
-          </DialogHeader>
+  const handleSubmit = (e: React.FormEvent): void => {
+    e.preventDefault();
+    e.stopPropagation();
+    form.handleSubmit();
+  };
 
-          <ScrollArea className="overflow-auto max-h-[70vh]">
-            <div className="grid gap-4 p-2">
-              {/* Status */}
-              <form.Field
-                name="status"
-                children={(field) => (
-                  <Field>
-                    <FieldTitle>Status</FieldTitle>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="w-full justify-between" type="button">
-                          {getMultiSelectDisplay(field.state.value, "status")}
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width)">
-                        {ORDER_STATUSES.map((status) => (
-                          <DropdownMenuCheckboxItem
-                            key={status}
-                            checked={field.state.value?.includes(status)}
-                            onCheckedChange={(checked) => {
-                              const current = field.state.value || [];
-                              const updated = checked
-                                ? [...current, status]
-                                : current.filter((s) => s !== status);
-                              field.handleChange(updated);
-                            }}
-                            onSelect={(e) => e.preventDefault()}
-                          >
-                            {status}
-                          </DropdownMenuCheckboxItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </Field>
-                )}
-              />
+  const formFieldsContent = (
+    <div className="grid gap-4 p-2">
+      {/* Status */}
+      <form.Field
+        name="status"
+        children={(field) => (
+          <Field>
+            <FieldTitle>Status</FieldTitle>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full justify-between" type="button">
+                  {getMultiSelectDisplay(field.state.value, "status")}
+                  <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width)">
+                {ORDER_STATUSES.map((status) => (
+                  <DropdownMenuCheckboxItem
+                    key={status}
+                    checked={field.state.value?.includes(status)}
+                    onCheckedChange={(checked) => {
+                      const current = field.state.value || [];
+                      const updated = checked
+                        ? [...current, status]
+                        : current.filter((s) => s !== status);
+                      field.handleChange(updated);
+                    }}
+                    onSelect={(e) => e.preventDefault()}
+                  >
+                    {status}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </Field>
+        )}
+      />
 
-              {/* Shipping Method */}
-              <form.Field
-                name="shipMethod"
-                children={(field) => (
-                  <Field>
-                    <FieldTitle>Shipping Method</FieldTitle>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="w-full justify-between" type="button">
-                          {getMultiSelectDisplay(field.state.value, "shipping method")}
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width)">
-                        <ScrollArea className="h-[200px]">
-                          {SHIPPING_METHODS.map((method) => (
-                            <DropdownMenuCheckboxItem
-                              key={method}
-                              checked={field.state.value?.includes(method)}
-                              onCheckedChange={(checked) => {
-                                const current = field.state.value || [];
-                                const updated = checked
-                                  ? [...current, method]
-                                  : current.filter((m) => m !== method);
-                                field.handleChange(updated);
-                              }}
-                              onSelect={(e) => e.preventDefault()}
-                            >
-                              {method}
-                            </DropdownMenuCheckboxItem>
-                          ))}
-                        </ScrollArea>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </Field>
-                )}
-              />
+      {/* Shipping Method */}
+      <form.Field
+        name="shipMethod"
+        children={(field) => (
+          <Field>
+            <FieldTitle>Shipping Method</FieldTitle>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full justify-between" type="button">
+                  {getMultiSelectDisplay(field.state.value, "shipping method")}
+                  <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width)">
+                <Scroller className="h-[200px]">
+                  {SHIPPING_METHODS.map((method) => (
+                    <DropdownMenuCheckboxItem
+                      key={method}
+                      checked={field.state.value?.includes(method)}
+                      onCheckedChange={(checked) => {
+                        const current = field.state.value || [];
+                        const updated = checked
+                          ? [...current, method]
+                          : current.filter((m) => m !== method);
+                        field.handleChange(updated);
+                      }}
+                      onSelect={(e) => e.preventDefault()}
+                    >
+                      {method}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </Scroller>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </Field>
+        )}
+      />
 
-              {/* Shop */}
-              <form.Field
-                name="shop"
-                children={(field) => (
-                  <Field className="gap-2">
-                    <FieldTitle>Shop</FieldTitle>
-                    <FieldContent>
-                      <div className="flex flex-wrap gap-2">
-                        {field.state.value?.map((shop, shopIndex) => (
-                          <Badge
-                            key={shopIndex}
-                            variant="outline"
-                            size="lg"
-                            className="flex items-center justify-between pr-0"
-                          >
-                            {shop}
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                const current = field.state.value || [];
-                                field.handleChange(current.filter((_, idx) => idx !== shopIndex));
-                              }}
-                              className=" hover:text-red-500 hover:bg-transparent"
-                            >
-                              <X />
-                            </Button>
-                          </Badge>
-                        ))}
-                      </div>
-                      <div className="flex gap-2">
-                        <Input
-                          id="shop-input"
-                          type="text"
-                          placeholder="Press enter after each shop to add"
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              const input = e.currentTarget;
-                              const value = input.value.trim();
-                              if (value) {
-                                const current = field.state.value || [];
-                                field.handleChange([...current, value]);
-                                input.value = "";
-                              }
-                            }
-                          }}
-                        />
-                      </div>
-                    </FieldContent>
-                  </Field>
-                )}
-              />
-
-              {/* Date Range Filters */}
-              <div className="space-y-4">
-                {/* Release Date */}
-                <Field>
-                  <Label>Release Date</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <form.Field
-                      name="releaseDateStart"
-                      children={(field) => (
-                        <DatePicker
-                          placeholder="From"
-                          value={field.state.value || null}
-                          onChange={(value) => field.handleChange(value || "")}
-                        />
-                      )}
-                    />
-                    <form.Field
-                      name="releaseDateEnd"
-                      children={(field) => (
-                        <DatePicker
-                          placeholder="To"
-                          value={field.state.value || null}
-                          onChange={(value) => field.handleChange(value || "")}
-                        />
-                      )}
-                    />
-                  </div>
-                </Field>
-
-                {/* Order Date */}
-                <Field>
-                  <Label>Order Date</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <form.Field
-                      name="orderDateStart"
-                      children={(field) => (
-                        <DatePicker
-                          placeholder="From"
-                          value={field.state.value || null}
-                          onChange={(value) => field.handleChange(value || "")}
-                        />
-                      )}
-                    />
-                    <form.Field
-                      name="orderDateEnd"
-                      children={(field) => (
-                        <DatePicker
-                          placeholder="To"
-                          value={field.state.value || null}
-                          onChange={(value) => field.handleChange(value || "")}
-                        />
-                      )}
-                    />
-                  </div>
-                </Field>
-
-                {/* Payment Date */}
-                <Field>
-                  <Label>Payment Date</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <form.Field
-                      name="payDateStart"
-                      children={(field) => (
-                        <DatePicker
-                          placeholder="From"
-                          value={field.state.value || null}
-                          onChange={(value) => field.handleChange(value || "")}
-                        />
-                      )}
-                    />
-                    <form.Field
-                      name="payDateEnd"
-                      children={(field) => (
-                        <DatePicker
-                          placeholder="To"
-                          value={field.state.value || null}
-                          onChange={(value) => field.handleChange(value || "")}
-                        />
-                      )}
-                    />
-                  </div>
-                </Field>
-
-                {/* Shipping Date */}
-                <Field>
-                  <Label>Shipping Date</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <form.Field
-                      name="shipDateStart"
-                      children={(field) => (
-                        <DatePicker
-                          placeholder="From"
-                          value={field.state.value || null}
-                          onChange={(value) => field.handleChange(value || "")}
-                        />
-                      )}
-                    />
-                    <form.Field
-                      name="shipDateEnd"
-                      children={(field) => (
-                        <DatePicker
-                          placeholder="To"
-                          value={field.state.value || null}
-                          onChange={(value) => field.handleChange(value || "")}
-                        />
-                      )}
-                    />
-                  </div>
-                </Field>
-
-                {/* Collection Date */}
-                <Field>
-                  <Label>Collection Date</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <form.Field
-                      name="colDateStart"
-                      children={(field) => (
-                        <DatePicker
-                          placeholder="From"
-                          value={field.state.value || null}
-                          onChange={(value) => field.handleChange(value || "")}
-                        />
-                      )}
-                    />
-                    <form.Field
-                      name="colDateEnd"
-                      children={(field) => (
-                        <DatePicker
-                          placeholder="To"
-                          value={field.state.value || null}
-                          onChange={(value) => field.handleChange(value || "")}
-                        />
-                      )}
-                    />
-                  </div>
-                </Field>
+      {/* Shop */}
+      <form.Field
+        name="shop"
+        children={(field) => (
+          <Field className="gap-2">
+            <FieldTitle>Shop</FieldTitle>
+            <FieldContent>
+              <div className="flex flex-wrap gap-2">
+                {field.state.value?.map((shop, shopIndex) => (
+                  <Badge
+                    key={shopIndex}
+                    variant="outline"
+                    size="lg"
+                    className="flex items-center justify-between pr-0"
+                  >
+                    {shop}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        const current = field.state.value || [];
+                        field.handleChange(current.filter((_, idx) => idx !== shopIndex));
+                      }}
+                      className=" hover:text-red-500 hover:bg-transparent"
+                    >
+                      <HugeiconsIcon icon={Cancel01Icon} />
+                    </Button>
+                  </Badge>
+                ))}
               </div>
+              <div className="flex gap-2">
+                <Input
+                  id="shop-input"
+                  type="text"
+                  placeholder="Press enter after each shop to add"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const input = e.currentTarget;
+                      const value = input.value.trim();
+                      if (value) {
+                        const current = field.state.value || [];
+                        field.handleChange([...current, value]);
+                        input.value = "";
+                      }
+                    }
+                  }}
+                />
+              </div>
+            </FieldContent>
+          </Field>
+        )}
+      />
 
-              {/* Total Range */}
-              <Field>
-                <FieldTitle>Total Range</FieldTitle>
-                <div className="grid grid-cols-2 gap-2">
-                  <form.Field
-                    name="totalMin"
-                    children={(field) => (
-                      <MaskInput
-                        mask="currency"
-                        currency={userCurrency}
-                        locale={userLocale}
-                        placeholder="Min"
-                        value={field.state.value || ""}
-                        onValueChange={(maskedValue, unmaskedValue) =>
-                          field.handleChange(unmaskedValue)
-                        }
-                      />
-                    )}
-                  />
-                  <form.Field
-                    name="totalMax"
-                    children={(field) => (
-                      <MaskInput
-                        mask="currency"
-                        currency={userCurrency}
-                        locale={userLocale}
-                        placeholder="Max"
-                        value={field.state.value || ""}
-                        onValueChange={(maskedValue, unmaskedValue) =>
-                          field.handleChange(unmaskedValue)
-                        }
-                      />
-                    )}
-                  />
-                </div>
-              </Field>
+      {/* Date Range Filters */}
+      <div className="space-y-4">
+        {/* Release Date */}
+        <Field>
+          <Label>Release Date</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <form.Field
+              name="releaseDateStart"
+              children={(field) => (
+                <DatePicker
+                  placeholder="From"
+                  value={field.state.value || null}
+                  onChange={(value) => field.handleChange(value || "")}
+                />
+              )}
+            />
+            <form.Field
+              name="releaseDateEnd"
+              children={(field) => (
+                <DatePicker
+                  placeholder="To"
+                  value={field.state.value || null}
+                  onChange={(value) => field.handleChange(value || "")}
+                />
+              )}
+            />
+          </div>
+        </Field>
 
-              {/* Shipping Fee Range */}
-              <Field>
-                <FieldTitle>Shipping Fee Range</FieldTitle>
-                <div className="grid grid-cols-2 gap-2">
-                  <form.Field
-                    name="shippingFeeMin"
-                    children={(field) => (
-                      <MaskInput
-                        mask="currency"
-                        currency={userCurrency}
-                        locale={userLocale}
-                        placeholder="Min"
-                        value={field.state.value || ""}
-                        onValueChange={(maskedValue, unmaskedValue) =>
-                          field.handleChange(unmaskedValue)
-                        }
-                      />
-                    )}
-                  />
-                  <form.Field
-                    name="shippingFeeMax"
-                    children={(field) => (
-                      <MaskInput
-                        mask="currency"
-                        currency={userCurrency}
-                        locale={userLocale}
-                        placeholder="Max"
-                        value={field.state.value || ""}
-                        onValueChange={(maskedValue, unmaskedValue) =>
-                          field.handleChange(unmaskedValue)
-                        }
-                      />
-                    )}
-                  />
-                </div>
-              </Field>
+        {/* Order Date */}
+        <Field>
+          <Label>Order Date</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <form.Field
+              name="orderDateStart"
+              children={(field) => (
+                <DatePicker
+                  placeholder="From"
+                  value={field.state.value || null}
+                  onChange={(value) => field.handleChange(value || "")}
+                />
+              )}
+            />
+            <form.Field
+              name="orderDateEnd"
+              children={(field) => (
+                <DatePicker
+                  placeholder="To"
+                  value={field.state.value || null}
+                  onChange={(value) => field.handleChange(value || "")}
+                />
+              )}
+            />
+          </div>
+        </Field>
 
-              {/* Taxes Range */}
-              <Field>
-                <FieldTitle>Taxes Range</FieldTitle>
-                <div className="grid grid-cols-2 gap-2">
-                  <form.Field
-                    name="taxesMin"
-                    children={(field) => (
-                      <MaskInput
-                        mask="currency"
-                        currency={userCurrency}
-                        locale={userLocale}
-                        placeholder="Min"
-                        value={field.state.value || ""}
-                        onValueChange={(maskedValue, unmaskedValue) =>
-                          field.handleChange(unmaskedValue)
-                        }
-                      />
-                    )}
-                  />
-                  <form.Field
-                    name="taxesMax"
-                    children={(field) => (
-                      <MaskInput
-                        mask="currency"
-                        currency={userCurrency}
-                        locale={userLocale}
-                        placeholder="Max"
-                        value={field.state.value || ""}
-                        onValueChange={(maskedValue, unmaskedValue) =>
-                          field.handleChange(unmaskedValue)
-                        }
-                      />
-                    )}
-                  />
-                </div>
-              </Field>
+        {/* Payment Date */}
+        <Field>
+          <Label>Payment Date</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <form.Field
+              name="payDateStart"
+              children={(field) => (
+                <DatePicker
+                  placeholder="From"
+                  value={field.state.value || null}
+                  onChange={(value) => field.handleChange(value || "")}
+                />
+              )}
+            />
+            <form.Field
+              name="payDateEnd"
+              children={(field) => (
+                <DatePicker
+                  placeholder="To"
+                  value={field.state.value || null}
+                  onChange={(value) => field.handleChange(value || "")}
+                />
+              )}
+            />
+          </div>
+        </Field>
 
-              {/* Duties Range */}
-              <Field>
-                <FieldTitle>Duties Range</FieldTitle>
-                <div className="grid grid-cols-2 gap-2">
-                  <form.Field
-                    name="dutiesMin"
-                    children={(field) => (
-                      <MaskInput
-                        mask="currency"
-                        currency={userCurrency}
-                        locale={userLocale}
-                        placeholder="Min"
-                        value={field.state.value || ""}
-                        onValueChange={(maskedValue, unmaskedValue) =>
-                          field.handleChange(unmaskedValue)
-                        }
-                      />
-                    )}
-                  />
-                  <form.Field
-                    name="dutiesMax"
-                    children={(field) => (
-                      <MaskInput
-                        mask="currency"
-                        currency={userCurrency}
-                        locale={userLocale}
-                        placeholder="Max"
-                        value={field.state.value || ""}
-                        onValueChange={(maskedValue, unmaskedValue) =>
-                          field.handleChange(unmaskedValue)
-                        }
-                      />
-                    )}
-                  />
-                </div>
-              </Field>
+        {/* Shipping Date */}
+        <Field>
+          <Label>Shipping Date</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <form.Field
+              name="shipDateStart"
+              children={(field) => (
+                <DatePicker
+                  placeholder="From"
+                  value={field.state.value || null}
+                  onChange={(value) => field.handleChange(value || "")}
+                />
+              )}
+            />
+            <form.Field
+              name="shipDateEnd"
+              children={(field) => (
+                <DatePicker
+                  placeholder="To"
+                  value={field.state.value || null}
+                  onChange={(value) => field.handleChange(value || "")}
+                />
+              )}
+            />
+          </div>
+        </Field>
 
-              {/* Tariffs Range */}
-              <Field>
-                <FieldTitle>Tariffs Range</FieldTitle>
-                <div className="grid grid-cols-2 gap-2">
-                  <form.Field
-                    name="tariffsMin"
-                    children={(field) => (
-                      <MaskInput
-                        mask="currency"
-                        currency={userCurrency}
-                        locale={userLocale}
-                        placeholder="Min"
-                        value={field.state.value || ""}
-                        onValueChange={(maskedValue, unmaskedValue) =>
-                          field.handleChange(unmaskedValue)
-                        }
-                      />
-                    )}
-                  />
-                  <form.Field
-                    name="tariffsMax"
-                    children={(field) => (
-                      <MaskInput
-                        mask="currency"
-                        currency={userCurrency}
-                        locale={userLocale}
-                        placeholder="Max"
-                        value={field.state.value || ""}
-                        onValueChange={(maskedValue, unmaskedValue) =>
-                          field.handleChange(unmaskedValue)
-                        }
-                      />
-                    )}
-                  />
-                </div>
-              </Field>
+        {/* Collection Date */}
+        <Field>
+          <Label>Collection Date</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <form.Field
+              name="colDateStart"
+              children={(field) => (
+                <DatePicker
+                  placeholder="From"
+                  value={field.state.value || null}
+                  onChange={(value) => field.handleChange(value || "")}
+                />
+              )}
+            />
+            <form.Field
+              name="colDateEnd"
+              children={(field) => (
+                <DatePicker
+                  placeholder="To"
+                  value={field.state.value || null}
+                  onChange={(value) => field.handleChange(value || "")}
+                />
+              )}
+            />
+          </div>
+        </Field>
+      </div>
 
-              {/* Misc Fees Range */}
-              <Field>
-                <FieldTitle>Misc Fees Range</FieldTitle>
-                <div className="grid grid-cols-2 gap-2">
-                  <form.Field
-                    name="miscFeesMin"
-                    children={(field) => (
-                      <MaskInput
-                        mask="currency"
-                        currency={userCurrency}
-                        locale={userLocale}
-                        placeholder="Min"
-                        value={field.state.value || ""}
-                        onValueChange={(maskedValue, unmaskedValue) =>
-                          field.handleChange(unmaskedValue)
-                        }
-                      />
-                    )}
-                  />
-                  <form.Field
-                    name="miscFeesMax"
-                    children={(field) => (
-                      <MaskInput
-                        mask="currency"
-                        currency={userCurrency}
-                        locale={userLocale}
-                        placeholder="Max"
-                        value={field.state.value || ""}
-                        onValueChange={(maskedValue, unmaskedValue) =>
-                          field.handleChange(unmaskedValue)
-                        }
-                      />
-                    )}
-                  />
-                </div>
-              </Field>
-            </div>
-          </ScrollArea>
+      {/* Total Range */}
+      <Field>
+        <FieldTitle>Total Range</FieldTitle>
+        <div className="grid grid-cols-2 gap-2">
+          <form.Field
+            name="totalMin"
+            children={(field) => (
+              <MaskInput
+                mask="currency"
+                currency={userCurrency}
+                locale={userLocale}
+                placeholder="Min"
+                value={field.state.value || ""}
+                onValueChange={(maskedValue, unmaskedValue) => field.handleChange(unmaskedValue)}
+              />
+            )}
+          />
+          <form.Field
+            name="totalMax"
+            children={(field) => (
+              <MaskInput
+                mask="currency"
+                currency={userCurrency}
+                locale={userLocale}
+                placeholder="Max"
+                value={field.state.value || ""}
+                onValueChange={(maskedValue, unmaskedValue) => field.handleChange(unmaskedValue)}
+              />
+            )}
+          />
+        </div>
+      </Field>
 
-          <DialogFooter className="">
+      {/* Shipping Fee Range */}
+      <Field>
+        <FieldTitle>Shipping Fee Range</FieldTitle>
+        <div className="grid grid-cols-2 gap-2">
+          <form.Field
+            name="shippingFeeMin"
+            children={(field) => (
+              <MaskInput
+                mask="currency"
+                currency={userCurrency}
+                locale={userLocale}
+                placeholder="Min"
+                value={field.state.value || ""}
+                onValueChange={(maskedValue, unmaskedValue) => field.handleChange(unmaskedValue)}
+              />
+            )}
+          />
+          <form.Field
+            name="shippingFeeMax"
+            children={(field) => (
+              <MaskInput
+                mask="currency"
+                currency={userCurrency}
+                locale={userLocale}
+                placeholder="Max"
+                value={field.state.value || ""}
+                onValueChange={(maskedValue, unmaskedValue) => field.handleChange(unmaskedValue)}
+              />
+            )}
+          />
+        </div>
+      </Field>
+
+      {/* Taxes Range */}
+      <Field>
+        <FieldTitle>Taxes Range</FieldTitle>
+        <div className="grid grid-cols-2 gap-2">
+          <form.Field
+            name="taxesMin"
+            children={(field) => (
+              <MaskInput
+                mask="currency"
+                currency={userCurrency}
+                locale={userLocale}
+                placeholder="Min"
+                value={field.state.value || ""}
+                onValueChange={(maskedValue, unmaskedValue) => field.handleChange(unmaskedValue)}
+              />
+            )}
+          />
+          <form.Field
+            name="taxesMax"
+            children={(field) => (
+              <MaskInput
+                mask="currency"
+                currency={userCurrency}
+                locale={userLocale}
+                placeholder="Max"
+                value={field.state.value || ""}
+                onValueChange={(maskedValue, unmaskedValue) => field.handleChange(unmaskedValue)}
+              />
+            )}
+          />
+        </div>
+      </Field>
+
+      {/* Duties Range */}
+      <Field>
+        <FieldTitle>Duties Range</FieldTitle>
+        <div className="grid grid-cols-2 gap-2">
+          <form.Field
+            name="dutiesMin"
+            children={(field) => (
+              <MaskInput
+                mask="currency"
+                currency={userCurrency}
+                locale={userLocale}
+                placeholder="Min"
+                value={field.state.value || ""}
+                onValueChange={(maskedValue, unmaskedValue) => field.handleChange(unmaskedValue)}
+              />
+            )}
+          />
+          <form.Field
+            name="dutiesMax"
+            children={(field) => (
+              <MaskInput
+                mask="currency"
+                currency={userCurrency}
+                locale={userLocale}
+                placeholder="Max"
+                value={field.state.value || ""}
+                onValueChange={(maskedValue, unmaskedValue) => field.handleChange(unmaskedValue)}
+              />
+            )}
+          />
+        </div>
+      </Field>
+
+      {/* Tariffs Range */}
+      <Field>
+        <FieldTitle>Tariffs Range</FieldTitle>
+        <div className="grid grid-cols-2 gap-2">
+          <form.Field
+            name="tariffsMin"
+            children={(field) => (
+              <MaskInput
+                mask="currency"
+                currency={userCurrency}
+                locale={userLocale}
+                placeholder="Min"
+                value={field.state.value || ""}
+                onValueChange={(maskedValue, unmaskedValue) => field.handleChange(unmaskedValue)}
+              />
+            )}
+          />
+          <form.Field
+            name="tariffsMax"
+            children={(field) => (
+              <MaskInput
+                mask="currency"
+                currency={userCurrency}
+                locale={userLocale}
+                placeholder="Max"
+                value={field.state.value || ""}
+                onValueChange={(maskedValue, unmaskedValue) => field.handleChange(unmaskedValue)}
+              />
+            )}
+          />
+        </div>
+      </Field>
+
+      {/* Misc Fees Range */}
+      <Field>
+        <FieldTitle>Misc Fees Range</FieldTitle>
+        <div className="grid grid-cols-2 gap-2">
+          <form.Field
+            name="miscFeesMin"
+            children={(field) => (
+              <MaskInput
+                mask="currency"
+                currency={userCurrency}
+                locale={userLocale}
+                placeholder="Min"
+                value={field.state.value || ""}
+                onValueChange={(maskedValue, unmaskedValue) => field.handleChange(unmaskedValue)}
+              />
+            )}
+          />
+          <form.Field
+            name="miscFeesMax"
+            children={(field) => (
+              <MaskInput
+                mask="currency"
+                currency={userCurrency}
+                locale={userLocale}
+                placeholder="Max"
+                value={field.state.value || ""}
+                onValueChange={(maskedValue, unmaskedValue) => field.handleChange(unmaskedValue)}
+              />
+            )}
+          />
+        </div>
+      </Field>
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetTrigger asChild>{renderTrigger}</SheetTrigger>
+        <SheetContent
+          side="right"
+          className="w-full sm:max-w-lg h-full overflow-hidden flex flex-col"
+        >
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+            <SheetHeader>
+              <SheetTitle>Filters</SheetTitle>
+              <SheetDescription>Apply filters to narrow down your orders</SheetDescription>
+            </SheetHeader>
+            <Scroller className="flex-1 min-h-0" size={24}>
+              {formFieldsContent}
+            </Scroller>
+            <SheetFooter className="flex flex-row">
+              <SheetClose asChild>
+                <Button type="button" variant="outline">
+                  Cancel
+                </Button>
+              </SheetClose>
+              <form.Subscribe
+                selector={(state) => [state.canSubmit, state.isSubmitting]}
+                children={([, isSubmitting]) => (
+                  <Button type="submit" disabled={isSubmitting}>
+                    Apply Filters
+                  </Button>
+                )}
+              />
+            </SheetFooter>
+          </form>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>{renderTrigger}</PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="w-[min(32rem,calc(100vw-2rem))] max-h-[min(85vh,32rem)] flex flex-col p-0"
+        aria-labelledby="filters-title"
+        aria-describedby="filters-desc"
+      >
+        <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
+          <div className="px-4 pt-4 pb-2 shrink-0">
+            <h2 id="filters-title" className="text-lg font-semibold">
+              Filters
+            </h2>
+            <p id="filters-desc" className="text-sm text-muted-foreground">
+              Apply filters to narrow down your orders
+            </p>
+          </div>
+          <Scroller className="flex-1 min-h-0" size={24}>
+            {formFieldsContent}
+          </Scroller>
+          <div className="sticky bottom-0 border-t p-3 flex justify-end gap-2 bg-popover shrink-0">
+            <PopoverClose asChild>
+              <Button type="button" variant="outline">
+                Cancel
+              </Button>
+            </PopoverClose>
             <form.Subscribe
               selector={(state) => [state.canSubmit, state.isSubmitting]}
               children={([, isSubmitting]) => (
-                <>
-                  <DialogClose asChild>
-                    <Button type="button" variant="outline">
-                      Cancel
-                    </Button>
-                  </DialogClose>
-                  <DialogClose asChild>
-                    <Button type="submit" disabled={isSubmitting}>
-                      Apply Filters
-                    </Button>
-                  </DialogClose>
-                </>
+                <Button type="submit" disabled={isSubmitting}>
+                  Apply Filters
+                </Button>
               )}
             />
-          </DialogFooter>
+          </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </PopoverContent>
+    </Popover>
   );
 }

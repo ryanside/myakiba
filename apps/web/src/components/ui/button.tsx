@@ -1,8 +1,8 @@
 import * as React from "react";
 import { cva } from "class-variance-authority";
 import type { VariantProps } from "class-variance-authority";
-import { ChevronDown } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
+import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
 import { Slot as SlotPrimitive } from "radix-ui";
 import { cn } from "@/lib/utils";
 
@@ -408,12 +408,19 @@ function Button({
   );
 }
 
-interface ButtonArrowProps extends React.SVGProps<SVGSVGElement> {
-  icon?: LucideIcon; // Allows passing Lucide icon
+interface ButtonArrowProps {
+  icon?: IconSvgElement;
+  className?: string;
 }
 
-function ButtonArrow({ icon: Icon = ChevronDown, className, ...props }: ButtonArrowProps) {
-  return <Icon data-slot="button-arrow" className={cn("ms-auto -me-1", className)} {...props} />;
+function ButtonArrow({ icon: Icon = ArrowDown01Icon, className }: ButtonArrowProps) {
+  return (
+    <HugeiconsIcon
+      icon={Icon}
+      data-slot="button-arrow"
+      className={cn("ms-auto -me-1", className)}
+    />
+  );
 }
 
 export { Button, ButtonArrow, buttonVariants };

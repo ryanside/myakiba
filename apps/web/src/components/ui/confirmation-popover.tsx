@@ -1,5 +1,6 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { InformationCircleIcon } from "@hugeicons/core-free-icons";
 import * as React from "react";
-import { Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger, PopoverClose } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -37,7 +38,7 @@ export function ConfirmationPopover({
             {tooltipContent && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Info className="w-4 h-4" />
+                  <HugeiconsIcon icon={InformationCircleIcon} className="w-4 h-4" />
                 </TooltipTrigger>
                 <TooltipContent className="max-h-40">
                   <p>{tooltipContent}</p>

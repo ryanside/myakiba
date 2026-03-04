@@ -1,3 +1,5 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, ArrowUp01Icon, ArrowUpDownIcon } from "@hugeicons/core-free-icons";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
   flexRender,
@@ -18,7 +20,6 @@ import {
 import { cn } from "@/lib/utils";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils";
 import { Progress } from "../ui/progress";
-import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "../ui/button";
 import { useMemo, useState, Fragment } from "react";
 import type { Category } from "@myakiba/types";
@@ -79,11 +80,11 @@ export function RankingCard({
         >
           {col.label}
           {column.getIsSorted() === "desc" ? (
-            <ArrowDown className="size-3" />
+            <HugeiconsIcon icon={ArrowDown01Icon} className="size-3" />
           ) : column.getIsSorted() === "asc" ? (
-            <ArrowUp className="size-3" />
+            <HugeiconsIcon icon={ArrowUp01Icon} className="size-3" />
           ) : (
-            <ArrowUpDown className="size-3" />
+            <HugeiconsIcon icon={ArrowUpDownIcon} className="size-3" />
           )}
         </Button>
       ),

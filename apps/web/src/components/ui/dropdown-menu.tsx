@@ -1,8 +1,9 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowRight01Icon, CircleIcon, Tick02Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { Check, ChevronRight, Circle } from "lucide-react";
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 
 function DropdownMenu({ ...props }: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
@@ -50,7 +51,8 @@ function DropdownMenuSubTrigger({
       {...props}
     >
       {children}
-      <ChevronRight
+      <HugeiconsIcon
+        icon={ArrowRight01Icon}
         data-slot="dropdown-menu-sub-trigger-indicator"
         className="ms-auto size-3.5! rtl:rotate-180"
       />
@@ -142,7 +144,7 @@ function DropdownMenuCheckboxItem({
     >
       <span className="absolute start-2 flex h-3.5 w-3.5 items-center text-muted-foreground justify-center">
         <DropdownMenuPrimitive.ItemIndicator>
-          <Check className="h-4 w-4 text-primary" />
+          <HugeiconsIcon icon={Tick02Icon} className="h-4 w-4 text-primary" />
         </DropdownMenuPrimitive.ItemIndicator>
       </span>
       {children}
@@ -166,7 +168,7 @@ function DropdownMenuRadioItem({
     >
       <span className="absolute start-1.5 flex h-3.5 w-3.5 items-center justify-center">
         <DropdownMenuPrimitive.ItemIndicator>
-          <Circle className="h-1.5 w-1.5 fill-primary stroke-primary" />
+          <HugeiconsIcon icon={CircleIcon} className="h-1.5 w-1.5 fill-primary stroke-primary" />
         </DropdownMenuPrimitive.ItemIndicator>
       </span>
       {children}

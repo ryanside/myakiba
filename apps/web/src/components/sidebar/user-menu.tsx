@@ -1,3 +1,5 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Logout01Icon, Settings01Icon, UserIcon } from "@hugeicons/core-free-icons";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,7 +10,6 @@ import {
 import { authClient } from "@/lib/auth-client";
 import { useNavigate } from "@tanstack/react-router";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { LogOut, Settings, User } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ModeToggle } from "../mode-toggle";
 import type { RouterAppContext } from "@/routes/__root";
@@ -42,7 +43,7 @@ export default function UserMenu({ session }: { session: RouterAppContext["sessi
         <Avatar className="h-7 w-7">
           {session.user.image && <AvatarImage src={session.user.image} />}
           <AvatarFallback className="bg-linear-to-br from-background via-muted to-background">
-            <User className="size-4" />
+            <HugeiconsIcon icon={UserIcon} className="size-4" />
           </AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
@@ -63,7 +64,7 @@ export default function UserMenu({ session }: { session: RouterAppContext["sessi
             });
           }}
         >
-          <User />
+          <HugeiconsIcon icon={UserIcon} />
           Profile
         </DropdownMenuItem>
         <DropdownMenuItem
@@ -73,7 +74,7 @@ export default function UserMenu({ session }: { session: RouterAppContext["sessi
             });
           }}
         >
-          <Settings />
+          <HugeiconsIcon icon={Settings01Icon} />
           Settings
         </DropdownMenuItem>
         <DropdownMenuSeparator />
@@ -82,7 +83,7 @@ export default function UserMenu({ session }: { session: RouterAppContext["sessi
             handleSignOut();
           }}
         >
-          <LogOut />
+          <HugeiconsIcon icon={Logout01Icon} />
           Sign Out
         </DropdownMenuItem>
       </DropdownMenuContent>

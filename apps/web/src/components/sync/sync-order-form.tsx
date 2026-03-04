@@ -1,3 +1,12 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  Add01Icon,
+  ArrowDown01Icon,
+  Cancel01Icon,
+  Edit01Icon,
+  InformationCircleIcon,
+  Loading03Icon,
+} from "@hugeicons/core-free-icons";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "../ui/button";
 import { Label } from "../ui/label";
@@ -24,7 +33,6 @@ import {
   DialogClose,
   DialogTrigger,
 } from "../ui/dialog";
-import { X, ChevronDown, Loader2, Plus, Edit, Info } from "lucide-react";
 import * as z from "zod";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import type { CascadeOptions, SyncFormOrder, SyncFormOrderItem, SyncOrder } from "@myakiba/types";
@@ -164,7 +172,11 @@ export default function SyncOrderForm({
                 className="ml-auto"
                 size="md"
               >
-                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Submit Order"}
+                {isSubmitting ? (
+                  <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />
+                ) : (
+                  "Submit Order"
+                )}
               </Button>
             )}
           />
@@ -178,7 +190,7 @@ export default function SyncOrderForm({
                 className="max-w-66 truncate justify-between  hover:bg-background active:bg-background data-[state=open]:bg-background"
               >
                 {cascadeDisplayText}
-                <ChevronDown className="h-4 w-4 z-10" />
+                <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4 z-10" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width)">
@@ -525,7 +537,7 @@ export default function SyncOrderForm({
                   </Badge>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Info className="w-4 h-4" />
+                      <HugeiconsIcon icon={InformationCircleIcon} className="w-4 h-4" />
                     </TooltipTrigger>
                     <TooltipContent className="max-h-40">
                       <p>
@@ -566,7 +578,7 @@ export default function SyncOrderForm({
                               <Dialog>
                                 <DialogTrigger asChild>
                                   <Button variant="ghost" size="icon" type="button">
-                                    <Edit />
+                                    <HugeiconsIcon icon={Edit01Icon} />
                                   </Button>
                                 </DialogTrigger>
                                 <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
@@ -839,7 +851,7 @@ export default function SyncOrderForm({
                                 }}
                                 disabled={field.state.value.length === 1}
                               >
-                                <X className="text-red-500" />
+                                <HugeiconsIcon icon={Cancel01Icon} className="text-red-500" />
                               </Button>
                             </div>
                             {!subField.state.meta.isValid && (
@@ -874,7 +886,7 @@ export default function SyncOrderForm({
                     });
                   }}
                 >
-                  <Plus /> Add Item
+                  <HugeiconsIcon icon={Add01Icon} /> Add Item
                 </Button>
               </div>
             );

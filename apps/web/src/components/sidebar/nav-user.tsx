@@ -1,5 +1,12 @@
-import { BadgeCheck, Bell, ChevronsUpDown, CreditCard, LogOut, Sparkles } from "lucide-react";
-
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  ArrowUpDownIcon,
+  CheckmarkBadge01Icon,
+  CreditCardIcon,
+  Logout01Icon,
+  Notification01Icon,
+  SparklesIcon,
+} from "@hugeicons/core-free-icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -45,7 +52,7 @@ export function NavUser({
                 <span className="truncate font-medium">{user.name}</span>
                 <span className="truncate text-xs">{user.email}</span>
               </div>
-              <ChevronsUpDown className="ml-auto size-4" />
+              <HugeiconsIcon icon={ArrowUpDownIcon} className="ml-auto size-4" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -69,28 +76,28 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem>
-                <Sparkles />
+                <HugeiconsIcon icon={SparklesIcon} />
                 Upgrade to Pro
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem>
-                <BadgeCheck />
+                <HugeiconsIcon icon={CheckmarkBadge01Icon} />
                 Account
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <CreditCard />
+                <HugeiconsIcon icon={CreditCardIcon} />
                 Billing
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <Bell />
+                <HugeiconsIcon icon={Notification01Icon} />
                 Notifications
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
-              <LogOut />
+              <HugeiconsIcon icon={Logout01Icon} />
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>

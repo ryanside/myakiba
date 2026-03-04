@@ -1,3 +1,12 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  AddSquareIcon,
+  Delete02Icon,
+  Edit01Icon,
+  MinusSignSquareIcon,
+  MoreHorizontalIcon,
+  ViewIcon,
+} from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -11,7 +20,6 @@ import {
 import { Link } from "@tanstack/react-router";
 import { DataGridColumnHeader } from "@/components/ui/data-grid-column-header";
 import { type ColumnDef, type RowSelectionState, type OnChangeFn } from "@tanstack/react-table";
-import { SquareMinus, SquarePlus, MoreHorizontal, Eye, Edit, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrencyFromMinorUnits, getCurrencyLocale } from "@myakiba/utils";
 import type { CascadeOptions, EditedOrder, Order } from "@myakiba/types";
@@ -92,7 +100,11 @@ export function createOrdersColumns({
       cell: ({ row }) => {
         return row.getCanExpand() ? (
           <Button onClick={row.getToggleExpandedHandler()} mode="icon" size="sm" variant="ghost">
-            {row.getIsExpanded() ? <SquareMinus /> : <SquarePlus />}
+            {row.getIsExpanded() ? (
+              <HugeiconsIcon icon={MinusSignSquareIcon} />
+            ) : (
+              <HugeiconsIcon icon={AddSquareIcon} />
+            )}
           </Button>
         ) : null;
       },
@@ -148,7 +160,9 @@ export function createOrdersColumns({
         <InlineTextCell
           value={row.original.shop}
           onSubmit={async (newValue) => {
-            const { ...orderWithoutTimestamps } = row.original;
+            const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
+            void createdAt;
+            void updatedAt;
             await onEditOrder(
               {
                 ...orderWithoutTimestamps,
@@ -377,7 +391,7 @@ export function createOrdersColumns({
         <DataGridColumnHeader title="Items" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
-        const itemCount = row.original.itemCount;
+        const itemCount = row.original.items.length;
         return (
           <div
             className="text-sm font-medium text-foreground hover:text-primary cursor-pointer"
@@ -695,21 +709,21 @@ export function createOrdersColumns({
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="h-8 w-8 p-0">
                 <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
+                <HugeiconsIcon icon={MoreHorizontalIcon} className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuItem asChild>
                 <Link to="/orders/$id" params={{ id: order.orderId }}>
-                  <Eye className="mr-2 h-4 w-4" />
+                  <HugeiconsIcon icon={ViewIcon} className="mr-2 h-4 w-4" />
                   View details
                 </Link>
               </DropdownMenuItem>
               <OrderForm
                 renderTrigger={
                   <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                    <Edit className="mr-2 h-4 w-4" />
+                    <HugeiconsIcon icon={Edit01Icon} className="mr-2 h-4 w-4" />
                     Edit order
                   </DropdownMenuItem>
                 }
@@ -723,7 +737,7 @@ export function createOrdersColumns({
                 variant="destructive"
                 onClick={() => onDeleteOrders(new Set([order.orderId]))}
               >
-                <Trash2 className="mr-2 h-4 w-4" />
+                <HugeiconsIcon icon={Delete02Icon} className="mr-2 h-4 w-4" />
                 Delete order
               </DropdownMenuItem>
             </DropdownMenuContent>

@@ -122,7 +122,7 @@ export function ValueLineBarChart({ data }: ValueLineBarChartProps) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <span className={cn("font-mono text-2xl tracking-tighter")}>{maxValueIndex.value}</span>
+          <span className={cn("text-2xl tracking-tighter")}>{maxValueIndex.value}</span>
         </CardTitle>
         <CardDescription>orders in {chartData[maxValueIndex.index].month}</CardDescription>
       </CardHeader>

@@ -1,6 +1,12 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  Cancel01Icon,
+  Delete01Icon,
+  FilterIcon,
+  FilterResetIcon,
+} from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { DebouncedInput } from "@/components/debounced-input";
-import { Filter, ListRestart, Trash, X } from "lucide-react";
 import FiltersForm from "./filters-form";
 import { SortCombobox, type SortableColumn } from "@/components/ui/sort-combobox";
 import { ConfirmationPopover } from "@/components/ui/confirmation-popover";
@@ -106,7 +112,7 @@ export function CollectionToolbar({
         <FiltersForm
           renderTrigger={
             <Button variant="outline">
-              <Filter className="" />
+              <HugeiconsIcon icon={FilterIcon} className="" />
               <span className="hidden md:block">Filters</span>
             </Button>
           }
@@ -122,7 +128,7 @@ export function CollectionToolbar({
           onSortChange={handleSortChange}
         />
         <Button onClick={onResetFilters} variant="outline">
-          <ListRestart />
+          <HugeiconsIcon icon={FilterResetIcon} />
           <span className="hidden md:block">Reset Filters</span>
         </Button>
       </div>
@@ -144,7 +150,7 @@ export function CollectionToolbar({
                 onSelect={(e) => e.preventDefault()}
                 variant="destructive"
               >
-                <Trash />
+                <HugeiconsIcon icon={Delete01Icon} />
                 <span>Delete</span>
               </ActionBarItem>
             }
@@ -158,7 +164,7 @@ export function CollectionToolbar({
         </ActionBarGroup>
         <ActionBarSeparator />
         <ActionBarClose>
-          <X />
+          <HugeiconsIcon icon={Cancel01Icon} />
         </ActionBarClose>
       </ActionBar>
     </>

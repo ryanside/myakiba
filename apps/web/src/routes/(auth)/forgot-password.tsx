@@ -1,3 +1,5 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowLeft01Icon, Loading03Icon, Mail01Icon } from "@hugeicons/core-free-icons";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { authClient } from "@/lib/auth-client";
 import { useForm } from "@tanstack/react-form";
@@ -7,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Turnstile } from "@marsidev/react-turnstile";
-import { ArrowLeft, Loader2, Mail } from "lucide-react";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
 import { useState } from "react";
 import { env } from "@myakiba/env/web";
@@ -65,7 +66,7 @@ function RouteComponent() {
         <div className="absolute top-4 left-4">
           <Link to="/">
             <Button variant="ghost" className="text-foreground">
-              <ArrowLeft />
+              <HugeiconsIcon icon={ArrowLeft01Icon} />
               Home
             </Button>
           </Link>
@@ -82,7 +83,10 @@ function RouteComponent() {
             </div>
             <div className="text-center space-y-4">
               <div className="mx-auto w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
-                <Mail className="w-6 h-6 text-green-600 dark:text-green-400" />
+                <HugeiconsIcon
+                  icon={Mail01Icon}
+                  className="w-6 h-6 text-green-600 dark:text-green-400"
+                />
               </div>
               <p className="text-muted-foreground">
                 We've sent a password reset link to <br />
@@ -111,7 +115,7 @@ function RouteComponent() {
       <div className="absolute top-4 left-4">
         <Link to="/">
           <Button variant="ghost" className="text-foreground">
-            <ArrowLeft />
+            <HugeiconsIcon icon={ArrowLeft01Icon} />
             Home
           </Button>
         </Link>
@@ -181,7 +185,11 @@ function RouteComponent() {
                   className="w-full"
                   disabled={!state.canSubmit || state.isSubmitting}
                 >
-                  {state.isSubmitting ? <Loader2 className="animate-spin" /> : "Send Reset Link"}
+                  {state.isSubmitting ? (
+                    <HugeiconsIcon icon={Loading03Icon} className="animate-spin" />
+                  ) : (
+                    "Send Reset Link"
+                  )}
                 </Button>
               )}
             </form.Subscribe>

@@ -1,3 +1,12 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  Copy01Icon,
+  Delete02Icon,
+  Edit01Icon,
+  MoreHorizontalIcon,
+  PackageIcon,
+  ViewIcon,
+} from "@hugeicons/core-free-icons";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { InlineTextCell } from "@/components/cells/inline-text-cell";
@@ -10,7 +19,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DataGridColumnHeader } from "@/components/ui/data-grid-column-header";
-import { MoreHorizontal, Eye, Edit, Trash2, Package, Copy } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
@@ -95,7 +103,7 @@ export function createCollectionColumns({
                   style={{ objectFit: "cover", objectPosition: "top" }}
                 />
                 <AvatarFallback className="rounded-sm">
-                  <Package className="size-4" />
+                  <HugeiconsIcon icon={PackageIcon} className="size-4" />
                 </AvatarFallback>
               </Avatar>
             )}
@@ -383,14 +391,14 @@ export function createCollectionColumns({
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="h-8 w-8 p-0">
                 <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
+                <HugeiconsIcon icon={MoreHorizontalIcon} className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuItem asChild>
                 <Link to="/items/$id" params={{ id: item.itemId }}>
-                  <Eye className="mr-2 h-4 w-4" />
+                  <HugeiconsIcon icon={ViewIcon} className="mr-2 h-4 w-4" />
                   View details
                 </Link>
               </DropdownMenuItem>
@@ -404,13 +412,13 @@ export function createCollectionColumns({
                   }
                 }}
               >
-                <Copy className="mr-2 h-4 w-4" />
+                <HugeiconsIcon icon={Copy01Icon} className="mr-2 h-4 w-4" />
                 Copy MFC item ID
               </DropdownMenuItem>
               <CollectionItemForm
                 renderTrigger={
                   <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                    <Edit className="mr-2 h-4 w-4" />
+                    <HugeiconsIcon icon={Edit01Icon} className="mr-2 h-4 w-4" />
                     Edit item
                   </DropdownMenuItem>
                 }
@@ -424,7 +432,7 @@ export function createCollectionColumns({
                 variant="destructive"
                 onClick={() => onDeleteCollectionItems(new Set([item.id]))}
               >
-                <Trash2 className="mr-2 h-4 w-4" />
+                <HugeiconsIcon icon={Delete02Icon} className="mr-2 h-4 w-4" />
                 Delete item
               </DropdownMenuItem>
             </DropdownMenuContent>

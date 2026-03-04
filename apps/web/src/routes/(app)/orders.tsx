@@ -12,13 +12,9 @@ import type {
 import { toast } from "sonner";
 import { searchSchema } from "@myakiba/schemas";
 import type { CollectionItemFormValues, Order } from "@myakiba/types";
-import { OrdersDataGridSkeleton } from "@/components/orders/orders-data-grid-skeleton";
 import { useCallback, useMemo } from "react";
 import { KPICard } from "@/components/ui/kpi-card";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Grid, TableOfContents } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { DateFormat } from "@myakiba/types";
 import { createBaseOrders, createOrdersActions, useOrdersLiveQuery } from "@/tanstack-db/db-orders";
 
@@ -205,7 +201,10 @@ function RouteComponent() {
     if (isPending) return undefined;
 
     const totalOrders = orders.length;
-    const totalSpent = orders.reduce((sum, order) => sum + Number(order.total), 0);
+    const totalSpent = orders.reduce(
+      (sum, order) => sum + (order.status !== "Ordered" ? Number(order.total) : 0),
+      0,
+    );
     const activeOrders = orders.reduce((sum, order) => sum + (order.status !== "Owned" ? 1 : 0), 0);
     const unpaidCosts = orders.reduce(
       (sum, order) => sum + (order.status === "Ordered" ? Number(order.total) : 0),
@@ -237,15 +236,20 @@ function RouteComponent() {
   }
 
   return (
-    <div className="w-full space-y-8">
-      <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-6 mx-auto w-full">
+      <div className="flex flex-col gap-2 mb-4">
         <div className="flex flex-row items-start gap-4">
           <h1 className="text-2xl tracking-tight">Orders</h1>
         </div>
         <p className="text-muted-foreground text-sm font-light">Manage and track your orders</p>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        <KPICard title="Total Orders" subtitle="all time" value={orderStats?.totalOrders} />
+        <KPICard
+          title="Total Orders"
+          subtitle="all time"
+          value={orderStats?.totalOrders}
+          isLoading={isPending}
+        />
         <KPICard
           title="Total Spent"
           subtitle="all time, including all fees"
@@ -254,11 +258,13 @@ function RouteComponent() {
               ? formatCurrencyFromMinorUnits(orderStats.totalSpent, userCurrency)
               : undefined
           }
+          isLoading={isPending}
         />
         <KPICard
           title="Active Orders"
           subtitle="orders without status 'Owned'"
           value={orderStats?.activeOrders}
+          isLoading={isPending}
         />
         <KPICard
           title="Unpaid Costs"
@@ -268,57 +274,37 @@ function RouteComponent() {
               ? formatCurrencyFromMinorUnits(orderStats.unpaidCosts, userCurrency)
               : undefined
           }
+          isLoading={isPending}
         />
       </div>
-      <Tabs defaultValue="table" className="w-[375px] text-sm text-muted-foreground">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="table">
-            <TableOfContents /> Table
-          </TabsTrigger>
-          <Tooltip>
-            <TooltipTrigger>
-              <TabsTrigger value="grid" disabled>
-                <Grid /> Grid
-              </TabsTrigger>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>More views coming soon! Grid, Kanban, Gallery, etc.</p>
-            </TooltipContent>
-          </Tooltip>
-        </TabsList>
-      </Tabs>
-      {isPending ? (
-        <OrdersDataGridSkeleton />
-      ) : (
-        <OrdersDataGrid
-          key="orders-data-grid"
-          orders={pagedOrders}
-          totalCount={totalCount ?? 0}
-          pagination={{
-            limit,
-            offset,
-          }}
-          sorting={{
-            sort: filters.sort ?? "createdAt",
-            order: filters.order ?? "desc",
-          }}
-          search={filters.search ?? ""}
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          onSearchChange={handleSearchChange}
-          onResetFilters={resetFilters}
-          onMerge={handleMerge}
-          onSplit={handleSplit}
-          onEditOrder={handleEditOrder}
-          onDeleteOrders={handleDeleteOrders}
-          onEditItem={handleEditItem}
-          onDeleteItem={handleDeleteItem}
-          onDeleteItems={handleDeleteItems}
-          onMoveItem={handleMoveItem}
-          currency={userCurrency}
-          dateFormat={dateFormat}
-        />
-      )}
+      <OrdersDataGrid
+        key="orders-data-grid"
+        orders={pagedOrders}
+        totalCount={totalCount ?? 0}
+        pagination={{
+          limit,
+          offset,
+        }}
+        sorting={{
+          sort: filters.sort ?? "createdAt",
+          order: filters.order ?? "desc",
+        }}
+        search={filters.search ?? ""}
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        onSearchChange={handleSearchChange}
+        onResetFilters={resetFilters}
+        onMerge={handleMerge}
+        onSplit={handleSplit}
+        onEditOrder={handleEditOrder}
+        onDeleteOrders={handleDeleteOrders}
+        onEditItem={handleEditItem}
+        onDeleteItem={handleDeleteItem}
+        onDeleteItems={handleDeleteItems}
+        onMoveItem={handleMoveItem}
+        currency={userCurrency}
+        dateFormat={dateFormat}
+      />
     </div>
   );
 }

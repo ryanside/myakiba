@@ -11,8 +11,6 @@ const schema = {
 
 const client = new SQL({
   url: env.DATABASE_URL,
-  max: 10,
-  idleTimeout: 20,
 });
 
 export const db = drizzle({ client, schema });

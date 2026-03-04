@@ -1,10 +1,11 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import SignInForm from "@/components/auth/sign-in-form";
 import SignUpForm from "@/components/auth/sign-up-form";
 import { EarlyAccessModal } from "@/components/auth/early-access-modal";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 
 export const Route = createFileRoute("/(auth)/login")({
@@ -41,7 +42,7 @@ function RouteComponent() {
       <div className="absolute top-4 left-4">
         <Link to="/">
           <Button variant="ghost" className="text-foreground">
-            <ArrowLeft />
+            <HugeiconsIcon icon={ArrowLeft01Icon} />
             Home
           </Button>
         </Link>

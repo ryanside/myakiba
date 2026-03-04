@@ -1,5 +1,5 @@
 import * as React from "react";
-import type { LucideIcon } from "lucide-react";
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 
 import {
   SidebarGroup,
@@ -16,7 +16,7 @@ export function NavSecondary({
   items: {
     title: string;
     url: string;
-    icon: LucideIcon | React.ComponentType<React.SVGProps<SVGSVGElement>>;
+    icon: IconSvgElement | React.ComponentType<React.SVGProps<SVGSVGElement>>;
   }[];
 } & React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
   return (
@@ -27,7 +27,11 @@ export function NavSecondary({
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton asChild size="sm">
                 <a href={item.url} target="_blank" rel="noopener noreferrer">
-                  <item.icon />
+                  {typeof item.icon === "function" ? (
+                    <item.icon />
+                  ) : (
+                    <HugeiconsIcon icon={item.icon} />
+                  )}
                   <span>{item.title}</span>
                 </a>
               </SidebarMenuButton>

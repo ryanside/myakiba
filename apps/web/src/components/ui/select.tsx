@@ -1,12 +1,13 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, ArrowUp01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { isValidElement } from "react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { cva } from "class-variance-authority";
 import type { VariantProps } from "class-variance-authority";
-import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import { Select as SelectPrimitive } from "radix-ui";
 
 // Create a Context for `indicatorPosition` and `indicator` control
@@ -79,7 +80,7 @@ function SelectTrigger({ className, children, size, ...props }: SelectTriggerPro
     >
       {children}
       <SelectPrimitive.Icon asChild>
-        <ChevronDown className="h-4 w-4 opacity-60 -me-0.5" />
+        <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4 opacity-60 -me-0.5" />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   );
@@ -95,7 +96,7 @@ function SelectScrollUpButton({
       className={cn("flex cursor-default items-center justify-center py-1", className)}
       {...props}
     >
-      <ChevronUp className="h-4 w-4" />
+      <HugeiconsIcon icon={ArrowUp01Icon} className="h-4 w-4" />
     </SelectPrimitive.ScrollUpButton>
   );
 }
@@ -110,7 +111,7 @@ function SelectScrollDownButton({
       className={cn("flex cursor-default items-center justify-center py-1", className)}
       {...props}
     >
-      <ChevronDown className="h-4 w-4" />
+      <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4" />
     </SelectPrimitive.ScrollDownButton>
   );
 }
@@ -188,7 +189,7 @@ function SelectItem({
             )}
           >
             <SelectPrimitive.ItemIndicator>
-              <Check className="h-4 w-4 text-primary" />
+              <HugeiconsIcon icon={Tick02Icon} className="h-4 w-4 text-primary" />
             </SelectPrimitive.ItemIndicator>
           </span>
         ))}

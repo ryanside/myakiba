@@ -1,11 +1,10 @@
-"use client";
-
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
+import { Search01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import React from "react";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import type { DialogProps } from "@radix-ui/react-dialog";
 import { Command as CommandPrimitive } from "cmdk";
-import { Check, type LucideIcon, Search } from "lucide-react";
 
 function Command({ className, ...props }: React.ComponentProps<typeof CommandPrimitive>) {
   return (
@@ -44,7 +43,7 @@ function CommandInput({
       cmdk-input-wrapper=""
       data-slot="command-input"
     >
-      <Search className="me-2 h-4 w-4 shrink-0 opacity-50" />
+      <HugeiconsIcon icon={Search01Icon} className="me-2 h-4 w-4 shrink-0 opacity-50" />
       <CommandPrimitive.Input
         className={cn(
           "flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-hidden text-foreground placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
@@ -128,17 +127,18 @@ const CommandShortcut = ({ className, ...props }: React.HTMLAttributes<HTMLSpanE
   );
 };
 
-interface ButtonArrowProps extends React.SVGProps<SVGSVGElement> {
-  icon?: LucideIcon; // Allows passing Lucide icon
+interface ButtonArrowProps {
+  icon?: IconSvgElement;
+  className?: string;
 }
 
-function CommandCheck({ icon: Icon = Check, className, ...props }: ButtonArrowProps) {
+function CommandCheck({ icon: Icon = Tick02Icon, className }: ButtonArrowProps) {
   return (
-    <Icon
+    <HugeiconsIcon
+      icon={Icon}
       data-slot="command-check"
       data-check="true"
       className={cn("size-4 ms-auto text-primary", className)}
-      {...props}
     />
   );
 }

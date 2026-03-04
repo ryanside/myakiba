@@ -91,6 +91,7 @@ export function OrderItemSubDataGrid({
         table={subTable}
         recordCount={items.length}
         tableLayout={{
+          dense: true,
           rowBorder: true,
           headerBackground: true,
           headerBorder: true,

@@ -213,19 +213,6 @@ export const order = pgTable(
   ],
 );
 
-export const budget = pgTable("budget", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => createId()),
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  period: text("period").$type<"monthly" | "annual" | "allocated">().notNull(),
-  amount: bigint("amount", { mode: "number" }).notNull(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
 export const waitlist = pgTable("waitlist", {
   id: text("id")
     .primaryKey()

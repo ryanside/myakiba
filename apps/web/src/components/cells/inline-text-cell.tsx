@@ -1,4 +1,4 @@
-import * as React from "react";
+import { useState, useCallback } from "react";
 import * as Editable from "@/components/ui/editable";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -24,14 +24,14 @@ export function InlineTextCell({
   disabled,
   readOnly,
 }: InlineTextCellProps): React.ReactElement {
-  const [isEditing, setIsEditing] = React.useState(false);
-  const [currentValue, setCurrentValue] = React.useState(value);
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentValue, setCurrentValue] = useState(value);
 
-  const resetToPreviousValue = React.useCallback(() => {
+  const resetToPreviousValue = useCallback(() => {
     setCurrentValue(value);
   }, [value]);
 
-  const handleSubmit = React.useCallback(
+  const handleSubmit = useCallback(
     async (newValue: string) => {
       if (value === newValue) {
         setIsEditing(false);
@@ -56,11 +56,11 @@ export function InlineTextCell({
     [onSubmit, resetToPreviousValue, validate, value],
   );
 
-  const handleEdit = React.useCallback(() => {
+  const handleEdit = useCallback(() => {
     setIsEditing(true);
   }, []);
 
-  const handleCancel = React.useCallback(() => {
+  const handleCancel = useCallback(() => {
     setIsEditing(false);
   }, []);
 

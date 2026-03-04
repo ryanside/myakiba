@@ -1,7 +1,8 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, Cancel01Icon, Edit01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "../ui/button";
 import type { SyncCollectionItem, SyncFormCollectionItem } from "@myakiba/types";
-import { Edit, Loader2, Plus, X } from "lucide-react";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { MaskInput } from "../ui/mask-input";
@@ -116,7 +117,7 @@ export default function SyncCollectionForm({
                         size="md"
                       >
                         {isSubmitting ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />
                         ) : (
                           "Submit Items"
                         )}
@@ -177,7 +178,7 @@ export default function SyncCollectionForm({
                               <Dialog>
                                 <DialogTrigger asChild>
                                   <Button variant="ghost" size="icon" type="button">
-                                    <Edit />
+                                    <HugeiconsIcon icon={Edit01Icon} />
                                   </Button>
                                 </DialogTrigger>
                                 <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
@@ -450,7 +451,10 @@ export default function SyncCollectionForm({
                                                   onClick={() => tagsField.removeValue(tagIndex)}
                                                   className="ml-1 hover:text-red-500"
                                                 >
-                                                  <X className="w-3 h-3" />
+                                                  <HugeiconsIcon
+                                                    icon={Cancel01Icon}
+                                                    className="w-3 h-3"
+                                                  />
                                                 </button>
                                               </Badge>
                                             ))}
@@ -517,7 +521,7 @@ export default function SyncCollectionForm({
                                 }}
                                 disabled={field.state.value.length === 1}
                               >
-                                <X className="text-red-500" />
+                                <HugeiconsIcon icon={Cancel01Icon} className="text-red-500" />
                               </Button>
                             </div>
                             {!subField.state.meta.isValid && (
@@ -541,7 +545,7 @@ export default function SyncCollectionForm({
                     field.pushValue({ ...DEFAULT_COLLECTION_ITEM });
                   }}
                 >
-                  <Plus /> Add Item
+                  <HugeiconsIcon icon={Add01Icon} /> Add Item
                 </Button>
               </div>
             );

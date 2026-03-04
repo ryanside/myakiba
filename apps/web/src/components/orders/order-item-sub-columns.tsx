@@ -1,3 +1,11 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  Copy01Icon,
+  Delete02Icon,
+  Edit01Icon,
+  MoreHorizontalIcon,
+  PackageIcon,
+} from "@hugeicons/core-free-icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -10,7 +18,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DataGridColumnHeader } from "@/components/ui/data-grid-column-header";
-import { Package, MoreHorizontal, Copy, Edit, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDate, getCurrencyLocale } from "@myakiba/utils";
 import type { DateFormat, OrderItem, CollectionItemFormValues, OrderStatus } from "@myakiba/types";
@@ -96,7 +103,7 @@ export function createOrderItemSubColumns({
                   style={{ objectFit: "cover", objectPosition: "top" }}
                 />
                 <AvatarFallback className="rounded-sm">
-                  <Package className="size-4" />
+                  <HugeiconsIcon icon={PackageIcon} className="size-4" />
                 </AvatarFallback>
               </Avatar>
             )}
@@ -245,7 +252,7 @@ export function createOrderItemSubColumns({
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="h-8 w-8 p-0">
                 <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
+                <HugeiconsIcon icon={MoreHorizontalIcon} className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -260,13 +267,13 @@ export function createOrderItemSubColumns({
                   }
                 }}
               >
-                <Copy className="mr-2 h-4 w-4" />
+                <HugeiconsIcon icon={Copy01Icon} className="mr-2 h-4 w-4" />
                 Copy MFC item ID
               </DropdownMenuItem>
               <CollectionItemForm
                 renderTrigger={
                   <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                    <Edit className="mr-2 h-4 w-4" />
+                    <HugeiconsIcon icon={Edit01Icon} className="mr-2 h-4 w-4" />
                     Edit item
                   </DropdownMenuItem>
                 }
@@ -281,7 +288,7 @@ export function createOrderItemSubColumns({
                 onSelect={(e) => e.preventDefault()}
                 onClick={() => onDeleteItem(orderId, item.id)}
               >
-                <Trash2 className="mr-2 h-4 w-4" />
+                <HugeiconsIcon icon={Delete02Icon} className="mr-2 h-4 w-4" />
                 Delete item
               </DropdownMenuItem>
             </DropdownMenuContent>

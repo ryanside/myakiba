@@ -4,13 +4,10 @@ import { app } from "@/lib/treaty-client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "@tanstack/react-router";
 import { CollectionBreakdown } from "@/components/dashboard/collection-breakdown";
-import { BudgetControlCard } from "@/components/dashboard/budget-control-card";
 import { ReleaseCalendar } from "@/components/dashboard/release-calendar";
-import { UnpaidOrders } from "@/components/dashboard/unpaid-orders";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils";
 import { Button } from "@/components/ui/button";
 import OrderKanban from "@/components/dashboard/order-kanban";
-import { Badge } from "@/components/ui/badge";
 import { ValueLineBarChart } from "@/components/ui/value-line-bar-chart";
 import { KPICard } from "@/components/ui/kpi-card";
 import Loader from "@/components/loader";
@@ -71,21 +68,16 @@ function DashboardContent() {
     );
   }
 
-  const {
-    collectionStats,
-    categoriesOwned,
-    orders,
-    ordersSummary,
-    budgetSummary,
-    unpaidOrders,
-    monthlyOrders,
-  } = data;
+  const { collectionStats, categoriesOwned, orders, ordersSummary, unpaidOrders, monthlyOrders } =
+    data;
 
   return (
-    <div className="flex flex-col gap-12 mx-auto">
-      <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-4 mx-auto">
+      <div className="flex flex-col gap-2 mb-6">
         <div className="flex flex-row items-start gap-4">
-          <h1 className="text-2xl tracking-tight">Welcome, {session?.user.username}</h1>
+          <h1 className="text-2xl tracking-tight">
+            Welcome, <span className="">{session?.user.username}.</span>
+          </h1>
         </div>
         <p className="text-muted-foreground text-sm font-light text-balance ">
           You have {ordersSummary[0]?.totalActiveOrderCount ?? 0} active orders,{" "}
@@ -93,101 +85,71 @@ function DashboardContent() {
           orders this month.
         </p>
       </div>
-      <div className="grid gap-4 grid-cols-1 lg:grid-cols-4">
-        <div className="col-span-1 lg:col-span-3 border-dashed space-y-4 flex flex-col">
-          <div className="grid gap-4 grid-cols-1 lg:grid-cols-3 border-dashed">
-            <div className="col-span-1 lg:col-span-3 grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <CollectionBreakdown data={categoriesOwned} currency={userCurrency} />
-              <ValueLineBarChart data={monthlyOrders} />
-              <div className="flex flex-col gap-4 col-span-1 h-full">
-                <KPICard
-                  title="Total Spent"
-                  subtitle="based on paid collection & order items"
-                  value={formatCurrencyFromMinorUnits(
-                    Number(collectionStats[0]?.totalSpent ?? 0),
-                    userCurrency,
-                  )}
-                  subvalueTitle="this month"
-                  subvalue={formatCurrencyFromMinorUnits(
-                    Number(collectionStats[0]?.totalSpentThisMonth ?? 0) +
-                      Number(ordersSummary[0]?.thisMonthShipping ?? 0) +
-                      Number(ordersSummary[0]?.thisMonthTaxes ?? 0) +
-                      Number(ordersSummary[0]?.thisMonthDuties ?? 0) +
-                      Number(ordersSummary[0]?.thisMonthTariffs ?? 0) +
-                      Number(ordersSummary[0]?.thisMonthMiscFees ?? 0),
-                    userCurrency,
-                  )}
-                />
-                <KPICard
-                  title="Active Orders"
-                  subtitle="orders not yet collected"
-                  value={ordersSummary[0]?.totalActiveOrderCount ?? 0}
-                  subvalueTitle="unpaid"
-                  subvalue={unpaidOrders.length}
-                />
-              </div>
-            </div>
-          </div>
-          <Card className="col-span-1 lg:col-span-3 h-full">
-            <CardHeader className="flex flex-row items-center gap-2">
-              <div className="flex flex-col items-start gap-2">
-                <CardTitle className="text-md font-medium">Orders Board</CardTitle>
-                <CardDescription className="text-xs text-muted-foreground">
-                  Quickly manage upcoming active orders
-                </CardDescription>
-              </div>
-              <Link to="/orders" className="ml-auto">
-                <Button variant="outline" size="md" className="rounded-md">
-                  View All
-                </Button>
-              </Link>
-            </CardHeader>
-            <CardContent className="h-full">
-              <OrderKanban orders={orders} currency={userCurrency} dateFormat={dateFormat} />
-            </CardContent>
-          </Card>
-        </div>
-        <div className="col-span-1 space-y-4 flex flex-col">
-          <BudgetControlCard
-            currentSpent={
-              budgetSummary.length > 0 && collectionStats.length > 0 && ordersSummary.length > 0
-                ? Number(collectionStats[0].totalSpentThisMonth) +
-                  Number(ordersSummary[0].thisMonthShipping) +
-                  Number(ordersSummary[0].thisMonthTaxes) +
-                  Number(ordersSummary[0].thisMonthDuties) +
-                  Number(ordersSummary[0].thisMonthTariffs) +
-                  Number(ordersSummary[0].thisMonthMiscFees)
-                : undefined
-            }
-            limit={budgetSummary.length > 0 ? budgetSummary[0].amount : undefined}
-            currency={userCurrency}
-            warningThreshold={75}
-          />
-          <Card className="min-h-[210px]">
-            <CardHeader className="flex flex-row items-center gap-2">
-              <CardTitle className="text-md font-medium">Release Calendar</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ReleaseCalendar currency={userCurrency} dateFormat={dateFormat} />
-            </CardContent>
-          </Card>
-          <Card className="flex-1">
-            <CardHeader className="flex flex-row items-center gap-2">
-              <CardTitle className="text-md font-medium">Unpaid Orders</CardTitle>
-              <Badge variant="outline">{unpaidOrders.length}</Badge>
-              <Badge variant="info" appearance="outline">
-                {formatCurrencyFromMinorUnits(
-                  unpaidOrders.reduce((acc, order) => acc + Number(order.total), 0),
-                  userCurrency,
-                )}
-              </Badge>
-            </CardHeader>
-            <CardContent>
-              <UnpaidOrders orders={unpaidOrders} currency={userCurrency} dateFormat={dateFormat} />
-            </CardContent>
-          </Card>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KPICard
+          title="Total Items"
+          subtitle="all collection items"
+          value={collectionStats[0]?.totalItems ?? 0}
+        />
+        <KPICard
+          title="Total Spent"
+          subtitle="based on paid collection & orders"
+          value={formatCurrencyFromMinorUnits(
+            Number(collectionStats[0]?.totalSpent ?? 0) +
+              Number(ordersSummary[0]?.totalShippingAllTime ?? 0) +
+              Number(ordersSummary[0]?.totalTaxesAllTime ?? 0) +
+              Number(ordersSummary[0]?.totalDutiesAllTime ?? 0) +
+              Number(ordersSummary[0]?.totalTariffsAllTime ?? 0) +
+              Number(ordersSummary[0]?.totalMiscFeesAllTime ?? 0),
+            userCurrency,
+          )}
+        />
+        <KPICard
+          title="Active Orders"
+          subtitle="orders not yet collected"
+          value={ordersSummary[0]?.totalActiveOrderCount ?? 0}
+          subvalueTitle="unpaid"
+          subvalue={unpaidOrders.length}
+        />
+        <KPICard
+          title="Unpaid Costs"
+          subtitle="costs with status 'Ordered'"
+          value={formatCurrencyFromMinorUnits(
+            unpaidOrders.reduce((acc, order) => acc + Number(order.total), 0),
+            userCurrency,
+          )}
+        />
       </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <CollectionBreakdown data={categoriesOwned} currency={userCurrency} />
+        <ValueLineBarChart data={monthlyOrders} />
+        <Card className="min-h-[210px]">
+          <CardHeader className="flex flex-row items-center gap-2">
+            <CardTitle className="text-md font-medium">Release Calendar</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ReleaseCalendar currency={userCurrency} dateFormat={dateFormat} />
+          </CardContent>
+        </Card>
+      </div>
+      <Card className="h-full">
+        <CardHeader className="flex flex-row items-center gap-2">
+          <div className="flex flex-col items-start gap-2">
+            <CardTitle className="text-md font-medium">Orders Board</CardTitle>
+            <CardDescription className="text-xs text-muted-foreground">
+              Quickly manage upcoming active orders
+            </CardDescription>
+          </div>
+          <Link to="/orders" className="ml-auto">
+            <Button variant="outline" size="md" className="rounded-md">
+              View All
+            </Button>
+          </Link>
+        </CardHeader>
+        <CardContent className="h-full">
+          <OrderKanban orders={orders} currency={userCurrency} dateFormat={dateFormat} />
+        </CardContent>
+      </Card>
     </div>
   );
 }

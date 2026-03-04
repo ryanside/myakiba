@@ -1,5 +1,6 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FeatureProps {
@@ -90,7 +91,7 @@ function FeatureInfo({
           className="my-2 text-nowrap text-sm dark:text-primary text-secondary hover:text-primary/80 transition-colors underline-offset-4 hover:underline flex items-center gap-2"
         >
           {linkText}
-          <ArrowRight className="inline-block size-4" />
+          <HugeiconsIcon icon={ArrowRight01Icon} className="inline-block size-4" />
         </Link>
       )}
     </div>

@@ -1,3 +1,5 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowLeft01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { authClient } from "@/lib/auth-client";
 import { useForm } from "@tanstack/react-form";
@@ -6,7 +8,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Loader2 } from "lucide-react";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
 
 export const Route = createFileRoute("/(auth)/reset-password")({
@@ -65,7 +66,7 @@ function RouteComponent() {
         <div className="absolute top-4 left-4">
           <Link to="/">
             <Button variant="ghost" className="text-foreground">
-              <ArrowLeft />
+              <HugeiconsIcon icon={ArrowLeft01Icon} />
               Home
             </Button>
           </Link>
@@ -109,7 +110,7 @@ function RouteComponent() {
       <div className="absolute top-4 left-4">
         <Link to="/">
           <Button variant="ghost" className="text-foreground">
-            <ArrowLeft />
+            <HugeiconsIcon icon={ArrowLeft01Icon} />
             Home
           </Button>
         </Link>
@@ -214,7 +215,11 @@ function RouteComponent() {
                   className="w-full"
                   disabled={!state.canSubmit || state.isSubmitting}
                 >
-                  {state.isSubmitting ? <Loader2 className="animate-spin" /> : "Reset Password"}
+                  {state.isSubmitting ? (
+                    <HugeiconsIcon icon={Loading03Icon} className="animate-spin" />
+                  ) : (
+                    "Reset Password"
+                  )}
                 </Button>
               )}
             </form.Subscribe>

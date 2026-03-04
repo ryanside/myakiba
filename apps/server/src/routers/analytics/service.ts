@@ -93,7 +93,13 @@ class AnalyticsService {
         totalSpent: sql<number>`SUM(${collection.price})`,
       })
       .from(collection)
-      .where(and(eq(collection.userId, sql.placeholder("userId")), not(eq(collection.shop, ""))))
+      .where(
+        and(
+          eq(collection.userId, sql.placeholder("userId")),
+          eq(collection.status, "Owned"),
+          not(eq(collection.shop, "")),
+        ),
+      )
       .groupBy(collection.shop)
       .orderBy(desc(count()), desc(sql<number>`SUM(${collection.price})`))
       .limit(10)

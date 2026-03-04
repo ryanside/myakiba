@@ -1,5 +1,6 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Calendar01Icon } from "@hugeicons/core-free-icons";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { parseLocalDate } from "@myakiba/utils";
 import { Button } from "@/components/ui/button";
@@ -53,7 +54,7 @@ export function DatePicker({
             className,
           )}
         >
-          <CalendarIcon className="mr-2 h-4 w-4" />
+          <HugeiconsIcon icon={Calendar01Icon} className="mr-2 h-4 w-4" />
           {dateValue ? format(dateValue, "PPP") : <span>{placeholder}</span>}
         </Button>
       </PopoverTrigger>

@@ -1,3 +1,5 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,7 +35,6 @@ import {
 import { DatePicker } from "@/components/ui/date-picker";
 import * as z from "zod";
 import type { EditedOrder, NewOrder, Order, CascadeOptions } from "@myakiba/types";
-import { Loader2 } from "lucide-react";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import { CascadeOptionsDropdown } from "@/components/cascade-options-dropdown";
 import { Textarea } from "../ui/textarea";
@@ -595,7 +596,11 @@ export function OrderForm(props: OrderFormProps) {
                       variant="primary"
                       className="w-full flex-1"
                     >
-                      {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Update"}
+                      {isSubmitting ? (
+                        <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />
+                      ) : (
+                        "Update"
+                      )}
                     </Button>
                   </SheetClose>
                 )}
@@ -985,7 +990,7 @@ export function OrderForm(props: OrderFormProps) {
                 <DialogClose asChild>
                   <Button type="submit" disabled={!canSubmit} variant="primary">
                     {isSubmitting ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />
                     ) : type === "merge" ? (
                       "Merge"
                     ) : (
