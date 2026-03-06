@@ -29,7 +29,11 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         return status(401, "Unauthorized");
       }
 
-      log.set({ action: "sync.csv", user: { id: user.id }, itemCount: body.length });
+      log.set({
+        action: "sync.csv",
+        user: { id: user.id },
+        itemCount: body.length,
+      });
 
       const items = SyncService.assignOrderIds(body);
 
@@ -38,7 +42,10 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       );
 
       if (processItemsError) {
-        log.error(processItemsError, { step: "processItems", outcome: "error" });
+        log.error(processItemsError, {
+          step: "processItems",
+          outcome: "error",
+        });
         return status(500, "Failed to process sync request");
       }
 
@@ -62,7 +69,10 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       );
 
       if (syncSessionError) {
-        log.error(syncSessionError, { step: "createSyncSession", outcome: "error" });
+        log.error(syncSessionError, {
+          step: "createSyncSession",
+          outcome: "error",
+        });
         return status(500, "Failed to create sync session");
       }
 
@@ -104,14 +114,23 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
         if (queueCSVSyncJobError) {
           if (queueCSVSyncJobError.message === "FAILED_TO_QUEUE_CSV_SYNC_JOB") {
-            log.error(queueCSVSyncJobError, { step: "queueCSVSyncJob", outcome: "error" });
+            log.error(queueCSVSyncJobError, {
+              step: "queueCSVSyncJob",
+              outcome: "error",
+            });
             return status(500, "Failed to queue CSV sync job");
           }
           if (queueCSVSyncJobError.message === "FAILED_TO_SET_JOB_STATUS_IN_REDIS") {
-            log.error(queueCSVSyncJobError, { step: "queueCSVSyncJob", outcome: "error" });
+            log.error(queueCSVSyncJobError, {
+              step: "queueCSVSyncJob",
+              outcome: "error",
+            });
             return status(500, "Failed to set job status");
           }
-          log.error(queueCSVSyncJobError, { step: "queueCSVSyncJob", outcome: "error" });
+          log.error(queueCSVSyncJobError, {
+            step: "queueCSVSyncJob",
+            outcome: "error",
+          });
           return status(500, "Failed to queue CSV sync job");
         }
 
@@ -135,7 +154,10 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           }),
         );
         if (updateSessionError) {
-          log.error(updateSessionError, { step: "updateSyncSession", outcome: "error" });
+          log.error(updateSessionError, {
+            step: "updateSyncSession",
+            outcome: "error",
+          });
           return status(500, "Failed to update sync session");
         }
       }
@@ -171,7 +193,11 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         return status(401, "Unauthorized");
       }
 
-      log.set({ action: "sync.order", user: { id: user.id }, itemCount: body.items.length });
+      log.set({
+        action: "sync.order",
+        user: { id: user.id },
+        itemCount: body.items.length,
+      });
 
       const orderId = createId();
 
@@ -182,7 +208,10 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       );
 
       if (existingItemsError) {
-        log.error(existingItemsError, { step: "getExistingItems", outcome: "error" });
+        log.error(existingItemsError, {
+          step: "getExistingItems",
+          outcome: "error",
+        });
         return status(500, "Failed to check for existing items");
       }
 
@@ -304,7 +333,10 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       );
 
       if (syncSessionError) {
-        log.error(syncSessionError, { step: "createSyncSession", outcome: "error" });
+        log.error(syncSessionError, {
+          step: "createSyncSession",
+          outcome: "error",
+        });
         return status(500, "Failed to create sync session");
       }
 
@@ -346,14 +378,23 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
         if (queueOrderSyncJobError) {
           if (queueOrderSyncJobError.message === "FAILED_TO_QUEUE_ORDER_SYNC_JOB") {
-            log.error(queueOrderSyncJobError, { step: "queueOrderSyncJob", outcome: "error" });
+            log.error(queueOrderSyncJobError, {
+              step: "queueOrderSyncJob",
+              outcome: "error",
+            });
             return status(500, "Failed to queue order sync job");
           }
           if (queueOrderSyncJobError.message === "FAILED_TO_SET_JOB_STATUS_IN_REDIS") {
-            log.error(queueOrderSyncJobError, { step: "queueOrderSyncJob", outcome: "error" });
+            log.error(queueOrderSyncJobError, {
+              step: "queueOrderSyncJob",
+              outcome: "error",
+            });
             return status(500, "Failed to set job status");
           }
-          log.error(queueOrderSyncJobError, { step: "queueOrderSyncJob", outcome: "error" });
+          log.error(queueOrderSyncJobError, {
+            step: "queueOrderSyncJob",
+            outcome: "error",
+          });
           return status(500, "Failed to queue order sync job");
         }
 
@@ -370,7 +411,10 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             }),
           );
           if (updateSessionError) {
-            log.error(updateSessionError, { step: "updateSyncSession", outcome: "error" });
+            log.error(updateSessionError, {
+              step: "updateSyncSession",
+              outcome: "error",
+            });
             return status(500, "Failed to update sync session");
           }
         }
@@ -408,7 +452,11 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         return status(401, "Unauthorized");
       }
 
-      log.set({ action: "sync.collection", user: { id: user.id }, itemCount: body.length });
+      log.set({
+        action: "sync.collection",
+        user: { id: user.id },
+        itemCount: body.length,
+      });
 
       const itemExternalIds = body.map((item: CollectionSyncType) => item.itemExternalId);
 
@@ -417,7 +465,10 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       );
 
       if (existingItemsError) {
-        log.error(existingItemsError, { step: "getExistingItems", outcome: "error" });
+        log.error(existingItemsError, {
+          step: "getExistingItems",
+          outcome: "error",
+        });
         return status(500, "Failed to check for existing items");
       }
 
@@ -510,7 +561,10 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       );
 
       if (syncSessionError) {
-        log.error(syncSessionError, { step: "createSyncSession", outcome: "error" });
+        log.error(syncSessionError, {
+          step: "createSyncSession",
+          outcome: "error",
+        });
         return status(500, "Failed to create sync session");
       }
 
@@ -583,7 +637,10 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             }),
           );
           if (updateSessionError) {
-            log.error(updateSessionError, { step: "updateSyncSession", outcome: "error" });
+            log.error(updateSessionError, {
+              step: "updateSyncSession",
+              outcome: "error",
+            });
             return status(500, "Failed to update sync session");
           }
         }
@@ -657,7 +714,11 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         return status(401, "Unauthorized");
       }
 
-      log.set({ action: "sync.sessionDetail", user: { id: user.id }, sessionId: params.id });
+      log.set({
+        action: "sync.sessionDetail",
+        user: { id: user.id },
+        sessionId: params.id,
+      });
 
       const page = query.page ? parseInt(query.page, 10) : undefined;
       const limit = query.limit ? parseInt(query.limit, 10) : undefined;
@@ -716,13 +777,13 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       if (error) {
         switch (error.message) {
           case "SYNC_SESSION_NOT_FOUND":
-            log.error(error, { step: "retryFailedItems", outcome: "error" });
+            log.set({ outcome: "not_found" });
             return status(404, "Sync session not found");
           case "NO_FAILED_ITEMS_TO_RETRY":
-            log.error(error, { step: "retryFailedItems", outcome: "error" });
+            log.set({ outcome: "conflict" });
             return status(409, "No failed items to retry");
           case "ORDER_NOT_FOUND_FOR_RETRY":
-            log.error(error, { step: "retryFailedItems", outcome: "error" });
+            log.set({ outcome: "not_found" });
             return status(404, "Original order not found, please re-submit the sync");
           default:
             log.error(error, { step: "retryFailedItems", outcome: "error" });
@@ -749,7 +810,11 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         return status(401, "Unauthorized");
       }
 
-      log.set({ action: "sync.jobStatus", user: { id: user.id }, jobId: query.jobId });
+      log.set({
+        action: "sync.jobStatus",
+        user: { id: user.id },
+        jobId: query.jobId,
+      });
 
       const { jobId } = query;
       const MAX_POLL_DURATION_MS = 10 * 60 * 1000; // 10 minutes
@@ -798,7 +863,9 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         });
 
         if (jobStatus.finished) {
-          log.set({ outcome: jobStatus.terminalState === "success" ? "success" : "error" });
+          log.set({
+            outcome: jobStatus.terminalState === "success" ? "success" : "error",
+          });
           return;
         }
 

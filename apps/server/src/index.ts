@@ -27,12 +27,15 @@ import syncRouter from "./routers/sync";
 import waitlistRouter from "./routers/waitlist";
 
 const pipeline = createDrainPipeline<DrainContext>();
-const drain = pipeline(
-  createAxiomDrain({
-    token: env.EVLOG_AXIOM_TOKEN,
-    dataset: env.EVLOG_AXIOM_DATASET,
-  }),
-);
+const drain =
+  env.EVLOG_AXIOM_TOKEN && env.EVLOG_AXIOM_DATASET
+    ? pipeline(
+        createAxiomDrain({
+          token: env.EVLOG_AXIOM_TOKEN,
+          dataset: env.EVLOG_AXIOM_DATASET,
+        }),
+      )
+    : undefined;
 initLogger({ env: { service: "api" }, drain });
 
 const resolveServerDistPath = (): string => {

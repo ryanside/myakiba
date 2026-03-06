@@ -39,7 +39,8 @@ const waitlistRouter = new Elysia({ prefix: "/waitlist" })
       );
 
       if (captchaError || !isValidCaptcha) {
-        log.set({ error: captchaError ?? null, outcome: "bad_request" });
+        if (captchaError) log.error(captchaError, { step: "verifyTurnstile" });
+        log.set({ outcome: "bad_request" });
         return status(400, "Captcha verification failed");
       }
 
