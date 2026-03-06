@@ -33,6 +33,7 @@ import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
 import type { CollectionItemFormValues } from "@myakiba/types";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/constants";
 import type { ShippingMethod, OrderStatus, DateFormat } from "@myakiba/types";
+import { Skeleton } from "../ui/skeleton";
 
 interface OrdersColumnsParams {
   onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
@@ -93,6 +94,9 @@ export function createOrdersColumns({
       enableSorting: false,
       enableHiding: false,
       enableResizing: false,
+      meta: {
+        skeleton: <Skeleton className="size-5 rounded-xs" />,
+      },
     },
     {
       id: "expand",
@@ -149,6 +153,9 @@ export function createOrdersColumns({
       enableHiding: true,
       enableResizing: true,
       size: 250,
+      meta: {
+        skeleton: <Skeleton className="h-8.5" />,
+      },
     },
     {
       accessorKey: "shop",
@@ -177,6 +184,9 @@ export function createOrdersColumns({
       enableHiding: true,
       enableResizing: true,
       size: 120,
+      meta: {
+        skeleton: <Skeleton className="h-6" />,
+      },
     },
     {
       accessorKey: "shippingMethod",
@@ -211,6 +221,9 @@ export function createOrdersColumns({
       enableHiding: true,
       enableResizing: true,
       size: 140,
+      meta: {
+        skeleton: <Skeleton className="h-6" />,
+      },
     },
     {
       accessorKey: "releaseDate",
@@ -243,6 +256,9 @@ export function createOrdersColumns({
       enableHiding: true,
       enableResizing: true,
       size: 120,
+      meta: {
+        skeleton: <Skeleton className="h-6" />,
+      },
     },
     {
       accessorKey: "orderDate",
@@ -277,6 +293,7 @@ export function createOrdersColumns({
       size: 120,
       meta: {
         headerTitle: "Order Date",
+        skeleton: <Skeleton className="h-6" />,
       },
     },
     {
@@ -312,6 +329,7 @@ export function createOrdersColumns({
       size: 120,
       meta: {
         headerTitle: "Payment Date",
+        skeleton: <Skeleton className="h-6" />,
       },
     },
     {
@@ -347,6 +365,7 @@ export function createOrdersColumns({
       size: 120,
       meta: {
         headerTitle: "Shipping Date",
+        skeleton: <Skeleton className="h-6" />,
       },
     },
     {
@@ -382,6 +401,7 @@ export function createOrdersColumns({
       size: 120,
       meta: {
         headerTitle: "Collection Date",
+        skeleton: <Skeleton className="h-6" />,
       },
     },
     {
@@ -405,6 +425,9 @@ export function createOrdersColumns({
       enableHiding: true,
       enableResizing: true,
       size: 100,
+      meta: {
+        skeleton: <Skeleton className="h-6" />,
+      },
     },
     {
       accessorKey: "total",
@@ -474,6 +497,7 @@ export function createOrdersColumns({
       size: 100,
       meta: {
         headerTitle: "Total",
+        skeleton: <Skeleton className="h-6" />,
       },
     },
     {
@@ -512,6 +536,7 @@ export function createOrdersColumns({
       size: 100,
       meta: {
         headerTitle: "Shipping Fee",
+        skeleton: <Skeleton className="h-6" />,
       },
     },
     {
@@ -550,6 +575,7 @@ export function createOrdersColumns({
       size: 100,
       meta: {
         headerTitle: "Taxes",
+        skeleton: <Skeleton className="h-6" />,
       },
     },
     {
@@ -588,6 +614,7 @@ export function createOrdersColumns({
       size: 100,
       meta: {
         headerTitle: "Duties",
+        skeleton: <Skeleton className="h-6" />,
       },
     },
     {
@@ -626,6 +653,7 @@ export function createOrdersColumns({
       size: 100,
       meta: {
         headerTitle: "Tariffs",
+        skeleton: <Skeleton className="h-6" />,
       },
     },
     {
@@ -664,6 +692,7 @@ export function createOrdersColumns({
       size: 100,
       meta: {
         headerTitle: "Misc Fees",
+        skeleton: <Skeleton className="h-6" />,
       },
     },
     {
@@ -697,6 +726,9 @@ export function createOrdersColumns({
       enableHiding: true,
       enableResizing: true,
       size: 120,
+      meta: {
+        skeleton: <Skeleton className="h-6" />,
+      },
     },
     {
       id: "actions",
@@ -748,6 +780,9 @@ export function createOrdersColumns({
       enableSorting: false,
       enableHiding: false,
       enableResizing: false,
+      meta: {
+        skeleton: <Skeleton className="h-4 w-1/2" />,
+      },
     },
   ];
 }

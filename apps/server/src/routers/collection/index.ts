@@ -8,17 +8,20 @@ import {
 } from "./model";
 import { tryCatch } from "@myakiba/utils";
 import { betterAuth } from "@/middleware/better-auth";
-import { requestContext } from "@/middleware/request-context";
+import { evlog } from "@/middleware/evlog";
 
 const collectionRouter = new Elysia({ prefix: "/collection" })
   .use(betterAuth)
-  .use(requestContext)
+  .use(evlog)
   .get(
     "/",
-    async ({ query, user, wideEvent }) => {
-      if (!user) return status(401, "Unauthorized");
+    async ({ query, user, log }) => {
+      if (!user) {
+        log.set({ outcome: "unauthorized" });
+        return status(401, "Unauthorized");
+      }
 
-      wideEvent.set({ userId: user.id });
+      log.set({ action: "collection.list", user: { id: user.id } });
 
       const { data: collection, error } = await tryCatch(
         CollectionService.getCollection(
@@ -52,7 +55,7 @@ const collectionRouter = new Elysia({ prefix: "/collection" })
       );
 
       if (error) {
-        wideEvent.set({ error, outcome: "error" });
+        log.error(error, { step: "getCollection", outcome: "error" });
         return status(500, "Failed to get collection table");
       }
 
@@ -62,17 +65,20 @@ const collectionRouter = new Elysia({ prefix: "/collection" })
         updatedAt: item.updatedAt.toISOString(),
       }));
 
-      wideEvent.set({ resultCount: serializedItems.length, outcome: "success" });
+      log.set({ collection: { resultCount: serializedItems.length }, outcome: "success" });
       return serializedItems;
     },
     { query: collectionQuerySchema, auth: true },
   )
   .get(
     "/:id",
-    async ({ params, user, wideEvent }) => {
-      if (!user) return status(401, "Unauthorized");
+    async ({ params, user, log }) => {
+      if (!user) {
+        log.set({ outcome: "unauthorized" });
+        return status(401, "Unauthorized");
+      }
 
-      wideEvent.set({ userId: user.id, collectionId: params.id });
+      log.set({ action: "collection.get", user: { id: user.id }, collection: { id: params.id } });
 
       const { data: collectionItem, error } = await tryCatch(
         CollectionService.getCollectionItem(user.id, params.id),
@@ -80,15 +86,15 @@ const collectionRouter = new Elysia({ prefix: "/collection" })
 
       if (error) {
         if (error.message === "COLLECTION_ITEM_NOT_FOUND") {
-          wideEvent.set({ outcome: "not_found" });
+          log.set({ outcome: "not_found" });
           return status(404, "Collection item not found");
         }
 
-        wideEvent.set({ error, outcome: "error" });
+        log.error(error, { step: "getCollectionItem", outcome: "error" });
         return status(500, "Failed to get collection item");
       }
 
-      wideEvent.set({ outcome: "success" });
+      log.set({ outcome: "success" });
       return {
         collectionItem: {
           ...collectionItem,
@@ -101,10 +107,17 @@ const collectionRouter = new Elysia({ prefix: "/collection" })
   )
   .put(
     "/:id",
-    async ({ params, body, user, wideEvent }) => {
-      if (!user) return status(401, "Unauthorized");
+    async ({ params, body, user, log }) => {
+      if (!user) {
+        log.set({ outcome: "unauthorized" });
+        return status(401, "Unauthorized");
+      }
 
-      wideEvent.set({ userId: user.id, collectionId: params.id });
+      log.set({
+        action: "collection.update",
+        user: { id: user.id },
+        collection: { id: params.id },
+      });
 
       const { data: update, error } = await tryCatch(
         CollectionService.updateCollectionItem(user.id, params.id, body),
@@ -112,25 +125,32 @@ const collectionRouter = new Elysia({ prefix: "/collection" })
 
       if (error) {
         if (error.message === "COLLECTION_ITEM_NOT_FOUND") {
-          wideEvent.set({ outcome: "not_found" });
+          log.set({ outcome: "not_found" });
           return status(404, "Collection item not found");
         }
 
-        wideEvent.set({ error, outcome: "error" });
+        log.error(error, { step: "updateCollectionItem", outcome: "error" });
         return status(500, "Failed to update collection item");
       }
 
-      wideEvent.set({ outcome: "success" });
+      log.set({ outcome: "success" });
       return { update };
     },
     { body: collectionUpdateSchema, params: collectionParamSchema, auth: true },
   )
   .delete(
     "/:id",
-    async ({ params, user, wideEvent }) => {
-      if (!user) return status(401, "Unauthorized");
+    async ({ params, user, log }) => {
+      if (!user) {
+        log.set({ outcome: "unauthorized" });
+        return status(401, "Unauthorized");
+      }
 
-      wideEvent.set({ userId: user.id, collectionId: params.id });
+      log.set({
+        action: "collection.delete",
+        user: { id: user.id },
+        collection: { id: params.id },
+      });
 
       const { data: deleted, error } = await tryCatch(
         CollectionService.deleteCollectionItem(user.id, params.id),
@@ -138,39 +158,46 @@ const collectionRouter = new Elysia({ prefix: "/collection" })
 
       if (error) {
         if (error.message === "COLLECTION_ITEM_NOT_FOUND") {
-          wideEvent.set({ outcome: "not_found" });
+          log.set({ outcome: "not_found" });
           return status(404, "Collection item not found");
         }
 
-        wideEvent.set({ error, outcome: "error" });
+        log.error(error, { step: "deleteCollectionItem", outcome: "error" });
         return status(500, "Failed to delete collection item");
       }
 
-      wideEvent.set({ outcome: "success" });
+      log.set({ outcome: "success" });
       return { deleted };
     },
     { params: collectionParamSchema, auth: true },
   )
   .delete(
     "/",
-    async ({ body, user, wideEvent }) => {
-      if (!user) return status(401, "Unauthorized");
+    async ({ body, user, log }) => {
+      if (!user) {
+        log.set({ outcome: "unauthorized" });
+        return status(401, "Unauthorized");
+      }
 
-      wideEvent.set({ userId: user.id, itemCount: body.ids.length });
+      log.set({
+        action: "collection.bulkDelete",
+        user: { id: user.id },
+        collection: { itemCount: body.ids.length },
+      });
 
       const { error } = await tryCatch(CollectionService.deleteCollectionItems(user.id, body.ids));
 
       if (error) {
         if (error.message === "COLLECTION_ITEMS_NOT_FOUND") {
-          wideEvent.set({ outcome: "not_found" });
+          log.set({ outcome: "not_found" });
           return status(404, "Collection item(s) not found");
         }
 
-        wideEvent.set({ error, outcome: "error" });
+        log.error(error, { step: "deleteCollectionItems", outcome: "error" });
         return status(500, "Failed to delete collection item(s)");
       }
 
-      wideEvent.set({ outcome: "success" });
+      log.set({ outcome: "success" });
       return "Collection item(s) deleted successfully";
     },
     { body: collectionDeleteSchema, auth: true },

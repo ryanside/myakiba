@@ -33,6 +33,7 @@ import { InlineCountCell } from "../cells/inline-count-cell";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/types";
 import type { DateFormat } from "@myakiba/types";
 import { getCategoryColor } from "@/lib/category-colors";
+import { Skeleton } from "../ui/skeleton";
 
 interface CollectionColumnsParams {
   onEditCollectionItem: (values: CollectionItemFormValues) => void;
@@ -83,6 +84,9 @@ export function createCollectionColumns({
       enableSorting: false,
       enableHiding: false,
       enableResizing: false,
+      meta: {
+        skeleton: <Skeleton className="size-5 rounded-xs" />,
+      },
     },
     {
       accessorKey: "itemTitle",
@@ -123,7 +127,7 @@ export function createCollectionColumns({
                     rel="noopener noreferrer"
                     className="text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline"
                   >
-                    https://myfigurecollection.net/item/{item.itemExternalId}
+                    MFC #{item.itemExternalId}
                   </a>
                 ) : (
                   <span className="text-xs text-muted-foreground">Custom</span>
@@ -140,6 +144,9 @@ export function createCollectionColumns({
       enableHiding: true,
       enableResizing: true,
       size: 450,
+      meta: {
+        skeleton: <Skeleton className="h-9 w-2/3" />,
+      },
     },
     {
       accessorKey: "itemScale",
@@ -152,6 +159,9 @@ export function createCollectionColumns({
       enableHiding: true,
       enableResizing: true,
       size: 100,
+      meta: {
+        skeleton: <Skeleton className="h-6 w-1/2" />,
+      },
     },
     {
       accessorKey: "count",
@@ -177,6 +187,9 @@ export function createCollectionColumns({
       enableHiding: true,
       enableResizing: true,
       size: 80,
+      meta: {
+        skeleton: <Skeleton className="h-6" />,
+      },
     },
     {
       accessorKey: "score",
@@ -202,6 +215,9 @@ export function createCollectionColumns({
       enableHiding: true,
       enableResizing: true,
       size: 80,
+      meta: {
+        skeleton: <Skeleton className="h-6" />,
+      },
     },
     {
       accessorKey: "shop",
@@ -234,6 +250,9 @@ export function createCollectionColumns({
       enableHiding: true,
       enableResizing: true,
       size: 120,
+      meta: {
+        skeleton: <Skeleton className="h-6" />,
+      },
     },
     {
       accessorKey: "price",
@@ -263,6 +282,9 @@ export function createCollectionColumns({
       enableHiding: true,
       enableResizing: true,
       size: 100,
+      meta: {
+        skeleton: <Skeleton className="h-6" />,
+      },
     },
     {
       accessorKey: "orderDate",
@@ -291,6 +313,7 @@ export function createCollectionColumns({
       size: 120,
       meta: {
         headerTitle: "Order Date",
+        skeleton: <Skeleton className="h-6" />,
       },
     },
     {
@@ -320,6 +343,7 @@ export function createCollectionColumns({
       size: 120,
       meta: {
         headerTitle: "Payment Date",
+        skeleton: <Skeleton className="h-6" />,
       },
     },
     {
@@ -349,6 +373,7 @@ export function createCollectionColumns({
       size: 120,
       meta: {
         headerTitle: "Shipping Date",
+        skeleton: <Skeleton className="h-6" />,
       },
     },
     {
@@ -378,6 +403,7 @@ export function createCollectionColumns({
       size: 120,
       meta: {
         headerTitle: "Collection Date",
+        skeleton: <Skeleton className="h-6" />,
       },
     },
     {
@@ -443,6 +469,9 @@ export function createCollectionColumns({
       enableSorting: false,
       enableHiding: false,
       enableResizing: false,
+      meta: {
+        skeleton: <Skeleton className="h-4 w-1/2" />,
+      },
     },
   ];
 }

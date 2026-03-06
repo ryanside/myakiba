@@ -259,10 +259,6 @@ class ItemService {
       .where(eq(item_release.itemId, itemId))
       .orderBy(item_release.date);
 
-    if (!releases) {
-      throw new Error("FAILED_TO_GET_ITEM_RELEASES");
-    }
-
     return {
       releases,
     };
@@ -327,7 +323,7 @@ class ItemService {
       .from(item)
       .where(eq(item.id, itemId));
 
-    if (!itemData || itemData.length === 0) {
+    if (itemData.length === 0) {
       throw new Error("ITEM_NOT_FOUND");
     }
 
@@ -351,10 +347,6 @@ class ItemService {
       .where(and(eq(collection.itemId, itemId), eq(order.userId, userId)))
       .groupBy(order.id)
       .orderBy(desc(order.releaseDate));
-
-    if (!orders) {
-      throw new Error("FAILED_TO_GET_ITEM_RELATED_ORDERS");
-    }
 
     return orders;
   }
@@ -384,10 +376,6 @@ class ItemService {
       .from(collection)
       .where(and(eq(collection.itemId, itemId), eq(collection.userId, userId)))
       .groupBy(collection.id);
-
-    if (!collectionItems) {
-      throw new Error("FAILED_TO_GET_ITEM_RELATED_COLLECTION");
-    }
 
     return collectionItems;
   }

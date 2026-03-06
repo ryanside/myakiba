@@ -106,8 +106,6 @@ function RouteComponent() {
     if (isPending) return undefined;
     return collectionItems.reduce((sum, item) => sum + item.price, 0);
   }, [collectionItems, isPending]);
-  // const totalItemsThisMonth = undefined;
-  // const totalSpentThisMonth = undefined;
 
   return (
     <div className="flex flex-col gap-6 mx-auto w-full">
@@ -136,20 +134,6 @@ function RouteComponent() {
           }
           isLoading={isPending}
         />
-        {/* <KPICard
-          title="Total Items This Month"
-          subtitle="based on collection date"
-          value={totalItemsThisMonth}
-        />
-        <KPICard
-          title="Total Spent This Month"
-          subtitle="based on payment date"
-          value={
-            totalSpentThisMonth !== undefined
-              ? formatCurrencyFromMinorUnits(totalSpentThisMonth, userCurrency)
-              : undefined
-          }
-        /> */}
       </div>
       <CollectionDataGrid
         key="collection-data-grid"
@@ -172,6 +156,7 @@ function RouteComponent() {
         onEditCollectionItem={handleEditCollectionItem}
         currency={userCurrency}
         dateFormat={dateFormat}
+        isLoading={isPending}
       />
     </div>
   );

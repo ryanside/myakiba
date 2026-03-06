@@ -13,10 +13,6 @@ class EntriesService {
       .from(entry)
       .where(ilike(entry.name, `%${search}%`));
 
-    if (!entries) {
-      throw new Error("FAILED_TO_GET_ENTRIES");
-    }
-
     return entries;
   }
 }

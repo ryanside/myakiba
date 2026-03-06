@@ -10,19 +10,6 @@
   font-style: normal;
 }
 
-.jetbrains-mono-font {
-  font-family: "JetBrains Mono", monospace;
-  font-optical-sizing: auto;
-  font-weight: normal;
-  font-style: normal;
-}
-
-.font-orbitron {
-  font-family: "Orbitron", sans-serif;
-  font-optical-sizing: auto;
-  font-style: normal;
-}
-
 :root {
   --background: #fafafa;
   --foreground: #201127;
@@ -59,8 +46,7 @@
   --sidebar-ring: #a2d843;
   --font-sans: Instrument Sans, ui-sans-serif, sans-serif, system-ui;
   --font-serif: serif;
-  --font-mono: JetBrains Mono, monospace;
-  --font-orbitron: "Orbitron", sans-serif;
+  --font-mono: ui-monospace, monospace;
   --radius: 0.75rem;
   --shadow-x: 0px;
   --shadow-y: 1px;
@@ -139,8 +125,7 @@
   --sidebar-ring: #b0e753;
   --font-sans: Instrument Sans, ui-sans-serif, sans-serif, system-ui;
   --font-serif: serif;
-  --font-mono: JetBrains Mono, monospace;
-  --font-orbitron: "Orbitron", sans-serif;
+  --font-mono: ui-monospace, monospace;
   --radius: 0.75rem;
   --shadow-x: 0px;
   --shadow-y: 1px;
@@ -220,7 +205,6 @@
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
   --font-serif: var(--font-serif);
-  --font-orbitron: var(--font-orbitron);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

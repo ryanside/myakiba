@@ -66,6 +66,8 @@ services:
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - RESEND_FROM_EMAIL=${RESEND_FROM_EMAIL}
       - EARLY_ACCESS_PASSWORD=${EARLY_ACCESS_PASSWORD}
+      - EVLOG_AXIOM_TOKEN=${EVLOG_AXIOM_TOKEN}
+      - EVLOG_AXIOM_DATASET=${EVLOG_AXIOM_DATASET}
     healthcheck:
       test: ["CMD", "/usr/bin/wget", "-q", "--spider", "http://localhost:3000/health"]
       interval: 30s

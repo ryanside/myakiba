@@ -68,6 +68,7 @@ interface OrdersDataGridProps {
   ) => Promise<void>;
   currency?: string;
   dateFormat: DateFormat;
+  isLoading?: boolean;
 }
 
 export default function OrdersDataGrid({
@@ -90,6 +91,7 @@ export default function OrdersDataGrid({
   onMoveItem,
   currency = "USD",
   dateFormat,
+  isLoading = false,
 }: OrdersDataGridProps) {
   const pagination = useMemo<PaginationState>(
     () => ({
@@ -274,6 +276,7 @@ export default function OrdersDataGrid({
       <div className="space-y-4">
         <DataGrid
           table={table}
+          isLoading={isLoading}
           recordCount={totalCount}
           tableLayout={{
             dense: true,
