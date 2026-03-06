@@ -15,13 +15,25 @@ import { ScrollArea, ScrollBar } from "../ui/scroll-area";
 import { DataGridTable } from "../ui/data-grid-table";
 import { DataGridColumnCombobox } from "../ui/data-grid-column-combobox";
 import { CollectionToolbar } from "./collection-toolbar";
-import { DEFAULT_PAGE_INDEX, DEFAULT_PAGE_SIZE } from "@myakiba/constants";
 import { createCollectionColumns } from "./collection-columns";
 import type { DateFormat } from "@myakiba/types";
 
-export { DEFAULT_PAGE_INDEX, DEFAULT_PAGE_SIZE };
-
-interface CollectionDataGridProps {
+export const CollectionDataGrid = ({
+  collection,
+  totalCount,
+  pagination: serverPagination,
+  sorting: serverSorting,
+  search,
+  filters,
+  onFilterChange,
+  onSearchChange,
+  onResetFilters,
+  onDeleteCollectionItems,
+  onEditCollectionItem,
+  currency = "USD",
+  dateFormat,
+  isLoading = false,
+}: {
   collection: CollectionItem[];
   totalCount: number;
   pagination: {
@@ -41,23 +53,8 @@ interface CollectionDataGridProps {
   onEditCollectionItem: (values: CollectionItemFormValues) => void;
   currency?: string;
   dateFormat: DateFormat;
-}
-
-export const CollectionDataGrid = ({
-  collection,
-  totalCount,
-  pagination: serverPagination,
-  sorting: serverSorting,
-  search,
-  filters,
-  onFilterChange,
-  onSearchChange,
-  onResetFilters,
-  onDeleteCollectionItems,
-  onEditCollectionItem,
-  currency = "USD",
-  dateFormat,
-}: CollectionDataGridProps) => {
+  isLoading?: boolean;
+}) => {
   const pagination = useMemo<PaginationState>(
     () => ({
       pageIndex: Math.floor(serverPagination.offset / serverPagination.limit),
@@ -201,6 +198,7 @@ export const CollectionDataGrid = ({
       <div className="space-y-4">
         <DataGrid
           table={table}
+          isLoading={isLoading}
           recordCount={totalCount}
           tableLayout={{
             dense: true,

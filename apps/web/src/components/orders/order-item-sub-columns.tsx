@@ -123,7 +123,7 @@ export function createOrderItemSubColumns({
                     rel="noopener noreferrer"
                     className="text-xs text-muted-foreground font-light hover:text-foreground transition-colors underline-offset-4 hover:underline"
                   >
-                    https://myfigurecollection.net/item/{item.itemExternalId}
+                    MFC #{item.itemExternalId}
                   </a>
                 ) : (
                   <span className="text-xs text-muted-foreground">Custom</span>

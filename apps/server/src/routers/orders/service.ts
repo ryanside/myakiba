@@ -241,7 +241,7 @@ class OrdersService {
   }
 
   async getOrder(userId: string, orderId: string) {
-    const [orderInfo] = await db
+    const orderInfoRows = await db
       .select({
         orderId: order.id,
         title: order.title,
@@ -306,11 +306,11 @@ class OrdersService {
       .where(and(eq(order.userId, userId), eq(order.id, orderId)))
       .groupBy(order.id);
 
-    if (!orderInfo) {
+    if (orderInfoRows.length === 0) {
       throw new Error("ORDER_NOT_FOUND");
     }
 
-    return orderInfo;
+    return orderInfoRows[0];
   }
 
   async mergeOrders(
@@ -347,7 +347,7 @@ class OrdersService {
         })
         .where(and(eq(collection.userId, userId), inArray(collection.orderId, orderIds)))
         .returning({ id: collection.id });
-      if (!collectionUpdated || collectionUpdated.length === 0) {
+      if (collectionUpdated.length === 0) {
         throw new Error("ORDER_ITEMS_NOT_FOUND");
       }
 
@@ -355,7 +355,7 @@ class OrdersService {
         .delete(order)
         .where(and(eq(order.userId, userId), inArray(order.id, orderIds)))
         .returning({ id: order.id });
-      if (!deletedOrders || deletedOrders.length === 0) {
+      if (deletedOrders.length === 0) {
         throw new Error("ORDERS_NOT_FOUND");
       }
 
@@ -379,7 +379,7 @@ class OrdersService {
           ...newOrder,
         })
         .returning();
-      if (!newOrderInserted || newOrderInserted.length === 0) {
+      if (newOrderInserted.length === 0) {
         throw new Error("FAILED_TO_INSERT_NEW_ORDER");
       }
 
@@ -399,7 +399,7 @@ class OrdersService {
         .where(and(eq(collection.userId, userId), inArray(collection.id, collectionIds)))
         .returning({ id: collection.id });
 
-      if (!collectionUpdated || collectionUpdated.length === 0) {
+      if (collectionUpdated.length === 0) {
         throw new Error("ORDER_ITEMS_NOT_FOUND");
       }
 
@@ -421,7 +421,7 @@ class OrdersService {
         .set(updatedOrder)
         .where(and(eq(order.userId, userId), eq(order.id, orderId)))
         .returning();
-      if (!orderUpdated || orderUpdated.length === 0) {
+      if (orderUpdated.length === 0) {
         throw new Error("ORDER_NOT_FOUND");
       }
 
@@ -464,7 +464,7 @@ class OrdersService {
         .where(and(eq(order.userId, userId), inArray(order.id, orderIds)))
         .returning();
 
-      if (!deletedOrders || deletedOrders.length === 0) {
+      if (deletedOrders.length === 0) {
         throw new Error("ORDERS_NOT_FOUND");
       }
 
@@ -545,10 +545,6 @@ class OrdersService {
       .where(and(eq(order.userId, userId), title ? ilike(order.title, `%${title}%`) : undefined))
       .groupBy(order.id, order.title);
 
-    if (!orderIdsAndTitles) {
-      throw new Error("FAILED_TO_GET_ORDER_IDS_AND_TITLES");
-    }
-
     return orderIdsAndTitles;
   }
 
@@ -570,7 +566,7 @@ class OrdersService {
       )
       .returning();
 
-    if (!moved || moved.length === 0) {
+    if (moved.length === 0) {
       throw new Error("FAILED_TO_MOVE_ITEMS");
     }
 

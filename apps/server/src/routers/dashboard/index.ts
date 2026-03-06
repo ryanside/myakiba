@@ -1,6 +1,6 @@
 import { Elysia, status } from "elysia";
 import { betterAuth } from "@/middleware/better-auth";
-import { requestContext } from "@/middleware/request-context";
+import { evlog } from "@/middleware/evlog";
 import DashboardService from "./service";
 import { tryCatch } from "@myakiba/utils";
 import * as z from "zod";
@@ -12,43 +12,49 @@ const releaseCalendarQuerySchema = z.object({
 
 const dashboardRouter = new Elysia({ prefix: "/dashboard" })
   .use(betterAuth)
-  .use(requestContext)
+  .use(evlog)
   .get(
     "/",
-    async ({ user, wideEvent }) => {
+    async ({ user, log }) => {
       if (!user) return status(401, "Unauthorized");
 
-      wideEvent.set({ userId: user.id });
+      log.set({ action: "get_dashboard", user: { id: user.id } });
 
       const { data: dashboard, error } = await tryCatch(DashboardService.getDashboard(user.id));
 
       if (error) {
-        wideEvent.set({ error, outcome: "error" });
+        log.error(error, { step: "getDashboard" });
+        log.set({ outcome: "error" });
         return status(500, "Failed to get dashboard data");
       }
 
-      wideEvent.set({ outcome: "success" });
+      log.set({ outcome: "success" });
       return dashboard;
     },
     { auth: true },
   )
   .get(
     "/release-calendar",
-    async ({ query, user, wideEvent }) => {
+    async ({ query, user, log }) => {
       if (!user) return status(401, "Unauthorized");
 
-      wideEvent.set({ userId: user.id, month: query.month, year: query.year });
+      log.set({
+        action: "get_release_calendar",
+        user: { id: user.id },
+        query: { month: query.month, year: query.year },
+      });
 
       const { data: releaseCalendar, error } = await tryCatch(
         DashboardService.getReleaseCalendar(user.id, query.month, query.year),
       );
 
       if (error) {
-        wideEvent.set({ error, outcome: "error" });
+        log.error(error, { step: "getReleaseCalendar" });
+        log.set({ outcome: "error" });
         return status(500, "Failed to get release calendar data");
       }
 
-      wideEvent.set({ outcome: "success" });
+      log.set({ outcome: "success" });
       return { releaseCalendar };
     },
     { query: releaseCalendarQuerySchema, auth: true },

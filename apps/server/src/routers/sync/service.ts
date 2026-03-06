@@ -301,7 +301,9 @@ class SyncService {
         throw new Error("FAILED_TO_SET_JOB_STATUS_IN_REDIS");
       }
 
-      const updated = await this.updateSyncSession(syncSessionId, { jobId: job.id });
+      const updated = await this.updateSyncSession(syncSessionId, {
+        jobId: job.id,
+      });
       if (!updated) {
         await job.remove().catch(() => undefined);
         throw new Error("SYNC_SESSION_NOT_FOUND");
@@ -375,7 +377,9 @@ class SyncService {
         throw new Error("FAILED_TO_SET_JOB_STATUS_IN_REDIS");
       }
 
-      const updated = await this.updateSyncSession(syncSessionId, { jobId: job.id });
+      const updated = await this.updateSyncSession(syncSessionId, {
+        jobId: job.id,
+      });
       if (!updated) {
         await job.remove().catch(() => undefined);
         throw new Error("SYNC_SESSION_NOT_FOUND");
@@ -447,7 +451,9 @@ class SyncService {
         throw new Error("FAILED_TO_SET_JOB_STATUS_IN_REDIS");
       }
 
-      const updated = await this.updateSyncSession(syncSessionId, { jobId: job.id });
+      const updated = await this.updateSyncSession(syncSessionId, {
+        jobId: job.id,
+      });
       if (!updated) {
         await job.remove().catch(() => undefined);
         throw new Error("SYNC_SESSION_NOT_FOUND");
@@ -785,7 +791,9 @@ class SyncService {
         throw new Error("FAILED_TO_SET_JOB_STATUS_IN_REDIS");
       }
 
-      const updated = await this.updateSyncSession(sessionId, { jobId: job.id });
+      const updated = await this.updateSyncSession(sessionId, {
+        jobId: job.id,
+      });
       if (!updated) {
         await job.remove().catch(() => undefined);
         throw new Error("SYNC_SESSION_NOT_FOUND");

@@ -193,7 +193,7 @@ class CollectionService {
       .leftJoin(item_release, eq(collection.releaseId, item_release.id))
       .where(and(eq(collection.userId, userId), eq(collection.id, collectionId)));
 
-    if (!collectionItem || collectionItem.length === 0) {
+    if (collectionItem.length === 0) {
       throw new Error("COLLECTION_ITEM_NOT_FOUND");
     }
 
@@ -214,7 +214,7 @@ class CollectionService {
       .where(and(eq(collection.userId, userId), eq(collection.id, collectionId)))
       .returning();
 
-    if (!updated || updated.length === 0) {
+    if (updated.length === 0) {
       throw new Error("COLLECTION_ITEM_NOT_FOUND");
     }
 
@@ -227,7 +227,7 @@ class CollectionService {
       .where(and(eq(collection.userId, userId), eq(collection.id, collectionId)))
       .returning();
 
-    if (!deleted || deleted.length === 0) {
+    if (deleted.length === 0) {
       throw new Error("COLLECTION_ITEM_NOT_FOUND");
     }
 
@@ -240,7 +240,7 @@ class CollectionService {
       .where(and(eq(collection.userId, userId), inArray(collection.id, collectionIds)))
       .returning();
 
-    if (!deleted || deleted.length === 0) {
+    if (deleted.length === 0) {
       throw new Error("COLLECTION_ITEMS_NOT_FOUND");
     }
 

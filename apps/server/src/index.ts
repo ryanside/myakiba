@@ -1,8 +1,11 @@
 import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
 import { logixlysia } from "logixlysia";
-import { requestContext } from "@/middleware/request-context";
-import { logger } from "@/lib/logger";
+import { evlog } from "@/middleware/evlog";
+import { initLogger, log } from "evlog";
+import type { DrainContext } from "evlog";
+import { createAxiomDrain } from "evlog/axiom";
+import { createDrainPipeline } from "evlog/pipeline";
 import { auth } from "@myakiba/auth";
 import { env } from "@myakiba/env/server";
 import { openapi } from "@elysiajs/openapi";
@@ -22,6 +25,18 @@ import searchRouter from "./routers/search";
 import settingsRouter from "./routers/settings";
 import syncRouter from "./routers/sync";
 import waitlistRouter from "./routers/waitlist";
+
+const pipeline = createDrainPipeline<DrainContext>();
+const drain =
+  env.EVLOG_AXIOM_TOKEN && env.EVLOG_AXIOM_DATASET
+    ? pipeline(
+        createAxiomDrain({
+          token: env.EVLOG_AXIOM_TOKEN,
+          dataset: env.EVLOG_AXIOM_DATASET,
+        }),
+      )
+    : undefined;
+initLogger({ env: { service: "api" }, drain });
 
 const resolveServerDistPath = (): string => {
   const fromEnv: string | undefined = process.env.STATIC_ASSETS_DIR;
@@ -60,7 +75,7 @@ const serveIndexHtml = async (distDir: string): Promise<Response> => {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const app = new Elysia()
   .use(logixlysia())
-  .use(requestContext)
+  .use(evlog)
   .use(
     cors({
       origin: env.CORS_ORIGIN,
@@ -119,7 +134,7 @@ const app = new Elysia()
     return serveIndexHtml(serverDistPath);
   })
   .listen(3000, () => {
-    logger.info({ msg: "server started", port: 3000, url: "http://localhost:3000" });
+    log.info({ msg: "server started", port: 3000, url: "http://localhost:3000" });
   });
 
 export type App = typeof app;

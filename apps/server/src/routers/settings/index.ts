@@ -3,41 +3,41 @@ import SettingsService from "./service";
 import { tryCatch } from "@myakiba/utils";
 import { z } from "zod";
 import { betterAuth } from "@/middleware/better-auth";
-import { requestContext } from "@/middleware/request-context";
+import { evlog } from "@/middleware/evlog";
 
 const settingsRouter = new Elysia({ prefix: "/settings" })
   .use(betterAuth)
-  .use(requestContext)
+  .use(evlog)
   .get(
     "/account-type",
-    async ({ user, wideEvent }) => {
+    async ({ user, log }) => {
       if (!user) return status(401, "Unauthorized");
 
-      wideEvent.set({ userId: user.id });
+      log.set({ action: "settings.getAccountType", user: { id: user.id } });
 
       const { data: hasCredential, error } = await tryCatch(
         SettingsService.hasCredentialAccount(user.id),
       );
 
       if (error) {
-        wideEvent.set({ error, outcome: "error" });
+        log.error(error, { step: "hasCredentialAccount", outcome: "error" });
         return status(500, "Failed to check account type");
       }
 
-      wideEvent.set({ outcome: "success" });
+      log.set({ outcome: "success" });
       return { hasCredentialAccount: hasCredential };
     },
     { auth: true },
   )
   .delete(
     "/account",
-    async ({ body, user, wideEvent }) => {
+    async ({ body, user, log }) => {
       if (!user) return status(401, "Unauthorized");
 
-      wideEvent.set({ userId: user.id });
+      log.set({ action: "settings.deleteAccount", user: { id: user.id } });
 
       if (body.confirmationPhrase !== "delete my account") {
-        wideEvent.set({ outcome: "bad_request" });
+        log.set({ outcome: "bad_request" });
         return status(400, "Invalid confirmation phrase");
       }
 
@@ -46,23 +46,23 @@ const settingsRouter = new Elysia({ prefix: "/settings" })
       );
 
       if (checkError) {
-        wideEvent.set({ error: checkError, outcome: "error" });
+        log.error(checkError, { step: "hasCredentialAccount", outcome: "error" });
         return status(500, "Failed to check account type");
       }
 
       if (hasCredential) {
-        wideEvent.set({ outcome: "bad_request" });
+        log.set({ outcome: "bad_request" });
         return status(400, "This endpoint is only for OAuth users. Please use password deletion.");
       }
 
       const { error: deleteError } = await tryCatch(SettingsService.deleteUser(user.id));
 
       if (deleteError) {
-        wideEvent.set({ error: deleteError, outcome: "error" });
+        log.error(deleteError, { step: "deleteUser", outcome: "error" });
         return status(500, "Failed to delete account");
       }
 
-      wideEvent.set({ outcome: "success" });
+      log.set({ outcome: "success" });
       return "Account deleted successfully";
     },
     {

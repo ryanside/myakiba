@@ -304,6 +304,7 @@ function RouteComponent() {
         onMoveItem={handleMoveItem}
         currency={userCurrency}
         dateFormat={dateFormat}
+        isLoading={isPending}
       />
     </div>
   );
