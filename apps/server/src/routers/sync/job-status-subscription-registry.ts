@@ -220,6 +220,10 @@ class JobStatusSubscriptionRegistry {
           return queuedEvent;
         }
 
+        if (consumerState.resolvePending !== null) {
+          throw new Error("Concurrent next() calls are not supported");
+        }
+
         return await new Promise<JobStatusSubscriptionEvent>((resolve) => {
           consumerState.resolvePending = resolve;
         });

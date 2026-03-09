@@ -507,6 +507,13 @@ class SyncService {
 
         return statusSchema.parse(parsedStatus);
       }
+
+      createLogger({
+        action: "sync.getJobStatus",
+        outcome: "warn",
+        jobId,
+        message: "Corrupt Redis job status cache; falling back to DB",
+      }).emit();
     }
 
     // Redis key expired — fall back to the persistent sync session record

@@ -1,4 +1,11 @@
 import type Redis from "ioredis";
+import {
+  JOB_STATUS_CHANNEL_PREFIX,
+  JOB_STATUS_KEY_PREFIX,
+  JOB_STATUS_KEY_SUFFIX,
+  JOB_STATUS_TTL_SECONDS,
+} from "@myakiba/constants";
+
 type JobStatusTerminalState = "success" | "error" | "timeout";
 
 type JobStatusPayload = Readonly<{
@@ -8,10 +15,6 @@ type JobStatusPayload = Readonly<{
   terminalState: JobStatusTerminalState | null;
 }>;
 
-const JOB_STATUS_TTL_SECONDS = 600;
-const JOB_STATUS_KEY_PREFIX = "job";
-const JOB_STATUS_KEY_SUFFIX = "status";
-const JOB_STATUS_CHANNEL_PREFIX = "job:status:";
 const ISO_DATETIME_UTC_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 const JOB_STATUS_TERMINAL_STATES: ReadonlySet<JobStatusTerminalState> = new Set([
   "success",
