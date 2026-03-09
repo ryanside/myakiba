@@ -77,10 +77,7 @@ process.once("SIGTERM", () => {
   void shutdown("SIGTERM", 0);
 });
 
-function handleFatalError(
-  kind: "uncaughtException" | "unhandledRejection",
-  err: unknown,
-): void {
+function handleFatalError(kind: "uncaughtException" | "unhandledRejection", err: unknown): void {
   if (isShuttingDown) return;
 
   const fatalLog = createLogger({

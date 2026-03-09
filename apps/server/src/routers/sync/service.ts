@@ -27,15 +27,19 @@ import type { SyncSessionItemStatus, SyncSessionStatus, SyncType } from "@myakib
 import { Queue } from "bullmq";
 import { createId } from "@paralleldrive/cuid2";
 import { env } from "@myakiba/env/server";
-import { dateToString, parseMoneyToMinorUnits } from "@myakiba/utils";
-import { redis } from "@myakiba/redis";
+import { dateToString, parseMoneyToMinorUnits, tryCatch } from "@myakiba/utils";
+import {
+  getJobStatusSnapshotKey,
+  parseJobStatusPayload,
+  redis,
+  writeJobStatusSnapshotAndPublish,
+} from "@myakiba/redis";
 import {
   csvItemMetadataSchema,
   orderItemMetadataSchema,
   collectionItemMetadataSchema,
   syncOrderSchema,
 } from "@myakiba/schemas";
-import { JOB_STATUS_TTL_SECONDS } from "@myakiba/constants";
 import { createLogger } from "evlog";
 
 const syncQueue = new Queue("sync-queue", {
@@ -78,6 +82,15 @@ class SyncService {
       status: "failed",
       statusMessage,
       completedAt: new Date(),
+    });
+  }
+
+  private async writeQueuedJobStatus(jobId: string, statusMessage: string): Promise<void> {
+    await writeJobStatusSnapshotAndPublish(redis, jobId, {
+      status: statusMessage,
+      finished: false,
+      createdAt: new Date().toISOString(),
+      terminalState: null,
     });
   }
 
@@ -296,19 +309,14 @@ class SyncService {
       }
 
       queuedJobId = job.id;
-      const setJobStatus = await redis.set(
-        `job:${job.id}:status`,
-        JSON.stringify({
-          status: "Your CSV sync job has been added to queue. Please wait...",
-          finished: false,
-          createdAt: new Date().toISOString(),
-          terminalState: null,
-        }),
-        "EX",
-        JOB_STATUS_TTL_SECONDS,
+      const { error: jobStatusError } = await tryCatch(
+        this.writeQueuedJobStatus(
+          job.id,
+          "Your CSV sync job has been added to queue. Please wait...",
+        ),
       );
 
-      if (!setJobStatus) {
+      if (jobStatusError) {
         await job.remove().catch(() => undefined);
         throw new Error("FAILED_TO_SET_JOB_STATUS_IN_REDIS");
       }
@@ -372,19 +380,14 @@ class SyncService {
       }
 
       queuedJobId = job.id;
-      const setJobStatus = await redis.set(
-        `job:${job.id}:status`,
-        JSON.stringify({
-          status: "Your order sync job has been added to queue. Please wait...",
-          finished: false,
-          createdAt: new Date().toISOString(),
-          terminalState: null,
-        }),
-        "EX",
-        JOB_STATUS_TTL_SECONDS,
+      const { error: jobStatusError } = await tryCatch(
+        this.writeQueuedJobStatus(
+          job.id,
+          "Your order sync job has been added to queue. Please wait...",
+        ),
       );
 
-      if (!setJobStatus) {
+      if (jobStatusError) {
         await job.remove().catch(() => undefined);
         throw new Error("FAILED_TO_SET_JOB_STATUS_IN_REDIS");
       }
@@ -446,19 +449,14 @@ class SyncService {
       }
 
       queuedJobId = job.id;
-      const setJobStatus = await redis.set(
-        `job:${job.id}:status`,
-        JSON.stringify({
-          status: "Your collection sync job has been added to queue. Please wait...",
-          finished: false,
-          createdAt: new Date().toISOString(),
-          terminalState: null,
-        }),
-        "EX",
-        JOB_STATUS_TTL_SECONDS,
+      const { error: jobStatusError } = await tryCatch(
+        this.writeQueuedJobStatus(
+          job.id,
+          "Your collection sync job has been added to queue. Please wait...",
+        ),
       );
 
-      if (!setJobStatus) {
+      if (jobStatusError) {
         await job.remove().catch(() => undefined);
         throw new Error("FAILED_TO_SET_JOB_STATUS_IN_REDIS");
       }
@@ -488,11 +486,12 @@ class SyncService {
   }
 
   async getJobStatus(jobId: string, userId: string): Promise<Status> {
-    const cached = await redis.get(`job:${jobId}:status`);
+    const cached = await redis.get(getJobStatusSnapshotKey(jobId));
     if (cached) {
-      const parsedStatus = statusSchema.safeParse(JSON.parse(cached));
-      if (parsedStatus.success) {
-        if (parsedStatus.data.finished && parsedStatus.data.terminalState === null) {
+      const parsedStatus = parseJobStatusPayload(cached);
+
+      if (parsedStatus) {
+        if (parsedStatus.finished && parsedStatus.terminalState === null) {
           const [cachedSession] = await db
             .select({ status: syncSession.status })
             .from(syncSession)
@@ -500,15 +499,14 @@ class SyncService {
 
           if (cachedSession) {
             return {
-              ...parsedStatus.data,
+              ...parsedStatus,
               terminalState: this.deriveTerminalStateFromSessionStatus(cachedSession.status),
             };
           }
         }
 
-        return parsedStatus.data;
+        return statusSchema.parse(parsedStatus);
       }
-      throw new Error("SYNC_JOB_STATUS_CORRUPT");
     }
 
     // Redis key expired — fall back to the persistent sync session record
@@ -786,19 +784,11 @@ class SyncService {
       if (!job?.id) throw new Error("FAILED_TO_QUEUE_RETRY_JOB");
       queuedJobId = job.id;
 
-      const setStatus = await redis.set(
-        `job:${job.id}:status`,
-        JSON.stringify({
-          status: `Retrying ${retryExternalIds.length} failed items...`,
-          finished: false,
-          createdAt: new Date().toISOString(),
-          terminalState: null,
-        }),
-        "EX",
-        JOB_STATUS_TTL_SECONDS,
+      const { error: jobStatusError } = await tryCatch(
+        this.writeQueuedJobStatus(job.id, `Retrying ${retryExternalIds.length} failed items...`),
       );
 
-      if (!setStatus) {
+      if (jobStatusError) {
         await job.remove().catch(() => undefined);
         throw new Error("FAILED_TO_SET_JOB_STATUS_IN_REDIS");
       }

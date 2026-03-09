@@ -1,3 +1,4 @@
 bun run fmt
+git add -u
 bun run lint
 bun run check-types
