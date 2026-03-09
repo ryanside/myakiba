@@ -3,11 +3,11 @@ import SettingsService from "./service";
 import { tryCatch } from "@myakiba/utils";
 import { z } from "zod";
 import { betterAuth } from "@/middleware/better-auth";
-import { evlog } from "@/middleware/evlog";
+import { evlog } from "evlog/elysia";
 
 const settingsRouter = new Elysia({ prefix: "/settings" })
   .use(betterAuth)
-  .use(evlog)
+  .use(evlog())
   .get(
     "/account-type",
     async ({ user, log }) => {

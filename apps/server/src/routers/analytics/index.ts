@@ -2,11 +2,11 @@ import { Elysia, status } from "elysia";
 import AnalyticsService from "./service";
 import { tryCatch } from "@myakiba/utils";
 import { betterAuth } from "@/middleware/better-auth";
-import { evlog } from "@/middleware/evlog";
+import { evlog } from "evlog/elysia";
 
 const analyticsRouter = new Elysia({ prefix: "/analytics" })
   .use(betterAuth)
-  .use(evlog)
+  .use(evlog())
   .get(
     "/",
     async ({ user, log }) => {

@@ -109,7 +109,9 @@ export async function transformCSVData(value: { file: File | undefined }) {
 
   const validatedCSV = csvSchema.safeParse(parsedCSV.data);
   if (!validatedCSV.success) {
-    console.log("Invalid CSV file", validatedCSV.error);
+    if (import.meta.env.DEV) {
+      console.log("Invalid CSV file", validatedCSV.error);
+    }
     throw new Error("Please select a valid MyFigureCollection CSV file");
   }
 

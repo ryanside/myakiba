@@ -22,6 +22,7 @@
     "cheerio": "^1.2.0",
     "domhandler": "^5.0.3",
     "drizzle-orm": "catalog:",
+    "evlog": "catalog:",
     "ioredis": "catalog:",
     "uuid": "catalog:",
     "zod": "catalog:"

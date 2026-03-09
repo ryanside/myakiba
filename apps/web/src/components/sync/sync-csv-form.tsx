@@ -48,7 +48,9 @@ export default function SyncCsvForm({
 
               const validatedCSV = csvSchema.safeParse(parsedCSV.data);
               if (!validatedCSV.success) {
-                console.log("Invalid CSV file", validatedCSV.error);
+                if (import.meta.env.DEV) {
+                  console.log("Invalid CSV file", validatedCSV.error);
+                }
                 return "Please select a valid MyFigureCollection CSV file";
               }
 

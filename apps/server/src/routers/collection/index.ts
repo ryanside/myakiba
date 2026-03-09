@@ -8,11 +8,11 @@ import {
 } from "./model";
 import { tryCatch } from "@myakiba/utils";
 import { betterAuth } from "@/middleware/better-auth";
-import { evlog } from "@/middleware/evlog";
+import { evlog } from "evlog/elysia";
 
 const collectionRouter = new Elysia({ prefix: "/collection" })
   .use(betterAuth)
-  .use(evlog)
+  .use(evlog())
   .get(
     "/",
     async ({ query, user, log }) => {

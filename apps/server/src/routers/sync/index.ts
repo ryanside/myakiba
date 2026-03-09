@@ -1,7 +1,7 @@
 import { Elysia, status, sse } from "elysia";
 import * as z from "zod";
 import { betterAuth } from "@/middleware/better-auth";
-import { evlog } from "@/middleware/evlog";
+import { evlog } from "evlog/elysia";
 import { rateLimit } from "@/middleware/rate-limit";
 import { collectionSyncSchema, csvItemSchema, orderSyncSchema } from "./model";
 import type {
@@ -19,7 +19,7 @@ import { createId } from "@paralleldrive/cuid2";
 
 const syncRouter = new Elysia({ prefix: "/sync" })
   .use(betterAuth)
-  .use(evlog)
+  .use(evlog())
   .use(rateLimit)
   .post(
     "/csv",
@@ -32,7 +32,8 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       log.set({
         action: "sync.csv",
         user: { id: user.id },
-        itemCount: body.length,
+        sync: { type: "csv" },
+        items: { requested: body.length },
       });
 
       const items = SyncService.assignOrderIds(body);
@@ -45,6 +46,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         log.error(processItemsError, {
           step: "processItems",
           outcome: "error",
+          sync: { type: "csv" },
         });
         return status(500, "Failed to process sync request");
       }
@@ -72,9 +74,17 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         log.error(syncSessionError, {
           step: "createSyncSession",
           outcome: "error",
+          sync: { type: "csv" },
         });
         return status(500, "Failed to create sync session");
       }
+
+      log.set({
+        sync: {
+          type: "csv",
+          sessionId: syncSessionId,
+        },
+      });
 
       if (collectionItems.length > 0) {
         const { error: insertToCollectionAndOrdersError } = await tryCatch(
@@ -94,6 +104,10 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           log.error(insertToCollectionAndOrdersError, {
             step: "insertToCollectionAndOrders",
             outcome: "error",
+            sync: {
+              type: "csv",
+              sessionId: syncSessionId,
+            },
           });
           return status(500, "Failed to insert to collection and orders");
         }
@@ -117,6 +131,10 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             log.error(queueCSVSyncJobError, {
               step: "queueCSVSyncJob",
               outcome: "error",
+              sync: {
+                type: "csv",
+                sessionId: syncSessionId,
+              },
             });
             return status(500, "Failed to queue CSV sync job");
           }
@@ -124,12 +142,20 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             log.error(queueCSVSyncJobError, {
               step: "queueCSVSyncJob",
               outcome: "error",
+              sync: {
+                type: "csv",
+                sessionId: syncSessionId,
+              },
             });
             return status(500, "Failed to set job status");
           }
           log.error(queueCSVSyncJobError, {
             step: "queueCSVSyncJob",
             outcome: "error",
+            sync: {
+              type: "csv",
+              sessionId: syncSessionId,
+            },
           });
           return status(500, "Failed to queue CSV sync job");
         }
@@ -157,6 +183,10 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           log.error(updateSessionError, {
             step: "updateSyncSession",
             outcome: "error",
+            sync: {
+              type: "csv",
+              sessionId: syncSessionId,
+            },
           });
           return status(500, "Failed to update sync session");
         }
@@ -164,10 +194,17 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       log.set({
         outcome: "success",
-        existingItemsToInsert: collectionItems.length,
-        newItems: itemsToScrape.length,
-        jobId: jobId ?? null,
-        syncSessionId,
+        sync: {
+          type: "csv",
+          sessionId: syncSessionId,
+          jobId: jobId ?? null,
+        },
+        items: {
+          requested: body.length,
+          existing: existingItemExternalIds.length,
+          toInsert: collectionItems.length,
+          queuedForScrape: itemsToScrape.length,
+        },
       });
 
       return {
@@ -196,7 +233,8 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       log.set({
         action: "sync.order",
         user: { id: user.id },
-        itemCount: body.items.length,
+        sync: { type: "order" },
+        items: { requested: body.items.length },
       });
 
       const orderId = createId();
@@ -211,6 +249,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         log.error(existingItemsError, {
           step: "getExistingItems",
           outcome: "error",
+          sync: { type: "order" },
         });
         return status(500, "Failed to check for existing items");
       }
@@ -223,6 +262,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         log.error(existingItemsWithReleasesError, {
           step: "getExistingItemsWithReleases",
           outcome: "error",
+          sync: { type: "order" },
         });
         return status(500, "Failed to check for existing items with releases");
       }
@@ -336,9 +376,22 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         log.error(syncSessionError, {
           step: "createSyncSession",
           outcome: "error",
+          sync: {
+            type: "order",
+            orderId,
+          },
         });
         return status(500, "Failed to create sync session");
       }
+
+      log.set({
+        sync: {
+          type: "order",
+          sessionId: syncSessionId,
+          orderId,
+        },
+        order: { id: orderId },
+      });
 
       if (collectionItemsToInsert.length > 0) {
         const { error: insertToCollectionAndOrdersError } = await tryCatch(
@@ -358,6 +411,12 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           log.error(insertToCollectionAndOrdersError, {
             step: "insertToCollectionAndOrders",
             outcome: "error",
+            sync: {
+              type: "order",
+              sessionId: syncSessionId,
+              orderId,
+            },
+            order: { id: orderId },
           });
           return status(500, "Failed to insert to collection and orders");
         }
@@ -381,6 +440,12 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             log.error(queueOrderSyncJobError, {
               step: "queueOrderSyncJob",
               outcome: "error",
+              sync: {
+                type: "order",
+                sessionId: syncSessionId,
+                orderId,
+              },
+              order: { id: orderId },
             });
             return status(500, "Failed to queue order sync job");
           }
@@ -388,12 +453,24 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             log.error(queueOrderSyncJobError, {
               step: "queueOrderSyncJob",
               outcome: "error",
+              sync: {
+                type: "order",
+                sessionId: syncSessionId,
+                orderId,
+              },
+              order: { id: orderId },
             });
             return status(500, "Failed to set job status");
           }
           log.error(queueOrderSyncJobError, {
             step: "queueOrderSyncJob",
             outcome: "error",
+            sync: {
+              type: "order",
+              sessionId: syncSessionId,
+              orderId,
+            },
+            order: { id: orderId },
           });
           return status(500, "Failed to queue order sync job");
         }
@@ -414,6 +491,12 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             log.error(updateSessionError, {
               step: "updateSyncSession",
               outcome: "error",
+              sync: {
+                type: "order",
+                sessionId: syncSessionId,
+                orderId,
+              },
+              order: { id: orderId },
             });
             return status(500, "Failed to update sync session");
           }
@@ -422,11 +505,19 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       log.set({
         outcome: "success",
-        orderId,
-        existingItemsToInsert: itemsToInsert.length,
-        newItems: itemsToScrape.length,
-        jobId: jobId ?? null,
-        syncSessionId,
+        sync: {
+          type: "order",
+          sessionId: syncSessionId,
+          jobId: jobId ?? null,
+          orderId,
+        },
+        order: { id: orderId },
+        items: {
+          requested: body.items.length,
+          existing: existingOrderItemExternalIds.length,
+          toInsert: itemsToInsert.length,
+          queuedForScrape: itemsToScrape.length,
+        },
       });
 
       return {
@@ -455,7 +546,8 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       log.set({
         action: "sync.collection",
         user: { id: user.id },
-        itemCount: body.length,
+        sync: { type: "collection" },
+        items: { requested: body.length },
       });
 
       const itemExternalIds = body.map((item: CollectionSyncType) => item.itemExternalId);
@@ -468,6 +560,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         log.error(existingItemsError, {
           step: "getExistingItems",
           outcome: "error",
+          sync: { type: "collection" },
         });
         return status(500, "Failed to check for existing items");
       }
@@ -480,6 +573,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         log.error(existingItemsWithReleasesError, {
           step: "getExistingItemsWithReleases",
           outcome: "error",
+          sync: { type: "collection" },
         });
         return status(500, "Failed to check for existing items with releases");
       }
@@ -564,9 +658,17 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         log.error(syncSessionError, {
           step: "createSyncSession",
           outcome: "error",
+          sync: { type: "collection" },
         });
         return status(500, "Failed to create sync session");
       }
+
+      log.set({
+        sync: {
+          type: "collection",
+          sessionId: syncSessionId,
+        },
+      });
 
       if (collectionItemsToInsert.length > 0) {
         const { error: insertToCollectionAndOrdersError } = await tryCatch(
@@ -586,6 +688,10 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           log.error(insertToCollectionAndOrdersError, {
             step: "insertToCollectionAndOrders",
             outcome: "error",
+            sync: {
+              type: "collection",
+              sessionId: syncSessionId,
+            },
           });
           return status(500, "Failed to insert to collection and orders");
         }
@@ -608,6 +714,10 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             log.error(queueCollectionSyncJobError, {
               step: "queueCollectionSyncJob",
               outcome: "error",
+              sync: {
+                type: "collection",
+                sessionId: syncSessionId,
+              },
             });
             return status(500, "Failed to queue collection sync job");
           }
@@ -615,12 +725,20 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             log.error(queueCollectionSyncJobError, {
               step: "queueCollectionSyncJob",
               outcome: "error",
+              sync: {
+                type: "collection",
+                sessionId: syncSessionId,
+              },
             });
             return status(500, "Failed to set job status");
           }
           log.error(queueCollectionSyncJobError, {
             step: "queueCollectionSyncJob",
             outcome: "error",
+            sync: {
+              type: "collection",
+              sessionId: syncSessionId,
+            },
           });
           return status(500, "Failed to queue collection sync job");
         }
@@ -640,6 +758,10 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             log.error(updateSessionError, {
               step: "updateSyncSession",
               outcome: "error",
+              sync: {
+                type: "collection",
+                sessionId: syncSessionId,
+              },
             });
             return status(500, "Failed to update sync session");
           }
@@ -648,10 +770,17 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       log.set({
         outcome: "success",
-        existingItemsToInsert: itemsToInsert.length,
-        newItems: itemsToScrape.length,
-        jobId: jobId ?? null,
-        syncSessionId,
+        sync: {
+          type: "collection",
+          sessionId: syncSessionId,
+          jobId: jobId ?? null,
+        },
+        items: {
+          requested: body.length,
+          existing: existingCollectionItemExternalIds.length,
+          toInsert: itemsToInsert.length,
+          queuedForScrape: itemsToScrape.length,
+        },
       });
 
       return {
@@ -677,13 +806,27 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         return status(401, "Unauthorized");
       }
 
-      log.set({ action: "sync.sessions", user: { id: user.id } });
-
       const page = query.page ? parseInt(query.page, 10) : 1;
       const limit = query.limit ? parseInt(query.limit, 10) : 20;
 
-      if (isNaN(page) || page < 1) return status(400, "Invalid page parameter");
-      if (isNaN(limit) || limit < 1 || limit > 100) return status(400, "Invalid limit parameter");
+      log.set({
+        action: "sync.sessions",
+        user: { id: user.id },
+        pagination: { page, limit },
+        filters: {
+          status: query.status ?? null,
+          syncType: query.syncType ?? null,
+        },
+      });
+
+      if (isNaN(page) || page < 1) {
+        log.set({ outcome: "bad_request" });
+        return status(400, "Invalid page parameter");
+      }
+      if (isNaN(limit) || limit < 1 || limit > 100) {
+        log.set({ outcome: "bad_request" });
+        return status(400, "Invalid limit parameter");
+      }
 
       const { data: result, error } = await tryCatch(
         SyncService.getSyncSessions(user.id, page, limit, query.status, query.syncType),
@@ -693,6 +836,14 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         log.error(error, { step: "getSyncSessions", outcome: "error" });
         return status(500, "Failed to fetch sync sessions");
       }
+
+      log.set({
+        outcome: "success",
+        result: {
+          sessionCount: result.sessions.length,
+          total: result.total,
+        },
+      });
 
       return { sessions: result.sessions, total: result.total, page, limit };
     },
@@ -717,23 +868,38 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       log.set({
         action: "sync.sessionDetail",
         user: { id: user.id },
-        sessionId: params.id,
+        sync: { sessionId: params.id },
       });
 
       const page = query.page ? parseInt(query.page, 10) : undefined;
       const limit = query.limit ? parseInt(query.limit, 10) : undefined;
 
-      if (page !== undefined && (isNaN(page) || page < 1))
+      log.set({
+        pagination: {
+          page: page ?? null,
+          limit: limit ?? null,
+        },
+      });
+
+      if (page !== undefined && (isNaN(page) || page < 1)) {
+        log.set({ outcome: "bad_request" });
         return status(400, "Invalid page parameter");
-      if (limit !== undefined && (isNaN(limit) || limit < 1 || limit > 100))
+      }
+      if (limit !== undefined && (isNaN(limit) || limit < 1 || limit > 100)) {
+        log.set({ outcome: "bad_request" });
         return status(400, "Invalid limit parameter");
+      }
 
       const { data: result, error } = await tryCatch(
         SyncService.getSyncSessionDetail(params.id, user.id, page, limit),
       );
 
       if (error) {
-        log.error(error, { step: "getSyncSessionDetail", outcome: "error" });
+        log.error(error, {
+          step: "getSyncSessionDetail",
+          outcome: "error",
+          sync: { sessionId: params.id },
+        });
         return status(500, "Failed to fetch sync session detail");
       }
 
@@ -741,6 +907,14 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         log.set({ outcome: "not_found" });
         return status(404, "Sync session not found");
       }
+
+      log.set({
+        outcome: "success",
+        result: {
+          itemCount: result.items.length,
+          totalItems: result.totalItems,
+        },
+      });
 
       return {
         session: { ...result.session, items: result.items },
@@ -767,7 +941,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       log.set({
         action: "sync.retry",
         user: { id: user.id },
-        syncSessionId: body.syncSessionId,
+        sync: { sessionId: body.syncSessionId },
       });
 
       const { data: result, error } = await tryCatch(
@@ -786,12 +960,25 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             log.set({ outcome: "not_found" });
             return status(404, "Original order not found, please re-submit the sync");
           default:
-            log.error(error, { step: "retryFailedItems", outcome: "error" });
+            log.error(error, {
+              step: "retryFailedItems",
+              outcome: "error",
+              sync: { sessionId: body.syncSessionId },
+            });
             return status(500, "Failed to retry failed items");
         }
       }
 
-      log.set({ outcome: "success", ...result });
+      log.set({
+        outcome: "success",
+        sync: {
+          sessionId: body.syncSessionId,
+          jobId: result.jobId,
+        },
+        items: {
+          retried: result.itemCount,
+        },
+      });
 
       return result;
     },
@@ -813,7 +1000,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       log.set({
         action: "sync.jobStatus",
         user: { id: user.id },
-        jobId: query.jobId,
+        sync: { jobId: query.jobId },
       });
 
       const { jobId } = query;
@@ -840,7 +1027,11 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           const message =
             error.message === "SYNC_JOB_NOT_FOUND" ? "Job not found" : "Error fetching job status";
 
-          log.error(error, { step: "getJobStatus", outcome: "error" });
+          if (error.message === "SYNC_JOB_NOT_FOUND") {
+            log.set({ outcome: "not_found" });
+          } else {
+            log.error(error, { step: "getJobStatus", outcome: "error" });
+          }
 
           yield sse({
             data: {
@@ -865,6 +1056,9 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         if (jobStatus.finished) {
           log.set({
             outcome: jobStatus.terminalState === "success" ? "success" : "error",
+            result: {
+              terminalState: jobStatus.terminalState,
+            },
           });
           return;
         }

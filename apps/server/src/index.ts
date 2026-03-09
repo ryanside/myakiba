@@ -1,10 +1,9 @@
 import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
-import { logixlysia } from "logixlysia";
-import { evlog } from "@/middleware/evlog";
+import { evlog } from "evlog/elysia";
 import { initLogger, log } from "evlog";
 import type { DrainContext } from "evlog";
-import { createAxiomDrain } from "evlog/axiom";
+import { createPostHogDrain } from "evlog/posthog";
 import { createDrainPipeline } from "evlog/pipeline";
 import { auth } from "@myakiba/auth";
 import { env } from "@myakiba/env/server";
@@ -26,17 +25,18 @@ import settingsRouter from "./routers/settings";
 import syncRouter from "./routers/sync";
 import waitlistRouter from "./routers/waitlist";
 
-const pipeline = createDrainPipeline<DrainContext>();
-const drain =
-  env.EVLOG_AXIOM_TOKEN && env.EVLOG_AXIOM_DATASET
-    ? pipeline(
-        createAxiomDrain({
-          token: env.EVLOG_AXIOM_TOKEN,
-          dataset: env.EVLOG_AXIOM_DATASET,
-        }),
-      )
-    : undefined;
-initLogger({ env: { service: "api" }, drain });
+const pipeline = createDrainPipeline<DrainContext>({
+  batch: { size: 50, intervalMs: 5000 },
+  retry: { maxAttempts: 3 },
+});
+const drain = env.POSTHOG_API_KEY
+  ? pipeline(
+      createPostHogDrain({
+        apiKey: env.POSTHOG_API_KEY,
+      }),
+    )
+  : undefined;
+initLogger({ env: { service: "api" } });
 
 const resolveServerDistPath = (): string => {
   const fromEnv: string | undefined = process.env.STATIC_ASSETS_DIR;
@@ -74,8 +74,12 @@ const serveIndexHtml = async (distDir: string): Promise<Response> => {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const app = new Elysia()
-  .use(logixlysia())
-  .use(evlog)
+  .use(
+    evlog({
+      drain,
+      exclude: ["/health"],
+    }),
+  )
   .use(
     cors({
       origin: env.CORS_ORIGIN,
@@ -134,7 +138,11 @@ const app = new Elysia()
     return serveIndexHtml(serverDistPath);
   })
   .listen(3000, () => {
-    log.info({ msg: "server started", port: 3000, url: "http://localhost:3000" });
+    log.info({
+      msg: "server started",
+      port: 3000,
+      url: "http://localhost:3000",
+    });
   });
 
 export type App = typeof app;

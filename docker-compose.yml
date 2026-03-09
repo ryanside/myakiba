@@ -66,8 +66,7 @@ services:
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - RESEND_FROM_EMAIL=${RESEND_FROM_EMAIL}
       - EARLY_ACCESS_PASSWORD=${EARLY_ACCESS_PASSWORD}
-      - EVLOG_AXIOM_TOKEN=${EVLOG_AXIOM_TOKEN}
-      - EVLOG_AXIOM_DATASET=${EVLOG_AXIOM_DATASET}
+      - POSTHOG_API_KEY=${POSTHOG_API_KEY}
     healthcheck:
       test: ["CMD", "/usr/bin/wget", "-q", "--spider", "http://localhost:3000/health"]
       interval: 30s
@@ -93,7 +92,7 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
-
+      - POSTHOG_API_KEY=${POSTHOG_API_KEY}
   worker2:
     depends_on:
       postgres:
@@ -112,7 +111,7 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
-
+      - POSTHOG_API_KEY=${POSTHOG_API_KEY}
 volumes:
   postgres_data:
   redis_data:

@@ -5,7 +5,7 @@ import { tryCatch } from "@myakiba/utils";
 import WaitlistService from "./service";
 import { joinWaitlistSchema, verifyAccessSchema } from "./model";
 import { rateLimit } from "@/middleware/rate-limit";
-import { evlog } from "@/middleware/evlog";
+import { evlog } from "evlog/elysia";
 
 async function verifyTurnstile(token: string): Promise<boolean> {
   const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
@@ -24,7 +24,7 @@ async function verifyTurnstile(token: string): Promise<boolean> {
 }
 
 const waitlistRouter = new Elysia({ prefix: "/waitlist" })
-  .use(evlog)
+  .use(evlog())
   .use(rateLimit)
   .post(
     "/",

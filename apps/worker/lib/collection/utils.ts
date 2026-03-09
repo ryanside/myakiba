@@ -1,5 +1,10 @@
-import type { FinalizeCollectionSyncParams } from "../types";
+import type {
+  FinalizeCollectionSyncParams,
+  FinalizePersistenceSummary,
+  FinalizeSyncResult,
+} from "../types";
 import type { UpdatedSyncCollection } from "@myakiba/schemas";
+import { tryCatch } from "@myakiba/utils";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@myakiba/db";
 import { assembleScrapedData } from "../assemble-scraped-data";
@@ -13,11 +18,12 @@ import { item, item_release, entry, entry_to_item, collection } from "@myakiba/d
 export async function finalizeCollectionSync({
   successfulResults,
   job,
+  log,
   redis,
   itemsToScrape,
   existingCount,
   syncSessionId,
-}: FinalizeCollectionSyncParams) {
+}: FinalizeCollectionSyncParams): Promise<FinalizeSyncResult> {
   const { items, entries, entryToItems, itemReleases, latestReleaseIdByExternalId } =
     assembleScrapedData(successfulResults);
   const successfulCollectionItems = itemsToScrape.filter((collectionItem) =>
@@ -27,9 +33,20 @@ export async function finalizeCollectionSync({
   const totalRowCount = existingCount + scrapeRowCount;
   let scrapedPersistedRowCount = 0;
 
+  const persistence: FinalizePersistenceSummary = {
+    items: items.length,
+    itemReleases: itemReleases.length,
+    entries: entries.length,
+    entryToItems: entryToItems.length,
+    collectionItems: successfulCollectionItems.length,
+    orders: 0,
+  };
+
+  log.set({ persistence });
+
   // assign latest release id to successfulCollectionItems
-  try {
-    await db.transaction(async (tx) => {
+  const { error } = await tryCatch(
+    db.transaction(async (tx) => {
       if (items.length > 0) {
         await tx
           .insert(item)
@@ -180,8 +197,10 @@ export async function finalizeCollectionSync({
       if (scrapedCollectionItems.length > 0) {
         await tx.insert(collection).values(scrapedCollectionItems);
       }
-    });
-  } catch (error) {
+    }),
+  );
+
+  if (error) {
     const scrapedItemIds = successfulResults.map((result) => result.id);
     const successCount = existingCount;
     const failCount = scrapeRowCount;
@@ -214,10 +233,23 @@ export async function finalizeCollectionSync({
       successCount,
       failCount,
     });
-    console.error("Failed to insert data to database.", error);
+
+    if (error instanceof Error) {
+      log.set({
+        outcome: "error",
+        sync: { sessionStatus, statusMessage },
+      });
+      log.error(error);
+    }
+
     return {
-      status: "Sync Job completed",
       processedAt: new Date().toISOString(),
+      successCount,
+      failCount,
+      scrapedPersistedRowCount: 0,
+      sessionStatus,
+      statusMessage,
+      persistence,
     };
   }
 
@@ -251,7 +283,12 @@ export async function finalizeCollectionSync({
   });
 
   return {
-    status: "Sync Job completed",
     processedAt: new Date().toISOString(),
+    successCount,
+    failCount,
+    scrapedPersistedRowCount,
+    sessionStatus,
+    statusMessage: `Sync ${statusLabel}: Synced ${successCount} out of ${totalRowCount} items`,
+    persistence,
   };
 }
