@@ -8,7 +8,7 @@ import type {
   UpdateSyncSessionCountsParams,
 } from "./types";
 import { env } from "@myakiba/env/worker";
-import { JOB_STATUS_TTL_SECONDS } from "@myakiba/constants";
+import { writeJobStatusSnapshotAndPublish } from "@myakiba/redis";
 
 export const createFetchOptions = (image: boolean = false) => ({
   proxy: env.HTTP_PROXY,
@@ -22,8 +22,8 @@ export const createFetchOptions = (image: boolean = false) => ({
 });
 
 /**
- * Writes job status to Redis (for SSE polling) and optionally
- * dual-writes to Postgres sync_session for durability.
+ * Writes the latest job status snapshot to Redis, publishes it for live
+ * subscribers, and optionally dual-writes durable session state to Postgres.
  */
 export const setJobStatus = async ({
   redis,
@@ -40,17 +40,12 @@ export const setJobStatus = async ({
         : "error"
       : null;
 
-  await redis.set(
-    `job:${jobId}:status`,
-    JSON.stringify({
-      status: statusMessage,
-      finished: finished,
-      createdAt: new Date().toISOString(),
-      terminalState,
-    }),
-    "EX",
-    JOB_STATUS_TTL_SECONDS,
-  );
+  await writeJobStatusSnapshotAndPublish(redis, jobId, {
+    status: statusMessage,
+    finished: finished,
+    createdAt: new Date().toISOString(),
+    terminalState,
+  });
 
   if (syncSessionId && sessionStatus) {
     await db

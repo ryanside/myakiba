@@ -13,3 +13,6 @@ export const SYNC_SESSION_SUBGRID_PAGE_SIZE = 5;
 export const SYNC_SESSION_DETAIL_PAGE_SIZE = 10;
 
 export const JOB_STATUS_TTL_SECONDS = 600;
+export const JOB_STATUS_KEY_PREFIX = "job";
+export const JOB_STATUS_KEY_SUFFIX = "status";
+export const JOB_STATUS_CHANNEL_PREFIX = "job:status:";

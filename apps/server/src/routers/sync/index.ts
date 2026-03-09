@@ -5,6 +5,7 @@ import { evlog } from "evlog/elysia";
 import { rateLimit } from "@/middleware/rate-limit";
 import { collectionSyncSchema, csvItemSchema, orderSyncSchema } from "./model";
 import type {
+  Status,
   OrderItemSyncType,
   UpdatedSyncOrder,
   CollectionSyncType,
@@ -16,6 +17,88 @@ import SyncService from "./service";
 import { tryCatch } from "@myakiba/utils";
 import { SYNC_SESSION_STATUSES, SYNC_TYPES } from "@myakiba/constants";
 import { createId } from "@paralleldrive/cuid2";
+import {
+  jobStatusSubscriptionRegistry,
+  type JobStatusSubscription,
+} from "./job-status-subscription-registry";
+
+const MAX_JOB_STATUS_STREAM_DURATION_MS = 10 * 60 * 1000;
+
+const createTerminalJobStatus = (
+  statusMessage: string,
+  terminalState: Status["terminalState"],
+): Status => ({
+  status: statusMessage,
+  finished: true,
+  createdAt: new Date().toISOString(),
+  terminalState,
+});
+
+const jobStatusesMatch = (left: Status, right: Status): boolean =>
+  left.status === right.status &&
+  left.finished === right.finished &&
+  left.createdAt === right.createdAt &&
+  left.terminalState === right.terminalState;
+
+const toSseJobStatus = (jobStatus: Status) =>
+  sse({
+    data: jobStatus,
+  });
+
+const waitForAbort = (signal: AbortSignal): Promise<"aborted"> => {
+  if (signal.aborted) {
+    return Promise.resolve("aborted");
+  }
+
+  return new Promise<"aborted">((resolve) => {
+    signal.addEventListener("abort", () => resolve("aborted"), { once: true });
+  });
+};
+
+type NextJobStatusEvent =
+  | Readonly<{
+      kind: "subscription";
+      event: Awaited<ReturnType<JobStatusSubscription["next"]>>;
+    }>
+  | Readonly<{
+      kind: "aborted";
+    }>
+  | Readonly<{
+      kind: "timeout";
+    }>;
+
+const waitForNextJobStatusEvent = async (
+  subscription: JobStatusSubscription,
+  abortPromise: Promise<"aborted">,
+  remainingMs: number,
+): Promise<NextJobStatusEvent> => {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  try {
+    return await Promise.race([
+      subscription.next().then(
+        (event): NextJobStatusEvent => ({
+          kind: "subscription",
+          event,
+        }),
+      ),
+      abortPromise.then(
+        (): NextJobStatusEvent => ({
+          kind: "aborted",
+        }),
+      ),
+      new Promise<NextJobStatusEvent>((resolve) => {
+        timeoutId = setTimeout(() => {
+          resolve({ kind: "timeout" });
+        }, remainingMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId !== null) {
+      clearTimeout(timeoutId);
+    }
+  }
+};
 
 const syncRouter = new Elysia({ prefix: "/sync" })
   .use(betterAuth)
@@ -991,7 +1074,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
   )
   .get(
     "/job-status",
-    async function* ({ query, user, log }) {
+    async function* ({ query, user, log, request }) {
       if (!user) {
         log.set({ outcome: "unauthorized" });
         return status(401, "Unauthorized");
@@ -1004,66 +1087,159 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       });
 
       const { jobId } = query;
-      const MAX_POLL_DURATION_MS = 10 * 60 * 1000; // 10 minutes
-      const startTime = Date.now();
+      const startedAt = Date.now();
+      const abortPromise = waitForAbort(request.signal);
 
-      while (true) {
-        if (Date.now() - startTime > MAX_POLL_DURATION_MS) {
-          log.set({ outcome: "timeout" });
-          yield sse({
-            data: {
-              status: "Status stream timed out — refresh to check latest status",
-              finished: true,
-              createdAt: new Date().toISOString(),
-              terminalState: "timeout",
-            },
-          });
-          return;
+      const { data: initialJobStatus, error: initialJobStatusError } = await tryCatch(
+        SyncService.getJobStatus(jobId, user.id),
+      );
+
+      if (initialJobStatusError) {
+        const message =
+          initialJobStatusError.message === "SYNC_JOB_NOT_FOUND"
+            ? "Job not found"
+            : "Error fetching job status";
+
+        if (initialJobStatusError.message === "SYNC_JOB_NOT_FOUND") {
+          log.set({ outcome: "not_found" });
+        } else {
+          log.error(initialJobStatusError, { step: "getJobStatus", outcome: "error" });
         }
 
-        const { data: jobStatus, error } = await tryCatch(SyncService.getJobStatus(jobId, user.id));
+        yield toSseJobStatus(createTerminalJobStatus(message, "error"));
+        return;
+      }
 
-        if (error) {
-          const message =
-            error.message === "SYNC_JOB_NOT_FOUND" ? "Job not found" : "Error fetching job status";
+      yield toSseJobStatus(initialJobStatus);
 
-          if (error.message === "SYNC_JOB_NOT_FOUND") {
-            log.set({ outcome: "not_found" });
-          } else {
-            log.error(error, { step: "getJobStatus", outcome: "error" });
-          }
-
-          yield sse({
-            data: {
-              status: message,
-              finished: true,
-              createdAt: new Date().toISOString(),
-              terminalState: "error",
-            },
-          });
-          return;
-        }
-
-        yield sse({
-          data: {
-            status: jobStatus.status,
-            finished: jobStatus.finished,
-            createdAt: jobStatus.createdAt,
-            terminalState: jobStatus.terminalState,
+      if (initialJobStatus.finished) {
+        log.set({
+          outcome: initialJobStatus.terminalState === "success" ? "success" : "error",
+          result: {
+            terminalState: initialJobStatus.terminalState,
           },
         });
+        return;
+      }
 
-        if (jobStatus.finished) {
+      const { data: subscription, error: subscriptionError } = await tryCatch(
+        jobStatusSubscriptionRegistry.subscribe(jobId),
+      );
+
+      if (subscriptionError) {
+        log.error(subscriptionError, {
+          step: "subscribeJobStatus",
+          outcome: "error",
+        });
+        yield toSseJobStatus(
+          createTerminalJobStatus(
+            "Status stream connection lost — refresh to check latest status",
+            "error",
+          ),
+        );
+        return;
+      }
+
+      try {
+        const { data: replayJobStatus, error: replayJobStatusError } = await tryCatch(
+          SyncService.getJobStatus(jobId, user.id),
+        );
+
+        if (replayJobStatusError) {
+          const message =
+            replayJobStatusError.message === "SYNC_JOB_NOT_FOUND"
+              ? "Job not found"
+              : "Error fetching job status";
+
+          if (replayJobStatusError.message === "SYNC_JOB_NOT_FOUND") {
+            log.set({ outcome: "not_found" });
+          } else {
+            log.error(replayJobStatusError, { step: "getJobStatusReplay", outcome: "error" });
+          }
+
+          yield toSseJobStatus(createTerminalJobStatus(message, "error"));
+          return;
+        }
+
+        if (!jobStatusesMatch(initialJobStatus, replayJobStatus)) {
+          yield toSseJobStatus(replayJobStatus);
+        }
+
+        if (replayJobStatus.finished) {
           log.set({
-            outcome: jobStatus.terminalState === "success" ? "success" : "error",
+            outcome: replayJobStatus.terminalState === "success" ? "success" : "error",
             result: {
-              terminalState: jobStatus.terminalState,
+              terminalState: replayJobStatus.terminalState,
             },
           });
           return;
         }
 
-        await Bun.sleep(2000);
+        while (true) {
+          const remainingMs = MAX_JOB_STATUS_STREAM_DURATION_MS - (Date.now() - startedAt);
+
+          if (remainingMs <= 0) {
+            log.set({ outcome: "timeout" });
+            yield toSseJobStatus(
+              createTerminalJobStatus(
+                "Status stream timed out — refresh to check latest status",
+                "timeout",
+              ),
+            );
+            return;
+          }
+
+          const nextEvent = await waitForNextJobStatusEvent(
+            subscription,
+            abortPromise,
+            remainingMs,
+          );
+
+          if (nextEvent.kind === "aborted") {
+            return;
+          }
+
+          if (nextEvent.kind === "timeout") {
+            log.set({ outcome: "timeout" });
+            yield toSseJobStatus(
+              createTerminalJobStatus(
+                "Status stream timed out — refresh to check latest status",
+                "timeout",
+              ),
+            );
+            return;
+          }
+
+          if (nextEvent.event.kind === "error") {
+            if (!request.signal.aborted) {
+              log.error(nextEvent.event.error, {
+                step: "jobStatusSubscription",
+                outcome: "error",
+              });
+              yield toSseJobStatus(
+                createTerminalJobStatus(
+                  "Status stream connection lost — refresh to check latest status",
+                  "error",
+                ),
+              );
+            }
+            return;
+          }
+
+          yield toSseJobStatus(nextEvent.event.status);
+
+          if (nextEvent.event.status.finished) {
+            log.set({
+              outcome: nextEvent.event.status.terminalState === "success" ? "success" : "error",
+              result: {
+                terminalState: nextEvent.event.status.terminalState,
+              },
+            });
+            return;
+          }
+        }
+      } finally {
+        await subscription.unsubscribe();
       }
     },
     {
