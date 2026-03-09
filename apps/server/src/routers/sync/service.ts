@@ -36,12 +36,24 @@ import {
   syncOrderSchema,
 } from "@myakiba/schemas";
 import { JOB_STATUS_TTL_SECONDS } from "@myakiba/constants";
+import { createLogger } from "evlog";
 
 const syncQueue = new Queue("sync-queue", {
   connection: {
     host: env.REDIS_HOST,
     port: env.REDIS_PORT,
+    enableOfflineQueue: false,
   },
+});
+
+syncQueue.on("error", (err: Error) => {
+  const queueLog = createLogger({
+    action: "sync.queue",
+    outcome: "error",
+    queue: { name: "sync-queue" },
+  });
+  queueLog.error(err);
+  queueLog.emit();
 });
 
 type SyncSessionUpdatePayload = Partial<

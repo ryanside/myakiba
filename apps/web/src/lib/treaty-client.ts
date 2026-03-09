@@ -77,6 +77,7 @@ const normalizeRequestBody = (
 };
 
 export const app = treaty<App>(env.VITE_SERVER_URL, {
+  parseDate: false,
   fetch: {
     credentials: "include",
   },

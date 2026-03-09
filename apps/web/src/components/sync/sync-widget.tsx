@@ -98,6 +98,12 @@ export default function SyncWidget({
 
   return (
     <>
+      {activeSessions.map((activeSession) =>
+        activeSession.jobId ? (
+          <SyncSessionObserver key={activeSession.id} jobId={activeSession.jobId} />
+        ) : null,
+      )}
+
       <Popover>
         <PopoverTrigger asChild>
           {TriggerWrapper ? (
@@ -250,6 +256,11 @@ export default function SyncWidget({
   );
 }
 
+function SyncSessionObserver({ jobId }: { readonly jobId: string }) {
+  useSyncJobStatusQuery(jobId);
+  return null;
+}
+
 type ActiveSessionProps = {
   readonly session: {
     readonly id: string;
@@ -321,7 +332,7 @@ function ActiveSessionItem({ session }: ActiveSessionProps) {
         )}
         {displayStatus && (
           <p
-            className={`mt-1.5 truncate text-xs ${
+            className={`mt-1.5 text-xs ${
               isJobError ? "text-destructive" : "text-muted-foreground"
             }`}
           >

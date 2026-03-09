@@ -2,6 +2,7 @@ import * as cheerio from "cheerio";
 import path from "path";
 import { URL } from "url";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { createError } from "evlog";
 import {
   extractArrayData,
   extractArrayDataWithIds,
@@ -13,6 +14,8 @@ import {
 import { createFetchOptions, setJobStatus } from "./utils";
 import type {
   ScrapedItem,
+  ScrapeFailure,
+  ScrapeResult,
   ScrapeImageParams,
   ScrapeSingleItemParams,
   ScrapeItemsParams,
@@ -28,17 +31,20 @@ const s3Client = new S3Client({
 
 export const scrapeImage = async ({
   imageUrl,
+  log,
   maxRetries = 3,
   baseDelayMs = 1000,
 }: ScrapeImageParams) => {
-  console.time("Scraping Image Duration");
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`Scraping image ${imageUrl} (attempt ${attempt}/${maxRetries})`);
       const response = await fetch(imageUrl, createFetchOptions(true));
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status} for ${imageUrl}`);
+        throw createError({
+          message: `HTTP ${response.status} for ${imageUrl}`,
+          status: response.status,
+          why: "Image URL returned non-OK status",
+        });
       }
 
       const imageBuffer = Buffer.from(await response.arrayBuffer());
@@ -47,12 +53,13 @@ export const scrapeImage = async ({
       const contentType = response.headers.get("content-type");
 
       if (!contentType || !contentType.startsWith("image/")) {
-        throw new Error("URL does not point to a valid image content type.");
+        throw createError({
+          message: "URL does not point to a valid image content type",
+          why: `Response content-type was "${contentType ?? "null"}"`,
+          fix: "Verify the image URL points to a valid image",
+        });
       }
-      console.log(`Detected filename: ${filename}`);
-      console.log(`Detected content-type: ${contentType}`);
 
-      console.log("Uploading to S3...");
       const command = new PutObjectCommand({
         Bucket: env.AWS_BUCKET_NAME,
         Key: filename,
@@ -62,26 +69,29 @@ export const scrapeImage = async ({
       const uploadResult = await s3Client.send(command);
 
       if (uploadResult.$metadata.httpStatusCode !== 200) {
-        throw new Error("Failed to upload image to S3");
+        throw createError({
+          message: "Failed to upload image to S3",
+          status: 502,
+          why: `S3 PutObject returned status ${uploadResult.$metadata.httpStatusCode}`,
+        });
       }
 
       const imageS3Url =
         env.NODE_ENV === "production"
           ? `https://static.myakiba.app/${filename}`
           : `https://${env.AWS_BUCKET_NAME}.s3.${env.AWS_BUCKET_REGION}.amazonaws.com/${filename}`;
-      console.timeEnd("Scraping Image Duration");
 
       return imageS3Url;
     } catch (error) {
-      console.error(`Error scraping image ${imageUrl} (attempt ${attempt}/${maxRetries}):`, error);
-
       if (attempt === maxRetries) {
-        console.error(`Failed to scrape image ${imageUrl} after ${maxRetries} attempts`);
+        log.warn(`Image scrape exhausted retries for ${imageUrl}`);
         throw error;
       }
 
+      const message = error instanceof Error ? error.message : String(error);
+      log.warn(`Image scrape attempt ${attempt}/${maxRetries} failed: ${message}`);
+
       const delayMs = baseDelayMs * Math.pow(2, attempt - 1);
-      console.log(`Retrying image ${imageUrl} in ${delayMs}ms...`);
       await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
   }
@@ -91,13 +101,13 @@ export const scrapeImage = async ({
 
 export const scrapeSingleItem = async ({
   id,
+  log,
   maxRetries = 3,
   baseDelayMs = 1000,
   jobId,
   overallIndex,
   totalItems,
 }: ScrapeSingleItemParams): Promise<ScrapedItem | null> => {
-  console.time("Scraping Duration");
   await setJobStatus({
     redis,
     jobId,
@@ -105,15 +115,20 @@ export const scrapeSingleItem = async ({
     finished: false,
   });
 
+  const attemptErrors: string[] = [];
+
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const url = `https://myfigurecollection.net/item/${id}`;
-      console.log(`Scraping ID ${id} (attempt ${attempt}/${maxRetries})`);
 
       const response = await fetch(url, createFetchOptions());
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status} for ID ${id}`);
+        throw createError({
+          message: `HTTP ${response.status} for item ${id}`,
+          status: response.status,
+          why: "MFC item page returned non-OK status",
+        });
       }
 
       const html = await response.text();
@@ -208,7 +223,10 @@ export const scrapeSingleItem = async ({
       }
 
       if (!category) {
-        throw new Error(`Invalid or missing category for ID ${id}`);
+        throw createError({
+          message: `Invalid or missing category for item ${id}`,
+          why: "Item page does not contain a recognized category",
+        });
       }
 
       let image = "";
@@ -216,12 +234,13 @@ export const scrapeSingleItem = async ({
       const imageUrl = imageElement.attr("src");
 
       if (imageUrl) {
-        console.log(`Scraping image for ID ${id}`);
-        const imageResponse = await scrapeImage({ imageUrl, maxRetries, baseDelayMs });
+        const imageResponse = await scrapeImage({ imageUrl, log, maxRetries, baseDelayMs });
         if (!imageResponse || imageResponse === null) {
-          throw new Error(`Failed to scrape image for ID ${id}`);
+          throw createError({
+            message: `Failed to scrape image for item ${id}`,
+            why: "Image scrape returned null after all retries",
+          });
         }
-        console.log(`Successfully scraped image for ID ${id}`);
         image = imageResponse;
       }
 
@@ -245,22 +264,21 @@ export const scrapeSingleItem = async ({
         image,
       };
 
-      console.log(`Successfully scraped ID ${id} on attempt ${attempt}`);
-      console.timeEnd("Scraping Duration");
-
       return scrapedItem;
     } catch (error) {
-      console.error(`Error scraping item ${id} (attempt ${attempt}/${maxRetries}):`, error);
+      const message = error instanceof Error ? error.message : String(error);
+      attemptErrors.push(message);
 
       if (attempt === maxRetries) {
-        console.error(`Failed to scrape ID ${id} after ${maxRetries} attempts`);
-        throw error;
+        log.warn(`Item ${id} failed after ${maxRetries} attempts`);
+        const finalError = error instanceof Error ? error : new Error(String(error));
+        (finalError as Error & { attemptErrors: string[] }).attemptErrors = attemptErrors;
+        throw finalError;
       }
 
-      // Calculate exponential backoff delay: 1s, 2s, 4s, 8s...
-      const delayMs = baseDelayMs * Math.pow(2, attempt - 1);
-      console.log(`Retrying ID ${id} in ${delayMs}ms...`);
+      log.warn(`Item ${id} attempt ${attempt}/${maxRetries} failed: ${message}`);
 
+      const delayMs = baseDelayMs * Math.pow(2, attempt - 1);
       await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
   }
@@ -270,19 +288,17 @@ export const scrapeSingleItem = async ({
 
 export const scrapeItems = async ({
   itemIds,
+  log,
   maxRetries = 3,
   baseDelayMs = 1000,
   jobId,
   startingIndex = 0,
   totalItems = itemIds.length,
-}: ScrapeItemsParams): Promise<ScrapedItem[]> => {
-  console.time("Scraping Duration");
-
-  console.log(`Starting to scrape ${itemIds.length} items with up to ${maxRetries} retries each`);
-
+}: ScrapeItemsParams): Promise<ScrapeResult> => {
   const promises = itemIds.map((id, index) =>
     scrapeSingleItem({
       id,
+      log,
       maxRetries,
       baseDelayMs,
       jobId,
@@ -292,79 +308,75 @@ export const scrapeItems = async ({
   );
   const results = await Promise.allSettled(promises);
 
-  const successfulResults = results
-    .filter(
-      (result): result is PromiseFulfilledResult<ScrapedItem> =>
-        result.status === "fulfilled" && result.value !== null,
-    )
-    .map((result) => result.value);
+  const successful: ScrapedItem[] = [];
+  const failures: ScrapeFailure[] = [];
 
-  const failures = results.filter((result) => result.status === "rejected");
-  if (failures.length > 0) {
-    console.warn(`Failed to scrape ${failures.length} out of ${itemIds.length} items`);
+  for (let i = 0; i < results.length; i++) {
+    const result = results[i];
+    if (result.status === "fulfilled" && result.value !== null) {
+      successful.push(result.value);
+    } else if (result.status === "rejected") {
+      const reason = result.reason as Error & { attemptErrors?: string[] };
+      failures.push({
+        id: itemIds[i],
+        attemptErrors: reason.attemptErrors ?? [reason.message ?? String(reason)],
+      });
+    }
   }
 
-  console.timeEnd("Scraping Duration");
+  if (failures.length > 0) {
+    log.warn(`Failed to scrape ${failures.length}/${itemIds.length} items`);
+  }
 
-  console.log(`Successfully scraped ${successfulResults.length} out of ${itemIds.length} items`);
-  return successfulResults;
+  return { successful, failures };
 };
 
 export const scrapedItemsWithRateLimit = async ({
   itemIds,
+  log,
   maxRetries = 3,
   baseDelayMs = 1000,
   jobId,
-}: Omit<ScrapeItemsParams, "startingIndex" | "totalItems">): Promise<ScrapedItem[]> => {
-  console.time("Rate-Limited Scraping Duration");
+}: Omit<ScrapeItemsParams, "startingIndex" | "totalItems">): Promise<ScrapeResult> => {
   const startTime = Date.now();
 
   const batchSize = 5;
   const delayMs = 2000;
 
-  console.log(`Starting rate-limited scraping of ${itemIds.length} items`);
-
-  console.log(`Batch size: ${batchSize}, Delay between batches: ${delayMs}ms`);
-
-  console.log(`Max retries per item: ${maxRetries}, Base retry delay: ${baseDelayMs}ms`);
-
-  const allResults: ScrapedItem[] = [];
+  const allSuccessful: ScrapedItem[] = [];
+  const allFailures: ScrapeFailure[] = [];
   const totalBatches = Math.ceil(itemIds.length / batchSize);
 
   for (let i = 0; i < itemIds.length; i += batchSize) {
     const batch = itemIds.slice(i, i + batchSize);
     const batchNumber = Math.floor(i / batchSize) + 1;
 
-    console.log(
-      `Processing batch ${batchNumber}/${totalBatches} (${batch.length} items): [${batch.join(", ")}]`,
-    );
+    log.info(`Batch ${batchNumber}/${totalBatches}: processing ${batch.length} items`);
 
-    const batchResults = await scrapeItems({
+    const { successful, failures } = await scrapeItems({
       itemIds: batch,
+      log,
       maxRetries,
       baseDelayMs,
       jobId,
       startingIndex: i,
       totalItems: itemIds.length,
     });
-    allResults.push(...batchResults);
+    allSuccessful.push(...successful);
+    allFailures.push(...failures);
 
-    console.log(
-      `Batch ${batchNumber} completed: ${batchResults.length}/${batch.length} successful`,
-    );
     if (i + batchSize < itemIds.length) {
-      console.log(`Waiting ${delayMs}ms before next batch...`);
       await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
   }
 
-  console.timeEnd("Rate-Limited Scraping Duration");
-  const endTime = Date.now();
-  const duration = endTime - startTime;
-  console.log(
-    `Rate-limited scraping completed in ${duration}ms (${(duration / 1000).toFixed(2)}s)`,
-  );
-  console.log(`Successfully scraped ${allResults.length} out of ${itemIds.length} items`);
-  console.log(`Average time per item: ${(duration / itemIds.length).toFixed(0)}ms`);
-  return allResults;
+  const durationMs = Date.now() - startTime;
+  log.set({
+    scrape: {
+      durationMs,
+      avgPerItemMs: Math.round(durationMs / itemIds.length),
+    },
+  });
+
+  return { successful: allSuccessful, failures: allFailures };
 };

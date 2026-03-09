@@ -3,11 +3,11 @@ import SearchService from "./service";
 import * as z from "zod";
 import { tryCatch } from "@myakiba/utils";
 import { betterAuth } from "@/middleware/better-auth";
-import { evlog } from "@/middleware/evlog";
+import { evlog } from "evlog/elysia";
 
 const searchRouter = new Elysia({ prefix: "/search" })
   .use(betterAuth)
-  .use(evlog)
+  .use(evlog())
   .get(
     "/",
     async ({ query, user, log }) => {

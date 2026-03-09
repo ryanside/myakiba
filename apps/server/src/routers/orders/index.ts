@@ -10,12 +10,12 @@ import {
 import { cascadeOptionsSchema } from "@myakiba/schemas";
 import { tryCatch } from "@myakiba/utils";
 import { betterAuth } from "@/middleware/better-auth";
-import { evlog } from "@/middleware/evlog";
+import { evlog } from "evlog/elysia";
 import type { Order, OrderQueryResponse } from "@myakiba/types";
 
 const ordersRouter = new Elysia({ prefix: "/orders" })
   .use(betterAuth)
-  .use(evlog)
+  .use(evlog())
   .get(
     "/",
     async ({ query, user, log }) => {

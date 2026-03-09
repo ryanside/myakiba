@@ -14,7 +14,7 @@
       "drizzle-zod": "^0.8.3",
       "ioredis": "^5.9.3",
       "postgres": "^3.4.8",
-      "bullmq": "^5.68.0",
+      "bullmq": "^5.70.4",
       "@paralleldrive/cuid2": "^3.3.0",
       "dotenv": "^17.2.4",
       "uuid": "^13.0.0",
@@ -23,7 +23,8 @@
       "@eslint/js": "^10.0.1",
       "eslint": "^10.0.0",
       "typescript-eslint": "^8.55.0",
-      "date-fns": "^4.1.0"
+      "date-fns": "^4.1.0",
+      "evlog": "^2.4.1"
     }
   },
   "scripts": {
@@ -48,12 +49,14 @@
     "redis:stop": "turbo -F @myakiba/redis stop",
     "redis:down": "turbo -F @myakiba/redis down",
     "fmt": "oxfmt",
-    "fmt:check": "oxfmt --check"
+    "fmt:check": "oxfmt --check",
+    "prepare": "husky"
   },
   "dependencies": {},
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "eslint": "^10.0.0",
+    "husky": "^9.1.7",
     "oxfmt": "^0.32.0",
     "turbo": "^2.8.7",
     "typescript": "^5.9.3",

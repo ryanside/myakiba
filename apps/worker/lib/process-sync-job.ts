@@ -1,25 +1,9 @@
 import { scrapeItems, scrapedItemsWithRateLimit } from "./scrape";
 import { setJobStatus, updateSyncSessionCounts, batchUpdateSyncSessionItemStatuses } from "./utils";
-import type { ScrapedItem } from "./types";
-import type Redis from "ioredis";
+import type { ProcessSyncJobParams, ProcessSyncJobResult } from "./types";
 
 const SCRAPE_FAILED_MESSAGE =
   "Sync failed: Failed to scrape items. Please try again. MFC might be down, or the MFC item IDs may be invalid.";
-
-export type ProcessSyncJobContext = {
-  readonly redis: Redis;
-  readonly jobId: string;
-  readonly syncSessionId: string;
-  readonly userId: string;
-};
-
-export type ProcessSyncJobParams = {
-  readonly itemIds: readonly number[];
-  readonly scrapeRowCount: number;
-  readonly existingCount: number;
-  readonly context: ProcessSyncJobContext;
-  readonly finalize: (successfulResults: readonly ScrapedItem[]) => Promise<void>;
-};
 
 export async function processSyncJob({
   itemIds,
@@ -27,10 +11,19 @@ export async function processSyncJob({
   existingCount,
   context,
   finalize,
-}: ProcessSyncJobParams): Promise<readonly ScrapedItem[]> {
-  const { redis, jobId, syncSessionId } = context;
+}: ProcessSyncJobParams): Promise<ProcessSyncJobResult> {
+  const { redis, jobId, syncSessionId, log } = context;
 
-  const scrapeMethod = itemIds.length <= 5 ? scrapeItems : scrapedItemsWithRateLimit;
+  const scrapeStrategy = itemIds.length <= 5 ? "standard" : "rate_limited";
+  const scrapeMethod = scrapeStrategy === "standard" ? scrapeItems : scrapedItemsWithRateLimit;
+
+  log.set({
+    scrape: {
+      strategy: scrapeStrategy,
+      maxRetries: 3,
+      baseDelayMs: 1000,
+    },
+  });
 
   await setJobStatus({
     redis,
@@ -41,16 +34,26 @@ export async function processSyncJob({
     sessionStatus: "processing",
   });
 
-  const successfulResults = await scrapeMethod({
+  const { successful: successfulResults, failures } = await scrapeMethod({
     itemIds: [...itemIds],
     maxRetries: 3,
     baseDelayMs: 1000,
     jobId,
+    log,
   });
 
   const scrapedItemIds = successfulResults.map((r) => r.id);
-  const scrapedItemIdSet = new Set(scrapedItemIds);
-  const failedItemIds = itemIds.filter((id) => !scrapedItemIdSet.has(id));
+  const failedItemIds = failures.map((f) => f.id);
+
+  log.set({
+    items: {
+      scraped: successfulResults.length,
+      failed: failedItemIds.length,
+      failedIds: failedItemIds,
+    },
+    scrapeErrors: failures,
+  });
+
   await batchUpdateSyncSessionItemStatuses({
     syncSessionId,
     scrapedItemIds,
@@ -79,9 +82,37 @@ export async function processSyncJob({
       successCount,
       failCount,
     });
-    return successfulResults;
+
+    const processedAt = new Date().toISOString();
+
+    return {
+      processedAt,
+      scrapeStrategy,
+      scrapedItemIds,
+      failedItemIds,
+      scrapedCount: successfulResults.length,
+      failedCount: failedItemIds.length,
+      successCount,
+      failCount,
+      sessionStatus,
+      statusMessage,
+      persistence: null,
+    };
   }
 
-  await finalize(successfulResults);
-  return successfulResults;
+  const finalizeResult = await finalize(successfulResults);
+
+  return {
+    processedAt: finalizeResult.processedAt,
+    scrapeStrategy,
+    scrapedItemIds,
+    failedItemIds,
+    scrapedCount: successfulResults.length,
+    failedCount: failedItemIds.length,
+    successCount: finalizeResult.successCount,
+    failCount: finalizeResult.failCount,
+    sessionStatus: finalizeResult.sessionStatus,
+    statusMessage: finalizeResult.statusMessage,
+    persistence: finalizeResult.persistence,
+  };
 }

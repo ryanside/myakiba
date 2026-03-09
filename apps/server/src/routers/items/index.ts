@@ -2,12 +2,12 @@ import { Elysia, status } from "elysia";
 import ItemService from "./service";
 import { tryCatch } from "@myakiba/utils";
 import { betterAuth } from "@/middleware/better-auth";
-import { evlog } from "@/middleware/evlog";
+import { evlog } from "evlog/elysia";
 import { itemParamSchema, customItemSchema } from "./model";
 
 const itemsRouter = new Elysia({ prefix: "/items" })
   .use(betterAuth)
-  .use(evlog)
+  .use(evlog())
   .post(
     "/custom",
     async ({ body, user, log }) => {

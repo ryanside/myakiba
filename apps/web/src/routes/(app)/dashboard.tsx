@@ -80,9 +80,7 @@ function DashboardContent() {
           </h1>
         </div>
         <p className="text-muted-foreground text-sm font-light text-balance ">
-          You have {ordersSummary[0]?.totalActiveOrderCount ?? 0} active orders,{" "}
-          {unpaidOrders.length} unpaid orders, and {ordersSummary[0]?.thisMonthOrderCount ?? 0}{" "}
-          orders this month.
+          Here’s your collection and orders at a glance.
         </p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

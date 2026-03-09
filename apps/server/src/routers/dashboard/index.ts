@@ -1,6 +1,6 @@
 import { Elysia, status } from "elysia";
 import { betterAuth } from "@/middleware/better-auth";
-import { evlog } from "@/middleware/evlog";
+import { evlog } from "evlog/elysia";
 import DashboardService from "./service";
 import { tryCatch } from "@myakiba/utils";
 import * as z from "zod";
@@ -12,7 +12,7 @@ const releaseCalendarQuerySchema = z.object({
 
 const dashboardRouter = new Elysia({ prefix: "/dashboard" })
   .use(betterAuth)
-  .use(evlog)
+  .use(evlog())
   .get(
     "/",
     async ({ user, log }) => {

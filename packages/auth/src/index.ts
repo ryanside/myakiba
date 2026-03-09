@@ -61,9 +61,6 @@ export const auth = betterAuth({
         text: `Click the link to reset your password: ${url}`,
       });
     },
-    onPasswordReset: async ({ user }) => {
-      console.log(`Password for user ${user.email} has been reset.`);
-    },
   },
   emailVerification: {
     autoSignInAfterVerification: true,

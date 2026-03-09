@@ -2,9 +2,9 @@ import { Elysia, status } from "elysia";
 import * as z from "zod";
 import EntriesService from "./service";
 import { tryCatch } from "@myakiba/utils";
-import { evlog } from "@/middleware/evlog";
+import { evlog } from "evlog/elysia";
 
-const entriesRouter = new Elysia({ prefix: "/entries" }).use(evlog).get(
+const entriesRouter = new Elysia({ prefix: "/entries" }).use(evlog()).get(
   "/search",
   async ({ query, log }) => {
     log.set({ action: "entries.search", query: { search: query.search } });

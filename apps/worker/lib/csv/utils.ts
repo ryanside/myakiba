@@ -1,6 +1,10 @@
 import type { ShippingMethod } from "@myakiba/types";
-import type { FinalizeCsvSyncParams } from "../types";
-import { parseMoneyToMinorUnits } from "@myakiba/utils";
+import type {
+  FinalizeCsvSyncParams,
+  FinalizePersistenceSummary,
+  FinalizeSyncResult,
+} from "../types";
+import { parseMoneyToMinorUnits, tryCatch } from "@myakiba/utils";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@myakiba/db";
 import { assembleScrapedData } from "../assemble-scraped-data";
@@ -21,12 +25,13 @@ import {
 export async function finalizeCsvSync({
   successfulResults,
   job,
+  log,
   userId,
   redis,
   csvItems,
   existingCount,
   syncSessionId,
-}: FinalizeCsvSyncParams) {
+}: FinalizeCsvSyncParams): Promise<FinalizeSyncResult> {
   const { items, entries, entryToItems, itemReleases, latestReleaseIdByExternalId } =
     assembleScrapedData(successfulResults);
   const successfulCollectionItems = csvItems.filter((i) =>
@@ -102,15 +107,19 @@ export async function finalizeCsvSync({
       releaseDate: latestReleaseIdByExternalId.get(ci.itemExternalId)?.date ?? null,
     }));
 
-  console.log("Items to be inserted:", items);
-  console.log("Releases to be inserted:", itemReleases);
-  console.log("Entries to be inserted:", entries);
-  console.log("Entry to Items to be inserted:", entryToItems);
-  console.log("Collection Items to be inserted:", collectionItems);
-  console.log("Orders to be inserted:", orders);
+  const persistence: FinalizePersistenceSummary = {
+    items: items.length,
+    itemReleases: itemReleases.length,
+    entries: entries.length,
+    entryToItems: entryToItems.length,
+    collectionItems: collectionItems.length,
+    orders: orders.length,
+  };
 
-  try {
-    await db.transaction(async (tx) => {
+  log.set({ persistence });
+
+  const { error } = await tryCatch(
+    db.transaction(async (tx) => {
       if (items.length > 0) {
         await tx
           .insert(item)
@@ -268,10 +277,10 @@ export async function finalizeCsvSync({
       if (collectionItemsToInsert.length > 0) {
         await tx.insert(collection).values(collectionItemsToInsert);
       }
-    });
+    }),
+  );
 
-    console.log("Successfully inserted data to database.");
-  } catch (error) {
+  if (error) {
     const scrapedItemIds = successfulResults.map((result) => result.id);
     const successCount = existingCount;
     const failCount = scrapeRowCount;
@@ -304,10 +313,23 @@ export async function finalizeCsvSync({
       successCount,
       failCount,
     });
-    console.error("Failed to insert data to database.", error);
+
+    if (error instanceof Error) {
+      log.set({
+        outcome: "error",
+        sync: { sessionStatus, statusMessage },
+      });
+      log.error(error);
+    }
+
     return {
-      status: "Sync Job completed",
       processedAt: new Date().toISOString(),
+      successCount,
+      failCount,
+      scrapedPersistedRowCount: 0,
+      sessionStatus,
+      statusMessage,
+      persistence,
     };
   }
 
@@ -341,7 +363,12 @@ export async function finalizeCsvSync({
   });
 
   return {
-    status: "Sync Job completed",
     processedAt: new Date().toISOString(),
+    successCount,
+    failCount,
+    scrapedPersistedRowCount,
+    sessionStatus,
+    statusMessage: `Sync ${statusLabel}: Synced ${successCount} out of ${totalRowCount} items`,
+    persistence,
   };
 }

@@ -29,9 +29,8 @@
     "drizzle-orm": "catalog:",
     "drizzle-zod": "catalog:",
     "elysia": "catalog:",
-    "evlog": "^2.1.0",
+    "evlog": "catalog:",
     "ioredis": "catalog:",
-    "logixlysia": "^6.2.0",
     "web": "workspace:*",
     "zod": "catalog:"
   },
