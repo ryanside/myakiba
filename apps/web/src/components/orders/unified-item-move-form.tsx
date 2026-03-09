@@ -12,7 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { MaskInput } from "@/components/ui/mask-input";
 import { Label } from "@/components/ui/label";
@@ -78,6 +78,7 @@ export default function UnifiedItemMoveForm({
   currency,
 }: UnifiedItemMoveFormProps) {
   const [moveMode, setMoveMode] = useState<"existing" | "new">("existing");
+  const targetOrderListId = useId();
 
   const userCurrency = currency || "USD";
   const userLocale = getCurrencyLocale(userCurrency);
@@ -223,7 +224,9 @@ export default function UnifiedItemMoveForm({
                           <Button
                             variant="outline"
                             role="combobox"
+                            aria-controls={targetOrderListId}
                             aria-expanded={popoverOpen}
+                            aria-haspopup="listbox"
                             className="w-full justify-between"
                             type="button"
                           >
@@ -248,7 +251,7 @@ export default function UnifiedItemMoveForm({
                               className="rounded-none shadow-none border-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-background"
                             />
                             {(data?.orderIdsAndTitles ?? error) !== undefined && (
-                              <CommandList className="space-y-2 p-1">
+                              <CommandList id={targetOrderListId} className="space-y-2 p-1">
                                 {error && (
                                   <CommandEmpty>
                                     Error searching orders: {error.message}

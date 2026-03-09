@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import type { InputHTMLAttributes } from "react";
 import { Input } from "./ui/input";
 import { CommandInput } from "./ui/command";
@@ -15,33 +15,56 @@ export function DebouncedInput({
   debounce?: number;
   isCommandInput?: boolean;
 } & Omit<InputHTMLAttributes<HTMLInputElement>, "onChange">) {
-  const [value, setValue] = useState<string | number>(initialValue);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const commandInputRef = useRef<HTMLInputElement | null>(null);
+  const onChangeRef = useRef(onChange);
+  const timeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
-    setValue(initialValue);
-  }, [initialValue]);
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   useEffect(() => {
+    const inputElement = isCommandInput ? commandInputRef.current : inputRef.current;
+    const nextValue = String(initialValue);
+
+    if (inputElement && inputElement.value !== nextValue) {
+      inputElement.value = nextValue;
+    }
+  }, [initialValue, isCommandInput]);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current !== null) {
+        window.clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleValueChange = (value: string | number): void => {
+    if (timeoutRef.current !== null) {
+      window.clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
     if (value === "" || value === 0) {
-      onChange(value);
+      onChangeRef.current(value);
       return;
     }
 
-    const timeout = setTimeout(() => {
-      onChange(value);
+    timeoutRef.current = window.setTimeout(() => {
+      onChangeRef.current(value);
+      timeoutRef.current = null;
     }, debounce);
-
-    return () => clearTimeout(timeout);
-  }, [value]);
+  };
 
   if (isCommandInput) {
     return (
       <CommandInput
         {...props}
-        value={(value as string) ?? ""}
-        onValueChange={(value) => {
-          setValue(value);
-        }}
+        ref={commandInputRef}
+        defaultValue={String(initialValue)}
+        onValueChange={handleValueChange}
       />
     );
   }
@@ -49,13 +72,18 @@ export function DebouncedInput({
   return (
     <Input
       {...props}
-      value={value ?? ""}
+      ref={inputRef}
+      defaultValue={initialValue}
       onChange={(e) => {
-        if (e.target.value === "") return setValue("");
+        if (e.target.value === "") {
+          handleValueChange("");
+          return;
+        }
+
         if (props.type === "number") {
-          setValue(e.target.valueAsNumber);
+          handleValueChange(e.target.valueAsNumber);
         } else {
-          setValue(e.target.value);
+          handleValueChange(e.target.value);
         }
       }}
     />

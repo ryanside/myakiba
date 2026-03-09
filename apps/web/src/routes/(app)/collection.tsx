@@ -53,6 +53,20 @@ function RouteComponent() {
     status,
   } = useCollectionLiveQuery(baseCollection, filters);
 
+  const collectionItems = data ?? [];
+  const limit = filters.limit ?? 10;
+  const offset = filters.offset ?? 0;
+  const pagedItems = useMemo((): CollectionItem[] => {
+    if (collectionItems.length === 0) return [];
+    return collectionItems.slice(offset, offset + limit);
+  }, [collectionItems, offset, limit]);
+
+  const totalItems = isPending ? undefined : collectionItems.length;
+  const totalSpent = useMemo((): number | undefined => {
+    if (isPending) return undefined;
+    return collectionItems.reduce((sum, item) => sum + item.price, 0);
+  }, [collectionItems, isPending]);
+
   const handleDeleteCollectionItems = useCallback(
     async (collectionIds: Set<string>): Promise<void> => {
       const transaction = baseCollection.delete(Array.from(collectionIds));
@@ -92,20 +106,6 @@ function RouteComponent() {
       </div>
     );
   }
-
-  const collectionItems = data ?? [];
-  const limit = filters.limit ?? 10;
-  const offset = filters.offset ?? 0;
-  const pagedItems = useMemo((): CollectionItem[] => {
-    if (collectionItems.length === 0) return [];
-    return collectionItems.slice(offset, offset + limit);
-  }, [collectionItems, offset, limit]);
-
-  const totalItems = isPending ? undefined : collectionItems.length;
-  const totalSpent = useMemo((): number | undefined => {
-    if (isPending) return undefined;
-    return collectionItems.reduce((sum, item) => sum + item.price, 0);
-  }, [collectionItems, isPending]);
 
   return (
     <div className="flex flex-col gap-6 mx-auto w-full">

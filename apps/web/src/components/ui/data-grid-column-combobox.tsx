@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Settings02Icon, Tick02Icon } from "@hugeicons/core-free-icons";
-import type { ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import type { Table } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -24,24 +24,33 @@ export function DataGridColumnCombobox<TData>({
   table,
   trigger,
 }: DataGridColumnComboboxProps<TData>): React.ReactElement {
+  const listboxId = useId();
+  const [isOpen, setIsOpen] = useState(false);
   const columns = table
     .getAllColumns()
     .filter((column) => typeof column.accessorFn !== "undefined" && column.getCanHide());
 
   const defaultTrigger = (
-    <Button variant="outline" role="combobox" className="justify-between">
+    <Button
+      variant="outline"
+      role="combobox"
+      aria-controls={listboxId}
+      aria-expanded={isOpen}
+      aria-haspopup="listbox"
+      className="justify-between"
+    >
       <HugeiconsIcon icon={Settings02Icon} className="h-4 w-4" />
       <span className="hidden md:block">Columns</span>
     </Button>
   );
 
   return (
-    <Popover>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>{trigger || defaultTrigger}</PopoverTrigger>
       <PopoverContent className="w-[200px] p-0" align="start">
         <Command>
           <CommandInput placeholder="Search columns..." />
-          <CommandList>
+          <CommandList id={listboxId}>
             <CommandEmpty>No column found.</CommandEmpty>
             <CommandGroup>
               <Scroller className="max-h-96">

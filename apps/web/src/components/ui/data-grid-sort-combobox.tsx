@@ -5,7 +5,7 @@ import {
   ArrowUpDownIcon,
   Cancel01Icon,
 } from "@hugeicons/core-free-icons";
-import type { ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import type { Table } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +30,8 @@ export function DataGridSortCombobox<TData>({
   onSortChange,
   trigger,
 }: DataGridSortComboboxProps<TData>): React.ReactElement {
+  const listboxId = useId();
+  const [isOpen, setIsOpen] = useState(false);
   const columns = table
     .getAllColumns()
     .filter((column) => column.getCanSort() && typeof column.accessorFn !== "undefined");
@@ -85,7 +87,14 @@ export function DataGridSortCombobox<TData>({
   };
 
   const defaultTrigger = (
-    <Button variant="outline" role="combobox" className="justify-between">
+    <Button
+      variant="outline"
+      role="combobox"
+      aria-controls={listboxId}
+      aria-expanded={isOpen}
+      aria-haspopup="listbox"
+      className="justify-between"
+    >
       {getSortButtonIcon()}
       <span className="hidden md:block">
         {currentColumnName && currentColumnName !== "createdAt"
@@ -96,12 +105,12 @@ export function DataGridSortCombobox<TData>({
   );
 
   return (
-    <Popover>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>{trigger || defaultTrigger}</PopoverTrigger>
       <PopoverContent className="w-[200px] p-0" align="start">
         <Command>
           <CommandInput placeholder="Search columns..." />
-          <CommandList>
+          <CommandList id={listboxId}>
             <CommandEmpty>No column found.</CommandEmpty>
             <CommandGroup>
               <CommandItem
