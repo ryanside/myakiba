@@ -5,7 +5,7 @@ import {
   ArrowUpDownIcon,
   Cancel01Icon,
 } from "@hugeicons/core-free-icons";
-import type { ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -40,6 +40,9 @@ export function SortCombobox({
   onSortChange,
   trigger,
 }: SortComboboxProps): React.ReactElement {
+  const listboxId = useId();
+  const [isOpen, setIsOpen] = useState(false);
+
   const handleSort = (columnId: string | null): void => {
     if (columnId === null) {
       onSortChange(null, null);
@@ -81,19 +84,26 @@ export function SortCombobox({
     : null;
 
   const defaultTrigger = (
-    <Button variant="outline" role="combobox" className="justify-between">
+    <Button
+      variant="outline"
+      role="combobox"
+      aria-controls={listboxId}
+      aria-expanded={isOpen}
+      aria-haspopup="listbox"
+      className="justify-between"
+    >
       {getSortButtonIcon()}
       <span className="hidden md:block">{currentColumnName ? currentColumnName : "Sort By"}</span>
     </Button>
   );
 
   return (
-    <Popover>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>{trigger || defaultTrigger}</PopoverTrigger>
       <PopoverContent className="w-[200px] p-0" align="start">
         <Command>
           <CommandInput placeholder="Search columns..." />
-          <CommandList>
+          <CommandList id={listboxId}>
             <CommandEmpty>No column found.</CommandEmpty>
             <CommandGroup>
               <CommandItem

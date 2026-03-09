@@ -16,7 +16,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useForm } from "@tanstack/react-form";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Field, FieldContent, FieldDescription, FieldTitle } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -64,6 +64,8 @@ export default function FiltersForm({
   onApplyFilters,
   currency,
 }: FiltersFormProps) {
+  const entriesListId = useId();
+  const [entriesPopoverOpen, setEntriesPopoverOpen] = useState(false);
   const userCurrency = currency || "USD";
   const userLocale = getCurrencyLocale(userCurrency);
 
@@ -354,11 +356,14 @@ export default function FiltersForm({
                         ))}
                       </div>
                       <div className="flex gap-2">
-                        <Popover>
+                        <Popover open={entriesPopoverOpen} onOpenChange={setEntriesPopoverOpen}>
                           <PopoverTrigger asChild>
                             <Button
                               variant="outline"
                               role="combobox"
+                              aria-controls={entriesListId}
+                              aria-expanded={entriesPopoverOpen}
+                              aria-haspopup="listbox"
                               className="w-full justify-between"
                             >
                               Select entries...
@@ -378,7 +383,7 @@ export default function FiltersForm({
                                 className="rounded-none shadow-none border-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-background"
                               />
                               {entries && entries?.entries.length > 0 && (
-                                <CommandList className="space-y-2 p-1">
+                                <CommandList id={entriesListId} className="space-y-2 p-1">
                                   {isError && (
                                     <CommandEmpty>
                                       Error searching entries: {error.message}
