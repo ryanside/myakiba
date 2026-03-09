@@ -17,7 +17,12 @@ export function DebouncedInput({
 } & Omit<InputHTMLAttributes<HTMLInputElement>, "onChange">) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const commandInputRef = useRef<HTMLInputElement | null>(null);
+  const onChangeRef = useRef(onChange);
   const timeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   useEffect(() => {
     const inputElement = isCommandInput ? commandInputRef.current : inputRef.current;
@@ -43,12 +48,12 @@ export function DebouncedInput({
     }
 
     if (value === "" || value === 0) {
-      onChange(value);
+      onChangeRef.current(value);
       return;
     }
 
     timeoutRef.current = window.setTimeout(() => {
-      onChange(value);
+      onChangeRef.current(value);
       timeoutRef.current = null;
     }, debounce);
   };
