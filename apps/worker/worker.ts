@@ -239,6 +239,9 @@ export const worker = new Worker(
     connection: {
       host: env.REDIS_HOST,
       port: env.REDIS_PORT,
+      retryStrategy(times: number): number {
+        return Math.max(Math.min(Math.exp(times), 20000), 1000);
+      },
     },
     concurrency: 2,
   },

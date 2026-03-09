@@ -76,3 +76,36 @@ process.once("SIGINT", () => {
 process.once("SIGTERM", () => {
   void shutdown("SIGTERM", 0);
 });
+
+function handleFatalError(
+  kind: "uncaughtException" | "unhandledRejection",
+  err: unknown,
+): void {
+  if (isShuttingDown) return;
+
+  const fatalLog = createLogger({
+    action: `worker.${kind}`,
+    outcome: "error",
+  });
+
+  if (err instanceof Error) {
+    fatalLog.error(err);
+  } else {
+    fatalLog.error(new Error(String(err)));
+  }
+  fatalLog.emit();
+
+  isShuttingDown = true;
+  void (async () => {
+    if (drain) await drain.flush();
+    process.exit(1);
+  })();
+}
+
+process.on("uncaughtException", (err: Error) => {
+  handleFatalError("uncaughtException", err);
+});
+
+process.on("unhandledRejection", (reason: unknown) => {
+  handleFatalError("unhandledRejection", reason);
+});
