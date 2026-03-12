@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import * as z from "zod";
-import type { EditedOrder, NewOrder, Order, CascadeOptions } from "@myakiba/types";
+import type { EditedOrder, NewOrder, Order, OrderListItem, CascadeOptions } from "@myakiba/types";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import { CascadeOptionsDropdown } from "@/components/cascade-options-dropdown";
 import { Textarea } from "../ui/textarea";
@@ -45,6 +45,7 @@ import {
 } from "@myakiba/utils";
 import { Scroller } from "../ui/scroller";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/constants";
+import { useState } from "react";
 
 type MergeOrderFormProps = {
   renderTrigger: React.ReactNode;
@@ -81,7 +82,7 @@ type EditOrderFormProps = {
   collectionIds?: Set<string>;
   type: "edit-order";
   callbackFn: (value: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
-  orderData: Order;
+  orderData: Order | OrderListItem;
   clearSelections?: () => void;
   currency?: string;
 };
@@ -91,6 +92,7 @@ type OrderFormProps = MergeOrderFormProps | SplitOrderFormProps | EditOrderFormP
 export function OrderForm(props: OrderFormProps) {
   const { callbackFn, type, orderIds, collectionIds, clearSelections, currency, renderTrigger } =
     props;
+  const [open, setOpen] = useState(false);
 
   const userCurrency = currency || "USD";
   const userLocale = getCurrencyLocale(userCurrency);
@@ -169,6 +171,7 @@ export function OrderForm(props: OrderFormProps) {
           notes: value.notes,
         };
         await callbackFn(transformedValue, cascadeOptions);
+        setOpen(false);
       } else if (type === "split") {
         const transformedValue: NewOrder = {
           title: value.title,
@@ -189,6 +192,7 @@ export function OrderForm(props: OrderFormProps) {
         };
         await callbackFn(transformedValue, cascadeOptions, collectionIds, orderIds);
         clearSelections?.();
+        setOpen(false);
       } else {
         const transformedValue: NewOrder = {
           title: value.title,
@@ -209,13 +213,14 @@ export function OrderForm(props: OrderFormProps) {
         };
         await callbackFn(transformedValue, cascadeOptions, orderIds);
         clearSelections?.();
+        setOpen(false);
       }
     },
   });
 
   if (type === "edit-order") {
     return (
-      <Sheet>
+      <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>{renderTrigger}</SheetTrigger>
         <SheetContent side="right" className="w-full sm:max-w-lg h-full">
           <form
@@ -581,28 +586,36 @@ export function OrderForm(props: OrderFormProps) {
               </div>
             </Scroller>
             <SheetFooter className="flex flex-row w-full">
-              <SheetClose asChild>
-                <Button type="button" variant="outline" className="w-full flex-1">
-                  Cancel
-                </Button>
-              </SheetClose>
+              <form.Subscribe
+                selector={(state) => [state.isSubmitting]}
+                children={([isSubmitting]) => (
+                  <SheetClose asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full flex-1"
+                      disabled={isSubmitting}
+                    >
+                      Cancel
+                    </Button>
+                  </SheetClose>
+                )}
+              />
               <form.Subscribe
                 selector={(state) => [state.canSubmit, state.isSubmitting]}
                 children={([canSubmit, isSubmitting]) => (
-                  <SheetClose asChild>
-                    <Button
-                      type="submit"
-                      disabled={!canSubmit || isSubmitting}
-                      variant="primary"
-                      className="w-full flex-1"
-                    >
-                      {isSubmitting ? (
-                        <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />
-                      ) : (
-                        "Update"
-                      )}
-                    </Button>
-                  </SheetClose>
+                  <Button
+                    type="submit"
+                    disabled={!canSubmit || isSubmitting}
+                    variant="primary"
+                    className="w-full flex-1"
+                  >
+                    {isSubmitting ? (
+                      <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />
+                    ) : (
+                      "Update"
+                    )}
+                  </Button>
                 )}
               />
             </SheetFooter>
@@ -613,7 +626,7 @@ export function OrderForm(props: OrderFormProps) {
   }
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{renderTrigger}</DialogTrigger>
       <DialogContent className="max-w-2xl">
         <form
@@ -979,25 +992,28 @@ export function OrderForm(props: OrderFormProps) {
           </Scroller>
 
           <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline" type="button">
-                Cancel
-              </Button>
-            </DialogClose>
+            <form.Subscribe
+              selector={(state) => [state.isSubmitting]}
+              children={([isSubmitting]) => (
+                <DialogClose asChild>
+                  <Button variant="outline" type="button" disabled={isSubmitting}>
+                    Cancel
+                  </Button>
+                </DialogClose>
+              )}
+            />
             <form.Subscribe
               selector={(state) => [state.canSubmit, state.isSubmitting]}
               children={([canSubmit, isSubmitting]) => (
-                <DialogClose asChild>
-                  <Button type="submit" disabled={!canSubmit} variant="primary">
-                    {isSubmitting ? (
-                      <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />
-                    ) : type === "merge" ? (
-                      "Merge"
-                    ) : (
-                      "Split"
-                    )}
-                  </Button>
-                </DialogClose>
+                <Button type="submit" disabled={!canSubmit || isSubmitting} variant="primary">
+                  {isSubmitting ? (
+                    <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />
+                  ) : type === "merge" ? (
+                    "Merge"
+                  ) : (
+                    "Split"
+                  )}
+                </Button>
               )}
             />
           </DialogFooter>

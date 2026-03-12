@@ -140,9 +140,7 @@ function RouteComponent() {
       <div className="w-full space-y-8">
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl tracking-tight">Sync</h1>
-          <p className="text-muted-foreground text-sm font-light">
-            Manage your sync sessions and add items
-          </p>
+          <p className="text-muted-foreground text-sm font-light">View your sync history</p>
         </div>
         <div className="flex flex-col items-center justify-center h-64 gap-y-4">
           <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
@@ -156,18 +154,17 @@ function RouteComponent() {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl tracking-tight">Sync</h1>
-          <p className="text-muted-foreground text-sm font-light">
-            Manage your sync sessions and add items
-          </p>
+          <p className="text-muted-foreground text-sm font-light">View your sync history</p>
         </div>
         <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground mx-1">Add:</span>
           <Button
             variant="outline"
             size="sm"
             onClick={() => setActiveSyncType("collection")}
             disabled={isSyncing}
           >
-            <HugeiconsIcon icon={LibraryIcon} className="size-3.5" />
+            <HugeiconsIcon icon={LibraryIcon} className="size-3.5 dark:text-primary" />
             Collection
           </Button>
           <Button
@@ -176,7 +173,7 @@ function RouteComponent() {
             onClick={() => setActiveSyncType("order")}
             disabled={isSyncing}
           >
-            <HugeiconsIcon icon={PackageIcon} className="size-3.5" />
+            <HugeiconsIcon icon={PackageIcon} className="size-3.5 dark:text-primary" />
             Order
           </Button>
           <Button
@@ -185,7 +182,7 @@ function RouteComponent() {
             onClick={() => setActiveSyncType("csv")}
             disabled={isSyncing}
           >
-            <HugeiconsIcon icon={FileUploadIcon} className="size-3.5" />
+            <HugeiconsIcon icon={FileUploadIcon} className="size-3.5 dark:text-primary" />
             CSV
           </Button>
         </div>

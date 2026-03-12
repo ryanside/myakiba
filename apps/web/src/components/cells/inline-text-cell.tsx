@@ -73,7 +73,7 @@ export function InlineTextCell({
       onCancel={handleCancel}
       editing={isEditing}
       onEditingChange={setIsEditing}
-      triggerMode="click"
+      triggerMode="focus"
       placeholder={placeholder}
       disabled={disabled}
       readOnly={readOnly}
@@ -85,7 +85,9 @@ export function InlineTextCell({
           e.stopPropagation();
         }}
       >
-        <Editable.Preview className={cn("w-full cursor-text", previewClassName)} />
+        <Editable.Preview
+          className={cn("w-full min-h-7 hover:bg-accent cursor-text", previewClassName)}
+        />
         <Editable.Input
           className={cn("w-full", inputClassName)}
           onClick={(e) => {

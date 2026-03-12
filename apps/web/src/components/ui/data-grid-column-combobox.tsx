@@ -69,7 +69,10 @@ export function DataGridColumnCombobox<TData>({
                     >
                       <HugeiconsIcon
                         icon={Tick02Icon}
-                        className={cn("mr-2 h-4 w-4", isVisible ? "opacity-100" : "opacity-0")}
+                        className={cn(
+                          "mr-2 h-4 w-4 text-primary",
+                          isVisible ? "opacity-100" : "opacity-0",
+                        )}
                       />
                       {columnName}
                     </CommandItem>

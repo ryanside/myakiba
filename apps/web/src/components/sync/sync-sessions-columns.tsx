@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, ArrowRight01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
+import { MinusSignSquareIcon, AddSquareIcon, Loading03Icon } from "@hugeicons/core-free-icons";
 import type { ReactNode } from "react";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import { useQueryClient } from "@tanstack/react-query";
@@ -44,9 +44,9 @@ function ExpandButton({ row }: { readonly row: Row<SyncSessionRow> }) {
       variant="ghost"
     >
       {row.getIsExpanded() ? (
-        <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 text-muted-foreground" />
+        <HugeiconsIcon icon={MinusSignSquareIcon} />
       ) : (
-        <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 text-muted-foreground" />
+        <HugeiconsIcon icon={AddSquareIcon} />
       )}
     </Button>
   );

@@ -3,6 +3,7 @@ import {
   Copy01Icon,
   Delete02Icon,
   Edit01Icon,
+  Loading03Icon,
   MoreHorizontalIcon,
   PackageIcon,
 } from "@hugeicons/core-free-icons";
@@ -30,6 +31,7 @@ import { SelectCell } from "../cells/select-cell";
 import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ORDER_STATUSES } from "@myakiba/constants";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface OrderItemSubColumnsParams {
   orderId: string;
@@ -37,6 +39,7 @@ interface OrderItemSubColumnsParams {
   onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
   currency: string;
   dateFormat: DateFormat;
+  pendingCollectionItemIds: ReadonlySet<string>;
 }
 
 export function createOrderItemSubColumns({
@@ -45,6 +48,7 @@ export function createOrderItemSubColumns({
   onDeleteItem,
   currency,
   dateFormat,
+  pendingCollectionItemIds,
 }: OrderItemSubColumnsParams): ColumnDef<OrderItem>[] {
   return [
     {
@@ -84,6 +88,9 @@ export function createOrderItemSubColumns({
       enableSorting: false,
       enableHiding: false,
       enableResizing: false,
+      meta: {
+        skeleton: <Skeleton className="size-5 rounded-xs" />,
+      },
     },
     {
       accessorKey: "title",
@@ -137,6 +144,17 @@ export function createOrderItemSubColumns({
       enableHiding: true,
       enableResizing: true,
       size: 450,
+      meta: {
+        skeleton: (
+          <div className="flex items-center gap-3">
+            <Skeleton className="size-8 rounded-sm" />
+            <div className="space-y-1.5">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3.5 w-16" />
+            </div>
+          </div>
+        ),
+      },
     },
     {
       accessorKey: "orderDate",
@@ -145,10 +163,12 @@ export function createOrderItemSubColumns({
       ),
       cell: ({ row }) => {
         const item = row.original;
+        const isPending = pendingCollectionItemIds.has(item.id);
         return (
           <PopoverDatePickerCell
             value={item.orderDate}
             dateFormat={dateFormat}
+            disabled={isPending}
             onSubmit={async (newValue) => {
               await onEditItem({ ...item, orderDate: newValue });
             }}
@@ -159,6 +179,9 @@ export function createOrderItemSubColumns({
       enableHiding: true,
       enableResizing: true,
       size: 100,
+      meta: {
+        skeleton: <Skeleton className="h-6" />,
+      },
     },
     {
       accessorKey: "releaseDate",
@@ -170,6 +193,9 @@ export function createOrderItemSubColumns({
       enableHiding: true,
       enableResizing: true,
       size: 100,
+      meta: {
+        skeleton: <Skeleton className="h-6" />,
+      },
     },
     {
       accessorKey: "count",
@@ -178,9 +204,11 @@ export function createOrderItemSubColumns({
       ),
       cell: ({ row }) => {
         const item = row.original;
+        const isPending = pendingCollectionItemIds.has(item.id);
         return (
           <InlineCountCell
             value={item.count}
+            disabled={isPending}
             onSubmit={async (newValue) => {
               await onEditItem({ ...item, count: newValue });
             }}
@@ -191,6 +219,9 @@ export function createOrderItemSubColumns({
       enableHiding: true,
       enableResizing: true,
       size: 70,
+      meta: {
+        skeleton: <Skeleton className="h-6 w-10" />,
+      },
     },
     {
       accessorKey: "status",
@@ -199,10 +230,12 @@ export function createOrderItemSubColumns({
       ),
       cell: ({ row }) => {
         const item = row.original;
+        const isPending = pendingCollectionItemIds.has(item.id);
         return (
           <SelectCell
             value={item.status}
             options={[...ORDER_STATUSES]}
+            disabled={isPending}
             onSubmit={async (value) => {
               await onEditItem({
                 ...item,
@@ -216,6 +249,9 @@ export function createOrderItemSubColumns({
       enableHiding: true,
       enableResizing: true,
       size: 95,
+      meta: {
+        skeleton: <Skeleton className="h-6" />,
+      },
     },
     {
       accessorKey: "price",
@@ -225,6 +261,7 @@ export function createOrderItemSubColumns({
       ),
       cell: ({ row }) => {
         const item = row.original;
+        const isPending = pendingCollectionItemIds.has(item.id);
         return (
           <InlineCurrencyCell
             value={item.price}
@@ -233,7 +270,7 @@ export function createOrderItemSubColumns({
               await onEditItem({ ...item, price: newValue });
             }}
             locale={getCurrencyLocale(currency)}
-            disabled={false}
+            disabled={isPending}
           />
         );
       },
@@ -241,18 +278,25 @@ export function createOrderItemSubColumns({
       enableHiding: true,
       enableResizing: true,
       size: 95,
+      meta: {
+        skeleton: <Skeleton className="h-6" />,
+      },
     },
     {
       id: "actions",
       header: () => null,
       cell: ({ row }) => {
         const item = row.original;
+        const isPending = pendingCollectionItemIds.has(item.id);
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
+              <Button variant="ghost" className="h-8 w-8 p-0" disabled={isPending}>
                 <span className="sr-only">Open menu</span>
-                <HugeiconsIcon icon={MoreHorizontalIcon} className="h-4 w-4" />
+                <HugeiconsIcon
+                  icon={isPending ? Loading03Icon : MoreHorizontalIcon}
+                  className={cn("h-4 w-4", isPending && "animate-spin")}
+                />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -272,9 +316,9 @@ export function createOrderItemSubColumns({
               </DropdownMenuItem>
               <CollectionItemForm
                 renderTrigger={
-                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                  <DropdownMenuItem onSelect={(e) => e.preventDefault()} disabled={isPending}>
                     <HugeiconsIcon icon={Edit01Icon} className="mr-2 h-4 w-4" />
-                    Edit item
+                    {isPending ? "Saving..." : "Edit item"}
                   </DropdownMenuItem>
                 }
                 itemData={item}
@@ -285,11 +329,12 @@ export function createOrderItemSubColumns({
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 variant="destructive"
+                disabled={isPending}
                 onSelect={(e) => e.preventDefault()}
                 onClick={() => onDeleteItem(orderId, item.id)}
               >
                 <HugeiconsIcon icon={Delete02Icon} className="mr-2 h-4 w-4" />
-                Delete item
+                {isPending ? "Deleting..." : "Delete item"}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -299,6 +344,9 @@ export function createOrderItemSubColumns({
       enableSorting: false,
       enableHiding: false,
       enableResizing: false,
+      meta: {
+        skeleton: <Skeleton className="h-4 w-1/2" />,
+      },
     },
   ];
 }

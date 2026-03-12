@@ -3,6 +3,7 @@ import {
   Copy01Icon,
   Delete02Icon,
   Edit01Icon,
+  Loading03Icon,
   MoreHorizontalIcon,
   PackageIcon,
   ViewIcon,
@@ -36,10 +37,11 @@ import { getCategoryColor } from "@/lib/category-colors";
 import { Skeleton } from "../ui/skeleton";
 
 interface CollectionColumnsParams {
-  onEditCollectionItem: (values: CollectionItemFormValues) => void;
+  onEditCollectionItem: (values: CollectionItemFormValues) => Promise<void>;
   onDeleteCollectionItems: (collectionIds: Set<string>) => Promise<void>;
   currency: string;
   dateFormat: DateFormat;
+  pendingCollectionIds: ReadonlySet<string>;
 }
 
 export function createCollectionColumns({
@@ -47,6 +49,7 @@ export function createCollectionColumns({
   onDeleteCollectionItems,
   currency,
   dateFormat,
+  pendingCollectionIds,
 }: CollectionColumnsParams): ColumnDef<CollectionItem>[] {
   return [
     {
@@ -171,9 +174,11 @@ export function createCollectionColumns({
       ),
       cell: ({ row }) => {
         const item = row.original;
+        const isPending = pendingCollectionIds.has(item.id);
         return (
           <InlineCountCell
             value={item.count}
+            disabled={isPending}
             onSubmit={async (newValue) => {
               await onEditCollectionItem({
                 ...item,
@@ -199,9 +204,11 @@ export function createCollectionColumns({
       ),
       cell: ({ row }) => {
         const item = row.original;
+        const isPending = pendingCollectionIds.has(item.id);
         return (
           <PopoverRatingCell
             value={item.score}
+            disabled={isPending}
             onSubmit={async (newValue) => {
               await onEditCollectionItem({
                 ...item,
@@ -227,9 +234,11 @@ export function createCollectionColumns({
       ),
       cell: ({ row }) => {
         const item = row.original;
+        const isPending = pendingCollectionIds.has(item.id);
         return (
           <InlineTextCell
             value={item.shop}
+            disabled={isPending}
             onSubmit={async (newValue) => {
               await onEditCollectionItem({
                 ...item,
@@ -263,6 +272,7 @@ export function createCollectionColumns({
       ),
       cell: ({ row }) => {
         const item = row.original;
+        const isPending = pendingCollectionIds.has(item.id);
         return (
           <InlineCurrencyCell
             value={item.price}
@@ -274,7 +284,7 @@ export function createCollectionColumns({
               });
             }}
             locale={getCurrencyLocale(currency)}
-            disabled={false}
+            disabled={isPending}
           />
         );
       },
@@ -294,10 +304,12 @@ export function createCollectionColumns({
       ),
       cell: ({ row }) => {
         const orderDate = row.original.orderDate;
+        const isPending = pendingCollectionIds.has(row.original.id);
         return (
           <PopoverDatePickerCell
             value={orderDate}
             dateFormat={dateFormat}
+            disabled={isPending}
             onSubmit={async (newValue) => {
               await onEditCollectionItem({
                 ...row.original,
@@ -324,10 +336,12 @@ export function createCollectionColumns({
       ),
       cell: ({ row }) => {
         const paymentDate = row.original.paymentDate;
+        const isPending = pendingCollectionIds.has(row.original.id);
         return (
           <PopoverDatePickerCell
             value={paymentDate}
             dateFormat={dateFormat}
+            disabled={isPending}
             onSubmit={async (newValue) => {
               await onEditCollectionItem({
                 ...row.original,
@@ -354,10 +368,12 @@ export function createCollectionColumns({
       ),
       cell: ({ row }) => {
         const shippingDate = row.original.shippingDate;
+        const isPending = pendingCollectionIds.has(row.original.id);
         return (
           <PopoverDatePickerCell
             value={shippingDate}
             dateFormat={dateFormat}
+            disabled={isPending}
             onSubmit={async (newValue) => {
               await onEditCollectionItem({
                 ...row.original,
@@ -384,10 +400,12 @@ export function createCollectionColumns({
       ),
       cell: ({ row }) => {
         const collectionDate = row.original.collectionDate;
+        const isPending = pendingCollectionIds.has(row.original.id);
         return (
           <PopoverDatePickerCell
             value={collectionDate}
             dateFormat={dateFormat}
+            disabled={isPending}
             onSubmit={async (newValue) => {
               await onEditCollectionItem({
                 ...row.original,
@@ -411,13 +429,17 @@ export function createCollectionColumns({
       header: () => null,
       cell: ({ row }) => {
         const item = row.original;
+        const isPending = pendingCollectionIds.has(item.id);
 
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
+              <Button variant="ghost" className="h-8 w-8 p-0" disabled={isPending}>
                 <span className="sr-only">Open menu</span>
-                <HugeiconsIcon icon={MoreHorizontalIcon} className="h-4 w-4" />
+                <HugeiconsIcon
+                  icon={isPending ? Loading03Icon : MoreHorizontalIcon}
+                  className={cn("h-4 w-4", isPending && "animate-spin")}
+                />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -443,9 +465,9 @@ export function createCollectionColumns({
               </DropdownMenuItem>
               <CollectionItemForm
                 renderTrigger={
-                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                  <DropdownMenuItem onSelect={(e) => e.preventDefault()} disabled={isPending}>
                     <HugeiconsIcon icon={Edit01Icon} className="mr-2 h-4 w-4" />
-                    Edit item
+                    {isPending ? "Saving..." : "Edit item"}
                   </DropdownMenuItem>
                 }
                 itemData={item}
@@ -456,10 +478,11 @@ export function createCollectionColumns({
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 variant="destructive"
+                disabled={isPending}
                 onClick={() => onDeleteCollectionItems(new Set([item.id]))}
               >
                 <HugeiconsIcon icon={Delete02Icon} className="mr-2 h-4 w-4" />
-                Delete item
+                {isPending ? "Deleting..." : "Delete item"}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

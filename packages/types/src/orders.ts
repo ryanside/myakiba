@@ -42,6 +42,16 @@ export type Order = {
   items: OrderItem[];
 };
 
+export type OrderListItem = Omit<Order, "items"> & {
+  readonly totalCount: number;
+  readonly images: readonly string[];
+};
+
+export type OrderItemsResponse = {
+  readonly items: readonly OrderItem[];
+  readonly totalCount: number;
+};
+
 export type OrderItem = Omit<
   CollectionItem,
   "itemCategory" | "itemScale" | "createdAt" | "updatedAt" | "totalCount" | "totalValue"

@@ -448,7 +448,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       const { data: syncSessionId, error: syncSessionError } = await tryCatch(
         SyncService.createSyncSession(user.id, "order", orderItemExternalIdsToTrack, {
-          orderId: collectionItemsToInsert.length > 0 ? orderId : undefined,
           orderPayload: order,
           itemMetadata: orderItemMetadata,
           existingItemExternalIds: existingOrderItemExternalIds,
@@ -502,6 +501,26 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             order: { id: orderId },
           });
           return status(500, "Failed to insert to collection and orders");
+        }
+
+        const { error: updateOrderSyncSessionError } = await tryCatch(
+          SyncService.updateSyncSession(syncSessionId, {
+            orderId,
+          }),
+        );
+
+        if (updateOrderSyncSessionError) {
+          log.error(updateOrderSyncSessionError, {
+            step: "updateSyncSessionOrderId",
+            outcome: "error",
+            sync: {
+              type: "order",
+              sessionId: syncSessionId,
+              orderId,
+            },
+            order: { id: orderId },
+          });
+          return status(500, "Failed to update sync session");
         }
       }
 

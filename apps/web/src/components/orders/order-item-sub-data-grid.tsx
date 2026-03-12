@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { DataGrid, DataGridContainer } from "@/components/ui/data-grid";
 import { DataGridPagination } from "@/components/ui/data-grid-pagination";
 import { DataGridTable } from "@/components/ui/data-grid-table";
@@ -6,39 +7,40 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   type RowSelectionState,
   getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
   type PaginationState,
   type SortingState,
+  getSortedRowModel,
   useReactTable,
   type OnChangeFn,
 } from "@tanstack/react-table";
-import type { OrderItem, DateFormat, CollectionItemFormValues } from "@myakiba/types";
+import type { OrderItem, CollectionItemFormValues } from "@myakiba/types";
 import { createOrderItemSubColumns } from "./order-item-sub-columns";
+import { orderItemsQueryOptions } from "@/hooks/use-orders";
+import { useUserPreferences } from "@/hooks/use-collection";
+
+export const ORDER_ITEM_PAGE_SIZE = 5;
 
 export function OrderItemSubDataGrid({
-  items,
   orderId,
   itemSelection,
   setItemSelection,
   onEditItem,
   onDeleteItem,
-  currency = "USD",
-  dateFormat = "MM/DD/YYYY",
+  pendingCollectionItemIds,
 }: {
-  items: OrderItem[];
   orderId: string;
   itemSelection: RowSelectionState;
   setItemSelection: OnChangeFn<RowSelectionState>;
   onEditItem: (values: CollectionItemFormValues) => Promise<void>;
   onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
-  currency?: string;
-  dateFormat?: DateFormat;
+  pendingCollectionItemIds: ReadonlySet<string>;
 }) {
+  const { currency, dateFormat } = useUserPreferences();
+
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
-    pageSize: 5,
+    pageSize: ORDER_ITEM_PAGE_SIZE,
   });
   const [columnOrder, setColumnOrder] = useState<string[]>([
     "select",
@@ -51,6 +53,18 @@ export function OrderItemSubDataGrid({
     "actions",
   ]);
 
+  const offset = pagination.pageIndex * pagination.pageSize;
+
+  const {
+    data: itemsData,
+    isPending,
+    isError,
+    error,
+  } = useQuery(orderItemsQueryOptions(orderId, pagination.pageSize, offset));
+
+  const items = itemsData?.items ?? [];
+  const totalCount = itemsData?.totalCount ?? 0;
+
   const columns = useMemo(
     () =>
       createOrderItemSubColumns({
@@ -59,14 +73,15 @@ export function OrderItemSubDataGrid({
         onDeleteItem,
         currency,
         dateFormat,
+        pendingCollectionItemIds,
       }),
-    [currency, dateFormat, onDeleteItem, onEditItem, orderId],
+    [currency, dateFormat, onDeleteItem, onEditItem, orderId, pendingCollectionItemIds],
   );
 
   const subTable = useReactTable({
-    data: items,
+    data: items as OrderItem[],
     columns,
-    pageCount: Math.ceil(items.length / pagination.pageSize),
+    pageCount: Math.max(1, Math.ceil(totalCount / pagination.pageSize)),
     state: {
       sorting,
       pagination,
@@ -78,18 +93,31 @@ export function OrderItemSubDataGrid({
     onPaginationChange: setPagination,
     onRowSelectionChange: setItemSelection,
     onColumnOrderChange: setColumnOrder,
+    manualPagination: true,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getRowId: (row: OrderItem) => `${orderId}-${row.id}`,
     enableRowSelection: true,
   });
+
+  if (isError) {
+    return (
+      <div className="bg-muted/30 p-4">
+        <p className="py-3 text-center text-sm text-destructive">
+          Failed to load order items: {error.message}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-muted/30 p-4" onClick={(e) => e.stopPropagation()}>
       <DataGrid
         table={subTable}
-        recordCount={items.length}
+        recordCount={totalCount}
+        isLoading={isPending}
+        loadingMode="skeleton"
+        skeletonRowCount={1}
         tableLayout={{
           dense: true,
           rowBorder: true,
@@ -112,8 +140,7 @@ export function OrderItemSubDataGrid({
           </div>
           <div className="flex items-center justify-between">
             <div className="flex-1 text-sm text-muted-foreground">
-              {subTable.getFilteredSelectedRowModel().rows.length} of{" "}
-              {subTable.getFilteredRowModel().rows.length} item(s) selected
+              {subTable.getFilteredSelectedRowModel().rows.length} of {totalCount} item(s) selected
             </div>
             <DataGridPagination className="pb-1.5" />
           </div>

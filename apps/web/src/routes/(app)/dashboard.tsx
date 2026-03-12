@@ -73,7 +73,7 @@ function DashboardContent() {
 
   return (
     <div className="flex flex-col gap-4 mx-auto">
-      <div className="flex flex-col gap-2 mb-6">
+      <div className="flex flex-col gap-2 mb-4">
         <div className="flex flex-row items-start gap-4">
           <h1 className="text-2xl tracking-tight">
             Welcome, <span className="">{session?.user.username}.</span>

@@ -33,8 +33,10 @@ export function useSyncJobStatusQuery(jobId: string | null) {
           for await (const chunk of stream) {
             yield chunk;
             if (chunk.data.finished) {
-              void queryClient.invalidateQueries({ queryKey: ["syncSessions"] });
-              void queryClient.invalidateQueries({ queryKey: ["syncSessionDetail"] });
+              // do not invalidate the sync job status query or infinite loop will occur
+              void queryClient.invalidateQueries({
+                predicate: (query) => query.queryKey[0] !== "syncJobStatus",
+              });
               if (chunk.data.terminalState === "success") {
                 toast.success("Sync completed");
               } else if (chunk.data.terminalState === "timeout") {

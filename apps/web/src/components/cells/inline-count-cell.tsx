@@ -6,9 +6,10 @@ import { tryCatch } from "@myakiba/utils";
 interface InlineCountCellProps {
   value: number;
   onSubmit: (newValue: number) => Promise<void>;
+  disabled?: boolean;
 }
 
-export function InlineCountCell({ value, onSubmit }: InlineCountCellProps) {
+export function InlineCountCell({ value, onSubmit, disabled = false }: InlineCountCellProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [newValue, setNewValue] = useState(value);
 
@@ -56,7 +57,12 @@ export function InlineCountCell({ value, onSubmit }: InlineCountCellProps) {
   }
 
   return (
-    <Button onClick={() => setIsEditing(true)} className="text-foreground pl-0" variant="ghost">
+    <Button
+      onClick={() => setIsEditing(true)}
+      className="text-foreground pl-0"
+      variant="ghost"
+      disabled={disabled}
+    >
       {newValue}
     </Button>
   );

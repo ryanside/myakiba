@@ -1,5 +1,5 @@
 import { useSelection } from "@/hooks/use-selection";
-import type { CollectionFilters, CollectionItem, CollectionItemFormValues } from "@myakiba/types";
+import type { CollectionItem } from "@myakiba/types";
 import type {
   Updater,
   ExpandedState,
@@ -16,61 +16,44 @@ import { DataGridTable } from "../ui/data-grid-table";
 import { DataGridColumnCombobox } from "../ui/data-grid-column-combobox";
 import { CollectionToolbar } from "./collection-toolbar";
 import { createCollectionColumns } from "./collection-columns";
-import type { DateFormat } from "@myakiba/types";
+import { SyncSheetButton } from "@/components/sync/sync-sheet-button";
+import {
+  useCollectionFilters,
+  useCollectionQuery,
+  useCollectionMutations,
+  useUserPreferences,
+} from "@/hooks/use-collection";
 
-export const CollectionDataGrid = ({
-  collection,
-  totalCount,
-  pagination: serverPagination,
-  sorting: serverSorting,
-  search,
-  filters,
-  onFilterChange,
-  onSearchChange,
-  onResetFilters,
-  onDeleteCollectionItems,
-  onEditCollectionItem,
-  currency = "USD",
-  dateFormat,
-  isLoading = false,
-}: {
-  collection: CollectionItem[];
-  totalCount: number;
-  pagination: {
-    limit: number;
-    offset: number;
-  };
-  sorting: {
-    sort: string;
-    order: string;
-  };
-  search: string;
-  filters: CollectionFilters;
-  onFilterChange: (filters: CollectionFilters) => void;
-  onSearchChange: (search: string) => void;
-  onResetFilters: () => void;
-  onDeleteCollectionItems: (collectionIds: Set<string>) => Promise<void>;
-  onEditCollectionItem: (values: CollectionItemFormValues) => void;
-  currency?: string;
-  dateFormat: DateFormat;
-  isLoading?: boolean;
-}) => {
+export const CollectionDataGrid = () => {
+  const { filters, setFilters } = useCollectionFilters();
+  const { items, totalCount, isPending } = useCollectionQuery();
+  const {
+    handleEditCollectionItem,
+    handleDeleteCollectionItems,
+    pendingCollectionIds,
+    isDeletingCollectionItems,
+  } = useCollectionMutations();
+  const { currency, dateFormat } = useUserPreferences();
+
+  const limit = filters.limit ?? 10;
+  const offset = filters.offset ?? 0;
+
   const pagination = useMemo<PaginationState>(
     () => ({
-      pageIndex: Math.floor(serverPagination.offset / serverPagination.limit),
-      pageSize: serverPagination.limit,
+      pageIndex: Math.floor(offset / limit),
+      pageSize: limit,
     }),
-    [serverPagination.offset, serverPagination.limit],
+    [offset, limit],
   );
 
   const sorting = useMemo<SortingState>(
     () => [
       {
-        id: serverSorting.sort,
-        desc: serverSorting.order === "desc",
+        id: filters.sort ?? "createdAt",
+        desc: (filters.order ?? "desc") === "desc",
       },
     ],
-    [serverSorting.sort, serverSorting.order],
+    [filters.sort, filters.order],
   );
 
   const {
@@ -104,24 +87,32 @@ export const CollectionDataGrid = ({
   const columns = useMemo(
     () =>
       createCollectionColumns({
-        onEditCollectionItem,
-        onDeleteCollectionItems,
+        onEditCollectionItem: handleEditCollectionItem,
+        onDeleteCollectionItems: handleDeleteCollectionItems,
         currency,
         dateFormat,
+        pendingCollectionIds,
       }),
-    [currency, dateFormat, onEditCollectionItem, onDeleteCollectionItems],
+    [
+      currency,
+      dateFormat,
+      handleEditCollectionItem,
+      handleDeleteCollectionItems,
+      pendingCollectionIds,
+    ],
   );
+
   const handlePaginationChange = useCallback(
     (updater: Updater<PaginationState>) => {
       const newPagination = typeof updater === "function" ? updater(pagination) : updater;
 
       const newOffset = newPagination.pageIndex * newPagination.pageSize;
-      onFilterChange({
+      setFilters({
         limit: newPagination.pageSize,
         offset: newOffset,
       });
     },
-    [pagination, onFilterChange],
+    [pagination, setFilters],
   );
 
   const handleSortingChange = useCallback(
@@ -130,7 +121,7 @@ export const CollectionDataGrid = ({
 
       if (newSorting.length > 0) {
         const sortConfig = newSorting[0];
-        onFilterChange({
+        setFilters({
           sort: sortConfig.id as
             | "itemTitle"
             | "itemScale"
@@ -148,13 +139,13 @@ export const CollectionDataGrid = ({
         });
       }
     },
-    [sorting, onFilterChange],
+    [sorting, setFilters],
   );
 
   const table = useReactTable({
     columns,
-    data: collection,
-    pageCount: Math.ceil(totalCount / serverPagination.limit),
+    data: items,
+    pageCount: Math.ceil(totalCount / limit),
     getRowId: (row: CollectionItem) => row.id,
     getRowCanExpand: () => true,
     state: {
@@ -181,24 +172,22 @@ export const CollectionDataGrid = ({
 
   return (
     <>
-      <div className="flex items-center justify-start gap-2">
-        <CollectionToolbar
-          search={search}
-          filters={filters}
-          onSearchChange={onSearchChange}
-          onFilterChange={onFilterChange}
-          onResetFilters={onResetFilters}
-          currency={currency}
-          selectedCollectionIds={getSelectedCollectionIds}
-          clearSelections={clearSelections}
-          onDeleteCollectionItems={onDeleteCollectionItems}
-        />
-        <DataGridColumnCombobox table={table} />
+      <div className="flex w-full flex-wrap items-center gap-2">
+        <div className="flex flex-1 flex-wrap items-center gap-2">
+          <CollectionToolbar
+            selectedCollectionIds={getSelectedCollectionIds}
+            clearSelections={clearSelections}
+            onDeleteCollectionItems={handleDeleteCollectionItems}
+            isDeletingCollectionItems={isDeletingCollectionItems}
+          />
+          <DataGridColumnCombobox table={table} />
+        </div>
+        <SyncSheetButton syncType="collection" label="Add" className="ml-auto" />
       </div>
       <div className="space-y-4">
         <DataGrid
           table={table}
-          isLoading={isLoading}
+          isLoading={isPending}
           recordCount={totalCount}
           tableLayout={{
             dense: true,

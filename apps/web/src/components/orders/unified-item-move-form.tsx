@@ -77,6 +77,7 @@ export default function UnifiedItemMoveForm({
   clearSelections,
   currency,
 }: UnifiedItemMoveFormProps) {
+  const [open, setOpen] = useState(false);
   const [moveMode, setMoveMode] = useState<"existing" | "new">("existing");
   const targetOrderListId = useId();
 
@@ -117,6 +118,7 @@ export default function UnifiedItemMoveForm({
         selectedItemData.orderIds,
       );
       clearSelections();
+      setOpen(false);
     },
   });
 
@@ -163,13 +165,14 @@ export default function UnifiedItemMoveForm({
         selectedItemData.orderIds,
       );
       clearSelections();
+      setOpen(false);
     },
   });
 
   const selectedCount = selectedItemData.collectionIds.size;
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{renderTrigger}</DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh]">
         <DialogHeader>
@@ -241,7 +244,7 @@ export default function UnifiedItemMoveForm({
                             />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                        <PopoverContent className="w-(--radix-popover-trigger-width) p-0">
                           <Command>
                             <DebouncedInput
                               value={filters.title}
@@ -305,19 +308,22 @@ export default function UnifiedItemMoveForm({
                 />
               </ScrollArea>
               <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant="outline" type="button">
-                    Cancel
-                  </Button>
-                </DialogClose>
+                <existingOrderForm.Subscribe
+                  selector={(state) => [state.isSubmitting]}
+                  children={([isSubmitting]) => (
+                    <DialogClose asChild>
+                      <Button variant="outline" type="button" disabled={isSubmitting}>
+                        Cancel
+                      </Button>
+                    </DialogClose>
+                  )}
+                />
                 <existingOrderForm.Subscribe
                   selector={(state) => [state.canSubmit, state.isSubmitting]}
                   children={([canSubmit, isSubmitting]) => (
-                    <DialogClose asChild>
-                      <Button type="submit" disabled={!canSubmit} variant="primary">
-                        {isSubmitting ? "Moving..." : "Move Items"}
-                      </Button>
-                    </DialogClose>
+                    <Button type="submit" disabled={!canSubmit || isSubmitting} variant="primary">
+                      {isSubmitting ? "Moving..." : "Move Items"}
+                    </Button>
                   )}
                 />
               </DialogFooter>
@@ -677,23 +683,26 @@ export default function UnifiedItemMoveForm({
                 </div>
               </Scroller>
               <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant="outline" type="button">
-                    Cancel
-                  </Button>
-                </DialogClose>
+                <newOrderForm.Subscribe
+                  selector={(state) => [state.isSubmitting]}
+                  children={([isSubmitting]) => (
+                    <DialogClose asChild>
+                      <Button variant="outline" type="button" disabled={isSubmitting}>
+                        Cancel
+                      </Button>
+                    </DialogClose>
+                  )}
+                />
                 <newOrderForm.Subscribe
                   selector={(state) => [state.canSubmit, state.isSubmitting]}
                   children={([canSubmit, isSubmitting]) => (
-                    <DialogClose asChild>
-                      <Button type="submit" disabled={!canSubmit} variant="primary">
-                        {isSubmitting ? (
-                          <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />
-                        ) : (
-                          "Move to New Order"
-                        )}
-                      </Button>
-                    </DialogClose>
+                    <Button type="submit" disabled={!canSubmit || isSubmitting} variant="primary">
+                      {isSubmitting ? (
+                        <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />
+                      ) : (
+                        "Move to New Order"
+                      )}
+                    </Button>
                   )}
                 />
               </DialogFooter>

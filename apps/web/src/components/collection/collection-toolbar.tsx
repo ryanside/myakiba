@@ -18,9 +18,8 @@ import {
   ActionBarClose,
   ActionBarSeparator,
 } from "@/components/ui/action-bar";
-import type { CollectionFilters } from "@myakiba/types";
+import { useCollectionFilters, useUserPreferences } from "@/hooks/use-collection";
 
-// Define sortable columns configuration
 const SORTABLE_COLUMNS: SortableColumn[] = [
   { id: "itemTitle", label: "Item" },
   { id: "itemScale", label: "Scale" },
@@ -35,31 +34,22 @@ const SORTABLE_COLUMNS: SortableColumn[] = [
   { id: "createdAt", label: "Created At" },
 ];
 
-interface CollectionToolbarProps {
-  search: string;
-  filters: CollectionFilters;
-  onSearchChange: (search: string) => void;
-  onFilterChange: (filters: CollectionFilters) => void;
-  onResetFilters: () => void;
-  currency?: string;
-  // Selection state
-  selectedCollectionIds: Set<string>;
-  clearSelections: () => void;
-  // Action callbacks
-  onDeleteCollectionItems: (collectionIds: Set<string>) => Promise<void>;
+export interface CollectionToolbarProps {
+  readonly selectedCollectionIds: Set<string>;
+  readonly clearSelections: () => void;
+  readonly onDeleteCollectionItems: (collectionIds: Set<string>) => Promise<void>;
+  readonly isDeletingCollectionItems: boolean;
 }
 
 export function CollectionToolbar({
-  search,
-  filters,
-  onSearchChange,
-  onFilterChange,
-  onResetFilters,
-  currency = "USD",
   selectedCollectionIds,
   clearSelections,
   onDeleteCollectionItems,
+  isDeletingCollectionItems,
 }: CollectionToolbarProps): React.ReactElement {
+  const { filters, setFilters, resetFilters } = useCollectionFilters();
+  const { currency } = useUserPreferences();
+
   const currentSort =
     filters.sort && filters.order
       ? {
@@ -70,14 +60,13 @@ export function CollectionToolbar({
 
   const handleSortChange = (columnId: string | null, direction: "asc" | "desc" | null): void => {
     if (columnId === null || direction === null) {
-      // Clear sorting - use default sort
-      onFilterChange({
+      setFilters({
         sort: "createdAt",
         order: "desc",
         offset: 0,
       });
     } else {
-      onFilterChange({
+      setFilters({
         sort: columnId as
           | "itemTitle"
           | "itemScale"
@@ -104,8 +93,8 @@ export function CollectionToolbar({
     <>
       <div className="flex items-center justify-start gap-2">
         <DebouncedInput
-          value={search ?? ""}
-          onChange={(e) => onSearchChange(e.toString())}
+          value={filters.search ?? ""}
+          onChange={(e) => setFilters({ ...filters, search: e.toString() })}
           placeholder="Search"
           className="max-w-xs"
         />
@@ -119,7 +108,7 @@ export function CollectionToolbar({
           currentFilters={{
             ...filters,
           }}
-          onApplyFilters={(newFilters) => onFilterChange({ ...filters, ...newFilters, offset: 0 })}
+          onApplyFilters={(newFilters) => setFilters({ ...filters, ...newFilters, offset: 0 })}
           currency={currency}
         />
         <SortCombobox
@@ -127,7 +116,7 @@ export function CollectionToolbar({
           currentSort={currentSort}
           onSortChange={handleSortChange}
         />
-        <Button onClick={onResetFilters} variant="outline">
+        <Button onClick={resetFilters} variant="outline">
           <HugeiconsIcon icon={FilterResetIcon} />
           <span className="hidden md:block">Reset Filters</span>
         </Button>
@@ -146,16 +135,16 @@ export function CollectionToolbar({
           <ConfirmationPopover
             trigger={
               <ActionBarItem
-                disabled={selectedCollectionIds.size === 0}
+                disabled={selectedCollectionIds.size === 0 || isDeletingCollectionItems}
                 onSelect={(e) => e.preventDefault()}
                 variant="destructive"
               >
                 <HugeiconsIcon icon={Delete01Icon} />
-                <span>Delete</span>
+                <span>{isDeletingCollectionItems ? "Deleting..." : "Delete"}</span>
               </ActionBarItem>
             }
             title="Delete the selected collection items?"
-            disabled={selectedCollectionIds.size === 0}
+            disabled={selectedCollectionIds.size === 0 || isDeletingCollectionItems}
             onConfirm={async () => {
               await onDeleteCollectionItems(selectedCollectionIds);
               clearSelections();
