@@ -585,7 +585,7 @@ class OrdersService {
       })
       .from(orderTotals);
 
-    return stats;
+    return stats ?? { totalOrders: 0, totalSpent: 0, activeOrders: 0, unpaidCosts: 0 };
   }
 
   async getOrderItems(userId: string, orderId: string, limit: number, offset: number) {

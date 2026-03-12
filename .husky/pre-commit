@@ -1,7 +1,7 @@
 # Capture the set of staged files before formatting
 STAGED_FILES=$(git diff --cached --name-only)
 bun run fmt
-# Re-stage only those files
-echo "$STAGED_FILES" | xargs git add
+# Re-stage only files that still exist (modified/added); deleted files stay staged as deletion
+echo "$STAGED_FILES" | while IFS= read -r f; do [ -f "$f" ] && git add "$f"; done
 bun run lint
 bun run check-types
