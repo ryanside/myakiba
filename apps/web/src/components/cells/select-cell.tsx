@@ -6,13 +6,14 @@ interface SelectCellProps {
   value: string;
   options: string[];
   onSubmit: (value: string) => Promise<void>;
+  disabled?: boolean;
 }
 
-export function SelectCell({ value, options, onSubmit }: SelectCellProps) {
+export function SelectCell({ value, options, onSubmit, disabled = false }: SelectCellProps) {
   return (
-    <Select value={value} onValueChange={(value) => onSubmit(value as string)}>
+    <Select value={value} onValueChange={(value) => onSubmit(value as string)} disabled={disabled}>
       <Badge asChild variant={getStatusVariant(value)} appearance="outline" className="py-4">
-        <SelectTrigger className="!justify-between">
+        <SelectTrigger className="justify-between!">
           <SelectValue />
         </SelectTrigger>
       </Badge>

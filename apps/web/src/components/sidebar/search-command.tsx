@@ -14,91 +14,9 @@ import { useQuery } from "@tanstack/react-query";
 import { DebouncedInput } from "../debounced-input";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "../ui/button";
+import { ImageThumbnail } from "../ui/image-thumbnail";
 import { useNavigate } from "@tanstack/react-router";
 import { getRecentItems } from "@/lib/recent-items";
-
-function ImageThumbnail({
-  images,
-  title,
-  fallbackIcon,
-}: {
-  images: string[];
-  title: string;
-  fallbackIcon: React.ReactNode;
-}): React.ReactElement {
-  const imageCount = images.length;
-  const displayImages = images.slice(0, 4);
-  const remainingCount = imageCount > 4 ? imageCount - 4 : 0;
-
-  if (imageCount === 0) {
-    return (
-      <div className="w-12 h-12 bg-muted rounded shrink-0 flex items-center justify-center">
-        {fallbackIcon}
-      </div>
-    );
-  }
-
-  return (
-    <div className="w-12 h-12 rounded shrink-0 relative overflow-hidden">
-      {imageCount === 1 ? (
-        <img src={images[0]} alt={title} className="w-full h-full object-cover object-top" />
-      ) : imageCount === 2 ? (
-        <div className="grid grid-cols-2 gap-px w-full h-full">
-          {displayImages.map((img, idx) => (
-            <div key={idx} className="w-full h-full overflow-hidden">
-              <img
-                src={img}
-                alt={`${title} ${idx + 1}`}
-                className="w-full h-full object-cover object-top"
-              />
-            </div>
-          ))}
-        </div>
-      ) : imageCount === 3 ? (
-        <div className="grid grid-cols-2 gap-px w-full h-full">
-          <div className="w-full h-full overflow-hidden row-span-2">
-            <img
-              src={displayImages[0]}
-              alt={`${title} 1`}
-              className="w-full h-full object-cover object-top"
-            />
-          </div>
-          <div className="w-full h-full overflow-hidden">
-            <img
-              src={displayImages[1]}
-              alt={`${title} 2`}
-              className="w-full h-full object-cover object-top"
-            />
-          </div>
-          <div className="w-full h-full overflow-hidden">
-            <img
-              src={displayImages[2]}
-              alt={`${title} 3`}
-              className="w-full h-full object-cover object-top"
-            />
-          </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 gap-px w-full h-full relative">
-          {displayImages.map((img, idx) => (
-            <div key={idx} className="w-full h-full overflow-hidden">
-              <img
-                src={img}
-                alt={`${title} ${idx + 1}`}
-                className="w-full h-full object-cover object-top"
-              />
-            </div>
-          ))}
-          {remainingCount > 0 && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <span className="text-xs font-medium text-white">+{remainingCount}</span>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export function SearchCommand() {
   const navigate = useNavigate();

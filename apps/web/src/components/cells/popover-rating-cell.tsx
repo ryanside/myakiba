@@ -8,9 +8,10 @@ import { useState } from "react";
 interface PopoverRatingCellProps {
   value: string;
   onSubmit: (newValue: string) => Promise<void>;
+  disabled?: boolean;
 }
 
-export function PopoverRatingCell({ value, onSubmit }: PopoverRatingCellProps) {
+export function PopoverRatingCell({ value, onSubmit, disabled = false }: PopoverRatingCellProps) {
   const [isOpen, setIsOpen] = useState(false);
   const handleSubmit = async (newValue: string) => {
     if (Number(newValue) === Number(value)) {
@@ -22,7 +23,7 @@ export function PopoverRatingCell({ value, onSubmit }: PopoverRatingCellProps) {
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" className="text-foreground pl-0">
+        <Button variant="ghost" className="text-foreground pl-0" disabled={disabled}>
           {value}
         </Button>
       </PopoverTrigger>

@@ -11,12 +11,14 @@ interface PopoverDatePickerCellProps {
   value: string | null;
   dateFormat?: DateFormat;
   onSubmit: (newValue: string | null) => Promise<void>;
+  disabled?: boolean;
 }
 
 export function PopoverDatePickerCell({
   value,
   dateFormat = "MM/DD/YYYY",
   onSubmit,
+  disabled = false,
 }: PopoverDatePickerCellProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dateValue = value ? parseLocalDate(value) : undefined;
@@ -36,7 +38,12 @@ export function PopoverDatePickerCell({
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" data-empty={!dateValue} className="text-foreground pl-0">
+        <Button
+          variant="ghost"
+          data-empty={!dateValue}
+          className="text-foreground pl-0"
+          disabled={disabled}
+        >
           {value ? formatDate(value, dateFormat) : "n/a"}
         </Button>
       </PopoverTrigger>

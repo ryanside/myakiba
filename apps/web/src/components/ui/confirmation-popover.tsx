@@ -24,12 +24,21 @@ export function ConfirmationPopover({
   cancelLabel = "Cancel",
   disabled = false,
 }: ConfirmationPopoverProps): React.ReactElement {
+  const [open, setOpen] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+
   const handleConfirm = async (): Promise<void> => {
-    await onConfirm();
+    setIsSubmitting(true);
+    try {
+      await onConfirm();
+      setOpen(false);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent>
         <div className="flex flex-col items-center gap-2 text-sm text-pretty">
@@ -48,20 +57,18 @@ export function ConfirmationPopover({
           </div>
           <div className="flex flex-row items-center gap-2 max-w-16 mr-auto">
             <PopoverClose asChild>
-              <Button variant="outline" className="block">
+              <Button variant="outline" className="block" disabled={isSubmitting}>
                 {cancelLabel}
               </Button>
             </PopoverClose>
-            <PopoverClose asChild>
-              <Button
-                variant="destructive"
-                disabled={disabled}
-                className="block"
-                onClick={handleConfirm}
-              >
-                {confirmLabel}
-              </Button>
-            </PopoverClose>
+            <Button
+              variant="destructive"
+              disabled={disabled || isSubmitting}
+              className="block"
+              onClick={handleConfirm}
+            >
+              {isSubmitting ? "Deleting..." : confirmLabel}
+            </Button>
           </div>
         </div>
       </PopoverContent>

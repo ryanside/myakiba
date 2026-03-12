@@ -21,6 +21,7 @@ interface PopoverMultiInputCellProps {
   currency: string;
   locale: string;
   onSubmit: (newValues: Record<string, number>) => Promise<void>;
+  disabled?: boolean;
 }
 
 export function PopoverMultiInputCell({
@@ -29,6 +30,7 @@ export function PopoverMultiInputCell({
   currency,
   locale,
   onSubmit,
+  disabled = false,
 }: PopoverMultiInputCellProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -54,7 +56,7 @@ export function PopoverMultiInputCell({
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" className="text-foreground pl-0">
+        <Button variant="ghost" className="text-foreground pl-0" disabled={disabled}>
           {total}
         </Button>
       </PopoverTrigger>

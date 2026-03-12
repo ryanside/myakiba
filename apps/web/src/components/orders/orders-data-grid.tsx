@@ -12,103 +12,59 @@ import {
   useReactTable,
   type Updater,
 } from "@tanstack/react-table";
-import type {
-  CascadeOptions,
-  EditedOrder,
-  OrderFilters,
-  NewOrder,
-  Order,
-  CollectionItemFormValues,
-  DateFormat,
-} from "@myakiba/types";
+import type { OrderFilters, OrderListItem } from "@myakiba/types";
 import { useSelection } from "@/hooks/use-selection";
 import { DataGridColumnCombobox } from "../ui/data-grid-column-combobox";
 import { OrdersToolbar } from "./orders-toolbar";
 import { DEFAULT_PAGE_INDEX, DEFAULT_PAGE_SIZE } from "@myakiba/constants";
 import { createOrdersColumns } from "./orders-columns";
+import { SyncSheetButton } from "@/components/sync/sync-sheet-button";
+import { useOrdersFilters, useOrdersQuery, useOrdersMutations } from "@/hooks/use-orders";
+import { useUserPreferences } from "@/hooks/use-collection";
 
 export { DEFAULT_PAGE_INDEX, DEFAULT_PAGE_SIZE };
 
-interface OrdersDataGridProps {
-  orders: Order[];
-  totalCount: number;
-  pagination: {
-    limit: number;
-    offset: number;
-  };
-  sorting: {
-    sort: string;
-    order: string;
-  };
-  search: string;
-  filters: OrderFilters;
-  onFilterChange: (filters: OrderFilters) => void;
-  onSearchChange: (search: string) => void;
-  onResetFilters: () => void;
-  onMerge: (
-    values: NewOrder,
-    cascadeOptions: CascadeOptions,
-    orderIds: Set<string>,
-  ) => Promise<void>;
-  onSplit: (
-    values: NewOrder,
-    cascadeOptions: CascadeOptions,
-    collectionIds: Set<string>,
-    orderIds: Set<string>,
-  ) => Promise<void>;
-  onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
-  onDeleteOrders: (orderIds: Set<string>) => Promise<void>;
-  onEditItem: (values: CollectionItemFormValues) => Promise<void>;
-  onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
-  onDeleteItems: (collectionIds: Set<string>, orderIds: Set<string>) => Promise<void>;
-  onMoveItem: (
-    targetOrderId: string,
-    collectionIds: Set<string>,
-    orderIds: Set<string>,
-  ) => Promise<void>;
-  currency?: string;
-  dateFormat: DateFormat;
-  isLoading?: boolean;
-}
+export default function OrdersDataGrid() {
+  const { filters, setFilters } = useOrdersFilters();
+  const { orders, totalCount, isPending } = useOrdersQuery();
+  const {
+    handleEditOrder,
+    handleDeleteOrders,
+    handleMerge,
+    handleSplit,
+    handleEditItem,
+    handleDeleteItem,
+    handleDeleteItems,
+    handleMoveItem,
+    pendingOrderIds,
+    pendingCollectionItemIds,
+    isMerging,
+    isSplitting,
+    isDeletingOrders,
+    isDeletingItems,
+    isMovingItems,
+  } = useOrdersMutations();
+  const { currency, dateFormat } = useUserPreferences();
 
-export default function OrdersDataGrid({
-  orders,
-  totalCount,
-  pagination: serverPagination,
-  sorting: serverSorting,
-  search,
-  filters,
-  onFilterChange,
-  onSearchChange,
-  onResetFilters,
-  onMerge,
-  onSplit,
-  onEditOrder,
-  onDeleteOrders,
-  onEditItem,
-  onDeleteItem,
-  onDeleteItems,
-  onMoveItem,
-  currency = "USD",
-  dateFormat,
-  isLoading = false,
-}: OrdersDataGridProps) {
+  const limit = filters.limit ?? 10;
+  const offset = filters.offset ?? 0;
+
   const pagination = useMemo<PaginationState>(
     () => ({
-      pageIndex: Math.floor(serverPagination.offset / serverPagination.limit),
-      pageSize: serverPagination.limit,
+      pageIndex: Math.floor(offset / limit),
+      pageSize: limit,
     }),
-    [serverPagination.offset, serverPagination.limit],
+    [offset, limit],
   );
 
   const sorting = useMemo<SortingState>(
     () => [
       {
-        id: serverSorting.sort,
-        desc: serverSorting.order === "desc",
+        id: filters.sort ?? "createdAt",
+        desc: (filters.order ?? "desc") === "desc",
       },
     ],
-    [serverSorting.sort, serverSorting.order],
+    [filters.sort, filters.order],
   );
 
   const {
@@ -123,6 +79,7 @@ export default function OrdersDataGrid({
 
   const [expandedRows, setExpandedRows] = useState<ExpandedState>({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
+    orderDate: false,
     paymentDate: false,
     shippingDate: false,
     collectionDate: false,
@@ -157,24 +114,28 @@ export default function OrdersDataGrid({
   const columns = useMemo(
     () =>
       createOrdersColumns({
-        onEditOrder,
-        onDeleteOrders,
-        onEditItem,
-        onDeleteItem,
+        onEditOrder: handleEditOrder,
+        onDeleteOrders: handleDeleteOrders,
+        onEditItem: handleEditItem,
+        onDeleteItem: handleDeleteItem,
         currency,
         itemSelection,
         setItemSelection,
         dateFormat,
+        pendingOrderIds,
+        pendingCollectionItemIds,
       }),
     [
-      onEditItem,
-      onDeleteItem,
-      onEditOrder,
-      onDeleteOrders,
+      handleEditItem,
+      handleDeleteItem,
+      handleEditOrder,
+      handleDeleteOrders,
       currency,
       itemSelection,
       setItemSelection,
       dateFormat,
+      pendingCollectionItemIds,
+      pendingOrderIds,
     ],
   );
 
@@ -183,12 +144,12 @@ export default function OrdersDataGrid({
       const newPagination = typeof updater === "function" ? updater(pagination) : updater;
 
       const newOffset = newPagination.pageIndex * newPagination.pageSize;
-      onFilterChange({
+      setFilters({
         limit: newPagination.pageSize,
         offset: newOffset,
       });
     },
-    [pagination, onFilterChange],
+    [pagination, setFilters],
   );
 
   const handleSortingChange = useCallback(
@@ -197,38 +158,21 @@ export default function OrdersDataGrid({
 
       if (newSorting.length > 0) {
         const sortConfig = newSorting[0];
-        onFilterChange({
-          sort: sortConfig.id as
-            | "title"
-            | "shop"
-            | "orderDate"
-            | "paymentDate"
-            | "shippingDate"
-            | "collectionDate"
-            | "releaseDate"
-            | "shippingMethod"
-            | "total"
-            | "shippingFee"
-            | "taxes"
-            | "duties"
-            | "tariffs"
-            | "miscFees"
-            | "itemCount"
-            | "status"
-            | "createdAt",
+        setFilters({
+          sort: sortConfig.id as OrderFilters["sort"],
           order: sortConfig.desc ? "desc" : "asc",
           offset: 0,
         });
       }
     },
-    [sorting, onFilterChange],
+    [sorting, setFilters],
   );
 
   const table = useReactTable({
     columns,
     data: orders,
-    pageCount: Math.ceil(totalCount / serverPagination.limit),
-    getRowId: (row: Order) => row.orderId,
+    pageCount: Math.ceil(totalCount / limit),
+    getRowId: (row: OrderListItem) => row.orderId,
     getRowCanExpand: () => true,
     state: {
       pagination,
@@ -254,29 +198,31 @@ export default function OrdersDataGrid({
 
   return (
     <>
-      <div className="flex items-center justify-start gap-2">
-        <OrdersToolbar
-          search={search}
-          filters={filters}
-          onSearchChange={onSearchChange}
-          onFilterChange={onFilterChange}
-          onResetFilters={onResetFilters}
-          currency={currency}
-          selectedOrderIds={getSelectedOrderIds}
-          selectedItemData={getSelectedItemData}
-          clearSelections={clearSelections}
-          onMerge={onMerge}
-          onSplit={onSplit}
-          onDeleteOrders={onDeleteOrders}
-          onMoveItem={onMoveItem}
-          onDeleteItems={onDeleteItems}
-        />
-        <DataGridColumnCombobox table={table} />
+      <div className="flex w-full flex-wrap items-center gap-2">
+        <div className="flex flex-1 flex-wrap items-center gap-2">
+          <OrdersToolbar
+            selectedOrderIds={getSelectedOrderIds}
+            selectedItemData={getSelectedItemData}
+            clearSelections={clearSelections}
+            onMerge={handleMerge}
+            onSplit={handleSplit}
+            onDeleteOrders={handleDeleteOrders}
+            onMoveItem={handleMoveItem}
+            onDeleteItems={handleDeleteItems}
+            isMerging={isMerging}
+            isSplitting={isSplitting}
+            isDeletingOrders={isDeletingOrders}
+            isDeletingItems={isDeletingItems}
+            isMovingItems={isMovingItems}
+          />
+          <DataGridColumnCombobox table={table} />
+        </div>
+        <SyncSheetButton syncType="order" label="Add" className="ml-auto" />
       </div>
       <div className="space-y-4">
         <DataGrid
           table={table}
-          isLoading={isLoading}
+          isLoading={isPending}
           recordCount={totalCount}
           tableLayout={{
             dense: true,

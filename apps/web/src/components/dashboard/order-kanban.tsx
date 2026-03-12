@@ -92,7 +92,7 @@ function OrderCard({
             {order.itemImages.slice(0, 3).map((image, idx) => (
               <div
                 key={idx}
-                className="relative w-12 h-12 rounded-md overflow-hidden border bg-muted shrink-0"
+                className="relative w-12 h-12 rounded-md overflow-hidden bg-muted shrink-0"
               >
                 <img src={image} alt="" className="w-full h-full object-cover object-top" />
               </div>

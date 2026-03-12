@@ -13,7 +13,9 @@ export type {
 
 export type {
   Order,
+  OrderListItem,
   OrderItem,
+  OrderItemsResponse,
   NewOrder,
   EditedOrder,
   OrderFilters,

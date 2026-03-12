@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { formatCurrencyFromMinorUnits, formatDate, formatTimestamp } from "@myakiba/utils";
 import { getStatusVariant } from "@/lib/orders";
 import { OrderItemSubDataGrid } from "@/components/orders/order-item-sub-data-grid";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { RowSelectionState } from "@tanstack/react-table";
 import { addRecentItem } from "@/lib/recent-items";
 import { OrderForm } from "@/components/orders/order-form";
@@ -50,6 +50,13 @@ function RouteComponent() {
   const { id } = useParams({ from: "/(app)/orders_/$id" });
   const queryClient = useQueryClient();
   const [itemSelection, setItemSelection] = useState<RowSelectionState>({});
+  const [pendingCollectionItemIdList, setPendingCollectionItemIdList] = useState<readonly string[]>(
+    [],
+  );
+  const pendingCollectionItemIds = useMemo(
+    () => new Set(pendingCollectionItemIdList),
+    [pendingCollectionItemIdList],
+  );
 
   const { data, isPending, isError, error } = useQuery({
     queryKey: ["order", id],
@@ -136,11 +143,27 @@ function RouteComponent() {
   };
 
   const handleEditItem = async (values: CollectionItemFormValues) => {
-    await editItemMutation.mutateAsync({ values });
+    setPendingCollectionItemIdList((previous) => Array.from(new Set([...previous, values.id])));
+
+    try {
+      await editItemMutation.mutateAsync({ values });
+    } finally {
+      setPendingCollectionItemIdList((previous) =>
+        previous.filter((collectionId) => collectionId !== values.id),
+      );
+    }
   };
 
   const handleDeleteItem = async (orderId: string, collectionId: string) => {
-    await deleteItemMutation.mutateAsync({ orderId, collectionId });
+    setPendingCollectionItemIdList((previous) => Array.from(new Set([...previous, collectionId])));
+
+    try {
+      await deleteItemMutation.mutateAsync({ orderId, collectionId });
+    } finally {
+      setPendingCollectionItemIdList((previous) =>
+        previous.filter((pendingId) => pendingId !== collectionId),
+      );
+    }
   };
 
   if (isPending) {
@@ -374,14 +397,12 @@ function RouteComponent() {
         <CardContent className="p-0">
           {order.items.length > 0 ? (
             <OrderItemSubDataGrid
-              items={order.items}
               orderId={order.orderId}
               itemSelection={itemSelection}
               setItemSelection={setItemSelection}
               onEditItem={handleEditItem}
               onDeleteItem={handleDeleteItem}
-              currency={userCurrency}
-              dateFormat={dateFormat}
+              pendingCollectionItemIds={pendingCollectionItemIds}
             />
           ) : (
             <div className="flex items-center justify-center py-8 text-muted-foreground">

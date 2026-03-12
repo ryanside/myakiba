@@ -147,6 +147,15 @@ class DashboardService {
           lte(item_release.date, sql.placeholder("endDate")),
         ),
       )
+      .groupBy(
+        item.id,
+        item.title,
+        item.image,
+        item.category,
+        item_release.date,
+        item_release.price,
+        item_release.priceCurrency,
+      )
       .orderBy(asc(item_release.date))
       .prepare("release_calendar");
   }

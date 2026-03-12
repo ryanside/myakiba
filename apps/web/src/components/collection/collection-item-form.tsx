@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import type { CollectionItemFormValues } from "@myakiba/types";
 import {
   Sheet,
@@ -41,17 +41,19 @@ import {
 import type { DateFormat } from "@myakiba/types";
 import { Scroller } from "../ui/scroller";
 import { COLLECTION_STATUSES, SHIPPING_METHODS, CONDITIONS } from "@myakiba/constants";
+import { useState } from "react";
 
 type CollectionItemFormProps = {
   renderTrigger: React.ReactNode;
   itemData: CollectionItemFormValues;
-  callbackFn: (itemData: CollectionItemFormValues) => void;
+  callbackFn: (itemData: CollectionItemFormValues) => Promise<void>;
   currency?: string;
   dateFormat?: DateFormat;
 };
 
 export default function CollectionItemForm(props: CollectionItemFormProps) {
   const { itemData, callbackFn, currency, dateFormat, renderTrigger } = props;
+  const [open, setOpen] = useState(false);
 
   const userCurrency = currency || "USD";
   const userLocale = getCurrencyLocale(userCurrency);
@@ -61,12 +63,13 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
       ...itemData,
       price: minorUnitsToMajorString(itemData.price ?? 0),
     },
-    onSubmit: ({ value }) => {
+    onSubmit: async ({ value }) => {
       const transformedValue: CollectionItemFormValues = {
         ...value,
         price: majorStringToMinorUnits(value.price),
       };
-      callbackFn(transformedValue);
+      await callbackFn(transformedValue);
+      setOpen(false);
     },
   });
 
@@ -84,7 +87,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
   });
 
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>{renderTrigger}</SheetTrigger>
       <SheetContent side="right" className="w-full sm:max-w-lg h-full">
         <form
@@ -557,23 +560,35 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
             </div>
           </Scroller>
           <SheetFooter className="flex flex-row w-full">
-            <SheetClose asChild>
-              <Button type="button" variant="outline" className="w-full flex-1">
-                Cancel
-              </Button>
-            </SheetClose>
+            <form.Subscribe
+              selector={(state) => [state.isSubmitting]}
+              children={([isSubmitting]) => (
+                <SheetClose asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full flex-1"
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </Button>
+                </SheetClose>
+              )}
+            />
             <form.Subscribe
               selector={(state) => [state.canSubmit, state.isSubmitting]}
               children={([canSubmit, isSubmitting]) => (
-                <SheetClose asChild>
-                  <Button
-                    type="submit"
-                    disabled={!canSubmit || isSubmitting}
-                    className="w-full flex-1"
-                  >
-                    {isSubmitting ? "Updating..." : "Update"}
-                  </Button>
-                </SheetClose>
+                <Button
+                  type="submit"
+                  disabled={!canSubmit || isSubmitting}
+                  className="w-full flex-1"
+                >
+                  {isSubmitting ? (
+                    <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />
+                  ) : (
+                    "Update"
+                  )}
+                </Button>
               )}
             />
           </SheetFooter>

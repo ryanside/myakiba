@@ -4,13 +4,15 @@ import type {
   CascadeOptions,
   EditedOrder,
   NewOrder,
-  Order,
   OrderFilters,
+  OrderListItem,
+  OrderStats,
+  OrderItemsResponse,
   OrderStatus,
   ItemReleasesResponse,
 } from "@myakiba/types";
 
-export async function getOrders(filters: OrderFilters): Promise<Order[]> {
+export async function getOrders(filters: OrderFilters): Promise<OrderListItem[]> {
   const queryParams = {
     limit: filters.limit ?? 10,
     offset: filters.offset ?? 0,
@@ -53,6 +55,38 @@ export async function getOrders(filters: OrderFilters): Promise<Order[]> {
   }
 
   return data;
+}
+
+export async function getOrderStats(): Promise<OrderStats> {
+  const { data, error } = await app.api.orders.stats.get();
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to get order stats"));
+  }
+  if (!data) {
+    throw new Error("Failed to get order stats");
+  }
+
+  return data;
+}
+
+export async function getOrderItems(
+  orderId: string,
+  limit: number,
+  offset: number,
+): Promise<OrderItemsResponse> {
+  const { data, error } = await app.api.orders({ orderId }).items.get({ query: { limit, offset } });
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to get order items"));
+  }
+  if (!data || !Array.isArray(data) || data.length === 0) {
+    return { items: [], totalCount: 0 };
+  }
+
+  const totalCount = (data[0] as { totalCount?: number }).totalCount ?? 0;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const items = data.map(({ totalCount: _tc, ...item }) => item);
+
+  return { items, totalCount };
 }
 
 export async function mergeOrders(

@@ -3,8 +3,10 @@ import {
   AddSquareIcon,
   Delete02Icon,
   Edit01Icon,
+  Loading03Icon,
   MinusSignSquareIcon,
   MoreHorizontalIcon,
+  PackageIcon,
   ViewIcon,
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
@@ -19,10 +21,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Link } from "@tanstack/react-router";
 import { DataGridColumnHeader } from "@/components/ui/data-grid-column-header";
-import { type ColumnDef, type RowSelectionState, type OnChangeFn } from "@tanstack/react-table";
+import {
+  type ColumnDef,
+  type Row,
+  type RowSelectionState,
+  type OnChangeFn,
+} from "@tanstack/react-table";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { formatCurrencyFromMinorUnits, getCurrencyLocale } from "@myakiba/utils";
-import type { CascadeOptions, EditedOrder, Order } from "@myakiba/types";
+import type { CascadeOptions, EditedOrder, OrderListItem } from "@myakiba/types";
 import { OrderForm } from "./order-form";
 import { OrderItemSubDataGrid } from "./order-item-sub-data-grid";
 import { PopoverMultiInputCell } from "../cells/popover-multi-input-cell";
@@ -34,6 +42,35 @@ import type { CollectionItemFormValues } from "@myakiba/types";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/constants";
 import type { ShippingMethod, OrderStatus, DateFormat } from "@myakiba/types";
 import { Skeleton } from "../ui/skeleton";
+import { ImageThumbnail } from "../ui/image-thumbnail";
+import { orderItemsQueryOptions } from "@/hooks/use-orders";
+import { ORDER_ITEM_PAGE_SIZE } from "./order-item-sub-data-grid";
+
+function ExpandButton({ row }: { readonly row: Row<OrderListItem> }) {
+  const queryClient = useQueryClient();
+
+  const handlePointerEnter = () => {
+    void queryClient.prefetchQuery(
+      orderItemsQueryOptions(row.original.orderId, ORDER_ITEM_PAGE_SIZE, 0),
+    );
+  };
+
+  return row.getCanExpand() ? (
+    <Button
+      onClick={row.getToggleExpandedHandler()}
+      onPointerEnter={handlePointerEnter}
+      mode="icon"
+      size="sm"
+      variant="ghost"
+    >
+      {row.getIsExpanded() ? (
+        <HugeiconsIcon icon={MinusSignSquareIcon} />
+      ) : (
+        <HugeiconsIcon icon={AddSquareIcon} />
+      )}
+    </Button>
+  ) : null;
+}
 
 interface OrdersColumnsParams {
   onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
@@ -44,6 +81,8 @@ interface OrdersColumnsParams {
   itemSelection: RowSelectionState;
   setItemSelection: OnChangeFn<RowSelectionState>;
   dateFormat: DateFormat;
+  pendingOrderIds: ReadonlySet<string>;
+  pendingCollectionItemIds: ReadonlySet<string>;
 }
 
 export function createOrdersColumns({
@@ -55,7 +94,9 @@ export function createOrdersColumns({
   itemSelection,
   setItemSelection,
   dateFormat,
-}: OrdersColumnsParams): ColumnDef<Order>[] {
+  pendingOrderIds,
+  pendingCollectionItemIds,
+}: OrdersColumnsParams): ColumnDef<OrderListItem>[] {
   return [
     {
       id: "select",
@@ -101,30 +142,20 @@ export function createOrdersColumns({
     {
       id: "expand",
       header: () => null,
-      cell: ({ row }) => {
-        return row.getCanExpand() ? (
-          <Button onClick={row.getToggleExpandedHandler()} mode="icon" size="sm" variant="ghost">
-            {row.getIsExpanded() ? (
-              <HugeiconsIcon icon={MinusSignSquareIcon} />
-            ) : (
-              <HugeiconsIcon icon={AddSquareIcon} />
-            )}
-          </Button>
-        ) : null;
-      },
+      cell: ({ row }) => <ExpandButton row={row} />,
       size: 25,
+      enableSorting: false,
+      enableHiding: false,
       enableResizing: false,
       meta: {
         expandedContent: (row) => (
           <OrderItemSubDataGrid
-            items={row.items}
             orderId={row.orderId}
             itemSelection={itemSelection}
             setItemSelection={setItemSelection}
             onEditItem={onEditItem}
             onDeleteItem={onDeleteItem}
-            currency={currency}
-            dateFormat={dateFormat}
+            pendingCollectionItemIds={pendingCollectionItemIds}
           />
         ),
       },
@@ -138,21 +169,29 @@ export function createOrdersColumns({
       cell: ({ row }) => {
         const order = row.original;
         return (
-          <div className="space-y-px">
-            <Link
-              to="/orders/$id"
-              params={{ id: order.orderId }}
-              className="font-medium text-foreground truncate"
-            >
-              {order.title}
-            </Link>
+          <div className="flex items-center gap-3">
+            <ImageThumbnail
+              images={order.images}
+              title={order.title}
+              fallbackIcon={<HugeiconsIcon icon={PackageIcon} className="size-4" />}
+              className="size-8 rounded-sm"
+            />
+            <div className="min-w-0 space-y-px">
+              <Link
+                to="/orders/$id"
+                params={{ id: order.orderId }}
+                className="block truncate font-medium text-foreground"
+              >
+                {order.title}
+              </Link>
+            </div>
           </div>
         );
       },
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 250,
+      size: 320,
       meta: {
         skeleton: <Skeleton className="h-8.5" />,
       },
@@ -166,6 +205,7 @@ export function createOrdersColumns({
       cell: ({ row }) => (
         <InlineTextCell
           value={row.original.shop}
+          disabled={pendingOrderIds.has(row.original.orderId)}
           onSubmit={async (newValue) => {
             const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
             void createdAt;
@@ -196,11 +236,13 @@ export function createOrdersColumns({
       ),
       cell: ({ row }) => {
         const order = row.original;
+        const isPending = pendingOrderIds.has(order.orderId);
         return (
           <div className="space-y-px">
             <SelectCell
               value={order.shippingMethod}
               options={[...SHIPPING_METHODS]}
+              disabled={isPending}
               onSubmit={async (value) => {
                 const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
                 void createdAt;
@@ -220,7 +262,7 @@ export function createOrdersColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 140,
+      size: 115,
       meta: {
         skeleton: <Skeleton className="h-6" />,
       },
@@ -233,10 +275,12 @@ export function createOrdersColumns({
       ),
       cell: ({ row }) => {
         const order = row.original;
+        const isPending = pendingOrderIds.has(order.orderId);
         return (
           <PopoverDatePickerCell
             value={order.releaseDate}
             dateFormat={dateFormat}
+            disabled={isPending}
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
@@ -255,7 +299,7 @@ export function createOrdersColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 120,
+      size: 95,
       meta: {
         skeleton: <Skeleton className="h-6" />,
       },
@@ -268,10 +312,12 @@ export function createOrdersColumns({
       ),
       cell: ({ row }) => {
         const order = row.original;
+        const isPending = pendingOrderIds.has(order.orderId);
         return (
           <PopoverDatePickerCell
             value={order.orderDate}
             dateFormat={dateFormat}
+            disabled={isPending}
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
@@ -304,10 +350,12 @@ export function createOrdersColumns({
       ),
       cell: ({ row }) => {
         const order = row.original;
+        const isPending = pendingOrderIds.has(order.orderId);
         return (
           <PopoverDatePickerCell
             value={order.paymentDate}
             dateFormat={dateFormat}
+            disabled={isPending}
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
@@ -340,10 +388,12 @@ export function createOrdersColumns({
       ),
       cell: ({ row }) => {
         const order = row.original;
+        const isPending = pendingOrderIds.has(order.orderId);
         return (
           <PopoverDatePickerCell
             value={order.shippingDate}
             dateFormat={dateFormat}
+            disabled={isPending}
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
@@ -376,10 +426,12 @@ export function createOrdersColumns({
       ),
       cell: ({ row }) => {
         const order = row.original;
+        const isPending = pendingOrderIds.has(order.orderId);
         return (
           <PopoverDatePickerCell
             value={order.collectionDate}
             dateFormat={dateFormat}
+            disabled={isPending}
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
@@ -411,7 +463,7 @@ export function createOrdersColumns({
         <DataGridColumnHeader title="Items" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
-        const itemCount = row.original.items.length;
+        const { itemCount } = row.original;
         return (
           <div
             className="text-sm font-medium text-foreground hover:text-primary cursor-pointer"
@@ -437,6 +489,7 @@ export function createOrdersColumns({
       ),
       cell: ({ row }) => {
         const order = row.original;
+        const isPending = pendingOrderIds.has(order.orderId);
         const inputs = [
           {
             title: "Shipping Fee",
@@ -476,6 +529,7 @@ export function createOrdersColumns({
             total={formatCurrencyFromMinorUnits(order.total, currency)}
             currency={currency}
             locale={locale}
+            disabled={isPending}
             onSubmit={async (newValues) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = order;
               void createdAt;
@@ -509,6 +563,7 @@ export function createOrdersColumns({
       ),
       cell: ({ row }) => {
         const order = row.original;
+        const isPending = pendingOrderIds.has(order.orderId);
         return (
           <InlineCurrencyCell
             value={order.shippingFee}
@@ -526,7 +581,7 @@ export function createOrdersColumns({
                 [] as CascadeOptions,
               );
             }}
-            disabled={false}
+            disabled={isPending}
           />
         );
       },
@@ -548,6 +603,7 @@ export function createOrdersColumns({
       ),
       cell: ({ row }) => {
         const order = row.original;
+        const isPending = pendingOrderIds.has(order.orderId);
         return (
           <InlineCurrencyCell
             value={order.taxes}
@@ -565,7 +621,7 @@ export function createOrdersColumns({
                 [] as CascadeOptions,
               );
             }}
-            disabled={false}
+            disabled={isPending}
           />
         );
       },
@@ -587,6 +643,7 @@ export function createOrdersColumns({
       ),
       cell: ({ row }) => {
         const order = row.original;
+        const isPending = pendingOrderIds.has(order.orderId);
         return (
           <InlineCurrencyCell
             value={order.duties}
@@ -604,7 +661,7 @@ export function createOrdersColumns({
                 [] as CascadeOptions,
               );
             }}
-            disabled={false}
+            disabled={isPending}
           />
         );
       },
@@ -626,6 +683,7 @@ export function createOrdersColumns({
       ),
       cell: ({ row }) => {
         const order = row.original;
+        const isPending = pendingOrderIds.has(order.orderId);
         return (
           <InlineCurrencyCell
             value={order.tariffs}
@@ -643,7 +701,7 @@ export function createOrdersColumns({
                 [] as CascadeOptions,
               );
             }}
-            disabled={false}
+            disabled={isPending}
           />
         );
       },
@@ -665,6 +723,7 @@ export function createOrdersColumns({
       ),
       cell: ({ row }) => {
         const order = row.original;
+        const isPending = pendingOrderIds.has(order.orderId);
         return (
           <InlineCurrencyCell
             value={order.miscFees}
@@ -682,7 +741,7 @@ export function createOrdersColumns({
                 [] as CascadeOptions,
               );
             }}
-            disabled={false}
+            disabled={isPending}
           />
         );
       },
@@ -703,10 +762,12 @@ export function createOrdersColumns({
       ),
       cell: ({ row }) => {
         const status = row.original.status;
+        const isPending = pendingOrderIds.has(row.original.orderId);
         return (
           <SelectCell
             value={status}
             options={[...ORDER_STATUSES]}
+            disabled={isPending}
             onSubmit={async (value) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
@@ -725,7 +786,7 @@ export function createOrdersColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 120,
+      size: 90,
       meta: {
         skeleton: <Skeleton className="h-6" />,
       },
@@ -735,13 +796,17 @@ export function createOrdersColumns({
       header: () => null,
       cell: ({ row }) => {
         const order = row.original;
+        const isPending = pendingOrderIds.has(order.orderId);
 
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
+              <Button variant="ghost" className="h-8 w-8 p-0" disabled={isPending}>
                 <span className="sr-only">Open menu</span>
-                <HugeiconsIcon icon={MoreHorizontalIcon} className="h-4 w-4" />
+                <HugeiconsIcon
+                  icon={isPending ? Loading03Icon : MoreHorizontalIcon}
+                  className={cn("h-4 w-4", isPending && "animate-spin")}
+                />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -754,9 +819,9 @@ export function createOrdersColumns({
               </DropdownMenuItem>
               <OrderForm
                 renderTrigger={
-                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                  <DropdownMenuItem onSelect={(e) => e.preventDefault()} disabled={isPending}>
                     <HugeiconsIcon icon={Edit01Icon} className="mr-2 h-4 w-4" />
-                    Edit order
+                    {isPending ? "Saving..." : "Edit order"}
                   </DropdownMenuItem>
                 }
                 type="edit-order"
@@ -767,10 +832,11 @@ export function createOrdersColumns({
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 variant="destructive"
+                disabled={isPending}
                 onClick={() => onDeleteOrders(new Set([order.orderId]))}
               >
                 <HugeiconsIcon icon={Delete02Icon} className="mr-2 h-4 w-4" />
-                Delete order
+                {isPending ? "Deleting..." : "Delete order"}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

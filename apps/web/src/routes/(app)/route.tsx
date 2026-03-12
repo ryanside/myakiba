@@ -3,8 +3,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { Outlet, redirect, useLocation } from "@tanstack/react-router";
+import { Outlet, redirect } from "@tanstack/react-router";
 import UserMenu from "@/components/sidebar/user-menu";
+import SyncStatusWidget from "@/components/sync/sync-status-widget";
 import { authClient } from "@/lib/auth-client";
 import { SearchCommand } from "@/components/sidebar/search-command";
 import { getVersion } from "@/queries/version";
@@ -32,7 +33,6 @@ export const Route = createFileRoute("/(app)")({
 function RouteComponent() {
   const hasNotified = useRef(false);
   const { session } = Route.useRouteContext();
-  const location = useLocation();
 
   const { data: versionData } = useQuery({
     queryKey: ["version"],
@@ -64,10 +64,10 @@ function RouteComponent() {
           <AppSidebar session={session} />
           <SidebarInset className="shadow-none! border-border">
             <header className="flex h-12 shrink-0 items-center justify-between gap-2 px-4">
-              <div className="flex items-center ">
+              <div className="flex items-center">
                 <SidebarTrigger className="-ml-1" />
                 <SearchCommand />
-                <span className="text-sm font-normal ml-1">{location.pathname}</span>
+                <SyncStatusWidget />
               </div>
               <div className="flex items-center gap-4">
                 <UserMenu session={session} />

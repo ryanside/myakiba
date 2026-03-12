@@ -33,18 +33,6 @@ class CollectionService {
     condition?: Array<Condition>,
     search?: string,
   ) {
-    let itemIdsWithEntries: string[] | undefined;
-    if (entries && entries.length > 0) {
-      const itemsWithEntries = await db
-        .select({
-          itemId: entry_to_item.itemId,
-        })
-        .from(entry_to_item)
-        .where(inArray(entry_to_item.entryId, entries));
-
-      itemIdsWithEntries = itemsWithEntries.map((item) => item.itemId);
-    }
-
     const filters = and(
       eq(collection.userId, userId),
       eq(collection.status, "Owned"),
@@ -69,8 +57,14 @@ class CollectionService {
       releaseCurrency && releaseCurrency.length > 0
         ? inArray(item_release.priceCurrency, releaseCurrency)
         : undefined,
-      itemIdsWithEntries && itemIdsWithEntries.length > 0
-        ? inArray(item.id, itemIdsWithEntries)
+      entries && entries.length > 0
+        ? inArray(
+            item.id,
+            db
+              .select({ itemId: entry_to_item.itemId })
+              .from(entry_to_item)
+              .where(inArray(entry_to_item.entryId, entries)),
+          )
         : undefined,
       search ? ilike(item.title, `%${search}%`) : undefined,
     );

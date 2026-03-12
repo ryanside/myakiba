@@ -23,8 +23,9 @@ import {
   ActionBarSeparator,
 } from "@/components/ui/action-bar";
 import type { OrderFilters, CascadeOptions, NewOrder } from "@myakiba/types";
+import { useOrdersFilters } from "@/hooks/use-orders";
+import { useUserPreferences } from "@/hooks/use-collection";
 
-// Define sortable columns configuration
 const SORTABLE_COLUMNS: SortableColumn[] = [
   { id: "title", label: "Order" },
   { id: "shop", label: "Shop" },
@@ -45,48 +46,39 @@ const SORTABLE_COLUMNS: SortableColumn[] = [
   { id: "createdAt", label: "Created At" },
 ];
 
-interface OrdersToolbarProps {
-  search: string;
-  filters: OrderFilters;
-  onSearchChange: (search: string) => void;
-  onFilterChange: (filters: OrderFilters) => void;
-  onResetFilters: () => void;
-  currency?: string;
-  // Selection state
-  selectedOrderIds: Set<string>;
-  selectedItemData: {
+export interface OrdersToolbarProps {
+  readonly selectedOrderIds: Set<string>;
+  readonly selectedItemData: {
     collectionIds: Set<string>;
     orderIds: Set<string>;
   };
-  clearSelections: () => void;
-  // Action callbacks
-  onMerge: (
+  readonly clearSelections: () => void;
+  readonly onMerge: (
     values: NewOrder,
     cascadeOptions: CascadeOptions,
     orderIds: Set<string>,
   ) => Promise<void>;
-  onSplit: (
+  readonly onSplit: (
     values: NewOrder,
     cascadeOptions: CascadeOptions,
     collectionIds: Set<string>,
     orderIds: Set<string>,
   ) => Promise<void>;
-  onDeleteOrders: (orderIds: Set<string>) => Promise<void>;
-  onMoveItem: (
+  readonly onDeleteOrders: (orderIds: Set<string>) => Promise<void>;
+  readonly onMoveItem: (
     targetOrderId: string,
     collectionIds: Set<string>,
     orderIds: Set<string>,
   ) => Promise<void>;
-  onDeleteItems: (collectionIds: Set<string>, orderIds: Set<string>) => Promise<void>;
+  readonly onDeleteItems: (collectionIds: Set<string>, orderIds: Set<string>) => Promise<void>;
+  readonly isMerging: boolean;
+  readonly isSplitting: boolean;
+  readonly isDeletingOrders: boolean;
+  readonly isDeletingItems: boolean;
+  readonly isMovingItems: boolean;
 }
 
 export function OrdersToolbar({
-  search,
-  filters,
-  onSearchChange,
-  onFilterChange,
-  onResetFilters,
-  currency = "USD",
   selectedOrderIds,
   selectedItemData,
   clearSelections,
@@ -95,7 +87,15 @@ export function OrdersToolbar({
   onDeleteOrders,
   onMoveItem,
   onDeleteItems,
+  isMerging,
+  isSplitting,
+  isDeletingOrders,
+  isDeletingItems,
+  isMovingItems,
 }: OrdersToolbarProps): React.ReactElement {
+  const { filters, setFilters, resetFilters } = useOrdersFilters();
+  const { currency } = useUserPreferences();
+
   const currentSort =
     filters.sort && filters.order
       ? {
@@ -106,32 +106,14 @@ export function OrdersToolbar({
 
   const handleSortChange = (columnId: string | null, direction: "asc" | "desc" | null): void => {
     if (columnId === null || direction === null) {
-      // Clear sorting - use default sort
-      onFilterChange({
+      setFilters({
         sort: "createdAt",
         order: "desc",
         offset: 0,
       });
     } else {
-      onFilterChange({
-        sort: columnId as
-          | "title"
-          | "shop"
-          | "orderDate"
-          | "paymentDate"
-          | "shippingDate"
-          | "collectionDate"
-          | "releaseDate"
-          | "shippingMethod"
-          | "total"
-          | "shippingFee"
-          | "taxes"
-          | "duties"
-          | "tariffs"
-          | "miscFees"
-          | "itemCount"
-          | "status"
-          | "createdAt",
+      setFilters({
+        sort: columnId as OrderFilters["sort"],
         order: direction,
         offset: 0,
       });
@@ -159,8 +141,8 @@ export function OrdersToolbar({
     <>
       <div className="flex items-center justify-start gap-2">
         <DebouncedInput
-          value={search ?? ""}
-          onChange={(e) => onSearchChange(e.toString())}
+          value={filters.search ?? ""}
+          onChange={(e) => setFilters({ ...filters, search: e.toString() })}
           placeholder="Search"
           className="max-w-xs"
         />
@@ -174,7 +156,7 @@ export function OrdersToolbar({
           currentFilters={{
             ...filters,
           }}
-          onApplyFilters={(newFilters) => onFilterChange({ ...filters, ...newFilters, offset: 0 })}
+          onApplyFilters={(newFilters) => setFilters({ ...filters, ...newFilters, offset: 0 })}
           currency={currency}
         />
         <SortCombobox
@@ -182,7 +164,7 @@ export function OrdersToolbar({
           currentSort={currentSort}
           onSortChange={handleSortChange}
         />
-        <Button onClick={onResetFilters} variant="outline">
+        <Button onClick={resetFilters} variant="outline">
           <HugeiconsIcon icon={FilterResetIcon} />
           <span className="hidden md:block">Reset Filters</span>
         </Button>
@@ -201,12 +183,12 @@ export function OrdersToolbar({
           <OrderForm
             renderTrigger={
               <ActionBarItem
-                disabled={selectedOrderIds.size < 2}
+                disabled={selectedOrderIds.size < 2 || isMerging}
                 onSelect={(e) => e.preventDefault()}
                 variant="primary"
               >
                 <HugeiconsIcon icon={GitMergeIcon} />
-                <span className="hidden md:block">Merge</span>
+                <span className="hidden md:block">{isMerging ? "Merging..." : "Merge"}</span>
               </ActionBarItem>
             }
             orderIds={selectedOrderIds}
@@ -218,12 +200,14 @@ export function OrdersToolbar({
           <UnifiedItemMoveForm
             renderTrigger={
               <ActionBarItem
-                disabled={selectedItemData.collectionIds.size === 0}
+                disabled={selectedItemData.collectionIds.size === 0 || isMovingItems || isSplitting}
                 onSelect={(e) => e.preventDefault()}
                 variant="primary"
               >
                 <HugeiconsIcon icon={MoveIcon} />
-                <span className="hidden md:block">Move Item</span>
+                <span className="hidden md:block">
+                  {isMovingItems || isSplitting ? "Moving..." : "Move Item"}
+                </span>
               </ActionBarItem>
             }
             selectedItemData={selectedItemData}
@@ -235,20 +219,22 @@ export function OrdersToolbar({
           <ConfirmationPopover
             trigger={
               <ActionBarItem
-                disabled={selectedOrderIds.size === 0}
+                disabled={selectedOrderIds.size === 0 || isDeletingOrders}
                 onSelect={(e) => e.preventDefault()}
                 variant="destructive"
               >
                 <HugeiconsIcon icon={Delete01Icon} />
                 <span>
-                  <span className="hidden md:inline">Delete </span>
+                  <span className="hidden md:inline">
+                    {isDeletingOrders ? "Deleting " : "Delete "}
+                  </span>
                   Orders
                 </span>
               </ActionBarItem>
             }
             title="Delete the selected orders and their items?"
             tooltipContent='Items with "Owned" status will not be deleted. You can delete owned items in the collection tab.'
-            disabled={selectedOrderIds.size === 0}
+            disabled={selectedOrderIds.size === 0 || isDeletingOrders}
             onConfirm={async () => {
               await onDeleteOrders(selectedOrderIds);
               clearSelections();
@@ -257,19 +243,22 @@ export function OrdersToolbar({
           <ConfirmationPopover
             trigger={
               <ActionBarItem
-                disabled={selectedItemData.collectionIds.size === 0}
+                disabled={selectedItemData.collectionIds.size === 0 || isDeletingItems}
                 onSelect={(e) => e.preventDefault()}
                 variant="destructive"
               >
                 <HugeiconsIcon icon={Delete01Icon} />
                 <span>
-                  <span className="hidden md:inline">Delete </span> Items
+                  <span className="hidden md:inline">
+                    {isDeletingItems ? "Deleting " : "Delete "}
+                  </span>{" "}
+                  Items
                 </span>
               </ActionBarItem>
             }
             title="Delete the selected items?"
             tooltipContent='Items with "Owned" status will not be deleted. You can delete owned items in the collection tab.'
-            disabled={selectedItemData.collectionIds.size === 0}
+            disabled={selectedItemData.collectionIds.size === 0 || isDeletingItems}
             onConfirm={async () => {
               await onDeleteItems(selectedItemData.collectionIds, selectedItemData.orderIds);
               clearSelections();

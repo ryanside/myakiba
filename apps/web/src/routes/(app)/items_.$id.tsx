@@ -259,11 +259,11 @@ function RouteComponent() {
           <CardContent className="space-y-6">
             <div className="flex flex-col md:flex-row gap-6">
               {item.image && (
-                <div className="">
+                <div className="relative w-32 h-32 shrink-0 overflow-hidden rounded-xl">
                   <img
                     src={item.image}
                     alt={item.title}
-                    className="w-32 h-32 object-cover object-top rounded-lg border"
+                    className="h-full w-full object-cover object-top"
                     loading="lazy"
                   />
                 </div>

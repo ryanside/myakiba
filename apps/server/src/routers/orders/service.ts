@@ -157,48 +157,19 @@ class OrdersService {
         miscFees: order.miscFees,
         notes: order.notes,
         itemCount: sql<number>`COUNT(${collection.id})`,
-        createdAt: order.createdAt,
-        updatedAt: order.updatedAt,
-        items: sql<OrderItem[]>`
+        images: sql<string[]>`
           COALESCE(
-            JSON_AGG(
-              JSON_BUILD_OBJECT(
-                'id', ${collection.id},
-                'orderId', ${collection.orderId},
-                'itemId', ${item.id},
-                'itemExternalId', ${item.externalId},
-                'releaseId', ${collection.releaseId},
-                'status', ${collection.status},
-                'itemTitle', ${item.title},
-                'itemImage', ${item.image},
-                'price', ${collection.price},
-                'count', ${collection.count},
-                'shop', ${collection.shop},
-                'score', ${collection.score}::text, 
-                'orderDate', ${collection.orderDate},
-                'paymentDate', ${collection.paymentDate},
-                'shippingDate', ${collection.shippingDate},
-                'collectionDate', ${collection.collectionDate},
-                'shippingMethod', ${collection.shippingMethod},
-                'releaseDate', ${item_release.date},
-                'releaseType', ${item_release.type},
-                'releasePrice', ${item_release.price},
-                'releaseCurrency', ${item_release.priceCurrency},
-                'releaseBarcode', ${item_release.barcode},
-                'condition', ${collection.condition},
-                'tags', ${collection.tags},
-                'notes', ${collection.notes}
-              )
-              ORDER BY ${item.title}
-            ) FILTER (WHERE ${collection.id} IS NOT NULL),
-            '[]'::json
+            ARRAY_AGG(DISTINCT ${item.image}) FILTER (WHERE ${item.image} IS NOT NULL),
+            ARRAY[]::text[]
           )
         `,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+        totalCount: sql<number>`COUNT(*) OVER()`,
       })
       .from(order)
       .leftJoin(collection, eq(order.id, collection.orderId))
       .leftJoin(item, eq(collection.itemId, item.id))
-      .leftJoin(item_release, eq(collection.releaseId, item_release.id))
       .where(whereConditions)
       .groupBy(
         order.id,
@@ -237,7 +208,10 @@ class OrdersService {
       .limit(limit)
       .offset(offset);
 
-    return orders;
+    return orders.map((currentOrder) => ({
+      ...currentOrder,
+      images: currentOrder.images.slice(0, 4),
+    }));
   }
 
   async getOrder(userId: string, orderId: string) {
@@ -571,6 +545,88 @@ class OrdersService {
     }
 
     return {};
+  }
+
+  async getOrderStats(userId: string): Promise<{
+    totalOrders: number;
+    totalSpent: number;
+    activeOrders: number;
+    unpaidCosts: number;
+  }> {
+    const orderTotals = db
+      .select({
+        orderId: order.id,
+        status: order.status,
+        total:
+          sql<number>`COALESCE(SUM(${collection.price}), 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`.as(
+            "total",
+          ),
+      })
+      .from(order)
+      .leftJoin(collection, eq(order.id, collection.orderId))
+      .where(eq(order.userId, userId))
+      .groupBy(
+        order.id,
+        order.status,
+        order.shippingFee,
+        order.taxes,
+        order.duties,
+        order.tariffs,
+        order.miscFees,
+      )
+      .as("order_totals");
+
+    const [stats] = await db
+      .select({
+        totalOrders: sql<number>`COUNT(*)`,
+        totalSpent: sql<number>`COALESCE(SUM(${orderTotals.total}) FILTER (WHERE ${orderTotals.status} != 'Ordered'), 0)`,
+        activeOrders: sql<number>`COUNT(*) FILTER (WHERE ${orderTotals.status} != 'Owned')`,
+        unpaidCosts: sql<number>`COALESCE(SUM(${orderTotals.total}) FILTER (WHERE ${orderTotals.status} = 'Ordered'), 0)`,
+      })
+      .from(orderTotals);
+
+    return stats;
+  }
+
+  async getOrderItems(userId: string, orderId: string, limit: number, offset: number) {
+    const items = await db
+      .select({
+        id: collection.id,
+        orderId: collection.orderId,
+        itemId: item.id,
+        itemExternalId: item.externalId,
+        releaseId: collection.releaseId,
+        status: collection.status,
+        itemTitle: item.title,
+        itemImage: item.image,
+        price: collection.price,
+        count: collection.count,
+        shop: collection.shop,
+        score: sql<string>`${collection.score}::text`,
+        orderDate: collection.orderDate,
+        paymentDate: collection.paymentDate,
+        shippingDate: collection.shippingDate,
+        collectionDate: collection.collectionDate,
+        shippingMethod: collection.shippingMethod,
+        releaseDate: item_release.date,
+        releaseType: item_release.type,
+        releasePrice: item_release.price,
+        releaseCurrency: item_release.priceCurrency,
+        releaseBarcode: item_release.barcode,
+        condition: collection.condition,
+        tags: collection.tags,
+        notes: collection.notes,
+        totalCount: sql<number>`COUNT(*) OVER()`,
+      })
+      .from(collection)
+      .innerJoin(item, eq(collection.itemId, item.id))
+      .leftJoin(item_release, eq(collection.releaseId, item_release.id))
+      .where(and(eq(collection.userId, userId), eq(collection.orderId, orderId)))
+      .orderBy(asc(item.title))
+      .limit(limit)
+      .offset(offset);
+
+    return items;
   }
 }
 
