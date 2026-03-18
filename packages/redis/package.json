@@ -20,6 +20,7 @@
   "dependencies": {
     "@myakiba/constants": "workspace:*",
     "@myakiba/env": "workspace:*",
+    "@myakiba/schemas": "workspace:*",
     "ioredis": "catalog:"
   },
   "devDependencies": {

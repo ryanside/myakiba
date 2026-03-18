@@ -88,17 +88,17 @@ export function CollectionBreakdown({
                       <div className="flex flex-col gap-1">
                         <p className="text-sm font-medium">{item.name}</p>
                         <div className="flex justify-between items-center gap-2">
-                          <span className="text-xs text-muted-foreground">Spent:</span>
+                          <span className="text-xs">Spent:</span>
                           <span className="text-xs font-medium">
                             {formatCurrencyFromMinorUnits(item.value, currency)}
                           </span>
                         </div>
                         <div className="flex justify-between items-center gap-2">
-                          <span className="text-xs text-muted-foreground">Percentage:</span>
+                          <span className="text-xs">Percentage:</span>
                           <span className="text-xs font-medium">{item.percentage.toFixed(1)}%</span>
                         </div>
                         <div className="flex justify-between items-center gap-2">
-                          <span className="text-xs text-muted-foreground">Items:</span>
+                          <span className="text-xs">Items:</span>
                           <span className="text-xs font-medium">{item.count}</span>
                         </div>
                       </div>

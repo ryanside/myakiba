@@ -16,7 +16,10 @@ export type OrderStats = {
   unpaidCosts: number;
 };
 
-export type OrderQueryResponse = Order;
+export type PaginatedResult<T> = {
+  readonly items: readonly T[];
+  readonly totalCount: number;
+};
 
 export type Order = {
   orderId: string;
@@ -39,17 +42,11 @@ export type Order = {
   itemCount: number;
   createdAt: string;
   updatedAt: string;
-  items: OrderItem[];
 };
 
-export type OrderListItem = Omit<Order, "items"> & {
+export type OrderListItem = Order & {
   readonly totalCount: number;
   readonly images: readonly string[];
-};
-
-export type OrderItemsResponse = {
-  readonly items: readonly OrderItem[];
-  readonly totalCount: number;
 };
 
 export type OrderItem = Omit<

@@ -1,46 +1,70 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  ArrowLeft01Icon,
-  Calendar01Icon,
-  CreditCardIcon,
-  Edit01Icon,
-  FileAttachmentIcon,
-  PackageIcon,
-  UserGroupIcon,
-} from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, Edit01Icon, PackageIcon } from "@hugeicons/core-free-icons";
 import { createFileRoute, useParams, Link } from "@tanstack/react-router";
+import { cn } from "@/lib/utils";
 import { getOrder, editOrder, deleteOrderItem } from "@/queries/orders";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/reui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { formatCurrencyFromMinorUnits, formatDate, formatTimestamp } from "@myakiba/utils";
 import { getStatusVariant } from "@/lib/orders";
 import { OrderItemSubDataGrid } from "@/components/orders/order-item-sub-data-grid";
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { RowSelectionState } from "@tanstack/react-table";
 import { OrderForm } from "@/components/orders/order-form";
-import type { EditedOrder, CascadeOptions } from "@myakiba/types";
+import type {
+  EditedOrder,
+  CascadeOptions,
+  CollectionItemFormValues,
+  DateFormat,
+} from "@myakiba/types";
 import { toast } from "sonner";
-import type { CollectionItemFormValues } from "@myakiba/types";
 import { updateCollectionItem } from "@/queries/collection";
 import Loader from "@/components/loader";
-import type { DateFormat } from "@myakiba/types";
+import {
+  Timeline,
+  TimelineItem,
+  TimelineIndicator,
+  TimelineSeparator,
+  TimelineHeader,
+  TimelineTitle,
+  TimelineDate,
+} from "@/components/reui/timeline";
 
 export const Route = createFileRoute("/(app)/orders_/$id")({
   component: RouteComponent,
   head: ({ params }) => ({
     meta: [
-      {
-        name: "description",
-        content: `order ${params.id} details`,
-      },
-      {
-        title: `Order ${params.id} - myakiba`,
-      },
+      { name: "description", content: `order ${params.id} details` },
+      { title: `Order ${params.id} - myakiba` },
     ],
   }),
 });
+
+const STATUS_TO_STEP: Readonly<Record<string, number>> = {
+  ordered: 1,
+  paid: 2,
+  shipped: 3,
+  owned: 4,
+};
+
+function CostRow({
+  label,
+  amount,
+  currency,
+}: {
+  readonly label: string;
+  readonly amount: number;
+  readonly currency: string | undefined;
+}): React.JSX.Element {
+  return (
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="tabular-nums">{formatCurrencyFromMinorUnits(amount, currency)}</span>
+    </div>
+  );
+}
 
 function RouteComponent() {
   const { session } = Route.useRouteContext();
@@ -69,8 +93,6 @@ function RouteComponent() {
     retry: false,
   });
 
-  // TODO: add delete order mutation
-
   const editOrderMutation = useMutation({
     mutationFn: async ({
       values,
@@ -81,7 +103,6 @@ function RouteComponent() {
     }) => {
       return await editOrder(values, cascadeOptions);
     },
-    // TODO: add optimistic update
     onSuccess: () => {},
     onError: (error) => {
       toast.error("Failed to update order. Please try again.", {
@@ -97,7 +118,6 @@ function RouteComponent() {
     mutationFn: async ({ values }: { values: CollectionItemFormValues }) => {
       return await updateCollectionItem(values);
     },
-    // TODO: add optimistic update
     onSuccess: () => {},
     onError: (error) => {
       toast.error("Failed to update item. Please try again.", {
@@ -113,7 +133,6 @@ function RouteComponent() {
     mutationFn: async ({ orderId, collectionId }: { orderId: string; collectionId: string }) => {
       return await deleteOrderItem(orderId, collectionId);
     },
-    // TODO: add optimistic update
     onSuccess: () => {},
     onError: (error) => {
       toast.error("Failed to delete item. Please try again.", {
@@ -131,7 +150,6 @@ function RouteComponent() {
 
   const handleEditItem = async (values: CollectionItemFormValues) => {
     setPendingCollectionItemIdList((previous) => Array.from(new Set([...previous, values.id])));
-
     try {
       await editItemMutation.mutateAsync({ values });
     } finally {
@@ -143,7 +161,6 @@ function RouteComponent() {
 
   const handleDeleteItem = async (orderId: string, collectionId: string) => {
     setPendingCollectionItemIdList((previous) => Array.from(new Set([...previous, collectionId])));
-
     try {
       await deleteItemMutation.mutateAsync({ orderId, collectionId });
     } finally {
@@ -161,51 +178,94 @@ function RouteComponent() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-y-4">
         <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
-        <Button variant="outline">
-          <Link to="/orders" className="flex items-center gap-1.5">
-            <HugeiconsIcon icon={ArrowLeft01Icon} />
-            Back to Orders
-          </Link>
-        </Button>
+        <Link
+          to="/orders"
+          className={cn(buttonVariants({ variant: "outline" }), "flex items-center gap-1.5")}
+        >
+          <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
+          Back to Orders
+        </Link>
       </div>
     );
   }
 
-  const { order } = data;
+  const order = data;
+  const activeStep = STATUS_TO_STEP[order.status.toLowerCase()] ?? 0;
 
-  // Calculate financial details
-  const itemsTotal = order.items.reduce((sum, item) => sum + item.price * item.count, 0);
   const shippingFee = order.shippingFee ?? 0;
   const taxes = order.taxes ?? 0;
   const duties = order.duties ?? 0;
   const tariffs = order.tariffs ?? 0;
   const miscFees = order.miscFees ?? 0;
   const totalAmount = order.total ?? 0;
+  const itemsTotal = totalAmount - shippingFee - taxes - duties - tariffs - miscFees;
+
+  const timelineSteps = [
+    { step: 1, title: "Ordered", date: order.orderDate },
+    { step: 2, title: "Paid", date: order.paymentDate },
+    { step: 3, title: "Shipped", date: order.shippingDate },
+    { step: 4, title: "Collected", date: order.collectionDate },
+  ] as const;
+
+  const optionalFees = [
+    { label: "Taxes", amount: taxes },
+    { label: "Duties", amount: duties },
+    { label: "Tariffs", amount: tariffs },
+    { label: "Other fees", amount: miscFees },
+  ].filter(({ amount }) => amount > 0);
 
   return (
-    <div className="flex flex-col gap-6 min-h-full">
-      {/* Header Section */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost">
-            <Link to="/orders" className="flex items-center gap-1.5">
-              <HugeiconsIcon icon={ArrowLeft01Icon} />
-              Back to Orders
-            </Link>
-          </Button>
-          <div className="flex flex-row items-center gap-x-2">
-            <h1 className="text-2xl font-medium text-foreground">{order.title}</h1>
-            <Badge variant={getStatusVariant(order.status)} className="text-sm" size="lg">
-              {order.status}
-            </Badge>
+    <div className="flex flex-col gap-8 min-h-full">
+      {/* Header */}
+      <div className="flex flex-col gap-3">
+        <Link
+          to="/orders"
+          className={cn(buttonVariants({ variant: "ghost" }), "flex items-center gap-1.5 w-fit")}
+        >
+          <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
+          Back to Orders
+        </Link>
+
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-semibold tracking-tight">{order.title}</h1>
+              <Badge variant={getStatusVariant(order.status)} size="lg">
+                {order.status}
+              </Badge>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+              {order.shop && (
+                <>
+                  <span>{order.shop}</span>
+                  <span className="text-border select-none" aria-hidden="true">
+                    &middot;
+                  </span>
+                </>
+              )}
+              <span>{order.shippingMethod}</span>
+              <span className="text-border select-none" aria-hidden="true">
+                &middot;
+              </span>
+              <span>
+                {order.itemCount} {order.itemCount === 1 ? "item" : "items"}
+              </span>
+              {order.releaseDate && (
+                <>
+                  <span className="text-border select-none" aria-hidden="true">
+                    &middot;
+                  </span>
+                  <span>Release {formatDate(order.releaseDate, dateFormat)}</span>
+                </>
+              )}
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-x-2">
+
           <OrderForm
             renderTrigger={
-              <Button variant="outline">
+              <Button variant="outline" size="sm">
                 <HugeiconsIcon icon={Edit01Icon} className="size-4" />
-                Edit Order
+                Edit
               </Button>
             }
             type="edit-order"
@@ -215,169 +275,68 @@ function RouteComponent() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {/* Order Information */}
-        <Card className="shadow-none">
-          <CardHeader className="flex flex-row items-center gap-2 pb-2">
-            <div className="flex items-center gap-x-2">
-              <HugeiconsIcon icon={PackageIcon} className="size-4 text-muted-foreground" />
-              <CardTitle className="text-sm font-medium">Order Details</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Order ID:</span>
-              <span className="text-sm font-medium">{order.orderId}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Shop:</span>
-              <span className="text-sm font-medium">{order.shop || "N/A"}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Items:</span>
-              <span className="text-sm font-medium">{order.itemCount}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Shipping Method:</span>
-              <span className="text-sm font-medium">{order.shippingMethod}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Release Period:</span>
-              <span className="text-sm font-medium">
-                {order.releaseDate ? formatDate(order.releaseDate, dateFormat) : "N/A"}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Created:</span>
-              <span className="text-sm font-medium">
-                {formatTimestamp(order.createdAt, dateFormat)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Last Updated:</span>
-              <span className="text-sm font-medium">
-                {formatTimestamp(order.updatedAt, dateFormat)}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Timeline + Cost Breakdown */}
+      <div className="grid gap-8 lg:grid-cols-[3fr_2fr]">
+        <section className="flex flex-col gap-3">
+          <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-widest">
+            Timeline
+          </h2>
+          <Timeline value={activeStep}>
+            {timelineSteps.map(({ step, title, date }) => (
+              <TimelineItem key={step} step={step}>
+                <TimelineIndicator />
+                <TimelineSeparator />
+                <TimelineHeader>
+                  <TimelineTitle>{title}</TimelineTitle>
+                </TimelineHeader>
+                <TimelineDate>{date ? formatDate(date, dateFormat) : "—"}</TimelineDate>
+              </TimelineItem>
+            ))}
+          </Timeline>
+        </section>
 
-        {/* Timeline */}
-        <Card className="shadow-none">
-          <CardHeader className="flex flex-row items-center gap-2 pb-2">
-            <div className="flex items-center gap-x-2">
-              <HugeiconsIcon icon={Calendar01Icon} className="size-4 text-muted-foreground" />
-              <CardTitle className="text-sm font-medium">Timeline</CardTitle>
+        <section className="flex flex-col gap-3">
+          <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-widest">
+            Cost Breakdown
+          </h2>
+          <div className="rounded-xl bg-card ring-1 ring-foreground/10 p-5 flex flex-col gap-3">
+            <div className="flex flex-col gap-2.5">
+              <CostRow label="Items" amount={itemsTotal} currency={userCurrency} />
+              <CostRow label="Shipping" amount={shippingFee} currency={userCurrency} />
+              {optionalFees.map(({ label, amount }) => (
+                <CostRow key={label} label={label} amount={amount} currency={userCurrency} />
+              ))}
             </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
+            <Separator />
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Ordered:</span>
-              <span className="text-sm font-medium">
-                {order.orderDate ? formatDate(order.orderDate, dateFormat) : "N/A"}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Paid:</span>
-              <span className="text-sm font-medium">
-                {order.paymentDate ? formatDate(order.paymentDate, dateFormat) : "N/A"}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Shipped:</span>
-              <span className="text-sm font-medium">
-                {order.shippingDate ? formatDate(order.shippingDate, dateFormat) : "N/A"}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Collected:</span>
-              <span className="text-sm font-medium">
-                {order.collectionDate ? formatDate(order.collectionDate, dateFormat) : "N/A"}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Financial Summary */}
-        <Card className="shadow-none">
-          <CardHeader className="flex flex-row items-center gap-2 pb-2">
-            <div className="flex items-center gap-x-2">
-              <HugeiconsIcon icon={CreditCardIcon} className="size-4 text-muted-foreground" />
-              <CardTitle className="text-sm font-medium">Financial Summary</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Items Total:</span>
-              <span className="text-sm font-medium">
-                {formatCurrencyFromMinorUnits(itemsTotal, userCurrency)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Shipping:</span>
-              <span className="text-sm font-medium">
-                {formatCurrencyFromMinorUnits(shippingFee, userCurrency)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Taxes:</span>
-              <span className="text-sm font-medium">
-                {formatCurrencyFromMinorUnits(taxes, userCurrency)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Duties:</span>
-              <span className="text-sm font-medium">
-                {formatCurrencyFromMinorUnits(duties, userCurrency)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Tariffs:</span>
-              <span className="text-sm font-medium">
-                {formatCurrencyFromMinorUnits(tariffs, userCurrency)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Misc Fees:</span>
-              <span className="text-sm font-medium">
-                {formatCurrencyFromMinorUnits(miscFees, userCurrency)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between font-medium">
-              <span className="text-sm">Total Amount:</span>
-              <span className="text-sm">
+              <span className="text-sm font-medium">Total</span>
+              <span className="text-lg font-semibold tracking-tight tabular-nums">
                 {formatCurrencyFromMinorUnits(totalAmount, userCurrency)}
               </span>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </section>
       </div>
 
-      {/* Notes Section */}
+      {/* Notes */}
       {order.notes && (
-        <Card>
-          <CardHeader className="flex flex-row items-center gap-2 pb-2">
-            <div className="flex items-center gap-x-2">
-              <HugeiconsIcon icon={FileAttachmentIcon} className="size-4 text-muted-foreground" />
-              <CardTitle className="text-sm font-medium">Notes</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{order.notes}</p>
-          </CardContent>
-        </Card>
+        <section className="flex flex-col gap-3">
+          <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-widest">
+            Notes
+          </h2>
+          <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed max-w-prose">
+            {order.notes}
+          </p>
+        </section>
       )}
 
       {/* Order Items */}
-      <Card className="shadow-none flex-1">
-        <CardHeader className="flex flex-row items-center gap-2 pb-2">
-          <div className="flex items-center gap-x-2">
-            <HugeiconsIcon icon={UserGroupIcon} className="size-4 text-muted-foreground" />
-            <CardTitle className="text-sm font-medium">Order Items ({order.itemCount})</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          {order.items.length > 0 ? (
+      <section className="flex flex-col gap-3 flex-1">
+        <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-widest">
+          Items ({order.itemCount})
+        </h2>
+        {order.itemCount > 0 ? (
+          <div className="rounded-xl ring-1 ring-foreground/10 bg-card overflow-hidden">
             <OrderItemSubDataGrid
               orderId={order.orderId}
               itemSelection={itemSelection}
@@ -386,14 +345,21 @@ function RouteComponent() {
               onDeleteItem={handleDeleteItem}
               isCollectionItemPending={isCollectionItemPending}
             />
-          ) : (
-            <div className="flex items-center justify-center py-8 text-muted-foreground">
-              <HugeiconsIcon icon={PackageIcon} className="size-5" />
-              No items in this order
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-16 gap-3 rounded-xl ring-1 ring-foreground/10 bg-card">
+            <HugeiconsIcon icon={PackageIcon} className="size-8 text-muted-foreground/40" />
+            <p className="text-sm text-muted-foreground">No items in this order yet</p>
+          </div>
+        )}
+      </section>
+
+      {/* Footer metadata */}
+      <div className="flex items-center gap-2 text-xs text-muted-foreground/60 pb-2">
+        <span>Created {formatTimestamp(order.createdAt, dateFormat)}</span>
+        <span aria-hidden="true">&middot;</span>
+        <span>Updated {formatTimestamp(order.updatedAt, dateFormat)}</span>
+      </div>
     </div>
   );
 }

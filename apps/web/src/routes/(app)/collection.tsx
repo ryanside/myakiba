@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { CollectionDataGrid } from "@/components/collection/collection-data-grid";
+import { CollectionQuickFilters } from "@/components/collection/collection-quick-filters";
 import { collectionSearchSchema } from "@myakiba/schemas";
 import { KPICard } from "@/components/ui/kpi-card";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils";
@@ -67,6 +68,7 @@ function RouteComponent() {
           isLoading={isPending}
         />
       </div>
+      <CollectionQuickFilters />
       <CollectionDataGrid key="collection-data-grid" />
     </div>
   );

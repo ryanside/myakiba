@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import * as z from "zod";
-import type { EditedOrder, NewOrder, Order, OrderListItem, CascadeOptions } from "@myakiba/types";
+import type { EditedOrder, NewOrder, Order, CascadeOptions } from "@myakiba/types";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import { CascadeOptionsDropdown } from "@/components/cascade-options-dropdown";
 import { Textarea } from "../ui/textarea";
@@ -82,7 +82,7 @@ type EditOrderFormProps = {
   collectionIds?: Set<string>;
   type: "edit-order";
   callbackFn: (value: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
-  orderData: Order | OrderListItem;
+  orderData: Order;
   clearSelections?: () => void;
   currency?: string;
 };

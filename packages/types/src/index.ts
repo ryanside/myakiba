@@ -12,15 +12,14 @@ export type {
 } from "./enums";
 
 export type {
+  PaginatedResult,
   Order,
   OrderListItem,
   OrderItem,
-  OrderItemsResponse,
   NewOrder,
   EditedOrder,
   OrderFilters,
   OrderStats,
-  OrderQueryResponse,
   CascadeOptions,
   ItemRelease,
   ItemReleasesResponse,
