@@ -12,7 +12,7 @@ import { cascadeOptionsSchema } from "@myakiba/schemas";
 import { tryCatch } from "@myakiba/utils";
 import { betterAuth } from "@/middleware/better-auth";
 import { evlog } from "evlog/elysia";
-import type { OrderListItem, OrderQueryResponse } from "@myakiba/types";
+import type { Order, OrderListItem } from "@myakiba/types";
 
 const ordersRouter = new Elysia({ prefix: "/orders" })
   .use(betterAuth)
@@ -153,14 +153,14 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
         return status(500, "Failed to get order");
       }
 
-      const serializedOrder: OrderQueryResponse = {
+      const serializedOrder: Order = {
         ...order,
         createdAt: order.createdAt.toISOString(),
         updatedAt: order.updatedAt.toISOString(),
       };
 
       log.set({ outcome: "success" });
-      return { order: serializedOrder };
+      return serializedOrder;
     },
     { params: orderIdParamSchema, auth: true },
   )

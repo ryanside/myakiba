@@ -11,13 +11,6 @@ import { createFileRoute, useParams, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { app, getErrorMessage } from "@/lib/treaty-client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import { Badge } from "@/components/reui/badge";
 import {
   Empty,
@@ -27,15 +20,24 @@ import {
   EmptyMedia,
 } from "@/components/ui/empty";
 import { formatCurrencyFromMinorUnits, formatDate } from "@myakiba/utils";
-import { Label } from "@/components/ui/label";
 import CollectionItemForm from "@/components/collection/collection-item-form";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import type { CollectionItemFormValues, CollectionItem } from "@myakiba/types";
+import type { CollectionItemFormValues, CollectionItem, DateFormat } from "@myakiba/types";
 import { deleteCollectionItems, updateCollectionItem } from "@/queries/collection";
 import { toast } from "sonner";
 import Loader from "@/components/loader";
-import type { DateFormat } from "@myakiba/types";
 import { getCategoryColor } from "@/lib/category-colors";
+import { Separator } from "@/components/ui/separator";
+import {
+  Timeline,
+  TimelineItem,
+  TimelineHeader,
+  TimelineDate,
+  TimelineTitle,
+  TimelineIndicator,
+  TimelineSeparator,
+} from "@/components/reui/timeline";
+import { getStatusVariant } from "@/lib/orders";
 
 type ItemRelatedCollection = {
   collection: Omit<
@@ -83,6 +85,42 @@ async function getItemRelatedCollection(itemId: string) {
   return data;
 }
 
+function getTimelineActiveStep(dates: {
+  readonly orderDate: string | null;
+  readonly paymentDate: string | null;
+  readonly shippingDate: string | null;
+  readonly collectionDate: string | null;
+}): number {
+  if (dates.collectionDate) return 4;
+  if (dates.shippingDate) return 3;
+  if (dates.paymentDate) return 2;
+  if (dates.orderDate) return 1;
+  return 0;
+}
+
+function SectionHeading({ children }: { readonly children: React.ReactNode }) {
+  return (
+    <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+      {children}
+    </h2>
+  );
+}
+
+function DetailRow({
+  label,
+  children,
+}: {
+  readonly label: string;
+  readonly children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-baseline justify-between gap-4">
+      <span className="text-sm text-muted-foreground shrink-0">{label}</span>
+      <span className="text-sm font-medium text-right">{children}</span>
+    </div>
+  );
+}
+
 function RouteComponent() {
   const { session } = Route.useRouteContext();
   const userCurrency = session?.user.currency;
@@ -97,12 +135,7 @@ function RouteComponent() {
     retry: false,
   });
 
-  const {
-    data: itemRelatedOrders,
-    // isPending: isPendingItemRelatedOrders,
-    // isError: isErrorItemRelatedOrders,
-    // error: errorItemRelatedOrders,
-  } = useQuery({
+  const { data: itemRelatedOrders } = useQuery({
     queryKey: ["item", id, "itemRelatedOrders"],
     queryFn: () => getItemRelatedOrders(id),
     staleTime: 1000 * 60 * 5,
@@ -130,33 +163,31 @@ function RouteComponent() {
       const previousData = queryClient.getQueryData(["item", id, "itemRelatedCollection"]);
       queryClient.setQueryData(
         ["item", id, "itemRelatedCollection"],
-        (old: ItemRelatedCollection) => {
-          return {
-            ...old,
-            collection: old.collection.map((collectionItem) => {
-              if (collectionItem.id === values.id) {
-                return {
-                  ...collectionItem,
-                  status: values.status,
-                  count: values.count,
-                  score: values.score,
-                  price: values.price,
-                  shop: values.shop,
-                  condition: values.condition,
-                  orderDate: values.orderDate,
-                  paymentDate: values.paymentDate,
-                  shippingDate: values.shippingDate,
-                  collectionDate: values.collectionDate,
-                  shippingMethod: values.shippingMethod,
-                  notes: values.notes,
-                  tags: values.tags,
-                  releaseId: values.releaseId,
-                };
-              }
-              return collectionItem;
-            }),
-          };
-        },
+        (old: ItemRelatedCollection) => ({
+          ...old,
+          collection: old.collection.map((collectionItem) => {
+            if (collectionItem.id === values.id) {
+              return {
+                ...collectionItem,
+                status: values.status,
+                count: values.count,
+                score: values.score,
+                price: values.price,
+                shop: values.shop,
+                condition: values.condition,
+                orderDate: values.orderDate,
+                paymentDate: values.paymentDate,
+                shippingDate: values.shippingDate,
+                collectionDate: values.collectionDate,
+                shippingMethod: values.shippingMethod,
+                notes: values.notes,
+                tags: values.tags,
+                releaseId: values.releaseId,
+              };
+            }
+            return collectionItem;
+          }),
+        }),
       );
       return { previousData };
     },
@@ -183,14 +214,10 @@ function RouteComponent() {
       const previousData = queryClient.getQueryData(["item", id, "itemRelatedCollection"]);
       queryClient.setQueryData(
         ["item", id, "itemRelatedCollection"],
-        (old: ItemRelatedCollection) => {
-          return {
-            ...old,
-            collection: old.collection.filter(
-              (collectionItem) => collectionItem.id !== collectionId,
-            ),
-          };
-        },
+        (old: ItemRelatedCollection) => ({
+          ...old,
+          collection: old.collection.filter((collectionItem) => collectionItem.id !== collectionId),
+        }),
       );
       return { previousData };
     },
@@ -208,11 +235,11 @@ function RouteComponent() {
     },
   });
 
-  const handleEditCollectionItem = async (values: CollectionItemFormValues) => {
+  const handleEditCollectionItem = async (values: CollectionItemFormValues): Promise<void> => {
     await editCollectionItemMutation.mutateAsync(values);
   };
 
-  const handleDeleteCollectionItem = async (collectionId: string) => {
+  const handleDeleteCollectionItem = async (collectionId: string): Promise<void> => {
     await deleteCollectionItemMutation.mutateAsync(collectionId);
   };
 
@@ -225,8 +252,8 @@ function RouteComponent() {
       <div className="flex flex-col items-center justify-center h-64 gap-y-4">
         <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
         <Button variant="outline">
-          <Link to="/collection">
-            <HugeiconsIcon icon={ArrowLeft01Icon} className="mr-2 h-4 w-4" />
+          <Link to="/collection" className="flex items-center gap-1.5">
+            <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
             Back to Collection
           </Link>
         </Button>
@@ -235,148 +262,179 @@ function RouteComponent() {
   }
 
   const { item } = data;
+  const collectionItems = itemRelatedCollection?.collection ?? [];
+  const ordersList = itemRelatedOrders?.orders ?? [];
 
-  const collectionItems = itemRelatedCollection?.collection || [];
-  const ordersList = itemRelatedOrders?.orders || [];
+  const entriesByCategory = item.entries.reduce(
+    (acc, entry) => {
+      if (!acc[entry.category]) {
+        acc[entry.category] = [];
+      }
+      acc[entry.category].push(entry);
+      return acc;
+    },
+    {} as Record<string, typeof item.entries>,
+  );
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1">
-        <Card className="lg:col-span-2">
-          <CardContent className="space-y-6">
-            <div className="flex flex-col md:flex-row gap-6">
-              {item.image && (
-                <div className="relative w-32 h-32 shrink-0 overflow-hidden rounded-xl">
-                  <img
-                    src={item.image}
-                    alt={item.title}
-                    className="h-full w-full object-cover object-top"
-                    loading="lazy"
-                  />
-                </div>
-              )}
+    <div className="flex flex-col gap-8 pb-8">
+      {/* Navigation */}
+      <nav>
+        <Button variant="ghost">
+          <Link to="/collection" className="flex items-center gap-1.5">
+            <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
+            Back to Collection
+          </Link>
+        </Button>
+      </nav>
 
-              <div className="flex-1 h-full space-y-2">
-                <div className="flex flex-col gap-y-0.5">
-                  <h1 className="text-xl font-medium ">{item.title}</h1>
-                  {item.externalId ? (
-                    <a
-                      href={`https://myfigurecollection.net/item/${item.externalId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-muted-foreground font-normal hover:text-foreground transition-colors underline-offset-4 hover:underline"
-                    >
-                      https://myfigurecollection.net/item/{item.externalId}
-                    </a>
-                  ) : (
-                    <span className="text-xs text-muted-foreground font-normal">Custom item</span>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Badge
-                    variant="outline"
-                    style={{
-                      borderColor: getCategoryColor(item.category),
-                      color: getCategoryColor(item.category),
-                    }}
-                  >
-                    {item.category}
-                  </Badge>
-                  {item.scale && item.scale !== "NON_SCALE" && (
-                    <Badge variant="outline">{item.scale}</Badge>
-                  )}
-                  {item.version && item.version.length > 0 && (
-                    <Badge variant="outline">{item.version}</Badge>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Releases */}
-            {item.releases && item.releases.length > 0 && (
-              <div>
-                <Label className="text-sm font-medium mb-3">Releases</Label>
-                <div className="space-y-2">
-                  {item.releases.map((release) => (
-                    <div
-                      key={release.id}
-                      className="flex flex-wrap items-center gap-2 text-sm p-3 border rounded-lg"
-                    >
-                      <HugeiconsIcon
-                        icon={Calendar01Icon}
-                        className="h-4 w-4 text-muted-foreground"
-                      />
-                      <span className="font-medium">{formatDate(release.date, dateFormat)}</span>
-                      {release.type && <Badge variant="outline">{release.type}</Badge>}
-                      {release.barcode && <Badge variant="outline">{release.barcode}</Badge>}
-                      {release.price && release.priceCurrency && (
-                        <span className="ml-auto font-medium">
-                          {formatCurrencyFromMinorUnits(release.price, release.priceCurrency)}
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
+      {/* Hero: Image + Item Identity */}
+      <div className="flex flex-col sm:flex-row gap-6">
+        {item.image && (
+          <div className="w-44 h-60 shrink-0 overflow-hidden rounded-xl bg-muted/40">
+            <img
+              src={item.image}
+              alt={item.title}
+              className="h-full w-full object-cover object-top"
+              loading="lazy"
+            />
+          </div>
+        )}
+        <div className="flex flex-col justify-center gap-3">
+          <div>
+            <h1 className="text-2xl font-medium tracking-tight">{item.title}</h1>
+            {item.externalId ? (
+              <a
+                href={`https://myfigurecollection.net/item/${item.externalId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline"
+              >
+                myfigurecollection.net/item/{item.externalId}
+              </a>
+            ) : (
+              <span className="text-xs text-muted-foreground">Custom item</span>
             )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Badge
+              variant="outline"
+              style={{
+                borderColor: getCategoryColor(item.category),
+                color: getCategoryColor(item.category),
+              }}
+            >
+              {item.category}
+            </Badge>
+            {item.scale && item.scale !== "NON_SCALE" && (
+              <Badge variant="outline">{item.scale}</Badge>
+            )}
+            {item.version && item.version.length > 0 && (
+              <Badge variant="outline">{item.version}</Badge>
+            )}
+          </div>
+        </div>
+      </div>
 
-            {/* Entries (Characters, Companies, etc.) */}
-            <div>
-              <Label className="text-sm font-medium mb-3">Related Entries</Label>
-              <div className="space-y-3">
-                {Object.entries(
-                  item.entries.reduce(
-                    (acc, entry) => {
-                      if (!acc[entry.category]) {
-                        acc[entry.category] = [];
-                      }
-                      acc[entry.category].push(entry);
-                      return acc;
-                    },
-                    {} as Record<string, typeof item.entries>,
-                  ),
-                ).map(([category, entries]) => (
+      {/* Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-x-12 gap-y-10">
+        {/* Left Column: Item Details */}
+        <div className="lg:col-span-3 space-y-10">
+          {/* Releases */}
+          {item.releases && item.releases.length > 0 && (
+            <section className="space-y-4">
+              <SectionHeading>Releases</SectionHeading>
+              <div className="space-y-2">
+                {item.releases.map((release) => (
+                  <div
+                    key={release.id}
+                    className="flex items-center gap-3 text-sm py-2 border-b border-border/50 last:border-0"
+                  >
+                    <HugeiconsIcon
+                      icon={Calendar01Icon}
+                      className="size-4 text-muted-foreground shrink-0"
+                    />
+                    <span className="font-medium">{formatDate(release.date, dateFormat)}</span>
+                    {release.type && <Badge variant="secondary">{release.type}</Badge>}
+                    {release.barcode && (
+                      <span className="text-xs text-muted-foreground">{release.barcode}</span>
+                    )}
+                    {release.price && release.priceCurrency && (
+                      <span className="ml-auto font-medium tabular-nums">
+                        {formatCurrencyFromMinorUnits(release.price, release.priceCurrency)}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Related Entries */}
+          {Object.keys(entriesByCategory).length > 0 && (
+            <section className="space-y-4">
+              <SectionHeading>Related Entries</SectionHeading>
+              <div className="space-y-4">
+                {Object.entries(entriesByCategory).map(([category, entries]) => (
                   <div key={category}>
-                    <Label className="text-xs font-medium text-muted-foreground uppercase mb-1">
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                       {category}
-                    </Label>
-                    <div className="flex flex-wrap gap-2">
+                    </span>
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
                       {entries.map((entry) => (
-                        <Badge key={entry.id} variant="outline">
+                        <Badge key={entry.id} variant="secondary">
                           {entry.name}
-                          {entry.role && <span className="text-xs">({entry.role})</span>}
+                          {entry.role && (
+                            <span className="text-muted-foreground ml-1">({entry.role})</span>
+                          )}
                         </Badge>
                       ))}
                     </div>
                   </div>
                 ))}
-                <div key="dimensions">
-                  <Label className="text-xs font-medium text-muted-foreground uppercase mb-1">
-                    Dimensions
-                  </Label>
-                  <div className="flex flex-wrap gap-2">
-                    {item.scale && <Badge variant="outline">{item.scale}</Badge>}
+              </div>
+            </section>
+          )}
 
-                    <Badge variant="outline">
-                      Height: {item.height ? `${item.height}mm` : "N/A"}
-                    </Badge>
-                    <Badge variant="outline">Width: {item.width ? `${item.width}mm` : "N/A"}</Badge>
-                    <Badge variant="outline">Depth: {item.depth ? `${item.depth}mm` : "N/A"}</Badge>
-                  </div>
+          {/* Specifications */}
+          <section className="space-y-4">
+            <SectionHeading>Specifications</SectionHeading>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+              {item.scale && (
+                <div>
+                  <span className="text-xs text-muted-foreground">Scale</span>
+                  <p className="text-sm font-medium mt-0.5">{item.scale}</p>
                 </div>
+              )}
+              <div>
+                <span className="text-xs text-muted-foreground">Height</span>
+                <p className="text-sm font-medium mt-0.5">
+                  {item.height ? `${item.height}mm` : "—"}
+                </p>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground">Width</span>
+                <p className="text-sm font-medium mt-0.5">{item.width ? `${item.width}mm` : "—"}</p>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground">Depth</span>
+                <p className="text-sm font-medium mt-0.5">{item.depth ? `${item.depth}mm` : "—"}</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </section>
+        </div>
 
-        <Card className="flex flex-col">
-          <CardHeader>
-            <CardTitle>Personal</CardTitle>
-          </CardHeader>
-          <CardContent className="flex-1 p-2 overflow-y-auto">
+        {/* Right Column: Your Collection */}
+        <div className="lg:col-span-2">
+          <SectionHeading>Your Collection</SectionHeading>
+
+          <div className="mt-4">
             {isPendingItemRelatedCollection ? (
-              <div className="flex items-center justify-center py-8">
-                <HugeiconsIcon icon={Loading03Icon} className="animate-spin" />
+              <div className="flex items-center justify-center py-12">
+                <HugeiconsIcon
+                  icon={Loading03Icon}
+                  className="size-5 animate-spin text-muted-foreground"
+                />
               </div>
             ) : isErrorItemRelatedCollection ? (
               <Empty>
@@ -389,45 +447,52 @@ function RouteComponent() {
                 </EmptyHeader>
               </Empty>
             ) : collectionItems.length === 0 ? (
-              <Empty>
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <HugeiconsIcon icon={Package01Icon} />
-                  </EmptyMedia>
-                  <EmptyTitle>No Collection Items</EmptyTitle>
-                  <EmptyDescription>
-                    You don't have this item in your collection yet.
-                  </EmptyDescription>
-                </EmptyHeader>
-              </Empty>
+              <div className="rounded-xl border border-dashed py-10 px-6 text-center">
+                <p className="text-sm text-muted-foreground">Not in your collection yet.</p>
+              </div>
             ) : (
-              <div className="space-y-4">
-                {collectionItems.map((collectionItem) => {
-                  const release = data.item.releases.find(
-                    (releaseItem) => releaseItem.id === collectionItem.releaseId,
-                  );
+              <div className="space-y-0">
+                {collectionItems.map((collectionItem, index) => {
+                  const release = item.releases.find((r) => r.id === collectionItem.releaseId);
                   const relatedOrder = collectionItem.orderId
-                    ? ordersList.find((order) => order.id === collectionItem.orderId)
+                    ? ordersList.find((o) => o.id === collectionItem.orderId)
                     : undefined;
+                  const activeStep = getTimelineActiveStep({
+                    orderDate: collectionItem.orderDate,
+                    paymentDate: collectionItem.paymentDate,
+                    shippingDate: collectionItem.shippingDate,
+                    collectionDate: collectionItem.collectionDate,
+                  });
 
                   return (
-                    <Card key={collectionItem.id}>
-                      <CardHeader>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="default">{collectionItem.status}</Badge>
-                          <div className="ml-auto">
+                    <div key={collectionItem.id}>
+                      {index > 0 && <Separator className="my-6" />}
+                      <div className="space-y-5">
+                        {/* Status + Actions */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Badge variant={getStatusVariant(collectionItem.status)}>
+                              {collectionItem.status}
+                            </Badge>
+                            {release && (
+                              <span className="text-xs text-muted-foreground">
+                                {formatDate(release.date, dateFormat)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1">
                             <CollectionItemForm
                               renderTrigger={
-                                <Button variant="ghost" size="icon" className="">
-                                  <HugeiconsIcon icon={Edit01Icon} className="" />
+                                <Button variant="ghost" size="icon">
+                                  <HugeiconsIcon icon={Edit01Icon} className="size-4" />
                                 </Button>
                               }
                               itemData={{
                                 ...collectionItem,
                                 id: collectionItem.id,
-                                itemExternalId: data.item.externalId ?? null,
-                                itemTitle: data.item.title,
-                                itemImage: data.item.image,
+                                itemExternalId: item.externalId ?? null,
+                                itemTitle: item.title,
+                                itemImage: item.image,
                                 releaseDate: release?.date ?? null,
                                 releasePrice: release?.price ?? null,
                                 releaseCurrency: release?.priceCurrency ?? null,
@@ -442,7 +507,7 @@ function RouteComponent() {
                               <PopoverTrigger
                                 render={
                                   <Button variant="ghost" size="icon">
-                                    <HugeiconsIcon icon={Delete01Icon} className="" />
+                                    <HugeiconsIcon icon={Delete01Icon} className="size-4" />
                                   </Button>
                                 }
                               />
@@ -452,7 +517,6 @@ function RouteComponent() {
                                   <div className="flex justify-end gap-2">
                                     <Button
                                       variant="destructive"
-                                      size="sm"
                                       onClick={() => handleDeleteCollectionItem(collectionItem.id)}
                                     >
                                       Delete
@@ -463,194 +527,115 @@ function RouteComponent() {
                             </Popover>
                           </div>
                         </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-muted-foreground text-sm items-center">
-                            <span>Count</span>
-                            <span className="text-foreground font-medium">
-                              {collectionItem.count}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-muted-foreground text-sm items-center">
-                            <span>Price</span>
-                            <span className="text-foreground font-medium">
-                              {formatCurrencyFromMinorUnits(collectionItem.price, userCurrency)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-muted-foreground text-sm items-center">
-                            <span>Condition</span>
-                            <span className="text-foreground font-medium">
-                              {collectionItem.condition}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-muted-foreground text-sm items-center">
-                            <span>Shop</span>
-                            <span className="text-foreground font-medium">
-                              {collectionItem.shop || "n/a"}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-muted-foreground text-sm items-center">
-                            <span>Shipping Method</span>
-                            <span className="text-foreground font-medium">
-                              {collectionItem.shippingMethod}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-muted-foreground text-sm items-center">
-                            <span>Release</span>
-                            <span className="text-foreground font-medium">
-                              {formatDate(release?.date, dateFormat)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-muted-foreground text-sm items-center">
-                            <span>Order Date</span>
-                            <span className="text-foreground font-medium">
-                              {formatDate(collectionItem.orderDate, dateFormat)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-muted-foreground text-sm items-center">
-                            <span>Payment Date</span>
-                            <span className="text-foreground font-medium">
-                              {formatDate(collectionItem.paymentDate, dateFormat)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-muted-foreground text-sm items-center">
-                            <span>Shipping Date</span>
-                            <span className="text-foreground font-medium">
-                              {formatDate(collectionItem.shippingDate, dateFormat)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-muted-foreground text-sm items-center">
-                            <span>Collection Date</span>
-                            <span className="text-foreground font-medium">
-                              {formatDate(collectionItem.collectionDate, dateFormat)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-muted-foreground text-sm items-center">
-                            <span>Score</span>
-                            <span className="text-right text-foreground font-medium">
-                              {collectionItem.score || "n/a"}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-muted-foreground text-sm items-center">
-                            <span>Tags</span>
-                            <span className="text-right text-foreground font-medium">
-                              {collectionItem.tags.join(", ") || "n/a"}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-muted-foreground text-sm items-center">
-                            <span>Notes</span>
-                            <span className="text-right max-w-[60%] text-foreground font-medium">
-                              {collectionItem.notes || "n/a"}
-                            </span>
-                          </div>
+
+                        {/* Quick Facts */}
+                        <div className="space-y-1.5">
+                          <DetailRow label="Count">{collectionItem.count}</DetailRow>
+                          <DetailRow label="Price">
+                            {formatCurrencyFromMinorUnits(collectionItem.price, userCurrency)}
+                          </DetailRow>
+                          <DetailRow label="Condition">{collectionItem.condition}</DetailRow>
+                          {collectionItem.shop && (
+                            <DetailRow label="Shop">{collectionItem.shop}</DetailRow>
+                          )}
+                          <DetailRow label="Shipping">{collectionItem.shippingMethod}</DetailRow>
                         </div>
-                        {collectionItem.orderId && (
-                          <div className="mt-4">
-                            <Accordion>
-                              <AccordionItem value="item-1">
-                                <AccordionTrigger className="text-sm">
-                                  Related Order
-                                </AccordionTrigger>
-                                <AccordionContent>
-                                  <div className="space-y-3 pt-2">
-                                    <div className="flex justify-between text-muted-foreground text-sm items-center">
-                                      <span>Order</span>
-                                      <Link
-                                        to={`/orders/$id`}
-                                        params={{
-                                          id: collectionItem.orderId,
-                                        }}
-                                        className="text-primary hover:underline"
-                                      >
-                                        {relatedOrder?.title}
-                                      </Link>
-                                    </div>
-                                    {relatedOrder?.shop && (
-                                      <div className="flex justify-between text-muted-foreground text-sm items-center">
-                                        <span>Shop</span>
-                                        <span className="text-foreground font-medium">
-                                          {relatedOrder.shop}
-                                        </span>
-                                      </div>
-                                    )}
-                                    {relatedOrder?.releaseDate && (
-                                      <div className="flex justify-between text-muted-foreground text-sm items-center">
-                                        <span>Release</span>
-                                        <span className="text-foreground font-medium">
-                                          {formatDate(relatedOrder.releaseDate, dateFormat)}
-                                        </span>
-                                      </div>
-                                    )}
-                                    {relatedOrder?.shippingFee && (
-                                      <div className="flex justify-between text-muted-foreground text-sm items-center">
-                                        <span>Shipping Fee</span>
-                                        <span className="text-foreground font-medium">
-                                          {formatCurrencyFromMinorUnits(
-                                            relatedOrder.shippingFee || 0,
-                                            userCurrency,
-                                          )}
-                                        </span>
-                                      </div>
-                                    )}
-                                    {relatedOrder?.taxes && (
-                                      <div className="flex justify-between text-muted-foreground text-sm items-center">
-                                        <span>Taxes</span>
-                                        <span className="text-foreground font-medium">
-                                          {formatCurrencyFromMinorUnits(
-                                            relatedOrder.taxes || 0,
-                                            userCurrency,
-                                          )}
-                                        </span>
-                                      </div>
-                                    )}
-                                    {relatedOrder?.duties && (
-                                      <div className="flex justify-between text-muted-foreground text-sm items-center">
-                                        <span>Duties</span>
-                                        <span className="text-foreground font-medium">
-                                          {formatCurrencyFromMinorUnits(
-                                            relatedOrder.duties || 0,
-                                            userCurrency,
-                                          )}
-                                        </span>
-                                      </div>
-                                    )}
-                                    {relatedOrder?.tariffs && (
-                                      <div className="flex justify-between text-muted-foreground text-sm items-center">
-                                        <span>Tariffs</span>
-                                        <span className="text-foreground font-medium">
-                                          {formatCurrencyFromMinorUnits(
-                                            relatedOrder.tariffs || 0,
-                                            userCurrency,
-                                          )}
-                                        </span>
-                                      </div>
-                                    )}
-                                    {relatedOrder?.miscFees && (
-                                      <div className="flex justify-between text-muted-foreground text-sm items-center">
-                                        <span>Misc Fees</span>
-                                        <span className="text-foreground font-medium">
-                                          {formatCurrencyFromMinorUnits(
-                                            relatedOrder.miscFees || 0,
-                                            userCurrency,
-                                          )}
-                                        </span>
-                                      </div>
-                                    )}
-                                  </div>
-                                </AccordionContent>
-                              </AccordionItem>
-                            </Accordion>
+
+                        {/* Date Timeline */}
+                        {activeStep > 0 && (
+                          <Timeline orientation="vertical" value={activeStep}>
+                            <TimelineItem step={1}>
+                              <TimelineIndicator />
+                              <TimelineSeparator />
+                              <TimelineHeader>
+                                <TimelineTitle>Ordered</TimelineTitle>
+                                <TimelineDate>
+                                  {formatDate(collectionItem.orderDate, dateFormat)}
+                                </TimelineDate>
+                              </TimelineHeader>
+                            </TimelineItem>
+                            <TimelineItem step={2}>
+                              <TimelineIndicator />
+                              <TimelineSeparator />
+                              <TimelineHeader>
+                                <TimelineTitle>Paid</TimelineTitle>
+                                <TimelineDate>
+                                  {formatDate(collectionItem.paymentDate, dateFormat)}
+                                </TimelineDate>
+                              </TimelineHeader>
+                            </TimelineItem>
+                            <TimelineItem step={3}>
+                              <TimelineIndicator />
+                              <TimelineSeparator />
+                              <TimelineHeader>
+                                <TimelineTitle>Shipped</TimelineTitle>
+                                <TimelineDate>
+                                  {formatDate(collectionItem.shippingDate, dateFormat)}
+                                </TimelineDate>
+                              </TimelineHeader>
+                            </TimelineItem>
+                            <TimelineItem step={4}>
+                              <TimelineIndicator />
+                              <TimelineSeparator />
+                              <TimelineHeader>
+                                <TimelineTitle>Collected</TimelineTitle>
+                                <TimelineDate>
+                                  {formatDate(collectionItem.collectionDate, dateFormat)}
+                                </TimelineDate>
+                              </TimelineHeader>
+                            </TimelineItem>
+                          </Timeline>
+                        )}
+
+                        {/* Score, Tags, Notes */}
+                        {(collectionItem.score ||
+                          collectionItem.tags.length > 0 ||
+                          collectionItem.notes) && (
+                          <div className="space-y-3">
+                            {collectionItem.score && (
+                              <DetailRow label="Score">{collectionItem.score}</DetailRow>
+                            )}
+                            {collectionItem.tags.length > 0 && (
+                              <div>
+                                <span className="text-xs text-muted-foreground">Tags</span>
+                                <div className="flex flex-wrap gap-1.5 mt-1">
+                                  {collectionItem.tags.map((tag) => (
+                                    <Badge key={tag} variant="secondary">
+                                      {tag}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {collectionItem.notes && (
+                              <div>
+                                <span className="text-xs text-muted-foreground">Notes</span>
+                                <p className="text-sm mt-1 text-foreground/80 whitespace-pre-wrap">
+                                  {collectionItem.notes}
+                                </p>
+                              </div>
+                            )}
                           </div>
                         )}
-                      </CardContent>
-                    </Card>
+
+                        {/* Related Order */}
+                        {relatedOrder && (
+                          <Link
+                            to="/orders/$id"
+                            params={{ id: collectionItem.orderId! }}
+                            className="flex items-center gap-2 text-sm text-primary hover:underline underline-offset-4"
+                          >
+                            <span>View order: {relatedOrder.title}</span>
+                          </Link>
+                        )}
+                      </div>
+                    </div>
                   );
                 })}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   );

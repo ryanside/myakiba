@@ -153,7 +153,7 @@ export default function SyncStatusWidget() {
                   size="sm"
                   className="w-full justify-between text-muted-foreground"
                 >
-                  View all syncs
+                  View sync history
                   <HugeiconsIcon icon={ArrowRight01Icon} className="size-3" />
                 </Button>
               </Link>

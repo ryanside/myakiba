@@ -1,0 +1,83 @@
+import { Button } from "@/components/ui/button";
+import { useCollectionFilters } from "@/hooks/use-collection";
+import type { Category } from "@myakiba/types";
+
+type QuickFilterGroup = {
+  readonly label: string;
+  readonly categories: readonly Category[];
+};
+
+const QUICK_FILTER_GROUPS: readonly QuickFilterGroup[] = [
+  {
+    label: "Figures",
+    categories: [
+      "Accessories",
+      "Action/Dolls",
+      "Prepainted",
+      "Garage Kits",
+      "Model Kits",
+      "Trading",
+    ],
+  },
+  {
+    label: "Goods",
+    categories: [
+      "Apparel",
+      "Dishes",
+      "Hanged up",
+      "Linens",
+      "Misc",
+      "Plushes",
+      "Stationeries",
+      "On Walls",
+    ],
+  },
+  {
+    label: "Media",
+    categories: ["Books", "Music", "Video", "Games"],
+  },
+];
+
+export function CollectionQuickFilters(): React.ReactElement {
+  const { filters, setFilters } = useCollectionFilters();
+  const activeCategories = new Set(filters.category ?? []);
+
+  const isGroupActive = (group: QuickFilterGroup): boolean =>
+    group.categories.every((cat) => activeCategories.has(cat));
+
+  const toggleGroup = (group: QuickFilterGroup): void => {
+    if (isGroupActive(group)) {
+      const groupSet = new Set<string>(group.categories);
+      const remaining = [...activeCategories].filter((cat) => !groupSet.has(cat));
+      setFilters({
+        category: remaining.length > 0 ? (remaining as Category[]) : undefined,
+        offset: 0,
+      });
+    } else {
+      const merged = new Set(activeCategories);
+      for (const cat of group.categories) {
+        merged.add(cat);
+      }
+      setFilters({ category: [...merged], offset: 0 });
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-1.5" role="group" aria-label="Quick category filters">
+      {QUICK_FILTER_GROUPS.map((group) => {
+        const active = isGroupActive(group);
+        return (
+          <Button
+            key={group.label}
+            variant={active ? "default" : "ghost"}
+            size="sm"
+            aria-pressed={active}
+            onClick={() => toggleGroup(group)}
+          >
+            {group.label}
+          </Button>
+        );
+      })}
+    </div>
+  );
+}

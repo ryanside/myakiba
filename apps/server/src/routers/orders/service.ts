@@ -1,38 +1,9 @@
-import type { ShippingMethod } from "@myakiba/types";
 import type { OrderCascadeOption } from "@myakiba/constants/orders";
 import { db } from "@myakiba/db";
 import { order, collection, item, item_release } from "@myakiba/db/schema/figure";
 import { eq, and, inArray, sql, desc, asc, ilike, ne, gte, lte } from "drizzle-orm";
+import type { OrderStatus, ShippingMethod } from "@myakiba/types";
 import type { OrderInsertType, OrderUpdateType } from "./model";
-import type { OrderStatus, Condition } from "@myakiba/types";
-
-type OrderItem = {
-  id: string;
-  orderId: string | null;
-  itemId: string;
-  itemExternalId: number | null;
-  releaseId: string;
-  status: OrderStatus;
-  itemTitle: string;
-  itemImage: string | null;
-  price: number;
-  count: number;
-  shop: string;
-  score: string;
-  orderDate: string | null;
-  paymentDate: string | null;
-  shippingDate: string | null;
-  collectionDate: string | null;
-  shippingMethod: ShippingMethod;
-  releaseDate: string | null;
-  releaseType: string | null;
-  releasePrice: number | null;
-  releaseCurrency: string | null;
-  releaseBarcode: string | null;
-  condition: Condition;
-  tags: string[];
-  notes: string;
-};
 
 class OrdersService {
   async getOrders(
@@ -237,46 +208,9 @@ class OrdersService {
         createdAt: order.createdAt,
         updatedAt: order.updatedAt,
         itemCount: sql<number>`COUNT(${collection.id})`,
-        items: sql<OrderItem[]>`
-          COALESCE(
-            JSON_AGG(
-              JSON_BUILD_OBJECT(
-                'id', ${collection.id},
-                'orderId', ${collection.orderId},
-                'itemId', ${item.id},
-                'itemExternalId', ${item.externalId},
-                'releaseId', ${collection.releaseId},
-                'status', ${collection.status},
-                'itemTitle', ${item.title},
-                'itemImage', ${item.image},
-                'price', ${collection.price},
-                'count', ${collection.count},
-                'shop', ${collection.shop},
-                'score', ${collection.score}::text,
-                'orderDate', ${collection.orderDate},
-                'paymentDate', ${collection.paymentDate},
-                'shippingDate', ${collection.shippingDate},
-                'collectionDate', ${collection.collectionDate},
-                'shippingMethod', ${collection.shippingMethod},
-                'releaseDate', ${item_release.date},
-                'releaseType', ${item_release.type},
-                'releasePrice', ${item_release.price},
-                'releaseCurrency', ${item_release.priceCurrency},
-                'releaseBarcode', ${item_release.barcode},
-                'condition', ${collection.condition},
-                'tags', ${collection.tags},
-                'notes', ${collection.notes}
-              )
-              ORDER BY ${item.title}
-            ) FILTER (WHERE ${collection.id} IS NOT NULL),
-            '[]'::json
-          )
-        `,
       })
       .from(order)
       .leftJoin(collection, eq(order.id, collection.orderId))
-      .leftJoin(item, eq(collection.itemId, item.id))
-      .leftJoin(item_release, eq(collection.releaseId, item_release.id))
       .where(and(eq(order.userId, userId), eq(order.id, orderId)))
       .groupBy(order.id);
 

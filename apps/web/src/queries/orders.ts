@@ -5,11 +5,13 @@ import type {
   EditedOrder,
   NewOrder,
   OrderFilters,
+  Order,
+  OrderItem,
   OrderListItem,
   OrderStats,
-  OrderItemsResponse,
   OrderStatus,
   ItemReleasesResponse,
+  PaginatedResult,
 } from "@myakiba/types";
 
 export async function getOrders(filters: OrderFilters): Promise<OrderListItem[]> {
@@ -73,7 +75,7 @@ export async function getOrderItems(
   orderId: string,
   limit: number,
   offset: number,
-): Promise<OrderItemsResponse> {
+): Promise<PaginatedResult<OrderItem>> {
   const { data, error } = await app.api.orders({ orderId }).items.get({ query: { limit, offset } });
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to get order items"));
@@ -213,7 +215,7 @@ export async function moveItem(
   }
 }
 
-export async function getOrder(orderId: string) {
+export async function getOrder(orderId: string): Promise<Order> {
   const { data, error } = await app.api.orders({ orderId }).get();
 
   if (error) {

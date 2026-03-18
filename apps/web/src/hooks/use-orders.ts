@@ -21,8 +21,9 @@ import type {
   NewOrder,
   CascadeOptions,
   OrderFilters,
+  OrderItem,
   OrderListItem,
-  OrderItemsResponse,
+  PaginatedResult,
   OrderStats,
   CollectionItemFormValues,
 } from "@myakiba/types";
@@ -448,12 +449,12 @@ export function useOrdersMutations() {
       if (!itemOrderId) return undefined;
 
       await queryClient.cancelQueries({ queryKey: ["orderItems", itemOrderId] });
-      const previousOrderItems = queryClient.getQueriesData<OrderItemsResponse>({
+      const previousOrderItems = queryClient.getQueriesData<PaginatedResult<OrderItem>>({
         queryKey: ["orderItems", itemOrderId],
       });
 
       let oldPrice: number | undefined;
-      queryClient.setQueriesData<OrderItemsResponse>(
+      queryClient.setQueriesData<PaginatedResult<OrderItem>>(
         { queryKey: ["orderItems", itemOrderId] },
         (old) => {
           if (!old) return old;
@@ -541,12 +542,12 @@ export function useOrdersMutations() {
       deleteOrderItem(orderId, itemId),
     onMutate: async ({ orderId, itemId }) => {
       await queryClient.cancelQueries({ queryKey: ["orderItems", orderId] });
-      const previousOrderItems = queryClient.getQueriesData<OrderItemsResponse>({
+      const previousOrderItems = queryClient.getQueriesData<PaginatedResult<OrderItem>>({
         queryKey: ["orderItems", orderId],
       });
 
       let removedPrice = 0;
-      queryClient.setQueriesData<OrderItemsResponse>(
+      queryClient.setQueriesData<PaginatedResult<OrderItem>>(
         { queryKey: ["orderItems", orderId] },
         (old) => {
           if (!old) return old;
