@@ -9,8 +9,9 @@ import {
 } from "@hugeicons/core-free-icons";
 import { createFileRoute, useParams, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
 import { app, getErrorMessage } from "@/lib/treaty-client";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/reui/badge";
 import {
   Empty,
@@ -251,12 +252,13 @@ function RouteComponent() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-y-4">
         <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
-        <Button variant="outline">
-          <Link to="/collection" className="flex items-center gap-1.5">
-            <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
-            Back to Collection
-          </Link>
-        </Button>
+        <Link
+          to="/collection"
+          className={cn(buttonVariants({ variant: "outline" }), "flex items-center gap-1.5")}
+        >
+          <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
+          Back to Collection
+        </Link>
       </div>
     );
   }
@@ -278,15 +280,13 @@ function RouteComponent() {
 
   return (
     <div className="flex flex-col gap-8 pb-8">
-      {/* Navigation */}
-      <nav>
-        <Button variant="ghost">
-          <Link to="/collection" className="flex items-center gap-1.5">
-            <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
-            Back to Collection
-          </Link>
-        </Button>
-      </nav>
+      <Link
+        to="/collection"
+        className={cn(buttonVariants({ variant: "ghost" }), "flex items-center gap-1.5 w-fit")}
+      >
+        <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
+        Back to Collection
+      </Link>
 
       {/* Hero: Image + Item Identity */}
       <div className="flex flex-col sm:flex-row gap-6">

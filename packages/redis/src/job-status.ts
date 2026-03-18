@@ -15,8 +15,13 @@ export const getJobStatusChannel = (jobId: string): string =>
   `${JOB_STATUS_CHANNEL_PREFIX}${jobId}`;
 
 export const parseJobStatusPayload = (value: string): SyncJobStatus | null => {
-  const result = syncJobStatusSchema.safeParse(JSON.parse(value));
-  return result.success ? result.data : null;
+  try {
+    const parsed = JSON.parse(value);
+    const result = syncJobStatusSchema.safeParse(parsed);
+    return result.success ? result.data : null;
+  } catch {
+    return null;
+  }
 };
 
 export const serializeJobStatusPayload = (status: SyncJobStatus): string =>

@@ -1,10 +1,11 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft01Icon, Edit01Icon, PackageIcon } from "@hugeicons/core-free-icons";
 import { createFileRoute, useParams, Link } from "@tanstack/react-router";
+import { cn } from "@/lib/utils";
 import { getOrder, editOrder, deleteOrderItem } from "@/queries/orders";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/reui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { formatCurrencyFromMinorUnits, formatDate, formatTimestamp } from "@myakiba/utils";
 import { getStatusVariant } from "@/lib/orders";
@@ -177,12 +178,13 @@ function RouteComponent() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-y-4">
         <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
-        <Button variant="outline">
-          <Link to="/orders" className="flex items-center gap-1.5">
-            <HugeiconsIcon icon={ArrowLeft01Icon} />
-            Back to Orders
-          </Link>
-        </Button>
+        <Link
+          to="/orders"
+          className={cn(buttonVariants({ variant: "outline" }), "flex items-center gap-1.5")}
+        >
+          <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
+          Back to Orders
+        </Link>
       </div>
     );
   }
@@ -218,13 +220,10 @@ function RouteComponent() {
       <div className="flex flex-col gap-3">
         <Link
           to="/orders"
-          className="group inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
+          className={cn(buttonVariants({ variant: "ghost" }), "flex items-center gap-1.5 w-fit")}
         >
-          <HugeiconsIcon
-            icon={ArrowLeft01Icon}
-            className="size-3.5 transition-transform group-hover:-translate-x-0.5"
-          />
-          Orders
+          <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
+          Back to Orders
         </Link>
 
         <div className="flex items-start justify-between gap-4">

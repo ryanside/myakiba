@@ -40,17 +40,17 @@ const QUICK_FILTER_GROUPS: readonly QuickFilterGroup[] = [
 
 export function CollectionQuickFilters(): React.ReactElement {
   const { filters, setFilters } = useCollectionFilters();
-  const activeCategories = new Set(filters.category ?? []);
+  const activeCategories = new Set<Category>(filters.category ?? []);
 
   const isGroupActive = (group: QuickFilterGroup): boolean =>
     group.categories.every((cat) => activeCategories.has(cat));
 
   const toggleGroup = (group: QuickFilterGroup): void => {
     if (isGroupActive(group)) {
-      const groupSet = new Set<string>(group.categories);
-      const remaining = [...activeCategories].filter((cat) => !groupSet.has(cat));
+      const groupSet = new Set<Category>(group.categories);
+      const remaining: Category[] = [...activeCategories].filter((cat) => !groupSet.has(cat));
       setFilters({
-        category: remaining.length > 0 ? (remaining as Category[]) : undefined,
+        category: remaining.length > 0 ? remaining : undefined,
         offset: 0,
       });
     } else {
