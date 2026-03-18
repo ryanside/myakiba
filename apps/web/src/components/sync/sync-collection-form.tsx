@@ -269,7 +269,7 @@ export default function SyncCollectionForm({
                                                 )
                                               }
                                             >
-                                              <SelectTrigger>
+                                              <SelectTrigger className="w-full">
                                                 <SelectValue placeholder="Select condition" />
                                               </SelectTrigger>
                                               <SelectContent>
@@ -339,7 +339,7 @@ export default function SyncCollectionForm({
                                               )
                                             }
                                           >
-                                            <SelectTrigger>
+                                            <SelectTrigger className="w-full">
                                               <SelectValue placeholder="Select shipping method" />
                                             </SelectTrigger>
                                             <SelectContent>

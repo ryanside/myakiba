@@ -159,7 +159,7 @@ export default function FiltersForm({
   return (
     <Dialog>
       <DialogTrigger render={renderTrigger} />
-      <DialogContent className="sm:max-w-lg!">
+      <DialogContent className="sm:max-w-lg! px-0">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -167,12 +167,12 @@ export default function FiltersForm({
             form.handleSubmit();
           }}
         >
-          <DialogHeader className="pb-4">
+          <DialogHeader className="pb-4 px-4">
             <DialogTitle>Filters</DialogTitle>
             <DialogDescription>Apply filters to narrow down your collection</DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="overflow-auto max-h-[60vh] pb-4">
+          <ScrollArea className="overflow-auto max-h-[60vh] pb-4 px-4">
             <div className="grid gap-4">
               {/* Shipping Method */}
               <form.Field
@@ -814,7 +814,7 @@ export default function FiltersForm({
             </div>
           </ScrollArea>
 
-          <DialogFooter className="">
+          <DialogFooter className="px-4! mx-0">
             <form.Subscribe
               selector={(state) => [state.canSubmit, state.isSubmitting]}
               children={([, isSubmitting]) => (

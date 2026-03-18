@@ -265,7 +265,7 @@ export function OrderForm(props: OrderFormProps) {
                             field.handleChange(value as typeof field.state.value)
                           }
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Select status" />
                           </SelectTrigger>
                           <SelectContent>
@@ -434,7 +434,7 @@ export function OrderForm(props: OrderFormProps) {
                             field.handleChange(value as typeof field.state.value)
                           }
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Select shipping method" />
                           </SelectTrigger>
                           <SelectContent>
@@ -674,7 +674,7 @@ export function OrderForm(props: OrderFormProps) {
                         field.handleChange(value as typeof field.state.value)
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                       <SelectContent>
@@ -839,7 +839,7 @@ export function OrderForm(props: OrderFormProps) {
                         field.handleChange(value as typeof field.state.value)
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select shipping method" />
                       </SelectTrigger>
                       <SelectContent>

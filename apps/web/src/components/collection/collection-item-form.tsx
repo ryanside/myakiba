@@ -178,7 +178,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                           field.handleChange(value as typeof field.state.value)
                         }
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select condition" />
                         </SelectTrigger>
                         <SelectContent>
@@ -233,7 +233,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                           field.handleChange(value as typeof field.state.value)
                         }
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select status" />
                         </SelectTrigger>
                         <SelectContent>
@@ -288,7 +288,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                         }
                       }}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select release">
                           {field.state.value &&
                             (() => {
@@ -467,7 +467,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                         field.handleChange(value as typeof field.state.value)
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select shipping method" />
                       </SelectTrigger>
                       <SelectContent>

@@ -183,10 +183,10 @@ export default function SyncOrderForm({
               render={
                 <Button
                   variant="outline"
-                  className="max-w-66 truncate hover:bg-background active:bg-background data-open:bg-background"
+                  className="justify-start hover:bg-background active:bg-background data-open:bg-background w-full"
                 >
-                  {cascadeDisplayText}
-                  <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4 z-10" />
+                  <span className="truncate">{cascadeDisplayText}</span>
+                  <HugeiconsIcon icon={ArrowDown01Icon} className="ml-auto h-4 w-4 z-10" />
                 </Button>
               }
             />
@@ -286,7 +286,7 @@ export default function SyncOrderForm({
                   value={field.state.value}
                   onValueChange={(value) => field.handleChange(value as typeof field.state.value)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -315,7 +315,7 @@ export default function SyncOrderForm({
                   value={field.state.value ?? ""}
                   onValueChange={(value) => field.handleChange(value as typeof field.state.value)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select shipping method" />
                   </SelectTrigger>
                   <SelectContent>
@@ -666,7 +666,7 @@ export default function SyncOrderForm({
                                                 )
                                               }
                                             >
-                                              <SelectTrigger>
+                                              <SelectTrigger className="w-full">
                                                 <SelectValue placeholder="Select condition" />
                                               </SelectTrigger>
                                               <SelectContent>
@@ -696,7 +696,7 @@ export default function SyncOrderForm({
                                                 )
                                               }
                                             >
-                                              <SelectTrigger>
+                                              <SelectTrigger className="w-full">
                                                 <SelectValue placeholder="Select status" />
                                               </SelectTrigger>
                                               <SelectContent>
@@ -736,7 +736,7 @@ export default function SyncOrderForm({
                                               )
                                             }
                                           >
-                                            <SelectTrigger>
+                                            <SelectTrigger className="w-full">
                                               <SelectValue placeholder="Select shipping method" />
                                             </SelectTrigger>
                                             <SelectContent>

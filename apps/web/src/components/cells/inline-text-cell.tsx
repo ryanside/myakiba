@@ -86,7 +86,7 @@ export function InlineTextCell({
         }}
       >
         <Editable.Preview
-          className={cn("w-full min-h-7 hover:bg-accent cursor-text", previewClassName)}
+          className={cn("w-full min-h-7 hover:bg-muted cursor-text", previewClassName)}
         />
         <Editable.Input
           className={cn("w-full", inputClassName)}

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import {
@@ -11,17 +10,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useForm } from "@tanstack/react-form";
 import { Field, FieldContent, FieldTitle } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
@@ -61,8 +49,6 @@ export default function OrdersFiltersForm({
 }: OrdersFiltersFormProps) {
   const userCurrency = currency || "USD";
   const userLocale = getCurrencyLocale(userCurrency);
-  const [open, setOpen] = useState(false);
-  const isMobile = useIsMobile();
 
   const form = useForm({
     defaultValues: {
@@ -160,7 +146,6 @@ export default function OrdersFiltersForm({
       };
 
       onApplyFilters(filters);
-      setOpen(false);
     },
   });
 
@@ -649,58 +634,21 @@ export default function OrdersFiltersForm({
     </div>
   );
 
-  if (isMobile) {
-    return (
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger render={renderTrigger} />
-        <SheetContent
-          side="right"
-          className="w-full sm:max-w-lg! h-full overflow-hidden flex flex-col"
-        >
-          <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-            <SheetHeader>
-              <SheetTitle>Filters</SheetTitle>
-              <SheetDescription>Apply filters to narrow down your orders</SheetDescription>
-            </SheetHeader>
-            <Scroller className="flex-1 min-h-0" size={24}>
-              {formFieldsContent}
-            </Scroller>
-            <SheetFooter className="flex flex-row">
-              <SheetClose>
-                <Button type="button" variant="outline">
-                  Cancel
-                </Button>
-              </SheetClose>
-              <form.Subscribe
-                selector={(state) => [state.canSubmit, state.isSubmitting]}
-                children={([, isSubmitting]) => (
-                  <Button type="submit" disabled={isSubmitting}>
-                    Apply Filters
-                  </Button>
-                )}
-              />
-            </SheetFooter>
-          </form>
-        </SheetContent>
-      </Sheet>
-    );
-  }
-
   return (
     <Dialog>
       <DialogTrigger render={renderTrigger} />
-      <DialogContent className="sm:max-w-lg!">
+      <DialogContent className="sm:max-w-lg! px-0">
         <form onSubmit={handleSubmit}>
-          <DialogHeader className="pb-4">
+          <DialogHeader className="pb-4 px-4">
             <DialogTitle>Filters</DialogTitle>
             <DialogDescription>Apply filters to narrow down your orders</DialogDescription>
           </DialogHeader>
 
           <ScrollArea className="overflow-auto max-h-[60vh] pb-4 w-full">
-            <div className="grid gap-4">{formFieldsContent}</div>
+            <div className="grid gap-4 px-4">{formFieldsContent}</div>
           </ScrollArea>
 
-          <DialogFooter className="">
+          <DialogFooter className="px-4! mx-0">
             <form.Subscribe
               selector={(state) => [state.canSubmit, state.isSubmitting]}
               children={([, isSubmitting]) => (
