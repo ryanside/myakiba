@@ -4,11 +4,11 @@ import { useMemo, useState } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getCoreRowModel, type PaginationState, useReactTable } from "@tanstack/react-table";
-import { DataGrid, DataGridContainer } from "@/components/ui/data-grid";
-import { DataGridPagination } from "@/components/ui/data-grid-pagination";
-import { DataGridTable } from "@/components/ui/data-grid-table";
+import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
+import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
+import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/reui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import type { EnrichedSyncSessionItemRow, SyncSessionStatus, SyncType } from "@myakiba/types";
@@ -127,8 +127,8 @@ function RouteComponent() {
         </div>
         <div className="flex flex-col items-center justify-center h-64 gap-y-4">
           <p className="text-lg font-medium text-destructive">Error: {error.message}</p>
-          <Button asChild variant="outline">
-            <Link to="/sync">
+          <Button variant="outline">
+            <Link to="/sync" className="flex items-center gap-1.5">
               <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
               Back to Sync
             </Link>
@@ -142,8 +142,8 @@ function RouteComponent() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-y-4">
         <p className="text-lg font-medium text-muted-foreground">Session not found</p>
-        <Button asChild variant="outline">
-          <Link to="/sync">
+        <Button variant="outline">
+          <Link to="/sync" className="flex items-center gap-1.5">
             <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
             Back to Sync
           </Link>
@@ -158,8 +158,8 @@ function RouteComponent() {
   return (
     <div className="w-full space-y-8">
       <div>
-        <Button asChild variant="ghost" size="sm" className="mb-4 -ml-2 text-muted-foreground">
-          <Link to="/sync">
+        <Button variant="ghost" size="sm" className="mb-4 -ml-2 text-muted-foreground">
+          <Link to="/sync" className="flex items-center gap-1.5">
             <HugeiconsIcon icon={ArrowLeft01Icon} className="size-3.5" />
             Back to Sync
           </Link>
@@ -169,11 +169,11 @@ function RouteComponent() {
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center gap-2.5">
               <h1 className="text-2xl tracking-tight">{typeConfig.label} Sync</h1>
-              <Badge variant={statusConfig.variant} appearance="light" size="sm">
+              <Badge variant={statusConfig.variant} size="sm">
                 {statusConfig.label}
               </Badge>
             </div>
-            <p className="text-muted-foreground text-sm font-light">
+            <p className="text-muted-foreground text-sm font-normal">
               Started {formatDateTime(session.createdAt)}
             </p>
           </div>
@@ -198,19 +198,19 @@ function RouteComponent() {
 
       <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
         <div className="flex flex-col gap-1">
-          <span className="text-sm text-muted-foreground font-light">Total Items</span>
+          <span className="text-sm text-muted-foreground font-normal">Total Items</span>
           <span className="text-2xl font-normal tabular-nums tracking-tight">
             {session.totalItems}
           </span>
         </div>
         <div className="flex flex-col gap-1">
-          <span className="text-sm text-muted-foreground font-light">Succeeded</span>
+          <span className="text-sm text-muted-foreground font-normal">Succeeded</span>
           <span className="text-2xl font-normal tabular-nums tracking-tight">
             {session.successCount}
           </span>
         </div>
         <div className="flex flex-col gap-1">
-          <span className="text-sm text-muted-foreground font-light">Failed</span>
+          <span className="text-sm text-muted-foreground font-normal">Failed</span>
           <span
             className={cn(
               "text-2xl font-normal tabular-nums tracking-tight",
@@ -221,7 +221,7 @@ function RouteComponent() {
           </span>
         </div>
         <div className="flex flex-col gap-1">
-          <span className="text-sm text-muted-foreground font-light">Duration</span>
+          <span className="text-sm text-muted-foreground font-normal">Duration</span>
           <span className="text-2xl font-normal tabular-nums tracking-tight">
             {formatDuration(session.createdAt, session.completedAt)}
           </span>

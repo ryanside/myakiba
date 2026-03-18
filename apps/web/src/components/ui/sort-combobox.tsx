@@ -5,7 +5,7 @@ import {
   ArrowUpDownIcon,
   Cancel01Icon,
 } from "@hugeicons/core-free-icons";
-import { useId, useState, type ReactNode } from "react";
+import { useId, useState, type ReactElement } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -31,7 +31,7 @@ interface SortComboboxProps {
     direction: "asc" | "desc";
   } | null;
   onSortChange: (columnId: string | null, direction: "asc" | "desc" | null) => void;
-  trigger?: ReactNode;
+  trigger?: ReactElement;
 }
 
 export function SortCombobox({
@@ -62,9 +62,9 @@ export function SortCombobox({
     if (currentSort?.columnId !== columnId) return null;
 
     return currentSort.direction === "desc" ? (
-      <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4 ml-auto text-primary" />
+      <HugeiconsIcon icon={ArrowDown01Icon} className="ml-auto h-4 w-4 text-primary" />
     ) : (
-      <HugeiconsIcon icon={ArrowUp01Icon} className="h-4 w-4 ml-auto text-primary" />
+      <HugeiconsIcon icon={ArrowUp01Icon} className="ml-auto h-4 w-4 text-primary" />
     );
   };
 
@@ -99,7 +99,7 @@ export function SortCombobox({
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>{trigger || defaultTrigger}</PopoverTrigger>
+      <PopoverTrigger render={trigger ?? defaultTrigger} />
       <PopoverContent className="w-[200px] p-0" align="start">
         <Command>
           <CommandInput placeholder="Search columns..." />
@@ -109,7 +109,7 @@ export function SortCombobox({
               <CommandItem
                 value="clear-sort"
                 onSelect={() => handleSort(null)}
-                className="text-muted-foreground"
+                className="text-muted-foreground [&>:last-child]:hidden"
               >
                 <HugeiconsIcon icon={Cancel01Icon} className="mr-2 h-4 w-4" />
                 Clear sorting
@@ -124,7 +124,7 @@ export function SortCombobox({
                       key={column.id}
                       value={column.id}
                       onSelect={() => handleSort(column.id)}
-                      className="capitalize"
+                      className="capitalize [&>:last-child]:hidden"
                     >
                       {column.label}
                       {getSortIcon(column.id)}

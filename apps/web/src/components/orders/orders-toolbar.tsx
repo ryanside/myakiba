@@ -185,7 +185,7 @@ export function OrdersToolbar({
               <ActionBarItem
                 disabled={selectedOrderIds.size < 2 || isMerging}
                 onSelect={(e) => e.preventDefault()}
-                variant="primary"
+                variant="default"
               >
                 <HugeiconsIcon icon={GitMergeIcon} />
                 <span className="hidden md:block">{isMerging ? "Merging..." : "Merge"}</span>
@@ -202,7 +202,7 @@ export function OrdersToolbar({
               <ActionBarItem
                 disabled={selectedItemData.collectionIds.size === 0 || isMovingItems || isSplitting}
                 onSelect={(e) => e.preventDefault()}
-                variant="primary"
+                variant="default"
               >
                 <HugeiconsIcon icon={MoveIcon} />
                 <span className="hidden md:block">

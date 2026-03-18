@@ -102,7 +102,7 @@ export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col items-center justify-center gap-2">
-        <div className="text-xl font-semibold flex items-center gap-2">
+        <div className="text-xl font-medium flex items-center gap-2">
           <span className="">Login to</span>
           <MyAkibaLogo size="full" className="size-28 inline-block" />
         </div>
@@ -111,8 +111,7 @@ export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () 
           <Button
             onClick={onSwitchToSignUp}
             className="underline underline-offset-4"
-            variant="primary"
-            mode="link"
+            variant="link"
           >
             Register
           </Button>

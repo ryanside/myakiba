@@ -1,6 +1,8 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowUp01Icon } from "@hugeicons/core-free-icons";
-import { ModeToggle } from "../mode-toggle";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useTheme } from "@/components/theme-provider";
+import { Sun01Icon, Moon02Icon, ComputerIcon } from "@hugeicons/core-free-icons";
 
 const links = [
   {
@@ -25,6 +27,8 @@ const navigation = [
 ];
 
 export default function FooterSection() {
+  const { theme, setTheme } = useTheme();
+
   return (
     <footer className="bg-sidebar min-h-[250px]">
       <div className="flex gap-16 justify-start mx-auto max-w-7xl px-6 py-12">
@@ -36,7 +40,7 @@ export default function FooterSection() {
                 href="https://github.com/ryanside"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-foreground hover:text-secondary duration-150 hover:underline underline-offset-2"
+                className="text-foreground duration-150 hover:underline underline-offset-2"
               >
                 @ryanside
               </a>
@@ -53,7 +57,7 @@ export default function FooterSection() {
                 className=" duration-150"
               >
                 <div className="flex flex-row items-center gap-2">
-                  <span className="hover:underline underline-offset-2 text-foreground hover:text-secondary text-sm">
+                  <span className="hover:underline underline-offset-2 text-foreground text-sm">
                     {link.title}
                   </span>
                 </div>
@@ -66,7 +70,7 @@ export default function FooterSection() {
             {navigation.map((link) => (
               <a key={link.title} href={link.href} className=" duration-150">
                 <div className="flex flex-row items-center gap-2">
-                  <span className="hover:underline underline-offset-2 text-foreground hover:text-secondary text-sm">
+                  <span className="hover:underline underline-offset-2 text-foreground text-sm">
                     {link.title}
                   </span>
                 </div>
@@ -76,10 +80,22 @@ export default function FooterSection() {
         </div>
         <div className="flex flex-col gap-4 ml-auto max-sm:hidden">
           <div className="flex flex-row items-center gap-x-6 gap-y-4">
-            <ModeToggle />
+            <Tabs value={theme ?? "system"} onValueChange={setTheme}>
+              <TabsList className="w-full">
+                <TabsTrigger value="light" className="h-6 flex-1">
+                  <HugeiconsIcon icon={Sun01Icon} className="size-4" aria-hidden="true" />
+                </TabsTrigger>
+                <TabsTrigger value="dark" className="h-6 flex-1">
+                  <HugeiconsIcon icon={Moon02Icon} className="size-4" aria-hidden="true" />
+                </TabsTrigger>
+                <TabsTrigger value="system" className="h-6 flex-1">
+                  <HugeiconsIcon icon={ComputerIcon} className="size-4" aria-hidden="true" />
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>{" "}
             <a href="/#hero" className="duration-150">
               <div className="flex flex-row items-center gap-2">
-                <span className="hover:underline underline-offset-2  text-muted-foreground hover:text-foreground text-sm">
+                <span className="hover:underline underline-offset-2  text-muted-foreground text-sm">
                   back to top <HugeiconsIcon icon={ArrowUp01Icon} className="size-3 inline-block" />
                 </span>
               </div>

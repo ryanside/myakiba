@@ -14,13 +14,14 @@ import { InlineTextCell } from "@/components/cells/inline-text-cell";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { DataGridColumnHeader } from "@/components/ui/data-grid-column-header";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
+import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import { getCurrencyLocale } from "@myakiba/utils";
@@ -41,7 +42,7 @@ interface CollectionColumnsParams {
   onDeleteCollectionItems: (collectionIds: Set<string>) => Promise<void>;
   currency: string;
   dateFormat: DateFormat;
-  pendingCollectionIds: ReadonlySet<string>;
+  isCollectionPending: (collectionId: string) => boolean;
 }
 
 export function createCollectionColumns({
@@ -49,20 +50,17 @@ export function createCollectionColumns({
   onDeleteCollectionItems,
   currency,
   dateFormat,
-  pendingCollectionIds,
+  isCollectionPending,
 }: CollectionColumnsParams): ColumnDef<CollectionItem>[] {
   return [
     {
       id: "select",
       header: ({ table }) => (
         <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
+          checked={table.getIsAllPageRowsSelected()}
+          indeterminate={table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()}
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
-          size="sm"
           className="align-[inherit] mb-0.5 rounded-xs"
         />
       ),
@@ -78,7 +76,6 @@ export function createCollectionColumns({
             checked={row.getIsSelected()}
             onCheckedChange={(value) => row.toggleSelected(!!value)}
             aria-label="Select row"
-            size="sm"
             className="align-[inherit] mb-0.5 rounded-xs"
           />
         </>
@@ -101,20 +98,13 @@ export function createCollectionColumns({
         const item = row.original;
         return (
           <div className="flex items-center gap-3">
-            {item.itemImage && (
-              <Avatar className="size-8 ">
-                <AvatarImage
-                  src={item.itemImage}
-                  alt={item.itemTitle}
-                  className="rounded-sm"
-                  style={{ objectFit: "cover", objectPosition: "top" }}
-                />
-                <AvatarFallback className="rounded-sm">
-                  <HugeiconsIcon icon={PackageIcon} className="size-4" />
-                </AvatarFallback>
-              </Avatar>
-            )}
-            <div className="space-y-px">
+            <ImageThumbnail
+              images={item.itemImage ? [item.itemImage] : []}
+              title={item.itemTitle}
+              fallbackIcon={<HugeiconsIcon icon={PackageIcon} className="size-4" />}
+              className="size-8 rounded-md"
+            />
+            <div className="min-w-0 space-y-px">
               <Link
                 to="/items/$id"
                 params={{ id: item.itemId }}
@@ -122,7 +112,7 @@ export function createCollectionColumns({
               >
                 {item.itemTitle}
               </Link>
-              <div className="flex items-center gap-1 font-light">
+              <div className="flex items-center gap-1 font-normal">
                 {item.itemExternalId ? (
                   <a
                     href={`https://myfigurecollection.net/item/${item.itemExternalId}`}
@@ -174,7 +164,7 @@ export function createCollectionColumns({
       ),
       cell: ({ row }) => {
         const item = row.original;
-        const isPending = pendingCollectionIds.has(item.id);
+        const isPending = isCollectionPending(item.id);
         return (
           <InlineCountCell
             value={item.count}
@@ -204,7 +194,7 @@ export function createCollectionColumns({
       ),
       cell: ({ row }) => {
         const item = row.original;
-        const isPending = pendingCollectionIds.has(item.id);
+        const isPending = isCollectionPending(item.id);
         return (
           <PopoverRatingCell
             value={item.score}
@@ -234,7 +224,7 @@ export function createCollectionColumns({
       ),
       cell: ({ row }) => {
         const item = row.original;
-        const isPending = pendingCollectionIds.has(item.id);
+        const isPending = isCollectionPending(item.id);
         return (
           <InlineTextCell
             value={item.shop}
@@ -272,7 +262,7 @@ export function createCollectionColumns({
       ),
       cell: ({ row }) => {
         const item = row.original;
-        const isPending = pendingCollectionIds.has(item.id);
+        const isPending = isCollectionPending(item.id);
         return (
           <InlineCurrencyCell
             value={item.price}
@@ -304,7 +294,7 @@ export function createCollectionColumns({
       ),
       cell: ({ row }) => {
         const orderDate = row.original.orderDate;
-        const isPending = pendingCollectionIds.has(row.original.id);
+        const isPending = isCollectionPending(row.original.id);
         return (
           <PopoverDatePickerCell
             value={orderDate}
@@ -336,7 +326,7 @@ export function createCollectionColumns({
       ),
       cell: ({ row }) => {
         const paymentDate = row.original.paymentDate;
-        const isPending = pendingCollectionIds.has(row.original.id);
+        const isPending = isCollectionPending(row.original.id);
         return (
           <PopoverDatePickerCell
             value={paymentDate}
@@ -368,7 +358,7 @@ export function createCollectionColumns({
       ),
       cell: ({ row }) => {
         const shippingDate = row.original.shippingDate;
-        const isPending = pendingCollectionIds.has(row.original.id);
+        const isPending = isCollectionPending(row.original.id);
         return (
           <PopoverDatePickerCell
             value={shippingDate}
@@ -400,7 +390,7 @@ export function createCollectionColumns({
       ),
       cell: ({ row }) => {
         const collectionDate = row.original.collectionDate;
-        const isPending = pendingCollectionIds.has(row.original.id);
+        const isPending = isCollectionPending(row.original.id);
         return (
           <PopoverDatePickerCell
             value={collectionDate}
@@ -429,59 +419,67 @@ export function createCollectionColumns({
       header: () => null,
       cell: ({ row }) => {
         const item = row.original;
-        const isPending = pendingCollectionIds.has(item.id);
+        const isPending = isCollectionPending(item.id);
 
         return (
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0" disabled={isPending}>
-                <span className="sr-only">Open menu</span>
-                <HugeiconsIcon
-                  icon={isPending ? Loading03Icon : MoreHorizontalIcon}
-                  className={cn("h-4 w-4", isPending && "animate-spin")}
-                />
-              </Button>
-            </DropdownMenuTrigger>
+            <DropdownMenuTrigger
+              render={
+                <Button variant="ghost" className="h-8 w-8 p-0" disabled={isPending}>
+                  <span className="sr-only">Open menu</span>
+                  <HugeiconsIcon
+                    icon={isPending ? Loading03Icon : MoreHorizontalIcon}
+                    className={cn("h-4 w-4", isPending && "animate-spin")}
+                  />
+                </Button>
+              }
+            />
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem asChild>
-                <Link to="/items/$id" params={{ id: item.itemId }}>
-                  <HugeiconsIcon icon={ViewIcon} className="mr-2 h-4 w-4" />
-                  View details
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  if (item.itemExternalId) {
-                    navigator.clipboard.writeText(item.itemExternalId.toString());
-                    toast.success("Copied MFC item ID to clipboard");
-                  } else {
-                    toast.error("No MFC item ID for custom items");
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuItem>
+                  <Link
+                    to="/items/$id"
+                    params={{ id: item.itemId }}
+                    className="flex items-center gap-1.5"
+                  >
+                    <HugeiconsIcon icon={ViewIcon} />
+                    View details
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    if (item.itemExternalId) {
+                      navigator.clipboard.writeText(item.itemExternalId.toString());
+                      toast.success("Copied MFC item ID to clipboard");
+                    } else {
+                      toast.error("No MFC item ID for custom items");
+                    }
+                  }}
+                >
+                  <HugeiconsIcon icon={Copy01Icon} />
+                  Copy MFC ID
+                </DropdownMenuItem>
+                <CollectionItemForm
+                  renderTrigger={
+                    <DropdownMenuItem closeOnClick={false} disabled={isPending}>
+                      <HugeiconsIcon icon={Edit01Icon} />
+                      {isPending ? "Saving..." : "Edit item"}
+                    </DropdownMenuItem>
                   }
-                }}
-              >
-                <HugeiconsIcon icon={Copy01Icon} className="mr-2 h-4 w-4" />
-                Copy MFC item ID
-              </DropdownMenuItem>
-              <CollectionItemForm
-                renderTrigger={
-                  <DropdownMenuItem onSelect={(e) => e.preventDefault()} disabled={isPending}>
-                    <HugeiconsIcon icon={Edit01Icon} className="mr-2 h-4 w-4" />
-                    {isPending ? "Saving..." : "Edit item"}
-                  </DropdownMenuItem>
-                }
-                itemData={item}
-                callbackFn={onEditCollectionItem}
-                currency={currency}
-                dateFormat={dateFormat}
-              />
+                  itemData={item}
+                  callbackFn={onEditCollectionItem}
+                  currency={currency}
+                  dateFormat={dateFormat}
+                />
+              </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 variant="destructive"
                 disabled={isPending}
                 onClick={() => onDeleteCollectionItems(new Set([item.id]))}
               >
-                <HugeiconsIcon icon={Delete02Icon} className="mr-2 h-4 w-4" />
+                <HugeiconsIcon icon={Delete02Icon} />
                 {isPending ? "Deleting..." : "Delete item"}
               </DropdownMenuItem>
             </DropdownMenuContent>

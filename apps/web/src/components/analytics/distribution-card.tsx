@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "../ui/badge";
+import { Badge } from "@/components/reui/badge";
 
 interface RowNavigation {
   to: string;
@@ -42,11 +42,11 @@ export function DistributionCard({
   return (
     <div
       className={cn(
-        "flex flex-col rounded-xl border border-border bg-card overflow-hidden",
+        "flex flex-col rounded-xl ring-1 ring-foreground/10 bg-card overflow-hidden",
         className,
       )}
     >
-      <div className="flex items-center gap-2.5 px-5 py-4 border-b border-border">
+      <div className="flex items-center gap-2.5 px-5 py-4">
         {icon && <span className="text-muted-foreground flex-shrink-0">{icon}</span>}
         <h3 className="text-base font-medium text-foreground">{title}</h3>
       </div>

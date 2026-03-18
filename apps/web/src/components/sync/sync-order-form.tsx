@@ -21,7 +21,7 @@ import {
 } from "../ui/dropdown-menu";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "../ui/select";
 import { DatePicker } from "../ui/date-picker";
-import { Badge } from "../ui/badge";
+import { Badge } from "@/components/reui/badge";
 import { Separator } from "../ui/separator";
 import {
   Dialog,
@@ -158,20 +158,14 @@ export default function SyncOrderForm({
           e.stopPropagation();
           void orderForm.handleSubmit();
         }}
-        className="rounded-lg border p-4 space-y-4 w-full"
+        className="rounded-lg space-y-4 w-full"
       >
         <div className="flex flex-row gap-2">
           <Label className="text-lg text-black dark:text-white">Order Details</Label>
           <orderForm.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
             children={([canSubmit, isSubmitting]) => (
-              <Button
-                type="submit"
-                disabled={!canSubmit}
-                variant="primary"
-                className="ml-auto"
-                size="md"
-              >
+              <Button type="submit" disabled={!canSubmit} variant="default" className="ml-auto">
                 {isSubmitting ? (
                   <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />
                 ) : (
@@ -184,16 +178,19 @@ export default function SyncOrderForm({
         <div className="grid gap-2">
           <Label>Cascade Order Details to Items</Label>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                className="max-w-66 truncate justify-between  hover:bg-background active:bg-background data-[state=open]:bg-background"
-              >
-                {cascadeDisplayText}
-                <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4 z-10" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width)">
+            <DropdownMenuTrigger
+              className="mr-auto"
+              render={
+                <Button
+                  variant="outline"
+                  className="max-w-66 truncate hover:bg-background active:bg-background data-open:bg-background"
+                >
+                  {cascadeDisplayText}
+                  <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4 z-10" />
+                </Button>
+              }
+            />
+            <DropdownMenuContent className="w-(--anchor-width)">
               <div className="flex gap-2 py-1">
                 <Button
                   variant="ghost"
@@ -509,7 +506,6 @@ export default function SyncOrderForm({
                 onBlur={field.handleBlur}
                 maxLength={1000}
                 onChange={(e) => field.handleChange(e.target.value)}
-                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 placeholder="Enter additional notes..."
               />
             </div>
@@ -532,11 +528,11 @@ export default function SyncOrderForm({
               <div className="flex flex-col gap-4">
                 <div className="flex flex-row gap-3 items-center">
                   <Label className="text-lg text-black dark:text-white">Order Items</Label>
-                  <Badge size="sm">
+                  <Badge>
                     {field.state.value.length} {field.state.value.length === 1 ? "item" : "items"}
                   </Badge>
                   <Tooltip>
-                    <TooltipTrigger asChild>
+                    <TooltipTrigger>
                       <HugeiconsIcon icon={InformationCircleIcon} className="w-4 h-4" />
                     </TooltipTrigger>
                     <TooltipContent className="max-h-40">
@@ -576,12 +572,17 @@ export default function SyncOrderForm({
                                 className="max-w-sm"
                               />
                               <Dialog>
-                                <DialogTrigger asChild>
-                                  <Button variant="ghost" size="icon" type="button">
-                                    <HugeiconsIcon icon={Edit01Icon} />
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+                                <DialogTrigger
+                                  render={
+                                    <Button variant="ghost" size="icon" type="button">
+                                      <HugeiconsIcon icon={Edit01Icon} />
+                                    </Button>
+                                  }
+                                />
+                                <DialogContent
+                                  className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto"
+                                  forceRenderBackdrop
+                                >
                                   <DialogHeader>
                                     <DialogTitle>Edit Order Item </DialogTitle>
                                     <DialogDescription>
@@ -833,7 +834,7 @@ export default function SyncOrderForm({
                                     </div>
                                   </div>
                                   <DialogFooter>
-                                    <DialogClose asChild>
+                                    <DialogClose>
                                       <Button variant="outline" type="button">
                                         Close
                                       </Button>

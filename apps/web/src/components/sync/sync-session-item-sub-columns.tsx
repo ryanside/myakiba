@@ -1,8 +1,8 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { PackageIcon } from "@hugeicons/core-free-icons";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import { ImageThumbnail } from "@/components/ui/image-thumbnail";
+import { Badge } from "@/components/reui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@tanstack/react-router";
 import type { EnrichedSyncSessionItemRow } from "@myakiba/types";
@@ -20,20 +20,13 @@ export function createSyncSessionItemSubColumns(): ColumnDef<EnrichedSyncSession
         if (item.itemId) {
           return (
             <div className="flex items-center gap-3">
-              <Avatar className="size-8">
-                {item.itemImage ? (
-                  <AvatarImage
-                    src={item.itemImage}
-                    alt={item.itemTitle ?? ""}
-                    className="rounded-sm"
-                    style={{ objectFit: "cover", objectPosition: "top" }}
-                  />
-                ) : null}
-                <AvatarFallback className="rounded-sm">
-                  <HugeiconsIcon icon={PackageIcon} className="size-4" />
-                </AvatarFallback>
-              </Avatar>
-              <div className="space-y-px min-w-0">
+              <ImageThumbnail
+                images={item.itemImage ? [item.itemImage] : []}
+                title={item.itemTitle ?? ""}
+                fallbackIcon={<HugeiconsIcon icon={PackageIcon} className="size-4" />}
+                className="size-8 rounded-md"
+              />
+              <div className="min-w-0 space-y-px">
                 <Link
                   className="font-medium text-foreground truncate block"
                   to="/items/$id"
@@ -45,7 +38,7 @@ export function createSyncSessionItemSubColumns(): ColumnDef<EnrichedSyncSession
                   href={`https://myfigurecollection.net/item/${item.itemExternalId}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-muted-foreground font-light hover:text-foreground transition-colors underline-offset-4 hover:underline"
+                  className="text-xs text-muted-foreground font-normal hover:text-foreground transition-colors underline-offset-4 hover:underline"
                 >
                   MFC #{item.itemExternalId}
                 </a>
@@ -77,7 +70,7 @@ export function createSyncSessionItemSubColumns(): ColumnDef<EnrichedSyncSession
       meta: {
         skeleton: (
           <div className="flex items-center gap-3">
-            <Skeleton className="size-8 rounded-sm" />
+            <Skeleton className="size-8 rounded-md" />
             <div className="space-y-1">
               <Skeleton className="h-4 w-32" />
               <Skeleton className="h-3 w-20" />
@@ -93,7 +86,7 @@ export function createSyncSessionItemSubColumns(): ColumnDef<EnrichedSyncSession
       cell: ({ row }) => {
         const config = ITEM_STATUS_CONFIG[row.original.status];
         return (
-          <Badge variant={config.variant} appearance="light" size="sm">
+          <Badge variant={config.variant} size="sm">
             {config.label}
           </Badge>
         );

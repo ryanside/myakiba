@@ -48,7 +48,7 @@ import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/constants";
 import { useState } from "react";
 
 type MergeOrderFormProps = {
-  renderTrigger: React.ReactNode;
+  renderTrigger: React.ReactElement;
   orderIds: Set<string>;
   collectionIds?: Set<string>;
   type: "merge";
@@ -62,7 +62,7 @@ type MergeOrderFormProps = {
 };
 
 type SplitOrderFormProps = {
-  renderTrigger: React.ReactNode;
+  renderTrigger: React.ReactElement;
   orderIds: Set<string>;
   collectionIds: Set<string>;
   type: "split";
@@ -77,7 +77,7 @@ type SplitOrderFormProps = {
 };
 
 type EditOrderFormProps = {
-  renderTrigger: React.ReactNode;
+  renderTrigger: React.ReactElement;
   orderIds?: Set<string>;
   collectionIds?: Set<string>;
   type: "edit-order";
@@ -221,8 +221,8 @@ export function OrderForm(props: OrderFormProps) {
   if (type === "edit-order") {
     return (
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger asChild>{renderTrigger}</SheetTrigger>
-        <SheetContent side="right" className="w-full sm:max-w-lg h-full">
+        <SheetTrigger render={renderTrigger} />
+        <SheetContent side="right" className="w-full sm:max-w-lg! h-full">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -577,7 +577,6 @@ export function OrderForm(props: OrderFormProps) {
                         onBlur={field.handleBlur}
                         maxLength={1000}
                         onChange={(e) => field.handleChange(e.target.value)}
-                        className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         placeholder="Enter additional notes..."
                       />
                     </div>
@@ -589,7 +588,7 @@ export function OrderForm(props: OrderFormProps) {
               <form.Subscribe
                 selector={(state) => [state.isSubmitting]}
                 children={([isSubmitting]) => (
-                  <SheetClose asChild>
+                  <SheetClose>
                     <Button
                       type="button"
                       variant="outline"
@@ -607,7 +606,7 @@ export function OrderForm(props: OrderFormProps) {
                   <Button
                     type="submit"
                     disabled={!canSubmit || isSubmitting}
-                    variant="primary"
+                    variant="default"
                     className="w-full flex-1"
                   >
                     {isSubmitting ? (
@@ -627,8 +626,8 @@ export function OrderForm(props: OrderFormProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{renderTrigger}</DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogTrigger render={renderTrigger} />
+      <DialogContent className="sm:max-w-lg!">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -647,7 +646,7 @@ export function OrderForm(props: OrderFormProps) {
             )}
           </DialogHeader>
 
-          <Scroller className="flex flex-col gap-4 max-h-[70vh] py-4">
+          <Scroller className="flex flex-col gap-4 max-h-[70vh] py-6 no-scrollbar">
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label>Cascade Order Details to Items</Label>
@@ -983,7 +982,6 @@ export function OrderForm(props: OrderFormProps) {
                     onBlur={field.handleBlur}
                     maxLength={1000}
                     onChange={(e) => field.handleChange(e.target.value)}
-                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     placeholder="Enter additional notes..."
                   />
                 </div>
@@ -995,7 +993,7 @@ export function OrderForm(props: OrderFormProps) {
             <form.Subscribe
               selector={(state) => [state.isSubmitting]}
               children={([isSubmitting]) => (
-                <DialogClose asChild>
+                <DialogClose>
                   <Button variant="outline" type="button" disabled={isSubmitting}>
                     Cancel
                   </Button>
@@ -1005,7 +1003,7 @@ export function OrderForm(props: OrderFormProps) {
             <form.Subscribe
               selector={(state) => [state.canSubmit, state.isSubmitting]}
               children={([canSubmit, isSubmitting]) => (
-                <Button type="submit" disabled={!canSubmit || isSubmitting} variant="primary">
+                <Button type="submit" disabled={!canSubmit || isSubmitting} variant="default">
                   {isSubmitting ? (
                     <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />
                   ) : type === "merge" ? (

@@ -1,6 +1,5 @@
 "use client";
 
-import { Slot } from "@radix-ui/react-slot";
 import { cva } from "class-variance-authority";
 import type { VariantProps } from "class-variance-authority";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -57,7 +56,6 @@ type ScrollVisibility = {
 interface ScrollerProps extends VariantProps<typeof scrollerVariants>, React.ComponentProps<"div"> {
   size?: number;
   offset?: number;
-  asChild?: boolean;
   withNavigation?: boolean;
   scrollStep?: number;
   scrollTriggerMode?: "press" | "hover" | "click";
@@ -72,7 +70,6 @@ function Scroller(props: ScrollerProps) {
     offset = 0,
     scrollStep = 40,
     style,
-    asChild,
     withNavigation = false,
     scrollTriggerMode = "press",
     ref,
@@ -224,7 +221,7 @@ function Scroller(props: ScrollerProps) {
     return orientation === "vertical" ? ["up", "down"] : ["left", "right"];
   }, [orientation, withNavigation]);
 
-  const ScrollerPrimitive = asChild ? Slot : "div";
+  const ScrollerPrimitive = "div";
 
   const ScrollerImpl = (
     <ScrollerPrimitive

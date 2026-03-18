@@ -9,9 +9,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { createFileRoute, useParams, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
 import { app, getErrorMessage } from "@/lib/treaty-client";
-import { addRecentItem } from "@/lib/recent-items";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -20,7 +18,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/reui/badge";
 import {
   Empty,
   EmptyHeader,
@@ -31,7 +29,7 @@ import {
 import { formatCurrencyFromMinorUnits, formatDate } from "@myakiba/utils";
 import { Label } from "@/components/ui/label";
 import CollectionItemForm from "@/components/collection/collection-item-form";
-import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { CollectionItemFormValues, CollectionItem } from "@myakiba/types";
 import { deleteCollectionItems, updateCollectionItem } from "@/queries/collection";
 import { toast } from "sonner";
@@ -218,17 +216,6 @@ function RouteComponent() {
     await deleteCollectionItemMutation.mutateAsync(collectionId);
   };
 
-  useEffect(() => {
-    if (data?.item) {
-      addRecentItem({
-        id: data.item.id,
-        type: "collection",
-        title: data.item.title,
-        images: data.item.image ? [data.item.image] : [],
-      });
-    }
-  }, [data?.item]);
-
   if (isPending) {
     return <Loader />;
   }
@@ -237,7 +224,7 @@ function RouteComponent() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-y-4">
         <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
-        <Button asChild variant="outline">
+        <Button variant="outline">
           <Link to="/collection">
             <HugeiconsIcon icon={ArrowLeft01Icon} className="mr-2 h-4 w-4" />
             Back to Collection
@@ -255,7 +242,7 @@ function RouteComponent() {
   return (
     <div className="flex flex-col h-full">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1">
-        <Card className="lg:col-span-2 border-none bg-background rounded-none shadow-none">
+        <Card className="lg:col-span-2">
           <CardContent className="space-y-6">
             <div className="flex flex-col md:flex-row gap-6">
               {item.image && (
@@ -271,18 +258,18 @@ function RouteComponent() {
 
               <div className="flex-1 h-full space-y-2">
                 <div className="flex flex-col gap-y-0.5">
-                  <h1 className="text-xl font-semibold ">{item.title}</h1>
+                  <h1 className="text-xl font-medium ">{item.title}</h1>
                   {item.externalId ? (
                     <a
                       href={`https://myfigurecollection.net/item/${item.externalId}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-muted-foreground font-light hover:text-foreground transition-colors underline-offset-4 hover:underline"
+                      className="text-xs text-muted-foreground font-normal hover:text-foreground transition-colors underline-offset-4 hover:underline"
                     >
                       https://myfigurecollection.net/item/{item.externalId}
                     </a>
                   ) : (
-                    <span className="text-xs text-muted-foreground font-light">Custom item</span>
+                    <span className="text-xs text-muted-foreground font-normal">Custom item</span>
                   )}
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -308,7 +295,7 @@ function RouteComponent() {
             {/* Releases */}
             {item.releases && item.releases.length > 0 && (
               <div>
-                <Label className="text-sm font-semibold mb-3">Releases</Label>
+                <Label className="text-sm font-medium mb-3">Releases</Label>
                 <div className="space-y-2">
                   {item.releases.map((release) => (
                     <div
@@ -320,16 +307,8 @@ function RouteComponent() {
                         className="h-4 w-4 text-muted-foreground"
                       />
                       <span className="font-medium">{formatDate(release.date, dateFormat)}</span>
-                      {release.type && (
-                        <Badge variant="outline" className="text-xs">
-                          {release.type}
-                        </Badge>
-                      )}
-                      {release.barcode && (
-                        <Badge appearance="ghost" variant="outline" className="text-xs">
-                          {release.barcode}
-                        </Badge>
-                      )}
+                      {release.type && <Badge variant="outline">{release.type}</Badge>}
+                      {release.barcode && <Badge variant="outline">{release.barcode}</Badge>}
                       {release.price && release.priceCurrency && (
                         <span className="ml-auto font-medium">
                           {formatCurrencyFromMinorUnits(release.price, release.priceCurrency)}
@@ -343,7 +322,7 @@ function RouteComponent() {
 
             {/* Entries (Characters, Companies, etc.) */}
             <div>
-              <Label className="text-sm font-semibold mb-3">Related Entries</Label>
+              <Label className="text-sm font-medium mb-3">Related Entries</Label>
               <div className="space-y-3">
                 {Object.entries(
                   item.entries.reduce(
@@ -390,11 +369,11 @@ function RouteComponent() {
           </CardContent>
         </Card>
 
-        <Card className="flex flex-col shadow-none">
-          <CardHeader className="">
+        <Card className="flex flex-col">
+          <CardHeader>
             <CardTitle>Personal</CardTitle>
           </CardHeader>
-          <CardContent className="flex-1 px-4 overflow-y-auto">
+          <CardContent className="flex-1 p-2 overflow-y-auto">
             {isPendingItemRelatedCollection ? (
               <div className="flex items-center justify-center py-8">
                 <HugeiconsIcon icon={Loading03Icon} className="animate-spin" />
@@ -432,10 +411,10 @@ function RouteComponent() {
                     : undefined;
 
                   return (
-                    <Card key={collectionItem.id} className="shadow-none bg-background">
+                    <Card key={collectionItem.id}>
                       <CardHeader>
                         <div className="flex items-center gap-2">
-                          <Badge variant="primary">{collectionItem.status}</Badge>
+                          <Badge variant="default">{collectionItem.status}</Badge>
                           <div className="ml-auto">
                             <CollectionItemForm
                               renderTrigger={
@@ -460,31 +439,24 @@ function RouteComponent() {
                               dateFormat={dateFormat}
                             />
                             <Popover>
-                              <PopoverTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <HugeiconsIcon icon={Delete01Icon} className="" />
-                                </Button>
-                              </PopoverTrigger>
+                              <PopoverTrigger
+                                render={
+                                  <Button variant="ghost" size="icon">
+                                    <HugeiconsIcon icon={Delete01Icon} className="" />
+                                  </Button>
+                                }
+                              />
                               <PopoverContent>
                                 <div className="flex flex-col gap-3">
                                   <p className="text-sm">Delete this collection item?</p>
                                   <div className="flex justify-end gap-2">
-                                    <PopoverClose asChild>
-                                      <Button variant="outline" size="sm">
-                                        Cancel
-                                      </Button>
-                                    </PopoverClose>
-                                    <PopoverClose asChild>
-                                      <Button
-                                        variant="destructive"
-                                        size="sm"
-                                        onClick={() =>
-                                          handleDeleteCollectionItem(collectionItem.id)
-                                        }
-                                      >
-                                        Delete
-                                      </Button>
-                                    </PopoverClose>
+                                    <Button
+                                      variant="destructive"
+                                      size="sm"
+                                      onClick={() => handleDeleteCollectionItem(collectionItem.id)}
+                                    >
+                                      Delete
+                                    </Button>
                                   </div>
                                 </div>
                               </PopoverContent>
@@ -575,7 +547,7 @@ function RouteComponent() {
                         </div>
                         {collectionItem.orderId && (
                           <div className="mt-4">
-                            <Accordion type="single" collapsible>
+                            <Accordion>
                               <AccordionItem value="item-1">
                                 <AccordionTrigger className="text-sm">
                                   Related Order

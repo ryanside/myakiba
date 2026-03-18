@@ -9,10 +9,10 @@ import type {
 } from "@tanstack/react-table";
 import { useCallback, useMemo, useState } from "react";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import { DataGridPagination } from "../ui/data-grid-pagination";
-import { DataGrid, DataGridContainer } from "../ui/data-grid";
+import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
+import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
 import { ScrollArea, ScrollBar } from "../ui/scroll-area";
-import { DataGridTable } from "../ui/data-grid-table";
+import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { DataGridColumnCombobox } from "../ui/data-grid-column-combobox";
 import { CollectionToolbar } from "./collection-toolbar";
 import { createCollectionColumns } from "./collection-columns";
@@ -30,7 +30,7 @@ export const CollectionDataGrid = () => {
   const {
     handleEditCollectionItem,
     handleDeleteCollectionItems,
-    pendingCollectionIds,
+    isCollectionPending,
     isDeletingCollectionItems,
   } = useCollectionMutations();
   const { currency, dateFormat } = useUserPreferences();
@@ -91,14 +91,14 @@ export const CollectionDataGrid = () => {
         onDeleteCollectionItems: handleDeleteCollectionItems,
         currency,
         dateFormat,
-        pendingCollectionIds,
+        isCollectionPending,
       }),
     [
       currency,
       dateFormat,
       handleEditCollectionItem,
       handleDeleteCollectionItems,
-      pendingCollectionIds,
+      isCollectionPending,
     ],
   );
 

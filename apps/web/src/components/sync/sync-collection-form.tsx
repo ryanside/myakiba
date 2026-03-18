@@ -15,7 +15,7 @@ import {
   DialogTrigger,
 } from "../ui/dialog";
 import { DialogFooter, DialogClose } from "../ui/dialog";
-import { Badge } from "../ui/badge";
+import { Badge } from "@/components/reui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { DatePicker } from "../ui/date-picker";
 import * as z from "zod";
@@ -85,7 +85,7 @@ export default function SyncCollectionForm({
           e.stopPropagation();
           void collectionForm.handleSubmit();
         }}
-        className="rounded-lg border p-4 space-y-4 w-full"
+        className="rounded-lg space-y-4 w-full"
       >
         <collectionForm.Field
           name="items"
@@ -112,9 +112,8 @@ export default function SyncCollectionForm({
                       <Button
                         type="submit"
                         disabled={!canSubmit}
-                        variant="primary"
+                        variant="default"
                         className="ml-auto"
-                        size="md"
                       >
                         {isSubmitting ? (
                           <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />
@@ -176,12 +175,17 @@ export default function SyncCollectionForm({
                               />
 
                               <Dialog>
-                                <DialogTrigger asChild>
-                                  <Button variant="ghost" size="icon" type="button">
-                                    <HugeiconsIcon icon={Edit01Icon} />
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+                                <DialogTrigger
+                                  render={
+                                    <Button variant="ghost" size="icon" type="button">
+                                      <HugeiconsIcon icon={Edit01Icon} />
+                                    </Button>
+                                  }
+                                />
+                                <DialogContent
+                                  className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto"
+                                  forceRenderBackdrop
+                                >
                                   <DialogHeader>
                                     <DialogTitle>Edit Collection Item</DialogTitle>
                                     <DialogDescription>
@@ -495,7 +499,6 @@ export default function SyncCollectionForm({
                                               notesField.handleChange(e.target.value)
                                             }
                                             placeholder="Additional notes..."
-                                            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                             rows={3}
                                           />
                                         </div>
@@ -503,7 +506,7 @@ export default function SyncCollectionForm({
                                     />
                                   </div>
                                   <DialogFooter>
-                                    <DialogClose asChild>
+                                    <DialogClose>
                                       <Button variant="outline" type="button">
                                         Close
                                       </Button>

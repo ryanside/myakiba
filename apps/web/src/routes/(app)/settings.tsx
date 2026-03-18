@@ -28,7 +28,6 @@ import {
 } from "@/components/ui/dialog";
 import * as z from "zod";
 import { app } from "@/lib/treaty-client";
-import { clearRecentItems } from "@/lib/recent-items";
 import { DATE_FORMATS } from "@myakiba/constants";
 
 type User = {
@@ -106,7 +105,7 @@ function RouteComponent() {
         <div className="flex flex-row items-start gap-4">
           <h1 className="text-2xl tracking-tight">Settings</h1>
         </div>
-        <p className="text-muted-foreground text-sm font-light">
+        <p className="text-muted-foreground text-sm font-normal">
           Manage your settings and preferences.
         </p>
       </div>
@@ -427,13 +426,13 @@ function PreferencesForm({ user }: { user: User }) {
               <div className="space-y-2">
                 <Label htmlFor={field.name}>Display Currency</Label>
                 <Select
-                  value={field.state.value}
-                  onValueChange={(value) => field.handleChange(value)}
+                  value={field.state.value ?? ""}
+                  onValueChange={(value) => field.handleChange(value ?? "")}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={field.state.value} />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent align="start" className="w-full">
                     {currencies.map((currency) => (
                       <SelectItem key={currency.value} value={currency.value}>
                         {currency.label}
@@ -441,9 +440,6 @@ function PreferencesForm({ user }: { user: User }) {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-sm text-muted-foreground">
-                  Choose your preferred currency for displaying and inputting prices
-                </p>
                 {field.state.meta.errors.length > 0 && (
                   <p className="text-sm text-destructive">{field.state.meta.errors[0]?.message}</p>
                 )}
@@ -456,13 +452,13 @@ function PreferencesForm({ user }: { user: User }) {
               <div className="space-y-2">
                 <Label htmlFor={field.name}>Date Format</Label>
                 <Select
-                  value={field.state.value}
-                  onValueChange={(value) => field.handleChange(value)}
+                  value={field.state.value ?? ""}
+                  onValueChange={(value) => field.handleChange(value ?? "")}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={field.state.value} />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent align="start">
                     {DATE_FORMATS.map((dateFormat) => (
                       <SelectItem key={dateFormat} value={dateFormat}>
                         {dateFormat}
@@ -470,9 +466,6 @@ function PreferencesForm({ user }: { user: User }) {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-sm text-muted-foreground">
-                  Choose your preferred date format for displaying and inputting dates
-                </p>
                 {field.state.meta.errors.length > 0 && (
                   <p className="text-sm text-destructive">{field.state.meta.errors[0]?.message}</p>
                 )}
@@ -529,7 +522,6 @@ function DeleteAccountForm({
           onSuccess: () => {
             // Clear all React Query cache
             queryClient.clear();
-            clearRecentItems();
             navigate({
               to: "/login",
             });
@@ -561,7 +553,6 @@ function DeleteAccountForm({
                   onSuccess: () => {
                     // Clear all React Query cache
                     queryClient.clear();
-                    clearRecentItems();
                     navigate({
                       to: "/login",
                     });
@@ -590,12 +581,14 @@ function DeleteAccountForm({
       </CardHeader>
       <CardContent>
         <Dialog>
-          <DialogTrigger asChild>
-            <Button variant="destructive">
-              <HugeiconsIcon icon={Delete02Icon} className="mr-2 h-4 w-4" />
-              Delete Account
-            </Button>
-          </DialogTrigger>
+          <DialogTrigger
+            render={
+              <Button variant="destructive">
+                <HugeiconsIcon icon={Delete02Icon} className="mr-2 h-4 w-4" />
+                Delete Account
+              </Button>
+            }
+          />
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Are you absolutely sure?</DialogTitle>

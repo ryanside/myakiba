@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Calendar01Icon, DragDropVerticalIcon, Tick02Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/reui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Kanban,
@@ -12,7 +12,7 @@ import {
   KanbanItem,
   KanbanItemHandle,
   KanbanOverlay,
-} from "@/components/ui/kanban";
+} from "@/components/reui/kanban";
 import { formatCurrencyFromMinorUnits, formatMonthYear } from "@myakiba/utils";
 import type { DateFormat } from "@myakiba/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -65,22 +65,24 @@ function OrderCard({
   ...props
 }: OrderCardProps) {
   const cardContent = (
-    <div className="rounded-md border bg-card p-3 shadow-xs hover:shadow-sm transition-shadow relative">
+    <div className="rounded-lg ring ring-foreground/10 bg-card p-3 shadow-xs hover:shadow-sm transition-shadow relative">
       <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="dim"
-            size="icon"
-            className="absolute top-2 right-2"
-            aria-label="Mark as collected"
-            onClick={(e) => {
-              e.stopPropagation();
-              onMarkOwned(order.orderId);
-            }}
-          >
-            <HugeiconsIcon icon={Tick02Icon} className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
+        <TooltipTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-2 right-2"
+              aria-label="Mark as collected"
+              onClick={(e) => {
+                e.stopPropagation();
+                onMarkOwned(order.orderId);
+              }}
+            >
+              <HugeiconsIcon icon={Tick02Icon} className="h-4 w-4" />
+            </Button>
+          }
+        />
         <TooltipContent>
           <p>Mark as collected</p>
         </TooltipContent>
@@ -98,7 +100,7 @@ function OrderCard({
               </div>
             ))}
             {order.itemImages.length > 3 && (
-              <div className="relative w-12 h-12 rounded-md overflow-hidden border bg-muted flex items-center justify-center shrink-0">
+              <div className="relative w-12 h-12 rounded-md overflow-hidden bg-muted flex items-center justify-center shrink-0">
                 <span className="text-xs font-medium text-muted-foreground">
                   +{order.itemImages.length - 3}
                 </span>
@@ -112,7 +114,7 @@ function OrderCard({
           <Link
             to="/orders/$id"
             params={{ id: order.orderId }}
-            className="line-clamp-2 font-light text-sm leading-tight hover:underline"
+            className="line-clamp-2 font-normal text-sm leading-tight hover:underline"
           >
             {order.title}
           </Link>
@@ -171,17 +173,17 @@ function OrderColumn({
     <KanbanColumn
       value={value}
       {...props}
-      className="rounded-lg border bg-background p-4 shadow-xs"
+      className="rounded-xl bg-sidebar dark:bg-background p-4 border border-border/30"
     >
       <div className="flex items-center justify-between mb-2.5">
         <div className="flex items-center gap-2.5">
-          <Badge asChild variant={getStatusVariant(value)} appearance="outline">
+          <Badge variant={getStatusVariant(value)}>
             <span className="font-medium text-sm">{COLUMN_TITLES[value]}</span>
           </Badge>
           <Badge variant="outline">{orders.length}</Badge>
         </div>
-        <KanbanColumnHandle asChild>
-          <Button variant="dim" size="sm" mode="icon">
+        <KanbanColumnHandle>
+          <Button variant="ghost" size="icon">
             <HugeiconsIcon icon={DragDropVerticalIcon} />
           </Button>
         </KanbanColumnHandle>
@@ -339,9 +341,9 @@ export default function OrderKanban({ orders, currency, dateFormat }: OrdersKanb
       onValueChange={setColumns}
       onMove={handleMove}
       getItemValue={(item) => item.orderId}
-      className="h-full"
+      className="h-full overflow-x-auto"
     >
-      <KanbanBoard className="grid auto-rows-fr grid-cols-3 h-full gap-2.5">
+      <KanbanBoard className="grid h-full auto-rows-fr grid-cols-3 gap-4 min-w-[1000px]">
         {Object.entries(columns).map(([columnValue, columnOrders]) => (
           <OrderColumn
             key={columnValue}
@@ -350,7 +352,7 @@ export default function OrderKanban({ orders, currency, dateFormat }: OrdersKanb
             currency={currency}
             dateFormat={dateFormat}
             onMarkOwned={handleMarkOwned}
-            className="max-h-[300px] overflow-auto"
+            className="w-[260px] max-h-[300px] overflow-auto"
           />
         ))}
       </KanbanBoard>

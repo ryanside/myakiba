@@ -30,7 +30,7 @@ import * as z from "zod";
 import { Textarea } from "../ui/textarea";
 import { Rating } from "../ui/rating";
 import { Field, FieldContent, FieldTitle } from "@/components/ui/field";
-import { Badge } from "../ui/badge";
+import { Badge } from "@/components/reui/badge";
 import {
   formatDate,
   formatCurrencyFromMinorUnits,
@@ -41,10 +41,10 @@ import {
 import type { DateFormat } from "@myakiba/types";
 import { Scroller } from "../ui/scroller";
 import { COLLECTION_STATUSES, SHIPPING_METHODS, CONDITIONS } from "@myakiba/constants";
-import { useState } from "react";
+import { useState, type ReactElement } from "react";
 
 type CollectionItemFormProps = {
-  renderTrigger: React.ReactNode;
+  renderTrigger: ReactElement;
   itemData: CollectionItemFormValues;
   callbackFn: (itemData: CollectionItemFormValues) => Promise<void>;
   currency?: string;
@@ -88,8 +88,8 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>{renderTrigger}</SheetTrigger>
-      <SheetContent side="right" className="w-full sm:max-w-lg h-full">
+      <SheetTrigger render={renderTrigger} />
+      <SheetContent side="right" className="w-full sm:max-w-lg! h-full">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -328,7 +328,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                             })()}
                         </SelectValue>
                       </SelectTrigger>
-                      <SelectContent className="min-w-(--radix-select-trigger-width)">
+                      <SelectContent className="min-w-(--anchor-width)">
                         {releasesLoading && (
                           <div className="flex items-center justify-center py-4">
                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
@@ -497,7 +497,6 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                           <Badge
                             key={tagIndex}
                             variant="outline"
-                            size="lg"
                             className="flex items-center justify-between pr-0"
                           >
                             {tag}
@@ -563,7 +562,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
             <form.Subscribe
               selector={(state) => [state.isSubmitting]}
               children={([isSubmitting]) => (
-                <SheetClose asChild>
+                <SheetClose>
                   <Button
                     type="button"
                     variant="outline"

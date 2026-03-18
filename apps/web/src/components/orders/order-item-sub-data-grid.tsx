@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { DataGrid, DataGridContainer } from "@/components/ui/data-grid";
-import { DataGridPagination } from "@/components/ui/data-grid-pagination";
-import { DataGridTable } from "@/components/ui/data-grid-table";
+import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
+import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
+import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   type RowSelectionState,
@@ -26,14 +26,14 @@ export function OrderItemSubDataGrid({
   setItemSelection,
   onEditItem,
   onDeleteItem,
-  pendingCollectionItemIds,
+  isCollectionItemPending,
 }: {
   orderId: string;
   itemSelection: RowSelectionState;
   setItemSelection: OnChangeFn<RowSelectionState>;
   onEditItem: (values: CollectionItemFormValues) => Promise<void>;
   onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
-  pendingCollectionItemIds: ReadonlySet<string>;
+  isCollectionItemPending: (collectionId: string) => boolean;
 }) {
   const { currency, dateFormat } = useUserPreferences();
 
@@ -73,9 +73,9 @@ export function OrderItemSubDataGrid({
         onDeleteItem,
         currency,
         dateFormat,
-        pendingCollectionItemIds,
+        isCollectionItemPending,
       }),
-    [currency, dateFormat, onDeleteItem, onEditItem, orderId, pendingCollectionItemIds],
+    [currency, dateFormat, isCollectionItemPending, onDeleteItem, onEditItem, orderId],
   );
 
   const subTable = useReactTable({
@@ -117,7 +117,6 @@ export function OrderItemSubDataGrid({
         recordCount={totalCount}
         isLoading={isPending}
         loadingMode="skeleton"
-        skeletonRowCount={1}
         tableLayout={{
           dense: true,
           rowBorder: true,

@@ -75,7 +75,7 @@ export function WaitlistForm() {
               onChange={(e) => field.handleChange(e.target.value)}
               disabled={form.state.isSubmitting}
               aria-invalid={field.state.meta.errors.length > 0}
-              className="h-12 px-5 rounded-full w-full sm:w-72 border-2 focus-visible:ring-offset-0"
+              className="h-12 px-5 rounded-full w-full sm:w-72"
             />
             {field.state.meta.errors.map((error) => (
               <p key={error?.message} className="text-sm text-destructive mt-1 ml-3">
@@ -89,7 +89,7 @@ export function WaitlistForm() {
         {(state) => (
           <Button
             type="submit"
-            variant="mono"
+            variant="default"
             disabled={!state.canSubmit || state.isSubmitting || mutation.isPending}
             className="h-12 px-6 rounded-full"
           >

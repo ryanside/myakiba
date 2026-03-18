@@ -34,12 +34,12 @@ export default function HeroSection({
           <div className="flex flex-col gap-3">
             <WaitlistForm />
             <div className="px-2 text-start text-xs text-muted-foreground italic">
-              <p>*in early development</p>
+              <p>*in early development, screenshots below may be outdated</p>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col items-center justify-center relative overflow-hidden rounded-sm bg-black/10 aspect-video">
+        <div className="flex flex-col items-center justify-center relative overflow-hidden rounded bg-black/10 aspect-video">
           <img
             src={heroBackgroundImage}
             alt="hero background image"

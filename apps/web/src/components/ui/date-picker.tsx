@@ -42,22 +42,24 @@ export function DatePicker({
 
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          id={id}
-          name={name}
-          variant="outline"
-          data-empty={!dateValue}
-          onBlur={onBlur}
-          className={cn(
-            "data-[empty=true]:text-muted-foreground w-full justify-start text-left font-normal",
-            className,
-          )}
-        >
-          <HugeiconsIcon icon={Calendar01Icon} className="mr-2 h-4 w-4" />
-          {dateValue ? format(dateValue, "PPP") : <span>{placeholder}</span>}
-        </Button>
-      </PopoverTrigger>
+      <PopoverTrigger
+        render={
+          <Button
+            id={id}
+            name={name}
+            variant="outline"
+            data-empty={!dateValue}
+            onBlur={onBlur}
+            className={cn(
+              "data-[empty=true]:text-muted-foreground w-full justify-start text-left font-normal",
+              className,
+            )}
+          >
+            <HugeiconsIcon icon={Calendar01Icon} className="mr-2 h-4 w-4" />
+            {dateValue ? format(dateValue, "PPP") : <span>{placeholder}</span>}
+          </Button>
+        }
+      />
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar
           mode="single"

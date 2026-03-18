@@ -10,7 +10,7 @@ export function ModeToggle({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 py-0.5 px-1 overflow-hidden",
+        "inline-flex items-center gap-1 rounded-full ring-1 ring-foreground/10 bg-muted/50 py-0.5 px-1 overflow-hidden",
         className,
       )}
     >
@@ -18,10 +18,8 @@ export function ModeToggle({ className }: { className?: string }) {
         variant="ghost"
         size="icon"
         className={cn(
-          "size-6 rounded-lg transition-all hover:bg-transparent",
-          theme === "system" || theme === undefined
-            ? "bg-card text-card-foreground border hover:bg-card"
-            : "",
+          "size-6 rounded-full transition-colors",
+          theme === "system" || theme === undefined ? "bg-foreground text-background" : "",
         )}
         onClick={() => setTheme("system")}
         aria-label="System theme"
@@ -32,8 +30,8 @@ export function ModeToggle({ className }: { className?: string }) {
         variant="ghost"
         size="icon"
         className={cn(
-          "size-6 rounded-full transition-all hover:bg-transparent",
-          theme === "light" ? "bg-card text-card-foreground border hover:bg-card" : "",
+          "size-6 rounded-full transition-colors",
+          theme === "light" ? "bg-foreground text-background" : "",
         )}
         onClick={() => setTheme("light")}
         aria-label="Light theme"
@@ -44,8 +42,8 @@ export function ModeToggle({ className }: { className?: string }) {
         variant="ghost"
         size="icon"
         className={cn(
-          "size-6 rounded-full transition-all hover:bg-transparent",
-          theme === "dark" ? "bg-card text-card-foreground border hover:bg-card" : "",
+          "size-6 rounded-full transition-colors",
+          theme === "dark" ? "bg-foreground text-background" : "",
         )}
         onClick={() => setTheme("dark")}
         aria-label="Dark theme"

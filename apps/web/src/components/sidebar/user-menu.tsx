@@ -1,37 +1,42 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Logout01Icon, Settings01Icon, UserIcon } from "@hugeicons/core-free-icons";
+import {
+  ComputerIcon,
+  LogoutSquare01Icon,
+  Moon02Icon,
+  Settings01Icon,
+  Sun01Icon,
+  UserIcon,
+} from "@hugeicons/core-free-icons";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { authClient } from "@/lib/auth-client";
 import { useNavigate } from "@tanstack/react-router";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { useQueryClient } from "@tanstack/react-query";
-import { ModeToggle } from "../mode-toggle";
+import { useTheme } from "@/components/theme-provider";
 import type { RouterAppContext } from "@/routes/__root";
-import { clearRecentItems } from "@/lib/recent-items";
 import { toast } from "sonner";
+import { Button } from "../ui/button";
 
 export default function UserMenu({ session }: { session: RouterAppContext["session"] }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { theme, setTheme } = useTheme();
 
-  const handleSignOut = async () => {
+  const handleSignOut = () => {
     authClient.signOut({
       fetchOptions: {
         onSuccess: () => {
           toast.success("Signed out successfully");
-          // Clear all React Query cache (not just invalidate)
           queryClient.clear();
-          // Clear localStorage
-          clearRecentItems();
-          navigate({
-            to: "/login",
-          });
+          navigate({ to: "/login" });
         },
       },
     });
@@ -39,51 +44,57 @@ export default function UserMenu({ session }: { session: RouterAppContext["sessi
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Avatar className="h-7 w-7">
+      <DropdownMenuTrigger render={<Button variant="ghost" size="icon-lg" />}>
+        <Avatar className="size-7">
           {session.user.image && <AvatarImage src={session.user.image} />}
           <AvatarFallback className="bg-linear-to-br from-background via-muted to-background">
             <HugeiconsIcon icon={UserIcon} className="size-4" />
           </AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="min-w-48">
+      <DropdownMenuContent className="w-60" align="start" sideOffset={8}>
         <div className="flex bg-linear-to-br from-background via-muted to-background rounded-sm outline outline-border items-center gap-2 px-2 py-1.5 text-sm">
-          {session.user.username}
+          <span className="text-foreground text-sm font-medium">{session.user.username}</span>
         </div>
+        <div className="py-2.5">
+          <Tabs value={theme ?? "system"} onValueChange={setTheme}>
+            <TabsList className="w-full">
+              <TabsTrigger value="light" className="h-6 flex-1">
+                <HugeiconsIcon icon={Sun01Icon} className="size-4" aria-hidden="true" />
+              </TabsTrigger>
+              <TabsTrigger value="dark" className="h-6 flex-1">
+                <HugeiconsIcon icon={Moon02Icon} className="size-4" aria-hidden="true" />
+              </TabsTrigger>
+              <TabsTrigger value="system" className="h-6 flex-1">
+                <HugeiconsIcon icon={ComputerIcon} className="size-4" aria-hidden="true" />
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+        <DropdownMenuGroup>
+          <DropdownMenuItem
+            onClick={() => {
+              navigate({
+                to: "/profile/$username",
+                params: { username: session.user.username ?? "" },
+              });
+            }}
+          >
+            <HugeiconsIcon icon={UserIcon} aria-hidden="true" />
+            Profile
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => {
+              navigate({ to: "/settings" });
+            }}
+          >
+            <HugeiconsIcon icon={Settings01Icon} aria-hidden="true" />
+            Settings
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <ModeToggle className="mb-1" />
-
-        <DropdownMenuItem
-          onClick={() => {
-            navigate({
-              to: "/profile/$username",
-              params: {
-                username: session.user.username ?? "",
-              },
-            });
-          }}
-        >
-          <HugeiconsIcon icon={UserIcon} />
-          Profile
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => {
-            navigate({
-              to: "/settings",
-            });
-          }}
-        >
-          <HugeiconsIcon icon={Settings01Icon} />
-          Settings
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={() => {
-            handleSignOut();
-          }}
-        >
-          <HugeiconsIcon icon={Logout01Icon} />
+        <DropdownMenuItem variant="destructive" onClick={handleSignOut}>
+          <HugeiconsIcon icon={LogoutSquare01Icon} aria-hidden="true" />
           Sign Out
         </DropdownMenuItem>
       </DropdownMenuContent>

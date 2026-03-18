@@ -49,7 +49,7 @@ import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/constants";
 import type { OrderStatus, ShippingMethod } from "@myakiba/types";
 
 type UnifiedItemMoveFormProps = {
-  renderTrigger: React.ReactNode;
+  renderTrigger: React.ReactElement;
   selectedItemData: {
     orderIds: Set<string>;
     collectionIds: Set<string>;
@@ -173,8 +173,8 @@ export default function UnifiedItemMoveForm({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{renderTrigger}</DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh]">
+      <DialogTrigger render={renderTrigger} />
+      <DialogContent className="sm:max-w-lg!">
         <DialogHeader>
           <DialogTitle>Move Items</DialogTitle>
           <DialogDescription>
@@ -183,7 +183,7 @@ export default function UnifiedItemMoveForm({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4 py-4">
+        <div className="grid gap-4">
           <div className="grid gap-2">
             <Label>Move to</Label>
             <RadioGroup
@@ -223,28 +223,30 @@ export default function UnifiedItemMoveForm({
                     <div className="grid gap-2">
                       <Label htmlFor={field.name}>Select Order:</Label>
                       <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-controls={targetOrderListId}
-                            aria-expanded={popoverOpen}
-                            aria-haspopup="listbox"
-                            className="w-full justify-between"
-                            type="button"
-                          >
-                            {field.state.value
-                              ? data?.orderIdsAndTitles?.find(
-                                  (order) => order.id === field.state.value,
-                                )?.title || "Select target order"
-                              : "Select target order"}
-                            <HugeiconsIcon
-                              icon={ArrowUpDownIcon}
-                              className="ml-2 h-4 w-4 shrink-0 opacity-50"
-                            />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-(--radix-popover-trigger-width) p-0">
+                        <PopoverTrigger
+                          render={
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-controls={targetOrderListId}
+                              aria-expanded={popoverOpen}
+                              aria-haspopup="listbox"
+                              className="w-full justify-between"
+                              type="button"
+                            >
+                              {field.state.value
+                                ? data?.orderIdsAndTitles?.find(
+                                    (order) => order.id === field.state.value,
+                                  )?.title || "Select target order"
+                                : "Select target order"}
+                              <HugeiconsIcon
+                                icon={ArrowUpDownIcon}
+                                className="ml-2 h-4 w-4 shrink-0 opacity-50"
+                              />
+                            </Button>
+                          }
+                        />
+                        <PopoverContent className="w-(--anchor-width) p-0">
                           <Command>
                             <DebouncedInput
                               value={filters.title}
@@ -311,7 +313,7 @@ export default function UnifiedItemMoveForm({
                 <existingOrderForm.Subscribe
                   selector={(state) => [state.isSubmitting]}
                   children={([isSubmitting]) => (
-                    <DialogClose asChild>
+                    <DialogClose>
                       <Button variant="outline" type="button" disabled={isSubmitting}>
                         Cancel
                       </Button>
@@ -321,7 +323,7 @@ export default function UnifiedItemMoveForm({
                 <existingOrderForm.Subscribe
                   selector={(state) => [state.canSubmit, state.isSubmitting]}
                   children={([canSubmit, isSubmitting]) => (
-                    <Button type="submit" disabled={!canSubmit || isSubmitting} variant="primary">
+                    <Button type="submit" disabled={!canSubmit || isSubmitting} variant="default">
                       {isSubmitting ? "Moving..." : "Move Items"}
                     </Button>
                   )}
@@ -686,7 +688,7 @@ export default function UnifiedItemMoveForm({
                 <newOrderForm.Subscribe
                   selector={(state) => [state.isSubmitting]}
                   children={([isSubmitting]) => (
-                    <DialogClose asChild>
+                    <DialogClose>
                       <Button variant="outline" type="button" disabled={isSubmitting}>
                         Cancel
                       </Button>
@@ -696,7 +698,7 @@ export default function UnifiedItemMoveForm({
                 <newOrderForm.Subscribe
                   selector={(state) => [state.canSubmit, state.isSubmitting]}
                   children={([canSubmit, isSubmitting]) => (
-                    <Button type="submit" disabled={!canSubmit || isSubmitting} variant="primary">
+                    <Button type="submit" disabled={!canSubmit || isSubmitting} variant="default">
                       {isSubmitting ? (
                         <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />
                       ) : (

@@ -32,7 +32,7 @@ function RouteComponent() {
           <div className="flex flex-row items-start gap-4">
             <h1 className="text-2xl tracking-tight">Collection</h1>
           </div>
-          <p className="text-muted-foreground text-sm font-light">
+          <p className="text-muted-foreground text-sm font-normal">
             Manage and track your collection items
           </p>
         </div>
@@ -49,7 +49,7 @@ function RouteComponent() {
         <div className="flex flex-row items-start gap-4">
           <h1 className="text-2xl tracking-tight">Collection</h1>
         </div>
-        <p className="text-muted-foreground text-sm font-light">
+        <p className="text-muted-foreground text-sm font-normal">
           Manage and track your collection items
         </p>
       </div>

@@ -24,7 +24,7 @@ function RouteComponent() {
         <div className="flex flex-col items-center justify-center gap-y-4 text-center">
           <HugeiconsIcon icon={CodeIcon} className="h-12 w-12 text-muted-foreground" />
           <div>
-            <h3 className="text-lg font-semibold">Expenses coming soon.</h3>
+            <h3 className="text-lg font-medium">Expenses coming soon.</h3>
             <p className="text-sm text-muted-foreground">
               This feature is not yet implemented. Check back soon!
             </p>

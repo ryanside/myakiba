@@ -78,7 +78,7 @@ function RouteComponent() {
                 <MyAkibaLogo size="full" className="size-28" />
               </Link>
               <div className="text-center">
-                <h1 className="text-2xl font-semibold">Invalid Reset Link</h1>
+                <h1 className="text-2xl font-medium">Invalid Reset Link</h1>
               </div>
             </div>
             <div className="text-center space-y-4">
@@ -122,7 +122,7 @@ function RouteComponent() {
               <MyAkibaLogo size="full" className="size-28" />
             </Link>
             <div className="text-center">
-              <h1 className="text-2xl font-semibold">Reset your password</h1>
+              <h1 className="text-2xl font-medium">Reset your password</h1>
               <p className="text-sm text-muted-foreground mt-2">Enter your new password below.</p>
             </div>
           </div>
@@ -227,7 +227,7 @@ function RouteComponent() {
           <div className="text-center text-sm">
             Remember your password?{" "}
             <Link to="/login">
-              <Button className="underline underline-offset-4" variant="primary" mode="link">
+              <Button className="underline underline-offset-4" variant="link">
                 Back to Login
               </Button>
             </Link>

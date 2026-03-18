@@ -2,7 +2,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Rating } from "../ui/rating";
-import * as Portal from "@radix-ui/react-portal";
 import { useState } from "react";
 
 interface PopoverRatingCellProps {
@@ -22,31 +21,31 @@ export function PopoverRatingCell({ value, onSubmit, disabled = false }: Popover
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" className="text-foreground pl-0" disabled={disabled}>
-          {value}
-        </Button>
-      </PopoverTrigger>
+      <PopoverTrigger
+        render={
+          <Button variant="ghost" className="text-foreground pl-0" disabled={disabled}>
+            {value}
+          </Button>
+        }
+      />
       {isOpen && (
-        <Portal.Root>
-          <PopoverContent className="">
-            <div className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="score">Score</Label>
-                <div>
-                  <Rating
-                    size="md"
-                    rating={Number(value) || 0}
-                    onRatingChange={(value) => handleSubmit(value.toFixed(1))}
-                    editable={true}
-                    showValue={true}
-                    maxRating={10}
-                  />
-                </div>
+        <PopoverContent>
+          <div className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="score">Score</Label>
+              <div>
+                <Rating
+                  size="md"
+                  rating={Number(value) || 0}
+                  onRatingChange={(value) => handleSubmit(value.toFixed(1))}
+                  editable={true}
+                  showValue={true}
+                  maxRating={10}
+                />
               </div>
             </div>
-          </PopoverContent>
-        </Portal.Root>
+          </div>
+        </PopoverContent>
       )}
     </Popover>
   );

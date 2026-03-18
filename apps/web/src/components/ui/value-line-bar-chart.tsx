@@ -28,7 +28,7 @@ const MONTH_NAMES = [
 const chartConfig = {
   desktop: {
     label: "Orders",
-    color: "var(--secondary-foreground)",
+    color: "var(--primary-foreground)",
   },
 } satisfies ChartConfig;
 
@@ -146,7 +146,7 @@ export function ValueLineBarChart({ data }: ValueLineBarChartProps) {
                 axisLine={false}
                 tickFormatter={(value) => value.slice(0, 3)}
               />
-              <Bar dataKey="desktop" fill="var(--secondary)" radius={4}>
+              <Bar dataKey="desktop" fill="var(--primary)" radius={4}>
                 {chartData.map((_, index) => (
                   <Cell
                     className="duration-200 cursor-pointer"
