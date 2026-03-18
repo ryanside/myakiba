@@ -1,58 +1,26 @@
 "use client";
 
-import { HugeiconsIcon } from "@hugeicons/react";
-import { MinusSignIcon, Tick02Icon } from "@hugeicons/core-free-icons";
-import * as React from "react";
+import { Checkbox as CheckboxPrimitive } from "@base-ui/react/checkbox";
+
 import { cn } from "@/lib/utils";
-import { cva } from "class-variance-authority";
-import type { VariantProps } from "class-variance-authority";
-import { Checkbox as CheckboxPrimitive } from "radix-ui";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Tick02Icon } from "@hugeicons/core-free-icons";
 
-// Define the variants for the Checkbox using cva.
-const checkboxVariants = cva(
-  `
-    group peer relative bg-background shrink-0 rounded-md border border-input ring-offset-background focus-visible:outline-none 
-    focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 
-    aria-invalid:border-destructive/60 aria-invalid:ring-destructive/10 dark:aria-invalid:border-destructive dark:aria-invalid:ring-destructive/20
-    [[data-invalid=true]_&]:border-destructive/60 [[data-invalid=true]_&]:ring-destructive/10  dark:[[data-invalid=true]_&]:border-destructive dark:[[data-invalid=true]_&]:ring-destructive/20,
-    data-[state=checked]:bg-primary data-[state=checked]:border-primary data-[state=checked]:text-primary-foreground data-[state=indeterminate]:bg-primary data-[state=indeterminate]:border-primary data-[state=indeterminate]:text-primary-foreground
-    `,
-  {
-    variants: {
-      size: {
-        sm: "size-4.5 [&_svg]:size-3",
-        md: "size-5 [&_svg]:size-3.5",
-        lg: "size-5.5 [&_svg]:size-4",
-      },
-    },
-    defaultVariants: {
-      size: "md",
-    },
-  },
-);
-
-function Checkbox({
-  className,
-  size,
-  ...props
-}: React.ComponentProps<typeof CheckboxPrimitive.Root> & VariantProps<typeof checkboxVariants>) {
+function Checkbox({ className, ...props }: CheckboxPrimitive.Root.Props) {
   return (
     <CheckboxPrimitive.Root
       data-slot="checkbox"
-      className={cn(checkboxVariants({ size }), className)}
+      className={cn(
+        "peer relative flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-input transition-colors outline-none group-has-disabled/field:opacity-50 after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 aria-invalid:aria-checked:border-primary dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 data-checked:border-primary data-checked:bg-primary data-checked:text-primary-foreground dark:data-checked:bg-primary",
+        className,
+      )}
       {...props}
     >
       <CheckboxPrimitive.Indicator
-        className={cn("absolute inset-0 flex items-center justify-center text-current")}
+        data-slot="checkbox-indicator"
+        className="grid place-content-center text-current transition-none [&>svg]:size-3.5"
       >
-        <HugeiconsIcon
-          icon={Tick02Icon}
-          className="group-data-[state=indeterminate]:hidden shrink-0"
-        />
-        <HugeiconsIcon
-          icon={MinusSignIcon}
-          className="hidden group-data-[state=indeterminate]:block shrink-0"
-        />
+        <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} />
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>
   );

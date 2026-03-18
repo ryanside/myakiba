@@ -42,25 +42,26 @@ export function SyncSheetButton({ syncType, label, className }: SyncSheetButtonP
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button
-          variant="primary"
-          autoHeight={true}
-          className={className}
-          aria-label={label}
-          onMouseEnter={() => addItemsIconRef.current?.startAnimation()}
-          onMouseLeave={() => addItemsIconRef.current?.stopAnimation()}
-          disabled={isSyncing}
-        >
-          {isSyncing ? (
-            <HugeiconsIcon icon={Loading03Icon} className="size-3 animate-spin" />
-          ) : (
-            <PlusIcon ref={addItemsIconRef} size={17} />
-          )}
-          {label}
-        </Button>
-      </SheetTrigger>
-      <SheetContent side="right" className="sm:max-w-xl overflow-y-auto">
+      <SheetTrigger
+        render={
+          <Button
+            variant="default"
+            className={className}
+            aria-label={label}
+            onMouseEnter={() => addItemsIconRef.current?.startAnimation()}
+            onMouseLeave={() => addItemsIconRef.current?.stopAnimation()}
+            disabled={isSyncing}
+          >
+            {isSyncing ? (
+              <HugeiconsIcon icon={Loading03Icon} className="size-3 animate-spin" />
+            ) : (
+              <PlusIcon ref={addItemsIconRef} size={17} />
+            )}
+            {label}
+          </Button>
+        }
+      />
+      <SheetContent side="right" className="sm:max-w-lg! overflow-y-auto">
         <SheetHeader>
           <SheetTitle>{meta.title}</SheetTitle>
           <SheetDescription>{meta.description}</SheetDescription>

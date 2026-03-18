@@ -16,14 +16,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useForm } from "@tanstack/react-form";
-import { useId, useState } from "react";
+import { useId, useState, type ReactElement } from "react";
 import { Field, FieldContent, FieldDescription, FieldTitle } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { MaskInput } from "@/components/ui/mask-input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/reui/badge";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -52,7 +52,7 @@ import {
 import { SHIPPING_METHODS, CONDITIONS, CURRENCIES, CATEGORIES } from "@myakiba/constants";
 
 interface FiltersFormProps {
-  renderTrigger: React.ReactNode;
+  renderTrigger: ReactElement;
   currentFilters?: CollectionFilters;
   onApplyFilters: (filters: CollectionFilters) => void;
   currency?: string;
@@ -158,8 +158,8 @@ export default function FiltersForm({
 
   return (
     <Dialog>
-      <DialogTrigger asChild>{renderTrigger}</DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogTrigger render={renderTrigger} />
+      <DialogContent className="sm:max-w-lg! px-0">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -167,13 +167,13 @@ export default function FiltersForm({
             form.handleSubmit();
           }}
         >
-          <DialogHeader>
+          <DialogHeader className="pb-4 px-4">
             <DialogTitle>Filters</DialogTitle>
             <DialogDescription>Apply filters to narrow down your collection</DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="overflow-auto max-h-[70vh]">
-            <div className="grid gap-4 p-2">
+          <ScrollArea className="overflow-auto max-h-[60vh] pb-4 px-4">
+            <div className="grid gap-4">
               {/* Shipping Method */}
               <form.Field
                 name="shipMethod"
@@ -181,13 +181,19 @@ export default function FiltersForm({
                   <Field>
                     <FieldTitle>Shipping Method</FieldTitle>
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="w-full justify-between" type="button">
-                          {getMultiSelectDisplay(field.state.value, "shipping method")}
-                          <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width)">
+                      <DropdownMenuTrigger
+                        render={
+                          <Button
+                            variant="outline"
+                            className="w-full justify-between"
+                            type="button"
+                          >
+                            {getMultiSelectDisplay(field.state.value, "shipping method")}
+                            <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4" />
+                          </Button>
+                        }
+                      />
+                      <DropdownMenuContent className="w-(--anchor-width)">
                         <ScrollArea className="h-[200px]">
                           {SHIPPING_METHODS.map((method) => (
                             <DropdownMenuCheckboxItem
@@ -219,13 +225,19 @@ export default function FiltersForm({
                   <Field>
                     <FieldTitle>Condition</FieldTitle>
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="w-full justify-between" type="button">
-                          {getMultiSelectDisplay(field.state.value, "condition")}
-                          <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width)">
+                      <DropdownMenuTrigger
+                        render={
+                          <Button
+                            variant="outline"
+                            className="w-full justify-between"
+                            type="button"
+                          >
+                            {getMultiSelectDisplay(field.state.value, "condition")}
+                            <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4" />
+                          </Button>
+                        }
+                      />
+                      <DropdownMenuContent className="w-(--anchor-width)">
                         {CONDITIONS.map((condition) => (
                           <DropdownMenuCheckboxItem
                             key={condition}
@@ -255,13 +267,19 @@ export default function FiltersForm({
                   <Field>
                     <FieldTitle>Category</FieldTitle>
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="w-full justify-between" type="button">
-                          {getMultiSelectDisplay(field.state.value, "category")}
-                          <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width)">
+                      <DropdownMenuTrigger
+                        render={
+                          <Button
+                            variant="outline"
+                            className="w-full justify-between"
+                            type="button"
+                          >
+                            {getMultiSelectDisplay(field.state.value, "category")}
+                            <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4" />
+                          </Button>
+                        }
+                      />
+                      <DropdownMenuContent className="w-(--anchor-width)">
                         <ScrollArea className="h-[200px]">
                           {CATEGORIES.map((category) => (
                             <DropdownMenuCheckboxItem
@@ -336,7 +354,6 @@ export default function FiltersForm({
                           <Badge
                             key={entryIndex}
                             variant="outline"
-                            size="lg"
                             className="flex items-center justify-between pr-0"
                           >
                             {entry}
@@ -357,30 +374,32 @@ export default function FiltersForm({
                       </div>
                       <div className="flex gap-2">
                         <Popover open={entriesPopoverOpen} onOpenChange={setEntriesPopoverOpen}>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              aria-controls={entriesListId}
-                              aria-expanded={entriesPopoverOpen}
-                              aria-haspopup="listbox"
-                              className="w-full justify-between"
-                            >
-                              Select entries...
-                              <HugeiconsIcon
-                                icon={ArrowUpDownIcon}
-                                className="ml-2 h-4 w-4 shrink-0 opacity-50"
-                              />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-(--radix-popover-trigger-width) p-0">
+                          <PopoverTrigger
+                            render={
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-controls={entriesListId}
+                                aria-expanded={entriesPopoverOpen}
+                                aria-haspopup="listbox"
+                                className="w-full justify-between"
+                              >
+                                Select entries...
+                                <HugeiconsIcon
+                                  icon={ArrowUpDownIcon}
+                                  className="ml-2 h-4 w-4 shrink-0 opacity-50"
+                                />
+                              </Button>
+                            }
+                          />
+
+                          <PopoverContent className="w-(--anchor-width) p-0">
                             <Command>
                               <DebouncedInput
                                 value={filters}
                                 onChange={(value) => setFilters(value.toString())}
                                 placeholder="Search entries..."
                                 debounce={200}
-                                className="rounded-none shadow-none border-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-background"
                               />
                               {entries && entries?.entries.length > 0 && (
                                 <CommandList id={entriesListId} className="space-y-2 p-1">
@@ -393,6 +412,9 @@ export default function FiltersForm({
                                     <CommandEmpty>No entries found.</CommandEmpty>
                                   )}
                                   <CommandGroup className="">
+                                    <div className="text-sm font-medium p-1 text-muted-foreground">
+                                      Results:
+                                    </div>
                                     {entries.entries.map((entry) => (
                                       <CommandItem
                                         key={entry.id}
@@ -444,7 +466,6 @@ export default function FiltersForm({
                           <Badge
                             key={shopIndex}
                             variant="outline"
-                            size="lg"
                             className="flex items-center justify-between pr-0"
                           >
                             {shop}
@@ -754,13 +775,19 @@ export default function FiltersForm({
                   <Field>
                     <FieldTitle>Release Price Currency</FieldTitle>
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="w-full justify-between" type="button">
-                          {getMultiSelectDisplay(field.state.value, "currency")}
-                          <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width)">
+                      <DropdownMenuTrigger
+                        render={
+                          <Button
+                            variant="outline"
+                            className="w-full justify-between"
+                            type="button"
+                          >
+                            {getMultiSelectDisplay(field.state.value, "currency")}
+                            <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4" />
+                          </Button>
+                        }
+                      />
+                      <DropdownMenuContent className="w-(--anchor-width)">
                         <ScrollArea className="h-[200px]">
                           {CURRENCIES.map((currency) => (
                             <DropdownMenuCheckboxItem
@@ -787,17 +814,17 @@ export default function FiltersForm({
             </div>
           </ScrollArea>
 
-          <DialogFooter className="">
+          <DialogFooter className="px-4! mx-0">
             <form.Subscribe
               selector={(state) => [state.canSubmit, state.isSubmitting]}
               children={([, isSubmitting]) => (
                 <>
-                  <DialogClose asChild>
+                  <DialogClose>
                     <Button type="button" variant="outline">
                       Cancel
                     </Button>
                   </DialogClose>
-                  <DialogClose asChild>
+                  <DialogClose>
                     <Button type="submit" disabled={isSubmitting}>
                       Apply Filters
                     </Button>

@@ -1,9 +1,6 @@
-import { HugeiconsIcon } from "@hugeicons/react";
-import { DragDropHorizontalIcon } from "@hugeicons/core-free-icons";
-import { useId } from "react";
+import { createContext, useContext, useId, useMemo, useRef } from "react";
 import type { CSSProperties } from "react";
-import { Button } from "@/components/ui/button";
-import { useDataGrid } from "@/components/ui/data-grid";
+import { useDataGrid } from "@/components/reui/data-grid/data-grid";
 import {
   DataGridTableBase,
   DataGridTableBody,
@@ -17,58 +14,98 @@ import {
   DataGridTableHeadRowCell,
   DataGridTableHeadRowCellResize,
   DataGridTableRowSpacer,
-} from "@/components/ui/data-grid-table";
+} from "@/components/reui/data-grid/data-grid-table";
 import {
   closestCenter,
   DndContext,
   KeyboardSensor,
   MouseSensor,
   TouchSensor,
-  type UniqueIdentifier,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type Modifier,
 } from "@dnd-kit/core";
+import type { UniqueIdentifier } from "@dnd-kit/core";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { flexRender } from "@tanstack/react-table";
 import type { Cell, HeaderGroup, Row } from "@tanstack/react-table";
 
-function DataGridTableDndRowHandle({ rowId }: { rowId: string }) {
-  const { attributes, listeners } = useSortable({
-    id: rowId,
-  });
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { DragDropHorizontalIcon } from "@hugeicons/core-free-icons";
+
+// Context to share sortable listeners from row to handle
+type SortableContextValue = ReturnType<typeof useSortable>;
+const SortableRowContext = createContext<Pick<
+  SortableContextValue,
+  "attributes" | "listeners"
+> | null>(null);
+
+function DataGridTableDndRowHandle({ className }: { className?: string }) {
+  const context = useContext(SortableRowContext);
+
+  if (!context) {
+    // Fallback if context is not available (shouldn't happen in normal usage)
+    return (
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        className={cn(
+          "size-7 cursor-move opacity-70 hover:bg-transparent hover:opacity-100",
+          className,
+        )}
+        disabled
+      >
+        <HugeiconsIcon icon={DragDropHorizontalIcon} strokeWidth={2} />
+      </Button>
+    );
+  }
 
   return (
-    <Button variant="dim" size="sm" className="size-7" {...attributes} {...listeners}>
-      <HugeiconsIcon icon={DragDropHorizontalIcon} />
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      className={cn(
+        "size-7 cursor-move opacity-70 hover:bg-transparent hover:opacity-100",
+        className,
+      )}
+      {...context.attributes}
+      {...context.listeners}
+    >
+      <HugeiconsIcon icon={DragDropHorizontalIcon} strokeWidth={2} />
     </Button>
   );
 }
 
 function DataGridTableDndRow<TData>({ row }: { row: Row<TData> }) {
-  const { transform, transition, setNodeRef, isDragging } = useSortable({
+  const { transform, transition, setNodeRef, isDragging, attributes, listeners } = useSortable({
     id: row.id,
   });
 
   const style: CSSProperties = {
-    transform: CSS.Transform.toString(transform), //let dnd-kit do its thing
+    transform: CSS.Transform.toString(transform),
     transition: transition,
     opacity: isDragging ? 0.8 : 1,
     zIndex: isDragging ? 1 : 0,
     position: "relative",
   };
+
   return (
-    <DataGridTableBodyRow row={row} dndRef={setNodeRef} dndStyle={style} key={row.id}>
-      {row.getVisibleCells().map((cell: Cell<TData, unknown>, colIndex) => {
-        return (
-          <DataGridTableBodyRowCell cell={cell} key={colIndex}>
-            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-          </DataGridTableBodyRowCell>
-        );
-      })}
-    </DataGridTableBodyRow>
+    <SortableRowContext.Provider value={{ attributes, listeners }}>
+      <DataGridTableBodyRow row={row} dndRef={setNodeRef} dndStyle={style} key={row.id}>
+        {row.getVisibleCells().map((cell: Cell<TData, unknown>, colIndex) => {
+          return (
+            <DataGridTableBodyRowCell cell={cell} key={colIndex}>
+              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+            </DataGridTableBodyRowCell>
+          );
+        })}
+      </DataGridTableBodyRow>
+    </SortableRowContext.Provider>
   );
 }
 
@@ -81,6 +118,7 @@ function DataGridTableDndRows<TData>({
 }) {
   const { table, isLoading, props } = useDataGrid();
   const pagination = table.getState().pagination;
+  const tableContainerRef = useRef<HTMLDivElement>(null);
 
   const sensors = useSensors(
     useSensor(MouseSensor, {}),
@@ -88,15 +126,39 @@ function DataGridTableDndRows<TData>({
     useSensor(KeyboardSensor, {}),
   );
 
+  const modifiers = useMemo(() => {
+    const restrictToTableContainer: Modifier = ({ transform, draggingNodeRect }) => {
+      if (!tableContainerRef.current || !draggingNodeRect) {
+        return transform;
+      }
+
+      const containerRect = tableContainerRef.current.getBoundingClientRect();
+      const { x, y } = transform;
+
+      const minX = containerRect.left - draggingNodeRect.left;
+      const maxX = containerRect.right - draggingNodeRect.right;
+      const minY = containerRect.top - draggingNodeRect.top;
+      const maxY = containerRect.bottom - draggingNodeRect.bottom;
+
+      return {
+        ...transform,
+        x: Math.max(minX, Math.min(maxX, x)),
+        y: Math.max(minY, Math.min(maxY, y)),
+      };
+    };
+
+    return [restrictToVerticalAxis, restrictToTableContainer];
+  }, []);
+
   return (
     <DndContext
       id={useId()}
       collisionDetection={closestCenter}
-      modifiers={[restrictToVerticalAxis]}
+      modifiers={modifiers}
       onDragEnd={handleDragEnd}
       sensors={sensors}
     >
-      <div className="relative">
+      <div ref={tableContainerRef} className="relative">
         <DataGridTableBase>
           <DataGridTableHead>
             {table.getHeaderGroups().map((headerGroup: HeaderGroup<TData>, index) => {

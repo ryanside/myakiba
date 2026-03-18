@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient, queryOptions } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useFilters } from "@/hooks/use-filters";
@@ -137,6 +137,12 @@ export function useOrdersMutations() {
     () => new Set(pendingCollectionItemIdList),
     [pendingCollectionItemIdList],
   );
+  const filtersActiveRef = useRef(filtersActive);
+  filtersActiveRef.current = filtersActive;
+  const pendingOrderIdsRef = useRef<ReadonlySet<string>>(pendingOrderIds);
+  pendingOrderIdsRef.current = pendingOrderIds;
+  const pendingCollectionItemIdsRef = useRef<ReadonlySet<string>>(pendingCollectionItemIds);
+  pendingCollectionItemIdsRef.current = pendingCollectionItemIds;
 
   const editOrderMutation = useMutation({
     mutationFn: ({
@@ -669,6 +675,20 @@ export function useOrdersMutations() {
       ]);
     },
   });
+  const editOrderMutationRef = useRef(editOrderMutation);
+  editOrderMutationRef.current = editOrderMutation;
+  const deleteOrdersMutationRef = useRef(deleteOrdersMutation);
+  deleteOrdersMutationRef.current = deleteOrdersMutation;
+  const editItemMutationRef = useRef(editItemMutation);
+  editItemMutationRef.current = editItemMutation;
+  const deleteItemMutationRef = useRef(deleteItemMutation);
+  deleteItemMutationRef.current = deleteItemMutation;
+  const isOrderPending = useCallback((orderId: string): boolean => {
+    return pendingOrderIdsRef.current.has(orderId);
+  }, []);
+  const isCollectionItemPending = useCallback((collectionId: string): boolean => {
+    return pendingCollectionItemIdsRef.current.has(collectionId);
+  }, []);
 
   const handleMerge = useCallback(
     async (
@@ -722,78 +742,73 @@ export function useOrdersMutations() {
 
   const handleEditOrder = useCallback(
     async (values: EditedOrder, cascadeOptions: CascadeOptions): Promise<void> => {
-      if (!filtersActive) {
-        editOrderMutation.mutate({ values, cascadeOptions });
+      const editOrderMutationState = editOrderMutationRef.current;
+      if (!filtersActiveRef.current) {
+        editOrderMutationState.mutate({ values, cascadeOptions });
         return;
       }
 
       setPendingOrderIdList((previous) => addPendingIds(previous, [values.orderId]));
 
       try {
-        await editOrderMutation.mutateAsync({ values, cascadeOptions });
+        await editOrderMutationState.mutateAsync({ values, cascadeOptions });
       } finally {
         setPendingOrderIdList((previous) => removePendingIds(previous, [values.orderId]));
       }
     },
-    [filtersActive, editOrderMutation],
+    [],
   );
 
-  const handleDeleteOrders = useCallback(
-    async (orderIds: Set<string>): Promise<void> => {
-      if (!filtersActive) {
-        deleteOrdersMutation.mutate(orderIds);
-        return;
-      }
+  const handleDeleteOrders = useCallback(async (orderIds: Set<string>): Promise<void> => {
+    const deleteOrdersMutationState = deleteOrdersMutationRef.current;
+    if (!filtersActiveRef.current) {
+      deleteOrdersMutationState.mutate(orderIds);
+      return;
+    }
 
-      const ids = Array.from(orderIds);
-      const loadingToastId = toast.loading("Deleting orders...");
-      setPendingOrderIdList((previous) => addPendingIds(previous, ids));
+    const ids = Array.from(orderIds);
+    const loadingToastId = toast.loading("Deleting orders...");
+    setPendingOrderIdList((previous) => addPendingIds(previous, ids));
 
-      try {
-        await deleteOrdersMutation.mutateAsync(orderIds);
-      } finally {
-        toast.dismiss(loadingToastId);
-        setPendingOrderIdList((previous) => removePendingIds(previous, ids));
-      }
-    },
-    [filtersActive, deleteOrdersMutation],
-  );
+    try {
+      await deleteOrdersMutationState.mutateAsync(orderIds);
+    } finally {
+      toast.dismiss(loadingToastId);
+      setPendingOrderIdList((previous) => removePendingIds(previous, ids));
+    }
+  }, []);
 
-  const handleEditItem = useCallback(
-    async (values: CollectionItemFormValues): Promise<void> => {
-      if (!filtersActive) {
-        editItemMutation.mutate(values);
-        return;
-      }
+  const handleEditItem = useCallback(async (values: CollectionItemFormValues): Promise<void> => {
+    const editItemMutationState = editItemMutationRef.current;
+    if (!filtersActiveRef.current) {
+      editItemMutationState.mutate(values);
+      return;
+    }
 
-      setPendingCollectionItemIdList((previous) => addPendingIds(previous, [values.id]));
+    setPendingCollectionItemIdList((previous) => addPendingIds(previous, [values.id]));
 
-      try {
-        await editItemMutation.mutateAsync(values);
-      } finally {
-        setPendingCollectionItemIdList((previous) => removePendingIds(previous, [values.id]));
-      }
-    },
-    [filtersActive, editItemMutation],
-  );
+    try {
+      await editItemMutationState.mutateAsync(values);
+    } finally {
+      setPendingCollectionItemIdList((previous) => removePendingIds(previous, [values.id]));
+    }
+  }, []);
 
-  const handleDeleteItem = useCallback(
-    async (orderId: string, itemId: string): Promise<void> => {
-      if (!filtersActive) {
-        deleteItemMutation.mutate({ orderId, itemId });
-        return;
-      }
+  const handleDeleteItem = useCallback(async (orderId: string, itemId: string): Promise<void> => {
+    const deleteItemMutationState = deleteItemMutationRef.current;
+    if (!filtersActiveRef.current) {
+      deleteItemMutationState.mutate({ orderId, itemId });
+      return;
+    }
 
-      setPendingCollectionItemIdList((previous) => addPendingIds(previous, [itemId]));
+    setPendingCollectionItemIdList((previous) => addPendingIds(previous, [itemId]));
 
-      try {
-        await deleteItemMutation.mutateAsync({ orderId, itemId });
-      } finally {
-        setPendingCollectionItemIdList((previous) => removePendingIds(previous, [itemId]));
-      }
-    },
-    [filtersActive, deleteItemMutation],
-  );
+    try {
+      await deleteItemMutationState.mutateAsync({ orderId, itemId });
+    } finally {
+      setPendingCollectionItemIdList((previous) => removePendingIds(previous, [itemId]));
+    }
+  }, []);
 
   const handleDeleteItems = useCallback(
     async (collectionIds: Set<string>): Promise<void> => {
@@ -852,6 +867,8 @@ export function useOrdersMutations() {
     handleMoveItem,
     pendingOrderIds,
     pendingCollectionItemIds,
+    isOrderPending,
+    isCollectionItemPending,
     isMerging: mergeOrdersMutation.isPending,
     isSplitting: splitOrdersMutation.isPending,
     isDeletingOrders: deleteOrdersMutation.isPending,

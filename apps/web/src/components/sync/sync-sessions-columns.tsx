@@ -3,7 +3,7 @@ import { MinusSignSquareIcon, AddSquareIcon, Loading03Icon } from "@hugeicons/co
 import type { ReactNode } from "react";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import { useQueryClient } from "@tanstack/react-query";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/reui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { SyncSessionRow } from "@myakiba/types";
@@ -39,8 +39,7 @@ function ExpandButton({ row }: { readonly row: Row<SyncSessionRow> }) {
         row.toggleExpanded();
       }}
       onPointerEnter={handlePointerEnter}
-      mode="icon"
-      size="sm"
+      size="icon-sm"
       variant="ghost"
     >
       {row.getIsExpanded() ? (
@@ -76,7 +75,7 @@ export function createSyncSessionColumns({
       cell: ({ row }) => {
         const config = SYNC_TYPE_CONFIG[row.original.syncType];
         return (
-          <Badge variant="outline" appearance="ghost" size="sm">
+          <Badge variant="outline" size="sm">
             {config.label}
           </Badge>
         );
@@ -101,7 +100,7 @@ export function createSyncSessionColumns({
         }
         const config = SESSION_STATUS_CONFIG[status];
         return (
-          <Badge variant={config.variant} appearance="light" size="sm">
+          <Badge variant={config.variant} size="sm">
             {config.label}
           </Badge>
         );
@@ -211,7 +210,7 @@ function ActiveStatusCell({ session }: { readonly session: SyncSessionRow }) {
 
   return (
     <div className="flex items-center gap-1.5">
-      <Badge variant={config.variant} appearance="light" size="sm">
+      <Badge variant={config.variant} size="sm">
         {config.label}
       </Badge>
       {!isFinished && !isJobError && (

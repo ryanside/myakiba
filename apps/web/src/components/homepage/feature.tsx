@@ -103,7 +103,7 @@ function FeatureImage({
   featureImage,
 }: Omit<FeatureProps, "title" | "description" | "link" | "linkText">) {
   return (
-    <div className="md:col-span-2 col-span-3 flex flex-col justify-center items-center relative overflow-hidden rounded-sm">
+    <div className="md:col-span-2 col-span-3 flex flex-col justify-center items-center relative overflow-hidden rounded">
       <img
         src={backgroundImage}
         alt="hero background image"

@@ -1,9 +1,8 @@
-import { HugeiconsIcon } from "@hugeicons/react";
-import { DragDropVerticalIcon } from "@hugeicons/core-free-icons";
-import { Fragment, useId } from "react";
+"use client";
+
+import { Fragment, useId, useRef } from "react";
 import type { CSSProperties } from "react";
-import { Button } from "@/components/ui/button";
-import { useDataGrid } from "@/components/ui/data-grid";
+import { useDataGrid } from "@/components/reui/data-grid/data-grid";
 import {
   DataGridTableBase,
   DataGridTableBody,
@@ -18,7 +17,7 @@ import {
   DataGridTableHeadRowCell,
   DataGridTableHeadRowCellResize,
   DataGridTableRowSpacer,
-} from "@/components/ui/data-grid-table";
+} from "@/components/reui/data-grid/data-grid-table";
 import {
   closestCenter,
   DndContext,
@@ -29,15 +28,23 @@ import {
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { restrictToParentElement } from "@dnd-kit/modifiers";
+import type { Modifier } from "@dnd-kit/core";
 import { horizontalListSortingStrategy, SortableContext, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { flexRender } from "@tanstack/react-table";
 import type { Cell, Header, HeaderGroup, Row } from "@tanstack/react-table";
 
+import { Button } from "@/components/ui/button";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { DragDropVerticalIcon } from "@hugeicons/core-free-icons";
+
 function DataGridTableDndHeader<TData>({ header }: { header: Header<TData, unknown> }) {
   const { props } = useDataGrid();
   const { column } = header;
+
+  // Check if column ordering is enabled for this column
+  const canOrder =
+    (column.columnDef as { enableColumnOrdering?: boolean }).enableColumnOrdering !== false;
 
   const { attributes, isDragging, listeners, setNodeRef, transform, transition } = useSortable({
     id: header.column.id,
@@ -56,20 +63,28 @@ function DataGridTableDndHeader<TData>({ header }: { header: Header<TData, unkno
   return (
     <DataGridTableHeadRowCell header={header} dndStyle={style} dndRef={setNodeRef}>
       <div className="flex items-center justify-start gap-0.5">
-        <Button
-          mode="icon"
-          size="sm"
-          variant="dim"
-          className="-ms-2 size-6"
-          {...attributes}
-          {...listeners}
-          aria-label="Drag to reorder"
-        >
-          <HugeiconsIcon icon={DragDropVerticalIcon} className="opacity-50" aria-hidden="true" />
-        </Button>
-        {header.isPlaceholder
-          ? null
-          : flexRender(header.column.columnDef.header, header.getContext())}
+        {canOrder && (
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            className="-ms-2 size-6 cursor-move"
+            {...attributes}
+            {...listeners}
+            aria-label="Drag to reorder"
+          >
+            <HugeiconsIcon
+              icon={DragDropVerticalIcon}
+              strokeWidth={2}
+              className="opacity-60 hover:opacity-100"
+              aria-hidden="true"
+            />
+          </Button>
+        )}
+        <span className="grow truncate">
+          {header.isPlaceholder
+            ? null
+            : flexRender(header.column.columnDef.header, header.getContext())}
+        </span>
         {props.tableLayout?.columnsResizable && column.getCanResize() && (
           <DataGridTableHeadRowCellResize header={header} />
         )}
@@ -106,6 +121,7 @@ function DataGridTableDnd<TData>({
 }) {
   const { table, isLoading, props } = useDataGrid();
   const pagination = table.getState().pagination;
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const sensors = useSensors(
     useSensor(MouseSensor, {}),
@@ -113,15 +129,34 @@ function DataGridTableDnd<TData>({
     useSensor(KeyboardSensor, {}),
   );
 
+  // Custom modifier to restrict dragging within table bounds with edge offset
+  const restrictToTableBounds: Modifier = ({ draggingNodeRect, transform }) => {
+    if (!draggingNodeRect || !containerRef.current) {
+      return { ...transform, y: 0 };
+    }
+
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const edgeOffset = 0;
+
+    const minX = containerRect.left - draggingNodeRect.left - edgeOffset;
+    const maxX = containerRect.right - draggingNodeRect.left - draggingNodeRect.width + edgeOffset;
+
+    return {
+      ...transform,
+      x: Math.min(Math.max(transform.x, minX), maxX),
+      y: 0, // Lock vertical movement
+    };
+  };
+
   return (
     <DndContext
-      id={useId()}
       collisionDetection={closestCenter}
-      modifiers={[restrictToParentElement]}
+      id={useId()}
+      modifiers={[restrictToTableBounds]}
       onDragEnd={handleDragEnd}
       sensors={sensors}
     >
-      <div className="relative">
+      <div ref={containerRef}>
         <DataGridTableBase>
           <DataGridTableHead>
             {table.getHeaderGroups().map((headerGroup: HeaderGroup<TData>, index) => {
@@ -131,8 +166,8 @@ function DataGridTableDnd<TData>({
                     items={table.getState().columnOrder}
                     strategy={horizontalListSortingStrategy}
                   >
-                    {headerGroup.headers.map((header, index) => (
-                      <DataGridTableDndHeader header={header} key={index} />
+                    {headerGroup.headers.map((header) => (
+                      <DataGridTableDndHeader header={header} key={header.id} />
                     ))}
                   </SortableContext>
                 </DataGridTableHeadRow>
@@ -158,10 +193,10 @@ function DataGridTableDnd<TData>({
                 </DataGridTableBodyRowSkeleton>
               ))
             ) : table.getRowModel().rows.length ? (
-              table.getRowModel().rows.map((row: Row<TData>, index) => {
+              table.getRowModel().rows.map((row: Row<TData>) => {
                 return (
                   <Fragment key={row.id}>
-                    <DataGridTableBodyRow row={row} key={index}>
+                    <DataGridTableBodyRow row={row}>
                       {row.getVisibleCells().map((cell: Cell<TData, unknown>) => {
                         return (
                           <SortableContext

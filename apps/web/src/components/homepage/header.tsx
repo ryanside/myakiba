@@ -1,11 +1,11 @@
 import { HugeiconsIcon } from "@hugeicons/react";
+import { GithubIcon, DiscordIcon } from "@hugeicons/core-free-icons";
 import { Cancel01Icon, Menu01Icon } from "@hugeicons/core-free-icons";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import React from "react";
 import { cn } from "@/lib/utils";
 import { MyAkibaLogo } from "../myakiba-logo";
-import { GithubIcon, DiscordIcon } from "@/components/sidebar/app-sidebar";
 
 const menuItems = [
   { name: "Features", href: "#features" },
@@ -82,8 +82,8 @@ export const HeroHeader = () => {
                 <ul className="flex gap-1">
                   {menuItems.map((item) => (
                     <li key={item.name}>
-                      <Button asChild variant="ghost" size="sm">
-                        <Link to={item.href} className="text-base">
+                      <Button variant="ghost" size="sm">
+                        <Link to={item.href} className="text-xs">
                           <span>{item.name}</span>
                         </Link>
                       </Button>
@@ -109,32 +109,32 @@ export const HeroHeader = () => {
                 </ul>
               </div>
               <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-2 sm:space-y-0 md:w-fit">
-                <Button asChild variant="ghost" size="sm">
+                <Button variant="ghost" size="sm">
                   <a
                     href="https://discord.gg/VKHVvhcC2z"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2"
                   >
-                    <DiscordIcon />
+                    <HugeiconsIcon icon={DiscordIcon} />
                   </a>
                 </Button>
-                <Button asChild variant="ghost" size="sm">
+                <Button variant="ghost" size="sm">
                   <a
                     href="https://github.com/ryanside/myakiba"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2"
                   >
-                    <GithubIcon />
+                    <HugeiconsIcon icon={GithubIcon} />
                   </a>
                 </Button>
-                <Button asChild variant="primary" size="sm">
+                <Button variant="default" size="sm">
                   <Link to="/login">
                     <span>Login</span>
                   </Link>
                 </Button>
-                {/* <Button asChild size="sm">
+                {/* <Button size="sm">
                   <Link to="/login">
                     <span>Sign Up</span>
                   </Link>

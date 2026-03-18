@@ -1,18 +1,15 @@
-import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
-import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { useIsMobile } from "@/hooks/use-mobile";
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { useForm } from "@tanstack/react-form";
 import { Field, FieldContent, FieldTitle } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
@@ -20,13 +17,14 @@ import { Input } from "@/components/ui/input";
 import { MaskInput } from "@/components/ui/mask-input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/reui/badge";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Scroller } from "@/components/ui/scroller";
 import type { OrderFilters } from "@myakiba/types";
 import {
@@ -37,7 +35,7 @@ import {
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/constants";
 
 interface OrdersFiltersFormProps {
-  renderTrigger: React.ReactNode;
+  renderTrigger: React.ReactElement;
   currentFilters?: OrderFilters;
   onApplyFilters: (filters: OrderFilters) => void;
   currency?: string;
@@ -51,8 +49,6 @@ export default function OrdersFiltersForm({
 }: OrdersFiltersFormProps) {
   const userCurrency = currency || "USD";
   const userLocale = getCurrencyLocale(userCurrency);
-  const [open, setOpen] = useState(false);
-  const isMobile = useIsMobile();
 
   const form = useForm({
     defaultValues: {
@@ -150,7 +146,6 @@ export default function OrdersFiltersForm({
       };
 
       onApplyFilters(filters);
-      setOpen(false);
     },
   });
 
@@ -167,7 +162,7 @@ export default function OrdersFiltersForm({
   };
 
   const formFieldsContent = (
-    <div className="grid gap-4 p-2">
+    <div className="grid gap-4">
       {/* Status */}
       <form.Field
         name="status"
@@ -175,13 +170,15 @@ export default function OrdersFiltersForm({
           <Field>
             <FieldTitle>Status</FieldTitle>
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="w-full justify-between" type="button">
-                  {getMultiSelectDisplay(field.state.value, "status")}
-                  <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width)">
+              <DropdownMenuTrigger
+                render={
+                  <Button variant="outline" className="w-full justify-between" type="button">
+                    {getMultiSelectDisplay(field.state.value, "status")}
+                    <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4" />
+                  </Button>
+                }
+              />
+              <DropdownMenuContent className="w-(--anchor-width)">
                 {ORDER_STATUSES.map((status) => (
                   <DropdownMenuCheckboxItem
                     key={status}
@@ -211,13 +208,15 @@ export default function OrdersFiltersForm({
           <Field>
             <FieldTitle>Shipping Method</FieldTitle>
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="w-full justify-between" type="button">
-                  {getMultiSelectDisplay(field.state.value, "shipping method")}
-                  <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width)">
+              <DropdownMenuTrigger
+                render={
+                  <Button variant="outline" className="w-full justify-between" type="button">
+                    {getMultiSelectDisplay(field.state.value, "shipping method")}
+                    <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4" />
+                  </Button>
+                }
+              />
+              <DropdownMenuContent className="w-(--anchor-width)">
                 <Scroller className="h-[200px]">
                   {SHIPPING_METHODS.map((method) => (
                     <DropdownMenuCheckboxItem
@@ -635,81 +634,41 @@ export default function OrdersFiltersForm({
     </div>
   );
 
-  if (isMobile) {
-    return (
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger asChild>{renderTrigger}</SheetTrigger>
-        <SheetContent
-          side="right"
-          className="w-full sm:max-w-lg h-full overflow-hidden flex flex-col"
-        >
-          <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-            <SheetHeader>
-              <SheetTitle>Filters</SheetTitle>
-              <SheetDescription>Apply filters to narrow down your orders</SheetDescription>
-            </SheetHeader>
-            <Scroller className="flex-1 min-h-0" size={24}>
-              {formFieldsContent}
-            </Scroller>
-            <SheetFooter className="flex flex-row">
-              <SheetClose asChild>
-                <Button type="button" variant="outline">
-                  Cancel
-                </Button>
-              </SheetClose>
-              <form.Subscribe
-                selector={(state) => [state.canSubmit, state.isSubmitting]}
-                children={([, isSubmitting]) => (
-                  <Button type="submit" disabled={isSubmitting}>
-                    Apply Filters
-                  </Button>
-                )}
-              />
-            </SheetFooter>
-          </form>
-        </SheetContent>
-      </Sheet>
-    );
-  }
-
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>{renderTrigger}</PopoverTrigger>
-      <PopoverContent
-        align="start"
-        className="w-[min(32rem,calc(100vw-2rem))] max-h-[min(85vh,32rem)] flex flex-col p-0"
-        aria-labelledby="filters-title"
-        aria-describedby="filters-desc"
-      >
-        <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
-          <div className="px-4 pt-4 pb-2 shrink-0">
-            <h2 id="filters-title" className="text-lg font-semibold">
-              Filters
-            </h2>
-            <p id="filters-desc" className="text-sm text-muted-foreground">
-              Apply filters to narrow down your orders
-            </p>
-          </div>
-          <Scroller className="flex-1 min-h-0" size={24}>
-            {formFieldsContent}
-          </Scroller>
-          <div className="sticky bottom-0 border-t p-3 flex justify-end gap-2 bg-popover shrink-0">
-            <PopoverClose asChild>
-              <Button type="button" variant="outline">
-                Cancel
-              </Button>
-            </PopoverClose>
+    <Dialog>
+      <DialogTrigger render={renderTrigger} />
+      <DialogContent className="sm:max-w-lg! px-0">
+        <form onSubmit={handleSubmit}>
+          <DialogHeader className="pb-4 px-4">
+            <DialogTitle>Filters</DialogTitle>
+            <DialogDescription>Apply filters to narrow down your orders</DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="overflow-auto max-h-[60vh] pb-4 w-full">
+            <div className="grid gap-4 px-4">{formFieldsContent}</div>
+          </ScrollArea>
+
+          <DialogFooter className="px-4! mx-0">
             <form.Subscribe
               selector={(state) => [state.canSubmit, state.isSubmitting]}
               children={([, isSubmitting]) => (
-                <Button type="submit" disabled={isSubmitting}>
-                  Apply Filters
-                </Button>
+                <>
+                  <DialogClose>
+                    <Button type="button" variant="outline">
+                      Cancel
+                    </Button>
+                  </DialogClose>
+                  <DialogClose>
+                    <Button type="submit" disabled={isSubmitting}>
+                      Apply Filters
+                    </Button>
+                  </DialogClose>
+                </>
               )}
             />
-          </div>
+          </DialogFooter>
         </form>
-      </PopoverContent>
-    </Popover>
+      </DialogContent>
+    </Dialog>
   );
 }

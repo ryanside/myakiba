@@ -10,14 +10,14 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils";
-import type { DateFormat } from "@myakiba/types";
-import type { Category } from "@myakiba/types";
+import type { DateFormat, Category } from "@myakiba/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { app } from "@/lib/treaty-client";
 import { Link } from "@tanstack/react-router";
-import { Badge } from "../ui/badge";
 import { ImageThumbnail } from "../ui/image-thumbnail";
 import { getCategoryColor } from "@/lib/category-colors";
+import { Badge } from "../reui/badge";
+import { Skeleton } from "../ui/skeleton";
 
 interface ReleaseItem {
   itemId: string;
@@ -36,17 +36,32 @@ interface ReleaseCalendarProps {
 }
 
 function formatMonthYear(date: Date): string {
-  return date.toLocaleString("default", {
-    month: "long",
-    year: "numeric",
-  });
+  return date.toLocaleString("default", { month: "long", year: "numeric" });
 }
 
-function ReleaseCalendar({
-  className,
-  currency,
-  dateFormat,
-}: ReleaseCalendarProps): React.ReactElement {
+function formatDateGroupLabel(releaseDate: string): string {
+  const d = new Date(releaseDate);
+  return d.toLocaleDateString("default", { weekday: "short", day: "numeric" });
+}
+
+function groupReleasesByDate(
+  releases: readonly ReleaseItem[],
+): ReadonlyArray<readonly [string, readonly ReleaseItem[]]> {
+  const groups = new Map<string, ReleaseItem[]>();
+  for (const item of releases) {
+    const existing = groups.get(item.releaseDate);
+    if (existing) {
+      existing.push(item);
+    } else {
+      groups.set(item.releaseDate, [item]);
+    }
+  }
+  return Array.from(groups.entries()).sort(
+    ([a], [b]) => new Date(a).getTime() - new Date(b).getTime(),
+  );
+}
+
+function ReleaseCalendar({ className, currency }: ReleaseCalendarProps): React.ReactElement {
   const [currentMonth, setCurrentMonth] = React.useState(new Date());
   const queryClient = useQueryClient();
 
@@ -55,10 +70,7 @@ function ReleaseCalendar({
     const apiYear = currentMonth.getFullYear();
 
     const { data, error } = await app.api.dashboard["release-calendar"].get({
-      query: {
-        month: apiMonth,
-        year: apiYear,
-      },
+      query: { month: apiMonth, year: apiYear },
     });
     if (error) {
       if (error.status === 422) {
@@ -66,7 +78,6 @@ function ReleaseCalendar({
       }
       throw new Error(error.value || "Failed to get release calendar");
     }
-
     return data;
   }
 
@@ -78,6 +89,7 @@ function ReleaseCalendar({
   });
 
   const releases = data?.releaseCalendar.releases ?? [];
+  const grouped = React.useMemo(() => groupReleasesByDate(releases), [releases]);
 
   const goToPreviousMonth = (): void => {
     const newDate = new Date(currentMonth);
@@ -97,62 +109,60 @@ function ReleaseCalendar({
     });
   };
 
-  const monthYearLabel = formatMonthYear(currentMonth);
-
   return (
-    <div className={cn("space-y-4", className)}>
-      <div className="flex items-center justify-between gap-2">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={goToPreviousMonth}
-          className="size-8 shrink-0"
-          disabled={isPending}
-          aria-label="Previous month"
-        >
-          <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
-        </Button>
-
-        <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
-          <span className="truncate text-base font-normal tracking-tight select-none">
-            {monthYearLabel}
+    <div className={cn("space-y-3", className)}>
+      <div className="flex items-center justify-between">
+        <div className="flex min-w-0 items-center justify-center gap-1.5">
+          <span className="text-sm font-medium tracking-tight select-none">
+            {formatMonthYear(currentMonth)}
           </span>
-          {data !== undefined && (
-            <Badge variant="outline" appearance="light" size="sm">
-              {releases.length}
+          {isPending ? (
+            <Badge variant="outline">
+              <Skeleton className="size-2" />
             </Badge>
+          ) : (
+            <Badge variant="outline">{releases.length}</Badge>
           )}
         </div>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={goToNextMonth}
-          className="size-8 shrink-0"
-          disabled={isPending}
-          aria-label="Next month"
-        >
-          <HugeiconsIcon icon={ArrowRight01Icon} className="size-4" />
-        </Button>
+        <div className="flex items-center">
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={goToPreviousMonth}
+            disabled={isPending}
+            aria-label="Previous month"
+          >
+            <HugeiconsIcon icon={ArrowLeft01Icon} className="size-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={goToNextMonth}
+            disabled={isPending}
+            aria-label="Next month"
+          >
+            <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5" />
+          </Button>
+        </div>
       </div>
 
-      <div className="max-h-[240px] space-y-1.5 overflow-y-auto">
+      <div className="max-h-[272px] overflow-y-auto overflow-x-hidden">
         {isPending ? (
-          <div className="flex items-center justify-center gap-2 py-6 text-sm">
-            <HugeiconsIcon icon={Loading03Icon} className="size-4 animate-spin" />
+          <div className="flex items-center justify-center py-10">
+            <HugeiconsIcon
+              icon={Loading03Icon}
+              className="size-4 animate-spin text-muted-foreground"
+            />
           </div>
         ) : isError ? (
           <ReleaseCalendarError message={error.message} onRetry={refetch} />
-        ) : releases.length > 0 ? (
-          releases.map((item, index) => (
-            <ReleaseCard
-              key={`${item.itemId}:${item.releaseDate}`}
-              item={item}
-              currency={item.priceCurrency || currency}
-              dateFormat={dateFormat}
-              index={index}
-            />
-          ))
+        ) : grouped.length > 0 ? (
+          <div className="space-y-3">
+            {grouped.map(([dateKey, items]) => (
+              <DateGroup key={dateKey} dateKey={dateKey} items={items} currency={currency} />
+            ))}
+          </div>
         ) : (
           <ReleaseCalendarEmpty />
         )}
@@ -161,23 +171,48 @@ function ReleaseCalendar({
   );
 }
 
-function formatReleaseDay(releaseDate: string): string {
-  const d = new Date(releaseDate);
-  return d.toLocaleDateString("default", { weekday: "short", day: "numeric" });
+function DateGroup({
+  dateKey,
+  items,
+  currency,
+}: {
+  readonly dateKey: string;
+  readonly items: readonly ReleaseItem[];
+  readonly currency: string;
+}): React.ReactElement {
+  return (
+    <div>
+      <div className="sticky top-0 z-10 flex items-center gap-2 bg-card pb-1">
+        <span className="shrink-0 text-[0.6875rem] font-medium uppercase tracking-wider text-muted-foreground">
+          {formatDateGroupLabel(dateKey)}
+        </span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+      <div>
+        {items.map((item) => (
+          <ReleaseCard
+            key={`${item.itemId}:${item.releaseDate}`}
+            item={item}
+            currency={item.priceCurrency || currency}
+          />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function ReleaseCalendarError({
   message,
   onRetry,
 }: {
-  message: string;
-  onRetry: () => void;
+  readonly message: string;
+  readonly onRetry: () => void;
 }): React.ReactElement {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 py-6 text-center">
-      <p className="text-sm text-destructive">Failed to load releases: {message}</p>
-      <Button variant="outline" size="sm" onClick={onRetry}>
-        Try again
+    <div className="flex flex-col items-center justify-center gap-2.5 py-10 text-center">
+      <p className="text-xs text-destructive">{message}</p>
+      <Button variant="ghost" size="xs" onClick={onRetry}>
+        Retry
       </Button>
     </div>
   );
@@ -185,9 +220,9 @@ function ReleaseCalendarError({
 
 function ReleaseCalendarEmpty(): React.ReactElement {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
-      <HugeiconsIcon icon={CryingIcon} className="size-5 text-muted-foreground" />
-      <p className="text-sm text-muted-foreground">You have no releases for this month.</p>
+    <div className="flex flex-col items-center justify-center gap-1.5 py-10 text-center">
+      <HugeiconsIcon icon={CryingIcon} className="size-5 text-muted-foreground/50" />
+      <p className="text-xs text-muted-foreground">Nothing releasing this month</p>
     </div>
   );
 }
@@ -195,60 +230,44 @@ function ReleaseCalendarEmpty(): React.ReactElement {
 function ReleaseCard({
   item,
   currency,
-  index,
 }: {
-  item: ReleaseItem;
-  currency: string;
-  dateFormat: DateFormat;
-  index: number;
+  readonly item: ReleaseItem;
+  readonly currency: string;
 }): React.ReactElement {
   const categoryColor = getCategoryColor((item.category as Category) ?? null);
-  const releaseDay = formatReleaseDay(item.releaseDate);
 
   return (
     <Link
       to="/items/$id"
       params={{ id: item.itemId }}
-      className={cn(
-        "flex items-center gap-3 rounded-md border border-border/30 bg-background p-2.5 transition-colors hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer",
-        "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-200",
-      )}
-      style={{
-        animationDelay: `${Math.min(index * 40, 160)}ms`,
-      }}
+      className="flex min-w-0 items-center gap-2.5 overflow-hidden rounded-md px-1.5 py-1.5 transition-colors hover:bg-accent"
     >
       <ImageThumbnail
         images={item.image ? [item.image] : []}
         title={item.title}
-        fallbackIcon={<HugeiconsIcon icon={Image01Icon} className="size-5 text-muted-foreground" />}
+        fallbackIcon={<HugeiconsIcon icon={Image01Icon} className="size-4 text-muted-foreground" />}
+        className="size-9"
       />
 
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        <Badge variant="outline" appearance="outline" size="sm">
-          {releaseDay}
-        </Badge>
-        <div className="min-w-0 flex-1">
-          <h4 className="truncate text-sm font-medium">{item.title}</h4>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            {item.category !== null && item.category !== undefined && (
-              <>
-                <span
-                  className="size-1.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: categoryColor }}
-                  aria-hidden
-                />
-                <span className="truncate">{item.category}</span>
-              </>
-            )}
-            {item.price !== null && item.price !== undefined && (
-              <>
-                {item.category !== null && item.category !== undefined && (
-                  <span aria-hidden>·</span>
-                )}
-                <span>{formatCurrencyFromMinorUnits(item.price, currency)}</span>
-              </>
-            )}
-          </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm leading-tight font-medium">{item.title}</p>
+        <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+          {item.category != null && (
+            <>
+              <span
+                className="size-1.5 shrink-0 rounded-full"
+                style={{ backgroundColor: categoryColor }}
+                aria-hidden
+              />
+              <span className="truncate">{item.category}</span>
+            </>
+          )}
+          {item.price != null && (
+            <>
+              {item.category != null && <span aria-hidden>·</span>}
+              <span className="shrink-0">{formatCurrencyFromMinorUnits(item.price, currency)}</span>
+            </>
+          )}
         </div>
       </div>
     </Link>

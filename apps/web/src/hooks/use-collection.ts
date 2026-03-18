@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient, queryOptions } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -68,11 +68,17 @@ export function useCollectionMutations() {
     () => new Set(pendingCollectionIdList),
     [pendingCollectionIdList],
   );
+  const filtersActiveRef = useRef(filtersActive);
+  filtersActiveRef.current = filtersActive;
+  const pendingCollectionIdsRef = useRef<ReadonlySet<string>>(pendingCollectionIds);
+  pendingCollectionIdsRef.current = pendingCollectionIds;
 
   const updateMutation = useMutation({
     mutationFn: (values: CollectionItemFormValues) => updateCollectionItem(values),
     onMutate: async (values: CollectionItemFormValues) => {
-      if (filtersActive) return undefined;
+      if (filtersActive) {
+        return undefined;
+      }
 
       await queryClient.cancelQueries({ queryKey: queryOpts.queryKey });
       const previous = queryClient.getQueryData<CollectionItem[]>(queryOpts.queryKey);
@@ -137,11 +143,20 @@ export function useCollectionMutations() {
       await queryClient.invalidateQueries({ queryKey: queryOpts.queryKey });
     },
   });
+  const updateMutationRef = useRef(updateMutation);
+  updateMutationRef.current = updateMutation;
+  const deleteMutationRef = useRef(deleteMutation);
+  deleteMutationRef.current = deleteMutation;
+
+  const isCollectionPending = useCallback((collectionId: string): boolean => {
+    return pendingCollectionIdsRef.current.has(collectionId);
+  }, []);
 
   const handleDeleteCollectionItems = useCallback(
     async (collectionIds: Set<string>): Promise<void> => {
-      if (!filtersActive) {
-        deleteMutation.mutate(Array.from(collectionIds));
+      const deleteMutationState = deleteMutationRef.current;
+      if (!filtersActiveRef.current) {
+        deleteMutationState.mutate(Array.from(collectionIds));
         return;
       }
 
@@ -153,7 +168,7 @@ export function useCollectionMutations() {
       });
 
       try {
-        await deleteMutation.mutateAsync(ids);
+        await deleteMutationState.mutateAsync(ids);
       } finally {
         toast.dismiss(loadingToastId);
         setPendingCollectionIdList((previous) =>
@@ -161,36 +176,36 @@ export function useCollectionMutations() {
         );
       }
     },
-    [filtersActive, deleteMutation],
+    [],
   );
 
   const handleEditCollectionItem = useCallback(
     async (values: CollectionItemFormValues): Promise<void> => {
-      if (!filtersActive) {
-        updateMutation.mutate(values);
+      const updateMutationState = updateMutationRef.current;
+      if (!filtersActiveRef.current) {
+        updateMutationState.mutate(values);
         return;
       }
-
       setPendingCollectionIdList((previous) => {
         const nextIds = new Set([...previous, values.id]);
         return Array.from(nextIds);
       });
 
       try {
-        await updateMutation.mutateAsync(values);
+        await updateMutationState.mutateAsync(values);
       } finally {
         setPendingCollectionIdList((previous) =>
           previous.filter((collectionId) => collectionId !== values.id),
         );
       }
     },
-    [filtersActive, updateMutation],
+    [],
   );
 
   return {
     handleEditCollectionItem,
     handleDeleteCollectionItems,
-    pendingCollectionIds,
+    isCollectionPending,
     isDeletingCollectionItems: deleteMutation.isPending,
   } as const;
 }

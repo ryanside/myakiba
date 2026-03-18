@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { parseLocalDate, formatDate } from "@myakiba/utils";
 import type { DateFormat } from "@myakiba/types";
 import { format } from "date-fns";
-import * as Portal from "@radix-ui/react-portal";
 
 interface PopoverDatePickerCellProps {
   value: string | null;
@@ -37,33 +36,33 @@ export function PopoverDatePickerCell({
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          data-empty={!dateValue}
-          className="text-foreground pl-0"
-          disabled={disabled}
-        >
-          {value ? formatDate(value, dateFormat) : "n/a"}
-        </Button>
-      </PopoverTrigger>
+      <PopoverTrigger
+        render={
+          <Button
+            variant="ghost"
+            data-empty={!dateValue}
+            className="text-foreground pl-0"
+            disabled={disabled}
+          >
+            {value ? formatDate(value, dateFormat) : "n/a"}
+          </Button>
+        }
+      />
       {isOpen && (
-        <Portal.Root>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              mode="single"
-              selected={dateValue}
-              onSelect={handleSelect}
-              defaultMonth={dateValue ?? new Date()}
-              captionLayout="dropdown"
-            />
-            <div className="border-t p-2">
-              <Button variant="outline" size="sm" className="w-full" onClick={handleClear}>
-                Clear
-              </Button>
-            </div>
-          </PopoverContent>
-        </Portal.Root>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={dateValue}
+            onSelect={handleSelect}
+            defaultMonth={dateValue ?? new Date()}
+            captionLayout="dropdown"
+          />
+          <div className="border-t p-2">
+            <Button variant="outline" size="sm" className="w-full" onClick={handleClear}>
+              Clear
+            </Button>
+          </div>
+        </PopoverContent>
       )}
     </Popover>
   );

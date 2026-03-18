@@ -1,11 +1,17 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon, CancelCircleIcon, Loading03Icon } from "@hugeicons/core-free-icons";
-import { useMemo } from "react";
+import {
+  ArrowRight01Icon,
+  CancelCircleIcon,
+  Loading03Icon,
+  Tick02Icon,
+  AlertCircleIcon,
+} from "@hugeicons/core-free-icons";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Badge } from "@/components/reui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ShimmeringText } from "@/components/ui/shimmering-text";
 import type { SyncSessionStatus, SyncType } from "@myakiba/types";
@@ -49,9 +55,13 @@ export default function SyncStatusWidget() {
   const totalActiveItems = activeSessions.reduce((sum, s) => sum + s.totalItems, 0);
   const totalActiveSynced = activeSessions.reduce((sum, s) => sum + s.successCount, 0);
 
+  const [open, setOpen] = useState(false);
+
   if (isRecentPending || (!hasSessions && !isRecentError)) {
     return null;
   }
+
+  const closePopover = () => setOpen(false);
 
   return (
     <>
@@ -61,85 +71,92 @@ export default function SyncStatusWidget() {
         ) : null,
       )}
 
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button size="sm" variant="outline" appearance="ghost" className="mx-2">
-            {hasActive ? (
-              <div className="flex items-center gap-2">
-                <PulsingDot />
-                <ShimmeringText
-                  text={
-                    totalActiveItems > 0
-                      ? `Syncing ${totalActiveSynced}/${totalActiveItems}`
-                      : "Syncing..."
-                  }
-                  duration={2.5}
-                  repeat={true}
-                  startOnView={false}
-                  className="text-xs font-medium"
-                  spread={1.5}
-                />
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger
+          render={
+            <Button size="sm" variant="outline" className="mx-2">
+              {hasActive ? (
+                <span className="flex items-center gap-2">
+                  <PulsingDot />
+                  <ShimmeringText
+                    text={
+                      totalActiveItems > 0
+                        ? `Syncing ${totalActiveSynced}/${totalActiveItems}`
+                        : "Syncing..."
+                    }
+                    duration={2.5}
+                    repeat={true}
+                    startOnView={false}
+                    className="text-xs font-medium"
+                    spread={1.5}
+                  />
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5">
+                  <span className="relative flex size-2">
+                    <span className="relative inline-flex size-2 rounded-full bg-border" />
+                  </span>
+                  <span className="text-xs text-muted-foreground">No active sync sessions</span>
+                </span>
+              )}
+            </Button>
+          }
+        />
+        <PopoverContent align="center" className="w-80 p-0">
+          <div className="max-h-[420px] overflow-y-auto">
+            {isRecentError ? (
+              <div className="flex items-center gap-2 px-4 py-3 text-xs text-destructive">
+                <HugeiconsIcon icon={AlertCircleIcon} className="size-3.5 shrink-0" />
+                {recentError.message}
               </div>
             ) : (
-              <div className="flex items-center gap-1.5">
-                <span className="relative flex size-2">
-                  <span className="relative inline-flex size-2 rounded-full bg-border" />
-                </span>
-                <span className="text-xs text-muted-foreground">No active sync sessions</span>
-              </div>
+              <>
+                {hasActive && (
+                  <div className="px-4 pt-3 pb-2">
+                    <p className="mb-2.5 text-[0.6875rem] font-medium tracking-wide text-muted-foreground">
+                      Active
+                    </p>
+                    <div className="space-y-1.5">
+                      {activeSessions.map((s) => (
+                        <ActiveSessionItem key={s.id} session={s} onNavigate={closePopover} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {finishedSessions.length > 0 && (
+                  <div className="px-4 pt-3 pb-2">
+                    {hasActive && <div className="mb-3 -mx-4 border-t" />}
+                    <p className="mb-2.5 text-[0.6875rem] font-medium tracking-wide text-muted-foreground">
+                      Recent
+                    </p>
+                    <div className="space-y-1.5">
+                      {finishedSessions.map((s) => (
+                        <RecentSessionItem key={s.id} session={s} onNavigate={closePopover} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {!hasActive && finishedSessions.length === 0 && (
+                  <div className="px-4 py-6 text-center">
+                    <p className="text-sm text-muted-foreground">No recent syncs</p>
+                  </div>
+                )}
+              </>
             )}
-          </Button>
-        </PopoverTrigger>
 
-        <PopoverContent align="center" className="w-80 p-0">
-          <div className="max-h-[400px] overflow-y-auto">
-            <div className="space-y-4 p-4">
-              {isRecentError && <p className="text-xs text-destructive">{recentError.message}</p>}
-
-              {!isRecentError && (
-                <>
-                  {hasActive && (
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Active
-                      </p>
-                      <div className="space-y-1.5">
-                        {activeSessions.map((s) => (
-                          <ActiveSessionItem key={s.id} session={s} />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {finishedSessions.length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Recent
-                      </p>
-                      <div className="space-y-1.5">
-                        {finishedSessions.map((s) => (
-                          <RecentSessionItem key={s.id} session={s} />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {!hasActive && finishedSessions.length === 0 && (
-                    <p className="text-xs text-muted-foreground">No recent syncs</p>
-                  )}
-                </>
-              )}
-
-              <div className="border-t pt-2">
-                <PopoverClose asChild>
-                  <Link to="/sync">
-                    <Button variant="ghost" size="sm" className="w-full justify-between">
-                      View sync history
-                      <HugeiconsIcon icon={ArrowRight01Icon} className="size-3" />
-                    </Button>
-                  </Link>
-                </PopoverClose>
-              </div>
+            <div className="border-t px-1.5 py-1.5">
+              <Link to="/sync" onClick={closePopover}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-between text-muted-foreground"
+                >
+                  View all syncs
+                  <HugeiconsIcon icon={ArrowRight01Icon} className="size-3" />
+                </Button>
+              </Link>
             </div>
           </div>
         </PopoverContent>
@@ -172,9 +189,10 @@ type ActiveSessionProps = {
     readonly successCount: number;
     readonly statusMessage: string;
   };
+  readonly onNavigate: () => void;
 };
 
-function ActiveSessionItem({ session }: ActiveSessionProps) {
+function ActiveSessionItem({ session, onNavigate }: ActiveSessionProps) {
   const {
     data: jobStatus,
     isError: isJobError,
@@ -186,62 +204,59 @@ function ActiveSessionItem({ session }: ActiveSessionProps) {
     ? jobError.message
     : (jobStatus?.status ?? session.statusMessage);
   const typeConfig = SYNC_TYPE_CONFIG[session.syncType];
+  const progressPercent =
+    session.totalItems > 0 ? Math.round((session.successCount / session.totalItems) * 100) : 0;
 
   return (
-    <PopoverClose asChild>
-      <Link
-        to="/sync/$id"
-        params={{ id: session.id }}
-        className="block w-full rounded-lg border p-3 text-left text-sm transition-colors hover:bg-accent"
-        aria-label="View sync session details"
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Badge variant={typeConfig.variant} appearance="outline" size="sm">
-              {typeConfig.label}
-            </Badge>
-            <Badge
-              variant={SESSION_STATUS_CONFIG[session.status].variant}
-              appearance="light"
-              size="sm"
-            >
-              {SESSION_STATUS_CONFIG[session.status].label}
-            </Badge>
-          </div>
-          {session.status === "processing" && !isFinished && !isJobError && (
-            <HugeiconsIcon
-              icon={Loading03Icon}
-              className="size-3 animate-spin text-muted-foreground"
-            />
-          )}
-          {isJobError && (
-            <HugeiconsIcon icon={CancelCircleIcon} className="size-3 text-destructive" />
-          )}
+    <Link
+      to="/sync/$id"
+      params={{ id: session.id }}
+      onClick={onNavigate}
+      className="group block rounded-md px-2.5 py-2 transition-colors duration-150 hover:bg-accent"
+      aria-label={`View ${typeConfig.label} sync session`}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <Badge variant={typeConfig.variant} size="xs">
+            {typeConfig.label}
+          </Badge>
+          <Badge variant={SESSION_STATUS_CONFIG[session.status].variant} size="xs">
+            {SESSION_STATUS_CONFIG[session.status].label}
+          </Badge>
         </div>
-        {session.totalItems > 0 && (
-          <div className="mt-2.5 space-y-1.5">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>
-                {session.successCount} of {session.totalItems} synced
-              </span>
-              <span className="tabular-nums">
-                {Math.round((session.successCount / session.totalItems) * 100)}%
-              </span>
-            </div>
-            <Progress value={session.successCount} max={session.totalItems} className="h-1" />
+        {session.status === "processing" && !isFinished && !isJobError && (
+          <HugeiconsIcon
+            icon={Loading03Icon}
+            className="size-3 animate-spin text-muted-foreground"
+          />
+        )}
+        {isJobError && (
+          <HugeiconsIcon icon={CancelCircleIcon} className="size-3 text-destructive" />
+        )}
+      </div>
+
+      {session.totalItems > 0 && (
+        <div className="mt-2 space-y-1">
+          <Progress value={session.successCount} max={session.totalItems} className="h-1" />
+          <div className="flex items-center justify-between text-[0.6875rem] text-muted-foreground">
+            <span>
+              {session.successCount} of {session.totalItems}
+            </span>
+            <span className="tabular-nums">{progressPercent}%</span>
           </div>
-        )}
-        {displayStatus && (
-          <p
-            className={`mt-1.5 text-xs ${
-              isJobError ? "text-destructive" : "text-muted-foreground"
-            }`}
-          >
-            {displayStatus}
-          </p>
-        )}
-      </Link>
-    </PopoverClose>
+        </div>
+      )}
+
+      {displayStatus && (
+        <p
+          className={`mt-1 text-[0.6875rem] leading-tight ${
+            isJobError ? "text-destructive" : "text-muted-foreground"
+          }`}
+        >
+          {displayStatus}
+        </p>
+      )}
+    </Link>
   );
 }
 
@@ -256,58 +271,66 @@ type RecentSessionProps = {
     readonly orderId: string | null;
     readonly createdAt: Date;
   };
+  readonly onNavigate: () => void;
 };
 
-function RecentSessionItem({ session }: RecentSessionProps) {
-  const statusConfig = SESSION_STATUS_CONFIG[session.status];
+function RecentSessionItem({ session, onNavigate }: RecentSessionProps) {
   const typeConfig = SYNC_TYPE_CONFIG[session.syncType];
   const hasItems = session.totalItems > 0;
-  const progressPercent = hasItems
-    ? Math.round((session.successCount / session.totalItems) * 100)
-    : 0;
+
+  const statusIcon = resolveStatusIcon(session.status);
 
   return (
-    <PopoverClose asChild>
-      <Link
-        to="/sync/$id"
-        params={{ id: session.id }}
-        className="block w-full rounded-lg border p-3 text-left text-sm transition-colors hover:bg-accent"
-        aria-label="View sync session details"
-      >
-        <div className="flex items-center justify-between">
+    <Link
+      to="/sync/$id"
+      params={{ id: session.id }}
+      onClick={onNavigate}
+      className="group flex items-start gap-2.5 rounded-md px-2.5 py-2 transition-colors duration-150 hover:bg-accent"
+      aria-label={`View ${typeConfig.label} sync session from ${formatRelativeTime(session.createdAt)}`}
+    >
+      <div className="mt-0.5 flex size-5 shrink-0 items-center justify-center">
+        <HugeiconsIcon icon={statusIcon.icon} className={`size-3.5 ${statusIcon.className}`} />
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
-            <Badge variant="outline" appearance="ghost" size="sm">
-              {typeConfig.label}
-            </Badge>
-            <Badge variant={statusConfig.variant} appearance="light" size="sm">
-              {statusConfig.label}
-            </Badge>
-            {session.orderId && (
-              <Badge variant="info" appearance="outline" size="sm">
-                Order
-              </Badge>
-            )}
+            <span className="text-xs font-medium">{typeConfig.label}</span>
           </div>
-          <span className="shrink-0 text-xs text-muted-foreground">
+          <span className="shrink-0 text-[0.6875rem] text-muted-foreground">
             {formatRelativeTime(session.createdAt)}
           </span>
         </div>
 
         {hasItems && (
-          <div className="mt-2.5 space-y-1.5">
-            <Progress value={session.successCount} max={session.totalItems} className="h-1" />
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>
-                {session.successCount}/{session.totalItems} synced
-                {session.failCount > 0 && (
-                  <span className="text-destructive"> &middot; {session.failCount} failed</span>
-                )}
-              </span>
-              <span className="tabular-nums">{progressPercent}%</span>
-            </div>
+          <div className="mt-1 flex items-center gap-2 text-[0.6875rem] text-muted-foreground">
+            <span>
+              {session.successCount}/{session.totalItems} synced
+            </span>
+            {session.failCount > 0 && (
+              <span className="text-destructive">{session.failCount} failed</span>
+            )}
           </div>
         )}
-      </Link>
-    </PopoverClose>
+      </div>
+    </Link>
   );
+}
+
+function resolveStatusIcon(status: SyncSessionStatus): {
+  readonly icon: typeof Tick02Icon;
+  readonly className: string;
+} {
+  switch (status) {
+    case "completed":
+      return { icon: Tick02Icon, className: "text-success" };
+    case "failed":
+      return { icon: CancelCircleIcon, className: "text-destructive" };
+    case "partial":
+      return { icon: AlertCircleIcon, className: "text-warning" };
+    case "processing":
+      return { icon: Loading03Icon, className: "text-info animate-spin" };
+    case "pending":
+      return { icon: Loading03Icon, className: "text-muted-foreground" };
+  }
 }

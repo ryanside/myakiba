@@ -243,7 +243,7 @@ function RouteComponent(): React.ReactNode {
         <div className="flex flex-row items-start gap-4">
           <h1 className="text-2xl tracking-tight">Analytics</h1>
         </div>
-        <p className="text-muted-foreground text-sm font-light">
+        <p className="text-muted-foreground text-sm font-normal">
           See how your collection is distributed across different categories.
         </p>
       </div>
@@ -386,7 +386,7 @@ function RouteComponent(): React.ReactNode {
         />
 
         <div className="lg:col-span-2 flex items-center justify-center py-8">
-          <p className="text-sm font-light text-muted-foreground">
+          <p className="text-sm font-normal text-muted-foreground">
             More coming soon! (*ˊᗜˋ*)/ᵗᑋᵃᐢᵏ ᵞᵒᵘ*
           </p>
         </div>

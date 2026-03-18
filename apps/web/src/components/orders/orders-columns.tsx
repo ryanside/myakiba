@@ -14,13 +14,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Link } from "@tanstack/react-router";
-import { DataGridColumnHeader } from "@/components/ui/data-grid-column-header";
+import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
 import {
   type ColumnDef,
   type Row,
@@ -40,6 +41,7 @@ import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
 import type { CollectionItemFormValues } from "@myakiba/types";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/constants";
+import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import type { ShippingMethod, OrderStatus, DateFormat } from "@myakiba/types";
 import { Skeleton } from "../ui/skeleton";
 import { ImageThumbnail } from "../ui/image-thumbnail";
@@ -59,8 +61,7 @@ function ExpandButton({ row }: { readonly row: Row<OrderListItem> }) {
     <Button
       onClick={row.getToggleExpandedHandler()}
       onPointerEnter={handlePointerEnter}
-      mode="icon"
-      size="sm"
+      size="icon-sm"
       variant="ghost"
     >
       {row.getIsExpanded() ? (
@@ -81,8 +82,8 @@ interface OrdersColumnsParams {
   itemSelection: RowSelectionState;
   setItemSelection: OnChangeFn<RowSelectionState>;
   dateFormat: DateFormat;
-  pendingOrderIds: ReadonlySet<string>;
-  pendingCollectionItemIds: ReadonlySet<string>;
+  isOrderPending: (orderId: string) => boolean;
+  isCollectionItemPending: (collectionId: string) => boolean;
 }
 
 export function createOrdersColumns({
@@ -94,22 +95,19 @@ export function createOrdersColumns({
   itemSelection,
   setItemSelection,
   dateFormat,
-  pendingOrderIds,
-  pendingCollectionItemIds,
+  isOrderPending,
+  isCollectionItemPending,
 }: OrdersColumnsParams): ColumnDef<OrderListItem>[] {
   return [
     {
       id: "select",
       header: ({ table }) => (
         <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
+          checked={table.getIsAllPageRowsSelected()}
+          indeterminate={table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()}
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           onClick={(e) => e.stopPropagation()}
           aria-label="Select all"
-          size="sm"
           className="align-[inherit] mb-0.5 rounded-xs"
         />
       ),
@@ -126,7 +124,6 @@ export function createOrdersColumns({
             onCheckedChange={(value) => row.toggleSelected(!!value)}
             onClick={(e) => e.stopPropagation()}
             aria-label="Select row"
-            size="sm"
             className="align-[inherit] mb-0.5 rounded-xs"
           />
         </>
@@ -155,7 +152,7 @@ export function createOrdersColumns({
             setItemSelection={setItemSelection}
             onEditItem={onEditItem}
             onDeleteItem={onDeleteItem}
-            pendingCollectionItemIds={pendingCollectionItemIds}
+            isCollectionItemPending={isCollectionItemPending}
           />
         ),
       },
@@ -174,7 +171,7 @@ export function createOrdersColumns({
               images={order.images}
               title={order.title}
               fallbackIcon={<HugeiconsIcon icon={PackageIcon} className="size-4" />}
-              className="size-8 rounded-sm"
+              className="size-8 rounded-md"
             />
             <div className="min-w-0 space-y-px">
               <Link
@@ -205,7 +202,7 @@ export function createOrdersColumns({
       cell: ({ row }) => (
         <InlineTextCell
           value={row.original.shop}
-          disabled={pendingOrderIds.has(row.original.orderId)}
+          disabled={isOrderPending(row.original.orderId)}
           onSubmit={async (newValue) => {
             const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
             void createdAt;
@@ -236,7 +233,7 @@ export function createOrdersColumns({
       ),
       cell: ({ row }) => {
         const order = row.original;
-        const isPending = pendingOrderIds.has(order.orderId);
+        const isPending = isOrderPending(order.orderId);
         return (
           <div className="space-y-px">
             <SelectCell
@@ -275,7 +272,7 @@ export function createOrdersColumns({
       ),
       cell: ({ row }) => {
         const order = row.original;
-        const isPending = pendingOrderIds.has(order.orderId);
+        const isPending = isOrderPending(order.orderId);
         return (
           <PopoverDatePickerCell
             value={order.releaseDate}
@@ -312,7 +309,7 @@ export function createOrdersColumns({
       ),
       cell: ({ row }) => {
         const order = row.original;
-        const isPending = pendingOrderIds.has(order.orderId);
+        const isPending = isOrderPending(order.orderId);
         return (
           <PopoverDatePickerCell
             value={order.orderDate}
@@ -350,7 +347,7 @@ export function createOrdersColumns({
       ),
       cell: ({ row }) => {
         const order = row.original;
-        const isPending = pendingOrderIds.has(order.orderId);
+        const isPending = isOrderPending(order.orderId);
         return (
           <PopoverDatePickerCell
             value={order.paymentDate}
@@ -388,7 +385,7 @@ export function createOrdersColumns({
       ),
       cell: ({ row }) => {
         const order = row.original;
-        const isPending = pendingOrderIds.has(order.orderId);
+        const isPending = isOrderPending(order.orderId);
         return (
           <PopoverDatePickerCell
             value={order.shippingDate}
@@ -426,7 +423,7 @@ export function createOrdersColumns({
       ),
       cell: ({ row }) => {
         const order = row.original;
-        const isPending = pendingOrderIds.has(order.orderId);
+        const isPending = isOrderPending(order.orderId);
         return (
           <PopoverDatePickerCell
             value={order.collectionDate}
@@ -489,7 +486,7 @@ export function createOrdersColumns({
       ),
       cell: ({ row }) => {
         const order = row.original;
-        const isPending = pendingOrderIds.has(order.orderId);
+        const isPending = isOrderPending(order.orderId);
         const inputs = [
           {
             title: "Shipping Fee",
@@ -563,7 +560,7 @@ export function createOrdersColumns({
       ),
       cell: ({ row }) => {
         const order = row.original;
-        const isPending = pendingOrderIds.has(order.orderId);
+        const isPending = isOrderPending(order.orderId);
         return (
           <InlineCurrencyCell
             value={order.shippingFee}
@@ -603,7 +600,7 @@ export function createOrdersColumns({
       ),
       cell: ({ row }) => {
         const order = row.original;
-        const isPending = pendingOrderIds.has(order.orderId);
+        const isPending = isOrderPending(order.orderId);
         return (
           <InlineCurrencyCell
             value={order.taxes}
@@ -643,7 +640,7 @@ export function createOrdersColumns({
       ),
       cell: ({ row }) => {
         const order = row.original;
-        const isPending = pendingOrderIds.has(order.orderId);
+        const isPending = isOrderPending(order.orderId);
         return (
           <InlineCurrencyCell
             value={order.duties}
@@ -683,7 +680,7 @@ export function createOrdersColumns({
       ),
       cell: ({ row }) => {
         const order = row.original;
-        const isPending = pendingOrderIds.has(order.orderId);
+        const isPending = isOrderPending(order.orderId);
         return (
           <InlineCurrencyCell
             value={order.tariffs}
@@ -723,7 +720,7 @@ export function createOrdersColumns({
       ),
       cell: ({ row }) => {
         const order = row.original;
-        const isPending = pendingOrderIds.has(order.orderId);
+        const isPending = isOrderPending(order.orderId);
         return (
           <InlineCurrencyCell
             value={order.miscFees}
@@ -762,11 +759,12 @@ export function createOrdersColumns({
       ),
       cell: ({ row }) => {
         const status = row.original.status;
-        const isPending = pendingOrderIds.has(row.original.orderId);
+        const isPending = isOrderPending(row.original.orderId);
         return (
           <SelectCell
             value={status}
             options={[...ORDER_STATUSES]}
+            colorMap={ORDER_STATUS_COLORS}
             disabled={isPending}
             onSubmit={async (value) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
@@ -796,46 +794,54 @@ export function createOrdersColumns({
       header: () => null,
       cell: ({ row }) => {
         const order = row.original;
-        const isPending = pendingOrderIds.has(order.orderId);
+        const isPending = isOrderPending(order.orderId);
 
         return (
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0" disabled={isPending}>
-                <span className="sr-only">Open menu</span>
-                <HugeiconsIcon
-                  icon={isPending ? Loading03Icon : MoreHorizontalIcon}
-                  className={cn("h-4 w-4", isPending && "animate-spin")}
-                />
-              </Button>
-            </DropdownMenuTrigger>
+            <DropdownMenuTrigger
+              render={
+                <Button variant="ghost" className="h-8 w-8 p-0" disabled={isPending}>
+                  <span className="sr-only">Open menu</span>
+                  <HugeiconsIcon
+                    icon={isPending ? Loading03Icon : MoreHorizontalIcon}
+                    className={cn("h-4 w-4", isPending && "animate-spin")}
+                  />
+                </Button>
+              }
+            />
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem asChild>
-                <Link to="/orders/$id" params={{ id: order.orderId }}>
-                  <HugeiconsIcon icon={ViewIcon} className="mr-2 h-4 w-4" />
-                  View details
-                </Link>
-              </DropdownMenuItem>
-              <OrderForm
-                renderTrigger={
-                  <DropdownMenuItem onSelect={(e) => e.preventDefault()} disabled={isPending}>
-                    <HugeiconsIcon icon={Edit01Icon} className="mr-2 h-4 w-4" />
-                    {isPending ? "Saving..." : "Edit order"}
-                  </DropdownMenuItem>
-                }
-                type="edit-order"
-                orderData={order}
-                callbackFn={onEditOrder}
-                currency={currency}
-              />
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuItem>
+                  <Link
+                    to="/orders/$id"
+                    params={{ id: order.orderId }}
+                    className="flex items-center gap-1.5"
+                  >
+                    <HugeiconsIcon icon={ViewIcon} />
+                    View details
+                  </Link>
+                </DropdownMenuItem>
+                <OrderForm
+                  renderTrigger={
+                    <DropdownMenuItem closeOnClick={false} disabled={isPending}>
+                      <HugeiconsIcon icon={Edit01Icon} />
+                      {isPending ? "Saving..." : "Edit order"}
+                    </DropdownMenuItem>
+                  }
+                  type="edit-order"
+                  orderData={order}
+                  callbackFn={onEditOrder}
+                  currency={currency}
+                />
+              </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 variant="destructive"
                 disabled={isPending}
                 onClick={() => onDeleteOrders(new Set([order.orderId]))}
               >
-                <HugeiconsIcon icon={Delete02Icon} className="mr-2 h-4 w-4" />
+                <HugeiconsIcon icon={Delete02Icon} />
                 {isPending ? "Deleting..." : "Delete order"}
               </DropdownMenuItem>
             </DropdownMenuContent>

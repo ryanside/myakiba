@@ -12,14 +12,13 @@ import { createFileRoute, useParams, Link } from "@tanstack/react-router";
 import { getOrder, editOrder, deleteOrderItem } from "@/queries/orders";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/reui/badge";
 import { Button } from "@/components/ui/button";
 import { formatCurrencyFromMinorUnits, formatDate, formatTimestamp } from "@myakiba/utils";
 import { getStatusVariant } from "@/lib/orders";
 import { OrderItemSubDataGrid } from "@/components/orders/order-item-sub-data-grid";
-import { useState, useEffect, useMemo } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import type { RowSelectionState } from "@tanstack/react-table";
-import { addRecentItem } from "@/lib/recent-items";
 import { OrderForm } from "@/components/orders/order-form";
 import type { EditedOrder, CascadeOptions } from "@myakiba/types";
 import { toast } from "sonner";
@@ -57,6 +56,11 @@ function RouteComponent() {
     () => new Set(pendingCollectionItemIdList),
     [pendingCollectionItemIdList],
   );
+  const pendingCollectionItemIdsRef = useRef<ReadonlySet<string>>(pendingCollectionItemIds);
+  pendingCollectionItemIdsRef.current = pendingCollectionItemIds;
+  const isCollectionItemPending = useCallback((collectionId: string): boolean => {
+    return pendingCollectionItemIdsRef.current.has(collectionId);
+  }, []);
 
   const { data, isPending, isError, error } = useQuery({
     queryKey: ["order", id],
@@ -64,23 +68,6 @@ function RouteComponent() {
     staleTime: 1000 * 60 * 5,
     retry: false,
   });
-
-  // Track recently viewed order
-  useEffect(() => {
-    if (data?.order) {
-      const images =
-        data.order.items
-          ?.map((item) => item.itemImage)
-          .filter((img): img is string => Boolean(img))
-          .slice(0, 4) || [];
-      addRecentItem({
-        id: data.order.orderId,
-        type: "order",
-        title: data.order.title,
-        images,
-      });
-    }
-  }, [data?.order]);
 
   // TODO: add delete order mutation
 
@@ -174,9 +161,9 @@ function RouteComponent() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-y-4">
         <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
-        <Button asChild variant="outline">
-          <Link to="/orders">
-            <HugeiconsIcon icon={ArrowLeft01Icon} className="mr-2 h-4 w-4" />
+        <Button variant="outline">
+          <Link to="/orders" className="flex items-center gap-1.5">
+            <HugeiconsIcon icon={ArrowLeft01Icon} />
             Back to Orders
           </Link>
         </Button>
@@ -200,20 +187,15 @@ function RouteComponent() {
       {/* Header Section */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button asChild variant="ghost">
-            <Link to="/orders">
-              <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
+          <Button variant="ghost">
+            <Link to="/orders" className="flex items-center gap-1.5">
+              <HugeiconsIcon icon={ArrowLeft01Icon} />
               Back to Orders
             </Link>
           </Button>
           <div className="flex flex-row items-center gap-x-2">
-            <h1 className="text-2xl font-semibold text-foreground">{order.title}</h1>
-            <Badge
-              variant={getStatusVariant(order.status)}
-              appearance="outline"
-              className="text-sm"
-              size="lg"
-            >
+            <h1 className="text-2xl font-medium text-foreground">{order.title}</h1>
+            <Badge variant={getStatusVariant(order.status)} className="text-sm" size="lg">
               {order.status}
             </Badge>
           </div>
@@ -361,7 +343,7 @@ function RouteComponent() {
                 {formatCurrencyFromMinorUnits(miscFees, userCurrency)}
               </span>
             </div>
-            <div className="flex items-center justify-between font-semibold">
+            <div className="flex items-center justify-between font-medium">
               <span className="text-sm">Total Amount:</span>
               <span className="text-sm">
                 {formatCurrencyFromMinorUnits(totalAmount, userCurrency)}
@@ -402,7 +384,7 @@ function RouteComponent() {
               setItemSelection={setItemSelection}
               onEditItem={handleEditItem}
               onDeleteItem={handleDeleteItem}
-              pendingCollectionItemIds={pendingCollectionItemIds}
+              isCollectionItemPending={isCollectionItemPending}
             />
           ) : (
             <div className="flex items-center justify-center py-8 text-muted-foreground">

@@ -29,16 +29,18 @@ export function CascadeOptionsDropdown({
 }: CascadeOptionsDropdownProps) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="outline"
-          className="max-w-66 truncate justify-between hover:bg-background active:bg-background data-[state=open]:bg-background"
-        >
-          {cascadeDisplayText}
-          <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4 z-10" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width)">
+      <DropdownMenuTrigger
+        render={
+          <Button
+            variant="outline"
+            className="max-w-66 truncate justify-between hover:bg-background active:bg-background data-open:bg-background"
+          >
+            {cascadeDisplayText}
+            <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4 z-10" />
+          </Button>
+        }
+      />
+      <DropdownMenuContent className="w-(--anchor-width)">
         <div className="flex gap-2 py-1">
           <Button
             variant="ghost"

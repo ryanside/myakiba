@@ -29,7 +29,7 @@ export default function SyncCsvForm({
           e.stopPropagation();
           void csvForm.handleSubmit();
         }}
-        className="rounded-lg border p-4 space-y-4 w-full"
+        className="rounded-lg space-y-4 w-full"
       >
         <csvForm.Field
           name="file"
@@ -78,9 +78,8 @@ export default function SyncCsvForm({
                       <Button
                         type="submit"
                         disabled={!canSubmit}
-                        variant="primary"
+                        variant="default"
                         className="ml-auto"
-                        size="md"
                       >
                         {isSubmitting ? (
                           <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />

@@ -6,19 +6,21 @@ import {
   Loading03Icon,
   MoreHorizontalIcon,
   PackageIcon,
+  ViewIcon,
 } from "@hugeicons/core-free-icons";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { DataGridColumnHeader } from "@/components/ui/data-grid-column-header";
+import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
 import { cn } from "@/lib/utils";
 import { formatDate, getCurrencyLocale } from "@myakiba/utils";
 import type { DateFormat, OrderItem, CollectionItemFormValues, OrderStatus } from "@myakiba/types";
@@ -31,6 +33,7 @@ import { SelectCell } from "../cells/select-cell";
 import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ORDER_STATUSES } from "@myakiba/constants";
+import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface OrderItemSubColumnsParams {
@@ -39,7 +42,7 @@ interface OrderItemSubColumnsParams {
   onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
   currency: string;
   dateFormat: DateFormat;
-  pendingCollectionItemIds: ReadonlySet<string>;
+  isCollectionItemPending: (collectionId: string) => boolean;
 }
 
 export function createOrderItemSubColumns({
@@ -48,21 +51,18 @@ export function createOrderItemSubColumns({
   onDeleteItem,
   currency,
   dateFormat,
-  pendingCollectionItemIds,
+  isCollectionItemPending,
 }: OrderItemSubColumnsParams): ColumnDef<OrderItem>[] {
   return [
     {
       id: "select",
       header: ({ table }) => (
         <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
+          checked={table.getIsAllPageRowsSelected()}
+          indeterminate={table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()}
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           onClick={(e) => e.stopPropagation()}
           aria-label="Select all"
-          size="sm"
           className="align-[inherit] mb-0.5 rounded-xs"
         />
       ),
@@ -79,7 +79,6 @@ export function createOrderItemSubColumns({
             onCheckedChange={(value) => row.toggleSelected(!!value)}
             onClick={(e) => e.stopPropagation()}
             aria-label="Select row"
-            size="sm"
             className="align-[inherit] mb-0.5 rounded-xs"
           />
         </>
@@ -101,20 +100,13 @@ export function createOrderItemSubColumns({
         const item = row.original;
         return (
           <div className="flex items-center gap-3">
-            {item.itemImage && (
-              <Avatar className="size-8">
-                <AvatarImage
-                  src={item.itemImage}
-                  alt={item.itemTitle}
-                  className="rounded-sm"
-                  style={{ objectFit: "cover", objectPosition: "top" }}
-                />
-                <AvatarFallback className="rounded-sm">
-                  <HugeiconsIcon icon={PackageIcon} className="size-4" />
-                </AvatarFallback>
-              </Avatar>
-            )}
-            <div className="space-y-px">
+            <ImageThumbnail
+              images={item.itemImage ? [item.itemImage] : []}
+              title={item.itemTitle}
+              fallbackIcon={<HugeiconsIcon icon={PackageIcon} className="size-4" />}
+              className="size-8 rounded-md"
+            />
+            <div className="min-w-0 space-y-px">
               <Link
                 className="font-medium text-foreground truncate"
                 to="/items/$id"
@@ -122,13 +114,13 @@ export function createOrderItemSubColumns({
               >
                 {item.itemTitle}
               </Link>
-              <div className="flex items-center gap-1 font-light">
+              <div className="flex items-center gap-1 font-normal">
                 {item.itemExternalId ? (
                   <a
                     href={`https://myfigurecollection.net/item/${item.itemExternalId}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-muted-foreground font-light hover:text-foreground transition-colors underline-offset-4 hover:underline"
+                    className="text-xs text-muted-foreground font-normal hover:text-foreground transition-colors underline-offset-4 hover:underline"
                   >
                     MFC #{item.itemExternalId}
                   </a>
@@ -147,7 +139,7 @@ export function createOrderItemSubColumns({
       meta: {
         skeleton: (
           <div className="flex items-center gap-3">
-            <Skeleton className="size-8 rounded-sm" />
+            <Skeleton className="size-8 rounded-md" />
             <div className="space-y-1.5">
               <Skeleton className="h-4 w-32" />
               <Skeleton className="h-3.5 w-16" />
@@ -163,7 +155,7 @@ export function createOrderItemSubColumns({
       ),
       cell: ({ row }) => {
         const item = row.original;
-        const isPending = pendingCollectionItemIds.has(item.id);
+        const isPending = isCollectionItemPending(item.id);
         return (
           <PopoverDatePickerCell
             value={item.orderDate}
@@ -204,7 +196,7 @@ export function createOrderItemSubColumns({
       ),
       cell: ({ row }) => {
         const item = row.original;
-        const isPending = pendingCollectionItemIds.has(item.id);
+        const isPending = isCollectionItemPending(item.id);
         return (
           <InlineCountCell
             value={item.count}
@@ -230,11 +222,12 @@ export function createOrderItemSubColumns({
       ),
       cell: ({ row }) => {
         const item = row.original;
-        const isPending = pendingCollectionItemIds.has(item.id);
+        const isPending = isCollectionItemPending(item.id);
         return (
           <SelectCell
             value={item.status}
             options={[...ORDER_STATUSES]}
+            colorMap={ORDER_STATUS_COLORS}
             disabled={isPending}
             onSubmit={async (value) => {
               await onEditItem({
@@ -261,7 +254,7 @@ export function createOrderItemSubColumns({
       ),
       cell: ({ row }) => {
         const item = row.original;
-        const isPending = pendingCollectionItemIds.has(item.id);
+        const isPending = isCollectionItemPending(item.id);
         return (
           <InlineCurrencyCell
             value={item.price}
@@ -287,53 +280,66 @@ export function createOrderItemSubColumns({
       header: () => null,
       cell: ({ row }) => {
         const item = row.original;
-        const isPending = pendingCollectionItemIds.has(item.id);
+        const isPending = isCollectionItemPending(item.id);
         return (
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0" disabled={isPending}>
-                <span className="sr-only">Open menu</span>
-                <HugeiconsIcon
-                  icon={isPending ? Loading03Icon : MoreHorizontalIcon}
-                  className={cn("h-4 w-4", isPending && "animate-spin")}
-                />
-              </Button>
-            </DropdownMenuTrigger>
+            <DropdownMenuTrigger
+              render={
+                <Button variant="ghost" className="h-8 w-8 p-0" disabled={isPending}>
+                  <span className="sr-only">Open menu</span>
+                  <HugeiconsIcon
+                    icon={isPending ? Loading03Icon : MoreHorizontalIcon}
+                    className={cn("h-4 w-4", isPending && "animate-spin")}
+                  />
+                </Button>
+              }
+            />
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem
-                onClick={() => {
-                  if (item.itemExternalId) {
-                    navigator.clipboard.writeText(item.itemExternalId.toString());
-                    toast.success("Copied MFC item ID to clipboard");
-                  } else {
-                    toast.error("No MFC item ID for custom items");
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuItem>
+                  <Link
+                    to="/items/$id"
+                    params={{ id: item.itemId }}
+                    className="flex items-center gap-1.5"
+                  >
+                    <HugeiconsIcon icon={ViewIcon} />
+                    View details
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    if (item.itemExternalId) {
+                      navigator.clipboard.writeText(item.itemExternalId.toString());
+                      toast.success("Copied MFC item ID to clipboard");
+                    } else {
+                      toast.error("No MFC item ID for custom items");
+                    }
+                  }}
+                >
+                  <HugeiconsIcon icon={Copy01Icon} />
+                  Copy MFC ID
+                </DropdownMenuItem>
+                <CollectionItemForm
+                  renderTrigger={
+                    <DropdownMenuItem closeOnClick={false} disabled={isPending}>
+                      <HugeiconsIcon icon={Edit01Icon} />
+                      {isPending ? "Saving..." : "Edit item"}
+                    </DropdownMenuItem>
                   }
-                }}
-              >
-                <HugeiconsIcon icon={Copy01Icon} className="mr-2 h-4 w-4" />
-                Copy MFC item ID
-              </DropdownMenuItem>
-              <CollectionItemForm
-                renderTrigger={
-                  <DropdownMenuItem onSelect={(e) => e.preventDefault()} disabled={isPending}>
-                    <HugeiconsIcon icon={Edit01Icon} className="mr-2 h-4 w-4" />
-                    {isPending ? "Saving..." : "Edit item"}
-                  </DropdownMenuItem>
-                }
-                itemData={item}
-                callbackFn={onEditItem}
-                currency={currency}
-                dateFormat={dateFormat}
-              />
+                  itemData={item}
+                  callbackFn={onEditItem}
+                  currency={currency}
+                  dateFormat={dateFormat}
+                />
+              </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 variant="destructive"
                 disabled={isPending}
-                onSelect={(e) => e.preventDefault()}
                 onClick={() => onDeleteItem(orderId, item.id)}
               >
-                <HugeiconsIcon icon={Delete02Icon} className="mr-2 h-4 w-4" />
+                <HugeiconsIcon icon={Delete02Icon} />
                 {isPending ? "Deleting..." : "Delete item"}
               </DropdownMenuItem>
             </DropdownMenuContent>

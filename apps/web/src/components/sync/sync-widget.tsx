@@ -5,11 +5,8 @@ import {
   LibraryIcon,
   PackageIcon,
 } from "@hugeicons/core-free-icons";
-import type { ComponentType, PropsWithChildren } from "react";
-import { useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
@@ -17,14 +14,13 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { SyncType } from "@myakiba/types";
 import { SYNC_TYPE_CONFIG, SYNC_OPTION_META } from "@/lib/sync";
 import SyncCsvForm from "@/components/sync/sync-csv-form";
 import SyncOrderForm from "@/components/sync/sync-order-form";
 import SyncCollectionForm from "@/components/sync/sync-collection-form";
 import type { RouterAppContext } from "@/routes/__root";
-import { PlusIcon, type PlusIconHandle } from "@/components/ui/plus";
 import { useSyncMutations } from "@/hooks/use-sync-mutations";
 
 const SYNC_OPTIONS: readonly {
@@ -33,24 +29,27 @@ const SYNC_OPTIONS: readonly {
   readonly description: string;
 }[] = [
   { type: "collection", icon: LibraryIcon, description: "Add items by MFC ID" },
-  { type: "order", icon: PackageIcon, description: "Create an order with MFC items" },
-  { type: "csv", icon: FileUploadIcon, description: "Import from MFC CSV export" },
+  {
+    type: "order",
+    icon: PackageIcon,
+    description: "Create an order with MFC items",
+  },
+  {
+    type: "csv",
+    icon: FileUploadIcon,
+    description: "Import from MFC CSV export",
+  },
 ];
 
 type SyncWidgetProps = {
   readonly session: RouterAppContext["session"];
-  readonly TriggerWrapper?: ComponentType<PropsWithChildren<Record<string, unknown>>>;
-  readonly triggerWrapperProps?: Record<string, unknown>;
+  readonly TriggerWrapper: React.ReactElement;
 };
 
-export default function SyncWidget({
-  session,
-  TriggerWrapper,
-  triggerWrapperProps = {},
-}: SyncWidgetProps) {
+export default function SyncWidget({ session, TriggerWrapper }: SyncWidgetProps) {
   const queryClient = useQueryClient();
   const [syncType, setSyncType] = useState<SyncType | null>(null);
-  const addItemsIconRef = useRef<PlusIconHandle>(null);
+  const [popoverOpen, setPopoverOpen] = useState(false);
 
   const userCurrency = session?.user.currency || "USD";
 
@@ -59,72 +58,37 @@ export default function SyncWidget({
       setSyncType(null);
     });
 
+  const handleOptionSelect = useCallback((type: SyncType) => {
+    setPopoverOpen(false);
+    setSyncType(type);
+  }, []);
+
   return (
     <>
-      <Popover>
-        <PopoverTrigger asChild>
-          {TriggerWrapper ? (
-            <TriggerWrapper
-              aria-label="Sync Items"
-              onMouseEnter={() => addItemsIconRef.current?.startAnimation()}
-              onMouseLeave={() => addItemsIconRef.current?.stopAnimation()}
-              {...triggerWrapperProps}
-            >
-              <PlusIcon ref={addItemsIconRef} size={17} />
-              <span>Sync Items</span>
-            </TriggerWrapper>
-          ) : (
-            <Button
-              variant="primary"
-              size="sm"
-              autoHeight={true}
-              aria-label="Add items"
-              onMouseEnter={() => addItemsIconRef.current?.startAnimation()}
-              onMouseLeave={() => addItemsIconRef.current?.stopAnimation()}
-            >
-              <PlusIcon ref={addItemsIconRef} size={17} />
-              Add items
-            </Button>
-          )}
-        </PopoverTrigger>
-        <PopoverContent align="start" className="w-80 p-0">
-          <div className="max-h-[400px] overflow-y-auto">
-            <div className="space-y-4 p-4">
-              <div className="space-y-1.5">
-                {SYNC_OPTIONS.map((option) => {
-                  const Icon = option.icon;
-                  const config = SYNC_TYPE_CONFIG[option.type];
-                  return (
-                    <button
-                      key={option.type}
-                      type="button"
-                      onClick={() => setSyncType(option.type)}
-                      className="flex w-full items-center gap-3 rounded-lg cursor-pointer border p-3 text-left transition-colors hover:bg-accent"
-                    >
-                      <div className="flex size-8 shrink-0 items-center justify-center">
-                        <HugeiconsIcon icon={Icon} className="size-4 dark:text-primary" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium">{config.label}</p>
-                        <p className="text-xs text-muted-foreground">{option.description}</p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="border-t pt-2">
-                <PopoverClose asChild>
-                  <Link to="/sync">
-                    <Button variant="ghost" size="sm" className="w-full justify-between">
-                      View sync history
-                      <HugeiconsIcon icon={ArrowRight01Icon} className="size-3" />
-                    </Button>
-                  </Link>
-                </PopoverClose>
-              </div>
-            </div>
-          </div>
+      <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+        <PopoverTrigger render={TriggerWrapper} />
+        <PopoverContent align="start" className="w-56 p-1">
+          {SYNC_OPTIONS.map((option) => {
+            const config = SYNC_TYPE_CONFIG[option.type];
+            return (
+              <button
+                key={option.type}
+                type="button"
+                onClick={() => handleOptionSelect(option.type)}
+                className="group/item flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors duration-150 hover:bg-accent cursor-pointer"
+              >
+                <HugeiconsIcon
+                  icon={option.icon}
+                  className="size-4 shrink-0 text-muted-foreground transition-colors duration-150 group-hover/item:text-foreground"
+                />
+                <span className="min-w-0 flex-1 text-sm">{config.label}</span>
+                <HugeiconsIcon
+                  icon={ArrowRight01Icon}
+                  className="size-3 shrink-0 text-muted-foreground/50 -translate-x-0.5 opacity-0 transition-all duration-150 group-hover/item:translate-x-0 group-hover/item:opacity-100"
+                />
+              </button>
+            );
+          })}
         </PopoverContent>
       </Popover>
 
@@ -134,7 +98,7 @@ export default function SyncWidget({
           if (!open) setSyncType(null);
         }}
       >
-        <SheetContent side="right" className="sm:max-w-xl overflow-y-auto">
+        <SheetContent side="left" className="sm:max-w-lg! overflow-y-auto">
           {syncType && (
             <>
               <SheetHeader>

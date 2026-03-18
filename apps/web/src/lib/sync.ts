@@ -21,10 +21,10 @@ export const SYNC_TYPE_CONFIG: Record<
   SyncType,
   {
     readonly label: string;
-    readonly variant: "primary" | "info" | "secondary";
+    readonly variant: "default" | "info" | "secondary";
   }
 > = {
-  csv: { label: "CSV", variant: "primary" },
+  csv: { label: "CSV", variant: "default" },
   order: { label: "Order", variant: "info" },
   collection: { label: "Collection", variant: "secondary" },
 };

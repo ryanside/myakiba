@@ -2,9 +2,9 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading03Icon, RedoIcon } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { DataGrid, DataGridContainer } from "@/components/ui/data-grid";
-import { DataGridPagination } from "@/components/ui/data-grid-pagination";
-import { DataGridTable } from "@/components/ui/data-grid-table";
+import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
+import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
+import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { getCoreRowModel, type PaginationState, useReactTable } from "@tanstack/react-table";
@@ -112,7 +112,6 @@ export function SyncSessionItemSubDataGrid({
         recordCount={totalItems}
         isLoading={isDetailPending}
         loadingMode="skeleton"
-        skeletonRowCount={1}
         tableLayout={{
           rowBorder: true,
           headerBackground: true,

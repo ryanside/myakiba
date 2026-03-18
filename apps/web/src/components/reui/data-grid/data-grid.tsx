@@ -1,12 +1,10 @@
+"use client";
+
 import { createContext, useContext } from "react";
 import type { ReactNode } from "react";
+import type { ColumnFiltersState, RowData, SortingState, Table } from "@tanstack/react-table";
+
 import { cn } from "@/lib/utils";
-import {
-  type ColumnFiltersState,
-  type RowData,
-  type SortingState,
-  type Table,
-} from "@tanstack/react-table";
 
 declare module "@tanstack/react-table" {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -58,7 +56,6 @@ export interface DataGridProps<TData extends object> {
   onRowClick?: (row: TData) => void;
   isLoading?: boolean;
   loadingMode?: "skeleton" | "spinner";
-  skeletonRowCount?: number;
   loadingMessage?: ReactNode | string;
   emptyMessage?: ReactNode | string;
   tableLayout?: {
@@ -167,6 +164,7 @@ function DataGrid<TData extends object>({ children, table, ...props }: DataGridP
     },
   };
 
+  // Ensure table is provided
   if (!table) {
     throw new Error('DataGrid requires a "table" prop');
   }
@@ -191,8 +189,8 @@ function DataGridContainer({
     <div
       data-slot="data-grid"
       className={cn(
-        "grid w-full",
-        border && "border border-border rounded-lg overflow-hidden",
+        "w-full min-w-0 max-w-full overflow-x-auto overflow-y-hidden",
+        border && "border-border rounded-lg border",
         className,
       )}
     >

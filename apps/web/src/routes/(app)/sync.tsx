@@ -20,7 +20,6 @@ import SyncCollectionForm from "@/components/sync/sync-collection-form";
 import { SyncSessionsDataGrid } from "@/components/sync/sync-sessions-data-grid";
 import { syncSearchSchema } from "@myakiba/schemas";
 import { useFilters } from "@/hooks/use-filters";
-import { Separator } from "@/components/ui/separator";
 import { useSyncMutations } from "@/hooks/use-sync-mutations";
 import { SYNC_WIDGET_RECENT_LIMIT } from "@myakiba/constants/sync";
 
@@ -140,7 +139,7 @@ function RouteComponent() {
       <div className="w-full space-y-8">
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl tracking-tight">Sync</h1>
-          <p className="text-muted-foreground text-sm font-light">View your sync history</p>
+          <p className="text-muted-foreground text-sm font-normal">View your sync history</p>
         </div>
         <div className="flex flex-col items-center justify-center h-64 gap-y-4">
           <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
@@ -154,7 +153,7 @@ function RouteComponent() {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl tracking-tight">Sync</h1>
-          <p className="text-muted-foreground text-sm font-light">View your sync history</p>
+          <p className="text-muted-foreground text-sm font-normal">View your sync history</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground mx-1">Add:</span>
@@ -188,12 +187,12 @@ function RouteComponent() {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+      <div className="flex flex-col sm:flex-row flex-wrap items-start gap-x-4 gap-y-2">
         <div className="flex items-center">
           {SYNC_TYPE_FILTER_OPTIONS.map((option) => (
             <Button
               key={option.value}
-              variant={syncTypeFilter === option.value ? "outline" : "dim"}
+              variant={syncTypeFilter === option.value ? "default" : "ghost"}
               size="sm"
               onClick={() => handleSyncTypeFilter(option.value)}
             >
@@ -201,12 +200,11 @@ function RouteComponent() {
             </Button>
           ))}
         </div>
-        <Separator orientation="vertical" className="h-4" />
         <div className="flex items-center">
           {STATUS_FILTER_OPTIONS.map((option) => (
             <Button
               key={option.value}
-              variant={statusFilter === option.value ? "outline" : "dim"}
+              variant={statusFilter === option.value ? "default" : "ghost"}
               size="sm"
               onClick={() => handleStatusFilter(option.value)}
             >
@@ -230,7 +228,7 @@ function RouteComponent() {
           if (!open) setActiveSyncType(null);
         }}
       >
-        <SheetContent side="right" className="sm:max-w-xl overflow-y-auto">
+        <SheetContent side="right" className="sm:max-w-lg! overflow-y-auto">
           {activeSyncType && (
             <>
               <SheetHeader>

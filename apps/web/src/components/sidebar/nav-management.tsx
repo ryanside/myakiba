@@ -2,7 +2,6 @@ import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import { Collapsible } from "@/components/ui/collapsible";
 import {
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -27,16 +26,12 @@ export function NavManagement({
   location: ParsedLocation;
 }) {
   return (
-    <SidebarGroup className="group-data-[collapsible=icon]:pt-1">
-      <SidebarGroupLabel className="group-data-[collapsible=icon]:-z-10 transition-all duration-100 ease-in-out">
-        Manage
-      </SidebarGroupLabel>
+    <SidebarGroup>
       <SidebarMenu>
         {items.map((item) => (
-          <Collapsible key={item.title} asChild defaultOpen={item.isActive}>
+          <Collapsible key={item.title} defaultOpen={item.isActive}>
             <SidebarMenuItem>
               <SidebarMenuButton
-                asChild
                 className="data-[active=true]:shadow-[0_0_0_1px_var(--color-border),0_1px_2px_0_rgb(0_0_0/0.05)] data-[active=true]:text-sidebar-accent-foreground text-muted-foreground"
                 tooltip={item.title}
                 isActive={location.pathname === `${item.url}`}

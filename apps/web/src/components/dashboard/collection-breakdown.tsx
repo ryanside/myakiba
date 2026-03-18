@@ -1,9 +1,9 @@
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils";
 import { Scroller } from "../ui/scroller";
-import { Separator } from "../ui/separator";
 import { Link } from "@tanstack/react-router";
 import type { Category } from "@myakiba/types";
 import { getCategoryColor } from "@/lib/category-colors";
@@ -43,7 +43,7 @@ export function CollectionBreakdown({
     return (
       <Card className={cn("flex flex-col", className)}>
         <CardHeader className="flex flex-row items-center gap-2">
-          <CardTitle className="text-md font-medium">Collection Breakdown</CardTitle>
+          <CardTitle className="text-base font-medium">Collection Breakdown</CardTitle>
         </CardHeader>
         <CardContent className="flex-1 pb-0">
           <p className="text-sm text-muted-foreground text-center py-8">No items in collection</p>
@@ -55,33 +55,36 @@ export function CollectionBreakdown({
   return (
     <Card className={cn("flex flex-col h-full", className)}>
       <CardHeader className="flex flex-row items-center gap-2">
-        <CardTitle className="text-md font-medium">Collection Breakdown</CardTitle>
+        <CardTitle className="text-base font-medium">Collection Breakdown</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4 px-0">
         {/* Horizontal Stacked Bar */}
-        <div className="relative px-6">
-          <div className="flex h-4 w-full rounded-xs">
-            {chartDataWithPercentages.map((item, index) => {
-              const isHovered = hoveredIndex === index;
-              const isOtherHovered = hoveredIndex !== null && hoveredIndex !== index;
-              const minWidth = item.percentage < 2 && item.percentage > 0 ? 2 : item.percentage;
+        <TooltipProvider>
+          <div className="relative px-4">
+            <div className="flex h-4 w-full rounded-xs">
+              {chartDataWithPercentages.map((item, index) => {
+                const isHovered = hoveredIndex === index;
+                const isOtherHovered = hoveredIndex !== null && hoveredIndex !== index;
+                const minWidth = item.percentage < 2 && item.percentage > 0 ? 2 : item.percentage;
 
-              return (
-                <div
-                  key={item.name}
-                  className="relative flex items-center justify-center transition-all duration-200 cursor-pointer group"
-                  style={{
-                    width: `${minWidth}%`,
-                    backgroundColor: item.fill,
-                    opacity: isOtherHovered ? 0.3 : 1,
-                    transform: isHovered ? "scaleY(1.05)" : "scaleY(1)",
-                  }}
-                  onMouseEnter={() => setHoveredIndex(index)}
-                  onMouseLeave={() => setHoveredIndex(null)}
-                >
-                  {/* Tooltip */}
-                  {isHovered && (
-                    <div className="absolute -top-24 left-1/2 -translate-x-1/2 z-10 bg-popover text-popover-foreground px-3 py-2 rounded-md shadow-lg border min-w-[160px]">
+                return (
+                  <Tooltip key={item.name} open={hoveredIndex === index}>
+                    <TooltipTrigger
+                      render={
+                        <div
+                          className="relative flex items-center justify-center transition-all duration-200 cursor-pointer group"
+                          style={{
+                            width: `${minWidth}%`,
+                            backgroundColor: item.fill,
+                            opacity: isOtherHovered ? 0.3 : 1,
+                            transform: isHovered ? "scaleY(1.05)" : "scaleY(1)",
+                          }}
+                          onMouseEnter={() => setHoveredIndex(index)}
+                          onMouseLeave={() => setHoveredIndex(null)}
+                        />
+                      }
+                    />
+                    <TooltipContent side="top">
                       <div className="flex flex-col gap-1">
                         <p className="text-sm font-medium">{item.name}</p>
                         <div className="flex justify-between items-center gap-2">
@@ -99,28 +102,22 @@ export function CollectionBreakdown({
                           <span className="text-xs font-medium">{item.count}</span>
                         </div>
                       </div>
-                      {/* Tooltip arrow */}
-                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-popover border-b border-r rotate-45" />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        </TooltipProvider>
 
-        <div className="px-6 my-0">
-          <Separator />
-        </div>
-
-        <div className="flex flex-col gap-2 pt-4 px-6">
+        <div className="flex flex-col gap-2 px-4">
           <div className="flex justify-between items-center">
-            <span className="text-sm tracking-tight">Categories</span>
+            <span className="text-sm">Categories</span>
           </div>
         </div>
 
         {/* Legend */}
-        <Scroller className="h-34 px-6">
+        <Scroller className="max-h-40 px-4">
           {chartDataWithPercentages.map((item, index) => {
             const isHovered = hoveredIndex === index;
             const isOtherHovered = hoveredIndex !== null && hoveredIndex !== index;
@@ -130,7 +127,7 @@ export function CollectionBreakdown({
                 to="/collection"
                 search={{ category: [item.name] }}
                 key={item.name}
-                className="flex flex-row gap-2 items-center font-light transition-opacity py-1 duration-200"
+                className="flex flex-row gap-2 items-center font-normal transition-opacity py-1 duration-200"
                 style={{ opacity: isOtherHovered ? 0.4 : 1 }}
                 onMouseEnter={() => setHoveredIndex(index)}
                 onMouseLeave={() => setHoveredIndex(null)}

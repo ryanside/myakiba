@@ -67,7 +67,7 @@ export default function FAQs() {
           </div>
 
           <div className="md:col-span-3">
-            <Accordion type="single" collapsible>
+            <Accordion>
               {FAQ_ITEMS.map((item) => (
                 <AccordionItem key={item.id} value={item.id}>
                   <AccordionTrigger className="cursor-pointer text-base hover:no-underline">

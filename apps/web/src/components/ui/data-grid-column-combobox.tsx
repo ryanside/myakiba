@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Settings02Icon, Tick02Icon } from "@hugeicons/core-free-icons";
-import { useId, useState, type ReactNode } from "react";
+import { useId, useState, type ReactElement } from "react";
 import type { Table } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import { Scroller } from "./scroller";
 
 interface DataGridColumnComboboxProps<TData> {
   table: Table<TData>;
-  trigger?: ReactNode;
+  trigger?: ReactElement;
 }
 
 export function DataGridColumnCombobox<TData>({
@@ -46,7 +46,7 @@ export function DataGridColumnCombobox<TData>({
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>{trigger || defaultTrigger}</PopoverTrigger>
+      <PopoverTrigger render={trigger ?? defaultTrigger} />
       <PopoverContent className="w-[200px] p-0" align="start">
         <Command>
           <CommandInput placeholder="Search columns..." />

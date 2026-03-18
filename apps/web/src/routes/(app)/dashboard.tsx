@@ -79,7 +79,7 @@ function DashboardContent() {
             Welcome, <span className="">{session?.user.username}.</span>
           </h1>
         </div>
-        <p className="text-muted-foreground text-sm font-light text-balance ">
+        <p className="text-muted-foreground text-sm font-normal text-balance ">
           Here’s your collection and orders at a glance.
         </p>
       </div>
@@ -123,7 +123,7 @@ function DashboardContent() {
         <ValueLineBarChart data={monthlyOrders} />
         <Card className="min-h-[210px]">
           <CardHeader className="flex flex-row items-center gap-2">
-            <CardTitle className="text-md font-medium">Release Calendar</CardTitle>
+            <CardTitle className="text-base font-medium">Release Calendar</CardTitle>
           </CardHeader>
           <CardContent>
             <ReleaseCalendar currency={userCurrency} dateFormat={dateFormat} />
@@ -133,13 +133,13 @@ function DashboardContent() {
       <Card className="h-full">
         <CardHeader className="flex flex-row items-center gap-2">
           <div className="flex flex-col items-start gap-2">
-            <CardTitle className="text-md font-medium">Orders Board</CardTitle>
+            <CardTitle className="text-base font-medium">Orders Board</CardTitle>
             <CardDescription className="text-xs text-muted-foreground">
               Quickly manage upcoming active orders
             </CardDescription>
           </div>
           <Link to="/orders" className="ml-auto">
-            <Button variant="outline" size="md" className="rounded-md">
+            <Button variant="outline" className="rounded-md">
               View All
             </Button>
           </Link>

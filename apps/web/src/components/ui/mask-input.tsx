@@ -1,4 +1,3 @@
-import { Slot } from "@radix-ui/react-slot";
 import * as React from "react";
 import { useComposedRefs } from "@/lib/compose-refs";
 import { cn } from "@/lib/utils";
@@ -744,7 +743,6 @@ interface MaskInputProps extends React.ComponentProps<"input"> {
   maskPlaceholder?: string;
   currency?: string;
   locale?: string;
-  asChild?: boolean;
   invalid?: boolean;
   withoutMask?: boolean;
 }
@@ -771,7 +769,6 @@ function MaskInput(props: MaskInputProps) {
     min,
     max,
     maxLength,
-    asChild = false,
     disabled = false,
     invalid = false,
     readOnly = false,
@@ -1339,7 +1336,7 @@ function MaskInput(props: MaskInputProps) {
     [maskPattern, onKeyDownProp, onValueChangeProp, transformOpts, mask, withoutMask],
   );
 
-  const InputPrimitive = asChild ? Slot : "input";
+  const InputPrimitive = "input";
 
   return (
     <InputPrimitive

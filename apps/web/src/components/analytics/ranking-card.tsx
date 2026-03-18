@@ -76,7 +76,7 @@ export function RankingCard({
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="text-xs -ms-2 px-2 h-7 hover:bg-muted data-[state=open]:bg-muted data-[state=open]:text-white"
+          className="text-xs -ms-2 px-2 h-7 hover:bg-muted data-open:bg-muted data-open:text-white"
         >
           {col.label}
           {column.getIsSorted() === "desc" ? (
@@ -126,11 +126,11 @@ export function RankingCard({
   return (
     <div
       className={cn(
-        "flex flex-col rounded-xl border border-border bg-card overflow-hidden",
+        "flex flex-col rounded-xl ring-1 ring-foreground/10 bg-card overflow-hidden",
         className,
       )}
     >
-      <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
         <div className="flex items-center gap-2.5">
           {icon && <span className="text-muted-foreground shrink-0">{icon}</span>}
           <h3 className="text-base font-medium text-foreground">{title}</h3>
@@ -143,7 +143,7 @@ export function RankingCard({
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow
                 key={headerGroup.id}
-                className="border-b border-border hover:bg-transparent"
+                className="border-b border-border/50 hover:bg-transparent"
               >
                 {headerGroup.headers.map((header) => (
                   <TableHead
@@ -189,7 +189,7 @@ export function RankingCard({
                             value={Number(row.original[progressKey])}
                             max={progressMax}
                             className="h-0.5 bg-sidebar rounded-none"
-                            indicatorClassName="bg-secondary"
+                            // indicatorClassName="bg-secondary"
                           />
                         </TableCell>
                       </TableRow>

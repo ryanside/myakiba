@@ -7,7 +7,6 @@ import { Outlet, redirect } from "@tanstack/react-router";
 import UserMenu from "@/components/sidebar/user-menu";
 import SyncStatusWidget from "@/components/sync/sync-status-widget";
 import { authClient } from "@/lib/auth-client";
-import { SearchCommand } from "@/components/sidebar/search-command";
 import { getVersion } from "@/queries/version";
 import { toast } from "sonner";
 import { env } from "@myakiba/env/web";
@@ -58,22 +57,21 @@ function RouteComponent() {
   }, [versionData]);
 
   return (
-    <div className="[--header-height:calc(--spacing(14))]">
+    <div className="[--header-height:calc(--spacing(14))] max-w-full overflow-x-hidden">
       <SidebarProvider className="flex flex-col">
-        <div className="flex flex-1">
+        <div className="flex min-w-0 max-w-full flex-1 overflow-x-hidden">
           <AppSidebar session={session} />
-          <SidebarInset className="shadow-none! border-border">
+          <SidebarInset>
             <header className="flex h-12 shrink-0 items-center justify-between gap-2 px-4">
               <div className="flex items-center">
                 <SidebarTrigger className="-ml-1" />
-                <SearchCommand />
                 <SyncStatusWidget />
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
                 <UserMenu session={session} />
               </div>
             </header>
-            <div className="h-full w-full p-6">
+            <div className="h-full w-full min-w-0 max-w-full overflow-x-hidden p-6">
               <Outlet />
             </div>
           </SidebarInset>
