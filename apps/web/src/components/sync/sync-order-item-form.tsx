@@ -32,31 +32,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { SyncFormOrderItem, SyncOrderItems } from "@myakiba/types";
+import type { SyncOrderItems } from "@myakiba/types";
 import { CONDITIONS, ORDER_STATUSES, SHIPPING_METHODS } from "@myakiba/constants";
 import { getCurrencyLocale, majorStringToMinorUnits } from "@myakiba/utils";
-import { extractMfcItemId } from "@/lib/sync";
+import { createDefaultSyncFormOrderItem, extractMfcItemId } from "@/lib/sync";
 
 type SyncOrderItemFormProps = {
   readonly orderId: string;
   readonly handleSyncOrderItemSubmit: (values: SyncOrderItems) => Promise<void>;
   readonly currency?: string;
 };
-
-function createDefaultSyncFormOrderItem(): SyncFormOrderItem {
-  return {
-    itemExternalId: "",
-    price: "0.00",
-    count: 1,
-    status: "Ordered",
-    condition: "New",
-    shippingMethod: "n/a",
-    orderDate: "",
-    paymentDate: "",
-    shippingDate: "",
-    collectionDate: "",
-  };
-}
 
 export default function SyncOrderItemForm({
   orderId,
@@ -68,7 +53,7 @@ export default function SyncOrderItemForm({
 
   const orderItemForm = useForm({
     defaultValues: {
-      items: [createDefaultSyncFormOrderItem()] as SyncFormOrderItem[],
+      items: [createDefaultSyncFormOrderItem()],
     },
     onSubmit: async ({ value }) => {
       const updatedItems = value.items.map((item) => {
@@ -76,9 +61,11 @@ export default function SyncOrderItemForm({
         if (!extractedId) {
           throw new Error(`Invalid item ID: ${item.itemExternalId}`);
         }
+        const { formRowId, ...rest } = item;
+        void formRowId;
 
         return {
-          ...item,
+          ...rest,
           itemExternalId: parseInt(extractedId, 10),
           price: majorStringToMinorUnits(item.price),
           orderDate: item.orderDate || null,
@@ -152,9 +139,9 @@ export default function SyncOrderItemForm({
               </Tooltip>
             </div>
 
-            {field.state.value.map((_, index) => (
+            {field.state.value.map((item, index) => (
               <orderItemForm.Field
-                key={index}
+                key={item.formRowId}
                 name={`items[${index}].itemExternalId`}
                 validators={{
                   onChange: ({ value }: { value: string }) => {
@@ -206,9 +193,9 @@ export default function SyncOrderItemForm({
                               >
                                 {(priceField) => (
                                   <div className="grid gap-2">
-                                    <Label htmlFor={`price-${index}`}>Price</Label>
+                                    <Label htmlFor={`price-${item.formRowId}`}>Price</Label>
                                     <MaskInput
-                                      id={`price-${index}`}
+                                      id={`price-${item.formRowId}`}
                                       name={priceField.name}
                                       mask="currency"
                                       currency={userCurrency}
@@ -236,9 +223,9 @@ export default function SyncOrderItemForm({
                               >
                                 {(countField) => (
                                   <div className="grid gap-2">
-                                    <Label htmlFor={`count-${index}`}>Count</Label>
+                                    <Label htmlFor={`count-${item.formRowId}`}>Count</Label>
                                     <Input
-                                      id={`count-${index}`}
+                                      id={`count-${item.formRowId}`}
                                       name={countField.name}
                                       value={countField.state.value}
                                       onBlur={countField.handleBlur}
@@ -263,7 +250,7 @@ export default function SyncOrderItemForm({
                               <orderItemForm.Field name={`items[${index}].condition`}>
                                 {(conditionField) => (
                                   <div className="grid gap-2">
-                                    <Label htmlFor={`condition-${index}`}>Condition</Label>
+                                    <Label htmlFor={`condition-${item.formRowId}`}>Condition</Label>
                                     <Select
                                       value={conditionField.state.value ?? ""}
                                       onValueChange={(value) =>
@@ -294,7 +281,7 @@ export default function SyncOrderItemForm({
                               >
                                 {(statusField) => (
                                   <div className="grid gap-2">
-                                    <Label htmlFor={`status-${index}`}>Status</Label>
+                                    <Label htmlFor={`status-${item.formRowId}`}>Status</Label>
                                     <Select
                                       value={statusField.state.value ?? ""}
                                       onValueChange={(value) =>
@@ -332,7 +319,9 @@ export default function SyncOrderItemForm({
                             >
                               {(shippingField) => (
                                 <div className="grid gap-2">
-                                  <Label htmlFor={`shipping-${index}`}>Shipping Method</Label>
+                                  <Label htmlFor={`shipping-${item.formRowId}`}>
+                                    Shipping Method
+                                  </Label>
                                   <Select
                                     value={shippingField.state.value ?? ""}
                                     onValueChange={(value) =>
@@ -360,9 +349,11 @@ export default function SyncOrderItemForm({
                               <orderItemForm.Field name={`items[${index}].orderDate`}>
                                 {(orderDateField) => (
                                   <div className="grid gap-2">
-                                    <Label htmlFor={`orderDate-${index}`}>Order Date</Label>
+                                    <Label htmlFor={`orderDate-${item.formRowId}`}>
+                                      Order Date
+                                    </Label>
                                     <DatePicker
-                                      id={`orderDate-${index}`}
+                                      id={`orderDate-${item.formRowId}`}
                                       name={orderDateField.name}
                                       value={orderDateField.state.value ?? null}
                                       onBlur={orderDateField.handleBlur}
@@ -375,9 +366,11 @@ export default function SyncOrderItemForm({
                               <orderItemForm.Field name={`items[${index}].paymentDate`}>
                                 {(paymentDateField) => (
                                   <div className="grid gap-2">
-                                    <Label htmlFor={`paymentDate-${index}`}>Payment Date</Label>
+                                    <Label htmlFor={`paymentDate-${item.formRowId}`}>
+                                      Payment Date
+                                    </Label>
                                     <DatePicker
-                                      id={`paymentDate-${index}`}
+                                      id={`paymentDate-${item.formRowId}`}
                                       name={paymentDateField.name}
                                       value={paymentDateField.state.value ?? null}
                                       onBlur={paymentDateField.handleBlur}
@@ -395,9 +388,11 @@ export default function SyncOrderItemForm({
                               <orderItemForm.Field name={`items[${index}].shippingDate`}>
                                 {(shippingDateField) => (
                                   <div className="grid gap-2">
-                                    <Label htmlFor={`shippingDate-${index}`}>Shipping Date</Label>
+                                    <Label htmlFor={`shippingDate-${item.formRowId}`}>
+                                      Shipping Date
+                                    </Label>
                                     <DatePicker
-                                      id={`shippingDate-${index}`}
+                                      id={`shippingDate-${item.formRowId}`}
                                       name={shippingDateField.name}
                                       value={shippingDateField.state.value ?? null}
                                       onBlur={shippingDateField.handleBlur}
@@ -412,11 +407,11 @@ export default function SyncOrderItemForm({
                               <orderItemForm.Field name={`items[${index}].collectionDate`}>
                                 {(collectionDateField) => (
                                   <div className="grid gap-2">
-                                    <Label htmlFor={`collectionDate-${index}`}>
+                                    <Label htmlFor={`collectionDate-${item.formRowId}`}>
                                       Collection Date
                                     </Label>
                                     <DatePicker
-                                      id={`collectionDate-${index}`}
+                                      id={`collectionDate-${item.formRowId}`}
                                       name={collectionDateField.name}
                                       value={collectionDateField.state.value ?? null}
                                       onBlur={collectionDateField.handleBlur}
