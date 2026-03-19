@@ -3,7 +3,12 @@ import * as z from "zod";
 import { betterAuth } from "@/middleware/better-auth";
 import { evlog } from "evlog/elysia";
 import { rateLimit } from "@/middleware/rate-limit";
-import { collectionSyncSchema, csvItemSchema, orderSyncSchema } from "./model";
+import {
+  collectionSyncSchema,
+  csvItemSchema,
+  orderItemsSyncSchema,
+  orderSyncSchema,
+} from "./model";
 import type {
   Status,
   OrderItemSyncType,
@@ -633,6 +638,331 @@ const syncRouter = new Elysia({ prefix: "/sync" })
     },
     {
       body: orderSyncSchema,
+      auth: true,
+      rateLimit: "order",
+    },
+  )
+  .post(
+    "/order-item",
+    async ({ body, user, log }) => {
+      if (!user) {
+        log.set({ outcome: "unauthorized" });
+        return status(401, "Unauthorized");
+      }
+
+      log.set({
+        action: "sync.orderItem",
+        user: { id: user.id },
+        sync: { type: "order-item", orderId: body.orderId },
+        items: { requested: body.items.length },
+      });
+
+      const { data: existingOrder, error: existingOrderError } = await tryCatch(
+        SyncService.getOrderByIdForUser(body.orderId, user.id),
+      );
+
+      if (existingOrderError) {
+        log.error(existingOrderError, {
+          step: "getOrderByIdForUser",
+          outcome: "error",
+          sync: { type: "order-item", orderId: body.orderId },
+        });
+        return status(500, "Failed to load order");
+      }
+
+      if (!existingOrder) {
+        log.set({ outcome: "not_found" });
+        return status(404, "Order not found");
+      }
+
+      const orderDetails: UpdatedSyncOrder = {
+        id: existingOrder.id,
+        userId: existingOrder.userId,
+        status: existingOrder.status,
+        title: existingOrder.title,
+        shop: existingOrder.shop,
+        orderDate: existingOrder.orderDate,
+        releaseDate: existingOrder.releaseDate,
+        paymentDate: existingOrder.paymentDate,
+        shippingDate: existingOrder.shippingDate,
+        collectionDate: existingOrder.collectionDate,
+        shippingMethod: existingOrder.shippingMethod,
+        shippingFee: existingOrder.shippingFee,
+        taxes: existingOrder.taxes,
+        duties: existingOrder.duties,
+        tariffs: existingOrder.tariffs,
+        miscFees: existingOrder.miscFees,
+        notes: existingOrder.notes,
+      };
+
+      const itemExternalIds = body.items.map((item: OrderItemSyncType) => item.itemExternalId);
+
+      const { data: existingItems, error: existingItemsError } = await tryCatch(
+        SyncService.getExistingItemsByExternalIds(itemExternalIds),
+      );
+
+      if (existingItemsError) {
+        log.error(existingItemsError, {
+          step: "getExistingItems",
+          outcome: "error",
+          sync: { type: "order-item", orderId: body.orderId },
+        });
+        return status(500, "Failed to check for existing items");
+      }
+
+      const existingItemIds = existingItems.map((existingItem) => existingItem.id);
+      const { data: existingItemsWithReleases, error: existingItemsWithReleasesError } =
+        await tryCatch(SyncService.getExistingItemsWithReleases(existingItemIds));
+
+      if (existingItemsWithReleasesError) {
+        log.error(existingItemsWithReleasesError, {
+          step: "getExistingItemsWithReleases",
+          outcome: "error",
+          sync: { type: "order-item", orderId: body.orderId },
+        });
+        return status(500, "Failed to check for existing items with releases");
+      }
+
+      const externalIdToInternalId = new Map(
+        existingItems.map((existingItem) => [existingItem.externalId, existingItem.id]),
+      );
+
+      const itemsToScrape: UpdatedSyncOrderItem[] = body.items
+        .filter((item: OrderItemSyncType) => !externalIdToInternalId.has(item.itemExternalId))
+        .map((item: OrderItemSyncType) => ({
+          ...item,
+          itemId: null,
+          orderId: existingOrder.id,
+          releaseId: null,
+          userId: user.id,
+        }));
+
+      const itemsToInsert: UpdatedSyncOrderItem[] = body.items.flatMap(
+        (item: OrderItemSyncType) => {
+          const internalItemId = externalIdToInternalId.get(item.itemExternalId);
+          if (!internalItemId) {
+            return [];
+          }
+          return [
+            {
+              ...item,
+              itemId: internalItemId,
+              orderId: existingOrder.id,
+              releaseId: existingItemsWithReleases.releases.get(internalItemId) ?? null,
+              userId: user.id,
+            },
+          ];
+        },
+      );
+
+      const orderItemExternalIdsToTrack = itemsToScrape.map((item) => item.itemExternalId);
+      const existingOrderItemExternalIds = itemsToInsert.map((item) => item.itemExternalId);
+      const orderItemMetadata = new Map(
+        itemsToScrape.map((item) => [
+          item.itemExternalId,
+          {
+            price: item.price,
+            count: item.count,
+            status: item.status,
+            condition: item.condition,
+            shippingMethod: item.shippingMethod,
+            orderDate: item.orderDate,
+            paymentDate: item.paymentDate,
+            shippingDate: item.shippingDate,
+            collectionDate: item.collectionDate,
+          },
+        ]),
+      );
+      const collectionItemsToInsert: CollectionInsertType[] = itemsToInsert
+        .filter((item): item is UpdatedSyncOrderItem & { itemId: string } => item.itemId !== null)
+        .map((item) => ({
+          userId: item.userId,
+          itemId: item.itemId,
+          orderId: item.orderId,
+          status: item.status,
+          count: item.count,
+          score: "0.0",
+          price: item.price,
+          shop: orderDetails.shop,
+          orderDate: item.orderDate,
+          paymentDate: item.paymentDate,
+          shippingDate: item.shippingDate,
+          collectionDate: item.collectionDate,
+          shippingMethod: item.shippingMethod,
+          condition: item.condition,
+          notes: "",
+          tags: [],
+          releaseId: item.releaseId,
+        }));
+
+      const { data: syncSessionId, error: syncSessionError } = await tryCatch(
+        SyncService.createSyncSession(user.id, "order-item", orderItemExternalIdsToTrack, {
+          orderId: existingOrder.id,
+          orderPayload: orderDetails,
+          itemMetadata: orderItemMetadata,
+          existingItemExternalIds: existingOrderItemExternalIds,
+        }),
+      );
+
+      if (syncSessionError) {
+        log.error(syncSessionError, {
+          step: "createSyncSession",
+          outcome: "error",
+          sync: {
+            type: "order-item",
+            orderId: existingOrder.id,
+          },
+        });
+        return status(500, "Failed to create sync session");
+      }
+
+      log.set({
+        sync: {
+          type: "order-item",
+          sessionId: syncSessionId,
+          orderId: existingOrder.id,
+        },
+        order: { id: existingOrder.id },
+      });
+
+      if (collectionItemsToInsert.length > 0) {
+        const { error: insertOrderItemsError } = await tryCatch(
+          SyncService.insertToCollectionAndOrders(collectionItemsToInsert),
+        );
+
+        if (insertOrderItemsError) {
+          if (syncSessionId) {
+            await tryCatch(
+              SyncService.updateSyncSession(syncSessionId, {
+                status: "failed",
+                statusMessage: "Failed to insert order items",
+                completedAt: new Date(),
+              }),
+            );
+          }
+          log.error(insertOrderItemsError, {
+            step: "insertOrderItems",
+            outcome: "error",
+            sync: {
+              type: "order-item",
+              sessionId: syncSessionId,
+              orderId: existingOrder.id,
+            },
+            order: { id: existingOrder.id },
+          });
+          return status(500, "Failed to insert order items");
+        }
+      }
+
+      let jobId: string | null | undefined = null;
+      if (itemsToScrape.length > 0) {
+        const { data: jobIdData, error: queueOrderItemSyncJobError } = await tryCatch(
+          SyncService.queueOrderItemSyncJob(
+            user.id,
+            orderDetails,
+            itemsToScrape,
+            itemsToInsert,
+            syncSessionId,
+            existingOrderItemExternalIds.length,
+          ),
+        );
+
+        if (queueOrderItemSyncJobError) {
+          if (queueOrderItemSyncJobError.message === "FAILED_TO_QUEUE_ORDER_ITEM_SYNC_JOB") {
+            log.error(queueOrderItemSyncJobError, {
+              step: "queueOrderItemSyncJob",
+              outcome: "error",
+              sync: {
+                type: "order-item",
+                sessionId: syncSessionId,
+                orderId: existingOrder.id,
+              },
+              order: { id: existingOrder.id },
+            });
+            return status(500, "Failed to queue order item sync job");
+          }
+          if (queueOrderItemSyncJobError.message === "FAILED_TO_SET_JOB_STATUS_IN_REDIS") {
+            log.error(queueOrderItemSyncJobError, {
+              step: "queueOrderItemSyncJob",
+              outcome: "error",
+              sync: {
+                type: "order-item",
+                sessionId: syncSessionId,
+                orderId: existingOrder.id,
+              },
+              order: { id: existingOrder.id },
+            });
+            return status(500, "Failed to set job status");
+          }
+          log.error(queueOrderItemSyncJobError, {
+            step: "queueOrderItemSyncJob",
+            outcome: "error",
+            sync: {
+              type: "order-item",
+              sessionId: syncSessionId,
+              orderId: existingOrder.id,
+            },
+            order: { id: existingOrder.id },
+          });
+          return status(500, "Failed to queue order item sync job");
+        }
+
+        jobId = jobIdData;
+      } else {
+        if (syncSessionId) {
+          const { error: updateSessionError } = await tryCatch(
+            SyncService.updateSyncSession(syncSessionId, {
+              status: "completed",
+              completedAt: new Date(),
+              statusMessage: "Sync completed",
+              orderId: existingOrder.id,
+              successCount: existingOrderItemExternalIds.length,
+            }),
+          );
+          if (updateSessionError) {
+            log.error(updateSessionError, {
+              step: "updateSyncSession",
+              outcome: "error",
+              sync: {
+                type: "order-item",
+                sessionId: syncSessionId,
+                orderId: existingOrder.id,
+              },
+              order: { id: existingOrder.id },
+            });
+            return status(500, "Failed to update sync session");
+          }
+        }
+      }
+
+      log.set({
+        outcome: "success",
+        sync: {
+          type: "order-item",
+          sessionId: syncSessionId,
+          jobId: jobId ?? null,
+          orderId: existingOrder.id,
+        },
+        order: { id: existingOrder.id },
+        items: {
+          requested: body.items.length,
+          existing: existingOrderItemExternalIds.length,
+          toInsert: itemsToInsert.length,
+          queuedForScrape: itemsToScrape.length,
+        },
+      });
+
+      return {
+        status: jobId ? "Job added to queue." : "Sync completed",
+        isFinished: jobId ? false : true,
+        existingItemsToInsert: itemsToInsert.length,
+        newItems: itemsToScrape.length,
+        jobId,
+        syncSessionId,
+      };
+    },
+    {
+      body: orderItemsSyncSchema,
       auth: true,
       rateLimit: "order",
     },

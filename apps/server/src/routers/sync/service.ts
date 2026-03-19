@@ -163,6 +163,15 @@ class SyncService {
     return { items, releases, releaseDates };
   }
 
+  async getOrderByIdForUser(orderId: string, userId: string) {
+    const [existingOrder] = await db
+      .select()
+      .from(order)
+      .where(and(eq(order.id, orderId), eq(order.userId, userId)));
+
+    return existingOrder ?? null;
+  }
+
   async insertToCollectionAndOrders(
     collectionItems: CollectionInsertType[],
     orderItems?: OrderInsertType[],
@@ -353,19 +362,68 @@ class SyncService {
     syncSessionId: string,
     existingCount: number,
   ) {
+    return this.queueOrderLikeSyncJob({
+      type: "order",
+      userId,
+      order,
+      itemsToScrape,
+      itemsToInsert,
+      syncSessionId,
+      existingCount,
+      queueErrorCode: "FAILED_TO_QUEUE_ORDER_SYNC_JOB",
+      statusMessage: "Your order sync job has been added to queue. Please wait...",
+    });
+  }
+
+  async queueOrderItemSyncJob(
+    userId: string,
+    order: UpdatedSyncOrder,
+    itemsToScrape: UpdatedSyncOrderItem[],
+    itemsToInsert: UpdatedSyncOrderItem[],
+    syncSessionId: string,
+    existingCount: number,
+  ) {
+    return this.queueOrderLikeSyncJob({
+      type: "order-item",
+      userId,
+      order,
+      itemsToScrape,
+      itemsToInsert,
+      syncSessionId,
+      existingCount,
+      queueErrorCode: "FAILED_TO_QUEUE_ORDER_ITEM_SYNC_JOB",
+      statusMessage: "Your order item sync job has been added to queue. Please wait...",
+    });
+  }
+
+  private async queueOrderLikeSyncJob(params: {
+    readonly type: "order" | "order-item";
+    readonly userId: string;
+    readonly order: UpdatedSyncOrder;
+    readonly itemsToScrape: UpdatedSyncOrderItem[];
+    readonly itemsToInsert: UpdatedSyncOrderItem[];
+    readonly syncSessionId: string;
+    readonly existingCount: number;
+    readonly queueErrorCode:
+      | "FAILED_TO_QUEUE_ORDER_SYNC_JOB"
+      | "FAILED_TO_QUEUE_ORDER_ITEM_SYNC_JOB";
+    readonly statusMessage: string;
+  }) {
+    // `order` and `order-item` jobs share the same worker payload shape. The worker decides
+    // whether to create or append based on `type`, so this helper keeps the queue contract in sync.
     let queuedJobId: string | null = null;
     try {
       const job = await syncQueue.add(
         "sync-job",
         {
-          type: "order" as const,
-          userId: userId,
-          syncSessionId,
+          type: params.type,
+          userId: params.userId,
+          syncSessionId: params.syncSessionId,
           order: {
-            details: order,
-            itemsToScrape: itemsToScrape,
-            itemsToInsert: itemsToInsert,
-            existingCount,
+            details: params.order,
+            itemsToScrape: params.itemsToScrape,
+            itemsToInsert: params.itemsToInsert,
+            existingCount: params.existingCount,
           },
         },
         {
@@ -376,15 +434,12 @@ class SyncService {
       );
 
       if (!job?.id) {
-        throw new Error("FAILED_TO_QUEUE_ORDER_SYNC_JOB");
+        throw new Error(params.queueErrorCode);
       }
 
       queuedJobId = job.id;
       const { error: jobStatusError } = await tryCatch(
-        this.writeQueuedJobStatus(
-          job.id,
-          "Your order sync job has been added to queue. Please wait...",
-        ),
+        this.writeQueuedJobStatus(job.id, params.statusMessage),
       );
 
       if (jobStatusError) {
@@ -392,7 +447,7 @@ class SyncService {
         throw new Error("FAILED_TO_SET_JOB_STATUS_IN_REDIS");
       }
 
-      const updated = await this.updateSyncSession(syncSessionId, {
+      const updated = await this.updateSyncSession(params.syncSessionId, {
         jobId: job.id,
       });
       if (!updated) {
@@ -406,7 +461,7 @@ class SyncService {
         error instanceof Error && error.message === "FAILED_TO_SET_JOB_STATUS_IN_REDIS"
           ? "Sync failed before processing started: unable to initialize job status."
           : "Sync failed before processing started: unable to queue job.";
-      await this.markSyncSessionAsFailed(syncSessionId, failureMessage);
+      await this.markSyncSessionAsFailed(params.syncSessionId, failureMessage);
 
       if (queuedJobId) {
         const queuedJob = await syncQueue.getJob(queuedJobId);
@@ -970,6 +1025,78 @@ class SyncService {
                 paymentDate: orderDetails.paymentDate,
                 shippingDate: orderDetails.shippingDate,
                 collectionDate: orderDetails.collectionDate,
+              };
+            }),
+            itemsToInsert: [],
+          },
+        };
+      }
+
+      case "order-item": {
+        let resolvedOrderId = orderId;
+        if (!resolvedOrderId && storedOrderPayload) {
+          const payloadParsed = syncOrderSchema.safeParse(storedOrderPayload);
+          if (payloadParsed.success) resolvedOrderId = payloadParsed.data.id;
+        }
+        if (!resolvedOrderId) throw new Error("ORDER_NOT_FOUND_FOR_RETRY");
+
+        const existingOrder = await this.getOrderByIdForUser(resolvedOrderId, userId);
+        if (!existingOrder) throw new Error("ORDER_NOT_FOUND_FOR_RETRY");
+
+        const orderDetails: UpdatedSyncOrder = {
+          id: existingOrder.id,
+          userId: existingOrder.userId,
+          status: existingOrder.status,
+          title: existingOrder.title,
+          shop: existingOrder.shop,
+          orderDate: existingOrder.orderDate,
+          releaseDate: existingOrder.releaseDate,
+          paymentDate: existingOrder.paymentDate,
+          shippingDate: existingOrder.shippingDate,
+          collectionDate: existingOrder.collectionDate,
+          shippingMethod: existingOrder.shippingMethod,
+          shippingFee: existingOrder.shippingFee,
+          taxes: existingOrder.taxes,
+          duties: existingOrder.duties,
+          tariffs: existingOrder.tariffs,
+          miscFees: existingOrder.miscFees,
+          notes: existingOrder.notes,
+        };
+
+        return {
+          type: "order-item" as const,
+          userId,
+          syncSessionId,
+          order: {
+            details: orderDetails,
+            existingCount,
+            itemsToScrape: itemsToRetry.map((item) => {
+              const parsed = orderItemMetadataSchema.safeParse(item.metadata);
+              if (parsed.success) {
+                return {
+                  userId,
+                  orderId: resolvedOrderId,
+                  releaseId: null,
+                  itemId: null,
+                  itemExternalId: item.itemExternalId,
+                  ...parsed.data,
+                };
+              }
+              return {
+                userId,
+                orderId: resolvedOrderId,
+                releaseId: null,
+                itemId: null,
+                itemExternalId: item.itemExternalId,
+                price: 0,
+                count: 1,
+                status: existingOrder.status,
+                condition: "New" as const,
+                shippingMethod: existingOrder.shippingMethod,
+                orderDate: existingOrder.orderDate,
+                paymentDate: existingOrder.paymentDate,
+                shippingDate: existingOrder.shippingDate,
+                collectionDate: existingOrder.collectionDate,
               };
             }),
             itemsToInsert: [],

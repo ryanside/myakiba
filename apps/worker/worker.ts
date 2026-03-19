@@ -204,6 +204,36 @@ export const worker = new Worker(
             itemsToScrape: order.itemsToScrape,
             existingCount: order.existingCount,
             syncSessionId,
+            syncMode: "create",
+          }),
+      });
+    }
+
+    if (type === "order-item") {
+      const { order } = validatedData.data;
+      const itemIds = Array.from(new Set(order.itemsToScrape.map((item) => item.itemExternalId)));
+
+      return executeSyncJob({
+        job,
+        queueName: SYNC_QUEUE_NAME,
+        type,
+        syncSessionId,
+        userId,
+        itemIds,
+        scrapeRowCount: order.itemsToScrape.length,
+        existingCount: order.existingCount,
+        orderId: order.details.id,
+        finalize: (successfulResults, jobLog) =>
+          finalizeOrderSync({
+            successfulResults: [...successfulResults],
+            job,
+            log: jobLog,
+            redis,
+            details: order.details,
+            itemsToScrape: order.itemsToScrape,
+            existingCount: order.existingCount,
+            syncSessionId,
+            syncMode: "append",
           }),
       });
     }
@@ -277,13 +307,13 @@ worker.on("failed", async (job, err) => {
   const existingCount =
     data.type === "csv"
       ? data.existingCount
-      : data.type === "order"
+      : data.type === "order" || data.type === "order-item"
         ? data.order.existingCount
         : data.collection.existingCount;
   const scrapeRowCount =
     data.type === "csv"
       ? data.items.length
-      : data.type === "order"
+      : data.type === "order" || data.type === "order-item"
         ? data.order.itemsToScrape.length
         : data.collection.itemsToScrape.length;
 

@@ -80,6 +80,15 @@ export type SyncOrderItem = Omit<
   collectionDate: string | null;
 };
 
+export type SyncFormOrderItems = {
+  readonly items: readonly SyncFormOrderItem[];
+};
+
+export type SyncOrderItems = {
+  readonly orderId: string;
+  readonly items: readonly SyncOrderItem[];
+};
+
 export type SyncFormOrder = {
   status: OrderStatus;
   title: string;

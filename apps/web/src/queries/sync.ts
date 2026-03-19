@@ -2,6 +2,7 @@ import { app, getErrorMessage } from "@/lib/treaty-client";
 import type {
   UserItem,
   SyncOrder,
+  SyncOrderItems,
   SyncCollectionItem,
   SyncSessionStatus,
   SyncType,
@@ -19,6 +20,17 @@ export async function sendOrder(order: SyncOrder) {
   const { data, error } = await app.api.sync.order.post(order);
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to send order"));
+  }
+  return data;
+}
+
+export async function sendOrderItems(orderItems: SyncOrderItems) {
+  const { data, error } = await app.api.sync["order-item"].post({
+    orderId: orderItems.orderId,
+    items: [...orderItems.items],
+  });
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to send order items"));
   }
   return data;
 }

@@ -26,6 +26,7 @@ export const SYNC_TYPE_CONFIG: Record<
 > = {
   csv: { label: "CSV", variant: "default" },
   order: { label: "Order", variant: "info" },
+  "order-item": { label: "Order Item", variant: "secondary" },
   collection: { label: "Collection", variant: "secondary" },
 };
 
@@ -52,6 +53,10 @@ export const SYNC_OPTION_META: Record<
   order: {
     title: "Sync Order",
     description: "Create and add an order using MyFigureCollection Item IDs.",
+  },
+  "order-item": {
+    title: "Add Order Items",
+    description: "Add items to an existing order using MyFigureCollection Item IDs.",
   },
   csv: {
     title: "Sync CSV",

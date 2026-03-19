@@ -67,6 +67,20 @@ export const syncOrderItemSchema = z.object({
   collectionDate: z.iso.date().nullable(),
 });
 
+export const syncOrderItemInputSchema = syncOrderItemSchema.omit({
+  userId: true,
+  orderId: true,
+  releaseId: true,
+  itemId: true,
+});
+
+// Reuse the full order-item shape, but strip fields that are always derived on the server.
+// For the append-to-existing-order flow, clients only tell us which order to target plus the
+// per-item metadata; ownership, internal item ids, and release ids are resolved server-side.
+export const syncOrderItemsSchema = z.object({
+  orderId: z.string(),
+  items: z.array(syncOrderItemInputSchema),
+});
 export const syncCollectionItemSchema = z.object({
   userId: z.string(),
   releaseId: z.string().nullable(),
@@ -187,6 +201,19 @@ export const jobDataSchema = z.discriminatedUnion("type", [
     }),
   }),
   z.object({
+    type: z.literal("order-item"),
+    userId: z.string(),
+    syncSessionId: z.string(),
+    order: z.object({
+      // The worker reuses the order sync pipeline, but in this branch `details.id` points at an
+      // existing order that should receive new collection rows instead of creating a fresh order.
+      details: syncOrderSchema,
+      itemsToScrape: z.array(syncOrderItemSchema),
+      itemsToInsert: z.array(syncOrderItemSchema),
+      existingCount: z.number().int().nonnegative(),
+    }),
+  }),
+  z.object({
     type: z.literal("collection"),
     userId: z.string(),
     syncSessionId: z.string(),
@@ -201,4 +228,6 @@ export const jobDataSchema = z.discriminatedUnion("type", [
 export type UpdatedSyncOrder = z.infer<typeof syncOrderSchema>;
 export type UpdatedSyncOrderItem = z.infer<typeof syncOrderItemSchema>;
 export type UpdatedSyncCollection = z.infer<typeof syncCollectionItemSchema>;
+export type SyncOrderItemInput = z.infer<typeof syncOrderItemInputSchema>;
+export type SyncOrderItems = z.infer<typeof syncOrderItemsSchema>;
 export type JobData = z.infer<typeof jobDataSchema>;
