@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { FileUploadIcon, LibraryIcon, PackageIcon } from "@hugeicons/core-free-icons";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -70,8 +70,14 @@ function RouteComponent() {
 
   const page = filters.page ?? 1;
   const limit = filters.limit ?? SYNC_WIDGET_RECENT_LIMIT;
-  const activeStatuses = new Set<SyncSessionStatus>(filters.status ?? []);
-  const activeSyncTypes = new Set<SyncType>(filters.syncType ?? []);
+  const activeStatuses = useMemo(
+    () => new Set<SyncSessionStatus>(filters.status ?? []),
+    [filters.status],
+  );
+  const activeSyncTypes = useMemo(
+    () => new Set<SyncType>(filters.syncType ?? []),
+    [filters.syncType],
+  );
   const [activeSyncType, setActiveSyncType] = useState<SyncType | null>(null);
 
   const {
