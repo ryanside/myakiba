@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { formatCurrencyFromMinorUnits, formatDate, formatTimestamp } from "@myakiba/utils";
 import { getStatusVariant } from "@/lib/orders";
 import { OrderItemSubDataGrid } from "@/components/orders/order-item-sub-data-grid";
+import { OrderItemSyncSheet } from "@/components/orders/order-item-sync-sheet";
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { RowSelectionState } from "@tanstack/react-table";
 import { OrderForm } from "@/components/orders/order-form";
@@ -350,6 +351,7 @@ function RouteComponent() {
           <div className="flex flex-col items-center justify-center py-16 gap-3 rounded-xl ring-1 ring-foreground/10 bg-card">
             <HugeiconsIcon icon={PackageIcon} className="size-8 text-muted-foreground/40" />
             <p className="text-sm text-muted-foreground">No items in this order yet</p>
+            <OrderItemSyncSheet orderId={order.orderId} label="Add First Item" />
           </div>
         )}
       </section>

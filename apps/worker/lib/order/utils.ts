@@ -32,6 +32,7 @@ export async function finalizeOrderSync({
   itemsToScrape,
   existingCount,
   syncSessionId,
+  syncMode,
 }: FinalizeOrderSyncParams): Promise<FinalizeSyncResult> {
   const { items, entries, entryToItems, itemReleases, latestReleaseIdByExternalId } =
     assembleScrapedData(successfulResults);
@@ -48,11 +49,20 @@ export async function finalizeOrderSync({
     (a, b) => a.date?.localeCompare(b.date ?? "") ?? 0,
   )[latestReleaseIdByExternalId.size - 1]?.date;
 
-  // compare current order.releaseDate with latestReleaseDate
-  // if latestReleaseDate is after order.releaseDate, update order.releaseDate
-  if (latestReleaseDate && (!details.releaseDate || latestReleaseDate > details.releaseDate)) {
+  const shouldUpdateReleaseDate =
+    latestReleaseDate !== undefined &&
+    latestReleaseDate !== null &&
+    (!details.releaseDate || latestReleaseDate > details.releaseDate);
+
+  if (shouldUpdateReleaseDate) {
     details.releaseDate = latestReleaseDate;
   }
+
+  // `create` mirrors the original order sync behavior and persists the order header. `append`
+  // only adds collection rows to an existing order, so we avoid rewriting the full order record
+  // unless scraped items reveal a newer release date worth preserving.
+  const shouldPersistOrderRecord = syncMode === "create";
+  const shouldUpdateExistingOrder = syncMode === "append" && shouldUpdateReleaseDate;
 
   const persistence: FinalizePersistenceSummary = {
     items: items.length,
@@ -60,7 +70,7 @@ export async function finalizeOrderSync({
     entries: entries.length,
     entryToItems: entryToItems.length,
     collectionItems: successfulOrderItems.length,
-    orders: 1,
+    orders: shouldPersistOrderRecord || shouldUpdateExistingOrder ? 1 : 0,
   };
 
   log.set({
@@ -218,30 +228,40 @@ export async function finalizeOrderSync({
 
       scrapedPersistedRowCount = scrapedOrderItems.length;
 
-      await tx
-        .insert(order)
-        .values(details)
-        .onConflictDoUpdate({
-          target: [order.id],
-          set: {
-            title: details.title,
-            shop: details.shop,
-            orderDate: details.orderDate,
+      if (shouldPersistOrderRecord) {
+        await tx
+          .insert(order)
+          .values(details)
+          .onConflictDoUpdate({
+            target: [order.id],
+            set: {
+              title: details.title,
+              shop: details.shop,
+              orderDate: details.orderDate,
+              releaseDate: details.releaseDate,
+              paymentDate: details.paymentDate,
+              shippingDate: details.shippingDate,
+              collectionDate: details.collectionDate,
+              shippingMethod: details.shippingMethod,
+              status: details.status,
+              shippingFee: details.shippingFee,
+              taxes: details.taxes,
+              duties: details.duties,
+              tariffs: details.tariffs,
+              miscFees: details.miscFees,
+              notes: details.notes,
+              updatedAt: new Date(),
+            },
+          });
+      } else if (shouldUpdateExistingOrder) {
+        await tx
+          .update(order)
+          .set({
             releaseDate: details.releaseDate,
-            paymentDate: details.paymentDate,
-            shippingDate: details.shippingDate,
-            collectionDate: details.collectionDate,
-            shippingMethod: details.shippingMethod,
-            status: details.status,
-            shippingFee: details.shippingFee,
-            taxes: details.taxes,
-            duties: details.duties,
-            tariffs: details.tariffs,
-            miscFees: details.miscFees,
-            notes: details.notes,
             updatedAt: new Date(),
-          },
-        });
+          })
+          .where(eq(order.id, details.id));
+      }
 
       if (scrapedOrderItems.length > 0) {
         await tx.insert(collection).values(scrapedOrderItems);

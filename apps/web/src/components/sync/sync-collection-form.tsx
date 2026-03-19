@@ -2,7 +2,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Cancel01Icon, Edit01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "../ui/button";
-import type { SyncCollectionItem, SyncFormCollectionItem } from "@myakiba/types";
+import type { SyncCollectionItem } from "@myakiba/types";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { MaskInput } from "../ui/mask-input";
@@ -22,24 +22,8 @@ import * as z from "zod";
 import { Rating } from "../ui/rating";
 import { Textarea } from "../ui/textarea";
 import { getCurrencyLocale, majorStringToMinorUnits } from "@myakiba/utils";
-import { extractMfcItemId } from "@/lib/sync";
+import { createDefaultSyncFormCollectionItem, extractMfcItemId } from "@/lib/sync";
 import { CONDITIONS, SHIPPING_METHODS } from "@myakiba/constants";
-
-const DEFAULT_COLLECTION_ITEM: SyncFormCollectionItem = {
-  itemExternalId: "",
-  price: "0.00",
-  count: 1,
-  score: 0,
-  shop: "",
-  orderDate: "",
-  paymentDate: "",
-  shippingDate: "",
-  collectionDate: "",
-  shippingMethod: "n/a",
-  tags: [],
-  condition: "New",
-  notes: "",
-};
 
 export default function SyncCollectionForm({
   handleSyncCollectionSubmit,
@@ -53,7 +37,7 @@ export default function SyncCollectionForm({
 
   const collectionForm = useForm({
     defaultValues: {
-      items: [{ ...DEFAULT_COLLECTION_ITEM }] as SyncFormCollectionItem[],
+      items: [createDefaultSyncFormCollectionItem()],
     },
     onSubmit: async ({ value }) => {
       const toMinorUnits = (amount: string): number => majorStringToMinorUnits(amount);
@@ -62,8 +46,10 @@ export default function SyncCollectionForm({
         if (!extractedId) {
           throw new Error(`Invalid item ID: ${item.itemExternalId}`);
         }
+        const { formRowId, ...rest } = item;
+        void formRowId;
         return {
-          ...item,
+          ...rest,
           itemExternalId: parseInt(extractedId, 10),
           price: toMinorUnits(item.price),
           orderDate: item.orderDate || null,
@@ -125,10 +111,10 @@ export default function SyncCollectionForm({
                   />
                 </div>
 
-                {field.state.value.map((_, i) => {
+                {field.state.value.map((item, i) => {
                   return (
                     <collectionForm.Field
-                      key={i}
+                      key={item.formRowId}
                       name={`items[${i}].itemExternalId`}
                       validators={{
                         onChange: ({ value }: { value: string }) => {
@@ -163,7 +149,7 @@ export default function SyncCollectionForm({
                                     const toAdd = Math.min(lines.length - 1, remainingSlots);
                                     for (let j = 1; j <= toAdd; j++) {
                                       field.pushValue({
-                                        ...DEFAULT_COLLECTION_ITEM,
+                                        ...createDefaultSyncFormCollectionItem(),
                                         itemExternalId: lines[j] ?? "",
                                       });
                                     }
@@ -201,9 +187,9 @@ export default function SyncCollectionForm({
                                         }}
                                         children={(priceField) => (
                                           <div className="grid gap-2">
-                                            <Label htmlFor={`price-${i}`}>Price</Label>
+                                            <Label htmlFor={`price-${item.formRowId}`}>Price</Label>
                                             <MaskInput
-                                              id={`price-${i}`}
+                                              id={`price-${item.formRowId}`}
                                               name={priceField.name}
                                               mask="currency"
                                               currency={userCurrency}
@@ -230,9 +216,9 @@ export default function SyncCollectionForm({
                                         }}
                                         children={(countField) => (
                                           <div className="grid gap-2">
-                                            <Label htmlFor={`count-${i}`}>Count</Label>
+                                            <Label htmlFor={`count-${item.formRowId}`}>Count</Label>
                                             <Input
-                                              id={`count-${i}`}
+                                              id={`count-${item.formRowId}`}
                                               name={countField.name}
                                               value={countField.state.value}
                                               onBlur={countField.handleBlur}
@@ -260,7 +246,9 @@ export default function SyncCollectionForm({
                                         name={`items[${i}].condition`}
                                         children={(conditionField) => (
                                           <div className="grid gap-2">
-                                            <Label htmlFor={`condition-${i}`}>Condition</Label>
+                                            <Label htmlFor={`condition-${item.formRowId}`}>
+                                              Condition
+                                            </Label>
                                             <Select
                                               value={conditionField.state.value ?? ""}
                                               onValueChange={(value) =>
@@ -287,7 +275,7 @@ export default function SyncCollectionForm({
                                         name={`items[${i}].score`}
                                         children={(scoreField) => (
                                           <div className="grid gap-2">
-                                            <Label htmlFor={`score-${i}`}>Score</Label>
+                                            <Label htmlFor={`score-${item.formRowId}`}>Score</Label>
                                             <div className="my-auto">
                                               <Rating
                                                 rating={scoreField.state.value ?? 0}
@@ -306,9 +294,9 @@ export default function SyncCollectionForm({
                                       name={`items[${i}].shop`}
                                       children={(shopField) => (
                                         <div className="grid gap-2">
-                                          <Label htmlFor={`shop-${i}`}>Shop</Label>
+                                          <Label htmlFor={`shop-${item.formRowId}`}>Shop</Label>
                                           <Input
-                                            id={`shop-${i}`}
+                                            id={`shop-${item.formRowId}`}
                                             name={shopField.name}
                                             value={shopField.state.value ?? ""}
                                             onBlur={shopField.handleBlur}
@@ -330,7 +318,9 @@ export default function SyncCollectionForm({
                                       }}
                                       children={(shippingField) => (
                                         <div className="grid gap-2">
-                                          <Label htmlFor={`shipping-${i}`}>Shipping Method</Label>
+                                          <Label htmlFor={`shipping-${item.formRowId}`}>
+                                            Shipping Method
+                                          </Label>
                                           <Select
                                             value={shippingField.state.value ?? ""}
                                             onValueChange={(value) =>
@@ -359,9 +349,11 @@ export default function SyncCollectionForm({
                                         name={`items[${i}].orderDate`}
                                         children={(orderDateField) => (
                                           <div className="grid gap-2">
-                                            <Label htmlFor={`orderDate-${i}`}>Order Date</Label>
+                                            <Label htmlFor={`orderDate-${item.formRowId}`}>
+                                              Order Date
+                                            </Label>
                                             <DatePicker
-                                              id={`orderDate-${i}`}
+                                              id={`orderDate-${item.formRowId}`}
                                               name={orderDateField.name}
                                               value={orderDateField.state.value ?? null}
                                               onBlur={orderDateField.handleBlur}
@@ -377,9 +369,11 @@ export default function SyncCollectionForm({
                                         name={`items[${i}].paymentDate`}
                                         children={(paymentDateField) => (
                                           <div className="grid gap-2">
-                                            <Label htmlFor={`paymentDate-${i}`}>Payment Date</Label>
+                                            <Label htmlFor={`paymentDate-${item.formRowId}`}>
+                                              Payment Date
+                                            </Label>
                                             <DatePicker
-                                              id={`paymentDate-${i}`}
+                                              id={`paymentDate-${item.formRowId}`}
                                               name={paymentDateField.name}
                                               value={paymentDateField.state.value ?? null}
                                               onBlur={paymentDateField.handleBlur}
@@ -398,11 +392,11 @@ export default function SyncCollectionForm({
                                         name={`items[${i}].shippingDate`}
                                         children={(shippingDateField) => (
                                           <div className="grid gap-2">
-                                            <Label htmlFor={`shippingDate-${i}`}>
+                                            <Label htmlFor={`shippingDate-${item.formRowId}`}>
                                               Shipping Date
                                             </Label>
                                             <DatePicker
-                                              id={`shippingDate-${i}`}
+                                              id={`shippingDate-${item.formRowId}`}
                                               name={shippingDateField.name}
                                               value={shippingDateField.state.value ?? null}
                                               onBlur={shippingDateField.handleBlur}
@@ -418,11 +412,11 @@ export default function SyncCollectionForm({
                                         name={`items[${i}].collectionDate`}
                                         children={(collectionDateField) => (
                                           <div className="grid gap-2">
-                                            <Label htmlFor={`collectionDate-${i}`}>
+                                            <Label htmlFor={`collectionDate-${item.formRowId}`}>
                                               Collection Date
                                             </Label>
                                             <DatePicker
-                                              id={`collectionDate-${i}`}
+                                              id={`collectionDate-${item.formRowId}`}
                                               name={collectionDateField.name}
                                               value={collectionDateField.state.value ?? null}
                                               onBlur={collectionDateField.handleBlur}
@@ -441,7 +435,9 @@ export default function SyncCollectionForm({
                                       mode="array"
                                       children={(tagsField) => (
                                         <div className="grid gap-2">
-                                          <Label htmlFor={`tags-input-${i}`}>Tags</Label>
+                                          <Label htmlFor={`tags-input-${item.formRowId}`}>
+                                            Tags
+                                          </Label>
                                           <div className="flex flex-wrap gap-2">
                                             {tagsField.state.value.map((tag, tagIndex) => (
                                               <Badge
@@ -465,7 +461,7 @@ export default function SyncCollectionForm({
                                           </div>
                                           <div className="flex gap-2">
                                             <Input
-                                              id={`tags-input-${i}`}
+                                              id={`tags-input-${item.formRowId}`}
                                               type="text"
                                               placeholder="Press enter after each tag to add"
                                               onKeyDown={(e) => {
@@ -489,9 +485,9 @@ export default function SyncCollectionForm({
                                       name={`items[${i}].notes`}
                                       children={(notesField) => (
                                         <div className="grid gap-2">
-                                          <Label htmlFor={`notes-${i}`}>Notes</Label>
+                                          <Label htmlFor={`notes-${item.formRowId}`}>Notes</Label>
                                           <Textarea
-                                            id={`notes-${i}`}
+                                            id={`notes-${item.formRowId}`}
                                             name={notesField.name}
                                             value={notesField.state.value ?? ""}
                                             onBlur={notesField.handleBlur}
@@ -545,7 +541,7 @@ export default function SyncCollectionForm({
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    field.pushValue({ ...DEFAULT_COLLECTION_ITEM });
+                    field.pushValue(createDefaultSyncFormCollectionItem());
                   }}
                 >
                   <HugeiconsIcon icon={Add01Icon} /> Add Item

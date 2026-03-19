@@ -1,7 +1,15 @@
 import Papa from "papaparse";
 import { csvSchema } from "@myakiba/schemas";
 import { SYNC_CSV_ITEM_STATUSES } from "@myakiba/constants/orders";
-import type { UserItem, SyncType, SyncSessionStatus, SyncSessionItemStatus } from "@myakiba/types";
+import type {
+  UserItem,
+  SyncType,
+  SyncSessionStatus,
+  SyncSessionItemStatus,
+  SyncFormOrder,
+  SyncFormOrderItem,
+  SyncFormCollectionItem,
+} from "@myakiba/types";
 
 export const SESSION_STATUS_CONFIG: Record<
   SyncSessionStatus,
@@ -26,6 +34,7 @@ export const SYNC_TYPE_CONFIG: Record<
 > = {
   csv: { label: "CSV", variant: "default" },
   order: { label: "Order", variant: "info" },
+  "order-item": { label: "Order Item", variant: "secondary" },
   collection: { label: "Collection", variant: "secondary" },
 };
 
@@ -52,6 +61,10 @@ export const SYNC_OPTION_META: Record<
   order: {
     title: "Sync Order",
     description: "Create and add an order using MyFigureCollection Item IDs.",
+  },
+  "order-item": {
+    title: "Add Order Items",
+    description: "Add items to an existing order using MyFigureCollection Item IDs.",
   },
   csv: {
     title: "Sync CSV",
@@ -94,6 +107,62 @@ export function extractMfcItemId(input: string): string | null {
 
   // If no match found, return null
   return null;
+}
+
+export function createDefaultSyncFormOrderItem(): SyncFormOrderItem {
+  return {
+    formRowId: crypto.randomUUID(),
+    itemExternalId: "",
+    price: "0.00",
+    count: 1,
+    status: "Ordered",
+    condition: "New",
+    shippingMethod: "n/a",
+    orderDate: "",
+    paymentDate: "",
+    shippingDate: "",
+    collectionDate: "",
+  };
+}
+
+export function createDefaultSyncFormOrder(): SyncFormOrder {
+  return {
+    status: "Ordered",
+    title: "New Order",
+    shop: "",
+    orderDate: "",
+    releaseDate: "",
+    paymentDate: "",
+    shippingDate: "",
+    collectionDate: "",
+    shippingMethod: "n/a",
+    shippingFee: "0.00",
+    taxes: "0.00",
+    duties: "0.00",
+    tariffs: "0.00",
+    miscFees: "0.00",
+    notes: "",
+    items: [createDefaultSyncFormOrderItem()],
+  };
+}
+
+export function createDefaultSyncFormCollectionItem(): SyncFormCollectionItem {
+  return {
+    formRowId: crypto.randomUUID(),
+    itemExternalId: "",
+    price: "0.00",
+    count: 1,
+    score: 0,
+    shop: "",
+    orderDate: "",
+    paymentDate: "",
+    shippingDate: "",
+    collectionDate: "",
+    shippingMethod: "n/a",
+    tags: [],
+    condition: "New",
+    notes: "",
+  };
 }
 
 export async function transformCSVData(value: { file: File | undefined }) {

@@ -148,6 +148,7 @@ export type FinalizeOrderSyncParams = {
   readonly itemsToScrape: UpdatedSyncOrderItem[];
   readonly existingCount: number;
   readonly syncSessionId: string;
+  readonly syncMode: "create" | "append";
 };
 
 export type FinalizeCsvSyncParams = {

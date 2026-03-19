@@ -39,6 +39,8 @@ export type {
   SyncJobStatus,
   SyncFormOrderItem,
   SyncOrderItem,
+  SyncFormOrderItems,
+  SyncOrderItems,
   SyncFormOrder,
   SyncOrder,
   SyncFormCollectionItem,

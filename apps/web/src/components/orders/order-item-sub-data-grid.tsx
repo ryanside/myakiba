@@ -15,6 +15,7 @@ import {
 } from "@tanstack/react-table";
 import type { OrderItem, CollectionItemFormValues } from "@myakiba/types";
 import { createOrderItemSubColumns } from "./order-item-sub-columns";
+import { OrderItemSyncSheet } from "./order-item-sync-sheet";
 import { orderItemsQueryOptions } from "@/hooks/use-orders";
 import { useUserPreferences } from "@/hooks/use-collection";
 
@@ -111,7 +112,12 @@ export function OrderItemSubDataGrid({
   }
 
   return (
-    <div className="bg-muted/30 p-4" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="bg-muted/30 p-4"
+      role="presentation"
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.stopPropagation()}
+    >
       <DataGrid
         table={subTable}
         recordCount={totalCount}
@@ -129,6 +135,9 @@ export function OrderItemSubDataGrid({
         }}
       >
         <div className="w-full space-y-2.5 overflow-x-auto">
+          <div className="flex items-center justify-end">
+            <OrderItemSyncSheet orderId={orderId} label="Add Item" />
+          </div>
           <div className="bg-card rounded-lg">
             <DataGridContainer>
               <ScrollArea>

@@ -56,6 +56,8 @@ export type SyncTerminalState = SharedSyncTerminalState;
 export type SyncJobStatus = Readonly<SharedSyncJobStatus>;
 
 export type SyncFormOrderItem = {
+  /** Stable id for list keys / dialog identity; duplicates may share the same MFC id. */
+  readonly formRowId: string;
   itemExternalId: string;
   price: string;
   count: number;
@@ -70,7 +72,13 @@ export type SyncFormOrderItem = {
 
 export type SyncOrderItem = Omit<
   SyncFormOrderItem,
-  "itemExternalId" | "orderDate" | "paymentDate" | "shippingDate" | "collectionDate" | "price"
+  | "formRowId"
+  | "itemExternalId"
+  | "orderDate"
+  | "paymentDate"
+  | "shippingDate"
+  | "collectionDate"
+  | "price"
 > & {
   itemExternalId: number;
   price: number;
@@ -78,6 +86,15 @@ export type SyncOrderItem = Omit<
   paymentDate: string | null;
   shippingDate: string | null;
   collectionDate: string | null;
+};
+
+export type SyncFormOrderItems = {
+  readonly items: readonly SyncFormOrderItem[];
+};
+
+export type SyncOrderItems = {
+  readonly orderId: string;
+  readonly items: readonly SyncOrderItem[];
 };
 
 export type SyncFormOrder = {
@@ -127,6 +144,8 @@ export type SyncOrder = Omit<
 };
 
 export type SyncFormCollectionItem = {
+  /** Stable id for list keys / dialog identity; duplicates may share the same MFC id. */
+  readonly formRowId: string;
   itemExternalId: string;
   price: string;
   count: number;
@@ -144,6 +163,7 @@ export type SyncFormCollectionItem = {
 
 export type SyncCollectionItem = Omit<
   SyncFormCollectionItem,
+  | "formRowId"
   | "itemExternalId"
   | "orderDate"
   | "paymentDate"

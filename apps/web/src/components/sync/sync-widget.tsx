@@ -23,8 +23,10 @@ import SyncCollectionForm from "@/components/sync/sync-collection-form";
 import type { RouterAppContext } from "@/routes/__root";
 import { useSyncMutations } from "@/hooks/use-sync-mutations";
 
+type LaunchableSyncType = Extract<SyncType, "collection" | "csv" | "order">;
+
 const SYNC_OPTIONS: readonly {
-  readonly type: SyncType;
+  readonly type: LaunchableSyncType;
   readonly icon: typeof LibraryIcon;
   readonly description: string;
 }[] = [
@@ -48,7 +50,7 @@ type SyncWidgetProps = {
 
 export default function SyncWidget({ session, TriggerWrapper }: SyncWidgetProps) {
   const queryClient = useQueryClient();
-  const [syncType, setSyncType] = useState<SyncType | null>(null);
+  const [syncType, setSyncType] = useState<LaunchableSyncType | null>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);
 
   const userCurrency = session?.user.currency || "USD";
@@ -58,7 +60,7 @@ export default function SyncWidget({ session, TriggerWrapper }: SyncWidgetProps)
       setSyncType(null);
     });
 
-  const handleOptionSelect = useCallback((type: SyncType) => {
+  const handleOptionSelect = useCallback((type: LaunchableSyncType) => {
     setPopoverOpen(false);
     setSyncType(type);
   }, []);

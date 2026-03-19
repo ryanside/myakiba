@@ -29,7 +29,7 @@ export const ENTRY_CATEGORIES = [
 
 export const DATE_FORMATS = ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY/MM/DD", "YYYY/DD/MM"] as const;
 
-export const SYNC_TYPES = ["csv", "order", "collection"] as const;
+export const SYNC_TYPES = ["csv", "order", "order-item", "collection"] as const;
 
 export const SYNC_SESSION_STATUSES = [
   "pending",

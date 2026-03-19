@@ -2,12 +2,13 @@ import { useCallback } from "react";
 import { useMutation, type QueryClient, type UseMutationResult } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { tryCatch } from "@myakiba/utils";
-import type { SyncCollectionItem, SyncOrder, UserItem } from "@myakiba/types";
+import type { SyncCollectionItem, SyncOrder, SyncOrderItems, UserItem } from "@myakiba/types";
 import { transformCSVData } from "@/lib/sync";
-import { sendCollection, sendItems, sendOrder } from "@/queries/sync";
+import { sendCollection, sendItems, sendOrder, sendOrderItems } from "@/queries/sync";
 
 type CsvMutationData = Awaited<ReturnType<typeof sendItems>>;
 type OrderMutationData = Awaited<ReturnType<typeof sendOrder>>;
+type OrderItemMutationData = Awaited<ReturnType<typeof sendOrderItems>>;
 type CollectionMutationData = Awaited<ReturnType<typeof sendCollection>>;
 
 type SyncMutationResult = {
@@ -22,6 +23,7 @@ type UseSyncMutationsOnComplete = (data: SyncMutationResult) => void;
 export type UseSyncMutationsReturn = {
   readonly csvMutation: UseMutationResult<CsvMutationData, Error, UserItem[]>;
   readonly orderMutation: UseMutationResult<OrderMutationData, Error, SyncOrder>;
+  readonly orderItemMutation: UseMutationResult<OrderItemMutationData, Error, SyncOrderItems>;
   readonly collectionMutation: UseMutationResult<
     CollectionMutationData,
     Error,
@@ -29,9 +31,11 @@ export type UseSyncMutationsReturn = {
   >;
   readonly mutateCsvAsync: (userItems: UserItem[]) => Promise<CsvMutationData>;
   readonly mutateOrderAsync: (order: SyncOrder) => Promise<OrderMutationData>;
+  readonly mutateOrderItemAsync: (orderItems: SyncOrderItems) => Promise<OrderItemMutationData>;
   readonly mutateCollectionAsync: (items: SyncCollectionItem[]) => Promise<CollectionMutationData>;
   readonly handleSyncCsvSubmit: (value: File | undefined) => Promise<void>;
   readonly handleSyncOrderSubmit: (values: SyncOrder) => Promise<void>;
+  readonly handleSyncOrderItemSubmit: (values: SyncOrderItems) => Promise<void>;
   readonly handleSyncCollectionSubmit: (values: SyncCollectionItem[]) => Promise<void>;
   readonly isSyncing: boolean;
 };
@@ -89,6 +93,22 @@ export function useSyncMutations(
     },
   });
 
+  const orderItemMutation = useMutation({
+    mutationFn: (orderItems: SyncOrderItems) => sendOrderItems(orderItems),
+    onSuccess: (data: OrderItemMutationData): void =>
+      handleFormResult({
+        syncSessionId: data.syncSessionId,
+        jobId: data.jobId,
+        isFinished: data.isFinished,
+        status: data.status,
+      }),
+    onError: (error: Error): void => {
+      toast.error("Failed to submit order items.", {
+        description: error.message,
+      });
+    },
+  });
+
   const collectionMutation = useMutation({
     mutationFn: (items: SyncCollectionItem[]) => sendCollection(items),
     onSuccess: (data: CollectionMutationData): void =>
@@ -132,18 +152,31 @@ export function useSyncMutations(
     [collectionMutation.mutateAsync],
   );
 
+  const handleSyncOrderItemSubmit = useCallback(
+    async (values: SyncOrderItems): Promise<void> => {
+      await orderItemMutation.mutateAsync(values);
+    },
+    [orderItemMutation.mutateAsync],
+  );
+
   const isSyncing =
-    csvMutation.isPending || orderMutation.isPending || collectionMutation.isPending;
+    csvMutation.isPending ||
+    orderMutation.isPending ||
+    orderItemMutation.isPending ||
+    collectionMutation.isPending;
 
   return {
     csvMutation,
     orderMutation,
+    orderItemMutation,
     collectionMutation,
     mutateCsvAsync: csvMutation.mutateAsync,
     mutateOrderAsync: orderMutation.mutateAsync,
+    mutateOrderItemAsync: orderItemMutation.mutateAsync,
     mutateCollectionAsync: collectionMutation.mutateAsync,
     handleSyncCsvSubmit,
     handleSyncOrderSubmit,
+    handleSyncOrderItemSubmit,
     handleSyncCollectionSubmit,
     isSyncing,
   };

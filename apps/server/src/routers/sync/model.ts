@@ -6,13 +6,15 @@ import {
   syncTerminalStateSchema as sharedSyncTerminalStateSchema,
   syncJobStatusSchema as sharedSyncJobStatusSchema,
   syncOrderSchema as sharedSyncOrderSchema,
-  syncOrderItemSchema as sharedSyncOrderItemSchema,
+  syncOrderItemInputSchema as sharedSyncOrderItemInputSchema,
+  syncOrderItemsSchema as sharedSyncOrderItemsSchema,
   syncCollectionItemSchema as sharedSyncCollectionItemSchema,
 } from "@myakiba/schemas";
 import type {
   InternalCsvItem,
   SyncTerminalState as SharedSyncTerminalState,
   SyncJobStatus as SharedSyncJobStatus,
+  SyncOrderItems as SharedSyncOrderItems,
   UpdatedSyncOrder,
   UpdatedSyncOrderItem,
   UpdatedSyncCollection,
@@ -29,14 +31,12 @@ export type Status = SharedSyncJobStatus;
 
 export const collectionInsertSchema = createInsertSchema(collection);
 
-export const orderItemSyncSchema = sharedSyncOrderItemSchema.omit({
-  userId: true,
-  orderId: true,
-  releaseId: true,
-  itemId: true,
-});
+export const orderItemSyncSchema = sharedSyncOrderItemInputSchema;
 
 export type OrderItemSyncType = z.infer<typeof orderItemSyncSchema>;
+
+export const orderItemsSyncSchema = sharedSyncOrderItemsSchema;
+export type OrderItemsSyncType = SharedSyncOrderItems;
 
 export const orderSyncSchema = sharedSyncOrderSchema
   .omit({

@@ -24,6 +24,8 @@ import { useFilters } from "@/hooks/use-filters";
 import { useSyncMutations } from "@/hooks/use-sync-mutations";
 import { SYNC_WIDGET_RECENT_LIMIT } from "@myakiba/constants/sync";
 
+type LaunchableSyncType = Extract<SyncType, "collection" | "csv" | "order">;
+
 const STATUS_FILTER_OPTIONS: readonly {
   readonly value: SyncSessionStatus;
   readonly label: string;
@@ -41,6 +43,7 @@ const SYNC_TYPE_FILTER_OPTIONS: readonly {
 }[] = [
   { value: "csv", label: "CSV" },
   { value: "order", label: "Order" },
+  { value: "order-item", label: "Order Item" },
   { value: "collection", label: "Collection" },
 ] as const;
 
@@ -78,7 +81,7 @@ function RouteComponent() {
     () => new Set<SyncType>(filters.syncType ?? []),
     [filters.syncType],
   );
-  const [activeSyncType, setActiveSyncType] = useState<SyncType | null>(null);
+  const [activeSyncType, setActiveSyncType] = useState<LaunchableSyncType | null>(null);
 
   const {
     data: sessionsData,
