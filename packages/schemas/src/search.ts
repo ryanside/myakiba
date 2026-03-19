@@ -110,8 +110,8 @@ export const collectionSearchSchema = z.object({
 export const syncSearchSchema = z.object({
   page: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().positive().optional(),
-  status: z.enum(SYNC_SESSION_STATUSES).optional(),
-  syncType: z.enum(SYNC_TYPES).optional(),
+  status: z.array(z.enum(SYNC_SESSION_STATUSES)).optional(),
+  syncType: z.array(z.enum(SYNC_TYPES)).optional(),
 });
 
 export type OrderFilters = z.infer<typeof searchSchema>;

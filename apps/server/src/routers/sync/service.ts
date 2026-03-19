@@ -604,14 +604,16 @@ class SyncService {
     userId: string,
     page: number,
     limit: number,
-    statusFilter?: SyncSessionStatus,
-    syncTypeFilter?: SyncType,
+    statusFilter?: readonly SyncSessionStatus[],
+    syncTypeFilter?: readonly SyncType[],
   ): Promise<{ sessions: DbSyncSessionRow[]; total: number }> {
     const offset = (page - 1) * limit;
 
     const conditions = [eq(syncSession.userId, userId)];
-    if (statusFilter) conditions.push(eq(syncSession.status, statusFilter));
-    if (syncTypeFilter) conditions.push(eq(syncSession.syncType, syncTypeFilter));
+    if (statusFilter && statusFilter.length > 0)
+      conditions.push(inArray(syncSession.status, statusFilter));
+    if (syncTypeFilter && syncTypeFilter.length > 0)
+      conditions.push(inArray(syncSession.syncType, syncTypeFilter));
     const whereClause = and(...conditions);
 
     const [sessions, [{ total }]] = await Promise.all([

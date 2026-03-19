@@ -1,5 +1,11 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import { useMutation, useQuery, useQueryClient, queryOptions } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  queryOptions,
+} from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { useFilters } from "@/hooks/use-filters";
@@ -16,6 +22,7 @@ export function collectionQueryOptions(filters: CollectionFilters) {
   return queryOptions({
     queryKey: ["collection", filters] as const,
     queryFn: () => getCollection(filters),
+    placeholderData: keepPreviousData,
   });
 }
 

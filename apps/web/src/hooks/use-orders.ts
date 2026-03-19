@@ -1,5 +1,11 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import { useMutation, useQuery, useQueryClient, queryOptions } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  queryOptions,
+} from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useFilters } from "@/hooks/use-filters";
 import {
@@ -32,6 +38,7 @@ export function ordersQueryOptions(filters: OrderFilters) {
   return queryOptions({
     queryKey: ["orders", filters] as const,
     queryFn: () => getOrders(filters),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -46,6 +53,7 @@ export function orderItemsQueryOptions(orderId: string, limit: number, offset: n
   return queryOptions({
     queryKey: ["orderItems", orderId, limit, offset] as const,
     queryFn: () => getOrderItems(orderId, limit, offset),
+    placeholderData: keepPreviousData,
     staleTime: 30_000,
   });
 }

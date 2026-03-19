@@ -76,10 +76,7 @@ export const scrapeImage = async ({
         });
       }
 
-      const imageS3Url =
-        env.NODE_ENV === "production"
-          ? `https://static.myakiba.app/${filename}`
-          : `https://${env.AWS_BUCKET_NAME}.s3.${env.AWS_BUCKET_REGION}.amazonaws.com/${filename}`;
+      const imageS3Url = `https://static.myakiba.app/${filename}`;
 
       return imageS3Url;
     } catch (error) {

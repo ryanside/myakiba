@@ -114,6 +114,7 @@ export function AppSidebar({
                 session={session}
                 TriggerWrapper={
                   <SidebarMenuButton
+                    className="transition-all"
                     tooltip="Sync Items"
                     render={
                       <Button
@@ -132,14 +133,15 @@ export function AppSidebar({
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton
+                className="transition-all"
                 tooltip="Sync History"
                 render={
-                  <Button variant="outline">
-                    <Link
-                      to="/sync"
-                      onMouseEnter={() => syncIconRef.current?.startAnimation()}
-                      onMouseLeave={() => syncIconRef.current?.stopAnimation()}
-                    >
+                  <Button
+                    variant="outline"
+                    onMouseEnter={() => syncIconRef.current?.startAnimation()}
+                    onMouseLeave={() => syncIconRef.current?.stopAnimation()}
+                  >
+                    <Link to="/sync">
                       <GitCompareIcon ref={syncIconRef} size={17} className="text-primary" />
                       <span className="">Sync History</span>
                     </Link>
