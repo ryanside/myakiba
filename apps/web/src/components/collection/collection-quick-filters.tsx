@@ -1,6 +1,6 @@
-import { Button } from "@/components/ui/button";
 import { useCollectionFilters } from "@/hooks/use-collection";
 import type { Category } from "@myakiba/types";
+import { Toggle } from "../ui/toggle";
 
 type QuickFilterGroup = {
   readonly label: string;
@@ -63,19 +63,13 @@ export function CollectionQuickFilters(): React.ReactElement {
   };
 
   return (
-    <div className="flex items-center gap-1.5" role="group" aria-label="Quick category filters">
+    <div className="flex items-center gap-1" role="group" aria-label="Quick category filters">
       {QUICK_FILTER_GROUPS.map((group) => {
         const active = isGroupActive(group);
         return (
-          <Button
-            key={group.label}
-            variant={active ? "default" : "ghost"}
-            size="sm"
-            aria-pressed={active}
-            onClick={() => toggleGroup(group)}
-          >
+          <Toggle key={group.label} pressed={active} onClick={() => toggleGroup(group)}>
             {group.label}
-          </Button>
+          </Toggle>
         );
       })}
     </div>

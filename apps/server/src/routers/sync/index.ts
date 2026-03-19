@@ -916,8 +916,8 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         user: { id: user.id },
         pagination: { page, limit },
         filters: {
-          status: query.status ?? null,
-          syncType: query.syncType ?? null,
+          status: query.status ?? [],
+          syncType: query.syncType ?? [],
         },
       });
 
@@ -953,8 +953,14 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       query: z.object({
         page: z.string().optional(),
         limit: z.string().optional(),
-        status: z.enum(SYNC_SESSION_STATUSES).optional(),
-        syncType: z.enum(SYNC_TYPES).optional(),
+        status: z
+          .union([z.enum(SYNC_SESSION_STATUSES), z.array(z.enum(SYNC_SESSION_STATUSES))])
+          .transform((v) => (Array.isArray(v) ? v : [v]))
+          .optional(),
+        syncType: z
+          .union([z.enum(SYNC_TYPES), z.array(z.enum(SYNC_TYPES))])
+          .transform((v) => (Array.isArray(v) ? v : [v]))
+          .optional(),
       }),
       auth: true,
     },

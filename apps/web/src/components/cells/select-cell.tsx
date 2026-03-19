@@ -63,7 +63,7 @@ export function SelectCell({
               )}
             </SelectValue>
           </SelectTrigger>
-          <SelectContent alignItemWithTrigger={false}>
+          <SelectContent>
             <SelectGroup>
               {coloredItems.map((item) => (
                 <SelectItem key={item.value} value={item}>

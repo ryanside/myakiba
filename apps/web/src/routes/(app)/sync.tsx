@@ -1,9 +1,10 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { FileUploadIcon, LibraryIcon, PackageIcon } from "@hugeicons/core-free-icons";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Toggle } from "@/components/ui/toggle";
 import {
   Sheet,
   SheetContent,
@@ -24,10 +25,9 @@ import { useSyncMutations } from "@/hooks/use-sync-mutations";
 import { SYNC_WIDGET_RECENT_LIMIT } from "@myakiba/constants/sync";
 
 const STATUS_FILTER_OPTIONS: readonly {
-  readonly value: SyncSessionStatus | "all";
+  readonly value: SyncSessionStatus;
   readonly label: string;
 }[] = [
-  { value: "all", label: "All" },
   { value: "processing", label: "Active" },
   { value: "completed", label: "Completed" },
   { value: "failed", label: "Failed" },
@@ -36,10 +36,9 @@ const STATUS_FILTER_OPTIONS: readonly {
 ] as const;
 
 const SYNC_TYPE_FILTER_OPTIONS: readonly {
-  readonly value: SyncType | "all";
+  readonly value: SyncType;
   readonly label: string;
 }[] = [
-  { value: "all", label: "All" },
   { value: "csv", label: "CSV" },
   { value: "order", label: "Order" },
   { value: "collection", label: "Collection" },
@@ -71,8 +70,14 @@ function RouteComponent() {
 
   const page = filters.page ?? 1;
   const limit = filters.limit ?? SYNC_WIDGET_RECENT_LIMIT;
-  const statusFilter: SyncSessionStatus | "all" = filters.status ?? "all";
-  const syncTypeFilter: SyncType | "all" = filters.syncType ?? "all";
+  const activeStatuses = useMemo(
+    () => new Set<SyncSessionStatus>(filters.status ?? []),
+    [filters.status],
+  );
+  const activeSyncTypes = useMemo(
+    () => new Set<SyncType>(filters.syncType ?? []),
+    [filters.syncType],
+  );
   const [activeSyncType, setActiveSyncType] = useState<SyncType | null>(null);
 
   const {
@@ -81,20 +86,15 @@ function RouteComponent() {
     isError,
     error,
   } = useQuery({
-    queryKey: [
-      "syncSessions",
-      page,
-      limit,
-      statusFilter === "all" ? undefined : statusFilter,
-      syncTypeFilter === "all" ? undefined : syncTypeFilter,
-    ] as const,
+    queryKey: ["syncSessions", page, limit, filters.status, filters.syncType] as const,
     queryFn: () =>
       fetchSyncSessions({
         page,
         limit,
-        status: statusFilter === "all" ? undefined : statusFilter,
-        syncType: syncTypeFilter === "all" ? undefined : syncTypeFilter,
+        status: filters.status,
+        syncType: filters.syncType,
       }),
+    placeholderData: keepPreviousData,
     staleTime: 15_000,
     refetchOnWindowFocus: true,
   });
@@ -114,24 +114,36 @@ function RouteComponent() {
     [setFilters],
   );
 
-  const handleStatusFilter = useCallback(
-    (status: SyncSessionStatus | "all") => {
+  const toggleStatus = useCallback(
+    (value: SyncSessionStatus) => {
+      const next = new Set(activeStatuses);
+      if (next.has(value)) {
+        next.delete(value);
+      } else {
+        next.add(value);
+      }
       setFilters({
-        status: status === "all" ? undefined : status,
+        status: next.size > 0 ? [...next] : undefined,
         page: undefined,
       });
     },
-    [setFilters],
+    [activeStatuses, setFilters],
   );
 
-  const handleSyncTypeFilter = useCallback(
-    (type: SyncType | "all") => {
+  const toggleSyncType = useCallback(
+    (value: SyncType) => {
+      const next = new Set(activeSyncTypes);
+      if (next.has(value)) {
+        next.delete(value);
+      } else {
+        next.add(value);
+      }
       setFilters({
-        syncType: type === "all" ? undefined : type,
+        syncType: next.size > 0 ? [...next] : undefined,
         page: undefined,
       });
     },
-    [setFilters],
+    [activeSyncTypes, setFilters],
   );
 
   if (isError) {
@@ -188,28 +200,26 @@ function RouteComponent() {
       </div>
 
       <div className="flex flex-col sm:flex-row flex-wrap items-start gap-x-4 gap-y-2">
-        <div className="flex items-center">
+        <div className="flex items-center gap-1" role="group" aria-label="Sync type filters">
           {SYNC_TYPE_FILTER_OPTIONS.map((option) => (
-            <Button
+            <Toggle
               key={option.value}
-              variant={syncTypeFilter === option.value ? "default" : "ghost"}
-              size="sm"
-              onClick={() => handleSyncTypeFilter(option.value)}
+              pressed={activeSyncTypes.has(option.value)}
+              onClick={() => toggleSyncType(option.value)}
             >
               {option.label}
-            </Button>
+            </Toggle>
           ))}
         </div>
-        <div className="flex items-center">
+        <div className="flex items-center gap-1" role="group" aria-label="Status filters">
           {STATUS_FILTER_OPTIONS.map((option) => (
-            <Button
+            <Toggle
               key={option.value}
-              variant={statusFilter === option.value ? "default" : "ghost"}
-              size="sm"
-              onClick={() => handleStatusFilter(option.value)}
+              pressed={activeStatuses.has(option.value)}
+              onClick={() => toggleStatus(option.value)}
             >
               {option.label}
-            </Button>
+            </Toggle>
           ))}
         </div>
       </div>

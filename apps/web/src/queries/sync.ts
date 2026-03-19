@@ -34,8 +34,8 @@ export async function sendCollection(collection: SyncCollectionItem[]) {
 export async function fetchSyncSessions(params: {
   readonly page?: number;
   readonly limit?: number;
-  readonly status?: SyncSessionStatus;
-  readonly syncType?: SyncType;
+  readonly status?: SyncSessionStatus[];
+  readonly syncType?: SyncType[];
 }) {
   const { data, error } = await app.api.sync.sessions.get({
     query: {

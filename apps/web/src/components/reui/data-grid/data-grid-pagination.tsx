@@ -1,6 +1,5 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { useDataGrid } from "@/components/reui/data-grid/data-grid";
 
 import { cn } from "@/lib/utils";
@@ -12,7 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 
@@ -21,11 +19,9 @@ interface DataGridPaginationProps {
   sizesInfo?: string;
   sizesLabel?: string;
   sizesDescription?: string;
-  sizesSkeleton?: ReactNode;
   more?: boolean;
   moreLimit?: number;
   info?: string;
-  infoSkeleton?: ReactNode;
   className?: string;
   rowsPerPageLabel?: string;
   previousPageLabel?: string;
@@ -34,17 +30,15 @@ interface DataGridPaginationProps {
 }
 
 function DataGridPagination(props: DataGridPaginationProps): React.JSX.Element {
-  const { table, recordCount, isLoading } = useDataGrid();
+  const { table, recordCount } = useDataGrid();
 
   const defaultProps: Partial<DataGridPaginationProps> = {
     sizes: [5, 10, 25, 50, 100],
     sizesLabel: "Show",
     sizesDescription: "per page",
-    sizesSkeleton: <Skeleton className="h-8 w-44" />,
     moreLimit: 5,
     more: false,
     info: "{from} - {to} of {count}",
-    infoSkeleton: <Skeleton className="h-8 w-60" />,
     rowsPerPageLabel: "Rows per page",
     previousPageLabel: "Go to previous page",
     nextPageLabel: "Go to next page",
@@ -144,72 +138,60 @@ function DataGridPagination(props: DataGridPaginationProps): React.JSX.Element {
       )}
     >
       <div className="order-2 flex flex-wrap items-center space-x-2.5 pb-2.5 sm:order-1 sm:pb-0">
-        {isLoading ? (
-          mergedProps?.sizesSkeleton
-        ) : (
-          <>
-            <div className="text-muted-foreground text-sm">{mergedProps.rowsPerPageLabel}</div>
-            <Select
-              value={`${pageSize}`}
-              onValueChange={(value) => {
-                const newPageSize = Number(value);
-                table.setPageSize(newPageSize);
-              }}
-            >
-              <SelectTrigger className="w-14" size="sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent side="top" className="min-w-18">
-                {mergedProps?.sizes?.map((size: number) => (
-                  <SelectItem key={size} value={`${size}`}>
-                    {size}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </>
-        )}
+        <div className="text-muted-foreground text-sm">{mergedProps.rowsPerPageLabel}</div>
+        <Select
+          value={`${pageSize}`}
+          onValueChange={(value) => {
+            const newPageSize = Number(value);
+            table.setPageSize(newPageSize);
+          }}
+        >
+          <SelectTrigger className="w-14" size="sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent side="top" className="min-w-18">
+            {mergedProps?.sizes?.map((size: number) => (
+              <SelectItem key={size} value={`${size}`}>
+                {size}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="order-1 flex flex-col items-center justify-center gap-2.5 pt-2.5 sm:order-2 sm:flex-row sm:justify-end sm:pt-0">
-        {isLoading ? (
-          mergedProps?.infoSkeleton
-        ) : (
-          <>
-            <div className="text-muted-foreground text-sm order-2 text-nowrap sm:order-1">
-              {paginationInfo}
-            </div>
-            {pageCount > 1 && (
-              <div className="order-1 flex items-center space-x-1 sm:order-2">
-                <Button
-                  size="icon-sm"
-                  variant="ghost"
-                  className={btnArrowClasses}
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
-                >
-                  <span className="sr-only">{mergedProps.previousPageLabel}</span>
-                  <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-4" />
-                </Button>
+        <div className="text-muted-foreground text-sm order-2 text-nowrap sm:order-1">
+          {paginationInfo}
+        </div>
+        {pageCount > 1 && (
+          <div className="order-1 flex items-center space-x-1 sm:order-2">
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              className={btnArrowClasses}
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <span className="sr-only">{mergedProps.previousPageLabel}</span>
+              <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-4" />
+            </Button>
 
-                {renderEllipsisPrevButton()}
+            {renderEllipsisPrevButton()}
 
-                {renderPageButtons()}
+            {renderPageButtons()}
 
-                {renderEllipsisNextButton()}
+            {renderEllipsisNextButton()}
 
-                <Button
-                  size="icon-sm"
-                  variant="ghost"
-                  className={btnArrowClasses}
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                >
-                  <span className="sr-only">{mergedProps.nextPageLabel}</span>
-                  <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4" />
-                </Button>
-              </div>
-            )}
-          </>
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              className={btnArrowClasses}
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              <span className="sr-only">{mergedProps.nextPageLabel}</span>
+              <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4" />
+            </Button>
+          </div>
         )}
       </div>
     </div>
