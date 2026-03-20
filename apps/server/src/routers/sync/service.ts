@@ -13,15 +13,13 @@ import type {
   DbSyncSessionRow,
 } from "@myakiba/db/schema/figure";
 import { and, inArray, eq, desc, count, sql } from "drizzle-orm";
-import { statusSchema, type SyncTerminalState } from "./model";
+import { syncJobStatusSchema, type SyncTerminalState } from "./model";
 import type {
-  CsvItem,
-  Status,
   UpdatedSyncCollection,
   UpdatedSyncOrder,
   UpdatedSyncOrderItem,
-  CollectionInsertType,
-} from "./model";
+} from "@myakiba/schemas/sync";
+import type { InternalCsvItem, SyncJobStatus, CollectionInsertType } from "./model";
 import type { OrderInsertType } from "../orders/model";
 import type { SyncSessionItemStatus, SyncSessionStatus, SyncType } from "@myakiba/types/enums";
 import { Queue } from "bullmq";
@@ -188,15 +186,15 @@ class SyncService {
     });
   }
 
-  assignOrderIds(items: CsvItem[]): CsvItem[] {
+  assignOrderIds(items: InternalCsvItem[]): InternalCsvItem[] {
     return items.map((item) => ({
       ...item,
       orderId: item.status === "Ordered" ? createId() : item.orderId,
     }));
   }
 
-  async processItems(items: CsvItem[], userId: string) {
-    const itemExternalIds = items.map((item: CsvItem) => item.itemExternalId);
+  async processItems(items: InternalCsvItem[], userId: string) {
+    const itemExternalIds = items.map((item: InternalCsvItem) => item.itemExternalId);
 
     const existingItems = await this.getExistingItemsByExternalIds(itemExternalIds);
     const existingItemIds = existingItems.map((existingItem) => existingItem.id);
@@ -220,14 +218,14 @@ class SyncService {
     const { releases: existingItemsReleases, releaseDates: existingItemsReleaseDates } =
       await this.getExistingItemsWithReleases(itemIdsNeedingInsert);
 
-    const csvItemsToInsert = items.filter((item: CsvItem) =>
+    const csvItemsToInsert = items.filter((item: InternalCsvItem) =>
       itemsNeedingInsert.some((existingItem) => existingItem.externalId === item.itemExternalId),
     );
 
     const idsToScrape = itemExternalIds.filter(
       (externalId) => !existingItems.some((existingItem) => existingItem.externalId === externalId),
     );
-    const csvItemsToScrape = items.filter((item: CsvItem) =>
+    const csvItemsToScrape = items.filter((item: InternalCsvItem) =>
       idsToScrape.includes(item.itemExternalId),
     );
 
@@ -292,7 +290,7 @@ class SyncService {
   }
 
   async queueCSVSyncJob(
-    items: CsvItem[],
+    items: InternalCsvItem[],
     userId: string,
     syncSessionId: string,
     existingCount: number,
@@ -542,7 +540,7 @@ class SyncService {
     }
   }
 
-  async getJobStatus(jobId: string, userId: string): Promise<Status> {
+  async getJobStatus(jobId: string, userId: string): Promise<SyncJobStatus> {
     const cached = await redis.get(getJobStatusSnapshotKey(jobId));
     if (cached) {
       const parsedStatus = parseJobStatusPayload(cached);
@@ -562,7 +560,7 @@ class SyncService {
           }
         }
 
-        return statusSchema.parse(parsedStatus);
+        return syncJobStatusSchema.parse(parsedStatus);
       }
 
       createLogger({

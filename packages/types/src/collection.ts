@@ -1,7 +1,5 @@
 import type { ShippingMethod, Condition, CollectionStatus, Category } from "./enums";
-import type { CollectionFilters as SchemaCollectionFilters } from "@myakiba/schemas/search";
-
-export type CollectionFilters = SchemaCollectionFilters;
+export type { CollectionFilters } from "@myakiba/schemas/search";
 
 export type CollectionItem = {
   id: string;
