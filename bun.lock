@@ -277,6 +277,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@myakiba/constants": "workspace:*",
+        "date-fns": "catalog:",
       },
       "devDependencies": {
         "@myakiba/config": "workspace:*",

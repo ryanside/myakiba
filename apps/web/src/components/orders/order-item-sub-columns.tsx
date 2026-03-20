@@ -22,7 +22,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
 import { cn } from "@/lib/utils";
-import { formatDate, getCurrencyLocale } from "@myakiba/utils";
+import { getCurrencyLocale } from "@myakiba/utils";
+import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import type { DateFormat, OrderItem, CollectionItemFormValues, OrderStatus } from "@myakiba/types";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
@@ -180,7 +181,7 @@ export function createOrderItemSubColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Release" visibility={true} column={column} />
       ),
-      cell: (info) => formatDate(info.getValue() as string, dateFormat),
+      cell: (info) => formatDateOnlyForDisplay(info.getValue() as string, dateFormat),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,

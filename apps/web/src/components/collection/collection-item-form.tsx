@@ -32,7 +32,6 @@ import { Rating } from "../ui/rating";
 import { Field, FieldContent, FieldTitle } from "@/components/ui/field";
 import { Badge } from "@/components/reui/badge";
 import {
-  formatDate,
   formatCurrencyFromMinorUnits,
   getCurrencyLocale,
   majorStringToMinorUnits,
@@ -42,6 +41,7 @@ import type { DateFormat } from "@myakiba/types";
 import { Scroller } from "../ui/scroller";
 import { COLLECTION_STATUSES, SHIPPING_METHODS, CONDITIONS } from "@myakiba/constants";
 import { useState, type ReactElement } from "react";
+import { formatDateOnlyForDisplay } from "@/lib/date-display";
 
 type CollectionItemFormProps = {
   renderTrigger: ReactElement;
@@ -306,7 +306,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                               return (
                                 <div className="flex items-center gap-3 text-sm">
                                   <span className="font-medium">
-                                    {formatDate(displayData.date, dateFormat)}
+                                    {formatDateOnlyForDisplay(displayData.date, dateFormat)}
                                   </span>
                                   {displayData.type && (
                                     <span className="text-muted-foreground">
@@ -347,7 +347,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                             <div className="flex flex-col gap-1">
                               <div className="flex items-center gap-2">
                                 <span className="font-medium text-sm">
-                                  {formatDate(release.date, dateFormat)}
+                                  {formatDateOnlyForDisplay(release.date, dateFormat)}
                                 </span>
                                 {release.type && (
                                   <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">

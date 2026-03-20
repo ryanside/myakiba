@@ -12,7 +12,8 @@
     }
   },
   "dependencies": {
-    "@myakiba/constants": "workspace:*"
+    "@myakiba/constants": "workspace:*",
+    "date-fns": "catalog:"
   },
   "devDependencies": {
     "@myakiba/config": "workspace:*",

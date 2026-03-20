@@ -2,7 +2,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { parseLocalDate, formatDate } from "@myakiba/utils";
+import { parseDateOnly } from "@myakiba/utils";
+import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import type { DateFormat } from "@myakiba/types";
 import { format } from "date-fns";
 
@@ -20,7 +21,7 @@ export function PopoverDatePickerCell({
   disabled = false,
 }: PopoverDatePickerCellProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const dateValue = value ? parseLocalDate(value) : undefined;
+  const dateValue = value ? parseDateOnly(value) : undefined;
   const handleSelect = async (date: Date | undefined): Promise<void> => {
     if (!date) return;
 
@@ -44,7 +45,7 @@ export function PopoverDatePickerCell({
             className="text-foreground pl-0"
             disabled={disabled}
           >
-            {value ? formatDate(value, dateFormat) : "n/a"}
+            {value ? formatDateOnlyForDisplay(value, dateFormat) : "n/a"}
           </Button>
         }
       />

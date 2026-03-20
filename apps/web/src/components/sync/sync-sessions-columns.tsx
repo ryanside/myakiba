@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { SyncSessionRow } from "@myakiba/types";
 import { SESSION_STATUS_CONFIG, SYNC_TYPE_CONFIG } from "@/lib/sync";
-import { formatDateTime, formatDuration } from "@myakiba/utils/dates";
+import { formatShortDateTime, formatSyncDuration } from "@/lib/date-display";
 import { fetchSyncSessionDetail } from "@/queries/sync";
 import {
   ACTIVE_SYNC_SESSION_STATUS_SET,
@@ -170,7 +170,7 @@ export function createSyncSessionColumns({
       id: "createdAt",
       header: () => <span className="text-foreground font-normal text-[0.8125rem]">Created</span>,
       cell: ({ row }) => (
-        <span className="text-muted-foreground">{formatDateTime(row.original.createdAt)}</span>
+        <span className="text-muted-foreground">{formatShortDateTime(row.original.createdAt)}</span>
       ),
       size: 150,
       enableSorting: false,
@@ -185,7 +185,7 @@ export function createSyncSessionColumns({
       header: () => <span className="text-foreground font-normal text-[0.8125rem]">Duration</span>,
       cell: ({ row }) => (
         <span className="text-muted-foreground">
-          {formatDuration(row.original.createdAt, row.original.completedAt)}
+          {formatSyncDuration(row.original.createdAt, row.original.completedAt)}
         </span>
       ),
       size: 100,

@@ -35,16 +35,25 @@ interface ReleaseCalendarProps {
   dateFormat: DateFormat;
 }
 
-function formatMonthYear(date: Date): string {
-  return date.toLocaleString("default", { month: "long", year: "numeric" });
+const CALENDAR_MONTH_LABEL_FORMATTER = new Intl.DateTimeFormat(undefined, {
+  month: "long",
+  year: "numeric",
+});
+
+const RELEASE_DATE_GROUP_LABEL_FORMATTER = new Intl.DateTimeFormat(undefined, {
+  weekday: "short",
+  day: "numeric",
+});
+
+function formatCalendarMonthLabel(date: Date): string {
+  return CALENDAR_MONTH_LABEL_FORMATTER.format(date);
 }
 
-function formatDateGroupLabel(releaseDate: string): string {
-  const d = new Date(releaseDate);
-  return d.toLocaleDateString("default", { weekday: "short", day: "numeric" });
+function formatReleaseDateGroupLabel(releaseDate: string): string {
+  return RELEASE_DATE_GROUP_LABEL_FORMATTER.format(new Date(releaseDate));
 }
 
-function groupReleasesByDate(
+function groupReleasesByReleaseDate(
   releases: readonly ReleaseItem[],
 ): ReadonlyArray<readonly [string, readonly ReleaseItem[]]> {
   const groups = new Map<string, ReleaseItem[]>();
@@ -89,7 +98,7 @@ function ReleaseCalendar({ className, currency }: ReleaseCalendarProps): React.R
   });
 
   const releases = data?.releaseCalendar.releases ?? [];
-  const grouped = React.useMemo(() => groupReleasesByDate(releases), [releases]);
+  const grouped = React.useMemo(() => groupReleasesByReleaseDate(releases), [releases]);
 
   const goToPreviousMonth = (): void => {
     const newDate = new Date(currentMonth);
@@ -114,7 +123,7 @@ function ReleaseCalendar({ className, currency }: ReleaseCalendarProps): React.R
       <div className="flex items-center justify-between">
         <div className="flex min-w-0 items-center justify-center gap-1.5">
           <span className="text-sm font-medium tracking-tight select-none">
-            {formatMonthYear(currentMonth)}
+            {formatCalendarMonthLabel(currentMonth)}
           </span>
           {isPending ? (
             <Badge variant="outline">
@@ -184,7 +193,7 @@ function DateGroup({
     <div>
       <div className="sticky top-0 z-10 flex items-center gap-2 bg-card pb-1">
         <span className="shrink-0 text-[0.6875rem] font-medium uppercase tracking-wider text-muted-foreground">
-          {formatDateGroupLabel(dateKey)}
+          {formatReleaseDateGroupLabel(dateKey)}
         </span>
         <div className="h-px flex-1 bg-border" />
       </div>

@@ -27,7 +27,7 @@ import type { SyncSessionItemStatus, SyncSessionStatus, SyncType } from "@myakib
 import { Queue } from "bullmq";
 import { createId } from "@paralleldrive/cuid2";
 import { env } from "@myakiba/env/server";
-import { dateToString, parseMoneyToMinorUnits, tryCatch } from "@myakiba/utils";
+import { parseMoneyToMinorUnits, toDateOnlyString, tryCatch } from "@myakiba/utils";
 import {
   getJobStatusSnapshotKey,
   parseJobStatusPayload,
@@ -154,7 +154,7 @@ class SyncService {
 
     for (const row of releaseResult) {
       releases.set(row.itemId, row.releaseId);
-      const releaseDate = dateToString(row.releaseDate);
+      const releaseDate = toDateOnlyString(row.releaseDate);
       if (releaseDate) {
         releaseDates.set(row.itemId, releaseDate);
       }

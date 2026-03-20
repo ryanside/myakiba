@@ -15,7 +15,7 @@ import type { EnrichedSyncSessionItemRow, SyncSessionStatus, SyncType } from "@m
 import { fetchSyncSessionDetail, retrySyncFailedItems } from "@/queries/sync";
 import { createSyncSessionItemSubColumns } from "@/components/sync/sync-session-item-sub-columns";
 import { SESSION_STATUS_CONFIG, SYNC_TYPE_CONFIG } from "@/lib/sync";
-import { formatDateTime, formatDuration } from "@myakiba/utils/dates";
+import { formatShortDateTime, formatSyncDuration } from "@/lib/date-display";
 import Loader from "@/components/loader";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
@@ -174,7 +174,7 @@ function RouteComponent() {
               </Badge>
             </div>
             <p className="text-muted-foreground text-sm font-normal">
-              Started {formatDateTime(session.createdAt)}
+              Started {formatShortDateTime(session.createdAt)}
             </p>
           </div>
 
@@ -223,7 +223,7 @@ function RouteComponent() {
         <div className="flex flex-col gap-1">
           <span className="text-sm text-muted-foreground font-normal">Duration</span>
           <span className="text-2xl font-normal tabular-nums tracking-tight">
-            {formatDuration(session.createdAt, session.completedAt)}
+            {formatSyncDuration(session.createdAt, session.completedAt)}
           </span>
         </div>
       </div>

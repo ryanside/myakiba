@@ -1,4 +1,4 @@
-import { dateToString } from "@myakiba/utils";
+import { toDateOnlyString } from "@myakiba/utils";
 
 type NormalizablePrimitive = string | number | boolean | null | undefined;
 
@@ -38,7 +38,7 @@ const isPlainObject = (value: EdenDateNormalizable): value is EdenDateNormalizab
 const normalizeDateValue = (value: EdenDateNormalizable): EdenDateNormalizable => {
   if (value === undefined) return value;
   if (value === null || value instanceof Date || typeof value === "string") {
-    return dateToString(value);
+    return toDateOnlyString(value);
   }
   return value;
 };

@@ -20,7 +20,8 @@ import {
   EmptyDescription,
   EmptyMedia,
 } from "@/components/ui/empty";
-import { formatCurrencyFromMinorUnits, formatDate } from "@myakiba/utils";
+import { formatCurrencyFromMinorUnits } from "@myakiba/utils";
+import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import CollectionItemForm from "@/components/collection/collection-item-form";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { CollectionItemFormValues, CollectionItem, DateFormat } from "@myakiba/types";
@@ -354,7 +355,9 @@ function RouteComponent() {
                       icon={Calendar01Icon}
                       className="size-4 text-muted-foreground shrink-0"
                     />
-                    <span className="font-medium">{formatDate(release.date, dateFormat)}</span>
+                    <span className="font-medium">
+                      {formatDateOnlyForDisplay(release.date, dateFormat)}
+                    </span>
                     {release.type && <Badge variant="secondary">{release.type}</Badge>}
                     {release.barcode && (
                       <span className="text-xs text-muted-foreground">{release.barcode}</span>
@@ -476,7 +479,7 @@ function RouteComponent() {
                             </Badge>
                             {release && (
                               <span className="text-xs text-muted-foreground">
-                                {formatDate(release.date, dateFormat)}
+                                {formatDateOnlyForDisplay(release.date, dateFormat)}
                               </span>
                             )}
                           </div>
@@ -550,7 +553,7 @@ function RouteComponent() {
                               <TimelineHeader>
                                 <TimelineTitle>Ordered</TimelineTitle>
                                 <TimelineDate>
-                                  {formatDate(collectionItem.orderDate, dateFormat)}
+                                  {formatDateOnlyForDisplay(collectionItem.orderDate, dateFormat)}
                                 </TimelineDate>
                               </TimelineHeader>
                             </TimelineItem>
@@ -560,7 +563,7 @@ function RouteComponent() {
                               <TimelineHeader>
                                 <TimelineTitle>Paid</TimelineTitle>
                                 <TimelineDate>
-                                  {formatDate(collectionItem.paymentDate, dateFormat)}
+                                  {formatDateOnlyForDisplay(collectionItem.paymentDate, dateFormat)}
                                 </TimelineDate>
                               </TimelineHeader>
                             </TimelineItem>
@@ -570,7 +573,10 @@ function RouteComponent() {
                               <TimelineHeader>
                                 <TimelineTitle>Shipped</TimelineTitle>
                                 <TimelineDate>
-                                  {formatDate(collectionItem.shippingDate, dateFormat)}
+                                  {formatDateOnlyForDisplay(
+                                    collectionItem.shippingDate,
+                                    dateFormat,
+                                  )}
                                 </TimelineDate>
                               </TimelineHeader>
                             </TimelineItem>
@@ -580,7 +586,10 @@ function RouteComponent() {
                               <TimelineHeader>
                                 <TimelineTitle>Collected</TimelineTitle>
                                 <TimelineDate>
-                                  {formatDate(collectionItem.collectionDate, dateFormat)}
+                                  {formatDateOnlyForDisplay(
+                                    collectionItem.collectionDate,
+                                    dateFormat,
+                                  )}
                                 </TimelineDate>
                               </TimelineHeader>
                             </TimelineItem>
