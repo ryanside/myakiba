@@ -1,3 +1,4 @@
+import "@fontsource-variable/instrument-sans";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { RouterProvider, createRouter } from "@tanstack/react-router";

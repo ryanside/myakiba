@@ -5,7 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 .instrument-sans-font {
-  font-family: "Instrument Sans", sans-serif;
+  font-family: "Instrument Sans Variable", sans-serif;
   font-optical-sizing: auto;
   font-weight: normal;
   font-style: normal;
@@ -46,7 +46,7 @@
   --sidebar-border: oklch(0.925 0 89.9);
   --sidebar-ring: oklch(0.925 0 89.9);
   --radius: 0.625rem;
-  --font-sans: Instrument Sans, ui-sans-serif, sans-serif, system-ui;
+  --font-sans: "Instrument Sans Variable", ui-sans-serif, sans-serif, system-ui;
   --font-serif: serif;
   --font-mono: ui-monospace, monospace;
 
@@ -116,7 +116,7 @@
   --sidebar-accent-foreground: oklch(0.98 0 0);
   --sidebar-border: oklch(0.28 0 89.9);
   --sidebar-ring: oklch(0.45 0 89.9);
-  --font-sans: Instrument Sans, ui-sans-serif, sans-serif, system-ui;
+  --font-sans: "Instrument Sans Variable", ui-sans-serif, sans-serif, system-ui;
   --font-serif: serif;
   --font-mono: ui-monospace, monospace;
 
