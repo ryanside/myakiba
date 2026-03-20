@@ -1,5 +1,5 @@
 import * as z from "zod";
-import { SHIPPING_METHODS, ORDER_STATUSES, CONDITIONS } from "@myakiba/constants";
+import { SHIPPING_METHODS, ORDER_STATUSES, CONDITIONS } from "@myakiba/constants/enums";
 import { SYNC_CSV_ITEM_STATUSES } from "@myakiba/constants/orders";
 
 /**

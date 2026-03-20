@@ -4,8 +4,8 @@ import {
   formatCurrencyFromMinorUnits,
   majorStringToMinorUnits,
   minorUnitsToMajorString,
-  tryCatch,
-} from "@myakiba/utils";
+} from "@myakiba/utils/currency";
+import { tryCatch } from "@myakiba/utils/result";
 import { Button } from "../ui/button";
 interface InlineCurrencyCellProps {
   value: number;

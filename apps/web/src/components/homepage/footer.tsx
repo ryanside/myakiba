@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowUp01Icon } from "@hugeicons/core-free-icons";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useTheme } from "@/components/theme-provider";
+import { useTheme } from "next-themes";
 import { Sun01Icon, Moon02Icon, ComputerIcon } from "@hugeicons/core-free-icons";
 
 const links = [

@@ -14,7 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Badge } from "@/components/reui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ShimmeringText } from "@/components/ui/shimmering-text";
-import type { SyncSessionStatus, SyncType } from "@myakiba/types";
+import type { SyncSessionStatus, SyncType } from "@myakiba/types/enums";
 import { fetchSyncSessions } from "@/queries/sync";
 import { SESSION_STATUS_CONFIG, SYNC_TYPE_CONFIG } from "@/lib/sync";
 import { formatRelativeTimeToNow } from "@/lib/date-display";

@@ -19,8 +19,8 @@ import type {
   CollectionInsertType,
 } from "./model";
 import SyncService from "./service";
-import { tryCatch } from "@myakiba/utils";
-import { SYNC_SESSION_STATUSES, SYNC_TYPES } from "@myakiba/constants";
+import { tryCatch } from "@myakiba/utils/result";
+import { SYNC_SESSION_STATUSES, SYNC_TYPES } from "@myakiba/constants/enums";
 import { createId } from "@paralleldrive/cuid2";
 import {
   jobStatusSubscriptionRegistry,

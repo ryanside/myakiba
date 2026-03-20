@@ -2,10 +2,10 @@ import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { formatCurrencyFromMinorUnits } from "@myakiba/utils";
+import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { Scroller } from "../ui/scroller";
 import { Link } from "@tanstack/react-router";
-import type { Category } from "@myakiba/types";
+import type { Category } from "@myakiba/types/enums";
 import { getCategoryColor } from "@/lib/category-colors";
 
 export function CollectionBreakdown({

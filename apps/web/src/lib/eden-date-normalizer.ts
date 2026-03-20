@@ -1,4 +1,4 @@
-import { toDateOnlyString } from "@myakiba/utils";
+import { toDateOnlyString } from "@myakiba/utils/date-only";
 
 type NormalizablePrimitive = string | number | boolean | null | undefined;
 

@@ -1,4 +1,4 @@
-import type { Category } from "@myakiba/types";
+import type { Category } from "@myakiba/types/enums";
 
 const CATEGORY_COLOR_MAP: Readonly<Record<Category, string>> = {
   Accessories: "var(--category-accessories)",

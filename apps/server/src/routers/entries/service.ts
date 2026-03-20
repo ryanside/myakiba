@@ -1,4 +1,4 @@
-import { db } from "@myakiba/db";
+import { db } from "@myakiba/db/client";
 import { entry } from "@myakiba/db/schema/figure";
 import { ilike } from "drizzle-orm";
 

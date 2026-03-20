@@ -3,10 +3,10 @@ import {
   SHIPPING_METHODS,
   ORDER_STATUSES,
   CONDITIONS,
-  CATEGORIES,
   SYNC_SESSION_STATUSES,
   SYNC_TYPES,
-} from "@myakiba/constants";
+} from "@myakiba/constants/enums";
+import { CATEGORIES } from "@myakiba/constants/categories";
 export const sortDirectionSchema = z.enum(["asc", "desc"]);
 
 export const orderSearchSortSchema = z.enum([

@@ -1,5 +1,5 @@
 import { useCollectionFilters } from "@/hooks/use-collection";
-import type { Category } from "@myakiba/types";
+import type { Category } from "@myakiba/types/enums";
 import { Toggle } from "../ui/toggle";
 
 type QuickFilterGroup = {

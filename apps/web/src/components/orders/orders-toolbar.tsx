@@ -22,7 +22,7 @@ import {
   ActionBarClose,
   ActionBarSeparator,
 } from "@/components/ui/action-bar";
-import type { OrderFilters, CascadeOptions, NewOrder } from "@myakiba/types";
+import type { OrderFilters, CascadeOptions, NewOrder } from "@myakiba/types/orders";
 import { useOrdersFilters } from "@/hooks/use-orders";
 import { useUserPreferences } from "@/hooks/use-collection";
 

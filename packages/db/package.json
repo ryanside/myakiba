@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": {
-      "default": "./src/index.ts"
+    "./client": {
+      "default": "./src/client.ts"
     },
     "./schema/*": {
       "default": "./src/schema/*.ts"

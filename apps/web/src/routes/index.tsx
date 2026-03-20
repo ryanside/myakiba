@@ -25,7 +25,7 @@ import ExampleItemImage7 from "/example-item7.jpg";
 import CallToAction from "@/components/homepage/call-to-action";
 import FAQs from "@/components/homepage/faqs";
 import LogoCloud from "@/components/logo-cloud";
-import { useTheme } from "@/components/theme-provider";
+import { useTheme } from "next-themes";
 
 const LOGO_CLOUD_IMAGES: readonly string[] = [
   ExampleItemImage1,

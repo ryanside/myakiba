@@ -1,4 +1,4 @@
-import { db } from "@myakiba/db";
+import { db } from "@myakiba/db/client";
 import { syncSession, syncSessionItem } from "@myakiba/db/schema/figure";
 import { and, eq, inArray } from "drizzle-orm";
 import type {
@@ -8,7 +8,7 @@ import type {
   UpdateSyncSessionCountsParams,
 } from "./types";
 import { env } from "@myakiba/env/worker";
-import { writeJobStatusSnapshotAndPublish } from "@myakiba/redis";
+import { writeJobStatusSnapshotAndPublish } from "@myakiba/redis/job-status";
 
 export const createFetchOptions = (image: boolean = false) => ({
   proxy: env.HTTP_PROXY,

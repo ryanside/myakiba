@@ -1,6 +1,6 @@
 import * as z from "zod";
-import { syncJobStatusSchema } from "@myakiba/schemas";
-import type { SyncJobStatus, SyncTerminalState } from "@myakiba/types";
+import { syncJobStatusSchema } from "@myakiba/schemas/sync";
+import type { SyncJobStatus, SyncTerminalState } from "@myakiba/types/sync";
 
 const sseJobStatusChunkSchema = z.object({
   data: syncJobStatusSchema,

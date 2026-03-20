@@ -5,13 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Link } from "@tanstack/react-router";
 import { CollectionBreakdown } from "@/components/dashboard/collection-breakdown";
 import { ReleaseCalendar } from "@/components/dashboard/release-calendar";
-import { formatCurrencyFromMinorUnits } from "@myakiba/utils";
+import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { Button } from "@/components/ui/button";
 import OrderKanban from "@/components/dashboard/order-kanban";
 import { ValueLineBarChart } from "@/components/ui/value-line-bar-chart";
 import { KPICard } from "@/components/ui/kpi-card";
 import Loader from "@/components/loader";
-import type { DateFormat } from "@myakiba/types";
+import type { DateFormat } from "@myakiba/types/enums";
 
 export const Route = createFileRoute("/(app)/dashboard")({
   component: RouteComponent,

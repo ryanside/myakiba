@@ -31,8 +31,8 @@ import type {
   OrderListItem,
   PaginatedResult,
   OrderStats,
-  CollectionItemFormValues,
-} from "@myakiba/types";
+} from "@myakiba/types/orders";
+import type { CollectionItemFormValues } from "@myakiba/types/collection";
 
 export function ordersQueryOptions(filters: OrderFilters) {
   return queryOptions({

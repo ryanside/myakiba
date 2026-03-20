@@ -1,5 +1,5 @@
 import { app, getErrorMessage } from "@/lib/treaty-client";
-import { itemReleasesResponseSchema } from "@myakiba/schemas";
+import { itemReleasesResponseSchema } from "@myakiba/schemas/items";
 import type {
   CascadeOptions,
   EditedOrder,
@@ -9,10 +9,10 @@ import type {
   OrderItem,
   OrderListItem,
   OrderStats,
-  OrderStatus,
   ItemReleasesResponse,
   PaginatedResult,
-} from "@myakiba/types";
+} from "@myakiba/types/orders";
+import type { OrderStatus } from "@myakiba/types/enums";
 
 export async function getOrders(filters: OrderFilters): Promise<OrderListItem[]> {
   const queryParams = {

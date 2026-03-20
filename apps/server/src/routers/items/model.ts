@@ -1,8 +1,8 @@
 import * as z from "zod";
 import { CATEGORIES } from "@myakiba/constants/categories";
 import { ENTRY_CATEGORIES } from "@myakiba/constants/enums";
-import { itemReleaseSchema, itemReleasesResponseSchema } from "@myakiba/schemas";
-import type { ItemRelease, ItemReleasesResponse } from "@myakiba/schemas";
+import { itemReleaseSchema, itemReleasesResponseSchema } from "@myakiba/schemas/items";
+import type { ItemRelease, ItemReleasesResponse } from "@myakiba/schemas/items";
 
 export { itemReleaseSchema, itemReleasesResponseSchema };
 export type { ItemRelease, ItemReleasesResponse };

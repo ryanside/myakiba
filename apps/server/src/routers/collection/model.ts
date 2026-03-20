@@ -1,12 +1,15 @@
 import * as z from "zod";
-import { CATEGORIES, COLLECTION_STATUSES, CONDITIONS, SHIPPING_METHODS } from "@myakiba/constants";
+import { CATEGORIES } from "@myakiba/constants/categories";
+import { COLLECTION_STATUSES, CONDITIONS, SHIPPING_METHODS } from "@myakiba/constants/enums";
 import {
   collectionSearchSchema,
   collectionSearchSortSchema,
+  sortDirectionSchema,
+} from "@myakiba/schemas/search";
+import {
   commaSeparatedStringArraySchema,
   createCommaSeparatedEnumArraySchema,
-  sortDirectionSchema,
-} from "@myakiba/schemas";
+} from "@myakiba/schemas/query-params";
 
 const commaSeparatedShipMethodArray = createCommaSeparatedEnumArraySchema(SHIPPING_METHODS);
 const commaSeparatedConditionArray = createCommaSeparatedEnumArraySchema(CONDITIONS);

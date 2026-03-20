@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ComputerIcon, MoonIcon, Sun01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
-import { useTheme } from "@/components/theme-provider";
+import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 
 export function ModeToggle({ className }: { className?: string }) {

@@ -7,8 +7,8 @@ import type {
   UpdatedSyncOrder,
   UpdatedSyncOrderItem,
   UpdatedSyncCollection,
-} from "@myakiba/schemas";
-import type { SyncSessionStatus, Category } from "@myakiba/types";
+} from "@myakiba/schemas/sync";
+import type { SyncSessionStatus, Category } from "@myakiba/types/enums";
 
 export type ScrapeFailure = {
   readonly id: number;

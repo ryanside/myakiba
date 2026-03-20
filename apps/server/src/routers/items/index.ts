@@ -1,6 +1,6 @@
 import { Elysia, status } from "elysia";
 import ItemService from "./service";
-import { tryCatch } from "@myakiba/utils";
+import { tryCatch } from "@myakiba/utils/result";
 import { betterAuth } from "@/middleware/better-auth";
 import { evlog } from "evlog/elysia";
 import { itemParamSchema, customItemSchema } from "./model";
