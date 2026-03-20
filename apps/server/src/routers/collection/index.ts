@@ -6,7 +6,7 @@ import {
   collectionUpdateSchema,
   collectionDeleteSchema,
 } from "./model";
-import { tryCatch } from "@myakiba/utils";
+import { tryCatch } from "@myakiba/utils/result";
 import { betterAuth } from "@/middleware/better-auth";
 import { evlog } from "evlog/elysia";
 

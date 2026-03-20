@@ -7,7 +7,7 @@ import type { ChartConfig } from "@/components/ui/chart";
 import { cn } from "@/lib/utils";
 import { useMotionValueEvent, useSpring } from "motion/react";
 import { useNavigate } from "@tanstack/react-router";
-import { toDateOnlyString } from "@myakiba/utils";
+import { toDateOnlyString } from "@myakiba/utils/date-only";
 
 const CHART_MARGIN = 35;
 

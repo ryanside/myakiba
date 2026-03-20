@@ -12,14 +12,15 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import type { SyncType, SyncSessionStatus, SyncSessionRow } from "@myakiba/types";
+import type { SyncType, SyncSessionStatus } from "@myakiba/types/enums";
+import type { SyncSessionRow } from "@myakiba/types/sync";
 import { fetchSyncSessions } from "@/queries/sync";
 import { SYNC_OPTION_META } from "@/lib/sync";
 import SyncCsvForm from "@/components/sync/sync-csv-form";
 import SyncOrderForm from "@/components/sync/sync-order-form";
 import SyncCollectionForm from "@/components/sync/sync-collection-form";
 import { SyncSessionsDataGrid } from "@/components/sync/sync-sessions-data-grid";
-import { syncSearchSchema } from "@myakiba/schemas";
+import { syncSearchSchema } from "@myakiba/schemas/search";
 import { useFilters } from "@/hooks/use-filters";
 import { useSyncMutations } from "@/hooks/use-sync-mutations";
 import { SYNC_WIDGET_RECENT_LIMIT } from "@myakiba/constants/sync";

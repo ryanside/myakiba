@@ -1,12 +1,6 @@
 import { app, getErrorMessage } from "@/lib/treaty-client";
-import type {
-  UserItem,
-  SyncOrder,
-  SyncOrderItems,
-  SyncCollectionItem,
-  SyncSessionStatus,
-  SyncType,
-} from "@myakiba/types";
+import type { UserItem, SyncOrder, SyncOrderItems, SyncCollectionItem } from "@myakiba/types/sync";
+import type { SyncSessionStatus, SyncType } from "@myakiba/types/enums";
 
 export async function sendItems(userItems: UserItem[]) {
   const { data, error } = await app.api.sync.csv.post(userItems);

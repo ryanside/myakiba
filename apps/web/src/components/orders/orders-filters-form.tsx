@@ -26,13 +26,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Scroller } from "@/components/ui/scroller";
-import type { OrderFilters } from "@myakiba/types";
+import type { OrderFilters } from "@myakiba/types/orders";
 import {
   getCurrencyLocale,
   majorStringToMinorUnits,
   minorUnitsToMajorString,
-} from "@myakiba/utils";
-import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/constants";
+} from "@myakiba/utils/currency";
+import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/constants/enums";
 
 interface OrdersFiltersFormProps {
   renderTrigger: React.ReactElement;

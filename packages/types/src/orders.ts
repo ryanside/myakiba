@@ -1,13 +1,15 @@
 import type { ShippingMethod, OrderStatus } from "./enums";
 import type { CollectionItem } from "./collection";
+import type { OrderFilters as SchemaOrderFilters } from "@myakiba/schemas/search";
 import type {
-  OrderFilters as SchemaOrderFilters,
   NewOrder as SchemaNewOrder,
   EditedOrder as SchemaEditedOrder,
   CascadeOptions as SchemaCascadeOptions,
+} from "@myakiba/schemas/orders";
+import type {
   ItemRelease as SchemaItemRelease,
   ItemReleasesResponse as SchemaItemReleasesResponse,
-} from "@myakiba/schemas";
+} from "@myakiba/schemas/items";
 
 export type OrderStats = {
   totalOrders: number;

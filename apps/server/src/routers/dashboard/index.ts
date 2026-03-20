@@ -2,7 +2,7 @@ import { Elysia, status } from "elysia";
 import { betterAuth } from "@/middleware/better-auth";
 import { evlog } from "evlog/elysia";
 import DashboardService from "./service";
-import { tryCatch } from "@myakiba/utils";
+import { tryCatch } from "@myakiba/utils/result";
 import * as z from "zod";
 
 const releaseCalendarQuerySchema = z.object({

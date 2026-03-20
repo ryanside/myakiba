@@ -10,7 +10,7 @@ import type {
   InternalCsvItem,
   SyncTerminalState as SharedSyncTerminalState,
   SyncJobStatus as SharedSyncJobStatus,
-} from "@myakiba/schemas";
+} from "@myakiba/schemas/sync";
 
 export type SyncSessionRow = {
   readonly id: string;

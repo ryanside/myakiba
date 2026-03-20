@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
-import { formatCurrencyFromMinorUnits } from "@myakiba/utils";
+import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/reui/badge";
 

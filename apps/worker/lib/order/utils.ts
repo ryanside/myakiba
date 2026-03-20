@@ -3,10 +3,10 @@ import type {
   FinalizePersistenceSummary,
   FinalizeSyncResult,
 } from "../types";
-import type { UpdatedSyncOrderItem } from "@myakiba/schemas";
-import { tryCatch } from "@myakiba/utils";
+import type { UpdatedSyncOrderItem } from "@myakiba/schemas/sync";
+import { tryCatch } from "@myakiba/utils/result";
 import { and, eq, inArray } from "drizzle-orm";
-import { db } from "@myakiba/db";
+import { db } from "@myakiba/db/client";
 import { assembleScrapedData } from "../assemble-scraped-data";
 import {
   markPersistFailedSyncSessionItemStatuses,

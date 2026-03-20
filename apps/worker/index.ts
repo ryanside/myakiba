@@ -1,5 +1,5 @@
 import { createLogger, initLogger, log } from "evlog";
-import { tryCatch } from "@myakiba/utils";
+import { tryCatch } from "@myakiba/utils/result";
 import { drain } from "./lib/evlog";
 import { env } from "@myakiba/env/worker";
 

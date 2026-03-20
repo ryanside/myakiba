@@ -1,5 +1,5 @@
 import { useSelection } from "@/hooks/use-selection";
-import type { CollectionItem } from "@myakiba/types";
+import type { CollectionItem } from "@myakiba/types/collection";
 import type {
   Updater,
   ExpandedState,

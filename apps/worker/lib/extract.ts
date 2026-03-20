@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
 import type { Element } from "domhandler";
-import { parseMoneyToMinorUnits } from "@myakiba/utils";
+import { parseMoneyToMinorUnits } from "@myakiba/utils/currency";
 
 export const REGEX_PATTERNS = {
   height: /H=(\d+)mm/,

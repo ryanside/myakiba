@@ -1,4 +1,4 @@
-import { db } from "@myakiba/db";
+import { db } from "@myakiba/db/client";
 import { collection, item, entry, entry_to_item } from "@myakiba/db/schema/figure";
 import { eq, count, and, sql, desc, not } from "drizzle-orm";
 

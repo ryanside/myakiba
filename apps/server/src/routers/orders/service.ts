@@ -1,8 +1,8 @@
 import type { OrderCascadeOption } from "@myakiba/constants/orders";
-import { db } from "@myakiba/db";
+import { db } from "@myakiba/db/client";
 import { order, collection, item, item_release } from "@myakiba/db/schema/figure";
 import { eq, and, inArray, sql, desc, asc, ilike, ne, gte, lte } from "drizzle-orm";
-import type { OrderStatus, ShippingMethod } from "@myakiba/types";
+import type { OrderStatus, ShippingMethod } from "@myakiba/types/enums";
 import type { OrderInsertType, OrderUpdateType } from "./model";
 
 class OrdersService {

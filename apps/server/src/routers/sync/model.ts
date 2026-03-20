@@ -9,7 +9,7 @@ import {
   syncOrderItemInputSchema as sharedSyncOrderItemInputSchema,
   syncOrderItemsSchema as sharedSyncOrderItemsSchema,
   syncCollectionItemSchema as sharedSyncCollectionItemSchema,
-} from "@myakiba/schemas";
+} from "@myakiba/schemas/sync";
 import type {
   InternalCsvItem,
   SyncTerminalState as SharedSyncTerminalState,
@@ -18,7 +18,7 @@ import type {
   UpdatedSyncOrder,
   UpdatedSyncOrderItem,
   UpdatedSyncCollection,
-} from "@myakiba/schemas";
+} from "@myakiba/schemas/sync";
 
 export const csvItemSchema = sharedInternalCsvItemSchema;
 export type CsvItem = InternalCsvItem;

@@ -5,7 +5,7 @@ import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { Badge } from "@/components/reui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@tanstack/react-router";
-import type { EnrichedSyncSessionItemRow } from "@myakiba/types";
+import type { EnrichedSyncSessionItemRow } from "@myakiba/types/sync";
 import { ITEM_STATUS_CONFIG } from "@/lib/sync";
 
 export function createSyncSessionItemSubColumns(): ColumnDef<EnrichedSyncSessionItemRow>[] {

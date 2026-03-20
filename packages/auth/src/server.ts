@@ -1,13 +1,13 @@
 import "dotenv/config";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { db } from "@myakiba/db";
+import { db } from "@myakiba/db/client";
 import * as schema from "@myakiba/db/schema/auth";
 import { admin, captcha, username, openAPI } from "better-auth/plugins";
 import { emailHarmony } from "better-auth-harmony";
 import { Resend } from "resend";
 import { createId } from "@paralleldrive/cuid2";
-import { redis } from "@myakiba/redis";
+import { redis } from "@myakiba/redis/client";
 import { env } from "@myakiba/env/server";
 
 const resend = new Resend(env.RESEND_API_KEY);

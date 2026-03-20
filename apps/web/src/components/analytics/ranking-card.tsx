@@ -18,11 +18,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { formatCurrencyFromMinorUnits } from "@myakiba/utils";
+import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { Progress } from "../ui/progress";
 import { Button } from "../ui/button";
 import { useMemo, useState, Fragment } from "react";
-import type { Category } from "@myakiba/types";
+import type { Category } from "@myakiba/types/enums";
 import { getCategoryColor } from "@/lib/category-colors";
 
 interface RowNavigation {

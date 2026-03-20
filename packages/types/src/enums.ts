@@ -3,14 +3,14 @@ import {
   COLLECTION_STATUSES,
   ORDER_STATUSES,
   CONDITIONS,
-  CURRENCIES,
-  CATEGORIES,
   ENTRY_CATEGORIES,
   DATE_FORMATS,
   SYNC_TYPES,
   SYNC_SESSION_STATUSES,
   SYNC_SESSION_ITEM_STATUSES,
-} from "@myakiba/constants";
+} from "@myakiba/constants/enums";
+import { CURRENCIES } from "@myakiba/constants/currencies";
+import { CATEGORIES } from "@myakiba/constants/categories";
 
 export type ShippingMethod = (typeof SHIPPING_METHODS)[number];
 export type OrderStatus = (typeof ORDER_STATUSES)[number];

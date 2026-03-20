@@ -1,7 +1,7 @@
 import { Elysia, status } from "elysia";
 import { timingSafeEqual } from "crypto";
 import { env } from "@myakiba/env/server";
-import { tryCatch } from "@myakiba/utils";
+import { tryCatch } from "@myakiba/utils/result";
 import WaitlistService from "./service";
 import { joinWaitlistSchema, verifyAccessSchema } from "./model";
 import { rateLimit } from "@/middleware/rate-limit";

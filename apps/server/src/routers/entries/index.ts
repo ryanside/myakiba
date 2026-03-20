@@ -1,7 +1,7 @@
 import { Elysia, status } from "elysia";
 import * as z from "zod";
 import EntriesService from "./service";
-import { tryCatch } from "@myakiba/utils";
+import { tryCatch } from "@myakiba/utils/result";
 import { evlog } from "evlog/elysia";
 
 const entriesRouter = new Elysia({ prefix: "/entries" }).use(evlog()).get(

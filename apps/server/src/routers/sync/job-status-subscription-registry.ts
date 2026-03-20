@@ -1,6 +1,7 @@
 import type Redis from "ioredis";
-import type { SyncJobStatus } from "@myakiba/schemas";
-import { getJobStatusChannel, parseJobStatusPayload, redis } from "@myakiba/redis";
+import type { SyncJobStatus } from "@myakiba/schemas/sync";
+import { getJobStatusChannel, parseJobStatusPayload } from "@myakiba/redis/job-status";
+import { redis } from "@myakiba/redis/client";
 
 type JobStatusSubscriptionEvent =
   | Readonly<{

@@ -20,7 +20,7 @@ import { authClient } from "@/lib/auth-client";
 import { useNavigate } from "@tanstack/react-router";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTheme } from "@/components/theme-provider";
+import { useTheme } from "next-themes";
 import type { RouterAppContext } from "@/routes/__root";
 import { toast } from "sonner";
 import { Button } from "../ui/button";

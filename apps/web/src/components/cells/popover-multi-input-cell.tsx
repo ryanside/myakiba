@@ -4,7 +4,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { MaskInput } from "@/components/ui/mask-input";
 import { useForm } from "@tanstack/react-form";
 import { useState } from "react";
-import { majorStringToMinorUnits, minorUnitsToMajorString, tryCatch } from "@myakiba/utils";
+import { majorStringToMinorUnits, minorUnitsToMajorString } from "@myakiba/utils/currency";
+import { tryCatch } from "@myakiba/utils/result";
 import { toast } from "sonner";
 
 interface PopoverInput {

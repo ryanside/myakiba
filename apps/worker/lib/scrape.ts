@@ -20,9 +20,9 @@ import type {
   ScrapeSingleItemParams,
   ScrapeItemsParams,
 } from "./types";
-import type { Category } from "@myakiba/types";
-import { CATEGORIES } from "@myakiba/constants";
-import { redis } from "@myakiba/redis";
+import type { Category } from "@myakiba/types/enums";
+import { CATEGORIES } from "@myakiba/constants/categories";
+import { redis } from "@myakiba/redis/client";
 import { env } from "@myakiba/env/worker";
 
 const s3Client = new S3Client({

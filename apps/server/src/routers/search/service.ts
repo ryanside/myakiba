@@ -1,4 +1,4 @@
-import { db } from "@myakiba/db";
+import { db } from "@myakiba/db/client";
 import { collection, item, order } from "@myakiba/db/schema/figure";
 import { eq, sql, and, ilike } from "drizzle-orm";
 

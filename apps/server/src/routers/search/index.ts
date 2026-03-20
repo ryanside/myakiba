@@ -1,7 +1,7 @@
 import { Elysia, status } from "elysia";
 import SearchService from "./service";
 import * as z from "zod";
-import { tryCatch } from "@myakiba/utils";
+import { tryCatch } from "@myakiba/utils/result";
 import { betterAuth } from "@/middleware/better-auth";
 import { evlog } from "evlog/elysia";
 

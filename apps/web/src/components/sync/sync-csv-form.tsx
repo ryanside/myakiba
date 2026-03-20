@@ -2,7 +2,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "../ui/button";
-import { csvSchema } from "@myakiba/schemas";
+import { csvSchema } from "@myakiba/schemas/sync";
 import Papa from "papaparse";
 import { Label } from "../ui/label";
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from "@/components/kibo-ui/dropzone";

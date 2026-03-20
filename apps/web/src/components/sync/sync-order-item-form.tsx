@@ -32,9 +32,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { SyncOrderItems } from "@myakiba/types";
-import { CONDITIONS, ORDER_STATUSES, SHIPPING_METHODS } from "@myakiba/constants";
-import { getCurrencyLocale, majorStringToMinorUnits } from "@myakiba/utils";
+import type { SyncOrderItems } from "@myakiba/types/sync";
+import { CONDITIONS, ORDER_STATUSES, SHIPPING_METHODS } from "@myakiba/constants/enums";
+import { getCurrencyLocale, majorStringToMinorUnits } from "@myakiba/utils/currency";
 import { createDefaultSyncFormOrderItem, extractMfcItemId } from "@/lib/sync";
 
 type SyncOrderItemFormProps = {

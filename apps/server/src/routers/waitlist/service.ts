@@ -1,4 +1,4 @@
-import { db } from "@myakiba/db";
+import { db } from "@myakiba/db/client";
 import { waitlist } from "@myakiba/db/schema/figure";
 import { eq } from "drizzle-orm";
 

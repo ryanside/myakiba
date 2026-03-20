@@ -5,10 +5,10 @@ import { initLogger, log } from "evlog";
 import type { DrainContext } from "evlog";
 import { createPostHogDrain } from "evlog/posthog";
 import { createDrainPipeline } from "evlog/pipeline";
-import { auth } from "@myakiba/auth";
+import { auth } from "@myakiba/auth/server";
 import { env } from "@myakiba/env/server";
 import { openapi } from "@elysiajs/openapi";
-import { OpenAPI } from "@myakiba/auth";
+import { OpenAPI } from "@myakiba/auth/server";
 import { staticPlugin } from "@elysiajs/static";
 import { resolve } from "path";
 import { existsSync } from "node:fs";
@@ -102,8 +102,8 @@ const app = new Elysia()
   .get("/api/auth/*", ({ request }) => auth.handler(request))
   .post("/api/auth/*", ({ request }) => auth.handler(request))
   .get("/health", () => ({ status: "ok" }))
-  .group("/api", (app) =>
-    app
+  .group("/api", (api) =>
+    api
       .get("/version", () => ({ buildId: env.BUILD_ID }), {
         response: z.object({ buildId: z.string() }),
       })

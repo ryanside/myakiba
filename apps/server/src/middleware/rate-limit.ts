@@ -1,7 +1,7 @@
 import { Elysia, status } from "elysia";
 import { createHash } from "crypto";
-import { redis } from "@myakiba/redis";
-import { auth } from "@myakiba/auth";
+import { redis } from "@myakiba/redis/client";
+import { auth } from "@myakiba/auth/server";
 
 const RATE_LIMIT_SCRIPT = `
 local key = KEYS[1]

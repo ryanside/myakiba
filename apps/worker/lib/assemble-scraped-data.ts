@@ -1,6 +1,6 @@
 import { log } from "evlog";
 import type { ScrapedItem } from "./types";
-import { normalizeScrapedDate } from "@myakiba/utils";
+import { normalizeScrapedDate } from "@myakiba/utils/date-only";
 import { v5 as uuidv5 } from "uuid";
 import type {
   AssembledScrapedData,

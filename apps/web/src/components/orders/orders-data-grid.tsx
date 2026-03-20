@@ -12,11 +12,11 @@ import {
   useReactTable,
   type Updater,
 } from "@tanstack/react-table";
-import type { OrderFilters, OrderListItem } from "@myakiba/types";
+import type { OrderFilters, OrderListItem } from "@myakiba/types/orders";
 import { useSelection } from "@/hooks/use-selection";
 import { DataGridColumnCombobox } from "../ui/data-grid-column-combobox";
 import { OrdersToolbar } from "./orders-toolbar";
-import { DEFAULT_PAGE_INDEX, DEFAULT_PAGE_SIZE } from "@myakiba/constants";
+import { DEFAULT_PAGE_INDEX, DEFAULT_PAGE_SIZE } from "@myakiba/constants/pagination";
 import { createOrdersColumns } from "./orders-columns";
 import { SyncSheetButton } from "@/components/sync/sync-sheet-button";
 import { useOrdersFilters, useOrdersQuery, useOrdersMutations } from "@/hooks/use-orders";

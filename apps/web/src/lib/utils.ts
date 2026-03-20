@@ -1,6 +1,10 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { DEFAULT_PAGE_INDEX, DEFAULT_PAGE_SIZE, DEFAULT_LIMIT } from "@myakiba/constants";
+import {
+  DEFAULT_PAGE_INDEX,
+  DEFAULT_PAGE_SIZE,
+  DEFAULT_LIMIT,
+} from "@myakiba/constants/pagination";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

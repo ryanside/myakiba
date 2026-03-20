@@ -1,6 +1,6 @@
 import { Worker } from "bullmq";
 import { createError, createLogger, log } from "evlog";
-import { tryCatch } from "@myakiba/utils";
+import { tryCatch } from "@myakiba/utils/result";
 import { setJobStatus, updateSyncSessionCounts } from "./lib/utils";
 import type {
   ExecuteSyncJobParams,
@@ -8,13 +8,13 @@ import type {
   ProcessSyncJobResult,
   WorkerJobContext,
 } from "./lib/types";
-import { jobDataSchema } from "@myakiba/schemas";
+import { jobDataSchema } from "@myakiba/schemas/sync";
 import { finalizeCollectionSync } from "./lib/collection/utils";
 import { finalizeOrderSync } from "./lib/order/utils";
 import { finalizeCsvSync } from "./lib/csv/utils";
 import { processSyncJob } from "./lib/process-sync-job";
 import { env } from "@myakiba/env/worker";
-import { redis } from "@myakiba/redis";
+import { redis } from "@myakiba/redis/client";
 import { createDefaultJobContext } from "./lib/evlog";
 
 const SYNC_QUEUE_NAME = "sync-queue";
