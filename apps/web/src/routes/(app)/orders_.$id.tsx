@@ -7,7 +7,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/reui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { formatCurrencyFromMinorUnits, formatDate, formatTimestamp } from "@myakiba/utils";
+import { formatCurrencyFromMinorUnits } from "@myakiba/utils";
+import { formatDateOnlyForDisplay, formatTimestampForDisplay } from "@/lib/date-display";
 import { getStatusVariant } from "@/lib/orders";
 import { OrderItemSubDataGrid } from "@/components/orders/order-item-sub-data-grid";
 import { OrderItemSyncSheet } from "@/components/orders/order-item-sync-sheet";
@@ -256,7 +257,7 @@ function RouteComponent() {
                   <span className="text-border select-none" aria-hidden="true">
                     &middot;
                   </span>
-                  <span>Release {formatDate(order.releaseDate, dateFormat)}</span>
+                  <span>Release {formatDateOnlyForDisplay(order.releaseDate, dateFormat)}</span>
                 </>
               )}
             </div>
@@ -290,7 +291,9 @@ function RouteComponent() {
                 <TimelineHeader>
                   <TimelineTitle>{title}</TimelineTitle>
                 </TimelineHeader>
-                <TimelineDate>{date ? formatDate(date, dateFormat) : "—"}</TimelineDate>
+                <TimelineDate>
+                  {date ? formatDateOnlyForDisplay(date, dateFormat) : "—"}
+                </TimelineDate>
               </TimelineItem>
             ))}
           </Timeline>
@@ -358,9 +361,9 @@ function RouteComponent() {
 
       {/* Footer metadata */}
       <div className="flex items-center gap-2 text-xs text-muted-foreground/60 pb-2">
-        <span>Created {formatTimestamp(order.createdAt, dateFormat)}</span>
+        <span>Created {formatTimestampForDisplay(order.createdAt, dateFormat)}</span>
         <span aria-hidden="true">&middot;</span>
-        <span>Updated {formatTimestamp(order.updatedAt, dateFormat)}</span>
+        <span>Updated {formatTimestampForDisplay(order.updatedAt, dateFormat)}</span>
       </div>
     </div>
   );

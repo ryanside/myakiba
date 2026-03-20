@@ -2,7 +2,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Calendar01Icon } from "@hugeicons/core-free-icons";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { parseLocalDate } from "@myakiba/utils";
+import { parseDateOnly } from "@myakiba/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -26,7 +26,7 @@ export function DatePicker({
   placeholder = "Pick a date",
   className,
 }: DatePickerProps) {
-  const dateValue = value ? parseLocalDate(value) : undefined;
+  const dateValue = value ? parseDateOnly(value) : undefined;
 
   const handleSelect = (date: Date | undefined): void => {
     if (!onChange) return;

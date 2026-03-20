@@ -13,7 +13,7 @@ import {
   KanbanItemHandle,
   KanbanOverlay,
 } from "@/components/reui/kanban";
-import { formatCurrencyFromMinorUnits, formatMonthYear } from "@myakiba/utils";
+import { formatCurrencyFromMinorUnits } from "@myakiba/utils";
 import type { DateFormat } from "@myakiba/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateOrderStatus } from "@/queries/orders";
@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { getStatusVariant } from "@/lib/orders";
+import { formatMonthYearForDisplay } from "@/lib/date-display";
 
 interface KanbanOrder {
   orderId: string;
@@ -132,7 +133,7 @@ function OrderCard({
               <>
                 <HugeiconsIcon icon={Calendar01Icon} className="h-3 w-3" />
                 <time className="text-[10px] tabular-nums">
-                  {formatMonthYear(order.releaseDate, dateFormat)}
+                  {formatMonthYearForDisplay(order.releaseDate, dateFormat)}
                 </time>
               </>
             )}

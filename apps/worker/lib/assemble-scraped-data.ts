@@ -1,5 +1,6 @@
+import { log } from "evlog";
 import type { ScrapedItem } from "./types";
-import { normalizeDateString } from "@myakiba/utils";
+import { normalizeScrapedDate } from "@myakiba/utils";
 import { v5 as uuidv5 } from "uuid";
 import type {
   AssembledScrapedData,
@@ -132,20 +133,33 @@ export function assembleScrapedData(
       });
     }
 
-    const releasesForItem = scraped.releaseDate.map((release) => {
-      const normalizedDate = normalizeDateString(release.date);
-      return {
-        id: uuidv5(
-          `${scraped.id}-${normalizedDate}-${release.type}-${release.price}-${release.priceCurrency}-${release.barcode}`,
-          RELEASE_UUID_NAMESPACE,
-        ),
-        itemExternalId: scraped.id,
-        date: normalizedDate,
-        type: release.type,
-        price: release.price,
-        priceCurrency: release.priceCurrency,
-        barcode: release.barcode,
-      };
+    const releasesForItem = scraped.releaseDate.flatMap((release) => {
+      const normalizedDate = normalizeScrapedDate(release.date);
+      if (!normalizedDate) {
+        log.warn({
+          action: "worker.assemble_scraped_data.release_skipped",
+          outcome: "skipped",
+          reason: "unsupported_release_date_format",
+          itemExternalId: scraped.id,
+          releaseDateRaw: release.date,
+        });
+        return [];
+      }
+
+      return [
+        {
+          id: uuidv5(
+            `${scraped.id}-${normalizedDate}-${release.type}-${release.price}-${release.priceCurrency}-${release.barcode}`,
+            RELEASE_UUID_NAMESPACE,
+          ),
+          itemExternalId: scraped.id,
+          date: normalizedDate,
+          type: release.type,
+          price: release.price,
+          priceCurrency: release.priceCurrency,
+          barcode: release.barcode,
+        },
+      ];
     });
 
     if (releasesForItem.length > 0) {

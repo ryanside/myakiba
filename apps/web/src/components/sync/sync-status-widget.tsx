@@ -17,7 +17,7 @@ import { ShimmeringText } from "@/components/ui/shimmering-text";
 import type { SyncSessionStatus, SyncType } from "@myakiba/types";
 import { fetchSyncSessions } from "@/queries/sync";
 import { SESSION_STATUS_CONFIG, SYNC_TYPE_CONFIG } from "@/lib/sync";
-import { formatRelativeTime } from "@myakiba/utils/dates";
+import { formatRelativeTimeToNow } from "@/lib/date-display";
 import { ACTIVE_SYNC_SESSION_STATUS_SET, SYNC_WIDGET_RECENT_LIMIT } from "@myakiba/constants/sync";
 import { useSyncJobStatusQuery } from "@/hooks/use-sync-job-status-query";
 
@@ -286,7 +286,7 @@ function RecentSessionItem({ session, onNavigate }: RecentSessionProps) {
       params={{ id: session.id }}
       onClick={onNavigate}
       className="group flex items-start gap-2.5 rounded-md px-2.5 py-2 transition-colors duration-150 hover:bg-accent"
-      aria-label={`View ${typeConfig.label} sync session from ${formatRelativeTime(session.createdAt)}`}
+      aria-label={`View ${typeConfig.label} sync session from ${formatRelativeTimeToNow(session.createdAt)}`}
     >
       <div className="mt-0.5 flex size-5 shrink-0 items-center justify-center">
         <HugeiconsIcon icon={statusIcon.icon} className={`size-3.5 ${statusIcon.className}`} />
@@ -298,7 +298,7 @@ function RecentSessionItem({ session, onNavigate }: RecentSessionProps) {
             <span className="text-xs font-medium">{typeConfig.label}</span>
           </div>
           <span className="shrink-0 text-[0.6875rem] text-muted-foreground">
-            {formatRelativeTime(session.createdAt)}
+            {formatRelativeTimeToNow(session.createdAt)}
           </span>
         </div>
 
