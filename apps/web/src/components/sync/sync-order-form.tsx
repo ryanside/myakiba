@@ -506,7 +506,7 @@ export default function SyncOrderForm({
               <div className="flex flex-col gap-4">
                 <div className="flex flex-row gap-3 items-center">
                   <Label className="text-lg text-black dark:text-white">Order Items</Label>
-                  <Badge>
+                  <Badge size="sm" variant="secondary">
                     {field.state.value.length} {field.state.value.length === 1 ? "item" : "items"}
                   </Badge>
                   <Tooltip>

@@ -62,7 +62,21 @@ export const CATEGORIES = [
   "Games",
 ] as const;
 
-export const CURRENCIES = ["USD", "JPY", "CNY", "EUR", "GBP", "CAD", "AUD", "NZD"] as const;
+export const CURRENCIES = [
+  "USD",
+  "JPY",
+  "CNY",
+  "EUR",
+  "GBP",
+  "CAD",
+  "AUD",
+  "NZD",
+  "BRL",
+  "HKD",
+  "PHP",
+  "RUB",
+  "SGD",
+] as const;
 
 export const DEFAULT_PAGE_INDEX = 0;
 export const DEFAULT_PAGE_SIZE = 10;

@@ -123,9 +123,9 @@ export function ValueLineBarChart({ data }: ValueLineBarChartProps) {
         </CardTitle>
         <CardDescription>orders in {chartData[maxValueIndex.index].month}</CardDescription>
       </CardHeader>
-      <CardContent className="">
+      <CardContent>
         <AnimatePresence mode="wait">
-          <ChartContainer config={chartConfig} className="">
+          <ChartContainer config={chartConfig}>
             <BarChart
               accessibilityLayer
               data={chartData}
