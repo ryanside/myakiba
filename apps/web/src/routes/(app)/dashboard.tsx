@@ -74,11 +74,11 @@ function DashboardContent() {
     <div className="flex flex-col gap-4 mx-auto">
       <div className="flex flex-col gap-2 mb-4">
         <div className="flex flex-row items-start gap-4">
-          <h1 className="text-2xl tracking-tight">
+          <h1 className="text-2xl tracking-tight font-heading font-medium">
             Welcome, <span className="">{session?.user.username}.</span>
           </h1>
         </div>
-        <p className="text-muted-foreground text-sm font-normal text-balance ">
+        <p className="text-muted-foreground text-sm font-normal">
           Here’s your collection and orders at a glance.
         </p>
       </div>

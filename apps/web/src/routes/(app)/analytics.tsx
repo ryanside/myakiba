@@ -241,7 +241,7 @@ function RouteComponent(): React.ReactNode {
     <div className="flex flex-col gap-6 mx-auto">
       <div className="flex flex-col gap-2 mb-4">
         <div className="flex flex-row items-start gap-4">
-          <h1 className="text-2xl tracking-tight">Analytics</h1>
+          <h1 className="text-2xl tracking-tight font-heading font-medium">Analytics</h1>
         </div>
         <p className="text-muted-foreground text-sm font-normal">
           See how your collection is distributed across different categories.
