@@ -24,6 +24,7 @@ import { Button } from "../ui/button";
 import { useMemo, useState, Fragment } from "react";
 import type { Category } from "@myakiba/contracts/shared/types";
 import { getCategoryColor } from "@/lib/category-colors";
+import { getCurrencyLocale } from "@/lib/locale";
 
 interface RowNavigation {
   to: string;
@@ -48,7 +49,7 @@ interface RankingCardProps {
   className?: string;
   progressKey?: string;
   progressMax?: number;
-  currency?: string;
+  currency: string;
   getRowNavigation?: (row: Record<string, string | number>) => RowNavigation | undefined;
 }
 
@@ -61,10 +62,11 @@ export function RankingCard({
   className,
   progressKey,
   progressMax,
-  currency = "USD",
+  currency,
   getRowNavigation,
 }: RankingCardProps) {
   const navigate = useNavigate();
+  const locale = getCurrencyLocale(currency);
 
   // prettier-ignore
   const tableColumns = useMemo<ColumnDef<Record<string, string | number>>[]>(() => {
@@ -104,7 +106,7 @@ export function RankingCard({
             }}
           >
             {col.type === "currency"
-              ? formatCurrencyFromMinorUnits(value as number, currency)
+              ? formatCurrencyFromMinorUnits(value as number, currency, locale)
               : value}{" "}
             {col.cellText && `${col.cellText}`}
           </span>

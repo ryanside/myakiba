@@ -24,16 +24,16 @@ import { Textarea } from "../ui/textarea";
 import { majorStringToMinorUnits } from "@myakiba/utils/currency";
 import { createDefaultSyncFormCollectionItem, extractMfcItemId } from "@/lib/sync";
 import { CONDITIONS, SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
+import { getCurrencyLocale } from "@/lib/locale";
 
 export default function SyncCollectionForm({
   handleSyncCollectionSubmit,
   currency,
 }: {
   handleSyncCollectionSubmit: (values: SyncCollectionItem[]) => void;
-  currency?: string;
+  currency: string;
 }) {
-  const userCurrency = currency || "USD";
-  const userLocale = "en-US";
+  const userLocale = getCurrencyLocale(currency);
 
   const collectionForm = useForm({
     defaultValues: {
@@ -192,7 +192,7 @@ export default function SyncCollectionForm({
                                               id={`price-${item.formRowId}`}
                                               name={priceField.name}
                                               mask="currency"
-                                              currency={userCurrency}
+                                              currency={currency}
                                               locale={userLocale}
                                               value={priceField.state.value}
                                               onBlur={priceField.handleBlur}

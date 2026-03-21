@@ -117,7 +117,7 @@ export function formatTimestampForDisplay(
  * // "Mar 15, 2:30 PM"
  */
 export function formatShortDateTime(date: Date, locale?: Intl.LocalesArgument): string {
-  return new Intl.DateTimeFormat(locale ?? "en-US", {
+  return new Intl.DateTimeFormat(locale, {
     month: "short",
     day: "numeric",
     hour: "numeric",

@@ -18,7 +18,7 @@ import type { CollectionItemFormValues } from "@myakiba/contracts/collection/typ
 import { createOrderItemSubColumns } from "./order-item-sub-columns";
 import { OrderItemSyncSheet } from "./order-item-sync-sheet";
 import { orderItemsQueryOptions } from "@/hooks/use-orders";
-import { useUserPreferences } from "@/hooks/use-collection";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 export const ORDER_ITEM_PAGE_SIZE = 5;
 
@@ -37,7 +37,7 @@ export function OrderItemSubDataGrid({
   onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
   isCollectionItemPending: (collectionId: string) => boolean;
 }) {
-  const { currency, dateFormat } = useUserPreferences();
+  const { currency, locale, dateFormat } = useUserPreferences();
 
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
@@ -74,10 +74,11 @@ export function OrderItemSubDataGrid({
         onEditItem,
         onDeleteItem,
         currency,
+        locale,
         dateFormat,
         isCollectionItemPending,
       }),
-    [currency, dateFormat, isCollectionItemPending, onDeleteItem, onEditItem, orderId],
+    [currency, locale, dateFormat, isCollectionItemPending, onDeleteItem, onEditItem, orderId],
   );
 
   const subTable = useReactTable({

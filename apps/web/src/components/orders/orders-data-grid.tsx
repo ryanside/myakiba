@@ -20,7 +20,7 @@ import { OrdersToolbar } from "./orders-toolbar";
 import { createOrdersColumns } from "./orders-columns";
 import { SyncSheetButton } from "@/components/sync/sync-sheet-button";
 import { useOrdersFilters, useOrdersQuery, useOrdersMutations } from "@/hooks/use-orders";
-import { useUserPreferences } from "@/hooks/use-collection";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 export default function OrdersDataGrid() {
   const { filters, setFilters } = useOrdersFilters();
@@ -42,7 +42,7 @@ export default function OrdersDataGrid() {
     isDeletingItems,
     isMovingItems,
   } = useOrdersMutations();
-  const { currency, dateFormat } = useUserPreferences();
+  const { currency, locale, dateFormat } = useUserPreferences();
 
   const limit = filters.limit ?? 10;
   const offset = filters.offset ?? 0;
@@ -117,6 +117,7 @@ export default function OrdersDataGrid() {
         onEditItem: handleEditItem,
         onDeleteItem: handleDeleteItem,
         currency,
+        locale,
         itemSelection,
         setItemSelection,
         dateFormat,
@@ -129,6 +130,7 @@ export default function OrdersDataGrid() {
       handleEditOrder,
       handleDeleteOrders,
       currency,
+      locale,
       itemSelection,
       setItemSelection,
       dateFormat,

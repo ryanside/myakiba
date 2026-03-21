@@ -17,7 +17,6 @@ import type { RowSelectionState } from "@tanstack/react-table";
 import { OrderForm } from "@/components/orders/order-form";
 import type { EditedOrder, CascadeOptions } from "@myakiba/contracts/orders/schema";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
-import type { DateFormat } from "@myakiba/contracts/shared/types";
 import { toast } from "sonner";
 import { updateCollectionItem } from "@/queries/collection";
 import Loader from "@/components/loader";
@@ -30,6 +29,7 @@ import {
   TimelineTitle,
   TimelineDate,
 } from "@/components/reui/timeline";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 export const Route = createFileRoute("/(app)/orders_/$id")({
   component: RouteComponent,
@@ -52,23 +52,23 @@ function CostRow({
   label,
   amount,
   currency,
+  locale,
 }: {
   readonly label: string;
   readonly amount: number;
-  readonly currency: string | undefined;
+  readonly currency: string;
+  readonly locale: string;
 }): React.JSX.Element {
   return (
     <div className="flex items-center justify-between text-sm">
       <span className="text-muted-foreground">{label}</span>
-      <span className="tabular-nums">{formatCurrencyFromMinorUnits(amount, currency)}</span>
+      <span className="tabular-nums">{formatCurrencyFromMinorUnits(amount, currency, locale)}</span>
     </div>
   );
 }
 
 function RouteComponent() {
-  const { session } = Route.useRouteContext();
-  const userCurrency = session?.user.currency;
-  const dateFormat = session?.user.dateFormat as DateFormat;
+  const { currency: userCurrency, locale: userLocale, dateFormat } = useUserPreferences();
   const { id } = useParams({ from: "/(app)/orders_/$id" });
   const queryClient = useQueryClient();
   const [itemSelection, setItemSelection] = useState<RowSelectionState>({});
@@ -274,6 +274,7 @@ function RouteComponent() {
             type="edit-order"
             orderData={order}
             callbackFn={handleEditOrder}
+            currency={userCurrency}
           />
         </div>
       </div>
@@ -302,17 +303,33 @@ function RouteComponent() {
           <h2 className="text-xs font-medium text-muted-foreground">Cost Breakdown</h2>
           <div className="rounded-xl bg-card ring-1 ring-foreground/10 p-5 flex flex-col gap-3">
             <div className="flex flex-col gap-2.5">
-              <CostRow label="Items" amount={itemsTotal} currency={userCurrency} />
-              <CostRow label="Shipping" amount={shippingFee} currency={userCurrency} />
+              <CostRow
+                label="Items"
+                amount={itemsTotal}
+                currency={userCurrency}
+                locale={userLocale}
+              />
+              <CostRow
+                label="Shipping"
+                amount={shippingFee}
+                currency={userCurrency}
+                locale={userLocale}
+              />
               {optionalFees.map(({ label, amount }) => (
-                <CostRow key={label} label={label} amount={amount} currency={userCurrency} />
+                <CostRow
+                  key={label}
+                  label={label}
+                  amount={amount}
+                  currency={userCurrency}
+                  locale={userLocale}
+                />
               ))}
             </div>
             <Separator />
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Total</span>
               <span className="text-lg font-semibold tracking-tight tabular-nums">
-                {formatCurrencyFromMinorUnits(totalAmount, userCurrency)}
+                {formatCurrencyFromMinorUnits(totalAmount, userCurrency, userLocale)}
               </span>
             </div>
           </div>

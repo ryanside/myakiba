@@ -80,6 +80,7 @@ interface OrdersColumnsParams {
   onEditItem: (values: CollectionItemFormValues) => Promise<void>;
   onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
   currency: string;
+  locale: string;
   itemSelection: RowSelectionState;
   setItemSelection: OnChangeFn<RowSelectionState>;
   dateFormat: DateFormat;
@@ -93,6 +94,7 @@ export function createOrdersColumns({
   onEditItem,
   onDeleteItem,
   currency,
+  locale,
   itemSelection,
   setItemSelection,
   dateFormat,
@@ -520,11 +522,10 @@ export function createOrdersColumns({
             value: order.miscFees,
           },
         ];
-        const locale = "en-US";
         return (
           <PopoverMultiInputCell
             inputs={inputs}
-            total={formatCurrencyFromMinorUnits(order.total, currency)}
+            total={formatCurrencyFromMinorUnits(order.total, currency, locale)}
             currency={currency}
             locale={locale}
             disabled={isPending}
@@ -566,7 +567,7 @@ export function createOrdersColumns({
           <InlineCurrencyCell
             value={order.shippingFee}
             currency={currency}
-            locale="en-US"
+            locale={locale}
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
@@ -606,7 +607,7 @@ export function createOrdersColumns({
           <InlineCurrencyCell
             value={order.taxes}
             currency={currency}
-            locale="en-US"
+            locale={locale}
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
@@ -646,7 +647,7 @@ export function createOrdersColumns({
           <InlineCurrencyCell
             value={order.duties}
             currency={currency}
-            locale="en-US"
+            locale={locale}
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
@@ -686,7 +687,7 @@ export function createOrdersColumns({
           <InlineCurrencyCell
             value={order.tariffs}
             currency={currency}
-            locale="en-US"
+            locale={locale}
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
@@ -726,7 +727,7 @@ export function createOrdersColumns({
           <InlineCurrencyCell
             value={order.miscFees}
             currency={currency}
-            locale="en-US"
+            locale={locale}
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;

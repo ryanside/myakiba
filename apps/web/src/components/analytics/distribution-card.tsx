@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/reui/badge";
+import { getCurrencyLocale } from "@/lib/locale";
 
 interface RowNavigation {
   to: string;
@@ -23,7 +24,7 @@ interface DistributionCardProps {
   maxValue: number;
   emptyMessage?: string;
   className?: string;
-  currency?: string;
+  currency: string;
   getRowNavigation?: (item: DistributionItem) => RowNavigation | undefined;
 }
 
@@ -34,10 +35,11 @@ export function DistributionCard({
   maxValue,
   emptyMessage = "No data found",
   className,
-  currency = "USD",
+  currency,
   getRowNavigation,
 }: DistributionCardProps): React.ReactNode {
   const navigate = useNavigate();
+  const locale = getCurrencyLocale(currency);
 
   return (
     <div
@@ -47,17 +49,17 @@ export function DistributionCard({
       )}
     >
       <div className="flex items-center gap-2.5 px-5 py-4">
-        {icon && <span className="text-muted-foreground flex-shrink-0">{icon}</span>}
+        {icon && <span className="text-muted-foreground shrink-0">{icon}</span>}
         <h3 className="text-base font-medium text-foreground">{title}</h3>
       </div>
 
       <div className="flex-1 px-5 py-4 space-y-4">
         {data.length > 0 ? (
-          data.map((item, index) => {
+          data.map((item) => {
             const rowNav = getRowNavigation?.(item);
             return (
               <div
-                key={index}
+                key={`${item.label}:${item.count}:${item.value ?? "empty"}`}
                 className={cn(
                   "space-y-2 rounded-lg p-2 -mx-2 transition-colors",
                   rowNav && "cursor-pointer hover:bg-muted/30",
@@ -74,7 +76,7 @@ export function DistributionCard({
                     <Badge variant="outline">{item.count} items</Badge>
                     {item.value !== null && item.value !== undefined && (
                       <span className="text-sm text-muted-foreground tabular-nums">
-                        {formatCurrencyFromMinorUnits(item.value as number, currency)}
+                        {formatCurrencyFromMinorUnits(item.value as number, currency, locale)}
                       </span>
                     )}
                   </div>

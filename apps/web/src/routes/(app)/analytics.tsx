@@ -17,6 +17,7 @@ import { getAnalytics } from "@/queries/analytics";
 import { RankingCard } from "@/components/analytics/ranking-card";
 import { DistributionCard } from "@/components/analytics/distribution-card";
 import Loader from "@/components/loader";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 export const Route = createFileRoute("/(app)/analytics")({
   component: RouteComponent,
@@ -34,8 +35,7 @@ export const Route = createFileRoute("/(app)/analytics")({
 });
 
 function RouteComponent(): React.ReactNode {
-  const { session } = Route.useRouteContext();
-  const userCurrency = session?.user.currency || "USD";
+  const { currency: userCurrency } = useUserPreferences();
   const { isPending, isError, data, error } = useQuery({
     queryKey: ["analytics"],
     queryFn: getAnalytics,

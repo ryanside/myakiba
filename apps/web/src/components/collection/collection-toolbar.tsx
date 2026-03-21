@@ -18,7 +18,8 @@ import {
   ActionBarClose,
   ActionBarSeparator,
 } from "@/components/ui/action-bar";
-import { useCollectionFilters, useUserPreferences } from "@/hooks/use-collection";
+import { useCollectionFilters } from "@/hooks/use-collection";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 const SORTABLE_COLUMNS: SortableColumn[] = [
   { id: "itemTitle", label: "Item" },

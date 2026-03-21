@@ -36,11 +36,12 @@ import type { SyncOrderItems } from "@myakiba/contracts/sync/types";
 import { CONDITIONS, ORDER_STATUSES, SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import { majorStringToMinorUnits } from "@myakiba/utils/currency";
 import { createDefaultSyncFormOrderItem, extractMfcItemId } from "@/lib/sync";
+import { getCurrencyLocale } from "@/lib/locale";
 
 type SyncOrderItemFormProps = {
   readonly orderId: string;
   readonly handleSyncOrderItemSubmit: (values: SyncOrderItems) => Promise<void>;
-  readonly currency?: string;
+  readonly currency: string;
 };
 
 export default function SyncOrderItemForm({
@@ -48,8 +49,7 @@ export default function SyncOrderItemForm({
   handleSyncOrderItemSubmit,
   currency,
 }: SyncOrderItemFormProps) {
-  const userCurrency = currency || "USD";
-  const userLocale = "en-US";
+  const userLocale = getCurrencyLocale(currency);
 
   const orderItemForm = useForm({
     defaultValues: {
@@ -198,7 +198,7 @@ export default function SyncOrderItemForm({
                                       id={`price-${item.formRowId}`}
                                       name={priceField.name}
                                       mask="currency"
-                                      currency={userCurrency}
+                                      currency={currency}
                                       locale={userLocale}
                                       value={priceField.state.value}
                                       onBlur={priceField.handleBlur}

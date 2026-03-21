@@ -51,12 +51,13 @@ import {
   CURRENCIES,
   CATEGORIES,
 } from "@myakiba/contracts/shared/constants";
+import { getCurrencyLocale } from "@/lib/locale";
 
 interface FiltersFormProps {
   renderTrigger: ReactElement;
   currentFilters?: CollectionFilters;
   onApplyFilters: (filters: CollectionFilters) => void;
-  currency?: string;
+  currency: string;
 }
 
 export default function FiltersForm({
@@ -67,8 +68,7 @@ export default function FiltersForm({
 }: FiltersFormProps) {
   const entriesListId = useId();
   const [entriesPopoverOpen, setEntriesPopoverOpen] = useState(false);
-  const userCurrency = currency || "USD";
-  const userLocale = "en-US";
+  const userLocale = getCurrencyLocale(currency);
 
   const form = useForm({
     defaultValues: {
@@ -314,7 +314,7 @@ export default function FiltersForm({
                     children={(field) => (
                       <MaskInput
                         mask="currency"
-                        currency={userCurrency}
+                        currency={currency}
                         locale={userLocale}
                         placeholder="Min"
                         value={field.state.value || ""}
@@ -329,7 +329,7 @@ export default function FiltersForm({
                     children={(field) => (
                       <MaskInput
                         mask="currency"
-                        currency={userCurrency}
+                        currency={currency}
                         locale={userLocale}
                         placeholder="Max"
                         value={field.state.value || ""}
@@ -741,7 +741,7 @@ export default function FiltersForm({
                     children={(field) => (
                       <MaskInput
                         mask="currency"
-                        currency={userCurrency}
+                        currency={currency}
                         locale={userLocale}
                         placeholder="Min"
                         value={field.state.value || ""}
@@ -756,7 +756,7 @@ export default function FiltersForm({
                     children={(field) => (
                       <MaskInput
                         mask="currency"
-                        currency={userCurrency}
+                        currency={currency}
                         locale={userLocale}
                         placeholder="Max"
                         value={field.state.value || ""}

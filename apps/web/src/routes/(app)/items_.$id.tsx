@@ -24,7 +24,6 @@ import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import CollectionItemForm from "@/components/collection/collection-item-form";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { CollectionItemFormValues, CollectionItem } from "@myakiba/contracts/collection/types";
-import type { DateFormat } from "@myakiba/contracts/shared/types";
 import { deleteCollectionItems, updateCollectionItem } from "@/queries/collection";
 import { toast } from "sonner";
 import Loader from "@/components/loader";
@@ -40,6 +39,8 @@ import {
   TimelineSeparator,
 } from "@/components/reui/timeline";
 import { getStatusVariant } from "@/lib/orders";
+import { getCurrencyLocale } from "@/lib/locale";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 type ItemRelatedCollection = {
   collection: Omit<
@@ -120,9 +121,7 @@ function DetailRow({
 }
 
 function RouteComponent() {
-  const { session } = Route.useRouteContext();
-  const userCurrency = session?.user.currency;
-  const dateFormat = session?.user.dateFormat as DateFormat;
+  const { currency: userCurrency, locale: userLocale, dateFormat } = useUserPreferences();
   const queryClient = useQueryClient();
   const { id } = useParams({ from: "/(app)/items_/$id" });
 
@@ -364,7 +363,11 @@ function RouteComponent() {
                     )}
                     {release.price != null && release.priceCurrency != null && (
                       <span className="ml-auto font-medium tabular-nums">
-                        {formatCurrencyFromMinorUnits(release.price, release.priceCurrency)}
+                        {formatCurrencyFromMinorUnits(
+                          release.price,
+                          release.priceCurrency,
+                          getCurrencyLocale(release.priceCurrency),
+                        )}
                       </span>
                     )}
                   </div>
@@ -529,7 +532,11 @@ function RouteComponent() {
                         <div className="space-y-1.5">
                           <DetailRow label="Count">{collectionItem.count}</DetailRow>
                           <DetailRow label="Price">
-                            {formatCurrencyFromMinorUnits(collectionItem.price, userCurrency)}
+                            {formatCurrencyFromMinorUnits(
+                              collectionItem.price,
+                              userCurrency,
+                              userLocale,
+                            )}
                           </DetailRow>
                           <DetailRow label="Condition">{collectionItem.condition}</DetailRow>
                           {collectionItem.shop && (

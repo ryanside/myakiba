@@ -16,7 +16,7 @@ import { SYNC_OPTION_META } from "@/lib/sync";
 import SyncOrderForm from "@/components/sync/sync-order-form";
 import SyncCollectionForm from "@/components/sync/sync-collection-form";
 import { useSyncMutations } from "@/hooks/use-sync-mutations";
-import { useUserPreferences } from "@/hooks/use-collection";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { PlusIcon, type PlusIconHandle } from "@/components/ui/plus";
 
 type SyncSheetButtonProps = {

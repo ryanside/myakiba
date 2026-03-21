@@ -24,6 +24,7 @@ import { syncSearchSchema } from "@myakiba/contracts/sync/schema";
 import { useFilters } from "@/hooks/use-filters";
 import { useSyncMutations } from "@/hooks/use-sync-mutations";
 import { SYNC_WIDGET_RECENT_LIMIT } from "@myakiba/contracts/sync/constants";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 type LaunchableSyncType = Extract<SyncType, "collection" | "csv" | "order">;
 
@@ -65,8 +66,7 @@ export const Route = createFileRoute("/(app)/sync")({
 });
 
 function RouteComponent() {
-  const { session } = Route.useRouteContext();
-  const userCurrency = session?.user.currency || "USD";
+  const { currency: userCurrency } = useUserPreferences();
   const queryClient = useQueryClient();
   const { filters, setFilters } = useFilters(Route.id, {
     paginationDefaults: { limit: SYNC_WIDGET_RECENT_LIMIT },

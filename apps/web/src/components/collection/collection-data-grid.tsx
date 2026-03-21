@@ -21,8 +21,8 @@ import {
   useCollectionFilters,
   useCollectionQuery,
   useCollectionMutations,
-  useUserPreferences,
 } from "@/hooks/use-collection";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 export const CollectionDataGrid = () => {
   const { filters, setFilters } = useCollectionFilters();
@@ -33,7 +33,7 @@ export const CollectionDataGrid = () => {
     isCollectionPending,
     isDeletingCollectionItems,
   } = useCollectionMutations();
-  const { currency, dateFormat } = useUserPreferences();
+  const { currency, locale, dateFormat } = useUserPreferences();
 
   const limit = filters.limit ?? 10;
   const offset = filters.offset ?? 0;
@@ -90,11 +90,13 @@ export const CollectionDataGrid = () => {
         onEditCollectionItem: handleEditCollectionItem,
         onDeleteCollectionItems: handleDeleteCollectionItems,
         currency,
+        locale,
         dateFormat,
         isCollectionPending,
       }),
     [
       currency,
+      locale,
       dateFormat,
       handleEditCollectionItem,
       handleDeleteCollectionItems,

@@ -43,6 +43,7 @@ interface OrderItemSubColumnsParams {
   onEditItem: (values: CollectionItemFormValues) => Promise<void>;
   onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
   currency: string;
+  locale: string;
   dateFormat: DateFormat;
   isCollectionItemPending: (collectionId: string) => boolean;
 }
@@ -52,6 +53,7 @@ export function createOrderItemSubColumns({
   onEditItem,
   onDeleteItem,
   currency,
+  locale,
   dateFormat,
   isCollectionItemPending,
 }: OrderItemSubColumnsParams): ColumnDef<OrderItem>[] {
@@ -264,7 +266,7 @@ export function createOrderItemSubColumns({
             onSubmit={async (newValue) => {
               await onEditItem({ ...item, price: newValue });
             }}
-            locale="en-US"
+            locale={locale}
             disabled={isPending}
           />
         );

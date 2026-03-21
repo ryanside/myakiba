@@ -25,7 +25,6 @@ import { Link, useLocation } from "@tanstack/react-router";
 import { useRef } from "react";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
 import { GitCompareIcon, type GitCompareIconHandle } from "../ui/git-compare";
-import type { RouterAppContext } from "@/routes/__root";
 import SyncWidget from "../sync/sync-widget";
 import { Button } from "../ui/button";
 import { PlusIcon, type PlusIconHandle } from "../ui/plus";
@@ -72,12 +71,7 @@ const data = {
   ],
 };
 
-export function AppSidebar({
-  session,
-  ...props
-}: React.ComponentProps<typeof Sidebar> & {
-  session: RouterAppContext["session"];
-}) {
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const location = useLocation();
   const syncIconRef = useRef<GitCompareIconHandle>(null);
   const addItemsIconRef = useRef<PlusIconHandle>(null);
@@ -111,7 +105,6 @@ export function AppSidebar({
           <SidebarMenu className="space-y-1">
             <SidebarMenuItem>
               <SyncWidget
-                session={session}
                 TriggerWrapper={
                   <SidebarMenuButton
                     className="transition-all"
@@ -137,7 +130,7 @@ export function AppSidebar({
                 tooltip="Sync History"
                 render={
                   <Button
-                    variant={location.pathname === "/sync" ? "secondary" : "outline"}
+                    variant={location.pathname.startsWith("/sync") ? "secondary" : "outline"}
                     onMouseEnter={() => syncIconRef.current?.startAnimation()}
                     onMouseLeave={() => syncIconRef.current?.stopAnimation()}
                   >

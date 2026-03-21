@@ -43,6 +43,7 @@ import { majorStringToMinorUnits, minorUnitsToMajorString } from "@myakiba/utils
 import { Scroller } from "../ui/scroller";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { useState } from "react";
+import { getCurrencyLocale } from "@/lib/locale";
 
 type MergeOrderFormProps = {
   renderTrigger: React.ReactElement;
@@ -55,7 +56,7 @@ type MergeOrderFormProps = {
     orderIds: Set<string>,
   ) => Promise<void>;
   clearSelections: () => void;
-  currency?: string;
+  currency: string;
 };
 
 type SplitOrderFormProps = {
@@ -70,7 +71,7 @@ type SplitOrderFormProps = {
     orderIds: Set<string>,
   ) => Promise<void>;
   clearSelections: () => void;
-  currency?: string;
+  currency: string;
 };
 
 type EditOrderFormProps = {
@@ -81,7 +82,7 @@ type EditOrderFormProps = {
   callbackFn: (value: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
   orderData: Order;
   clearSelections?: () => void;
-  currency?: string;
+  currency: string;
 };
 
 type OrderFormProps = MergeOrderFormProps | SplitOrderFormProps | EditOrderFormProps;
@@ -91,8 +92,7 @@ export function OrderForm(props: OrderFormProps) {
     props;
   const [open, setOpen] = useState(false);
 
-  const userCurrency = currency || "USD";
-  const userLocale = "en-US";
+  const userLocale = getCurrencyLocale(currency);
 
   const {
     cascadeOptions,
@@ -457,7 +457,7 @@ export function OrderForm(props: OrderFormProps) {
                           id={field.name}
                           name={field.name}
                           mask="currency"
-                          currency={userCurrency}
+                          currency={currency}
                           locale={userLocale}
                           value={field.state.value}
                           onBlur={field.handleBlur}
@@ -479,7 +479,7 @@ export function OrderForm(props: OrderFormProps) {
                           id={field.name}
                           name={field.name}
                           mask="currency"
-                          currency={userCurrency}
+                          currency={currency}
                           locale={userLocale}
                           value={field.state.value}
                           onBlur={field.handleBlur}
@@ -503,7 +503,7 @@ export function OrderForm(props: OrderFormProps) {
                           id={field.name}
                           name={field.name}
                           mask="currency"
-                          currency={userCurrency}
+                          currency={currency}
                           locale={userLocale}
                           value={field.state.value}
                           onBlur={field.handleBlur}
@@ -525,7 +525,7 @@ export function OrderForm(props: OrderFormProps) {
                           id={field.name}
                           name={field.name}
                           mask="currency"
-                          currency={userCurrency}
+                          currency={currency}
                           locale={userLocale}
                           value={field.state.value}
                           onBlur={field.handleBlur}
@@ -548,7 +548,7 @@ export function OrderForm(props: OrderFormProps) {
                         id={field.name}
                         name={field.name}
                         mask="currency"
-                        currency={userCurrency}
+                        currency={currency}
                         locale={userLocale}
                         value={field.state.value}
                         onBlur={field.handleBlur}
@@ -862,7 +862,7 @@ export function OrderForm(props: OrderFormProps) {
                       id={field.name}
                       name={field.name}
                       mask="currency"
-                      currency={userCurrency}
+                      currency={currency}
                       locale={userLocale}
                       value={field.state.value}
                       onBlur={field.handleBlur}
@@ -884,7 +884,7 @@ export function OrderForm(props: OrderFormProps) {
                       id={field.name}
                       name={field.name}
                       mask="currency"
-                      currency={userCurrency}
+                      currency={currency}
                       locale={userLocale}
                       value={field.state.value}
                       onBlur={field.handleBlur}
@@ -908,7 +908,7 @@ export function OrderForm(props: OrderFormProps) {
                       id={field.name}
                       name={field.name}
                       mask="currency"
-                      currency={userCurrency}
+                      currency={currency}
                       locale={userLocale}
                       value={field.state.value}
                       onBlur={field.handleBlur}
@@ -930,7 +930,7 @@ export function OrderForm(props: OrderFormProps) {
                       id={field.name}
                       name={field.name}
                       mask="currency"
-                      currency={userCurrency}
+                      currency={currency}
                       locale={userLocale}
                       value={field.state.value}
                       onBlur={field.handleBlur}
@@ -953,7 +953,7 @@ export function OrderForm(props: OrderFormProps) {
                     id={field.name}
                     name={field.name}
                     mask="currency"
-                    currency={userCurrency}
+                    currency={currency}
                     locale={userLocale}
                     value={field.state.value}
                     onBlur={field.handleBlur}

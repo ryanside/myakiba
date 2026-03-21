@@ -40,6 +40,7 @@ interface CollectionColumnsParams {
   onEditCollectionItem: (values: CollectionItemFormValues) => Promise<void>;
   onDeleteCollectionItems: (collectionIds: Set<string>) => Promise<void>;
   currency: string;
+  locale: string;
   dateFormat: DateFormat;
   isCollectionPending: (collectionId: string) => boolean;
 }
@@ -48,6 +49,7 @@ export function createCollectionColumns({
   onEditCollectionItem,
   onDeleteCollectionItems,
   currency,
+  locale,
   dateFormat,
   isCollectionPending,
 }: CollectionColumnsParams): ColumnDef<CollectionItem>[] {
@@ -272,7 +274,7 @@ export function createCollectionColumns({
                 price: newValue,
               });
             }}
-            locale="en-US"
+            locale={locale}
             disabled={isPending}
           />
         );

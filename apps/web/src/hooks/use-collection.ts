@@ -6,14 +6,12 @@ import {
   useQueryClient,
   queryOptions,
 } from "@tanstack/react-query";
-import { getRouteApi } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { useFilters } from "@/hooks/use-filters";
 import { getCollection, deleteCollectionItems, updateCollectionItem } from "@/queries/collection";
 import { hasActiveFiltersOrSorting } from "@/lib/filters";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
-import type { DateFormat } from "@myakiba/contracts/shared/types";
 
 export function collectionQueryOptions(filters: CollectionFilters) {
   return queryOptions({
@@ -21,19 +19,6 @@ export function collectionQueryOptions(filters: CollectionFilters) {
     queryFn: () => getCollection(filters),
     placeholderData: keepPreviousData,
   });
-}
-
-const appRouteApi = getRouteApi("/(app)");
-
-export function useUserPreferences(): {
-  readonly currency: string;
-  readonly dateFormat: DateFormat;
-} {
-  const { session } = appRouteApi.useRouteContext();
-  return {
-    currency: session?.user.currency ?? "USD",
-    dateFormat: (session?.user.dateFormat ?? "yyyy-MM-dd") as DateFormat,
-  };
 }
 
 export function useCollectionFilters() {

@@ -45,12 +45,13 @@ import {
 } from "@myakiba/contracts/shared/constants";
 import { useState, type ReactElement } from "react";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
+import { getCurrencyLocale } from "@/lib/locale";
 
 type CollectionItemFormProps = {
   renderTrigger: ReactElement;
   itemData: CollectionItemFormValues;
   callbackFn: (itemData: CollectionItemFormValues) => Promise<void>;
-  currency?: string;
+  currency: string;
   dateFormat?: DateFormat;
 };
 
@@ -58,8 +59,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
   const { itemData, callbackFn, currency, dateFormat, renderTrigger } = props;
   const [open, setOpen] = useState(false);
 
-  const userCurrency = currency || "USD";
-  const userLocale = "en-US";
+  const userLocale = getCurrencyLocale(currency);
 
   const form = useForm({
     defaultValues: {
@@ -120,7 +120,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                         id={field.name}
                         name={field.name}
                         mask="currency"
-                        currency={userCurrency}
+                        currency={currency}
                         locale={userLocale}
                         value={field.state.value}
                         onBlur={field.handleBlur}
@@ -323,6 +323,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                                         {formatCurrencyFromMinorUnits(
                                           displayData.price,
                                           displayData.priceCurrency,
+                                          getCurrencyLocale(displayData.priceCurrency),
                                         )}
                                       </span>
                                     )}
@@ -366,6 +367,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                                       {formatCurrencyFromMinorUnits(
                                         release.price,
                                         release.priceCurrency,
+                                        getCurrencyLocale(release.priceCurrency),
                                       )}
                                     </span>
                                   )}

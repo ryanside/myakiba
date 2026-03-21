@@ -22,6 +22,7 @@ import { Link } from "@tanstack/react-router";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { getStatusVariant } from "@/lib/orders";
 import { formatMonthYearForDisplay } from "@/lib/date-display";
+import { getCurrencyLocale } from "@/lib/locale";
 
 interface KanbanOrder {
   orderId: string;
@@ -65,6 +66,7 @@ function OrderCard({
   onMarkOwned,
   ...props
 }: OrderCardProps) {
+  const locale = getCurrencyLocale(currency);
   const cardContent = (
     <div className="rounded-lg ring ring-foreground/10 bg-card p-3 shadow-xs hover:shadow-sm transition-shadow relative">
       <Tooltip>
@@ -92,9 +94,9 @@ function OrderCard({
         {/* Item Images */}
         {order.itemImages && order.itemImages.length > 0 && (
           <div className="flex gap-1 mb-1">
-            {order.itemImages.slice(0, 3).map((image, idx) => (
+            {order.itemImages.slice(0, 3).map((image) => (
               <div
-                key={idx}
+                key={`${order.orderId}:${image}`}
                 className="relative w-12 h-12 rounded-md overflow-hidden bg-muted shrink-0"
               >
                 <img src={image} alt="" className="w-full h-full object-cover object-top" />
@@ -139,7 +141,7 @@ function OrderCard({
             )}
           </div>
           <span className="font-normal text-sm">
-            {formatCurrencyFromMinorUnits(order.total, currency)}
+            {formatCurrencyFromMinorUnits(order.total, currency, locale)}
           </span>
         </div>
       </div>
