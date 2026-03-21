@@ -3,7 +3,7 @@ import type {
   FinalizePersistenceSummary,
   FinalizeSyncResult,
 } from "../types";
-import type { UpdatedSyncCollection } from "@myakiba/schemas/sync";
+import type { UpdatedSyncCollection } from "@myakiba/contracts/sync/schema";
 import { tryCatch } from "@myakiba/utils/result";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@myakiba/db/client";

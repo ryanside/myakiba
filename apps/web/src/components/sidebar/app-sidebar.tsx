@@ -137,12 +137,12 @@ export function AppSidebar({
                 tooltip="Sync History"
                 render={
                   <Button
-                    variant="outline"
+                    variant={location.pathname === "/sync" ? "secondary" : "outline"}
                     onMouseEnter={() => syncIconRef.current?.startAnimation()}
                     onMouseLeave={() => syncIconRef.current?.stopAnimation()}
                   >
                     <Link to="/sync">
-                      <GitCompareIcon ref={syncIconRef} size={17} className="text-primary" />
+                      <GitCompareIcon ref={syncIconRef} size={17} />
                       <span className="">Sync History</span>
                     </Link>
                   </Button>

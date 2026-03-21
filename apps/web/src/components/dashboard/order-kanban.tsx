@@ -14,7 +14,7 @@ import {
   KanbanOverlay,
 } from "@/components/reui/kanban";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import type { DateFormat } from "@myakiba/types/enums";
+import type { DateFormat } from "@myakiba/contracts/shared/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateOrderStatus } from "@/queries/orders";
 import { toast } from "sonner";

@@ -5,7 +5,7 @@ import {
   syncOrderSchema,
   syncOrderItemInputSchema,
   syncCollectionItemSchema,
-} from "@myakiba/schemas/sync";
+} from "@myakiba/contracts/sync/schema";
 
 export {
   internalCsvItemSchema,
@@ -13,15 +13,15 @@ export {
   syncJobStatusSchema,
   syncOrderItemInputSchema,
   syncOrderItemsSchema,
-} from "@myakiba/schemas/sync";
+} from "@myakiba/contracts/sync/schema";
 
 export type {
   InternalCsvItem,
   SyncTerminalState,
   SyncJobStatus,
   SyncOrderItemInput,
-  SyncOrderItems,
-} from "@myakiba/schemas/sync";
+  SyncOrderItemsInput,
+} from "@myakiba/contracts/sync/schema";
 
 export const collectionInsertSchema = createInsertSchema(collection);
 

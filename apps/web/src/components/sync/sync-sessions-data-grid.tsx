@@ -11,7 +11,7 @@ import {
   useReactTable,
   type Updater,
 } from "@tanstack/react-table";
-import type { SyncSessionRow } from "@myakiba/types/sync";
+import type { SyncSessionRow } from "@myakiba/contracts/sync/types";
 import { createSyncSessionColumns } from "./sync-sessions-columns";
 import { SyncSessionItemSubDataGrid } from "./sync-session-item-sub-data-grid";
 

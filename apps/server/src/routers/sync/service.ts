@@ -18,10 +18,14 @@ import type {
   UpdatedSyncCollection,
   UpdatedSyncOrder,
   UpdatedSyncOrderItem,
-} from "@myakiba/schemas/sync";
+} from "@myakiba/contracts/sync/schema";
 import type { InternalCsvItem, SyncJobStatus, CollectionInsertType } from "./model";
 import type { OrderInsertType } from "../orders/model";
-import type { SyncSessionItemStatus, SyncSessionStatus, SyncType } from "@myakiba/types/enums";
+import type {
+  SyncSessionItemStatus,
+  SyncSessionStatus,
+  SyncType,
+} from "@myakiba/contracts/shared/types";
 import { Queue } from "bullmq";
 import { createId } from "@paralleldrive/cuid2";
 import { env } from "@myakiba/env/server";
@@ -39,7 +43,7 @@ import {
   orderItemMetadataSchema,
   collectionItemMetadataSchema,
   syncOrderSchema,
-} from "@myakiba/schemas/sync";
+} from "@myakiba/contracts/sync/schema";
 import { createLogger } from "evlog";
 
 const syncQueue = new Queue("sync-queue", {

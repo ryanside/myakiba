@@ -9,9 +9,9 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { getCoreRowModel, type PaginationState, useReactTable } from "@tanstack/react-table";
 import { toast } from "sonner";
-import type { EnrichedSyncSessionItemRow } from "@myakiba/types/sync";
-import type { SyncSessionStatus } from "@myakiba/types/enums";
-import { SYNC_SESSION_SUBGRID_PAGE_SIZE } from "@myakiba/constants/sync";
+import type { EnrichedSyncSessionItemRow } from "@myakiba/contracts/sync/types";
+import type { SyncSessionStatus } from "@myakiba/contracts/shared/types";
+import { SYNC_SESSION_SUBGRID_PAGE_SIZE } from "@myakiba/contracts/sync/constants";
 import { fetchSyncSessionDetail, retrySyncFailedItems } from "@/queries/sync";
 import { createSyncSessionItemSubColumns } from "./sync-session-item-sub-columns";
 

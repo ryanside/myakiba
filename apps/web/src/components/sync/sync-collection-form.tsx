@@ -2,7 +2,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Cancel01Icon, Edit01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "../ui/button";
-import type { SyncCollectionItem } from "@myakiba/types/sync";
+import type { SyncCollectionItem } from "@myakiba/contracts/sync/types";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { MaskInput } from "../ui/mask-input";
@@ -21,9 +21,9 @@ import { DatePicker } from "../ui/date-picker";
 import * as z from "zod";
 import { Rating } from "../ui/rating";
 import { Textarea } from "../ui/textarea";
-import { getCurrencyLocale, majorStringToMinorUnits } from "@myakiba/utils/currency";
+import { majorStringToMinorUnits } from "@myakiba/utils/currency";
 import { createDefaultSyncFormCollectionItem, extractMfcItemId } from "@/lib/sync";
-import { CONDITIONS, SHIPPING_METHODS } from "@myakiba/constants/enums";
+import { CONDITIONS, SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 
 export default function SyncCollectionForm({
   handleSyncCollectionSubmit,
@@ -33,7 +33,7 @@ export default function SyncCollectionForm({
   currency?: string;
 }) {
   const userCurrency = currency || "USD";
-  const userLocale = getCurrencyLocale(userCurrency);
+  const userLocale = "en-US";
 
   const collectionForm = useForm({
     defaultValues: {

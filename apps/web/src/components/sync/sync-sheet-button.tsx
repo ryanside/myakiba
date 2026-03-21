@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { useQueryClient } from "@tanstack/react-query";
-import type { SyncType } from "@myakiba/types/enums";
+import type { SyncType } from "@myakiba/contracts/shared/types";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {

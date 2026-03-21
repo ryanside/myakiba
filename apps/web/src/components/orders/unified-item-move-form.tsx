@@ -25,12 +25,12 @@ import {
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import * as z from "zod";
-import type { NewOrder, CascadeOptions } from "@myakiba/types/orders";
+import type { NewOrder, CascadeOptions } from "@myakiba/contracts/orders/schema";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import { CascadeOptionsDropdown } from "@/components/cascade-options-dropdown";
 import { Textarea } from "../ui/textarea";
 import { cn } from "@/lib/utils";
-import { getCurrencyLocale, majorStringToMinorUnits } from "@myakiba/utils/currency";
+import { majorStringToMinorUnits } from "@myakiba/utils/currency";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useQuery } from "@tanstack/react-query";
 import { getOrderIdsAndTitles } from "@/queries/orders";
@@ -45,8 +45,8 @@ import {
 } from "@/components/ui/command";
 import { ScrollArea } from "../ui/scroll-area";
 import { Scroller } from "../ui/scroller";
-import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/constants/enums";
-import type { OrderStatus, ShippingMethod } from "@myakiba/types/enums";
+import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
+import type { OrderStatus, ShippingMethod } from "@myakiba/contracts/shared/types";
 
 type UnifiedItemMoveFormProps = {
   renderTrigger: React.ReactElement;
@@ -82,7 +82,7 @@ export default function UnifiedItemMoveForm({
   const targetOrderListId = useId();
 
   const userCurrency = currency || "USD";
-  const userLocale = getCurrencyLocale(userCurrency);
+  const userLocale = "en-US";
 
   const {
     cascadeOptions,

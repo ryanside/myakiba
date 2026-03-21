@@ -35,17 +35,17 @@ import {
 } from "../ui/dialog";
 import * as z from "zod";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
-import type { CascadeOptions } from "@myakiba/types/orders";
-import type { SyncFormOrderItem, SyncOrder } from "@myakiba/types/sync";
+import type { CascadeOptions } from "@myakiba/contracts/orders/schema";
+import type { SyncFormOrderItem, SyncOrder } from "@myakiba/contracts/sync/types";
 import { Textarea } from "../ui/textarea";
-import { getCurrencyLocale, majorStringToMinorUnits } from "@myakiba/utils/currency";
+import { majorStringToMinorUnits } from "@myakiba/utils/currency";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   createDefaultSyncFormOrder,
   createDefaultSyncFormOrderItem,
   extractMfcItemId,
 } from "@/lib/sync";
-import { SHIPPING_METHODS, ORDER_STATUSES, CONDITIONS } from "@myakiba/constants/enums";
+import { SHIPPING_METHODS, ORDER_STATUSES, CONDITIONS } from "@myakiba/contracts/shared/constants";
 
 export default function SyncOrderForm({
   handleSyncOrderSubmit,
@@ -55,7 +55,7 @@ export default function SyncOrderForm({
   currency?: string;
 }) {
   const userCurrency = currency || "USD";
-  const userLocale = getCurrencyLocale(userCurrency);
+  const userLocale = "en-US";
 
   const {
     cascadeOptions,

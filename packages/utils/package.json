@@ -9,12 +9,10 @@
     }
   },
   "dependencies": {
-    "@myakiba/constants": "workspace:*",
     "date-fns": "catalog:"
   },
   "devDependencies": {
     "@myakiba/config": "workspace:*",
-    "@myakiba/types": "workspace:*",
     "@types/bun": "catalog:"
   },
   "peerDependencies": {

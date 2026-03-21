@@ -8,11 +8,11 @@ import {
   orderIdParamSchema,
   orderItemsQuerySchema,
 } from "./model";
-import { cascadeOptionsSchema } from "@myakiba/schemas/orders";
+import { cascadeOptionsSchema } from "@myakiba/contracts/orders/schema";
 import { tryCatch } from "@myakiba/utils/result";
 import { betterAuth } from "@/middleware/better-auth";
 import { evlog } from "evlog/elysia";
-import type { Order, OrderListItem } from "@myakiba/types/orders";
+import type { Order, OrderListItem } from "@myakiba/contracts/orders/types";
 
 const ordersRouter = new Elysia({ prefix: "/orders" })
   .use(betterAuth)

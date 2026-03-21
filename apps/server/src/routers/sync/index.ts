@@ -13,7 +13,7 @@ import type {
   UpdatedSyncCollection,
   UpdatedSyncOrder,
   UpdatedSyncOrderItem,
-} from "@myakiba/schemas/sync";
+} from "@myakiba/contracts/sync/schema";
 import type {
   SyncJobStatus,
   SyncOrderItemInput,
@@ -22,7 +22,7 @@ import type {
 } from "./model";
 import SyncService from "./service";
 import { tryCatch } from "@myakiba/utils/result";
-import { SYNC_SESSION_STATUSES, SYNC_TYPES } from "@myakiba/constants/enums";
+import { SYNC_SESSION_STATUSES, SYNC_TYPES } from "@myakiba/contracts/shared/constants";
 import { createId } from "@paralleldrive/cuid2";
 import {
   jobStatusSubscriptionRegistry,

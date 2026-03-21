@@ -21,12 +21,10 @@
         "@elysiajs/openapi": "^1.4.14",
         "@elysiajs/static": "^1.4.7",
         "@myakiba/auth": "workspace:*",
-        "@myakiba/constants": "workspace:*",
+        "@myakiba/contracts": "workspace:*",
         "@myakiba/db": "workspace:*",
         "@myakiba/env": "workspace:*",
         "@myakiba/redis": "workspace:*",
-        "@myakiba/schemas": "workspace:*",
-        "@myakiba/types": "workspace:*",
         "@myakiba/utils": "workspace:*",
         "@paralleldrive/cuid2": "catalog:",
         "bullmq": "catalog:",
@@ -61,10 +59,8 @@
         "@hugeicons/core-free-icons": "^4.0.0",
         "@hugeicons/react": "^1.1.6",
         "@marsidev/react-turnstile": "^1.4.2",
-        "@myakiba/constants": "workspace:*",
+        "@myakiba/contracts": "workspace:*",
         "@myakiba/env": "workspace:*",
-        "@myakiba/schemas": "workspace:*",
-        "@myakiba/types": "workspace:*",
         "@myakiba/utils": "workspace:*",
         "@tailwindcss/vite": "^4.1.18",
         "@tanstack/react-form": "^1.28.0",
@@ -116,12 +112,10 @@
       "name": "worker",
       "dependencies": {
         "@aws-sdk/client-s3": "^3.988.0",
-        "@myakiba/constants": "workspace:*",
+        "@myakiba/contracts": "workspace:*",
         "@myakiba/db": "workspace:*",
         "@myakiba/env": "workspace:*",
         "@myakiba/redis": "workspace:*",
-        "@myakiba/schemas": "workspace:*",
-        "@myakiba/types": "workspace:*",
         "@myakiba/utils": "workspace:*",
         "bullmq": "catalog:",
         "cheerio": "^1.2.0",
@@ -167,9 +161,12 @@
       "name": "@myakiba/config",
       "version": "0.0.0",
     },
-    "packages/constants": {
-      "name": "@myakiba/constants",
+    "packages/contracts": {
+      "name": "@myakiba/contracts",
       "version": "0.0.0",
+      "dependencies": {
+        "zod": "catalog:",
+      },
       "devDependencies": {
         "@myakiba/config": "workspace:*",
         "@types/bun": "catalog:",
@@ -182,7 +179,7 @@
       "name": "@myakiba/db",
       "version": "0.0.0",
       "dependencies": {
-        "@myakiba/constants": "workspace:*",
+        "@myakiba/contracts": "workspace:*",
         "@myakiba/env": "workspace:*",
         "@paralleldrive/cuid2": "catalog:",
         "dotenv": "catalog:",
@@ -229,40 +226,9 @@
       "name": "@myakiba/redis",
       "version": "0.0.0",
       "dependencies": {
-        "@myakiba/constants": "workspace:*",
+        "@myakiba/contracts": "workspace:*",
         "@myakiba/env": "workspace:*",
-        "@myakiba/schemas": "workspace:*",
         "ioredis": "catalog:",
-      },
-      "devDependencies": {
-        "@myakiba/config": "workspace:*",
-        "@types/bun": "catalog:",
-      },
-      "peerDependencies": {
-        "typescript": "catalog:",
-      },
-    },
-    "packages/schemas": {
-      "name": "@myakiba/schemas",
-      "version": "0.0.0",
-      "dependencies": {
-        "@myakiba/constants": "workspace:*",
-        "zod": "catalog:",
-      },
-      "devDependencies": {
-        "@myakiba/config": "workspace:*",
-        "@types/bun": "catalog:",
-      },
-      "peerDependencies": {
-        "typescript": "catalog:",
-      },
-    },
-    "packages/types": {
-      "name": "@myakiba/types",
-      "version": "0.0.0",
-      "dependencies": {
-        "@myakiba/constants": "workspace:*",
-        "@myakiba/schemas": "workspace:*",
       },
       "devDependencies": {
         "@myakiba/config": "workspace:*",
@@ -276,12 +242,10 @@
       "name": "@myakiba/utils",
       "version": "0.0.0",
       "dependencies": {
-        "@myakiba/constants": "workspace:*",
         "date-fns": "catalog:",
       },
       "devDependencies": {
         "@myakiba/config": "workspace:*",
-        "@myakiba/types": "workspace:*",
         "@types/bun": "catalog:",
       },
       "peerDependencies": {
@@ -646,7 +610,7 @@
 
     "@myakiba/config": ["@myakiba/config@workspace:packages/config"],
 
-    "@myakiba/constants": ["@myakiba/constants@workspace:packages/constants"],
+    "@myakiba/contracts": ["@myakiba/contracts@workspace:packages/contracts"],
 
     "@myakiba/db": ["@myakiba/db@workspace:packages/db"],
 
@@ -655,10 +619,6 @@
     "@myakiba/eslint-config": ["@myakiba/eslint-config@workspace:packages/eslint-config"],
 
     "@myakiba/redis": ["@myakiba/redis@workspace:packages/redis"],
-
-    "@myakiba/schemas": ["@myakiba/schemas@workspace:packages/schemas"],
-
-    "@myakiba/types": ["@myakiba/types@workspace:packages/types"],
 
     "@myakiba/utils": ["@myakiba/utils@workspace:packages/utils"],
 

@@ -1,6 +1,6 @@
 import { db } from "@myakiba/db/client";
 import { item, collection, item_release, order } from "@myakiba/db/schema/figure";
-import type { Category } from "@myakiba/types/enums";
+import type { Category } from "@myakiba/contracts/shared/types";
 import { eq, count, and, sum, asc, sql, desc, ne, gte, lte } from "drizzle-orm";
 
 class DashboardService {

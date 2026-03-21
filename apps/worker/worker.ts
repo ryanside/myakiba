@@ -8,7 +8,7 @@ import type {
   ProcessSyncJobResult,
   WorkerJobContext,
 } from "./lib/types";
-import { jobDataSchema } from "@myakiba/schemas/sync";
+import { jobDataSchema } from "@myakiba/contracts/sync/schema";
 import { finalizeCollectionSync } from "./lib/collection/utils";
 import { finalizeOrderSync } from "./lib/order/utils";
 import { finalizeCsvSync } from "./lib/csv/utils";

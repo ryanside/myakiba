@@ -1,6 +1,5 @@
 import * as z from "zod";
-import { CATEGORIES } from "@myakiba/constants/categories";
-import { ENTRY_CATEGORIES } from "@myakiba/constants/enums";
+import { CATEGORIES, ENTRY_CATEGORIES } from "@myakiba/contracts/shared/constants";
 
 export const customItemReleaseSchema = z.object({
   date: z.iso.date(),

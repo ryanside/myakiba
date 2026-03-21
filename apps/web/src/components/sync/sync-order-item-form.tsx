@@ -32,9 +32,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { SyncOrderItems } from "@myakiba/types/sync";
-import { CONDITIONS, ORDER_STATUSES, SHIPPING_METHODS } from "@myakiba/constants/enums";
-import { getCurrencyLocale, majorStringToMinorUnits } from "@myakiba/utils/currency";
+import type { SyncOrderItems } from "@myakiba/contracts/sync/types";
+import { CONDITIONS, ORDER_STATUSES, SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
+import { majorStringToMinorUnits } from "@myakiba/utils/currency";
 import { createDefaultSyncFormOrderItem, extractMfcItemId } from "@/lib/sync";
 
 type SyncOrderItemFormProps = {
@@ -49,7 +49,7 @@ export default function SyncOrderItemForm({
   currency,
 }: SyncOrderItemFormProps) {
   const userCurrency = currency || "USD";
-  const userLocale = getCurrencyLocale(userCurrency);
+  const userLocale = "en-US";
 
   const orderItemForm = useForm({
     defaultValues: {

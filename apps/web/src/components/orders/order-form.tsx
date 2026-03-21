@@ -34,17 +34,14 @@ import {
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import * as z from "zod";
-import type { EditedOrder, NewOrder, Order, CascadeOptions } from "@myakiba/types/orders";
+import type { EditedOrder, NewOrder, CascadeOptions } from "@myakiba/contracts/orders/schema";
+import type { Order } from "@myakiba/contracts/orders/types";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import { CascadeOptionsDropdown } from "@/components/cascade-options-dropdown";
 import { Textarea } from "../ui/textarea";
-import {
-  getCurrencyLocale,
-  majorStringToMinorUnits,
-  minorUnitsToMajorString,
-} from "@myakiba/utils/currency";
+import { majorStringToMinorUnits, minorUnitsToMajorString } from "@myakiba/utils/currency";
 import { Scroller } from "../ui/scroller";
-import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/constants/enums";
+import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { useState } from "react";
 
 type MergeOrderFormProps = {
@@ -95,7 +92,7 @@ export function OrderForm(props: OrderFormProps) {
   const [open, setOpen] = useState(false);
 
   const userCurrency = currency || "USD";
-  const userLocale = getCurrencyLocale(userCurrency);
+  const userLocale = "en-US";
 
   const {
     cascadeOptions,

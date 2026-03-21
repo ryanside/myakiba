@@ -20,8 +20,8 @@ import type {
   ScrapeSingleItemParams,
   ScrapeItemsParams,
 } from "./types";
-import type { Category } from "@myakiba/types/enums";
-import { CATEGORIES } from "@myakiba/constants/categories";
+import type { Category } from "@myakiba/contracts/shared/types";
+import { CATEGORIES } from "@myakiba/contracts/shared/constants";
 import { redis } from "@myakiba/redis/client";
 import { env } from "@myakiba/env/worker";
 

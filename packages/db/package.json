@@ -24,7 +24,7 @@
     "db:down": "docker compose down"
   },
   "dependencies": {
-    "@myakiba/constants": "workspace:*",
+    "@myakiba/contracts": "workspace:*",
     "@myakiba/env": "workspace:*",
     "@paralleldrive/cuid2": "catalog:",
     "dotenv": "catalog:",

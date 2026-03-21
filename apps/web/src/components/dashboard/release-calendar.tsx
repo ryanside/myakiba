@@ -10,7 +10,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import type { DateFormat, Category } from "@myakiba/types/enums";
+import type { DateFormat, Category } from "@myakiba/contracts/shared/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { app } from "@/lib/treaty-client";
 import { Link } from "@tanstack/react-router";
@@ -35,12 +35,12 @@ interface ReleaseCalendarProps {
   dateFormat: DateFormat;
 }
 
-const CALENDAR_MONTH_LABEL_FORMATTER = new Intl.DateTimeFormat(undefined, {
+const CALENDAR_MONTH_LABEL_FORMATTER = new Intl.DateTimeFormat("en-US", {
   month: "long",
   year: "numeric",
 });
 
-const RELEASE_DATE_GROUP_LABEL_FORMATTER = new Intl.DateTimeFormat(undefined, {
+const RELEASE_DATE_GROUP_LABEL_FORMATTER = new Intl.DateTimeFormat("en-US", {
   weekday: "short",
   day: "numeric",
 });

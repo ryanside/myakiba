@@ -11,7 +11,7 @@ import OrderKanban from "@/components/dashboard/order-kanban";
 import { ValueLineBarChart } from "@/components/ui/value-line-bar-chart";
 import { KPICard } from "@/components/ui/kpi-card";
 import Loader from "@/components/loader";
-import type { DateFormat } from "@myakiba/types/enums";
+import type { DateFormat } from "@myakiba/contracts/shared/types";
 
 export const Route = createFileRoute("/(app)/dashboard")({
   component: RouteComponent,

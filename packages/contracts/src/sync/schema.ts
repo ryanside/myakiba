@@ -1,22 +1,33 @@
 import * as z from "zod";
-import { SHIPPING_METHODS, ORDER_STATUSES, CONDITIONS } from "@myakiba/constants/enums";
-import { SYNC_CSV_ITEM_STATUSES } from "@myakiba/constants/orders";
+import {
+  CONDITIONS,
+  ORDER_STATUSES,
+  SHIPPING_METHODS,
+  SYNC_SESSION_STATUSES,
+  SYNC_TYPES,
+} from "../shared/constants";
+import { SYNC_CSV_ITEM_STATUSES } from "./constants";
 
 /**
  * Schema for CSV date fields that handles MFC export quirks.
  * - Returns null for placeholder dates (0000-00-00)
- * - Normalizes dates with 00 values (e.g., "2002-00-00" → "2002-01-01")
+ * - Normalizes dates with 00 values (e.g., "2002-00-00" -> "2002-01-01")
  */
 const csvDateSchema = z
   .string()
-  .transform((val): string | null => {
-    if (val.trim() === "") return null;
-    // Handle all-zeros placeholder date
-    if (val === "0000-00-00") return null;
-    // Replace 00 month/day with 01: 2002-00-00 → 2002-01-01
-    return val.replace(/-00/g, "-01");
+  .transform((value): string | null => {
+    if (value.trim() === "") return null;
+    if (value === "0000-00-00") return null;
+    return value.replace(/-00/g, "-01");
   })
   .pipe(z.iso.date().nullable());
+
+export const syncSearchSchema = z.object({
+  page: z.coerce.number().int().positive().optional(),
+  limit: z.coerce.number().int().positive().optional(),
+  status: z.array(z.enum(SYNC_SESSION_STATUSES)).optional(),
+  syncType: z.array(z.enum(SYNC_TYPES)).optional(),
+});
 
 export const syncTerminalStateSchema = z.enum(["success", "error", "timeout"]);
 
@@ -26,9 +37,6 @@ export const syncJobStatusSchema = z.object({
   createdAt: z.iso.datetime(),
   terminalState: syncTerminalStateSchema.nullable().optional().default(null),
 });
-
-export type SyncTerminalState = z.infer<typeof syncTerminalStateSchema>;
-export type SyncJobStatus = z.infer<typeof syncJobStatusSchema>;
 
 export const syncOrderSchema = z.object({
   id: z.string(),
@@ -74,13 +82,11 @@ export const syncOrderItemInputSchema = syncOrderItemSchema.omit({
   itemId: true,
 });
 
-// Reuse the full order-item shape, but strip fields that are always derived on the server.
-// For the append-to-existing-order flow, clients only tell us which order to target plus the
-// per-item metadata; ownership, internal item ids, and release ids are resolved server-side.
 export const syncOrderItemsSchema = z.object({
   orderId: z.string(),
   items: z.array(syncOrderItemInputSchema),
 });
+
 export const syncCollectionItemSchema = z.object({
   userId: z.string(),
   releaseId: z.string().nullable(),
@@ -111,11 +117,11 @@ export const csvItemSchema = z.object({
   barcode: z.string(),
   status: z
     .string()
-    .transform((val) => (val === "" ? undefined : val))
+    .transform((value) => (value === "" ? undefined : value))
     .pipe(z.enum(["Owned", "Ordered", "Wished"]).default("Owned")),
   count: z
     .string()
-    .transform((val) => (val === "" ? undefined : val))
+    .transform((value) => (value === "" ? undefined : value))
     .pipe(z.string().default("1")),
   score: z.string(),
   payment_date: csvDateSchema,
@@ -125,7 +131,7 @@ export const csvItemSchema = z.object({
   shop: z.string(),
   shipping_method: z
     .string()
-    .transform((val) => (val === "" ? undefined : val))
+    .transform((value) => (value === "" ? undefined : value))
     .pipe(z.enum(SHIPPING_METHODS).default("n/a")),
   tracking_number: z.string(),
   wishibility: z.string().optional(),
@@ -134,7 +140,6 @@ export const csvItemSchema = z.object({
 
 export const csvSchema = z.array(csvItemSchema);
 
-// Internal CSV item schema for worker processing
 export const internalCsvItemSchema = z.object({
   itemExternalId: z.number(),
   status: z.enum(SYNC_CSV_ITEM_STATUSES),
@@ -150,9 +155,6 @@ export const internalCsvItemSchema = z.object({
   orderId: z.string().nullable(),
   orderDate: z.iso.date().nullable(),
 });
-
-export type CsvItem = z.infer<typeof csvItemSchema>;
-export type InternalCsvItem = z.infer<typeof internalCsvItemSchema>;
 
 export const csvItemMetadataSchema = internalCsvItemSchema.omit({
   itemExternalId: true,
@@ -176,10 +178,6 @@ export const collectionItemMetadataSchema = syncCollectionItemSchema.omit({
   itemId: true,
   itemExternalId: true,
 });
-
-export type CsvItemMetadata = z.infer<typeof csvItemMetadataSchema>;
-export type OrderItemMetadata = z.infer<typeof orderItemMetadataSchema>;
-export type CollectionItemMetadata = z.infer<typeof collectionItemMetadataSchema>;
 
 export const jobDataSchema = z.discriminatedUnion("type", [
   z.object({
@@ -205,8 +203,6 @@ export const jobDataSchema = z.discriminatedUnion("type", [
     userId: z.string(),
     syncSessionId: z.string(),
     order: z.object({
-      // The worker reuses the order sync pipeline, but in this branch `details.id` points at an
-      // existing order that should receive new collection rows instead of creating a fresh order.
       details: syncOrderSchema,
       itemsToScrape: z.array(syncOrderItemSchema),
       itemsToInsert: z.array(syncOrderItemSchema),
@@ -225,9 +221,16 @@ export const jobDataSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
+export type SyncTerminalState = z.infer<typeof syncTerminalStateSchema>;
+export type SyncJobStatus = z.infer<typeof syncJobStatusSchema>;
+export type CsvItem = z.infer<typeof csvItemSchema>;
+export type InternalCsvItem = z.infer<typeof internalCsvItemSchema>;
+export type CsvItemMetadata = z.infer<typeof csvItemMetadataSchema>;
+export type OrderItemMetadata = z.infer<typeof orderItemMetadataSchema>;
+export type CollectionItemMetadata = z.infer<typeof collectionItemMetadataSchema>;
 export type UpdatedSyncOrder = z.infer<typeof syncOrderSchema>;
 export type UpdatedSyncOrderItem = z.infer<typeof syncOrderItemSchema>;
 export type UpdatedSyncCollection = z.infer<typeof syncCollectionItemSchema>;
 export type SyncOrderItemInput = z.infer<typeof syncOrderItemInputSchema>;
-export type SyncOrderItems = z.infer<typeof syncOrderItemsSchema>;
+export type SyncOrderItemsInput = z.infer<typeof syncOrderItemsSchema>;
 export type JobData = z.infer<typeof jobDataSchema>;

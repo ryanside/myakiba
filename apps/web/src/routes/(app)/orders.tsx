@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import OrdersDataGrid from "@/components/orders/orders-data-grid";
-import { searchSchema } from "@myakiba/schemas/search";
+import { searchSchema } from "@myakiba/contracts/orders/schema";
 import { KPICard } from "@/components/ui/kpi-card";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { useOrdersQuery, useOrderStatsQuery } from "@/hooks/use-orders";

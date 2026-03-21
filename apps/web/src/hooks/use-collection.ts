@@ -11,12 +11,9 @@ import { toast } from "sonner";
 import { useFilters } from "@/hooks/use-filters";
 import { getCollection, deleteCollectionItems, updateCollectionItem } from "@/queries/collection";
 import { hasActiveFiltersOrSorting } from "@/lib/filters";
-import type {
-  CollectionFilters,
-  CollectionItem,
-  CollectionItemFormValues,
-} from "@myakiba/types/collection";
-import type { DateFormat } from "@myakiba/types/enums";
+import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
+import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
+import type { DateFormat } from "@myakiba/contracts/shared/types";
 
 export function collectionQueryOptions(filters: CollectionFilters) {
   return queryOptions({

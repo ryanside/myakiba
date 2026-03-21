@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { CollectionDataGrid } from "@/components/collection/collection-data-grid";
 import { CollectionQuickFilters } from "@/components/collection/collection-quick-filters";
-import { collectionSearchSchema } from "@myakiba/schemas/search";
+import { collectionSearchSchema } from "@myakiba/contracts/collection/schema";
 import { KPICard } from "@/components/ui/kpi-card";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { useCollectionQuery, useUserPreferences } from "@/hooks/use-collection";

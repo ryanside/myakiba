@@ -15,6 +15,7 @@ import {
 import { user } from "./auth";
 import { createId } from "@paralleldrive/cuid2";
 import {
+  CATEGORIES,
   COLLECTION_STATUSES,
   SHIPPING_METHODS,
   ORDER_STATUSES,
@@ -22,8 +23,7 @@ import {
   SYNC_TYPES,
   SYNC_SESSION_STATUSES,
   SYNC_SESSION_ITEM_STATUSES,
-} from "@myakiba/constants/enums";
-import { CATEGORIES } from "@myakiba/constants/categories";
+} from "@myakiba/contracts/shared/constants";
 
 export const item = pgTable(
   "item",

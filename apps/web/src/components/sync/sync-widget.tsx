@@ -15,7 +15,7 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import type { SyncType } from "@myakiba/types/enums";
+import type { SyncType } from "@myakiba/contracts/shared/types";
 import { SYNC_TYPE_CONFIG, SYNC_OPTION_META } from "@/lib/sync";
 import SyncCsvForm from "@/components/sync/sync-csv-form";
 import SyncOrderForm from "@/components/sync/sync-order-form";

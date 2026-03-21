@@ -22,7 +22,7 @@ import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { Progress } from "../ui/progress";
 import { Button } from "../ui/button";
 import { useMemo, useState, Fragment } from "react";
-import type { Category } from "@myakiba/types/enums";
+import type { Category } from "@myakiba/contracts/shared/types";
 import { getCategoryColor } from "@/lib/category-colors";
 
 interface RowNavigation {

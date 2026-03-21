@@ -31,7 +31,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { CollectionFilters } from "@myakiba/types/collection";
+import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
 import { useQuery } from "@tanstack/react-query";
 import { searchEntries } from "@/queries/collection";
 import { DebouncedInput } from "@/components/debounced-input";
@@ -44,14 +44,13 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { majorStringToMinorUnits, minorUnitsToMajorString } from "@myakiba/utils/currency";
 import {
-  getCurrencyLocale,
-  majorStringToMinorUnits,
-  minorUnitsToMajorString,
-} from "@myakiba/utils/currency";
-import { SHIPPING_METHODS, CONDITIONS } from "@myakiba/constants/enums";
-import { CURRENCIES } from "@myakiba/constants/currencies";
-import { CATEGORIES } from "@myakiba/constants/categories";
+  SHIPPING_METHODS,
+  CONDITIONS,
+  CURRENCIES,
+  CATEGORIES,
+} from "@myakiba/contracts/shared/constants";
 
 interface FiltersFormProps {
   renderTrigger: ReactElement;
@@ -69,7 +68,7 @@ export default function FiltersForm({
   const entriesListId = useId();
   const [entriesPopoverOpen, setEntriesPopoverOpen] = useState(false);
   const userCurrency = currency || "USD";
-  const userLocale = getCurrencyLocale(userCurrency);
+  const userLocale = "en-US";
 
   const form = useForm({
     defaultValues: {

@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
-import type { CollectionItemFormValues } from "@myakiba/types/collection";
+import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import {
   Sheet,
   SheetContent,
@@ -33,13 +33,16 @@ import { Field, FieldContent, FieldTitle } from "@/components/ui/field";
 import { Badge } from "@/components/reui/badge";
 import {
   formatCurrencyFromMinorUnits,
-  getCurrencyLocale,
   majorStringToMinorUnits,
   minorUnitsToMajorString,
 } from "@myakiba/utils/currency";
-import type { DateFormat } from "@myakiba/types/enums";
+import type { DateFormat } from "@myakiba/contracts/shared/types";
 import { Scroller } from "../ui/scroller";
-import { COLLECTION_STATUSES, SHIPPING_METHODS, CONDITIONS } from "@myakiba/constants/enums";
+import {
+  COLLECTION_STATUSES,
+  SHIPPING_METHODS,
+  CONDITIONS,
+} from "@myakiba/contracts/shared/constants";
 import { useState, type ReactElement } from "react";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 
@@ -56,7 +59,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
   const [open, setOpen] = useState(false);
 
   const userCurrency = currency || "USD";
-  const userLocale = getCurrencyLocale(userCurrency);
+  const userLocale = "en-US";
 
   const form = useForm({
     defaultValues: {

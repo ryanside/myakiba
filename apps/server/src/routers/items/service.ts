@@ -8,7 +8,7 @@ import {
   order,
 } from "@myakiba/db/schema/figure";
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
-import type { ItemRelease, ItemReleasesResponse } from "@myakiba/schemas/items";
+import type { ItemRelease, ItemReleasesResponse } from "@myakiba/contracts/items/schema";
 import type { EntriesWithRoles, CustomItemInput } from "./model";
 
 class ItemService {

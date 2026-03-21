@@ -7,10 +7,9 @@ export function formatCurrencyFromMinorUnits(
   valueMinorUnits: number,
   currency: string = "USD",
 ): string {
-  const locale = getCurrencyLocale(currency);
   const amountMajorUnits = valueMinorUnits / 100;
 
-  return new Intl.NumberFormat(locale, {
+  return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency,
   }).format(amountMajorUnits);
@@ -38,23 +37,6 @@ export function parseMoneyToMinorUnits(input: string): number {
   return isNegative ? -minorUnits : minorUnits;
 }
 
-/**
- * Returns the appropriate locale string for a currency code.
- */
-export function getCurrencyLocale(currency: string = "USD"): string {
-  const localeMap: Record<string, string> = {
-    JPY: "ja-JP",
-    EUR: "de-DE",
-    CNY: "zh-CN",
-    GBP: "en-GB",
-    CAD: "en-CA",
-    AUD: "en-AU",
-    NZD: "en-NZ",
-    USD: "en-US",
-  };
-  return localeMap[currency] || "en-US";
-}
-
 export function minorUnitsToMajorString(valueMinorUnits: number): string {
   const isNegative = valueMinorUnits < 0;
   const absValue = Math.abs(valueMinorUnits);
@@ -73,9 +55,8 @@ export function majorStringToMinorUnits(input: string): number {
  * Prefer `formatCurrencyFromMinorUnits()` for persisted values.
  */
 export function formatCurrency(valueMajorUnits: string | number, currency: string = "USD"): string {
-  const locale = getCurrencyLocale(currency);
   const amount = typeof valueMajorUnits === "number" ? valueMajorUnits : Number(valueMajorUnits);
   const safeAmount = Number.isFinite(amount) ? amount : 0;
 
-  return new Intl.NumberFormat(locale, { style: "currency", currency }).format(safeAmount);
+  return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(safeAmount);
 }

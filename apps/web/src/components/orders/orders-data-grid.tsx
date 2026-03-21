@@ -12,7 +12,8 @@ import {
   useReactTable,
   type Updater,
 } from "@tanstack/react-table";
-import type { OrderFilters, OrderListItem } from "@myakiba/types/orders";
+import type { OrderFilters } from "@myakiba/contracts/orders/schema";
+import type { OrderListItem } from "@myakiba/contracts/orders/types";
 import { useSelection } from "@/hooks/use-selection";
 import { DataGridColumnCombobox } from "../ui/data-grid-column-combobox";
 import { OrdersToolbar } from "./orders-toolbar";

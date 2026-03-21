@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { Scroller } from "../ui/scroller";
 import { Link } from "@tanstack/react-router";
-import type { Category } from "@myakiba/types/enums";
+import type { Category } from "@myakiba/contracts/shared/types";
 import { getCategoryColor } from "@/lib/category-colors";
 
 export function CollectionBreakdown({

@@ -1,13 +1,17 @@
 import Papa from "papaparse";
-import { csvSchema } from "@myakiba/schemas/sync";
-import { SYNC_CSV_ITEM_STATUSES } from "@myakiba/constants/orders";
+import { csvSchema } from "@myakiba/contracts/sync/schema";
+import { SYNC_CSV_ITEM_STATUSES } from "@myakiba/contracts/sync/constants";
 import type {
   UserItem,
   SyncFormOrder,
   SyncFormOrderItem,
   SyncFormCollectionItem,
-} from "@myakiba/types/sync";
-import type { SyncType, SyncSessionStatus, SyncSessionItemStatus } from "@myakiba/types/enums";
+} from "@myakiba/contracts/sync/types";
+import type {
+  SyncType,
+  SyncSessionStatus,
+  SyncSessionItemStatus,
+} from "@myakiba/contracts/shared/types";
 
 export const SESSION_STATUS_CONFIG: Record<
   SyncSessionStatus,

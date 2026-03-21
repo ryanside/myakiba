@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, Loading03Icon, RotateLeft01Icon } from "@hugeicons/core-free-icons";
+import { Loading03Icon, RotateLeft01Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -9,10 +9,10 @@ import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagina
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/reui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { toast } from "sonner";
-import type { EnrichedSyncSessionItemRow } from "@myakiba/types/sync";
-import type { SyncSessionStatus, SyncType } from "@myakiba/types/enums";
+import type { EnrichedSyncSessionItemRow } from "@myakiba/contracts/sync/types";
+import type { SyncSessionStatus, SyncType } from "@myakiba/contracts/shared/types";
 import { fetchSyncSessionDetail, retrySyncFailedItems } from "@/queries/sync";
 import { createSyncSessionItemSubColumns } from "@/components/sync/sync-session-item-sub-columns";
 import { SESSION_STATUS_CONFIG, SYNC_TYPE_CONFIG } from "@/lib/sync";
@@ -23,7 +23,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   ACTIVE_SYNC_SESSION_STATUS_SET,
   SYNC_SESSION_DETAIL_PAGE_SIZE,
-} from "@myakiba/constants/sync";
+} from "@myakiba/contracts/sync/constants";
 import { useSyncJobStatusQuery } from "@/hooks/use-sync-job-status-query";
 
 export const Route = createFileRoute("/(app)/sync_/$id")({
@@ -128,12 +128,15 @@ function RouteComponent() {
         </div>
         <div className="flex flex-col items-center justify-center h-64 gap-y-4">
           <p className="text-lg font-medium text-destructive">Error: {error.message}</p>
-          <Button variant="outline">
-            <Link to="/sync" className="flex items-center gap-1.5">
-              <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
-              Back to Sync
-            </Link>
-          </Button>
+          <Link
+            to="/sync"
+            className={cn(
+              buttonVariants({ variant: "link" }),
+              "mx-0 p-0 w-fit text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline",
+            )}
+          >
+            Back to Sync
+          </Link>
         </div>
       </div>
     );
@@ -143,12 +146,15 @@ function RouteComponent() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-y-4">
         <p className="text-lg font-medium text-muted-foreground">Session not found</p>
-        <Button variant="outline">
-          <Link to="/sync" className="flex items-center gap-1.5">
-            <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
-            Back to Sync
-          </Link>
-        </Button>
+        <Link
+          to="/sync"
+          className={cn(
+            buttonVariants({ variant: "link" }),
+            "mx-0 p-0 w-fit text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline",
+          )}
+        >
+          Back to Sync
+        </Link>
       </div>
     );
   }
@@ -159,12 +165,15 @@ function RouteComponent() {
   return (
     <div className="w-full space-y-8">
       <div>
-        <Button variant="ghost" size="sm" className="mb-4 -ml-2 text-muted-foreground">
-          <Link to="/sync" className="flex items-center gap-1.5">
-            <HugeiconsIcon icon={ArrowLeft01Icon} className="size-3.5" />
-            Back to Sync
-          </Link>
-        </Button>
+        <Link
+          to="/sync"
+          className={cn(
+            buttonVariants({ variant: "link" }),
+            "mb-4 mx-0 p-0 w-fit text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline",
+          )}
+        >
+          Back to Sync
+        </Link>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex flex-col gap-1.5">

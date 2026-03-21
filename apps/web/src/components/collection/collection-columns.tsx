@@ -24,7 +24,6 @@ import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-colu
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
-import { getCurrencyLocale } from "@myakiba/utils/currency";
 import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
 import CollectionItemForm from "./collection-item-form";
@@ -32,8 +31,8 @@ import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import { PopoverRatingCell } from "../cells/popover-rating-cell";
 import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
 import { InlineCountCell } from "../cells/inline-count-cell";
-import type { CollectionItem, CollectionItemFormValues } from "@myakiba/types/collection";
-import type { DateFormat } from "@myakiba/types/enums";
+import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
+import type { DateFormat } from "@myakiba/contracts/shared/types";
 import { getCategoryColor } from "@/lib/category-colors";
 import { Skeleton } from "../ui/skeleton";
 
@@ -273,7 +272,7 @@ export function createCollectionColumns({
                 price: newValue,
               });
             }}
-            locale={getCurrencyLocale(currency)}
+            locale="en-US"
             disabled={isPending}
           />
         );

@@ -15,9 +15,8 @@
     "redis:down": "docker compose down"
   },
   "dependencies": {
-    "@myakiba/constants": "workspace:*",
+    "@myakiba/contracts": "workspace:*",
     "@myakiba/env": "workspace:*",
-    "@myakiba/schemas": "workspace:*",
     "ioredis": "catalog:"
   },
   "devDependencies": {

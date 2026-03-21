@@ -26,13 +26,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Scroller } from "@/components/ui/scroller";
-import type { OrderFilters } from "@myakiba/types/orders";
-import {
-  getCurrencyLocale,
-  majorStringToMinorUnits,
-  minorUnitsToMajorString,
-} from "@myakiba/utils/currency";
-import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/constants/enums";
+import type { OrderFilters } from "@myakiba/contracts/orders/schema";
+import { majorStringToMinorUnits, minorUnitsToMajorString } from "@myakiba/utils/currency";
+import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 
 interface OrdersFiltersFormProps {
   renderTrigger: React.ReactElement;
@@ -48,7 +44,7 @@ export default function OrdersFiltersForm({
   currency,
 }: OrdersFiltersFormProps) {
   const userCurrency = currency || "USD";
-  const userLocale = getCurrencyLocale(userCurrency);
+  const userLocale = "en-US";
 
   const form = useForm({
     defaultValues: {

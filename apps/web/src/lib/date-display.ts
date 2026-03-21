@@ -1,6 +1,6 @@
-import { format as formatDateFns, intervalToDuration, parseISO } from "date-fns";
+import { format as formatDateFns, parseISO } from "date-fns";
 import { parseDateOnly } from "@myakiba/utils/date-only";
-import type { DateFormat } from "@myakiba/types/enums";
+import type { DateFormat } from "@myakiba/contracts/shared/types";
 
 const DATE_PATTERN_BY_FORMAT: Readonly<Record<DateFormat, string>> = {
   "MM/DD/YYYY": "MM/dd/yyyy",
@@ -18,7 +18,7 @@ const TIMESTAMP_PATTERN_BY_FORMAT: Readonly<Record<DateFormat, string>> = {
 
 const YEAR_FIRST_FORMATS = new Set<DateFormat>(["YYYY/MM/DD", "YYYY/DD/MM"]);
 
-const RELATIVE_TIME_FORMATTER = new Intl.RelativeTimeFormat("en", {
+const RELATIVE_TIME_FORMATTER = new Intl.RelativeTimeFormat("en-US", {
   numeric: "auto",
   style: "narrow",
 });
@@ -117,7 +117,7 @@ export function formatTimestampForDisplay(
  * // "Mar 15, 2:30 PM"
  */
 export function formatShortDateTime(date: Date, locale?: Intl.LocalesArgument): string {
-  return new Intl.DateTimeFormat(locale, {
+  return new Intl.DateTimeFormat(locale ?? "en-US", {
     month: "short",
     day: "numeric",
     hour: "numeric",
@@ -145,10 +145,9 @@ export function formatSyncDuration(start: Date, end: Date | null): string {
   if (Number.isNaN(ms)) return "-";
   if (ms < 1000) return "<1s";
 
-  const duration = intervalToDuration({ start: startDate, end: endDate });
-  const seconds = duration.seconds ?? 0;
-  const minutes =
-    (duration.minutes ?? 0) + (duration.hours ?? 0) * 60 + (duration.days ?? 0) * 24 * 60;
+  const totalSeconds = Math.floor(ms / 1000);
+  const seconds = totalSeconds % 60;
+  const minutes = Math.floor(totalSeconds / 60);
 
   if (minutes < 1) return `${seconds}s`;
   if (minutes < 60) return `${minutes}m ${seconds}s`;

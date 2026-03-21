@@ -2,7 +2,7 @@ import { db } from "@myakiba/db/client";
 import { collection, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
 import { and, eq, gte, lte, inArray, arrayContains, desc, asc, ilike, sql } from "drizzle-orm";
 import type { CollectionUpdateType } from "./model";
-import type { Category, Condition, ShippingMethod } from "@myakiba/types/enums";
+import type { Category, Condition, ShippingMethod } from "@myakiba/contracts/shared/types";
 
 class CollectionService {
   async getCollection(
