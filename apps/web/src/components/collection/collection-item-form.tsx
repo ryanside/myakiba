@@ -312,9 +312,9 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                                       {displayData.type}
                                     </span>
                                   )}
-                                  {displayData.price !== null &&
-                                    displayData.price !== undefined &&
-                                    displayData.priceCurrency && (
+                                  {displayData.price != null &&
+                                    displayData.price > 0 &&
+                                    displayData.priceCurrency?.trim() && (
                                       <span className="text-muted-foreground">
                                         {formatReleaseDate(
                                           displayData.price,
@@ -356,9 +356,9 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                                 )}
                               </div>
                               <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                {release.price !== null &&
-                                  release.price !== undefined &&
-                                  release.priceCurrency && (
+                                {release.price != null &&
+                                  release.price > 0 &&
+                                  release.priceCurrency?.trim() && (
                                     <span>
                                       {formatReleaseDate(
                                         release.price,

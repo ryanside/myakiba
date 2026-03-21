@@ -337,9 +337,9 @@ function RouteComponent() {
       </div>
 
       {/* Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 border-t border-border/50">
+      <div className="grid grid-cols-1 lg:grid-cols-5 border-border/50">
         {/* Left Column: Item Details */}
-        <div className="lg:col-span-3 space-y-10 lg:border-r border-border/50 lg:pr-6 py-8">
+        <div className="lg:col-span-3 space-y-10 border-border/50 lg:pr-6 py-8">
           {/* Releases */}
           {item.releases && item.releases.length > 0 && (
             <section className="space-y-2">
@@ -361,11 +361,13 @@ function RouteComponent() {
                     {release.barcode && (
                       <span className="text-xs text-muted-foreground">{release.barcode}</span>
                     )}
-                    {release.price != null && release.priceCurrency != null && (
-                      <span className="ml-auto font-medium tabular-nums">
-                        {formatReleaseDate(release.price, release.priceCurrency, userCurrency)}
-                      </span>
-                    )}
+                    {release.price != null &&
+                      release.price > 0 &&
+                      release.priceCurrency?.trim() && (
+                        <span className="ml-auto font-medium tabular-nums">
+                          {formatReleaseDate(release.price, release.priceCurrency, userCurrency)}
+                        </span>
+                      )}
                   </div>
                 ))}
               </div>

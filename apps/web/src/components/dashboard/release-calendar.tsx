@@ -258,7 +258,7 @@ function ReleaseCard({
               <span className="truncate">{item.category}</span>
             </>
           )}
-          {item.price != null && item.priceCurrency && (
+          {item.price != null && item.price > 0 && item.priceCurrency?.trim() && (
             <>
               {item.category != null && <span aria-hidden>·</span>}
               <span className="shrink-0">
