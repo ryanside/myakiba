@@ -24,6 +24,7 @@ import { Textarea } from "../ui/textarea";
 import { majorStringToMinorUnits } from "@myakiba/utils/currency";
 import { createDefaultSyncFormCollectionItem, extractMfcItemId } from "@/lib/sync";
 import { CONDITIONS, SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
+import type { Currency } from "@myakiba/contracts/shared/types";
 import { getCurrencyLocale } from "@/lib/locale";
 
 export default function SyncCollectionForm({
@@ -31,7 +32,7 @@ export default function SyncCollectionForm({
   currency,
 }: {
   handleSyncCollectionSubmit: (values: SyncCollectionItem[]) => void;
-  currency: string;
+  currency: Currency;
 }) {
   const userLocale = getCurrencyLocale(currency);
 

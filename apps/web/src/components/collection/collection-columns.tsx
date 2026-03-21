@@ -32,14 +32,14 @@ import { PopoverRatingCell } from "../cells/popover-rating-cell";
 import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
 import { InlineCountCell } from "../cells/inline-count-cell";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
-import type { DateFormat } from "@myakiba/contracts/shared/types";
+import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { getCategoryColor } from "@/lib/category-colors";
 import { Skeleton } from "../ui/skeleton";
 
 interface CollectionColumnsParams {
   onEditCollectionItem: (values: CollectionItemFormValues) => Promise<void>;
   onDeleteCollectionItems: (collectionIds: Set<string>) => Promise<void>;
-  currency: string;
+  currency: Currency;
   locale: string;
   dateFormat: DateFormat;
   isCollectionPending: (collectionId: string) => boolean;

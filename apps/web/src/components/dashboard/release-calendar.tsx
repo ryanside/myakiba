@@ -9,14 +9,13 @@ import {
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import type { Category } from "@myakiba/contracts/shared/types";
+import type { Category, Currency } from "@myakiba/contracts/shared/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { app } from "@/lib/treaty-client";
 import { Link } from "@tanstack/react-router";
 import { ImageThumbnail } from "../ui/image-thumbnail";
 import { getCategoryColor } from "@/lib/category-colors";
-import { getCurrencyLocale } from "@/lib/locale";
+import { formatReleaseDate } from "@/lib/locale";
 import { Badge } from "../reui/badge";
 import { Skeleton } from "../ui/skeleton";
 
@@ -32,6 +31,7 @@ interface ReleaseItem {
 
 interface ReleaseCalendarProps {
   className?: string;
+  currency: Currency;
 }
 
 const CALENDAR_MONTH_LABEL_FORMATTER = new Intl.DateTimeFormat("en-US", {
@@ -61,7 +61,7 @@ function groupReleasesByReleaseDate(
   );
 }
 
-function ReleaseCalendar({ className }: ReleaseCalendarProps): React.ReactElement {
+function ReleaseCalendar({ className, currency }: ReleaseCalendarProps): React.ReactElement {
   const [currentMonth, setCurrentMonth] = React.useState(new Date());
   const queryClient = useQueryClient();
 
@@ -160,7 +160,7 @@ function ReleaseCalendar({ className }: ReleaseCalendarProps): React.ReactElemen
         ) : grouped.length > 0 ? (
           <div className="space-y-3">
             {grouped.map(([dateKey, items]) => (
-              <DateGroup key={dateKey} dateKey={dateKey} items={items} />
+              <DateGroup key={dateKey} dateKey={dateKey} items={items} currency={currency} />
             ))}
           </div>
         ) : (
@@ -174,9 +174,11 @@ function ReleaseCalendar({ className }: ReleaseCalendarProps): React.ReactElemen
 function DateGroup({
   dateKey,
   items,
+  currency,
 }: {
   readonly dateKey: string;
   readonly items: readonly ReleaseItem[];
+  readonly currency: Currency;
 }): React.ReactElement {
   return (
     <div>
@@ -188,7 +190,7 @@ function DateGroup({
       </div>
       <div>
         {items.map((item) => (
-          <ReleaseCard key={`${item.itemId}:${item.releaseDate}`} item={item} />
+          <ReleaseCard key={`${item.itemId}:${item.releaseDate}`} item={item} currency={currency} />
         ))}
       </div>
     </div>
@@ -221,7 +223,13 @@ function ReleaseCalendarEmpty(): React.ReactElement {
   );
 }
 
-function ReleaseCard({ item }: { readonly item: ReleaseItem }): React.ReactElement {
+function ReleaseCard({
+  item,
+  currency,
+}: {
+  readonly item: ReleaseItem;
+  readonly currency: Currency;
+}): React.ReactElement {
   const categoryColor = getCategoryColor((item.category as Category) ?? null);
 
   return (
@@ -254,11 +262,7 @@ function ReleaseCard({ item }: { readonly item: ReleaseItem }): React.ReactEleme
             <>
               {item.category != null && <span aria-hidden>·</span>}
               <span className="shrink-0">
-                {formatCurrencyFromMinorUnits(
-                  item.price,
-                  item.priceCurrency,
-                  getCurrencyLocale(item.priceCurrency),
-                )}
+                {formatReleaseDate(item.price, item.priceCurrency, currency)}
               </span>
             </>
           )}

@@ -29,13 +29,14 @@ import { Scroller } from "@/components/ui/scroller";
 import type { OrderFilters } from "@myakiba/contracts/orders/schema";
 import { majorStringToMinorUnits, minorUnitsToMajorString } from "@myakiba/utils/currency";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
+import type { Currency } from "@myakiba/contracts/shared/types";
 import { getCurrencyLocale } from "@/lib/locale";
 
 interface OrdersFiltersFormProps {
   renderTrigger: React.ReactElement;
   currentFilters?: OrderFilters;
   onApplyFilters: (filters: OrderFilters) => void;
-  currency: string;
+  currency: Currency;
 }
 
 export default function OrdersFiltersForm({

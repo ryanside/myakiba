@@ -51,13 +51,14 @@ import {
   CURRENCIES,
   CATEGORIES,
 } from "@myakiba/contracts/shared/constants";
+import type { Currency } from "@myakiba/contracts/shared/types";
 import { getCurrencyLocale } from "@/lib/locale";
 
 interface FiltersFormProps {
   renderTrigger: ReactElement;
   currentFilters?: CollectionFilters;
   onApplyFilters: (filters: CollectionFilters) => void;
-  currency: string;
+  currency: Currency;
 }
 
 export default function FiltersForm({

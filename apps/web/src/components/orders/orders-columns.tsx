@@ -43,7 +43,12 @@ import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
-import type { ShippingMethod, OrderStatus, DateFormat } from "@myakiba/contracts/shared/types";
+import type {
+  Currency,
+  ShippingMethod,
+  OrderStatus,
+  DateFormat,
+} from "@myakiba/contracts/shared/types";
 import { Skeleton } from "../ui/skeleton";
 import { ImageThumbnail } from "../ui/image-thumbnail";
 import { orderItemsQueryOptions } from "@/hooks/use-orders";
@@ -79,7 +84,7 @@ interface OrdersColumnsParams {
   onDeleteOrders: (orderIds: Set<string>) => Promise<void>;
   onEditItem: (values: CollectionItemFormValues) => Promise<void>;
   onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
-  currency: string;
+  currency: Currency;
   locale: string;
   itemSelection: RowSelectionState;
   setItemSelection: OnChangeFn<RowSelectionState>;

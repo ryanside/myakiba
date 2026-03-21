@@ -46,6 +46,7 @@ import {
   extractMfcItemId,
 } from "@/lib/sync";
 import { SHIPPING_METHODS, ORDER_STATUSES, CONDITIONS } from "@myakiba/contracts/shared/constants";
+import type { Currency } from "@myakiba/contracts/shared/types";
 import { getCurrencyLocale } from "@/lib/locale";
 
 export default function SyncOrderForm({
@@ -53,7 +54,7 @@ export default function SyncOrderForm({
   currency,
 }: {
   handleSyncOrderSubmit: (values: SyncOrder) => void;
-  currency: string;
+  currency: Currency;
 }) {
   const userLocale = getCurrencyLocale(currency);
 

@@ -23,6 +23,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { getStatusVariant } from "@/lib/orders";
 import { formatMonthYearForDisplay } from "@/lib/date-display";
 import { getCurrencyLocale } from "@/lib/locale";
+import type { Currency } from "@myakiba/contracts/shared/types";
 
 interface KanbanOrder {
   orderId: string;
@@ -37,7 +38,7 @@ interface KanbanOrder {
 
 interface OrdersKanbanProps {
   orders: KanbanOrder[];
-  currency: string;
+  currency: Currency;
   dateFormat: DateFormat;
 }
 
@@ -52,7 +53,7 @@ interface OrderCardProps extends Omit<
   "value" | "children"
 > {
   order: KanbanOrder;
-  currency: string;
+  currency: Currency;
   dateFormat: DateFormat;
   asHandle?: boolean;
   onMarkOwned: (orderId: string) => void;
@@ -157,7 +158,7 @@ function OrderCard({
 
 interface OrderColumnProps extends Omit<React.ComponentProps<typeof KanbanColumn>, "children"> {
   orders: KanbanOrder[];
-  currency: string;
+  currency: Currency;
   dateFormat: DateFormat;
   isOverlay?: boolean;
   onMarkOwned: (orderId: string) => void;

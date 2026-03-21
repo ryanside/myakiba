@@ -127,7 +127,7 @@ function DashboardContent() {
             <CardTitle className="text-base font-medium">Release Calendar</CardTitle>
           </CardHeader>
           <CardContent>
-            <ReleaseCalendar />
+            <ReleaseCalendar currency={userCurrency} />
           </CardContent>
         </Card>
       </div>

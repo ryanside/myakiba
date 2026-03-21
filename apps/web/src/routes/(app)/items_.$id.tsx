@@ -39,7 +39,7 @@ import {
   TimelineSeparator,
 } from "@/components/reui/timeline";
 import { getStatusVariant } from "@/lib/orders";
-import { getCurrencyLocale } from "@/lib/locale";
+import { formatReleaseDate } from "@/lib/locale";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 type ItemRelatedCollection = {
@@ -363,11 +363,7 @@ function RouteComponent() {
                     )}
                     {release.price != null && release.priceCurrency != null && (
                       <span className="ml-auto font-medium tabular-nums">
-                        {formatCurrencyFromMinorUnits(
-                          release.price,
-                          release.priceCurrency,
-                          getCurrencyLocale(release.priceCurrency),
-                        )}
+                        {formatReleaseDate(release.price, release.priceCurrency, userCurrency)}
                       </span>
                     )}
                   </div>
@@ -602,7 +598,7 @@ function RouteComponent() {
                           collectionItem.tags.length > 0 ||
                           collectionItem.notes) && (
                           <div className="space-y-3">
-                            {collectionItem.score && collectionItem.score !== "0" && (
+                            {collectionItem.score && parseFloat(collectionItem.score) !== 0 && (
                               <DetailRow label="Score">{collectionItem.score}</DetailRow>
                             )}
                             {collectionItem.tags.length > 0 && (

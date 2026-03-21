@@ -31,12 +31,8 @@ import { Textarea } from "../ui/textarea";
 import { Rating } from "../ui/rating";
 import { Field, FieldContent, FieldTitle } from "@/components/ui/field";
 import { Badge } from "@/components/reui/badge";
-import {
-  formatCurrencyFromMinorUnits,
-  majorStringToMinorUnits,
-  minorUnitsToMajorString,
-} from "@myakiba/utils/currency";
-import type { DateFormat } from "@myakiba/contracts/shared/types";
+import { majorStringToMinorUnits, minorUnitsToMajorString } from "@myakiba/utils/currency";
+import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { Scroller } from "../ui/scroller";
 import {
   COLLECTION_STATUSES,
@@ -45,13 +41,13 @@ import {
 } from "@myakiba/contracts/shared/constants";
 import { useState, type ReactElement } from "react";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
-import { getCurrencyLocale } from "@/lib/locale";
+import { formatReleaseDate, getCurrencyLocale } from "@/lib/locale";
 
 type CollectionItemFormProps = {
   renderTrigger: ReactElement;
   itemData: CollectionItemFormValues;
   callbackFn: (itemData: CollectionItemFormValues) => Promise<void>;
-  currency: string;
+  currency: Currency;
   dateFormat?: DateFormat;
 };
 
@@ -320,10 +316,10 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                                     displayData.price !== undefined &&
                                     displayData.priceCurrency && (
                                       <span className="text-muted-foreground">
-                                        {formatCurrencyFromMinorUnits(
+                                        {formatReleaseDate(
                                           displayData.price,
                                           displayData.priceCurrency,
-                                          getCurrencyLocale(displayData.priceCurrency),
+                                          currency,
                                         )}
                                       </span>
                                     )}
@@ -364,10 +360,10 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                                   release.price !== undefined &&
                                   release.priceCurrency && (
                                     <span>
-                                      {formatCurrencyFromMinorUnits(
+                                      {formatReleaseDate(
                                         release.price,
                                         release.priceCurrency,
-                                        getCurrencyLocale(release.priceCurrency),
+                                        currency,
                                       )}
                                     </span>
                                   )}

@@ -44,6 +44,7 @@ import { Scroller } from "../ui/scroller";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { useState } from "react";
 import { getCurrencyLocale } from "@/lib/locale";
+import type { Currency } from "@myakiba/contracts/shared/types";
 
 type MergeOrderFormProps = {
   renderTrigger: React.ReactElement;
@@ -56,7 +57,7 @@ type MergeOrderFormProps = {
     orderIds: Set<string>,
   ) => Promise<void>;
   clearSelections: () => void;
-  currency: string;
+  currency: Currency;
 };
 
 type SplitOrderFormProps = {
@@ -71,7 +72,7 @@ type SplitOrderFormProps = {
     orderIds: Set<string>,
   ) => Promise<void>;
   clearSelections: () => void;
-  currency: string;
+  currency: Currency;
 };
 
 type EditOrderFormProps = {
@@ -82,7 +83,7 @@ type EditOrderFormProps = {
   callbackFn: (value: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
   orderData: Order;
   clearSelections?: () => void;
-  currency: string;
+  currency: Currency;
 };
 
 type OrderFormProps = MergeOrderFormProps | SplitOrderFormProps | EditOrderFormProps;

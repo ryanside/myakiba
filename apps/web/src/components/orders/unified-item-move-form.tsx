@@ -46,7 +46,7 @@ import {
 import { ScrollArea } from "../ui/scroll-area";
 import { Scroller } from "../ui/scroller";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
-import type { OrderStatus, ShippingMethod } from "@myakiba/contracts/shared/types";
+import type { Currency, OrderStatus, ShippingMethod } from "@myakiba/contracts/shared/types";
 import { getCurrencyLocale } from "@/lib/locale";
 
 type UnifiedItemMoveFormProps = {
@@ -67,7 +67,7 @@ type UnifiedItemMoveFormProps = {
     orderIds: Set<string>,
   ) => Promise<void>;
   clearSelections: () => void;
-  currency: string;
+  currency: Currency;
 };
 
 export default function UnifiedItemMoveForm({

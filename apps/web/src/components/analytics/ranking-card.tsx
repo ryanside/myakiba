@@ -22,7 +22,7 @@ import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { Progress } from "../ui/progress";
 import { Button } from "../ui/button";
 import { useMemo, useState, Fragment } from "react";
-import type { Category } from "@myakiba/contracts/shared/types";
+import type { Category, Currency } from "@myakiba/contracts/shared/types";
 import { getCategoryColor } from "@/lib/category-colors";
 import { getCurrencyLocale } from "@/lib/locale";
 
@@ -49,7 +49,7 @@ interface RankingCardProps {
   className?: string;
   progressKey?: string;
   progressMax?: number;
-  currency: string;
+  currency: Currency;
   getRowNavigation?: (row: Record<string, string | number>) => RowNavigation | undefined;
 }
 
@@ -113,7 +113,7 @@ export function RankingCard({
         );
       },
     }));
-  }, [columns, currency]);
+  }, [columns, currency, locale]);
 
   const [sorting, setSorting] = useState<SortingState>([{ id: "count", desc: true }]);
   const table = useReactTable({

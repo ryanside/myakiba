@@ -23,7 +23,7 @@ import {
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
 import { cn } from "@/lib/utils";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
-import type { DateFormat, OrderStatus } from "@myakiba/contracts/shared/types";
+import type { Currency, DateFormat, OrderStatus } from "@myakiba/contracts/shared/types";
 import type { OrderItem } from "@myakiba/contracts/orders/types";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import { toast } from "sonner";
@@ -42,7 +42,7 @@ interface OrderItemSubColumnsParams {
   orderId: string;
   onEditItem: (values: CollectionItemFormValues) => Promise<void>;
   onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
-  currency: string;
+  currency: Currency;
   locale: string;
   dateFormat: DateFormat;
   isCollectionItemPending: (collectionId: string) => boolean;

@@ -1,5 +1,6 @@
 import * as React from "react";
 import { useNavigate } from "@tanstack/react-router";
+import type { Currency } from "@myakiba/contracts/shared/types";
 import { cn } from "@/lib/utils";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { Progress } from "@/components/ui/progress";
@@ -24,7 +25,7 @@ interface DistributionCardProps {
   maxValue: number;
   emptyMessage?: string;
   className?: string;
-  currency: string;
+  currency: Currency;
   getRowNavigation?: (item: DistributionItem) => RowNavigation | undefined;
 }
 

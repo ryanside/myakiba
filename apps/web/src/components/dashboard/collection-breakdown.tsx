@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { Scroller } from "../ui/scroller";
 import { Link } from "@tanstack/react-router";
-import type { Category } from "@myakiba/contracts/shared/types";
+import type { Category, Currency } from "@myakiba/contracts/shared/types";
 import { getCategoryColor } from "@/lib/category-colors";
 import { getCurrencyLocale } from "@/lib/locale";
 
@@ -16,7 +16,7 @@ export function CollectionBreakdown({
 }: {
   data: { name: Category; count: number; totalValue: number | null }[];
   className?: string;
-  currency: string;
+  currency: Currency;
 }) {
   const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null);
   const locale = getCurrencyLocale(currency);
