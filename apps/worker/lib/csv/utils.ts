@@ -1,4 +1,4 @@
-import type { ShippingMethod } from "@myakiba/types/enums";
+import type { ShippingMethod } from "@myakiba/contracts/shared/types";
 import type {
   FinalizeCsvSyncParams,
   FinalizePersistenceSummary,

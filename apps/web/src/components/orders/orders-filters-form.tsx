@@ -26,19 +26,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Scroller } from "@/components/ui/scroller";
-import type { OrderFilters } from "@myakiba/types/orders";
-import {
-  getCurrencyLocale,
-  majorStringToMinorUnits,
-  minorUnitsToMajorString,
-} from "@myakiba/utils/currency";
-import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/constants/enums";
+import type { OrderFilters } from "@myakiba/contracts/orders/schema";
+import { majorStringToMinorUnits, minorUnitsToMajorString } from "@myakiba/utils/currency";
+import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
+import type { Currency } from "@myakiba/contracts/shared/types";
+import { getCurrencyLocale } from "@/lib/locale";
 
 interface OrdersFiltersFormProps {
   renderTrigger: React.ReactElement;
   currentFilters?: OrderFilters;
   onApplyFilters: (filters: OrderFilters) => void;
-  currency?: string;
+  currency: Currency;
 }
 
 export default function OrdersFiltersForm({
@@ -47,8 +45,7 @@ export default function OrdersFiltersForm({
   onApplyFilters,
   currency,
 }: OrdersFiltersFormProps) {
-  const userCurrency = currency || "USD";
-  const userLocale = getCurrencyLocale(userCurrency);
+  const userLocale = getCurrencyLocale(currency);
 
   const form = useForm({
     defaultValues: {
@@ -443,7 +440,7 @@ export default function OrdersFiltersForm({
             children={(field) => (
               <MaskInput
                 mask="currency"
-                currency={userCurrency}
+                currency={currency}
                 locale={userLocale}
                 placeholder="Min"
                 value={field.state.value || ""}
@@ -456,7 +453,7 @@ export default function OrdersFiltersForm({
             children={(field) => (
               <MaskInput
                 mask="currency"
-                currency={userCurrency}
+                currency={currency}
                 locale={userLocale}
                 placeholder="Max"
                 value={field.state.value || ""}
@@ -476,7 +473,7 @@ export default function OrdersFiltersForm({
             children={(field) => (
               <MaskInput
                 mask="currency"
-                currency={userCurrency}
+                currency={currency}
                 locale={userLocale}
                 placeholder="Min"
                 value={field.state.value || ""}
@@ -489,7 +486,7 @@ export default function OrdersFiltersForm({
             children={(field) => (
               <MaskInput
                 mask="currency"
-                currency={userCurrency}
+                currency={currency}
                 locale={userLocale}
                 placeholder="Max"
                 value={field.state.value || ""}
@@ -509,7 +506,7 @@ export default function OrdersFiltersForm({
             children={(field) => (
               <MaskInput
                 mask="currency"
-                currency={userCurrency}
+                currency={currency}
                 locale={userLocale}
                 placeholder="Min"
                 value={field.state.value || ""}
@@ -522,7 +519,7 @@ export default function OrdersFiltersForm({
             children={(field) => (
               <MaskInput
                 mask="currency"
-                currency={userCurrency}
+                currency={currency}
                 locale={userLocale}
                 placeholder="Max"
                 value={field.state.value || ""}
@@ -542,7 +539,7 @@ export default function OrdersFiltersForm({
             children={(field) => (
               <MaskInput
                 mask="currency"
-                currency={userCurrency}
+                currency={currency}
                 locale={userLocale}
                 placeholder="Min"
                 value={field.state.value || ""}
@@ -555,7 +552,7 @@ export default function OrdersFiltersForm({
             children={(field) => (
               <MaskInput
                 mask="currency"
-                currency={userCurrency}
+                currency={currency}
                 locale={userLocale}
                 placeholder="Max"
                 value={field.state.value || ""}
@@ -575,7 +572,7 @@ export default function OrdersFiltersForm({
             children={(field) => (
               <MaskInput
                 mask="currency"
-                currency={userCurrency}
+                currency={currency}
                 locale={userLocale}
                 placeholder="Min"
                 value={field.state.value || ""}
@@ -588,7 +585,7 @@ export default function OrdersFiltersForm({
             children={(field) => (
               <MaskInput
                 mask="currency"
-                currency={userCurrency}
+                currency={currency}
                 locale={userLocale}
                 placeholder="Max"
                 value={field.state.value || ""}
@@ -608,7 +605,7 @@ export default function OrdersFiltersForm({
             children={(field) => (
               <MaskInput
                 mask="currency"
-                currency={userCurrency}
+                currency={currency}
                 locale={userLocale}
                 placeholder="Min"
                 value={field.state.value || ""}
@@ -621,7 +618,7 @@ export default function OrdersFiltersForm({
             children={(field) => (
               <MaskInput
                 mask="currency"
-                currency={userCurrency}
+                currency={currency}
                 locale={userLocale}
                 placeholder="Max"
                 value={field.state.value || ""}

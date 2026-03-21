@@ -22,9 +22,9 @@ import {
   ActionBarClose,
   ActionBarSeparator,
 } from "@/components/ui/action-bar";
-import type { OrderFilters, CascadeOptions, NewOrder } from "@myakiba/types/orders";
+import type { OrderFilters, CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
 import { useOrdersFilters } from "@/hooks/use-orders";
-import { useUserPreferences } from "@/hooks/use-collection";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 const SORTABLE_COLUMNS: SortableColumn[] = [
   { id: "title", label: "Order" },

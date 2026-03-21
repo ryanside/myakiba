@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { CollectionDataGrid } from "@/components/collection/collection-data-grid";
 import { CollectionQuickFilters } from "@/components/collection/collection-quick-filters";
-import { collectionSearchSchema } from "@myakiba/schemas/search";
+import { collectionSearchSchema } from "@myakiba/contracts/collection/schema";
 import { KPICard } from "@/components/ui/kpi-card";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import { useCollectionQuery, useUserPreferences } from "@/hooks/use-collection";
+import { useCollectionQuery } from "@/hooks/use-collection";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 export const Route = createFileRoute("/(app)/collection")({
   component: RouteComponent,
@@ -23,7 +24,7 @@ export const Route = createFileRoute("/(app)/collection")({
 });
 
 function RouteComponent() {
-  const { currency } = useUserPreferences();
+  const { currency, locale } = useUserPreferences();
   const { isPending, isError, status, totalCount, totalValue } = useCollectionQuery();
 
   if (isError) {
@@ -64,7 +65,7 @@ function RouteComponent() {
         <KPICard
           title="Total Spent"
           subtitle="based on total item prices"
-          value={isPending ? undefined : formatCurrencyFromMinorUnits(totalValue, currency)}
+          value={isPending ? undefined : formatCurrencyFromMinorUnits(totalValue, currency, locale)}
           isLoading={isPending}
         />
       </div>

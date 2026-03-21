@@ -25,12 +25,12 @@ import {
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import * as z from "zod";
-import type { NewOrder, CascadeOptions } from "@myakiba/types/orders";
+import type { NewOrder, CascadeOptions } from "@myakiba/contracts/orders/schema";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import { CascadeOptionsDropdown } from "@/components/cascade-options-dropdown";
 import { Textarea } from "../ui/textarea";
 import { cn } from "@/lib/utils";
-import { getCurrencyLocale, majorStringToMinorUnits } from "@myakiba/utils/currency";
+import { majorStringToMinorUnits } from "@myakiba/utils/currency";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useQuery } from "@tanstack/react-query";
 import { getOrderIdsAndTitles } from "@/queries/orders";
@@ -45,8 +45,9 @@ import {
 } from "@/components/ui/command";
 import { ScrollArea } from "../ui/scroll-area";
 import { Scroller } from "../ui/scroller";
-import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/constants/enums";
-import type { OrderStatus, ShippingMethod } from "@myakiba/types/enums";
+import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
+import type { Currency, OrderStatus, ShippingMethod } from "@myakiba/contracts/shared/types";
+import { getCurrencyLocale } from "@/lib/locale";
 
 type UnifiedItemMoveFormProps = {
   renderTrigger: React.ReactElement;
@@ -66,7 +67,7 @@ type UnifiedItemMoveFormProps = {
     orderIds: Set<string>,
   ) => Promise<void>;
   clearSelections: () => void;
-  currency?: string;
+  currency: Currency;
 };
 
 export default function UnifiedItemMoveForm({
@@ -81,8 +82,7 @@ export default function UnifiedItemMoveForm({
   const [moveMode, setMoveMode] = useState<"existing" | "new">("existing");
   const targetOrderListId = useId();
 
-  const userCurrency = currency || "USD";
-  const userLocale = getCurrencyLocale(userCurrency);
+  const userLocale = getCurrencyLocale(currency);
 
   const {
     cascadeOptions,
@@ -560,7 +560,7 @@ export default function UnifiedItemMoveForm({
                             id={field.name}
                             name={field.name}
                             mask="currency"
-                            currency={userCurrency}
+                            currency={currency}
                             locale={userLocale}
                             value={field.state.value}
                             onBlur={field.handleBlur}
@@ -582,7 +582,7 @@ export default function UnifiedItemMoveForm({
                             id={field.name}
                             name={field.name}
                             mask="currency"
-                            currency={userCurrency}
+                            currency={currency}
                             locale={userLocale}
                             value={field.state.value}
                             onBlur={field.handleBlur}
@@ -606,7 +606,7 @@ export default function UnifiedItemMoveForm({
                             id={field.name}
                             name={field.name}
                             mask="currency"
-                            currency={userCurrency}
+                            currency={currency}
                             locale={userLocale}
                             value={field.state.value}
                             onBlur={field.handleBlur}
@@ -628,7 +628,7 @@ export default function UnifiedItemMoveForm({
                             id={field.name}
                             name={field.name}
                             mask="currency"
-                            currency={userCurrency}
+                            currency={currency}
                             locale={userLocale}
                             value={field.state.value}
                             onBlur={field.handleBlur}
@@ -651,7 +651,7 @@ export default function UnifiedItemMoveForm({
                           id={field.name}
                           name={field.name}
                           mask="currency"
-                          currency={userCurrency}
+                          currency={currency}
                           locale={userLocale}
                           value={field.state.value}
                           onBlur={field.handleBlur}

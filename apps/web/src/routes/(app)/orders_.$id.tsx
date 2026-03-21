@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, Edit01Icon, PackageIcon } from "@hugeicons/core-free-icons";
+import { Edit01Icon, PackageIcon } from "@hugeicons/core-free-icons";
 import { createFileRoute, useParams, Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import { getOrder, editOrder, deleteOrderItem } from "@/queries/orders";
@@ -15,9 +15,8 @@ import { OrderItemSyncSheet } from "@/components/orders/order-item-sync-sheet";
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { RowSelectionState } from "@tanstack/react-table";
 import { OrderForm } from "@/components/orders/order-form";
-import type { EditedOrder, CascadeOptions } from "@myakiba/types/orders";
-import type { CollectionItemFormValues } from "@myakiba/types/collection";
-import type { DateFormat } from "@myakiba/types/enums";
+import type { EditedOrder, CascadeOptions } from "@myakiba/contracts/orders/schema";
+import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import { toast } from "sonner";
 import { updateCollectionItem } from "@/queries/collection";
 import Loader from "@/components/loader";
@@ -30,6 +29,7 @@ import {
   TimelineTitle,
   TimelineDate,
 } from "@/components/reui/timeline";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 export const Route = createFileRoute("/(app)/orders_/$id")({
   component: RouteComponent,
@@ -52,23 +52,23 @@ function CostRow({
   label,
   amount,
   currency,
+  locale,
 }: {
   readonly label: string;
   readonly amount: number;
-  readonly currency: string | undefined;
+  readonly currency: string;
+  readonly locale: string;
 }): React.JSX.Element {
   return (
     <div className="flex items-center justify-between text-sm">
       <span className="text-muted-foreground">{label}</span>
-      <span className="tabular-nums">{formatCurrencyFromMinorUnits(amount, currency)}</span>
+      <span className="tabular-nums">{formatCurrencyFromMinorUnits(amount, currency, locale)}</span>
     </div>
   );
 }
 
 function RouteComponent() {
-  const { session } = Route.useRouteContext();
-  const userCurrency = session?.user.currency;
-  const dateFormat = session?.user.dateFormat as DateFormat;
+  const { currency: userCurrency, locale: userLocale, dateFormat } = useUserPreferences();
   const { id } = useParams({ from: "/(app)/orders_/$id" });
   const queryClient = useQueryClient();
   const [itemSelection, setItemSelection] = useState<RowSelectionState>({});
@@ -179,9 +179,11 @@ function RouteComponent() {
         <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
         <Link
           to="/orders"
-          className={cn(buttonVariants({ variant: "outline" }), "flex items-center gap-1.5")}
+          className={cn(
+            buttonVariants({ variant: "link" }),
+            "mx-0 p-0 w-fit text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline",
+          )}
         >
-          <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
           Back to Orders
         </Link>
       </div>
@@ -219,9 +221,11 @@ function RouteComponent() {
       <div className="flex flex-col gap-3">
         <Link
           to="/orders"
-          className={cn(buttonVariants({ variant: "ghost" }), "flex items-center gap-1.5 w-fit")}
+          className={cn(
+            buttonVariants({ variant: "link" }),
+            "mx-0 p-0 w-fit text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline",
+          )}
         >
-          <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
           Back to Orders
         </Link>
 
@@ -270,6 +274,7 @@ function RouteComponent() {
             type="edit-order"
             orderData={order}
             callbackFn={handleEditOrder}
+            currency={userCurrency}
           />
         </div>
       </div>
@@ -277,9 +282,7 @@ function RouteComponent() {
       {/* Timeline + Cost Breakdown */}
       <div className="grid gap-8 lg:grid-cols-[3fr_2fr]">
         <section className="flex flex-col gap-3">
-          <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-widest">
-            Timeline
-          </h2>
+          <h2 className="text-xs font-medium text-muted-foreground">Timeline</h2>
           <Timeline value={activeStep}>
             {timelineSteps.map(({ step, title, date }) => (
               <TimelineItem key={step} step={step}>
@@ -297,22 +300,36 @@ function RouteComponent() {
         </section>
 
         <section className="flex flex-col gap-3">
-          <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-widest">
-            Cost Breakdown
-          </h2>
+          <h2 className="text-xs font-medium text-muted-foreground">Cost Breakdown</h2>
           <div className="rounded-xl bg-card ring-1 ring-foreground/10 p-5 flex flex-col gap-3">
             <div className="flex flex-col gap-2.5">
-              <CostRow label="Items" amount={itemsTotal} currency={userCurrency} />
-              <CostRow label="Shipping" amount={shippingFee} currency={userCurrency} />
+              <CostRow
+                label="Items"
+                amount={itemsTotal}
+                currency={userCurrency}
+                locale={userLocale}
+              />
+              <CostRow
+                label="Shipping"
+                amount={shippingFee}
+                currency={userCurrency}
+                locale={userLocale}
+              />
               {optionalFees.map(({ label, amount }) => (
-                <CostRow key={label} label={label} amount={amount} currency={userCurrency} />
+                <CostRow
+                  key={label}
+                  label={label}
+                  amount={amount}
+                  currency={userCurrency}
+                  locale={userLocale}
+                />
               ))}
             </div>
             <Separator />
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Total</span>
               <span className="text-lg font-semibold tracking-tight tabular-nums">
-                {formatCurrencyFromMinorUnits(totalAmount, userCurrency)}
+                {formatCurrencyFromMinorUnits(totalAmount, userCurrency, userLocale)}
               </span>
             </div>
           </div>
@@ -322,9 +339,7 @@ function RouteComponent() {
       {/* Notes */}
       {order.notes && (
         <section className="flex flex-col gap-3">
-          <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-widest">
-            Notes
-          </h2>
+          <h2 className="text-xs font-medium text-muted-foreground">Notes</h2>
           <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed max-w-prose">
             {order.notes}
           </p>
@@ -333,9 +348,7 @@ function RouteComponent() {
 
       {/* Order Items */}
       <section className="flex flex-col gap-3 flex-1">
-        <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-widest">
-          Items ({order.itemCount})
-        </h2>
+        <h2 className="text-xs font-medium text-muted-foreground">Items ({order.itemCount})</h2>
         {order.itemCount > 0 ? (
           <div className="rounded-xl ring-1 ring-foreground/10 bg-card overflow-hidden">
             <OrderItemSubDataGrid

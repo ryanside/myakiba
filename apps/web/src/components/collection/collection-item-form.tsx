@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
-import type { CollectionItemFormValues } from "@myakiba/types/collection";
+import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import {
   Sheet,
   SheetContent,
@@ -31,23 +31,23 @@ import { Textarea } from "../ui/textarea";
 import { Rating } from "../ui/rating";
 import { Field, FieldContent, FieldTitle } from "@/components/ui/field";
 import { Badge } from "@/components/reui/badge";
-import {
-  formatCurrencyFromMinorUnits,
-  getCurrencyLocale,
-  majorStringToMinorUnits,
-  minorUnitsToMajorString,
-} from "@myakiba/utils/currency";
-import type { DateFormat } from "@myakiba/types/enums";
+import { majorStringToMinorUnits, minorUnitsToMajorString } from "@myakiba/utils/currency";
+import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { Scroller } from "../ui/scroller";
-import { COLLECTION_STATUSES, SHIPPING_METHODS, CONDITIONS } from "@myakiba/constants/enums";
+import {
+  COLLECTION_STATUSES,
+  SHIPPING_METHODS,
+  CONDITIONS,
+} from "@myakiba/contracts/shared/constants";
 import { useState, type ReactElement } from "react";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
+import { formatReleaseDate, getCurrencyLocale } from "@/lib/locale";
 
 type CollectionItemFormProps = {
   renderTrigger: ReactElement;
   itemData: CollectionItemFormValues;
   callbackFn: (itemData: CollectionItemFormValues) => Promise<void>;
-  currency?: string;
+  currency: Currency;
   dateFormat?: DateFormat;
 };
 
@@ -55,8 +55,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
   const { itemData, callbackFn, currency, dateFormat, renderTrigger } = props;
   const [open, setOpen] = useState(false);
 
-  const userCurrency = currency || "USD";
-  const userLocale = getCurrencyLocale(userCurrency);
+  const userLocale = getCurrencyLocale(currency);
 
   const form = useForm({
     defaultValues: {
@@ -117,7 +116,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                         id={field.name}
                         name={field.name}
                         mask="currency"
-                        currency={userCurrency}
+                        currency={currency}
                         locale={userLocale}
                         value={field.state.value}
                         onBlur={field.handleBlur}
@@ -313,13 +312,14 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                                       {displayData.type}
                                     </span>
                                   )}
-                                  {displayData.price !== null &&
-                                    displayData.price !== undefined &&
-                                    displayData.priceCurrency && (
+                                  {displayData.price != null &&
+                                    displayData.price > 0 &&
+                                    displayData.priceCurrency?.trim() && (
                                       <span className="text-muted-foreground">
-                                        {formatCurrencyFromMinorUnits(
+                                        {formatReleaseDate(
                                           displayData.price,
                                           displayData.priceCurrency,
+                                          currency,
                                         )}
                                       </span>
                                     )}
@@ -356,13 +356,14 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                                 )}
                               </div>
                               <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                {release.price !== null &&
-                                  release.price !== undefined &&
-                                  release.priceCurrency && (
+                                {release.price != null &&
+                                  release.price > 0 &&
+                                  release.priceCurrency?.trim() && (
                                     <span>
-                                      {formatCurrencyFromMinorUnits(
+                                      {formatReleaseDate(
                                         release.price,
                                         release.priceCurrency,
+                                        currency,
                                       )}
                                     </span>
                                   )}

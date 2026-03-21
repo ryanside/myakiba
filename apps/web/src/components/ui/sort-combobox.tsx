@@ -1,10 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  ArrowDown01Icon,
-  ArrowUp01Icon,
-  ArrowUpDownIcon,
-  Cancel01Icon,
-} from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowUp01Icon, ArrowUpDownIcon } from "@hugeicons/core-free-icons";
 import { useId, useState, type ReactElement } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +9,6 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandSeparator,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Scroller } from "./scroller";
@@ -105,17 +99,6 @@ export function SortCombobox({
           <CommandInput placeholder="Search columns..." />
           <CommandList id={listboxId}>
             <CommandEmpty>No column found.</CommandEmpty>
-            <CommandGroup>
-              <CommandItem
-                value="clear-sort"
-                onSelect={() => handleSort(null)}
-                className="text-muted-foreground [&>:last-child]:hidden"
-              >
-                <HugeiconsIcon icon={Cancel01Icon} className="mr-2 h-4 w-4" />
-                Clear sorting
-              </CommandItem>
-            </CommandGroup>
-            <CommandSeparator />
             <CommandGroup>
               <Scroller className="max-h-96">
                 {columns.map((column) => {

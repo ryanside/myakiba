@@ -22,11 +22,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
 import { cn } from "@/lib/utils";
-import { getCurrencyLocale } from "@myakiba/utils/currency";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
-import type { DateFormat, OrderStatus } from "@myakiba/types/enums";
-import type { OrderItem } from "@myakiba/types/orders";
-import type { CollectionItemFormValues } from "@myakiba/types/collection";
+import type { Currency, DateFormat, OrderStatus } from "@myakiba/contracts/shared/types";
+import type { OrderItem } from "@myakiba/contracts/orders/types";
+import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import CollectionItemForm from "../collection/collection-item-form";
@@ -35,7 +34,7 @@ import { InlineCountCell } from "../cells/inline-count-cell";
 import { SelectCell } from "../cells/select-cell";
 import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import type { ColumnDef } from "@tanstack/react-table";
-import { ORDER_STATUSES } from "@myakiba/constants/enums";
+import { ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -43,7 +42,8 @@ interface OrderItemSubColumnsParams {
   orderId: string;
   onEditItem: (values: CollectionItemFormValues) => Promise<void>;
   onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
-  currency: string;
+  currency: Currency;
+  locale: string;
   dateFormat: DateFormat;
   isCollectionItemPending: (collectionId: string) => boolean;
 }
@@ -53,6 +53,7 @@ export function createOrderItemSubColumns({
   onEditItem,
   onDeleteItem,
   currency,
+  locale,
   dateFormat,
   isCollectionItemPending,
 }: OrderItemSubColumnsParams): ColumnDef<OrderItem>[] {
@@ -265,7 +266,7 @@ export function createOrderItemSubColumns({
             onSubmit={async (newValue) => {
               await onEditItem({ ...item, price: newValue });
             }}
-            locale={getCurrencyLocale(currency)}
+            locale={locale}
             disabled={isPending}
           />
         );

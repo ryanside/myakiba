@@ -5,22 +5,24 @@ import { evlog } from "evlog/elysia";
 import { rateLimit } from "@/middleware/rate-limit";
 import {
   collectionSyncSchema,
-  csvItemSchema,
-  orderItemsSyncSchema,
+  internalCsvItemSchema,
   orderSyncSchema,
+  syncOrderItemsSchema,
 } from "./model";
 import type {
-  Status,
-  OrderItemSyncType,
-  UpdatedSyncOrder,
-  CollectionSyncType,
   UpdatedSyncCollection,
+  UpdatedSyncOrder,
   UpdatedSyncOrderItem,
+} from "@myakiba/contracts/sync/schema";
+import type {
+  SyncJobStatus,
+  SyncOrderItemInput,
+  CollectionSyncType,
   CollectionInsertType,
 } from "./model";
 import SyncService from "./service";
 import { tryCatch } from "@myakiba/utils/result";
-import { SYNC_SESSION_STATUSES, SYNC_TYPES } from "@myakiba/constants/enums";
+import { SYNC_SESSION_STATUSES, SYNC_TYPES } from "@myakiba/contracts/shared/constants";
 import { createId } from "@paralleldrive/cuid2";
 import {
   jobStatusSubscriptionRegistry,
@@ -31,21 +33,21 @@ const MAX_JOB_STATUS_STREAM_DURATION_MS = 10 * 60 * 1000;
 
 const createTerminalJobStatus = (
   statusMessage: string,
-  terminalState: Status["terminalState"],
-): Status => ({
+  terminalState: SyncJobStatus["terminalState"],
+): SyncJobStatus => ({
   status: statusMessage,
   finished: true,
   createdAt: new Date().toISOString(),
   terminalState,
 });
 
-const jobStatusesMatch = (left: Status, right: Status): boolean =>
+const jobStatusesMatch = (left: SyncJobStatus, right: SyncJobStatus): boolean =>
   left.status === right.status &&
   left.finished === right.finished &&
   left.createdAt === right.createdAt &&
   left.terminalState === right.terminalState;
 
-const toSseJobStatus = (jobStatus: Status) =>
+const toSseJobStatus = (jobStatus: SyncJobStatus) =>
   sse({
     data: jobStatus,
   });
@@ -305,7 +307,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       };
     },
     {
-      body: z.array(csvItemSchema),
+      body: z.array(internalCsvItemSchema),
       auth: true,
       rateLimit: "csv",
     },
@@ -327,7 +329,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       const orderId = createId();
 
-      const itemExternalIds = body.items.map((item: OrderItemSyncType) => item.itemExternalId);
+      const itemExternalIds = body.items.map((item: SyncOrderItemInput) => item.itemExternalId);
 
       const { data: existingItems, error: existingItemsError } = await tryCatch(
         SyncService.getExistingItemsByExternalIds(itemExternalIds),
@@ -360,7 +362,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       );
 
       const releaseDates = body.items
-        .map((item: OrderItemSyncType) => {
+        .map((item: SyncOrderItemInput) => {
           const internalId = externalIdToInternalId.get(item.itemExternalId);
           if (!internalId) {
             return undefined;
@@ -384,8 +386,8 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       };
 
       const itemsToScrape: UpdatedSyncOrderItem[] = body.items
-        .filter((item: OrderItemSyncType) => !externalIdToInternalId.has(item.itemExternalId))
-        .map((item: OrderItemSyncType) => ({
+        .filter((item: SyncOrderItemInput) => !externalIdToInternalId.has(item.itemExternalId))
+        .map((item: SyncOrderItemInput) => ({
           ...item,
           itemId: null,
           orderId: orderId,
@@ -394,7 +396,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         }));
 
       const itemsToInsert: UpdatedSyncOrderItem[] = body.items.flatMap(
-        (item: OrderItemSyncType) => {
+        (item: SyncOrderItemInput) => {
           const internalItemId = externalIdToInternalId.get(item.itemExternalId);
           if (!internalItemId) {
             return [];
@@ -695,7 +697,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         notes: existingOrder.notes,
       };
 
-      const itemExternalIds = body.items.map((item: OrderItemSyncType) => item.itemExternalId);
+      const itemExternalIds = body.items.map((item: SyncOrderItemInput) => item.itemExternalId);
 
       const { data: existingItems, error: existingItemsError } = await tryCatch(
         SyncService.getExistingItemsByExternalIds(itemExternalIds),
@@ -728,8 +730,8 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       );
 
       const itemsToScrape: UpdatedSyncOrderItem[] = body.items
-        .filter((item: OrderItemSyncType) => !externalIdToInternalId.has(item.itemExternalId))
-        .map((item: OrderItemSyncType) => ({
+        .filter((item: SyncOrderItemInput) => !externalIdToInternalId.has(item.itemExternalId))
+        .map((item: SyncOrderItemInput) => ({
           ...item,
           itemId: null,
           orderId: existingOrder.id,
@@ -738,7 +740,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         }));
 
       const itemsToInsert: UpdatedSyncOrderItem[] = body.items.flatMap(
-        (item: OrderItemSyncType) => {
+        (item: SyncOrderItemInput) => {
           const internalItemId = externalIdToInternalId.get(item.itemExternalId);
           if (!internalItemId) {
             return [];
@@ -962,7 +964,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       };
     },
     {
-      body: orderItemsSyncSchema,
+      body: syncOrderItemsSchema,
       auth: true,
       rateLimit: "order",
     },

@@ -1,5 +1,5 @@
 import type Redis from "ioredis";
-import type { SyncJobStatus } from "@myakiba/schemas/sync";
+import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
 import { getJobStatusChannel, parseJobStatusPayload } from "@myakiba/redis/job-status";
 import { redis } from "@myakiba/redis/client";
 

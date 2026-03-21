@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
-import type { CascadeOptions } from "@myakiba/types/orders";
-import { ORDER_CASCADE_OPTIONS } from "@myakiba/constants/orders";
+import type { CascadeOptions } from "@myakiba/contracts/orders/schema";
+import { ORDER_CASCADE_OPTIONS } from "@myakiba/contracts/orders/constants";
 
 const cascadeOptionsList: readonly CascadeOptions[number][] = ORDER_CASCADE_OPTIONS;
 

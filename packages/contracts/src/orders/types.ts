@@ -1,15 +1,5 @@
-import type { ShippingMethod, OrderStatus } from "./enums";
-import type { CollectionItem } from "./collection";
-import type { OrderFilters as SchemaOrderFilters } from "@myakiba/schemas/search";
-import type {
-  NewOrder as SchemaNewOrder,
-  EditedOrder as SchemaEditedOrder,
-  CascadeOptions as SchemaCascadeOptions,
-} from "@myakiba/schemas/orders";
-import type {
-  ItemRelease as SchemaItemRelease,
-  ItemReleasesResponse as SchemaItemReleasesResponse,
-} from "@myakiba/schemas/items";
+import type { CollectionItem } from "../collection/types";
+import type { OrderStatus, ShippingMethod } from "../shared/types";
 
 export type OrderStats = {
   totalOrders: number;
@@ -55,15 +45,3 @@ export type OrderItem = Omit<
   CollectionItem,
   "itemCategory" | "itemScale" | "createdAt" | "updatedAt" | "totalCount" | "totalValue"
 >;
-
-export type NewOrder = SchemaNewOrder;
-
-export type EditedOrder = SchemaEditedOrder;
-
-export type OrderFilters = SchemaOrderFilters;
-
-export type CascadeOptions = SchemaCascadeOptions;
-
-export type ItemRelease = SchemaItemRelease;
-
-export type ItemReleasesResponse = SchemaItemReleasesResponse;

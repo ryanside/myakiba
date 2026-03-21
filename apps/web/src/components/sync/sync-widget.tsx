@@ -15,13 +15,13 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import type { SyncType } from "@myakiba/types/enums";
+import type { SyncType } from "@myakiba/contracts/shared/types";
 import { SYNC_TYPE_CONFIG, SYNC_OPTION_META } from "@/lib/sync";
 import SyncCsvForm from "@/components/sync/sync-csv-form";
 import SyncOrderForm from "@/components/sync/sync-order-form";
 import SyncCollectionForm from "@/components/sync/sync-collection-form";
-import type { RouterAppContext } from "@/routes/__root";
 import { useSyncMutations } from "@/hooks/use-sync-mutations";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 type LaunchableSyncType = Extract<SyncType, "collection" | "csv" | "order">;
 
@@ -44,16 +44,15 @@ const SYNC_OPTIONS: readonly {
 ];
 
 type SyncWidgetProps = {
-  readonly session: RouterAppContext["session"];
   readonly TriggerWrapper: React.ReactElement;
 };
 
-export default function SyncWidget({ session, TriggerWrapper }: SyncWidgetProps) {
+export default function SyncWidget({ TriggerWrapper }: SyncWidgetProps) {
   const queryClient = useQueryClient();
   const [syncType, setSyncType] = useState<LaunchableSyncType | null>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);
 
-  const userCurrency = session?.user.currency || "USD";
+  const { currency: userCurrency } = useUserPreferences();
 
   const { handleSyncCsvSubmit, handleSyncOrderSubmit, handleSyncCollectionSubmit } =
     useSyncMutations(queryClient, () => {

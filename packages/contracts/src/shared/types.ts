@@ -1,16 +1,16 @@
 import {
-  SHIPPING_METHODS,
+  CATEGORIES,
   COLLECTION_STATUSES,
-  ORDER_STATUSES,
   CONDITIONS,
-  ENTRY_CATEGORIES,
+  CURRENCIES,
   DATE_FORMATS,
-  SYNC_TYPES,
-  SYNC_SESSION_STATUSES,
+  ENTRY_CATEGORIES,
+  ORDER_STATUSES,
+  SHIPPING_METHODS,
   SYNC_SESSION_ITEM_STATUSES,
-} from "@myakiba/constants/enums";
-import { CURRENCIES } from "@myakiba/constants/currencies";
-import { CATEGORIES } from "@myakiba/constants/categories";
+  SYNC_SESSION_STATUSES,
+  SYNC_TYPES,
+} from "./constants";
 
 export type ShippingMethod = (typeof SHIPPING_METHODS)[number];
 export type OrderStatus = (typeof ORDER_STATUSES)[number];

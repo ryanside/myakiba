@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import OrdersDataGrid from "@/components/orders/orders-data-grid";
-import { searchSchema } from "@myakiba/schemas/search";
+import { searchSchema } from "@myakiba/contracts/orders/schema";
 import { KPICard } from "@/components/ui/kpi-card";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { useOrdersQuery, useOrderStatsQuery } from "@/hooks/use-orders";
-import { useUserPreferences } from "@/hooks/use-collection";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 export const Route = createFileRoute("/(app)/orders")({
   component: RouteComponent,
@@ -23,7 +23,7 @@ export const Route = createFileRoute("/(app)/orders")({
 });
 
 function RouteComponent() {
-  const { currency } = useUserPreferences();
+  const { currency, locale } = useUserPreferences();
   const { isError, status } = useOrdersQuery();
   const { orderStats, isStatsPending } = useOrderStatsQuery();
 
@@ -62,7 +62,9 @@ function RouteComponent() {
           title="Total Spent"
           subtitle="all time, including all fees"
           value={
-            orderStats ? formatCurrencyFromMinorUnits(orderStats.totalSpent, currency) : undefined
+            orderStats
+              ? formatCurrencyFromMinorUnits(orderStats.totalSpent, currency, locale)
+              : undefined
           }
           isLoading={isStatsPending}
         />
@@ -76,7 +78,9 @@ function RouteComponent() {
           title="Unpaid Costs"
           subtitle="costs with status 'Ordered'"
           value={
-            orderStats ? formatCurrencyFromMinorUnits(orderStats.unpaidCosts, currency) : undefined
+            orderStats
+              ? formatCurrencyFromMinorUnits(orderStats.unpaidCosts, currency, locale)
+              : undefined
           }
           isLoading={isStatsPending}
         />

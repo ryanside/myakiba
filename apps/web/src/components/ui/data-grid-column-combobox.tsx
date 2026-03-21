@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Settings02Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { DragDropVerticalIcon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { useId, useState, type ReactElement } from "react";
 import type { Table } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
@@ -39,7 +39,7 @@ export function DataGridColumnCombobox<TData>({
       aria-haspopup="listbox"
       className="justify-between"
     >
-      <HugeiconsIcon icon={Settings02Icon} className="h-4 w-4" />
+      <HugeiconsIcon icon={DragDropVerticalIcon} className="h-4 w-4" />
       <span className="hidden md:block">Columns</span>
     </Button>
   );

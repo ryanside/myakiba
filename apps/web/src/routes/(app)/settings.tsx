@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import * as z from "zod";
 import { app } from "@/lib/treaty-client";
-import { DATE_FORMATS } from "@myakiba/constants/enums";
+import { DATE_FORMATS } from "@myakiba/contracts/shared/constants";
 
 type User = {
   id: string;

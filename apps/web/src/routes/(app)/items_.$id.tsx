@@ -1,6 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  ArrowLeft01Icon,
   Calendar01Icon,
   Delete01Icon,
   Edit01Icon,
@@ -24,13 +23,12 @@ import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import CollectionItemForm from "@/components/collection/collection-item-form";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import type { CollectionItemFormValues, CollectionItem } from "@myakiba/types/collection";
-import type { DateFormat } from "@myakiba/types/enums";
+import type { CollectionItemFormValues, CollectionItem } from "@myakiba/contracts/collection/types";
 import { deleteCollectionItems, updateCollectionItem } from "@/queries/collection";
 import { toast } from "sonner";
 import Loader from "@/components/loader";
 import { getCategoryColor } from "@/lib/category-colors";
-import { Separator } from "@/components/ui/separator";
+import { Card, CardHeader, CardAction, CardContent, CardFooter } from "@/components/ui/card";
 import {
   Timeline,
   TimelineItem,
@@ -41,6 +39,8 @@ import {
   TimelineSeparator,
 } from "@/components/reui/timeline";
 import { getStatusVariant } from "@/lib/orders";
+import { formatReleaseDate } from "@/lib/locale";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 type ItemRelatedCollection = {
   collection: Omit<
@@ -102,11 +102,7 @@ function getTimelineActiveStep(dates: {
 }
 
 function SectionHeading({ children }: { readonly children: React.ReactNode }) {
-  return (
-    <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-      {children}
-    </h2>
-  );
+  return <h2 className="text-xs font-medium text-muted-foreground">{children}</h2>;
 }
 
 function DetailRow({
@@ -125,9 +121,7 @@ function DetailRow({
 }
 
 function RouteComponent() {
-  const { session } = Route.useRouteContext();
-  const userCurrency = session?.user.currency;
-  const dateFormat = session?.user.dateFormat as DateFormat;
+  const { currency: userCurrency, locale: userLocale, dateFormat } = useUserPreferences();
   const queryClient = useQueryClient();
   const { id } = useParams({ from: "/(app)/items_/$id" });
 
@@ -256,9 +250,11 @@ function RouteComponent() {
         <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
         <Link
           to="/collection"
-          className={cn(buttonVariants({ variant: "outline" }), "flex items-center gap-1.5")}
+          className={cn(
+            buttonVariants({ variant: "link" }),
+            "mx-0 p-0 w-fit text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline",
+          )}
         >
-          <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
           Back to Collection
         </Link>
       </div>
@@ -281,12 +277,14 @@ function RouteComponent() {
   );
 
   return (
-    <div className="flex flex-col gap-8 pb-8">
+    <div className="flex flex-col gap-8">
       <Link
         to="/collection"
-        className={cn(buttonVariants({ variant: "ghost" }), "flex items-center gap-1.5 w-fit")}
+        className={cn(
+          buttonVariants({ variant: "link" }),
+          "mx-0 p-0 w-fit text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline",
+        )}
       >
-        <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
         Back to Collection
       </Link>
 
@@ -339,18 +337,18 @@ function RouteComponent() {
       </div>
 
       {/* Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-x-12 gap-y-10">
+      <div className="grid grid-cols-1 lg:grid-cols-5 border-border/50">
         {/* Left Column: Item Details */}
-        <div className="lg:col-span-3 space-y-10">
+        <div className="lg:col-span-3 space-y-10 border-border/50 lg:pr-6 py-8">
           {/* Releases */}
           {item.releases && item.releases.length > 0 && (
-            <section className="space-y-4">
+            <section className="space-y-2">
               <SectionHeading>Releases</SectionHeading>
               <div className="space-y-2">
                 {item.releases.map((release) => (
                   <div
                     key={release.id}
-                    className="flex items-center gap-3 text-sm py-2 border-b border-border/50 last:border-0"
+                    className="flex items-center gap-3 text-sm py-2 last:pb-0 border-b border-border/50 last:border-0"
                   >
                     <HugeiconsIcon
                       icon={Calendar01Icon}
@@ -363,11 +361,13 @@ function RouteComponent() {
                     {release.barcode && (
                       <span className="text-xs text-muted-foreground">{release.barcode}</span>
                     )}
-                    {release.price && release.priceCurrency && (
-                      <span className="ml-auto font-medium tabular-nums">
-                        {formatCurrencyFromMinorUnits(release.price, release.priceCurrency)}
-                      </span>
-                    )}
+                    {release.price != null &&
+                      release.price > 0 &&
+                      release.priceCurrency?.trim() && (
+                        <span className="ml-auto font-medium tabular-nums">
+                          {formatReleaseDate(release.price, release.priceCurrency, userCurrency)}
+                        </span>
+                      )}
                   </div>
                 ))}
               </div>
@@ -376,32 +376,27 @@ function RouteComponent() {
 
           {/* Related Entries */}
           {Object.keys(entriesByCategory).length > 0 && (
-            <section className="space-y-4">
-              <SectionHeading>Related Entries</SectionHeading>
-              <div className="space-y-4">
-                {Object.entries(entriesByCategory).map(([category, entries]) => (
-                  <div key={category}>
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      {category}
-                    </span>
-                    <div className="flex flex-wrap gap-1.5 mt-1.5">
-                      {entries.map((entry) => (
-                        <Badge key={entry.id} variant="secondary">
-                          {entry.name}
-                          {entry.role && (
-                            <span className="text-muted-foreground ml-1">({entry.role})</span>
-                          )}
-                        </Badge>
-                      ))}
-                    </div>
+            <section className="space-y-2">
+              {Object.entries(entriesByCategory).map(([category, entries]) => (
+                <div key={category}>
+                  <span className="text-xs font-medium text-muted-foreground">{category}</span>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {entries.map((entry) => (
+                      <Badge key={entry.id} variant="secondary">
+                        {entry.name}
+                        {entry.role && (
+                          <span className="text-muted-foreground ml-1">({entry.role})</span>
+                        )}
+                      </Badge>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </section>
           )}
 
           {/* Specifications */}
-          <section className="space-y-4">
+          <section className="space-y-2">
             <SectionHeading>Specifications</SectionHeading>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
               {item.scale && (
@@ -429,7 +424,7 @@ function RouteComponent() {
         </div>
 
         {/* Right Column: Your Collection */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 lg:pl-6 py-8 border-t border-border lg:border-t-0">
           <SectionHeading>Your Collection</SectionHeading>
 
           <div className="mt-4">
@@ -455,8 +450,8 @@ function RouteComponent() {
                 <p className="text-sm text-muted-foreground">Not in your collection yet.</p>
               </div>
             ) : (
-              <div className="space-y-0">
-                {collectionItems.map((collectionItem, index) => {
+              <div className="space-y-6">
+                {collectionItems.map((collectionItem) => {
                   const release = item.releases.find((r) => r.id === collectionItem.releaseId);
                   const relatedOrder = collectionItem.orderId
                     ? ordersList.find((o) => o.id === collectionItem.orderId)
@@ -469,21 +464,19 @@ function RouteComponent() {
                   });
 
                   return (
-                    <div key={collectionItem.id}>
-                      {index > 0 && <Separator className="my-6" />}
-                      <div className="space-y-5">
-                        {/* Status + Actions */}
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Badge variant={getStatusVariant(collectionItem.status)}>
-                              {collectionItem.status}
-                            </Badge>
-                            {release && (
-                              <span className="text-xs text-muted-foreground">
-                                {formatDateOnlyForDisplay(release.date, dateFormat)}
-                              </span>
-                            )}
-                          </div>
+                    <Card key={collectionItem.id}>
+                      <CardHeader>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={getStatusVariant(collectionItem.status)}>
+                            {collectionItem.status}
+                          </Badge>
+                          {release && (
+                            <span className="text-xs text-muted-foreground">
+                              {formatDateOnlyForDisplay(release.date, dateFormat)}
+                            </span>
+                          )}
+                        </div>
+                        <CardAction>
                           <div className="flex items-center gap-1">
                             <CollectionItemForm
                               renderTrigger={
@@ -530,22 +523,28 @@ function RouteComponent() {
                               </PopoverContent>
                             </Popover>
                           </div>
-                        </div>
+                        </CardAction>
+                      </CardHeader>
 
-                        {/* Quick Facts */}
+                      <CardContent className="space-y-5">
                         <div className="space-y-1.5">
                           <DetailRow label="Count">{collectionItem.count}</DetailRow>
                           <DetailRow label="Price">
-                            {formatCurrencyFromMinorUnits(collectionItem.price, userCurrency)}
+                            {formatCurrencyFromMinorUnits(
+                              collectionItem.price,
+                              userCurrency,
+                              userLocale,
+                            )}
                           </DetailRow>
                           <DetailRow label="Condition">{collectionItem.condition}</DetailRow>
                           {collectionItem.shop && (
                             <DetailRow label="Shop">{collectionItem.shop}</DetailRow>
                           )}
-                          <DetailRow label="Shipping">{collectionItem.shippingMethod}</DetailRow>
+                          <DetailRow label="Shipping Method">
+                            {collectionItem.shippingMethod}
+                          </DetailRow>
                         </div>
 
-                        {/* Date Timeline */}
                         {activeStep > 0 && (
                           <Timeline orientation="vertical" value={activeStep}>
                             <TimelineItem step={1}>
@@ -597,12 +596,11 @@ function RouteComponent() {
                           </Timeline>
                         )}
 
-                        {/* Score, Tags, Notes */}
                         {(collectionItem.score ||
                           collectionItem.tags.length > 0 ||
                           collectionItem.notes) && (
                           <div className="space-y-3">
-                            {collectionItem.score && (
+                            {collectionItem.score && parseFloat(collectionItem.score) !== 0 && (
                               <DetailRow label="Score">{collectionItem.score}</DetailRow>
                             )}
                             {collectionItem.tags.length > 0 && (
@@ -627,9 +625,10 @@ function RouteComponent() {
                             )}
                           </div>
                         )}
+                      </CardContent>
 
-                        {/* Related Order */}
-                        {relatedOrder && (
+                      {relatedOrder && (
+                        <CardFooter>
                           <Link
                             to="/orders/$id"
                             params={{ id: collectionItem.orderId! }}
@@ -637,9 +636,9 @@ function RouteComponent() {
                           >
                             <span>View order: {relatedOrder.title}</span>
                           </Link>
-                        )}
-                      </div>
-                    </div>
+                        </CardFooter>
+                      )}
+                    </Card>
                   );
                 })}
               </div>

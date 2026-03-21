@@ -40,3 +40,30 @@ export const SYNC_SESSION_STATUSES = [
 ] as const;
 
 export const SYNC_SESSION_ITEM_STATUSES = ["pending", "scraped", "failed"] as const;
+
+export const CATEGORIES = [
+  "Prepainted",
+  "Action/Dolls",
+  "Trading",
+  "Garage Kits",
+  "Model Kits",
+  "Accessories",
+  "Plushes",
+  "Linens",
+  "Dishes",
+  "Hanged up",
+  "Apparel",
+  "On Walls",
+  "Stationeries",
+  "Misc",
+  "Books",
+  "Music",
+  "Video",
+  "Games",
+] as const;
+
+export const CURRENCIES = ["USD", "JPY", "CNY", "EUR", "GBP", "CAD", "AUD", "NZD"] as const;
+
+export const DEFAULT_PAGE_INDEX = 0;
+export const DEFAULT_PAGE_SIZE = 10;
+export const DEFAULT_LIMIT = 10;

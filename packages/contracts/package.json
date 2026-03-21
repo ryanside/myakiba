@@ -1,15 +1,17 @@
 {
-  "name": "@myakiba/schemas",
+  "name": "@myakiba/contracts",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "exports": {
-    "./*": {
-      "default": "./src/*.ts"
-    }
+    "./shared/*": "./src/shared/*.ts",
+    "./orders/*": "./src/orders/*.ts",
+    "./collection/*": "./src/collection/*.ts",
+    "./sync/*": "./src/sync/*.ts",
+    "./items/*": "./src/items/*.ts",
+    "./search/*": "./src/search/*.ts"
   },
   "dependencies": {
-    "@myakiba/constants": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {

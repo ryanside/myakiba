@@ -60,7 +60,7 @@ function RouteComponent() {
     <div className="[--header-height:calc(--spacing(14))] max-w-full overflow-x-hidden">
       <SidebarProvider className="flex flex-col">
         <div className="flex min-w-0 max-w-full flex-1 overflow-x-hidden">
-          <AppSidebar session={session} />
+          <AppSidebar />
           <SidebarInset>
             <header className="flex h-12 shrink-0 items-center justify-between gap-2 px-4">
               <div className="flex items-center">

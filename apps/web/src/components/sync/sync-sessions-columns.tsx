@@ -6,14 +6,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/reui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { SyncSessionRow } from "@myakiba/types/sync";
+import type { SyncSessionRow } from "@myakiba/contracts/sync/types";
 import { SESSION_STATUS_CONFIG, SYNC_TYPE_CONFIG } from "@/lib/sync";
 import { formatShortDateTime, formatSyncDuration } from "@/lib/date-display";
 import { fetchSyncSessionDetail } from "@/queries/sync";
 import {
   ACTIVE_SYNC_SESSION_STATUS_SET,
   SYNC_SESSION_SUBGRID_PAGE_SIZE,
-} from "@myakiba/constants/sync";
+} from "@myakiba/contracts/sync/constants";
 import { useSyncJobStatusQuery } from "@/hooks/use-sync-job-status-query";
 
 interface SyncSessionColumnsParams {

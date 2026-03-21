@@ -27,12 +27,14 @@ import type {
   NewOrder,
   CascadeOptions,
   OrderFilters,
+} from "@myakiba/contracts/orders/schema";
+import type {
   OrderItem,
   OrderListItem,
   PaginatedResult,
   OrderStats,
-} from "@myakiba/types/orders";
-import type { CollectionItemFormValues } from "@myakiba/types/collection";
+} from "@myakiba/contracts/orders/types";
+import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 
 export function ordersQueryOptions(filters: OrderFilters) {
   return queryOptions({

@@ -1,4 +1,4 @@
-import { SYNC_SESSION_STATUSES } from "./enums";
+import { SYNC_SESSION_STATUSES } from "../shared/constants";
 
 export type SyncSessionStatusValue = (typeof SYNC_SESSION_STATUSES)[number];
 
@@ -16,3 +16,7 @@ export const JOB_STATUS_TTL_SECONDS = 600;
 export const JOB_STATUS_KEY_PREFIX = "job";
 export const JOB_STATUS_KEY_SUFFIX = "status";
 export const JOB_STATUS_CHANNEL_PREFIX = "job:status:";
+
+export const SYNC_CSV_ITEM_STATUSES = ["Owned", "Ordered"] as const;
+
+export type SyncCsvItemStatus = (typeof SYNC_CSV_ITEM_STATUSES)[number];

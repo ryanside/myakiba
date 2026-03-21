@@ -30,8 +30,9 @@ import {
 } from "@tanstack/react-table";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { formatCurrencyFromMinorUnits, getCurrencyLocale } from "@myakiba/utils/currency";
-import type { CascadeOptions, EditedOrder, OrderListItem } from "@myakiba/types/orders";
+import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
+import type { CascadeOptions, EditedOrder } from "@myakiba/contracts/orders/schema";
+import type { OrderListItem } from "@myakiba/contracts/orders/types";
 import { OrderForm } from "./order-form";
 import { OrderItemSubDataGrid } from "./order-item-sub-data-grid";
 import { PopoverMultiInputCell } from "../cells/popover-multi-input-cell";
@@ -39,10 +40,15 @@ import { SelectCell } from "../cells/select-cell";
 import { InlineTextCell } from "../cells/inline-text-cell";
 import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
-import type { CollectionItemFormValues } from "@myakiba/types/collection";
-import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/constants/enums";
+import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
+import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
-import type { ShippingMethod, OrderStatus, DateFormat } from "@myakiba/types/enums";
+import type {
+  Currency,
+  ShippingMethod,
+  OrderStatus,
+  DateFormat,
+} from "@myakiba/contracts/shared/types";
 import { Skeleton } from "../ui/skeleton";
 import { ImageThumbnail } from "../ui/image-thumbnail";
 import { orderItemsQueryOptions } from "@/hooks/use-orders";
@@ -78,7 +84,8 @@ interface OrdersColumnsParams {
   onDeleteOrders: (orderIds: Set<string>) => Promise<void>;
   onEditItem: (values: CollectionItemFormValues) => Promise<void>;
   onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
-  currency: string;
+  currency: Currency;
+  locale: string;
   itemSelection: RowSelectionState;
   setItemSelection: OnChangeFn<RowSelectionState>;
   dateFormat: DateFormat;
@@ -92,6 +99,7 @@ export function createOrdersColumns({
   onEditItem,
   onDeleteItem,
   currency,
+  locale,
   itemSelection,
   setItemSelection,
   dateFormat,
@@ -519,11 +527,10 @@ export function createOrdersColumns({
             value: order.miscFees,
           },
         ];
-        const locale = getCurrencyLocale(currency);
         return (
           <PopoverMultiInputCell
             inputs={inputs}
-            total={formatCurrencyFromMinorUnits(order.total, currency)}
+            total={formatCurrencyFromMinorUnits(order.total, currency, locale)}
             currency={currency}
             locale={locale}
             disabled={isPending}
@@ -565,7 +572,7 @@ export function createOrdersColumns({
           <InlineCurrencyCell
             value={order.shippingFee}
             currency={currency}
-            locale={getCurrencyLocale(currency)}
+            locale={locale}
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
@@ -605,7 +612,7 @@ export function createOrdersColumns({
           <InlineCurrencyCell
             value={order.taxes}
             currency={currency}
-            locale={getCurrencyLocale(currency)}
+            locale={locale}
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
@@ -645,7 +652,7 @@ export function createOrdersColumns({
           <InlineCurrencyCell
             value={order.duties}
             currency={currency}
-            locale={getCurrencyLocale(currency)}
+            locale={locale}
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
@@ -685,7 +692,7 @@ export function createOrdersColumns({
           <InlineCurrencyCell
             value={order.tariffs}
             currency={currency}
-            locale={getCurrencyLocale(currency)}
+            locale={locale}
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
@@ -725,7 +732,7 @@ export function createOrdersColumns({
           <InlineCurrencyCell
             value={order.miscFees}
             currency={currency}
-            locale={getCurrencyLocale(currency)}
+            locale={locale}
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;

@@ -1,7 +1,6 @@
 import { relations } from "drizzle-orm";
 import { pgTable, text, timestamp, boolean, index } from "drizzle-orm/pg-core";
-import { CURRENCIES } from "@myakiba/constants/currencies";
-import { DATE_FORMATS } from "@myakiba/constants/enums";
+import { CURRENCIES, DATE_FORMATS } from "@myakiba/contracts/shared/constants";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),

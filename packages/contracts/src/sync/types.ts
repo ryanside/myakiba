@@ -1,16 +1,11 @@
 import type {
-  ShippingMethod,
-  OrderStatus,
   Condition,
-  SyncSessionStatus,
+  OrderStatus,
+  ShippingMethod,
   SyncSessionItemStatus,
+  SyncSessionStatus,
   SyncType,
-} from "./enums";
-import type {
-  InternalCsvItem,
-  SyncTerminalState as SharedSyncTerminalState,
-  SyncJobStatus as SharedSyncJobStatus,
-} from "@myakiba/schemas/sync";
+} from "../shared/types";
 
 export type SyncSessionRow = {
   readonly id: string;
@@ -52,8 +47,7 @@ export type SyncStatus = {
   status: string;
 };
 
-export type SyncTerminalState = SharedSyncTerminalState;
-export type SyncJobStatus = Readonly<SharedSyncJobStatus>;
+export type UserItem = import("./schema").InternalCsvItem;
 
 export type SyncFormOrderItem = {
   /** Stable id for list keys / dialog identity; duplicates may share the same MFC id. */
@@ -180,5 +174,3 @@ export type SyncCollectionItem = Omit<
   collectionDate: string | null;
   score: string;
 };
-
-export type UserItem = InternalCsvItem;

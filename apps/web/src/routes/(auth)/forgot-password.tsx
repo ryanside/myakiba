@@ -5,7 +5,8 @@ import { authClient } from "@/lib/auth-client";
 import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Turnstile } from "@marsidev/react-turnstile";
@@ -98,10 +99,14 @@ function RouteComponent() {
               </p>
             </div>
             <div className="text-center text-sm">
-              <Link to="/login">
-                <Button className="underline underline-offset-4" variant="link">
-                  Back to Login
-                </Button>
+              <Link
+                to="/login"
+                className={cn(
+                  buttonVariants({ variant: "link" }),
+                  "mx-0 p-0 w-fit text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline",
+                )}
+              >
+                Back to Login
               </Link>
             </div>
           </div>
@@ -196,10 +201,14 @@ function RouteComponent() {
           </form>
           <div className="text-center text-sm">
             Remember your password?{" "}
-            <Link to="/login">
-              <Button className="underline underline-offset-4" variant="link">
-                Back to Login
-              </Button>
+            <Link
+              to="/login"
+              className={cn(
+                buttonVariants({ variant: "link" }),
+                "mx-0 p-0 w-fit text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline",
+              )}
+            >
+              Back to Login
             </Link>
           </div>
         </div>

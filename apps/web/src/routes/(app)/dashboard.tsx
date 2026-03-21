@@ -11,7 +11,7 @@ import OrderKanban from "@/components/dashboard/order-kanban";
 import { ValueLineBarChart } from "@/components/ui/value-line-bar-chart";
 import { KPICard } from "@/components/ui/kpi-card";
 import Loader from "@/components/loader";
-import type { DateFormat } from "@myakiba/types/enums";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 export const Route = createFileRoute("/(app)/dashboard")({
   component: RouteComponent,
@@ -34,8 +34,7 @@ function RouteComponent() {
 
 function DashboardContent() {
   const { session } = Route.useRouteContext();
-  const userCurrency = session?.user.currency;
-  const dateFormat = session?.user.dateFormat as DateFormat;
+  const { currency: userCurrency, locale: userLocale, dateFormat } = useUserPreferences();
 
   async function getDashboard() {
     const { data, error } = await app.api.dashboard.get();
@@ -100,6 +99,7 @@ function DashboardContent() {
               Number(ordersSummary[0]?.totalTariffsAllTime ?? 0) +
               Number(ordersSummary[0]?.totalMiscFeesAllTime ?? 0),
             userCurrency,
+            userLocale,
           )}
         />
         <KPICard
@@ -115,6 +115,7 @@ function DashboardContent() {
           value={formatCurrencyFromMinorUnits(
             unpaidOrders.reduce((acc, order) => acc + Number(order.total), 0),
             userCurrency,
+            userLocale,
           )}
         />
       </div>
@@ -126,7 +127,7 @@ function DashboardContent() {
             <CardTitle className="text-base font-medium">Release Calendar</CardTitle>
           </CardHeader>
           <CardContent>
-            <ReleaseCalendar currency={userCurrency} dateFormat={dateFormat} />
+            <ReleaseCalendar currency={userCurrency} />
           </CardContent>
         </Card>
       </div>

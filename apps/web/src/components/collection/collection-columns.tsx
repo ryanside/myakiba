@@ -24,7 +24,6 @@ import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-colu
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
-import { getCurrencyLocale } from "@myakiba/utils/currency";
 import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
 import CollectionItemForm from "./collection-item-form";
@@ -32,15 +31,16 @@ import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import { PopoverRatingCell } from "../cells/popover-rating-cell";
 import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
 import { InlineCountCell } from "../cells/inline-count-cell";
-import type { CollectionItem, CollectionItemFormValues } from "@myakiba/types/collection";
-import type { DateFormat } from "@myakiba/types/enums";
+import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
+import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { getCategoryColor } from "@/lib/category-colors";
 import { Skeleton } from "../ui/skeleton";
 
 interface CollectionColumnsParams {
   onEditCollectionItem: (values: CollectionItemFormValues) => Promise<void>;
   onDeleteCollectionItems: (collectionIds: Set<string>) => Promise<void>;
-  currency: string;
+  currency: Currency;
+  locale: string;
   dateFormat: DateFormat;
   isCollectionPending: (collectionId: string) => boolean;
 }
@@ -49,6 +49,7 @@ export function createCollectionColumns({
   onEditCollectionItem,
   onDeleteCollectionItems,
   currency,
+  locale,
   dateFormat,
   isCollectionPending,
 }: CollectionColumnsParams): ColumnDef<CollectionItem>[] {
@@ -273,7 +274,7 @@ export function createCollectionColumns({
                 price: newValue,
               });
             }}
-            locale={getCurrencyLocale(currency)}
+            locale={locale}
             disabled={isPending}
           />
         );

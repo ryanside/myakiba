@@ -5,19 +5,21 @@ import { cn } from "@/lib/utils";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { Scroller } from "../ui/scroller";
 import { Link } from "@tanstack/react-router";
-import type { Category } from "@myakiba/types/enums";
+import type { Category, Currency } from "@myakiba/contracts/shared/types";
 import { getCategoryColor } from "@/lib/category-colors";
+import { getCurrencyLocale } from "@/lib/locale";
 
 export function CollectionBreakdown({
   data,
-  currency = "USD",
+  currency,
   className,
 }: {
   data: { name: Category; count: number; totalValue: number | null }[];
   className?: string;
-  currency?: string;
+  currency: Currency;
 }) {
   const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null);
+  const locale = getCurrencyLocale(currency);
 
   const chartData = React.useMemo(() => {
     return data.map((item) => ({
@@ -90,7 +92,7 @@ export function CollectionBreakdown({
                         <div className="flex justify-between items-center gap-2">
                           <span className="text-xs">Spent:</span>
                           <span className="text-xs font-medium">
-                            {formatCurrencyFromMinorUnits(item.value, currency)}
+                            {formatCurrencyFromMinorUnits(item.value, currency, locale)}
                           </span>
                         </div>
                         <div className="flex justify-between items-center gap-2">
@@ -145,7 +147,7 @@ export function CollectionBreakdown({
                   ({item.percentage.toFixed(1)}%)
                 </span>
                 <span className="ml-auto text-sm text-foreground">
-                  {formatCurrencyFromMinorUnits(item.value, currency)}
+                  {formatCurrencyFromMinorUnits(item.value, currency, locale)}
                 </span>
               </Link>
             );

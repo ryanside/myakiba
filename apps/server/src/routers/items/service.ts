@@ -8,7 +8,8 @@ import {
   order,
 } from "@myakiba/db/schema/figure";
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
-import type { ItemReleasesResponse, ItemRelease, EntriesWithRoles, CustomItemInput } from "./model";
+import type { ItemRelease, ItemReleasesResponse } from "@myakiba/contracts/items/schema";
+import type { EntriesWithRoles, CustomItemInput } from "./model";
 
 class ItemService {
   async createCustomItem(input: CustomItemInput) {

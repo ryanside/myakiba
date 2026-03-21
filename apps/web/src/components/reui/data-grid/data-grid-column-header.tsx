@@ -30,7 +30,7 @@ import {
   ArrowRight03Icon,
   ArrowLeft02Icon,
   ArrowRight02Icon,
-  SlidersHorizontalIcon,
+  DragDropVerticalIcon,
   PinOffIcon,
 } from "@hugeicons/core-free-icons";
 
@@ -273,7 +273,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
       items.push(
         <DropdownMenuSub key="visibility">
           <DropdownMenuSubTrigger>
-            <HugeiconsIcon icon={SlidersHorizontalIcon} strokeWidth={2} className="size-3.5!" />
+            <HugeiconsIcon icon={DragDropVerticalIcon} strokeWidth={2} className="size-3.5!" />
             <span>Columns</span>
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent side="right">

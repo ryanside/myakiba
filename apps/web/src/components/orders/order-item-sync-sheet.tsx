@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/sheet";
 import { PlusIcon, type PlusIconHandle } from "@/components/ui/plus";
 import { SYNC_OPTION_META } from "@/lib/sync";
-import { useUserPreferences } from "@/hooks/use-collection";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { useSyncMutations } from "@/hooks/use-sync-mutations";
 import SyncOrderItemForm from "@/components/sync/sync-order-item-form";
 

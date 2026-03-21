@@ -100,7 +100,7 @@ export function InlineCurrencyCell({
       variant="ghost"
       disabled={disabled || isPending}
     >
-      {formatCurrencyFromMinorUnits(displayValue, currency)}
+      {formatCurrencyFromMinorUnits(displayValue, currency, locale)}
     </Button>
   );
 }

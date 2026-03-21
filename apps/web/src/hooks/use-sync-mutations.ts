@@ -2,7 +2,12 @@ import { useCallback } from "react";
 import { useMutation, type QueryClient, type UseMutationResult } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { tryCatch } from "@myakiba/utils/result";
-import type { SyncCollectionItem, SyncOrder, SyncOrderItems, UserItem } from "@myakiba/types/sync";
+import type {
+  SyncCollectionItem,
+  SyncOrder,
+  SyncOrderItems,
+  UserItem,
+} from "@myakiba/contracts/sync/types";
 import { transformCSVData } from "@/lib/sync";
 import { sendCollection, sendItems, sendOrder, sendOrderItems } from "@/queries/sync";
 

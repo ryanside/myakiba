@@ -2,7 +2,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Cancel01Icon, Edit01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "../ui/button";
-import type { SyncCollectionItem } from "@myakiba/types/sync";
+import type { SyncCollectionItem } from "@myakiba/contracts/sync/types";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { MaskInput } from "../ui/mask-input";
@@ -21,19 +21,20 @@ import { DatePicker } from "../ui/date-picker";
 import * as z from "zod";
 import { Rating } from "../ui/rating";
 import { Textarea } from "../ui/textarea";
-import { getCurrencyLocale, majorStringToMinorUnits } from "@myakiba/utils/currency";
+import { majorStringToMinorUnits } from "@myakiba/utils/currency";
 import { createDefaultSyncFormCollectionItem, extractMfcItemId } from "@/lib/sync";
-import { CONDITIONS, SHIPPING_METHODS } from "@myakiba/constants/enums";
+import { CONDITIONS, SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
+import type { Currency } from "@myakiba/contracts/shared/types";
+import { getCurrencyLocale } from "@/lib/locale";
 
 export default function SyncCollectionForm({
   handleSyncCollectionSubmit,
   currency,
 }: {
   handleSyncCollectionSubmit: (values: SyncCollectionItem[]) => void;
-  currency?: string;
+  currency: Currency;
 }) {
-  const userCurrency = currency || "USD";
-  const userLocale = getCurrencyLocale(userCurrency);
+  const userLocale = getCurrencyLocale(currency);
 
   const collectionForm = useForm({
     defaultValues: {
@@ -192,7 +193,7 @@ export default function SyncCollectionForm({
                                               id={`price-${item.formRowId}`}
                                               name={priceField.name}
                                               mask="currency"
-                                              currency={userCurrency}
+                                              currency={currency}
                                               locale={userLocale}
                                               value={priceField.state.value}
                                               onBlur={priceField.handleBlur}

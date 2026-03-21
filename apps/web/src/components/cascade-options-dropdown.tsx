@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { CascadeOptions } from "@myakiba/types/orders";
+import type { CascadeOptions } from "@myakiba/contracts/orders/schema";
 
 interface CascadeOptionsDropdownProps {
   readonly cascadeOptions: CascadeOptions;

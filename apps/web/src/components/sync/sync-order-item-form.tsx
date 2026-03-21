@@ -32,15 +32,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { SyncOrderItems } from "@myakiba/types/sync";
-import { CONDITIONS, ORDER_STATUSES, SHIPPING_METHODS } from "@myakiba/constants/enums";
-import { getCurrencyLocale, majorStringToMinorUnits } from "@myakiba/utils/currency";
+import type { SyncOrderItems } from "@myakiba/contracts/sync/types";
+import { CONDITIONS, ORDER_STATUSES, SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
+import type { Currency } from "@myakiba/contracts/shared/types";
+import { majorStringToMinorUnits } from "@myakiba/utils/currency";
 import { createDefaultSyncFormOrderItem, extractMfcItemId } from "@/lib/sync";
+import { getCurrencyLocale } from "@/lib/locale";
 
 type SyncOrderItemFormProps = {
   readonly orderId: string;
   readonly handleSyncOrderItemSubmit: (values: SyncOrderItems) => Promise<void>;
-  readonly currency?: string;
+  readonly currency: Currency;
 };
 
 export default function SyncOrderItemForm({
@@ -48,8 +50,7 @@ export default function SyncOrderItemForm({
   handleSyncOrderItemSubmit,
   currency,
 }: SyncOrderItemFormProps) {
-  const userCurrency = currency || "USD";
-  const userLocale = getCurrencyLocale(userCurrency);
+  const userLocale = getCurrencyLocale(currency);
 
   const orderItemForm = useForm({
     defaultValues: {
@@ -198,7 +199,7 @@ export default function SyncOrderItemForm({
                                       id={`price-${item.formRowId}`}
                                       name={priceField.name}
                                       mask="currency"
-                                      currency={userCurrency}
+                                      currency={currency}
                                       locale={userLocale}
                                       value={priceField.state.value}
                                       onBlur={priceField.handleBlur}

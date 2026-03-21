@@ -35,27 +35,28 @@ import {
 } from "../ui/dialog";
 import * as z from "zod";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
-import type { CascadeOptions } from "@myakiba/types/orders";
-import type { SyncFormOrderItem, SyncOrder } from "@myakiba/types/sync";
+import type { CascadeOptions } from "@myakiba/contracts/orders/schema";
+import type { SyncFormOrderItem, SyncOrder } from "@myakiba/contracts/sync/types";
 import { Textarea } from "../ui/textarea";
-import { getCurrencyLocale, majorStringToMinorUnits } from "@myakiba/utils/currency";
+import { majorStringToMinorUnits } from "@myakiba/utils/currency";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   createDefaultSyncFormOrder,
   createDefaultSyncFormOrderItem,
   extractMfcItemId,
 } from "@/lib/sync";
-import { SHIPPING_METHODS, ORDER_STATUSES, CONDITIONS } from "@myakiba/constants/enums";
+import { SHIPPING_METHODS, ORDER_STATUSES, CONDITIONS } from "@myakiba/contracts/shared/constants";
+import type { Currency } from "@myakiba/contracts/shared/types";
+import { getCurrencyLocale } from "@/lib/locale";
 
 export default function SyncOrderForm({
   handleSyncOrderSubmit,
   currency,
 }: {
   handleSyncOrderSubmit: (values: SyncOrder) => void;
-  currency?: string;
+  currency: Currency;
 }) {
-  const userCurrency = currency || "USD";
-  const userLocale = getCurrencyLocale(userCurrency);
+  const userLocale = getCurrencyLocale(currency);
 
   const {
     cascadeOptions,
@@ -384,7 +385,7 @@ export default function SyncOrderForm({
                   id={field.name}
                   name={field.name}
                   mask="currency"
-                  currency={userCurrency}
+                  currency={currency}
                   locale={userLocale}
                   value={field.state.value}
                   onBlur={field.handleBlur}
@@ -403,7 +404,7 @@ export default function SyncOrderForm({
                   id={field.name}
                   name={field.name}
                   mask="currency"
-                  currency={userCurrency}
+                  currency={currency}
                   locale={userLocale}
                   value={field.state.value}
                   onBlur={field.handleBlur}
@@ -422,7 +423,7 @@ export default function SyncOrderForm({
                   id={field.name}
                   name={field.name}
                   mask="currency"
-                  currency={userCurrency}
+                  currency={currency}
                   locale={userLocale}
                   value={field.state.value}
                   onBlur={field.handleBlur}
@@ -441,7 +442,7 @@ export default function SyncOrderForm({
                   id={field.name}
                   name={field.name}
                   mask="currency"
-                  currency={userCurrency}
+                  currency={currency}
                   locale={userLocale}
                   value={field.state.value}
                   onBlur={field.handleBlur}
@@ -460,7 +461,7 @@ export default function SyncOrderForm({
                   id={field.name}
                   name={field.name}
                   mask="currency"
-                  currency={userCurrency}
+                  currency={currency}
                   locale={userLocale}
                   value={field.state.value}
                   onBlur={field.handleBlur}
@@ -580,7 +581,7 @@ export default function SyncOrderForm({
                                               id={`price-${item.formRowId}`}
                                               name={priceField.name}
                                               mask="currency"
-                                              currency={userCurrency}
+                                              currency={currency}
                                               locale={userLocale}
                                               value={priceField.state.value}
                                               onBlur={priceField.handleBlur}

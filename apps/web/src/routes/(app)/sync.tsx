@@ -12,18 +12,19 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import type { SyncType, SyncSessionStatus } from "@myakiba/types/enums";
-import type { SyncSessionRow } from "@myakiba/types/sync";
+import type { SyncType, SyncSessionStatus } from "@myakiba/contracts/shared/types";
+import type { SyncSessionRow } from "@myakiba/contracts/sync/types";
 import { fetchSyncSessions } from "@/queries/sync";
 import { SYNC_OPTION_META } from "@/lib/sync";
 import SyncCsvForm from "@/components/sync/sync-csv-form";
 import SyncOrderForm from "@/components/sync/sync-order-form";
 import SyncCollectionForm from "@/components/sync/sync-collection-form";
 import { SyncSessionsDataGrid } from "@/components/sync/sync-sessions-data-grid";
-import { syncSearchSchema } from "@myakiba/schemas/search";
+import { syncSearchSchema } from "@myakiba/contracts/sync/schema";
 import { useFilters } from "@/hooks/use-filters";
 import { useSyncMutations } from "@/hooks/use-sync-mutations";
-import { SYNC_WIDGET_RECENT_LIMIT } from "@myakiba/constants/sync";
+import { SYNC_WIDGET_RECENT_LIMIT } from "@myakiba/contracts/sync/constants";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 type LaunchableSyncType = Extract<SyncType, "collection" | "csv" | "order">;
 
@@ -65,8 +66,7 @@ export const Route = createFileRoute("/(app)/sync")({
 });
 
 function RouteComponent() {
-  const { session } = Route.useRouteContext();
-  const userCurrency = session?.user.currency || "USD";
+  const { currency: userCurrency } = useUserPreferences();
   const queryClient = useQueryClient();
   const { filters, setFilters } = useFilters(Route.id, {
     paginationDefaults: { limit: SYNC_WIDGET_RECENT_LIMIT },

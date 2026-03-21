@@ -1,5 +1,6 @@
 import { app, getErrorMessage } from "@/lib/treaty-client";
-import type { CollectionFilters, CollectionItemFormValues } from "@myakiba/types/collection";
+import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
+import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 
 export async function getCollection(filters: CollectionFilters) {
   const queryParams = {

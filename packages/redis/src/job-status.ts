@@ -1,12 +1,12 @@
 import type Redis from "ioredis";
-import type { SyncJobStatus } from "@myakiba/schemas/sync";
-import { syncJobStatusSchema } from "@myakiba/schemas/sync";
+import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
+import { syncJobStatusSchema } from "@myakiba/contracts/sync/schema";
 import {
   JOB_STATUS_CHANNEL_PREFIX,
   JOB_STATUS_KEY_PREFIX,
   JOB_STATUS_KEY_SUFFIX,
   JOB_STATUS_TTL_SECONDS,
-} from "@myakiba/constants/sync";
+} from "@myakiba/contracts/sync/constants";
 
 export const getJobStatusSnapshotKey = (jobId: string): string =>
   `${JOB_STATUS_KEY_PREFIX}:${jobId}:${JOB_STATUS_KEY_SUFFIX}`;
