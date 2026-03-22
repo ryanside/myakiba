@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { app } from "@/lib/treaty-client";
@@ -12,6 +13,27 @@ import { ValueLineBarChart } from "@/components/ui/value-line-bar-chart";
 import { KPICard } from "@/components/ui/kpi-card";
 import Loader from "@/components/loader";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
+
+const KAOMOJI_POOL = [
+  "(˶˃ ᵕ ˂˶) .ᐟ.ᐟ",
+  "⋆˚꩜｡",
+  "ദ്ദി◝ ⩊ ◜.ᐟ",
+  "₊˚⊹ᰔ",
+  "⋆˙⟡",
+  "(˶˃𐃷˂˶)",
+  "ᕙ( •̀ ᗜ •́ )ᕗ",
+  "⭑.ᐟ",
+  "⋆✴︎˚｡⋆",
+  "₍^ >⩊< ^₎Ⳋ",
+  "⋆˙⟡ ⋆.˚ ⊹₊⟡ ⋆",
+  "(⸝⸝> ᴗ•⸝⸝)",
+  "ദ്ദി ˉ͈̀꒳ˉ͈́ )✧",
+  "(˵ •̀ ᴗ - ˵ ) ✧",
+] as const;
+
+function randomKaomoji(): string {
+  return KAOMOJI_POOL[Math.floor(Math.random() * KAOMOJI_POOL.length)];
+}
 
 export const Route = createFileRoute("/(app)/dashboard")({
   component: RouteComponent,
@@ -35,6 +57,7 @@ function RouteComponent() {
 function DashboardContent() {
   const { session } = Route.useRouteContext();
   const { currency: userCurrency, locale: userLocale, dateFormat } = useUserPreferences();
+  const [kaomoji] = useState(randomKaomoji);
 
   async function getDashboard() {
     const { data, error } = await app.api.dashboard.get();
@@ -75,7 +98,7 @@ function DashboardContent() {
       <div className="flex flex-col gap-2 mb-4">
         <div className="flex flex-row items-start gap-4">
           <h1 className="text-2xl tracking-tight font-heading font-medium">
-            Welcome, <span className="">{session?.user.username}.</span>
+            Welcome, <span className="">{session?.user.username}.</span> {kaomoji}
           </h1>
         </div>
         <p className="text-muted-foreground text-sm font-normal">
