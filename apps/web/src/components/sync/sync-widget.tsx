@@ -1,63 +1,21 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  ArrowRight01Icon,
-  FileUploadIcon,
-  LibraryIcon,
-  PackageIcon,
-} from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import type { SyncType } from "@myakiba/contracts/shared/types";
-import { SYNC_TYPE_CONFIG, SYNC_OPTION_META } from "@/lib/sync";
-import SyncCsvForm from "@/components/sync/sync-csv-form";
-import SyncOrderForm from "@/components/sync/sync-order-form";
-import SyncCollectionForm from "@/components/sync/sync-collection-form";
-import { useSyncMutations } from "@/hooks/use-sync-mutations";
-import { useUserPreferences } from "@/hooks/use-user-preferences";
-
-type LaunchableSyncType = Extract<SyncType, "collection" | "csv" | "order">;
-
-const SYNC_OPTIONS: readonly {
-  readonly type: LaunchableSyncType;
-  readonly icon: typeof LibraryIcon;
-  readonly description: string;
-}[] = [
-  { type: "collection", icon: LibraryIcon, description: "Add items by MFC ID" },
-  {
-    type: "order",
-    icon: PackageIcon,
-    description: "Create an order with MFC items",
-  },
-  {
-    type: "csv",
-    icon: FileUploadIcon,
-    description: "Import from MFC CSV export",
-  },
-];
+import { SYNC_TYPE_CONFIG } from "@/lib/sync";
+import {
+  LAUNCHABLE_SYNC_OPTIONS,
+  SyncActionSheet,
+  type LaunchableSyncType,
+} from "@/components/sync/sync-launcher";
 
 type SyncWidgetProps = {
   readonly TriggerWrapper: React.ReactElement;
 };
 
 export default function SyncWidget({ TriggerWrapper }: SyncWidgetProps) {
-  const queryClient = useQueryClient();
   const [syncType, setSyncType] = useState<LaunchableSyncType | null>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);
-
-  const { currency: userCurrency } = useUserPreferences();
-
-  const { handleSyncCsvSubmit, handleSyncOrderSubmit, handleSyncCollectionSubmit } =
-    useSyncMutations(queryClient, () => {
-      setSyncType(null);
-    });
 
   const handleOptionSelect = useCallback((type: LaunchableSyncType) => {
     setPopoverOpen(false);
@@ -69,7 +27,7 @@ export default function SyncWidget({ TriggerWrapper }: SyncWidgetProps) {
       <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
         <PopoverTrigger render={TriggerWrapper} />
         <PopoverContent align="start" className="w-56 p-1">
-          {SYNC_OPTIONS.map((option) => {
+          {LAUNCHABLE_SYNC_OPTIONS.map((option) => {
             const config = SYNC_TYPE_CONFIG[option.type];
             return (
               <button
@@ -93,38 +51,7 @@ export default function SyncWidget({ TriggerWrapper }: SyncWidgetProps) {
         </PopoverContent>
       </Popover>
 
-      <Sheet
-        open={syncType !== null}
-        onOpenChange={(open) => {
-          if (!open) setSyncType(null);
-        }}
-      >
-        <SheetContent side="left" className="sm:max-w-lg! overflow-y-auto">
-          {syncType && (
-            <>
-              <SheetHeader>
-                <SheetTitle>{SYNC_OPTION_META[syncType].title}</SheetTitle>
-                <SheetDescription>{SYNC_OPTION_META[syncType].description}</SheetDescription>
-              </SheetHeader>
-              <div className="px-4 pb-4">
-                {syncType === "csv" && <SyncCsvForm handleSyncCsvSubmit={handleSyncCsvSubmit} />}
-                {syncType === "order" && (
-                  <SyncOrderForm
-                    handleSyncOrderSubmit={handleSyncOrderSubmit}
-                    currency={userCurrency}
-                  />
-                )}
-                {syncType === "collection" && (
-                  <SyncCollectionForm
-                    handleSyncCollectionSubmit={handleSyncCollectionSubmit}
-                    currency={userCurrency}
-                  />
-                )}
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
+      <SyncActionSheet syncType={syncType} onSyncTypeChange={setSyncType} side="left" />
     </>
   );
 }

@@ -1,11 +1,11 @@
 import { useEffect, useRef } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { Outlet, redirect } from "@tanstack/react-router";
 import UserMenu from "@/components/sidebar/user-menu";
 import SyncStatusWidget from "@/components/sync/sync-status-widget";
+import { AppCommand } from "@/components/command/app-command";
 import { authClient } from "@/lib/auth-client";
 import { getVersion } from "@/queries/version";
 import { toast } from "sonner";
@@ -66,6 +66,7 @@ function RouteComponent() {
               <div className="flex items-center">
                 <SidebarTrigger className="-ml-1" />
                 <SyncStatusWidget />
+                <AppCommand />
               </div>
               <div className="flex items-center gap-2">
                 <UserMenu session={session} />
