@@ -1,7 +1,4 @@
-import type { VariantProps } from "class-variance-authority";
-import { badgeVariants } from "@/components/reui/badge";
-
-type BadgeVariant = VariantProps<typeof badgeVariants>["variant"];
+import type { BadgeVariant } from "@/components/reui/badge";
 
 const STATUS_VARIANT_MAP: Readonly<Record<string, BadgeVariant>> = {
   ordered: "info",

@@ -8,7 +8,7 @@ import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-gr
 import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/reui/badge";
+import { ThemedBadge } from "@/components/reui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { toast } from "sonner";
 import type { EnrichedSyncSessionItemRow } from "@myakiba/contracts/sync/types";
@@ -179,9 +179,9 @@ function RouteComponent() {
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center gap-2.5">
               <h1 className="text-2xl tracking-tight">{typeConfig.label} Sync</h1>
-              <Badge variant={statusConfig.variant} size="sm">
+              <ThemedBadge variant={statusConfig.variant} size="sm">
                 {statusConfig.label}
-              </Badge>
+              </ThemedBadge>
             </div>
             <p className="text-muted-foreground text-sm font-normal">
               Started {formatShortDateTime(session.createdAt)}

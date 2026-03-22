@@ -1,6 +1,7 @@
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
+import { useTheme } from "next-themes";
 
 import { cn } from "@/lib/utils";
 
@@ -68,4 +69,23 @@ function Badge({ className, variant, size, render, ...props }: BadgeProps) {
   });
 }
 
-export { Badge, badgeVariants, type BadgeProps };
+type BadgeVariant = NonNullable<BadgeProps["variant"]>;
+
+const LIGHT_VARIANT_MAP: Partial<Record<BadgeVariant, BadgeVariant>> = {
+  default: "primary-light",
+  info: "info-light",
+  success: "success-light",
+  warning: "warning-light",
+  destructive: "destructive-light",
+  invert: "invert-light",
+  focus: "focus-light",
+};
+
+function ThemedBadge({ variant, ...props }: BadgeProps) {
+  const { resolvedTheme } = useTheme();
+  const resolvedVariant =
+    resolvedTheme === "dark" || !variant ? variant : (LIGHT_VARIANT_MAP[variant] ?? variant);
+  return <Badge variant={resolvedVariant} {...props} />;
+}
+
+export { Badge, ThemedBadge, badgeVariants, type BadgeProps, type BadgeVariant };

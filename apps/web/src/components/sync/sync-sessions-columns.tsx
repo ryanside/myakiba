@@ -3,7 +3,7 @@ import { MinusSignSquareIcon, AddSquareIcon, Loading03Icon } from "@hugeicons/co
 import type { ReactNode } from "react";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import { useQueryClient } from "@tanstack/react-query";
-import { Badge } from "@/components/reui/badge";
+import { Badge, ThemedBadge } from "@/components/reui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { SyncSessionRow } from "@myakiba/contracts/sync/types";
@@ -100,9 +100,9 @@ export function createSyncSessionColumns({
         }
         const config = SESSION_STATUS_CONFIG[status];
         return (
-          <Badge variant={config.variant} size="sm">
+          <ThemedBadge variant={config.variant} size="sm">
             {config.label}
-          </Badge>
+          </ThemedBadge>
         );
       },
       size: 200,
@@ -210,9 +210,9 @@ function ActiveStatusCell({ session }: { readonly session: SyncSessionRow }) {
 
   return (
     <div className="flex items-center gap-1.5">
-      <Badge variant={config.variant} size="sm">
+      <ThemedBadge variant={config.variant} size="sm">
         {config.label}
-      </Badge>
+      </ThemedBadge>
       {!isFinished && !isJobError && (
         <HugeiconsIcon
           icon={Loading03Icon}

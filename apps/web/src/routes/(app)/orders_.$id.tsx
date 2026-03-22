@@ -4,7 +4,7 @@ import { createFileRoute, useParams, Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import { getOrder, editOrder, deleteOrderItem } from "@/queries/orders";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Badge } from "@/components/reui/badge";
+import { ThemedBadge } from "@/components/reui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
@@ -233,9 +233,9 @@ function RouteComponent() {
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-semibold tracking-tight">{order.title}</h1>
-              <Badge variant={getStatusVariant(order.status)} size="lg">
+              <ThemedBadge variant={getStatusVariant(order.status)} size="lg">
                 {order.status}
-              </Badge>
+              </ThemedBadge>
             </div>
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
               {order.shop && (

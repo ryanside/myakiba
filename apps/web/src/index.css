@@ -38,7 +38,7 @@
   --sidebar-accent-foreground: oklch(0.25 0 89.9);
   --sidebar-border: oklch(0.925 0 89.9);
   --sidebar-ring: oklch(0.925 0 89.9);
-  --radius: 0.5rem;
+  --radius: 0.625rem;
   --font-sans: "Instrument Sans Variable", ui-sans-serif, sans-serif, system-ui;
   --font-serif: serif;
   --font-mono: ui-monospace, monospace;

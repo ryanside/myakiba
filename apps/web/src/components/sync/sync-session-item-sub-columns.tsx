@@ -2,7 +2,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { PackageIcon } from "@hugeicons/core-free-icons";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
-import { Badge } from "@/components/reui/badge";
+import { ThemedBadge } from "@/components/reui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@tanstack/react-router";
 import type { EnrichedSyncSessionItemRow } from "@myakiba/contracts/sync/types";
@@ -86,9 +86,9 @@ export function createSyncSessionItemSubColumns(): ColumnDef<EnrichedSyncSession
       cell: ({ row }) => {
         const config = ITEM_STATUS_CONFIG[row.original.status];
         return (
-          <Badge variant={config.variant} size="sm">
+          <ThemedBadge variant={config.variant} size="sm">
             {config.label}
-          </Badge>
+          </ThemedBadge>
         );
       },
       size: 100,

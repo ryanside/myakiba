@@ -1,10 +1,9 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { FileUploadIcon, LibraryIcon, PackageIcon } from "@hugeicons/core-free-icons";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Toggle } from "@/components/ui/toggle";
 import {
   Sheet,
   SheetContent,
@@ -12,7 +11,7 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import type { SyncType, SyncSessionStatus } from "@myakiba/contracts/shared/types";
+import type { SyncType } from "@myakiba/contracts/shared/types";
 import type { SyncSessionRow } from "@myakiba/contracts/sync/types";
 import { fetchSyncSessions } from "@/queries/sync";
 import { SYNC_OPTION_META } from "@/lib/sync";
@@ -20,6 +19,7 @@ import SyncCsvForm from "@/components/sync/sync-csv-form";
 import SyncOrderForm from "@/components/sync/sync-order-form";
 import SyncCollectionForm from "@/components/sync/sync-collection-form";
 import { SyncSessionsDataGrid } from "@/components/sync/sync-sessions-data-grid";
+import { SyncQuickFilters } from "@/components/sync/sync-quick-filters";
 import { syncSearchSchema } from "@myakiba/contracts/sync/schema";
 import { useFilters } from "@/hooks/use-filters";
 import { useSyncMutations } from "@/hooks/use-sync-mutations";
@@ -27,27 +27,6 @@ import { SYNC_WIDGET_RECENT_LIMIT } from "@myakiba/contracts/sync/constants";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 type LaunchableSyncType = Extract<SyncType, "collection" | "csv" | "order">;
-
-const STATUS_FILTER_OPTIONS: readonly {
-  readonly value: SyncSessionStatus;
-  readonly label: string;
-}[] = [
-  { value: "processing", label: "Active" },
-  { value: "completed", label: "Completed" },
-  { value: "failed", label: "Failed" },
-  { value: "partial", label: "Partial" },
-  { value: "pending", label: "Pending" },
-] as const;
-
-const SYNC_TYPE_FILTER_OPTIONS: readonly {
-  readonly value: SyncType;
-  readonly label: string;
-}[] = [
-  { value: "csv", label: "CSV" },
-  { value: "order", label: "Order" },
-  { value: "order-item", label: "Order Item" },
-  { value: "collection", label: "Collection" },
-] as const;
 
 export const Route = createFileRoute("/(app)/sync")({
   component: RouteComponent,
@@ -74,14 +53,6 @@ function RouteComponent() {
 
   const page = filters.page ?? 1;
   const limit = filters.limit ?? SYNC_WIDGET_RECENT_LIMIT;
-  const activeStatuses = useMemo(
-    () => new Set<SyncSessionStatus>(filters.status ?? []),
-    [filters.status],
-  );
-  const activeSyncTypes = useMemo(
-    () => new Set<SyncType>(filters.syncType ?? []),
-    [filters.syncType],
-  );
   const [activeSyncType, setActiveSyncType] = useState<LaunchableSyncType | null>(null);
 
   const {
@@ -118,38 +89,6 @@ function RouteComponent() {
     [setFilters],
   );
 
-  const toggleStatus = useCallback(
-    (value: SyncSessionStatus) => {
-      const next = new Set(activeStatuses);
-      if (next.has(value)) {
-        next.delete(value);
-      } else {
-        next.add(value);
-      }
-      setFilters({
-        status: next.size > 0 ? [...next] : undefined,
-        page: undefined,
-      });
-    },
-    [activeStatuses, setFilters],
-  );
-
-  const toggleSyncType = useCallback(
-    (value: SyncType) => {
-      const next = new Set(activeSyncTypes);
-      if (next.has(value)) {
-        next.delete(value);
-      } else {
-        next.add(value);
-      }
-      setFilters({
-        syncType: next.size > 0 ? [...next] : undefined,
-        page: undefined,
-      });
-    },
-    [activeSyncTypes, setFilters],
-  );
-
   if (isError) {
     return (
       <div className="w-full space-y-8">
@@ -165,8 +104,8 @@ function RouteComponent() {
   }
 
   return (
-    <div className="w-full space-y-8">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+    <div className="flex flex-col gap-4 mx-auto w-full">
+      <div className="flex flex-col gap-2 mb-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl tracking-tight">Sync</h1>
           <p className="text-muted-foreground text-sm font-normal">View your sync history</p>
@@ -204,28 +143,7 @@ function RouteComponent() {
       </div>
 
       <div className="flex flex-col sm:flex-row flex-wrap items-start gap-x-4 gap-y-2">
-        <div className="flex items-center gap-1" role="group" aria-label="Sync type filters">
-          {SYNC_TYPE_FILTER_OPTIONS.map((option) => (
-            <Toggle
-              key={option.value}
-              pressed={activeSyncTypes.has(option.value)}
-              onClick={() => toggleSyncType(option.value)}
-            >
-              {option.label}
-            </Toggle>
-          ))}
-        </div>
-        <div className="flex items-center gap-1" role="group" aria-label="Status filters">
-          {STATUS_FILTER_OPTIONS.map((option) => (
-            <Toggle
-              key={option.value}
-              pressed={activeStatuses.has(option.value)}
-              onClick={() => toggleStatus(option.value)}
-            >
-              {option.label}
-            </Toggle>
-          ))}
-        </div>
+        <SyncQuickFilters />
       </div>
 
       <SyncSessionsDataGrid
