@@ -282,7 +282,7 @@ class AnalyticsService {
       scaleDistribution,
       mostExpensiveCollectionItems,
       topShops,
-      totalOwned,
+      totalOwnedRows,
       topCharacters,
       topOrigins,
       topCompanies,
@@ -304,6 +304,8 @@ class AnalyticsService {
       this.topClassificationsPrepared.execute({ userId }),
       this.topEventsPrepared.execute({ userId }),
     ]);
+
+    const totalOwned = totalOwnedRows[0] ?? { count: 0 };
 
     const topEntriesByAllCategories = {
       Characters: topCharacters,

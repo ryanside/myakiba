@@ -56,11 +56,11 @@ function RouteComponent(): React.ReactNode {
   }
 
   const { analytics } = data;
-  const totalCollectionCount = analytics.totalOwned[0]?.count || 100;
+  const totalCollectionCount = analytics.totalOwned.count || 100;
 
   // ranking cards data
   const topCharactersData =
-    analytics.topEntriesByAllCategories.Characters?.map((entry, idx) => ({
+    analytics.topEntriesByAllCategories.Characters.map((entry, idx) => ({
       rank: idx + 1,
       entryId: entry.entryId,
       name: entry.originName,
@@ -69,7 +69,7 @@ function RouteComponent(): React.ReactNode {
     })) || [];
 
   const topOriginsData =
-    analytics.topEntriesByAllCategories.Origins?.map((entry, idx) => ({
+    analytics.topEntriesByAllCategories.Origins.map((entry, idx) => ({
       rank: idx + 1,
       entryId: entry.entryId,
       name: entry.originName,
@@ -78,7 +78,7 @@ function RouteComponent(): React.ReactNode {
     })) || [];
 
   const topCompaniesData =
-    analytics.topEntriesByAllCategories.Companies?.map((entry, idx) => ({
+    analytics.topEntriesByAllCategories.Companies.map((entry, idx) => ({
       rank: idx + 1,
       entryId: entry.entryId,
       name: entry.originName,
@@ -87,7 +87,7 @@ function RouteComponent(): React.ReactNode {
     })) || [];
 
   const topArtistsData =
-    analytics.topEntriesByAllCategories.Artists?.map((entry, idx) => ({
+    analytics.topEntriesByAllCategories.Artists.map((entry, idx) => ({
       rank: idx + 1,
       entryId: entry.entryId,
       name: entry.originName,
@@ -96,7 +96,7 @@ function RouteComponent(): React.ReactNode {
     })) || [];
 
   const topShopsData =
-    analytics.topShops?.map((shop, idx) => ({
+    analytics.topShops.map((shop, idx) => ({
       rank: idx + 1,
       shopName: shop.shop,
       name: shop.shop,
@@ -105,7 +105,7 @@ function RouteComponent(): React.ReactNode {
     })) || [];
 
   const mostExpensiveData =
-    analytics.mostExpensiveCollectionItems?.map((item, idx) => ({
+    analytics.mostExpensiveCollectionItems.map((item, idx) => ({
       rank: idx + 1,
       itemId: item.itemId,
       name: item.itemTitle,
@@ -114,7 +114,7 @@ function RouteComponent(): React.ReactNode {
     })) || [];
 
   const scaleData =
-    analytics.scaleDistribution?.map((item, idx) => ({
+    analytics.scaleDistribution.map((item, idx) => ({
       rank: idx + 1,
       scaleName: item.scale || "Non-Scale",
       name: item.scale || "Non-Scale",
@@ -123,7 +123,7 @@ function RouteComponent(): React.ReactNode {
     })) || [];
 
   const materialsData =
-    analytics.topEntriesByAllCategories.Materials?.map((entry, idx) => ({
+    analytics.topEntriesByAllCategories.Materials.map((entry, idx) => ({
       rank: idx + 1,
       entryId: entry.entryId,
       name: entry.originName,
@@ -132,7 +132,7 @@ function RouteComponent(): React.ReactNode {
     })) || [];
 
   const classificationsData =
-    analytics.topEntriesByAllCategories.Classifications?.map((entry, idx) => ({
+    analytics.topEntriesByAllCategories.Classifications.map((entry, idx) => ({
       rank: idx + 1,
       entryId: entry.entryId,
       name: entry.originName,
@@ -141,7 +141,7 @@ function RouteComponent(): React.ReactNode {
     })) || [];
 
   const eventsData =
-    analytics.topEntriesByAllCategories.Events?.map((entry, idx) => ({
+    analytics.topEntriesByAllCategories.Events.map((entry, idx) => ({
       rank: idx + 1,
       entryId: entry.entryId,
       name: entry.originName,

@@ -170,28 +170,48 @@ class DashboardService {
     const startOfYear = new Date(new Date().getFullYear(), 0, 1).toISOString();
     const endOfYear = new Date(new Date().getFullYear() + 1, 0, 1).toISOString();
 
-    const [collectionStats, categoriesOwned, orders, ordersSummary, unpaidOrders, monthlyOrders] =
-      await Promise.all([
-        this.collectionStatsPrepared.execute({ userId }),
+    const [
+      collectionStatsRows,
+      categoriesOwned,
+      orders,
+      ordersSummaryRows,
+      unpaidOrders,
+      monthlyOrders,
+    ] = await Promise.all([
+      this.collectionStatsPrepared.execute({ userId }),
 
-        this.categoriesOwnedPrepared.execute({ userId }),
+      this.categoriesOwnedPrepared.execute({ userId }),
 
-        this.ordersPrepared.execute({ userId }),
+      this.ordersPrepared.execute({ userId }),
 
-        this.ordersSummaryPrepared.execute({
-          userId,
-          currentMonth,
-          nextMonth,
-        }),
+      this.ordersSummaryPrepared.execute({
+        userId,
+        currentMonth,
+        nextMonth,
+      }),
 
-        this.unpaidOrdersPrepared.execute({ userId }),
+      this.unpaidOrdersPrepared.execute({ userId }),
 
-        this.monthlyOrdersPrepared.execute({
-          userId,
-          startOfYear,
-          endOfYear,
-        }),
-      ]);
+      this.monthlyOrdersPrepared.execute({
+        userId,
+        startOfYear,
+        endOfYear,
+      }),
+    ]);
+
+    const collectionStats = collectionStatsRows[0] ?? {
+      totalItems: 0,
+      totalSpent: 0,
+    };
+    const ordersSummary = ordersSummaryRows[0] ?? {
+      totalActiveOrderCount: 0,
+      totalShippingAllTime: 0,
+      totalTaxesAllTime: 0,
+      totalDutiesAllTime: 0,
+      totalTariffsAllTime: 0,
+      totalMiscFeesAllTime: 0,
+      thisMonthOrderCount: 0,
+    };
 
     return {
       collectionStats,

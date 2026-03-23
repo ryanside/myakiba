@@ -8,349 +8,349 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './routes/__root'
-import { Route as appRouteRouteImport } from './routes/(app)/route'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as ProfileUsernameRouteImport } from './routes/profile.$username'
-import { Route as authResetPasswordRouteImport } from './routes/(auth)/reset-password'
-import { Route as authLoginRouteImport } from './routes/(auth)/login'
-import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-password'
-import { Route as appSyncRouteImport } from './routes/(app)/sync'
-import { Route as appSettingsRouteImport } from './routes/(app)/settings'
-import { Route as appOrdersRouteImport } from './routes/(app)/orders'
-import { Route as appExpensesRouteImport } from './routes/(app)/expenses'
-import { Route as appDashboardRouteImport } from './routes/(app)/dashboard'
-import { Route as appCollectionRouteImport } from './routes/(app)/collection'
-import { Route as appAnalyticsRouteImport } from './routes/(app)/analytics'
-import { Route as appSyncIdRouteImport } from './routes/(app)/sync_.$id'
-import { Route as appOrdersIdRouteImport } from './routes/(app)/orders_.$id'
-import { Route as appItemsIdRouteImport } from './routes/(app)/items_.$id'
+import { Route as rootRouteImport } from "./routes/__root";
+import { Route as appRouteRouteImport } from "./routes/(app)/route";
+import { Route as IndexRouteImport } from "./routes/index";
+import { Route as ProfileUsernameRouteImport } from "./routes/profile.$username";
+import { Route as authResetPasswordRouteImport } from "./routes/(auth)/reset-password";
+import { Route as authLoginRouteImport } from "./routes/(auth)/login";
+import { Route as authForgotPasswordRouteImport } from "./routes/(auth)/forgot-password";
+import { Route as appSyncRouteImport } from "./routes/(app)/sync";
+import { Route as appSettingsRouteImport } from "./routes/(app)/settings";
+import { Route as appOrdersRouteImport } from "./routes/(app)/orders";
+import { Route as appExpensesRouteImport } from "./routes/(app)/expenses";
+import { Route as appDashboardRouteImport } from "./routes/(app)/dashboard";
+import { Route as appCollectionRouteImport } from "./routes/(app)/collection";
+import { Route as appAnalyticsRouteImport } from "./routes/(app)/analytics";
+import { Route as appSyncIdRouteImport } from "./routes/(app)/sync_.$id";
+import { Route as appOrdersIdRouteImport } from "./routes/(app)/orders_.$id";
+import { Route as appItemsIdRouteImport } from "./routes/(app)/items_.$id";
 
 const appRouteRoute = appRouteRouteImport.update({
-  id: '/(app)',
+  id: "/(app)",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+  id: "/",
+  path: "/",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const ProfileUsernameRoute = ProfileUsernameRouteImport.update({
-  id: '/profile/$username',
-  path: '/profile/$username',
+  id: "/profile/$username",
+  path: "/profile/$username",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const authResetPasswordRoute = authResetPasswordRouteImport.update({
-  id: '/(auth)/reset-password',
-  path: '/reset-password',
+  id: "/(auth)/reset-password",
+  path: "/reset-password",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const authLoginRoute = authLoginRouteImport.update({
-  id: '/(auth)/login',
-  path: '/login',
+  id: "/(auth)/login",
+  path: "/login",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const authForgotPasswordRoute = authForgotPasswordRouteImport.update({
-  id: '/(auth)/forgot-password',
-  path: '/forgot-password',
+  id: "/(auth)/forgot-password",
+  path: "/forgot-password",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const appSyncRoute = appSyncRouteImport.update({
-  id: '/sync',
-  path: '/sync',
+  id: "/sync",
+  path: "/sync",
   getParentRoute: () => appRouteRoute,
-} as any)
+} as any);
 const appSettingsRoute = appSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
+  id: "/settings",
+  path: "/settings",
   getParentRoute: () => appRouteRoute,
-} as any)
+} as any);
 const appOrdersRoute = appOrdersRouteImport.update({
-  id: '/orders',
-  path: '/orders',
+  id: "/orders",
+  path: "/orders",
   getParentRoute: () => appRouteRoute,
-} as any)
+} as any);
 const appExpensesRoute = appExpensesRouteImport.update({
-  id: '/expenses',
-  path: '/expenses',
+  id: "/expenses",
+  path: "/expenses",
   getParentRoute: () => appRouteRoute,
-} as any)
+} as any);
 const appDashboardRoute = appDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
+  id: "/dashboard",
+  path: "/dashboard",
   getParentRoute: () => appRouteRoute,
-} as any)
+} as any);
 const appCollectionRoute = appCollectionRouteImport.update({
-  id: '/collection',
-  path: '/collection',
+  id: "/collection",
+  path: "/collection",
   getParentRoute: () => appRouteRoute,
-} as any)
+} as any);
 const appAnalyticsRoute = appAnalyticsRouteImport.update({
-  id: '/analytics',
-  path: '/analytics',
+  id: "/analytics",
+  path: "/analytics",
   getParentRoute: () => appRouteRoute,
-} as any)
+} as any);
 const appSyncIdRoute = appSyncIdRouteImport.update({
-  id: '/sync_/$id',
-  path: '/sync/$id',
+  id: "/sync_/$id",
+  path: "/sync/$id",
   getParentRoute: () => appRouteRoute,
-} as any)
+} as any);
 const appOrdersIdRoute = appOrdersIdRouteImport.update({
-  id: '/orders_/$id',
-  path: '/orders/$id',
+  id: "/orders_/$id",
+  path: "/orders/$id",
   getParentRoute: () => appRouteRoute,
-} as any)
+} as any);
 const appItemsIdRoute = appItemsIdRouteImport.update({
-  id: '/items_/$id',
-  path: '/items/$id',
+  id: "/items_/$id",
+  path: "/items/$id",
   getParentRoute: () => appRouteRoute,
-} as any)
+} as any);
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/analytics': typeof appAnalyticsRoute
-  '/collection': typeof appCollectionRoute
-  '/dashboard': typeof appDashboardRoute
-  '/expenses': typeof appExpensesRoute
-  '/orders': typeof appOrdersRoute
-  '/settings': typeof appSettingsRoute
-  '/sync': typeof appSyncRoute
-  '/forgot-password': typeof authForgotPasswordRoute
-  '/login': typeof authLoginRoute
-  '/reset-password': typeof authResetPasswordRoute
-  '/profile/$username': typeof ProfileUsernameRoute
-  '/items/$id': typeof appItemsIdRoute
-  '/orders/$id': typeof appOrdersIdRoute
-  '/sync/$id': typeof appSyncIdRoute
+  "/": typeof IndexRoute;
+  "/analytics": typeof appAnalyticsRoute;
+  "/collection": typeof appCollectionRoute;
+  "/dashboard": typeof appDashboardRoute;
+  "/expenses": typeof appExpensesRoute;
+  "/orders": typeof appOrdersRoute;
+  "/settings": typeof appSettingsRoute;
+  "/sync": typeof appSyncRoute;
+  "/forgot-password": typeof authForgotPasswordRoute;
+  "/login": typeof authLoginRoute;
+  "/reset-password": typeof authResetPasswordRoute;
+  "/profile/$username": typeof ProfileUsernameRoute;
+  "/items/$id": typeof appItemsIdRoute;
+  "/orders/$id": typeof appOrdersIdRoute;
+  "/sync/$id": typeof appSyncIdRoute;
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/analytics': typeof appAnalyticsRoute
-  '/collection': typeof appCollectionRoute
-  '/dashboard': typeof appDashboardRoute
-  '/expenses': typeof appExpensesRoute
-  '/orders': typeof appOrdersRoute
-  '/settings': typeof appSettingsRoute
-  '/sync': typeof appSyncRoute
-  '/forgot-password': typeof authForgotPasswordRoute
-  '/login': typeof authLoginRoute
-  '/reset-password': typeof authResetPasswordRoute
-  '/profile/$username': typeof ProfileUsernameRoute
-  '/items/$id': typeof appItemsIdRoute
-  '/orders/$id': typeof appOrdersIdRoute
-  '/sync/$id': typeof appSyncIdRoute
+  "/": typeof IndexRoute;
+  "/analytics": typeof appAnalyticsRoute;
+  "/collection": typeof appCollectionRoute;
+  "/dashboard": typeof appDashboardRoute;
+  "/expenses": typeof appExpensesRoute;
+  "/orders": typeof appOrdersRoute;
+  "/settings": typeof appSettingsRoute;
+  "/sync": typeof appSyncRoute;
+  "/forgot-password": typeof authForgotPasswordRoute;
+  "/login": typeof authLoginRoute;
+  "/reset-password": typeof authResetPasswordRoute;
+  "/profile/$username": typeof ProfileUsernameRoute;
+  "/items/$id": typeof appItemsIdRoute;
+  "/orders/$id": typeof appOrdersIdRoute;
+  "/sync/$id": typeof appSyncIdRoute;
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/(app)': typeof appRouteRouteWithChildren
-  '/(app)/analytics': typeof appAnalyticsRoute
-  '/(app)/collection': typeof appCollectionRoute
-  '/(app)/dashboard': typeof appDashboardRoute
-  '/(app)/expenses': typeof appExpensesRoute
-  '/(app)/orders': typeof appOrdersRoute
-  '/(app)/settings': typeof appSettingsRoute
-  '/(app)/sync': typeof appSyncRoute
-  '/(auth)/forgot-password': typeof authForgotPasswordRoute
-  '/(auth)/login': typeof authLoginRoute
-  '/(auth)/reset-password': typeof authResetPasswordRoute
-  '/profile/$username': typeof ProfileUsernameRoute
-  '/(app)/items_/$id': typeof appItemsIdRoute
-  '/(app)/orders_/$id': typeof appOrdersIdRoute
-  '/(app)/sync_/$id': typeof appSyncIdRoute
+  __root__: typeof rootRouteImport;
+  "/": typeof IndexRoute;
+  "/(app)": typeof appRouteRouteWithChildren;
+  "/(app)/analytics": typeof appAnalyticsRoute;
+  "/(app)/collection": typeof appCollectionRoute;
+  "/(app)/dashboard": typeof appDashboardRoute;
+  "/(app)/expenses": typeof appExpensesRoute;
+  "/(app)/orders": typeof appOrdersRoute;
+  "/(app)/settings": typeof appSettingsRoute;
+  "/(app)/sync": typeof appSyncRoute;
+  "/(auth)/forgot-password": typeof authForgotPasswordRoute;
+  "/(auth)/login": typeof authLoginRoute;
+  "/(auth)/reset-password": typeof authResetPasswordRoute;
+  "/profile/$username": typeof ProfileUsernameRoute;
+  "/(app)/items_/$id": typeof appItemsIdRoute;
+  "/(app)/orders_/$id": typeof appOrdersIdRoute;
+  "/(app)/sync_/$id": typeof appSyncIdRoute;
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
+  fileRoutesByFullPath: FileRoutesByFullPath;
   fullPaths:
-    | '/'
-    | '/analytics'
-    | '/collection'
-    | '/dashboard'
-    | '/expenses'
-    | '/orders'
-    | '/settings'
-    | '/sync'
-    | '/forgot-password'
-    | '/login'
-    | '/reset-password'
-    | '/profile/$username'
-    | '/items/$id'
-    | '/orders/$id'
-    | '/sync/$id'
-  fileRoutesByTo: FileRoutesByTo
+    | "/"
+    | "/analytics"
+    | "/collection"
+    | "/dashboard"
+    | "/expenses"
+    | "/orders"
+    | "/settings"
+    | "/sync"
+    | "/forgot-password"
+    | "/login"
+    | "/reset-password"
+    | "/profile/$username"
+    | "/items/$id"
+    | "/orders/$id"
+    | "/sync/$id";
+  fileRoutesByTo: FileRoutesByTo;
   to:
-    | '/'
-    | '/analytics'
-    | '/collection'
-    | '/dashboard'
-    | '/expenses'
-    | '/orders'
-    | '/settings'
-    | '/sync'
-    | '/forgot-password'
-    | '/login'
-    | '/reset-password'
-    | '/profile/$username'
-    | '/items/$id'
-    | '/orders/$id'
-    | '/sync/$id'
+    | "/"
+    | "/analytics"
+    | "/collection"
+    | "/dashboard"
+    | "/expenses"
+    | "/orders"
+    | "/settings"
+    | "/sync"
+    | "/forgot-password"
+    | "/login"
+    | "/reset-password"
+    | "/profile/$username"
+    | "/items/$id"
+    | "/orders/$id"
+    | "/sync/$id";
   id:
-    | '__root__'
-    | '/'
-    | '/(app)'
-    | '/(app)/analytics'
-    | '/(app)/collection'
-    | '/(app)/dashboard'
-    | '/(app)/expenses'
-    | '/(app)/orders'
-    | '/(app)/settings'
-    | '/(app)/sync'
-    | '/(auth)/forgot-password'
-    | '/(auth)/login'
-    | '/(auth)/reset-password'
-    | '/profile/$username'
-    | '/(app)/items_/$id'
-    | '/(app)/orders_/$id'
-    | '/(app)/sync_/$id'
-  fileRoutesById: FileRoutesById
+    | "__root__"
+    | "/"
+    | "/(app)"
+    | "/(app)/analytics"
+    | "/(app)/collection"
+    | "/(app)/dashboard"
+    | "/(app)/expenses"
+    | "/(app)/orders"
+    | "/(app)/settings"
+    | "/(app)/sync"
+    | "/(auth)/forgot-password"
+    | "/(auth)/login"
+    | "/(auth)/reset-password"
+    | "/profile/$username"
+    | "/(app)/items_/$id"
+    | "/(app)/orders_/$id"
+    | "/(app)/sync_/$id";
+  fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  appRouteRoute: typeof appRouteRouteWithChildren
-  authForgotPasswordRoute: typeof authForgotPasswordRoute
-  authLoginRoute: typeof authLoginRoute
-  authResetPasswordRoute: typeof authResetPasswordRoute
-  ProfileUsernameRoute: typeof ProfileUsernameRoute
+  IndexRoute: typeof IndexRoute;
+  appRouteRoute: typeof appRouteRouteWithChildren;
+  authForgotPasswordRoute: typeof authForgotPasswordRoute;
+  authLoginRoute: typeof authLoginRoute;
+  authResetPasswordRoute: typeof authResetPasswordRoute;
+  ProfileUsernameRoute: typeof ProfileUsernameRoute;
 }
 
-declare module '@tanstack/react-router' {
+declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
-    '/(app)': {
-      id: '/(app)'
-      path: ''
-      fullPath: ''
-      preLoaderRoute: typeof appRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profile/$username': {
-      id: '/profile/$username'
-      path: '/profile/$username'
-      fullPath: '/profile/$username'
-      preLoaderRoute: typeof ProfileUsernameRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/(auth)/reset-password': {
-      id: '/(auth)/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof authResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/(auth)/login': {
-      id: '/(auth)/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof authLoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/(auth)/forgot-password': {
-      id: '/(auth)/forgot-password'
-      path: '/forgot-password'
-      fullPath: '/forgot-password'
-      preLoaderRoute: typeof authForgotPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/(app)/sync': {
-      id: '/(app)/sync'
-      path: '/sync'
-      fullPath: '/sync'
-      preLoaderRoute: typeof appSyncRouteImport
-      parentRoute: typeof appRouteRoute
-    }
-    '/(app)/settings': {
-      id: '/(app)/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof appSettingsRouteImport
-      parentRoute: typeof appRouteRoute
-    }
-    '/(app)/orders': {
-      id: '/(app)/orders'
-      path: '/orders'
-      fullPath: '/orders'
-      preLoaderRoute: typeof appOrdersRouteImport
-      parentRoute: typeof appRouteRoute
-    }
-    '/(app)/expenses': {
-      id: '/(app)/expenses'
-      path: '/expenses'
-      fullPath: '/expenses'
-      preLoaderRoute: typeof appExpensesRouteImport
-      parentRoute: typeof appRouteRoute
-    }
-    '/(app)/dashboard': {
-      id: '/(app)/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof appDashboardRouteImport
-      parentRoute: typeof appRouteRoute
-    }
-    '/(app)/collection': {
-      id: '/(app)/collection'
-      path: '/collection'
-      fullPath: '/collection'
-      preLoaderRoute: typeof appCollectionRouteImport
-      parentRoute: typeof appRouteRoute
-    }
-    '/(app)/analytics': {
-      id: '/(app)/analytics'
-      path: '/analytics'
-      fullPath: '/analytics'
-      preLoaderRoute: typeof appAnalyticsRouteImport
-      parentRoute: typeof appRouteRoute
-    }
-    '/(app)/sync_/$id': {
-      id: '/(app)/sync_/$id'
-      path: '/sync/$id'
-      fullPath: '/sync/$id'
-      preLoaderRoute: typeof appSyncIdRouteImport
-      parentRoute: typeof appRouteRoute
-    }
-    '/(app)/orders_/$id': {
-      id: '/(app)/orders_/$id'
-      path: '/orders/$id'
-      fullPath: '/orders/$id'
-      preLoaderRoute: typeof appOrdersIdRouteImport
-      parentRoute: typeof appRouteRoute
-    }
-    '/(app)/items_/$id': {
-      id: '/(app)/items_/$id'
-      path: '/items/$id'
-      fullPath: '/items/$id'
-      preLoaderRoute: typeof appItemsIdRouteImport
-      parentRoute: typeof appRouteRoute
-    }
+    "/(app)": {
+      id: "/(app)";
+      path: "";
+      fullPath: "";
+      preLoaderRoute: typeof appRouteRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/": {
+      id: "/";
+      path: "/";
+      fullPath: "/";
+      preLoaderRoute: typeof IndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/profile/$username": {
+      id: "/profile/$username";
+      path: "/profile/$username";
+      fullPath: "/profile/$username";
+      preLoaderRoute: typeof ProfileUsernameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/(auth)/reset-password": {
+      id: "/(auth)/reset-password";
+      path: "/reset-password";
+      fullPath: "/reset-password";
+      preLoaderRoute: typeof authResetPasswordRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/(auth)/login": {
+      id: "/(auth)/login";
+      path: "/login";
+      fullPath: "/login";
+      preLoaderRoute: typeof authLoginRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/(auth)/forgot-password": {
+      id: "/(auth)/forgot-password";
+      path: "/forgot-password";
+      fullPath: "/forgot-password";
+      preLoaderRoute: typeof authForgotPasswordRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/(app)/sync": {
+      id: "/(app)/sync";
+      path: "/sync";
+      fullPath: "/sync";
+      preLoaderRoute: typeof appSyncRouteImport;
+      parentRoute: typeof appRouteRoute;
+    };
+    "/(app)/settings": {
+      id: "/(app)/settings";
+      path: "/settings";
+      fullPath: "/settings";
+      preLoaderRoute: typeof appSettingsRouteImport;
+      parentRoute: typeof appRouteRoute;
+    };
+    "/(app)/orders": {
+      id: "/(app)/orders";
+      path: "/orders";
+      fullPath: "/orders";
+      preLoaderRoute: typeof appOrdersRouteImport;
+      parentRoute: typeof appRouteRoute;
+    };
+    "/(app)/expenses": {
+      id: "/(app)/expenses";
+      path: "/expenses";
+      fullPath: "/expenses";
+      preLoaderRoute: typeof appExpensesRouteImport;
+      parentRoute: typeof appRouteRoute;
+    };
+    "/(app)/dashboard": {
+      id: "/(app)/dashboard";
+      path: "/dashboard";
+      fullPath: "/dashboard";
+      preLoaderRoute: typeof appDashboardRouteImport;
+      parentRoute: typeof appRouteRoute;
+    };
+    "/(app)/collection": {
+      id: "/(app)/collection";
+      path: "/collection";
+      fullPath: "/collection";
+      preLoaderRoute: typeof appCollectionRouteImport;
+      parentRoute: typeof appRouteRoute;
+    };
+    "/(app)/analytics": {
+      id: "/(app)/analytics";
+      path: "/analytics";
+      fullPath: "/analytics";
+      preLoaderRoute: typeof appAnalyticsRouteImport;
+      parentRoute: typeof appRouteRoute;
+    };
+    "/(app)/sync_/$id": {
+      id: "/(app)/sync_/$id";
+      path: "/sync/$id";
+      fullPath: "/sync/$id";
+      preLoaderRoute: typeof appSyncIdRouteImport;
+      parentRoute: typeof appRouteRoute;
+    };
+    "/(app)/orders_/$id": {
+      id: "/(app)/orders_/$id";
+      path: "/orders/$id";
+      fullPath: "/orders/$id";
+      preLoaderRoute: typeof appOrdersIdRouteImport;
+      parentRoute: typeof appRouteRoute;
+    };
+    "/(app)/items_/$id": {
+      id: "/(app)/items_/$id";
+      path: "/items/$id";
+      fullPath: "/items/$id";
+      preLoaderRoute: typeof appItemsIdRouteImport;
+      parentRoute: typeof appRouteRoute;
+    };
   }
 }
 
 interface appRouteRouteChildren {
-  appAnalyticsRoute: typeof appAnalyticsRoute
-  appCollectionRoute: typeof appCollectionRoute
-  appDashboardRoute: typeof appDashboardRoute
-  appExpensesRoute: typeof appExpensesRoute
-  appOrdersRoute: typeof appOrdersRoute
-  appSettingsRoute: typeof appSettingsRoute
-  appSyncRoute: typeof appSyncRoute
-  appItemsIdRoute: typeof appItemsIdRoute
-  appOrdersIdRoute: typeof appOrdersIdRoute
-  appSyncIdRoute: typeof appSyncIdRoute
+  appAnalyticsRoute: typeof appAnalyticsRoute;
+  appCollectionRoute: typeof appCollectionRoute;
+  appDashboardRoute: typeof appDashboardRoute;
+  appExpensesRoute: typeof appExpensesRoute;
+  appOrdersRoute: typeof appOrdersRoute;
+  appSettingsRoute: typeof appSettingsRoute;
+  appSyncRoute: typeof appSyncRoute;
+  appItemsIdRoute: typeof appItemsIdRoute;
+  appOrdersIdRoute: typeof appOrdersIdRoute;
+  appSyncIdRoute: typeof appSyncIdRoute;
 }
 
 const appRouteRouteChildren: appRouteRouteChildren = {
@@ -364,11 +364,9 @@ const appRouteRouteChildren: appRouteRouteChildren = {
   appItemsIdRoute: appItemsIdRoute,
   appOrdersIdRoute: appOrdersIdRoute,
   appSyncIdRoute: appSyncIdRoute,
-}
+};
 
-const appRouteRouteWithChildren = appRouteRoute._addFileChildren(
-  appRouteRouteChildren,
-)
+const appRouteRouteWithChildren = appRouteRoute._addFileChildren(appRouteRouteChildren);
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -377,7 +375,7 @@ const rootRouteChildren: RootRouteChildren = {
   authLoginRoute: authLoginRoute,
   authResetPasswordRoute: authResetPasswordRoute,
   ProfileUsernameRoute: ProfileUsernameRoute,
-}
+};
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>()
+  ._addFileTypes<FileRouteTypes>();

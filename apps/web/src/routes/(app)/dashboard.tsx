@@ -109,18 +109,18 @@ function DashboardContent() {
         <KPICard
           title="Total Items"
           subtitle="all collection items"
-          value={collectionStats[0]?.totalItems ?? 0}
+          value={collectionStats.totalItems}
         />
         <KPICard
           title="Total Spent"
           subtitle="based on paid collection & orders"
           value={formatCurrencyFromMinorUnits(
-            Number(collectionStats[0]?.totalSpent ?? 0) +
-              Number(ordersSummary[0]?.totalShippingAllTime ?? 0) +
-              Number(ordersSummary[0]?.totalTaxesAllTime ?? 0) +
-              Number(ordersSummary[0]?.totalDutiesAllTime ?? 0) +
-              Number(ordersSummary[0]?.totalTariffsAllTime ?? 0) +
-              Number(ordersSummary[0]?.totalMiscFeesAllTime ?? 0),
+            Number(collectionStats.totalSpent) +
+              Number(ordersSummary.totalShippingAllTime) +
+              Number(ordersSummary.totalTaxesAllTime) +
+              Number(ordersSummary.totalDutiesAllTime) +
+              Number(ordersSummary.totalTariffsAllTime) +
+              Number(ordersSummary.totalMiscFeesAllTime),
             userCurrency,
             userLocale,
           )}
@@ -128,7 +128,7 @@ function DashboardContent() {
         <KPICard
           title="Active Orders"
           subtitle="orders not yet collected"
-          value={ordersSummary[0]?.totalActiveOrderCount ?? 0}
+          value={ordersSummary.totalActiveOrderCount}
           subvalueTitle="unpaid"
           subvalue={unpaidOrders.length}
         />
