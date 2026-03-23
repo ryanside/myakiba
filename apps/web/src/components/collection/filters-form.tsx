@@ -3,7 +3,7 @@ import {
   ArrowDown01Icon,
   ArrowUpDownIcon,
   Cancel01Icon,
-  Tick02Icon,
+  Loading03Icon,
 } from "@hugeicons/core-free-icons";
 import {
   Dialog,
@@ -32,10 +32,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
-import { useQuery } from "@tanstack/react-query";
-import { searchEntries } from "@/queries/collection";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { searchEntries } from "@/queries/search";
 import { DebouncedInput } from "@/components/debounced-input";
-import { cn } from "@/lib/utils";
 import {
   Command,
   CommandEmpty,
@@ -60,6 +59,8 @@ interface FiltersFormProps {
   onApplyFilters: (filters: CollectionFilters) => void;
   currency: Currency;
 }
+
+const ENTRY_SEARCH_PAGE_SIZE = 20;
 
 export default function FiltersForm({
   renderTrigger,
@@ -143,20 +144,36 @@ export default function FiltersForm({
     return `${items.length} selected`;
   };
 
-  const [filters, setFilters] = useState("");
+  const [entrySearch, setEntrySearch] = useState("");
+  const [entryNameMap, setEntryNameMap] = useState<Record<string, string>>({});
 
   const {
-    data: entries,
-    isPending,
-    error,
-    isError,
-  } = useQuery({
-    queryKey: ["entries", filters],
-    queryFn: () => searchEntries(filters),
+    data: entryPages,
+    isPending: isEntriesPending,
+    isFetchingNextPage: isFetchingMoreEntries,
+    hasNextPage: hasMoreEntries,
+    fetchNextPage: fetchMoreEntries,
+    error: entriesError,
+    isError: isEntriesError,
+  } = useInfiniteQuery({
+    queryKey: ["entries", entrySearch],
+    queryFn: ({ pageParam }) =>
+      searchEntries({
+        search: entrySearch,
+        limit: ENTRY_SEARCH_PAGE_SIZE,
+        offset: pageParam,
+      }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, _allPages, lastPageParam) =>
+      lastPage.entries.length < ENTRY_SEARCH_PAGE_SIZE
+        ? undefined
+        : lastPageParam + ENTRY_SEARCH_PAGE_SIZE,
     staleTime: 1000 * 60 * 5,
     retry: false,
-    enabled: filters.length > 0,
+    enabled: entrySearch.length > 0,
   });
+
+  const entries = entryPages?.pages.flatMap((page) => page.entries) ?? [];
 
   return (
     <Dialog>
@@ -351,23 +368,24 @@ export default function FiltersForm({
                     <FieldTitle>Entries</FieldTitle>
                     <FieldDescription>e.g., Companies, Characters, Artists</FieldDescription>
                     <FieldContent>
-                      <div className="flex flex-wrap gap-2">
-                        {field.state.value?.map((entry, entryIndex) => (
+                      <div className="flex flex-wrap gap-1.5">
+                        {field.state.value?.map((entryId) => (
                           <Badge
-                            key={entryIndex}
+                            key={entryId}
                             variant="outline"
-                            className="flex items-center justify-between pr-0"
+                            className="flex items-center gap-0.5 pr-0"
                           >
-                            {entry}
+                            {entryNameMap[entryId] ?? entryId}
                             <Button
                               type="button"
                               variant="ghost"
                               size="icon"
                               onClick={() => {
-                                const current = field.state.value || [];
-                                field.handleChange(current.filter((_, idx) => idx !== entryIndex));
+                                field.handleChange(
+                                  (field.state.value || []).filter((id) => id !== entryId),
+                                );
                               }}
-                              className=" hover:text-red-500 hover:bg-transparent"
+                              className="hover:text-red-500 hover:bg-transparent!"
                             >
                               <HugeiconsIcon icon={Cancel01Icon} />
                             </Button>
@@ -396,56 +414,102 @@ export default function FiltersForm({
                           />
 
                           <PopoverContent className="w-(--anchor-width) p-0">
-                            <Command>
+                            <Command shouldFilter={false}>
                               <DebouncedInput
-                                value={filters}
-                                onChange={(value) => setFilters(value.toString())}
+                                value={entrySearch}
+                                onChange={(value) => setEntrySearch(value.toString())}
                                 placeholder="Search entries..."
                                 debounce={200}
+                                isCommandInput
                               />
-                              {entries && entries?.entries.length > 0 && (
-                                <CommandList id={entriesListId} className="space-y-2 p-1">
-                                  {isError && (
-                                    <CommandEmpty>
-                                      Error searching entries: {error.message}
-                                    </CommandEmpty>
-                                  )}
-                                  {entries.entries.length === 0 && !isPending && !isError && (
-                                    <CommandEmpty>No entries found.</CommandEmpty>
-                                  )}
-                                  <CommandGroup className="">
-                                    <div className="text-sm font-medium p-1 text-muted-foreground">
-                                      Results:
-                                    </div>
-                                    {entries.entries.map((entry) => (
-                                      <CommandItem
-                                        key={entry.id}
-                                        value={entry.id}
-                                        onSelect={() => {
-                                          field.handleChange([...field.state.value, entry.id]);
-                                        }}
-                                        onKeyDown={(e) => {
-                                          if (e.key === "Enter") {
-                                            e.preventDefault();
-                                            field.handleChange([...field.state.value, entry.id]);
-                                          }
-                                        }}
-                                      >
-                                        <HugeiconsIcon
-                                          icon={Tick02Icon}
-                                          className={cn(
-                                            "mr-2 h-4 w-4",
-                                            field.state.value.includes(entry.id)
-                                              ? "opacity-100"
-                                              : "opacity-0",
+                              <CommandList id={entriesListId}>
+                                {entrySearch.length === 0 && (
+                                  <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                                    Type to search for entries
+                                  </div>
+                                )}
+                                {entrySearch.length > 0 && isEntriesError && (
+                                  <CommandEmpty>
+                                    Could not load entries. {entriesError.message}
+                                  </CommandEmpty>
+                                )}
+                                {entrySearch.length > 0 && isEntriesPending && !isEntriesError && (
+                                  <div className="flex items-center justify-center gap-2 px-2 py-6 text-sm text-muted-foreground">
+                                    <HugeiconsIcon
+                                      icon={Loading03Icon}
+                                      className="h-4 w-4 animate-spin"
+                                    />
+                                    Searching...
+                                  </div>
+                                )}
+                                {entrySearch.length > 0 &&
+                                  entries.length === 0 &&
+                                  !isEntriesPending &&
+                                  !isEntriesError && <CommandEmpty>No entries found.</CommandEmpty>}
+                                {entries.length > 0 && (
+                                  <>
+                                    <CommandGroup>
+                                      {entries.map((entry) => {
+                                        const isSelected = field.state.value.includes(entry.id);
+                                        return (
+                                          <CommandItem
+                                            key={entry.id}
+                                            value={entry.id}
+                                            data-checked={isSelected}
+                                            onSelect={() => {
+                                              const current = field.state.value ?? [];
+                                              if (isSelected) {
+                                                field.handleChange(
+                                                  current.filter((id) => id !== entry.id),
+                                                );
+                                              } else {
+                                                field.handleChange([...current, entry.id]);
+                                                setEntryNameMap((prev) => ({
+                                                  ...prev,
+                                                  [entry.id]: entry.name,
+                                                }));
+                                              }
+                                            }}
+                                          >
+                                            <span className="flex flex-col">
+                                              <span>{entry.name}</span>
+                                              {entry.category && (
+                                                <span className="text-xs text-muted-foreground">
+                                                  {entry.category}
+                                                </span>
+                                              )}
+                                            </span>
+                                          </CommandItem>
+                                        );
+                                      })}
+                                    </CommandGroup>
+                                    {hasMoreEntries && (
+                                      <div className="px-2 pb-2">
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          className="w-full justify-center text-xs"
+                                          onClick={() => void fetchMoreEntries()}
+                                          disabled={isFetchingMoreEntries}
+                                        >
+                                          {isFetchingMoreEntries ? (
+                                            <>
+                                              <HugeiconsIcon
+                                                icon={Loading03Icon}
+                                                className="mr-1.5 h-3 w-3 animate-spin"
+                                              />
+                                              Loading...
+                                            </>
+                                          ) : (
+                                            "Load more"
                                           )}
-                                        />
-                                        {entry.name}
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                </CommandList>
-                              )}
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+                              </CommandList>
                             </Command>
                           </PopoverContent>
                         </Popover>

@@ -51,16 +51,6 @@ export async function deleteCollectionItems(ids: string[]) {
   }
 }
 
-export async function searchEntries(search: string) {
-  const { data, error } = await app.api.entries.search.get({
-    query: { search },
-  });
-  if (error) {
-    throw new Error(getErrorMessage(error, "Failed to search entries"));
-  }
-  return data;
-}
-
 export async function updateCollectionItem(values: CollectionItemFormValues) {
   const { error } = await app.api.collection({ id: values.id }).put(values);
   if (error) {

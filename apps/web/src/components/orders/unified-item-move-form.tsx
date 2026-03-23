@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowUpDownIcon, Loading03Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { ArrowUpDownIcon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,11 +29,10 @@ import type { NewOrder, CascadeOptions } from "@myakiba/contracts/orders/schema"
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import { CascadeOptionsDropdown } from "@/components/cascade-options-dropdown";
 import { Textarea } from "../ui/textarea";
-import { cn } from "@/lib/utils";
 import { majorStringToMinorUnits } from "@myakiba/utils/currency";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useQuery } from "@tanstack/react-query";
-import { getOrderIdsAndTitles } from "@/queries/orders";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { searchOrders } from "@/queries/search";
 import { DebouncedInput } from "@/components/debounced-input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -70,6 +69,8 @@ type UnifiedItemMoveFormProps = {
   currency: Currency;
 };
 
+const ORDER_SEARCH_PAGE_SIZE = 20;
+
 export default function UnifiedItemMoveForm({
   renderTrigger,
   selectedItemData,
@@ -93,19 +94,38 @@ export default function UnifiedItemMoveForm({
     cascadeOptionsList,
   } = useCascadeOptions();
 
-  const [filters, setFilters] = useState({
+  const [orderSearch, setOrderSearch] = useState({
     title: "",
   });
 
   const [popoverOpen, setPopoverOpen] = useState(false);
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["orderIdsAndTitles", filters],
-    queryFn: () => getOrderIdsAndTitles(filters),
+  const {
+    data: orderPages,
+    isPending: isOrdersPending,
+    isFetchingNextPage: isFetchingMoreOrders,
+    hasNextPage: hasMoreOrders,
+    fetchNextPage: fetchMoreOrders,
+    error: orderSearchError,
+  } = useInfiniteQuery({
+    queryKey: ["orderIdsAndTitles", orderSearch.title],
+    queryFn: ({ pageParam }) =>
+      searchOrders({
+        title: orderSearch.title,
+        limit: ORDER_SEARCH_PAGE_SIZE,
+        offset: pageParam,
+      }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, _allPages, lastPageParam) =>
+      lastPage.orderIdsAndTitles.length < ORDER_SEARCH_PAGE_SIZE
+        ? undefined
+        : lastPageParam + ORDER_SEARCH_PAGE_SIZE,
     staleTime: 1000 * 60 * 5,
     retry: false,
-    enabled: filters.title.length > 0 && moveMode === "existing",
+    enabled: orderSearch.title.length > 0 && moveMode === "existing",
   });
+
+  const orderResults = orderPages?.pages.flatMap((page) => page.orderIdsAndTitles) ?? [];
 
   const existingOrderForm = useForm({
     defaultValues: {
@@ -235,9 +255,8 @@ export default function UnifiedItemMoveForm({
                               type="button"
                             >
                               {field.state.value
-                                ? data?.orderIdsAndTitles?.find(
-                                    (order) => order.id === field.state.value,
-                                  )?.title || "Select target order"
+                                ? orderResults.find((order) => order.id === field.state.value)
+                                    ?.title || "Select target order"
                                 : "Select target order"}
                               <HugeiconsIcon
                                 icon={ArrowUpDownIcon}
@@ -247,58 +266,84 @@ export default function UnifiedItemMoveForm({
                           }
                         />
                         <PopoverContent className="w-(--anchor-width) p-0">
-                          <Command>
+                          <Command shouldFilter={false}>
                             <DebouncedInput
-                              value={filters.title}
-                              onChange={(value) => setFilters({ title: value.toString() })}
-                              placeholder="Search by title..."
+                              value={orderSearch.title}
+                              onChange={(value) => setOrderSearch({ title: value.toString() })}
+                              placeholder="Search orders by title..."
                               debounce={200}
-                              className="rounded-none shadow-none border-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-background"
+                              isCommandInput
                             />
-                            {(data?.orderIdsAndTitles ?? error) !== undefined && (
-                              <CommandList id={targetOrderListId} className="space-y-2 p-1">
-                                {error && (
-                                  <CommandEmpty>
-                                    Error searching orders: {error.message}
-                                  </CommandEmpty>
+                            <CommandList id={targetOrderListId}>
+                              {orderSearch.title.length === 0 && !orderSearchError && (
+                                <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                                  Type to search for orders
+                                </div>
+                              )}
+                              {orderSearchError && (
+                                <CommandEmpty>
+                                  Could not load orders. {orderSearchError.message}
+                                </CommandEmpty>
+                              )}
+                              {orderSearch.title.length > 0 &&
+                                isOrdersPending &&
+                                !orderSearchError && (
+                                  <div className="flex items-center justify-center gap-2 px-2 py-6 text-sm text-muted-foreground">
+                                    <HugeiconsIcon
+                                      icon={Loading03Icon}
+                                      className="h-4 w-4 animate-spin"
+                                    />
+                                    Searching...
+                                  </div>
                                 )}
-                                {data?.orderIdsAndTitles?.length === 0 && !isLoading && !error && (
-                                  <CommandEmpty>No orders found.</CommandEmpty>
-                                )}
-                                {(data?.orderIdsAndTitles?.length ?? 0) > 0 && (
+                              {orderSearch.title.length > 0 &&
+                                orderResults.length === 0 &&
+                                !isOrdersPending &&
+                                !orderSearchError && <CommandEmpty>No orders found.</CommandEmpty>}
+                              {orderResults.length > 0 && (
+                                <>
                                   <CommandGroup>
-                                    {data?.orderIdsAndTitles?.map((order) => (
+                                    {orderResults.map((order) => (
                                       <CommandItem
                                         key={order.id}
                                         value={order.id}
+                                        data-checked={field.state.value === order.id}
                                         onSelect={() => {
                                           field.handleChange(order.id);
                                           setPopoverOpen(false);
                                         }}
-                                        onKeyDown={(e) => {
-                                          if (e.key === "Enter") {
-                                            e.preventDefault();
-                                            field.handleChange(order.id);
-                                            setPopoverOpen(false);
-                                          }
-                                        }}
                                       >
-                                        <HugeiconsIcon
-                                          icon={Tick02Icon}
-                                          className={cn(
-                                            "mr-2 h-4 w-4",
-                                            field.state.value === order.id
-                                              ? "opacity-100"
-                                              : "opacity-0",
-                                          )}
-                                        />
                                         {order.title}
                                       </CommandItem>
                                     ))}
                                   </CommandGroup>
-                                )}
-                              </CommandList>
-                            )}
+                                  {hasMoreOrders && (
+                                    <div className="px-2 pb-2">
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="w-full justify-center text-xs"
+                                        onClick={() => void fetchMoreOrders()}
+                                        disabled={isFetchingMoreOrders}
+                                      >
+                                        {isFetchingMoreOrders ? (
+                                          <>
+                                            <HugeiconsIcon
+                                              icon={Loading03Icon}
+                                              className="mr-1.5 h-3 w-3 animate-spin"
+                                            />
+                                            Loading...
+                                          </>
+                                        ) : (
+                                          "Load more"
+                                        )}
+                                      </Button>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </CommandList>
                           </Command>
                         </PopoverContent>
                       </Popover>

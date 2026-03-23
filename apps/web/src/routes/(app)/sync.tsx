@@ -113,30 +113,30 @@ function RouteComponent() {
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground mx-1">Add:</span>
           <Button
-            variant="outline"
+            variant="default"
             size="sm"
             onClick={() => setActiveSyncType("collection")}
             disabled={isSyncing}
           >
-            <HugeiconsIcon icon={LibraryIcon} className="size-3.5 dark:text-primary" />
+            <HugeiconsIcon icon={LibraryIcon} className="size-3.5" />
             Collection
           </Button>
           <Button
-            variant="outline"
+            variant="default"
             size="sm"
             onClick={() => setActiveSyncType("order")}
             disabled={isSyncing}
           >
-            <HugeiconsIcon icon={PackageIcon} className="size-3.5 dark:text-primary" />
+            <HugeiconsIcon icon={PackageIcon} className="size-3.5" />
             Order
           </Button>
           <Button
-            variant="outline"
+            variant="default"
             size="sm"
             onClick={() => setActiveSyncType("csv")}
             disabled={isSyncing}
           >
-            <HugeiconsIcon icon={FileUploadIcon} className="size-3.5 dark:text-primary" />
+            <HugeiconsIcon icon={FileUploadIcon} className="size-3.5" />
             CSV
           </Button>
         </div>

@@ -106,28 +106,6 @@ const itemsRouter = new Elysia({ prefix: "/items" })
       return { collection };
     },
     { params: itemParamSchema, auth: true },
-  )
-  .get(
-    "/:itemId/releases",
-    async ({ params, log }) => {
-      log.set({ action: "items.getReleases", item: { id: params.itemId } });
-
-      const { data: releases, error } = await tryCatch(ItemService.getItemReleases(params.itemId));
-
-      if (error) {
-        if (error.message === "FAILED_TO_GET_ITEM_RELEASES") {
-          log.error(error, { step: "getItemReleases", outcome: "error" });
-          return status(500, "Failed to get item releases");
-        }
-
-        log.error(error, { step: "getItemReleases", outcome: "error" });
-        return status(500, "Failed to get item releases");
-      }
-
-      log.set({ outcome: "success" });
-      return releases;
-    },
-    { params: itemParamSchema },
   );
 
 export default itemsRouter;

@@ -104,31 +104,6 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
     { auth: true },
   )
   .get(
-    "/ids-and-titles",
-    async ({ query, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
-      log.set({ action: "orders.ids_and_titles", user: { id: user.id } });
-
-      const { data: result, error } = await tryCatch(
-        OrdersService.getOrderIdsAndTitles(user.id, query.title),
-      );
-
-      if (error) {
-        log.error(error, { step: "get_order_ids_and_titles" });
-        log.set({ outcome: "error" });
-        return status(500, "Failed to get order ids and titles");
-      }
-
-      log.set({ outcome: "success" });
-      return { orderIdsAndTitles: result };
-    },
-    { query: z.object({ title: z.string().optional() }), auth: true },
-  )
-  .get(
     "/:orderId",
     async ({ params, user, log }) => {
       if (!user) {

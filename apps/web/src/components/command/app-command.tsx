@@ -27,29 +27,13 @@ import {
   type AppNavigationItem,
   type AppNavigationTarget,
 } from "@/lib/app-navigation";
-import { getCollection } from "@/queries/collection";
-import { getOrderIdsAndTitles } from "@/queries/orders";
+import { searchCommandResults, type CommandSearchResults } from "@/queries/search";
 import {
   LAUNCHABLE_SYNC_OPTIONS,
   SyncActionSheet,
   type LaunchableSyncType,
   type SyncLauncherOption,
 } from "@/components/sync/sync-launcher";
-
-type OrderCommandMatch = {
-  readonly id: string;
-  readonly title: string;
-};
-
-type ItemCommandMatch = {
-  readonly itemId: string;
-  readonly itemTitle: string;
-  readonly itemImage: string | null;
-  readonly itemCategory: string | null;
-  readonly itemExternalId: number | null;
-};
-
-const COMMAND_RESULT_LIMIT = 5;
 
 const SYNC_TYPE_LABELS: Record<LaunchableSyncType, string> = {
   csv: "CSV",
@@ -58,6 +42,10 @@ const SYNC_TYPE_LABELS: Record<LaunchableSyncType, string> = {
 };
 const COMMAND_TOKEN_SPLIT_PATTERN = /[^a-z0-9]+/i;
 const COMMAND_SEARCH_DEBOUNCE_MS = 250;
+const EMPTY_COMMAND_SEARCH_RESULTS: CommandSearchResults = {
+  orderMatches: [],
+  itemMatches: [],
+};
 
 function getCommandTerms(value: string): readonly string[] {
   return value
@@ -114,40 +102,6 @@ function isTypingTarget(target: EventTarget | null): boolean {
       "input, textarea, select, [contenteditable='true'], [role='textbox'], [role='combobox']",
     ) !== null
   );
-}
-
-async function getCommandOrderMatches(query: string): Promise<readonly OrderCommandMatch[]> {
-  const data = await getOrderIdsAndTitles({ title: query });
-  return data?.orderIdsAndTitles ?? [];
-}
-
-async function getCommandItemMatches(query: string): Promise<readonly ItemCommandMatch[]> {
-  const data = await getCollection({
-    search: query,
-    limit: COMMAND_RESULT_LIMIT,
-    offset: 0,
-  });
-
-  const uniqueMatches = new Map<string, ItemCommandMatch>();
-  for (const item of data) {
-    if (uniqueMatches.has(item.itemId)) {
-      continue;
-    }
-
-    uniqueMatches.set(item.itemId, {
-      itemId: item.itemId,
-      itemTitle: item.itemTitle,
-      itemImage: item.itemImage,
-      itemCategory: item.itemCategory,
-      itemExternalId: item.itemExternalId,
-    });
-
-    if (uniqueMatches.size >= COMMAND_RESULT_LIMIT) {
-      break;
-    }
-  }
-
-  return [...uniqueMatches.values()];
 }
 
 function CommandLeadIcon({ icon }: { readonly icon: IconSvgElement }): React.JSX.Element {
@@ -243,23 +197,12 @@ export function AppCommand(): React.JSX.Element {
   }, [normalizedInputQuery]);
 
   const {
-    data: orderMatches = [],
-    isLoading: isOrderSearchLoading,
-    error: orderSearchError,
+    data: { orderMatches, itemMatches } = EMPTY_COMMAND_SEARCH_RESULTS,
+    isLoading: isSearchLoading,
+    error: searchError,
   } = useQuery({
-    queryKey: ["app-command", "orders", normalizedDebouncedQuery],
-    queryFn: () => getCommandOrderMatches(debouncedInputQuery),
-    enabled: normalizedDebouncedQuery.length > 0,
-    staleTime: 30_000,
-  });
-
-  const {
-    data: itemMatches = [],
-    isLoading: isItemSearchLoading,
-    error: itemSearchError,
-  } = useQuery({
-    queryKey: ["app-command", "items", normalizedDebouncedQuery],
-    queryFn: () => getCommandItemMatches(debouncedInputQuery),
+    queryKey: ["app-command", "search", normalizedDebouncedQuery],
+    queryFn: () => searchCommandResults(debouncedInputQuery),
     enabled: normalizedDebouncedQuery.length > 0,
     staleTime: 30_000,
   });
@@ -422,20 +365,18 @@ export function AppCommand(): React.JSX.Element {
 
             {showSearchGroups ? (
               <CommandGroup heading="Orders">
-                {isSearchPending || isOrderSearchLoading ? (
+                {isSearchPending || isSearchLoading ? (
                   <LoadingCommandItem label="Searching orders..." />
                 ) : null}
-                {!isSearchPending && orderSearchError ? (
+                {!isSearchPending && searchError ? (
                   <StatusCommandItem
                     title="Could not search orders"
-                    subtitle={
-                      orderSearchError instanceof Error ? orderSearchError.message : undefined
-                    }
+                    subtitle={searchError instanceof Error ? searchError.message : undefined}
                   />
                 ) : null}
                 {!isSearchPending &&
-                !isOrderSearchLoading &&
-                !orderSearchError &&
+                !isSearchLoading &&
+                !searchError &&
                 orderMatches.length === 0 ? (
                   <StatusCommandItem title={`No orders matched "${trimmedInputQuery}"`} />
                 ) : null}
@@ -447,7 +388,14 @@ export function AppCommand(): React.JSX.Element {
                         title={order.title}
                         subtitle={`Open order ${order.id}`}
                         shortcut="Order"
-                        leading={<CommandLeadIcon icon={PackageIcon} />}
+                        leading={
+                          <ImageThumbnail
+                            images={order.itemImages}
+                            title={order.title}
+                            fallbackIcon={<HugeiconsIcon icon={PackageIcon} className="size-4" />}
+                            className="size-8 rounded-md"
+                          />
+                        }
                         onSelect={() => handleOrderOpen(order.id)}
                       />
                     ))
@@ -467,20 +415,18 @@ export function AppCommand(): React.JSX.Element {
 
             {showSearchGroups ? (
               <CommandGroup heading="Items">
-                {isSearchPending || isItemSearchLoading ? (
+                {isSearchPending || isSearchLoading ? (
                   <LoadingCommandItem label="Searching items..." />
                 ) : null}
-                {!isSearchPending && itemSearchError ? (
+                {!isSearchPending && searchError ? (
                   <StatusCommandItem
                     title="Could not search items"
-                    subtitle={
-                      itemSearchError instanceof Error ? itemSearchError.message : undefined
-                    }
+                    subtitle={searchError instanceof Error ? searchError.message : undefined}
                   />
                 ) : null}
                 {!isSearchPending &&
-                !isItemSearchLoading &&
-                !itemSearchError &&
+                !isSearchLoading &&
+                !searchError &&
                 itemMatches.length === 0 ? (
                   <StatusCommandItem title={`No items matched "${trimmedInputQuery}"`} />
                 ) : null}
