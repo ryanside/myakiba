@@ -1,6 +1,6 @@
 import { useCollectionFilters } from "@/hooks/use-collection";
 import type { Category } from "@myakiba/contracts/shared/types";
-import { Toggle } from "../ui/toggle";
+import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
 
 type QuickFilterGroup = {
   readonly label: string;
@@ -38,40 +38,41 @@ const QUICK_FILTER_GROUPS: readonly QuickFilterGroup[] = [
   },
 ];
 
+const GROUP_BY_LABEL = new Map(QUICK_FILTER_GROUPS.map((g) => [g.label, g] as const));
+
 export function CollectionQuickFilters(): React.ReactElement {
   const { filters, setFilters } = useCollectionFilters();
   const activeCategories = new Set<Category>(filters.category ?? []);
 
-  const isGroupActive = (group: QuickFilterGroup): boolean =>
-    group.categories.every((cat) => activeCategories.has(cat));
+  const activeGroupLabels = QUICK_FILTER_GROUPS.filter((g) =>
+    g.categories.every((cat) => activeCategories.has(cat)),
+  ).map((g) => g.label);
 
-  const toggleGroup = (group: QuickFilterGroup): void => {
-    if (isGroupActive(group)) {
-      const groupSet = new Set<Category>(group.categories);
-      const remaining: Category[] = [...activeCategories].filter((cat) => !groupSet.has(cat));
-      setFilters({
-        category: remaining.length > 0 ? remaining : undefined,
-        offset: 0,
-      });
-    } else {
-      const merged = new Set(activeCategories);
-      for (const cat of group.categories) {
-        merged.add(cat);
-      }
-      setFilters({ category: [...merged], offset: 0 });
-    }
+  const handleValueChange = (labels: string[]): void => {
+    const categories: Category[] = labels.flatMap((label) => {
+      const group = GROUP_BY_LABEL.get(label);
+      return group ? [...group.categories] : [];
+    });
+
+    setFilters({
+      category: categories.length > 0 ? categories : undefined,
+      offset: 0,
+    });
   };
 
   return (
-    <div className="flex items-center gap-1" role="group" aria-label="Quick category filters">
-      {QUICK_FILTER_GROUPS.map((group) => {
-        const active = isGroupActive(group);
-        return (
-          <Toggle key={group.label} pressed={active} onClick={() => toggleGroup(group)}>
-            {group.label}
-          </Toggle>
-        );
-      })}
-    </div>
+    <ToggleGroup
+      value={activeGroupLabels}
+      onValueChange={handleValueChange}
+      multiple
+      variant="outline"
+      size="sm"
+    >
+      {QUICK_FILTER_GROUPS.map((group) => (
+        <ToggleGroupItem key={group.label} value={group.label}>
+          {group.label}
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
   );
 }

@@ -136,7 +136,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   >
                     <Link to="/sync">
                       <GitCompareIcon ref={syncIconRef} size={17} />
-                      <span className="">Sync History</span>
+                      <span>Sync History</span>
                     </Link>
                   </Button>
                 }

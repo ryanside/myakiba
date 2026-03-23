@@ -2,13 +2,18 @@ import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import type { Currency } from "@myakiba/contracts/shared/types";
 
 const CURRENCY_LOCALE_MAP: Readonly<Record<Currency, string>> = {
+  BRL: "pt-BR",
   JPY: "ja-JP",
   EUR: "de-DE",
   CNY: "zh-CN",
   GBP: "en-GB",
   CAD: "en-CA",
   AUD: "en-AU",
+  HKD: "zh-HK",
   NZD: "en-NZ",
+  PHP: "en-PH",
+  RUB: "ru-RU",
+  SGD: "en-SG",
   USD: "en-US",
 };
 

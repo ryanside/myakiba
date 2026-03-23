@@ -1,6 +1,9 @@
 import * as cheerio from "cheerio";
 import type { Element } from "domhandler";
+import { CURRENCIES } from "@myakiba/contracts/shared/constants";
 import { parseMoneyToMinorUnits } from "@myakiba/utils/currency";
+
+const TYPE_END_CURRENCY_PATTERN = CURRENCIES.join("|");
 
 export const REGEX_PATTERNS = {
   height: /H=(\d+)mm/,
@@ -9,7 +12,7 @@ export const REGEX_PATTERNS = {
   price: /(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s+(?:<small>)?([A-Z]{3})(?:<\/small>)?/,
   priceCurrency: /(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s+(?:<small>)?([A-Z]{3})(?:<\/small>)?/,
   barcode: /([A-Z0-9-]+)$/,
-  typeEnd: /\d{2,}|•|JPY|USD|EUR|CNY/,
+  typeEnd: new RegExp(`\\d{2,}|•|${TYPE_END_CURRENCY_PATTERN}`),
   trailingSpace: /\s+$/,
   entryId: /\/entry\/(\d+)/,
 } as const;

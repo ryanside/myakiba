@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { MaskInput } from "@/components/ui/mask-input";
 import { useForm } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
-import { getItemReleases } from "@/queries/orders";
+import { searchReleases } from "@/queries/search";
 import { Label } from "../ui/label";
 import {
   Select,
@@ -79,7 +79,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
     refetch: refetchReleases,
   } = useQuery({
     queryKey: ["itemReleases", itemData.itemId],
-    queryFn: () => getItemReleases(itemData.itemId),
+    queryFn: () => searchReleases(itemData.itemId),
     staleTime: 1000 * 60 * 5,
     retry: false,
     enabled: false,

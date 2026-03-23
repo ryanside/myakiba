@@ -1,14 +1,14 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Calendar01Icon, DragDropVerticalIcon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { Calendar01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { Badge } from "@/components/reui/badge";
 import { Button } from "@/components/ui/button";
+import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame";
 import {
   Kanban,
   KanbanBoard,
   KanbanColumn,
   KanbanColumnContent,
-  KanbanColumnHandle,
   KanbanItem,
   KanbanItemHandle,
   KanbanOverlay,
@@ -20,7 +20,8 @@ import { updateOrderStatus } from "@/queries/orders";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-import { getStatusVariant } from "@/lib/orders";
+import { cn } from "@/lib/utils";
+import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { formatMonthYearForDisplay } from "@/lib/date-display";
 import { getCurrencyLocale } from "@/lib/locale";
 import type { Currency } from "@myakiba/contracts/shared/types";
@@ -42,10 +43,10 @@ interface OrdersKanbanProps {
   dateFormat: DateFormat;
 }
 
-const COLUMN_TITLES: Record<string, string> = {
-  Ordered: "Ordered",
-  Paid: "Paid",
-  Shipped: "Shipped",
+const COLUMNS: Record<string, { title: string; color: string }> = {
+  Ordered: { title: "Ordered", color: ORDER_STATUS_COLORS.Ordered },
+  Paid: { title: "Paid", color: ORDER_STATUS_COLORS.Paid },
+  Shipped: { title: "Shipped", color: ORDER_STATUS_COLORS.Shipped },
 };
 
 interface OrderCardProps extends Omit<
@@ -68,142 +69,133 @@ function OrderCard({
   ...props
 }: OrderCardProps) {
   const locale = getCurrencyLocale(currency);
-  const cardContent = (
-    <div className="rounded-lg ring ring-foreground/10 bg-card p-3 shadow-xs hover:shadow-sm transition-shadow relative">
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-2 right-2"
-              aria-label="Mark as collected"
-              onClick={(e) => {
-                e.stopPropagation();
-                onMarkOwned(order.orderId);
-              }}
-            >
-              <HugeiconsIcon icon={Tick02Icon} className="h-4 w-4" />
-            </Button>
-          }
-        />
-        <TooltipContent>
-          <p>Mark as collected</p>
-        </TooltipContent>
-      </Tooltip>
-      <div className="flex flex-col gap-2.5">
-        {/* Item Images */}
-        {order.itemImages && order.itemImages.length > 0 && (
-          <div className="flex gap-1 mb-1">
-            {order.itemImages.slice(0, 3).map((image) => (
-              <div
-                key={`${order.orderId}:${image}`}
-                className="relative w-12 h-12 rounded-md overflow-hidden bg-muted shrink-0"
+  const content = (
+    <Frame variant="ghost" spacing="sm" className="group/card relative p-0">
+      <FramePanel className="p-3">
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-2 right-2 opacity-0 group-hover/card:opacity-100 transition-opacity"
+                aria-label="Mark as collected"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMarkOwned(order.orderId);
+                }}
               >
-                <img src={image} alt="" className="w-full h-full object-cover object-top" />
-              </div>
-            ))}
-            {order.itemImages.length > 3 && (
-              <div className="relative w-12 h-12 rounded-md overflow-hidden bg-muted flex items-center justify-center shrink-0">
-                <span className="text-xs font-medium text-muted-foreground">
-                  +{order.itemImages.length - 3}
-                </span>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Title */}
-        <div className="flex flex-col gap-1">
-          <Link
-            to="/orders/$id"
-            params={{ id: order.orderId }}
-            className="line-clamp-2 font-normal text-sm leading-tight hover:underline"
-          >
-            {order.title}
-          </Link>
-          {order.shop && (
-            <Badge variant="outline" className="pointer-events-none w-fit text-[10px] px-1.5 py-0">
-              {order.shop}
-            </Badge>
+                <HugeiconsIcon icon={Tick02Icon} className="h-4 w-4" />
+              </Button>
+            }
+          />
+          <TooltipContent>
+            <p>Mark as collected</p>
+          </TooltipContent>
+        </Tooltip>
+        <div className="flex flex-col gap-2.5">
+          {order.itemImages.length > 0 && (
+            <div className="flex gap-1">
+              {order.itemImages.slice(0, 3).map((image) => (
+                <div
+                  key={`${order.orderId}:${image}`}
+                  className="relative size-12 shrink-0 overflow-hidden rounded-md bg-muted"
+                >
+                  <img src={image} alt="" className="size-full object-cover object-top" />
+                </div>
+              ))}
+              {order.itemImages.length > 3 && (
+                <div className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    +{order.itemImages.length - 3}
+                  </span>
+                </div>
+              )}
+            </div>
           )}
-        </div>
-
-        {/* Bottom Info */}
-        <div className="flex items-center justify-between text-xs pt-1 border-t">
-          <div className="flex items-center gap-1 text-muted-foreground">
-            {order.releaseDate && (
-              <>
-                <HugeiconsIcon icon={Calendar01Icon} className="h-3 w-3" />
-                <time className="text-[10px] tabular-nums">
-                  {formatMonthYearForDisplay(order.releaseDate, dateFormat)}
-                </time>
-              </>
+          <div className="flex flex-col gap-1">
+            <Link
+              to="/orders/$id"
+              params={{ id: order.orderId }}
+              className="line-clamp-2 text-sm font-medium leading-tight hover:underline"
+            >
+              {order.title}
+            </Link>
+            {order.shop && (
+              <Badge
+                variant="outline"
+                className="pointer-events-none w-fit px-1.5 py-0 text-[10px]"
+              >
+                {order.shop}
+              </Badge>
             )}
           </div>
-          <span className="font-normal text-sm">
-            {formatCurrencyFromMinorUnits(order.total, currency, locale)}
-          </span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1 text-muted-foreground">
+              {order.releaseDate && (
+                <>
+                  <HugeiconsIcon icon={Calendar01Icon} className="size-3" />
+                  <time className="text-[10px] tabular-nums">
+                    {formatMonthYearForDisplay(order.releaseDate, dateFormat)}
+                  </time>
+                </>
+              )}
+            </div>
+            <span className="text-sm tabular-nums">
+              {formatCurrencyFromMinorUnits(order.total, currency, locale)}
+            </span>
+          </div>
         </div>
-      </div>
-    </div>
+      </FramePanel>
+    </Frame>
   );
 
   return (
     <KanbanItem value={order.orderId} {...props}>
-      {asHandle ? <KanbanItemHandle>{cardContent}</KanbanItemHandle> : cardContent}
+      {asHandle ? <KanbanItemHandle>{content}</KanbanItemHandle> : content}
     </KanbanItem>
   );
 }
 
-interface OrderColumnProps extends Omit<React.ComponentProps<typeof KanbanColumn>, "children"> {
-  orders: KanbanOrder[];
-  currency: Currency;
-  dateFormat: DateFormat;
-  isOverlay?: boolean;
-  onMarkOwned: (orderId: string) => void;
-}
-
 function OrderColumn({
-  value,
+  columnId,
   orders,
   currency,
   dateFormat,
   isOverlay,
   onMarkOwned,
-  ...props
-}: OrderColumnProps) {
+}: {
+  columnId: string;
+  orders: readonly KanbanOrder[];
+  currency: Currency;
+  dateFormat: DateFormat;
+  isOverlay?: boolean;
+  onMarkOwned: (orderId: string) => void;
+}) {
+  const col = COLUMNS[columnId];
   return (
-    <KanbanColumn
-      value={value}
-      {...props}
-      className="rounded-xl bg-sidebar dark:bg-background p-4 border border-border/30"
-    >
-      <div className="flex items-center justify-between mb-2.5">
-        <div className="flex items-center gap-2.5">
-          <Badge variant={getStatusVariant(value)}>
-            <span className="font-medium text-sm">{COLUMN_TITLES[value]}</span>
+    <KanbanColumn value={columnId}>
+      <Frame spacing="sm" className="h-full">
+        <FrameHeader className="flex flex-row items-center gap-2">
+          <div className={cn("size-2 rounded-full", col.color)} />
+          <FrameTitle>{col.title}</FrameTitle>
+          <Badge variant="outline" size="sm" className="ml-auto">
+            {orders.length}
           </Badge>
-          <Badge variant="outline">{orders.length}</Badge>
-        </div>
-        <KanbanColumnHandle>
-          <Button variant="ghost" size="icon">
-            <HugeiconsIcon icon={DragDropVerticalIcon} />
-          </Button>
-        </KanbanColumnHandle>
-      </div>
-      <KanbanColumnContent value={value} className="flex flex-col gap-2.5 p-0.5">
-        {orders.map((order) => (
-          <OrderCard
-            key={order.orderId}
-            order={order}
-            currency={currency}
-            dateFormat={dateFormat}
-            asHandle={!isOverlay}
-            onMarkOwned={onMarkOwned}
-          />
-        ))}
-      </KanbanColumnContent>
+        </FrameHeader>
+        <KanbanColumnContent value={columnId} className="flex flex-col gap-2 p-0.5">
+          {orders.map((order) => (
+            <OrderCard
+              key={order.orderId}
+              order={order}
+              currency={currency}
+              dateFormat={dateFormat}
+              asHandle={!isOverlay}
+              onMarkOwned={onMarkOwned}
+            />
+          ))}
+        </KanbanColumnContent>
+      </Frame>
     </KanbanColumn>
   );
 }
@@ -345,24 +337,20 @@ export default function OrderKanban({ orders, currency, dateFormat }: OrdersKanb
       onValueChange={setColumns}
       onMove={handleMove}
       getItemValue={(item) => item.orderId}
-      className="h-full overflow-x-auto"
     >
-      <KanbanBoard className="grid h-full auto-rows-fr grid-cols-3 gap-4 min-w-[1000px]">
-        {Object.entries(columns).map(([columnValue, columnOrders]) => (
+      <KanbanBoard className="grid grid-cols-3">
+        {Object.entries(columns).map(([columnId, columnOrders]) => (
           <OrderColumn
-            key={columnValue}
-            value={columnValue}
+            key={columnId}
+            columnId={columnId}
             orders={columnOrders}
             currency={currency}
             dateFormat={dateFormat}
             onMarkOwned={handleMarkOwned}
-            className="w-[260px] max-h-[300px] overflow-auto"
           />
         ))}
       </KanbanBoard>
-      <KanbanOverlay>
-        <div className="rounded-md bg-muted/60 size-full" />
-      </KanbanOverlay>
+      <KanbanOverlay className="bg-muted/10 rounded-md border-2 border-dashed" />
     </Kanban>
   );
 }

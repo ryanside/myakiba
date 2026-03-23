@@ -1,5 +1,4 @@
 import { app, getErrorMessage } from "@/lib/treaty-client";
-import { itemReleasesResponseSchema } from "@myakiba/contracts/items/schema";
 import type {
   CascadeOptions,
   EditedOrder,
@@ -13,7 +12,6 @@ import type {
   OrderStats,
   PaginatedResult,
 } from "@myakiba/contracts/orders/types";
-import type { ItemReleasesResponse } from "@myakiba/contracts/items/schema";
 import type { OrderStatus } from "@myakiba/contracts/shared/types";
 
 export async function getOrders(filters: OrderFilters): Promise<OrderListItem[]> {
@@ -166,39 +164,6 @@ export async function deleteOrderItems(collectionIds: Set<string>) {
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to delete order items"));
   }
-}
-
-export async function getItemReleases(itemId: string): Promise<ItemReleasesResponse> {
-  const { data, error } = await app.api.items({ itemId }).releases.get();
-
-  if (error) {
-    throw new Error(getErrorMessage(error, "Failed to get item releases"));
-  }
-
-  if (!data) {
-    throw new Error("Failed to get item releases");
-  }
-
-  const parsed = itemReleasesResponseSchema.safeParse(data);
-  if (!parsed.success) {
-    throw new Error("Failed to parse item releases response");
-  }
-
-  return parsed.data;
-}
-
-export async function getOrderIdsAndTitles(filters: { title?: string }) {
-  const { data, error } = await app.api.orders["ids-and-titles"].get({
-    query: {
-      title: filters.title?.toString(),
-    },
-  });
-
-  if (error) {
-    throw new Error(getErrorMessage(error, "Failed to get order IDs and titles"));
-  }
-
-  return data;
 }
 
 export async function moveItem(

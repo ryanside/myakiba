@@ -28,7 +28,30 @@ import {
 } from "@/components/ui/dialog";
 import * as z from "zod";
 import { app } from "@/lib/treaty-client";
-import { DATE_FORMATS } from "@myakiba/contracts/shared/constants";
+import { CURRENCIES, DATE_FORMATS } from "@myakiba/contracts/shared/constants";
+import type { Currency } from "@myakiba/contracts/shared/types";
+
+const CURRENCY_LABELS: Readonly<Record<Currency, string>> = {
+  AUD: "Australian Dollar",
+  BRL: "Brazilian Real",
+  CAD: "Canadian Dollar",
+  CNY: "Chinese Renminbi",
+  EUR: "Euro",
+  GBP: "Pound Sterling",
+  HKD: "Hong Kong Dollar",
+  JPY: "Japanese Yen",
+  NZD: "New Zealand Dollar",
+  PHP: "Philippine Peso",
+  RUB: "Russian Ruble",
+  SGD: "Singapore Dollar",
+  USD: "United States Dollar",
+};
+
+const CURRENCY_OPTIONS: ReadonlyArray<{ readonly value: Currency; readonly label: string }> =
+  CURRENCIES.map((currency) => ({
+    value: currency,
+    label: `${currency} - ${CURRENCY_LABELS[currency]}`,
+  }));
 
 type User = {
   id: string;
@@ -389,22 +412,11 @@ function PreferencesForm({ user }: { user: User }) {
     },
     validators: {
       onSubmit: z.object({
-        currency: z.string().min(1, "Currency is required"),
+        currency: z.enum(CURRENCIES),
         dateFormat: z.enum(DATE_FORMATS),
       }),
     },
   });
-
-  const currencies = [
-    { value: "USD", label: "USD - US Dollar" },
-    { value: "EUR", label: "EUR - Euro" },
-    { value: "GBP", label: "GBP - British Pound" },
-    { value: "JPY", label: "JPY - Japanese Yen" },
-    { value: "CNY", label: "CNY - Chinese Yuan" },
-    { value: "CAD", label: "CAD - Canadian Dollar" },
-    { value: "AUD", label: "AUD - Australian Dollar" },
-    { value: "NZD", label: "NZD - New Zealand Dollar" },
-  ];
 
   return (
     <Card>
@@ -433,7 +445,7 @@ function PreferencesForm({ user }: { user: User }) {
                     <SelectValue placeholder={field.state.value} />
                   </SelectTrigger>
                   <SelectContent align="start" className="w-full">
-                    {currencies.map((currency) => (
+                    {CURRENCY_OPTIONS.map((currency) => (
                       <SelectItem key={currency.value} value={currency.value}>
                         {currency.label}
                       </SelectItem>

@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import OrdersDataGrid from "@/components/orders/orders-data-grid";
+import { OrdersQuickFilters } from "@/components/orders/orders-quick-filters";
 import { searchSchema } from "@myakiba/contracts/orders/schema";
 import { KPICard } from "@/components/ui/kpi-card";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
@@ -32,7 +33,7 @@ function RouteComponent() {
       <div className="w-full space-y-8">
         <div className="flex flex-col gap-2">
           <div className="flex flex-row items-start gap-4">
-            <h1 className="text-2xl tracking-tight">Orders</h1>
+            <h1 className="text-2xl tracking-tight font-heading font-medium">Orders</h1>
           </div>
           <p className="text-muted-foreground text-sm font-normal">Manage and track your orders</p>
         </div>
@@ -47,7 +48,7 @@ function RouteComponent() {
     <div className="flex flex-col gap-4 mx-auto w-full">
       <div className="flex flex-col gap-2 mb-4">
         <div className="flex flex-row items-start gap-4">
-          <h1 className="text-2xl tracking-tight">Orders</h1>
+          <h1 className="text-2xl tracking-tight font-heading font-medium">Orders</h1>
         </div>
         <p className="text-muted-foreground text-sm font-normal">Manage and track your orders</p>
       </div>
@@ -85,6 +86,7 @@ function RouteComponent() {
           isLoading={isStatsPending}
         />
       </div>
+      <OrdersQuickFilters />
       <OrdersDataGrid key="orders-data-grid" />
     </div>
   );

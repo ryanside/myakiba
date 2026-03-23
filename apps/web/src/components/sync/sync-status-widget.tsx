@@ -11,7 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Badge } from "@/components/reui/badge";
+import { ThemedBadge } from "@/components/reui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ShimmeringText } from "@/components/ui/shimmering-text";
 import type { SyncSessionStatus, SyncType } from "@myakiba/contracts/shared/types";
@@ -220,12 +220,12 @@ function ActiveSessionItem({ session, onNavigate }: ActiveSessionProps) {
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <Badge variant={typeConfig.variant} size="xs">
+          <ThemedBadge variant={typeConfig.variant} size="xs">
             {typeConfig.label}
-          </Badge>
-          <Badge variant={SESSION_STATUS_CONFIG[session.status].variant} size="xs">
+          </ThemedBadge>
+          <ThemedBadge variant={SESSION_STATUS_CONFIG[session.status].variant} size="xs">
             {SESSION_STATUS_CONFIG[session.status].label}
-          </Badge>
+          </ThemedBadge>
         </div>
         {session.status === "processing" && !isFinished && !isJobError && (
           <HugeiconsIcon

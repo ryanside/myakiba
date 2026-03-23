@@ -11,7 +11,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { app, getErrorMessage } from "@/lib/treaty-client";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Badge } from "@/components/reui/badge";
+import { Badge, ThemedBadge } from "@/components/reui/badge";
 import {
   Empty,
   EmptyHeader,
@@ -467,9 +467,9 @@ function RouteComponent() {
                     <Card key={collectionItem.id}>
                       <CardHeader>
                         <div className="flex items-center gap-2">
-                          <Badge variant={getStatusVariant(collectionItem.status)}>
+                          <ThemedBadge variant={getStatusVariant(collectionItem.status)}>
                             {collectionItem.status}
-                          </Badge>
+                          </ThemedBadge>
                           {release && (
                             <span className="text-xs text-muted-foreground">
                               {formatDateOnlyForDisplay(release.date, dateFormat)}
