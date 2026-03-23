@@ -68,6 +68,7 @@ export const CollectionDataGrid = () => {
     orderDate: false,
     paymentDate: false,
     shippingDate: false,
+    releaseDate: false,
   });
   const [columnOrder, setColumnOrder] = useState<string[]>([
     "select",
@@ -76,6 +77,7 @@ export const CollectionDataGrid = () => {
     "count",
     "score",
     "price",
+    "releaseDate",
     "shop",
     "orderDate",
     "paymentDate",
@@ -131,6 +133,7 @@ export const CollectionDataGrid = () => {
             | "score"
             | "price"
             | "shop"
+            | "releaseDate"
             | "orderDate"
             | "paymentDate"
             | "shippingDate"

@@ -31,6 +31,7 @@ import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import { PopoverRatingCell } from "../cells/popover-rating-cell";
 import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
 import { InlineCountCell } from "../cells/inline-count-cell";
+import { InlineReleaseCell } from "../cells/inline-release-cell";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { getCategoryColor } from "@/lib/category-colors";
@@ -284,6 +285,47 @@ export function createCollectionColumns({
       enableResizing: true,
       size: 100,
       meta: {
+        skeleton: <Skeleton className="h-6" />,
+      },
+    },
+    {
+      accessorKey: "releaseDate",
+      id: "releaseDate",
+      header: ({ column }) => (
+        <DataGridColumnHeader title="Release" visibility={true} column={column} />
+      ),
+      cell: ({ row }) => {
+        const item = row.original;
+        const isPending = isCollectionPending(item.id);
+        return (
+          <InlineReleaseCell
+            releaseId={item.releaseId}
+            itemId={item.itemId}
+            fallback={{
+              releaseDate: item.releaseDate,
+              releaseType: item.releaseType,
+              releasePrice: item.releasePrice,
+              releaseCurrency: item.releaseCurrency,
+              releaseBarcode: item.releaseBarcode,
+            }}
+            currency={currency}
+            dateFormat={dateFormat}
+            disabled={isPending}
+            onSubmit={async (newReleaseId) => {
+              await onEditCollectionItem({
+                ...item,
+                releaseId: newReleaseId,
+              });
+            }}
+          />
+        );
+      },
+      enableSorting: true,
+      enableHiding: true,
+      enableResizing: true,
+      size: 110,
+      meta: {
+        headerTitle: "Release",
         skeleton: <Skeleton className="h-6" />,
       },
     },
