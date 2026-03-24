@@ -48,13 +48,13 @@ import type { Currency } from "@myakiba/contracts/shared/types";
 
 type MergeOrderFormProps = {
   renderTrigger: React.ReactElement;
-  orderIds: Set<string>;
-  collectionIds?: Set<string>;
+  orderIds: ReadonlySet<string>;
+  collectionIds?: ReadonlySet<string>;
   type: "merge";
   callbackFn: (
     value: NewOrder,
     cascadeOptions: CascadeOptions,
-    orderIds: Set<string>,
+    orderIds: ReadonlySet<string>,
   ) => Promise<void>;
   clearSelections: () => void;
   currency: Currency;
@@ -62,14 +62,14 @@ type MergeOrderFormProps = {
 
 type SplitOrderFormProps = {
   renderTrigger: React.ReactElement;
-  orderIds: Set<string>;
-  collectionIds: Set<string>;
+  orderIds: ReadonlySet<string>;
+  collectionIds: ReadonlySet<string>;
   type: "split";
   callbackFn: (
     value: NewOrder,
     cascadeOptions: CascadeOptions,
-    collectionIds: Set<string>,
-    orderIds: Set<string>,
+    collectionIds: ReadonlySet<string>,
+    orderIds: ReadonlySet<string>,
   ) => Promise<void>;
   clearSelections: () => void;
   currency: Currency;
@@ -77,8 +77,8 @@ type SplitOrderFormProps = {
 
 type EditOrderFormProps = {
   renderTrigger: React.ReactElement;
-  orderIds?: Set<string>;
-  collectionIds?: Set<string>;
+  orderIds?: ReadonlySet<string>;
+  collectionIds?: ReadonlySet<string>;
   type: "edit-order";
   callbackFn: (value: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
   orderData: Order;

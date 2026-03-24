@@ -25,6 +25,7 @@ import {
 import type { OrderFilters, CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
 import { useOrdersFilters } from "@/hooks/use-orders";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
+import type { SelectedCollectionItems } from "@/hooks/use-selection";
 
 const SORTABLE_COLUMNS: SortableColumn[] = [
   { id: "title", label: "Order" },
@@ -47,30 +48,26 @@ const SORTABLE_COLUMNS: SortableColumn[] = [
 ];
 
 export interface OrdersToolbarProps {
-  readonly selectedOrderIds: Set<string>;
-  readonly selectedItemData: {
-    collectionIds: Set<string>;
-    orderIds: Set<string>;
-  };
+  readonly selectedOrderIds: ReadonlySet<string>;
+  readonly selectedItems: SelectedCollectionItems;
   readonly clearSelections: () => void;
   readonly onMerge: (
     values: NewOrder,
     cascadeOptions: CascadeOptions,
-    orderIds: Set<string>,
+    orderIds: ReadonlySet<string>,
   ) => Promise<void>;
   readonly onSplit: (
     values: NewOrder,
     cascadeOptions: CascadeOptions,
-    collectionIds: Set<string>,
-    orderIds: Set<string>,
+    collectionIds: ReadonlySet<string>,
   ) => Promise<void>;
-  readonly onDeleteOrders: (orderIds: Set<string>) => Promise<void>;
+  readonly onDeleteOrders: (orderIds: ReadonlySet<string>) => Promise<void>;
   readonly onMoveItem: (
     targetOrderId: string,
-    collectionIds: Set<string>,
-    orderIds: Set<string>,
+    collectionIds: ReadonlySet<string>,
+    orderIds?: ReadonlySet<string>,
   ) => Promise<void>;
-  readonly onDeleteItems: (collectionIds: Set<string>, orderIds: Set<string>) => Promise<void>;
+  readonly onDeleteItems: (collectionIds: ReadonlySet<string>) => Promise<void>;
   readonly isMerging: boolean;
   readonly isSplitting: boolean;
   readonly isDeletingOrders: boolean;
@@ -80,7 +77,7 @@ export interface OrdersToolbarProps {
 
 export function OrdersToolbar({
   selectedOrderIds,
-  selectedItemData,
+  selectedItems,
   clearSelections,
   onMerge,
   onSplit,
@@ -120,18 +117,16 @@ export function OrdersToolbar({
     }
   };
 
-  const isActionBarOpen = selectedOrderIds.size > 0 || selectedItemData.collectionIds.size > 0;
+  const isActionBarOpen = selectedOrderIds.size > 0 || selectedItems.collectionIds.size > 0;
 
   const selectionText = (() => {
     const parts: string[] = [];
     if (selectedOrderIds.size > 0) {
       parts.push(`${selectedOrderIds.size} ${selectedOrderIds.size === 1 ? "order" : "orders"}`);
     }
-    if (selectedItemData.collectionIds.size > 0) {
+    if (selectedItems.collectionIds.size > 0) {
       parts.push(
-        `${selectedItemData.collectionIds.size} ${
-          selectedItemData.collectionIds.size === 1 ? "item" : "items"
-        }`,
+        `${selectedItems.collectionIds.size} ${selectedItems.collectionIds.size === 1 ? "item" : "items"}`,
       );
     }
     return parts.join(", ");
@@ -200,7 +195,7 @@ export function OrdersToolbar({
           <UnifiedItemMoveForm
             renderTrigger={
               <ActionBarItem
-                disabled={selectedItemData.collectionIds.size === 0 || isMovingItems || isSplitting}
+                disabled={selectedItems.collectionIds.size === 0 || isMovingItems || isSplitting}
                 onSelect={(e) => e.preventDefault()}
                 variant="default"
               >
@@ -210,7 +205,7 @@ export function OrdersToolbar({
                 </span>
               </ActionBarItem>
             }
-            selectedItemData={selectedItemData}
+            selectedItems={selectedItems}
             onMoveToExisting={onMoveItem}
             onMoveToNew={onSplit}
             clearSelections={clearSelections}
@@ -243,7 +238,7 @@ export function OrdersToolbar({
           <ConfirmationPopover
             trigger={
               <ActionBarItem
-                disabled={selectedItemData.collectionIds.size === 0 || isDeletingItems}
+                disabled={selectedItems.collectionIds.size === 0 || isDeletingItems}
                 onSelect={(e) => e.preventDefault()}
                 variant="destructive"
               >
@@ -258,9 +253,9 @@ export function OrdersToolbar({
             }
             title="Delete the selected items?"
             tooltipContent='Items with "Owned" status will not be deleted. You can delete owned items in the collection tab.'
-            disabled={selectedItemData.collectionIds.size === 0 || isDeletingItems}
+            disabled={selectedItems.collectionIds.size === 0 || isDeletingItems}
             onConfirm={async () => {
-              await onDeleteItems(selectedItemData.collectionIds, selectedItemData.orderIds);
+              await onDeleteItems(selectedItems.collectionIds);
               clearSelections();
             }}
           />

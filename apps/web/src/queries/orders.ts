@@ -111,7 +111,7 @@ export async function mergeOrders(
 
 export async function splitOrders(
   values: NewOrder,
-  collectionIds: Set<string>,
+  collectionIds: ReadonlySet<string>,
   cascadeOptions: CascadeOptions,
 ) {
   const { data, error } = await app.api.orders.split.post({
@@ -168,14 +168,16 @@ export async function deleteOrderItems(collectionIds: Set<string>) {
 
 export async function moveItem(
   targetOrderId: string,
-  collectionIds: Set<string>,
-  orderIds: Set<string>,
-) {
-  const { error } = await app.api.orders["move-items"].put({
+  collectionIds: ReadonlySet<string>,
+  orderIds?: ReadonlySet<string>,
+): Promise<void> {
+  const moveItemPayload = {
     targetOrderId,
     collectionIds: Array.from(collectionIds),
-    orderIds: Array.from(orderIds),
-  });
+    orderIds: Array.from(orderIds ?? []),
+  };
+
+  const { error } = await app.api.orders["move-items"].put(moveItemPayload);
 
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to move items"));

@@ -19,10 +19,12 @@ import { createCollectionColumns } from "./collection-columns";
 import { SyncSheetButton } from "@/components/sync/sync-sheet-button";
 import {
   useCollectionFilters,
+  useCollectionOrderMutations,
   useCollectionQuery,
   useCollectionMutations,
 } from "@/hooks/use-collection";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
+import type { SelectedCollectionItems } from "@/hooks/use-selection";
 
 export const CollectionDataGrid = () => {
   const { filters, setFilters } = useCollectionFilters();
@@ -33,6 +35,13 @@ export const CollectionDataGrid = () => {
     isCollectionPending,
     isDeletingCollectionItems,
   } = useCollectionMutations();
+  const {
+    handleAddCollectionItemsToOrder,
+    handleAddCollectionItemsToNewOrder,
+    isCollectionOrderPending,
+    isMovingCollectionItems,
+    isSplittingCollectionItems,
+  } = useCollectionOrderMutations();
   const { currency, locale, dateFormat } = useUserPreferences();
 
   const limit = filters.limit ?? 10;
@@ -59,9 +68,28 @@ export const CollectionDataGrid = () => {
   const {
     rowSelection: collectionSelection,
     setRowSelection: setCollectionSelection,
-    getSelectedOrderIds: getSelectedCollectionIds,
+    selectedRowIds: selectedCollectionIds,
     clearSelections,
   } = useSelection();
+
+  const selectedItems = useMemo<SelectedCollectionItems>(() => {
+    const orderIds = new Set<string>();
+
+    for (const item of items) {
+      if (!selectedCollectionIds.has(item.id)) {
+        continue;
+      }
+
+      if (item.orderId) {
+        orderIds.add(item.orderId);
+      }
+    }
+
+    return {
+      collectionIds: selectedCollectionIds,
+      orderIds,
+    };
+  }, [items, selectedCollectionIds]);
 
   const [expandedRows, setExpandedRows] = useState<ExpandedState>({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
@@ -91,10 +119,13 @@ export const CollectionDataGrid = () => {
       createCollectionColumns({
         onEditCollectionItem: handleEditCollectionItem,
         onDeleteCollectionItems: handleDeleteCollectionItems,
+        onAddCollectionItemsToOrder: handleAddCollectionItemsToOrder,
+        onAddCollectionItemsToNewOrder: handleAddCollectionItemsToNewOrder,
         currency,
         locale,
         dateFormat,
         isCollectionPending,
+        isCollectionOrderPending,
       }),
     [
       currency,
@@ -102,7 +133,10 @@ export const CollectionDataGrid = () => {
       dateFormat,
       handleEditCollectionItem,
       handleDeleteCollectionItems,
+      handleAddCollectionItemsToOrder,
+      handleAddCollectionItemsToNewOrder,
       isCollectionPending,
+      isCollectionOrderPending,
     ],
   );
 
@@ -180,10 +214,14 @@ export const CollectionDataGrid = () => {
       <div className="flex w-full flex-wrap items-center gap-2">
         <div className="flex flex-1 flex-wrap items-center gap-2">
           <CollectionToolbar
-            selectedCollectionIds={getSelectedCollectionIds}
+            selectedItems={selectedItems}
             clearSelections={clearSelections}
             onDeleteCollectionItems={handleDeleteCollectionItems}
+            onAddCollectionItemsToOrder={handleAddCollectionItemsToOrder}
+            onAddCollectionItemsToNewOrder={handleAddCollectionItemsToNewOrder}
             isDeletingCollectionItems={isDeletingCollectionItems}
+            isAddingCollectionItemsToOrder={isMovingCollectionItems}
+            isCreatingCollectionOrder={isSplittingCollectionItems}
           />
           <DataGridColumnCombobox table={table} />
         </div>

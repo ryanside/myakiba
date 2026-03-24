@@ -47,41 +47,47 @@ import { Scroller } from "../ui/scroller";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import type { Currency, OrderStatus, ShippingMethod } from "@myakiba/contracts/shared/types";
 import { getCurrencyLocale } from "@/lib/locale";
+import type { SelectedCollectionItems } from "@/hooks/use-selection";
 
 type UnifiedItemMoveFormProps = {
-  renderTrigger: React.ReactElement;
-  selectedItemData: {
-    orderIds: Set<string>;
-    collectionIds: Set<string>;
-  };
+  readonly renderTrigger: React.ReactElement;
+  readonly selectedItems: SelectedCollectionItems;
   onMoveToExisting: (
     targetOrderId: string,
-    collectionIds: Set<string>,
-    orderIds: Set<string>,
+    collectionIds: ReadonlySet<string>,
+    orderIds?: ReadonlySet<string>,
   ) => Promise<void>;
   onMoveToNew: (
     values: NewOrder,
     cascadeOptions: CascadeOptions,
-    collectionIds: Set<string>,
-    orderIds: Set<string>,
+    collectionIds: ReadonlySet<string>,
   ) => Promise<void>;
-  clearSelections: () => void;
-  currency: Currency;
+  readonly clearSelections: () => void;
+  readonly currency: Currency;
+  readonly intent?: "move" | "add";
 };
 
 const ORDER_SEARCH_PAGE_SIZE = 20;
 
 export default function UnifiedItemMoveForm({
   renderTrigger,
-  selectedItemData,
+  selectedItems,
   onMoveToExisting,
   onMoveToNew,
   clearSelections,
   currency,
+  intent = "move",
 }: UnifiedItemMoveFormProps) {
   const [open, setOpen] = useState(false);
   const [moveMode, setMoveMode] = useState<"existing" | "new">("existing");
   const targetOrderListId = useId();
+  const sourceOrderIds = selectedItems.orderIds.size > 0 ? selectedItems.orderIds : undefined;
+  const selectedCount = selectedItems.collectionIds.size;
+  const actionLabel = intent === "add" ? "Assign" : "Move";
+  const dialogTitle = intent === "add" ? "Assign Order" : "Move Items";
+  const pendingActionLabel = intent === "add" ? "Assigning..." : "Moving...";
+  const existingSubmitLabel = intent === "add" ? "Assign Order" : "Move Items";
+  const newSubmitLabel = intent === "add" ? "Assign to New Order" : "Move to New Order";
 
   const userLocale = getCurrencyLocale(currency);
 
@@ -132,11 +138,7 @@ export default function UnifiedItemMoveForm({
       targetOrderId: "",
     },
     onSubmit: async ({ value }) => {
-      await onMoveToExisting(
-        value.targetOrderId,
-        selectedItemData.collectionIds,
-        selectedItemData.orderIds,
-      );
+      await onMoveToExisting(value.targetOrderId, selectedItems.collectionIds, sourceOrderIds);
       clearSelections();
       setOpen(false);
     },
@@ -178,34 +180,27 @@ export default function UnifiedItemMoveForm({
         miscFees: majorStringToMinorUnits(value.miscFees),
         notes: value.notes,
       };
-      await onMoveToNew(
-        transformedValue,
-        cascadeOptions,
-        selectedItemData.collectionIds,
-        selectedItemData.orderIds,
-      );
+      await onMoveToNew(transformedValue, cascadeOptions, selectedItems.collectionIds);
       clearSelections();
       setOpen(false);
     },
   });
-
-  const selectedCount = selectedItemData.collectionIds.size;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={renderTrigger} />
       <DialogContent className="sm:max-w-lg!">
         <DialogHeader>
-          <DialogTitle>Move Items</DialogTitle>
+          <DialogTitle>{dialogTitle}</DialogTitle>
           <DialogDescription>
-            Move the selected {selectedCount} item{selectedCount !== 1 ? "s" : ""} to an existing
-            order or create a new order.
+            {actionLabel} the selected {selectedCount} item{selectedCount !== 1 ? "s" : ""} to an
+            existing order or create a new order.
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4">
           <div className="grid gap-2">
-            <Label>Move to</Label>
+            <Label>Destination</Label>
             <RadioGroup
               value={moveMode}
               onValueChange={(value) => setMoveMode(value as "existing" | "new")}
@@ -369,7 +364,7 @@ export default function UnifiedItemMoveForm({
                   selector={(state) => [state.canSubmit, state.isSubmitting]}
                   children={([canSubmit, isSubmitting]) => (
                     <Button type="submit" disabled={!canSubmit || isSubmitting} variant="default">
-                      {isSubmitting ? "Moving..." : "Move Items"}
+                      {isSubmitting ? pendingActionLabel : existingSubmitLabel}
                     </Button>
                   )}
                 />
@@ -747,7 +742,7 @@ export default function UnifiedItemMoveForm({
                       {isSubmitting ? (
                         <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />
                       ) : (
-                        "Move to New Order"
+                        newSubmitLabel
                       )}
                     </Button>
                   )}

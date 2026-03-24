@@ -70,8 +70,8 @@ export default function OrdersDataGrid() {
     setRowSelection,
     itemSelection,
     setItemSelection,
-    getSelectedOrderIds,
-    getSelectedItemData,
+    selectedRowIds,
+    selectedNestedItemData,
     clearSelections,
   } = useSelection();
 
@@ -201,8 +201,8 @@ export default function OrdersDataGrid() {
       <div className="flex w-full flex-wrap items-center gap-2">
         <div className="flex flex-1 flex-wrap items-center gap-2">
           <OrdersToolbar
-            selectedOrderIds={getSelectedOrderIds}
-            selectedItemData={getSelectedItemData}
+            selectedOrderIds={selectedRowIds}
+            selectedItems={selectedNestedItemData}
             clearSelections={clearSelections}
             onMerge={handleMerge}
             onSplit={handleSplit}

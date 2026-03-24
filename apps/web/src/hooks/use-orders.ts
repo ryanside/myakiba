@@ -668,7 +668,7 @@ export function useOrdersMutations() {
     }: {
       targetOrderId: string;
       collectionIds: Set<string>;
-      orderIds: Set<string>;
+      orderIds?: Set<string>;
     }) => moveItem(targetOrderId, collectionIds, orderIds),
     onSuccess: (_data, { collectionIds }) => {
       toast.success(
@@ -705,19 +705,25 @@ export function useOrdersMutations() {
     async (
       values: NewOrder,
       cascadeOptions: CascadeOptions,
-      orderIds: Set<string>,
+      orderIds: ReadonlySet<string>,
     ): Promise<void> => {
+      const mutableOrderIds = new Set(orderIds);
+
       if (!filtersActive) {
-        mergeOrdersMutation.mutate({ values, orderIds, cascadeOptions });
+        mergeOrdersMutation.mutate({ values, orderIds: mutableOrderIds, cascadeOptions });
         return;
       }
 
-      const ids = Array.from(orderIds);
+      const ids = Array.from(mutableOrderIds);
       const loadingToastId = toast.loading("Merging orders...");
       setPendingOrderIdList((previous) => addPendingIds(previous, ids));
 
       try {
-        await mergeOrdersMutation.mutateAsync({ values, orderIds, cascadeOptions });
+        await mergeOrdersMutation.mutateAsync({
+          values,
+          orderIds: mutableOrderIds,
+          cascadeOptions,
+        });
       } finally {
         toast.dismiss(loadingToastId);
         setPendingOrderIdList((previous) => removePendingIds(previous, ids));
@@ -730,19 +736,29 @@ export function useOrdersMutations() {
     async (
       values: NewOrder,
       cascadeOptions: CascadeOptions,
-      collectionIds: Set<string>,
+      collectionIds: ReadonlySet<string>,
     ): Promise<void> => {
+      const mutableCollectionIds = new Set(collectionIds);
+
       if (!filtersActive) {
-        splitOrdersMutation.mutate({ values, collectionIds, cascadeOptions });
+        splitOrdersMutation.mutate({
+          values,
+          collectionIds: mutableCollectionIds,
+          cascadeOptions,
+        });
         return;
       }
 
-      const ids = Array.from(collectionIds);
+      const ids = Array.from(mutableCollectionIds);
       const loadingToastId = toast.loading("Creating order...");
       setPendingCollectionItemIdList((previous) => addPendingIds(previous, ids));
 
       try {
-        await splitOrdersMutation.mutateAsync({ values, collectionIds, cascadeOptions });
+        await splitOrdersMutation.mutateAsync({
+          values,
+          collectionIds: mutableCollectionIds,
+          cascadeOptions,
+        });
       } finally {
         toast.dismiss(loadingToastId);
         setPendingCollectionItemIdList((previous) => removePendingIds(previous, ids));
@@ -770,19 +786,20 @@ export function useOrdersMutations() {
     [],
   );
 
-  const handleDeleteOrders = useCallback(async (orderIds: Set<string>): Promise<void> => {
+  const handleDeleteOrders = useCallback(async (orderIds: ReadonlySet<string>): Promise<void> => {
     const deleteOrdersMutationState = deleteOrdersMutationRef.current;
+    const mutableOrderIds = new Set(orderIds);
     if (!filtersActiveRef.current) {
-      deleteOrdersMutationState.mutate(orderIds);
+      deleteOrdersMutationState.mutate(mutableOrderIds);
       return;
     }
 
-    const ids = Array.from(orderIds);
+    const ids = Array.from(mutableOrderIds);
     const loadingToastId = toast.loading("Deleting orders...");
     setPendingOrderIdList((previous) => addPendingIds(previous, ids));
 
     try {
-      await deleteOrdersMutationState.mutateAsync(orderIds);
+      await deleteOrdersMutationState.mutateAsync(mutableOrderIds);
     } finally {
       toast.dismiss(loadingToastId);
       setPendingOrderIdList((previous) => removePendingIds(previous, ids));
@@ -822,18 +839,20 @@ export function useOrdersMutations() {
   }, []);
 
   const handleDeleteItems = useCallback(
-    async (collectionIds: Set<string>): Promise<void> => {
+    async (collectionIds: ReadonlySet<string>): Promise<void> => {
+      const mutableCollectionIds = new Set(collectionIds);
+
       if (!filtersActive) {
-        deleteItemsMutation.mutate(collectionIds);
+        deleteItemsMutation.mutate(mutableCollectionIds);
         return;
       }
 
-      const ids = Array.from(collectionIds);
+      const ids = Array.from(mutableCollectionIds);
       const loadingToastId = toast.loading("Deleting items...");
       setPendingCollectionItemIdList((previous) => addPendingIds(previous, ids));
 
       try {
-        await deleteItemsMutation.mutateAsync(collectionIds);
+        await deleteItemsMutation.mutateAsync(mutableCollectionIds);
       } finally {
         toast.dismiss(loadingToastId);
         setPendingCollectionItemIdList((previous) => removePendingIds(previous, ids));
@@ -845,20 +864,31 @@ export function useOrdersMutations() {
   const handleMoveItem = useCallback(
     async (
       targetOrderId: string,
-      collectionIds: Set<string>,
-      orderIds: Set<string>,
+      collectionIds: ReadonlySet<string>,
+      orderIds?: ReadonlySet<string>,
     ): Promise<void> => {
+      const mutableCollectionIds = new Set(collectionIds);
+      const mutableOrderIds = orderIds ? new Set(orderIds) : undefined;
+
       if (!filtersActive) {
-        moveItemMutation.mutate({ targetOrderId, collectionIds, orderIds });
+        moveItemMutation.mutate({
+          targetOrderId,
+          collectionIds: mutableCollectionIds,
+          orderIds: mutableOrderIds,
+        });
         return;
       }
 
-      const ids = Array.from(collectionIds);
+      const ids = Array.from(mutableCollectionIds);
       const loadingToastId = toast.loading("Moving items...");
       setPendingCollectionItemIdList((previous) => addPendingIds(previous, ids));
 
       try {
-        await moveItemMutation.mutateAsync({ targetOrderId, collectionIds, orderIds });
+        await moveItemMutation.mutateAsync({
+          targetOrderId,
+          collectionIds: mutableCollectionIds,
+          orderIds: mutableOrderIds,
+        });
       } finally {
         toast.dismiss(loadingToastId);
         setPendingCollectionItemIdList((previous) => removePendingIds(previous, ids));
