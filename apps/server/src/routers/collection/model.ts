@@ -3,6 +3,7 @@ import {
   CATEGORIES,
   COLLECTION_STATUSES,
   CONDITIONS,
+  DEFAULT_LIMIT,
   SHIPPING_METHODS,
 } from "@myakiba/contracts/shared/constants";
 import { collectionSearchSortSchema, sortDirectionSchema } from "@myakiba/contracts/search/schema";
@@ -17,7 +18,7 @@ const commaSeparatedConditionArray = createCommaSeparatedEnumArraySchema(CONDITI
 const commaSeparatedCategoryArray = createCommaSeparatedEnumArraySchema(CATEGORIES);
 
 export const collectionQuerySchema = collectionSearchSchema.extend({
-  limit: z.coerce.number().optional().default(10),
+  limit: z.coerce.number().optional().default(DEFAULT_LIMIT),
   offset: z.coerce.number().optional().default(0),
   sort: collectionSearchSortSchema.optional().default("createdAt"),
   order: sortDirectionSchema.optional().default("desc"),

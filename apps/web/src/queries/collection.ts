@@ -1,10 +1,11 @@
 import { app, getErrorMessage } from "@/lib/treaty-client";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
+import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 
 export async function getCollection(filters: CollectionFilters) {
   const queryParams = {
-    limit: filters.limit ?? 10,
+    limit: filters.limit ?? DEFAULT_LIMIT,
     offset: filters.offset ?? 0,
     sort: filters.sort ?? "createdAt",
     order: filters.order ?? "desc",

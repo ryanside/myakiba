@@ -18,10 +18,7 @@ import type { SyncSessionStatus, SyncType } from "@myakiba/contracts/shared/type
 import { fetchSyncSessions } from "@/queries/sync";
 import { SESSION_STATUS_CONFIG, SYNC_TYPE_CONFIG } from "@/lib/sync";
 import { formatRelativeTimeToNow } from "@/lib/date-display";
-import {
-  ACTIVE_SYNC_SESSION_STATUS_SET,
-  SYNC_WIDGET_RECENT_LIMIT,
-} from "@myakiba/contracts/sync/constants";
+import { ACTIVE_SYNC_SESSION_STATUS_SET } from "@myakiba/contracts/sync/constants";
 import { useSyncJobStatusQuery } from "@/hooks/use-sync-job-status-query";
 import { PulsingDot } from "@/components/ui/pulsing-dot";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,8 +31,8 @@ export default function SyncStatusWidget() {
     isError: isRecentError,
     error: recentError,
   } = useQuery({
-    queryKey: ["syncSessions", 1, SYNC_WIDGET_RECENT_LIMIT, undefined, undefined] as const,
-    queryFn: () => fetchSyncSessions({ page: 1, limit: SYNC_WIDGET_RECENT_LIMIT }),
+    queryKey: ["syncSessions", 1, 5, undefined, undefined] as const,
+    queryFn: () => fetchSyncSessions({ page: 1, limit: 5 }),
     staleTime: 30_000,
     refetchOnWindowFocus: true,
   });

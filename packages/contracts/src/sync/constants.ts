@@ -8,9 +8,9 @@ export const ACTIVE_SYNC_SESSION_STATUS_SET: ReadonlySet<SyncSessionStatusValue>
   ACTIVE_SYNC_SESSION_STATUSES,
 );
 
-export const SYNC_WIDGET_RECENT_LIMIT = 5;
-export const SYNC_SESSION_SUBGRID_PAGE_SIZE = 5;
-export const SYNC_SESSION_DETAIL_PAGE_SIZE = 10;
+export const SYNC_WIDGET_RECENT_LIMIT = 6;
+export const SYNC_SESSION_SUBGRID_PAGE_SIZE = 6;
+export const SYNC_SESSION_DETAIL_PAGE_SIZE = 12;
 
 export const JOB_STATUS_TTL_SECONDS = 600;
 export const JOB_STATUS_KEY_PREFIX = "job";

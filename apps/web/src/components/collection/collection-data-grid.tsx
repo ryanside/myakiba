@@ -15,18 +15,32 @@ import { ScrollArea, ScrollBar } from "../ui/scroll-area";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { DataGridColumnCombobox } from "../ui/data-grid-column-combobox";
 import { CollectionToolbar } from "./collection-toolbar";
+import { CollectionCardGrid } from "./collection-card-grid";
+import { CollectionGalleryGrid } from "./collection-gallery-grid";
 import { createCollectionColumns } from "./collection-columns";
 import { SyncSheetButton } from "@/components/sync/sync-sheet-button";
+import { ViewToggle, type ViewMode } from "@/components/ui/view-toggle";
+import { GridSizeSlider } from "@/components/ui/grid-size-slider";
+import { GalleryLayoutToggle, type GalleryLayout } from "@/components/ui/gallery-layout-toggle";
 import {
   useCollectionFilters,
   useCollectionOrderMutations,
   useCollectionQuery,
   useCollectionMutations,
 } from "@/hooks/use-collection";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type { SelectedCollectionItems } from "@/hooks/use-selection";
+import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 
 export const CollectionDataGrid = () => {
+  const [viewMode, setViewMode] = useLocalStorage<ViewMode>("collection:viewMode", "compact");
+  const [cardWidth, setCardWidth] = useLocalStorage<number>("collection:cardWidth", 180);
+  const [galleryLayout, setGalleryLayout] = useLocalStorage<GalleryLayout>(
+    "collection:galleryLayout",
+    "square",
+  );
+  const isTableView = viewMode === "compact" || viewMode === "table";
   const { filters, setFilters } = useCollectionFilters();
   const { items, totalCount, isPending } = useCollectionQuery();
   const {
@@ -44,7 +58,7 @@ export const CollectionDataGrid = () => {
   } = useCollectionOrderMutations();
   const { currency, locale, dateFormat } = useUserPreferences();
 
-  const limit = filters.limit ?? 10;
+  const limit = filters.limit ?? DEFAULT_LIMIT;
   const offset = filters.offset ?? 0;
 
   const pagination = useMemo<PaginationState>(
@@ -223,17 +237,26 @@ export const CollectionDataGrid = () => {
             isAddingCollectionItemsToOrder={isMovingCollectionItems}
             isCreatingCollectionOrder={isSplittingCollectionItems}
           />
-          <DataGridColumnCombobox table={table} />
+          {isTableView ? <DataGridColumnCombobox table={table} /> : null}
         </div>
+        <ViewToggle value={viewMode} onValueChange={setViewMode} />
         <SyncSheetButton syncType="collection" label="Add" className="ml-auto" />
       </div>
+      {viewMode === "grid" || viewMode === "gallery" ? (
+        <div className="flex w-full items-center justify-center gap-3">
+          <GridSizeSlider value={cardWidth} onValueChange={setCardWidth} min={120} max={300} />
+          {viewMode === "gallery" ? (
+            <GalleryLayoutToggle value={galleryLayout} onValueChange={setGalleryLayout} />
+          ) : null}
+        </div>
+      ) : null}
       <div className="space-y-4">
         <DataGrid
           table={table}
           isLoading={isPending}
           recordCount={totalCount}
           tableLayout={{
-            dense: true,
+            dense: viewMode === "compact",
             columnsPinnable: true,
             columnsResizable: true,
             columnsMovable: true,
@@ -241,12 +264,48 @@ export const CollectionDataGrid = () => {
           }}
         >
           <div className="w-full space-y-2.5">
-            <DataGridContainer>
-              <ScrollArea>
-                <DataGridTable />
-                <ScrollBar orientation="horizontal" />
-              </ScrollArea>
-            </DataGridContainer>
+            {isTableView ? (
+              <DataGridContainer>
+                <ScrollArea>
+                  <DataGridTable />
+                  <ScrollBar orientation="horizontal" />
+                </ScrollArea>
+              </DataGridContainer>
+            ) : viewMode === "gallery" ? (
+              <CollectionGalleryGrid
+                items={items}
+                tileSize={cardWidth}
+                galleryLayout={galleryLayout}
+                rowSelection={collectionSelection}
+                onRowSelectionChange={setCollectionSelection}
+                onEditCollectionItem={handleEditCollectionItem}
+                onDeleteCollectionItems={handleDeleteCollectionItems}
+                onAddCollectionItemsToOrder={handleAddCollectionItemsToOrder}
+                onAddCollectionItemsToNewOrder={handleAddCollectionItemsToNewOrder}
+                currency={currency}
+                dateFormat={dateFormat}
+                isCollectionPending={isCollectionPending}
+                isCollectionOrderPending={isCollectionOrderPending}
+                isLoading={isPending}
+              />
+            ) : (
+              <CollectionCardGrid
+                items={items}
+                cardWidth={cardWidth}
+                rowSelection={collectionSelection}
+                onRowSelectionChange={setCollectionSelection}
+                onEditCollectionItem={handleEditCollectionItem}
+                onDeleteCollectionItems={handleDeleteCollectionItems}
+                onAddCollectionItemsToOrder={handleAddCollectionItemsToOrder}
+                onAddCollectionItemsToNewOrder={handleAddCollectionItemsToNewOrder}
+                currency={currency}
+                locale={locale}
+                dateFormat={dateFormat}
+                isCollectionPending={isCollectionPending}
+                isCollectionOrderPending={isCollectionOrderPending}
+                isLoading={isPending}
+              />
+            )}
             <div className="flex items-center justify-between">
               <div className="flex-1 text-sm text-muted-foreground">
                 {table.getFilteredSelectedRowModel().rows.length} of{" "}

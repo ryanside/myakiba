@@ -13,10 +13,11 @@ import type {
   PaginatedResult,
 } from "@myakiba/contracts/orders/types";
 import type { OrderStatus } from "@myakiba/contracts/shared/types";
+import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 
 export async function getOrders(filters: OrderFilters): Promise<OrderListItem[]> {
   const queryParams = {
-    limit: filters.limit ?? 10,
+    limit: filters.limit ?? DEFAULT_LIMIT,
     offset: filters.offset ?? 0,
     sort: filters.sort ?? "createdAt",
     order: filters.order ?? "desc",
