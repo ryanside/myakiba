@@ -23,6 +23,9 @@ import {
   SYNC_WIDGET_RECENT_LIMIT,
 } from "@myakiba/contracts/sync/constants";
 import { useSyncJobStatusQuery } from "@/hooks/use-sync-job-status-query";
+import { PulsingDot } from "@/components/ui/pulsing-dot";
+import { Skeleton } from "@/components/ui/skeleton";
+import { SparkleTrail } from "@/components/ui/sparkle-trail";
 
 export default function SyncStatusWidget() {
   const {
@@ -61,7 +64,11 @@ export default function SyncStatusWidget() {
   const [open, setOpen] = useState(false);
 
   if (isRecentPending || (!hasSessions && !isRecentError)) {
-    return null;
+    return (
+      <Button size="sm" variant="outline" className="mx-2 w-41.5 justify-start!">
+        <Skeleton className="w-41.5 h-4" />
+      </Button>
+    );
   }
 
   const closePopover = () => setOpen(false);
@@ -77,9 +84,9 @@ export default function SyncStatusWidget() {
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
           render={
-            <Button size="sm" variant="outline" className="mx-2">
+            <Button size="sm" variant="outline" className="mx-2 w-41.5 justify-start!">
               {hasActive ? (
-                <span className="flex items-center gap-2">
+                <span className="flex w-full items-center gap-2">
                   <PulsingDot />
                   <ShimmeringText
                     text={
@@ -93,6 +100,7 @@ export default function SyncStatusWidget() {
                     className="text-xs font-medium"
                     spread={1.5}
                   />
+                  <SparkleTrail />
                 </span>
               ) : (
                 <span className="flex items-center gap-1.5">
@@ -127,9 +135,10 @@ export default function SyncStatusWidget() {
                   </div>
                 )}
 
+                {hasActive && finishedSessions.length > 0 && <div className="border-t" />}
+
                 {finishedSessions.length > 0 && (
                   <div className="px-4 pt-3 pb-2">
-                    {hasActive && <div className="mb-3 -mx-4 border-t" />}
                     <p className="mb-2.5 text-[0.6875rem] font-medium tracking-wide text-muted-foreground">
                       Recent
                     </p>
@@ -165,15 +174,6 @@ export default function SyncStatusWidget() {
         </PopoverContent>
       </Popover>
     </>
-  );
-}
-
-function PulsingDot() {
-  return (
-    <span className="relative flex size-2">
-      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-      <span className="relative inline-flex size-2 rounded-full bg-primary" />
-    </span>
   );
 }
 
