@@ -29,7 +29,6 @@ export type SyncSessionItemRow = {
   readonly itemExternalId: number;
   readonly status: SyncSessionItemStatus;
   readonly errorReason: string | null;
-  readonly retryCount: number;
   readonly createdAt: Date;
   readonly updatedAt: Date;
 };

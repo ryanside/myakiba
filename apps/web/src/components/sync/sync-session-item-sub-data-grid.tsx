@@ -1,32 +1,20 @@
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Loading03Icon, RedoIcon } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
-import { keepPreviousData, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
 import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
 import { getCoreRowModel, type PaginationState, useReactTable } from "@tanstack/react-table";
-import { toast } from "sonner";
 import type { EnrichedSyncSessionItemRow } from "@myakiba/contracts/sync/types";
-import type { SyncSessionStatus } from "@myakiba/contracts/shared/types";
 import { SYNC_SESSION_SUBGRID_PAGE_SIZE } from "@myakiba/contracts/sync/constants";
-import { fetchSyncSessionDetail, retrySyncFailedItems } from "@/queries/sync";
+import { fetchSyncSessionDetail } from "@/queries/sync";
 import { createSyncSessionItemSubColumns } from "./sync-session-item-sub-columns";
 
 interface SyncSessionItemSubDataGridProps {
   readonly sessionId: string;
-  readonly sessionStatus: SyncSessionStatus;
-  readonly failCount: number;
 }
 
-export function SyncSessionItemSubDataGrid({
-  sessionId,
-  sessionStatus,
-  failCount,
-}: SyncSessionItemSubDataGridProps) {
-  const queryClient = useQueryClient();
+export function SyncSessionItemSubDataGrid({ sessionId }: SyncSessionItemSubDataGridProps) {
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: SYNC_SESSION_SUBGRID_PAGE_SIZE,
@@ -47,25 +35,9 @@ export function SyncSessionItemSubDataGrid({
     staleTime: 30_000,
   });
 
-  const retryAllMutation = useMutation({
-    mutationFn: () => retrySyncFailedItems(sessionId),
-    onSuccess: (data) => {
-      toast.success(`Retrying ${data.itemCount} failed items...`);
-      void queryClient.invalidateQueries({ queryKey: ["syncSessions"] });
-      void queryClient.invalidateQueries({
-        queryKey: ["syncSessionDetail", sessionId],
-      });
-    },
-    onError: (error: Error) => {
-      toast.error("Failed to retry.", { description: error.message });
-    },
-  });
-
   const responseData = detailData;
   const items = responseData?.session?.items ?? [];
   const totalItems = responseData?.totalItems ?? 0;
-
-  const isRetryable = (sessionStatus === "failed" || sessionStatus === "partial") && failCount > 0;
 
   const columns = useMemo(() => createSyncSessionItemSubColumns(), []);
 
@@ -91,24 +63,12 @@ export function SyncSessionItemSubDataGrid({
   }
 
   return (
-    <div className="bg-muted/30 p-4" onClick={(e) => e.stopPropagation()}>
-      {isRetryable && (
-        <div className="mb-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => retryAllMutation.mutate()}
-            disabled={retryAllMutation.isPending}
-          >
-            {retryAllMutation.isPending ? (
-              <HugeiconsIcon icon={Loading03Icon} className="size-3.5 animate-spin" />
-            ) : (
-              <HugeiconsIcon icon={RedoIcon} className="size-3.5" />
-            )}
-            Retry all failed ({failCount})
-          </Button>
-        </div>
-      )}
+    <div
+      role="presentation"
+      className="bg-muted/30 p-4"
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.stopPropagation()}
+    >
       <DataGrid
         table={subTable}
         recordCount={totalItems}

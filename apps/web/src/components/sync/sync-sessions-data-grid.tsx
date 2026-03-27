@@ -48,11 +48,7 @@ export function SyncSessionsDataGrid({
     () =>
       createSyncSessionColumns({
         expandedContent: (session: SyncSessionRow) => (
-          <SyncSessionItemSubDataGrid
-            sessionId={session.id}
-            sessionStatus={session.status}
-            failCount={session.failCount}
-          />
+          <SyncSessionItemSubDataGrid sessionId={session.id} />
         ),
       }),
     [],

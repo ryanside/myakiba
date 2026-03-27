@@ -77,13 +77,3 @@ export async function fetchSyncSessionDetail(
   }
   return data;
 }
-
-export async function retrySyncFailedItems(syncSessionId: string) {
-  const { data, error } = await app.api.sync.retry.post({
-    syncSessionId,
-  });
-  if (error) {
-    throw new Error(getErrorMessage(error, "Failed to retry failed items"));
-  }
-  return data;
-}

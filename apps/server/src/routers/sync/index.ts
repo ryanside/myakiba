@@ -149,13 +149,9 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       } = result;
 
       const itemExternalIdsToTrack = itemsToScrape.map((i) => i.itemExternalId);
-      const csvItemMetadata = new Map(
-        itemsToScrape.map(({ itemExternalId, ...metadata }) => [itemExternalId, metadata]),
-      );
 
       const { data: syncSessionId, error: syncSessionError } = await tryCatch(
         SyncService.createSyncSession(user.id, "csv", itemExternalIdsToTrack, {
-          itemMetadata: csvItemMetadata,
           existingItemExternalIds,
         }),
       );
@@ -415,22 +411,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       const orderItemExternalIdsToTrack = itemsToScrape.map((i) => i.itemExternalId);
       const existingOrderItemExternalIds = itemsToInsert.map((i) => i.itemExternalId);
-      const orderItemMetadata = new Map(
-        itemsToScrape.map((item) => [
-          item.itemExternalId,
-          {
-            price: item.price,
-            count: item.count,
-            status: item.status,
-            condition: item.condition,
-            shippingMethod: item.shippingMethod,
-            orderDate: item.orderDate,
-            paymentDate: item.paymentDate,
-            shippingDate: item.shippingDate,
-            collectionDate: item.collectionDate,
-          },
-        ]),
-      );
       const collectionItemsToInsert: CollectionInsertType[] = itemsToInsert
         .filter((item): item is UpdatedSyncOrderItem & { itemId: string } => item.itemId !== null)
         .map((item) => ({
@@ -455,8 +435,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       const { data: syncSessionId, error: syncSessionError } = await tryCatch(
         SyncService.createSyncSession(user.id, "order", orderItemExternalIdsToTrack, {
-          orderPayload: order,
-          itemMetadata: orderItemMetadata,
+          orderId,
           existingItemExternalIds: existingOrderItemExternalIds,
         }),
       );
@@ -759,22 +738,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       const orderItemExternalIdsToTrack = itemsToScrape.map((item) => item.itemExternalId);
       const existingOrderItemExternalIds = itemsToInsert.map((item) => item.itemExternalId);
-      const orderItemMetadata = new Map(
-        itemsToScrape.map((item) => [
-          item.itemExternalId,
-          {
-            price: item.price,
-            count: item.count,
-            status: item.status,
-            condition: item.condition,
-            shippingMethod: item.shippingMethod,
-            orderDate: item.orderDate,
-            paymentDate: item.paymentDate,
-            shippingDate: item.shippingDate,
-            collectionDate: item.collectionDate,
-          },
-        ]),
-      );
       const collectionItemsToInsert: CollectionInsertType[] = itemsToInsert
         .filter((item): item is UpdatedSyncOrderItem & { itemId: string } => item.itemId !== null)
         .map((item) => ({
@@ -800,8 +763,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       const { data: syncSessionId, error: syncSessionError } = await tryCatch(
         SyncService.createSyncSession(user.id, "order-item", orderItemExternalIdsToTrack, {
           orderId: existingOrder.id,
-          orderPayload: orderDetails,
-          itemMetadata: orderItemMetadata,
           existingItemExternalIds: existingOrderItemExternalIds,
         }),
       );
@@ -1042,25 +1003,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       const collectionItemExternalIdsToTrack = itemsToScrape.map((i) => i.itemExternalId);
       const existingCollectionItemExternalIds = itemsToInsert.map((i) => i.itemExternalId);
-      const collectionItemMetadata = new Map(
-        itemsToScrape.map((item) => [
-          item.itemExternalId,
-          {
-            price: item.price,
-            count: item.count,
-            score: item.score,
-            shop: item.shop,
-            orderDate: item.orderDate,
-            paymentDate: item.paymentDate,
-            shippingDate: item.shippingDate,
-            collectionDate: item.collectionDate,
-            shippingMethod: item.shippingMethod,
-            tags: item.tags,
-            condition: item.condition,
-            notes: item.notes,
-          },
-        ]),
-      );
       const collectionItemsToInsert: CollectionInsertType[] = itemsToInsert
         .filter((item): item is UpdatedSyncCollection & { itemId: string } => item.itemId !== null)
         .map((item) => ({
@@ -1083,7 +1025,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       const { data: syncSessionId, error: syncSessionError } = await tryCatch(
         SyncService.createSyncSession(user.id, "collection", collectionItemExternalIdsToTrack, {
-          itemMetadata: collectionItemMetadata,
           existingItemExternalIds: existingCollectionItemExternalIds,
         }),
       );
@@ -1366,65 +1307,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       query: z.object({
         page: z.string().optional(),
         limit: z.string().optional(),
-      }),
-      auth: true,
-    },
-  )
-  .post(
-    "/retry",
-    async ({ body, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
-      log.set({
-        action: "sync.retry",
-        user: { id: user.id },
-        sync: { sessionId: body.syncSessionId },
-      });
-
-      const { data: result, error } = await tryCatch(
-        SyncService.retryFailedItems(body.syncSessionId, user.id),
-      );
-
-      if (error) {
-        switch (error.message) {
-          case "SYNC_SESSION_NOT_FOUND":
-            log.set({ outcome: "not_found" });
-            return status(404, "Sync session not found");
-          case "NO_FAILED_ITEMS_TO_RETRY":
-            log.set({ outcome: "conflict" });
-            return status(409, "No failed items to retry");
-          case "ORDER_NOT_FOUND_FOR_RETRY":
-            log.set({ outcome: "not_found" });
-            return status(404, "Original order not found, please re-submit the sync");
-          default:
-            log.error(error, {
-              step: "retryFailedItems",
-              outcome: "error",
-              sync: { sessionId: body.syncSessionId },
-            });
-            return status(500, "Failed to retry failed items");
-        }
-      }
-
-      log.set({
-        outcome: "success",
-        sync: {
-          sessionId: body.syncSessionId,
-          jobId: result.jobId,
-        },
-        items: {
-          retried: result.itemCount,
-        },
-      });
-
-      return result;
-    },
-    {
-      body: z.object({
-        syncSessionId: z.string().min(1),
       }),
       auth: true,
     },
