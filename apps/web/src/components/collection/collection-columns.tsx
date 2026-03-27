@@ -157,7 +157,7 @@ export function createCollectionColumns({
       enableResizing: true,
       size: 450,
       meta: {
-        skeleton: <Skeleton className="h-9 w-2/3" />,
+        skeleton: <Skeleton className="h-6 my-1.5 w-2/3" />,
       },
     },
     {

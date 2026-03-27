@@ -3,12 +3,7 @@ import { betterAuth } from "@/middleware/better-auth";
 import { evlog } from "evlog/elysia";
 import DashboardService from "./service";
 import { tryCatch } from "@myakiba/utils/result";
-import * as z from "zod";
-
-const releaseCalendarQuerySchema = z.object({
-  month: z.coerce.number(),
-  year: z.coerce.number(),
-});
+import { monthYearQuerySchema } from "./model";
 
 const dashboardRouter = new Elysia({ prefix: "/dashboard" })
   .use(betterAuth)
@@ -57,7 +52,33 @@ const dashboardRouter = new Elysia({ prefix: "/dashboard" })
       log.set({ outcome: "success" });
       return { releaseCalendar };
     },
-    { query: releaseCalendarQuerySchema, auth: true },
+    { query: monthYearQuerySchema, auth: true },
+  )
+  .get(
+    "/monthly",
+    async ({ query, user, log }) => {
+      if (!user) return status(401, "Unauthorized");
+
+      log.set({
+        action: "get_monthly_dashboard",
+        user: { id: user.id },
+        query: { month: query.month, year: query.year },
+      });
+
+      const { data: monthly, error } = await tryCatch(
+        DashboardService.getMonthlyDashboard(user.id, query.month, query.year),
+      );
+
+      if (error) {
+        log.error(error, { step: "getMonthlyDashboard" });
+        log.set({ outcome: "error" });
+        return status(500, "Failed to get monthly dashboard data");
+      }
+
+      log.set({ outcome: "success" });
+      return monthly;
+    },
+    { query: monthYearQuerySchema, auth: true },
   );
 
 export default dashboardRouter;

@@ -91,7 +91,7 @@ export default function SyncStatusWidget() {
                         ? `Syncing ${totalActiveSynced}/${totalActiveItems}`
                         : "Syncing..."
                     }
-                    duration={2.5}
+                    duration={1}
                     repeat={true}
                     startOnView={false}
                     className="text-xs font-medium"

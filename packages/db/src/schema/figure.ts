@@ -46,10 +46,7 @@ export const item = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
-  (t) => [
-    index("item_title_idx").on(t.title),
-    uniqueIndex("item_source_external_id_idx").on(t.source, t.externalId),
-  ],
+  (t) => [uniqueIndex("item_source_external_id_idx").on(t.source, t.externalId)],
 );
 
 export const item_release = pgTable(
@@ -67,7 +64,14 @@ export const item_release = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
-  (t) => [index("item_release_item_id_date_idx").on(t.itemId, t.date.desc())],
+  (t) => [
+    index("item_release_item_id_date_created_at_idx").on(
+      t.itemId,
+      t.date.desc(),
+      t.createdAt.desc(),
+    ),
+    index("item_release_date_item_id_idx").on(t.date, t.itemId),
+  ],
 );
 
 export const entry = pgTable(
@@ -84,7 +88,7 @@ export const entry = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
-    index("entry_name_idx").on(t.name),
+    index("entry_name_category_idx").on(t.name, t.category),
     uniqueIndex("entry_source_external_id_idx").on(t.source, t.externalId),
   ],
 );
@@ -104,7 +108,7 @@ export const entry_to_item = pgTable(
   },
   (t) => [
     primaryKey({ columns: [t.entryId, t.itemId] }),
-    index("entry_to_item_entry_id_idx").on(t.entryId),
+    index("entry_to_item_item_id_idx").on(t.itemId),
   ],
 );
 
@@ -157,14 +161,9 @@ export const collection = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
-    // High-priority composite indexes
-    index("collection_user_id_status_idx").on(t.userId, t.status),
+    index("collection_user_id_status_created_at_idx").on(t.userId, t.status, t.createdAt.desc()),
     index("collection_user_id_item_id_idx").on(t.userId, t.itemId),
-    index("collection_user_id_order_id_idx").on(t.userId, t.orderId),
-    // Medium-priority single-column indexes
-    index("collection_collection_date_idx").on(t.collectionDate),
-    index("collection_payment_date_idx").on(t.paymentDate),
-    index("collection_created_at_idx").on(t.createdAt),
+    index("collection_order_id_user_id_idx").on(t.orderId, t.userId),
   ],
 );
 
@@ -204,12 +203,9 @@ export const order = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
-    // High-priority composite index
-    index("order_user_id_status_idx").on(t.userId, t.status),
-    // Medium-priority single-column index
-    index("order_release_date_idx").on(t.releaseDate),
-    // Text search index
-    index("order_title_idx").on(t.title),
+    index("order_user_id_release_date_idx").on(t.userId, t.releaseDate),
+    index("order_user_id_status_release_date_idx").on(t.userId, t.status, t.releaseDate),
+    index("order_user_id_created_at_idx").on(t.userId, t.createdAt.desc()),
   ],
 );
 
@@ -246,6 +242,7 @@ export const syncSession = pgTable(
     completedAt: timestamp("completed_at"),
   },
   (t) => [
+    index("sync_session_job_id_user_id_idx").on(t.jobId, t.userId),
     index("sync_session_user_id_status_idx").on(t.userId, t.status),
     index("sync_session_user_id_created_at_idx").on(t.userId, t.createdAt.desc()),
   ],

@@ -253,6 +253,7 @@ function RouteComponent() {
   }
 
   if (isError) {
+    console.error(error);
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-y-4">
         <div className="text-lg font-medium text-destructive">Error: {error.message}</div>

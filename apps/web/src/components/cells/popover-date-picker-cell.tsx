@@ -1,3 +1,4 @@
+import type { ReactElement } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useState } from "react";
@@ -6,12 +7,15 @@ import { parseDateOnly } from "@myakiba/utils/date-only";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import type { DateFormat } from "@myakiba/contracts/shared/types";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface PopoverDatePickerCellProps {
   value: string | null;
   dateFormat?: DateFormat;
   onSubmit: (newValue: string | null) => Promise<void>;
   disabled?: boolean;
+  trigger?: ReactElement;
+  triggerClassName?: string;
 }
 
 export function PopoverDatePickerCell({
@@ -19,6 +23,8 @@ export function PopoverDatePickerCell({
   dateFormat = "MM/DD/YYYY",
   onSubmit,
   disabled = false,
+  trigger,
+  triggerClassName,
 }: PopoverDatePickerCellProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dateValue = value ? parseDateOnly(value) : undefined;
@@ -35,20 +41,20 @@ export function PopoverDatePickerCell({
     setIsOpen(false);
   };
 
+  const defaultTrigger = (
+    <Button
+      variant="ghost"
+      data-empty={!dateValue}
+      className={cn("text-foreground pl-0", triggerClassName)}
+      disabled={disabled}
+    >
+      {value ? formatDateOnlyForDisplay(value, dateFormat) : "n/a"}
+    </Button>
+  );
+
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger
-        render={
-          <Button
-            variant="ghost"
-            data-empty={!dateValue}
-            className="text-foreground pl-0"
-            disabled={disabled}
-          >
-            {value ? formatDateOnlyForDisplay(value, dateFormat) : "n/a"}
-          </Button>
-        }
-      />
+      <PopoverTrigger render={trigger ?? defaultTrigger} />
       {isOpen && (
         <PopoverContent className="w-auto p-0" align="start">
           <Calendar

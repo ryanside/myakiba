@@ -141,7 +141,7 @@ export function createOrdersColumns({
       enableHiding: false,
       enableResizing: false,
       meta: {
-        skeleton: <Skeleton className="size-5 rounded-xs" />,
+        skeleton: <Skeleton className="size-4 rounded-xs" />,
       },
     },
     {
@@ -153,6 +153,7 @@ export function createOrdersColumns({
       enableHiding: false,
       enableResizing: false,
       meta: {
+        skeleton: <Skeleton className="size-4 rounded-sm ml-1.5" />,
         expandedContent: (row) => (
           <OrderItemSubDataGrid
             orderId={row.orderId}
@@ -198,7 +199,7 @@ export function createOrdersColumns({
       enableResizing: true,
       size: 320,
       meta: {
-        skeleton: <Skeleton className="h-8.5" />,
+        skeleton: <Skeleton className="h-6 my-1" />,
       },
     },
     {

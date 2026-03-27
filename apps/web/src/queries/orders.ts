@@ -211,3 +211,25 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus): P
     throw new Error(getErrorMessage(error, "Failed to update order status"));
   }
 }
+
+export type OrderDateField =
+  | "releaseDate"
+  | "orderDate"
+  | "paymentDate"
+  | "shippingDate"
+  | "collectionDate";
+
+export async function updateOrderDate(
+  orderId: string,
+  field: OrderDateField,
+  date: string | null,
+): Promise<void> {
+  const { error } = await app.api.orders({ orderId }).put({
+    order: { [field]: date },
+    cascadeOptions: [],
+  });
+
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to update order date"));
+  }
+}
