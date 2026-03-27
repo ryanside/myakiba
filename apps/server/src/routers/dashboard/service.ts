@@ -370,8 +370,6 @@ class DashboardService {
 
   async getDashboard(userId: string) {
     const now = new Date();
-    const currentMonth = toDateOnlyString(new Date(now.getFullYear(), now.getMonth(), 1));
-    const nextMonth = toDateOnlyString(new Date(now.getFullYear(), now.getMonth() + 1, 1));
     const overviewStartDate = toDateOnlyString(new Date(now.getFullYear(), now.getMonth() - 2, 1));
     const overviewEndDate = toDateOnlyString(new Date(now.getFullYear(), now.getMonth() + 3, 0));
     const startOfYear = toDateOnlyString(new Date(now.getFullYear(), 0, 1));
@@ -397,8 +395,6 @@ class DashboardService {
 
       this.ordersSummaryPrepared.execute({
         userId,
-        currentMonth,
-        nextMonth,
       }),
 
       this.unpaidOrdersPrepared.execute({ userId }),
