@@ -106,7 +106,7 @@ function isTypingTarget(target: EventTarget | null): boolean {
 
 function CommandLeadIcon({ icon }: { readonly icon: IconSvgElement }): React.JSX.Element {
   return (
-    <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted">
+    <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted ring-1 ring-foreground/10 shadow-sm">
       <HugeiconsIcon icon={icon} className="size-4 text-muted-foreground" />
     </div>
   );

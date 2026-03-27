@@ -1,7 +1,11 @@
 import * as z from "zod";
 import { createInsertSchema, createUpdateSchema } from "drizzle-zod";
 import { order } from "@myakiba/db/schema/figure";
-import { ORDER_STATUSES, SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
+import {
+  DEFAULT_LIMIT,
+  ORDER_STATUSES,
+  SHIPPING_METHODS,
+} from "@myakiba/contracts/shared/constants";
 import {
   createCommaSeparatedEnumArraySchema,
   commaSeparatedStringArraySchema,
@@ -13,7 +17,7 @@ const commaSeparatedShipMethodArray = createCommaSeparatedEnumArraySchema(SHIPPI
 const commaSeparatedStatusArray = createCommaSeparatedEnumArraySchema(ORDER_STATUSES);
 
 export const ordersQuerySchema = searchSchema.extend({
-  limit: z.coerce.number().optional().default(10),
+  limit: z.coerce.number().optional().default(DEFAULT_LIMIT),
   offset: z.coerce.number().optional().default(0),
   sort: orderSearchSortSchema.optional().default("createdAt"),
   order: sortDirectionSchema.optional().default("desc"),
@@ -28,7 +32,7 @@ export const orderUpdateSchema = createUpdateSchema(order);
 export const orderIdParamSchema = z.object({ orderId: z.string() });
 
 export const orderItemsQuerySchema = z.object({
-  limit: z.coerce.number().optional().default(5),
+  limit: z.coerce.number().optional().default(6),
   offset: z.coerce.number().optional().default(0),
 });
 

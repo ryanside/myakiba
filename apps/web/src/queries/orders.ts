@@ -13,10 +13,11 @@ import type {
   PaginatedResult,
 } from "@myakiba/contracts/orders/types";
 import type { OrderStatus } from "@myakiba/contracts/shared/types";
+import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 
 export async function getOrders(filters: OrderFilters): Promise<OrderListItem[]> {
   const queryParams = {
-    limit: filters.limit ?? 10,
+    limit: filters.limit ?? DEFAULT_LIMIT,
     offset: filters.offset ?? 0,
     sort: filters.sort ?? "createdAt",
     order: filters.order ?? "desc",
@@ -111,7 +112,7 @@ export async function mergeOrders(
 
 export async function splitOrders(
   values: NewOrder,
-  collectionIds: Set<string>,
+  collectionIds: ReadonlySet<string>,
   cascadeOptions: CascadeOptions,
 ) {
   const { data, error } = await app.api.orders.split.post({
@@ -168,14 +169,16 @@ export async function deleteOrderItems(collectionIds: Set<string>) {
 
 export async function moveItem(
   targetOrderId: string,
-  collectionIds: Set<string>,
-  orderIds: Set<string>,
-) {
-  const { error } = await app.api.orders["move-items"].put({
+  collectionIds: ReadonlySet<string>,
+  orderIds?: ReadonlySet<string>,
+): Promise<void> {
+  const moveItemPayload = {
     targetOrderId,
     collectionIds: Array.from(collectionIds),
-    orderIds: Array.from(orderIds),
-  });
+    orderIds: Array.from(orderIds ?? []),
+  };
+
+  const { error } = await app.api.orders["move-items"].put(moveItemPayload);
 
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to move items"));
@@ -206,5 +209,27 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus): P
 
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to update order status"));
+  }
+}
+
+export type OrderDateField =
+  | "releaseDate"
+  | "orderDate"
+  | "paymentDate"
+  | "shippingDate"
+  | "collectionDate";
+
+export async function updateOrderDate(
+  orderId: string,
+  field: OrderDateField,
+  date: string | null,
+): Promise<void> {
+  const { error } = await app.api.orders({ orderId }).put({
+    order: { [field]: date },
+    cascadeOptions: [],
+  });
+
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to update order date"));
   }
 }

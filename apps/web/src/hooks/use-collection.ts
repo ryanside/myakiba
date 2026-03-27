@@ -9,9 +9,11 @@ import {
 import { toast } from "sonner";
 import { useFilters } from "@/hooks/use-filters";
 import { getCollection, deleteCollectionItems, updateCollectionItem } from "@/queries/collection";
+import { moveItem, splitOrders } from "@/queries/orders";
 import { hasActiveFiltersOrSorting } from "@/lib/filters";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
+import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
 
 export function collectionQueryOptions(filters: CollectionFilters) {
   return queryOptions({
@@ -43,6 +45,144 @@ export function useCollectionQuery() {
     status,
     queryOpts,
     filtersActive,
+  } as const;
+}
+
+function addPendingIds(previous: readonly string[], ids: readonly string[]): readonly string[] {
+  return Array.from(new Set([...previous, ...ids]));
+}
+
+function removePendingIds(previous: readonly string[], ids: readonly string[]): readonly string[] {
+  if (ids.length === 0) {
+    return previous;
+  }
+
+  const idsToRemove = new Set(ids);
+  return previous.filter((id) => !idsToRemove.has(id));
+}
+
+export function useCollectionOrderMutations() {
+  const queryClient = useQueryClient();
+  const [pendingCollectionIdList, setPendingCollectionIdList] = useState<readonly string[]>([]);
+  const pendingCollectionIds = useMemo(
+    () => new Set(pendingCollectionIdList),
+    [pendingCollectionIdList],
+  );
+  const pendingCollectionIdsRef = useRef<ReadonlySet<string>>(pendingCollectionIds);
+  pendingCollectionIdsRef.current = pendingCollectionIds;
+
+  const moveItemsMutation = useMutation({
+    mutationFn: ({
+      targetOrderId,
+      collectionIds,
+      orderIds,
+    }: {
+      targetOrderId: string;
+      collectionIds: ReadonlySet<string>;
+      orderIds?: ReadonlySet<string>;
+    }) => moveItem(targetOrderId, collectionIds, orderIds),
+    onSuccess: (_data, { collectionIds }) => {
+      toast.success(
+        collectionIds.size === 1
+          ? "Order assigned"
+          : `Successfully assigned ${collectionIds.size} items to an order`,
+      );
+    },
+    onError: () => {
+      toast.error("Failed to assign items to an order. Please try again.");
+    },
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["orderStats"] }),
+        queryClient.invalidateQueries({ queryKey: ["orderItems"] }),
+        queryClient.invalidateQueries({ queryKey: ["collection"] }),
+        queryClient.invalidateQueries({ queryKey: ["item"] }),
+      ]);
+    },
+  });
+
+  const splitItemsMutation = useMutation({
+    mutationFn: ({
+      values,
+      collectionIds,
+      cascadeOptions,
+    }: {
+      values: NewOrder;
+      collectionIds: ReadonlySet<string>;
+      cascadeOptions: CascadeOptions;
+    }) => splitOrders(values, collectionIds, cascadeOptions),
+    onSuccess: (_data, { collectionIds }) => {
+      toast.success(
+        collectionIds.size === 1
+          ? "Order assigned"
+          : `Successfully assigned ${collectionIds.size} items to a new order`,
+      );
+    },
+    onError: () => {
+      toast.error("Failed to assign items to a new order. Please try again.");
+    },
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["orderStats"] }),
+        queryClient.invalidateQueries({ queryKey: ["orderItems"] }),
+        queryClient.invalidateQueries({ queryKey: ["collection"] }),
+        queryClient.invalidateQueries({ queryKey: ["item"] }),
+      ]);
+    },
+  });
+
+  const handleAddCollectionItemsToOrder = useCallback(
+    async (
+      targetOrderId: string,
+      collectionIds: ReadonlySet<string>,
+      orderIds?: ReadonlySet<string>,
+    ): Promise<void> => {
+      const ids = Array.from(collectionIds);
+      const loadingToastId = toast.loading("Assigning order...");
+      setPendingCollectionIdList((previous) => addPendingIds(previous, ids));
+
+      try {
+        await moveItemsMutation.mutateAsync({ targetOrderId, collectionIds, orderIds });
+      } finally {
+        toast.dismiss(loadingToastId);
+        setPendingCollectionIdList((previous) => removePendingIds(previous, ids));
+      }
+    },
+    [moveItemsMutation],
+  );
+
+  const handleAddCollectionItemsToNewOrder = useCallback(
+    async (
+      values: NewOrder,
+      cascadeOptions: CascadeOptions,
+      collectionIds: ReadonlySet<string>,
+    ): Promise<void> => {
+      const ids = Array.from(collectionIds);
+      const loadingToastId = toast.loading("Creating order...");
+      setPendingCollectionIdList((previous) => addPendingIds(previous, ids));
+
+      try {
+        await splitItemsMutation.mutateAsync({ values, cascadeOptions, collectionIds });
+      } finally {
+        toast.dismiss(loadingToastId);
+        setPendingCollectionIdList((previous) => removePendingIds(previous, ids));
+      }
+    },
+    [splitItemsMutation],
+  );
+
+  const isCollectionOrderPending = useCallback((collectionId: string): boolean => {
+    return pendingCollectionIdsRef.current.has(collectionId);
+  }, []);
+
+  return {
+    handleAddCollectionItemsToOrder,
+    handleAddCollectionItemsToNewOrder,
+    isCollectionOrderPending,
+    isMovingCollectionItems: moveItemsMutation.isPending,
+    isSplittingCollectionItems: splitItemsMutation.isPending,
   } as const;
 }
 
@@ -142,14 +282,15 @@ export function useCollectionMutations() {
   }, []);
 
   const handleDeleteCollectionItems = useCallback(
-    async (collectionIds: Set<string>): Promise<void> => {
+    async (collectionIds: ReadonlySet<string>): Promise<void> => {
       const deleteMutationState = deleteMutationRef.current;
+      const ids = Array.from(collectionIds);
+
       if (!filtersActiveRef.current) {
-        deleteMutationState.mutate(Array.from(collectionIds));
+        deleteMutationState.mutate(ids);
         return;
       }
 
-      const ids = Array.from(collectionIds);
       const loadingToastId = toast.loading("Deleting collection items...");
       setPendingCollectionIdList((previous) => {
         const nextIds = new Set([...previous, ...ids]);

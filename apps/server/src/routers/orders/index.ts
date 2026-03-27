@@ -288,7 +288,10 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
       log.set({
         action: "orders.move_items",
         user: { id: user.id },
-        move: { itemCount: body.collectionIds.length },
+        move: {
+          itemCount: body.collectionIds.length,
+          sourceOrderCount: body.orderIds?.length ?? 0,
+        },
       });
 
       const { error } = await tryCatch(
@@ -308,7 +311,7 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
       body: z.object({
         targetOrderId: z.string(),
         collectionIds: z.array(z.string()),
-        orderIds: z.array(z.string()),
+        orderIds: z.array(z.string()).optional(),
       }),
       auth: true,
     },

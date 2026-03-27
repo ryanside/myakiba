@@ -1,7 +1,7 @@
 import type { OrderCascadeOption } from "@myakiba/contracts/orders/constants";
 import { db } from "@myakiba/db/client";
 import { order, collection, item, item_release } from "@myakiba/db/schema/figure";
-import { eq, and, inArray, sql, desc, asc, ilike, ne, gte, lte } from "drizzle-orm";
+import { eq, and, inArray, sql, desc, asc, ilike, ne, gte, lte, or, isNull } from "drizzle-orm";
 import type { OrderStatus, ShippingMethod } from "@myakiba/contracts/shared/types";
 import type { OrderInsertType, OrderUpdateType } from "./model";
 
@@ -460,8 +460,13 @@ class OrdersService {
     userId: string,
     targetOrderId: string,
     collectionIds: string[],
-    orderIds: string[],
+    orderIds?: readonly string[],
   ) {
+    const sourceOrderFilter =
+      orderIds && orderIds.length > 0
+        ? or(inArray(collection.orderId, orderIds), isNull(collection.orderId))
+        : undefined;
+
     const moved = await db
       .update(collection)
       .set({ orderId: targetOrderId })
@@ -469,7 +474,7 @@ class OrdersService {
         and(
           eq(collection.userId, userId),
           inArray(collection.id, collectionIds),
-          inArray(collection.orderId, orderIds),
+          sourceOrderFilter,
         ),
       )
       .returning();

@@ -232,7 +232,7 @@ function RouteComponent() {
         <div className="flex items-start justify-between gap-4">
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-semibold tracking-tight">{order.title}</h1>
+              <h1 className="text-2xl font-medium tracking-tight">{order.title}</h1>
               <ThemedBadge variant={getStatusVariant(order.status)} size="lg">
                 {order.status}
               </ThemedBadge>
@@ -328,7 +328,7 @@ function RouteComponent() {
             <Separator />
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Total</span>
-              <span className="text-lg font-semibold tracking-tight tabular-nums">
+              <span className="text-lg font-medium tracking-tight tabular-nums">
                 {formatCurrencyFromMinorUnits(totalAmount, userCurrency, userLocale)}
               </span>
             </div>

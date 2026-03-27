@@ -1,41 +1,26 @@
-import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { type ReactElement, useMemo, useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { app } from "@/lib/treaty-client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Link } from "@tanstack/react-router";
-import { CollectionBreakdown } from "@/components/dashboard/collection-breakdown";
-import { ReleaseCalendar } from "@/components/dashboard/release-calendar";
-import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
+import * as z from "zod";
+import { MonthlyTab } from "@/components/dashboard/monthly-tab";
+import { OverviewTab } from "@/components/dashboard/overview-tab";
 import { Button } from "@/components/ui/button";
-import OrderKanban from "@/components/dashboard/order-kanban";
-import { ValueLineBarChart } from "@/components/ui/value-line-bar-chart";
-import { KPICard } from "@/components/ui/kpi-card";
-import Loader from "@/components/loader";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
+import { randomKaomoji } from "@/lib/kaomoji";
+import { getDashboard, getMonthlyDashboard } from "@/queries/dashboard";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 
-const KAOMOJI_POOL = [
-  "(˶˃ ᵕ ˂˶) .ᐟ.ᐟ",
-  "⋆˚꩜｡",
-  "ദ്ദി◝ ⩊ ◜.ᐟ",
-  "₊˚⊹ᰔ",
-  "⋆˙⟡",
-  "(˶˃𐃷˂˶)",
-  "ᕙ( •̀ ᗜ •́ )ᕗ",
-  "⭑.ᐟ",
-  "⋆✴︎˚｡⋆",
-  "₍^ >⩊< ^₎Ⳋ",
-  "⋆˙⟡ ⋆.˚ ⊹₊⟡ ⋆",
-  "(⸝⸝> ᴗ•⸝⸝)",
-  "ദ്ദി ˉ͈̀꒳ˉ͈́ )✧",
-  "(˵ •̀ ᴗ - ˵ ) ✧",
-] as const;
-
-function randomKaomoji(): string {
-  return KAOMOJI_POOL[Math.floor(Math.random() * KAOMOJI_POOL.length)];
+function getCurrentVisibleMonth(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), 1);
 }
 
 export const Route = createFileRoute("/(app)/dashboard")({
+  validateSearch: z.object({
+    tab: z.enum(["overview", "monthly"]).optional(),
+  }),
   component: RouteComponent,
   head: () => ({
     meta: [
@@ -50,22 +35,44 @@ export const Route = createFileRoute("/(app)/dashboard")({
   }),
 });
 
-function RouteComponent() {
-  return <DashboardContent />;
-}
-
-function DashboardContent() {
+function RouteComponent(): ReactElement {
+  const navigate = useNavigate({ from: Route.fullPath });
   const { session } = Route.useRouteContext();
+  const { tab } = Route.useSearch();
   const { currency: userCurrency, locale: userLocale, dateFormat } = useUserPreferences();
   const [kaomoji] = useState(randomKaomoji);
+  const activeTab = tab ?? "overview";
+  const [visibleMonth, setVisibleMonth] = useState<Date>(getCurrentVisibleMonth);
 
-  async function getDashboard() {
-    const { data, error } = await app.api.dashboard.get();
+  const monthYearLabel = useMemo(
+    () => new Intl.DateTimeFormat(userLocale, { month: "short", year: "numeric" }),
+    [userLocale],
+  );
 
-    if (error) {
-      throw new Error(error.value || "Failed to get dashboard");
+  const selectedMonth = visibleMonth.getMonth() + 1;
+  const selectedYear = visibleMonth.getFullYear();
+
+  function setActiveTab(nextTab: string): void {
+    if (nextTab !== "overview" && nextTab !== "monthly") {
+      return;
     }
-    return data;
+
+    navigate({
+      search:
+        nextTab === "overview"
+          ? {}
+          : {
+              tab: nextTab,
+            },
+    });
+  }
+
+  function shiftMonth(delta: number): void {
+    setVisibleMonth((prev) => {
+      const next = new Date(prev);
+      next.setMonth(next.getMonth() + delta);
+      return next;
+    });
   }
 
   const { isPending, isError, data, error } = useQuery({
@@ -73,105 +80,99 @@ function DashboardContent() {
     queryFn: getDashboard,
     staleTime: 1000 * 60 * 5,
     retry: false,
+    enabled: activeTab === "overview",
   });
 
-  if (isPending) {
-    return <Loader />;
-  }
-
-  if (isError) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-destructive">Error</CardTitle>
-          <CardDescription>Failed to load dashboard data: {error.message}</CardDescription>
-        </CardHeader>
-      </Card>
-    );
-  }
-
-  const { collectionStats, categoriesOwned, orders, ordersSummary, unpaidOrders, monthlyOrders } =
-    data;
+  const {
+    isPending: monthlyIsPending,
+    isError: monthlyIsError,
+    data: monthlyData,
+    error: monthlyError,
+  } = useQuery({
+    queryKey: ["dashboard", "monthly", selectedMonth, selectedYear],
+    queryFn: () => getMonthlyDashboard(selectedMonth, selectedYear),
+    staleTime: 1000 * 60 * 5,
+    retry: false,
+    enabled: activeTab === "monthly",
+  });
 
   return (
     <div className="flex flex-col gap-4 mx-auto">
       <div className="flex flex-col gap-2 mb-4">
         <div className="flex flex-row items-start gap-4">
-          <h1 className="text-2xl tracking-tight font-heading font-medium">
-            Welcome, <span className="">{session?.user.username}.</span> {kaomoji}
-          </h1>
+          {activeTab === "overview" ? (
+            <h1 className="text-2xl tracking-tight font-heading font-medium">
+              Welcome
+              <span className="hidden sm:inline">
+                , {session?.user.username}. {kaomoji}
+              </span>
+            </h1>
+          ) : (
+            <div
+              className="inline-flex max-w-full items-center gap-1"
+              role="group"
+              aria-label="Select month"
+            >
+              <h1 className="w-28 min-w-0 shrink-0 truncate text-left text-2xl tracking-tight font-heading font-medium tabular-nums">
+                {monthYearLabel.format(visibleMonth)}
+              </h1>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                onClick={() => shiftMonth(-1)}
+                aria-label="Previous month"
+              >
+                <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-3.5" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                onClick={() => shiftMonth(1)}
+                aria-label="Next month"
+              >
+                <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-3.5" />
+              </Button>
+            </div>
+          )}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="ml-auto shrink-0">
+            <TabsList variant="line">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="monthly">Monthly</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
         <p className="text-muted-foreground text-sm font-normal">
-          Here’s your collection and orders at a glance.
+          {activeTab === "overview"
+            ? "Here's your collection and orders at a glance."
+            : "Spending, releases, and orders for this month."}
         </p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard
-          title="Total Items"
-          subtitle="all collection items"
-          value={collectionStats[0]?.totalItems ?? 0}
+      {activeTab === "overview" && (
+        <OverviewTab
+          data={data}
+          isLoading={isPending}
+          isError={isError}
+          error={error}
+          currency={userCurrency}
+          locale={userLocale}
+          dateFormat={dateFormat}
         />
-        <KPICard
-          title="Total Spent"
-          subtitle="based on paid collection & orders"
-          value={formatCurrencyFromMinorUnits(
-            Number(collectionStats[0]?.totalSpent ?? 0) +
-              Number(ordersSummary[0]?.totalShippingAllTime ?? 0) +
-              Number(ordersSummary[0]?.totalTaxesAllTime ?? 0) +
-              Number(ordersSummary[0]?.totalDutiesAllTime ?? 0) +
-              Number(ordersSummary[0]?.totalTariffsAllTime ?? 0) +
-              Number(ordersSummary[0]?.totalMiscFeesAllTime ?? 0),
-            userCurrency,
-            userLocale,
-          )}
+      )}
+      {activeTab === "monthly" && (
+        <MonthlyTab
+          data={monthlyData}
+          isLoading={monthlyIsPending}
+          isError={monthlyIsError}
+          error={monthlyError}
+          currency={userCurrency}
+          locale={userLocale}
+          dateFormat={dateFormat}
+          month={selectedMonth}
+          year={selectedYear}
         />
-        <KPICard
-          title="Active Orders"
-          subtitle="orders not yet collected"
-          value={ordersSummary[0]?.totalActiveOrderCount ?? 0}
-          subvalueTitle="unpaid"
-          subvalue={unpaidOrders.length}
-        />
-        <KPICard
-          title="Unpaid Costs"
-          subtitle="costs with status 'Ordered'"
-          value={formatCurrencyFromMinorUnits(
-            unpaidOrders.reduce((acc, order) => acc + Number(order.total), 0),
-            userCurrency,
-            userLocale,
-          )}
-        />
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <CollectionBreakdown data={categoriesOwned} currency={userCurrency} />
-        <ValueLineBarChart data={monthlyOrders} />
-        <Card className="min-h-[210px]">
-          <CardHeader className="flex flex-row items-center gap-2">
-            <CardTitle className="text-base font-medium">Release Calendar</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ReleaseCalendar currency={userCurrency} />
-          </CardContent>
-        </Card>
-      </div>
-      <Card className="h-full">
-        <CardHeader className="flex flex-row items-center gap-2">
-          <div className="flex flex-col items-start gap-2">
-            <CardTitle className="text-base font-medium">Orders Board</CardTitle>
-            <CardDescription className="text-xs text-muted-foreground">
-              Quickly manage upcoming active orders
-            </CardDescription>
-          </div>
-          <Link to="/orders" className="ml-auto">
-            <Button variant="outline" className="rounded-md">
-              View All
-            </Button>
-          </Link>
-        </CardHeader>
-        <CardContent className="h-full">
-          <OrderKanban orders={orders} currency={userCurrency} dateFormat={dateFormat} />
-        </CardContent>
-      </Card>
+      )}
     </div>
   );
 }

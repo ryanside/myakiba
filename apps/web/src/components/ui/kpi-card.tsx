@@ -28,7 +28,11 @@ export function KPICard({
       </CardHeader>
       <CardContent className="mt-auto">
         <div className="flex flex-row items-baseline w-full">
-          {isLoading ? <Skeleton className="h-7 w-24" /> : <p className="text-xl">{value}</p>}
+          {isLoading ? (
+            <Skeleton className="h-7 w-24" />
+          ) : (
+            <p className="text-xl font-medium">{value}</p>
+          )}
           {!isLoading && subvalueTitle && subvalue !== undefined && (
             <div className="flex-row gap-1 ml-2 flex">
               <p className="text-xs text-muted-foreground font-normal">{subvalue}</p>

@@ -4,6 +4,7 @@ import {
   Delete02Icon,
   Edit01Icon,
   Loading03Icon,
+  MoveIcon,
   MoreHorizontalIcon,
   PackageIcon,
   ViewIcon,
@@ -27,31 +28,48 @@ import { cn } from "@/lib/utils";
 import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
 import CollectionItemForm from "./collection-item-form";
+import UnifiedItemMoveForm from "@/components/orders/unified-item-move-form";
 import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import { PopoverRatingCell } from "../cells/popover-rating-cell";
 import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
 import { InlineCountCell } from "../cells/inline-count-cell";
+import { InlineReleaseCell } from "../cells/inline-release-cell";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
+import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { getCategoryColor } from "@/lib/category-colors";
 import { Skeleton } from "../ui/skeleton";
 
 interface CollectionColumnsParams {
   onEditCollectionItem: (values: CollectionItemFormValues) => Promise<void>;
-  onDeleteCollectionItems: (collectionIds: Set<string>) => Promise<void>;
+  onDeleteCollectionItems: (collectionIds: ReadonlySet<string>) => Promise<void>;
+  onAddCollectionItemsToOrder: (
+    targetOrderId: string,
+    collectionIds: ReadonlySet<string>,
+    orderIds?: ReadonlySet<string>,
+  ) => Promise<void>;
+  onAddCollectionItemsToNewOrder: (
+    values: NewOrder,
+    cascadeOptions: CascadeOptions,
+    collectionIds: ReadonlySet<string>,
+  ) => Promise<void>;
   currency: Currency;
   locale: string;
   dateFormat: DateFormat;
   isCollectionPending: (collectionId: string) => boolean;
+  isCollectionOrderPending: (collectionId: string) => boolean;
 }
 
 export function createCollectionColumns({
   onEditCollectionItem,
   onDeleteCollectionItems,
+  onAddCollectionItemsToOrder,
+  onAddCollectionItemsToNewOrder,
   currency,
   locale,
   dateFormat,
   isCollectionPending,
+  isCollectionOrderPending,
 }: CollectionColumnsParams): ColumnDef<CollectionItem>[] {
   return [
     {
@@ -139,7 +157,7 @@ export function createCollectionColumns({
       enableResizing: true,
       size: 450,
       meta: {
-        skeleton: <Skeleton className="h-9 w-2/3" />,
+        skeleton: <Skeleton className="h-6 my-1.5 w-2/3" />,
       },
     },
     {
@@ -165,7 +183,7 @@ export function createCollectionColumns({
       ),
       cell: ({ row }) => {
         const item = row.original;
-        const isPending = isCollectionPending(item.id);
+        const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
         return (
           <InlineCountCell
             value={item.count}
@@ -195,7 +213,7 @@ export function createCollectionColumns({
       ),
       cell: ({ row }) => {
         const item = row.original;
-        const isPending = isCollectionPending(item.id);
+        const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
         return (
           <PopoverRatingCell
             value={item.score}
@@ -225,7 +243,7 @@ export function createCollectionColumns({
       ),
       cell: ({ row }) => {
         const item = row.original;
-        const isPending = isCollectionPending(item.id);
+        const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
         return (
           <InlineTextCell
             value={item.shop}
@@ -263,7 +281,7 @@ export function createCollectionColumns({
       ),
       cell: ({ row }) => {
         const item = row.original;
-        const isPending = isCollectionPending(item.id);
+        const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
         return (
           <InlineCurrencyCell
             value={item.price}
@@ -288,6 +306,47 @@ export function createCollectionColumns({
       },
     },
     {
+      accessorKey: "releaseDate",
+      id: "releaseDate",
+      header: ({ column }) => (
+        <DataGridColumnHeader title="Release" visibility={true} column={column} />
+      ),
+      cell: ({ row }) => {
+        const item = row.original;
+        const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
+        return (
+          <InlineReleaseCell
+            releaseId={item.releaseId}
+            itemId={item.itemId}
+            fallback={{
+              releaseDate: item.releaseDate,
+              releaseType: item.releaseType,
+              releasePrice: item.releasePrice,
+              releaseCurrency: item.releaseCurrency,
+              releaseBarcode: item.releaseBarcode,
+            }}
+            currency={currency}
+            dateFormat={dateFormat}
+            disabled={isPending}
+            onSubmit={async (newReleaseId) => {
+              await onEditCollectionItem({
+                ...item,
+                releaseId: newReleaseId,
+              });
+            }}
+          />
+        );
+      },
+      enableSorting: true,
+      enableHiding: true,
+      enableResizing: true,
+      size: 110,
+      meta: {
+        headerTitle: "Release",
+        skeleton: <Skeleton className="h-6" />,
+      },
+    },
+    {
       accessorKey: "orderDate",
       id: "orderDate",
       header: ({ column }) => (
@@ -295,7 +354,8 @@ export function createCollectionColumns({
       ),
       cell: ({ row }) => {
         const orderDate = row.original.orderDate;
-        const isPending = isCollectionPending(row.original.id);
+        const isPending =
+          isCollectionPending(row.original.id) || isCollectionOrderPending(row.original.id);
         return (
           <PopoverDatePickerCell
             value={orderDate}
@@ -327,7 +387,8 @@ export function createCollectionColumns({
       ),
       cell: ({ row }) => {
         const paymentDate = row.original.paymentDate;
-        const isPending = isCollectionPending(row.original.id);
+        const isPending =
+          isCollectionPending(row.original.id) || isCollectionOrderPending(row.original.id);
         return (
           <PopoverDatePickerCell
             value={paymentDate}
@@ -359,7 +420,8 @@ export function createCollectionColumns({
       ),
       cell: ({ row }) => {
         const shippingDate = row.original.shippingDate;
-        const isPending = isCollectionPending(row.original.id);
+        const isPending =
+          isCollectionPending(row.original.id) || isCollectionOrderPending(row.original.id);
         return (
           <PopoverDatePickerCell
             value={shippingDate}
@@ -391,7 +453,8 @@ export function createCollectionColumns({
       ),
       cell: ({ row }) => {
         const collectionDate = row.original.collectionDate;
-        const isPending = isCollectionPending(row.original.id);
+        const isPending =
+          isCollectionPending(row.original.id) || isCollectionOrderPending(row.original.id);
         return (
           <PopoverDatePickerCell
             value={collectionDate}
@@ -420,7 +483,11 @@ export function createCollectionColumns({
       header: () => null,
       cell: ({ row }) => {
         const item = row.original;
-        const isPending = isCollectionPending(item.id);
+        const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
+        const selectedItems = {
+          collectionIds: new Set([item.id]),
+          orderIds: item.orderId ? new Set([item.orderId]) : new Set<string>(),
+        };
 
         return (
           <DropdownMenu>
@@ -472,6 +539,20 @@ export function createCollectionColumns({
                   callbackFn={onEditCollectionItem}
                   currency={currency}
                   dateFormat={dateFormat}
+                />
+                <UnifiedItemMoveForm
+                  renderTrigger={
+                    <DropdownMenuItem closeOnClick={false} disabled={isPending}>
+                      <HugeiconsIcon icon={MoveIcon} />
+                      {isPending ? "Assigning..." : "Assign Order"}
+                    </DropdownMenuItem>
+                  }
+                  selectedItems={selectedItems}
+                  onMoveToExisting={onAddCollectionItemsToOrder}
+                  onMoveToNew={onAddCollectionItemsToNewOrder}
+                  clearSelections={() => {}}
+                  currency={currency}
+                  intent="add"
                 />
               </DropdownMenuGroup>
               <DropdownMenuSeparator />

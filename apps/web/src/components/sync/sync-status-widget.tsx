@@ -18,11 +18,11 @@ import type { SyncSessionStatus, SyncType } from "@myakiba/contracts/shared/type
 import { fetchSyncSessions } from "@/queries/sync";
 import { SESSION_STATUS_CONFIG, SYNC_TYPE_CONFIG } from "@/lib/sync";
 import { formatRelativeTimeToNow } from "@/lib/date-display";
-import {
-  ACTIVE_SYNC_SESSION_STATUS_SET,
-  SYNC_WIDGET_RECENT_LIMIT,
-} from "@myakiba/contracts/sync/constants";
+import { ACTIVE_SYNC_SESSION_STATUS_SET } from "@myakiba/contracts/sync/constants";
 import { useSyncJobStatusQuery } from "@/hooks/use-sync-job-status-query";
+import { PulsingDot } from "@/components/ui/pulsing-dot";
+import { Skeleton } from "@/components/ui/skeleton";
+import { SparkleTrail } from "@/components/ui/sparkle-trail";
 
 export default function SyncStatusWidget() {
   const {
@@ -31,8 +31,8 @@ export default function SyncStatusWidget() {
     isError: isRecentError,
     error: recentError,
   } = useQuery({
-    queryKey: ["syncSessions", 1, SYNC_WIDGET_RECENT_LIMIT, undefined, undefined] as const,
-    queryFn: () => fetchSyncSessions({ page: 1, limit: SYNC_WIDGET_RECENT_LIMIT }),
+    queryKey: ["syncSessions", 1, 5, undefined, undefined] as const,
+    queryFn: () => fetchSyncSessions({ page: 1, limit: 5 }),
     staleTime: 30_000,
     refetchOnWindowFocus: true,
   });
@@ -61,7 +61,11 @@ export default function SyncStatusWidget() {
   const [open, setOpen] = useState(false);
 
   if (isRecentPending || (!hasSessions && !isRecentError)) {
-    return null;
+    return (
+      <Button size="sm" variant="outline" className="mx-2 w-41.5 justify-start!">
+        <Skeleton className="w-41.5 h-4" />
+      </Button>
+    );
   }
 
   const closePopover = () => setOpen(false);
@@ -77,9 +81,9 @@ export default function SyncStatusWidget() {
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
           render={
-            <Button size="sm" variant="outline" className="mx-2">
+            <Button size="sm" variant="outline" className="mx-2 w-41.5 justify-start!">
               {hasActive ? (
-                <span className="flex items-center gap-2">
+                <span className="flex w-full items-center gap-2">
                   <PulsingDot />
                   <ShimmeringText
                     text={
@@ -87,12 +91,13 @@ export default function SyncStatusWidget() {
                         ? `Syncing ${totalActiveSynced}/${totalActiveItems}`
                         : "Syncing..."
                     }
-                    duration={2.5}
+                    duration={1}
                     repeat={true}
                     startOnView={false}
                     className="text-xs font-medium"
                     spread={1.5}
                   />
+                  <SparkleTrail />
                 </span>
               ) : (
                 <span className="flex items-center gap-1.5">
@@ -127,9 +132,10 @@ export default function SyncStatusWidget() {
                   </div>
                 )}
 
+                {hasActive && finishedSessions.length > 0 && <div className="border-t" />}
+
                 {finishedSessions.length > 0 && (
                   <div className="px-4 pt-3 pb-2">
-                    {hasActive && <div className="mb-3 -mx-4 border-t" />}
                     <p className="mb-2.5 text-[0.6875rem] font-medium tracking-wide text-muted-foreground">
                       Recent
                     </p>
@@ -165,15 +171,6 @@ export default function SyncStatusWidget() {
         </PopoverContent>
       </Popover>
     </>
-  );
-}
-
-function PulsingDot() {
-  return (
-    <span className="relative flex size-2">
-      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-      <span className="relative inline-flex size-2 rounded-full bg-primary" />
-    </span>
   );
 }
 

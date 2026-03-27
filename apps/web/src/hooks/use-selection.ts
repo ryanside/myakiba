@@ -1,19 +1,27 @@
 import { useState, useMemo } from "react";
 import type { RowSelectionState } from "@tanstack/react-table";
-// TODO: Rename variables to be more reusable
+
+export type SelectedCollectionItems = {
+  readonly collectionIds: ReadonlySet<string>;
+  readonly orderIds: ReadonlySet<string>;
+};
+
 export function useSelection() {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [itemSelection, setItemSelection] = useState<RowSelectionState>({});
 
-  const getSelectedOrderIds = useMemo(() => new Set(Object.keys(rowSelection)), [rowSelection]);
+  const selectedRowIds = useMemo<ReadonlySet<string>>(
+    () => new Set(Object.keys(rowSelection)),
+    [rowSelection],
+  );
 
-  const getSelectedItemData = useMemo(() => {
+  const selectedNestedItemData = useMemo<SelectedCollectionItems>(() => {
     const collectionIds = new Set(Object.keys(itemSelection).map((id) => id.split("-")[1]));
     const orderIds = new Set(Object.keys(itemSelection).map((id) => id.split("-")[0]));
     return { collectionIds, orderIds };
   }, [itemSelection]);
 
-  const clearSelections = () => {
+  const clearSelections = (): void => {
     setRowSelection({});
     setItemSelection({});
   };
@@ -23,8 +31,8 @@ export function useSelection() {
     setRowSelection,
     itemSelection,
     setItemSelection,
-    getSelectedOrderIds,
-    getSelectedItemData,
+    selectedRowIds,
+    selectedNestedItemData,
     clearSelections,
-  };
+  } as const;
 }

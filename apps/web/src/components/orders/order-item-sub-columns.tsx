@@ -22,7 +22,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
 import { cn } from "@/lib/utils";
-import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import type { Currency, DateFormat, OrderStatus } from "@myakiba/contracts/shared/types";
 import type { OrderItem } from "@myakiba/contracts/orders/types";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
@@ -33,6 +32,7 @@ import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
 import { InlineCountCell } from "../cells/inline-count-cell";
 import { SelectCell } from "../cells/select-cell";
 import { InlineCurrencyCell } from "../cells/inline-currency-cell";
+import { InlineReleaseCell } from "../cells/inline-release-cell";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
@@ -184,11 +184,33 @@ export function createOrderItemSubColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Release" visibility={true} column={column} />
       ),
-      cell: (info) => formatDateOnlyForDisplay(info.getValue() as string, dateFormat),
+      cell: ({ row }) => {
+        const item = row.original;
+        const isPending = isCollectionItemPending(item.id);
+        return (
+          <InlineReleaseCell
+            releaseId={item.releaseId}
+            itemId={item.itemId}
+            fallback={{
+              releaseDate: item.releaseDate,
+              releaseType: item.releaseType,
+              releasePrice: item.releasePrice,
+              releaseCurrency: item.releaseCurrency,
+              releaseBarcode: item.releaseBarcode,
+            }}
+            currency={currency}
+            dateFormat={dateFormat}
+            disabled={isPending}
+            onSubmit={async (newReleaseId) => {
+              await onEditItem({ ...item, releaseId: newReleaseId });
+            }}
+          />
+        );
+      },
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 100,
+      size: 110,
       meta: {
         skeleton: <Skeleton className="h-6" />,
       },

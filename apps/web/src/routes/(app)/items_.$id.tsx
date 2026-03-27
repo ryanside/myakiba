@@ -4,6 +4,7 @@ import {
   Delete01Icon,
   Edit01Icon,
   Loading03Icon,
+  MoveIcon,
   Package01Icon,
 } from "@hugeicons/core-free-icons";
 import { createFileRoute, useParams, Link } from "@tanstack/react-router";
@@ -29,6 +30,7 @@ import { toast } from "sonner";
 import Loader from "@/components/loader";
 import { getCategoryColor } from "@/lib/category-colors";
 import { Card, CardHeader, CardAction, CardContent, CardFooter } from "@/components/ui/card";
+import UnifiedItemMoveForm from "@/components/orders/unified-item-move-form";
 import {
   Timeline,
   TimelineItem,
@@ -41,6 +43,7 @@ import {
 import { getStatusVariant } from "@/lib/orders";
 import { formatReleaseDate } from "@/lib/locale";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
+import { useCollectionOrderMutations } from "@/hooks/use-collection";
 
 type ItemRelatedCollection = {
   collection: Omit<
@@ -124,6 +127,11 @@ function RouteComponent() {
   const { currency: userCurrency, locale: userLocale, dateFormat } = useUserPreferences();
   const queryClient = useQueryClient();
   const { id } = useParams({ from: "/(app)/items_/$id" });
+  const {
+    handleAddCollectionItemsToOrder,
+    handleAddCollectionItemsToNewOrder,
+    isCollectionOrderPending,
+  } = useCollectionOrderMutations();
 
   const { data, isPending, isError, error } = useQuery({
     queryKey: ["item", id],
@@ -245,6 +253,7 @@ function RouteComponent() {
   }
 
   if (isError) {
+    console.error(error);
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-y-4">
         <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
@@ -456,6 +465,7 @@ function RouteComponent() {
                   const relatedOrder = collectionItem.orderId
                     ? ordersList.find((o) => o.id === collectionItem.orderId)
                     : undefined;
+                  const isOrderActionPending = isCollectionOrderPending(collectionItem.id);
                   const activeStep = getTimelineActiveStep({
                     orderDate: collectionItem.orderDate,
                     paymentDate: collectionItem.paymentDate,
@@ -499,6 +509,28 @@ function RouteComponent() {
                               callbackFn={handleEditCollectionItem}
                               currency={userCurrency}
                               dateFormat={dateFormat}
+                            />
+                            <UnifiedItemMoveForm
+                              renderTrigger={
+                                <Button variant="ghost" size="icon" disabled={isOrderActionPending}>
+                                  <HugeiconsIcon
+                                    icon={isOrderActionPending ? Loading03Icon : MoveIcon}
+                                    className={cn("size-4", isOrderActionPending && "animate-spin")}
+                                  />
+                                  <span className="sr-only">Assign order</span>
+                                </Button>
+                              }
+                              selectedItems={{
+                                collectionIds: new Set([collectionItem.id]),
+                                orderIds: collectionItem.orderId
+                                  ? new Set([collectionItem.orderId])
+                                  : new Set<string>(),
+                              }}
+                              onMoveToExisting={handleAddCollectionItemsToOrder}
+                              onMoveToNew={handleAddCollectionItemsToNewOrder}
+                              clearSelections={() => {}}
+                              currency={userCurrency}
+                              intent="add"
                             />
                             <Popover>
                               <PopoverTrigger

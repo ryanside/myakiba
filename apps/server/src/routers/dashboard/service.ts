@@ -1,7 +1,10 @@
 import { db } from "@myakiba/db/client";
 import { item, collection, item_release, order } from "@myakiba/db/schema/figure";
 import type { Category } from "@myakiba/contracts/shared/types";
-import { eq, count, and, sum, asc, sql, desc, ne, gte, lte } from "drizzle-orm";
+import { eq, count, and, sum, asc, sql, desc, ne, gte, lte, exists, or } from "drizzle-orm";
+import { toDateOnlyString } from "@myakiba/utils/date-only";
+
+const DASHBOARD_KANBAN_ORDER_LIMIT = 75;
 
 class DashboardService {
   private collectionStatsPrepared;
@@ -11,8 +14,79 @@ class DashboardService {
   private unpaidOrdersPrepared;
   private monthlyOrdersPrepared;
   private releaseCalendarPrepared;
+  private monthlySummaryPrepared;
+  private monthlyShopBreakdownPrepared;
+  private monthlyOrdersKanbanPrepared;
 
   constructor() {
+    // Narrow the monthly dashboard to one filtered order set and build everything else from it.
+    const monthlyOrdersBase = db
+      .select({
+        orderId: order.id,
+        title: order.title,
+        shop: order.shop,
+        status: order.status,
+        releaseDate: order.releaseDate,
+        shippingFee: order.shippingFee,
+        taxes: order.taxes,
+        duties: order.duties,
+        tariffs: order.tariffs,
+        miscFees: order.miscFees,
+      })
+      .from(order)
+      .where(
+        and(
+          eq(order.userId, sql.placeholder("userId")),
+          gte(order.releaseDate, sql.placeholder("startDate")),
+          lte(order.releaseDate, sql.placeholder("endDate")),
+        ),
+      )
+      .as("monthly_orders_base");
+
+    // Per-order item counts/totals for the selected month. This avoids rescanning collection
+    // separately for KPI totals and shop breakdowns.
+    const monthlyOrderItemStats = db
+      .select({
+        orderId: collection.orderId,
+        itemCount: count(collection.id).as("itemCount"),
+        itemTotal: sql<number>`COALESCE(${sum(collection.price)}, 0)`.as("itemTotal"),
+      })
+      .from(collection)
+      .innerJoin(order, eq(collection.orderId, order.id))
+      .where(
+        and(
+          eq(order.userId, sql.placeholder("userId")),
+          gte(order.releaseDate, sql.placeholder("startDate")),
+          lte(order.releaseDate, sql.placeholder("endDate")),
+        ),
+      )
+      .groupBy(collection.orderId)
+      .as("monthly_order_item_stats");
+
+    // Reused fee expression so paid/unpaid monthly totals stay consistent everywhere.
+    const monthlyOrderFeesTotal = sql<number>`
+      COALESCE(${monthlyOrdersBase.shippingFee}, 0)
+      + COALESCE(${monthlyOrdersBase.taxes}, 0)
+      + COALESCE(${monthlyOrdersBase.duties}, 0)
+      + COALESCE(${monthlyOrdersBase.tariffs}, 0)
+      + COALESCE(${monthlyOrdersBase.miscFees}, 0)
+    `;
+
+    // Shop totals are computed in SQL now instead of merging separate order/item query results in JS.
+    const monthlyShopTotalAmount = sql<number>`
+      COALESCE(
+        SUM(
+          COALESCE(${monthlyOrderItemStats.itemTotal}, 0)
+          + COALESCE(${monthlyOrdersBase.shippingFee}, 0)
+          + COALESCE(${monthlyOrdersBase.taxes}, 0)
+          + COALESCE(${monthlyOrdersBase.duties}, 0)
+          + COALESCE(${monthlyOrdersBase.tariffs}, 0)
+          + COALESCE(${monthlyOrdersBase.miscFees}, 0)
+        ),
+        0
+      )
+    `;
+
     // Total Items, Total Spent
     this.collectionStatsPrepared = db
       .select({
@@ -37,7 +111,7 @@ class DashboardService {
       .orderBy(desc(count()))
       .prepare("categories_owned");
 
-    // Order Kanban - Contains "Ordered", "Paid", "Shipped" Orders
+    // Overview kanban shows recent and near-term order activity across every status.
     this.ordersPrepared = db
       .select({
         orderId: order.id,
@@ -45,19 +119,73 @@ class DashboardService {
         shop: order.shop,
         status: order.status,
         releaseDate: order.releaseDate,
+        orderDate: order.orderDate,
+        paymentDate: order.paymentDate,
+        shippingDate: order.shippingDate,
+        collectionDate: order.collectionDate,
         itemImages: sql<
           string[]
-        >`array_agg(DISTINCT ${item.image}) FILTER (WHERE ${item.image} IS NOT NULL)`,
-        itemIds: sql<string[]>`array_agg(DISTINCT ${item.id})`,
+        >`COALESCE(array_agg(DISTINCT ${item.image}) FILTER (WHERE ${item.image} IS NOT NULL), ARRAY[]::text[])`,
+        itemIds: sql<string[]>`COALESCE(array_agg(DISTINCT ${item.id}), ARRAY[]::text[])`,
         total: sql<number>`COALESCE(${sum(collection.price)}, 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`,
       })
       .from(order)
       .leftJoin(collection, and(eq(order.id, collection.orderId)))
       .leftJoin(item, eq(collection.itemId, item.id))
-      .where(and(eq(order.userId, sql.placeholder("userId")), ne(order.status, "Owned")))
-      .groupBy(order.id, order.title, order.shop, order.status, order.releaseDate)
-      .orderBy(asc(order.releaseDate))
-      .limit(10)
+      .where(
+        and(
+          eq(order.userId, sql.placeholder("userId")),
+          or(
+            and(
+              eq(order.status, "Owned"),
+              gte(order.collectionDate, sql.placeholder("startDate")),
+              lte(order.collectionDate, sql.placeholder("endDate")),
+            ),
+            and(
+              ne(order.status, "Owned"),
+              or(
+                and(
+                  gte(order.releaseDate, sql.placeholder("startDate")),
+                  lte(order.releaseDate, sql.placeholder("endDate")),
+                ),
+                and(
+                  eq(order.status, "Ordered"),
+                  gte(order.orderDate, sql.placeholder("startDate")),
+                  lte(order.orderDate, sql.placeholder("endDate")),
+                ),
+                and(
+                  eq(order.status, "Paid"),
+                  gte(order.paymentDate, sql.placeholder("startDate")),
+                  lte(order.paymentDate, sql.placeholder("endDate")),
+                ),
+                and(
+                  eq(order.status, "Shipped"),
+                  gte(order.shippingDate, sql.placeholder("startDate")),
+                  lte(order.shippingDate, sql.placeholder("endDate")),
+                ),
+              ),
+            ),
+          ),
+        ),
+      )
+      .groupBy(
+        order.id,
+        order.title,
+        order.shop,
+        order.status,
+        order.releaseDate,
+        order.orderDate,
+        order.paymentDate,
+        order.shippingDate,
+        order.collectionDate,
+      )
+      .orderBy(
+        asc(
+          sql`COALESCE(${order.collectionDate}, ${order.shippingDate}, ${order.paymentDate}, ${order.orderDate}, ${order.releaseDate})`,
+        ),
+        asc(order.createdAt),
+      )
+      .limit(DASHBOARD_KANBAN_ORDER_LIMIT)
       .prepare("orders_kanban");
 
     // Total Active Orders Count, This Month Order Count, Total Shipping, Taxes, Duties, Tariffs, Misc Fees
@@ -72,11 +200,6 @@ class DashboardService {
         totalDutiesAllTime: sql<number>`COALESCE(${sum(sql`CASE WHEN ${order.status} != 'Ordered' THEN ${order.duties} ELSE 0 END`)}, 0)`,
         totalTariffsAllTime: sql<number>`COALESCE(${sum(sql`CASE WHEN ${order.status} != 'Ordered' THEN ${order.tariffs} ELSE 0 END`)}, 0)`,
         totalMiscFeesAllTime: sql<number>`COALESCE(${sum(sql`CASE WHEN ${order.status} != 'Ordered' THEN ${order.miscFees} ELSE 0 END`)}, 0)`,
-        thisMonthOrderCount: sql<number>`COALESCE(${sum(
-          sql`CASE WHEN ${order.releaseDate} >= ${sql.placeholder("currentMonth")}
-              AND ${order.releaseDate} < ${sql.placeholder("nextMonth")}
-              THEN 1 ELSE 0 END`,
-        )}, 0)`,
       })
       .from(order)
       .where(eq(order.userId, sql.placeholder("userId")))
@@ -133,65 +256,168 @@ class DashboardService {
       })
       .from(item_release)
       .innerJoin(item, eq(item_release.itemId, item.id))
-      .innerJoin(
-        collection,
-        and(
-          eq(item.id, collection.itemId),
-          eq(collection.userId, sql.placeholder("userId")),
-          ne(collection.status, "Owned"),
-        ),
-      )
       .where(
         and(
           gte(item_release.date, sql.placeholder("startDate")),
           lte(item_release.date, sql.placeholder("endDate")),
+          // Use an existence check instead of joining collection and deduping release rows with GROUP BY.
+          exists(
+            db
+              .select({ itemId: collection.itemId })
+              .from(collection)
+              .where(
+                and(
+                  eq(collection.itemId, item.id),
+                  eq(collection.userId, sql.placeholder("userId")),
+                  ne(collection.status, "Owned"),
+                ),
+              ),
+          ),
         ),
-      )
-      .groupBy(
-        item.id,
-        item.title,
-        item.image,
-        item.category,
-        item_release.date,
-        item_release.price,
-        item_release.priceCurrency,
       )
       .orderBy(asc(item_release.date))
       .prepare("release_calendar");
+
+    // Single monthly KPI query: order counts, item totals, fees, and paid/unpaid splits.
+    this.monthlySummaryPrepared = db
+      .select({
+        orderCount: count(monthlyOrdersBase.orderId),
+        unpaidOrderCount: sql<number>`COALESCE(SUM(CASE WHEN ${monthlyOrdersBase.status} = 'Ordered' THEN 1 ELSE 0 END), 0)`,
+        itemCount: sql<number>`COALESCE(SUM(COALESCE(${monthlyOrderItemStats.itemCount}, 0)), 0)`,
+        paidItemTotal: sql<number>`COALESCE(SUM(CASE WHEN ${monthlyOrdersBase.status} != 'Ordered' THEN COALESCE(${monthlyOrderItemStats.itemTotal}, 0) ELSE 0 END), 0)`,
+        unpaidItemTotal: sql<number>`COALESCE(SUM(CASE WHEN ${monthlyOrdersBase.status} = 'Ordered' THEN COALESCE(${monthlyOrderItemStats.itemTotal}, 0) ELSE 0 END), 0)`,
+        shipping: sql<number>`COALESCE(SUM(COALESCE(${monthlyOrdersBase.shippingFee}, 0)), 0)`,
+        taxes: sql<number>`COALESCE(SUM(COALESCE(${monthlyOrdersBase.taxes}, 0)), 0)`,
+        duties: sql<number>`COALESCE(SUM(COALESCE(${monthlyOrdersBase.duties}, 0)), 0)`,
+        tariffs: sql<number>`COALESCE(SUM(COALESCE(${monthlyOrdersBase.tariffs}, 0)), 0)`,
+        miscFees: sql<number>`COALESCE(SUM(COALESCE(${monthlyOrdersBase.miscFees}, 0)), 0)`,
+        paidFees: sql<number>`COALESCE(SUM(CASE WHEN ${monthlyOrdersBase.status} != 'Ordered' THEN ${monthlyOrderFeesTotal} ELSE 0 END), 0)`,
+        unpaidFees: sql<number>`COALESCE(SUM(CASE WHEN ${monthlyOrdersBase.status} = 'Ordered' THEN ${monthlyOrderFeesTotal} ELSE 0 END), 0)`,
+      })
+      .from(monthlyOrdersBase)
+      .leftJoin(monthlyOrderItemStats, eq(monthlyOrdersBase.orderId, monthlyOrderItemStats.orderId))
+      .prepare("monthly_summary");
+
+    // Shop breakdown is now assembled entirely in SQL from the shared monthly subqueries.
+    this.monthlyShopBreakdownPrepared = db
+      .select({
+        shopName: monthlyOrdersBase.shop,
+        orderCount: count(monthlyOrdersBase.orderId),
+        totalAmount: monthlyShopTotalAmount,
+      })
+      .from(monthlyOrdersBase)
+      .leftJoin(monthlyOrderItemStats, eq(monthlyOrdersBase.orderId, monthlyOrderItemStats.orderId))
+      .groupBy(monthlyOrdersBase.shop)
+      .orderBy(desc(monthlyShopTotalAmount))
+      .prepare("monthly_shop_breakdown");
+
+    // Monthly kanban keeps release-month orders plus owned orders collected in that month.
+    this.monthlyOrdersKanbanPrepared = db
+      .select({
+        orderId: order.id,
+        title: order.title,
+        shop: order.shop,
+        status: order.status,
+        releaseDate: order.releaseDate,
+        orderDate: order.orderDate,
+        paymentDate: order.paymentDate,
+        shippingDate: order.shippingDate,
+        collectionDate: order.collectionDate,
+        itemImages: sql<
+          string[]
+        >`COALESCE(array_agg(DISTINCT ${item.image}) FILTER (WHERE ${item.image} IS NOT NULL), ARRAY[]::text[])`,
+        itemIds: sql<string[]>`COALESCE(array_agg(DISTINCT ${item.id}), ARRAY[]::text[])`,
+        total: sql<number>`COALESCE(${sum(collection.price)}, 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`,
+      })
+      .from(order)
+      .leftJoin(collection, and(eq(order.id, collection.orderId)))
+      .leftJoin(item, eq(collection.itemId, item.id))
+      .where(
+        and(
+          eq(order.userId, sql.placeholder("userId")),
+          or(
+            and(
+              ne(order.status, "Owned"),
+              gte(order.releaseDate, sql.placeholder("startDate")),
+              lte(order.releaseDate, sql.placeholder("endDate")),
+            ),
+            and(
+              eq(order.status, "Owned"),
+              gte(order.collectionDate, sql.placeholder("startDate")),
+              lte(order.collectionDate, sql.placeholder("endDate")),
+            ),
+          ),
+        ),
+      )
+      .groupBy(
+        order.id,
+        order.title,
+        order.shop,
+        order.status,
+        order.releaseDate,
+        order.orderDate,
+        order.paymentDate,
+        order.shippingDate,
+        order.collectionDate,
+      )
+      .orderBy(
+        asc(sql`COALESCE(${order.collectionDate}, ${order.releaseDate})`),
+        asc(order.createdAt),
+      )
+      .limit(DASHBOARD_KANBAN_ORDER_LIMIT)
+      .prepare("monthly_orders_kanban");
   }
 
   async getDashboard(userId: string) {
-    const currentMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-    const nextMonth = new Date(
-      new Date().getFullYear(),
-      new Date().getMonth() + 1,
-      1,
-    ).toISOString();
-    const startOfYear = new Date(new Date().getFullYear(), 0, 1).toISOString();
-    const endOfYear = new Date(new Date().getFullYear() + 1, 0, 1).toISOString();
+    const now = new Date();
+    const overviewStartDate = toDateOnlyString(new Date(now.getFullYear(), now.getMonth() - 2, 1));
+    const overviewEndDate = toDateOnlyString(new Date(now.getFullYear(), now.getMonth() + 3, 0));
+    const startOfYear = toDateOnlyString(new Date(now.getFullYear(), 0, 1));
+    const endOfYear = toDateOnlyString(new Date(now.getFullYear() + 1, 0, 1));
 
-    const [collectionStats, categoriesOwned, orders, ordersSummary, unpaidOrders, monthlyOrders] =
-      await Promise.all([
-        this.collectionStatsPrepared.execute({ userId }),
+    const [
+      collectionStatsRows,
+      categoriesOwned,
+      orders,
+      ordersSummaryRows,
+      unpaidOrders,
+      monthlyOrders,
+    ] = await Promise.all([
+      this.collectionStatsPrepared.execute({ userId }),
 
-        this.categoriesOwnedPrepared.execute({ userId }),
+      this.categoriesOwnedPrepared.execute({ userId }),
 
-        this.ordersPrepared.execute({ userId }),
+      this.ordersPrepared.execute({
+        userId,
+        startDate: overviewStartDate,
+        endDate: overviewEndDate,
+      }),
 
-        this.ordersSummaryPrepared.execute({
-          userId,
-          currentMonth,
-          nextMonth,
-        }),
+      this.ordersSummaryPrepared.execute({
+        userId,
+      }),
 
-        this.unpaidOrdersPrepared.execute({ userId }),
+      this.unpaidOrdersPrepared.execute({ userId }),
 
-        this.monthlyOrdersPrepared.execute({
-          userId,
-          startOfYear,
-          endOfYear,
-        }),
-      ]);
+      this.monthlyOrdersPrepared.execute({
+        userId,
+        startOfYear,
+        endOfYear,
+      }),
+    ]);
+
+    const collectionStats = collectionStatsRows[0] ?? {
+      totalItems: 0,
+      totalSpent: 0,
+    };
+    const ordersSummary = ordersSummaryRows[0] ?? {
+      totalActiveOrderCount: 0,
+      totalShippingAllTime: 0,
+      totalTaxesAllTime: 0,
+      totalDutiesAllTime: 0,
+      totalTariffsAllTime: 0,
+      totalMiscFeesAllTime: 0,
+    };
 
     return {
       collectionStats,
@@ -204,8 +430,8 @@ class DashboardService {
   }
 
   async getReleaseCalendar(userId: string, month: number, year: number) {
-    const startDate = new Date(year, month - 1, 1).toISOString();
-    const endDate = new Date(year, month, 0).toISOString();
+    const startDate = toDateOnlyString(new Date(year, month - 1, 1));
+    const endDate = toDateOnlyString(new Date(year, month, 0));
 
     const releases = await this.releaseCalendarPrepared.execute({
       userId,
@@ -214,6 +440,58 @@ class DashboardService {
     });
 
     return { releases };
+  }
+
+  async getMonthlyDashboard(userId: string, month: number, year: number) {
+    const startDate = toDateOnlyString(new Date(year, month - 1, 1));
+    const endDate = toDateOnlyString(new Date(year, month, 0));
+    const params = { userId, startDate, endDate };
+
+    // The monthly response now comes from three queries instead of multiple overlapping scans.
+    const [monthlySummaryRows, shopBreakdownRows, orders] = await Promise.all([
+      this.monthlySummaryPrepared.execute(params),
+      this.monthlyShopBreakdownPrepared.execute(params),
+      this.monthlyOrdersKanbanPrepared.execute(params),
+    ]);
+
+    const monthlySummary = monthlySummaryRows[0] ?? {
+      itemCount: 0,
+      orderCount: 0,
+      unpaidOrderCount: 0,
+      paidItemTotal: 0,
+      unpaidItemTotal: 0,
+      shipping: 0,
+      taxes: 0,
+      duties: 0,
+      tariffs: 0,
+      miscFees: 0,
+      paidFees: 0,
+      unpaidFees: 0,
+    };
+    const shopBreakdown = shopBreakdownRows.map((row) => ({
+      shopName: row.shopName,
+      orderCount: row.orderCount,
+      totalAmount: Number(row.totalAmount),
+    }));
+    const costBreakdown = {
+      items: Number(monthlySummary.paidItemTotal) + Number(monthlySummary.unpaidItemTotal),
+      shipping: Number(monthlySummary.shipping),
+      taxes: Number(monthlySummary.taxes),
+      duties: Number(monthlySummary.duties),
+      tariffs: Number(monthlySummary.tariffs),
+      miscFees: Number(monthlySummary.miscFees),
+    };
+
+    return {
+      itemCount: Number(monthlySummary.itemCount),
+      orderCount: monthlySummary.orderCount,
+      unpaidOrderCount: Number(monthlySummary.unpaidOrderCount),
+      paidAmount: Number(monthlySummary.paidItemTotal) + Number(monthlySummary.paidFees),
+      unpaidAmount: Number(monthlySummary.unpaidItemTotal) + Number(monthlySummary.unpaidFees),
+      shopBreakdown,
+      costBreakdown,
+      orders,
+    };
   }
 }
 

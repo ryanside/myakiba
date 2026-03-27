@@ -57,7 +57,7 @@ export function SyncSheetButton({ syncType, label, className }: SyncSheetButtonP
             ) : (
               <PlusIcon ref={addItemsIconRef} size={17} />
             )}
-            {label}
+            <span className="hidden sm:inline">{label}</span>
           </Button>
         }
       />

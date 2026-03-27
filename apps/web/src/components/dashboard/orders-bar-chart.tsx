@@ -1,13 +1,14 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Bar, BarChart, Cell, XAxis, ReferenceLine } from "recharts";
-import React from "react";
 import { AnimatePresence } from "motion/react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartContainer } from "@/components/ui/chart";
-import type { ChartConfig } from "@/components/ui/chart";
-import { cn } from "@/lib/utils";
 import { useMotionValueEvent, useSpring } from "motion/react";
 import { useNavigate } from "@tanstack/react-router";
 import { toDateOnlyString } from "@myakiba/utils/date-only";
+import { ChartContainer } from "@/components/ui/chart";
+import type { ChartConfig } from "@/components/ui/chart";
+import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame";
+import { Skeleton } from "@/components/ui/skeleton";
+import Loader from "../loader";
 
 const CHART_MARGIN = 35;
 
@@ -34,23 +35,23 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 interface MonthlyOrderData {
-  month: number;
-  orderCount: number;
+  readonly month: number;
+  readonly orderCount: number;
 }
 
-interface ValueLineBarChartProps {
-  data: MonthlyOrderData[];
+interface OrdersBarChartProps {
+  readonly data: ReadonlyArray<MonthlyOrderData>;
+  readonly isLoading?: boolean;
 }
 
 function formatDateOnlyForSearch(date: Date): string {
   return toDateOnlyString(date) ?? "";
 }
 
-export function ValueLineBarChart({ data }: ValueLineBarChartProps) {
+export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.ReactNode {
   const navigate = useNavigate();
 
-  // Transform data to include all 12 months with 0 for missing months
-  const chartData = React.useMemo(() => {
+  const chartData = useMemo(() => {
     const monthMap = new Map(data.map((item) => [Number(item.month), Number(item.orderCount)]));
     return MONTH_NAMES.map((monthName, index) => ({
       month: monthName,
@@ -58,17 +59,13 @@ export function ValueLineBarChart({ data }: ValueLineBarChartProps) {
     }));
   }, [data]);
 
-  // Get current month index (0-11)
-  const currentMonthIndex = React.useMemo(() => new Date().getMonth(), []);
+  const currentMonthIndex = useMemo(() => new Date().getMonth(), []);
 
-  const [activeIndex, setActiveIndex] = React.useState<number | undefined>(currentMonthIndex);
+  const [activeIndex, setActiveIndex] = useState<number | undefined>(currentMonthIndex);
 
-  // Calculate date range for a given month index (0-11)
-  const getReleaseMonthDateRange = React.useCallback((monthIndex: number) => {
+  const getReleaseMonthDateRange = useCallback((monthIndex: number) => {
     const currentYear = new Date().getFullYear();
-    // monthIndex is 0-11, but Date constructor expects 0-11 for months
     const startDate = new Date(currentYear, monthIndex, 1);
-    // Get last day of the month by going to the first day of next month and subtracting 1 day
     const endDate = new Date(currentYear, monthIndex + 1, 0);
 
     return {
@@ -77,8 +74,7 @@ export function ValueLineBarChart({ data }: ValueLineBarChartProps) {
     };
   }, []);
 
-  // Handle bar click to navigate to orders page with filters
-  const handleBarClick = React.useCallback(
+  const handleBarClick = useCallback(
     (monthIndex: number) => {
       const releaseDateRange = getReleaseMonthDateRange(monthIndex);
       navigate({
@@ -89,15 +85,13 @@ export function ValueLineBarChart({ data }: ValueLineBarChartProps) {
     [navigate, getReleaseMonthDateRange],
   );
 
-  const maxValueIndex = React.useMemo(() => {
-    // if user is moving mouse over bar then set value to the bar value
+  const maxValueIndex = useMemo(() => {
     if (activeIndex !== undefined) {
       return { index: activeIndex, value: chartData[activeIndex].desktop };
     }
-    // if no active index then set value to max value
     return chartData.reduce(
-      (max, data, index) => {
-        return data.desktop > max.value ? { index, value: data.desktop } : max;
+      (max, d, index) => {
+        return d.desktop > max.value ? { index, value: d.desktop } : max;
       },
       { index: 0, value: 0 },
     );
@@ -105,27 +99,43 @@ export function ValueLineBarChart({ data }: ValueLineBarChartProps) {
 
   const maxValueIndexSpring = useSpring(maxValueIndex.value);
 
-  const [springyValue, setSpringyValue] = React.useState(maxValueIndex.value);
+  const [springyValue, setSpringyValue] = useState(maxValueIndex.value);
 
   useMotionValueEvent(maxValueIndexSpring, "change", (latest) => {
     setSpringyValue(Number(latest));
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     maxValueIndexSpring.set(maxValueIndex.value);
   }, [maxValueIndex.value, maxValueIndexSpring]);
 
+  if (isLoading) {
+    return (
+      <Frame className="border-none ring-1 ring-foreground/10 shadow-xs! min-h-[320px]">
+        <FrameHeader>
+          <Skeleton className="h-4 my-1 w-32" />
+        </FrameHeader>
+        <FramePanel className="shadow-none!">
+          <Loader className="justify-center text-muted" />
+        </FramePanel>
+      </Frame>
+    );
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <span className={cn("text-2xl tracking-tighter")}>{maxValueIndex.value}</span>
-        </CardTitle>
-        <CardDescription>orders in {chartData[maxValueIndex.index].month}</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Frame className="border-none ring-1 ring-foreground/10 shadow-xs! lg:max-h-[320px]">
+      <FrameHeader>
+        <FrameTitle className="text-base font-medium">
+          {maxValueIndex.value}{" "}
+          <span className="ml-1 text-sm text-muted-foreground">
+            {maxValueIndex.value === 1 ? "order" : "orders"} in{" "}
+            {chartData[maxValueIndex.index].month}
+          </span>
+        </FrameTitle>
+      </FrameHeader>
+      <FramePanel className="shadow-none!">
         <AnimatePresence mode="wait">
-          <ChartContainer config={chartConfig}>
+          <ChartContainer config={chartConfig} className="w-full h-full">
             <BarChart
               accessibilityLayer
               data={chartData}
@@ -141,9 +151,10 @@ export function ValueLineBarChart({ data }: ValueLineBarChartProps) {
                 tickLine={false}
                 tickMargin={10}
                 axisLine={false}
-                tickFormatter={(value) => value.slice(0, 3)}
+                tickFormatter={(value: string) => value.slice(0, 3)}
+                allowDataOverflow={true}
               />
-              <Bar dataKey="desktop" fill="var(--primary)" radius={4}>
+              <Bar dataKey="desktop" fill="var(--primary)" radius={6.25}>
                 {chartData.map((_, index) => (
                   <Cell
                     className="duration-200 cursor-pointer"
@@ -165,27 +176,26 @@ export function ValueLineBarChart({ data }: ValueLineBarChartProps) {
             </BarChart>
           </ChartContainer>
         </AnimatePresence>
-      </CardContent>
-    </Card>
+      </FramePanel>
+    </Frame>
   );
 }
 
 interface CustomReferenceLabelProps {
-  viewBox?: {
-    x?: number;
-    y?: number;
+  readonly viewBox?: {
+    readonly x?: number;
+    readonly y?: number;
   };
-  value: number;
+  readonly value: number;
 }
 
-const CustomReferenceLabel: React.FC<CustomReferenceLabelProps> = (props) => {
+function CustomReferenceLabel(props: CustomReferenceLabelProps): React.ReactNode {
   const { viewBox, value } = props;
   const x = viewBox?.x ?? 0;
   const y = viewBox?.y ?? 0;
 
-  // we need to change width based on value length
-  const width = React.useMemo(() => {
-    const characterWidth = 8; // Average width of a character in pixels
+  const width = useMemo(() => {
+    const characterWidth = 8;
     const padding = 10;
     return value.toString().length * characterWidth + padding;
   }, [value]);
@@ -205,4 +215,4 @@ const CustomReferenceLabel: React.FC<CustomReferenceLabelProps> = (props) => {
       </text>
     </>
   );
-};
+}
