@@ -160,7 +160,7 @@ function RouteComponent() {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center gap-2.5">
-              <h1 className="text-2xl tracking-tight">{typeConfig.label} Sync</h1>
+              <h1 className="text-2xl font-medium tracking-tight">{typeConfig.label} Sync</h1>
               <ThemedBadge variant={statusConfig.variant} size="sm">
                 {statusConfig.label}
               </ThemedBadge>

@@ -79,5 +79,5 @@ export const CURRENCIES = [
 ] as const;
 
 export const DEFAULT_PAGE_INDEX = 0;
-export const DEFAULT_PAGE_SIZE = 12;
-export const DEFAULT_LIMIT = 12;
+export const DEFAULT_PAGE_SIZE = 24;
+export const DEFAULT_LIMIT = 24;

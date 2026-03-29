@@ -53,14 +53,13 @@ export default function SyncStatusWidget() {
   }, [sessions]);
 
   const hasActive = activeSessions.length > 0;
-  const hasSessions = sessions.length > 0;
 
   const totalActiveItems = activeSessions.reduce((sum, s) => sum + s.totalItems, 0);
   const totalActiveSynced = activeSessions.reduce((sum, s) => sum + s.successCount, 0);
 
   const [open, setOpen] = useState(false);
 
-  if (isRecentPending || (!hasSessions && !isRecentError)) {
+  if (isRecentPending) {
     return (
       <Button size="sm" variant="outline" className="mx-2 w-41.5 justify-start!">
         <Skeleton className="w-41.5 h-4" />

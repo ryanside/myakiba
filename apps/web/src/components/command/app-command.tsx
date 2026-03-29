@@ -303,7 +303,7 @@ export function AppCommand(): React.JSX.Element {
         onClick={() => setOpen(true)}
       >
         <span className="flex min-w-0 items-center gap-2">
-          <HugeiconsIcon icon={SearchIcon} className="size-4 shrink-0" />
+          <HugeiconsIcon icon={SearchIcon} className="size-3 shrink-0" strokeWidth={2} />
           <span className="truncate">Search</span>
         </span>
         <CommandShortcut>⌘K</CommandShortcut>

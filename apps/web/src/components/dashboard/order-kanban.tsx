@@ -146,7 +146,7 @@ function OrderCard({
             <Link
               to="/orders/$id"
               params={{ id: order.orderId }}
-              className="line-clamp-2 text-sm font-medium leading-tight hover:underline"
+              className="line-clamp-1 text-sm font-medium leading-tight hover:underline"
               onPointerDown={(e) => e.stopPropagation()}
             >
               {order.title}

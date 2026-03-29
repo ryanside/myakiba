@@ -20,7 +20,7 @@ import { OrderItemSyncSheet } from "./order-item-sync-sheet";
 import { orderItemsQueryOptions } from "@/hooks/use-orders";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 
-export const ORDER_ITEM_PAGE_SIZE = 6;
+export const ORDER_ITEM_PAGE_SIZE = 12;
 
 export function OrderItemSubDataGrid({
   orderId,

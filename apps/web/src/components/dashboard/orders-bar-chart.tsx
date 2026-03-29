@@ -97,7 +97,10 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
     );
   }, [activeIndex, chartData]);
 
-  const maxValueIndexSpring = useSpring(maxValueIndex.value);
+  const maxValueIndexSpring = useSpring(maxValueIndex.value, {
+    stiffness: 150,
+    damping: 18,
+  });
 
   const [springyValue, setSpringyValue] = useState(maxValueIndex.value);
 
@@ -166,6 +169,7 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
                 ))}
               </Bar>
               <ReferenceLine
+                ifOverflow="visible"
                 opacity={0.4}
                 y={springyValue}
                 stroke="var(--foreground)"
