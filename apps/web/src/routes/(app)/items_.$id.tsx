@@ -1,17 +1,19 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Calendar01Icon,
+  ArrowLeft01Icon,
   Delete01Icon,
   Edit01Icon,
   Loading03Icon,
   MoveIcon,
   Package01Icon,
+  Refresh01Icon,
 } from "@hugeicons/core-free-icons";
 import { createFileRoute, useParams, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { app, getErrorMessage } from "@/lib/treaty-client";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Badge, ThemedBadge } from "@/components/reui/badge";
 import {
   Empty,
@@ -21,7 +23,7 @@ import {
   EmptyMedia,
 } from "@/components/ui/empty";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import { formatDateOnlyForDisplay } from "@/lib/date-display";
+import { formatDateOnlyForDisplay, formatRelativeTimeToNow } from "@/lib/date-display";
 import CollectionItemForm from "@/components/collection/collection-item-form";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { CollectionItemFormValues, CollectionItem } from "@myakiba/contracts/collection/types";
@@ -30,6 +32,7 @@ import { toast } from "sonner";
 import Loader from "@/components/loader";
 import { getCategoryColor } from "@/lib/category-colors";
 import { Card, CardHeader, CardAction, CardContent, CardFooter } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import UnifiedItemMoveForm from "@/components/orders/unified-item-move-form";
 import {
   Timeline,
@@ -91,6 +94,22 @@ async function getItemRelatedCollection(itemId: string) {
   return data;
 }
 
+async function getResyncStatus(itemId: string) {
+  const { data, error } = await app.api.items({ itemId })["resync-status"].get();
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to get resync status"));
+  }
+  return data;
+}
+
+async function requestResync(itemId: string) {
+  const { data, error } = await app.api.items({ itemId }).resync.post();
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to request resync"));
+  }
+  return data;
+}
+
 function getTimelineActiveStep(dates: {
   readonly orderDate: string | null;
   readonly paymentDate: string | null;
@@ -123,6 +142,69 @@ function DetailRow({
   );
 }
 
+type ResyncStatus = "idle" | "requested" | "processing" | "cooldown";
+
+const RESYNC_LABELS: Readonly<Record<ResyncStatus, string>> = {
+  idle: "Update data",
+  requested: "Update requested",
+  processing: "Updating now",
+  cooldown: "Recently updated",
+};
+
+function formatCooldownRemaining(expiresAt: string): string {
+  const ms = new Date(expiresAt).getTime() - Date.now();
+  if (ms <= 0) return "";
+
+  const hours = Math.floor(ms / (1000 * 60 * 60));
+  const days = Math.floor(hours / 24);
+  const remainingHours = hours % 24;
+
+  if (days > 0) return `${days}d ${remainingHours}h`;
+  if (hours > 0) return `${hours}h`;
+  const minutes = Math.ceil(ms / (1000 * 60));
+  return `${minutes}m`;
+}
+
+function ResyncButton({
+  status,
+  isPending,
+  cooldownExpiresAt,
+  onRequest,
+}: {
+  readonly status: ResyncStatus;
+  readonly isPending: boolean;
+  readonly cooldownExpiresAt: string | null;
+  readonly onRequest: () => void;
+}) {
+  const isDisabled = status !== "idle" || isPending;
+  const buttonLabel = isPending ? "Requesting..." : RESYNC_LABELS[status];
+  const showCooldownTooltip = status === "cooldown" && cooldownExpiresAt !== null;
+  const cooldownRemaining = cooldownExpiresAt ? formatCooldownRemaining(cooldownExpiresAt) : "";
+
+  const button = (
+    <Button variant="ghost" size="xs" disabled={isDisabled} onClick={onRequest} className="gap-1.5">
+      <HugeiconsIcon
+        icon={isPending ? Loading03Icon : Refresh01Icon}
+        className={cn("size-3", isPending && "animate-spin")}
+      />
+      {buttonLabel}
+    </Button>
+  );
+
+  if (showCooldownTooltip) {
+    return (
+      <Tooltip>
+        <TooltipTrigger render={<span className="inline-flex cursor-default">{button}</span>} />
+        <TooltipContent>
+          {cooldownRemaining ? `Available again in ${cooldownRemaining}` : RESYNC_LABELS.cooldown}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return button;
+}
+
 function RouteComponent() {
   const { currency: userCurrency, locale: userLocale, dateFormat } = useUserPreferences();
   const queryClient = useQueryClient();
@@ -138,6 +220,26 @@ function RouteComponent() {
     queryFn: () => getItem(id),
     staleTime: 1000 * 60 * 5,
     retry: false,
+  });
+
+  const { data: resyncStatusData } = useQuery({
+    queryKey: ["item", id, "resyncStatus"],
+    queryFn: () => getResyncStatus(id),
+    staleTime: 1000 * 30,
+    retry: false,
+  });
+
+  const requestResyncMutation = useMutation({
+    mutationFn: () => requestResync(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["item", id, "resyncStatus"] });
+      toast.success("Update requested");
+    },
+    onError: (mutationError) => {
+      toast.error("Failed to request update", {
+        description: mutationError.message,
+      });
+    },
   });
 
   const { data: itemRelatedOrders } = useQuery({
@@ -255,17 +357,23 @@ function RouteComponent() {
   if (isError) {
     console.error(error);
     return (
-      <div className="flex flex-col items-center justify-center h-64 gap-y-4">
-        <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
-        <Link
-          to="/collection"
-          className={cn(
-            buttonVariants({ variant: "link" }),
-            "mx-0 p-0 w-fit text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline",
-          )}
+      <div className="flex flex-col items-center justify-center gap-y-4">
+        <Button
+          variant="link"
+          size="sm"
+          render={<Link to="/collection" />}
+          nativeButton={false}
+          className="self-start"
         >
+          <HugeiconsIcon
+            icon={ArrowLeft01Icon}
+            strokeWidth={2}
+            data-icon="inline-start"
+            aria-hidden="true"
+          />
           Back to Collection
-        </Link>
+        </Button>
+        <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
       </div>
     );
   }
@@ -286,16 +394,22 @@ function RouteComponent() {
   );
 
   return (
-    <div className="flex flex-col gap-8">
-      <Link
-        to="/collection"
-        className={cn(
-          buttonVariants({ variant: "link" }),
-          "mx-0 p-0 w-fit text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline",
-        )}
+    <div className="flex flex-col gap-4">
+      <Button
+        variant="link"
+        size="sm"
+        render={<Link to="/collection" />}
+        nativeButton={false}
+        className="self-start"
       >
+        <HugeiconsIcon
+          icon={ArrowLeft01Icon}
+          strokeWidth={2}
+          data-icon="inline-start"
+          aria-hidden="true"
+        />
         Back to Collection
-      </Link>
+      </Button>
 
       {/* Hero: Image + Item Identity */}
       <div className="flex flex-col sm:flex-row gap-6">
@@ -309,10 +423,10 @@ function RouteComponent() {
             />
           </div>
         )}
-        <div className="flex flex-col justify-center gap-3">
-          <div>
-            <h1 className="text-2xl font-medium tracking-tight">{item.title}</h1>
-            {item.externalId ? (
+        <div className="flex flex-col items-start justify-center gap-2">
+          <h1 className="text-2xl font-medium tracking-tight">{item.title}</h1>
+          {item.externalId ? (
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <a
                 href={`https://myfigurecollection.net/item/${item.externalId}`}
                 target="_blank"
@@ -321,11 +435,31 @@ function RouteComponent() {
               >
                 myfigurecollection.net/item/{item.externalId}
               </a>
-            ) : (
-              <span className="text-xs text-muted-foreground">Custom item</span>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2">
+              {item.updatedAt && (
+                <>
+                  <span className="hidden sm:inline text-xs text-muted-foreground/50">·</span>
+                  <span className="text-xs text-muted-foreground/70">
+                    Updated {formatRelativeTimeToNow(new Date(item.updatedAt))}
+                  </span>
+                </>
+              )}
+              {item.source === "mfc" && item.externalId && (
+                <div className="flex items-center gap-2">
+                  <span className="hidden sm:inline text-xs text-muted-foreground/50">·</span>
+                  <span className="text-xs text-muted-foreground/70">Item info outdated?</span>
+                  <ResyncButton
+                    status={resyncStatusData?.status ?? "idle"}
+                    isPending={requestResyncMutation.isPending}
+                    cooldownExpiresAt={resyncStatusData?.cooldownExpiresAt ?? null}
+                    onRequest={() => requestResyncMutation.mutate()}
+                  />
+                </div>
+              )}
+            </div>
+          ) : (
+            <span className="text-xs text-muted-foreground">Custom item</span>
+          )}
+          <div className="flex flex-wrap items-center gap-2">
             <Badge
               variant="outline"
               style={{
