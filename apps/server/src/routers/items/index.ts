@@ -110,8 +110,14 @@ const itemsRouter = new Elysia({ prefix: "/items" })
   )
   .get(
     "/:itemId/resync-status",
-    async ({ params, log }) => {
-      log.set({ action: "items.resyncStatus", item: { id: params.itemId } });
+    async ({ params, user, log }) => {
+      if (!user) return status(401, "Unauthorized");
+
+      log.set({
+        action: "items.resyncStatus",
+        user: { id: user.id },
+        item: { id: params.itemId },
+      });
 
       const { data: resyncItem, error: validateError } = await tryCatch(
         ItemResyncService.validateItemForResync(params.itemId),
@@ -142,7 +148,7 @@ const itemsRouter = new Elysia({ prefix: "/items" })
       log.set({ outcome: "success", resyncStatus: state.status });
       return state;
     },
-    { params: itemParamSchema },
+    { params: itemParamSchema, auth: true },
   )
   .post(
     "/:itemId/resync",

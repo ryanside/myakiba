@@ -14,7 +14,7 @@ export async function refreshItemData(scrapedItem: ScrapedItem, itemId: string):
   const assembledItem = assembled.items[0];
 
   await db.transaction(async (tx) => {
-    await tx
+    const updatedItems = await tx
       .update(item)
       .set({
         title: assembledItem.title,
@@ -27,7 +27,12 @@ export async function refreshItemData(scrapedItem: ScrapedItem, itemId: string):
         image: assembledItem.image,
         updatedAt: new Date(),
       })
-      .where(eq(item.id, itemId));
+      .where(eq(item.id, itemId))
+      .returning({ id: item.id });
+
+    if (updatedItems.length === 0) {
+      throw new Error("ITEM_NOT_FOUND_DURING_RESYNC");
+    }
 
     if (assembled.entries.length > 0) {
       await tx
