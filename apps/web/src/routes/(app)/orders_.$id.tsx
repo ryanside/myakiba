@@ -1,11 +1,10 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Edit01Icon, PackageIcon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, Edit01Icon, PackageIcon } from "@hugeicons/core-free-icons";
 import { createFileRoute, useParams, Link } from "@tanstack/react-router";
-import { cn } from "@/lib/utils";
 import { getOrder, editOrder, deleteOrderItem } from "@/queries/orders";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ThemedBadge } from "@/components/reui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { formatDateOnlyForDisplay, formatTimestampForDisplay } from "@/lib/date-display";
@@ -175,17 +174,23 @@ function RouteComponent() {
 
   if (isError) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 gap-y-4">
-        <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
-        <Link
-          to="/orders"
-          className={cn(
-            buttonVariants({ variant: "link" }),
-            "mx-0 p-0 w-fit text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline",
-          )}
+      <div className="flex flex-col gap-3">
+        <Button
+          variant="link"
+          size="sm"
+          render={<Link to="/orders" />}
+          nativeButton={false}
+          className="self-start"
         >
+          <HugeiconsIcon
+            icon={ArrowLeft01Icon}
+            strokeWidth={2}
+            data-icon="inline-start"
+            aria-hidden="true"
+          />
           Back to Orders
-        </Link>
+        </Button>
+        <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
       </div>
     );
   }
@@ -219,15 +224,21 @@ function RouteComponent() {
     <div className="flex flex-col gap-8 min-h-full">
       {/* Header */}
       <div className="flex flex-col gap-3">
-        <Link
-          to="/orders"
-          className={cn(
-            buttonVariants({ variant: "link" }),
-            "mx-0 p-0 w-fit text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline",
-          )}
+        <Button
+          variant="link"
+          size="sm"
+          render={<Link to="/orders" />}
+          nativeButton={false}
+          className="self-start"
         >
+          <HugeiconsIcon
+            icon={ArrowLeft01Icon}
+            strokeWidth={2}
+            data-icon="inline-start"
+            aria-hidden="true"
+          />
           Back to Orders
-        </Link>
+        </Button>
 
         <div className="flex items-start justify-between gap-4">
           <div className="flex flex-col gap-1.5">

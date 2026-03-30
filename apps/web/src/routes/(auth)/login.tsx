@@ -40,12 +40,15 @@ function RouteComponent() {
       <EarlyAccessModal open={!hasAccess} onAccessGranted={() => setHasAccess(true)} />
 
       <div className="absolute top-4 left-4">
-        <Link to="/">
-          <Button variant="ghost" className="text-foreground">
-            <HugeiconsIcon icon={ArrowLeft01Icon} />
-            Home
-          </Button>
-        </Link>
+        <Button variant="link" size="sm" render={<Link to="/" />} nativeButton={false}>
+          <HugeiconsIcon
+            icon={ArrowLeft01Icon}
+            strokeWidth={2}
+            data-icon="inline-start"
+            aria-hidden="true"
+          />
+          Back to Home
+        </Button>
       </div>
       <div className="w-full max-w-md">
         {showSignIn ? (
