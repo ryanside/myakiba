@@ -106,7 +106,7 @@ export const batchUpdateSyncSessionItemStatuses = async ({
 
 /**
  * Marks previously scraped sync_session_item rows as failed when persistence fails.
- * This keeps retry semantics consistent because /sync/retry claims failed rows only.
+ * This keeps durable sync history accurate when scraping succeeded but persistence did not.
  */
 export const markPersistFailedSyncSessionItemStatuses = async ({
   syncSessionId,

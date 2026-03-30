@@ -10,7 +10,6 @@ import {
   bigint,
   index,
   uniqueIndex,
-  jsonb,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 import { createId } from "@paralleldrive/cuid2";
@@ -233,7 +232,6 @@ export const syncSession = pgTable(
     orderId: text("order_id").references(() => order.id, {
       onDelete: "set null",
     }),
-    orderPayload: jsonb("order_payload"),
     totalItems: integer("total_items").notNull().default(0),
     successCount: integer("success_count").notNull().default(0),
     failCount: integer("fail_count").notNull().default(0),
@@ -258,10 +256,8 @@ export const syncSessionItem = pgTable(
       .notNull()
       .references(() => syncSession.id, { onDelete: "cascade" }),
     itemExternalId: integer("item_external_id").notNull(),
-    metadata: jsonb("metadata"),
     status: text("status", { enum: SYNC_SESSION_ITEM_STATUSES }).notNull().default("pending"),
     errorReason: text("error_reason"),
-    retryCount: integer("retry_count").notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },

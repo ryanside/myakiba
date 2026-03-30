@@ -7,11 +7,7 @@ import {
   syncSession,
   syncSessionItem,
 } from "@myakiba/db/schema/figure";
-import type {
-  DbEnrichedSyncSessionItemRow,
-  DbSyncSessionItemRow,
-  DbSyncSessionRow,
-} from "@myakiba/db/schema/figure";
+import type { DbEnrichedSyncSessionItemRow, DbSyncSessionRow } from "@myakiba/db/schema/figure";
 import { and, inArray, eq, desc, count, sql } from "drizzle-orm";
 import { syncJobStatusSchema, type SyncTerminalState } from "./model";
 import type {
@@ -38,12 +34,6 @@ import {
   writeJobStatusSnapshotAndPublish,
 } from "@myakiba/redis/job-status";
 import { redis } from "@myakiba/redis/client";
-import {
-  csvItemMetadataSchema,
-  orderItemMetadataSchema,
-  collectionItemMetadataSchema,
-  syncOrderSchema,
-} from "@myakiba/contracts/sync/schema";
 import { createLogger } from "evlog";
 
 const syncQueue = new Queue("sync-queue", {
@@ -618,8 +608,6 @@ class SyncService {
     itemExternalIds: readonly number[],
     options?: {
       readonly orderId?: string;
-      readonly orderPayload?: UpdatedSyncOrder;
-      readonly itemMetadata?: ReadonlyMap<number, Record<string, unknown>>;
       readonly existingItemExternalIds?: readonly number[];
     },
   ): Promise<string> {
@@ -632,7 +620,6 @@ class SyncService {
         userId,
         syncType,
         orderId: options?.orderId ?? null,
-        orderPayload: options?.orderPayload ?? null,
         totalItems: itemExternalIds.length + existingIds.length,
         successCount: existingIds.length,
       });
@@ -640,14 +627,12 @@ class SyncService {
       const pendingRows = itemExternalIds.map((externalId) => ({
         syncSessionId: sessionId,
         itemExternalId: externalId,
-        metadata: options?.itemMetadata?.get(externalId) ?? null,
       }));
 
       const scrapedRows = existingIds.map((externalId) => ({
         syncSessionId: sessionId,
         itemExternalId: externalId,
         status: "scraped" as const,
-        metadata: options?.itemMetadata?.get(externalId) ?? null,
       }));
 
       const allRows = [...pendingRows, ...scrapedRows];
@@ -714,10 +699,8 @@ class SyncService {
         id: syncSessionItem.id,
         syncSessionId: syncSessionItem.syncSessionId,
         itemExternalId: syncSessionItem.itemExternalId,
-        metadata: syncSessionItem.metadata,
         status: syncSessionItem.status,
         errorReason: syncSessionItem.errorReason,
-        retryCount: syncSessionItem.retryCount,
         createdAt: syncSessionItem.createdAt,
         updatedAt: syncSessionItem.updatedAt,
         itemId: item.id,
@@ -786,369 +769,6 @@ class SyncService {
           eq(syncSessionItem.itemExternalId, itemExternalId),
         ),
       );
-  }
-
-  async retryFailedItems(
-    sessionId: string,
-    userId: string,
-  ): Promise<{ jobId: string; itemCount: number }> {
-    const [sessionData] = await db
-      .select()
-      .from(syncSession)
-      .where(and(eq(syncSession.id, sessionId), eq(syncSession.userId, userId)));
-
-    if (!sessionData) throw new Error("SYNC_SESSION_NOT_FOUND");
-
-    // Atomically claim failed rows via UPDATE ... RETURNING. This prevents stale
-    // pre-read snapshots and ensures concurrent retry calls cannot claim the same rows.
-    const itemsToRetry = await db.transaction(async (tx) => {
-      const claimedRows = await tx
-        .update(syncSessionItem)
-        .set({
-          status: "pending",
-          errorReason: null,
-          retryCount: sql`${syncSessionItem.retryCount} + 1`,
-          updatedAt: new Date(),
-        })
-        .where(
-          and(eq(syncSessionItem.syncSessionId, sessionId), eq(syncSessionItem.status, "failed")),
-        )
-        .returning();
-
-      if (claimedRows.length === 0) throw new Error("NO_FAILED_ITEMS_TO_RETRY");
-
-      await tx
-        .update(syncSession)
-        .set({
-          status: "processing",
-          completedAt: null,
-          updatedAt: new Date(),
-        })
-        .where(eq(syncSession.id, sessionId));
-
-      return [...claimedRows].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-    });
-
-    const retryExternalIds = itemsToRetry.map((i) => i.itemExternalId);
-    let queuedJobId: string | null = null;
-
-    try {
-      const jobData = await this.buildRetryJobData(
-        sessionData.syncType,
-        userId,
-        sessionId,
-        itemsToRetry,
-        sessionData.orderId,
-        sessionData.orderPayload,
-        sessionData.successCount,
-      );
-
-      const job = await syncQueue.add("sync-job", jobData, {
-        removeOnComplete: true,
-        removeOnFail: true,
-        jobId: createId(),
-      });
-
-      if (!job?.id) throw new Error("FAILED_TO_QUEUE_RETRY_JOB");
-      queuedJobId = job.id;
-
-      const { error: jobStatusError } = await tryCatch(
-        this.writeQueuedJobStatus(job.id, `Retrying ${retryExternalIds.length} failed items...`),
-      );
-
-      if (jobStatusError) {
-        await job.remove().catch(() => undefined);
-        throw new Error("FAILED_TO_SET_JOB_STATUS_IN_REDIS");
-      }
-
-      const updated = await this.updateSyncSession(sessionId, {
-        jobId: job.id,
-      });
-      if (!updated) {
-        await job.remove().catch(() => undefined);
-        throw new Error("SYNC_SESSION_NOT_FOUND");
-      }
-
-      return { jobId: job.id, itemCount: retryExternalIds.length };
-    } catch (error) {
-      await db.transaction(async (tx) => {
-        if (retryExternalIds.length > 0) {
-          await tx
-            .update(syncSessionItem)
-            .set({
-              status: "failed",
-              errorReason: "Retry failed before processing started",
-              updatedAt: new Date(),
-            })
-            .where(
-              and(
-                eq(syncSessionItem.syncSessionId, sessionId),
-                inArray(syncSessionItem.itemExternalId, retryExternalIds),
-                eq(syncSessionItem.status, "pending"),
-              ),
-            );
-        }
-
-        const failureMessage =
-          error instanceof Error && error.message === "ORDER_NOT_FOUND_FOR_RETRY"
-            ? "Retry failed before processing started: original order is no longer available."
-            : error instanceof Error && error.message === "FAILED_TO_SET_JOB_STATUS_IN_REDIS"
-              ? "Retry failed before processing started: unable to initialize job status."
-              : "Retry failed before processing started: unable to queue retry job.";
-
-        await tx
-          .update(syncSession)
-          .set({
-            status: "failed",
-            statusMessage: failureMessage,
-            completedAt: new Date(),
-            updatedAt: new Date(),
-          })
-          .where(eq(syncSession.id, sessionId));
-      });
-
-      if (queuedJobId) {
-        const queuedJob = await syncQueue.getJob(queuedJobId);
-        await queuedJob?.remove().catch(() => undefined);
-      }
-      throw error;
-    }
-  }
-
-  private async buildRetryJobData(
-    syncType: SyncType,
-    userId: string,
-    syncSessionId: string,
-    itemsToRetry: readonly DbSyncSessionItemRow[],
-    orderId: string | null,
-    storedOrderPayload: unknown,
-    existingCount: number,
-  ) {
-    switch (syncType) {
-      case "csv":
-        return {
-          type: "csv" as const,
-          userId,
-          syncSessionId,
-          existingCount,
-          items: itemsToRetry.map((item) => {
-            const parsed = csvItemMetadataSchema.safeParse(item.metadata);
-            if (parsed.success) {
-              return { itemExternalId: item.itemExternalId, ...parsed.data };
-            }
-            return {
-              itemExternalId: item.itemExternalId,
-              status: "Owned",
-              count: 1,
-              score: "0.0",
-              payment_date: null,
-              shipping_date: null,
-              collecting_date: null,
-              price: "0",
-              shop: "",
-              shipping_method: "n/a" as const,
-              note: "",
-              orderId: null,
-              orderDate: null,
-            };
-          }),
-        };
-
-      case "order": {
-        // orderId may be null if the initial sync failed before the order was created.
-        // Fall back to extracting it from the stored order payload.
-        let resolvedOrderId = orderId;
-        if (!resolvedOrderId && storedOrderPayload) {
-          const payloadParsed = syncOrderSchema.safeParse(storedOrderPayload);
-          if (payloadParsed.success) resolvedOrderId = payloadParsed.data.id;
-        }
-        if (!resolvedOrderId) throw new Error("ORDER_NOT_FOUND_FOR_RETRY");
-
-        // Try the order table first (exists when at least one item succeeded).
-        // Fall back to the stored payload (covers total scrape failure).
-        const [existingOrder] = await db.select().from(order).where(eq(order.id, resolvedOrderId));
-
-        let orderDetails: UpdatedSyncOrder;
-        if (existingOrder) {
-          orderDetails = {
-            id: existingOrder.id,
-            userId: existingOrder.userId,
-            status: existingOrder.status,
-            title: existingOrder.title,
-            shop: existingOrder.shop,
-            orderDate: existingOrder.orderDate,
-            releaseDate: existingOrder.releaseDate,
-            paymentDate: existingOrder.paymentDate,
-            shippingDate: existingOrder.shippingDate,
-            collectionDate: existingOrder.collectionDate,
-            shippingMethod: existingOrder.shippingMethod,
-            shippingFee: existingOrder.shippingFee,
-            taxes: existingOrder.taxes,
-            duties: existingOrder.duties,
-            tariffs: existingOrder.tariffs,
-            miscFees: existingOrder.miscFees,
-            notes: existingOrder.notes,
-          };
-        } else {
-          const parsedPayload = syncOrderSchema.safeParse(storedOrderPayload);
-          if (!parsedPayload.success) throw new Error("ORDER_NOT_FOUND_FOR_RETRY");
-          orderDetails = parsedPayload.data;
-        }
-
-        return {
-          type: "order" as const,
-          userId,
-          syncSessionId,
-          order: {
-            details: orderDetails,
-            existingCount,
-            itemsToScrape: itemsToRetry.map((item) => {
-              const parsed = orderItemMetadataSchema.safeParse(item.metadata);
-              if (parsed.success) {
-                return {
-                  userId,
-                  orderId: resolvedOrderId,
-                  releaseId: null,
-                  itemId: null,
-                  itemExternalId: item.itemExternalId,
-                  ...parsed.data,
-                };
-              }
-              return {
-                userId,
-                orderId: resolvedOrderId,
-                releaseId: null,
-                itemId: null,
-                itemExternalId: item.itemExternalId,
-                price: 0,
-                count: 1,
-                status: "Ordered" as const,
-                condition: "New" as const,
-                shippingMethod: "n/a" as const,
-                orderDate: orderDetails.orderDate,
-                paymentDate: orderDetails.paymentDate,
-                shippingDate: orderDetails.shippingDate,
-                collectionDate: orderDetails.collectionDate,
-              };
-            }),
-            itemsToInsert: [],
-          },
-        };
-      }
-
-      case "order-item": {
-        let resolvedOrderId = orderId;
-        if (!resolvedOrderId && storedOrderPayload) {
-          const payloadParsed = syncOrderSchema.safeParse(storedOrderPayload);
-          if (payloadParsed.success) resolvedOrderId = payloadParsed.data.id;
-        }
-        if (!resolvedOrderId) throw new Error("ORDER_NOT_FOUND_FOR_RETRY");
-
-        const existingOrder = await this.getOrderByIdForUser(resolvedOrderId, userId);
-        if (!existingOrder) throw new Error("ORDER_NOT_FOUND_FOR_RETRY");
-
-        const orderDetails: UpdatedSyncOrder = {
-          id: existingOrder.id,
-          userId: existingOrder.userId,
-          status: existingOrder.status,
-          title: existingOrder.title,
-          shop: existingOrder.shop,
-          orderDate: existingOrder.orderDate,
-          releaseDate: existingOrder.releaseDate,
-          paymentDate: existingOrder.paymentDate,
-          shippingDate: existingOrder.shippingDate,
-          collectionDate: existingOrder.collectionDate,
-          shippingMethod: existingOrder.shippingMethod,
-          shippingFee: existingOrder.shippingFee,
-          taxes: existingOrder.taxes,
-          duties: existingOrder.duties,
-          tariffs: existingOrder.tariffs,
-          miscFees: existingOrder.miscFees,
-          notes: existingOrder.notes,
-        };
-
-        return {
-          type: "order-item" as const,
-          userId,
-          syncSessionId,
-          order: {
-            details: orderDetails,
-            existingCount,
-            itemsToScrape: itemsToRetry.map((item) => {
-              const parsed = orderItemMetadataSchema.safeParse(item.metadata);
-              if (parsed.success) {
-                return {
-                  userId,
-                  orderId: resolvedOrderId,
-                  releaseId: null,
-                  itemId: null,
-                  itemExternalId: item.itemExternalId,
-                  ...parsed.data,
-                };
-              }
-              return {
-                userId,
-                orderId: resolvedOrderId,
-                releaseId: null,
-                itemId: null,
-                itemExternalId: item.itemExternalId,
-                price: 0,
-                count: 1,
-                status: existingOrder.status,
-                condition: "New" as const,
-                shippingMethod: existingOrder.shippingMethod,
-                orderDate: existingOrder.orderDate,
-                paymentDate: existingOrder.paymentDate,
-                shippingDate: existingOrder.shippingDate,
-                collectionDate: existingOrder.collectionDate,
-              };
-            }),
-            itemsToInsert: [],
-          },
-        };
-      }
-
-      case "collection":
-        return {
-          type: "collection" as const,
-          userId,
-          syncSessionId,
-          collection: {
-            existingCount,
-            itemsToScrape: itemsToRetry.map((item) => {
-              const parsed = collectionItemMetadataSchema.safeParse(item.metadata);
-              if (parsed.success) {
-                return {
-                  userId,
-                  releaseId: null,
-                  itemId: null,
-                  itemExternalId: item.itemExternalId,
-                  ...parsed.data,
-                };
-              }
-              return {
-                userId,
-                releaseId: null,
-                itemId: null,
-                itemExternalId: item.itemExternalId,
-                price: 0,
-                count: 1,
-                score: "0.0",
-                shop: "",
-                orderDate: null,
-                paymentDate: null,
-                shippingDate: null,
-                collectionDate: null,
-                shippingMethod: "n/a" as const,
-                tags: [] as string[],
-                condition: "New" as const,
-                notes: "",
-              };
-            }),
-            itemsToInsert: [],
-          },
-        };
-    }
   }
 }
 

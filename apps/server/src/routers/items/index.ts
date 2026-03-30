@@ -1,5 +1,6 @@
 import { Elysia, status } from "elysia";
 import ItemService from "./service";
+import ItemResyncService from "./resync-service";
 import { tryCatch } from "@myakiba/utils/result";
 import { betterAuth } from "@/middleware/better-auth";
 import { evlog } from "evlog/elysia";
@@ -104,6 +105,102 @@ const itemsRouter = new Elysia({ prefix: "/items" })
 
       log.set({ outcome: "success" });
       return { collection };
+    },
+    { params: itemParamSchema, auth: true },
+  )
+  .get(
+    "/:itemId/resync-status",
+    async ({ params, user, log }) => {
+      if (!user) return status(401, "Unauthorized");
+
+      log.set({
+        action: "items.resyncStatus",
+        user: { id: user.id },
+        item: { id: params.itemId },
+      });
+
+      const { data: resyncItem, error: validateError } = await tryCatch(
+        ItemResyncService.validateItemForResync(params.itemId),
+      );
+
+      if (validateError) {
+        if (validateError.message === "ITEM_NOT_FOUND") {
+          log.set({ outcome: "not_found" });
+          return status(404, "Item not found");
+        }
+        if (validateError.message === "ITEM_NOT_RESYNCABLE") {
+          log.set({ outcome: "not_resyncable" });
+          return { status: "idle" as const, cooldownExpiresAt: null };
+        }
+        log.error(validateError, { step: "validateItemForResync", outcome: "error" });
+        return status(500, "Failed to check resync status");
+      }
+
+      const { data: state, error } = await tryCatch(
+        ItemResyncService.getResyncStatus(resyncItem.id),
+      );
+
+      if (error) {
+        log.error(error, { step: "getResyncStatus", outcome: "error" });
+        return status(500, "Failed to check resync status");
+      }
+
+      log.set({ outcome: "success", resyncStatus: state.status });
+      return state;
+    },
+    { params: itemParamSchema, auth: true },
+  )
+  .post(
+    "/:itemId/resync",
+    async ({ params, user, log }) => {
+      if (!user) return status(401, "Unauthorized");
+
+      log.set({
+        action: "items.requestResync",
+        user: { id: user.id },
+        item: { id: params.itemId },
+      });
+
+      const { data: resyncItem, error: validateError } = await tryCatch(
+        ItemResyncService.validateItemForResync(params.itemId),
+      );
+
+      if (validateError) {
+        if (validateError.message === "ITEM_NOT_FOUND") {
+          log.set({ outcome: "not_found" });
+          return status(404, "Item not found");
+        }
+        if (validateError.message === "ITEM_NOT_RESYNCABLE") {
+          log.set({ outcome: "not_resyncable" });
+          return status(400, "Item cannot be resynced");
+        }
+        log.error(validateError, { step: "validateItemForResync", outcome: "error" });
+        return status(500, "Failed to request resync");
+      }
+
+      const { data: state, error } = await tryCatch(
+        ItemResyncService.requestResync(resyncItem.id, resyncItem.externalId),
+      );
+
+      if (error) {
+        if (error.message === "RESYNC_BLOCKED_REQUESTED") {
+          log.set({ outcome: "blocked", reason: "already_requested" });
+          return status(409, "Resync already requested");
+        }
+        if (error.message === "RESYNC_BLOCKED_PROCESSING") {
+          log.set({ outcome: "blocked", reason: "processing" });
+          return status(409, "Resync already in progress");
+        }
+        if (error.message === "RESYNC_BLOCKED_COOLDOWN") {
+          log.set({ outcome: "blocked", reason: "cooldown" });
+          return status(429, "Item was recently updated");
+        }
+        log.error(error, { step: "requestResync", outcome: "error" });
+        return status(500, "Failed to request resync");
+      }
+
+      log.set({ outcome: "success" });
+      return state;
     },
     { params: itemParamSchema, auth: true },
   );

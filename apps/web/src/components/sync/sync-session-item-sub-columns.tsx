@@ -123,22 +123,5 @@ export function createSyncSessionItemSubColumns(): ColumnDef<EnrichedSyncSession
         skeleton: <Skeleton className="h-4 w-28" />,
       },
     },
-    {
-      accessorKey: "retryCount",
-      id: "retryCount",
-      header: () => (
-        <span className="text-foreground font-normal text-[0.8125rem] block">Retries</span>
-      ),
-      cell: ({ row }) => (
-        <span className="block tabular-nums text-muted-foreground">{row.original.retryCount}</span>
-      ),
-      size: 80,
-      enableSorting: false,
-      enableHiding: false,
-      enableResizing: false,
-      meta: {
-        skeleton: <Skeleton className="h-5 w-6" />,
-      },
-    },
   ];
 }

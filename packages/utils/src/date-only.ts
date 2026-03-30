@@ -9,6 +9,7 @@ type DateOnlyParts = Readonly<{
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const YEAR_ONLY_PATTERN = /^\d{4}$/;
 const MONTH_YEAR_PATTERN = /^(\d{1,2})\/(\d{4})$/;
+const MONTH_DAY_YEAR_PATTERN = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
 
 function padNumber(value: number): string {
   return String(value).padStart(2, "0");
@@ -120,6 +121,10 @@ export function toDateOnlyString(value: Date | string | null | undefined): strin
  * // "2024-01-15"
  *
  * @example
+ * normalizeScrapedDate("09/18/2025")
+ * // "2025-09-18"
+ *
+ * @example
  * normalizeScrapedDate("TBD")
  * // null
  */
@@ -136,6 +141,15 @@ export function normalizeScrapedDate(dateStr: string): string | null {
     const month = Number(monthYearMatch[1]);
     const year = Number(monthYearMatch[2]);
     const parts: DateOnlyParts = { year, month, day: 1 };
+    return isValidDateOnlyParts(parts) ? partsToIsoDate(parts) : null;
+  }
+
+  const monthDayYearMatch = trimmed.match(MONTH_DAY_YEAR_PATTERN);
+  if (monthDayYearMatch) {
+    const month = Number(monthDayYearMatch[1]);
+    const day = Number(monthDayYearMatch[2]);
+    const year = Number(monthDayYearMatch[3]);
+    const parts: DateOnlyParts = { year, month, day };
     return isValidDateOnlyParts(parts) ? partsToIsoDate(parts) : null;
   }
 

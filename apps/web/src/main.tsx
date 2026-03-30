@@ -22,7 +22,7 @@ const router = createRouter({
     </div>
   ),
   defaultNotFoundComponent: () => <div>404 Not Found</div>,
-  defaultViewTransition: true,
+  scrollRestoration: true,
 });
 
 declare module "@tanstack/react-router" {

@@ -1,19 +1,18 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Loading03Icon, RotateLeft01Icon } from "@hugeicons/core-free-icons";
+import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { getCoreRowModel, type PaginationState, useReactTable } from "@tanstack/react-table";
 import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
 import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { ThemedBadge } from "@/components/reui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { toast } from "sonner";
+import { buttonVariants } from "@/components/ui/button";
 import type { EnrichedSyncSessionItemRow } from "@myakiba/contracts/sync/types";
 import type { SyncSessionStatus, SyncType } from "@myakiba/contracts/shared/types";
-import { fetchSyncSessionDetail, retrySyncFailedItems } from "@/queries/sync";
+import { fetchSyncSessionDetail } from "@/queries/sync";
 import { createSyncSessionItemSubColumns } from "@/components/sync/sync-session-item-sub-columns";
 import { SESSION_STATUS_CONFIG, SYNC_TYPE_CONFIG } from "@/lib/sync";
 import { formatShortDateTime, formatSyncDuration } from "@/lib/date-display";
@@ -59,7 +58,6 @@ function LiveStatusBanner({ jobId }: { readonly jobId: string }) {
 
 function RouteComponent() {
   const { id } = useParams({ from: "/(app)/sync_/$id" });
-  const queryClient = useQueryClient();
 
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -88,22 +86,6 @@ function RouteComponent() {
   const sessionStatus = (session?.status ?? "pending") as SyncSessionStatus;
   const sessionSyncType = (session?.syncType ?? "csv") as SyncType;
   const isActive = session ? ACTIVE_SYNC_SESSION_STATUS_SET.has(sessionStatus) : false;
-  const isRetryable =
-    (sessionStatus === "failed" || sessionStatus === "partial") && (session?.failCount ?? 0) > 0;
-
-  const retryMutation = useMutation({
-    mutationFn: () => retrySyncFailedItems(id),
-    onSuccess: (data) => {
-      toast.success(`Retrying ${data.itemCount} failed items...`);
-      void queryClient.invalidateQueries({ queryKey: ["syncSessions"] });
-      void queryClient.invalidateQueries({
-        queryKey: ["syncSessionDetail", id],
-      });
-    },
-    onError: (err: Error) => {
-      toast.error("Failed to retry.", { description: err.message });
-    },
-  });
 
   const columns = useMemo(() => createSyncSessionItemSubColumns(), []);
 
@@ -178,7 +160,7 @@ function RouteComponent() {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center gap-2.5">
-              <h1 className="text-2xl tracking-tight">{typeConfig.label} Sync</h1>
+              <h1 className="text-2xl font-medium tracking-tight">{typeConfig.label} Sync</h1>
               <ThemedBadge variant={statusConfig.variant} size="sm">
                 {statusConfig.label}
               </ThemedBadge>
@@ -187,22 +169,6 @@ function RouteComponent() {
               Started {formatShortDateTime(session.createdAt)}
             </p>
           </div>
-
-          {isRetryable && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => retryMutation.mutate()}
-              disabled={retryMutation.isPending}
-            >
-              {retryMutation.isPending ? (
-                <HugeiconsIcon icon={Loading03Icon} className="size-3.5 animate-spin" />
-              ) : (
-                <HugeiconsIcon icon={RotateLeft01Icon} className="size-3.5" />
-              )}
-              Retry failed ({session.failCount})
-            </Button>
-          )}
         </div>
       </div>
 
