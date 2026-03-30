@@ -12,6 +12,7 @@ import {
   getOrders,
   getOrderStats,
   getOrderItems,
+  getOrderItemReleases,
   mergeOrders,
   splitOrders,
   editOrder,
@@ -56,6 +57,14 @@ export function orderItemsQueryOptions(orderId: string, limit: number, offset: n
     queryKey: ["orderItems", orderId, limit, offset] as const,
     queryFn: () => getOrderItems(orderId, limit, offset),
     placeholderData: keepPreviousData,
+    staleTime: 30_000,
+  });
+}
+
+export function orderItemReleasesQueryOptions(orderId: string) {
+  return queryOptions({
+    queryKey: ["orderItemReleases", orderId] as const,
+    queryFn: () => getOrderItemReleases(orderId),
     staleTime: 30_000,
   });
 }

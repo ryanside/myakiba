@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
+import { PopoverReleaseDateCell } from "@/components/cells/popover-release-date-cell";
 import * as z from "zod";
 import type { EditedOrder, NewOrder, CascadeOptions } from "@myakiba/contracts/orders/schema";
 import type { Order } from "@myakiba/contracts/orders/types";
@@ -351,12 +352,12 @@ export function OrderForm(props: OrderFormProps) {
                     children={(field) => (
                       <div className="grid gap-2">
                         <Label htmlFor={field.name}>Release</Label>
-                        <DatePicker
-                          id={field.name}
-                          name={field.name}
+                        <PopoverReleaseDateCell
                           value={field.state.value ?? null}
-                          onBlur={field.handleBlur}
-                          onChange={(value) => field.handleChange(value)}
+                          orderId={orderData?.orderId}
+                          onSubmit={async (value) => field.handleChange(value)}
+                          triggerVariant="outline"
+                          triggerClassName="w-full justify-start"
                           placeholder="Select release date"
                         />
                       </div>

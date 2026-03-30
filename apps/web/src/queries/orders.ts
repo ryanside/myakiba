@@ -72,6 +72,23 @@ export async function getOrderStats(): Promise<OrderStats> {
   return data;
 }
 
+export interface OrderItemRelease {
+  readonly releaseDate: string;
+  readonly itemImage: string | null;
+}
+
+export async function getOrderItemReleases(orderId: string): Promise<readonly OrderItemRelease[]> {
+  const { data, error } = await app.api.orders({ orderId })["item-releases"].get();
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to get order item releases"));
+  }
+  if (!data) {
+    throw new Error("Failed to get order item releases");
+  }
+
+  return data;
+}
+
 export async function getOrderItems(
   orderId: string,
   limit: number,
