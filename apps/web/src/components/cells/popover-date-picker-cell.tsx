@@ -29,15 +29,12 @@ export function PopoverDatePickerCell({
   const [isOpen, setIsOpen] = useState(false);
   const dateValue = value ? parseDateOnly(value) : undefined;
   const handleSelect = async (date: Date | undefined): Promise<void> => {
-    if (!date) return;
-
-    const formattedDate = format(date, "yyyy-MM-dd");
-    await onSubmit(formattedDate);
-    setIsOpen(false);
-  };
-
-  const handleClear = async (): Promise<void> => {
-    await onSubmit(null);
+    if (date) {
+      const formattedDate = format(date, "yyyy-MM-dd");
+      await onSubmit(formattedDate);
+    } else {
+      await onSubmit(null);
+    }
     setIsOpen(false);
   };
 
@@ -64,11 +61,6 @@ export function PopoverDatePickerCell({
             defaultMonth={dateValue ?? new Date()}
             captionLayout="dropdown"
           />
-          <div className="border-t p-2">
-            <Button variant="outline" size="sm" className="w-full" onClick={handleClear}>
-              Clear
-            </Button>
-          </div>
         </PopoverContent>
       )}
     </Popover>

@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Loading03Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
@@ -9,7 +9,7 @@ import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagina
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { ThemedBadge } from "@/components/reui/badge";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import type { EnrichedSyncSessionItemRow } from "@myakiba/contracts/sync/types";
 import type { SyncSessionStatus, SyncType } from "@myakiba/contracts/shared/types";
 import { fetchSyncSessionDetail } from "@/queries/sync";
@@ -108,17 +108,23 @@ function RouteComponent() {
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl tracking-tight">Sync Session</h1>
         </div>
-        <div className="flex flex-col items-center justify-center h-64 gap-y-4">
-          <p className="text-lg font-medium text-destructive">Error: {error.message}</p>
-          <Link
-            to="/sync"
-            className={cn(
-              buttonVariants({ variant: "link" }),
-              "mx-0 p-0 w-fit text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline",
-            )}
+        <div className="flex flex-col gap-3">
+          <Button
+            variant="link"
+            size="sm"
+            render={<Link to="/sync" />}
+            nativeButton={false}
+            className="self-start"
           >
+            <HugeiconsIcon
+              icon={ArrowLeft01Icon}
+              strokeWidth={2}
+              data-icon="inline-start"
+              aria-hidden="true"
+            />
             Back to Sync
-          </Link>
+          </Button>
+          <p className="text-lg font-medium text-destructive">Error: {error.message}</p>
         </div>
       </div>
     );
@@ -126,17 +132,23 @@ function RouteComponent() {
 
   if (!session) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 gap-y-4">
-        <p className="text-lg font-medium text-muted-foreground">Session not found</p>
-        <Link
-          to="/sync"
-          className={cn(
-            buttonVariants({ variant: "link" }),
-            "mx-0 p-0 w-fit text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline",
-          )}
+      <div className="flex flex-col gap-3">
+        <Button
+          variant="link"
+          size="sm"
+          render={<Link to="/sync" />}
+          nativeButton={false}
+          className="self-start"
         >
+          <HugeiconsIcon
+            icon={ArrowLeft01Icon}
+            strokeWidth={2}
+            data-icon="inline-start"
+            aria-hidden="true"
+          />
           Back to Sync
-        </Link>
+        </Button>
+        <p className="text-lg font-medium text-muted-foreground">Session not found</p>
       </div>
     );
   }
@@ -147,15 +159,21 @@ function RouteComponent() {
   return (
     <div className="w-full space-y-8">
       <div>
-        <Link
-          to="/sync"
-          className={cn(
-            buttonVariants({ variant: "link" }),
-            "mb-4 mx-0 p-0 w-fit text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline",
-          )}
+        <Button
+          variant="link"
+          size="sm"
+          render={<Link to="/sync" />}
+          nativeButton={false}
+          className="self-start"
         >
+          <HugeiconsIcon
+            icon={ArrowLeft01Icon}
+            strokeWidth={2}
+            data-icon="inline-start"
+            aria-hidden="true"
+          />
           Back to Sync
-        </Link>
+        </Button>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex flex-col gap-1.5">

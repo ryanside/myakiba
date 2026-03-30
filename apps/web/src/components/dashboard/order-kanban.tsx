@@ -14,6 +14,7 @@ import {
   KanbanOverlay,
 } from "@/components/reui/kanban";
 import { PopoverDatePickerCell } from "@/components/cells/popover-date-picker-cell";
+import { PopoverReleaseDateCell } from "@/components/cells/popover-release-date-cell";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
@@ -172,35 +173,50 @@ function OrderCard({
           <div className="-mx-1.5 flex flex-col">
             {DATE_FIELDS.map(({ field, label }) => {
               const dateValue = order[field] ?? null;
-              return (
-                <div key={field} onPointerDown={(e) => e.stopPropagation()}>
+              const triggerButton = (
+                <button
+                  type="button"
+                  className={cn(
+                    "flex w-full items-center justify-between gap-2 rounded px-1.5 py-0.5 text-left",
+                    "transition-colors hover:bg-muted/80",
+                    "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                  )}
+                >
+                  <span className="shrink-0 text-[10px] font-medium text-muted-foreground">
+                    {label}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-[10px] tabular-nums",
+                      dateValue ? "text-foreground" : "text-muted-foreground/50",
+                    )}
+                  >
+                    {dateValue ? formatDateOnlyForDisplay(dateValue, dateFormat) : "—"}
+                  </span>
+                </button>
+              );
+
+              const DateCell =
+                field === "releaseDate" ? (
+                  <PopoverReleaseDateCell
+                    value={dateValue}
+                    dateFormat={dateFormat}
+                    orderId={order.orderId}
+                    onSubmit={async (date) => onDateChange(order.orderId, field, date)}
+                    trigger={triggerButton}
+                  />
+                ) : (
                   <PopoverDatePickerCell
                     value={dateValue}
                     dateFormat={dateFormat}
                     onSubmit={async (date) => onDateChange(order.orderId, field, date)}
-                    trigger={
-                      <button
-                        type="button"
-                        className={cn(
-                          "flex w-full items-center justify-between gap-2 rounded px-1.5 py-0.5 text-left",
-                          "transition-colors hover:bg-muted/80",
-                          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-                        )}
-                      >
-                        <span className="shrink-0 text-[10px] font-medium text-muted-foreground">
-                          {label}
-                        </span>
-                        <span
-                          className={cn(
-                            "text-[10px] tabular-nums",
-                            dateValue ? "text-foreground" : "text-muted-foreground/50",
-                          )}
-                        >
-                          {dateValue ? formatDateOnlyForDisplay(dateValue, dateFormat) : "—"}
-                        </span>
-                      </button>
-                    }
+                    trigger={triggerButton}
                   />
+                );
+
+              return (
+                <div key={field} onPointerDown={(e) => e.stopPropagation()}>
+                  {DateCell}
                 </div>
               );
             })}

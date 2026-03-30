@@ -527,6 +527,19 @@ class OrdersService {
     return stats ?? { totalOrders: 0, totalSpent: 0, activeOrders: 0, unpaidCosts: 0 };
   }
 
+  async getOrderItemReleases(userId: string, orderId: string) {
+    return db
+      .select({
+        releaseDate: item_release.date,
+        itemImage: item.image,
+      })
+      .from(collection)
+      .innerJoin(item, eq(collection.itemId, item.id))
+      .innerJoin(item_release, eq(collection.releaseId, item_release.id))
+      .where(and(eq(collection.userId, userId), eq(collection.orderId, orderId)))
+      .orderBy(asc(item_release.date));
+  }
+
   async getOrderItems(userId: string, orderId: string, limit: number, offset: number) {
     const items = await db
       .select({

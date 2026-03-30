@@ -40,6 +40,7 @@ import { SelectCell } from "../cells/select-cell";
 import { InlineTextCell } from "../cells/inline-text-cell";
 import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
+import { PopoverReleaseDateCell } from "../cells/popover-release-date-cell";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
@@ -283,10 +284,11 @@ export function createOrdersColumns({
         const order = row.original;
         const isPending = isOrderPending(order.orderId);
         return (
-          <PopoverDatePickerCell
+          <PopoverReleaseDateCell
             value={order.releaseDate}
             dateFormat={dateFormat}
             disabled={isPending}
+            orderId={order.orderId}
             onSubmit={async (newValue) => {
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;

@@ -172,6 +172,38 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
       auth: true,
     },
   )
+  .get(
+    "/:orderId/item-releases",
+    async ({ params, user, log }) => {
+      if (!user) {
+        log.set({ outcome: "unauthorized" });
+        return status(401, "Unauthorized");
+      }
+
+      log.set({
+        action: "orders.item_releases",
+        user: { id: user.id },
+        order: { id: params.orderId },
+      });
+
+      const { data: releases, error } = await tryCatch(
+        OrdersService.getOrderItemReleases(user.id, params.orderId),
+      );
+
+      if (error) {
+        log.error(error, { step: "get_order_item_releases" });
+        log.set({ outcome: "error" });
+        return status(500, "Failed to get order item releases");
+      }
+
+      log.set({ orders: { releaseCount: releases.length }, outcome: "success" });
+      return releases;
+    },
+    {
+      params: orderIdParamSchema,
+      auth: true,
+    },
+  )
   .post(
     "/merge",
     async ({ body, user, log }) => {

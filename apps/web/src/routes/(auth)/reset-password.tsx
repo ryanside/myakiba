@@ -65,12 +65,15 @@ function RouteComponent() {
     return (
       <div className="bg-background flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
         <div className="absolute top-4 left-4">
-          <Link to="/">
-            <Button variant="ghost" className="text-foreground">
-              <HugeiconsIcon icon={ArrowLeft01Icon} />
-              Home
-            </Button>
-          </Link>
+          <Button variant="link" size="sm" render={<Link to="/" />} nativeButton={false}>
+            <HugeiconsIcon
+              icon={ArrowLeft01Icon}
+              strokeWidth={2}
+              data-icon="inline-start"
+              aria-hidden="true"
+            />
+            Back to Home
+          </Button>
         </div>
         <div className="w-full max-w-md">
           <div className="flex flex-col gap-6">
@@ -94,15 +97,21 @@ function RouteComponent() {
               <Link to="/forgot-password">
                 <Button className="w-full">Request New Reset Link</Button>
               </Link>
-              <Link
-                to="/login"
-                className={cn(
-                  buttonVariants({ variant: "link" }),
-                  "mx-0 p-0 w-fit self-center text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline",
-                )}
+              <Button
+                variant="link"
+                size="sm"
+                render={<Link to="/login" />}
+                nativeButton={false}
+                className="self-center"
               >
+                <HugeiconsIcon
+                  icon={ArrowLeft01Icon}
+                  strokeWidth={2}
+                  data-icon="inline-start"
+                  aria-hidden="true"
+                />
                 Back to Login
-              </Link>
+              </Button>
             </div>
           </div>
         </div>
@@ -113,12 +122,15 @@ function RouteComponent() {
   return (
     <div className="bg-background flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
       <div className="absolute top-4 left-4">
-        <Link to="/">
-          <Button variant="ghost" className="text-foreground">
-            <HugeiconsIcon icon={ArrowLeft01Icon} />
-            Home
-          </Button>
-        </Link>
+        <Button variant="link" size="sm" render={<Link to="/" />} nativeButton={false}>
+          <HugeiconsIcon
+            icon={ArrowLeft01Icon}
+            strokeWidth={2}
+            data-icon="inline-start"
+            aria-hidden="true"
+          />
+          Back to Home
+        </Button>
       </div>
       <div className="w-full max-w-md">
         <div className="flex flex-col gap-6">

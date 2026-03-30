@@ -6,6 +6,7 @@ import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { EarlyAccessModal } from "@/components/auth/early-access-modal";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +22,7 @@ export const Route = createFileRoute("/(auth)/forgot-password")({
 function RouteComponent() {
   const [emailSent, setEmailSent] = useState(false);
   const [sentEmail, setSentEmail] = useState("");
+  const [hasAccess, setHasAccess] = useState(false);
 
   const form = useForm({
     defaultValues: {
@@ -64,13 +66,18 @@ function RouteComponent() {
   if (emailSent) {
     return (
       <div className="bg-background flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
+        <EarlyAccessModal open={!hasAccess} onAccessGranted={() => setHasAccess(true)} />
+
         <div className="absolute top-4 left-4">
-          <Link to="/">
-            <Button variant="ghost" className="text-foreground">
-              <HugeiconsIcon icon={ArrowLeft01Icon} />
-              Home
-            </Button>
-          </Link>
+          <Button variant="link" size="sm" render={<Link to="/" />} nativeButton={false}>
+            <HugeiconsIcon
+              icon={ArrowLeft01Icon}
+              strokeWidth={2}
+              data-icon="inline-start"
+              aria-hidden="true"
+            />
+            Back to Home
+          </Button>
         </div>
         <div className="w-full max-w-md">
           <div className="flex flex-col gap-6">
@@ -98,16 +105,16 @@ function RouteComponent() {
                 check your spam folder.
               </p>
             </div>
-            <div className="text-center text-sm">
-              <Link
-                to="/login"
-                className={cn(
-                  buttonVariants({ variant: "link" }),
-                  "mx-0 p-0 w-fit text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline",
-                )}
-              >
+            <div className="flex justify-center">
+              <Button variant="link" size="sm" render={<Link to="/login" />} nativeButton={false}>
+                <HugeiconsIcon
+                  icon={ArrowLeft01Icon}
+                  strokeWidth={2}
+                  data-icon="inline-start"
+                  aria-hidden="true"
+                />
                 Back to Login
-              </Link>
+              </Button>
             </div>
           </div>
         </div>
@@ -117,13 +124,18 @@ function RouteComponent() {
 
   return (
     <div className="bg-background flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
+      <EarlyAccessModal open={!hasAccess} onAccessGranted={() => setHasAccess(true)} />
+
       <div className="absolute top-4 left-4">
-        <Link to="/">
-          <Button variant="ghost" className="text-foreground">
-            <HugeiconsIcon icon={ArrowLeft01Icon} />
-            Home
-          </Button>
-        </Link>
+        <Button variant="link" size="sm" render={<Link to="/" />} nativeButton={false}>
+          <HugeiconsIcon
+            icon={ArrowLeft01Icon}
+            strokeWidth={2}
+            data-icon="inline-start"
+            aria-hidden="true"
+          />
+          Back to Home
+        </Button>
       </div>
       <div className="w-full max-w-md">
         <div className="flex flex-col gap-6">
