@@ -3,10 +3,11 @@ import { item, item_release, entry, entry_to_item, collection } from "@myakiba/d
 import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import { assembleScrapedData } from "../../lib/assemble-scraped-data";
 import type { ScrapedItem } from "../../lib/types";
+import { buildReleasePlan } from "./release-plan";
 
 /**
  * Updates an existing MFC item with freshly scraped data. This is a dedicated
- * refresh path that updates the item row in place and reconciles releases,
+ * refresh path that updates the item row in place and updates releases,
  * entries, and entry-to-item links rather than using insert-only semantics.
  */
 export async function refreshItemData(scrapedItem: ScrapedItem, itemId: string): Promise<void> {
@@ -70,11 +71,12 @@ export async function refreshItemData(scrapedItem: ScrapedItem, itemId: string):
         .onConflictDoNothing({ target: [entry_to_item.entryId, entry_to_item.itemId] });
     }
 
-    const existingReleaseIds = await tx
-      .select({ id: item_release.id })
-      .from(item_release)
-      .where(eq(item_release.itemId, itemId));
-    const existingReleaseIdSet = new Set(existingReleaseIds.map((r) => r.id));
+    const existingReleaseIds = (
+      await tx
+        .select({ id: item_release.id })
+        .from(item_release)
+        .where(eq(item_release.itemId, itemId))
+    ).map((release) => release.id);
 
     const releasesToUpsert = assembled.itemReleases.map((release) => ({
       id: release.id,
@@ -86,33 +88,60 @@ export async function refreshItemData(scrapedItem: ScrapedItem, itemId: string):
       barcode: release.barcode,
     }));
 
-    const newReleaseIdSet = new Set(releasesToUpsert.map((r) => r.id));
-    const staleReleaseIds = [...existingReleaseIdSet].filter((id) => !newReleaseIdSet.has(id));
-
-    if (staleReleaseIds.length > 0) {
-      // Releases referenced by collection rows must be preserved so users
-      // don't silently lose their chosen release (FK is onDelete: "set null").
-      const referencedReleases = await tx
-        .selectDistinct({ releaseId: collection.releaseId })
-        .from(collection)
-        .where(
-          and(isNotNull(collection.releaseId), inArray(collection.releaseId, staleReleaseIds)),
-        );
-      const referencedIds = new Set(referencedReleases.map((r) => r.releaseId));
-      const safeToDelete = staleReleaseIds.filter((id) => !referencedIds.has(id));
-
-      if (safeToDelete.length > 0) {
-        await tx
-          .delete(item_release)
-          .where(and(eq(item_release.itemId, itemId), inArray(item_release.id, safeToDelete)));
-      }
-    }
+    const releasePlan = buildReleasePlan({
+      existingReleaseIds,
+      scrapedReleaseIds: releasesToUpsert.map((release) => release.id),
+    });
 
     if (releasesToUpsert.length > 0) {
       await tx
         .insert(item_release)
         .values(releasesToUpsert)
         .onConflictDoNothing({ target: [item_release.id] });
+    }
+
+    // Fresh releases must exist before we remap collection rows to them.
+    switch (releasePlan.kind) {
+      case "none":
+        break;
+      case "remap":
+        await tx
+          .update(collection)
+          .set({
+            releaseId: releasePlan.toReleaseId,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(eq(collection.itemId, itemId), eq(collection.releaseId, releasePlan.fromReleaseId)),
+          );
+        break;
+      case "clear":
+        await tx
+          .update(collection)
+          .set({
+            releaseId: null,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(collection.itemId, itemId),
+              isNotNull(collection.releaseId),
+              inArray(collection.releaseId, releasePlan.staleReleaseIds),
+            ),
+          );
+        break;
+    }
+
+    // After remap-or-clear, only the latest scraped release set should remain.
+    if (releasePlan.staleReleaseIds.length > 0) {
+      await tx
+        .delete(item_release)
+        .where(
+          and(
+            eq(item_release.itemId, itemId),
+            inArray(item_release.id, releasePlan.staleReleaseIds),
+          ),
+        );
     }
   });
 }
