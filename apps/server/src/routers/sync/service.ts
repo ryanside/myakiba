@@ -26,7 +26,6 @@ import { Queue } from "bullmq";
 import { createId } from "@paralleldrive/cuid2";
 import { env } from "@myakiba/env/server";
 import { parseMoneyToMinorUnits } from "@myakiba/utils/currency";
-import { toDateOnlyString } from "@myakiba/utils/date-only";
 import { tryCatch } from "@myakiba/utils/result";
 import {
   getJobStatusSnapshotKey,
@@ -148,9 +147,8 @@ class SyncService {
 
     for (const row of releaseResult) {
       releases.set(row.itemId, row.releaseId);
-      const releaseDate = toDateOnlyString(row.releaseDate);
-      if (releaseDate) {
-        releaseDates.set(row.itemId, releaseDate);
+      if (row.releaseDate) {
+        releaseDates.set(row.itemId, row.releaseDate);
       }
     }
 

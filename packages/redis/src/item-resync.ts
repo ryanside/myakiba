@@ -32,11 +32,6 @@ export async function setResyncCooldown(redis: Redis, itemId: string): Promise<v
   await redis.set(getCooldownKey(itemId), Date.now().toString(), "EX", COOLDOWN_TTL_SECONDS);
 }
 
-export async function isResyncOnCooldown(redis: Redis, itemId: string): Promise<boolean> {
-  const exists = await redis.exists(getCooldownKey(itemId));
-  return exists === 1;
-}
-
 export async function getResyncCooldownExpiresAt(
   redis: Redis,
   itemId: string,
