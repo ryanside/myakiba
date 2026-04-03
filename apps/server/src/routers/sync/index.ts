@@ -435,7 +435,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       const { data: syncSessionId, error: syncSessionError } = await tryCatch(
         SyncService.createSyncSession(user.id, "order", orderItemExternalIdsToTrack, {
-          orderId,
           existingItemExternalIds: existingOrderItemExternalIds,
         }),
       );
