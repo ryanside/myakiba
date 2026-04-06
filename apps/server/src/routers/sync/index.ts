@@ -432,6 +432,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           tags: [],
           releaseId: item.releaseId,
         }));
+      const orderWasPersistedImmediately = collectionItemsToInsert.length > 0;
 
       const { data: syncSessionId, error: syncSessionError } = await tryCatch(
         SyncService.createSyncSession(user.id, "order", orderItemExternalIdsToTrack, {
@@ -460,7 +461,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         order: { id: orderId },
       });
 
-      if (collectionItemsToInsert.length > 0) {
+      if (orderWasPersistedImmediately) {
         const { error: insertToCollectionAndOrdersError } = await tryCatch(
           SyncService.insertToCollectionAndOrders(collectionItemsToInsert, [order]),
         );
@@ -565,14 +566,15 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         jobId = jobIdData;
       } else {
         if (syncSessionId) {
+          const completedSessionUpdate = {
+            status: "completed" as const,
+            completedAt: new Date(),
+            statusMessage: "Sync completed",
+            successCount: existingOrderItemExternalIds.length,
+            ...(orderWasPersistedImmediately ? { orderId } : {}),
+          };
           const { error: updateSessionError } = await tryCatch(
-            SyncService.updateSyncSession(syncSessionId, {
-              status: "completed",
-              completedAt: new Date(),
-              statusMessage: "Sync completed",
-              orderId,
-              successCount: existingOrderItemExternalIds.length,
-            }),
+            SyncService.updateSyncSession(syncSessionId, completedSessionUpdate),
           );
           if (updateSessionError) {
             log.error(updateSessionError, {
