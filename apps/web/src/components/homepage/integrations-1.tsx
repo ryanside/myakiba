@@ -1,4 +1,5 @@
-import { ChevronRight } from "lucide-react";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
@@ -40,7 +41,7 @@ export default function MfcSyncSection() {
               nativeButton={false}
             >
               Get started
-              <ChevronRight className="size-4" />
+              <HugeiconsIcon icon={ArrowRight01Icon} />
             </Button>
           </div>
         </div>
