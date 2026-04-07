@@ -208,14 +208,6 @@ export const order = pgTable(
   ],
 );
 
-export const waitlist = pgTable("waitlist", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => createId()),
-  email: text("email").notNull().unique(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
-
 export const syncSession = pgTable(
   "sync_session",
   {

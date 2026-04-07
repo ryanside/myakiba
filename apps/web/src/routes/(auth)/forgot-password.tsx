@@ -6,7 +6,6 @@ import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { EarlyAccessModal } from "@/components/auth/early-access-modal";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +21,6 @@ export const Route = createFileRoute("/(auth)/forgot-password")({
 function RouteComponent() {
   const [emailSent, setEmailSent] = useState(false);
   const [sentEmail, setSentEmail] = useState("");
-  const [hasAccess, setHasAccess] = useState(false);
 
   const form = useForm({
     defaultValues: {
@@ -66,8 +64,6 @@ function RouteComponent() {
   if (emailSent) {
     return (
       <div className="bg-background flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
-        <EarlyAccessModal open={!hasAccess} onAccessGranted={() => setHasAccess(true)} />
-
         <div className="absolute top-4 left-4">
           <Button variant="link" size="sm" render={<Link to="/" />} nativeButton={false}>
             <HugeiconsIcon
@@ -124,8 +120,6 @@ function RouteComponent() {
 
   return (
     <div className="bg-background flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
-      <EarlyAccessModal open={!hasAccess} onAccessGranted={() => setHasAccess(true)} />
-
       <div className="absolute top-4 left-4">
         <Button variant="link" size="sm" render={<Link to="/" />} nativeButton={false}>
           <HugeiconsIcon
