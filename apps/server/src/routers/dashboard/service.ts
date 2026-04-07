@@ -111,7 +111,7 @@ class DashboardService {
       .orderBy(desc(count()))
       .prepare("categories_owned");
 
-    // Overview kanban shows recent and near-term order activity across every status.
+    // Overview kanban should keep orders visible when any lifecycle milestone is recent.
     this.ordersPrepared = db
       .select({
         orderId: order.id,
@@ -137,33 +137,24 @@ class DashboardService {
           eq(order.userId, sql.placeholder("userId")),
           or(
             and(
-              eq(order.status, "Owned"),
-              gte(order.collectionDate, sql.placeholder("startDate")),
-              lte(order.collectionDate, sql.placeholder("endDate")),
+              gte(order.releaseDate, sql.placeholder("startDate")),
+              lte(order.releaseDate, sql.placeholder("endDate")),
             ),
             and(
-              ne(order.status, "Owned"),
-              or(
-                and(
-                  gte(order.releaseDate, sql.placeholder("startDate")),
-                  lte(order.releaseDate, sql.placeholder("endDate")),
-                ),
-                and(
-                  eq(order.status, "Ordered"),
-                  gte(order.orderDate, sql.placeholder("startDate")),
-                  lte(order.orderDate, sql.placeholder("endDate")),
-                ),
-                and(
-                  eq(order.status, "Paid"),
-                  gte(order.paymentDate, sql.placeholder("startDate")),
-                  lte(order.paymentDate, sql.placeholder("endDate")),
-                ),
-                and(
-                  eq(order.status, "Shipped"),
-                  gte(order.shippingDate, sql.placeholder("startDate")),
-                  lte(order.shippingDate, sql.placeholder("endDate")),
-                ),
-              ),
+              gte(order.orderDate, sql.placeholder("startDate")),
+              lte(order.orderDate, sql.placeholder("endDate")),
+            ),
+            and(
+              gte(order.paymentDate, sql.placeholder("startDate")),
+              lte(order.paymentDate, sql.placeholder("endDate")),
+            ),
+            and(
+              gte(order.shippingDate, sql.placeholder("startDate")),
+              lte(order.shippingDate, sql.placeholder("endDate")),
+            ),
+            and(
+              gte(order.collectionDate, sql.placeholder("startDate")),
+              lte(order.collectionDate, sql.placeholder("endDate")),
             ),
           ),
         ),
