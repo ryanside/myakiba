@@ -1,12 +1,9 @@
-"use client";
-
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Link } from "@tanstack/react-router";
 
 const FAQ_ITEMS: readonly {
   readonly id: string;
@@ -16,7 +13,8 @@ const FAQ_ITEMS: readonly {
   {
     id: "item-1",
     question: "Does myakiba use MyFigureCollection's data?",
-    answer: `Yes, we use MyFigureCollection's item information. Since MyFigureCollection does not have a public API, myakiba scrapes and stores item information from MyFigureCollection item links (https://myfigurecollection.net/item/xxxxx) that the user provides. Items are periodically rescraped to ensure the item information is accurate and up to date.`,
+    answer:
+      "Yes, we use MyFigureCollection's item information. Since MyFigureCollection does not have a public API, myakiba scrapes and stores item information from MyFigureCollection item links that the user provides. Items are periodically rescraped to ensure the item information is accurate and up to date.",
   },
   {
     id: "item-2",
@@ -28,66 +26,51 @@ const FAQ_ITEMS: readonly {
     id: "item-3",
     question: "Is myakiba safe to use since it scrapes data from MyFigureCollection?",
     answer:
-      "Yes. MyFigureCollection's terms of service do not prohibit scraping. We also don't mass scrape MyFigureCollection, only scraping core item data from the user's provided MyFigureCollection item links. The scraper is heavily rate limited and throttled to prevent overloading MyFigureCollection, item data is cached so we don't need to scrape the same item data multiple times, and users are limited to syncing a few times per hour to prevent abuse.",
+      "Yes. MyFigureCollection's terms of service do not prohibit scraping. We only scrape core item data from the user's provided item links. The scraper is heavily rate limited and throttled, item data is cached to avoid redundant scrapes, and users are limited to syncing a few times per hour to prevent abuse.",
   },
   {
     id: "item-4",
     question: "Who is myakiba for?",
-    answer: "Collectors who want an alternative to MyFigureCollection/Spreadsheets.",
+    answer:
+      "Collectors who want an alternative to MyFigureCollection's manager or DIY spreadsheets.",
   },
   {
     id: "item-5",
     question: "I'm a developer. Can I contribute to the project?",
     answer:
-      "Yes! Contributions are welcome. Please check out the GitHub repository and feel free to join our Discord server.",
+      "Yes! Contributions are welcome. Check out the GitHub repository and feel free to join our Discord server.",
   },
 ];
 
-export default function FAQs() {
+export default function FAQsSection() {
   return (
-    <section id="faqs" className="py-16 md:py-24 bg-sidebar">
-      <div className="mx-auto max-w-7xl px-6">
-        <div className="grid gap-8 md:grid-cols-5 md:gap-12">
-          <div className="md:col-span-2">
-            <h2 className="text-black dark:text-white tracking-tight text-4xl font-medium">FAQs</h2>
-            <p className="text-muted-foreground mt-4 text-balance text-lg">
-              Your questions answered
-            </p>
-            <p className="text-muted-foreground mt-6 hidden md:block">
-              Have a different question? Join and ask in our{" "}
-              <a
-                href="https://discord.gg/VKHVvhcC2z"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-foreground font-medium hover:underline"
-              >
-                Discord
-              </a>
-            </p>
-          </div>
+    <section id="faqs" className="bg-background py-16">
+      <div className="mx-auto max-w-2xl px-6">
+        <h2 className="text-xl font-medium tracking-tight">FAQs</h2>
+        <Accordion className="mt-8">
+          {FAQ_ITEMS.map((item) => (
+            <AccordionItem key={item.id} value={item.id}>
+              <AccordionTrigger className="cursor-pointer text-sm hover:no-underline">
+                {item.question}
+              </AccordionTrigger>
+              <AccordionContent>
+                <p className="text-sm text-muted-foreground">{item.answer}</p>
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
 
-          <div className="md:col-span-3">
-            <Accordion>
-              {FAQ_ITEMS.map((item) => (
-                <AccordionItem key={item.id} value={item.id}>
-                  <AccordionTrigger className="cursor-pointer text-base hover:no-underline">
-                    {item.question}
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <p className="text-base">{item.answer}</p>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          </div>
-
-          <p className="text-muted-foreground mt-6 md:hidden">
-            Can't find what you're looking for? Join and ask in our{" "}
-            <Link to="/" className="text-secondary font-medium hover:underline">
-              Discord
-            </Link>
-          </p>
-        </div>
+        <p className="text-muted-foreground mt-8 text-sm">
+          Have a different question?{" "}
+          <a
+            href="https://discord.gg/VKHVvhcC2z"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-foreground font-medium hover:underline"
+          >
+            Ask on Discord
+          </a>
+        </p>
       </div>
     </section>
   );
