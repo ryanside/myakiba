@@ -50,18 +50,6 @@ const rateLimitConfigs = {
     keyPrefix: "rl:order",
     strategy: "userId",
   },
-  waitlist: {
-    maxRequests: 5,
-    windowSeconds: 3600,
-    keyPrefix: "rl:waitlist",
-    strategy: "ipFingerprint",
-  },
-  verifyAccess: {
-    maxRequests: 15,
-    windowSeconds: 900,
-    keyPrefix: "rl:verify",
-    strategy: "ipFingerprint",
-  },
 } as const satisfies Record<string, RateLimitConfig>;
 
 type RateLimitName = keyof typeof rateLimitConfigs;

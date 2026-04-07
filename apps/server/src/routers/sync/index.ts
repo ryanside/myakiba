@@ -41,25 +41,32 @@ const createTerminalJobStatus = (
   terminalState,
 });
 
-const jobStatusesMatch = (left: SyncJobStatus, right: SyncJobStatus): boolean =>
-  left.status === right.status &&
-  left.finished === right.finished &&
-  left.createdAt === right.createdAt &&
-  left.terminalState === right.terminalState;
+type ExistingItemsWithLatestRelease = Awaited<
+  ReturnType<typeof SyncService.getExistingItemsWithLatestReleaseByExternalIds>
+>;
 
-const toSseJobStatus = (jobStatus: SyncJobStatus) =>
-  sse({
-    data: jobStatus,
-  });
+const buildExistingItemLookups = (existingItems: ExistingItemsWithLatestRelease) => {
+  const externalIdToInternalId = new Map<number, string>();
+  const releaseIdsByItemId = new Map<string, string>();
+  const releaseDatesByItemId = new Map<string, string>();
 
-const waitForAbort = (signal: AbortSignal): Promise<"aborted"> => {
-  if (signal.aborted) {
-    return Promise.resolve("aborted");
+  for (const existingItem of existingItems) {
+    externalIdToInternalId.set(existingItem.externalId, existingItem.id);
+
+    if (existingItem.releaseId) {
+      releaseIdsByItemId.set(existingItem.id, existingItem.releaseId);
+    }
+
+    if (existingItem.releaseDate) {
+      releaseDatesByItemId.set(existingItem.id, existingItem.releaseDate);
+    }
   }
 
-  return new Promise<"aborted">((resolve) => {
-    signal.addEventListener("abort", () => resolve("aborted"), { once: true });
-  });
+  return {
+    externalIdToInternalId,
+    releaseIdsByItemId,
+    releaseDatesByItemId,
+  };
 };
 
 type NextJobStatusEvent =
@@ -328,34 +335,20 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       const itemExternalIds = body.items.map((item: SyncOrderItemInput) => item.itemExternalId);
 
       const { data: existingItems, error: existingItemsError } = await tryCatch(
-        SyncService.getExistingItemsByExternalIds(itemExternalIds),
+        SyncService.getExistingItemsWithLatestReleaseByExternalIds(itemExternalIds),
       );
 
       if (existingItemsError) {
         log.error(existingItemsError, {
-          step: "getExistingItems",
+          step: "getExistingItemsWithLatestRelease",
           outcome: "error",
           sync: { type: "order" },
         });
         return status(500, "Failed to check for existing items");
       }
 
-      const existingItemIds = existingItems.map((existingItem) => existingItem.id);
-      const { data: existingItemsWithReleases, error: existingItemsWithReleasesError } =
-        await tryCatch(SyncService.getExistingItemsWithReleases(existingItemIds));
-
-      if (existingItemsWithReleasesError) {
-        log.error(existingItemsWithReleasesError, {
-          step: "getExistingItemsWithReleases",
-          outcome: "error",
-          sync: { type: "order" },
-        });
-        return status(500, "Failed to check for existing items with releases");
-      }
-
-      const externalIdToInternalId = new Map(
-        existingItems.map((existingItem) => [existingItem.externalId, existingItem.id]),
-      );
+      const { externalIdToInternalId, releaseIdsByItemId, releaseDatesByItemId } =
+        buildExistingItemLookups(existingItems);
 
       const releaseDates = body.items
         .map((item: SyncOrderItemInput) => {
@@ -363,7 +356,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           if (!internalId) {
             return undefined;
           }
-          return existingItemsWithReleases.releaseDates.get(internalId);
+          return releaseDatesByItemId.get(internalId);
         })
         .filter((date): date is string => date !== undefined);
 
@@ -402,7 +395,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
               ...item,
               itemId: internalItemId,
               orderId: orderId,
-              releaseId: existingItemsWithReleases.releases.get(internalItemId) ?? null,
+              releaseId: releaseIdsByItemId.get(internalItemId) ?? null,
               userId: user.id,
             },
           ];
@@ -432,10 +425,10 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           tags: [],
           releaseId: item.releaseId,
         }));
+      const orderWasPersistedImmediately = collectionItemsToInsert.length > 0;
 
       const { data: syncSessionId, error: syncSessionError } = await tryCatch(
         SyncService.createSyncSession(user.id, "order", orderItemExternalIdsToTrack, {
-          orderId,
           existingItemExternalIds: existingOrderItemExternalIds,
         }),
       );
@@ -461,7 +454,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         order: { id: orderId },
       });
 
-      if (collectionItemsToInsert.length > 0) {
+      if (orderWasPersistedImmediately) {
         const { error: insertToCollectionAndOrdersError } = await tryCatch(
           SyncService.insertToCollectionAndOrders(collectionItemsToInsert, [order]),
         );
@@ -566,14 +559,15 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         jobId = jobIdData;
       } else {
         if (syncSessionId) {
+          const completedSessionUpdate = {
+            status: "completed" as const,
+            completedAt: new Date(),
+            statusMessage: "Sync completed",
+            successCount: existingOrderItemExternalIds.length,
+            ...(orderWasPersistedImmediately ? { orderId } : {}),
+          };
           const { error: updateSessionError } = await tryCatch(
-            SyncService.updateSyncSession(syncSessionId, {
-              status: "completed",
-              completedAt: new Date(),
-              statusMessage: "Sync completed",
-              orderId,
-              successCount: existingOrderItemExternalIds.length,
-            }),
+            SyncService.updateSyncSession(syncSessionId, completedSessionUpdate),
           );
           if (updateSessionError) {
             log.error(updateSessionError, {
@@ -679,34 +673,20 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       const itemExternalIds = body.items.map((item: SyncOrderItemInput) => item.itemExternalId);
 
       const { data: existingItems, error: existingItemsError } = await tryCatch(
-        SyncService.getExistingItemsByExternalIds(itemExternalIds),
+        SyncService.getExistingItemsWithLatestReleaseByExternalIds(itemExternalIds),
       );
 
       if (existingItemsError) {
         log.error(existingItemsError, {
-          step: "getExistingItems",
+          step: "getExistingItemsWithLatestRelease",
           outcome: "error",
           sync: { type: "order-item", orderId: body.orderId },
         });
         return status(500, "Failed to check for existing items");
       }
 
-      const existingItemIds = existingItems.map((existingItem) => existingItem.id);
-      const { data: existingItemsWithReleases, error: existingItemsWithReleasesError } =
-        await tryCatch(SyncService.getExistingItemsWithReleases(existingItemIds));
-
-      if (existingItemsWithReleasesError) {
-        log.error(existingItemsWithReleasesError, {
-          step: "getExistingItemsWithReleases",
-          outcome: "error",
-          sync: { type: "order-item", orderId: body.orderId },
-        });
-        return status(500, "Failed to check for existing items with releases");
-      }
-
-      const externalIdToInternalId = new Map(
-        existingItems.map((existingItem) => [existingItem.externalId, existingItem.id]),
-      );
+      const { externalIdToInternalId, releaseIdsByItemId } =
+        buildExistingItemLookups(existingItems);
 
       const itemsToScrape: UpdatedSyncOrderItem[] = body.items
         .filter((item: SyncOrderItemInput) => !externalIdToInternalId.has(item.itemExternalId))
@@ -729,7 +709,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
               ...item,
               itemId: internalItemId,
               orderId: existingOrder.id,
-              releaseId: existingItemsWithReleases.releases.get(internalItemId) ?? null,
+              releaseId: releaseIdsByItemId.get(internalItemId) ?? null,
               userId: user.id,
             },
           ];
@@ -948,34 +928,20 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       const itemExternalIds = body.map((item: CollectionSyncType) => item.itemExternalId);
 
       const { data: existingItems, error: existingItemsError } = await tryCatch(
-        SyncService.getExistingItemsByExternalIds(itemExternalIds),
+        SyncService.getExistingItemsWithLatestReleaseByExternalIds(itemExternalIds),
       );
 
       if (existingItemsError) {
         log.error(existingItemsError, {
-          step: "getExistingItems",
+          step: "getExistingItemsWithLatestRelease",
           outcome: "error",
           sync: { type: "collection" },
         });
         return status(500, "Failed to check for existing items");
       }
 
-      const existingItemIds = existingItems.map((existingItem) => existingItem.id);
-      const { data: existingItemsWithReleases, error: existingItemsWithReleasesError } =
-        await tryCatch(SyncService.getExistingItemsWithReleases(existingItemIds));
-
-      if (existingItemsWithReleasesError) {
-        log.error(existingItemsWithReleasesError, {
-          step: "getExistingItemsWithReleases",
-          outcome: "error",
-          sync: { type: "collection" },
-        });
-        return status(500, "Failed to check for existing items with releases");
-      }
-
-      const externalIdToInternalId = new Map(
-        existingItems.map((existingItem) => [existingItem.externalId, existingItem.id]),
-      );
+      const { externalIdToInternalId, releaseIdsByItemId } =
+        buildExistingItemLookups(existingItems);
 
       const itemsToScrape: UpdatedSyncCollection[] = body
         .filter((item: CollectionSyncType) => !externalIdToInternalId.has(item.itemExternalId))
@@ -995,7 +961,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           {
             ...item,
             itemId: internalItemId,
-            releaseId: existingItemsWithReleases.releases.get(internalItemId) ?? null,
+            releaseId: releaseIdsByItemId.get(internalItemId) ?? null,
             userId: user.id,
           },
         ];
@@ -1327,7 +1293,11 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       const { jobId } = query;
       const startedAt = Date.now();
-      const abortPromise = waitForAbort(request.signal);
+      const abortPromise = request.signal.aborted
+        ? Promise.resolve<"aborted">("aborted")
+        : new Promise<"aborted">((resolve) => {
+            request.signal.addEventListener("abort", () => resolve("aborted"), { once: true });
+          });
 
       const { data: initialJobStatus, error: initialJobStatusError } = await tryCatch(
         SyncService.getJobStatus(jobId, user.id),
@@ -1345,11 +1315,15 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           log.error(initialJobStatusError, { step: "getJobStatus", outcome: "error" });
         }
 
-        yield toSseJobStatus(createTerminalJobStatus(message, "error"));
+        yield sse({
+          data: createTerminalJobStatus(message, "error"),
+        });
         return;
       }
 
-      yield toSseJobStatus(initialJobStatus);
+      yield sse({
+        data: initialJobStatus,
+      });
 
       if (initialJobStatus.finished) {
         log.set({
@@ -1370,12 +1344,12 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           step: "subscribeJobStatus",
           outcome: "error",
         });
-        yield toSseJobStatus(
-          createTerminalJobStatus(
+        yield sse({
+          data: createTerminalJobStatus(
             "Status stream connection lost — refresh to check latest status",
             "error",
           ),
-        );
+        });
         return;
       }
 
@@ -1396,12 +1370,21 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             log.error(replayJobStatusError, { step: "getJobStatusReplay", outcome: "error" });
           }
 
-          yield toSseJobStatus(createTerminalJobStatus(message, "error"));
+          yield sse({
+            data: createTerminalJobStatus(message, "error"),
+          });
           return;
         }
 
-        if (!jobStatusesMatch(initialJobStatus, replayJobStatus)) {
-          yield toSseJobStatus(replayJobStatus);
+        if (
+          initialJobStatus.status !== replayJobStatus.status ||
+          initialJobStatus.finished !== replayJobStatus.finished ||
+          initialJobStatus.createdAt !== replayJobStatus.createdAt ||
+          initialJobStatus.terminalState !== replayJobStatus.terminalState
+        ) {
+          yield sse({
+            data: replayJobStatus,
+          });
         }
 
         if (replayJobStatus.finished) {
@@ -1419,12 +1402,12 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
           if (remainingMs <= 0) {
             log.set({ outcome: "timeout" });
-            yield toSseJobStatus(
-              createTerminalJobStatus(
+            yield sse({
+              data: createTerminalJobStatus(
                 "Status stream timed out — refresh to check latest status",
                 "timeout",
               ),
-            );
+            });
             return;
           }
 
@@ -1440,12 +1423,12 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
           if (nextEvent.kind === "timeout") {
             log.set({ outcome: "timeout" });
-            yield toSseJobStatus(
-              createTerminalJobStatus(
+            yield sse({
+              data: createTerminalJobStatus(
                 "Status stream timed out — refresh to check latest status",
                 "timeout",
               ),
-            );
+            });
             return;
           }
 
@@ -1455,17 +1438,19 @@ const syncRouter = new Elysia({ prefix: "/sync" })
                 step: "jobStatusSubscription",
                 outcome: "error",
               });
-              yield toSseJobStatus(
-                createTerminalJobStatus(
+              yield sse({
+                data: createTerminalJobStatus(
                   "Status stream connection lost — refresh to check latest status",
                   "error",
                 ),
-              );
+              });
             }
             return;
           }
 
-          yield toSseJobStatus(nextEvent.event.status);
+          yield sse({
+            data: nextEvent.event.status,
+          });
 
           if (nextEvent.event.status.finished) {
             log.set({

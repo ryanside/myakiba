@@ -26,7 +26,6 @@ import { Queue } from "bullmq";
 import { createId } from "@paralleldrive/cuid2";
 import { env } from "@myakiba/env/server";
 import { parseMoneyToMinorUnits } from "@myakiba/utils/currency";
-import { toDateOnlyString } from "@myakiba/utils/date-only";
 import { tryCatch } from "@myakiba/utils/result";
 import {
   getJobStatusSnapshotKey,
@@ -61,6 +60,19 @@ type SyncSessionUpdatePayload = Partial<
   >
 >;
 
+type ExistingItemWithLatestRelease = Readonly<{
+  id: string;
+  externalId: number;
+  title: string;
+  releaseId: string | null;
+  releaseDate: string | null;
+}>;
+
+type CsvSyncCandidate = ExistingItemWithLatestRelease &
+  Readonly<{
+    isInCollection: boolean;
+  }>;
+
 class SyncService {
   private deriveTerminalStateFromSessionStatus(
     sessionStatus: SyncSessionStatus,
@@ -88,73 +100,62 @@ class SyncService {
     });
   }
 
-  async getExistingItemIdsInCollection(
-    itemIds: string[],
-    userId: string,
-  ): Promise<{ itemId: string }[]> {
-    if (!itemIds || itemIds.length === 0) {
-      return [];
-    }
-
-    return await db
-      .select({ itemId: collection.itemId })
-      .from(collection)
-      .where(and(inArray(collection.itemId, itemIds), eq(collection.userId, userId)));
-  }
-
-  async getExistingItemsByExternalIds(
-    externalIds: number[],
-  ): Promise<{ id: string; externalId: number; title: string }[]> {
+  async getExistingItemsWithLatestReleaseByExternalIds(
+    externalIds: readonly number[],
+  ): Promise<readonly ExistingItemWithLatestRelease[]> {
     if (!externalIds || externalIds.length === 0) {
       return [];
     }
 
     const existingItems = await db
-      .select({ id: item.id, externalId: item.externalId, title: item.title })
+      .selectDistinctOn([item.id], {
+        id: item.id,
+        externalId: item.externalId,
+        title: item.title,
+        releaseId: item_release.id,
+        releaseDate: item_release.date,
+      })
       .from(item)
-      .where(and(eq(item.source, "mfc"), inArray(item.externalId, externalIds)));
+      .leftJoin(item_release, eq(item_release.itemId, item.id))
+      .where(and(eq(item.source, "mfc"), inArray(item.externalId, [...externalIds])))
+      .orderBy(item.id, desc(item_release.date), desc(item_release.createdAt));
 
     return existingItems.filter(
-      (existingItem): existingItem is { id: string; externalId: number; title: string } =>
+      (existingItem): existingItem is ExistingItemWithLatestRelease =>
         existingItem.externalId !== null,
     );
   }
 
-  async getExistingItemsWithReleases(itemIds: string[]): Promise<{
-    items: { id: string; title: string }[];
-    releases: Map<string, string>;
-    releaseDates: Map<string, string>;
-  }> {
-    if (!itemIds || itemIds.length === 0) {
-      return { items: [], releases: new Map(), releaseDates: new Map() };
+  async getCsvSyncCandidates(
+    externalIds: readonly number[],
+    userId: string,
+  ): Promise<readonly CsvSyncCandidate[]> {
+    if (!externalIds || externalIds.length === 0) {
+      return [];
     }
 
-    const items = await db
-      .select({ id: item.id, title: item.title })
-      .from(item)
-      .where(inArray(item.id, itemIds));
-
-    const releases = new Map<string, string>();
-    const releaseDates = new Map<string, string>();
-    const releaseResult = await db
-      .selectDistinctOn([item_release.itemId], {
-        itemId: item_release.itemId,
+    const existingItems = await db
+      .selectDistinctOn([item.id], {
+        id: item.id,
+        externalId: item.externalId,
+        title: item.title,
         releaseId: item_release.id,
         releaseDate: item_release.date,
+        isInCollection: sql<boolean>`exists (
+          select 1
+          from ${collection}
+          where ${collection.itemId} = ${item.id}
+            and ${collection.userId} = ${userId}
+        )`,
       })
-      .from(item_release)
-      .where(inArray(item_release.itemId, itemIds))
-      .orderBy(item_release.itemId, desc(item_release.date), desc(item_release.createdAt));
+      .from(item)
+      .leftJoin(item_release, eq(item_release.itemId, item.id))
+      .where(and(eq(item.source, "mfc"), inArray(item.externalId, [...externalIds])))
+      .orderBy(item.id, desc(item_release.date), desc(item_release.createdAt));
 
-    for (const row of releaseResult) {
-      releases.set(row.itemId, row.releaseId);
-      const releaseDate = toDateOnlyString(row.releaseDate);
-      if (releaseDate) {
-        releaseDates.set(row.itemId, releaseDate);
-      }
-    }
-
-    return { items, releases, releaseDates };
+    return existingItems.filter(
+      (existingItem): existingItem is CsvSyncCandidate => existingItem.externalId !== null,
+    );
   }
 
   async getOrderByIdForUser(orderId: string, userId: string) {
@@ -190,13 +191,18 @@ class SyncService {
   async processItems(items: InternalCsvItem[], userId: string) {
     const itemExternalIds = items.map((item: InternalCsvItem) => item.itemExternalId);
 
-    const existingItems = await this.getExistingItemsByExternalIds(itemExternalIds);
-    const existingItemIds = existingItems.map((existingItem) => existingItem.id);
+    const existingCandidates = await this.getCsvSyncCandidates(itemExternalIds, userId);
 
-    const idsInCollection = await this.getExistingItemIdsInCollection(existingItemIds, userId);
+    const existingItems = existingCandidates.map(({ id, externalId, title }) => ({
+      id,
+      externalId,
+      title,
+    }));
 
     const idsInCollectionSet = new Set(
-      idsInCollection.map((collectionItem) => collectionItem.itemId),
+      existingCandidates
+        .filter((existingCandidate) => existingCandidate.isInCollection)
+        .map((existingCandidate) => existingCandidate.id),
     );
 
     const externalIdToInternalId = new Map(
@@ -208,9 +214,20 @@ class SyncService {
     );
 
     const itemIdsNeedingInsert = itemsNeedingInsert.map((existingItem) => existingItem.id);
-
-    const { releases: existingItemsReleases, releaseDates: existingItemsReleaseDates } =
-      await this.getExistingItemsWithReleases(itemIdsNeedingInsert);
+    const itemIdsNeedingInsertSet = new Set(itemIdsNeedingInsert);
+    const existingItemsReleases = new Map<string, string>();
+    const existingItemsReleaseDates = new Map<string, string>();
+    for (const existingCandidate of existingCandidates) {
+      if (!itemIdsNeedingInsertSet.has(existingCandidate.id)) {
+        continue;
+      }
+      if (existingCandidate.releaseId) {
+        existingItemsReleases.set(existingCandidate.id, existingCandidate.releaseId);
+      }
+      if (existingCandidate.releaseDate) {
+        existingItemsReleaseDates.set(existingCandidate.id, existingCandidate.releaseDate);
+      }
+    }
 
     const csvItemsToInsert = items.filter((item: InternalCsvItem) =>
       itemsNeedingInsert.some((existingItem) => existingItem.externalId === item.itemExternalId),
