@@ -273,7 +273,7 @@ export const syncWorker = new Worker(
         return Math.max(Math.min(Math.exp(times), 20000), 1000);
       },
     },
-    concurrency: 2,
+    concurrency: 50,
   },
 );
 
