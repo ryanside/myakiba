@@ -271,7 +271,7 @@ function DataGridTableBodyRow<TData>({
       data-state={table.options.enableRowSelection && row.getIsSelected() ? "selected" : undefined}
       onClick={() => props.onRowClick && props.onRowClick(row.original)}
       className={cn(
-        "hover:bg-muted/40 data-[state=selected]:bg-muted/50",
+        "group/row hover:bg-muted/40 data-[state=selected]:bg-muted/50",
         props.onRowClick && "cursor-pointer",
         !props.tableLayout?.stripped &&
           props.tableLayout?.rowBorder &&

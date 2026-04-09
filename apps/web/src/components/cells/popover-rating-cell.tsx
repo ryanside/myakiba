@@ -23,7 +23,11 @@ export function PopoverRatingCell({ value, onSubmit, disabled = false }: Popover
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger
         render={
-          <Button variant="ghost" className="text-foreground pl-0" disabled={disabled}>
+          <Button
+            variant="ghost"
+            className="w-full justify-start text-foreground pl-0"
+            disabled={disabled}
+          >
             {value}
           </Button>
         }

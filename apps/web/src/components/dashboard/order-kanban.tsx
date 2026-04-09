@@ -12,6 +12,7 @@ import {
   KanbanItem,
   KanbanItemHandle,
   KanbanOverlay,
+  type KanbanMoveEvent,
 } from "@/components/reui/kanban";
 import { PopoverDatePickerCell } from "@/components/cells/popover-date-picker-cell";
 import { PopoverReleaseDateCell } from "@/components/cells/popover-release-date-cell";
@@ -97,7 +98,7 @@ function OrderCard({
   const locale = getCurrencyLocale(currency);
 
   const content = (
-    <Frame variant="ghost" spacing="sm" className="group/card relative p-0">
+    <Frame variant="ghost" spacing="sm" className="animate-data-in group/card relative p-0">
       <FramePanel className="p-3">
         {columnId !== "Owned" && (
           <Tooltip>
@@ -261,7 +262,11 @@ function OrderColumn({
           <div className={cn("size-2 rounded-full", col.color)} />
           <FrameTitle>{col.title}</FrameTitle>
           <Badge variant="outline" size="sm" className="ml-auto">
-            {isLoading ? <Skeleton className="size-2" /> : orders.length}
+            {isLoading ? (
+              <Skeleton className="size-2" />
+            ) : (
+              <span className="animate-data-in">{orders.length}</span>
+            )}
           </Badge>
         </FrameHeader>
         <KanbanColumnContent
@@ -271,7 +276,7 @@ function OrderColumn({
           {isLoading ? (
             <Loader className="justify-start text-muted pt-4" />
           ) : (
-            orders.map((order) => (
+            orders.map((order, index) => (
               <OrderCard
                 key={order.orderId}
                 order={order}
@@ -281,6 +286,7 @@ function OrderColumn({
                 asHandle={!isOverlay}
                 onMarkOwned={onMarkOwned}
                 onDateChange={onDateChange}
+                style={{ "--data-in-delay": `${index * 30}ms` } as React.CSSProperties}
               />
             ))
           )}
@@ -418,36 +424,14 @@ export default function OrderKanban({
   );
 
   const handleMove = React.useCallback(
-    (moveEvent: {
-      activeContainer: string;
-      activeIndex: number;
-      overContainer: string;
-      overIndex: number;
-    }) => {
-      const { activeContainer, activeIndex, overContainer, overIndex } = moveEvent;
-      const movedOrder = columns[activeContainer][activeIndex];
-
+    ({ activeContainer, overContainer, event }: KanbanMoveEvent) => {
       if (activeContainer !== overContainer) {
+        const orderId = String(event.active.id);
         const newStatus = overContainer as "Ordered" | "Paid" | "Shipped" | "Owned";
-        const activeItems = [...columns[activeContainer]];
-        const overItems = [...columns[overContainer]];
-
-        activeItems.splice(activeIndex, 1);
-        overItems.splice(overIndex, 0, movedOrder);
-
-        setColumns({
-          ...columns,
-          [activeContainer]: activeItems,
-          [overContainer]: overItems,
-        });
-
-        statusMutation.mutate({
-          orderId: movedOrder.orderId,
-          status: newStatus,
-        });
+        statusMutation.mutate({ orderId, status: newStatus });
       }
     },
-    [columns, statusMutation],
+    [statusMutation],
   );
 
   return (

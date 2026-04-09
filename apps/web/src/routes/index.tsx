@@ -7,19 +7,21 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon, Sun01Icon, Moon02Icon } from "@hugeicons/core-free-icons";
 import { useTheme } from "next-themes";
+import BounceCards from "@/components/BounceCards";
 import MfcSyncSection from "@/components/homepage/integrations-1";
 import FAQsSection from "@/components/homepage/faqs";
 import FooterSection from "@/components/homepage/footer";
 import LogoCloud from "@/components/homepage/logo-cloud";
+import { cn } from "@/lib/utils";
 
 const EXAMPLE_ITEMS = [
-  "/example-item1.jpg",
-  "/example-item2.jpg",
-  "/example-item3.jpg",
-  "/example-item4.jpg",
-  "/example-item5.jpg",
-  "/example-item6.jpg",
-  "/example-item7.jpg",
+  "/example-item1.webp",
+  "/example-item2.webp",
+  "/example-item3.webp",
+  "/example-item4.webp",
+  "/example-item5.webp",
+  "/example-item6.webp",
+  "/example-item7.webp",
 ] as const;
 
 const HERO_TABS = [
@@ -112,7 +114,7 @@ function HomeComponent() {
   const [activeTab, setActiveTab] = useState<HeroTabId>("dashboard");
 
   return (
-    <div className="min-h-screen overflow-x-clip bg-background text-foreground">
+    <div className="min-h-screen min-w-0 overflow-x-clip bg-background text-foreground">
       <header className="sticky top-0 z-30 w-full bg-background">
         <nav className="mx-auto flex h-12 max-w-6xl items-center px-6 min-[940px]:grid min-[940px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] min-[940px]:gap-4">
           <div />
@@ -153,7 +155,7 @@ function HomeComponent() {
       </header>
 
       <main className="w-full max-w-2xl mx-auto px-6 pt-16 sm:pt-24 pb-8">
-        <div className="flex items-center gap-3.5 mb-6">
+        <div className="animate-appear flex items-center gap-3.5 mb-6">
           <MyAkibaLogo size="full" className="size-32 block" />
           <span className="hidden sm:block text-xs tracking-wide [&_span]:font-normal">
             <TextLoop
@@ -164,16 +166,16 @@ function HomeComponent() {
           </span>
         </div>
 
-        <h1 className="text-xl font-medium tracking-tight">
+        <h1 className="animate-appear text-xl font-medium tracking-tight [--appear-delay:80ms]">
           A modern anime figure collection manager
         </h1>
 
-        <p className="mt-3 text-[15px] leading-normal text-muted-foreground">
+        <p className="animate-appear mt-3 text-[15px] leading-normal text-muted-foreground [--appear-delay:140ms]">
           Your MyFigureCollection catalog and the flexibility of spreadsheets, unified into a modern
           collection manager. Track orders, analyze your collection, and sync with MFC.
         </p>
 
-        <div className="mt-5 mb-7 flex flex-wrap items-center gap-3">
+        <div className="animate-appear mt-5 mb-7 flex flex-wrap items-center gap-3 [--appear-delay:200ms]">
           <Button
             size="lg"
             className="h-10 rounded-xl px-4"
@@ -184,11 +186,28 @@ function HomeComponent() {
             <HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" />
           </Button>
           <div className="px-2 text-start text-xs text-muted-foreground italic">
-            <p>*in early development, screenshots below may be outdated</p>
+            <p>*in early development</p>
           </div>{" "}
         </div>
 
-        <section id="features" className="mb-12">
+        <div className="animate-appear flex justify-start my-2 [--appear-delay:240ms]">
+          <BounceCards
+            images={[...EXAMPLE_ITEMS].slice(0, 5)}
+            containerWidth={240}
+            containerHeight={120}
+            cardSize={70}
+            animationDelay={0.3}
+            transformStyles={[
+              "rotate(10deg) translate(-76px)",
+              "rotate(5deg) translate(-38px)",
+              "rotate(-3deg)",
+              "rotate(-10deg) translate(38px)",
+              "rotate(2deg) translate(76px)",
+            ]}
+          />
+        </div>
+
+        <section id="features" className="animate-appear mb-12 [--appear-delay:300ms]">
           <h2 className="text-xs font-medium text-muted-foreground tracking-tight mb-4">
             Features
           </h2>
@@ -205,7 +224,7 @@ function HomeComponent() {
           </ul>
         </section>
 
-        <div className="-mx-6 sm:-mx-24 md:-mx-36 lg:-mx-60 xl:-mx-84">
+        <div className="animate-appear -mx-6 sm:-mx-24 md:-mx-36 lg:-mx-60 xl:-mx-84 [--appear-delay:380ms]">
           <Tabs
             value={activeTab}
             onValueChange={(value) => setActiveTab(value as HeroTabId)}
@@ -220,22 +239,34 @@ function HomeComponent() {
             </TabsList>
           </Tabs>
 
-          <img
-            key={`${activeTab}-${isDark}`}
-            src={getHeroImage(activeTab, isDark)}
-            alt={`myakiba ${activeTab}`}
-            className="w-full rounded-xl"
-            loading="eager"
-            fetchPriority="high"
-          />
+          <div className="relative aspect-2992/1788 w-full overflow-hidden rounded-xl">
+            {HERO_TABS.map((tab) => (
+              <img
+                key={tab.id}
+                src={getHeroImage(tab.id, isDark)}
+                alt={`myakiba ${tab.id}`}
+                className={cn(
+                  "absolute inset-0 h-full w-full object-cover transition-opacity duration-150",
+                  tab.id === activeTab ? "opacity-100" : "opacity-0",
+                )}
+                loading="eager"
+              />
+            ))}
+          </div>
 
           <LogoCloud images={EXAMPLE_ITEMS} />
         </div>
       </main>
 
-      <MfcSyncSection />
-      <FAQsSection />
-      <FooterSection />
+      <div className="animate-appear [--appear-delay:460ms]">
+        <MfcSyncSection />
+      </div>
+      <div className="animate-appear [--appear-delay:520ms]">
+        <FAQsSection />
+      </div>
+      <div className="animate-appear [--appear-delay:560ms]">
+        <FooterSection />
+      </div>
     </div>
   );
 }

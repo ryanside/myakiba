@@ -31,6 +31,7 @@ import { Textarea } from "../ui/textarea";
 import { Rating } from "../ui/rating";
 import { Field, FieldContent, FieldTitle } from "@/components/ui/field";
 import { Badge } from "@/components/reui/badge";
+import { FormSection } from "@/components/ui/form-section";
 import { majorStringToMinorUnits, minorUnitsToMajorString } from "@myakiba/utils/currency";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { Scroller } from "../ui/scroller";
@@ -101,105 +102,137 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
             <SheetDescription>{itemData.itemTitle}</SheetDescription>
           </SheetHeader>
           <Scroller className="max-h-[70vh] px-2">
-            <div className="grid gap-4 p-2">
-              {/* Price, Count, Score */}
-              <div className="grid grid-cols-2 gap-4">
-                <form.Field
-                  name="price"
-                  validators={{
-                    onChange: z.string().nonempty("Price is required"),
-                  }}
-                  children={(field) => (
-                    <div className="grid gap-2">
-                      <Label htmlFor={field.name}>Price</Label>
-                      <MaskInput
-                        id={field.name}
-                        name={field.name}
-                        mask="currency"
-                        currency={currency}
-                        locale={userLocale}
-                        value={field.state.value}
-                        onBlur={field.handleBlur}
-                        onValueChange={(maskedValue, unmaskedValue) =>
-                          field.handleChange(unmaskedValue)
-                        }
-                        placeholder="0.00"
-                      />
-                      {!field.state.meta.isValid && (
-                        <em role="alert" className="text-xs text-destructive">
-                          {field.state.meta.errors.join(", ")}
-                        </em>
-                      )}
-                    </div>
-                  )}
-                />
+            <div className="flex flex-col gap-3 p-2">
+              <FormSection title="Basics">
+                <div className="grid grid-cols-2 gap-3">
+                  <form.Field
+                    name="price"
+                    validators={{ onChange: z.string().nonempty("Price is required") }}
+                    children={(field) => (
+                      <div className="grid gap-1.5">
+                        <Label htmlFor={field.name}>Price</Label>
+                        <MaskInput
+                          id={field.name}
+                          name={field.name}
+                          mask="currency"
+                          currency={currency}
+                          locale={userLocale}
+                          value={field.state.value}
+                          onBlur={field.handleBlur}
+                          onValueChange={(_maskedValue, unmaskedValue) =>
+                            field.handleChange(unmaskedValue)
+                          }
+                          placeholder="0.00"
+                        />
+                        {!field.state.meta.isValid && (
+                          <p role="alert" className="text-xs text-destructive">
+                            {field.state.meta.errors.join(", ")}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  />
 
-                <form.Field
-                  name="count"
-                  validators={{
-                    onChange: z.number().min(1, "Count must be at least 1"),
-                  }}
-                  children={(field) => (
-                    <div className="grid gap-2">
-                      <Label htmlFor={field.name}>Count</Label>
-                      <Input
-                        id={field.name}
-                        name={field.name}
-                        value={field.state.value ?? 1}
-                        onBlur={field.handleBlur}
-                        type="number"
-                        min="1"
-                        onChange={(e) => field.handleChange(parseInt(e.target.value) || 1)}
-                        placeholder="1"
-                      />
-                      {!field.state.meta.isValid && (
-                        <em role="alert" className="text-xs text-destructive">
-                          {field.state.meta.errors.join(", ")}
-                        </em>
-                      )}
-                    </div>
-                  )}
-                />
-              </div>
+                  <form.Field
+                    name="count"
+                    validators={{ onChange: z.number().min(1, "Count must be at least 1") }}
+                    children={(field) => (
+                      <div className="grid gap-1.5">
+                        <Label htmlFor={field.name}>Count</Label>
+                        <Input
+                          id={field.name}
+                          name={field.name}
+                          value={field.state.value ?? 1}
+                          onBlur={field.handleBlur}
+                          type="number"
+                          min="1"
+                          onChange={(e) => field.handleChange(parseInt(e.target.value) || 1)}
+                          placeholder="1"
+                        />
+                        {!field.state.meta.isValid && (
+                          <p role="alert" className="text-xs text-destructive">
+                            {field.state.meta.errors.join(", ")}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  />
+                </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <form.Field
-                  name="condition"
-                  validators={{
-                    onChange: z.enum(CONDITIONS, "Condition is required"),
-                  }}
-                  children={(field) => (
-                    <div className="grid gap-2">
-                      <Label htmlFor={field.name}>Condition</Label>
-                      <Select
-                        value={field.state.value ?? ""}
-                        onValueChange={(value) =>
-                          field.handleChange(value as typeof field.state.value)
-                        }
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select condition" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {CONDITIONS.map((condition) => (
-                            <SelectItem key={condition} value={condition}>
-                              {condition}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {!field.state.meta.isValid && (
-                        <em role="alert" className="text-xs text-destructive">
-                          {field.state.meta.errors.join(", ")}
-                        </em>
-                      )}
-                    </div>
-                  )}
-                />
+                <div className="grid grid-cols-2 gap-3">
+                  <form.Field
+                    name="status"
+                    validators={{
+                      onChange: z.enum(COLLECTION_STATUSES, "Status is required"),
+                    }}
+                    children={(field) => (
+                      <div className="grid gap-1.5">
+                        <Label htmlFor={field.name}>Status</Label>
+                        <Select
+                          value={field.state.value ?? ""}
+                          onValueChange={(value) =>
+                            field.handleChange(value as typeof field.state.value)
+                          }
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {COLLECTION_STATUSES.map((status) => (
+                              <SelectItem key={status} value={status}>
+                                {status}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {!field.state.meta.isValid && (
+                          <p role="alert" className="text-xs text-destructive">
+                            {field.state.meta.errors.join(", ")}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  />
+
+                  <form.Field
+                    name="condition"
+                    validators={{ onChange: z.enum(CONDITIONS, "Condition is required") }}
+                    children={(field) => (
+                      <div className="grid gap-1.5">
+                        <Label htmlFor={field.name}>Condition</Label>
+                        <Select
+                          value={field.state.value ?? ""}
+                          onValueChange={(value) =>
+                            field.handleChange(value as typeof field.state.value)
+                          }
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select condition" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CONDITIONS.map((condition) => (
+                              <SelectItem key={condition} value={condition}>
+                                {condition}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {!field.state.meta.isValid && (
+                          <p role="alert" className="text-xs text-destructive">
+                            {field.state.meta.errors.join(", ")}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  />
+                </div>
+              </FormSection>
+
+              <FormSection title="Details">
                 <form.Field
                   name="score"
                   children={(field) => (
-                    <div className="grid gap-2">
+                    <div className="grid gap-1.5">
                       <Label htmlFor={field.name}>Score</Label>
                       <div>
                         <Rating
@@ -214,48 +247,11 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                     </div>
                   )}
                 />
-              </div>
-
-              {/* Status and Shop */}
-              <div className="grid grid-cols-2 gap-4">
-                <form.Field
-                  name="status"
-                  validators={{
-                    onChange: z.enum(COLLECTION_STATUSES, "Status is required"),
-                  }}
-                  children={(field) => (
-                    <div className="grid gap-2">
-                      <Label htmlFor={field.name}>Status</Label>
-                      <Select
-                        value={field.state.value ?? ""}
-                        onValueChange={(value) =>
-                          field.handleChange(value as typeof field.state.value)
-                        }
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {COLLECTION_STATUSES.map((status) => (
-                            <SelectItem key={status} value={status}>
-                              {status}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {!field.state.meta.isValid && (
-                        <em role="alert" className="text-xs text-destructive">
-                          {field.state.meta.errors.join(", ")}
-                        </em>
-                      )}
-                    </div>
-                  )}
-                />
 
                 <form.Field
                   name="shop"
                   children={(field) => (
-                    <div className="grid gap-2">
+                    <div className="grid gap-1.5">
                       <Label htmlFor={field.name}>Shop</Label>
                       <Input
                         id={field.name}
@@ -268,229 +264,231 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                     </div>
                   )}
                 />
-              </div>
 
-              {/* Release Date */}
-              <form.Field
-                name="releaseId"
-                children={(field) => (
-                  <div className="grid gap-2">
-                    <Label htmlFor={field.name}>Release Date</Label>
-                    <Select
-                      value={field.state.value ?? ""}
-                      onValueChange={(value) =>
-                        field.handleChange(value as typeof field.state.value)
-                      }
-                      onOpenChange={(open) => {
-                        if (open) {
-                          refetchReleases();
+                <form.Field
+                  name="releaseId"
+                  children={(field) => (
+                    <div className="grid gap-1.5">
+                      <Label htmlFor={field.name}>Release Date</Label>
+                      <Select
+                        value={field.state.value ?? ""}
+                        onValueChange={(value) =>
+                          field.handleChange(value as typeof field.state.value)
                         }
-                      }}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select release">
-                          {field.state.value &&
-                            (() => {
-                              const selectedRelease = releasesData?.releases.find(
-                                (r) => r.id === field.state.value,
-                              );
-                              const displayData = selectedRelease || {
-                                date: itemData.releaseDate,
-                                type: itemData.releaseType,
-                                price: itemData.releasePrice,
-                                priceCurrency: itemData.releaseCurrency,
-                                barcode: itemData.releaseBarcode,
-                              };
+                        onOpenChange={(open) => {
+                          if (open) {
+                            refetchReleases();
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select release">
+                            {field.state.value &&
+                              (() => {
+                                const selectedRelease = releasesData?.releases.find(
+                                  (r) => r.id === field.state.value,
+                                );
+                                const displayData = selectedRelease || {
+                                  date: itemData.releaseDate,
+                                  type: itemData.releaseType,
+                                  price: itemData.releasePrice,
+                                  priceCurrency: itemData.releaseCurrency,
+                                  barcode: itemData.releaseBarcode,
+                                };
 
-                              return (
-                                <div className="flex items-center gap-3 text-sm">
-                                  <span className="font-medium">
-                                    {formatDateOnlyForDisplay(displayData.date, dateFormat)}
+                                return (
+                                  <div className="flex items-center gap-3 text-sm">
+                                    <span className="font-medium">
+                                      {formatDateOnlyForDisplay(displayData.date, dateFormat)}
+                                    </span>
+                                    {displayData.type && (
+                                      <span className="text-muted-foreground">
+                                        {displayData.type}
+                                      </span>
+                                    )}
+                                    {displayData.price != null &&
+                                      displayData.price > 0 &&
+                                      displayData.priceCurrency?.trim() && (
+                                        <span className="text-muted-foreground">
+                                          {formatReleaseDate(
+                                            displayData.price,
+                                            displayData.priceCurrency,
+                                            currency,
+                                          )}
+                                        </span>
+                                      )}
+                                  </div>
+                                );
+                              })()}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className="min-w-(--anchor-width)">
+                          {releasesLoading && (
+                            <div className="flex items-center justify-center py-4">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
+                              <span className="ml-2 text-sm text-muted-foreground">
+                                Loading releases...
+                              </span>
+                            </div>
+                          )}
+                          {releasesError && (
+                            <div className="py-3 px-3 text-sm text-destructive">
+                              {releasesError.message}
+                            </div>
+                          )}
+                          {releasesData?.releases.map((release) => (
+                            <SelectItem key={release.id} value={release.id} className="py-2.5">
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-sm">
+                                    {formatDateOnlyForDisplay(release.date, dateFormat)}
                                   </span>
-                                  {displayData.type && (
-                                    <span className="text-muted-foreground">
-                                      {displayData.type}
+                                  {release.type && (
+                                    <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                                      {release.type}
                                     </span>
                                   )}
-                                  {displayData.price != null &&
-                                    displayData.price > 0 &&
-                                    displayData.priceCurrency?.trim() && (
-                                      <span className="text-muted-foreground">
+                                </div>
+                                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                  {release.price != null &&
+                                    release.price > 0 &&
+                                    release.priceCurrency?.trim() && (
+                                      <span>
                                         {formatReleaseDate(
-                                          displayData.price,
-                                          displayData.priceCurrency,
+                                          release.price,
+                                          release.priceCurrency,
                                           currency,
                                         )}
                                       </span>
                                     )}
+                                  {release.barcode && <span>#{release.barcode}</span>}
                                 </div>
-                              );
-                            })()}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent className="min-w-(--anchor-width)">
-                        {releasesLoading && (
-                          <div className="flex items-center justify-center py-4">
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                            <span className="ml-2 text-sm text-muted-foreground">
-                              Loading releases...
-                            </span>
-                          </div>
-                        )}
-                        {releasesError && (
-                          <div className="py-3 px-3 text-sm text-destructive">
-                            {releasesError.message}
-                          </div>
-                        )}
-                        {releasesData?.releases.map((release) => (
-                          <SelectItem key={release.id} value={release.id} className="py-2.5">
-                            <div className="flex flex-col gap-1">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-sm">
-                                  {formatDateOnlyForDisplay(release.date, dateFormat)}
-                                </span>
-                                {release.type && (
-                                  <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                                    {release.type}
-                                  </span>
-                                )}
                               </div>
-                              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                {release.price != null &&
-                                  release.price > 0 &&
-                                  release.priceCurrency?.trim() && (
-                                    <span>
-                                      {formatReleaseDate(
-                                        release.price,
-                                        release.priceCurrency,
-                                        currency,
-                                      )}
-                                    </span>
-                                  )}
-                                {release.barcode && <span className="">#{release.barcode}</span>}
-                              </div>
+                            </SelectItem>
+                          ))}
+                          {releasesData?.releases.length === 0 && !releasesLoading && (
+                            <div className="py-4 px-3 text-sm text-muted-foreground text-center">
+                              No releases found
                             </div>
-                          </SelectItem>
-                        ))}
-                        {releasesData?.releases.length === 0 && !releasesLoading && (
-                          <div className="py-4 px-3 text-sm text-muted-foreground text-center">
-                            No releases found
-                          </div>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              />
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                />
+              </FormSection>
 
-              {/* Date Fields */}
-              <div className="grid grid-cols-2 gap-4">
-                <form.Field
-                  name="orderDate"
-                  children={(field) => (
-                    <div className="grid gap-2">
-                      <Label htmlFor={field.name}>Order Date</Label>
-                      <DatePicker
-                        id={field.name}
-                        name={field.name}
-                        value={field.state.value ?? null}
-                        onBlur={field.handleBlur}
-                        onChange={(value) => field.handleChange(value)}
-                        placeholder="Select order date"
-                      />
-                    </div>
-                  )}
-                />
-
-                <form.Field
-                  name="paymentDate"
-                  children={(field) => (
-                    <div className="grid gap-2">
-                      <Label htmlFor={field.name}>Payment Date</Label>
-                      <DatePicker
-                        id={field.name}
-                        name={field.name}
-                        value={field.state.value ?? null}
-                        onBlur={field.handleBlur}
-                        onChange={(value) => field.handleChange(value)}
-                        placeholder="Select payment date"
-                      />
-                    </div>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <form.Field
-                  name="shippingDate"
-                  children={(field) => (
-                    <div className="grid gap-2">
-                      <Label htmlFor={field.name}>Shipping Date</Label>
-                      <DatePicker
-                        id={field.name}
-                        name={field.name}
-                        value={field.state.value ?? null}
-                        onBlur={field.handleBlur}
-                        onChange={(value) => field.handleChange(value)}
-                        placeholder="Select shipping date"
-                      />
-                    </div>
-                  )}
-                />
-                <form.Field
-                  name="collectionDate"
-                  children={(field) => (
-                    <div className="grid gap-2">
-                      <Label htmlFor={field.name}>Collection Date</Label>
-                      <DatePicker
-                        id={field.name}
-                        name={field.name}
-                        value={field.state.value ?? null}
-                        onBlur={field.handleBlur}
-                        onChange={(value) => field.handleChange(value)}
-                        placeholder="Select collection date"
-                      />
-                    </div>
-                  )}
-                />
-              </div>
-              <form.Field
-                name="shippingMethod"
-                validators={{
-                  onChange: z.enum(SHIPPING_METHODS, "Shipping method is required"),
-                }}
-                children={(field) => (
-                  <div className="grid gap-2">
-                    <Label htmlFor={field.name}>Shipping Method</Label>
-                    <Select
-                      value={field.state.value ?? ""}
-                      onValueChange={(value) =>
-                        field.handleChange(value as typeof field.state.value)
-                      }
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select shipping method" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {SHIPPING_METHODS.map((method) => (
-                          <SelectItem key={method} value={method}>
-                            {method}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {!field.state.meta.isValid && (
-                      <em role="alert" className="text-xs text-destructive">
-                        {field.state.meta.errors.join(", ")}
-                      </em>
+              <FormSection title="Timeline">
+                <div className="grid grid-cols-2 gap-3">
+                  <form.Field
+                    name="orderDate"
+                    children={(field) => (
+                      <div className="grid gap-1.5">
+                        <Label htmlFor={field.name}>Order Date</Label>
+                        <DatePicker
+                          id={field.name}
+                          name={field.name}
+                          value={field.state.value ?? null}
+                          onBlur={field.handleBlur}
+                          onChange={(value) => field.handleChange(value)}
+                          placeholder="Select date"
+                        />
+                      </div>
                     )}
-                  </div>
-                )}
-              />
+                  />
+
+                  <form.Field
+                    name="paymentDate"
+                    children={(field) => (
+                      <div className="grid gap-1.5">
+                        <Label htmlFor={field.name}>Payment Date</Label>
+                        <DatePicker
+                          id={field.name}
+                          name={field.name}
+                          value={field.state.value ?? null}
+                          onBlur={field.handleBlur}
+                          onChange={(value) => field.handleChange(value)}
+                          placeholder="Select date"
+                        />
+                      </div>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <form.Field
+                    name="shippingDate"
+                    children={(field) => (
+                      <div className="grid gap-1.5">
+                        <Label htmlFor={field.name}>Shipping Date</Label>
+                        <DatePicker
+                          id={field.name}
+                          name={field.name}
+                          value={field.state.value ?? null}
+                          onBlur={field.handleBlur}
+                          onChange={(value) => field.handleChange(value)}
+                          placeholder="Select date"
+                        />
+                      </div>
+                    )}
+                  />
+                  <form.Field
+                    name="collectionDate"
+                    children={(field) => (
+                      <div className="grid gap-1.5">
+                        <Label htmlFor={field.name}>Collection Date</Label>
+                        <DatePicker
+                          id={field.name}
+                          name={field.name}
+                          value={field.state.value ?? null}
+                          onBlur={field.handleBlur}
+                          onChange={(value) => field.handleChange(value)}
+                          placeholder="Select date"
+                        />
+                      </div>
+                    )}
+                  />
+                </div>
+
+                <form.Field
+                  name="shippingMethod"
+                  validators={{
+                    onChange: z.enum(SHIPPING_METHODS, "Shipping method is required"),
+                  }}
+                  children={(field) => (
+                    <div className="grid gap-1.5">
+                      <Label htmlFor={field.name}>Shipping Method</Label>
+                      <Select
+                        value={field.state.value ?? ""}
+                        onValueChange={(value) =>
+                          field.handleChange(value as typeof field.state.value)
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select shipping method" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SHIPPING_METHODS.map((method) => (
+                            <SelectItem key={method} value={method}>
+                              {method}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {!field.state.meta.isValid && (
+                        <p role="alert" className="text-xs text-destructive">
+                          {field.state.meta.errors.join(", ")}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                />
+              </FormSection>
+
               <form.Field
                 name="tags"
                 children={(field) => (
-                  <Field className="gap-2">
+                  <Field className="gap-1.5">
                     <FieldTitle>Tags</FieldTitle>
                     <FieldContent>
                       <div className="flex flex-wrap gap-2">
@@ -509,7 +507,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                                 const current = field.state.value || [];
                                 field.handleChange(current.filter((_, idx) => idx !== tagIndex));
                               }}
-                              className=" hover:text-red-500 hover:bg-transparent"
+                              className="hover:text-destructive hover:bg-transparent"
                             >
                               <HugeiconsIcon icon={Cancel01Icon} />
                             </Button>
@@ -520,7 +518,7 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                         <Input
                           id="tags-input"
                           type="text"
-                          placeholder="Press enter after each tag to add"
+                          placeholder="Type a tag and press Enter"
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
                               e.preventDefault();
@@ -540,23 +538,24 @@ export default function CollectionItemForm(props: CollectionItemFormProps) {
                 )}
               />
 
-              {/* Notes */}
-              <form.Field
-                name="notes"
-                children={(field) => (
-                  <div className="grid gap-2">
-                    <Label htmlFor={field.name}>Notes</Label>
-                    <Textarea
-                      id={field.name}
-                      name={field.name}
-                      value={field.state.value ?? ""}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      placeholder="Additional notes"
-                    />
-                  </div>
-                )}
-              />
+              <FormSection title="Notes" defaultOpen={false}>
+                <form.Field
+                  name="notes"
+                  children={(field) => (
+                    <div className="grid gap-1.5">
+                      <Textarea
+                        id={field.name}
+                        name={field.name}
+                        value={field.state.value ?? ""}
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        placeholder="Add any notes..."
+                        rows={3}
+                      />
+                    </div>
+                  )}
+                />
+              </FormSection>
             </div>
           </Scroller>
           <SheetFooter className="flex flex-row w-full">

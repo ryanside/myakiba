@@ -88,7 +88,7 @@ export function InlineCurrencyCell({
             handleCancel();
           }
         }}
-        className="text-foreground pl-0"
+        className="h-8 w-full text-foreground pl-0"
       />
     );
   }
@@ -96,7 +96,7 @@ export function InlineCurrencyCell({
   return (
     <Button
       onClick={handleStartEditing}
-      className="text-foreground pl-0"
+      className="w-full justify-start text-foreground pl-0"
       variant="ghost"
       disabled={disabled || isPending}
     >

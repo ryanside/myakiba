@@ -1,6 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   AddSquareIcon,
+  ArrowRight01Icon,
   Delete02Icon,
   Edit01Icon,
   Loading03Icon,
@@ -183,15 +184,40 @@ export function createOrdersColumns({
               fallbackIcon={<HugeiconsIcon icon={PackageIcon} className="size-4" />}
               className="size-8 rounded-md"
             />
-            <div className="min-w-0 space-y-px">
-              <Link
-                to="/orders/$id"
-                params={{ id: order.orderId }}
-                className="block truncate font-medium text-foreground"
-              >
-                {order.title}
-              </Link>
+            <div className="min-w-0 flex-1">
+              <InlineTextCell
+                value={order.title}
+                disabled={isOrderPending(order.orderId)}
+                onSubmit={async (newValue) => {
+                  const { createdAt, updatedAt, ...orderWithoutTimestamps } = order;
+                  void createdAt;
+                  void updatedAt;
+                  await onEditOrder(
+                    {
+                      ...orderWithoutTimestamps,
+                      title: newValue,
+                    },
+                    [] as CascadeOptions,
+                  );
+                }}
+                validate={(value) => {
+                  if (!value || value.trim().length === 0) {
+                    return "Order title cannot be empty";
+                  }
+                  return true;
+                }}
+                previewClassName="text-sm font-medium"
+              />
             </div>
+            <Link
+              to="/orders/$id"
+              params={{ id: order.orderId }}
+              className="shrink-0 rounded-sm p-0.5 text-muted-foreground/60 opacity-0 transition-opacity group-hover/row:opacity-100 hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              aria-label={`View ${order.title}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5" strokeWidth={2} />
+            </Link>
           </div>
         );
       },
@@ -500,7 +526,7 @@ export function createOrdersColumns({
         const isPending = isOrderPending(order.orderId);
         const inputs = [
           {
-            title: "Shipping Fee",
+            title: "Shipping",
             name: "shippingFee",
             type: "currency" as const,
             value: order.shippingFee,
@@ -524,7 +550,7 @@ export function createOrdersColumns({
             value: order.tariffs,
           },
           {
-            title: "Misc Fees",
+            title: "Miscellaneous",
             name: "miscFees",
             type: "currency" as const,
             value: order.miscFees,
@@ -533,6 +559,8 @@ export function createOrdersColumns({
         return (
           <PopoverMultiInputCell
             inputs={inputs}
+            title="Fees & Charges"
+            description="Expand order to edit item prices"
             total={formatCurrencyFromMinorUnits(order.total, currency, locale)}
             currency={currency}
             locale={locale}

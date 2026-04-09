@@ -143,7 +143,9 @@ function ReleaseCalendar({
                 <Skeleton className="size-2" />
               </Badge>
             ) : (
-              <Badge variant="outline">{releases.length}</Badge>
+              <Badge variant="outline" className="animate-data-in">
+                {releases.length}
+              </Badge>
             )}
           </div>
 
@@ -177,8 +179,8 @@ function ReleaseCalendar({
         ) : isError ? (
           <ReleaseCalendarError message={error.message} onRetry={refetch} />
         ) : grouped.length > 0 ? (
-          <div className="space-y-3">
-            <div className="max-h-57 overflow-y-auto overflow-x-hidden">
+          <div className="animate-data-in space-y-3 [--data-in-delay:60ms]">
+            <div className="-mx-(--frame-panel-p) max-h-57 overflow-y-auto overflow-x-hidden">
               {grouped.map(([dateKey, items]) => (
                 <DateGroup key={dateKey} dateKey={dateKey} items={items} currency={currency} />
               ))}
@@ -203,13 +205,13 @@ function DateGroup({
 }): React.ReactNode {
   return (
     <div>
-      <div className="sticky top-0 z-10 flex items-center gap-2 bg-(--frame-panel-bg) pb-1">
+      <div className="sticky top-0 z-10 flex items-center gap-2 bg-(--frame-panel-bg) px-(--frame-panel-p) pb-1">
         <span className="shrink-0 text-[0.6875rem] font-medium uppercase tracking-wider text-muted-foreground">
           {RELEASE_DATE_GROUP_LABEL_FORMATTER.format(new Date(dateKey))}
         </span>
         <div className="h-px flex-1 bg-border" />
       </div>
-      <div>
+      <div className="px-(--frame-panel-p)">
         {items.map((item) => (
           <ReleaseCard key={`${item.itemId}:${item.releaseDate}`} item={item} currency={currency} />
         ))}

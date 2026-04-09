@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 
 const FIGURE_ITEMS = [
-  "/example-item1.jpg",
-  "/example-item2.jpg",
-  "/example-item3.jpg",
-  "/example-item4.jpg",
-  "/example-item5.jpg",
-  "/example-item6.jpg",
+  "/example-item1.webp",
+  "/example-item2.webp",
+  "/example-item3.webp",
+  "/example-item4.webp",
+  "/example-item5.webp",
+  "/example-item6.webp",
 ] as const;
 
 function FigureThumb({ src }: { readonly src: string }) {

@@ -25,7 +25,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Scroller } from "@/components/ui/scroller";
 import type { OrderFilters } from "@myakiba/contracts/orders/schema";
 import { majorStringToMinorUnits, minorUnitsToMajorString } from "@myakiba/utils/currency";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
@@ -214,7 +213,7 @@ export default function OrdersFiltersForm({
                 }
               />
               <DropdownMenuContent className="w-(--anchor-width)">
-                <Scroller className="h-[200px]">
+                <ScrollArea className="h-[200px]">
                   {SHIPPING_METHODS.map((method) => (
                     <DropdownMenuCheckboxItem
                       key={method}
@@ -231,7 +230,7 @@ export default function OrdersFiltersForm({
                       {method}
                     </DropdownMenuCheckboxItem>
                   ))}
-                </Scroller>
+                </ScrollArea>
               </DropdownMenuContent>
             </DropdownMenu>
           </Field>

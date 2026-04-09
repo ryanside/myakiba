@@ -65,7 +65,7 @@ export function ShopBreakdown({
   return (
     <Frame className="border-none ring-1 ring-foreground/10 shadow-xs! min-h-[320px]">
       <FrameHeader>
-        <FrameTitle className="text-base font-medium">
+        <FrameTitle className="animate-data-in text-base font-medium">
           {totalOrders} {totalOrders === 1 ? "order" : "orders"} across {shopCount}{" "}
           {shopCount === 1 ? "shop" : "shops"}
         </FrameTitle>
@@ -76,7 +76,7 @@ export function ShopBreakdown({
         ) : (
           <>
             <TooltipProvider>
-              <div className="flex h-2.5 w-full rounded-sm overflow-hidden">
+              <div className="animate-data-in flex h-2.5 w-full rounded-sm overflow-hidden [--data-in-delay:60ms]">
                 {entries.map((entry, index) => {
                   const isOtherHovered = hoveredIndex !== null && hoveredIndex !== index;
                   const minWidth =
@@ -112,7 +112,7 @@ export function ShopBreakdown({
               </div>
             </TooltipProvider>
 
-            <div className="flex flex-col gap-0.5">
+            <div className="animate-data-in flex flex-col gap-0.5 [--data-in-delay:100ms]">
               {entries.map((entry, index) => {
                 const isHovered = hoveredIndex === index;
                 const isOtherHovered = hoveredIndex !== null && hoveredIndex !== index;

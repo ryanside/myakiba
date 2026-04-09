@@ -31,10 +31,10 @@ export function KPICard({
           {isLoading ? (
             <Skeleton className="h-7 w-24" />
           ) : (
-            <p className="text-xl font-medium">{value}</p>
+            <p className="animate-data-in text-xl font-medium">{value}</p>
           )}
           {!isLoading && subvalueTitle && subvalue !== undefined && (
-            <div className="flex-row gap-1 ml-2 flex">
+            <div className="animate-data-in flex-row gap-1 ml-2 flex [--data-in-delay:40ms]">
               <p className="text-xs text-muted-foreground font-normal">{subvalue}</p>
               <p className="text-xs text-muted-foreground font-normal">{subvalueTitle}</p>
             </div>

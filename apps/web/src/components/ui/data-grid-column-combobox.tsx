@@ -13,7 +13,6 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Scroller } from "./scroller";
 
 interface DataGridColumnComboboxProps<TData> {
   table: Table<TData>;
@@ -50,35 +49,33 @@ export function DataGridColumnCombobox<TData>({
       <PopoverContent className="w-[200px] p-0" align="start">
         <Command>
           <CommandInput placeholder="Search columns..." />
-          <CommandList id={listboxId}>
+          <CommandList id={listboxId} hideScrollbar={false}>
             <CommandEmpty>No column found.</CommandEmpty>
             <CommandGroup>
-              <Scroller className="max-h-96">
-                {columns.map((column) => {
-                  const isVisible = column.getIsVisible();
-                  const columnName = column.columnDef.meta?.headerTitle || column.id;
+              {columns.map((column) => {
+                const isVisible = column.getIsVisible();
+                const columnName = column.columnDef.meta?.headerTitle || column.id;
 
-                  return (
-                    <CommandItem
-                      key={column.id}
-                      value={column.id}
-                      onSelect={() => {
-                        column.toggleVisibility(!isVisible);
-                      }}
-                      className="capitalize"
-                    >
-                      <HugeiconsIcon
-                        icon={Tick02Icon}
-                        className={cn(
-                          "mr-2 h-4 w-4 text-primary",
-                          isVisible ? "opacity-100" : "opacity-0",
-                        )}
-                      />
-                      {columnName}
-                    </CommandItem>
-                  );
-                })}
-              </Scroller>
+                return (
+                  <CommandItem
+                    key={column.id}
+                    value={column.id}
+                    onSelect={() => {
+                      column.toggleVisibility(!isVisible);
+                    }}
+                    className="capitalize"
+                  >
+                    <HugeiconsIcon
+                      icon={Tick02Icon}
+                      className={cn(
+                        "mr-2 h-4 w-4 text-primary",
+                        isVisible ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                    {columnName}
+                  </CommandItem>
+                );
+              })}
             </CommandGroup>
           </CommandList>
         </Command>

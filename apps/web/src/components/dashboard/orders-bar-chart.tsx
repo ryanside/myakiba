@@ -128,7 +128,7 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
   return (
     <Frame className="border-none ring-1 ring-foreground/10 shadow-xs! lg:max-h-[320px]">
       <FrameHeader>
-        <FrameTitle className="text-base font-medium">
+        <FrameTitle className="animate-data-in text-base font-medium">
           {maxValueIndex.value}{" "}
           <span className="ml-1 text-sm text-muted-foreground">
             {maxValueIndex.value === 1 ? "order" : "orders"} in{" "}
@@ -138,7 +138,10 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
       </FrameHeader>
       <FramePanel className="shadow-none!">
         <AnimatePresence mode="wait">
-          <ChartContainer config={chartConfig} className="w-full h-full">
+          <ChartContainer
+            config={chartConfig}
+            className="animate-data-in w-full h-full [--data-in-delay:60ms]"
+          >
             <BarChart
               accessibilityLayer
               data={chartData}

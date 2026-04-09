@@ -42,7 +42,7 @@ export function PopoverDatePickerCell({
     <Button
       variant="ghost"
       data-empty={!dateValue}
-      className={cn("text-foreground pl-0", triggerClassName)}
+      className={cn("w-full justify-start text-foreground pl-0", triggerClassName)}
       disabled={disabled}
     >
       {value ? formatDateOnlyForDisplay(value, dateFormat) : "n/a"}

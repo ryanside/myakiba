@@ -248,10 +248,7 @@ export function useOrdersMutations() {
       toast.error("Failed to update order. Please try again.");
     },
     onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["orderStats"] }),
-      ]);
+      await queryClient.invalidateQueries();
     },
   });
 
@@ -317,10 +314,7 @@ export function useOrdersMutations() {
       toast.error("Failed to delete order(s). Please try again.");
     },
     onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["orderStats"] }),
-      ]);
+      await queryClient.invalidateQueries();
     },
   });
 
@@ -429,10 +423,7 @@ export function useOrdersMutations() {
       toast.success(`Successfully merged ${orderIds.size} orders into one!`);
     },
     onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["orderStats"] }),
-      ]);
+      await queryClient.invalidateQueries();
     },
   });
 
@@ -453,11 +444,7 @@ export function useOrdersMutations() {
       toast.error("Failed to move items to a new order. Please try again.");
     },
     onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["orderStats"] }),
-        queryClient.invalidateQueries({ queryKey: ["orderItems"] }),
-      ]);
+      await queryClient.invalidateQueries();
     },
   });
 
@@ -548,11 +535,7 @@ export function useOrdersMutations() {
       toast.error("Failed to update item. Please try again.");
     },
     onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["orderStats"] }),
-        queryClient.invalidateQueries({ queryKey: ["orderItems"] }),
-      ]);
+      await queryClient.invalidateQueries();
     },
   });
 
@@ -640,11 +623,7 @@ export function useOrdersMutations() {
       toast.error("Failed to delete item. Please try again.");
     },
     onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["orderStats"] }),
-        queryClient.invalidateQueries({ queryKey: ["orderItems"] }),
-      ]);
+      await queryClient.invalidateQueries();
     },
   });
 
@@ -661,11 +640,7 @@ export function useOrdersMutations() {
       toast.error("Failed to delete items. Please try again.");
     },
     onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["orderStats"] }),
-        queryClient.invalidateQueries({ queryKey: ["orderItems"] }),
-      ]);
+      await queryClient.invalidateQueries();
     },
   });
 
@@ -688,11 +663,7 @@ export function useOrdersMutations() {
       toast.error("Failed to move items. Please try again.");
     },
     onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["orderStats"] }),
-        queryClient.invalidateQueries({ queryKey: ["orderItems"] }),
-      ]);
+      await queryClient.invalidateQueries();
     },
   });
   const editOrderMutationRef = useRef(editOrderMutation);

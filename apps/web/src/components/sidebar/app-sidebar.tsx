@@ -4,9 +4,8 @@ import {
   ChartColumnIcon,
   LibraryIcon,
   PackageIcon,
-  GithubIcon,
-  DiscordIcon,
 } from "@hugeicons/core-free-icons";
+import { DiscordLogo, GitHubLogo } from "@/components/ui/brand-icons";
 
 import { NavMain } from "@/components/sidebar/nav-main";
 import { NavSecondary } from "@/components/sidebar/nav-secondary";
@@ -61,12 +60,12 @@ const data = {
     {
       title: "Discord",
       url: "https://discord.gg/VKHVvhcC2z",
-      icon: DiscordIcon,
+      icon: DiscordLogo,
     },
     {
       title: "Github",
       url: "https://github.com/ryanside/myakiba",
-      icon: GithubIcon,
+      icon: GitHubLogo,
     },
   ],
 };

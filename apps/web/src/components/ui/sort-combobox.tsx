@@ -11,7 +11,6 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Scroller } from "./scroller";
 
 export type SortableColumn = {
   id: string;
@@ -97,24 +96,22 @@ export function SortCombobox({
       <PopoverContent className="w-[200px] p-0" align="start">
         <Command>
           <CommandInput placeholder="Search columns..." />
-          <CommandList id={listboxId}>
+          <CommandList id={listboxId} hideScrollbar={false}>
             <CommandEmpty>No column found.</CommandEmpty>
             <CommandGroup>
-              <Scroller className="max-h-96">
-                {columns.map((column) => {
-                  return (
-                    <CommandItem
-                      key={column.id}
-                      value={column.id}
-                      onSelect={() => handleSort(column.id)}
-                      className="capitalize [&>:last-child]:hidden"
-                    >
-                      {column.label}
-                      {getSortIcon(column.id)}
-                    </CommandItem>
-                  );
-                })}
-              </Scroller>
+              {columns.map((column) => {
+                return (
+                  <CommandItem
+                    key={column.id}
+                    value={column.id}
+                    onSelect={() => handleSort(column.id)}
+                    className="capitalize *:last:hidden"
+                  >
+                    {column.label}
+                    {getSortIcon(column.id)}
+                  </CommandItem>
+                );
+              })}
             </CommandGroup>
           </CommandList>
         </Command>

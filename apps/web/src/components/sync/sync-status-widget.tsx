@@ -54,9 +54,6 @@ export default function SyncStatusWidget() {
 
   const hasActive = activeSessions.length > 0;
 
-  const totalActiveItems = activeSessions.reduce((sum, s) => sum + s.totalItems, 0);
-  const totalActiveSynced = activeSessions.reduce((sum, s) => sum + s.successCount, 0);
-
   const [open, setOpen] = useState(false);
 
   if (isRecentPending) {
@@ -81,31 +78,34 @@ export default function SyncStatusWidget() {
         <PopoverTrigger
           render={
             <Button size="sm" variant="outline" className="mx-2 w-41.5 justify-start!">
-              {hasActive ? (
-                <span className="flex w-full items-center gap-2">
-                  <PulsingDot />
-                  <ShimmeringText
-                    text={
-                      totalActiveItems > 0
-                        ? `Syncing ${totalActiveSynced}/${totalActiveItems}`
-                        : "Syncing..."
-                    }
-                    duration={1}
-                    repeat={true}
-                    startOnView={false}
-                    className="text-xs font-medium"
-                    spread={1.5}
-                  />
-                  <SparkleTrail />
+              <span className="grid w-full *:col-start-1 *:row-start-1">
+                <span
+                  className={`flex w-full items-center gap-2 transition-opacity duration-300 ${hasActive ? "opacity-100" : "opacity-0"}`}
+                >
+                  {hasActive && (
+                    <>
+                      <PulsingDot />
+                      <ShimmeringText
+                        text="Syncing..."
+                        duration={1}
+                        repeat={true}
+                        startOnView={false}
+                        className="text-xs font-medium"
+                        spread={1.5}
+                      />
+                      <SparkleTrail />
+                    </>
+                  )}
                 </span>
-              ) : (
-                <span className="flex items-center gap-1.5">
+                <span
+                  className={`flex items-center gap-1.5 transition-opacity duration-300 ${hasActive ? "opacity-0" : "opacity-100"}`}
+                >
                   <span className="relative flex size-2">
                     <span className="relative inline-flex size-2 rounded-full bg-border" />
                   </span>
                   <span className="text-xs text-muted-foreground">No active sync sessions</span>
                 </span>
-              )}
+              </span>
             </Button>
           }
         />
@@ -276,6 +276,8 @@ type RecentSessionProps = {
 function RecentSessionItem({ session, onNavigate }: RecentSessionProps) {
   const typeConfig = SYNC_TYPE_CONFIG[session.syncType];
   const hasItems = session.totalItems > 0;
+  const displayedSuccessCount =
+    session.status === "completed" ? session.totalItems - session.failCount : session.successCount;
 
   const statusIcon = resolveStatusIcon(session.status);
 
@@ -304,7 +306,7 @@ function RecentSessionItem({ session, onNavigate }: RecentSessionProps) {
         {hasItems && (
           <div className="mt-1 flex items-center gap-2 text-[0.6875rem] text-muted-foreground">
             <span>
-              {session.successCount}/{session.totalItems} synced
+              {displayedSuccessCount}/{session.totalItems} synced
             </span>
             {session.failCount > 0 && (
               <span className="text-destructive">{session.failCount} failed</span>

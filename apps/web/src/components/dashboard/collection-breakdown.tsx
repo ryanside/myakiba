@@ -59,7 +59,7 @@ export function CollectionBreakdown({
   return (
     <Frame className="border-none ring-1 ring-foreground/10 shadow-xs! min-h-[320px]">
       <FrameHeader>
-        <FrameTitle className="text-base font-medium">
+        <FrameTitle className="animate-data-in text-base font-medium">
           {totalItems} {totalItems === 1 ? "item" : "items"} across {categoryCount}{" "}
           {categoryCount === 1 ? "category" : "categories"}
         </FrameTitle>
@@ -70,7 +70,7 @@ export function CollectionBreakdown({
         ) : (
           <>
             <TooltipProvider>
-              <div className="flex h-2.5 w-full rounded-sm overflow-hidden">
+              <div className="animate-data-in flex h-2.5 w-full rounded-sm overflow-hidden [--data-in-delay:60ms]">
                 {entries.map((entry, index) => {
                   const isOtherHovered = hoveredIndex !== null && hoveredIndex !== index;
                   const minWidth =
@@ -106,7 +106,7 @@ export function CollectionBreakdown({
               </div>
             </TooltipProvider>
 
-            <Scroller className="max-h-50 flex flex-col gap-0.5">
+            <Scroller className="animate-data-in -mx-(--frame-panel-p) max-h-50 flex flex-col gap-0.5 [--data-in-delay:100ms]">
               {entries.map((entry, index) => {
                 const isHovered = hoveredIndex === index;
                 const isOtherHovered = hoveredIndex !== null && hoveredIndex !== index;
@@ -115,7 +115,7 @@ export function CollectionBreakdown({
                     key={entry.name}
                     to="/collection"
                     search={{ category: [entry.name] }}
-                    className="flex items-center gap-2.5 py-1 transition-opacity duration-200"
+                    className="flex items-center gap-2.5 px-(--frame-panel-p) py-1 transition-opacity duration-200"
                     style={{ opacity: isOtherHovered ? 0.4 : 1 }}
                     onMouseEnter={() => setHoveredIndex(index)}
                     onMouseLeave={() => setHoveredIndex(null)}

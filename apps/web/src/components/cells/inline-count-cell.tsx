@@ -36,7 +36,7 @@ export function InlineCountCell({ value, onSubmit, disabled = false }: InlineCou
         <Input
           id="count"
           name="count"
-          className="text-foreground pl-0"
+          className="w-full text-foreground pl-0"
           value={newValue}
           onBlur={handleCancel}
           onKeyDown={(e) => {
@@ -59,7 +59,7 @@ export function InlineCountCell({ value, onSubmit, disabled = false }: InlineCou
   return (
     <Button
       onClick={() => setIsEditing(true)}
-      className="text-foreground pl-0"
+      className="w-full justify-start text-foreground pl-0"
       variant="ghost"
       disabled={disabled}
     >
