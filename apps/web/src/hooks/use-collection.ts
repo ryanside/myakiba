@@ -92,13 +92,7 @@ export function useCollectionOrderMutations() {
       toast.error("Failed to assign items to an order. Please try again.");
     },
     onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["orderStats"] }),
-        queryClient.invalidateQueries({ queryKey: ["orderItems"] }),
-        queryClient.invalidateQueries({ queryKey: ["collection"] }),
-        queryClient.invalidateQueries({ queryKey: ["item"] }),
-      ]);
+      await queryClient.invalidateQueries();
     },
   });
 
@@ -123,13 +117,7 @@ export function useCollectionOrderMutations() {
       toast.error("Failed to assign items to a new order. Please try again.");
     },
     onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
-        queryClient.invalidateQueries({ queryKey: ["orderStats"] }),
-        queryClient.invalidateQueries({ queryKey: ["orderItems"] }),
-        queryClient.invalidateQueries({ queryKey: ["collection"] }),
-        queryClient.invalidateQueries({ queryKey: ["item"] }),
-      ]);
+      await queryClient.invalidateQueries();
     },
   });
 
@@ -228,7 +216,7 @@ export function useCollectionMutations() {
       toast.success("Collection updated");
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryOpts.queryKey });
+      await queryClient.invalidateQueries();
     },
   });
 
@@ -269,7 +257,7 @@ export function useCollectionMutations() {
       toast.success("Collection deleted");
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryOpts.queryKey });
+      await queryClient.invalidateQueries();
     },
   });
   const updateMutationRef = useRef(updateMutation);

@@ -82,7 +82,7 @@ export function InlineReleaseCell({
             )}
           </SelectValue>
         </SelectTrigger>
-        <SelectContent align="start" alignItemWithTrigger={false} className="w-auto min-w-64">
+        <SelectContent align="start" className="w-auto min-w-64">
           {releasesLoading && (
             <div className="flex items-center justify-center py-4 px-3">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />

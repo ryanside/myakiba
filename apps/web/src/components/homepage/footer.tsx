@@ -1,6 +1,5 @@
 import { MyAkibaLogo } from "@/components/myakiba-logo";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { GithubIcon, DiscordIcon } from "@hugeicons/core-free-icons";
+import { DiscordLogo, GitHubLogo } from "@/components/ui/brand-icons";
 
 export default function FooterSection() {
   return (
@@ -40,7 +39,7 @@ export default function FooterSection() {
             className="text-muted-foreground hover:text-foreground transition-colors"
             aria-label="Discord"
           >
-            <HugeiconsIcon icon={DiscordIcon} className="size-4" />
+            <DiscordLogo className="size-4" />
           </a>
           <a
             href="https://github.com/ryanside/myakiba"
@@ -49,7 +48,7 @@ export default function FooterSection() {
             className="text-muted-foreground hover:text-foreground transition-colors"
             aria-label="GitHub"
           >
-            <HugeiconsIcon icon={GithubIcon} className="size-4" />
+            <GitHubLogo className="size-4" />
           </a>
         </nav>
       </div>

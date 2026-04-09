@@ -46,6 +46,24 @@
     <link rel="alternate" hreflang="en" href="https://myakiba.app" />
     <link rel="alternate" hreflang="x-default" href="https://myakiba.app" />
 
+    <!-- Prevent flash of white by applying theme before first paint -->
+    <script>
+      (function () {
+        var t = localStorage.getItem("vite-ui-theme") || "dark";
+        if (t === "system")
+          t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.classList.add(t);
+      })();
+    </script>
+    <style>
+      html.dark {
+        background-color: oklch(0.145 0 0);
+      }
+      html.light {
+        background-color: oklch(1 0 0);
+      }
+    </style>
+
     <!-- Preload critical hero images -->
     <link rel="preload" as="image" type="image/webp" href="/hero-bg.webp" />
     <link rel="preload" as="image" type="image/webp" href="/dashboard-dark.webp" />

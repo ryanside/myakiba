@@ -79,12 +79,19 @@ function CommandInput({
   );
 }
 
-function CommandList({ className, ...props }: React.ComponentProps<typeof CommandPrimitive.List>) {
+function CommandList({
+  className,
+  hideScrollbar = true,
+  ...props
+}: React.ComponentProps<typeof CommandPrimitive.List> & {
+  hideScrollbar?: boolean;
+}) {
   return (
     <CommandPrimitive.List
       data-slot="command-list"
       className={cn(
-        "no-scrollbar max-h-72 scroll-py-1 overflow-x-hidden overflow-y-auto outline-none",
+        "max-h-72 scroll-py-1 overflow-x-hidden overflow-y-auto outline-none",
+        hideScrollbar && "no-scrollbar",
         className,
       )}
       {...props}
@@ -163,7 +170,7 @@ function CommandShortcut({ className, ...props }: React.ComponentProps<"span">) 
     <span
       data-slot="command-shortcut"
       className={cn(
-        "ml-auto text-xs tracking-widest text-muted-foreground group-data-selected/command-item:text-foreground",
+        "ml-auto text-xs font-normal text-muted-foreground group-data-selected/command-item:text-foreground",
         className,
       )}
       {...props}

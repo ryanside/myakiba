@@ -191,8 +191,8 @@ export default function FiltersForm({
             <DialogDescription>Apply filters to narrow down your collection</DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="overflow-auto max-h-[60vh] pb-4 px-4">
-            <div className="grid gap-4">
+          <ScrollArea className="overflow-auto max-h-[60vh] pb-4 w-full">
+            <div className="grid gap-4 px-4">
               {/* Shipping Method */}
               <form.Field
                 name="shipMethod"

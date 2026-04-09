@@ -115,7 +115,7 @@ function ReleaseSelect({
         <SelectTrigger size="sm" className="w-full">
           <SelectValue placeholder="From item release" />
         </SelectTrigger>
-        <SelectContent align="start" alignItemWithTrigger={false}>
+        <SelectContent align="start">
           <SelectGroup>
             {value && (
               <SelectItem value={CLEAR_VALUE} className="text-muted-foreground">
@@ -184,6 +184,7 @@ export function PopoverReleaseDateCell({
       variant={triggerVariant}
       data-empty={!dateValue}
       className={cn(
+        "w-full justify-start",
         triggerVariant === "ghost" && "text-foreground pl-0",
         triggerVariant === "outline" &&
           "data-[empty=true]:text-muted-foreground text-left font-normal",

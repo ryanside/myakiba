@@ -1,5 +1,13 @@
 import * as React from "react";
-import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
@@ -131,6 +139,7 @@ function Kanban<T>({
   const columns = value;
   const setColumns = onValueChange;
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
+  const originalContainerRef = useRef<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -158,16 +167,18 @@ function Kanban<T>({
     [columns, columnIds, getItemValue, isColumn],
   );
 
-  const handleDragStart = useCallback((event: DragStartEvent) => {
-    setActiveId(event.active.id);
-  }, []);
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      setActiveId(event.active.id);
+      if (!isColumn(event.active.id)) {
+        originalContainerRef.current = findContainer(event.active.id) ?? null;
+      }
+    },
+    [isColumn, findContainer],
+  );
 
   const handleDragOver = useCallback(
     (event: DragOverEvent) => {
-      if (onMove) {
-        return;
-      }
-
       const { active, over } = event;
       if (!over) return;
 
@@ -217,39 +228,37 @@ function Kanban<T>({
         }
       }
     },
-    [findContainer, getItemValue, isColumn, setColumns, columns, onMove],
+    [findContainer, getItemValue, isColumn, setColumns, columns],
   );
 
   const handleDragCancel = useCallback(() => {
     setActiveId(null);
+    originalContainerRef.current = null;
   }, []);
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event;
+      const startContainer = originalContainerRef.current;
       setActiveId(null);
+      originalContainerRef.current = null;
 
       if (!over) return;
 
-      // Handle item move callback
       if (onMove && !isColumn(active.id)) {
-        const activeContainer = findContainer(active.id);
-        const overContainer = findContainer(over.id);
+        const currentContainer = findContainer(active.id);
 
-        if (activeContainer && overContainer) {
-          const activeIndex = columns[activeContainer].findIndex(
+        if (startContainer && currentContainer) {
+          const currentIndex = columns[currentContainer].findIndex(
             (item: T) => getItemValue(item) === active.id,
           );
-          const overIndex = isColumn(over.id)
-            ? columns[overContainer].length
-            : columns[overContainer].findIndex((item: T) => getItemValue(item) === over.id);
 
           onMove({
             event,
-            activeContainer,
-            activeIndex,
-            overContainer,
-            overIndex,
+            activeContainer: startContainer,
+            activeIndex: currentIndex,
+            overContainer: currentContainer,
+            overIndex: currentIndex,
           });
         }
         return;

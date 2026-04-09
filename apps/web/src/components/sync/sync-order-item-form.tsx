@@ -32,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { FormSection } from "@/components/ui/form-section";
 import type { SyncOrderItems } from "@myakiba/contracts/sync/types";
 import { CONDITIONS, ORDER_STATUSES, SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import type { Currency } from "@myakiba/contracts/shared/types";
@@ -91,10 +92,10 @@ export default function SyncOrderItemForm({
         e.stopPropagation();
         void orderItemForm.handleSubmit();
       }}
-      className="space-y-4 rounded-lg w-full"
+      className="space-y-3 w-full"
     >
       <div className="flex flex-row gap-2">
-        <Label className="text-lg text-black dark:text-white">Order Items</Label>
+        <Label className="text-lg text-foreground">Order Items</Label>
         <orderItemForm.Subscribe
           selector={(state) => [state.canSubmit, state.isSubmitting]}
           children={([canSubmit, isSubmitting]) => (
@@ -123,7 +124,7 @@ export default function SyncOrderItemForm({
         {(field) => (
           <div className="flex flex-col gap-4">
             <div className="flex flex-row gap-3 items-center">
-              <Label className="text-lg text-black dark:text-white">New Items</Label>
+              <Label className="text-lg text-foreground">New Items</Label>
               <Badge size="sm" variant="secondary">
                 {field.state.value.length} {field.state.value.length === 1 ? "item" : "items"}
               </Badge>
@@ -133,8 +134,8 @@ export default function SyncOrderItemForm({
                 </TooltipTrigger>
                 <TooltipContent className="max-h-40">
                   <p>
-                    When an item status is set to "Owned", it will be added to your collection on
-                    the linked order.
+                    When an item status is set to &ldquo;Owned&rdquo;, it will be added to your
+                    collection on the linked order.
                   </p>
                 </TooltipContent>
               </Tooltip>
@@ -157,7 +158,7 @@ export default function SyncOrderItemForm({
                 }}
               >
                 {(subField) => (
-                  <div className="max-w-md rounded-lg">
+                  <div className="max-w-md">
                     <div className="flex flex-row gap-2">
                       <Input
                         value={subField.state.value}
@@ -175,98 +176,172 @@ export default function SyncOrderItemForm({
                           }
                         />
                         <DialogContent
-                          className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto"
+                          className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto px-0"
                           forceRenderBackdrop
                         >
-                          <DialogHeader>
+                          <DialogHeader className="px-4">
                             <DialogTitle>Edit Order Item</DialogTitle>
                             <DialogDescription>
                               MFC Item: {subField.state.value || "Not set"}
                             </DialogDescription>
                           </DialogHeader>
-                          <div className="grid gap-4 py-4">
-                            <div className="grid grid-cols-2 gap-4">
-                              <orderItemForm.Field
-                                name={`items[${index}].price`}
-                                validators={{
-                                  onChange: z.string().nonempty("Price is required"),
-                                }}
-                              >
-                                {(priceField) => (
-                                  <div className="grid gap-2">
-                                    <Label htmlFor={`price-${item.formRowId}`}>Price</Label>
-                                    <MaskInput
-                                      id={`price-${item.formRowId}`}
-                                      name={priceField.name}
-                                      mask="currency"
-                                      currency={currency}
-                                      locale={userLocale}
-                                      value={priceField.state.value}
-                                      onBlur={priceField.handleBlur}
-                                      onValueChange={(_maskedValue, unmaskedValue) =>
-                                        priceField.handleChange(unmaskedValue)
-                                      }
-                                      placeholder="0.00"
-                                    />
-                                    {!priceField.state.meta.isValid && (
-                                      <em role="alert" className="text-red-500 text-xs">
-                                        {priceField.state.meta.errors.join(", ")}
-                                      </em>
-                                    )}
-                                  </div>
-                                )}
-                              </orderItemForm.Field>
-                              <orderItemForm.Field
-                                name={`items[${index}].count`}
-                                validators={{
-                                  onChange: z.number().min(1, "Count must be at least 1"),
-                                }}
-                              >
-                                {(countField) => (
-                                  <div className="grid gap-2">
-                                    <Label htmlFor={`count-${item.formRowId}`}>Count</Label>
-                                    <Input
-                                      id={`count-${item.formRowId}`}
-                                      name={countField.name}
-                                      value={countField.state.value}
-                                      onBlur={countField.handleBlur}
-                                      type="number"
-                                      min="1"
-                                      onChange={(e) =>
-                                        countField.handleChange(parseInt(e.target.value, 10) || 1)
-                                      }
-                                      placeholder="1"
-                                    />
-                                    {!countField.state.meta.isValid && (
-                                      <em role="alert" className="text-red-500 text-xs">
-                                        {countField.state.meta.errors.join(", ")}
-                                      </em>
-                                    )}
-                                  </div>
-                                )}
-                              </orderItemForm.Field>
-                            </div>
+                          <div className="flex flex-col gap-3 py-4 px-4">
+                            <FormSection title="Basics">
+                              <div className="grid grid-cols-2 gap-3">
+                                <orderItemForm.Field
+                                  name={`items[${index}].price`}
+                                  validators={{
+                                    onChange: z.string().nonempty("Price is required"),
+                                  }}
+                                >
+                                  {(priceField) => (
+                                    <div className="grid gap-1.5">
+                                      <Label htmlFor={`price-${item.formRowId}`}>Price</Label>
+                                      <MaskInput
+                                        id={`price-${item.formRowId}`}
+                                        name={priceField.name}
+                                        mask="currency"
+                                        currency={currency}
+                                        locale={userLocale}
+                                        value={priceField.state.value}
+                                        onBlur={priceField.handleBlur}
+                                        onValueChange={(_maskedValue, unmaskedValue) =>
+                                          priceField.handleChange(unmaskedValue)
+                                        }
+                                        placeholder="0.00"
+                                      />
+                                      {!priceField.state.meta.isValid && (
+                                        <p role="alert" className="text-xs text-destructive">
+                                          {priceField.state.meta.errors.join(", ")}
+                                        </p>
+                                      )}
+                                    </div>
+                                  )}
+                                </orderItemForm.Field>
+                                <orderItemForm.Field
+                                  name={`items[${index}].count`}
+                                  validators={{
+                                    onChange: z.number().min(1, "Count must be at least 1"),
+                                  }}
+                                >
+                                  {(countField) => (
+                                    <div className="grid gap-1.5">
+                                      <Label htmlFor={`count-${item.formRowId}`}>Count</Label>
+                                      <Input
+                                        id={`count-${item.formRowId}`}
+                                        name={countField.name}
+                                        value={countField.state.value}
+                                        onBlur={countField.handleBlur}
+                                        type="number"
+                                        min="1"
+                                        onChange={(e) =>
+                                          countField.handleChange(parseInt(e.target.value, 10) || 1)
+                                        }
+                                        placeholder="1"
+                                      />
+                                      {!countField.state.meta.isValid && (
+                                        <p role="alert" className="text-xs text-destructive">
+                                          {countField.state.meta.errors.join(", ")}
+                                        </p>
+                                      )}
+                                    </div>
+                                  )}
+                                </orderItemForm.Field>
+                              </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                              <orderItemForm.Field name={`items[${index}].condition`}>
-                                {(conditionField) => (
-                                  <div className="grid gap-2">
-                                    <Label htmlFor={`condition-${item.formRowId}`}>Condition</Label>
+                              <div className="grid grid-cols-2 gap-3">
+                                <orderItemForm.Field name={`items[${index}].condition`}>
+                                  {(conditionField) => (
+                                    <div className="grid gap-1.5">
+                                      <Label htmlFor={`condition-${item.formRowId}`}>
+                                        Condition
+                                      </Label>
+                                      <Select
+                                        value={conditionField.state.value ?? ""}
+                                        onValueChange={(value) =>
+                                          conditionField.handleChange(
+                                            value as typeof conditionField.state.value,
+                                          )
+                                        }
+                                      >
+                                        <SelectTrigger className="w-full">
+                                          <SelectValue placeholder="Select condition" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {CONDITIONS.map((condition) => (
+                                            <SelectItem key={condition} value={condition}>
+                                              {condition}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  )}
+                                </orderItemForm.Field>
+                                <orderItemForm.Field
+                                  name={`items[${index}].status`}
+                                  validators={{
+                                    onChange: z.enum(ORDER_STATUSES, "Status is required"),
+                                  }}
+                                >
+                                  {(statusField) => (
+                                    <div className="grid gap-1.5">
+                                      <Label htmlFor={`status-${item.formRowId}`}>Status</Label>
+                                      <Select
+                                        value={statusField.state.value ?? ""}
+                                        onValueChange={(value) =>
+                                          statusField.handleChange(
+                                            value as typeof statusField.state.value,
+                                          )
+                                        }
+                                      >
+                                        <SelectTrigger className="w-full">
+                                          <SelectValue placeholder="Select status" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {ORDER_STATUSES.map((status) => (
+                                            <SelectItem key={status} value={status}>
+                                              {status}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                      {!statusField.state.meta.isValid && (
+                                        <p role="alert" className="text-xs text-destructive">
+                                          {statusField.state.meta.errors.join(", ")}
+                                        </p>
+                                      )}
+                                    </div>
+                                  )}
+                                </orderItemForm.Field>
+                              </div>
+
+                              <orderItemForm.Field
+                                name={`items[${index}].shippingMethod`}
+                                validators={{
+                                  onChange: z.enum(SHIPPING_METHODS, "Shipping method is required"),
+                                }}
+                              >
+                                {(shippingField) => (
+                                  <div className="grid gap-1.5">
+                                    <Label htmlFor={`shipping-${item.formRowId}`}>
+                                      Shipping Method
+                                    </Label>
                                     <Select
-                                      value={conditionField.state.value ?? ""}
+                                      value={shippingField.state.value ?? ""}
                                       onValueChange={(value) =>
-                                        conditionField.handleChange(
-                                          value as typeof conditionField.state.value,
+                                        shippingField.handleChange(
+                                          value as typeof shippingField.state.value,
                                         )
                                       }
                                     >
                                       <SelectTrigger className="w-full">
-                                        <SelectValue placeholder="Select condition" />
+                                        <SelectValue placeholder="Select method" />
                                       </SelectTrigger>
                                       <SelectContent>
-                                        {CONDITIONS.map((condition) => (
-                                          <SelectItem key={condition} value={condition}>
-                                            {condition}
+                                        {SHIPPING_METHODS.map((method) => (
+                                          <SelectItem key={method} value={method}>
+                                            {method}
                                           </SelectItem>
                                         ))}
                                       </SelectContent>
@@ -274,162 +349,96 @@ export default function SyncOrderItemForm({
                                   </div>
                                 )}
                               </orderItemForm.Field>
-                              <orderItemForm.Field
-                                name={`items[${index}].status`}
-                                validators={{
-                                  onChange: z.enum(ORDER_STATUSES, "Status is required"),
-                                }}
-                              >
-                                {(statusField) => (
-                                  <div className="grid gap-2">
-                                    <Label htmlFor={`status-${item.formRowId}`}>Status</Label>
-                                    <Select
-                                      value={statusField.state.value ?? ""}
-                                      onValueChange={(value) =>
-                                        statusField.handleChange(
-                                          value as typeof statusField.state.value,
-                                        )
-                                      }
-                                    >
-                                      <SelectTrigger className="w-full">
-                                        <SelectValue placeholder="Select status" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {ORDER_STATUSES.map((status) => (
-                                          <SelectItem key={status} value={status}>
-                                            {status}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                    {!statusField.state.meta.isValid && (
-                                      <em role="alert" className="text-red-500 text-xs">
-                                        {statusField.state.meta.errors.join(", ")}
-                                      </em>
-                                    )}
-                                  </div>
-                                )}
-                              </orderItemForm.Field>
-                            </div>
+                            </FormSection>
 
-                            <orderItemForm.Field
-                              name={`items[${index}].shippingMethod`}
-                              validators={{
-                                onChange: z.enum(SHIPPING_METHODS, "Shipping method is required"),
-                              }}
-                            >
-                              {(shippingField) => (
-                                <div className="grid gap-2">
-                                  <Label htmlFor={`shipping-${item.formRowId}`}>
-                                    Shipping Method
-                                  </Label>
-                                  <Select
-                                    value={shippingField.state.value ?? ""}
-                                    onValueChange={(value) =>
-                                      shippingField.handleChange(
-                                        value as typeof shippingField.state.value,
-                                      )
-                                    }
-                                  >
-                                    <SelectTrigger className="w-full">
-                                      <SelectValue placeholder="Select shipping method" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {SHIPPING_METHODS.map((method) => (
-                                        <SelectItem key={method} value={method}>
-                                          {method}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              )}
-                            </orderItemForm.Field>
+                            <FormSection title="Timeline">
+                              <div className="grid grid-cols-2 gap-3">
+                                <orderItemForm.Field name={`items[${index}].orderDate`}>
+                                  {(orderDateField) => (
+                                    <div className="grid gap-1.5">
+                                      <Label htmlFor={`orderDate-${item.formRowId}`}>
+                                        Order Date
+                                      </Label>
+                                      <DatePicker
+                                        id={`orderDate-${item.formRowId}`}
+                                        name={orderDateField.name}
+                                        value={orderDateField.state.value ?? null}
+                                        onBlur={orderDateField.handleBlur}
+                                        onChange={(value) =>
+                                          orderDateField.handleChange(value ?? "")
+                                        }
+                                        placeholder="Select date"
+                                      />
+                                    </div>
+                                  )}
+                                </orderItemForm.Field>
+                                <orderItemForm.Field name={`items[${index}].paymentDate`}>
+                                  {(paymentDateField) => (
+                                    <div className="grid gap-1.5">
+                                      <Label htmlFor={`paymentDate-${item.formRowId}`}>
+                                        Payment Date
+                                      </Label>
+                                      <DatePicker
+                                        id={`paymentDate-${item.formRowId}`}
+                                        name={paymentDateField.name}
+                                        value={paymentDateField.state.value ?? null}
+                                        onBlur={paymentDateField.handleBlur}
+                                        onChange={(value) =>
+                                          paymentDateField.handleChange(value ?? "")
+                                        }
+                                        placeholder="Select date"
+                                      />
+                                    </div>
+                                  )}
+                                </orderItemForm.Field>
+                              </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                              <orderItemForm.Field name={`items[${index}].orderDate`}>
-                                {(orderDateField) => (
-                                  <div className="grid gap-2">
-                                    <Label htmlFor={`orderDate-${item.formRowId}`}>
-                                      Order Date
-                                    </Label>
-                                    <DatePicker
-                                      id={`orderDate-${item.formRowId}`}
-                                      name={orderDateField.name}
-                                      value={orderDateField.state.value ?? null}
-                                      onBlur={orderDateField.handleBlur}
-                                      onChange={(value) => orderDateField.handleChange(value ?? "")}
-                                      placeholder="Select order date"
-                                    />
-                                  </div>
-                                )}
-                              </orderItemForm.Field>
-                              <orderItemForm.Field name={`items[${index}].paymentDate`}>
-                                {(paymentDateField) => (
-                                  <div className="grid gap-2">
-                                    <Label htmlFor={`paymentDate-${item.formRowId}`}>
-                                      Payment Date
-                                    </Label>
-                                    <DatePicker
-                                      id={`paymentDate-${item.formRowId}`}
-                                      name={paymentDateField.name}
-                                      value={paymentDateField.state.value ?? null}
-                                      onBlur={paymentDateField.handleBlur}
-                                      onChange={(value) =>
-                                        paymentDateField.handleChange(value ?? "")
-                                      }
-                                      placeholder="Select payment date"
-                                    />
-                                  </div>
-                                )}
-                              </orderItemForm.Field>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                              <orderItemForm.Field name={`items[${index}].shippingDate`}>
-                                {(shippingDateField) => (
-                                  <div className="grid gap-2">
-                                    <Label htmlFor={`shippingDate-${item.formRowId}`}>
-                                      Shipping Date
-                                    </Label>
-                                    <DatePicker
-                                      id={`shippingDate-${item.formRowId}`}
-                                      name={shippingDateField.name}
-                                      value={shippingDateField.state.value ?? null}
-                                      onBlur={shippingDateField.handleBlur}
-                                      onChange={(value) =>
-                                        shippingDateField.handleChange(value ?? "")
-                                      }
-                                      placeholder="Select shipping date"
-                                    />
-                                  </div>
-                                )}
-                              </orderItemForm.Field>
-                              <orderItemForm.Field name={`items[${index}].collectionDate`}>
-                                {(collectionDateField) => (
-                                  <div className="grid gap-2">
-                                    <Label htmlFor={`collectionDate-${item.formRowId}`}>
-                                      Collection Date
-                                    </Label>
-                                    <DatePicker
-                                      id={`collectionDate-${item.formRowId}`}
-                                      name={collectionDateField.name}
-                                      value={collectionDateField.state.value ?? null}
-                                      onBlur={collectionDateField.handleBlur}
-                                      onChange={(value) =>
-                                        collectionDateField.handleChange(value ?? "")
-                                      }
-                                      placeholder="Select collection date"
-                                    />
-                                  </div>
-                                )}
-                              </orderItemForm.Field>
-                            </div>
+                              <div className="grid grid-cols-2 gap-3">
+                                <orderItemForm.Field name={`items[${index}].shippingDate`}>
+                                  {(shippingDateField) => (
+                                    <div className="grid gap-1.5">
+                                      <Label htmlFor={`shippingDate-${item.formRowId}`}>
+                                        Shipping Date
+                                      </Label>
+                                      <DatePicker
+                                        id={`shippingDate-${item.formRowId}`}
+                                        name={shippingDateField.name}
+                                        value={shippingDateField.state.value ?? null}
+                                        onBlur={shippingDateField.handleBlur}
+                                        onChange={(value) =>
+                                          shippingDateField.handleChange(value ?? "")
+                                        }
+                                        placeholder="Select date"
+                                      />
+                                    </div>
+                                  )}
+                                </orderItemForm.Field>
+                                <orderItemForm.Field name={`items[${index}].collectionDate`}>
+                                  {(collectionDateField) => (
+                                    <div className="grid gap-1.5">
+                                      <Label htmlFor={`collectionDate-${item.formRowId}`}>
+                                        Collection Date
+                                      </Label>
+                                      <DatePicker
+                                        id={`collectionDate-${item.formRowId}`}
+                                        name={collectionDateField.name}
+                                        value={collectionDateField.state.value ?? null}
+                                        onBlur={collectionDateField.handleBlur}
+                                        onChange={(value) =>
+                                          collectionDateField.handleChange(value ?? "")
+                                        }
+                                        placeholder="Select date"
+                                      />
+                                    </div>
+                                  )}
+                                </orderItemForm.Field>
+                              </div>
+                            </FormSection>
                           </div>
-                          <DialogFooter>
+                          <DialogFooter className="px-4! mx-0">
                             <DialogClose>
                               <Button variant="outline" type="button">
-                                Close
+                                Done
                               </Button>
                             </DialogClose>
                           </DialogFooter>
@@ -445,13 +454,13 @@ export default function SyncOrderItemForm({
                         }}
                         disabled={field.state.value.length === 1}
                       >
-                        <HugeiconsIcon icon={Cancel01Icon} className="text-red-500" />
+                        <HugeiconsIcon icon={Cancel01Icon} className="text-destructive" />
                       </Button>
                     </div>
                     {!subField.state.meta.isValid && (
-                      <em role="alert" className="text-red-500 text-xs">
+                      <p role="alert" className="text-xs text-destructive mt-1">
                         {subField.state.meta.errors[0]}
-                      </em>
+                      </p>
                     )}
                   </div>
                 )}
@@ -468,7 +477,7 @@ export default function SyncOrderItemForm({
                 field.pushValue(createDefaultSyncFormOrderItem());
               }}
             >
-              <HugeiconsIcon icon={Add01Icon} /> Add Item
+              <HugeiconsIcon icon={Add01Icon} /> Add More Items
             </Button>
           </div>
         )}
