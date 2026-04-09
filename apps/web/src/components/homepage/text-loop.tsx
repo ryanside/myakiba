@@ -1,23 +1,33 @@
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
 
 interface TextLoopProps {
-  preText: string;
-  texts: readonly string[];
+  readonly preText: string;
+  readonly texts: readonly string[];
   interval?: number;
 }
 
 export function TextLoop({ preText, texts, interval = 3000 }: TextLoopProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isFading, setIsFading] = useState(false);
 
   useEffect(() => {
     if (texts.length <= 1) return;
 
-    const timer = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % texts.length);
+    const fadeDurationMs = 250;
+    let switchTimer: number | undefined;
+
+    const timer = window.setInterval(() => {
+      setIsFading(true);
+      switchTimer = window.setTimeout(() => {
+        setCurrentIndex((prev) => (prev + 1) % texts.length);
+        setIsFading(false);
+      }, fadeDurationMs);
     }, interval);
 
-    return () => clearInterval(timer);
+    return () => {
+      window.clearInterval(timer);
+      if (switchTimer !== undefined) window.clearTimeout(switchTimer);
+    };
   }, [texts.length, interval]);
 
   return (
@@ -34,22 +44,13 @@ export function TextLoop({ preText, texts, interval = 3000 }: TextLoopProps) {
             {text}
           </span>
         ))}
-        {/* Visible animated text */}
-        <AnimatePresence mode="wait">
-          <motion.span
-            key={currentIndex}
-            className="inline-block font-medium text-black dark:text-white/85 whitespace-nowrap"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{
-              duration: 0.3,
-              ease: [0.4, 0, 0.2, 1],
-            }}
-          >
-            {texts[currentIndex]}
-          </motion.span>
-        </AnimatePresence>
+        <span
+          className={`inline-block whitespace-nowrap font-medium text-black transition-opacity duration-300 dark:text-white/85 ${
+            isFading ? "opacity-0" : "opacity-100"
+          }`}
+        >
+          {texts[currentIndex]}
+        </span>
       </span>
     </span>
   );
