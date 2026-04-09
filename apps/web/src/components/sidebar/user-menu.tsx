@@ -21,6 +21,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
+import { setThemeWithTransition } from "@/lib/theme-transition";
 import type { RouterAppContext } from "@/routes/__root";
 import { toast } from "sonner";
 import { Button } from "../ui/button";
@@ -57,7 +58,10 @@ export default function UserMenu({ session }: { session: RouterAppContext["sessi
           <span className="text-foreground text-sm font-medium">{session.user.username}</span>
         </div>
         <div className="py-2.5">
-          <Tabs value={theme ?? "system"} onValueChange={setTheme}>
+          <Tabs
+            value={theme ?? "system"}
+            onValueChange={(v) => setThemeWithTransition(v, setTheme)}
+          >
             <TabsList className="w-full">
               <TabsTrigger value="light" className="h-6 flex-1">
                 <HugeiconsIcon icon={Sun01Icon} className="size-4" aria-hidden="true" />

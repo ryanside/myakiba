@@ -13,6 +13,7 @@ import FAQsSection from "@/components/homepage/faqs";
 import FooterSection from "@/components/homepage/footer";
 import LogoCloud from "@/components/homepage/logo-cloud";
 import { cn } from "@/lib/utils";
+import { setThemeWithTransition } from "@/lib/theme-transition";
 
 const EXAMPLE_ITEMS = [
   "/example-item1.webp",
@@ -100,7 +101,7 @@ function ThemeToggle() {
     <Button
       variant="ghost"
       size="icon-sm"
-      onClick={() => setTheme(isDark ? "light" : "dark")}
+      onClick={() => setThemeWithTransition(isDark ? "light" : "dark", setTheme)}
       aria-label="Toggle theme"
     >
       <HugeiconsIcon icon={isDark ? Sun01Icon : Moon02Icon} />
