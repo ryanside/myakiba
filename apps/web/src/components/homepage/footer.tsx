@@ -6,7 +6,7 @@ export default function FooterSection() {
     <footer className="py-8">
       <div className="mx-auto flex max-w-2xl items-center justify-between px-6">
         <div className="flex items-center gap-3">
-          <MyAkibaLogo size="full" className="hidden sm:block size-20 my-0" />
+          <MyAkibaLogo size="full" className="hidden sm:block size-20 pt-0.5" />
           <span className="text-muted-foreground text-sm">
             made by{" "}
             <a
