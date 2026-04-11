@@ -1,12 +1,10 @@
+import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  Copy01Icon,
-  Delete02Icon,
-  Edit01Icon,
+  Edit03Icon,
   Loading03Icon,
   MoreHorizontalIcon,
   PackageIcon,
-  ViewIcon,
 } from "@hugeicons/core-free-icons";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { Button } from "@/components/ui/button";
@@ -16,10 +14,19 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
 import { cn } from "@/lib/utils";
 import type { Currency, DateFormat, OrderStatus } from "@myakiba/contracts/shared/types";
@@ -36,6 +43,7 @@ import { InlineReleaseCell } from "../cells/inline-release-cell";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
+import { getCategoryColor } from "@/lib/category-colors";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface OrderItemSubColumnsParams {
@@ -46,6 +54,112 @@ interface OrderItemSubColumnsParams {
   locale: string;
   dateFormat: DateFormat;
   isCollectionItemPending: (collectionId: string) => boolean;
+}
+
+function OrderItemActionsCell({
+  item,
+  isPending,
+  orderId,
+  onEditItem,
+  onDeleteItem,
+  currency,
+  dateFormat,
+}: Pick<
+  OrderItemSubColumnsParams,
+  "orderId" | "onEditItem" | "onDeleteItem" | "currency" | "dateFormat"
+> & {
+  readonly item: OrderItem;
+  readonly isPending: boolean;
+}) {
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  return (
+    <>
+      <div className="flex items-center justify-end gap-0.5">
+        <CollectionItemForm
+          renderTrigger={
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              disabled={isPending}
+              className="text-muted-foreground"
+            >
+              <HugeiconsIcon icon={Edit03Icon} className="size-3" />
+              <span className="sr-only">Edit item</span>
+            </Button>
+          }
+          itemData={item}
+          callbackFn={onEditItem}
+          currency={currency}
+          dateFormat={dateFormat}
+        />
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button variant="ghost" size="icon-sm" disabled={isPending}>
+                <span className="sr-only">Open menu</span>
+                <HugeiconsIcon
+                  icon={isPending ? Loading03Icon : MoreHorizontalIcon}
+                  className={cn("h-4 w-4", isPending && "animate-spin")}
+                />
+              </Button>
+            }
+          />
+          <DropdownMenuContent align="end">
+            <DropdownMenuGroup>
+              <DropdownMenuItem>
+                <Link to="/items/$id" params={{ id: item.itemId }}>
+                  View details
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  if (item.itemExternalId) {
+                    navigator.clipboard.writeText(item.itemExternalId.toString());
+                    toast.success("Copied MFC item ID to clipboard");
+                  } else {
+                    toast.error("No MFC item ID for custom items");
+                  }
+                }}
+              >
+                Copy MFC ID
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              disabled={isPending}
+              onClick={() => setDeleteOpen(true)}
+            >
+              Remove item
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove item?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove this item from the order.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                setDeleteOpen(false);
+                onDeleteItem(orderId, item.id);
+              }}
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
 }
 
 export function createOrderItemSubColumns({
@@ -87,7 +201,7 @@ export function createOrderItemSubColumns({
           />
         </>
       ),
-      size: 40,
+      size: 32,
       enableSorting: false,
       enableHiding: false,
       enableResizing: false,
@@ -131,6 +245,11 @@ export function createOrderItemSubColumns({
                 ) : (
                   <span className="text-xs text-muted-foreground">Custom</span>
                 )}
+                {item.itemCategory ? (
+                  <p className="text-xs" style={{ color: getCategoryColor(item.itemCategory) }}>
+                    <span className="text-muted-foreground">•</span> {item.itemCategory}
+                  </p>
+                ) : null}
               </div>
             </div>
           </div>
@@ -267,7 +386,7 @@ export function createOrderItemSubColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 95,
+      size: 105,
       meta: {
         skeleton: <Skeleton className="h-6" />,
       },
@@ -308,71 +427,18 @@ export function createOrderItemSubColumns({
         const item = row.original;
         const isPending = isCollectionItemPending(item.id);
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button variant="ghost" className="h-8 w-8 p-0" disabled={isPending}>
-                  <span className="sr-only">Open menu</span>
-                  <HugeiconsIcon
-                    icon={isPending ? Loading03Icon : MoreHorizontalIcon}
-                    className={cn("h-4 w-4", isPending && "animate-spin")}
-                  />
-                </Button>
-              }
-            />
-            <DropdownMenuContent align="end">
-              <DropdownMenuGroup>
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuItem>
-                  <Link
-                    to="/items/$id"
-                    params={{ id: item.itemId }}
-                    className="flex items-center gap-1.5"
-                  >
-                    <HugeiconsIcon icon={ViewIcon} />
-                    View details
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    if (item.itemExternalId) {
-                      navigator.clipboard.writeText(item.itemExternalId.toString());
-                      toast.success("Copied MFC item ID to clipboard");
-                    } else {
-                      toast.error("No MFC item ID for custom items");
-                    }
-                  }}
-                >
-                  <HugeiconsIcon icon={Copy01Icon} />
-                  Copy MFC ID
-                </DropdownMenuItem>
-                <CollectionItemForm
-                  renderTrigger={
-                    <DropdownMenuItem closeOnClick={false} disabled={isPending}>
-                      <HugeiconsIcon icon={Edit01Icon} />
-                      {isPending ? "Saving..." : "Edit item"}
-                    </DropdownMenuItem>
-                  }
-                  itemData={item}
-                  callbackFn={onEditItem}
-                  currency={currency}
-                  dateFormat={dateFormat}
-                />
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                disabled={isPending}
-                onClick={() => onDeleteItem(orderId, item.id)}
-              >
-                <HugeiconsIcon icon={Delete02Icon} />
-                {isPending ? "Deleting..." : "Delete item"}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <OrderItemActionsCell
+            item={item}
+            isPending={isPending}
+            orderId={orderId}
+            onEditItem={onEditItem}
+            onDeleteItem={onDeleteItem}
+            currency={currency}
+            dateFormat={dateFormat}
+          />
         );
       },
-      size: 60,
+      size: 56,
       enableSorting: false,
       enableHiding: false,
       enableResizing: false,

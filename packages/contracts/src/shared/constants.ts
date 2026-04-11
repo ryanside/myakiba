@@ -18,13 +18,13 @@ export const COLLECTION_STATUSES = ["Ordered", "Paid", "Shipped", "Owned"] as co
 export const CONDITIONS = ["New", "Pre-Owned"] as const;
 
 export const ENTRY_CATEGORIES = [
-  "Classifications",
-  "Origins",
-  "Characters",
-  "Companies",
   "Artists",
-  "Materials",
+  "Characters",
+  "Origins",
+  "Companies",
+  "Classifications",
   "Events",
+  "Materials",
 ] as const;
 
 export const DATE_FORMATS = ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY/MM/DD", "YYYY/DD/MM"] as const;
@@ -76,6 +76,18 @@ export const CURRENCIES = [
   "PHP",
   "RUB",
   "SGD",
+] as const;
+
+export const ANALYTICS_SECTIONS = [
+  "classifications",
+  "origins",
+  "characters",
+  "companies",
+  "artists",
+  "materials",
+  "events",
+  "shops",
+  "scales",
 ] as const;
 
 export const DEFAULT_PAGE_INDEX = 0;

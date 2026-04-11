@@ -44,12 +44,12 @@
   --border: oklch(0.925 0 89.9);
   --input: oklch(0.925 0 89.9);
   --ring: oklch(0.35 0 89.9 / 0.9);
-  --chart-1: oklch(0.9183 0.2281 124.62);
-  --chart-2: oklch(0.4709 0.2878 276.48);
-  --chart-3: oklch(0.6375 0.2452 4.77);
-  --chart-4: oklch(0.867 0.1211 186.66);
-  --chart-5: oklch(0.7014 0.1947 43.65);
-  --chart-6: oklch(0.6066 0.3029 312.4);
+  --chart-1: var(--color-blue-600);
+  --chart-2: var(--color-violet-600);
+  --chart-3: var(--color-emerald-600);
+  --chart-4: var(--color-amber-500);
+  --chart-5: var(--color-rose-500);
+  --chart-6: var(--color-sky-500);
   --sidebar: oklch(0.984 0 89.9);
   --sidebar-foreground: oklch(0.25 0 89.9);
   --sidebar-primary: oklch(0.35 0 89.9);
@@ -60,6 +60,7 @@
   --sidebar-ring: oklch(0.925 0 89.9);
   --radius: 0.625rem;
   --font-sans: "Instrument Sans Variable", ui-sans-serif, sans-serif, system-ui;
+  --font-orbitron: "Orbitron Variable", ui-sans-serif, sans-serif, system-ui;
   --font-serif: serif;
   --font-mono: ui-monospace, monospace;
 
@@ -116,12 +117,12 @@
   --border: oklch(0.29 0 89.9);
   --input: oklch(0.29 0 89.9);
   --ring: oklch(0.45 0 89.9);
-  --chart-1: oklch(0.9183 0.2281 124.62);
-  --chart-2: oklch(0.4709 0.2878 276.48);
-  --chart-3: oklch(0.6375 0.2452 4.77);
-  --chart-4: oklch(0.867 0.1211 186.66);
-  --chart-5: oklch(0.7014 0.1947 43.65);
-  --chart-6: oklch(0.6066 0.3029 312.4);
+  --chart-1: var(--color-blue-600);
+  --chart-2: var(--color-violet-600);
+  --chart-3: var(--color-emerald-600);
+  --chart-4: var(--color-amber-500);
+  --chart-5: var(--color-rose-500);
+  --chart-6: var(--color-sky-500);
   --sidebar: oklch(0.11 0 89.9);
   --sidebar-foreground: oklch(0.98 0 0);
   --sidebar-primary: oklch(0.98 0 0);
@@ -131,6 +132,7 @@
   --sidebar-border: oklch(0.28 0 89.9);
   --sidebar-ring: oklch(0.45 0 89.9);
   --font-sans: "Instrument Sans Variable", ui-sans-serif, sans-serif, system-ui;
+  --font-orbitron: "Orbitron Variable", ui-sans-serif, sans-serif, system-ui;
   --font-serif: serif;
   --font-mono: ui-monospace, monospace;
 
@@ -169,6 +171,7 @@
 @theme inline {
   /* shadcn */
   --font-sans: var(--font-sans);
+  --font-orbitron: var(--font-orbitron);
   --font-serif: var(--font-serif);
   --font-mono: var(--font-mono);
   --font-heading: var(--font-sans);
@@ -281,7 +284,7 @@ body {
 }
 
 @utility animate-appear {
-  animation: appear 600ms cubic-bezier(0.25, 1, 0.5, 1) both;
+  animation: appear 600ms cubic-bezier(0.23, 1, 0.32, 1) both;
   animation-delay: var(--appear-delay, 0ms);
 }
 
@@ -293,7 +296,7 @@ body {
 }
 
 @utility animate-data-in {
-  animation: data-in 350ms cubic-bezier(0.25, 1, 0.5, 1) both;
+  animation: data-in 250ms cubic-bezier(0.23, 1, 0.32, 1) both;
   animation-delay: var(--data-in-delay, 0ms);
 }
 

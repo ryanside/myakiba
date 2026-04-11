@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Delete02Icon,
-  Edit01Icon,
+  Edit03Icon,
   Loading03Icon,
   MoreHorizontalIcon,
   PackageIcon,
@@ -36,7 +36,11 @@ import type { OrderListItem } from "@myakiba/contracts/orders/types";
 import type { CascadeOptions, EditedOrder } from "@myakiba/contracts/orders/schema";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import type { RowSelectionState } from "@tanstack/react-table";
+import type { CSSProperties } from "react";
 import { ThemedBadge } from "../reui/badge";
+
+const MAX_STAGGER_INDEX = 20;
+const STAGGER_DELAY_MS = 30;
 
 interface OrdersCardGridProps {
   readonly orders: readonly OrderListItem[];
@@ -113,16 +117,18 @@ export function OrdersCardGrid({
 
   return (
     <div className="grid gap-3" style={gridStyle}>
-      {orders.map((order) => {
+      {orders.map((order, index) => {
         const isSelected = !!rowSelection[order.orderId];
         const isPending = isOrderPending(order.orderId);
         const displayImages = order.images.slice(0, 4);
+        const staggerDelay = Math.min(index, MAX_STAGGER_INDEX) * STAGGER_DELAY_MS;
 
         return (
           <Card
             key={order.orderId}
             size="sm"
-            className={cn("relative p-0!", isSelected && "ring-primary")}
+            className={cn("animate-data-in relative p-0!", isSelected && "ring-primary")}
+            style={{ "--data-in-delay": `${staggerDelay}ms` } as CSSProperties}
           >
             {/* Selection + Actions overlay */}
             <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-between p-2">
@@ -171,7 +177,7 @@ export function OrdersCardGrid({
                     <OrderForm
                       renderTrigger={
                         <DropdownMenuItem closeOnClick={false} disabled={isPending}>
-                          <HugeiconsIcon icon={Edit01Icon} />
+                          <HugeiconsIcon icon={Edit03Icon} />
                           {isPending ? "Saving..." : "Edit order"}
                         </DropdownMenuItem>
                       }

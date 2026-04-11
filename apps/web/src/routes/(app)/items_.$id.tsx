@@ -3,7 +3,7 @@ import {
   Calendar01Icon,
   ArrowLeft01Icon,
   Delete01Icon,
-  Edit01Icon,
+  Edit03Icon,
   Loading03Icon,
   MoveIcon,
   Package01Icon,
@@ -625,7 +625,7 @@ function RouteComponent() {
                             <CollectionItemForm
                               renderTrigger={
                                 <Button variant="ghost" size="icon">
-                                  <HugeiconsIcon icon={Edit01Icon} className="size-4" />
+                                  <HugeiconsIcon icon={Edit03Icon} className="size-4" />
                                 </Button>
                               }
                               itemData={{

@@ -1,13 +1,10 @@
+import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  Copy01Icon,
-  Delete02Icon,
-  Edit01Icon,
+  Edit03Icon,
   Loading03Icon,
-  MoveIcon,
   MoreHorizontalIcon,
   PackageIcon,
-  ViewIcon,
 } from "@hugeicons/core-free-icons";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -17,10 +14,19 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { Link } from "@tanstack/react-router";
@@ -58,6 +64,135 @@ interface CollectionColumnsParams {
   dateFormat: DateFormat;
   isCollectionPending: (collectionId: string) => boolean;
   isCollectionOrderPending: (collectionId: string) => boolean;
+}
+
+function CollectionActionsCell({
+  item,
+  isPending,
+  onEditCollectionItem,
+  onDeleteCollectionItems,
+  onAddCollectionItemsToOrder,
+  onAddCollectionItemsToNewOrder,
+  currency,
+  dateFormat,
+}: Pick<
+  CollectionColumnsParams,
+  | "onEditCollectionItem"
+  | "onDeleteCollectionItems"
+  | "onAddCollectionItemsToOrder"
+  | "onAddCollectionItemsToNewOrder"
+  | "currency"
+  | "dateFormat"
+> & {
+  readonly item: CollectionItem;
+  readonly isPending: boolean;
+}) {
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const selectedItems = {
+    collectionIds: new Set([item.id]),
+    orderIds: item.orderId ? new Set([item.orderId]) : new Set<string>(),
+  };
+
+  return (
+    <>
+      <div className="flex items-center justify-end gap-0.5">
+        <CollectionItemForm
+          renderTrigger={
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              disabled={isPending}
+              className="text-muted-foreground"
+            >
+              <HugeiconsIcon icon={Edit03Icon} className="size-3" />
+              <span className="sr-only">Edit item</span>
+            </Button>
+          }
+          itemData={item}
+          callbackFn={onEditCollectionItem}
+          currency={currency}
+          dateFormat={dateFormat}
+        />
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button variant="ghost" size="icon-sm" disabled={isPending}>
+                <span className="sr-only">Open menu</span>
+                <HugeiconsIcon
+                  icon={isPending ? Loading03Icon : MoreHorizontalIcon}
+                  className={cn("h-4 w-4", isPending && "animate-spin")}
+                />
+              </Button>
+            }
+          />
+          <DropdownMenuContent align="end">
+            <DropdownMenuGroup>
+              <DropdownMenuItem>
+                <Link to="/items/$id" params={{ id: item.itemId }}>
+                  View details
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  if (item.itemExternalId) {
+                    navigator.clipboard.writeText(item.itemExternalId.toString());
+                    toast.success("Copied MFC item ID to clipboard");
+                  } else {
+                    toast.error("No MFC item ID for custom items");
+                  }
+                }}
+              >
+                Copy MFC ID
+              </DropdownMenuItem>
+              <UnifiedItemMoveForm
+                renderTrigger={
+                  <DropdownMenuItem closeOnClick={false} disabled={isPending}>
+                    {isPending ? "Assigning..." : "Assign Order"}
+                  </DropdownMenuItem>
+                }
+                selectedItems={selectedItems}
+                onMoveToExisting={onAddCollectionItemsToOrder}
+                onMoveToNew={onAddCollectionItemsToNewOrder}
+                clearSelections={() => {}}
+                currency={currency}
+                intent="add"
+              />
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              disabled={isPending}
+              onClick={() => setDeleteOpen(true)}
+            >
+              Delete item
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete item?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove this item from your collection.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                setDeleteOpen(false);
+                onDeleteCollectionItems(new Set([item.id]));
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
 }
 
 export function createCollectionColumns({
@@ -99,7 +234,7 @@ export function createCollectionColumns({
           />
         </>
       ),
-      size: 40,
+      size: 32,
       enableSorting: false,
       enableHiding: false,
       enableResizing: false,
@@ -170,7 +305,7 @@ export function createCollectionColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 100,
+      size: 72,
       meta: {
         skeleton: <Skeleton className="h-6 w-1/2" />,
       },
@@ -200,7 +335,7 @@ export function createCollectionColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 80,
+      size: 65,
       meta: {
         skeleton: <Skeleton className="h-6" />,
       },
@@ -230,7 +365,7 @@ export function createCollectionColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 80,
+      size: 68,
       meta: {
         skeleton: <Skeleton className="h-6" />,
       },
@@ -373,7 +508,7 @@ export function createCollectionColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 120,
+      size: 108,
       meta: {
         headerTitle: "Order Date",
         skeleton: <Skeleton className="h-6" />,
@@ -406,7 +541,7 @@ export function createCollectionColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 120,
+      size: 108,
       meta: {
         headerTitle: "Payment Date",
         skeleton: <Skeleton className="h-6" />,
@@ -439,7 +574,7 @@ export function createCollectionColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 120,
+      size: 108,
       meta: {
         headerTitle: "Shipping Date",
         skeleton: <Skeleton className="h-6" />,
@@ -472,7 +607,7 @@ export function createCollectionColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 120,
+      size: 108,
       meta: {
         headerTitle: "Collection Date",
         skeleton: <Skeleton className="h-6" />,
@@ -484,91 +619,20 @@ export function createCollectionColumns({
       cell: ({ row }) => {
         const item = row.original;
         const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
-        const selectedItems = {
-          collectionIds: new Set([item.id]),
-          orderIds: item.orderId ? new Set([item.orderId]) : new Set<string>(),
-        };
-
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button variant="ghost" className="h-8 w-8 p-0" disabled={isPending}>
-                  <span className="sr-only">Open menu</span>
-                  <HugeiconsIcon
-                    icon={isPending ? Loading03Icon : MoreHorizontalIcon}
-                    className={cn("h-4 w-4", isPending && "animate-spin")}
-                  />
-                </Button>
-              }
-            />
-            <DropdownMenuContent align="end">
-              <DropdownMenuGroup>
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuItem>
-                  <Link
-                    to="/items/$id"
-                    params={{ id: item.itemId }}
-                    className="flex items-center gap-1.5"
-                  >
-                    <HugeiconsIcon icon={ViewIcon} />
-                    View details
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    if (item.itemExternalId) {
-                      navigator.clipboard.writeText(item.itemExternalId.toString());
-                      toast.success("Copied MFC item ID to clipboard");
-                    } else {
-                      toast.error("No MFC item ID for custom items");
-                    }
-                  }}
-                >
-                  <HugeiconsIcon icon={Copy01Icon} />
-                  Copy MFC ID
-                </DropdownMenuItem>
-                <CollectionItemForm
-                  renderTrigger={
-                    <DropdownMenuItem closeOnClick={false} disabled={isPending}>
-                      <HugeiconsIcon icon={Edit01Icon} />
-                      {isPending ? "Saving..." : "Edit item"}
-                    </DropdownMenuItem>
-                  }
-                  itemData={item}
-                  callbackFn={onEditCollectionItem}
-                  currency={currency}
-                  dateFormat={dateFormat}
-                />
-                <UnifiedItemMoveForm
-                  renderTrigger={
-                    <DropdownMenuItem closeOnClick={false} disabled={isPending}>
-                      <HugeiconsIcon icon={MoveIcon} />
-                      {isPending ? "Assigning..." : "Assign Order"}
-                    </DropdownMenuItem>
-                  }
-                  selectedItems={selectedItems}
-                  onMoveToExisting={onAddCollectionItemsToOrder}
-                  onMoveToNew={onAddCollectionItemsToNewOrder}
-                  clearSelections={() => {}}
-                  currency={currency}
-                  intent="add"
-                />
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                disabled={isPending}
-                onClick={() => onDeleteCollectionItems(new Set([item.id]))}
-              >
-                <HugeiconsIcon icon={Delete02Icon} />
-                {isPending ? "Deleting..." : "Delete item"}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <CollectionActionsCell
+            item={item}
+            isPending={isPending}
+            onEditCollectionItem={onEditCollectionItem}
+            onDeleteCollectionItems={onDeleteCollectionItems}
+            onAddCollectionItemsToOrder={onAddCollectionItemsToOrder}
+            onAddCollectionItemsToNewOrder={onAddCollectionItemsToNewOrder}
+            currency={currency}
+            dateFormat={dateFormat}
+          />
         );
       },
-      size: 50,
+      size: 56,
       enableSorting: false,
       enableHiding: false,
       enableResizing: false,

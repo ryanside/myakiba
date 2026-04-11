@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Delete02Icon,
-  Edit01Icon,
+  Edit03Icon,
   Loading03Icon,
   MoreHorizontalIcon,
   PackageIcon,
@@ -26,7 +26,11 @@ import type { OrderListItem } from "@myakiba/contracts/orders/types";
 import type { CascadeOptions, EditedOrder } from "@myakiba/contracts/orders/schema";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import type { RowSelectionState } from "@tanstack/react-table";
+import type { CSSProperties } from "react";
 import type { GalleryLayout } from "@/components/ui/gallery-layout-toggle";
+
+const MAX_STAGGER_INDEX = 20;
+const STAGGER_DELAY_MS = 30;
 
 interface OrdersGalleryGridProps {
   readonly orders: readonly OrderListItem[];
@@ -164,19 +168,21 @@ export function OrdersGalleryGrid({
     );
   }
 
-  const tiles = orders.map((order) => {
+  const tiles = orders.map((order, index) => {
     const isSelected = !!rowSelection[order.orderId];
     const isPending = isOrderPending(order.orderId);
     const imageCount = order.images.length;
+    const staggerDelay = Math.min(index, MAX_STAGGER_INDEX) * STAGGER_DELAY_MS;
 
     return (
       <div
         key={order.orderId}
         className={cn(
-          "group/tile relative overflow-hidden rounded-lg",
+          "animate-data-in group/tile relative overflow-hidden rounded-lg",
           galleryLayout === "masonry" && "mb-2 break-inside-avoid",
           isSelected && "ring-2 ring-primary ring-offset-1 ring-offset-background",
         )}
+        style={{ "--data-in-delay": `${staggerDelay}ms` } as CSSProperties}
       >
         <div
           className={cn(
@@ -231,7 +237,7 @@ export function OrdersGalleryGrid({
                 <OrderForm
                   renderTrigger={
                     <DropdownMenuItem closeOnClick={false} disabled={isPending}>
-                      <HugeiconsIcon icon={Edit01Icon} />
+                      <HugeiconsIcon icon={Edit03Icon} />
                       {isPending ? "Saving..." : "Edit order"}
                     </DropdownMenuItem>
                   }

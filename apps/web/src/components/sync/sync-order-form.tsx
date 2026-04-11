@@ -3,7 +3,7 @@ import {
   Add01Icon,
   ArrowDown01Icon,
   Cancel01Icon,
-  Edit01Icon,
+  Edit03Icon,
   InformationCircleIcon,
   Loading03Icon,
 } from "@hugeicons/core-free-icons";
@@ -20,6 +20,7 @@ import {
   DropdownMenuCheckboxItem,
 } from "../ui/dropdown-menu";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "../ui/select";
+import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { DatePicker } from "../ui/date-picker";
 import { Badge } from "@/components/reui/badge";
 import { Separator } from "../ui/separator";
@@ -211,12 +212,26 @@ export default function SyncOrderForm({
                     onValueChange={(value) => field.handleChange(value as typeof field.state.value)}
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select status" />
+                      <SelectValue placeholder="Select status">
+                        {field.state.value && (
+                          <span className="flex items-center gap-2">
+                            <span
+                              className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[field.state.value] ?? "bg-muted"}`}
+                            />
+                            {field.state.value}
+                          </span>
+                        )}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {ORDER_STATUSES.map((status) => (
                         <SelectItem key={status} value={status}>
-                          {status}
+                          <span className="flex items-center gap-2">
+                            <span
+                              className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[status] ?? "bg-muted"}`}
+                            />
+                            {status}
+                          </span>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -574,7 +589,7 @@ export default function SyncOrderForm({
                           <DialogTrigger
                             render={
                               <Button variant="ghost" size="icon" type="button">
-                                <HugeiconsIcon icon={Edit01Icon} />
+                                <HugeiconsIcon icon={Edit03Icon} />
                               </Button>
                             }
                           />
@@ -697,12 +712,26 @@ export default function SyncOrderForm({
                                           }
                                         >
                                           <SelectTrigger className="w-full">
-                                            <SelectValue placeholder="Select status" />
+                                            <SelectValue placeholder="Select status">
+                                              {statusField.state.value && (
+                                                <span className="flex items-center gap-2">
+                                                  <span
+                                                    className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[statusField.state.value] ?? "bg-muted"}`}
+                                                  />
+                                                  {statusField.state.value}
+                                                </span>
+                                              )}
+                                            </SelectValue>
                                           </SelectTrigger>
                                           <SelectContent>
                                             {ORDER_STATUSES.map((status) => (
                                               <SelectItem key={status} value={status}>
-                                                {status}
+                                                <span className="flex items-center gap-2">
+                                                  <span
+                                                    className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[status] ?? "bg-muted"}`}
+                                                  />
+                                                  {status}
+                                                </span>
                                               </SelectItem>
                                             ))}
                                           </SelectContent>

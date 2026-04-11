@@ -43,5 +43,5 @@ export type OrderListItem = Order & {
 
 export type OrderItem = Omit<
   CollectionItem,
-  "itemCategory" | "itemScale" | "createdAt" | "updatedAt" | "totalCount" | "totalValue"
+  "itemScale" | "createdAt" | "updatedAt" | "totalCount" | "totalValue"
 >;

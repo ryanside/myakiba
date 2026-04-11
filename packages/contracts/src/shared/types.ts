@@ -1,4 +1,5 @@
 import {
+  ANALYTICS_SECTIONS,
   CATEGORIES,
   COLLECTION_STATUSES,
   CONDITIONS,
@@ -22,4 +23,5 @@ export type EntryCategory = (typeof ENTRY_CATEGORIES)[number];
 export type DateFormat = (typeof DATE_FORMATS)[number];
 export type SyncType = (typeof SYNC_TYPES)[number];
 export type SyncSessionStatus = (typeof SYNC_SESSION_STATUSES)[number];
+export type AnalyticsSection = (typeof ANALYTICS_SECTIONS)[number];
 export type SyncSessionItemStatus = (typeof SYNC_SESSION_ITEM_STATUSES)[number];

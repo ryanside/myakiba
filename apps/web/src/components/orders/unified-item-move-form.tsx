@@ -48,6 +48,7 @@ import { Scroller } from "../ui/scroller";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import type { Currency, OrderStatus, ShippingMethod } from "@myakiba/contracts/shared/types";
 import { getCurrencyLocale } from "@/lib/locale";
+import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import type { SelectedCollectionItems } from "@/hooks/use-selection";
 
 type UnifiedItemMoveFormProps = {
@@ -444,12 +445,26 @@ export default function UnifiedItemMoveForm({
                               }
                             >
                               <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select status" />
+                                <SelectValue placeholder="Select status">
+                                  {field.state.value && (
+                                    <span className="flex items-center gap-2">
+                                      <span
+                                        className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[field.state.value] ?? "bg-muted"}`}
+                                      />
+                                      {field.state.value}
+                                    </span>
+                                  )}
+                                </SelectValue>
                               </SelectTrigger>
                               <SelectContent>
                                 {ORDER_STATUSES.map((status) => (
                                   <SelectItem key={status} value={status}>
-                                    {status}
+                                    <span className="flex items-center gap-2">
+                                      <span
+                                        className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[status] ?? "bg-muted"}`}
+                                      />
+                                      {status}
+                                    </span>
                                   </SelectItem>
                                 ))}
                               </SelectContent>

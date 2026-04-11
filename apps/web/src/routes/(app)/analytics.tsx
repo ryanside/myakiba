@@ -1,22 +1,11 @@
-import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  Building02Icon,
-  Calendar01Icon,
-  ColorPickerIcon,
-  GlobeIcon,
-  PieChartIcon,
-  SparklesIcon,
-  Store01Icon,
-  Tag01Icon,
-  UserGroupIcon,
-  Edit01Icon,
-} from "@hugeicons/core-free-icons";
+import type { ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { getAnalytics } from "@/queries/analytics";
-import { RankingCard } from "@/components/analytics/ranking-card";
-import { DistributionCard } from "@/components/analytics/distribution-card";
 import Loader from "@/components/loader";
+import { LeaderboardTable } from "@/components/analytics/leaderboard-table";
+import { SECTION_GRADIENT_COLORS, Section } from "@/components/analytics/section";
+import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 export const Route = createFileRoute("/(app)/analytics")({
@@ -34,8 +23,8 @@ export const Route = createFileRoute("/(app)/analytics")({
   }),
 });
 
-function RouteComponent(): React.ReactNode {
-  const { currency: userCurrency } = useUserPreferences();
+function RouteComponent(): ReactNode {
+  const { currency, locale } = useUserPreferences();
   const { isPending, isError, data, error } = useQuery({
     queryKey: ["analytics"],
     queryFn: getAnalytics,
@@ -43,354 +32,154 @@ function RouteComponent(): React.ReactNode {
     retry: false,
   });
 
-  if (isPending) {
-    return <Loader />;
-  }
+  const analytics = data?.analytics;
 
-  if (isError) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 gap-y-4">
-        <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
-      </div>
-    );
-  }
-
-  const { analytics } = data;
-  const totalCollectionCount = analytics.totalOwned.count || 100;
-
-  // ranking cards data
-  const topCharactersData =
-    analytics.topEntriesByAllCategories.Characters.map((entry, idx) => ({
-      rank: idx + 1,
-      entryId: entry.entryId,
-      name: entry.originName,
-      count: `${entry.itemCount}`,
-      value: Number(entry.totalValue),
-    })) || [];
-
-  const topOriginsData =
-    analytics.topEntriesByAllCategories.Origins.map((entry, idx) => ({
-      rank: idx + 1,
-      entryId: entry.entryId,
-      name: entry.originName,
-      count: `${entry.itemCount}`,
-      value: Number(entry.totalValue),
-    })) || [];
-
-  const topCompaniesData =
-    analytics.topEntriesByAllCategories.Companies.map((entry, idx) => ({
-      rank: idx + 1,
-      entryId: entry.entryId,
-      name: entry.originName,
-      count: `${entry.itemCount}`,
-      value: Number(entry.totalValue),
-    })) || [];
-
-  const topArtistsData =
-    analytics.topEntriesByAllCategories.Artists.map((entry, idx) => ({
-      rank: idx + 1,
-      entryId: entry.entryId,
-      name: entry.originName,
-      count: `${entry.itemCount}`,
-      value: Number(entry.totalValue),
-    })) || [];
-
-  const topShopsData =
-    analytics.topShops.map((shop, idx) => ({
-      rank: idx + 1,
-      shopName: shop.shop,
-      name: shop.shop,
-      count: `${shop.count}`,
-      value: Number(shop.totalSpent),
-    })) || [];
-
-  const mostExpensiveData =
-    analytics.mostExpensiveCollectionItems.map((item, idx) => ({
-      rank: idx + 1,
-      itemId: item.itemId,
-      name: item.itemTitle,
-      category: item.itemCategory || "n/a",
-      value: Number(item.collectionPrice),
-    })) || [];
-
-  const scaleData =
-    analytics.scaleDistribution.map((item, idx) => ({
-      rank: idx + 1,
-      scaleName: item.scale || "Non-Scale",
-      name: item.scale || "Non-Scale",
-      count: item.count,
-      value: Number(item.totalValue),
-    })) || [];
-
-  const materialsData =
-    analytics.topEntriesByAllCategories.Materials.map((entry, idx) => ({
-      rank: idx + 1,
-      entryId: entry.entryId,
-      name: entry.originName,
-      count: entry.itemCount,
-      value: Number(entry.totalValue),
-    })) || [];
-
-  const classificationsData =
-    analytics.topEntriesByAllCategories.Classifications.map((entry, idx) => ({
-      rank: idx + 1,
-      entryId: entry.entryId,
-      name: entry.originName,
-      count: entry.itemCount,
-      value: Number(entry.totalValue),
-    })) || [];
-
-  const eventsData =
-    analytics.topEntriesByAllCategories.Events.map((entry, idx) => ({
-      rank: idx + 1,
-      entryId: entry.entryId,
-      name: entry.originName,
-      count: entry.itemCount,
-      value: Number(entry.totalValue),
-    })) || [];
-
-  // distribution cards data
-  const priceRangeData = analytics.priceRangeDistribution.map((range) => ({
-    label: range.priceRange,
-    count: range.count,
-    value: Number(range.totalValue),
-  }));
-
-  const rankingColumns = [
-    { key: "rank", label: "Rank", align: "center" as const, type: "number" as const },
-    {
-      key: "name",
-      label: "Name",
-      align: "left" as const,
-      type: "string" as const,
-      cellClassName: "text-foreground",
-    },
-    {
-      key: "count",
-      label: "Count",
-      align: "left" as const,
-      type: "number" as const,
-      cellText: "items",
-    },
-    { key: "value", label: "Spent", align: "left" as const, type: "currency" as const },
-  ];
-
-  const expensiveColumns = [
-    { key: "rank", label: "Rank", align: "center" as const },
-    { key: "name", label: "Item", align: "left" as const, cellClassName: "text-foreground" },
-    { key: "category", label: "Category", align: "left" as const },
-    { key: "value", label: "Price", align: "left" as const, type: "currency" as const },
-  ];
-
-  const getEntryNavigation = (row: Record<string, string | number>) => {
-    const entryId = row.entryId as string;
-    if (!entryId) return undefined;
-    return {
-      to: "/collection",
-      search: { entries: [entryId] },
-    };
-  };
-
-  const getShopNavigation = (row: Record<string, string | number>) => {
-    const shopName = row.shopName as string;
-    if (!shopName) return undefined;
-    return {
-      to: "/collection",
-      search: { shop: [shopName] },
-    };
-  };
-
-  const getScaleNavigation = (row: Record<string, string | number>) => {
-    const scaleName = row.scaleName as string;
-    if (!scaleName) return undefined;
-    return {
-      to: "/collection",
-      search: { scale: [scaleName] },
-    };
-  };
-
-  const getItemNavigation = (row: Record<string, string | number>) => {
-    const itemId = row.itemId as string;
-    if (!itemId) return undefined;
-    return {
-      to: `/items/${itemId}`,
-    };
-  };
-
-  const getPriceRangeNavigation = (item: {
-    label: string;
-    count: number;
-    value?: string | number;
-  }) => {
-    const label = item.label;
-    if (label === "< $50") {
-      return { to: "/collection", search: { paidMax: 5000 } };
-    } else if (label === "$50-$100") {
-      return { to: "/collection", search: { paidMin: 5000, paidMax: 10000 } };
-    } else if (label === "$100-$200") {
-      return { to: "/collection", search: { paidMin: 10000, paidMax: 20000 } };
-    } else if (label === "$200-$500") {
-      return { to: "/collection", search: { paidMin: 20000, paidMax: 50000 } };
-    } else if (label === "> $500") {
-      return { to: "/collection", search: { paidMin: 50000 } };
+  const formatCell = (column: string, value: string | number | null): string | number | null => {
+    if (column === "totalSpent" && value !== null) {
+      return formatCurrencyFromMinorUnits(Number(value), currency, locale);
     }
-    return undefined;
+    return value;
   };
 
   return (
-    <div className="flex flex-col gap-6 mx-auto">
-      <div className="flex flex-col gap-2 mb-4">
-        <div className="flex flex-row items-start gap-4">
-          <h1 className="text-2xl tracking-tight font-heading font-medium">Analytics</h1>
-        </div>
-        <p className="text-muted-foreground text-sm font-normal">
-          See how your collection is distributed across different categories.
-        </p>
+    <div className="flex flex-col gap-6 mx-auto max-w-4xl">
+      <div className="flex flex-col gap-2 mb-2">
+        <h1 className="text-2xl font-orbitron font-medium">
+          analytics
+          <span className="hidden sm:inline"> ⭑.ᐟ</span>
+        </h1>
+        <p className="text-muted-foreground text-sm">See what shapes your collection.</p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-        <RankingCard
-          title="Top Characters"
-          icon={<HugeiconsIcon icon={UserGroupIcon} className="size-4 stroke-foreground" />}
-          progressKey="count"
-          progressMax={totalCollectionCount}
-          columns={rankingColumns}
-          data={topCharactersData}
-          emptyMessage="No characters found"
-          className="min-h-[620px]"
-          currency={userCurrency}
-          getRowNavigation={getEntryNavigation}
-        />
+      {isPending && <Loader className="h-64" />}
 
-        <RankingCard
-          title="Top Origins"
-          icon={<HugeiconsIcon icon={GlobeIcon} className="size-4 stroke-foreground" />}
-          progressKey="count"
-          progressMax={totalCollectionCount}
-          columns={rankingColumns}
-          data={topOriginsData}
-          emptyMessage="No origins found"
-          className="min-h-[620px]"
-          currency={userCurrency}
-          getRowNavigation={getEntryNavigation}
-        />
-
-        <RankingCard
-          title="Top Companies"
-          icon={<HugeiconsIcon icon={Building02Icon} className="size-4 stroke-foreground" />}
-          progressKey="count"
-          progressMax={totalCollectionCount}
-          columns={rankingColumns}
-          data={topCompaniesData}
-          emptyMessage="No companies found"
-          className="min-h-[620px]"
-          currency={userCurrency}
-          getRowNavigation={getEntryNavigation}
-        />
-
-        <RankingCard
-          title="Top Artists"
-          icon={<HugeiconsIcon icon={ColorPickerIcon} className="size-4 stroke-foreground" />}
-          progressKey="count"
-          progressMax={totalCollectionCount}
-          columns={rankingColumns}
-          data={topArtistsData}
-          emptyMessage="No artists found"
-          className="min-h-[620px]"
-          currency={userCurrency}
-          getRowNavigation={getEntryNavigation}
-        />
-
-        <RankingCard
-          title="Top Shops"
-          icon={<HugeiconsIcon icon={Store01Icon} className="size-4 stroke-foreground" />}
-          progressKey="count"
-          progressMax={totalCollectionCount}
-          columns={rankingColumns}
-          data={topShopsData}
-          emptyMessage="No shops found"
-          className="min-h-[620px]"
-          currency={userCurrency}
-          getRowNavigation={getShopNavigation}
-        />
-
-        <RankingCard
-          title="Top Materials"
-          icon={<HugeiconsIcon icon={Tag01Icon} className="size-4 stroke-foreground" />}
-          progressKey="count"
-          progressMax={totalCollectionCount}
-          columns={rankingColumns}
-          data={materialsData}
-          emptyMessage="No materials found"
-          className="min-h-[620px]"
-          currency={userCurrency}
-          getRowNavigation={getEntryNavigation}
-        />
-
-        <RankingCard
-          title="Top Classifications"
-          icon={<HugeiconsIcon icon={Tag01Icon} className="size-4 stroke-foreground" />}
-          progressKey="count"
-          progressMax={totalCollectionCount}
-          columns={rankingColumns}
-          data={classificationsData}
-          emptyMessage="No classifications found"
-          className="min-h-[620px]"
-          currency={userCurrency}
-          getRowNavigation={getEntryNavigation}
-        />
-
-        <RankingCard
-          title="Top Events"
-          icon={<HugeiconsIcon icon={Calendar01Icon} className="size-4 stroke-foreground" />}
-          progressKey="count"
-          progressMax={totalCollectionCount}
-          columns={rankingColumns}
-          data={eventsData}
-          emptyMessage="No events found"
-          className="min-h-[620px]"
-          currency={userCurrency}
-          getRowNavigation={getEntryNavigation}
-        />
-        <RankingCard
-          title="Scale"
-          icon={<HugeiconsIcon icon={Edit01Icon} className="size-4 stroke-foreground" />}
-          progressKey="count"
-          progressMax={totalCollectionCount}
-          columns={rankingColumns}
-          data={scaleData}
-          emptyMessage="No scale distribution found"
-          className="lg:col-span-2"
-          currency={userCurrency}
-          getRowNavigation={getScaleNavigation}
-        />
-        <DistributionCard
-          title="Price Range"
-          icon={<HugeiconsIcon icon={PieChartIcon} className="size-4 stroke-foreground" />}
-          data={priceRangeData}
-          maxValue={totalCollectionCount}
-          emptyMessage="No price range distribution found"
-          className="lg:col-span-2"
-          currency={userCurrency}
-          getRowNavigation={getPriceRangeNavigation}
-        />
-        <RankingCard
-          title="Most Expensive Items"
-          icon={<HugeiconsIcon icon={SparklesIcon} className="size-4 stroke-foreground" />}
-          columns={expensiveColumns}
-          data={mostExpensiveData}
-          emptyMessage="No expensive items found"
-          className="lg:col-span-2"
-          currency={userCurrency}
-          getRowNavigation={getItemNavigation}
-        />
-
-        <div className="lg:col-span-2 flex items-center justify-center py-8">
-          <p className="text-sm font-normal text-muted-foreground">
-            More coming soon! (*ˊᗜˋ*)/ᵗᑋᵃᐢᵏ ᵞᵒᵘ*
-          </p>
+      {isError && (
+        <div className="flex flex-col items-center justify-center h-64 gap-y-4">
+          <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
         </div>
-      </div>
+      )}
+
+      {analytics && (
+        <>
+          {analytics.entries.map((entry, idx) => (
+            <Section
+              key={entry.category}
+              title={`${entry.category}`}
+              uniqueOwned={entry.uniqueOwned}
+              gradientColor={SECTION_GRADIENT_COLORS[idx % SECTION_GRADIENT_COLORS.length]}
+              link={{
+                to: `/analytics/${entry.category.toLowerCase()}`,
+                label: `View all ${entry.category}`,
+              }}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <h4 className="text-xs font-medium text-muted-foreground">Top by Count</h4>
+                  <LeaderboardTable
+                    rows={entry.topByCount}
+                    columns={["name", "itemCount", "totalSpent"]}
+                    formatCell={formatCell}
+                    getRowNavigation={(row) => ({
+                      to: "/collection",
+                      search: { entries: [String(row.entryId)] },
+                    })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-xs font-medium text-muted-foreground">Top by Spend</h4>
+                  <LeaderboardTable
+                    rows={entry.topBySpend}
+                    columns={["name", "itemCount", "totalSpent"]}
+                    formatCell={formatCell}
+                    getRowNavigation={(row) => ({
+                      to: "/collection",
+                      search: { entries: [String(row.entryId)] },
+                    })}
+                  />
+                </div>
+              </div>
+            </Section>
+          ))}
+
+          <Section
+            title="Shops"
+            uniqueOwned={analytics.shops.uniqueOwned}
+            gradientColor={
+              SECTION_GRADIENT_COLORS[analytics.entries.length % SECTION_GRADIENT_COLORS.length]
+            }
+            link={{ to: "/analytics/shops", label: "View all shops" }}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <h4 className="text-xs font-medium text-muted-foreground">Top by Count</h4>
+                <LeaderboardTable
+                  rows={analytics.shops.topByCount}
+                  columns={["shop", "itemCount", "totalSpent"]}
+                  formatCell={formatCell}
+                  getRowNavigation={(row) =>
+                    row.shop
+                      ? { to: "/collection", search: { shop: [String(row.shop)] } }
+                      : undefined
+                  }
+                />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-xs font-medium text-muted-foreground">Top by Spend</h4>
+                <LeaderboardTable
+                  rows={analytics.shops.topBySpend}
+                  columns={["shop", "itemCount", "totalSpent"]}
+                  formatCell={formatCell}
+                  getRowNavigation={(row) =>
+                    row.shop
+                      ? { to: "/collection", search: { shop: [String(row.shop)] } }
+                      : undefined
+                  }
+                />
+              </div>
+            </div>
+          </Section>
+
+          <Section
+            title="Scales"
+            uniqueOwned={analytics.scales.uniqueOwned}
+            gradientColor={
+              SECTION_GRADIENT_COLORS[
+                (analytics.entries.length + 1) % SECTION_GRADIENT_COLORS.length
+              ]
+            }
+            link={{ to: "/analytics/scales", label: "View all scales" }}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <h4 className="text-xs font-medium text-muted-foreground">Top by Count</h4>
+                <LeaderboardTable
+                  rows={analytics.scales.topByCount}
+                  columns={["scale", "itemCount", "totalSpent"]}
+                  formatCell={formatCell}
+                  getRowNavigation={(row) =>
+                    row.scale
+                      ? { to: "/collection", search: { scale: [String(row.scale)] } }
+                      : undefined
+                  }
+                />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-xs font-medium text-muted-foreground">Top by Spend</h4>
+                <LeaderboardTable
+                  rows={analytics.scales.topBySpend}
+                  columns={["scale", "itemCount", "totalSpent"]}
+                  formatCell={formatCell}
+                  getRowNavigation={(row) =>
+                    row.scale
+                      ? { to: "/collection", search: { scale: [String(row.scale)] } }
+                      : undefined
+                  }
+                />
+              </div>
+            </div>
+          </Section>
+        </>
+      )}
     </div>
   );
 }

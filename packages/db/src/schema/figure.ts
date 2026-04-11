@@ -11,6 +11,7 @@ import {
   index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { user } from "./auth";
 import { createId } from "@paralleldrive/cuid2";
 import {
@@ -108,6 +109,7 @@ export const entry_to_item = pgTable(
   (t) => [
     primaryKey({ columns: [t.entryId, t.itemId] }),
     index("entry_to_item_item_id_idx").on(t.itemId),
+    index("entry_to_item_item_id_entry_id_idx").on(t.itemId, t.entryId),
   ],
 );
 
@@ -162,6 +164,12 @@ export const collection = pgTable(
   (t) => [
     index("collection_user_id_status_created_at_idx").on(t.userId, t.status, t.createdAt.desc()),
     index("collection_user_id_item_id_idx").on(t.userId, t.itemId),
+    index("collection_owned_user_id_item_id_idx")
+      .on(t.userId, t.itemId)
+      .where(sql`${t.status} = 'Owned'`),
+    index("collection_owned_user_id_shop_idx")
+      .on(t.userId, t.shop)
+      .where(sql`${t.status} = 'Owned' AND ${t.shop} <> ''`),
     index("collection_order_id_user_id_idx").on(t.orderId, t.userId),
   ],
 );

@@ -125,7 +125,7 @@ export function ShopBreakdown({
                     onMouseLeave={() => setHoveredIndex(null)}
                   >
                     <div
-                      className="h-4 rounded-full shrink-0 transition-all duration-200"
+                      className="h-4 rounded-full shrink-0 transition-[width] duration-200"
                       style={{
                         backgroundColor: entry.color,
                         width: isHovered ? "0.5rem" : "0.375rem",

@@ -551,6 +551,7 @@ class OrdersService {
         status: collection.status,
         itemTitle: item.title,
         itemImage: item.image,
+        itemCategory: item.category,
         price: collection.price,
         count: collection.count,
         shop: collection.shop,

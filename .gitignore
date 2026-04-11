@@ -25,6 +25,7 @@ dist/
 .vercel
 .cursor/
 .agents/
+skills-lock.json
 
 # deps
 node_modules/

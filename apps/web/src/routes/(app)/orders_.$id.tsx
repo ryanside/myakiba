@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, Edit01Icon, PackageIcon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, Edit03Icon, PackageIcon } from "@hugeicons/core-free-icons";
 import { createFileRoute, useParams, Link } from "@tanstack/react-router";
 import { getOrder, editOrder, deleteOrderItem } from "@/queries/orders";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -278,7 +278,7 @@ function RouteComponent() {
           <OrderForm
             renderTrigger={
               <Button variant="outline" size="sm">
-                <HugeiconsIcon icon={Edit01Icon} className="size-4" />
+                <HugeiconsIcon icon={Edit03Icon} className="size-4" />
                 Edit
               </Button>
             }

@@ -13,7 +13,7 @@ export function TextLoop({ preText, texts, interval = 3000 }: TextLoopProps) {
   useEffect(() => {
     if (texts.length <= 1) return;
 
-    const fadeDurationMs = 250;
+    const fadeDurationMs = 200;
     let switchTimer: number | undefined;
 
     const timer = window.setInterval(() => {
@@ -45,7 +45,7 @@ export function TextLoop({ preText, texts, interval = 3000 }: TextLoopProps) {
           </span>
         ))}
         <span
-          className={`inline-block whitespace-nowrap font-medium text-black transition-opacity duration-300 dark:text-white/85 ${
+          className={`inline-block whitespace-nowrap font-medium text-black transition-opacity duration-200 dark:text-white/85 ${
             isFading ? "opacity-0" : "opacity-100"
           }`}
         >
