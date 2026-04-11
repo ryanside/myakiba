@@ -4,10 +4,13 @@ import { z } from "zod";
 import { CodeIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
+const analyticsSectionSchema = z.enum(ANALYTICS_SECTIONS);
+
 export const Route = createFileRoute("/(app)/analytics_/$sectionName")({
   beforeLoad: ({ params }) => {
-    const sectionName = z.enum(ANALYTICS_SECTIONS).parse(params.sectionName);
-    if (!ANALYTICS_SECTIONS.includes(sectionName)) {
+    const sectionNameResult = analyticsSectionSchema.safeParse(params.sectionName);
+
+    if (!sectionNameResult.success) {
       throw notFound();
     }
   },
