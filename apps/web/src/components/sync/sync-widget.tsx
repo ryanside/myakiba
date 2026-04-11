@@ -43,7 +43,7 @@ export default function SyncWidget({ TriggerWrapper }: SyncWidgetProps) {
                 <span className="min-w-0 flex-1 text-sm">{config.label}</span>
                 <HugeiconsIcon
                   icon={ArrowRight01Icon}
-                  className="size-3 shrink-0 text-muted-foreground/50 -translate-x-0.5 opacity-0 transition-all duration-150 group-hover/item:translate-x-0 group-hover/item:opacity-100"
+                  className="size-3 shrink-0 text-muted-foreground/50 -translate-x-0.5 opacity-0 transition-[transform,opacity] duration-150 group-hover/item:translate-x-0 group-hover/item:opacity-100"
                 />
               </button>
             );

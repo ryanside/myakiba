@@ -62,8 +62,8 @@ function SyncIllustration() {
 
       <div className="@lg:px-24 relative flex h-10 items-center justify-between px-12">
         <div className="bg-border absolute inset-0 my-auto h-px" />
-        <div className="bg-linear-to-r mask-l-from-15% mask-l-to-40% mask-r-from-75% mask-r-to-75% from-chart-3 absolute inset-0 my-auto h-px w-1/2 via-chart-5 to-chart-6" />
-        <div className="bg-linear-to-r mask-r-from-15% mask-r-to-40% mask-l-from-75% mask-l-to-75% absolute inset-0 my-auto ml-auto h-px w-1/2 from-chart-2 via-chart-4 to-chart-6" />
+        <div className="bg-chart-5 mask-l-from-15% mask-l-to-40% mask-r-from-75% mask-r-to-75% absolute inset-0 my-auto h-px w-1/2" />
+        <div className="bg-chart-6 mask-r-from-15% mask-r-to-40% mask-l-from-75% mask-l-to-75% absolute inset-0 my-auto ml-auto h-px w-1/2" />
 
         <FigureThumb src={FIGURE_ITEMS[2]} />
 

@@ -2,7 +2,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Copy01Icon,
   Delete02Icon,
-  Edit01Icon,
+  Edit03Icon,
   Loading03Icon,
   MoreHorizontalIcon,
   MoveIcon,
@@ -32,8 +32,12 @@ import { cn } from "@/lib/utils";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
+import type { CSSProperties } from "react";
 import type { RowSelectionState } from "@tanstack/react-table";
 import { ThemedBadge } from "../reui/badge";
+
+const MAX_STAGGER_INDEX = 20;
+const STAGGER_DELAY_MS = 30;
 
 interface CollectionCardGridProps {
   readonly items: readonly CollectionItem[];
@@ -125,19 +129,21 @@ export function CollectionCardGrid({
 
   return (
     <div className="grid gap-3" style={gridStyle}>
-      {items.map((item) => {
+      {items.map((item, index) => {
         const isSelected = !!rowSelection[item.id];
         const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
         const selectedItems = {
           collectionIds: new Set([item.id]),
           orderIds: item.orderId ? new Set([item.orderId]) : new Set<string>(),
         };
+        const staggerDelay = Math.min(index, MAX_STAGGER_INDEX) * STAGGER_DELAY_MS;
 
         return (
           <Card
             key={item.id}
             size="sm"
-            className={cn("relative p-0!", isSelected && "ring-primary")}
+            className={cn("animate-data-in relative p-0!", isSelected && "ring-primary")}
+            style={{ "--data-in-delay": `${staggerDelay}ms` } as CSSProperties}
           >
             {/* Selection + Actions overlay */}
             <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-between p-2">
@@ -199,7 +205,7 @@ export function CollectionCardGrid({
                     <CollectionItemForm
                       renderTrigger={
                         <DropdownMenuItem closeOnClick={false} disabled={isPending}>
-                          <HugeiconsIcon icon={Edit01Icon} />
+                          <HugeiconsIcon icon={Edit03Icon} />
                           {isPending ? "Saving..." : "Edit item"}
                         </DropdownMenuItem>
                       }

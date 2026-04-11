@@ -211,7 +211,7 @@ function ActiveSessionItem({ session, onNavigate }: ActiveSessionProps) {
       to="/sync/$id"
       params={{ id: session.id }}
       onClick={onNavigate}
-      className="group block rounded-md px-2.5 py-2 transition-colors duration-150 hover:bg-accent"
+      className="group block rounded-md py-2 transition-colors duration-150 hover:bg-accent"
       aria-label={`View ${typeConfig.label} sync session`}
     >
       <div className="flex items-center justify-between">
@@ -286,7 +286,7 @@ function RecentSessionItem({ session, onNavigate }: RecentSessionProps) {
       to="/sync/$id"
       params={{ id: session.id }}
       onClick={onNavigate}
-      className="group flex items-start gap-2.5 rounded-md px-2.5 py-2 transition-colors duration-150 hover:bg-accent"
+      className="group flex items-start gap-2.5 rounded-md  py-2 transition-colors duration-150 hover:bg-accent"
       aria-label={`View ${typeConfig.label} sync session from ${formatRelativeTimeToNow(session.createdAt)}`}
     >
       <div className="mt-0.5 flex size-5 shrink-0 items-center justify-center">

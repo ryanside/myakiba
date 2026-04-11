@@ -1,14 +1,13 @@
+import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   AddSquareIcon,
   ArrowRight01Icon,
-  Delete02Icon,
-  Edit01Icon,
+  Edit03Icon,
   Loading03Icon,
   MinusSignSquareIcon,
   MoreHorizontalIcon,
   PackageIcon,
-  ViewIcon,
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -17,10 +16,19 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Link } from "@tanstack/react-router";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
 import {
@@ -81,6 +89,95 @@ function ExpandButton({ row }: { readonly row: Row<OrderListItem> }) {
   ) : null;
 }
 
+function OrderActionsCell({
+  order,
+  isPending,
+  onEditOrder,
+  onDeleteOrders,
+  currency,
+}: Pick<OrdersColumnsParams, "onEditOrder" | "onDeleteOrders" | "currency"> & {
+  readonly order: OrderListItem;
+  readonly isPending: boolean;
+}) {
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  return (
+    <>
+      <div className="flex items-center justify-end gap-0.5">
+        <OrderForm
+          renderTrigger={
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              disabled={isPending}
+              className="text-muted-foreground"
+            >
+              <HugeiconsIcon icon={Edit03Icon} className="size-3" />
+              <span className="sr-only">Edit order</span>
+            </Button>
+          }
+          type="edit-order"
+          orderData={order}
+          callbackFn={onEditOrder}
+          currency={currency}
+        />
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button variant="ghost" size="icon-sm" disabled={isPending}>
+                <span className="sr-only">Open menu</span>
+                <HugeiconsIcon
+                  icon={isPending ? Loading03Icon : MoreHorizontalIcon}
+                  className={cn("h-4 w-4", isPending && "animate-spin")}
+                />
+              </Button>
+            }
+          />
+          <DropdownMenuContent align="end">
+            <DropdownMenuGroup>
+              <DropdownMenuItem>
+                <Link to="/orders/$id" params={{ id: order.orderId }}>
+                  View details
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              disabled={isPending}
+              onClick={() => setDeleteOpen(true)}
+            >
+              Delete order
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete order?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this order and all its items.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                setDeleteOpen(false);
+                onDeleteOrders(new Set([order.orderId]));
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
 interface OrdersColumnsParams {
   onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
   onDeleteOrders: (orderIds: Set<string>) => Promise<void>;
@@ -138,7 +235,7 @@ export function createOrdersColumns({
           />
         </>
       ),
-      size: 30,
+      size: 28,
       enableSorting: false,
       enableHiding: false,
       enableResizing: false,
@@ -150,7 +247,7 @@ export function createOrdersColumns({
       id: "expand",
       header: () => null,
       cell: ({ row }) => <ExpandButton row={row} />,
-      size: 25,
+      size: 24,
       enableSorting: false,
       enableHiding: false,
       enableResizing: false,
@@ -370,7 +467,7 @@ export function createOrdersColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 120,
+      size: 108,
       meta: {
         headerTitle: "Order Date",
         skeleton: <Skeleton className="h-6" />,
@@ -408,7 +505,7 @@ export function createOrdersColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 120,
+      size: 108,
       meta: {
         headerTitle: "Payment Date",
         skeleton: <Skeleton className="h-6" />,
@@ -446,7 +543,7 @@ export function createOrdersColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 120,
+      size: 108,
       meta: {
         headerTitle: "Shipping Date",
         skeleton: <Skeleton className="h-6" />,
@@ -484,7 +581,7 @@ export function createOrdersColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 120,
+      size: 108,
       meta: {
         headerTitle: "Collection Date",
         skeleton: <Skeleton className="h-6" />,
@@ -510,7 +607,7 @@ export function createOrdersColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 100,
+      size: 78,
       meta: {
         skeleton: <Skeleton className="h-6" />,
       },
@@ -623,7 +720,7 @@ export function createOrdersColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 100,
+      size: 90,
       meta: {
         headerTitle: "Shipping Fee",
         skeleton: <Skeleton className="h-6" />,
@@ -663,7 +760,7 @@ export function createOrdersColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 100,
+      size: 90,
       meta: {
         headerTitle: "Taxes",
         skeleton: <Skeleton className="h-6" />,
@@ -703,7 +800,7 @@ export function createOrdersColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 100,
+      size: 90,
       meta: {
         headerTitle: "Duties",
         skeleton: <Skeleton className="h-6" />,
@@ -743,7 +840,7 @@ export function createOrdersColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 100,
+      size: 90,
       meta: {
         headerTitle: "Tariffs",
         skeleton: <Skeleton className="h-6" />,
@@ -783,7 +880,7 @@ export function createOrdersColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 100,
+      size: 90,
       meta: {
         headerTitle: "Misc Fees",
         skeleton: <Skeleton className="h-6" />,
@@ -822,7 +919,7 @@ export function createOrdersColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 90,
+      size: 105,
       meta: {
         skeleton: <Skeleton className="h-6" />,
       },
@@ -833,60 +930,17 @@ export function createOrdersColumns({
       cell: ({ row }) => {
         const order = row.original;
         const isPending = isOrderPending(order.orderId);
-
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button variant="ghost" className="h-8 w-8 p-0" disabled={isPending}>
-                  <span className="sr-only">Open menu</span>
-                  <HugeiconsIcon
-                    icon={isPending ? Loading03Icon : MoreHorizontalIcon}
-                    className={cn("h-4 w-4", isPending && "animate-spin")}
-                  />
-                </Button>
-              }
-            />
-            <DropdownMenuContent align="end">
-              <DropdownMenuGroup>
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuItem>
-                  <Link
-                    to="/orders/$id"
-                    params={{ id: order.orderId }}
-                    className="flex items-center gap-1.5"
-                  >
-                    <HugeiconsIcon icon={ViewIcon} />
-                    View details
-                  </Link>
-                </DropdownMenuItem>
-                <OrderForm
-                  renderTrigger={
-                    <DropdownMenuItem closeOnClick={false} disabled={isPending}>
-                      <HugeiconsIcon icon={Edit01Icon} />
-                      {isPending ? "Saving..." : "Edit order"}
-                    </DropdownMenuItem>
-                  }
-                  type="edit-order"
-                  orderData={order}
-                  callbackFn={onEditOrder}
-                  currency={currency}
-                />
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                disabled={isPending}
-                onClick={() => onDeleteOrders(new Set([order.orderId]))}
-              >
-                <HugeiconsIcon icon={Delete02Icon} />
-                {isPending ? "Deleting..." : "Delete order"}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <OrderActionsCell
+            order={order}
+            isPending={isPending}
+            onEditOrder={onEditOrder}
+            onDeleteOrders={onDeleteOrders}
+            currency={currency}
+          />
         );
       },
-      size: 50,
+      size: 56,
       enableSorting: false,
       enableHiding: false,
       enableResizing: false,

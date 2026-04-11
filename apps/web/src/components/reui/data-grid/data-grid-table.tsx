@@ -267,11 +267,11 @@ function DataGridTableBodyRow<TData>({
   return (
     <tr
       ref={dndRef}
-      style={{ ...(dndStyle ? dndStyle : null) }}
+      style={dndStyle ?? undefined}
       data-state={table.options.enableRowSelection && row.getIsSelected() ? "selected" : undefined}
       onClick={() => props.onRowClick && props.onRowClick(row.original)}
       className={cn(
-        "group/row hover:bg-muted/40 data-[state=selected]:bg-muted/50",
+        "animate-data-in group/row hover:bg-muted/40 data-[state=selected]:bg-muted/50",
         props.onRowClick && "cursor-pointer",
         !props.tableLayout?.stripped &&
           props.tableLayout?.rowBorder &&

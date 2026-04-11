@@ -2,7 +2,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Add01Icon,
   Cancel01Icon,
-  Edit01Icon,
+  Edit03Icon,
   InformationCircleIcon,
   Loading03Icon,
 } from "@hugeicons/core-free-icons";
@@ -39,6 +39,7 @@ import type { Currency } from "@myakiba/contracts/shared/types";
 import { majorStringToMinorUnits } from "@myakiba/utils/currency";
 import { createDefaultSyncFormOrderItem, extractMfcItemId } from "@/lib/sync";
 import { getCurrencyLocale } from "@/lib/locale";
+import { ORDER_STATUS_COLORS } from "@/lib/orders";
 
 type SyncOrderItemFormProps = {
   readonly orderId: string;
@@ -171,7 +172,7 @@ export default function SyncOrderItemForm({
                         <DialogTrigger
                           render={
                             <Button variant="ghost" size="icon" type="button">
-                              <HugeiconsIcon icon={Edit01Icon} />
+                              <HugeiconsIcon icon={Edit03Icon} />
                             </Button>
                           }
                         />
@@ -296,12 +297,26 @@ export default function SyncOrderItemForm({
                                         }
                                       >
                                         <SelectTrigger className="w-full">
-                                          <SelectValue placeholder="Select status" />
+                                          <SelectValue placeholder="Select status">
+                                            {statusField.state.value && (
+                                              <span className="flex items-center gap-2">
+                                                <span
+                                                  className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[statusField.state.value] ?? "bg-muted"}`}
+                                                />
+                                                {statusField.state.value}
+                                              </span>
+                                            )}
+                                          </SelectValue>
                                         </SelectTrigger>
                                         <SelectContent>
                                           {ORDER_STATUSES.map((status) => (
                                             <SelectItem key={status} value={status}>
-                                              {status}
+                                              <span className="flex items-center gap-2">
+                                                <span
+                                                  className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[status] ?? "bg-muted"}`}
+                                                />
+                                                {status}
+                                              </span>
                                             </SelectItem>
                                           ))}
                                         </SelectContent>

@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, Cancel01Icon, Edit01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Cancel01Icon, Edit03Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "../ui/button";
 import type { SyncCollectionItem } from "@myakiba/contracts/sync/types";
@@ -164,7 +164,7 @@ export default function SyncCollectionForm({
                           <DialogTrigger
                             render={
                               <Button variant="ghost" size="icon" type="button">
-                                <HugeiconsIcon icon={Edit01Icon} />
+                                <HugeiconsIcon icon={Edit03Icon} />
                               </Button>
                             }
                           />
