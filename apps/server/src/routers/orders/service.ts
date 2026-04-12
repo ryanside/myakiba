@@ -175,6 +175,7 @@ class OrdersService {
       .orderBy(
         orderBy === "asc" ? asc(sortByColumn) : desc(sortByColumn),
         orderBy === "asc" ? asc(order.createdAt) : desc(order.createdAt),
+        orderBy === "asc" ? asc(order.id) : desc(order.id),
       )
       .limit(limit)
       .offset(offset);
@@ -575,7 +576,7 @@ class OrdersService {
       .innerJoin(item, eq(collection.itemId, item.id))
       .leftJoin(item_release, eq(collection.releaseId, item_release.id))
       .where(and(eq(collection.userId, userId), eq(collection.orderId, orderId)))
-      .orderBy(asc(item.title))
+      .orderBy(asc(item.title), asc(collection.id))
       .limit(limit)
       .offset(offset);
 

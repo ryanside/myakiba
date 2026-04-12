@@ -37,7 +37,6 @@ import {
   type RowSelectionState,
   type OnChangeFn,
 } from "@tanstack/react-table";
-import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import type { CascadeOptions, EditedOrder } from "@myakiba/contracts/orders/schema";
@@ -61,25 +60,13 @@ import type {
 } from "@myakiba/contracts/shared/types";
 import { Skeleton } from "../ui/skeleton";
 import { ImageThumbnail } from "../ui/image-thumbnail";
-import { orderItemsQueryOptions } from "@/hooks/use-orders";
-import { ORDER_ITEM_PAGE_SIZE } from "./order-item-sub-data-grid";
+
+const SHIPPING_METHOD_OPTIONS = [...SHIPPING_METHODS];
+const ORDER_STATUS_OPTIONS = [...ORDER_STATUSES];
 
 function ExpandButton({ row }: { readonly row: Row<OrderListItem> }) {
-  const queryClient = useQueryClient();
-
-  const handlePointerEnter = () => {
-    void queryClient.prefetchQuery(
-      orderItemsQueryOptions(row.original.orderId, ORDER_ITEM_PAGE_SIZE, 0),
-    );
-  };
-
   return row.getCanExpand() ? (
-    <Button
-      onClick={row.getToggleExpandedHandler()}
-      onPointerEnter={handlePointerEnter}
-      size="icon-sm"
-      variant="ghost"
-    >
+    <Button onClick={row.getToggleExpandedHandler()} size="icon-sm" variant="ghost">
       {row.getIsExpanded() ? (
         <HugeiconsIcon icon={MinusSignSquareIcon} />
       ) : (
@@ -100,6 +87,7 @@ function OrderActionsCell({
   readonly isPending: boolean;
 }) {
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <>
@@ -121,7 +109,7 @@ function OrderActionsCell({
           callbackFn={onEditOrder}
           currency={currency}
         />
-        <DropdownMenu>
+        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
           <DropdownMenuTrigger
             render={
               <Button variant="ghost" size="icon-sm" disabled={isPending}>
@@ -133,46 +121,53 @@ function OrderActionsCell({
               </Button>
             }
           />
-          <DropdownMenuContent align="end">
-            <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <Link to="/orders/$id" params={{ id: order.orderId }}>
-                  View details
-                </Link>
+          {menuOpen ? (
+            <DropdownMenuContent align="end">
+              <DropdownMenuGroup>
+                <DropdownMenuItem>
+                  <Link to="/orders/$id" params={{ id: order.orderId }}>
+                    View details
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                variant="destructive"
+                disabled={isPending}
+                onClick={() => {
+                  setMenuOpen(false);
+                  setDeleteOpen(true);
+                }}
+              >
+                Delete order
               </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              variant="destructive"
-              disabled={isPending}
-              onClick={() => setDeleteOpen(true)}
-            >
-              Delete order
-            </DropdownMenuItem>
-          </DropdownMenuContent>
+            </DropdownMenuContent>
+          ) : null}
         </DropdownMenu>
       </div>
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent size="sm">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete order?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete this order and all its items.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={() => {
-                setDeleteOpen(false);
-                onDeleteOrders(new Set([order.orderId]));
-              }}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
+        {deleteOpen ? (
+          <AlertDialogContent size="sm">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete order?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete this order and all its items.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                onClick={() => {
+                  setDeleteOpen(false);
+                  onDeleteOrders(new Set([order.orderId]));
+                }}
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        ) : null}
       </AlertDialog>
     </>
   );
@@ -371,7 +366,7 @@ export function createOrdersColumns({
           <div className="space-y-px">
             <SelectCell
               value={order.shippingMethod}
-              options={[...SHIPPING_METHODS]}
+              options={SHIPPING_METHOD_OPTIONS}
               disabled={isPending}
               onSubmit={async (value) => {
                 const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
@@ -898,7 +893,7 @@ export function createOrdersColumns({
         return (
           <SelectCell
             value={status}
-            options={[...ORDER_STATUSES]}
+            options={ORDER_STATUS_OPTIONS}
             colorMap={ORDER_STATUS_COLORS}
             disabled={isPending}
             onSubmit={async (value) => {

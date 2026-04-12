@@ -1,11 +1,14 @@
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
 
 export interface RowNavigation {
   to: string;
   search?: Record<string, string[] | number[]>;
 }
+
+type CellValue = string | number | null;
 
 const COLUMN_LABELS: Record<string, string> = {
   name: "name",
@@ -15,20 +18,67 @@ const COLUMN_LABELS: Record<string, string> = {
   scale: "scale",
 };
 
-export function LeaderboardTable({
+const ROW_NUMBER_COLUMN_ID = "__rowNumber";
+
+export function LeaderboardTable<TRow extends Record<string, CellValue>>({
   rows,
   columns,
   formatCell,
   getRowNavigation,
 }: {
-  readonly rows: readonly Record<string, string | number | null>[];
+  readonly rows: readonly TRow[];
   readonly columns: readonly string[];
-  readonly formatCell?: (column: string, value: string | number | null) => string | number | null;
-  readonly getRowNavigation?: (
-    row: Record<string, string | number | null>,
-  ) => RowNavigation | undefined;
+  readonly formatCell?: (column: string, value: CellValue) => CellValue;
+  readonly getRowNavigation?: (row: TRow) => RowNavigation | undefined;
 }): ReactNode {
   const navigate = useNavigate();
+  const tableData = useMemo(() => Array.from(rows), [rows]);
+  const tableColumns = useMemo<ColumnDef<TRow, CellValue>[]>(
+    () => [
+      {
+        id: ROW_NUMBER_COLUMN_ID,
+        header: "#",
+        cell: ({ row }) => row.index + 1,
+      },
+      ...columns.map(
+        (column): ColumnDef<TRow, CellValue> => ({
+          id: column,
+          accessorFn: (row) => row[column] ?? null,
+          header: COLUMN_LABELS[column] ?? column,
+          cell: ({ getValue }) => {
+            const value = getValue();
+
+            return (formatCell ? formatCell(column, value) : value) ?? "—";
+          },
+        }),
+      ),
+    ],
+    [columns, formatCell],
+  );
+  const table = useReactTable({
+    data: tableData,
+    columns: tableColumns,
+    getCoreRowModel: getCoreRowModel(),
+    getRowId: (row, index) => {
+      if (typeof row.entryId === "string" && row.entryId.length > 0) {
+        return `entry-${row.entryId}`;
+      }
+
+      if (typeof row.shop === "string" && row.shop.length > 0) {
+        return `shop-${row.shop}`;
+      }
+
+      if (typeof row.scale === "string" && row.scale.length > 0) {
+        return `scale-${row.scale}`;
+      }
+
+      if (typeof row.name === "string" && row.name.length > 0) {
+        return `name-${row.name}-${index}`;
+      }
+
+      return `row-${index}`;
+    },
+  });
 
   if (rows.length === 0) {
     return <p className="text-muted-foreground text-xs italic">No data</p>;
@@ -37,21 +87,28 @@ export function LeaderboardTable({
   return (
     <table className="w-full text-xs border-collapse">
       <thead>
-        <tr>
-          <th className="text-left p-1.5 border-b font-medium text-muted-foreground">#</th>
-          {columns.map((col) => (
-            <th key={col} className="text-left p-1.5 border-b font-medium text-muted-foreground">
-              {COLUMN_LABELS[col] ?? col}
-            </th>
-          ))}
-        </tr>
+        {table.getHeaderGroups().map((headerGroup) => (
+          <tr key={headerGroup.id}>
+            {headerGroup.headers.map((header) => (
+              <th
+                key={header.id}
+                className="text-left p-1.5 border-b font-medium text-muted-foreground"
+              >
+                {header.isPlaceholder
+                  ? null
+                  : flexRender(header.column.columnDef.header, header.getContext())}
+              </th>
+            ))}
+          </tr>
+        ))}
       </thead>
       <tbody>
-        {rows.map((row, idx) => {
-          const rowNav = getRowNavigation?.(row);
+        {table.getRowModel().rows.map((row) => {
+          const rowNav = getRowNavigation?.(row.original);
+
           return (
             <tr
-              key={idx}
+              key={row.id}
               className={cn(
                 "border-b border-border/50 hover:bg-muted/40",
                 rowNav && "cursor-pointer",
@@ -62,10 +119,15 @@ export function LeaderboardTable({
                 }
               }}
             >
-              <td className="p-1.5 text-muted-foreground">{idx + 1}</td>
-              {columns.map((col) => (
-                <td key={col} className="p-1.5">
-                  {(formatCell ? formatCell(col, row[col]) : row[col]) ?? "—"}
+              {row.getVisibleCells().map((cell) => (
+                <td
+                  key={cell.id}
+                  className={cn(
+                    "p-1.5",
+                    cell.column.id === ROW_NUMBER_COLUMN_ID && "text-muted-foreground",
+                  )}
+                >
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </td>
               ))}
             </tr>

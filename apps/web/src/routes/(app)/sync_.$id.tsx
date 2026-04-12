@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
+import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { createFileRoute, useParams } from "@tanstack/react-router";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { getCoreRowModel, type PaginationState, useReactTable } from "@tanstack/react-table";
 import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
@@ -9,7 +9,7 @@ import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagina
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { ThemedBadge } from "@/components/reui/badge";
-import { Button } from "@/components/ui/button";
+import { BackLink } from "@/components/ui/back-link";
 import type { EnrichedSyncSessionItemRow } from "@myakiba/contracts/sync/types";
 import type { SyncSessionStatus, SyncType } from "@myakiba/contracts/shared/types";
 import { fetchSyncSessionDetail } from "@/queries/sync";
@@ -109,21 +109,7 @@ function RouteComponent() {
           <h1 className="text-2xl tracking-tight">Sync Session</h1>
         </div>
         <div className="flex flex-col gap-3">
-          <Button
-            variant="link"
-            size="sm"
-            render={<Link to="/sync" />}
-            nativeButton={false}
-            className="self-start"
-          >
-            <HugeiconsIcon
-              icon={ArrowLeft01Icon}
-              strokeWidth={2}
-              data-icon="inline-start"
-              aria-hidden="true"
-            />
-            Back to Sync
-          </Button>
+          <BackLink to="/sync" text="Back" font="sans" className="self-start" />
           <p className="text-lg font-medium text-destructive">Error: {error.message}</p>
         </div>
       </div>
@@ -133,21 +119,7 @@ function RouteComponent() {
   if (!session) {
     return (
       <div className="flex flex-col gap-3">
-        <Button
-          variant="link"
-          size="sm"
-          render={<Link to="/sync" />}
-          nativeButton={false}
-          className="self-start"
-        >
-          <HugeiconsIcon
-            icon={ArrowLeft01Icon}
-            strokeWidth={2}
-            data-icon="inline-start"
-            aria-hidden="true"
-          />
-          Back to Sync
-        </Button>
+        <BackLink to="/sync" text="Back" font="sans" className="self-start" />
         <p className="text-lg font-medium text-muted-foreground">Session not found</p>
       </div>
     );
@@ -159,21 +131,7 @@ function RouteComponent() {
   return (
     <div className="w-full space-y-8">
       <div>
-        <Button
-          variant="link"
-          size="sm"
-          render={<Link to="/sync" />}
-          nativeButton={false}
-          className="self-start"
-        >
-          <HugeiconsIcon
-            icon={ArrowLeft01Icon}
-            strokeWidth={2}
-            data-icon="inline-start"
-            aria-hidden="true"
-          />
-          Back to Sync
-        </Button>
+        <BackLink to="/sync" text="Back" font="sans" className="self-start" />
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex flex-col gap-1.5">

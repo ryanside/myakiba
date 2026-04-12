@@ -74,6 +74,7 @@ export function SyncSessionItemSubDataGrid({ sessionId }: SyncSessionItemSubData
         recordCount={totalItems}
         isLoading={isDetailPending}
         loadingMode="skeleton"
+        skeletonRowCount={1}
         tableLayout={{
           rowBorder: true,
           headerBackground: true,

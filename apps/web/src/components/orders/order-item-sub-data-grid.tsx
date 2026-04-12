@@ -125,6 +125,7 @@ export function OrderItemSubDataGrid({
         recordCount={totalCount}
         isLoading={isPending}
         loadingMode="skeleton"
+        skeletonRowCount={1}
         tableLayout={{
           dense: true,
           rowBorder: true,

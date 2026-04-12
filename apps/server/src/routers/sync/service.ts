@@ -685,6 +685,7 @@ class SyncService {
         .orderBy(
           sql`CASE WHEN ${syncSession.status} IN ('pending', 'processing') THEN 0 ELSE 1 END`,
           desc(syncSession.createdAt),
+          desc(syncSession.id),
         )
         .limit(limit)
         .offset(offset),
@@ -730,7 +731,7 @@ class SyncService {
         and(eq(item.externalId, syncSessionItem.itemExternalId), eq(item.source, "mfc")),
       )
       .where(eq(syncSessionItem.syncSessionId, sessionId))
-      .orderBy(syncSessionItem.createdAt);
+      .orderBy(syncSessionItem.createdAt, syncSessionItem.id);
 
     const countQuery = db
       .select({ total: count() })
