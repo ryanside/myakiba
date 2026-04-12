@@ -88,6 +88,7 @@ function CollectionActionsCell({
   readonly isPending: boolean;
 }) {
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const selectedItems = {
     collectionIds: new Set([item.id]),
     orderIds: item.orderId ? new Set([item.orderId]) : new Set<string>(),
@@ -113,7 +114,7 @@ function CollectionActionsCell({
           currency={currency}
           dateFormat={dateFormat}
         />
-        <DropdownMenu>
+        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
           <DropdownMenuTrigger
             render={
               <Button variant="ghost" size="icon-sm" disabled={isPending}>
@@ -125,71 +126,78 @@ function CollectionActionsCell({
               </Button>
             }
           />
-          <DropdownMenuContent align="end">
-            <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <Link to="/items/$id" params={{ id: item.itemId }}>
-                  View details
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  if (item.itemExternalId) {
-                    navigator.clipboard.writeText(item.itemExternalId.toString());
-                    toast.success("Copied MFC item ID to clipboard");
-                  } else {
-                    toast.error("No MFC item ID for custom items");
+          {menuOpen ? (
+            <DropdownMenuContent align="end">
+              <DropdownMenuGroup>
+                <DropdownMenuItem>
+                  <Link to="/items/$id" params={{ id: item.itemId }}>
+                    View details
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    if (item.itemExternalId) {
+                      navigator.clipboard.writeText(item.itemExternalId.toString());
+                      toast.success("Copied MFC item ID to clipboard");
+                    } else {
+                      toast.error("No MFC item ID for custom items");
+                    }
+                  }}
+                >
+                  Copy MFC ID
+                </DropdownMenuItem>
+                <UnifiedItemMoveForm
+                  renderTrigger={
+                    <DropdownMenuItem closeOnClick={false} disabled={isPending}>
+                      {isPending ? "Assigning..." : "Assign Order"}
+                    </DropdownMenuItem>
                   }
+                  selectedItems={selectedItems}
+                  onMoveToExisting={onAddCollectionItemsToOrder}
+                  onMoveToNew={onAddCollectionItemsToNewOrder}
+                  clearSelections={() => {}}
+                  currency={currency}
+                  intent="add"
+                />
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                variant="destructive"
+                disabled={isPending}
+                onClick={() => {
+                  setMenuOpen(false);
+                  setDeleteOpen(true);
                 }}
               >
-                Copy MFC ID
+                Delete item
               </DropdownMenuItem>
-              <UnifiedItemMoveForm
-                renderTrigger={
-                  <DropdownMenuItem closeOnClick={false} disabled={isPending}>
-                    {isPending ? "Assigning..." : "Assign Order"}
-                  </DropdownMenuItem>
-                }
-                selectedItems={selectedItems}
-                onMoveToExisting={onAddCollectionItemsToOrder}
-                onMoveToNew={onAddCollectionItemsToNewOrder}
-                clearSelections={() => {}}
-                currency={currency}
-                intent="add"
-              />
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              variant="destructive"
-              disabled={isPending}
-              onClick={() => setDeleteOpen(true)}
-            >
-              Delete item
-            </DropdownMenuItem>
-          </DropdownMenuContent>
+            </DropdownMenuContent>
+          ) : null}
         </DropdownMenu>
       </div>
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent size="sm">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete item?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently remove this item from your collection.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={() => {
-                setDeleteOpen(false);
-                onDeleteCollectionItems(new Set([item.id]));
-              }}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
+        {deleteOpen ? (
+          <AlertDialogContent size="sm">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete item?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently remove this item from your collection.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                onClick={() => {
+                  setDeleteOpen(false);
+                  onDeleteCollectionItems(new Set([item.id]));
+                }}
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        ) : null}
       </AlertDialog>
     </>
   );
@@ -388,12 +396,6 @@ export function createCollectionColumns({
                 ...item,
                 shop: newValue,
               });
-            }}
-            validate={(value) => {
-              if (!value || value.trim().length === 0) {
-                return "Shop cannot be empty";
-              }
-              return true;
             }}
             previewClassName="text-sm"
           />

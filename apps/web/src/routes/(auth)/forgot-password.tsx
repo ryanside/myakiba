@@ -1,12 +1,12 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, Loading03Icon, Mail01Icon } from "@hugeicons/core-free-icons";
+import { Loading03Icon, Mail01Icon } from "@hugeicons/core-free-icons";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { authClient } from "@/lib/auth-client";
 import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { BackLink } from "@/components/ui/back-link";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Turnstile } from "@marsidev/react-turnstile";
@@ -65,15 +65,7 @@ function RouteComponent() {
     return (
       <div className="bg-background flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
         <div className="absolute top-4 left-4">
-          <Button variant="link" size="sm" render={<Link to="/" />} nativeButton={false}>
-            <HugeiconsIcon
-              icon={ArrowLeft01Icon}
-              strokeWidth={2}
-              data-icon="inline-start"
-              aria-hidden="true"
-            />
-            Back to Home
-          </Button>
+          <BackLink to="/" text="Back to Home" font="sans" />
         </div>
         <div className="w-full max-w-md">
           <div className="flex flex-col gap-6">
@@ -102,15 +94,7 @@ function RouteComponent() {
               </p>
             </div>
             <div className="flex justify-center">
-              <Button variant="link" size="sm" render={<Link to="/login" />} nativeButton={false}>
-                <HugeiconsIcon
-                  icon={ArrowLeft01Icon}
-                  strokeWidth={2}
-                  data-icon="inline-start"
-                  aria-hidden="true"
-                />
-                Back to Login
-              </Button>
+              <BackLink to="/login" text="Back to Login" font="sans" />
             </div>
           </div>
         </div>
@@ -121,15 +105,7 @@ function RouteComponent() {
   return (
     <div className="bg-background flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
       <div className="absolute top-4 left-4">
-        <Button variant="link" size="sm" render={<Link to="/" />} nativeButton={false}>
-          <HugeiconsIcon
-            icon={ArrowLeft01Icon}
-            strokeWidth={2}
-            data-icon="inline-start"
-            aria-hidden="true"
-          />
-          Back to Home
-        </Button>
+        <BackLink to="/" text="Back to Home" font="sans" />
       </div>
       <div className="w-full max-w-md">
         <div className="flex flex-col gap-6">
@@ -207,15 +183,12 @@ function RouteComponent() {
           </form>
           <div className="text-center text-sm">
             Remember your password?{" "}
-            <Link
+            <BackLink
               to="/login"
-              className={cn(
-                buttonVariants({ variant: "link" }),
-                "mx-0 p-0 w-fit text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline",
-              )}
-            >
-              Back to Login
-            </Link>
+              text="Back to Login"
+              font="sans"
+              className="inline-flex py-0 mb-0 align-baseline"
+            />
           </div>
         </div>
       </div>

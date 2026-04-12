@@ -1,7 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Calendar01Icon,
-  ArrowLeft01Icon,
   Delete01Icon,
   Edit03Icon,
   Loading03Icon,
@@ -13,6 +12,7 @@ import { createFileRoute, useParams, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { app, getErrorMessage } from "@/lib/treaty-client";
+import { BackLink } from "@/components/ui/back-link";
 import { Button } from "@/components/ui/button";
 import { Badge, ThemedBadge } from "@/components/reui/badge";
 import {
@@ -358,21 +358,7 @@ function RouteComponent() {
     console.error(error);
     return (
       <div className="flex flex-col items-center justify-center gap-y-4">
-        <Button
-          variant="link"
-          size="sm"
-          render={<Link to="/collection" />}
-          nativeButton={false}
-          className="self-start"
-        >
-          <HugeiconsIcon
-            icon={ArrowLeft01Icon}
-            strokeWidth={2}
-            data-icon="inline-start"
-            aria-hidden="true"
-          />
-          Back to Collection
-        </Button>
+        <BackLink to="/collection" text="Back" font="sans" className="self-start" />
         <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
       </div>
     );
@@ -395,21 +381,7 @@ function RouteComponent() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Button
-        variant="link"
-        size="sm"
-        render={<Link to="/collection" />}
-        nativeButton={false}
-        className="self-start"
-      >
-        <HugeiconsIcon
-          icon={ArrowLeft01Icon}
-          strokeWidth={2}
-          data-icon="inline-start"
-          aria-hidden="true"
-        />
-        Back to Collection
-      </Button>
+      <BackLink to="/collection" text="Back" font="sans" className="self-start" />
 
       {/* Hero: Image + Item Identity */}
       <div className="flex flex-col sm:flex-row gap-6">

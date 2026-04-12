@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useCallback, type ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { getAnalytics } from "@/queries/analytics";
@@ -7,6 +7,10 @@ import { LeaderboardTable } from "@/components/analytics/leaderboard-table";
 import { SECTION_GRADIENT_COLORS, Section } from "@/components/analytics/section";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
+
+const ENTRY_LEADERBOARD_COLUMNS = ["name", "itemCount", "totalSpent"] as const;
+const SHOP_LEADERBOARD_COLUMNS = ["shop", "itemCount", "totalSpent"] as const;
+const SCALE_LEADERBOARD_COLUMNS = ["scale", "itemCount", "totalSpent"] as const;
 
 export const Route = createFileRoute("/(app)/analytics")({
   component: RouteComponent,
@@ -34,12 +38,16 @@ function RouteComponent(): ReactNode {
 
   const analytics = data?.analytics;
 
-  const formatCell = (column: string, value: string | number | null): string | number | null => {
-    if (column === "totalSpent" && value !== null) {
-      return formatCurrencyFromMinorUnits(Number(value), currency, locale);
-    }
-    return value;
-  };
+  const formatCell = useCallback(
+    (column: string, value: string | number | null): string | number | null => {
+      if (column === "totalSpent" && value !== null) {
+        return formatCurrencyFromMinorUnits(Number(value), currency, locale);
+      }
+
+      return value;
+    },
+    [currency, locale],
+  );
 
   return (
     <div className="flex flex-col gap-6 mx-auto max-w-4xl">
@@ -64,7 +72,7 @@ function RouteComponent(): ReactNode {
           {analytics.entries.map((entry, idx) => (
             <Section
               key={entry.category}
-              title={`${entry.category}`}
+              title={entry.category}
               uniqueOwned={entry.uniqueOwned}
               gradientColor={SECTION_GRADIENT_COLORS[idx % SECTION_GRADIENT_COLORS.length]}
               link={{
@@ -77,7 +85,7 @@ function RouteComponent(): ReactNode {
                   <h4 className="text-xs font-medium text-muted-foreground">Top by Count</h4>
                   <LeaderboardTable
                     rows={entry.topByCount}
-                    columns={["name", "itemCount", "totalSpent"]}
+                    columns={ENTRY_LEADERBOARD_COLUMNS}
                     formatCell={formatCell}
                     getRowNavigation={(row) => ({
                       to: "/collection",
@@ -89,7 +97,7 @@ function RouteComponent(): ReactNode {
                   <h4 className="text-xs font-medium text-muted-foreground">Top by Spend</h4>
                   <LeaderboardTable
                     rows={entry.topBySpend}
-                    columns={["name", "itemCount", "totalSpent"]}
+                    columns={ENTRY_LEADERBOARD_COLUMNS}
                     formatCell={formatCell}
                     getRowNavigation={(row) => ({
                       to: "/collection",
@@ -114,7 +122,7 @@ function RouteComponent(): ReactNode {
                 <h4 className="text-xs font-medium text-muted-foreground">Top by Count</h4>
                 <LeaderboardTable
                   rows={analytics.shops.topByCount}
-                  columns={["shop", "itemCount", "totalSpent"]}
+                  columns={SHOP_LEADERBOARD_COLUMNS}
                   formatCell={formatCell}
                   getRowNavigation={(row) =>
                     row.shop
@@ -127,7 +135,7 @@ function RouteComponent(): ReactNode {
                 <h4 className="text-xs font-medium text-muted-foreground">Top by Spend</h4>
                 <LeaderboardTable
                   rows={analytics.shops.topBySpend}
-                  columns={["shop", "itemCount", "totalSpent"]}
+                  columns={SHOP_LEADERBOARD_COLUMNS}
                   formatCell={formatCell}
                   getRowNavigation={(row) =>
                     row.shop
@@ -154,7 +162,7 @@ function RouteComponent(): ReactNode {
                 <h4 className="text-xs font-medium text-muted-foreground">Top by Count</h4>
                 <LeaderboardTable
                   rows={analytics.scales.topByCount}
-                  columns={["scale", "itemCount", "totalSpent"]}
+                  columns={SCALE_LEADERBOARD_COLUMNS}
                   formatCell={formatCell}
                   getRowNavigation={(row) =>
                     row.scale
@@ -167,7 +175,7 @@ function RouteComponent(): ReactNode {
                 <h4 className="text-xs font-medium text-muted-foreground">Top by Spend</h4>
                 <LeaderboardTable
                   rows={analytics.scales.topBySpend}
-                  columns={["scale", "itemCount", "totalSpent"]}
+                  columns={SCALE_LEADERBOARD_COLUMNS}
                   formatCell={formatCell}
                   getRowNavigation={(row) =>
                     row.scale

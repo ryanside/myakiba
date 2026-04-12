@@ -44,21 +44,6 @@ export function PopoverMultiInputCell({
   description,
 }: PopoverMultiInputCellProps): React.JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
-  const firstInputRef = useRef<HTMLInputElement>(null);
-
-  const form = useForm({
-    defaultValues: Object.fromEntries(
-      inputs.map((input) => [input.name, minorUnitsToMajorString(input.value)]),
-    ),
-    onSubmit: async ({ value }) => {
-      setIsOpen(false);
-      const converted = Object.fromEntries(
-        Object.entries(value).map(([key, amount]) => [key, majorStringToMinorUnits(amount)]),
-      );
-      const { error } = await tryCatch(onSubmit(converted));
-      if (error) toast.error(error.message);
-    },
-  });
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -74,60 +59,96 @@ export function PopoverMultiInputCell({
         }
       />
       {isOpen && (
-        <PopoverContent className="w-72 p-0" align="start">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              form.handleSubmit();
-            }}
-          >
-            <PopoverHeader className="px-3 pt-3 pb-2">
-              <PopoverTitle className="text-xs">{title}</PopoverTitle>
-              {description && <p className="text-[11px] text-muted-foreground">{description}</p>}
-            </PopoverHeader>
-
-            <div className="flex flex-col gap-2 px-3 pb-3">
-              {inputs.map((input, index) => (
-                <form.Field key={input.name} name={input.name}>
-                  {(field) => (
-                    <div className="grid grid-cols-[5.5rem_1fr] items-center gap-2">
-                      <Label
-                        htmlFor={input.name}
-                        className="truncate text-xs text-muted-foreground"
-                      >
-                        {input.title}
-                      </Label>
-                      <MaskInput
-                        ref={index === 0 ? firstInputRef : undefined}
-                        id={input.name}
-                        name={input.name}
-                        mask={input.type}
-                        currency={currency}
-                        locale={locale}
-                        value={field.state.value}
-                        onValueChange={(_, unmasked) => field.handleChange(unmasked)}
-                        className="h-7 text-xs"
-                      />
-                    </div>
-                  )}
-                </form.Field>
-              ))}
-            </div>
-
-            <Separator />
-
-            <div className="flex justify-end gap-1.5 px-3 py-2">
-              <Button type="button" variant="ghost" size="xs" onClick={() => setIsOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" size="xs">
-                Save
-              </Button>
-            </div>
-          </form>
-        </PopoverContent>
+        <PopoverMultiInputCellContent
+          inputs={inputs}
+          currency={currency}
+          locale={locale}
+          onSubmit={onSubmit}
+          title={title}
+          description={description}
+          close={() => setIsOpen(false)}
+        />
       )}
     </Popover>
+  );
+}
+
+function PopoverMultiInputCellContent({
+  inputs,
+  currency,
+  locale,
+  onSubmit,
+  title,
+  description,
+  close,
+}: Omit<PopoverMultiInputCellProps, "total" | "disabled"> & {
+  readonly close: () => void;
+}) {
+  const firstInputRef = useRef<HTMLInputElement>(null);
+  const form = useForm({
+    defaultValues: Object.fromEntries(
+      inputs.map((input) => [input.name, minorUnitsToMajorString(input.value)]),
+    ),
+    onSubmit: async ({ value }) => {
+      close();
+      const converted = Object.fromEntries(
+        Object.entries(value).map(([key, amount]) => [key, majorStringToMinorUnits(amount)]),
+      );
+      const { error } = await tryCatch(onSubmit(converted));
+      if (error) toast.error(error.message);
+    },
+  });
+
+  return (
+    <PopoverContent className="w-72 p-0" align="start">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          form.handleSubmit();
+        }}
+      >
+        <PopoverHeader className="px-3 pt-3 pb-2">
+          <PopoverTitle className="text-xs">{title}</PopoverTitle>
+          {description && <p className="text-[11px] text-muted-foreground">{description}</p>}
+        </PopoverHeader>
+
+        <div className="flex flex-col gap-2 px-3 pb-3">
+          {inputs.map((input, index) => (
+            <form.Field key={input.name} name={input.name}>
+              {(field) => (
+                <div className="grid grid-cols-[5.5rem_1fr] items-center gap-2">
+                  <Label htmlFor={input.name} className="truncate text-xs text-muted-foreground">
+                    {input.title}
+                  </Label>
+                  <MaskInput
+                    ref={index === 0 ? firstInputRef : undefined}
+                    id={input.name}
+                    name={input.name}
+                    mask={input.type}
+                    currency={currency}
+                    locale={locale}
+                    value={field.state.value}
+                    onValueChange={(_, unmasked) => field.handleChange(unmasked)}
+                    className="h-7 text-xs"
+                  />
+                </div>
+              )}
+            </form.Field>
+          ))}
+        </div>
+
+        <Separator />
+
+        <div className="flex justify-end gap-1.5 px-3 py-2">
+          <Button type="button" variant="ghost" size="xs" onClick={close}>
+            Cancel
+          </Button>
+          <Button type="submit" size="xs">
+            Save
+          </Button>
+        </div>
+      </form>
+    </PopoverContent>
   );
 }

@@ -145,6 +145,7 @@ class CollectionService {
       .orderBy(
         orderBy === "asc" ? asc(sortByColumn) : desc(sortByColumn),
         orderBy === "asc" ? asc(collection.createdAt) : desc(collection.createdAt),
+        orderBy === "asc" ? asc(collection.id) : desc(collection.id),
       )
       .limit(limit)
       .offset(offset);

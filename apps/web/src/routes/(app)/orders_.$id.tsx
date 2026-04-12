@@ -1,9 +1,10 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, Edit03Icon, PackageIcon } from "@hugeicons/core-free-icons";
-import { createFileRoute, useParams, Link } from "@tanstack/react-router";
+import { Edit03Icon, PackageIcon } from "@hugeicons/core-free-icons";
+import { createFileRoute, useParams } from "@tanstack/react-router";
 import { getOrder, editOrder, deleteOrderItem } from "@/queries/orders";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ThemedBadge } from "@/components/reui/badge";
+import { BackLink } from "@/components/ui/back-link";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
@@ -175,21 +176,7 @@ function RouteComponent() {
   if (isError) {
     return (
       <div className="flex flex-col gap-3">
-        <Button
-          variant="link"
-          size="sm"
-          render={<Link to="/orders" />}
-          nativeButton={false}
-          className="self-start"
-        >
-          <HugeiconsIcon
-            icon={ArrowLeft01Icon}
-            strokeWidth={2}
-            data-icon="inline-start"
-            aria-hidden="true"
-          />
-          Back to Orders
-        </Button>
+        <BackLink to="/orders" text="Back" font="sans" className="self-start" />
         <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
       </div>
     );
@@ -224,21 +211,7 @@ function RouteComponent() {
     <div className="flex flex-col gap-8 min-h-full">
       {/* Header */}
       <div className="flex flex-col gap-3">
-        <Button
-          variant="link"
-          size="sm"
-          render={<Link to="/orders" />}
-          nativeButton={false}
-          className="self-start"
-        >
-          <HugeiconsIcon
-            icon={ArrowLeft01Icon}
-            strokeWidth={2}
-            data-icon="inline-start"
-            aria-hidden="true"
-          />
-          Back to Orders
-        </Button>
+        <BackLink to="/orders" text="Back" font="sans" className="self-start" />
 
         <div className="flex items-start justify-between gap-4">
           <div className="flex flex-col gap-1.5">

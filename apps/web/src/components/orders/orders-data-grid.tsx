@@ -247,6 +247,7 @@ export default function OrdersDataGrid() {
           table={table}
           isLoading={isPending}
           recordCount={totalCount}
+          memoizeStableRows
           tableLayout={{
             dense: viewMode === "compact",
             columnsPinnable: true,
