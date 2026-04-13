@@ -166,7 +166,10 @@ function RouteComponent(): ReactNode {
                   formatCell={formatCell}
                   getRowNavigation={(row) =>
                     row.scale
-                      ? { to: "/collection", search: { scale: [String(row.scale)] } }
+                      ? {
+                          to: "/collection",
+                          search: { scale: [String(row.scale)], category: ["Prepainted"] },
+                        }
                       : undefined
                   }
                 />
@@ -179,7 +182,10 @@ function RouteComponent(): ReactNode {
                   formatCell={formatCell}
                   getRowNavigation={(row) =>
                     row.scale
-                      ? { to: "/collection", search: { scale: [String(row.scale)] } }
+                      ? {
+                          to: "/collection",
+                          search: { scale: [String(row.scale)], category: ["Prepainted"] },
+                        }
                       : undefined
                   }
                 />

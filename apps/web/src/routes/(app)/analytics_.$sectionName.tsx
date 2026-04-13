@@ -43,6 +43,7 @@ import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { useFilters } from "@/hooks/use-filters";
 import { cn } from "@/lib/utils";
 import { BackLink } from "@/components/ui/back-link";
+import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
 
 const analyticsSectionSchema = z.enum(ANALYTICS_SECTIONS);
 
@@ -223,10 +224,12 @@ function RouteComponent(): ReactNode {
             </div>
 
             <div className="relative flex items-center justify-between gap-3 pt-2">
-              <p className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
-                Showing {offset + 1}–{Math.min(offset + limit, data.totalCount)} of{" "}
-                {data.totalCount}
-              </p>
+              {data.totalCount > 0 ? (
+                <p className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
+                  Showing {offset + 1}–{Math.min(offset + limit, data.totalCount)} of{" "}
+                  {data.totalCount}
+                </p>
+              ) : null}
               <TablePagination
                 totalCount={data.totalCount}
                 limit={limit}
@@ -403,10 +406,24 @@ function TableRow({
   );
 }
 
-function getCollectionFilterKey(sectionName: AnalyticsSection): "shop" | "scale" | "entries" {
-  if (sectionName === "shops") return "shop";
-  if (sectionName === "scales") return "scale";
-  return "entries";
+function getCollectionSearch(
+  sectionName: AnalyticsSection,
+  row: AnalyticsSectionRow,
+): Pick<CollectionFilters, "shop" | "scale" | "entries" | "category"> {
+  const value = row.id ?? row.name;
+
+  if (sectionName === "shops") {
+    return { shop: [value] };
+  }
+
+  if (sectionName === "scales") {
+    return {
+      scale: [value],
+      category: ["Prepainted"],
+    };
+  }
+
+  return { entries: [value] };
 }
 
 function ExpandedRowContent({
@@ -417,8 +434,7 @@ function ExpandedRowContent({
   readonly sectionName: AnalyticsSection;
 }): ReactNode {
   const [offset, setOffset] = useState(0);
-  const filterKey = getCollectionFilterKey(sectionName);
-  const filterValue = row.id ?? row.name;
+  const collectionSearch = getCollectionSearch(sectionName, row);
   const match = row.id ?? row.name;
   const { data, isPending, isError, error, isFetching } = useQuery({
     queryKey: ["analytics", "section-items", sectionName, match, SECTION_ITEM_PAGE_SIZE, offset],
@@ -441,7 +457,7 @@ function ExpandedRowContent({
           </p>
           <Link
             to="/collection"
-            search={{ [filterKey]: [filterValue] }}
+            search={collectionSearch}
             className="text-xs text-muted-foreground hover:text-foreground transition-colors duration-150 underline-offset-2 hover:underline"
           >
             View in collection →

@@ -30,7 +30,7 @@ type ShopLeaderboardRow = {
 };
 
 type ScaleLeaderboardRow = {
-  readonly scale: string | null;
+  readonly scale: string;
   readonly itemCount: number;
   readonly totalSpent: number;
 };
@@ -182,7 +182,7 @@ const shopRankingsPrepared = db
 
 const scaleSummaryQuery = db
   .select({
-    scale: item.scale,
+    scale: sql<string>`${item.scale}`.as("scale"),
     itemCount: count().as("itemCount"),
     totalSpent: sql<number>`SUM(${collection.price})`.as("totalSpent"),
   })
@@ -419,11 +419,10 @@ class AnalyticsService {
     }
 
     if (section === "scales") {
-      const scaleName = sql<string>`COALESCE(${item.scale}, 'Unknown')`;
       const scaleSummary = db
         .select({
           id: sql<string | null>`NULL`.as("id"),
-          name: scaleName.as("name"),
+          name: sql<string>`${item.scale}`.as("name"),
           itemCount: count().as("itemCount"),
           totalSpent: sql<number>`COALESCE(SUM(${collection.price}), 0)`.as("totalSpent"),
         })
@@ -434,7 +433,7 @@ class AnalyticsService {
             eq(collection.userId, userId),
             eq(collection.status, "Owned"),
             eq(item.category, "Prepainted"),
-            trimmedSearch ? ilike(scaleName, `%${trimmedSearch}%`) : undefined,
+            trimmedSearch ? ilike(item.scale, `%${trimmedSearch}%`) : undefined,
           ),
         )
         .groupBy(item.scale)
@@ -557,7 +556,6 @@ class AnalyticsService {
     }
 
     if (section === "scales") {
-      const scaleName = sql<string>`COALESCE(${item.scale}, 'Unknown')`;
       const rows = await db
         .select({
           id: item.id,
@@ -572,7 +570,7 @@ class AnalyticsService {
             eq(collection.userId, userId),
             eq(collection.status, "Owned"),
             eq(item.category, "Prepainted"),
-            eq(scaleName, match),
+            eq(item.scale, match),
           ),
         )
         .orderBy(asc(sql`LOWER(${item.title})`), asc(item.id))

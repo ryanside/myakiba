@@ -47,6 +47,7 @@ import { getStatusVariant } from "@/lib/orders";
 import { formatReleaseDate } from "@/lib/locale";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { useCollectionOrderMutations } from "@/hooks/use-collection";
+import { NO_SCALE, normalizeScale } from "@myakiba/contracts/shared/scale";
 
 type ItemRelatedCollection = {
   collection: Omit<
@@ -367,6 +368,7 @@ function RouteComponent() {
   const { item } = data;
   const collectionItems = itemRelatedCollection?.collection ?? [];
   const ordersList = itemRelatedOrders?.orders ?? [];
+  const scale = normalizeScale(typeof item.scale === "string" ? item.scale : null);
 
   const entriesByCategory = item.entries.reduce(
     (acc, entry) => {
@@ -441,9 +443,7 @@ function RouteComponent() {
             >
               {item.category}
             </Badge>
-            {item.scale && item.scale !== "NON_SCALE" && (
-              <Badge variant="outline">{item.scale}</Badge>
-            )}
+            {scale !== NO_SCALE && <Badge variant="outline">{scale}</Badge>}
             {item.version && item.version.length > 0 && (
               <Badge variant="outline">{item.version}</Badge>
             )}
@@ -514,12 +514,10 @@ function RouteComponent() {
           <section className="space-y-2">
             <SectionHeading>Specifications</SectionHeading>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-              {item.scale && (
-                <div>
-                  <span className="text-xs text-muted-foreground">Scale</span>
-                  <p className="text-sm font-medium mt-0.5">{item.scale}</p>
-                </div>
-              )}
+              <div>
+                <span className="text-xs text-muted-foreground">Scale</span>
+                <p className="text-sm font-medium mt-0.5">{scale}</p>
+              </div>
               <div>
                 <span className="text-xs text-muted-foreground">Height</span>
                 <p className="text-sm font-medium mt-0.5">

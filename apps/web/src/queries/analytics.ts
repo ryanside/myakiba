@@ -32,7 +32,7 @@ export type ShopLeaderboardRow = AnalyticsRow<{
 }>;
 
 export type ScaleLeaderboardRow = AnalyticsRow<{
-  readonly scale: string | null;
+  readonly scale: string;
   readonly itemCount: number;
   readonly totalSpent: number;
 }>;
