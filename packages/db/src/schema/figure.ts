@@ -39,7 +39,7 @@ export const item = pgTable(
       enum: CATEGORIES,
     }),
     version: text("version").array(),
-    scale: text("scale").default(NO_SCALE),
+    scale: text("scale").default(NO_SCALE).notNull(),
     height: integer("height"),
     width: integer("width"),
     depth: integer("depth"),
