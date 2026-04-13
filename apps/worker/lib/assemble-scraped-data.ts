@@ -1,6 +1,7 @@
 import { log } from "evlog";
 import type { ScrapedItem } from "./types";
 import { normalizeScrapedDate } from "@myakiba/utils/date-only";
+import { normalizeScale } from "@myakiba/contracts/shared/scale";
 import { v5 as uuidv5 } from "uuid";
 import type {
   AssembledScrapedData,
@@ -22,7 +23,7 @@ export function assembleScrapedData(
     title: scrapedItem.title,
     category: scrapedItem.category,
     version: scrapedItem.version,
-    scale: scrapedItem.scale,
+    scale: normalizeScale(scrapedItem.scale),
     height: scrapedItem.height,
     width: scrapedItem.width,
     depth: scrapedItem.depth,

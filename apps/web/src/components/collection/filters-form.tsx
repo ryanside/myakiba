@@ -50,6 +50,7 @@ import {
   CURRENCIES,
   CATEGORIES,
 } from "@myakiba/contracts/shared/constants";
+import { NO_SCALE, normalizeScale } from "@myakiba/contracts/shared/scale";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import { getCurrencyLocale } from "@/lib/locale";
 
@@ -580,7 +581,7 @@ export default function FiltersForm({
                 children={(field) => (
                   <Field className="gap-2">
                     <FieldTitle>Scale</FieldTitle>
-                    <FieldDescription>e.g., 1/8, 1/7, NON_SCALE</FieldDescription>
+                    <FieldDescription>e.g., 1/8, 1/7, {NO_SCALE} (non-scale)</FieldDescription>
                     <FieldContent>
                       <div className="flex flex-wrap gap-2">
                         {field.state.value?.map((scale, scaleIndex) => (
@@ -618,7 +619,7 @@ export default function FiltersForm({
                               const value = input.value.trim();
                               if (value) {
                                 const current = field.state.value || [];
-                                field.handleChange([...current, value]);
+                                field.handleChange([...current, normalizeScale(value)]);
                                 input.value = "";
                               }
                             }

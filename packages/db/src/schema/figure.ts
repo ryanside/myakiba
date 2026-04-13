@@ -24,6 +24,7 @@ import {
   SYNC_SESSION_STATUSES,
   SYNC_SESSION_ITEM_STATUSES,
 } from "@myakiba/contracts/shared/constants";
+import { NO_SCALE } from "@myakiba/contracts/shared/scale";
 
 export const item = pgTable(
   "item",
@@ -38,7 +39,7 @@ export const item = pgTable(
       enum: CATEGORIES,
     }),
     version: text("version").array(),
-    scale: text("scale").default("NON_SCALE"),
+    scale: text("scale").default(NO_SCALE).notNull(),
     height: integer("height"),
     width: integer("width"),
     depth: integer("depth"),

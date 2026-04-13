@@ -25,9 +25,8 @@ export function InlineCurrencyCell({
   const [isEditing, setIsEditing] = useState(false);
   const [newValue, setNewValue] = useState<string | null>(null);
   const [pendingValue, setPendingValue] = useState<number | null>(null);
-  const currentValue = minorUnitsToMajorString(value);
-  const isPending = pendingValue !== null && pendingValue !== value;
-  const displayValue = isPending ? pendingValue : value;
+  const displayValue = pendingValue !== null && pendingValue !== value ? pendingValue : value;
+  const currentValue = minorUnitsToMajorString(displayValue);
 
   const handleSubmit = useCallback(async () => {
     const submittedValue = newValue ?? currentValue;
@@ -51,7 +50,6 @@ export function InlineCurrencyCell({
     const { error } = await tryCatch(onSubmit(nextValue));
     if (error) {
       setPendingValue(null);
-      return;
     }
   }, [currentValue, newValue, onSubmit]);
 
@@ -98,7 +96,7 @@ export function InlineCurrencyCell({
       onClick={handleStartEditing}
       className="w-full justify-start text-foreground pl-0"
       variant="ghost"
-      disabled={disabled || isPending}
+      disabled={disabled}
     >
       {formatCurrencyFromMinorUnits(displayValue, currency, locale)}
     </Button>

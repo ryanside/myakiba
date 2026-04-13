@@ -9,6 +9,7 @@ import {
 } from "@myakiba/db/schema/figure";
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import type { ItemRelease, ItemReleasesResponse } from "@myakiba/contracts/items/schema";
+import { normalizeScale } from "@myakiba/contracts/shared/scale";
 import type { EntriesWithRoles, CustomItemInput } from "./model";
 
 class ItemService {
@@ -20,7 +21,7 @@ class ItemService {
           title: input.title,
           category: input.category,
           version: input.version ?? [],
-          scale: input.scale ?? undefined,
+          scale: normalizeScale(input.scale),
           height: input.height ?? null,
           width: input.width ?? null,
           depth: input.depth ?? null,
@@ -328,7 +329,10 @@ class ItemService {
       throw new Error("ITEM_NOT_FOUND");
     }
 
-    return itemData[0];
+    return {
+      ...itemData[0],
+      scale: normalizeScale(itemData[0].scale),
+    };
   }
   async getItemRelatedOrders(userId: string, itemId: string) {
     const orders = await db

@@ -121,6 +121,7 @@ function DataGridTableDnd<TData>({
 }) {
   const { table, isLoading, props } = useDataGrid();
   const pagination = table.getState().pagination;
+  const skeletonRowCount = props.skeletonRowCount ?? pagination?.pageSize;
   const containerRef = useRef<HTMLDivElement>(null);
 
   const sensors = useSensors(
@@ -180,8 +181,8 @@ function DataGridTableDnd<TData>({
           )}
 
           <DataGridTableBody>
-            {props.loadingMode === "skeleton" && isLoading && pagination?.pageSize ? (
-              Array.from({ length: pagination.pageSize }).map((_, rowIndex) => (
+            {props.loadingMode === "skeleton" && isLoading && skeletonRowCount ? (
+              Array.from({ length: skeletonRowCount }).map((_, rowIndex) => (
                 <DataGridTableBodyRowSkeleton key={rowIndex}>
                   {table.getVisibleFlatColumns().map((column, colIndex) => {
                     return (

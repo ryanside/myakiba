@@ -120,6 +120,12 @@ export function useCollectionOrderMutations() {
       await queryClient.invalidateQueries();
     },
   });
+  // Keep the latest mutation objects in refs so these action callbacks can stay stable.
+  // Recreating them churns CollectionDataGrid columns and causes editable cells to remount.
+  const moveItemsMutationRef = useRef(moveItemsMutation);
+  moveItemsMutationRef.current = moveItemsMutation;
+  const splitItemsMutationRef = useRef(splitItemsMutation);
+  splitItemsMutationRef.current = splitItemsMutation;
 
   const handleAddCollectionItemsToOrder = useCallback(
     async (
@@ -132,13 +138,13 @@ export function useCollectionOrderMutations() {
       setPendingCollectionIdList((previous) => addPendingIds(previous, ids));
 
       try {
-        await moveItemsMutation.mutateAsync({ targetOrderId, collectionIds, orderIds });
+        await moveItemsMutationRef.current.mutateAsync({ targetOrderId, collectionIds, orderIds });
       } finally {
         toast.dismiss(loadingToastId);
         setPendingCollectionIdList((previous) => removePendingIds(previous, ids));
       }
     },
-    [moveItemsMutation],
+    [],
   );
 
   const handleAddCollectionItemsToNewOrder = useCallback(
@@ -152,13 +158,13 @@ export function useCollectionOrderMutations() {
       setPendingCollectionIdList((previous) => addPendingIds(previous, ids));
 
       try {
-        await splitItemsMutation.mutateAsync({ values, cascadeOptions, collectionIds });
+        await splitItemsMutationRef.current.mutateAsync({ values, cascadeOptions, collectionIds });
       } finally {
         toast.dismiss(loadingToastId);
         setPendingCollectionIdList((previous) => removePendingIds(previous, ids));
       }
     },
-    [splitItemsMutation],
+    [],
   );
 
   const isCollectionOrderPending = useCallback((collectionId: string): boolean => {
@@ -199,7 +205,6 @@ export function useCollectionMutations() {
 
       await queryClient.cancelQueries({ queryKey: queryOpts.queryKey });
       const previous = queryClient.getQueryData<CollectionItem[]>(queryOpts.queryKey);
-
       queryClient.setQueryData<CollectionItem[]>(queryOpts.queryKey, (old) =>
         old?.map((item) => (item.id === values.id ? { ...item, ...values } : item)),
       );

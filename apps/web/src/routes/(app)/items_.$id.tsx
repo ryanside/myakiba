@@ -1,7 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Calendar01Icon,
-  ArrowLeft01Icon,
   Delete01Icon,
   Edit03Icon,
   Loading03Icon,
@@ -13,6 +12,7 @@ import { createFileRoute, useParams, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { app, getErrorMessage } from "@/lib/treaty-client";
+import { BackLink } from "@/components/ui/back-link";
 import { Button } from "@/components/ui/button";
 import { Badge, ThemedBadge } from "@/components/reui/badge";
 import {
@@ -47,6 +47,7 @@ import { getStatusVariant } from "@/lib/orders";
 import { formatReleaseDate } from "@/lib/locale";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { useCollectionOrderMutations } from "@/hooks/use-collection";
+import { NO_SCALE, normalizeScale } from "@myakiba/contracts/shared/scale";
 
 type ItemRelatedCollection = {
   collection: Omit<
@@ -358,21 +359,7 @@ function RouteComponent() {
     console.error(error);
     return (
       <div className="flex flex-col items-center justify-center gap-y-4">
-        <Button
-          variant="link"
-          size="sm"
-          render={<Link to="/collection" />}
-          nativeButton={false}
-          className="self-start"
-        >
-          <HugeiconsIcon
-            icon={ArrowLeft01Icon}
-            strokeWidth={2}
-            data-icon="inline-start"
-            aria-hidden="true"
-          />
-          Back to Collection
-        </Button>
+        <BackLink to="/collection" text="Back" font="sans" className="self-start" />
         <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
       </div>
     );
@@ -381,6 +368,7 @@ function RouteComponent() {
   const { item } = data;
   const collectionItems = itemRelatedCollection?.collection ?? [];
   const ordersList = itemRelatedOrders?.orders ?? [];
+  const scale = normalizeScale(typeof item.scale === "string" ? item.scale : null);
 
   const entriesByCategory = item.entries.reduce(
     (acc, entry) => {
@@ -395,21 +383,7 @@ function RouteComponent() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Button
-        variant="link"
-        size="sm"
-        render={<Link to="/collection" />}
-        nativeButton={false}
-        className="self-start"
-      >
-        <HugeiconsIcon
-          icon={ArrowLeft01Icon}
-          strokeWidth={2}
-          data-icon="inline-start"
-          aria-hidden="true"
-        />
-        Back to Collection
-      </Button>
+      <BackLink to="/collection" text="Back" font="sans" className="self-start" />
 
       {/* Hero: Image + Item Identity */}
       <div className="flex flex-col sm:flex-row gap-6">
@@ -469,9 +443,7 @@ function RouteComponent() {
             >
               {item.category}
             </Badge>
-            {item.scale && item.scale !== "NON_SCALE" && (
-              <Badge variant="outline">{item.scale}</Badge>
-            )}
+            {scale !== NO_SCALE && <Badge variant="outline">{scale}</Badge>}
             {item.version && item.version.length > 0 && (
               <Badge variant="outline">{item.version}</Badge>
             )}
@@ -542,12 +514,10 @@ function RouteComponent() {
           <section className="space-y-2">
             <SectionHeading>Specifications</SectionHeading>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-              {item.scale && (
-                <div>
-                  <span className="text-xs text-muted-foreground">Scale</span>
-                  <p className="text-sm font-medium mt-0.5">{item.scale}</p>
-                </div>
-              )}
+              <div>
+                <span className="text-xs text-muted-foreground">Scale</span>
+                <p className="text-sm font-medium mt-0.5">{scale}</p>
+              </div>
               <div>
                 <span className="text-xs text-muted-foreground">Height</span>
                 <p className="text-sm font-medium mt-0.5">

@@ -90,12 +90,41 @@ type EditOrderFormProps = {
 };
 
 type OrderFormProps = MergeOrderFormProps | SplitOrderFormProps | EditOrderFormProps;
+type DeferredMergeOrderFormProps = Omit<MergeOrderFormProps, "renderTrigger">;
+type DeferredSplitOrderFormProps = Omit<SplitOrderFormProps, "renderTrigger">;
+type DeferredEditOrderFormProps = Omit<EditOrderFormProps, "renderTrigger">;
 
 export function OrderForm(props: OrderFormProps) {
-  const { callbackFn, type, orderIds, collectionIds, clearSelections, currency, renderTrigger } =
-    props;
+  const { renderTrigger, type } = props;
   const [open, setOpen] = useState(false);
 
+  if (type === "edit-order") {
+    return (
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetTrigger render={renderTrigger} />
+        {open ? <OrderFormContent {...props} close={() => setOpen(false)} /> : null}
+      </Sheet>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger render={renderTrigger} />
+      {open ? <OrderFormContent {...props} close={() => setOpen(false)} /> : null}
+    </Dialog>
+  );
+}
+
+function OrderFormContent(
+  props: (
+    | DeferredMergeOrderFormProps
+    | DeferredSplitOrderFormProps
+    | DeferredEditOrderFormProps
+  ) & {
+    readonly close: () => void;
+  },
+) {
+  const { type, currency, close } = props;
   const userLocale = getCurrencyLocale(currency);
 
   const {
@@ -109,11 +138,12 @@ export function OrderForm(props: OrderFormProps) {
 
   const selectedCount =
     type === "merge"
-      ? props.orderIds.size
+      ? (props as DeferredMergeOrderFormProps).orderIds.size
       : type === "split"
-        ? props.collectionIds.size
+        ? (props as DeferredSplitOrderFormProps).collectionIds.size
         : undefined;
-  const orderData = type === "edit-order" ? props.orderData : undefined;
+  const orderData =
+    type === "edit-order" ? (props as DeferredEditOrderFormProps).orderData : undefined;
 
   const formatMoneyForInput = (value: number | null | undefined): string =>
     minorUnitsToMajorString(value ?? 0);
@@ -171,17 +201,21 @@ export function OrderForm(props: OrderFormProps) {
       };
 
       if (type === "edit-order") {
+        const { callbackFn } = props as DeferredEditOrderFormProps;
         const transformedValue: EditedOrder = { orderId: orderData!.orderId, ...base };
         await callbackFn(transformedValue, cascadeOptions);
-        setOpen(false);
+        close();
       } else if (type === "split") {
-        await callbackFn(base as NewOrder, cascadeOptions, collectionIds!, orderIds);
+        const { callbackFn, collectionIds, orderIds, clearSelections } =
+          props as DeferredSplitOrderFormProps;
+        await callbackFn(base as NewOrder, cascadeOptions, collectionIds, orderIds);
         clearSelections?.();
-        setOpen(false);
+        close();
       } else {
+        const { callbackFn, orderIds, clearSelections } = props as DeferredMergeOrderFormProps;
         await callbackFn(base as NewOrder, cascadeOptions, orderIds);
         clearSelections?.();
-        setOpen(false);
+        close();
       }
     },
   });
@@ -551,67 +585,7 @@ export function OrderForm(props: OrderFormProps) {
 
   if (type === "edit-order") {
     return (
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger render={renderTrigger} />
-        <SheetContent side="right" className="w-full sm:max-w-lg! h-full">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              form.handleSubmit();
-            }}
-          >
-            <SheetHeader>
-              <SheetTitle>Edit Order</SheetTitle>
-              <SheetDescription>
-                {orderData ? orderData.title : "Edit the selected order."}
-              </SheetDescription>
-            </SheetHeader>
-            <Scroller className="max-h-[70vh] px-2">{formFields}</Scroller>
-            <SheetFooter className="flex flex-row w-full">
-              <form.Subscribe
-                selector={(state) => [state.isSubmitting]}
-                children={([isSubmitting]) => (
-                  <SheetClose>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full flex-1"
-                      disabled={isSubmitting}
-                    >
-                      Cancel
-                    </Button>
-                  </SheetClose>
-                )}
-              />
-              <form.Subscribe
-                selector={(state) => [state.canSubmit, state.isSubmitting]}
-                children={([canSubmit, isSubmitting]) => (
-                  <Button
-                    type="submit"
-                    disabled={!canSubmit || isSubmitting}
-                    variant="default"
-                    className="w-full flex-1"
-                  >
-                    {isSubmitting ? (
-                      <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />
-                    ) : (
-                      "Update"
-                    )}
-                  </Button>
-                )}
-              />
-            </SheetFooter>
-          </form>
-        </SheetContent>
-      </Sheet>
-    );
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={renderTrigger} />
-      <DialogContent className="sm:max-w-lg!">
+      <SheetContent side="right" className="w-full sm:max-w-lg! h-full">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -619,47 +593,101 @@ export function OrderForm(props: OrderFormProps) {
             form.handleSubmit();
           }}
         >
-          <DialogHeader>
-            <DialogTitle>{type === "merge" ? "Merge Orders" : "Split Items"}</DialogTitle>
-            {selectedCount && (
-              <DialogDescription>
-                {type === "merge"
-                  ? `Merge the selected ${selectedCount} orders into a new order.`
-                  : `Split the selected ${selectedCount} items into a new order.`}
-              </DialogDescription>
-            )}
-          </DialogHeader>
-
-          <Scroller className="max-h-[70vh] py-4 no-scrollbar">{formFields}</Scroller>
-
-          <DialogFooter>
+          <SheetHeader>
+            <SheetTitle>Edit Order</SheetTitle>
+            <SheetDescription>
+              {orderData ? orderData.title : "Edit the selected order."}
+            </SheetDescription>
+          </SheetHeader>
+          <Scroller className="max-h-[70vh] px-2">{formFields}</Scroller>
+          <SheetFooter className="flex flex-row w-full">
             <form.Subscribe
               selector={(state) => [state.isSubmitting]}
               children={([isSubmitting]) => (
-                <DialogClose>
-                  <Button variant="outline" type="button" disabled={isSubmitting}>
+                <SheetClose>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full flex-1"
+                    disabled={isSubmitting}
+                  >
                     Cancel
                   </Button>
-                </DialogClose>
+                </SheetClose>
               )}
             />
             <form.Subscribe
               selector={(state) => [state.canSubmit, state.isSubmitting]}
               children={([canSubmit, isSubmitting]) => (
-                <Button type="submit" disabled={!canSubmit || isSubmitting} variant="default">
+                <Button
+                  type="submit"
+                  disabled={!canSubmit || isSubmitting}
+                  variant="default"
+                  className="w-full flex-1"
+                >
                   {isSubmitting ? (
                     <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />
-                  ) : type === "merge" ? (
-                    "Merge"
                   ) : (
-                    "Split"
+                    "Update"
                   )}
                 </Button>
               )}
             />
-          </DialogFooter>
+          </SheetFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    );
+  }
+
+  return (
+    <DialogContent className="sm:max-w-lg!">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          form.handleSubmit();
+        }}
+      >
+        <DialogHeader>
+          <DialogTitle>{type === "merge" ? "Merge Orders" : "Split Items"}</DialogTitle>
+          {selectedCount && (
+            <DialogDescription>
+              {type === "merge"
+                ? `Merge the selected ${selectedCount} orders into a new order.`
+                : `Split the selected ${selectedCount} items into a new order.`}
+            </DialogDescription>
+          )}
+        </DialogHeader>
+
+        <Scroller className="max-h-[70vh] py-4 no-scrollbar">{formFields}</Scroller>
+
+        <DialogFooter>
+          <form.Subscribe
+            selector={(state) => [state.isSubmitting]}
+            children={([isSubmitting]) => (
+              <DialogClose>
+                <Button variant="outline" type="button" disabled={isSubmitting}>
+                  Cancel
+                </Button>
+              </DialogClose>
+            )}
+          />
+          <form.Subscribe
+            selector={(state) => [state.canSubmit, state.isSubmitting]}
+            children={([canSubmit, isSubmitting]) => (
+              <Button type="submit" disabled={!canSubmit || isSubmitting} variant="default">
+                {isSubmitting ? (
+                  <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />
+                ) : type === "merge" ? (
+                  "Merge"
+                ) : (
+                  "Split"
+                )}
+              </Button>
+            )}
+          />
+        </DialogFooter>
+      </form>
+    </DialogContent>
   );
 }

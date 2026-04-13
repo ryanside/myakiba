@@ -259,7 +259,7 @@ function ReleaseCard({
     <Link
       to="/items/$id"
       params={{ id: item.itemId }}
-      className="flex min-w-0 items-center gap-2.5 overflow-hidden rounded-md px-1.5 py-1.5 transition-colors hover:bg-accent"
+      className="flex min-w-0 items-center gap-2.5 overflow-hidden rounded-md px-1.5 py-1.5 transition-colors hover:bg-accent duration-50"
     >
       <ImageThumbnail
         images={item.image ? [item.image] : []}

@@ -80,7 +80,7 @@ export function CollectionBreakdown({
                       <TooltipTrigger
                         render={
                           <div
-                            className="transition-opacity duration-200 cursor-default first:rounded-l-sm last:rounded-r-sm"
+                            className="transition-opacity duration-50 cursor-default first:rounded-l-sm last:rounded-r-sm"
                             style={{
                               width: `${minWidth}%`,
                               backgroundColor: entry.color,
@@ -106,7 +106,7 @@ export function CollectionBreakdown({
               </div>
             </TooltipProvider>
 
-            <Scroller className="animate-data-in -mx-(--frame-panel-p) max-h-50 flex flex-col gap-0.5 [--data-in-delay:100ms]">
+            <Scroller className="animate-data-in -mx-(--frame-panel-p) max-h-50 flex flex-col gap-0 [--data-in-delay:100ms]">
               {entries.map((entry, index) => {
                 const isHovered = hoveredIndex === index;
                 const isOtherHovered = hoveredIndex !== null && hoveredIndex !== index;
@@ -115,13 +115,13 @@ export function CollectionBreakdown({
                     key={entry.name}
                     to="/collection"
                     search={{ category: [entry.name] }}
-                    className="flex items-center gap-2.5 px-(--frame-panel-p) py-1 transition-opacity duration-200"
+                    className="flex items-center gap-2.5 px-(--frame-panel-p) py-1 transition-opacity duration-50"
                     style={{ opacity: isOtherHovered ? 0.4 : 1 }}
                     onMouseEnter={() => setHoveredIndex(index)}
                     onMouseLeave={() => setHoveredIndex(null)}
                   >
                     <div
-                      className="h-4 rounded-full shrink-0 transition-[width] duration-200"
+                      className="h-4 rounded-full shrink-0 transition-[width] duration-50"
                       style={{
                         backgroundColor: entry.color,
                         width: isHovered ? "0.5rem" : "0.375rem",
