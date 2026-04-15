@@ -489,11 +489,13 @@ function DataGridTableBodyRowCell<TData>({
 
 function DataGridTableEmpty() {
   const { table, props } = useDataGrid();
-  const totalColumns = table.getAllColumns().length;
 
   return (
     <tr>
-      <td colSpan={totalColumns} className="text-muted-foreground text-sm py-6 text-center">
+      <td
+        colSpan={table.getVisibleFlatColumns().length}
+        className="text-muted-foreground text-sm py-6 text-center"
+      >
         {props.emptyMessage || "No data available"}
       </td>
     </tr>

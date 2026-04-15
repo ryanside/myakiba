@@ -6,10 +6,13 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import UserMenu from "@/components/sidebar/user-menu";
 import SyncStatusWidget from "@/components/sync/sync-status-widget";
 import { AppCommand } from "@/components/command/app-command";
+import { Banner } from "@/components/banner";
 import { authClient } from "@/lib/auth-client";
 import { getVersion } from "@/queries/version";
 import { toast } from "sonner";
 import { env } from "@myakiba/env/web";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Alert02Icon } from "@hugeicons/core-free-icons";
 
 export const Route = createFileRoute("/(app)")({
   component: RouteComponent,
@@ -62,6 +65,16 @@ function RouteComponent() {
         <div className="flex min-w-0 max-w-full flex-1 overflow-x-hidden">
           <AppSidebar />
           <SidebarInset>
+            {!session.user.emailVerified ? (
+              <Banner variant="rainbow" changeLayout={false} className="">
+                <div className="flex items-center gap-2 pr-8 text-foreground">
+                  <HugeiconsIcon icon={Alert02Icon} className="size-4" />
+                  <span className="text-sm font-medium">
+                    please verify your email first to start adding items. thanks!
+                  </span>
+                </div>
+              </Banner>
+            ) : null}
             <header className="flex h-12 shrink-0 items-center justify-between gap-2 px-4">
               <div className="flex items-center">
                 <SidebarTrigger className="-ml-1" />

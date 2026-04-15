@@ -6,7 +6,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ThemedBadge } from "@/components/reui/badge";
 import { BackLink } from "@/components/ui/back-link";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { formatDateOnlyForDisplay, formatTimestampForDisplay } from "@/lib/date-display";
 import { getStatusVariant } from "@/lib/orders";
@@ -210,7 +209,7 @@ function RouteComponent() {
   return (
     <div className="flex flex-col gap-8 min-h-full">
       {/* Header */}
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 animate-appear">
         <BackLink to="/orders" text="Back" font="sans" className="self-start" />
 
         <div className="flex items-start justify-between gap-4">
@@ -263,11 +262,11 @@ function RouteComponent() {
         </div>
       </div>
 
-      {/* Timeline + Cost Breakdown */}
-      <div className="grid gap-8 lg:grid-cols-[3fr_2fr]">
+      {/* Progress + Cost Breakdown */}
+      <div className="grid gap-8 lg:grid-cols-[3fr_2fr] animate-appear [--appear-delay:80ms]">
         <section className="flex flex-col gap-3">
-          <h2 className="text-xs font-medium text-muted-foreground">Timeline</h2>
-          <Timeline value={activeStep}>
+          <h2 className="text-xs font-medium text-muted-foreground">Progress</h2>
+          <Timeline orientation="horizontal" value={activeStep}>
             {timelineSteps.map(({ step, title, date }) => (
               <TimelineItem key={step} step={step}>
                 <TimelineIndicator />
@@ -285,8 +284,8 @@ function RouteComponent() {
 
         <section className="flex flex-col gap-3">
           <h2 className="text-xs font-medium text-muted-foreground">Cost Breakdown</h2>
-          <div className="rounded-xl bg-card ring-1 ring-foreground/10 p-5 flex flex-col gap-3">
-            <div className="flex flex-col gap-2.5">
+          <div className="rounded-xl bg-card ring-1 ring-foreground/10 overflow-hidden">
+            <div className="flex flex-col gap-2.5 p-5">
               <CostRow
                 label="Items"
                 amount={itemsTotal}
@@ -309,10 +308,9 @@ function RouteComponent() {
                 />
               ))}
             </div>
-            <Separator />
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between px-5 py-3.5 border-t bg-muted/30">
               <span className="text-sm font-medium">Total</span>
-              <span className="text-lg font-medium tracking-tight tabular-nums">
+              <span className="text-lg font-semibold tracking-tight tabular-nums">
                 {formatCurrencyFromMinorUnits(totalAmount, userCurrency, userLocale)}
               </span>
             </div>
@@ -322,16 +320,18 @@ function RouteComponent() {
 
       {/* Notes */}
       {order.notes && (
-        <section className="flex flex-col gap-3">
+        <section className="flex flex-col gap-3 animate-appear [--appear-delay:160ms]">
           <h2 className="text-xs font-medium text-muted-foreground">Notes</h2>
-          <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed max-w-prose">
-            {order.notes}
-          </p>
+          <div className="rounded-xl bg-card ring-1 ring-foreground/10 px-5 py-4">
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed max-w-prose">
+              {order.notes}
+            </p>
+          </div>
         </section>
       )}
 
       {/* Order Items */}
-      <section className="flex flex-col gap-3 flex-1">
+      <section className="flex flex-col gap-3 flex-1 animate-appear [--appear-delay:240ms]">
         <h2 className="text-xs font-medium text-muted-foreground">Items ({order.itemCount})</h2>
         {order.itemCount > 0 ? (
           <div className="rounded-xl ring-1 ring-foreground/10 bg-card overflow-hidden">
@@ -345,16 +345,18 @@ function RouteComponent() {
             />
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-16 gap-3 rounded-xl ring-1 ring-foreground/10 bg-card">
-            <HugeiconsIcon icon={PackageIcon} className="size-8 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">No items in this order yet</p>
+          <div className="flex flex-col items-center justify-center py-20 gap-4 rounded-xl border border-dashed">
+            <div className="flex flex-col items-center gap-2">
+              <HugeiconsIcon icon={PackageIcon} className="size-8 text-muted-foreground/30" />
+              <p className="text-sm text-muted-foreground">No items in this order yet</p>
+            </div>
             <OrderItemSyncSheet orderId={order.orderId} label="Add First Item" />
           </div>
         )}
       </section>
 
       {/* Footer metadata */}
-      <div className="flex items-center gap-2 text-xs text-muted-foreground/60 pb-2">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground/60 pb-2 animate-appear [--appear-delay:320ms]">
         <span>Created {formatTimestampForDisplay(order.createdAt, dateFormat)}</span>
         <span aria-hidden="true">&middot;</span>
         <span>Updated {formatTimestampForDisplay(order.updatedAt, dateFormat)}</span>

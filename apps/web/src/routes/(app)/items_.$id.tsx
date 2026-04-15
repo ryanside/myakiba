@@ -136,9 +136,9 @@ function DetailRow({
   readonly children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-baseline justify-between gap-4">
-      <span className="text-sm text-muted-foreground shrink-0">{label}</span>
-      <span className="text-sm font-medium text-right">{children}</span>
+    <div className="flex items-baseline justify-between gap-4 py-1">
+      <span className="text-[0.8125rem] text-muted-foreground shrink-0">{label}</span>
+      <span className="text-[0.8125rem] font-medium text-right tabular-nums">{children}</span>
     </div>
   );
 }
@@ -382,13 +382,13 @@ function RouteComponent() {
   );
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       <BackLink to="/collection" text="Back" font="sans" className="self-start" />
 
       {/* Hero: Image + Item Identity */}
-      <div className="flex flex-col sm:flex-row gap-6">
+      <div className="flex flex-col sm:flex-row gap-6 animate-appear">
         {item.image && (
-          <div className="w-44 h-60 shrink-0 overflow-hidden rounded-xl bg-muted/40">
+          <div className="w-48 aspect-11/15 shrink-0 overflow-hidden rounded-xl bg-muted/30 ring-1 ring-foreground/6">
             <img
               src={item.image}
               alt={item.title}
@@ -397,42 +397,33 @@ function RouteComponent() {
             />
           </div>
         )}
-        <div className="flex flex-col items-start justify-center gap-2">
-          <h1 className="text-2xl font-medium tracking-tight">{item.title}</h1>
-          {item.externalId ? (
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <a
-                href={`https://myfigurecollection.net/item/${item.externalId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline"
-              >
-                myfigurecollection.net/item/{item.externalId}
-              </a>
-              {item.updatedAt && (
-                <>
-                  <span className="hidden sm:inline text-xs text-muted-foreground/50">·</span>
-                  <span className="text-xs text-muted-foreground/70">
-                    Updated {formatRelativeTimeToNow(new Date(item.updatedAt))}
-                  </span>
-                </>
-              )}
-              {item.source === "mfc" && item.externalId && (
-                <div className="flex items-center gap-2">
-                  <span className="hidden sm:inline text-xs text-muted-foreground/50">·</span>
-                  <span className="text-xs text-muted-foreground/70">Item info outdated?</span>
-                  <ResyncButton
-                    status={resyncStatusData?.status ?? "idle"}
-                    isPending={requestResyncMutation.isPending}
-                    cooldownExpiresAt={resyncStatusData?.cooldownExpiresAt ?? null}
-                    onRequest={() => requestResyncMutation.mutate()}
-                  />
-                </div>
-              )}
-            </div>
-          ) : (
-            <span className="text-xs text-muted-foreground">Custom item</span>
-          )}
+        <div className="flex flex-col items-start justify-center gap-3">
+          <div className="space-y-1.5">
+            <h1 className="text-2xl font-medium tracking-tight leading-tight">{item.title}</h1>
+            {item.externalId ? (
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <a
+                  href={`https://myfigurecollection.net/item/${item.externalId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-muted-foreground transition-colors duration-150 ease-out underline-offset-4 hover:text-foreground hover:underline"
+                >
+                  myfigurecollection.net/item/{item.externalId}
+                </a>
+                {item.updatedAt && (
+                  <>
+                    <span className="hidden sm:inline text-xs text-muted-foreground/40">·</span>
+                    <span className="text-xs text-muted-foreground/60">
+                      Updated {formatRelativeTimeToNow(new Date(item.updatedAt))}
+                    </span>
+                  </>
+                )}
+              </div>
+            ) : (
+              <span className="text-xs text-muted-foreground/60">Custom item</span>
+            )}
+          </div>
+
           <div className="flex flex-wrap items-center gap-2">
             <Badge
               variant="outline"
@@ -448,33 +439,51 @@ function RouteComponent() {
               <Badge variant="outline">{item.version}</Badge>
             )}
           </div>
+
+          {item.source === "mfc" && item.externalId && (
+            <ResyncButton
+              status={resyncStatusData?.status ?? "idle"}
+              isPending={requestResyncMutation.isPending}
+              cooldownExpiresAt={resyncStatusData?.cooldownExpiresAt ?? null}
+              onRequest={() => requestResyncMutation.mutate()}
+            />
+          )}
         </div>
       </div>
 
       {/* Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 border-border/50">
+      <div className="grid grid-cols-1 lg:grid-cols-5">
         {/* Left Column: Item Details */}
-        <div className="lg:col-span-3 space-y-10 border-border/50 lg:pr-6 py-8">
+        <div
+          className="lg:col-span-3 space-y-10 lg:pr-8 pt-8 pb-8 animate-appear"
+          style={{ "--appear-delay": "75ms" } as React.CSSProperties}
+        >
           {/* Releases */}
           {item.releases && item.releases.length > 0 && (
-            <section className="space-y-2">
+            <section className="space-y-3">
               <SectionHeading>Releases</SectionHeading>
-              <div className="space-y-2">
+              <div className="divide-y divide-border/50">
                 {item.releases.map((release) => (
                   <div
                     key={release.id}
-                    className="flex items-center gap-3 text-sm py-2 last:pb-0 border-b border-border/50 last:border-0"
+                    className="flex items-center gap-3 text-sm py-2.5 first:pt-0"
                   >
                     <HugeiconsIcon
                       icon={Calendar01Icon}
-                      className="size-4 text-muted-foreground shrink-0"
+                      className="size-3.5 text-muted-foreground/70 shrink-0"
                     />
-                    <span className="font-medium">
+                    <span className="font-medium tabular-nums">
                       {formatDateOnlyForDisplay(release.date, dateFormat)}
                     </span>
-                    {release.type && <Badge variant="secondary">{release.type}</Badge>}
+                    {release.type && (
+                      <Badge variant="secondary" size="sm">
+                        {release.type}
+                      </Badge>
+                    )}
                     {release.barcode && (
-                      <span className="text-xs text-muted-foreground">{release.barcode}</span>
+                      <span className="text-xs text-muted-foreground/60 tabular-nums">
+                        {release.barcode}
+                      </span>
                     )}
                     {release.price != null &&
                       release.price > 0 &&
@@ -491,22 +500,25 @@ function RouteComponent() {
 
           {/* Related Entries */}
           {Object.keys(entriesByCategory).length > 0 && (
-            <section className="space-y-2">
-              {Object.entries(entriesByCategory).map(([category, entries]) => (
-                <div key={category}>
-                  <span className="text-xs font-medium text-muted-foreground">{category}</span>
-                  <div className="flex flex-wrap gap-1.5 mt-1.5">
-                    {entries.map((entry) => (
-                      <Badge key={entry.id} variant="secondary">
-                        {entry.name}
-                        {entry.role && (
-                          <span className="text-muted-foreground ml-1">({entry.role})</span>
-                        )}
-                      </Badge>
-                    ))}
+            <section className="space-y-3">
+              <SectionHeading>Related</SectionHeading>
+              <div className="space-y-3">
+                {Object.entries(entriesByCategory).map(([category, entries]) => (
+                  <div key={category}>
+                    <span className="text-xs font-medium text-muted-foreground/70">{category}</span>
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {entries.map((entry) => (
+                        <Badge key={entry.id} variant="secondary">
+                          {entry.name}
+                          {entry.role && (
+                            <span className="text-muted-foreground ml-1">({entry.role})</span>
+                          )}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </section>
           )}
 
@@ -537,7 +549,10 @@ function RouteComponent() {
         </div>
 
         {/* Right Column: Your Collection */}
-        <div className="lg:col-span-2 lg:pl-6 py-8 border-t border-border lg:border-t-0">
+        <div
+          className="lg:col-span-2 lg:pl-8 lg:border-l lg:border-border/40 pt-8 pb-8 border-t border-border/40 lg:border-t-0 animate-appear"
+          style={{ "--appear-delay": "150ms" } as React.CSSProperties}
+        >
           <SectionHeading>Your Collection</SectionHeading>
 
           <div className="mt-4">
@@ -559,12 +574,20 @@ function RouteComponent() {
                 </EmptyHeader>
               </Empty>
             ) : collectionItems.length === 0 ? (
-              <div className="rounded-xl border border-dashed py-10 px-6 text-center">
-                <p className="text-sm text-muted-foreground">Not in your collection yet.</p>
-              </div>
+              <Empty className="py-12">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <HugeiconsIcon icon={Package01Icon} />
+                  </EmptyMedia>
+                  <EmptyTitle>Not in your collection</EmptyTitle>
+                  <EmptyDescription>
+                    This item hasn&apos;t been added to your collection yet.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             ) : (
-              <div className="space-y-6">
-                {collectionItems.map((collectionItem) => {
+              <div className="space-y-5">
+                {collectionItems.map((collectionItem, index) => {
                   const release = item.releases.find((r) => r.id === collectionItem.releaseId);
                   const relatedOrder = collectionItem.orderId
                     ? ordersList.find((o) => o.id === collectionItem.orderId)
@@ -578,203 +601,237 @@ function RouteComponent() {
                   });
 
                   return (
-                    <Card key={collectionItem.id}>
-                      <CardHeader>
-                        <div className="flex items-center gap-2">
-                          <ThemedBadge variant={getStatusVariant(collectionItem.status)}>
-                            {collectionItem.status}
-                          </ThemedBadge>
-                          {release && (
-                            <span className="text-xs text-muted-foreground">
-                              {formatDateOnlyForDisplay(release.date, dateFormat)}
-                            </span>
-                          )}
-                        </div>
-                        <CardAction>
-                          <div className="flex items-center gap-1">
-                            <CollectionItemForm
-                              renderTrigger={
-                                <Button variant="ghost" size="icon">
-                                  <HugeiconsIcon icon={Edit03Icon} className="size-4" />
-                                </Button>
-                              }
-                              itemData={{
-                                ...collectionItem,
-                                id: collectionItem.id,
-                                itemExternalId: item.externalId ?? null,
-                                itemTitle: item.title,
-                                itemImage: item.image,
-                                releaseDate: release?.date ?? null,
-                                releasePrice: release?.price ?? null,
-                                releaseCurrency: release?.priceCurrency ?? null,
-                                releaseBarcode: release?.barcode ?? null,
-                                releaseType: release?.type ?? null,
-                              }}
-                              callbackFn={handleEditCollectionItem}
-                              currency={userCurrency}
-                              dateFormat={dateFormat}
-                            />
-                            <UnifiedItemMoveForm
-                              renderTrigger={
-                                <Button variant="ghost" size="icon" disabled={isOrderActionPending}>
-                                  <HugeiconsIcon
-                                    icon={isOrderActionPending ? Loading03Icon : MoveIcon}
-                                    className={cn("size-4", isOrderActionPending && "animate-spin")}
-                                  />
-                                  <span className="sr-only">Assign order</span>
-                                </Button>
-                              }
-                              selectedItems={{
-                                collectionIds: new Set([collectionItem.id]),
-                                orderIds: collectionItem.orderId
-                                  ? new Set([collectionItem.orderId])
-                                  : new Set<string>(),
-                              }}
-                              onMoveToExisting={handleAddCollectionItemsToOrder}
-                              onMoveToNew={handleAddCollectionItemsToNewOrder}
-                              clearSelections={() => {}}
-                              currency={userCurrency}
-                              intent="add"
-                            />
-                            <Popover>
-                              <PopoverTrigger
-                                render={
-                                  <Button variant="ghost" size="icon">
-                                    <HugeiconsIcon icon={Delete01Icon} className="size-4" />
+                    <div
+                      key={collectionItem.id}
+                      className="animate-appear"
+                      style={{ "--appear-delay": `${200 + index * 60}ms` } as React.CSSProperties}
+                    >
+                      <Card>
+                        <CardHeader>
+                          <div className="flex items-center gap-2">
+                            <ThemedBadge variant={getStatusVariant(collectionItem.status)}>
+                              {collectionItem.status}
+                            </ThemedBadge>
+                            {release && (
+                              <span className="text-xs text-muted-foreground/60 tabular-nums">
+                                {formatDateOnlyForDisplay(release.date, dateFormat)}
+                              </span>
+                            )}
+                          </div>
+                          <CardAction>
+                            <div className="flex items-center">
+                              <CollectionItemForm
+                                renderTrigger={
+                                  <Button
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    className="text-muted-foreground"
+                                  >
+                                    <HugeiconsIcon icon={Edit03Icon} className="size-3.5" />
                                   </Button>
                                 }
+                                itemData={{
+                                  ...collectionItem,
+                                  id: collectionItem.id,
+                                  itemExternalId: item.externalId ?? null,
+                                  itemTitle: item.title,
+                                  itemImage: item.image,
+                                  releaseDate: release?.date ?? null,
+                                  releasePrice: release?.price ?? null,
+                                  releaseCurrency: release?.priceCurrency ?? null,
+                                  releaseBarcode: release?.barcode ?? null,
+                                  releaseType: release?.type ?? null,
+                                }}
+                                callbackFn={handleEditCollectionItem}
+                                currency={userCurrency}
+                                dateFormat={dateFormat}
                               />
-                              <PopoverContent>
-                                <div className="flex flex-col gap-3">
-                                  <p className="text-sm">Delete this collection item?</p>
-                                  <div className="flex justify-end gap-2">
+                              <UnifiedItemMoveForm
+                                renderTrigger={
+                                  <Button
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    className="text-muted-foreground"
+                                    disabled={isOrderActionPending}
+                                  >
+                                    <HugeiconsIcon
+                                      icon={isOrderActionPending ? Loading03Icon : MoveIcon}
+                                      className={cn(
+                                        "size-3.5",
+                                        isOrderActionPending && "animate-spin",
+                                      )}
+                                    />
+                                    <span className="sr-only">Assign order</span>
+                                  </Button>
+                                }
+                                selectedItems={{
+                                  collectionIds: new Set([collectionItem.id]),
+                                  orderIds: collectionItem.orderId
+                                    ? new Set([collectionItem.orderId])
+                                    : new Set<string>(),
+                                }}
+                                onMoveToExisting={handleAddCollectionItemsToOrder}
+                                onMoveToNew={handleAddCollectionItemsToNewOrder}
+                                clearSelections={() => {}}
+                                currency={userCurrency}
+                                intent="add"
+                              />
+                              <Popover>
+                                <PopoverTrigger
+                                  render={
                                     <Button
-                                      variant="destructive"
-                                      onClick={() => handleDeleteCollectionItem(collectionItem.id)}
+                                      variant="ghost"
+                                      size="icon-sm"
+                                      className="text-muted-foreground"
                                     >
-                                      Delete
+                                      <HugeiconsIcon icon={Delete01Icon} className="size-3.5" />
                                     </Button>
+                                  }
+                                />
+                                <PopoverContent>
+                                  <div className="flex flex-col gap-3">
+                                    <p className="text-sm">Delete this collection item?</p>
+                                    <div className="flex justify-end gap-2">
+                                      <Button
+                                        variant="destructive"
+                                        onClick={() =>
+                                          handleDeleteCollectionItem(collectionItem.id)
+                                        }
+                                      >
+                                        Delete
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                          </CardAction>
+                        </CardHeader>
+
+                        <CardContent className="space-y-5">
+                          <div className="space-y-0.5">
+                            <DetailRow label="Count">{collectionItem.count}</DetailRow>
+                            <DetailRow label="Price">
+                              {formatCurrencyFromMinorUnits(
+                                collectionItem.price,
+                                userCurrency,
+                                userLocale,
+                              )}
+                            </DetailRow>
+                            <DetailRow label="Condition">{collectionItem.condition}</DetailRow>
+                            {collectionItem.shop && (
+                              <DetailRow label="Shop">{collectionItem.shop}</DetailRow>
+                            )}
+                            <DetailRow label="Shipping">{collectionItem.shippingMethod}</DetailRow>
+                          </div>
+
+                          {activeStep > 0 && (
+                            <div className="pt-1">
+                              <Timeline orientation="horizontal" value={activeStep}>
+                                <TimelineItem step={1}>
+                                  <TimelineIndicator />
+                                  <TimelineSeparator />
+                                  <TimelineHeader>
+                                    <TimelineTitle>Ordered</TimelineTitle>
+                                    <TimelineDate>
+                                      {formatDateOnlyForDisplay(
+                                        collectionItem.orderDate,
+                                        dateFormat,
+                                      )}
+                                    </TimelineDate>
+                                  </TimelineHeader>
+                                </TimelineItem>
+                                <TimelineItem step={2}>
+                                  <TimelineIndicator />
+                                  <TimelineSeparator />
+                                  <TimelineHeader>
+                                    <TimelineTitle>Paid</TimelineTitle>
+                                    <TimelineDate>
+                                      {formatDateOnlyForDisplay(
+                                        collectionItem.paymentDate,
+                                        dateFormat,
+                                      )}
+                                    </TimelineDate>
+                                  </TimelineHeader>
+                                </TimelineItem>
+                                <TimelineItem step={3}>
+                                  <TimelineIndicator />
+                                  <TimelineSeparator />
+                                  <TimelineHeader>
+                                    <TimelineTitle>Shipped</TimelineTitle>
+                                    <TimelineDate>
+                                      {formatDateOnlyForDisplay(
+                                        collectionItem.shippingDate,
+                                        dateFormat,
+                                      )}
+                                    </TimelineDate>
+                                  </TimelineHeader>
+                                </TimelineItem>
+                                <TimelineItem step={4}>
+                                  <TimelineIndicator />
+                                  <TimelineSeparator />
+                                  <TimelineHeader>
+                                    <TimelineTitle>Collected</TimelineTitle>
+                                    <TimelineDate>
+                                      {formatDateOnlyForDisplay(
+                                        collectionItem.collectionDate,
+                                        dateFormat,
+                                      )}
+                                    </TimelineDate>
+                                  </TimelineHeader>
+                                </TimelineItem>
+                              </Timeline>
+                            </div>
+                          )}
+
+                          {(collectionItem.score ||
+                            collectionItem.tags.length > 0 ||
+                            collectionItem.notes) && (
+                            <div className="space-y-3 border-t border-border/40 pt-4">
+                              {collectionItem.score && parseFloat(collectionItem.score) !== 0 && (
+                                <DetailRow label="Score">{collectionItem.score}</DetailRow>
+                              )}
+                              {collectionItem.tags.length > 0 && (
+                                <div>
+                                  <span className="text-[0.6875rem] text-muted-foreground">
+                                    Tags
+                                  </span>
+                                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                    {collectionItem.tags.map((tag) => (
+                                      <Badge key={tag} variant="secondary" size="sm">
+                                        {tag}
+                                      </Badge>
+                                    ))}
                                   </div>
                                 </div>
-                              </PopoverContent>
-                            </Popover>
-                          </div>
-                        </CardAction>
-                      </CardHeader>
-
-                      <CardContent className="space-y-5">
-                        <div className="space-y-1.5">
-                          <DetailRow label="Count">{collectionItem.count}</DetailRow>
-                          <DetailRow label="Price">
-                            {formatCurrencyFromMinorUnits(
-                              collectionItem.price,
-                              userCurrency,
-                              userLocale,
-                            )}
-                          </DetailRow>
-                          <DetailRow label="Condition">{collectionItem.condition}</DetailRow>
-                          {collectionItem.shop && (
-                            <DetailRow label="Shop">{collectionItem.shop}</DetailRow>
-                          )}
-                          <DetailRow label="Shipping Method">
-                            {collectionItem.shippingMethod}
-                          </DetailRow>
-                        </div>
-
-                        {activeStep > 0 && (
-                          <Timeline orientation="vertical" value={activeStep}>
-                            <TimelineItem step={1}>
-                              <TimelineIndicator />
-                              <TimelineSeparator />
-                              <TimelineHeader>
-                                <TimelineTitle>Ordered</TimelineTitle>
-                                <TimelineDate>
-                                  {formatDateOnlyForDisplay(collectionItem.orderDate, dateFormat)}
-                                </TimelineDate>
-                              </TimelineHeader>
-                            </TimelineItem>
-                            <TimelineItem step={2}>
-                              <TimelineIndicator />
-                              <TimelineSeparator />
-                              <TimelineHeader>
-                                <TimelineTitle>Paid</TimelineTitle>
-                                <TimelineDate>
-                                  {formatDateOnlyForDisplay(collectionItem.paymentDate, dateFormat)}
-                                </TimelineDate>
-                              </TimelineHeader>
-                            </TimelineItem>
-                            <TimelineItem step={3}>
-                              <TimelineIndicator />
-                              <TimelineSeparator />
-                              <TimelineHeader>
-                                <TimelineTitle>Shipped</TimelineTitle>
-                                <TimelineDate>
-                                  {formatDateOnlyForDisplay(
-                                    collectionItem.shippingDate,
-                                    dateFormat,
-                                  )}
-                                </TimelineDate>
-                              </TimelineHeader>
-                            </TimelineItem>
-                            <TimelineItem step={4}>
-                              <TimelineIndicator />
-                              <TimelineSeparator />
-                              <TimelineHeader>
-                                <TimelineTitle>Collected</TimelineTitle>
-                                <TimelineDate>
-                                  {formatDateOnlyForDisplay(
-                                    collectionItem.collectionDate,
-                                    dateFormat,
-                                  )}
-                                </TimelineDate>
-                              </TimelineHeader>
-                            </TimelineItem>
-                          </Timeline>
-                        )}
-
-                        {(collectionItem.score ||
-                          collectionItem.tags.length > 0 ||
-                          collectionItem.notes) && (
-                          <div className="space-y-3">
-                            {collectionItem.score && parseFloat(collectionItem.score) !== 0 && (
-                              <DetailRow label="Score">{collectionItem.score}</DetailRow>
-                            )}
-                            {collectionItem.tags.length > 0 && (
-                              <div>
-                                <span className="text-xs text-muted-foreground">Tags</span>
-                                <div className="flex flex-wrap gap-1.5 mt-1">
-                                  {collectionItem.tags.map((tag) => (
-                                    <Badge key={tag} variant="secondary">
-                                      {tag}
-                                    </Badge>
-                                  ))}
+                              )}
+                              {collectionItem.notes && (
+                                <div>
+                                  <span className="text-[0.6875rem] text-muted-foreground">
+                                    Notes
+                                  </span>
+                                  <p className="text-sm mt-1 leading-relaxed text-foreground/75 whitespace-pre-wrap">
+                                    {collectionItem.notes}
+                                  </p>
                                 </div>
-                              </div>
-                            )}
-                            {collectionItem.notes && (
-                              <div>
-                                <span className="text-xs text-muted-foreground">Notes</span>
-                                <p className="text-sm mt-1 text-foreground/80 whitespace-pre-wrap">
-                                  {collectionItem.notes}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </CardContent>
+                              )}
+                            </div>
+                          )}
+                        </CardContent>
 
-                      {relatedOrder && (
-                        <CardFooter>
-                          <Link
-                            to="/orders/$id"
-                            params={{ id: collectionItem.orderId! }}
-                            className="flex items-center gap-2 text-sm text-primary hover:underline underline-offset-4"
-                          >
-                            <span>View order: {relatedOrder.title}</span>
-                          </Link>
-                        </CardFooter>
-                      )}
-                    </Card>
+                        {relatedOrder && (
+                          <CardFooter>
+                            <Link
+                              to="/orders/$id"
+                              params={{ id: collectionItem.orderId! }}
+                              className="flex items-center gap-2 text-sm text-primary transition-colors duration-150 ease-out hover:text-primary/80 underline-offset-4 hover:underline"
+                            >
+                              <span>View order: {relatedOrder.title}</span>
+                            </Link>
+                          </CardFooter>
+                        )}
+                      </Card>
+                    </div>
                   );
                 })}
               </div>
