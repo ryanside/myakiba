@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useMutation, type QueryClient, type UseMutationResult } from "@tanstack/react-query";
+import { useMutation, type QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { tryCatch } from "@myakiba/utils/result";
 import type {
@@ -10,34 +10,16 @@ import type {
 } from "@myakiba/contracts/sync/types";
 import { transformCSVData } from "@/lib/sync";
 import { sendCollection, sendItems, sendOrder, sendOrderItems } from "@/queries/sync";
+import { showSyncToast } from "@/components/sync/sync-toast";
 
-type CsvMutationData = Awaited<ReturnType<typeof sendItems>>;
-type OrderMutationData = Awaited<ReturnType<typeof sendOrder>>;
-type OrderItemMutationData = Awaited<ReturnType<typeof sendOrderItems>>;
-type CollectionMutationData = Awaited<ReturnType<typeof sendCollection>>;
-
-type SyncMutationResult = {
+type SyncResponse = {
   readonly syncSessionId: string;
-  readonly jobId: string | null | undefined;
   readonly isFinished: boolean;
-  readonly status: string;
+  readonly existingItemsToInsert: number;
+  readonly newItems: number;
 };
 
-type UseSyncMutationsOnComplete = (data: SyncMutationResult) => void;
-
 export type UseSyncMutationsReturn = {
-  readonly csvMutation: UseMutationResult<CsvMutationData, Error, UserItem[]>;
-  readonly orderMutation: UseMutationResult<OrderMutationData, Error, SyncOrder>;
-  readonly orderItemMutation: UseMutationResult<OrderItemMutationData, Error, SyncOrderItems>;
-  readonly collectionMutation: UseMutationResult<
-    CollectionMutationData,
-    Error,
-    SyncCollectionItem[]
-  >;
-  readonly mutateCsvAsync: (userItems: UserItem[]) => Promise<CsvMutationData>;
-  readonly mutateOrderAsync: (order: SyncOrder) => Promise<OrderMutationData>;
-  readonly mutateOrderItemAsync: (orderItems: SyncOrderItems) => Promise<OrderItemMutationData>;
-  readonly mutateCollectionAsync: (items: SyncCollectionItem[]) => Promise<CollectionMutationData>;
   readonly handleSyncCsvSubmit: (value: File | undefined) => Promise<void>;
   readonly handleSyncOrderSubmit: (values: SyncOrder) => Promise<void>;
   readonly handleSyncOrderItemSubmit: (values: SyncOrderItems) => Promise<void>;
@@ -45,89 +27,58 @@ export type UseSyncMutationsReturn = {
   readonly isSyncing: boolean;
 };
 
+const toastSyncError =
+  (title: string) =>
+  (error: Error): void => {
+    const message = error.message.trim();
+    toast.error(message.length > 0 ? message : title);
+  };
+
 export function useSyncMutations(
   queryClient: QueryClient,
-  onComplete?: UseSyncMutationsOnComplete,
+  onComplete?: () => void,
 ): UseSyncMutationsReturn {
-  const handleFormResult = useCallback(
-    (data: SyncMutationResult): void => {
-      onComplete?.(data);
+  const handleSuccess = useCallback(
+    (data: SyncResponse): void => {
+      onComplete?.();
+
+      showSyncToast({
+        finished: data.isFinished,
+        existingItems: data.existingItemsToInsert,
+        newItems: data.newItems,
+      });
 
       if (data.isFinished) {
-        toast.success(data.status);
         void queryClient.invalidateQueries();
-        return;
+      } else {
+        void queryClient.invalidateQueries({ queryKey: ["syncSessions"] });
       }
-
-      void queryClient.invalidateQueries({
-        queryKey: ["syncSessions"],
-      });
     },
     [onComplete, queryClient],
   );
 
   const csvMutation = useMutation({
     mutationFn: (userItems: UserItem[]) => sendItems(userItems),
-    onSuccess: (data: CsvMutationData): void =>
-      handleFormResult({
-        syncSessionId: data.syncSessionId,
-        jobId: data.jobId,
-        isFinished: data.isFinished,
-        status: data.status,
-      }),
-    onError: (error: Error): void => {
-      toast.error("Failed to submit CSV.", {
-        description: error.message,
-      });
-    },
+    onSuccess: handleSuccess,
+    onError: toastSyncError("Failed to submit CSV."),
   });
 
   const orderMutation = useMutation({
     mutationFn: (order: SyncOrder) => sendOrder(order),
-    onSuccess: (data: OrderMutationData): void =>
-      handleFormResult({
-        syncSessionId: data.syncSessionId,
-        jobId: data.jobId,
-        isFinished: data.isFinished,
-        status: data.status,
-      }),
-    onError: (error: Error): void => {
-      toast.error("Failed to submit order.", {
-        description: error.message,
-      });
-    },
+    onSuccess: handleSuccess,
+    onError: toastSyncError("Failed to submit order."),
   });
 
   const orderItemMutation = useMutation({
     mutationFn: (orderItems: SyncOrderItems) => sendOrderItems(orderItems),
-    onSuccess: (data: OrderItemMutationData): void =>
-      handleFormResult({
-        syncSessionId: data.syncSessionId,
-        jobId: data.jobId,
-        isFinished: data.isFinished,
-        status: data.status,
-      }),
-    onError: (error: Error): void => {
-      toast.error("Failed to submit order items.", {
-        description: error.message,
-      });
-    },
+    onSuccess: handleSuccess,
+    onError: toastSyncError("Failed to submit order items."),
   });
 
   const collectionMutation = useMutation({
     mutationFn: (items: SyncCollectionItem[]) => sendCollection(items),
-    onSuccess: (data: CollectionMutationData): void =>
-      handleFormResult({
-        syncSessionId: data.syncSessionId,
-        jobId: data.jobId,
-        isFinished: data.isFinished,
-        status: data.status,
-      }),
-    onError: (error: Error): void => {
-      toast.error("Failed to submit collection.", {
-        description: error.message,
-      });
-    },
+    onSuccess: handleSuccess,
+    onError: toastSyncError("Failed to submit collection."),
   });
 
   const handleSyncCsvSubmit = useCallback(
@@ -171,14 +122,6 @@ export function useSyncMutations(
     collectionMutation.isPending;
 
   return {
-    csvMutation,
-    orderMutation,
-    orderItemMutation,
-    collectionMutation,
-    mutateCsvAsync: csvMutation.mutateAsync,
-    mutateOrderAsync: orderMutation.mutateAsync,
-    mutateOrderItemAsync: orderItemMutation.mutateAsync,
-    mutateCollectionAsync: collectionMutation.mutateAsync,
     handleSyncCsvSubmit,
     handleSyncOrderSubmit,
     handleSyncOrderItemSubmit,

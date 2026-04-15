@@ -30,6 +30,8 @@ import {
 } from "./job-status-subscription-registry";
 
 const MAX_JOB_STATUS_STREAM_DURATION_MS = 10 * 60 * 1000;
+const VERIFY_EMAIL_BEFORE_SYNC_MESSAGE =
+  "Please verify your email before syncing. A verification email was already sent when you signed up.";
 
 const createTerminalJobStatus = (
   statusMessage: string,
@@ -124,6 +126,16 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       if (!user) {
         log.set({ outcome: "unauthorized" });
         return status(401, "Unauthorized");
+      }
+
+      if (!user.emailVerified) {
+        log.set({
+          action: "sync.csv",
+          outcome: "forbidden",
+          user: { id: user.id },
+          sync: { type: "csv", reason: "email_not_verified" },
+        });
+        return status(403, VERIFY_EMAIL_BEFORE_SYNC_MESSAGE);
       }
 
       log.set({
@@ -321,6 +333,16 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       if (!user) {
         log.set({ outcome: "unauthorized" });
         return status(401, "Unauthorized");
+      }
+
+      if (!user.emailVerified) {
+        log.set({
+          action: "sync.order",
+          outcome: "forbidden",
+          user: { id: user.id },
+          sync: { type: "order", reason: "email_not_verified" },
+        });
+        return status(403, VERIFY_EMAIL_BEFORE_SYNC_MESSAGE);
       }
 
       log.set({
@@ -625,6 +647,16 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         return status(401, "Unauthorized");
       }
 
+      if (!user.emailVerified) {
+        log.set({
+          action: "sync.orderItem",
+          outcome: "forbidden",
+          user: { id: user.id },
+          sync: { type: "order-item", orderId: body.orderId, reason: "email_not_verified" },
+        });
+        return status(403, VERIFY_EMAIL_BEFORE_SYNC_MESSAGE);
+      }
+
       log.set({
         action: "sync.orderItem",
         user: { id: user.id },
@@ -916,6 +948,16 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       if (!user) {
         log.set({ outcome: "unauthorized" });
         return status(401, "Unauthorized");
+      }
+
+      if (!user.emailVerified) {
+        log.set({
+          action: "sync.collection",
+          outcome: "forbidden",
+          user: { id: user.id },
+          sync: { type: "collection", reason: "email_not_verified" },
+        });
+        return status(403, VERIFY_EMAIL_BEFORE_SYNC_MESSAGE);
       }
 
       log.set({

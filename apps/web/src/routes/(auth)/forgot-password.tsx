@@ -13,6 +13,7 @@ import { Turnstile } from "@marsidev/react-turnstile";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
 import { useState } from "react";
 import { env } from "@myakiba/env/web";
+import { AuthLayout } from "@/components/auth/auth-layout";
 
 export const Route = createFileRoute("/(auth)/forgot-password")({
   component: RouteComponent,
@@ -63,113 +64,124 @@ function RouteComponent() {
 
   if (emailSent) {
     return (
-      <div className="bg-background flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
-        <div className="absolute top-4 left-4">
-          <BackLink to="/" text="Back to Home" font="sans" />
-        </div>
-        <div className="w-full max-w-md">
-          <div className="flex flex-col gap-6">
-            <div className="flex flex-col items-center justify-center gap-2">
-              <Link to="/">
-                <MyAkibaLogo size="full" className="size-28" />
-              </Link>
-              <div className="text-center">
-                <h1 className="text-2xl font-medium">Check your email</h1>
-              </div>
-            </div>
-            <div className="text-center space-y-4">
-              <div className="mx-auto w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
-                <HugeiconsIcon
-                  icon={Mail01Icon}
-                  className="w-6 h-6 text-green-600 dark:text-green-400"
-                />
-              </div>
-              <p className="text-muted-foreground">
-                We've sent a password reset link to <br />
-                <span className="font-medium text-foreground">{sentEmail}</span>
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Click the link in the email to reset your password. If you don't see the email,
-                check your spam folder.
-              </p>
-            </div>
-            <div className="flex justify-center">
-              <BackLink to="/login" text="Back to Login" font="sans" />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-background flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
-      <div className="absolute top-4 left-4">
-        <BackLink to="/" text="Back to Home" font="sans" />
-      </div>
-      <div className="w-full max-w-md">
+      <AuthLayout>
         <div className="flex flex-col gap-6">
-          <div className="flex flex-col items-center justify-center gap-2">
+          <div
+            className="flex flex-col items-center justify-center gap-2 animate-appear"
+            style={{ "--appear-delay": "0ms" } as React.CSSProperties}
+          >
             <Link to="/">
               <MyAkibaLogo size="full" className="size-28" />
             </Link>
             <div className="text-center">
-              <h1 className="text-2xl font-medium">Forgot your password?</h1>
-              <p className="text-sm text-muted-foreground mt-2">
-                Enter your email address and we'll send you a link to reset your password.
-              </p>
+              <h1 className="text-2xl font-medium">Check your email</h1>
             </div>
           </div>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              form.handleSubmit();
-            }}
-            className="grid gap-4"
+          <div
+            className="text-center space-y-4 animate-appear"
+            style={{ "--appear-delay": "80ms" } as React.CSSProperties}
           >
-            <div>
-              <form.Field name="email">
-                {(field) => (
-                  <div className="space-y-2">
-                    <Label htmlFor={field.name}>Email</Label>
-                    <Input
-                      id={field.name}
-                      name={field.name}
-                      type="email"
-                      placeholder="your@email.com"
-                      value={field.state.value}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                    />
-                    {field.state.meta.errors.map((error) => (
-                      <p key={error?.message} className="text-red-500 text-sm">
-                        {error?.message}
-                      </p>
-                    ))}
-                  </div>
-                )}
-              </form.Field>
+            <div className="mx-auto w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
+              <HugeiconsIcon
+                icon={Mail01Icon}
+                className="w-6 h-6 text-green-600 dark:text-green-400"
+              />
             </div>
+            <p className="text-muted-foreground">
+              We've sent a password reset link to <br />
+              <span className="font-medium text-foreground">{sentEmail}</span>
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Click the link in the email to reset your password. If you don't see the email, check
+              your spam folder.
+            </p>
+          </div>
+          <div
+            className="flex justify-center animate-appear"
+            style={{ "--appear-delay": "160ms" } as React.CSSProperties}
+          >
+            <BackLink to="/login" text="Back to Login" font="sans" />
+          </div>
+        </div>
+      </AuthLayout>
+    );
+  }
 
-            <div>
-              <form.Field name="turnstileToken">
-                {(field) => (
-                  <div className="space-y-2">
-                    <Turnstile
-                      siteKey={env.VITE_TURNSTILE_SITE_KEY}
-                      onSuccess={field.handleChange}
-                    />
-                  </div>
-                )}
-              </form.Field>
-            </div>
+  return (
+    <AuthLayout>
+      <div className="flex flex-col gap-6">
+        <div
+          className="flex flex-col items-center justify-center gap-2 animate-appear"
+          style={{ "--appear-delay": "0ms" } as React.CSSProperties}
+        >
+          <Link to="/">
+            <MyAkibaLogo size="full" className="size-28" />
+          </Link>
+          <div className="text-center">
+            <h1 className="text-2xl font-medium">Forgot your password?</h1>
+            <p className="text-sm text-muted-foreground mt-2">
+              Enter your email address and we'll send you a link to reset your password.
+            </p>
+          </div>
+        </div>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            form.handleSubmit();
+          }}
+          className="grid gap-4"
+        >
+          <div
+            className="animate-appear"
+            style={{ "--appear-delay": "80ms" } as React.CSSProperties}
+          >
+            <form.Field name="email">
+              {(field) => (
+                <div className="space-y-2">
+                  <Label htmlFor={field.name}>Email</Label>
+                  <Input
+                    id={field.name}
+                    name={field.name}
+                    type="email"
+                    placeholder="your@email.com"
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                  />
+                  {field.state.meta.errors.map((error) => (
+                    <p key={error?.message} className="text-red-500 text-sm">
+                      {error?.message}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </form.Field>
+          </div>
 
+          <div
+            className="animate-appear"
+            style={{ "--appear-delay": "160ms" } as React.CSSProperties}
+          >
+            <form.Field name="turnstileToken">
+              {(field) => (
+                <div className="space-y-2">
+                  <Turnstile siteKey={env.VITE_TURNSTILE_SITE_KEY} onSuccess={field.handleChange} />
+                </div>
+              )}
+            </form.Field>
+          </div>
+
+          <div
+            className="animate-appear"
+            style={{ "--appear-delay": "240ms" } as React.CSSProperties}
+          >
             <form.Subscribe>
               {(state) => (
                 <Button
                   type="submit"
-                  className="w-full"
+                  className="w-full active:scale-[0.97] transition-transform duration-150"
+                  style={{ transitionTimingFunction: "cubic-bezier(0.23, 1, 0.32, 1)" }}
                   disabled={!state.canSubmit || state.isSubmitting}
                 >
                   {state.isSubmitting ? (
@@ -180,18 +192,21 @@ function RouteComponent() {
                 </Button>
               )}
             </form.Subscribe>
-          </form>
-          <div className="text-center text-sm">
-            Remember your password?{" "}
-            <BackLink
-              to="/login"
-              text="Back to Login"
-              font="sans"
-              className="inline-flex py-0 mb-0 align-baseline"
-            />
           </div>
+        </form>
+        <div
+          className="text-center text-sm animate-appear"
+          style={{ "--appear-delay": "300ms" } as React.CSSProperties}
+        >
+          Remember your password?{" "}
+          <BackLink
+            to="/login"
+            text="Back to Login"
+            font="sans"
+            className="inline-flex py-0 mb-0 align-baseline"
+          />
         </div>
       </div>
-    </div>
+    </AuthLayout>
   );
 }

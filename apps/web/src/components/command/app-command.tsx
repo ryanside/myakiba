@@ -34,12 +34,7 @@ import {
   type LaunchableSyncType,
   type SyncLauncherOption,
 } from "@/components/sync/sync-launcher";
-
-const SYNC_TYPE_LABELS: Record<LaunchableSyncType, string> = {
-  csv: "CSV",
-  order: "Order",
-  collection: "Collection",
-};
+import { SYNC_TYPE_CONFIG } from "@/lib/sync";
 const COMMAND_TOKEN_SPLIT_PATTERN = /[^a-z0-9]+/i;
 const COMMAND_SEARCH_DEBOUNCE_MS = 250;
 const EMPTY_COMMAND_SEARCH_RESULTS: CommandSearchResults = {
@@ -351,7 +346,7 @@ export function AppCommand(): React.JSX.Element {
                   <ActionCommandItem
                     key={item.type}
                     value={`sync-${item.type}`}
-                    title={`Sync ${SYNC_TYPE_LABELS[item.type]}`}
+                    title={`Sync ${SYNC_TYPE_CONFIG[item.type].label}`}
                     subtitle={item.description}
                     shortcut="Action"
                     leading={<CommandLeadIcon icon={item.icon} />}

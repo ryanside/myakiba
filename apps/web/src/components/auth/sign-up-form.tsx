@@ -109,31 +109,46 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col items-center justify-center gap-2">
+      <div
+        className="flex flex-col items-center justify-center gap-2 animate-appear"
+        style={{ "--appear-delay": "0ms" } as React.CSSProperties}
+      >
         <div className="text-xl font-medium flex items-center gap-2">
-          <span className="">Welcome to</span>
+          <span>Welcome to</span>
           <MyAkibaLogo size="full" className="size-28 inline-block" />
         </div>
-        <div className="text-center text-sm">
+        <div className="text-center text-sm text-muted-foreground">
           Already have an account?{" "}
-          <Button
+          <button
+            type="button"
             onClick={onSwitchToSignIn}
-            className="underline underline-offset-4"
-            variant="link"
+            className="text-foreground underline underline-offset-4 transition-colors duration-150 hover:text-foreground/80"
           >
             Login
-          </Button>
+          </button>
         </div>
       </div>
-      <div className="grid gap-4">
-        <Button variant="outline" type="button" className="w-full" onClick={handleGoogleAuth}>
+
+      <div className="animate-appear" style={{ "--appear-delay": "60ms" } as React.CSSProperties}>
+        <Button
+          variant="outline"
+          type="button"
+          className="w-full active:scale-[0.97] transition-transform duration-150"
+          style={{ transitionTimingFunction: "cubic-bezier(0.23, 1, 0.32, 1)" }}
+          onClick={handleGoogleAuth}
+        >
           <GoogleIcon />
           Continue with Google
         </Button>
       </div>
-      <div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
-        <span className="bg-background text-muted-foreground relative z-10 px-2">Or</span>
+
+      <div
+        className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t animate-appear"
+        style={{ "--appear-delay": "120ms" } as React.CSSProperties}
+      >
+        <span className="bg-background text-muted-foreground relative z-10 px-2">or</span>
       </div>
+
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -142,7 +157,10 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
         }}
         className="grid gap-4"
       >
-        <div>
+        <div
+          className="animate-appear"
+          style={{ "--appear-delay": "180ms" } as React.CSSProperties}
+        >
           <form.Field
             name="username"
             asyncDebounceMs={1000}
@@ -183,7 +201,7 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
                 {field.state.meta.errors.map((error) => (
                   <p
                     key={typeof error === "string" ? error : error?.message}
-                    className="text-red-500"
+                    className="text-red-500 text-sm"
                   >
                     {typeof error === "string" ? error : error?.message}
                   </p>
@@ -193,7 +211,10 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
           </form.Field>
         </div>
 
-        <div>
+        <div
+          className="animate-appear"
+          style={{ "--appear-delay": "240ms" } as React.CSSProperties}
+        >
           <form.Field
             name="email"
             validators={{
@@ -212,7 +233,7 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
                   onChange={(e) => field.handleChange(e.target.value)}
                 />
                 {field.state.meta.errors.map((error) => (
-                  <p key={error?.message} className="text-red-500">
+                  <p key={error?.message} className="text-red-500 text-sm">
                     {error?.message}
                   </p>
                 ))}
@@ -221,7 +242,10 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
           </form.Field>
         </div>
 
-        <div>
+        <div
+          className="animate-appear"
+          style={{ "--appear-delay": "300ms" } as React.CSSProperties}
+        >
           <form.Field
             name="password"
             validators={{
@@ -240,14 +264,14 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
                   onChange={(e) => field.handleChange(e.target.value)}
                 />
                 {field.state.meta.errors.map((error) => (
-                  <p key={error?.message} className="text-red-500">
+                  <p key={error?.message} className="text-red-500 text-sm">
                     {error?.message}
                   </p>
                 ))}
                 <div className="flex items-center justify-end">
                   <Link
                     to="/forgot-password"
-                    className="text-sm text-primary hover:underline underline-offset-4"
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-150 underline underline-offset-4"
                   >
                     Forgot password?
                   </Link>
@@ -257,7 +281,10 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
           </form.Field>
         </div>
 
-        <div>
+        <div
+          className="animate-appear"
+          style={{ "--appear-delay": "360ms" } as React.CSSProperties}
+        >
           <form.Field name="turnstileToken">
             {(field) => (
               <div className="space-y-2">
@@ -267,21 +294,27 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
           </form.Field>
         </div>
 
-        <form.Subscribe>
-          {(state) => (
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={!state.canSubmit || state.isSubmitting}
-            >
-              {state.isSubmitting ? (
-                <HugeiconsIcon icon={Loading03Icon} className="animate-spin" />
-              ) : (
-                "Register"
-              )}
-            </Button>
-          )}
-        </form.Subscribe>
+        <div
+          className="animate-appear"
+          style={{ "--appear-delay": "420ms" } as React.CSSProperties}
+        >
+          <form.Subscribe>
+            {(state) => (
+              <Button
+                type="submit"
+                className="w-full active:scale-[0.97] transition-transform duration-150"
+                style={{ transitionTimingFunction: "cubic-bezier(0.23, 1, 0.32, 1)" }}
+                disabled={!state.canSubmit || state.isSubmitting}
+              >
+                {state.isSubmitting ? (
+                  <HugeiconsIcon icon={Loading03Icon} className="animate-spin" />
+                ) : (
+                  "Register"
+                )}
+              </Button>
+            )}
+          </form.Subscribe>
+        </div>
       </form>
     </div>
   );
