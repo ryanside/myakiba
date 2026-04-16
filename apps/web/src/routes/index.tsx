@@ -50,7 +50,7 @@ const NAV_LINKS: readonly {
   { name: "Features", href: "#features" },
   { name: "FAQs", href: "#faqs" },
   { name: "Discord", href: "https://discord.gg/VKHVvhcC2z", external: true },
-  { name: "Github", href: "https://github.com/ryanside/myakiba", external: true },
+  { name: "GitHub", href: "https://github.com/ryanside/myakiba", external: true },
 ];
 
 type Feature = {
@@ -171,7 +171,7 @@ function HomeComponent() {
           A modern anime figure collection manager
         </h1>
 
-        <p className="animate-appear mt-3 text-[15px] leading-normal text-muted-foreground [--appear-delay:140ms]">
+        <p className="animate-appear mt-3 text-[15px] text-balance leading-normal text-muted-foreground [--appear-delay:140ms]">
           Your MyFigureCollection catalog and the flexibility of spreadsheets, unified into a modern
           collection manager. Track orders, analyze your collection, and sync with MFC.
         </p>

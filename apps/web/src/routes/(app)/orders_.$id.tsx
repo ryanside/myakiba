@@ -263,7 +263,7 @@ function RouteComponent() {
       </div>
 
       {/* Progress + Cost Breakdown */}
-      <div className="grid gap-8 lg:grid-cols-[3fr_2fr] animate-appear [--appear-delay:80ms]">
+      <div className="grid gap-8 lg:grid-cols-[3fr_2fr] animate-appear">
         <section className="flex flex-col gap-3">
           <h2 className="text-xs font-medium text-muted-foreground">Progress</h2>
           <Timeline orientation="horizontal" value={activeStep}>
@@ -320,7 +320,7 @@ function RouteComponent() {
 
       {/* Notes */}
       {order.notes && (
-        <section className="flex flex-col gap-3 animate-appear [--appear-delay:160ms]">
+        <section className="flex flex-col gap-3 animate-appear">
           <h2 className="text-xs font-medium text-muted-foreground">Notes</h2>
           <div className="rounded-xl bg-card ring-1 ring-foreground/10 px-5 py-4">
             <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed max-w-prose">
@@ -331,7 +331,7 @@ function RouteComponent() {
       )}
 
       {/* Order Items */}
-      <section className="flex flex-col gap-3 flex-1 animate-appear [--appear-delay:240ms]">
+      <section className="flex flex-col gap-3 flex-1 animate-appear">
         <h2 className="text-xs font-medium text-muted-foreground">Items ({order.itemCount})</h2>
         {order.itemCount > 0 ? (
           <div className="rounded-xl ring-1 ring-foreground/10 bg-card overflow-hidden">
@@ -356,7 +356,7 @@ function RouteComponent() {
       </section>
 
       {/* Footer metadata */}
-      <div className="flex items-center gap-2 text-xs text-muted-foreground/60 pb-2 animate-appear [--appear-delay:320ms]">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground/60 pb-2 animate-appear">
         <span>Created {formatTimestampForDisplay(order.createdAt, dateFormat)}</span>
         <span aria-hidden="true">&middot;</span>
         <span>Updated {formatTimestampForDisplay(order.updatedAt, dateFormat)}</span>
