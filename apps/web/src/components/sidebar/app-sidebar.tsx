@@ -63,7 +63,7 @@ const data = {
       icon: DiscordLogo,
     },
     {
-      title: "Github",
+      title: "GitHub",
       url: "https://github.com/ryanside/myakiba",
       icon: GitHubLogo,
     },

@@ -454,10 +454,7 @@ function RouteComponent() {
       {/* Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-5">
         {/* Left Column: Item Details */}
-        <div
-          className="lg:col-span-3 space-y-10 lg:pr-8 pt-8 pb-8 animate-appear"
-          style={{ "--appear-delay": "75ms" } as React.CSSProperties}
-        >
+        <div className="lg:col-span-3 space-y-10 lg:pr-8 pt-8 pb-8 animate-appear">
           {/* Releases */}
           {item.releases && item.releases.length > 0 && (
             <section className="space-y-3">
@@ -549,10 +546,7 @@ function RouteComponent() {
         </div>
 
         {/* Right Column: Your Collection */}
-        <div
-          className="lg:col-span-2 lg:pl-8 lg:border-l lg:border-border/40 pt-8 pb-8 border-t border-border/40 lg:border-t-0 animate-appear"
-          style={{ "--appear-delay": "150ms" } as React.CSSProperties}
-        >
+        <div className="lg:col-span-2 lg:pl-8 pt-8 pb-8 animate-appear">
           <SectionHeading>Your Collection</SectionHeading>
 
           <div className="mt-4">
@@ -587,7 +581,7 @@ function RouteComponent() {
               </Empty>
             ) : (
               <div className="space-y-5">
-                {collectionItems.map((collectionItem, index) => {
+                {collectionItems.map((collectionItem) => {
                   const release = item.releases.find((r) => r.id === collectionItem.releaseId);
                   const relatedOrder = collectionItem.orderId
                     ? ordersList.find((o) => o.id === collectionItem.orderId)
@@ -601,11 +595,7 @@ function RouteComponent() {
                   });
 
                   return (
-                    <div
-                      key={collectionItem.id}
-                      className="animate-appear"
-                      style={{ "--appear-delay": `${200 + index * 60}ms` } as React.CSSProperties}
-                    >
+                    <div key={collectionItem.id} className="animate-appear">
                       <Card>
                         <CardHeader>
                           <div className="flex items-center gap-2">
