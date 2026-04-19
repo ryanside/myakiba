@@ -50,7 +50,7 @@ function RouteComponent() {
         <div className="flex flex-row items-start gap-4">
           <h1 className="text-2xl tracking-tight font-heading font-medium">Orders</h1>
         </div>
-        <p className="text-muted-foreground text-sm font-normal">Manage and track your orders</p>
+        <p className="text-muted-foreground text-sm font-normal">Manage and track your orders.</p>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         <KPICard

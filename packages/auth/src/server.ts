@@ -51,8 +51,17 @@ export const auth = betterAuth({
     },
   },
   trustedOrigins: env.CORS_ORIGIN.split(",").map((origin) => origin.trim()) || [],
+  rateLimit: {
+    enabled: true,
+    storage: "secondary-storage",
+    customRules: {
+      "/send-verification-email": { window: 60, max: 1 },
+      "/forget-password": { window: 60, max: 3 },
+    },
+  },
   emailAndPassword: {
     enabled: true,
+    requireEmailVerification: true,
     sendResetPassword: async ({ user, url }) => {
       await resend.emails.send({
         from: env.RESEND_FROM_EMAIL,
@@ -64,6 +73,8 @@ export const auth = betterAuth({
   },
   emailVerification: {
     autoSignInAfterVerification: true,
+    sendOnSignUp: true,
+    sendOnSignIn: true,
     sendVerificationEmail: async ({ user, url }) => {
       await resend.emails.send({
         from: env.RESEND_FROM_EMAIL,

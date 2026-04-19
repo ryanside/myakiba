@@ -10,13 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Dialog,
   DialogContent,
@@ -28,30 +22,10 @@ import {
 } from "@/components/ui/dialog";
 import * as z from "zod";
 import { app } from "@/lib/treaty-client";
+import { formatDateOnlyForDisplay } from "@/lib/date-display";
+import { CURRENCY_LABELS } from "@/lib/locale";
 import { CURRENCIES, DATE_FORMATS } from "@myakiba/contracts/shared/constants";
-import type { Currency } from "@myakiba/contracts/shared/types";
-
-const CURRENCY_LABELS: Readonly<Record<Currency, string>> = {
-  AUD: "Australian Dollar",
-  BRL: "Brazilian Real",
-  CAD: "Canadian Dollar",
-  CNY: "Chinese Renminbi",
-  EUR: "Euro",
-  GBP: "Pound Sterling",
-  HKD: "Hong Kong Dollar",
-  JPY: "Japanese Yen",
-  NZD: "New Zealand Dollar",
-  PHP: "Philippine Peso",
-  RUB: "Russian Ruble",
-  SGD: "Singapore Dollar",
-  USD: "United States Dollar",
-};
-
-const CURRENCY_OPTIONS: ReadonlyArray<{ readonly value: Currency; readonly label: string }> =
-  CURRENCIES.map((currency) => ({
-    value: currency,
-    label: `${currency} - ${CURRENCY_LABELS[currency]}`,
-  }));
+import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 
 type User = {
   id: string;
@@ -191,21 +165,13 @@ function ProfileForm({ user }: { user: User }) {
             asyncDebounceMs={1000}
             validators={{
               onChangeAsync: async ({ value }) => {
-                if (value.length < 3) {
-                  return;
-                } else if (value.length > 30) {
-                  return;
-                } else {
-                  const { data, error } = await authClient.isUsernameAvailable({
-                    username: value,
-                  });
-                  if (data?.available === false) {
-                    return "Username is already taken";
-                  }
-                  if (error) {
-                    return error.message;
-                  }
-                }
+                if (value.length < 3 || value.length > 30) return;
+                if (value === user.username) return;
+                const { data, error } = await authClient.isUsernameAvailable({
+                  username: value,
+                });
+                if (data?.available === false) return "Username is already taken";
+                if (error) return error.message;
               },
               onBlur: z
                 .string()
@@ -435,23 +401,35 @@ function PreferencesForm({ user }: { user: User }) {
         >
           <form.Field name="currency">
             {(field) => (
-              <div className="space-y-2">
-                <Label htmlFor={field.name}>Display Currency</Label>
-                <Select
-                  value={field.state.value ?? ""}
-                  onValueChange={(value) => field.handleChange(value ?? "")}
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor={field.name}>Display Currency</Label>
+                  <span className="text-xs text-muted-foreground">
+                    {CURRENCY_LABELS[field.state.value as Currency]}
+                  </span>
+                </div>
+                <ToggleGroup
+                  id={field.name}
+                  variant="outline"
+                  spacing={1}
+                  value={[field.state.value]}
+                  onValueChange={(newValue) => {
+                    if (newValue.length > 0) {
+                      field.handleChange(newValue[0] ?? "");
+                    }
+                  }}
+                  className="flex-wrap"
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder={field.state.value} />
-                  </SelectTrigger>
-                  <SelectContent align="start" className="w-full">
-                    {CURRENCY_OPTIONS.map((currency) => (
-                      <SelectItem key={currency.value} value={currency.value}>
-                        {currency.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  {CURRENCIES.map((currency) => (
+                    <ToggleGroupItem
+                      key={currency}
+                      value={currency}
+                      aria-label={CURRENCY_LABELS[currency]}
+                    >
+                      {currency}
+                    </ToggleGroupItem>
+                  ))}
+                </ToggleGroup>
                 {field.state.meta.errors.length > 0 && (
                   <p className="text-sm text-destructive">{field.state.meta.errors[0]?.message}</p>
                 )}
@@ -461,23 +439,31 @@ function PreferencesForm({ user }: { user: User }) {
 
           <form.Field name="dateFormat">
             {(field) => (
-              <div className="space-y-2">
-                <Label htmlFor={field.name}>Date Format</Label>
-                <Select
-                  value={field.state.value ?? ""}
-                  onValueChange={(value) => field.handleChange(value ?? "")}
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor={field.name}>Date Format</Label>
+                  <span className="text-xs text-muted-foreground">
+                    e.g. {formatDateOnlyForDisplay(new Date(), field.state.value as DateFormat)}
+                  </span>
+                </div>
+                <ToggleGroup
+                  id={field.name}
+                  variant="outline"
+                  spacing={1}
+                  value={[field.state.value]}
+                  onValueChange={(newValue) => {
+                    if (newValue.length > 0) {
+                      field.handleChange(newValue[0] ?? "");
+                    }
+                  }}
+                  className="flex-wrap"
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder={field.state.value} />
-                  </SelectTrigger>
-                  <SelectContent align="start">
-                    {DATE_FORMATS.map((dateFormat) => (
-                      <SelectItem key={dateFormat} value={dateFormat}>
-                        {dateFormat}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  {DATE_FORMATS.map((dateFormat) => (
+                    <ToggleGroupItem key={dateFormat} value={dateFormat}>
+                      {dateFormat}
+                    </ToggleGroupItem>
+                  ))}
+                </ToggleGroup>
                 {field.state.meta.errors.length > 0 && (
                   <p className="text-sm text-destructive">{field.state.meta.errors[0]?.message}</p>
                 )}

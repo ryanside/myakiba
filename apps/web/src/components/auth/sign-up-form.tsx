@@ -39,6 +39,7 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
   const navigate = useNavigate({
     from: "/",
   });
+
   const handleGoogleAuth = async () => {
     await authClient.signIn.social(
       {
@@ -72,20 +73,18 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
           password: value.password,
           name: value.username,
           username: value.username,
+          callbackURL: import.meta.env.PROD
+            ? "https://myakiba.app/dashboard"
+            : "http://localhost:3001/dashboard",
         },
         {
           headers: {
             "x-captcha-response": value.turnstileToken,
           },
-          onSuccess: async () => {
-            await authClient.sendVerificationEmail({
-              email: value.email,
-              callbackURL: import.meta.env.PROD
-                ? "https://myakiba.app/sync"
-                : "http://localhost:3001/sync",
-            });
+          onSuccess: () => {
             navigate({
-              to: "/sync",
+              to: "/login",
+              search: { view: "verify-email", email: value.email },
             });
           },
           onError: (error) => {

@@ -52,7 +52,7 @@ function RouteComponent() {
           <h1 className="text-2xl tracking-tight font-heading font-medium">Collection</h1>
         </div>
         <p className="text-muted-foreground text-sm font-normal">
-          Manage and track your collection items
+          Manage and track your collection items.
         </p>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">

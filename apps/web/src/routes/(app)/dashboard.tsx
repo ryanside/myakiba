@@ -104,7 +104,7 @@ function RouteComponent(): ReactElement {
             <h1 className="text-2xl tracking-tight font-heading font-medium">
               Welcome
               <span className="hidden sm:inline">
-                , {session?.user.username}. {kaomoji}
+                , {session?.user.username} {kaomoji}
               </span>
             </h1>
           ) : (

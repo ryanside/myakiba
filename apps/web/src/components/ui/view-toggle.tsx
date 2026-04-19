@@ -9,14 +9,23 @@ import {
 
 type ViewMode = "compact" | "table" | "grid" | "gallery";
 
+const VIEW_MODE_LABELS: Readonly<Record<ViewMode, string>> = {
+  compact: "Compact",
+  table: "Table",
+  grid: "Grid",
+  gallery: "Gallery",
+};
+
 interface ViewToggleProps {
+  readonly id?: string;
   readonly value: ViewMode;
   readonly onValueChange: (value: ViewMode) => void;
 }
 
-export function ViewToggle({ value, onValueChange }: ViewToggleProps): React.JSX.Element {
+export function ViewToggle({ id, value, onValueChange }: ViewToggleProps): React.JSX.Element {
   return (
     <ToggleGroup
+      id={id}
       value={[value]}
       onValueChange={(newValue) => {
         if (newValue.length > 0) {
@@ -41,4 +50,5 @@ export function ViewToggle({ value, onValueChange }: ViewToggleProps): React.JSX
   );
 }
 
+export { VIEW_MODE_LABELS };
 export type { ViewMode };
