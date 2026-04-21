@@ -60,9 +60,15 @@ export const PHASE_CONFIG: Record<SyncJobPhase, { readonly bannerClass: string }
  *
  * Precedence:
  * 1. stream error copy
- * 2. latest recent-item outcome from the live stream
- * 3. live `jobStatus.statusMessage`
- * 4. persisted `session.statusMessage`
+ * 2. terminal `jobStatus.statusMessage` (summary — wins over per-item ticker)
+ * 3. latest recent-item outcome from the live stream
+ * 4. live `jobStatus.statusMessage`
+ * 5. persisted `session.statusMessage`
+ *
+ * The recent-item override is intentionally skipped once the job has reached a
+ * terminal state, otherwise a completion toast or final banner would show the
+ * per-item ticker ("Synced {last item}") instead of the aggregate summary
+ * ("Synced 10/10 items").
  *
  * This helper only decides the sentence. Badge label, spinner state, and
  * container styling should stay at the call site.
@@ -96,6 +102,10 @@ export function resolveSyncMessage(
 ): string {
   if (isStreamError) {
     return SYNC_STATUS_MESSAGES.streamError;
+  }
+
+  if (jobStatus?.terminalState != null) {
+    return jobStatus.statusMessage;
   }
 
   const recentItem = jobStatus?.recentItems[0];
