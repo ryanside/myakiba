@@ -8,6 +8,7 @@ import {
 import type { ProcessSyncJobParams, ProcessSyncJobResult, SyncJobStatusState } from "./types";
 import { sessionStatusToPhase, sessionStatusToTerminalState } from "@myakiba/contracts/sync/schema";
 import type { SyncSessionStatus } from "@myakiba/contracts/shared/types";
+import { env } from "@myakiba/env/worker";
 import type Redis from "ioredis";
 
 /**
@@ -17,7 +18,8 @@ import type Redis from "ioredis";
  *
  * Has no effect on `item-resync` or any other worker.
  */
-export const MOCK_SCRAPE = true;
+const MOCK_SCRAPE_FLAG = false;
+export const MOCK_SCRAPE = MOCK_SCRAPE_FLAG && env.NODE_ENV !== "production";
 
 const MOCK_SCRAPE_DELAY_MS = 10000;
 const MOCK_SCRAPE_FAIL_RATE = 0;
