@@ -2,13 +2,38 @@ import { db } from "@myakiba/db/client";
 import { syncSession, syncSessionItem } from "@myakiba/db/schema/figure";
 import { and, eq, inArray } from "drizzle-orm";
 import type {
-  SetJobStatusParams,
   BatchUpdateSyncSessionItemStatusesParams,
   MarkPersistFailedSyncSessionItemStatusesParams,
+  PublishJobStatusParams,
+  SyncJobStatusState,
   UpdateSyncSessionCountsParams,
 } from "./types";
 import { env } from "@myakiba/env/worker";
 import { writeJobStatusSnapshotAndPublish } from "@myakiba/redis/job-status";
+import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
+import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
+import type { SyncSessionStatus } from "@myakiba/contracts/shared/types";
+
+const RECENT_ITEMS_LIMIT = 5;
+
+type ResolveTerminalStateParams = {
+  readonly successCount: number;
+  readonly failCount: number;
+  readonly totalRowCount: number;
+  readonly error?: Error | null;
+};
+
+type ResolvedTerminalState = {
+  readonly sessionStatus: SyncSessionStatus;
+  readonly statusMessage: string;
+};
+
+const formatFailureMessage = (error?: Error | null): string => {
+  if (!error?.message) {
+    return SYNC_STATUS_MESSAGES.failedPersist;
+  }
+  return `${SYNC_STATUS_MESSAGES.failedPersist} - ${error.message}`;
+};
 
 export const createFetchOptions = (image: boolean = false) => ({
   proxy: env.HTTP_PROXY,
@@ -22,39 +47,179 @@ export const createFetchOptions = (image: boolean = false) => ({
 });
 
 /**
- * Writes the latest job status snapshot to Redis, publishes it for live
- * subscribers, and optionally dual-writes durable session state to Postgres.
+ * Creates the mutable in-memory job-status state that the worker updates while
+ * a sync is running.
+ *
+ * Use this at the start of a worker job before publishing the first snapshot.
+ * Callers then mutate the returned object through helpers like
+ * `recordItemOutcome()` and publish it via `publishJobStatus()`.
+ *
+ * This is worker-only state. UI code should consume the serialized
+ * `SyncJobStatus` payload instead of creating its own local version.
+ *
+ * @example
+ * const state = createJobStatusState({
+ *   jobId: "job_123",
+ *   totalItems: 10,
+ *   phase: "scraping",
+ *   statusMessage: SYNC_STATUS_MESSAGES.starting(10),
+ * });
  */
-export const setJobStatus = async ({
-  redis,
+export const createJobStatusState = ({
   jobId,
+  totalItems,
+  phase,
   statusMessage,
-  finished,
+}: {
+  readonly jobId: string;
+  readonly totalItems: number;
+  readonly phase: SyncJobStatusState["phase"];
+  readonly statusMessage: string;
+}): SyncJobStatusState => ({
+  jobId,
+  startedAt: new Date().toISOString(),
+  phase,
+  progress: totalItems > 0 ? { processed: 0, total: totalItems, succeeded: 0, failed: 0 } : null,
+  recentItems: [],
+  statusMessage,
+});
+
+/**
+ * Resolves the terminal session status and canonical terminal message from the
+ * worker's final counts.
+ *
+ * Use this in finalize paths after scraping/persistence completes, instead of
+ * rebuilding the same completed/partial/failed wording in each sync type.
+ *
+ * Pass `error` only for persistence failures where the run reached a terminal
+ * state but we want the stored message to include the underlying cause.
+ *
+ * Do not use this for live progress updates. During in-flight work, the worker
+ * should set `state.phase` and `state.statusMessage` directly.
+ *
+ * @example
+ * resolveTerminalState({ successCount: 10, failCount: 0, totalRowCount: 10 })
+ * // { sessionStatus: "completed", statusMessage: "Synced 10/10 items" }
+ *
+ * @example
+ * resolveTerminalState({
+ *   successCount: 3,
+ *   failCount: 2,
+ *   totalRowCount: 5,
+ *   error: new Error("duplicate key value violates unique constraint"),
+ * })
+ * // {
+ * //   sessionStatus: "partial",
+ * //   statusMessage:
+ * //     "Sync failed - couldn't save scraped items - duplicate key value violates unique constraint"
+ * // }
+ */
+export const resolveTerminalState = ({
+  successCount,
+  failCount,
+  totalRowCount,
+  error = null,
+}: ResolveTerminalStateParams): ResolvedTerminalState => {
+  const sessionStatus = failCount === 0 ? "completed" : successCount > 0 ? "partial" : "failed";
+
+  if (error) {
+    return {
+      sessionStatus,
+      statusMessage: formatFailureMessage(error),
+    };
+  }
+
+  switch (sessionStatus) {
+    case "completed":
+      return {
+        sessionStatus,
+        statusMessage: SYNC_STATUS_MESSAGES.completed(successCount, totalRowCount),
+      };
+    case "partial":
+      return {
+        sessionStatus,
+        statusMessage: SYNC_STATUS_MESSAGES.partial(successCount, totalRowCount, failCount),
+      };
+    case "failed":
+      return {
+        sessionStatus,
+        statusMessage: SYNC_STATUS_MESSAGES.failedPersist,
+      };
+  }
+};
+
+type RecordItemParams =
+  | {
+      readonly outcome: "succeeded";
+      readonly externalId: number;
+      readonly title: string | null;
+    }
+  | {
+      readonly outcome: "failed";
+      readonly externalId: number;
+      readonly title?: string | null;
+      readonly failureReason: string;
+    };
+
+/**
+ * Mutates `state` with a single item's completion: bumps the matching progress
+ * counter and prepends a ticker entry capped at `RECENT_ITEMS_LIMIT`.
+ */
+export const recordItemOutcome = (state: SyncJobStatusState, item: RecordItemParams): void => {
+  if (state.progress) {
+    state.progress = {
+      ...state.progress,
+      processed: state.progress.processed + 1,
+      succeeded: state.progress.succeeded + (item.outcome === "succeeded" ? 1 : 0),
+      failed: state.progress.failed + (item.outcome === "failed" ? 1 : 0),
+    };
+  }
+  state.recentItems = [
+    {
+      externalId: item.externalId,
+      title: item.title ?? null,
+      outcome: item.outcome,
+      failureReason: item.outcome === "failed" ? item.failureReason : null,
+      completedAt: new Date().toISOString(),
+    },
+    ...state.recentItems,
+  ].slice(0, RECENT_ITEMS_LIMIT);
+};
+
+/**
+ * Stamps `updatedAt`, writes the snapshot to Redis (SET + PUBLISH), and
+ * dual-writes durable session state to Postgres when a session id is supplied.
+ */
+export const publishJobStatus = async ({
+  redis,
+  state,
+  terminalState,
   syncSessionId,
   sessionStatus,
-}: SetJobStatusParams): Promise<void> => {
-  const terminalState =
-    finished === true && sessionStatus != null
-      ? sessionStatus === "completed" || sessionStatus === "partial"
-        ? "success"
-        : "error"
-      : null;
-
-  await writeJobStatusSnapshotAndPublish(redis, jobId, {
-    status: statusMessage,
-    finished: finished,
-    createdAt: new Date().toISOString(),
+  error,
+}: PublishJobStatusParams): Promise<void> => {
+  const payload: SyncJobStatus = {
+    jobId: state.jobId,
+    phase: state.phase,
+    statusMessage: state.statusMessage,
+    progress: state.progress,
+    recentItems: state.recentItems,
+    error,
+    startedAt: state.startedAt,
+    updatedAt: new Date().toISOString(),
     terminalState,
-  });
+  };
+
+  await writeJobStatusSnapshotAndPublish(redis, state.jobId, payload);
 
   if (syncSessionId && sessionStatus) {
     await db
       .update(syncSession)
       .set({
-        statusMessage,
+        statusMessage: state.statusMessage,
         status: sessionStatus,
         updatedAt: new Date(),
-        ...(finished ? { completedAt: new Date() } : {}),
+        ...(terminalState !== null ? { completedAt: new Date() } : {}),
       })
       .where(eq(syncSession.id, syncSessionId));
   }

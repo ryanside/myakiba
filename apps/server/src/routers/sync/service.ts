@@ -9,12 +9,14 @@ import {
 } from "@myakiba/db/schema/figure";
 import type { DbEnrichedSyncSessionItemRow, DbSyncSessionRow } from "@myakiba/db/schema/figure";
 import { and, inArray, eq, desc, count, sql } from "drizzle-orm";
-import { syncJobStatusSchema, type SyncTerminalState } from "./model";
+import { syncJobStatusSchema } from "./model";
 import type {
+  SyncJobProgress,
   UpdatedSyncCollection,
   UpdatedSyncOrder,
   UpdatedSyncOrderItem,
 } from "@myakiba/contracts/sync/schema";
+import { sessionStatusToPhase, sessionStatusToTerminalState } from "@myakiba/contracts/sync/schema";
 import type { InternalCsvItem, SyncJobStatus, CollectionInsertType } from "./model";
 import type { OrderInsertType } from "../orders/model";
 import type {
@@ -22,6 +24,7 @@ import type {
   SyncSessionStatus,
   SyncType,
 } from "@myakiba/contracts/shared/types";
+import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import { Queue } from "bullmq";
 import { createId } from "@paralleldrive/cuid2";
 import { env } from "@myakiba/env/server";
@@ -73,13 +76,45 @@ type CsvSyncCandidate = ExistingItemWithLatestRelease &
     isInCollection: boolean;
   }>;
 
-class SyncService {
-  private deriveTerminalStateFromSessionStatus(
-    sessionStatus: SyncSessionStatus,
-  ): SyncTerminalState {
-    return sessionStatus === "completed" || sessionStatus === "partial" ? "success" : "error";
+const resolveFallbackJobStatusMessage = ({
+  status,
+  statusMessage,
+  totalItems,
+  successCount,
+  failCount,
+}: {
+  readonly status: SyncSessionStatus;
+  readonly statusMessage: string | null;
+  readonly totalItems: number;
+  readonly successCount: number;
+  readonly failCount: number;
+}): string => {
+  if (statusMessage) {
+    return statusMessage;
   }
 
+  switch (status) {
+    case "completed":
+      return SYNC_STATUS_MESSAGES.completed(successCount, totalItems);
+    case "partial":
+      return SYNC_STATUS_MESSAGES.partial(successCount, totalItems, failCount);
+    case "failed":
+      if (successCount + failCount === 0) {
+        return SYNC_STATUS_MESSAGES.failedBeforeStart;
+      }
+      return successCount > 0
+        ? SYNC_STATUS_MESSAGES.failedPersist
+        : SYNC_STATUS_MESSAGES.failedScrape;
+    case "pending":
+      return SYNC_STATUS_MESSAGES.queued;
+    case "processing":
+      return totalItems > 0
+        ? SYNC_STATUS_MESSAGES.starting(totalItems)
+        : SYNC_STATUS_MESSAGES.queued;
+  }
+};
+
+class SyncService {
   private async markSyncSessionAsFailed(
     syncSessionId: string,
     statusMessage: string,
@@ -92,10 +127,16 @@ class SyncService {
   }
 
   private async writeQueuedJobStatus(jobId: string, statusMessage: string): Promise<void> {
+    const now = new Date().toISOString();
     await writeJobStatusSnapshotAndPublish(redis, jobId, {
-      status: statusMessage,
-      finished: false,
-      createdAt: new Date().toISOString(),
+      jobId,
+      phase: "queued",
+      statusMessage,
+      progress: null,
+      recentItems: [],
+      error: null,
+      startedAt: now,
+      updatedAt: now,
       terminalState: null,
     });
   }
@@ -330,10 +371,7 @@ class SyncService {
 
       queuedJobId = job.id;
       const { error: jobStatusError } = await tryCatch(
-        this.writeQueuedJobStatus(
-          job.id,
-          "Your CSV sync job has been added to queue. Please wait...",
-        ),
+        this.writeQueuedJobStatus(job.id, SYNC_STATUS_MESSAGES.queued),
       );
 
       if (jobStatusError) {
@@ -351,11 +389,7 @@ class SyncService {
 
       return job.id;
     } catch (error) {
-      const failureMessage =
-        error instanceof Error && error.message === "FAILED_TO_SET_JOB_STATUS_IN_REDIS"
-          ? "Sync failed before processing started: unable to initialize job status."
-          : "Sync failed before processing started: unable to queue job.";
-      await this.markSyncSessionAsFailed(syncSessionId, failureMessage);
+      await this.markSyncSessionAsFailed(syncSessionId, SYNC_STATUS_MESSAGES.failedBeforeStart);
 
       if (queuedJobId) {
         const queuedJob = await syncQueue.getJob(queuedJobId);
@@ -382,7 +416,6 @@ class SyncService {
       syncSessionId,
       existingCount,
       queueErrorCode: "FAILED_TO_QUEUE_ORDER_SYNC_JOB",
-      statusMessage: "Your order sync job has been added to queue. Please wait...",
     });
   }
 
@@ -403,7 +436,6 @@ class SyncService {
       syncSessionId,
       existingCount,
       queueErrorCode: "FAILED_TO_QUEUE_ORDER_ITEM_SYNC_JOB",
-      statusMessage: "Your order item sync job has been added to queue. Please wait...",
     });
   }
 
@@ -418,7 +450,6 @@ class SyncService {
     readonly queueErrorCode:
       | "FAILED_TO_QUEUE_ORDER_SYNC_JOB"
       | "FAILED_TO_QUEUE_ORDER_ITEM_SYNC_JOB";
-    readonly statusMessage: string;
   }) {
     // `order` and `order-item` jobs share the same worker payload shape. The worker decides
     // whether to create or append based on `type`, so this helper keeps the queue contract in sync.
@@ -450,7 +481,7 @@ class SyncService {
 
       queuedJobId = job.id;
       const { error: jobStatusError } = await tryCatch(
-        this.writeQueuedJobStatus(job.id, params.statusMessage),
+        this.writeQueuedJobStatus(job.id, SYNC_STATUS_MESSAGES.queued),
       );
 
       if (jobStatusError) {
@@ -468,11 +499,10 @@ class SyncService {
 
       return job.id;
     } catch (error) {
-      const failureMessage =
-        error instanceof Error && error.message === "FAILED_TO_SET_JOB_STATUS_IN_REDIS"
-          ? "Sync failed before processing started: unable to initialize job status."
-          : "Sync failed before processing started: unable to queue job.";
-      await this.markSyncSessionAsFailed(params.syncSessionId, failureMessage);
+      await this.markSyncSessionAsFailed(
+        params.syncSessionId,
+        SYNC_STATUS_MESSAGES.failedBeforeStart,
+      );
 
       if (queuedJobId) {
         const queuedJob = await syncQueue.getJob(queuedJobId);
@@ -516,10 +546,7 @@ class SyncService {
 
       queuedJobId = job.id;
       const { error: jobStatusError } = await tryCatch(
-        this.writeQueuedJobStatus(
-          job.id,
-          "Your collection sync job has been added to queue. Please wait...",
-        ),
+        this.writeQueuedJobStatus(job.id, SYNC_STATUS_MESSAGES.queued),
       );
 
       if (jobStatusError) {
@@ -537,11 +564,7 @@ class SyncService {
 
       return job.id;
     } catch (error) {
-      const failureMessage =
-        error instanceof Error && error.message === "FAILED_TO_SET_JOB_STATUS_IN_REDIS"
-          ? "Sync failed before processing started: unable to initialize job status."
-          : "Sync failed before processing started: unable to queue job.";
-      await this.markSyncSessionAsFailed(syncSessionId, failureMessage);
+      await this.markSyncSessionAsFailed(syncSessionId, SYNC_STATUS_MESSAGES.failedBeforeStart);
 
       if (queuedJobId) {
         const queuedJob = await syncQueue.getJob(queuedJobId);
@@ -557,7 +580,11 @@ class SyncService {
       const parsedStatus = parseJobStatusPayload(cached);
 
       if (parsedStatus) {
-        if (parsedStatus.finished && parsedStatus.terminalState === null) {
+        // Defensive backfill: if the worker crashed between marking the session
+        // terminal and writing a terminal-state snapshot, derive it from the session.
+        const isPhaseTerminal =
+          parsedStatus.phase === "completed" || parsedStatus.phase === "failed";
+        if (isPhaseTerminal && parsedStatus.terminalState === null) {
           const [cachedSession] = await db
             .select({ status: syncSession.status })
             .from(syncSession)
@@ -566,7 +593,7 @@ class SyncService {
           if (cachedSession) {
             return {
               ...parsedStatus,
-              terminalState: this.deriveTerminalStateFromSessionStatus(cachedSession.status),
+              terminalState: sessionStatusToTerminalState(cachedSession.status),
             };
           }
         }
@@ -582,12 +609,16 @@ class SyncService {
       }).emit();
     }
 
-    // Redis key expired — fall back to the persistent sync session record
+    // Redis key expired — synthesize a v2 snapshot from the durable session row.
     const [session] = await db
       .select({
         status: syncSession.status,
         statusMessage: syncSession.statusMessage,
+        totalItems: syncSession.totalItems,
+        successCount: syncSession.successCount,
+        failCount: syncSession.failCount,
         createdAt: syncSession.createdAt,
+        updatedAt: syncSession.updatedAt,
       })
       .from(syncSession)
       .where(and(eq(syncSession.jobId, jobId), eq(syncSession.userId, userId)));
@@ -596,23 +627,27 @@ class SyncService {
       throw new Error("SYNC_JOB_NOT_FOUND");
     }
 
-    const finishedStatuses: ReadonlySet<SyncSessionStatus> = new Set([
-      "completed",
-      "failed",
-      "partial",
-    ]);
-    const finished = finishedStatuses.has(session.status);
-
-    const statusMessage = session.statusMessage ? session.statusMessage : `Sync ${session.status}`;
-
-    const terminalState = finished
-      ? this.deriveTerminalStateFromSessionStatus(session.status)
-      : null;
+    const statusMessage = resolveFallbackJobStatusMessage(session);
+    const terminalState = sessionStatusToTerminalState(session.status);
+    const progress: SyncJobProgress | null =
+      session.totalItems > 0
+        ? {
+            processed: session.successCount + session.failCount,
+            total: session.totalItems,
+            succeeded: session.successCount,
+            failed: session.failCount,
+          }
+        : null;
 
     return {
-      status: statusMessage,
-      finished,
-      createdAt: session.createdAt.toISOString(),
+      jobId,
+      phase: sessionStatusToPhase(session.status),
+      statusMessage,
+      progress,
+      recentItems: [],
+      error: null,
+      startedAt: session.createdAt.toISOString(),
+      updatedAt: session.updatedAt.toISOString(),
       terminalState,
     };
   }

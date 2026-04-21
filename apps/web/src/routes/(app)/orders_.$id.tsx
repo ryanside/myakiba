@@ -207,7 +207,7 @@ function RouteComponent() {
   ].filter(({ amount }) => amount > 0);
 
   return (
-    <div className="flex flex-col gap-8 min-h-full">
+    <div className="flex flex-col gap-8 min-h-full mx-auto max-w-[88rem]">
       {/* Header */}
       <div className="flex flex-col gap-3 animate-appear">
         <BackLink to="/orders" text="Back" font="sans" className="self-start" />

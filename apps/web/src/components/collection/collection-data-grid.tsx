@@ -33,8 +33,17 @@ import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type { SelectedCollectionItems } from "@/hooks/use-selection";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 
+const VIEW_MODE_KEY = "collection:viewMode";
+const COLUMN_VISIBILITY_KEY = "collection:columnVisibility";
+const DEFAULT_VISIBILITY: VisibilityState = {
+  orderDate: false,
+  paymentDate: false,
+  shippingDate: false,
+  releaseDate: false,
+};
+
 export const CollectionDataGrid = () => {
-  const [viewMode, setViewMode] = useLocalStorage<ViewMode>("collection:viewMode", "compact");
+  const [viewMode, setViewMode] = useLocalStorage<ViewMode>(VIEW_MODE_KEY, "compact");
   const [cardWidth, setCardWidth] = useLocalStorage<number>("collection:cardWidth", 180);
   const [galleryLayout, setGalleryLayout] = useLocalStorage<GalleryLayout>(
     "collection:galleryLayout",
@@ -106,12 +115,10 @@ export const CollectionDataGrid = () => {
   }, [items, selectedCollectionIds]);
 
   const [expandedRows, setExpandedRows] = useState<ExpandedState>({});
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
-    orderDate: false,
-    paymentDate: false,
-    shippingDate: false,
-    releaseDate: false,
-  });
+  const [columnVisibility, setColumnVisibility] = useLocalStorage<VisibilityState>(
+    COLUMN_VISIBILITY_KEY,
+    DEFAULT_VISIBILITY,
+  );
   const [columnOrder, setColumnOrder] = useState<string[]>([
     "select",
     "itemTitle",

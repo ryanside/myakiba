@@ -91,7 +91,7 @@ function RouteComponent() {
 
   if (isError) {
     return (
-      <div className="w-full space-y-8">
+      <div className="flex flex-col gap-4 mx-auto max-w-[88rem]">
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl tracking-tight">Sync</h1>
           <p className="text-muted-foreground text-sm font-normal">View your sync history</p>
@@ -104,11 +104,11 @@ function RouteComponent() {
   }
 
   return (
-    <div className="flex flex-col gap-4 mx-auto w-full">
-      <div className="flex flex-col gap-2 mb-4 sm:flex-row sm:items-start sm:justify-between">
+    <div className="flex flex-col gap-4 mx-auto max-w-[88rem]">
+      <div className="flex flex-col gap-2 mb-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-2">
-          <h1 className="text-2xl tracking-tight">Sync</h1>
-          <p className="text-muted-foreground text-sm font-normal">View your sync history</p>
+          <h1 className="text-2xl font-medium tracking-tight">Sync</h1>
+          <p className="text-muted-foreground text-sm font-normal">View your sync history.</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground mx-1">Add:</span>

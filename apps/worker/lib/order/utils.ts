@@ -10,9 +10,11 @@ import { db } from "@myakiba/db/client";
 import { assembleScrapedData } from "../assemble-scraped-data";
 import {
   markPersistFailedSyncSessionItemStatuses,
-  setJobStatus,
+  publishJobStatus,
+  resolveTerminalState,
   updateSyncSessionCounts,
 } from "../utils";
+import { sessionStatusToPhase, sessionStatusToTerminalState } from "@myakiba/contracts/sync/schema";
 import {
   item,
   item_release,
@@ -25,9 +27,9 @@ import {
 
 export async function finalizeOrderSync({
   successfulResults,
-  job,
   log,
   redis,
+  state,
   details,
   itemsToScrape,
   existingCount,
@@ -36,18 +38,20 @@ export async function finalizeOrderSync({
 }: FinalizeOrderSyncParams): Promise<FinalizeSyncResult> {
   const { items, entries, entryToItems, itemReleases, latestReleaseIdByExternalId } =
     assembleScrapedData(successfulResults);
+  const successfulIds = new Set(successfulResults.map((result) => result.id));
   const successfulOrderItems = itemsToScrape.filter((orderItem) =>
-    successfulResults.some((result) => result.id === orderItem.itemExternalId),
+    successfulIds.has(orderItem.itemExternalId),
   );
   const scrapeRowCount = itemsToScrape.length;
   const totalRowCount = existingCount + scrapeRowCount;
   let scrapedPersistedRowCount = 0;
 
-  // assign latest release id to successfulOrderItems
-  // determine the latest release date from scraped items
-  const latestReleaseDate = [...latestReleaseIdByExternalId.values()].sort(
-    (a, b) => a.date?.localeCompare(b.date ?? "") ?? 0,
-  )[latestReleaseIdByExternalId.size - 1]?.date;
+  let latestReleaseDate: string | null = null;
+  for (const releaseInfo of latestReleaseIdByExternalId.values()) {
+    if (releaseInfo.date && (!latestReleaseDate || releaseInfo.date > latestReleaseDate)) {
+      latestReleaseDate = releaseInfo.date;
+    }
+  }
 
   const shouldUpdateReleaseDate =
     latestReleaseDate !== undefined &&
@@ -278,29 +282,31 @@ export async function finalizeOrderSync({
     const scrapedItemIds = successfulResults.map((result) => result.id);
     const successCount = existingCount;
     const failCount = scrapeRowCount;
-    const sessionStatus =
-      failCount === 0
-        ? ("completed" as const)
-        : successCount > 0
-          ? ("partial" as const)
-          : ("failed" as const);
-    const statusMessage =
-      sessionStatus === "partial"
-        ? "Sync partially completed: Failed to persist scraped items."
-        : "Sync failed: Failed to persist scraped items.";
+    const persistenceError = error instanceof Error ? error : null;
+    const { sessionStatus, statusMessage } = resolveTerminalState({
+      successCount,
+      failCount,
+      totalRowCount,
+      error: persistenceError,
+    });
 
     await markPersistFailedSyncSessionItemStatuses({
       syncSessionId,
       scrapedItemIds,
       errorReason: "Persistence failed while saving scraped items",
     });
-    await setJobStatus({
+    state.phase = sessionStatusToPhase(sessionStatus);
+    state.statusMessage = statusMessage;
+    await publishJobStatus({
       redis,
-      jobId: job.id!,
-      statusMessage,
-      finished: true,
+      state,
       syncSessionId,
       sessionStatus,
+      terminalState: sessionStatusToTerminalState(sessionStatus),
+      error: {
+        code: "persistence_failed",
+        message: persistenceError?.message ?? statusMessage,
+      },
     });
     await updateSyncSessionCounts({
       syncSessionId,
@@ -329,26 +335,20 @@ export async function finalizeOrderSync({
 
   const successCount = existingCount + scrapedPersistedRowCount;
   const failCount = scrapeRowCount - scrapedPersistedRowCount;
-  const sessionStatus =
-    failCount === 0
-      ? ("completed" as const)
-      : successCount > 0
-        ? ("partial" as const)
-        : ("failed" as const);
-  const statusLabel =
-    sessionStatus === "completed"
-      ? "completed"
-      : sessionStatus === "partial"
-        ? "partially completed"
-        : "failed";
-
-  await setJobStatus({
+  const { sessionStatus, statusMessage } = resolveTerminalState({
+    successCount,
+    failCount,
+    totalRowCount,
+  });
+  state.phase = sessionStatusToPhase(sessionStatus);
+  state.statusMessage = statusMessage;
+  await publishJobStatus({
     redis,
-    jobId: job.id!,
-    statusMessage: `Sync ${statusLabel}: Synced ${successCount} out of ${totalRowCount} items`,
-    finished: true,
+    state,
     syncSessionId,
     sessionStatus,
+    terminalState: sessionStatusToTerminalState(sessionStatus),
+    error: null,
   });
   await updateSyncSessionCounts({
     syncSessionId,
@@ -362,7 +362,7 @@ export async function finalizeOrderSync({
     failCount,
     scrapedPersistedRowCount,
     sessionStatus,
-    statusMessage: `Sync ${statusLabel}: Synced ${successCount} out of ${totalRowCount} items`,
+    statusMessage,
     persistence,
   };
 }

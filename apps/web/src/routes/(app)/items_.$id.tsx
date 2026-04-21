@@ -382,7 +382,7 @@ function RouteComponent() {
   );
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 mx-auto max-w-[88rem]">
       <BackLink to="/collection" text="Back" font="sans" className="self-start" />
 
       {/* Hero: Image + Item Identity */}

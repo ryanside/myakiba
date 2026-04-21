@@ -17,6 +17,22 @@ const CURRENCY_LOCALE_MAP: Readonly<Record<Currency, string>> = {
   USD: "en-US",
 };
 
+export const CURRENCY_LABELS: Readonly<Record<Currency, string>> = {
+  AUD: "Australian Dollar",
+  BRL: "Brazilian Real",
+  CAD: "Canadian Dollar",
+  CNY: "Chinese Renminbi",
+  EUR: "Euro",
+  GBP: "Pound Sterling",
+  HKD: "Hong Kong Dollar",
+  JPY: "Japanese Yen",
+  NZD: "New Zealand Dollar",
+  PHP: "Philippine Peso",
+  RUB: "Russian Ruble",
+  SGD: "Singapore Dollar",
+  USD: "United States Dollar",
+};
+
 const CURRENCY_CODE_PATTERN = /^[A-Z]{3}$/;
 const DEFAULT_UNSUPPORTED_CURRENCY_LOCALE = "en-US";
 

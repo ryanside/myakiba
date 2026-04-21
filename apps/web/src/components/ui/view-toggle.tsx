@@ -10,13 +10,15 @@ import {
 type ViewMode = "compact" | "table" | "grid" | "gallery";
 
 interface ViewToggleProps {
+  readonly id?: string;
   readonly value: ViewMode;
   readonly onValueChange: (value: ViewMode) => void;
 }
 
-export function ViewToggle({ value, onValueChange }: ViewToggleProps): React.JSX.Element {
+export function ViewToggle({ id, value, onValueChange }: ViewToggleProps): React.JSX.Element {
   return (
     <ToggleGroup
+      id={id}
       value={[value]}
       onValueChange={(newValue) => {
         if (newValue.length > 0) {

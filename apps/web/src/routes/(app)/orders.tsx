@@ -30,7 +30,7 @@ function RouteComponent() {
 
   if (isError) {
     return (
-      <div className="w-full space-y-8">
+      <div className="flex flex-col gap-4 mx-auto max-w-[88rem]">
         <div className="flex flex-col gap-2">
           <div className="flex flex-row items-start gap-4">
             <h1 className="text-2xl tracking-tight font-heading font-medium">Orders</h1>
@@ -45,8 +45,8 @@ function RouteComponent() {
   }
 
   return (
-    <div className="flex flex-col gap-4 mx-auto w-full">
-      <div className="flex flex-col gap-2 mb-4">
+    <div className="flex flex-col gap-4 mx-auto max-w-[88rem]">
+      <div className="flex flex-col gap-2 mb-2">
         <div className="flex flex-row items-start gap-4">
           <h1 className="text-2xl tracking-tight font-heading font-medium">Orders</h1>
         </div>

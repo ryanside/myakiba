@@ -33,9 +33,6 @@ export async function processItemResyncJob(job: Job<ItemResyncJobData>): Promise
       log: jobLog,
       maxRetries: 3,
       baseDelayMs: 1000,
-      jobId: job.id ?? itemId,
-      overallIndex: 0,
-      totalItems: 1,
     });
 
     if (!scrapedItem) {

@@ -10,6 +10,8 @@ import {
   syncOrderItemsSchema,
 } from "./model";
 import type {
+  SyncJobError,
+  SyncTerminalState,
   UpdatedSyncCollection,
   UpdatedSyncOrder,
   UpdatedSyncOrderItem,
@@ -20,6 +22,7 @@ import type {
   CollectionSyncType,
   CollectionInsertType,
 } from "./model";
+import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import SyncService from "./service";
 import { tryCatch } from "@myakiba/utils/result";
 import { SYNC_SESSION_STATUSES, SYNC_TYPES } from "@myakiba/contracts/shared/constants";
@@ -30,16 +33,26 @@ import {
 } from "./job-status-subscription-registry";
 
 const MAX_JOB_STATUS_STREAM_DURATION_MS = 10 * 60 * 1000;
-const VERIFY_EMAIL_BEFORE_SYNC_MESSAGE =
-  "Please verify your email before syncing. A verification email was already sent when you signed up.";
 
-const createTerminalJobStatus = (
-  statusMessage: string,
-  terminalState: SyncJobStatus["terminalState"],
-): SyncJobStatus => ({
-  status: statusMessage,
-  finished: true,
-  createdAt: new Date().toISOString(),
+const createTerminalJobStatus = ({
+  jobId,
+  startedAt,
+  error,
+  terminalState,
+}: {
+  readonly jobId: string;
+  readonly startedAt: string;
+  readonly error: SyncJobError;
+  readonly terminalState: SyncTerminalState;
+}): SyncJobStatus => ({
+  jobId,
+  phase: "failed",
+  statusMessage: error.message,
+  progress: null,
+  recentItems: [],
+  error,
+  startedAt,
+  updatedAt: new Date().toISOString(),
   terminalState,
 });
 
@@ -135,7 +148,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           user: { id: user.id },
           sync: { type: "csv", reason: "email_not_verified" },
         });
-        return status(403, VERIFY_EMAIL_BEFORE_SYNC_MESSAGE);
+        return status(403, SYNC_STATUS_MESSAGES.requireEmailVerification);
       }
 
       log.set({
@@ -201,7 +214,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             await tryCatch(
               SyncService.updateSyncSession(syncSessionId, {
                 status: "failed",
-                statusMessage: "Failed to insert to collection and orders",
+                statusMessage: SYNC_STATUS_MESSAGES.failedPersist,
                 completedAt: new Date(),
               }),
             );
@@ -266,13 +279,11 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         }
 
         jobId = jobIdData;
-        statusMessage = jobId ? "Job added to queue." : "Sync completed";
+        statusMessage = SYNC_STATUS_MESSAGES.queued;
       } else if (collectionItems.length === 0 && itemsToScrape.length === 0) {
-        statusMessage =
-          "All items already synced to your collection. If you want to add duplicates, use Collection/Order Sync.";
+        statusMessage = SYNC_STATUS_MESSAGES.alreadyOwned;
       } else {
-        statusMessage =
-          "Sync completed - All items already in myakiba database, no scraping needed";
+        statusMessage = SYNC_STATUS_MESSAGES.insertedWithoutScrape;
       }
 
       if (!jobId && syncSessionId) {
@@ -342,7 +353,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           user: { id: user.id },
           sync: { type: "order", reason: "email_not_verified" },
         });
-        return status(403, VERIFY_EMAIL_BEFORE_SYNC_MESSAGE);
+        return status(403, SYNC_STATUS_MESSAGES.requireEmailVerification);
       }
 
       log.set({
@@ -486,7 +497,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             await tryCatch(
               SyncService.updateSyncSession(syncSessionId, {
                 status: "failed",
-                statusMessage: "Failed to insert to collection and orders",
+                statusMessage: SYNC_STATUS_MESSAGES.failedPersist,
                 completedAt: new Date(),
               }),
             );
@@ -584,7 +595,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           const completedSessionUpdate = {
             status: "completed" as const,
             completedAt: new Date(),
-            statusMessage: "Sync completed",
+            statusMessage: SYNC_STATUS_MESSAGES.insertedWithoutScrape,
             successCount: existingOrderItemExternalIds.length,
             ...(orderWasPersistedImmediately ? { orderId } : {}),
           };
@@ -624,8 +635,12 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         },
       });
 
+      const statusMessage = jobId
+        ? SYNC_STATUS_MESSAGES.queued
+        : SYNC_STATUS_MESSAGES.insertedWithoutScrape;
+
       return {
-        status: jobId ? "Job added to queue." : "Sync completed",
+        status: statusMessage,
         isFinished: jobId ? false : true,
         existingItemsToInsert: itemsToInsert.length,
         newItems: itemsToScrape.length,
@@ -654,7 +669,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           user: { id: user.id },
           sync: { type: "order-item", orderId: body.orderId, reason: "email_not_verified" },
         });
-        return status(403, VERIFY_EMAIL_BEFORE_SYNC_MESSAGE);
+        return status(403, SYNC_STATUS_MESSAGES.requireEmailVerification);
       }
 
       log.set({
@@ -810,7 +825,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             await tryCatch(
               SyncService.updateSyncSession(syncSessionId, {
                 status: "failed",
-                statusMessage: "Failed to insert order items",
+                statusMessage: SYNC_STATUS_MESSAGES.failedPersist,
                 completedAt: new Date(),
               }),
             );
@@ -889,7 +904,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             SyncService.updateSyncSession(syncSessionId, {
               status: "completed",
               completedAt: new Date(),
-              statusMessage: "Sync completed",
+              statusMessage: SYNC_STATUS_MESSAGES.insertedWithoutScrape,
               orderId: existingOrder.id,
               successCount: existingOrderItemExternalIds.length,
             }),
@@ -927,8 +942,12 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         },
       });
 
+      const statusMessage = jobId
+        ? SYNC_STATUS_MESSAGES.queued
+        : SYNC_STATUS_MESSAGES.insertedWithoutScrape;
+
       return {
-        status: jobId ? "Job added to queue." : "Sync completed",
+        status: statusMessage,
         isFinished: jobId ? false : true,
         existingItemsToInsert: itemsToInsert.length,
         newItems: itemsToScrape.length,
@@ -957,7 +976,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           user: { id: user.id },
           sync: { type: "collection", reason: "email_not_verified" },
         });
-        return status(403, VERIFY_EMAIL_BEFORE_SYNC_MESSAGE);
+        return status(403, SYNC_STATUS_MESSAGES.requireEmailVerification);
       }
 
       log.set({
@@ -1063,7 +1082,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             await tryCatch(
               SyncService.updateSyncSession(syncSessionId, {
                 status: "failed",
-                statusMessage: "Failed to insert to collection and orders",
+                statusMessage: SYNC_STATUS_MESSAGES.failedPersist,
                 completedAt: new Date(),
               }),
             );
@@ -1133,7 +1152,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             SyncService.updateSyncSession(syncSessionId, {
               status: "completed",
               completedAt: new Date(),
-              statusMessage: "Sync completed",
+              statusMessage: SYNC_STATUS_MESSAGES.insertedWithoutScrape,
               successCount: existingCollectionItemExternalIds.length,
             }),
           );
@@ -1166,8 +1185,12 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         },
       });
 
+      const statusMessage = jobId
+        ? SYNC_STATUS_MESSAGES.queued
+        : SYNC_STATUS_MESSAGES.insertedWithoutScrape;
+
       return {
-        status: jobId ? "Job added to queue." : "Sync completed",
+        status: statusMessage,
         isFinished: jobId ? false : true,
         existingItemsToInsert: itemsToInsert.length,
         newItems: itemsToScrape.length,
@@ -1334,31 +1357,42 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       });
 
       const { jobId } = query;
-      const startedAt = Date.now();
+      const streamStartedAt = Date.now();
+      const streamStartedAtIso = new Date(streamStartedAt).toISOString();
       const abortPromise = request.signal.aborted
         ? Promise.resolve<"aborted">("aborted")
         : new Promise<"aborted">((resolve) => {
             request.signal.addEventListener("abort", () => resolve("aborted"), { once: true });
           });
 
+      const logTerminalOutcome = (terminalState: SyncTerminalState): void => {
+        log.set({
+          outcome: terminalState,
+          result: { terminalState },
+        });
+      };
+
       const { data: initialJobStatus, error: initialJobStatusError } = await tryCatch(
         SyncService.getJobStatus(jobId, user.id),
       );
 
       if (initialJobStatusError) {
-        const message =
-          initialJobStatusError.message === "SYNC_JOB_NOT_FOUND"
-            ? "Job not found"
-            : "Error fetching job status";
+        const isNotFound = initialJobStatusError.message === "SYNC_JOB_NOT_FOUND";
+        const message = isNotFound ? "Job not found" : "Error fetching job status";
 
-        if (initialJobStatusError.message === "SYNC_JOB_NOT_FOUND") {
+        if (isNotFound) {
           log.set({ outcome: "not_found" });
         } else {
           log.error(initialJobStatusError, { step: "getJobStatus", outcome: "error" });
         }
 
         yield sse({
-          data: createTerminalJobStatus(message, "error"),
+          data: createTerminalJobStatus({
+            jobId,
+            startedAt: streamStartedAtIso,
+            error: { code: "unknown", message },
+            terminalState: "error",
+          }),
         });
         return;
       }
@@ -1367,13 +1401,8 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         data: initialJobStatus,
       });
 
-      if (initialJobStatus.finished) {
-        log.set({
-          outcome: initialJobStatus.terminalState === "success" ? "success" : "error",
-          result: {
-            terminalState: initialJobStatus.terminalState,
-          },
-        });
+      if (initialJobStatus.terminalState !== null) {
+        logTerminalOutcome(initialJobStatus.terminalState);
         return;
       }
 
@@ -1387,10 +1416,15 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           outcome: "error",
         });
         yield sse({
-          data: createTerminalJobStatus(
-            "Status stream connection lost — refresh to check latest status",
-            "error",
-          ),
+          data: createTerminalJobStatus({
+            jobId,
+            startedAt: initialJobStatus.startedAt,
+            error: {
+              code: "connection_lost",
+              message: SYNC_STATUS_MESSAGES.streamError,
+            },
+            terminalState: "error",
+          }),
         });
         return;
       }
@@ -1401,27 +1435,30 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         );
 
         if (replayJobStatusError) {
-          const message =
-            replayJobStatusError.message === "SYNC_JOB_NOT_FOUND"
-              ? "Job not found"
-              : "Error fetching job status";
+          const isNotFound = replayJobStatusError.message === "SYNC_JOB_NOT_FOUND";
+          const message = isNotFound ? "Job not found" : "Error fetching job status";
 
-          if (replayJobStatusError.message === "SYNC_JOB_NOT_FOUND") {
+          if (isNotFound) {
             log.set({ outcome: "not_found" });
           } else {
             log.error(replayJobStatusError, { step: "getJobStatusReplay", outcome: "error" });
           }
 
           yield sse({
-            data: createTerminalJobStatus(message, "error"),
+            data: createTerminalJobStatus({
+              jobId,
+              startedAt: initialJobStatus.startedAt,
+              error: { code: "unknown", message },
+              terminalState: "error",
+            }),
           });
           return;
         }
 
         if (
-          initialJobStatus.status !== replayJobStatus.status ||
-          initialJobStatus.finished !== replayJobStatus.finished ||
-          initialJobStatus.createdAt !== replayJobStatus.createdAt ||
+          initialJobStatus.phase !== replayJobStatus.phase ||
+          initialJobStatus.statusMessage !== replayJobStatus.statusMessage ||
+          initialJobStatus.updatedAt !== replayJobStatus.updatedAt ||
           initialJobStatus.terminalState !== replayJobStatus.terminalState
         ) {
           yield sse({
@@ -1429,26 +1466,26 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           });
         }
 
-        if (replayJobStatus.finished) {
-          log.set({
-            outcome: replayJobStatus.terminalState === "success" ? "success" : "error",
-            result: {
-              terminalState: replayJobStatus.terminalState,
-            },
-          });
+        if (replayJobStatus.terminalState !== null) {
+          logTerminalOutcome(replayJobStatus.terminalState);
           return;
         }
 
         while (true) {
-          const remainingMs = MAX_JOB_STATUS_STREAM_DURATION_MS - (Date.now() - startedAt);
+          const remainingMs = MAX_JOB_STATUS_STREAM_DURATION_MS - (Date.now() - streamStartedAt);
 
           if (remainingMs <= 0) {
             log.set({ outcome: "timeout" });
             yield sse({
-              data: createTerminalJobStatus(
-                "Status stream timed out — refresh to check latest status",
-                "timeout",
-              ),
+              data: createTerminalJobStatus({
+                jobId,
+                startedAt: initialJobStatus.startedAt,
+                error: {
+                  code: "timeout",
+                  message: SYNC_STATUS_MESSAGES.streamTimeout,
+                },
+                terminalState: "timeout",
+              }),
             });
             return;
           }
@@ -1466,10 +1503,15 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           if (nextEvent.kind === "timeout") {
             log.set({ outcome: "timeout" });
             yield sse({
-              data: createTerminalJobStatus(
-                "Status stream timed out — refresh to check latest status",
-                "timeout",
-              ),
+              data: createTerminalJobStatus({
+                jobId,
+                startedAt: initialJobStatus.startedAt,
+                error: {
+                  code: "timeout",
+                  message: SYNC_STATUS_MESSAGES.streamTimeout,
+                },
+                terminalState: "timeout",
+              }),
             });
             return;
           }
@@ -1481,10 +1523,15 @@ const syncRouter = new Elysia({ prefix: "/sync" })
                 outcome: "error",
               });
               yield sse({
-                data: createTerminalJobStatus(
-                  "Status stream connection lost — refresh to check latest status",
-                  "error",
-                ),
+                data: createTerminalJobStatus({
+                  jobId,
+                  startedAt: initialJobStatus.startedAt,
+                  error: {
+                    code: "connection_lost",
+                    message: SYNC_STATUS_MESSAGES.streamError,
+                  },
+                  terminalState: "error",
+                }),
               });
             }
             return;
@@ -1494,13 +1541,8 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             data: nextEvent.event.status,
           });
 
-          if (nextEvent.event.status.finished) {
-            log.set({
-              outcome: nextEvent.event.status.terminalState === "success" ? "success" : "error",
-              result: {
-                terminalState: nextEvent.event.status.terminalState,
-              },
-            });
+          if (nextEvent.event.status.terminalState !== null) {
+            logTerminalOutcome(nextEvent.event.status.terminalState);
             return;
           }
         }

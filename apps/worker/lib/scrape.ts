@@ -11,7 +11,7 @@ import {
   extractReleaseData,
   extractMaterialsData,
 } from "./extract";
-import { createFetchOptions, setJobStatus } from "./utils";
+import { createFetchOptions, publishJobStatus, recordItemOutcome } from "./utils";
 import type {
   ScrapedItem,
   ScrapeFailure,
@@ -22,7 +22,7 @@ import type {
 } from "./types";
 import type { Category } from "@myakiba/contracts/shared/types";
 import { CATEGORIES } from "@myakiba/contracts/shared/constants";
-import { redis } from "@myakiba/redis/client";
+import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import { env } from "@myakiba/env/worker";
 
 const s3Client = new S3Client({
@@ -101,17 +101,9 @@ export const scrapeSingleItem = async ({
   log,
   maxRetries = 3,
   baseDelayMs = 1000,
-  jobId,
-  overallIndex,
-  totalItems,
+  redis,
+  state,
 }: ScrapeSingleItemParams): Promise<ScrapedItem | null> => {
-  await setJobStatus({
-    redis,
-    jobId,
-    statusMessage: `Syncing...${overallIndex + 1}/${totalItems}`,
-    finished: false,
-  });
-
   const attemptErrors: string[] = [];
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -261,6 +253,15 @@ export const scrapeSingleItem = async ({
         image,
       };
 
+      if (redis && state && state.progress) {
+        recordItemOutcome(state, { outcome: "succeeded", externalId: id, title });
+        state.statusMessage = SYNC_STATUS_MESSAGES.scraping(
+          state.progress.processed,
+          state.progress.total,
+        );
+        await publishJobStatus({ redis, state, terminalState: null, error: null });
+      }
+
       return scrapedItem;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -268,6 +269,18 @@ export const scrapeSingleItem = async ({
 
       if (attempt === maxRetries) {
         log.warn(`Item ${id} failed after ${maxRetries} attempts`);
+        if (redis && state && state.progress) {
+          recordItemOutcome(state, {
+            outcome: "failed",
+            externalId: id,
+            failureReason: message,
+          });
+          state.statusMessage = SYNC_STATUS_MESSAGES.scraping(
+            state.progress.processed,
+            state.progress.total,
+          );
+          await publishJobStatus({ redis, state, terminalState: null, error: null });
+        }
         const finalError = error instanceof Error ? error : new Error(String(error));
         (finalError as Error & { attemptErrors: string[] }).attemptErrors = attemptErrors;
         throw finalError;
@@ -288,19 +301,17 @@ export const scrapeItems = async ({
   log,
   maxRetries = 3,
   baseDelayMs = 1000,
-  jobId,
-  startingIndex = 0,
-  totalItems = itemIds.length,
+  redis,
+  state,
 }: ScrapeItemsParams): Promise<ScrapeResult> => {
-  const promises = itemIds.map((id, index) =>
+  const promises = itemIds.map((id) =>
     scrapeSingleItem({
       id,
       log,
       maxRetries,
       baseDelayMs,
-      jobId,
-      overallIndex: startingIndex + index,
-      totalItems,
+      redis,
+      state,
     }),
   );
   const results = await Promise.allSettled(promises);
@@ -333,8 +344,9 @@ export const scrapedItemsWithRateLimit = async ({
   log,
   maxRetries = 3,
   baseDelayMs = 1000,
-  jobId,
-}: Omit<ScrapeItemsParams, "startingIndex" | "totalItems">): Promise<ScrapeResult> => {
+  redis,
+  state,
+}: ScrapeItemsParams): Promise<ScrapeResult> => {
   const startTime = Date.now();
 
   const batchSize = 5;
@@ -355,9 +367,8 @@ export const scrapedItemsWithRateLimit = async ({
       log,
       maxRetries,
       baseDelayMs,
-      jobId,
-      startingIndex: i,
-      totalItems: itemIds.length,
+      redis,
+      state,
     });
     allSuccessful.push(...successful);
     allFailures.push(...failures);

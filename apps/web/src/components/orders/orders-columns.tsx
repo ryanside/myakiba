@@ -65,9 +65,17 @@ const SHIPPING_METHOD_OPTIONS = [...SHIPPING_METHODS];
 const ORDER_STATUS_OPTIONS = [...ORDER_STATUSES];
 
 function ExpandButton({ row }: { readonly row: Row<OrderListItem> }) {
+  const isExpanded = row.getIsExpanded();
+
   return row.getCanExpand() ? (
-    <Button onClick={row.getToggleExpandedHandler()} size="icon-sm" variant="ghost">
-      {row.getIsExpanded() ? (
+    <Button
+      onClick={row.getToggleExpandedHandler()}
+      size="icon-sm"
+      variant="ghost"
+      aria-label={isExpanded ? "Collapse row" : "Expand row"}
+      aria-expanded={isExpanded}
+    >
+      {isExpanded ? (
         <HugeiconsIcon icon={MinusSignSquareIcon} />
       ) : (
         <HugeiconsIcon icon={AddSquareIcon} />

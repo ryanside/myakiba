@@ -19,7 +19,7 @@ export const Route = createFileRoute("/(app)/expenses")({
 
 function RouteComponent() {
   return (
-    <div className="flex-1 gap-y-4 p-4 md:p-8 pt-6">
+    <div className="flex flex-col gap-4 mx-auto max-w-[88rem]">
       <div className="rounded-lg border border-dashed p-8">
         <div className="flex flex-col items-center justify-center gap-y-4 text-center">
           <HugeiconsIcon icon={CodeIcon} className="h-12 w-12 text-muted-foreground" />

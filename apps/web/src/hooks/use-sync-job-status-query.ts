@@ -4,12 +4,29 @@ import {
   experimental_streamedQuery as streamedQuery,
 } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import { app } from "@/lib/treaty-client";
 import {
   parseSSEJobStatusStream,
   type JobStatusEvent,
   type SSEJobStatusChunk,
 } from "@/lib/sync-job-status-stream";
+import { resolveSyncMessage } from "@/lib/sync";
+
+const buildInitialValue = (jobId: string): JobStatusEvent => {
+  const now = new Date().toISOString();
+  return {
+    jobId,
+    phase: "queued",
+    statusMessage: SYNC_STATUS_MESSAGES.connecting,
+    progress: null,
+    recentItems: [],
+    error: null,
+    startedAt: now,
+    updatedAt: now,
+    terminalState: null,
+  };
+};
 
 export function useSyncJobStatusQuery(jobId: string | null) {
   const queryClient = useQueryClient();
@@ -32,21 +49,35 @@ export function useSyncJobStatusQuery(jobId: string | null) {
         async function* withFinishedCheck(): AsyncGenerator<SSEJobStatusChunk> {
           for await (const chunk of stream) {
             yield chunk;
-            if (chunk.data.finished) {
-              // do not invalidate the sync job status query or infinite loop will occur
-              void queryClient.invalidateQueries({
-                predicate: (query) => query.queryKey[0] !== "syncJobStatus",
-              });
-              if (chunk.data.terminalState === "success") {
-                toast.success("Sync completed");
-              } else if (chunk.data.terminalState === "timeout") {
-                toast.info("Sync status stream timed out", {
-                  description: "Refresh to check the latest sync status.",
-                });
+            const { terminalState } = chunk.data;
+            if (terminalState === null) continue;
+
+            // do not invalidate the sync job status query or infinite loop will occur
+            void queryClient.invalidateQueries({
+              predicate: (query) => query.queryKey[0] !== "syncJobStatus",
+            });
+
+            const message = resolveSyncMessage(
+              { statusMessage: chunk.data.statusMessage },
+              chunk.data,
+              false,
+            );
+
+            if (terminalState === "success") {
+              toast.success(message);
+            } else if (terminalState === "partial") {
+              toast.warning(message);
+            } else if (terminalState === "timeout") {
+              toast.info(message);
+            } else {
+              const description =
+                chunk.data.error?.message && chunk.data.error.message !== message
+                  ? chunk.data.error.message
+                  : undefined;
+              if (description) {
+                toast.error(message, { description });
               } else {
-                toast.error("Sync failed", {
-                  description: chunk.data.status,
-                });
+                toast.error(message);
               }
             }
           }
@@ -55,12 +86,7 @@ export function useSyncJobStatusQuery(jobId: string | null) {
         return withFinishedCheck();
       },
       reducer: (_prev: JobStatusEvent, chunk: SSEJobStatusChunk) => chunk.data,
-      initialValue: {
-        status: "Connecting...",
-        finished: false,
-        createdAt: "",
-        terminalState: null,
-      },
+      initialValue: buildInitialValue(jobId ?? ""),
     }),
     refetchOnWindowFocus: false,
     retry: false,

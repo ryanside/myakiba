@@ -7,6 +7,11 @@ import type {
   UpdatedSyncOrder,
   UpdatedSyncOrderItem,
   UpdatedSyncCollection,
+  SyncJobPhase,
+  SyncJobProgress,
+  SyncJobRecentItem,
+  SyncJobError,
+  SyncTerminalState,
 } from "@myakiba/contracts/sync/schema";
 import type { SyncSessionStatus, Category } from "@myakiba/contracts/shared/types";
 
@@ -75,11 +80,20 @@ export interface FullJobData extends Job {
   data: JobData;
 }
 
-export type SetJobStatusParams = {
-  readonly redis: Redis;
+export type SyncJobStatusState = {
   readonly jobId: string;
-  readonly statusMessage: string;
-  readonly finished: boolean;
+  readonly startedAt: string;
+  phase: SyncJobPhase;
+  progress: SyncJobProgress | null;
+  recentItems: readonly SyncJobRecentItem[];
+  statusMessage: string;
+};
+
+export type PublishJobStatusParams = {
+  readonly redis: Redis;
+  readonly state: SyncJobStatusState;
+  readonly terminalState: SyncTerminalState | null;
+  readonly error: SyncJobError | null;
   readonly syncSessionId?: string;
   readonly sessionStatus?: SyncSessionStatus;
 };
@@ -111,29 +125,33 @@ export type ScrapeImageParams = {
 
 export type ScrapeSingleItemParams = {
   readonly id: number;
-  readonly jobId: string;
   readonly log: WorkerJobLogger;
-  readonly overallIndex: number;
-  readonly totalItems: number;
   readonly maxRetries?: number;
   readonly baseDelayMs?: number;
+  /**
+   * Optional live-status publish target. When both `redis` and `state` are
+   * provided, `scrapeSingleItem` publishes a fresh `SyncJobStatus` snapshot
+   * after each item resolves (success or failure). Single-item resync jobs
+   * that have no SSE subscriber omit both and run silently.
+   */
+  readonly redis?: Redis;
+  readonly state?: SyncJobStatusState;
 };
 
 export type ScrapeItemsParams = {
   readonly itemIds: readonly number[];
-  readonly jobId: string;
+  readonly redis: Redis;
+  readonly state: SyncJobStatusState;
   readonly log: WorkerJobLogger;
   readonly maxRetries?: number;
   readonly baseDelayMs?: number;
-  readonly startingIndex?: number;
-  readonly totalItems?: number;
 };
 
 export type FinalizeCollectionSyncParams = {
   readonly successfulResults: ScrapedItem[];
-  readonly job: FullJobData;
   readonly log: WorkerJobLogger;
   readonly redis: Redis;
+  readonly state: SyncJobStatusState;
   readonly itemsToScrape: UpdatedSyncCollection[];
   readonly existingCount: number;
   readonly syncSessionId: string;
@@ -141,9 +159,9 @@ export type FinalizeCollectionSyncParams = {
 
 export type FinalizeOrderSyncParams = {
   readonly successfulResults: ScrapedItem[];
-  readonly job: FullJobData;
   readonly log: WorkerJobLogger;
   readonly redis: Redis;
+  readonly state: SyncJobStatusState;
   readonly details: UpdatedSyncOrder;
   readonly itemsToScrape: UpdatedSyncOrderItem[];
   readonly existingCount: number;
@@ -153,10 +171,10 @@ export type FinalizeOrderSyncParams = {
 
 export type FinalizeCsvSyncParams = {
   readonly successfulResults: ScrapedItem[];
-  readonly job: FullJobData;
   readonly log: WorkerJobLogger;
   readonly userId: string;
   readonly redis: Redis;
+  readonly state: SyncJobStatusState;
   readonly csvItems: InternalCsvItem[];
   readonly existingCount: number;
   readonly syncSessionId: string;
@@ -194,7 +212,10 @@ export type ProcessSyncJobParams = {
   readonly scrapeRowCount: number;
   readonly existingCount: number;
   readonly context: ProcessSyncJobContext;
-  readonly finalize: (successfulResults: readonly ScrapedItem[]) => Promise<FinalizeSyncResult>;
+  readonly finalize: (
+    successfulResults: readonly ScrapedItem[],
+    state: SyncJobStatusState,
+  ) => Promise<FinalizeSyncResult>;
 };
 
 export type ProcessSyncJobResult = {
@@ -223,6 +244,7 @@ export type ExecuteSyncJobParams = {
   readonly orderId: string | null;
   readonly finalize: (
     successfulResults: readonly ScrapedItem[],
+    state: SyncJobStatusState,
     log: WorkerJobLogger,
   ) => Promise<FinalizeSyncResult>;
 };

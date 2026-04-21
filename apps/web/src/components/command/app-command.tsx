@@ -15,12 +15,13 @@ import {
   Command,
   CommandDialog,
   CommandEmpty,
+  CommandFooter,
+  CommandFooterHint,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
   CommandSeparator,
-  CommandShortcut,
 } from "@/components/ui/command";
 import {
   APP_COMMAND_NAVIGATION_ITEMS,
@@ -101,7 +102,7 @@ function isTypingTarget(target: EventTarget | null): boolean {
 
 function CommandLeadIcon({ icon }: { readonly icon: IconSvgElement }): React.JSX.Element {
   return (
-    <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted ring-1 ring-foreground/10 shadow-sm">
+    <div className="flex size-8 shrink-0 items-center justify-center rounded-md">
       <HugeiconsIcon icon={icon} className="size-4 text-muted-foreground" />
     </div>
   );
@@ -111,14 +112,12 @@ function ActionCommandItem({
   value,
   title,
   subtitle,
-  shortcut,
   leading,
   onSelect,
 }: {
   readonly value: string;
   readonly title: string;
   readonly subtitle?: string;
-  readonly shortcut?: string;
   readonly leading: React.ReactNode;
   readonly onSelect: () => void;
 }): React.JSX.Element {
@@ -129,7 +128,6 @@ function ActionCommandItem({
         <div className="truncate font-medium">{title}</div>
         {subtitle ? <div className="truncate text-xs text-muted-foreground">{subtitle}</div> : null}
       </div>
-      {shortcut ? <CommandShortcut>{shortcut}</CommandShortcut> : null}
     </CommandItem>
   );
 }
@@ -292,16 +290,13 @@ export function AppCommand(): React.JSX.Element {
     <>
       <Button
         type="button"
-        size="sm"
-        variant="outline"
-        className="min-w-0 justify-between gap-2 text-muted-foreground sm:min-w-48"
+        size="icon"
+        variant="ghost"
+        className="size-7"
         onClick={() => setOpen(true)}
       >
-        <span className="flex min-w-0 items-center gap-2">
-          <HugeiconsIcon icon={SearchIcon} className="size-3 shrink-0" strokeWidth={2} />
-          <span className="truncate">Search</span>
-        </span>
-        <CommandShortcut>⌘K</CommandShortcut>
+        <HugeiconsIcon icon={SearchIcon} className="cn-rtl-flip" />
+        <span className="sr-only">Search</span>
       </Button>
 
       <CommandDialog
@@ -311,13 +306,13 @@ export function AppCommand(): React.JSX.Element {
         description="Navigate pages, launch sync actions, and search orders or items."
         className="sm:max-w-2xl"
       >
-        <Command shouldFilter={false} className="**:data-[selected=true]:bg-muted/80">
+        <Command shouldFilter={false} className="**:data-[selected=true]:bg-muted">
           <CommandInput
             value={inputValue}
             onValueChange={setInputValue}
             placeholder="Search pages, actions, orders, or items..."
           />
-          <CommandList className="max-h-104">
+          <CommandList className="max-h-104 mx-2">
             {!hasVisibleResults ? <CommandEmpty>No results found.</CommandEmpty> : null}
 
             {showNavigationGroup ? (
@@ -328,16 +323,11 @@ export function AppCommand(): React.JSX.Element {
                     value={`navigate-${item.to}`}
                     title={item.title}
                     subtitle={`Open ${item.title}`}
-                    shortcut="Page"
                     leading={<CommandLeadIcon icon={item.icon} />}
                     onSelect={() => handleNavigate(item.to)}
                   />
                 ))}
               </CommandGroup>
-            ) : null}
-
-            {showNavigationGroup && (showSyncGroup || showSearchGroups) ? (
-              <CommandSeparator />
             ) : null}
 
             {showSyncGroup ? (
@@ -348,7 +338,6 @@ export function AppCommand(): React.JSX.Element {
                     value={`sync-${item.type}`}
                     title={`Sync ${SYNC_TYPE_CONFIG[item.type].label}`}
                     subtitle={item.description}
-                    shortcut="Action"
                     leading={<CommandLeadIcon icon={item.icon} />}
                     onSelect={() => handleSyncAction(item.type)}
                   />
@@ -382,7 +371,6 @@ export function AppCommand(): React.JSX.Element {
                         value={`order-${order.id}`}
                         title={order.title}
                         subtitle={`Open order ${order.id}`}
-                        shortcut="Order"
                         leading={
                           <ImageThumbnail
                             images={order.itemImages}
@@ -399,7 +387,6 @@ export function AppCommand(): React.JSX.Element {
                   value={`orders-all-${trimmedInputQuery}`}
                   title={`View all orders for "${trimmedInputQuery}"`}
                   subtitle="Open the full orders page with this query"
-                  shortcut="/orders"
                   leading={<CommandLeadIcon icon={ArrowRight01Icon} />}
                   onSelect={handleViewAllOrders}
                 />
@@ -436,7 +423,6 @@ export function AppCommand(): React.JSX.Element {
                             ? `MFC #${item.itemExternalId}${item.itemCategory ? ` • ${item.itemCategory}` : ""}`
                             : (item.itemCategory ?? "Open item details")
                         }
-                        shortcut="Item"
                         leading={
                           <ImageThumbnail
                             images={item.itemImage ? [item.itemImage] : []}
@@ -453,13 +439,17 @@ export function AppCommand(): React.JSX.Element {
                   value={`items-all-${trimmedInputQuery}`}
                   title={`View all items for "${trimmedInputQuery}"`}
                   subtitle="Open the collection page with this query"
-                  shortcut="/collection"
                   leading={<CommandLeadIcon icon={ArrowRight01Icon} />}
                   onSelect={handleViewAllItems}
                 />
               </CommandGroup>
             ) : null}
           </CommandList>
+          <CommandFooter>
+            <CommandFooterHint keys={["↑", "↓"]} label="to navigate" />
+            <CommandFooterHint keys={["↵"]} label="to select" />
+            <CommandFooterHint keys={["esc"]} label="to close" />
+          </CommandFooter>
         </Command>
       </CommandDialog>
 

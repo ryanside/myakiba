@@ -19,6 +19,7 @@ function Command({ className, ...props }: React.ComponentProps<typeof CommandPri
       data-slot="command"
       className={cn(
         "flex size-full flex-col overflow-hidden rounded-xl! bg-popover p-1 text-popover-foreground",
+        "in-data-[slot=dialog-content]:bg-transparent in-data-[slot=dialog-content]:p-0",
         className,
       )}
       {...props}
@@ -47,7 +48,11 @@ function CommandDialog({
         <DialogDescription>{description}</DialogDescription>
       </DialogHeader>
       <DialogContent
-        className={cn("top-1/2 -translate-y-1/2 overflow-hidden rounded-xl! p-0", className)}
+        className={cn(
+          "top-1/2 -translate-y-1/2 overflow-hidden rounded-xl! p-0",
+          "bg-background/90 ring-1 ring-foreground/10 backdrop-blur-xs",
+          className,
+        )}
         showCloseButton={showCloseButton}
       >
         {children}
@@ -61,18 +66,28 @@ function CommandInput({
   ...props
 }: React.ComponentProps<typeof CommandPrimitive.Input>) {
   return (
-    <div data-slot="command-input-wrapper" className="p-1 pb-0">
-      <InputGroup className="h-8! rounded-lg! border-input/30 bg-input/30 shadow-none! *:data-[slot=input-group-addon]:pl-2!">
+    <div data-slot="command-input-wrapper" className="p-1 pb-0 in-data-[slot=dialog-content]:p-0">
+      <InputGroup
+        className={cn(
+          "h-8! rounded-lg! border-border/40 bg-background/90 shadow-none! *:data-[slot=input-group-addon]:pl-2!",
+          "in-data-[slot=dialog-content]:h-12! in-data-[slot=dialog-content]:rounded-none! in-data-[slot=dialog-content]:border-0 in-data-[slot=dialog-content]:border-b in-data-[slot=dialog-content]:border-foreground/10 in-data-[slot=dialog-content]:bg-transparent! in-data-[slot=dialog-content]:has-[[data-slot=input-group-control]:focus-visible]:border-foreground/10 in-data-[slot=dialog-content]:has-[[data-slot=input-group-control]:focus-visible]:ring-0 in-data-[slot=dialog-content]:*:data-[slot=input-group-addon]:pl-4!",
+        )}
+      >
         <CommandPrimitive.Input
           data-slot="command-input"
           className={cn(
             "w-full text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
+            "in-data-[slot=dialog-content]:pr-4 in-data-[slot=dialog-content]:text-[15px] in-data-[slot=dialog-content]:placeholder:text-muted-foreground/70",
             className,
           )}
           {...props}
         />
         <InputGroupAddon>
-          <HugeiconsIcon icon={SearchIcon} strokeWidth={2} className="size-4 shrink-0 opacity-50" />
+          <HugeiconsIcon
+            icon={SearchIcon}
+            strokeWidth={2}
+            className="size-4 shrink-0 opacity-50 in-data-[slot=dialog-content]:size-[1.1rem] in-data-[slot=dialog-content]:opacity-60"
+          />
         </InputGroupAddon>
       </InputGroup>
     </div>
@@ -178,6 +193,57 @@ function CommandShortcut({ className, ...props }: React.ComponentProps<"span">) 
   );
 }
 
+function CommandFooter({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="command-footer"
+      className={cn(
+        "flex h-12 items-center gap-5 border-t border-foreground/10 px-4 text-xs text-muted-foreground",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function CommandFooterHint({
+  className,
+  keys,
+  label,
+  ...props
+}: React.ComponentProps<"div"> & {
+  readonly keys: readonly string[];
+  readonly label: string;
+}) {
+  return (
+    <div
+      data-slot="command-footer-hint"
+      className={cn("flex items-center gap-1.5", className)}
+      {...props}
+    >
+      <span className="flex items-center gap-0.5">
+        {keys.map((key) => (
+          <CommandKey key={key}>{key}</CommandKey>
+        ))}
+      </span>
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function CommandKey({ className, ...props }: React.ComponentProps<"kbd">) {
+  return (
+    <kbd
+      data-slot="command-key"
+      className={cn(
+        "inline-flex h-5 min-w-5 items-center justify-center rounded-[calc(var(--radius)-5px)] bg-background/90 px-1 font-sans text-[10px] font-medium text-foreground/80 ring-1 ring-foreground/10 backdrop-blur-xs",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
 export {
   Command,
   CommandDialog,
@@ -188,4 +254,7 @@ export {
   CommandItem,
   CommandShortcut,
   CommandSeparator,
+  CommandFooter,
+  CommandFooterHint,
+  CommandKey,
 };

@@ -7,7 +7,7 @@ import { Badge, ThemedBadge } from "@/components/reui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { SyncSessionRow } from "@myakiba/contracts/sync/types";
-import { SESSION_STATUS_CONFIG, SYNC_TYPE_CONFIG } from "@/lib/sync";
+import { resolveSyncMessage, SESSION_STATUS_CONFIG, SYNC_TYPE_CONFIG } from "@/lib/sync";
 import { formatShortDateTime, formatSyncDuration } from "@/lib/date-display";
 import { fetchSyncSessionDetail } from "@/queries/sync";
 import {
@@ -32,6 +32,8 @@ function ExpandButton({ row }: { readonly row: Row<SyncSessionRow> }) {
     });
   };
 
+  const isExpanded = row.getIsExpanded();
+
   return (
     <Button
       onClick={(e) => {
@@ -41,8 +43,10 @@ function ExpandButton({ row }: { readonly row: Row<SyncSessionRow> }) {
       onPointerEnter={handlePointerEnter}
       size="icon-sm"
       variant="ghost"
+      aria-label={isExpanded ? "Collapse row" : "Expand row"}
+      aria-expanded={isExpanded}
     >
-      {row.getIsExpanded() ? (
+      {isExpanded ? (
         <HugeiconsIcon icon={MinusSignSquareIcon} />
       ) : (
         <HugeiconsIcon icon={AddSquareIcon} />
@@ -205,15 +209,14 @@ function ActiveStatusCell({ session }: { readonly session: SyncSessionRow }) {
 
   const { data: jobStatus, isError: isJobError } = useSyncJobStatusQuery(session.jobId);
 
-  const isFinished = jobStatus?.finished === true;
-  const displayStatus = isJobError ? "Stream error" : (jobStatus?.status ?? session.statusMessage);
+  const displayStatus = resolveSyncMessage(session, jobStatus ?? null, isJobError);
 
   return (
     <div className="flex items-center gap-1.5">
       <ThemedBadge variant={config.variant} size="sm">
         {config.label}
       </ThemedBadge>
-      {!isFinished && !isJobError && (
+      {jobStatus?.terminalState == null && !isJobError && (
         <HugeiconsIcon
           icon={Loading03Icon}
           className="size-3 shrink-0 animate-spin text-muted-foreground"
