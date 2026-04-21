@@ -205,7 +205,7 @@ function ActiveSessionItem({ session, onNavigate }: ActiveSessionProps) {
     displayedTotal > 0 ? Math.round((displayedProcessed / displayedTotal) * 100) : 0;
 
   const displayStatus = resolveSyncMessage(session, jobStatus ?? null, isJobError);
-  const showSpinner = jobStatus?.terminalState == null && !isJobError;
+  const showSpinner = session.jobId !== null && jobStatus?.terminalState == null && !isJobError;
 
   return (
     <Link
