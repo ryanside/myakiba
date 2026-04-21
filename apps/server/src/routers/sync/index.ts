@@ -33,8 +33,6 @@ import {
 } from "./job-status-subscription-registry";
 
 const MAX_JOB_STATUS_STREAM_DURATION_MS = 10 * 60 * 1000;
-const VERIFY_EMAIL_BEFORE_SYNC_MESSAGE =
-  "Please verify your email before syncing. A verification email was already sent when you signed up.";
 
 const createTerminalJobStatus = ({
   jobId,
@@ -150,7 +148,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           user: { id: user.id },
           sync: { type: "csv", reason: "email_not_verified" },
         });
-        return status(403, VERIFY_EMAIL_BEFORE_SYNC_MESSAGE);
+        return status(403, SYNC_STATUS_MESSAGES.requireEmailVerification);
       }
 
       log.set({
@@ -355,7 +353,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           user: { id: user.id },
           sync: { type: "order", reason: "email_not_verified" },
         });
-        return status(403, VERIFY_EMAIL_BEFORE_SYNC_MESSAGE);
+        return status(403, SYNC_STATUS_MESSAGES.requireEmailVerification);
       }
 
       log.set({
@@ -671,7 +669,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           user: { id: user.id },
           sync: { type: "order-item", orderId: body.orderId, reason: "email_not_verified" },
         });
-        return status(403, VERIFY_EMAIL_BEFORE_SYNC_MESSAGE);
+        return status(403, SYNC_STATUS_MESSAGES.requireEmailVerification);
       }
 
       log.set({
@@ -978,7 +976,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           user: { id: user.id },
           sync: { type: "collection", reason: "email_not_verified" },
         });
-        return status(403, VERIFY_EMAIL_BEFORE_SYNC_MESSAGE);
+        return status(403, SYNC_STATUS_MESSAGES.requireEmailVerification);
       }
 
       log.set({

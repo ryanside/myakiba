@@ -9,13 +9,6 @@ import {
 
 type ViewMode = "compact" | "table" | "grid" | "gallery";
 
-const VIEW_MODE_LABELS: Readonly<Record<ViewMode, string>> = {
-  compact: "Compact",
-  table: "Table",
-  grid: "Grid",
-  gallery: "Gallery",
-};
-
 interface ViewToggleProps {
   readonly id?: string;
   readonly value: ViewMode;
@@ -50,5 +43,4 @@ export function ViewToggle({ id, value, onValueChange }: ViewToggleProps): React
   );
 }
 
-export { VIEW_MODE_LABELS };
 export type { ViewMode };

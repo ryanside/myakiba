@@ -40,4 +40,6 @@ export const SYNC_STATUS_MESSAGES = {
   streamError: "Lost connection - refresh to see latest status",
   streamTimeout: "Stream timed out - refresh to see latest status",
   connecting: "Connecting...",
+  requireEmailVerification:
+    "Please verify your email before syncing. A verification email was already sent when you signed up.",
 } as const;

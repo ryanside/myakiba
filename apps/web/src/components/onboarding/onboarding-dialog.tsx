@@ -91,7 +91,14 @@ const ENTER_TRANSITION = `transition-[opacity,transform,filter] duration-200 ${E
 const appRouteApi = getRouteApi("/(app)");
 
 function OnboardingDialog() {
-  const { step: savedStep, hasSeen, isCompleted, setStep, complete, dismiss } = useOnboarding();
+  const {
+    step: savedStep,
+    hasSeen,
+    isCompleted,
+    setStep,
+    complete,
+    dismiss,
+  } = useOnboarding({ totalSteps: STEPS.length });
   const [open, setOpen] = useState(false);
   const [syncSheetType, setSyncSheetType] = useState<LaunchableSyncType | null>(null);
   const resumeStep = isCompleted
@@ -175,9 +182,14 @@ function OnboardingDialog() {
 
   useEffect(() => {
     if (hasSeen) return;
-    const timeoutId = window.setTimeout(() => setOpen(true), FIRST_OPEN_DELAY_MS);
+    const timeoutId = window.setTimeout(() => {
+      setOpen(true);
+      // Persist that the user has seen the dialog at first auto-open, so a
+      // tab close or refresh before any interaction doesn't re-trigger it.
+      dismiss();
+    }, FIRST_OPEN_DELAY_MS);
     return () => window.clearTimeout(timeoutId);
-  }, [hasSeen]);
+  }, [hasSeen, dismiss]);
 
   const handleOpenChange = useCallback(
     (next: boolean) => {
@@ -403,8 +415,6 @@ function OnboardingDialog() {
                   isLast={isLast}
                   isSaving={isSubmitting}
                   canContinue={currentMeta.id !== "preferences" || canSubmit}
-                  hideContinue={currentMeta.id === "sync"}
-                  skipLabel={currentMeta.id === "sync" ? "I'll do this later" : undefined}
                   onBack={handleBack}
                   onContinue={handleContinue}
                   onSkip={handleSkip}
@@ -561,8 +571,6 @@ type StepFooterProps = {
   readonly isLast: boolean;
   readonly isSaving: boolean;
   readonly canContinue: boolean;
-  readonly hideContinue?: boolean;
-  readonly skipLabel?: string;
   readonly onBack: () => void;
   readonly onContinue: () => void;
   readonly onSkip: () => void;
@@ -573,19 +581,17 @@ function StepFooter({
   isLast,
   isSaving,
   canContinue,
-  hideContinue = false,
-  skipLabel,
   onBack,
   onContinue,
   onSkip,
 }: StepFooterProps) {
   const continueIcon = isSaving ? Loading03Icon : isLast ? Tick02Icon : ArrowRight01Icon;
-  const resolvedSkipLabel = skipLabel ?? (isLast ? "Close" : "Skip");
+  const skipLabel = "Close";
 
   return (
     <div className="flex items-center justify-between gap-2 border-t bg-background px-4 py-3">
       <Button variant="ghost" size="sm" onClick={onSkip} disabled={isSaving}>
-        {resolvedSkipLabel}
+        {skipLabel}
       </Button>
       <div className="flex items-center gap-2">
         {!isFirst && (
@@ -594,16 +600,14 @@ function StepFooter({
             Back
           </Button>
         )}
-        {!hideContinue && (
-          <Button size="sm" onClick={onContinue} disabled={isSaving || !canContinue}>
-            {isLast ? "Get started" : "Continue"}
-            <HugeiconsIcon
-              icon={continueIcon}
-              strokeWidth={2}
-              className={cn(isSaving && "animate-spin")}
-            />
-          </Button>
-        )}
+        <Button size="sm" onClick={onContinue} disabled={isSaving || !canContinue}>
+          {isLast ? "Get started" : "Continue"}
+          <HugeiconsIcon
+            icon={continueIcon}
+            strokeWidth={2}
+            className={cn(isSaving && "animate-spin")}
+          />
+        </Button>
       </div>
     </div>
   );

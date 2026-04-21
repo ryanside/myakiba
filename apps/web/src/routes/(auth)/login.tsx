@@ -28,14 +28,14 @@ export const Route = createFileRoute("/(auth)/login")({
     ],
   }),
   beforeLoad: async ({ search }) => {
-    if (search.view === "verify-email") {
-      return;
-    }
     const { data: session } = await authClient.getSession();
     if (session) {
       throw redirect({
         to: "/dashboard",
       });
+    }
+    if (search.view === "verify-email") {
+      return;
     }
   },
 });
