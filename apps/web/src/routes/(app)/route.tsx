@@ -66,8 +66,8 @@ function RouteComponent() {
             <header className="flex h-12 shrink-0 items-center justify-between gap-2 px-4">
               <div className="flex items-center">
                 <SidebarTrigger className="-ml-1" />
-                <SyncStatusWidget />
                 <AppCommand />
+                <SyncStatusWidget />
               </div>
               <div className="flex items-center gap-2">
                 <OnboardingDialog />

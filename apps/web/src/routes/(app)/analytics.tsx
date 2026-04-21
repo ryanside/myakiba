@@ -56,7 +56,7 @@ function RouteComponent(): ReactNode {
           analytics
           <span className="hidden sm:inline"> ⭑.ᐟ</span>
         </h1>
-        <p className="text-muted-foreground text-sm">See what shapes your collection.</p>
+        <p className="text-muted-foreground text-sm">See what shapes your collection</p>
       </div>
 
       {isPending && <Loader className="h-64" />}

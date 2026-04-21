@@ -1,14 +1,19 @@
 import { Worker } from "bullmq";
 import { createError, createLogger, log } from "evlog";
 import { tryCatch } from "@myakiba/utils/result";
-import { setJobStatus, updateSyncSessionCounts } from "../../lib/utils";
+import { createJobStatusState, publishJobStatus, updateSyncSessionCounts } from "../../lib/utils";
 import type {
   ExecuteSyncJobParams,
   FullJobData,
   ProcessSyncJobResult,
   WorkerJobContext,
 } from "../../lib/types";
-import { jobDataSchema } from "@myakiba/contracts/sync/schema";
+import {
+  jobDataSchema,
+  sessionStatusToPhase,
+  sessionStatusToTerminalState,
+} from "@myakiba/contracts/sync/schema";
+import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import { finalizeCollectionSync } from "../../lib/collection/utils";
 import { finalizeOrderSync } from "../../lib/order/utils";
 import { finalizeCsvSync } from "../../lib/csv/utils";
@@ -75,7 +80,7 @@ async function executeSyncJob({
           userId,
           log: jobLog,
         },
-        finalize: async (successfulResults) => finalize(successfulResults, jobLog),
+        finalize: async (successfulResults, state) => finalize(successfulResults, state, jobLog),
       }),
     );
 
@@ -134,11 +139,20 @@ export const syncWorker = new Worker(
       invalidJobLog.error(new Error("Invalid sync job payload", { cause: validatedData.error }));
       invalidJobLog.emit();
 
-      await setJobStatus({
+      const invalidPayloadMessage = SYNC_STATUS_MESSAGES.failedBeforeStart;
+      await publishJobStatus({
         redis,
-        jobId: job.id!,
-        statusMessage: `Sync failed: Invalid data. Please try again.`,
-        finished: true,
+        state: createJobStatusState({
+          jobId: job.id!,
+          totalItems: 0,
+          phase: "failed",
+          statusMessage: invalidPayloadMessage,
+        }),
+        terminalState: "error",
+        error: {
+          code: "invalid_payload",
+          message: "Job data failed schema validation",
+        },
       });
       throw createError({
         message: "Invalid sync job payload",
@@ -166,13 +180,13 @@ export const syncWorker = new Worker(
         scrapeRowCount: data.items.length,
         existingCount: data.existingCount,
         orderId: null,
-        finalize: (successfulResults, jobLog) =>
+        finalize: (successfulResults, state, jobLog) =>
           finalizeCsvSync({
             successfulResults: [...successfulResults],
-            job,
             log: jobLog,
             userId,
             redis,
+            state,
             csvItems: data.items,
             existingCount: data.existingCount,
             syncSessionId,
@@ -194,12 +208,12 @@ export const syncWorker = new Worker(
         scrapeRowCount: order.itemsToScrape.length,
         existingCount: order.existingCount,
         orderId: order.details.id,
-        finalize: (successfulResults, jobLog) =>
+        finalize: (successfulResults, state, jobLog) =>
           finalizeOrderSync({
             successfulResults: [...successfulResults],
-            job,
             log: jobLog,
             redis,
+            state,
             details: order.details,
             itemsToScrape: order.itemsToScrape,
             existingCount: order.existingCount,
@@ -223,12 +237,12 @@ export const syncWorker = new Worker(
         scrapeRowCount: order.itemsToScrape.length,
         existingCount: order.existingCount,
         orderId: order.details.id,
-        finalize: (successfulResults, jobLog) =>
+        finalize: (successfulResults, state, jobLog) =>
           finalizeOrderSync({
             successfulResults: [...successfulResults],
-            job,
             log: jobLog,
             redis,
+            state,
             details: order.details,
             itemsToScrape: order.itemsToScrape,
             existingCount: order.existingCount,
@@ -253,12 +267,12 @@ export const syncWorker = new Worker(
       scrapeRowCount: collection.itemsToScrape.length,
       existingCount: collection.existingCount,
       orderId: null,
-      finalize: (successfulResults, jobLog) =>
+      finalize: (successfulResults, state, jobLog) =>
         finalizeCollectionSync({
           successfulResults: [...successfulResults],
-          job,
           log: jobLog,
           redis,
+          state,
           itemsToScrape: collection.itemsToScrape,
           existingCount: collection.existingCount,
           syncSessionId,
@@ -321,14 +335,20 @@ syncWorker.on("failed", async (job, err) => {
   const failCount = scrapeRowCount;
   const sessionStatus = successCount > 0 ? ("partial" as const) : ("failed" as const);
 
+  const failedStatusMessage = SYNC_STATUS_MESSAGES.failedBeforeStartWithReason(err.message);
   const { error: statusError } = await tryCatch(
-    setJobStatus({
+    publishJobStatus({
       redis,
-      jobId: job.id,
-      statusMessage: `Sync failed: ${err.message}`,
-      finished: true,
+      state: createJobStatusState({
+        jobId: job.id,
+        totalItems: scrapeRowCount,
+        phase: sessionStatusToPhase(sessionStatus),
+        statusMessage: failedStatusMessage,
+      }),
       syncSessionId,
       sessionStatus,
+      terminalState: sessionStatusToTerminalState(sessionStatus),
+      error: { code: "unknown", message: err.message },
     }),
   );
   const { error: countsError } = await tryCatch(

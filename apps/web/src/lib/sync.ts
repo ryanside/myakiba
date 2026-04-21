@@ -1,17 +1,20 @@
 import Papa from "papaparse";
 import { csvSchema } from "@myakiba/contracts/sync/schema";
 import { SYNC_CSV_ITEM_STATUSES } from "@myakiba/contracts/sync/constants";
+import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import type {
   UserItem,
   SyncFormOrder,
   SyncFormOrderItem,
   SyncFormCollectionItem,
+  SyncSessionRow,
 } from "@myakiba/contracts/sync/types";
 import type {
   SyncType,
   SyncSessionStatus,
   SyncSessionItemStatus,
 } from "@myakiba/contracts/shared/types";
+import type { SyncJobPhase, SyncJobStatus } from "@myakiba/contracts/sync/schema";
 
 export const SESSION_STATUS_CONFIG: Record<
   SyncSessionStatus,
@@ -40,6 +43,69 @@ export const SYNC_TYPE_CONFIG: Record<
   collection: { label: "Collection", variant: "secondary" },
 };
 
+export const PHASE_CONFIG: Record<SyncJobPhase, { readonly bannerClass: string }> = {
+  queued: { bannerClass: "border-border bg-muted/40 text-muted-foreground" },
+  scraping: { bannerClass: "border-info/30 bg-info/5 text-info" },
+  persisting: { bannerClass: "border-info/30 bg-info/5 text-info" },
+  completed: { bannerClass: "border-success/30 bg-success/5 text-success" },
+  failed: { bannerClass: "border-destructive/30 bg-destructive/5 text-destructive" },
+};
+
+/**
+ * Chooses the one sync status sentence the UI should show for a session.
+ *
+ * Use this in widgets, table cells, banners, and toasts when the goal is to
+ * match backend-persisted status text while still preferring the most recent
+ * item outcome from the live stream.
+ *
+ * Precedence:
+ * 1. stream error copy
+ * 2. latest recent-item outcome from the live stream
+ * 3. live `jobStatus.statusMessage`
+ * 4. persisted `session.statusMessage`
+ *
+ * This helper only decides the sentence. Badge label, spinner state, and
+ * container styling should stay at the call site.
+ *
+ * @example
+ * resolveSyncMessage(
+ *   { statusMessage: "Sync queued" },
+ *   {
+ *     jobId: "job_123",
+ *     phase: "scraping",
+ *     statusMessage: "Scraping 4/10 items",
+ *     progress: { processed: 4, total: 10, succeeded: 3, failed: 1 },
+ *     recentItems: [],
+ *     error: null,
+ *     startedAt: "2026-04-19T00:00:00.000Z",
+ *     updatedAt: "2026-04-19T00:00:01.000Z",
+ *     terminalState: null,
+ *   },
+ *   false,
+ * )
+ * // "Scraping 4/10 items"
+ *
+ * @example
+ * resolveSyncMessage({ statusMessage: "Scraping 4/10 items" }, null, true)
+ * // "Lost connection - refresh to see latest status"
+ */
+export function resolveSyncMessage(
+  session: Pick<SyncSessionRow, "statusMessage">,
+  jobStatus: SyncJobStatus | null,
+  isStreamError: boolean,
+): string {
+  if (isStreamError) {
+    return SYNC_STATUS_MESSAGES.streamError;
+  }
+
+  const recentItem = jobStatus?.recentItems[0];
+  if (recentItem) {
+    return SYNC_STATUS_MESSAGES.itemOutcome(recentItem);
+  }
+
+  return jobStatus?.statusMessage ?? session.statusMessage;
+}
+
 export const ITEM_STATUS_CONFIG: Record<
   SyncSessionItemStatus,
   {
@@ -58,15 +124,15 @@ export const SYNC_OPTION_META: Record<
 > = {
   collection: {
     title: "Sync Collection",
-    description: "Add to your collection using MyFigureCollection Item IDs.",
+    description: "Add to your collection using MyFigureCollection Item IDs/links.",
   },
   order: {
     title: "Sync Order",
-    description: "Create and add an order using MyFigureCollection Item IDs.",
+    description: "Create and add an order using MyFigureCollection Item IDs/links.",
   },
   "order-item": {
     title: "Add Order Items",
-    description: "Add items to an existing order using MyFigureCollection Item IDs.",
+    description: "Add items to an existing order using MyFigureCollection Item IDs/links.",
   },
   csv: {
     title: "Sync CSV",

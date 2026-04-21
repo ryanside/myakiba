@@ -29,13 +29,56 @@ export const syncSearchSchema = z.object({
   syncType: z.array(z.enum(SYNC_TYPES)).optional(),
 });
 
-export const syncTerminalStateSchema = z.enum(["success", "error", "timeout"]);
+export const syncTerminalStateSchema = z.enum(["success", "partial", "error", "timeout"]);
+
+export const syncJobPhaseSchema = z.enum([
+  "queued",
+  "scraping",
+  "persisting",
+  "completed",
+  "failed",
+]);
+
+export const syncJobProgressSchema = z.object({
+  processed: z.number().int().nonnegative(),
+  total: z.number().int().nonnegative(),
+  succeeded: z.number().int().nonnegative(),
+  failed: z.number().int().nonnegative(),
+});
+
+export const syncJobRecentItemSchema = z.object({
+  externalId: z.number().int(),
+  title: z.string().nullable(),
+  outcome: z.enum(["succeeded", "failed"]),
+  failureReason: z.string().nullable(),
+  completedAt: z.iso.datetime(),
+});
+
+export const syncJobErrorCodeSchema = z.enum([
+  "queue_failed",
+  "scrape_failed",
+  "persistence_failed",
+  "invalid_payload",
+  "connection_lost",
+  "timeout",
+  "unknown",
+]);
+
+export const syncJobErrorSchema = z.object({
+  code: syncJobErrorCodeSchema,
+  message: z.string(),
+});
 
 export const syncJobStatusSchema = z.object({
-  status: z.string(),
-  finished: z.boolean(),
-  createdAt: z.iso.datetime(),
-  terminalState: syncTerminalStateSchema.nullable().optional().default(null),
+  jobId: z.string(),
+  phase: syncJobPhaseSchema,
+  statusMessage: z.string(),
+  progress: syncJobProgressSchema.nullable(),
+  recentItems: z.array(syncJobRecentItemSchema).max(5).readonly(),
+  error: syncJobErrorSchema.nullable(),
+  startedAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+  terminalState: syncTerminalStateSchema.nullable().default(null),
 });
 
 export const syncOrderSchema = z.object({
@@ -222,7 +265,89 @@ export const jobDataSchema = z.discriminatedUnion("type", [
 ]);
 
 export type SyncTerminalState = z.infer<typeof syncTerminalStateSchema>;
+export type SyncJobPhase = z.infer<typeof syncJobPhaseSchema>;
+export type SyncJobProgress = z.infer<typeof syncJobProgressSchema>;
+export type SyncJobRecentItem = z.infer<typeof syncJobRecentItemSchema>;
+export type SyncJobErrorCode = z.infer<typeof syncJobErrorCodeSchema>;
+export type SyncJobError = z.infer<typeof syncJobErrorSchema>;
 export type SyncJobStatus = z.infer<typeof syncJobStatusSchema>;
+
+/**
+ * Maps a persisted session status to the closest `SyncJobPhase` snapshot.
+ *
+ * Use this when rebuilding a job-status payload from durable session data,
+ * especially after Redis expires or when cleanup code only has the persisted
+ * `SyncSessionStatus`.
+ *
+ * This is intentionally lossy:
+ * - `processing` maps to `scraping` because persistence is not stored durably
+ * - `partial` maps to `completed` because partial is a terminal outcome, not a phase
+ *
+ * Do not use this for live worker transitions; the worker should set `phase`
+ * explicitly as it moves through queued/scraping/persisting.
+ *
+ * @example
+ * sessionStatusToPhase("pending")
+ * // "queued"
+ *
+ * @example
+ * sessionStatusToPhase("partial")
+ * // "completed"
+ */
+export const sessionStatusToPhase = (
+  status: import("../shared/types").SyncSessionStatus,
+): SyncJobPhase => {
+  switch (status) {
+    case "pending":
+      return "queued";
+    case "processing":
+      return "scraping";
+    case "completed":
+    case "partial":
+      return "completed";
+    case "failed":
+      return "failed";
+  }
+};
+
+/**
+ * Maps a persisted session status to the terminal state shown in live UI flows.
+ *
+ * Use this when a caller needs to answer "is this job done, and if so how did
+ * it end?" from persisted session data alone.
+ *
+ * Return value meaning:
+ * - `null`: still in flight
+ * - `"success"`: finished cleanly
+ * - `"partial"`: finished with mixed success/failure
+ * - `"error"`: terminal failure
+ *
+ * This helper belongs in contracts because both server and worker use the same
+ * status-to-terminal mapping.
+ *
+ * @example
+ * sessionStatusToTerminalState("processing")
+ * // null
+ *
+ * @example
+ * sessionStatusToTerminalState("failed")
+ * // "error"
+ */
+export const sessionStatusToTerminalState = (
+  status: import("../shared/types").SyncSessionStatus,
+): SyncTerminalState | null => {
+  switch (status) {
+    case "completed":
+      return "success";
+    case "partial":
+      return "partial";
+    case "failed":
+      return "error";
+    case "pending":
+    case "processing":
+      return null;
+  }
+};
 export type CsvItem = z.infer<typeof csvItemSchema>;
 export type InternalCsvItem = z.infer<typeof internalCsvItemSchema>;
 export type CsvItemMetadata = z.infer<typeof csvItemMetadataSchema>;

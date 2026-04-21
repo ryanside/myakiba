@@ -97,8 +97,8 @@ function RouteComponent(): ReactElement {
   });
 
   return (
-    <div className="flex flex-col gap-4 mx-auto">
-      <div className="flex flex-col gap-2 mb-4">
+    <div className="flex flex-col gap-4 mx-auto max-w-[88rem]">
+      <div className="flex flex-col gap-2 mb-2">
         <div className="flex flex-row items-start gap-4">
           {activeTab === "overview" ? (
             <h1 className="text-2xl tracking-tight font-heading font-medium">
@@ -145,8 +145,8 @@ function RouteComponent(): ReactElement {
         </div>
         <p className="text-muted-foreground text-sm font-normal">
           {activeTab === "overview"
-            ? "Here's your collection and orders at a glance."
-            : "Spending, releases, and orders for this month."}
+            ? "Here's your collection and orders at a glance"
+            : "Spending, releases, and orders for this month"}
         </p>
       </div>
       {activeTab === "overview" && (

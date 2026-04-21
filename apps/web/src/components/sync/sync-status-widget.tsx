@@ -16,7 +16,7 @@ import { Progress } from "@/components/ui/progress";
 import { ShimmeringText } from "@/components/ui/shimmering-text";
 import type { SyncSessionStatus, SyncType } from "@myakiba/contracts/shared/types";
 import { fetchSyncSessions } from "@/queries/sync";
-import { SESSION_STATUS_CONFIG, SYNC_TYPE_CONFIG } from "@/lib/sync";
+import { resolveSyncMessage, SESSION_STATUS_CONFIG, SYNC_TYPE_CONFIG } from "@/lib/sync";
 import { formatRelativeTimeToNow } from "@/lib/date-display";
 import { ACTIVE_SYNC_SESSION_STATUS_SET } from "@myakiba/contracts/sync/constants";
 import { useSyncJobStatusQuery } from "@/hooks/use-sync-job-status-query";
@@ -186,25 +186,26 @@ type ActiveSessionProps = {
     readonly jobId: string | null;
     readonly totalItems: number;
     readonly successCount: number;
+    readonly failCount: number;
     readonly statusMessage: string;
   };
   readonly onNavigate: () => void;
 };
 
 function ActiveSessionItem({ session, onNavigate }: ActiveSessionProps) {
-  const {
-    data: jobStatus,
-    isError: isJobError,
-    error: jobError,
-  } = useSyncJobStatusQuery(session.jobId);
+  const { data: jobStatus, isError: isJobError } = useSyncJobStatusQuery(session.jobId);
 
-  const isFinished = jobStatus?.finished === true;
-  const displayStatus = isJobError
-    ? jobError.message
-    : (jobStatus?.status ?? session.statusMessage);
   const typeConfig = SYNC_TYPE_CONFIG[session.syncType];
+  const liveProgress = jobStatus?.progress ?? null;
+  // `progress.processed` counts succeeded + failed, so the DB fallback must too
+  // — otherwise the bar jumps forward on stream disconnect.
+  const displayedProcessed = liveProgress?.processed ?? session.successCount + session.failCount;
+  const displayedTotal = liveProgress?.total ?? session.totalItems;
   const progressPercent =
-    session.totalItems > 0 ? Math.round((session.successCount / session.totalItems) * 100) : 0;
+    displayedTotal > 0 ? Math.round((displayedProcessed / displayedTotal) * 100) : 0;
+
+  const displayStatus = resolveSyncMessage(session, jobStatus ?? null, isJobError);
+  const showSpinner = jobStatus?.terminalState == null && !isJobError;
 
   return (
     <Link
@@ -223,7 +224,7 @@ function ActiveSessionItem({ session, onNavigate }: ActiveSessionProps) {
             {SESSION_STATUS_CONFIG[session.status].label}
           </ThemedBadge>
         </div>
-        {session.status === "processing" && !isFinished && !isJobError && (
+        {showSpinner && (
           <HugeiconsIcon
             icon={Loading03Icon}
             className="size-3 animate-spin text-muted-foreground"
@@ -234,12 +235,12 @@ function ActiveSessionItem({ session, onNavigate }: ActiveSessionProps) {
         )}
       </div>
 
-      {session.totalItems > 0 && (
+      {displayedTotal > 0 && (
         <div className="mt-2 space-y-1">
-          <Progress value={session.successCount} max={session.totalItems} className="h-1" />
+          <Progress value={displayedProcessed} max={displayedTotal} className="h-1" />
           <div className="flex items-center justify-between text-[0.6875rem] text-muted-foreground">
             <span>
-              {session.successCount} of {session.totalItems}
+              {displayedProcessed} of {displayedTotal}
             </span>
             <span className="tabular-nums">{progressPercent}%</span>
           </div>

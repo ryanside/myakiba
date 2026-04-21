@@ -1,17 +1,21 @@
 import { scrapeItems, scrapedItemsWithRateLimit } from "./scrape";
-import { setJobStatus, updateSyncSessionCounts, batchUpdateSyncSessionItemStatuses } from "./utils";
+import {
+  batchUpdateSyncSessionItemStatuses,
+  createJobStatusState,
+  publishJobStatus,
+  updateSyncSessionCounts,
+} from "./utils";
+import { MOCK_SCRAPE, runMockSyncJob } from "./mock-scrape";
 import type { ProcessSyncJobParams, ProcessSyncJobResult } from "./types";
+import { sessionStatusToPhase, sessionStatusToTerminalState } from "@myakiba/contracts/sync/schema";
+import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 
-const SCRAPE_FAILED_MESSAGE =
-  "Sync failed: Failed to scrape items. Please try again. MFC might be down, or the MFC item IDs may be invalid.";
+export async function processSyncJob(params: ProcessSyncJobParams): Promise<ProcessSyncJobResult> {
+  if (MOCK_SCRAPE) {
+    return runMockSyncJob(params);
+  }
 
-export async function processSyncJob({
-  itemIds,
-  scrapeRowCount,
-  existingCount,
-  context,
-  finalize,
-}: ProcessSyncJobParams): Promise<ProcessSyncJobResult> {
+  const { itemIds, scrapeRowCount, existingCount, context, finalize } = params;
   const { redis, jobId, syncSessionId, log } = context;
 
   const scrapeStrategy = itemIds.length <= 5 ? "standard" : "rate_limited";
@@ -25,20 +29,28 @@ export async function processSyncJob({
     },
   });
 
-  await setJobStatus({
-    redis,
+  const state = createJobStatusState({
     jobId,
-    statusMessage: `Starting to sync ${itemIds.length} items`,
-    finished: false,
+    totalItems: itemIds.length,
+    phase: "scraping",
+    statusMessage: SYNC_STATUS_MESSAGES.starting(itemIds.length),
+  });
+
+  await publishJobStatus({
+    redis,
+    state,
     syncSessionId,
     sessionStatus: "processing",
+    terminalState: null,
+    error: null,
   });
 
   const { successful: successfulResults, failures } = await scrapeMethod({
     itemIds: [...itemIds],
     maxRetries: 3,
     baseDelayMs: 1000,
-    jobId,
+    redis,
+    state,
     log,
   });
 
@@ -63,19 +75,23 @@ export async function processSyncJob({
   if (successfulResults.length === 0) {
     const successCount = existingCount;
     const failCount = scrapeRowCount;
+    const totalRowCount = existingCount + scrapeRowCount;
     const sessionStatus = successCount > 0 ? ("partial" as const) : ("failed" as const);
     const statusMessage =
       sessionStatus === "partial"
-        ? `Sync partially completed: Failed to scrape ${scrapeRowCount} pending items.`
-        : SCRAPE_FAILED_MESSAGE;
+        ? SYNC_STATUS_MESSAGES.partial(successCount, totalRowCount, failCount)
+        : SYNC_STATUS_MESSAGES.failedScrape;
 
-    await setJobStatus({
+    state.phase = sessionStatusToPhase(sessionStatus);
+    state.statusMessage = statusMessage;
+
+    await publishJobStatus({
       redis,
-      jobId,
-      statusMessage,
-      finished: true,
+      state,
       syncSessionId,
       sessionStatus,
+      terminalState: sessionStatusToTerminalState(sessionStatus),
+      error: sessionStatus === "failed" ? { code: "scrape_failed", message: statusMessage } : null,
     });
     await updateSyncSessionCounts({
       syncSessionId,
@@ -100,7 +116,18 @@ export async function processSyncJob({
     };
   }
 
-  const finalizeResult = await finalize(successfulResults);
+  state.phase = "persisting";
+  state.statusMessage = SYNC_STATUS_MESSAGES.persisting(successfulResults.length);
+  await publishJobStatus({
+    redis,
+    state,
+    syncSessionId,
+    sessionStatus: "processing",
+    terminalState: null,
+    error: null,
+  });
+
+  const finalizeResult = await finalize(successfulResults, state);
 
   return {
     processedAt: finalizeResult.processedAt,

@@ -1,5 +1,3 @@
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
@@ -10,15 +8,16 @@ import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { ThemedBadge } from "@/components/reui/badge";
 import { BackLink } from "@/components/ui/back-link";
-import type { EnrichedSyncSessionItemRow } from "@myakiba/contracts/sync/types";
+import { PulsingDot } from "@/components/ui/pulsing-dot";
+import { Progress } from "@/components/ui/progress";
+import type { EnrichedSyncSessionItemRow, SyncSessionRow } from "@myakiba/contracts/sync/types";
 import type { SyncSessionStatus, SyncType } from "@myakiba/contracts/shared/types";
 import { fetchSyncSessionDetail } from "@/queries/sync";
 import { createSyncSessionItemSubColumns } from "@/components/sync/sync-session-item-sub-columns";
-import { SESSION_STATUS_CONFIG, SYNC_TYPE_CONFIG } from "@/lib/sync";
+import { resolveSyncMessage, SESSION_STATUS_CONFIG, SYNC_TYPE_CONFIG } from "@/lib/sync";
 import { formatShortDateTime, formatSyncDuration } from "@/lib/date-display";
 import Loader from "@/components/loader";
 import { cn } from "@/lib/utils";
-import { Separator } from "@/components/ui/separator";
 import {
   ACTIVE_SYNC_SESSION_STATUS_SET,
   SYNC_SESSION_DETAIL_PAGE_SIZE,
@@ -35,23 +34,53 @@ export const Route = createFileRoute("/(app)/sync_/$id")({
   }),
 });
 
-function LiveStatusBanner({ jobId }: { readonly jobId: string }) {
-  const { data: jobStatus, isError: isJobError } = useSyncJobStatusQuery(jobId);
+function SessionStatusPanel({
+  session,
+  isActive,
+}: {
+  readonly session: Pick<
+    SyncSessionRow,
+    "jobId" | "statusMessage" | "totalItems" | "successCount" | "failCount"
+  >;
+  readonly isActive: boolean;
+}) {
+  const { data: jobStatus, isError: isJobError } = useSyncJobStatusQuery(
+    isActive ? session.jobId : null,
+  );
 
-  const isFinished = jobStatus?.finished === true;
-  const displayStatus = isJobError ? "Stream error" : (jobStatus?.status ?? "Connecting...");
+  const isLive = isActive && jobStatus?.terminalState == null;
+  const isStreamError = isLive && (isJobError || !jobStatus);
+  const message = resolveSyncMessage(session, isLive ? (jobStatus ?? null) : null, isStreamError);
 
-  if (isFinished) return null;
+  if (!message) return null;
+
+  // `progress.processed` counts succeeded + failed, so the DB fallback must too
+  // — otherwise the bar jumps forward on stream disconnect.
+  const liveProgress = isLive ? (jobStatus?.progress ?? null) : null;
+  const displayedProcessed = liveProgress?.processed ?? session.successCount + session.failCount;
+  const displayedTotal = liveProgress?.total ?? session.totalItems;
+  const percent = displayedTotal > 0 ? Math.round((displayedProcessed / displayedTotal) * 100) : 0;
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border bg-muted/40 px-4 py-3">
-      {!isJobError && (
-        <HugeiconsIcon
-          icon={Loading03Icon}
-          className="size-4 shrink-0 animate-spin text-muted-foreground"
-        />
-      )}
-      <p className="text-sm text-muted-foreground">{displayStatus}</p>
+    <div className="space-y-2" role="status" aria-live={isLive ? "polite" : "off"}>
+      <div className="flex items-center gap-2">
+        {isLive ? (
+          <PulsingDot />
+        ) : (
+          <span aria-hidden className="size-2 shrink-0 rounded-full bg-muted-foreground/50" />
+        )}
+        <p className={cn("text-sm", isStreamError && "text-destructive")}>Status: {message}</p>
+      </div>
+
+      <div className="space-y-1">
+        <Progress value={displayedProcessed} max={displayedTotal || 1} className="h-1" />
+        <div className="flex items-center justify-between text-xs text-muted-foreground tabular-nums">
+          <span>
+            {displayedProcessed} of {displayedTotal}
+          </span>
+          <span>{percent}%</span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -104,13 +133,16 @@ function RouteComponent() {
 
   if (isError) {
     return (
-      <div className="w-full space-y-8">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-2xl tracking-tight">Sync Session</h1>
-        </div>
-        <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-4 mx-auto max-w-[88rem]">
+        <div>
           <BackLink to="/sync" text="Back" font="sans" className="self-start" />
-          <p className="text-lg font-medium text-destructive">Error: {error.message}</p>
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex flex-col gap-1.5">
+              <h1 className="text-2xl font-medium tracking-tight">Sync Session</h1>
+              <p className="text-sm font-normal text-destructive">Error: {error.message}</p>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -118,9 +150,17 @@ function RouteComponent() {
 
   if (!session) {
     return (
-      <div className="flex flex-col gap-3">
-        <BackLink to="/sync" text="Back" font="sans" className="self-start" />
-        <p className="text-lg font-medium text-muted-foreground">Session not found</p>
+      <div className="flex flex-col gap-4 mx-auto max-w-[88rem]">
+        <div>
+          <BackLink to="/sync" text="Back" font="sans" className="self-start" />
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex flex-col gap-1.5">
+              <h1 className="text-2xl font-medium tracking-tight">Sync Session</h1>
+              <p className="text-muted-foreground text-sm font-normal">Session not found</p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -129,7 +169,7 @@ function RouteComponent() {
   const typeConfig = SYNC_TYPE_CONFIG[sessionSyncType];
 
   return (
-    <div className="w-full space-y-8">
+    <div className="flex flex-col gap-4 mx-auto max-w-[88rem]">
       <div>
         <BackLink to="/sync" text="Back" font="sans" className="self-start" />
 
@@ -180,14 +220,7 @@ function RouteComponent() {
         </div>
       </div>
 
-      {isActive && session.jobId && <LiveStatusBanner jobId={session.jobId} />}
-
-      {!isActive && session.statusMessage && (
-        <div className="rounded-lg flex items-center gap-2">
-          <Separator orientation="vertical" className="h-4 inline-block" />
-          <p className="text-sm">Status: {session.statusMessage}</p>
-        </div>
-      )}
+      <SessionStatusPanel session={session} isActive={isActive} />
 
       <DataGrid
         table={table}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { useForm } from "@tanstack/react-form";
 import z from "zod";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -6,15 +6,14 @@ import {
   ArrowLeft01Icon,
   ArrowRight01Icon,
   ArrowRight02Icon,
+  CheckListIcon,
   FileUploadIcon,
   LibraryIcon,
   Loading03Icon,
   PackageIcon,
-  SparklesIcon,
   Tick02Icon,
 } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
-import type { VisibilityState } from "@tanstack/react-table";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -35,35 +34,18 @@ import {
   StepperPanel,
   StepperTrigger,
 } from "@/components/reui/stepper";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { VIEW_MODE_LABELS, ViewToggle, type ViewMode } from "@/components/ui/view-toggle";
-import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { authClient } from "@/lib/auth-client";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { CURRENCY_LABELS } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 import { SyncActionSheet, type LaunchableSyncType } from "@/components/sync/sync-launcher";
-import {
-  COLLECTION_COLUMN_VISIBILITY_KEY,
-  COLLECTION_COLUMNS,
-  COLLECTION_VIEW_MODE_KEY,
-  DEFAULT_COLLECTION_VISIBILITY,
-  DEFAULT_ORDER_VISIBILITY,
-  DEFAULT_VIEW_MODE,
-  ORDER_COLUMN_VISIBILITY_KEY,
-  ORDER_COLUMNS,
-  ORDER_VIEW_MODE_KEY,
-  type GridColumn,
-  visibilityFromIds,
-  visibleColumnIds,
-} from "@/lib/grid-columns";
 import { CURRENCIES, DATE_FORMATS } from "@myakiba/contracts/shared/constants";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { getRouteApi, useRouter } from "@tanstack/react-router";
 
-type StepId = "welcome" | "preferences" | "layout" | "sync";
+type StepId = "welcome" | "preferences" | "sync";
 
 type StepMeta = {
   readonly id: StepId;
@@ -85,23 +67,15 @@ const STEPS: readonly StepMeta[] = [
     id: "preferences",
     step: 2,
     eyebrow: "Preferences",
-    title: "Make it yours.",
-    description: "Pick a handle, your currency, and a date format.",
-  },
-  {
-    id: "layout",
-    step: 3,
-    eyebrow: "Layout",
-    title: "How should we lay things out?",
-    description: "Choose a default view and the columns you care about.",
+    title: "Set your username, currency, and date format.",
+    description: "Click continue to save your preferences.",
   },
   {
     id: "sync",
-    step: 4,
+    step: 3,
     eyebrow: "Sync",
     title: "Bring in your items.",
-    description:
-      "Pick how you'd like to start. You can always add more later through the sync button in the sidebar.",
+    description: "You can always add more later through the + button in the sidebar.",
   },
 ];
 
@@ -255,14 +229,14 @@ function OnboardingDialog() {
         <DialogTrigger
           render={
             <Button variant="ghost" size="sm">
-              <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} />
+              <HugeiconsIcon icon={CheckListIcon} strokeWidth={2} />
               <span className="hidden sm:inline">Getting started</span>
             </Button>
           }
         />
 
         <DialogContent
-          className="sm:max-w-xl gap-0 overflow-hidden p-0 bg-background/80 backdrop-blur-sm"
+          className="sm:max-w-xl gap-0 overflow-hidden p-0 bg-background/90 backdrop-blur-xs"
           showCloseButton={false}
         >
           <Stepper value={currentStep} onValueChange={setCurrentStep}>
@@ -412,7 +386,6 @@ function OnboardingDialog() {
                       </form.Field>
                     </form>
                   ) : null}
-                  {meta.id === "layout" ? <LayoutFields /> : null}
                   {meta.id === "sync" ? <SyncFields onSelect={handleSelectSync} /> : null}
                 </StepperContent>
               ))}
@@ -482,127 +455,13 @@ type StepHeaderProps = {
 function StepHeader({ meta }: StepHeaderProps) {
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
-      <div className="text-xs font-medium text-muted-foreground">{meta.eyebrow}</div>
-      <DialogTitle className="font-heading text-xl leading-tight font-medium">
+      <div className="text-xs font-medium text-muted-foreground font-orbitron lowercase">
+        {meta.eyebrow}
+      </div>
+      <DialogTitle className="tracking-tight text-xl leading-tight font-medium">
         {meta.title}
       </DialogTitle>
       <DialogDescription>{meta.description}</DialogDescription>
-    </div>
-  );
-}
-
-type Surface = "collection" | "orders";
-
-function LayoutFields() {
-  const [surface, setSurface] = useState<Surface>("collection");
-
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="mx-auto">
-        <Tabs value={surface} onValueChange={(value) => setSurface(value as Surface)}>
-          <TabsList className="px-0!" variant="line">
-            <TabsTrigger value="collection">Collection</TabsTrigger>
-            <TabsTrigger value="orders">Orders</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-      <div className="flex flex-col gap-4">
-        {surface === "collection" ? <CollectionLayoutCard /> : <OrdersLayoutCard />}
-      </div>
-    </div>
-  );
-}
-
-function CollectionLayoutCard() {
-  const [viewMode, setViewMode] = useLocalStorage<ViewMode>(
-    COLLECTION_VIEW_MODE_KEY,
-    DEFAULT_VIEW_MODE,
-  );
-  const [visibility, setVisibility] = useLocalStorage<VisibilityState>(
-    COLLECTION_COLUMN_VISIBILITY_KEY,
-    DEFAULT_COLLECTION_VISIBILITY,
-  );
-  return (
-    <LayoutCard
-      viewMode={viewMode}
-      onViewModeChange={setViewMode}
-      columns={COLLECTION_COLUMNS}
-      visibility={visibility}
-      onVisibilityChange={setVisibility}
-    />
-  );
-}
-
-function OrdersLayoutCard() {
-  const [viewMode, setViewMode] = useLocalStorage<ViewMode>(ORDER_VIEW_MODE_KEY, DEFAULT_VIEW_MODE);
-  const [visibility, setVisibility] = useLocalStorage<VisibilityState>(
-    ORDER_COLUMN_VISIBILITY_KEY,
-    DEFAULT_ORDER_VISIBILITY,
-  );
-  return (
-    <LayoutCard
-      viewMode={viewMode}
-      onViewModeChange={setViewMode}
-      columns={ORDER_COLUMNS}
-      visibility={visibility}
-      onVisibilityChange={setVisibility}
-    />
-  );
-}
-
-type LayoutCardProps = {
-  readonly viewMode: ViewMode;
-  readonly onViewModeChange: (mode: ViewMode) => void;
-  readonly columns: readonly GridColumn[];
-  readonly visibility: VisibilityState;
-  readonly onVisibilityChange: (next: VisibilityState) => void;
-};
-
-function LayoutCard({
-  viewMode,
-  onViewModeChange,
-  columns,
-  visibility,
-  onVisibilityChange,
-}: LayoutCardProps) {
-  const visibleIds = useMemo(() => visibleColumnIds(columns, visibility), [columns, visibility]);
-
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="onboarding-default-view">Default view</Label>
-          <span className="text-xs text-muted-foreground">{VIEW_MODE_LABELS[viewMode]}</span>
-        </div>
-        <ViewToggle
-          id="onboarding-default-view"
-          value={viewMode}
-          onValueChange={onViewModeChange}
-        />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-col">
-          <span className="text-sm font-medium">Visible columns</span>
-          <span className="text-xs text-muted-foreground">
-            Toggle what shows up in table views.
-          </span>
-        </div>
-        <ToggleGroup
-          multiple
-          variant="outline"
-          spacing={1}
-          value={[...visibleIds]}
-          onValueChange={(next) => onVisibilityChange(visibilityFromIds(columns, next))}
-          className="flex-wrap"
-        >
-          {columns.map(({ id, label }) => (
-            <ToggleGroupItem key={id} value={id}>
-              {label}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
-      </div>
     </div>
   );
 }

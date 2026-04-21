@@ -24,8 +24,10 @@ export const parseJobStatusPayload = (value: string): SyncJobStatus | null => {
   }
 };
 
-export const serializeJobStatusPayload = (status: SyncJobStatus): string =>
-  JSON.stringify(syncJobStatusSchema.parse(status));
+// Producers own the trust boundary here; `parseJobStatusPayload` validates on
+// the consumer side. Re-parsing on serialize turned ~200 per-sync publishes
+// into ~200 Zod passes on the worker event loop for no extra safety.
+export const serializeJobStatusPayload = (status: SyncJobStatus): string => JSON.stringify(status);
 
 export const writeJobStatusSnapshotAndPublish = async (
   redis: Redis,
