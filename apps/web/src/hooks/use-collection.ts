@@ -259,7 +259,7 @@ export function useCollectionMutations() {
       toast.error("Failed to delete collection item(s). Please try again.");
     },
     onSuccess: () => {
-      toast.success("Collection deleted");
+      toast.success("Collection item(s) deleted");
     },
     onSettled: async () => {
       await queryClient.invalidateQueries();

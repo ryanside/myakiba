@@ -98,6 +98,7 @@ export interface AnalyticsSectionResponse {
 
 export interface AnalyticsSectionItem {
   readonly id: string;
+  readonly externalId: number | null;
   readonly title: string;
   readonly image: string | null;
 }

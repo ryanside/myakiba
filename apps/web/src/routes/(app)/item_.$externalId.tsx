@@ -1,14 +1,17 @@
+import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Calendar01Icon,
   Delete01Icon,
   Edit03Icon,
+  LibraryIcon,
   Loading03Icon,
   MoveIcon,
   Package01Icon,
+  PackageIcon,
   Refresh01Icon,
 } from "@hugeicons/core-free-icons";
-import { createFileRoute, useParams, Link } from "@tanstack/react-router";
+import { createFileRoute, useParams, Link, notFound } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { app, getErrorMessage } from "@/lib/treaty-client";
@@ -17,11 +20,13 @@ import { Button } from "@/components/ui/button";
 import { Badge, ThemedBadge } from "@/components/reui/badge";
 import {
   Empty,
+  EmptyContent,
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
   EmptyMedia,
 } from "@/components/ui/empty";
+import { SyncActionSheet, type LaunchableSyncType } from "@/components/sync/sync-launcher";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { formatDateOnlyForDisplay, formatRelativeTimeToNow } from "@/lib/date-display";
 import CollectionItemForm from "@/components/collection/collection-item-form";
@@ -56,55 +61,63 @@ type ItemRelatedCollection = {
   >[];
 };
 
-export const Route = createFileRoute("/(app)/items_/$id")({
+export const Route = createFileRoute("/(app)/item_/$externalId")({
+  parseParams: ({ externalId }) => {
+    if (!/^\d+$/.test(externalId)) {
+      throw notFound();
+    }
+    return { externalId: Number(externalId) };
+  },
+  stringifyParams: ({ externalId }) => ({ externalId: String(externalId) }),
   component: RouteComponent,
   head: ({ params }) => ({
     meta: [
       {
         name: "description",
-        content: `item ${params.id} details`,
+        content: `item ${params.externalId} details`,
       },
       {
-        title: `Item ${params.id} - myakiba`,
+        title: `Item ${params.externalId} - myakiba`,
       },
     ],
   }),
 });
 
-async function getItem(itemId: string) {
-  const { data, error } = await app.api.items({ itemId }).get();
+async function getItem(externalId: number) {
+  const { data, error } = await app.api.item({ externalId }).get();
   if (error) {
+    if (error.status === 404) return null;
     throw new Error(getErrorMessage(error, "Failed to get item"));
   }
   return data;
 }
 
-async function getItemRelatedOrders(itemId: string) {
-  const { data, error } = await app.api.items({ itemId }).orders.get();
+async function getItemRelatedOrders(externalId: number) {
+  const { data, error } = await app.api.item({ externalId }).orders.get();
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to get item related orders"));
   }
   return data;
 }
 
-async function getItemRelatedCollection(itemId: string) {
-  const { data, error } = await app.api.items({ itemId }).collection.get();
+async function getItemRelatedCollection(externalId: number) {
+  const { data, error } = await app.api.item({ externalId }).collection.get();
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to get item related collection"));
   }
   return data;
 }
 
-async function getResyncStatus(itemId: string) {
-  const { data, error } = await app.api.items({ itemId })["resync-status"].get();
+async function getResyncStatus(externalId: number) {
+  const { data, error } = await app.api.item({ externalId })["resync-status"].get();
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to get resync status"));
   }
   return data;
 }
 
-async function requestResync(itemId: string) {
-  const { data, error } = await app.api.items({ itemId }).resync.post();
+async function requestResync(externalId: number) {
+  const { data, error } = await app.api.item({ externalId }).resync.post();
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to request resync"));
   }
@@ -209,7 +222,8 @@ function ResyncButton({
 function RouteComponent() {
   const { currency: userCurrency, locale: userLocale, dateFormat } = useUserPreferences();
   const queryClient = useQueryClient();
-  const { id } = useParams({ from: "/(app)/items_/$id" });
+  const { externalId } = useParams({ from: "/(app)/item_/$externalId" });
+  const [syncType, setSyncType] = useState<LaunchableSyncType | null>(null);
   const {
     handleAddCollectionItemsToOrder,
     handleAddCollectionItemsToNewOrder,
@@ -217,23 +231,26 @@ function RouteComponent() {
   } = useCollectionOrderMutations();
 
   const { data, isPending, isError, error } = useQuery({
-    queryKey: ["item", id],
-    queryFn: () => getItem(id),
+    queryKey: ["item", externalId],
+    queryFn: () => getItem(externalId),
     staleTime: 1000 * 60 * 5,
     retry: false,
   });
 
+  const isNotFound = data === null;
+
   const { data: resyncStatusData } = useQuery({
-    queryKey: ["item", id, "resyncStatus"],
-    queryFn: () => getResyncStatus(id),
+    queryKey: ["item", externalId, "resyncStatus"],
+    queryFn: () => getResyncStatus(externalId),
     staleTime: 1000 * 30,
     retry: false,
+    enabled: data !== null,
   });
 
   const requestResyncMutation = useMutation({
-    mutationFn: () => requestResync(id),
+    mutationFn: () => requestResync(externalId),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["item", id, "resyncStatus"] });
+      void queryClient.invalidateQueries({ queryKey: ["item", externalId, "resyncStatus"] });
       toast.success("Update requested");
     },
     onError: (mutationError) => {
@@ -244,10 +261,11 @@ function RouteComponent() {
   });
 
   const { data: itemRelatedOrders } = useQuery({
-    queryKey: ["item", id, "itemRelatedOrders"],
-    queryFn: () => getItemRelatedOrders(id),
+    queryKey: ["item", externalId, "itemRelatedOrders"],
+    queryFn: () => getItemRelatedOrders(externalId),
     staleTime: 1000 * 60 * 5,
     retry: false,
+    enabled: data !== null,
   });
 
   const {
@@ -256,21 +274,22 @@ function RouteComponent() {
     isError: isErrorItemRelatedCollection,
     error: errorItemRelatedCollection,
   } = useQuery({
-    queryKey: ["item", id, "itemRelatedCollection"],
-    queryFn: () => getItemRelatedCollection(id),
+    queryKey: ["item", externalId, "itemRelatedCollection"],
+    queryFn: () => getItemRelatedCollection(externalId),
     staleTime: 1000 * 60 * 5,
     retry: false,
+    enabled: data !== null,
   });
 
   const editCollectionItemMutation = useMutation({
     mutationFn: (values: CollectionItemFormValues) => updateCollectionItem(values),
     onMutate: async (values) => {
       await queryClient.cancelQueries({
-        queryKey: ["item", id, "itemRelatedCollection"],
+        queryKey: ["item", externalId, "itemRelatedCollection"],
       });
-      const previousData = queryClient.getQueryData(["item", id, "itemRelatedCollection"]);
+      const previousData = queryClient.getQueryData(["item", externalId, "itemRelatedCollection"]);
       queryClient.setQueryData(
-        ["item", id, "itemRelatedCollection"],
+        ["item", externalId, "itemRelatedCollection"],
         (old: ItemRelatedCollection) => ({
           ...old,
           collection: old.collection.map((collectionItem) => {
@@ -302,7 +321,10 @@ function RouteComponent() {
     onSuccess: () => {},
     onError: (error, _, context) => {
       if (context?.previousData) {
-        queryClient.setQueryData(["item", id, "itemRelatedCollection"], context.previousData);
+        queryClient.setQueryData(
+          ["item", externalId, "itemRelatedCollection"],
+          context.previousData,
+        );
       }
       toast.error("Failed to update collection item. Please try again.", {
         description: `Error: ${error.message}`,
@@ -317,11 +339,11 @@ function RouteComponent() {
     mutationFn: (collectionId: string) => deleteCollectionItems([collectionId]),
     onMutate: async (collectionId) => {
       await queryClient.cancelQueries({
-        queryKey: ["item", id, "itemRelatedCollection"],
+        queryKey: ["item", externalId, "itemRelatedCollection"],
       });
-      const previousData = queryClient.getQueryData(["item", id, "itemRelatedCollection"]);
+      const previousData = queryClient.getQueryData(["item", externalId, "itemRelatedCollection"]);
       queryClient.setQueryData(
-        ["item", id, "itemRelatedCollection"],
+        ["item", externalId, "itemRelatedCollection"],
         (old: ItemRelatedCollection) => ({
           ...old,
           collection: old.collection.filter((collectionItem) => collectionItem.id !== collectionId),
@@ -331,7 +353,10 @@ function RouteComponent() {
     },
     onError: (error, _, context) => {
       if (context?.previousData) {
-        queryClient.setQueryData(["item", id, "itemRelatedCollection"], context.previousData);
+        queryClient.setQueryData(
+          ["item", externalId, "itemRelatedCollection"],
+          context.previousData,
+        );
       }
       toast.error("Failed to delete collection item(s). Please try again.", {
         description: `Error: ${error.message}`,
@@ -365,6 +390,51 @@ function RouteComponent() {
     );
   }
 
+  if (isNotFound) {
+    return (
+      <div className="flex flex-col gap-6 mx-auto max-w-352">
+        <BackLink to="/collection" text="Back" font="sans" className="self-start" />
+        <Empty className="py-16">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <HugeiconsIcon icon={Package01Icon} />
+            </EmptyMedia>
+            <EmptyTitle>Item not in your library yet</EmptyTitle>
+            <EmptyDescription>
+              MFC item #{externalId} hasn&apos;t been synced to myakiba. Sync it now to add it to
+              your collection or a new order.
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <div className="flex flex-col sm:flex-row gap-2 w-full justify-center">
+              <Button variant="default" onClick={() => setSyncType("collection")}>
+                <HugeiconsIcon icon={LibraryIcon} />
+                Sync as Collection
+              </Button>
+              <Button variant="outline" onClick={() => setSyncType("order")}>
+                <HugeiconsIcon icon={PackageIcon} />
+                Sync as Order
+              </Button>
+            </div>
+            <a
+              href={`https://myfigurecollection.net/item/${externalId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+            >
+              View myfigurecollection.net/item/{externalId}
+            </a>
+          </EmptyContent>
+        </Empty>
+        <SyncActionSheet
+          syncType={syncType}
+          onSyncTypeChange={setSyncType}
+          initialItemExternalId={String(externalId)}
+        />
+      </div>
+    );
+  }
+
   const { item } = data;
   const collectionItems = itemRelatedCollection?.collection ?? [];
   const ordersList = itemRelatedOrders?.orders ?? [];
@@ -382,7 +452,7 @@ function RouteComponent() {
   );
 
   return (
-    <div className="flex flex-col gap-6 mx-auto max-w-[88rem]">
+    <div className="flex flex-col gap-6 mx-auto max-w-352">
       <BackLink to="/collection" text="Back" font="sans" className="self-start" />
 
       {/* Hero: Image + Item Identity */}
@@ -400,28 +470,24 @@ function RouteComponent() {
         <div className="flex flex-col items-start justify-center gap-3">
           <div className="space-y-1.5">
             <h1 className="text-2xl font-medium tracking-tight leading-tight">{item.title}</h1>
-            {item.externalId ? (
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <a
-                  href={`https://myfigurecollection.net/item/${item.externalId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-muted-foreground transition-colors duration-150 ease-out underline-offset-4 hover:text-foreground hover:underline"
-                >
-                  myfigurecollection.net/item/{item.externalId}
-                </a>
-                {item.updatedAt && (
-                  <>
-                    <span className="hidden sm:inline text-xs text-muted-foreground/40">·</span>
-                    <span className="text-xs text-muted-foreground/60">
-                      Updated {formatRelativeTimeToNow(new Date(item.updatedAt))}
-                    </span>
-                  </>
-                )}
-              </div>
-            ) : (
-              <span className="text-xs text-muted-foreground/60">Custom item</span>
-            )}
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <a
+                href={`https://myfigurecollection.net/item/${externalId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-muted-foreground transition-colors duration-150 ease-out underline-offset-4 hover:text-foreground hover:underline"
+              >
+                myfigurecollection.net/item/{externalId}
+              </a>
+              {item.updatedAt && (
+                <>
+                  <span className="hidden sm:inline text-xs text-muted-foreground/40">·</span>
+                  <span className="text-xs text-muted-foreground/60">
+                    Updated {formatRelativeTimeToNow(new Date(item.updatedAt))}
+                  </span>
+                </>
+              )}
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -440,14 +506,12 @@ function RouteComponent() {
             )}
           </div>
 
-          {item.source === "mfc" && item.externalId && (
-            <ResyncButton
-              status={resyncStatusData?.status ?? "idle"}
-              isPending={requestResyncMutation.isPending}
-              cooldownExpiresAt={resyncStatusData?.cooldownExpiresAt ?? null}
-              onRequest={() => requestResyncMutation.mutate()}
-            />
-          )}
+          <ResyncButton
+            status={resyncStatusData?.status ?? "idle"}
+            isPending={requestResyncMutation.isPending}
+            cooldownExpiresAt={resyncStatusData?.cooldownExpiresAt ?? null}
+            onRequest={() => requestResyncMutation.mutate()}
+          />
         </div>
       </div>
 
@@ -575,9 +639,21 @@ function RouteComponent() {
                   </EmptyMedia>
                   <EmptyTitle>Not in your collection</EmptyTitle>
                   <EmptyDescription>
-                    This item hasn&apos;t been added to your collection yet.
+                    Add this item to your collection or a new order.
                   </EmptyDescription>
                 </EmptyHeader>
+                <EmptyContent>
+                  <div className="flex flex-col sm:flex-row gap-2 w-full justify-center">
+                    <Button variant="default" onClick={() => setSyncType("collection")}>
+                      <HugeiconsIcon icon={LibraryIcon} />
+                      Add to Collection
+                    </Button>
+                    <Button variant="outline" onClick={() => setSyncType("order")}>
+                      <HugeiconsIcon icon={PackageIcon} />
+                      Add to Order
+                    </Button>
+                  </div>
+                </EmptyContent>
               </Empty>
             ) : (
               <div className="space-y-5">
@@ -623,7 +699,7 @@ function RouteComponent() {
                                 itemData={{
                                   ...collectionItem,
                                   id: collectionItem.id,
-                                  itemExternalId: item.externalId ?? null,
+                                  itemExternalId: externalId,
                                   itemTitle: item.title,
                                   itemImage: item.image,
                                   releaseDate: release?.date ?? null,
@@ -829,6 +905,11 @@ function RouteComponent() {
           </div>
         </div>
       </div>
+      <SyncActionSheet
+        syncType={syncType}
+        onSyncTypeChange={setSyncType}
+        initialItemExternalId={String(externalId)}
+      />
     </div>
   );
 }

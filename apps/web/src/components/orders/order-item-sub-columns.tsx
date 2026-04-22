@@ -108,7 +108,14 @@ function OrderItemActionsCell({
           <DropdownMenuContent align="end">
             <DropdownMenuGroup>
               <DropdownMenuItem>
-                <Link to="/items/$id" params={{ id: item.itemId }}>
+                <Link
+                  {...(item.itemExternalId !== null
+                    ? ({
+                        to: "/item/$externalId",
+                        params: { externalId: item.itemExternalId },
+                      } as const)
+                    : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
+                >
                   View details
                 </Link>
               </DropdownMenuItem>
@@ -227,8 +234,12 @@ export function createOrderItemSubColumns({
             <div className="min-w-0 space-y-px">
               <Link
                 className="font-medium text-foreground truncate"
-                to="/items/$id"
-                params={{ id: item.itemId }}
+                {...(item.itemExternalId !== null
+                  ? ({
+                      to: "/item/$externalId",
+                      params: { externalId: item.itemExternalId },
+                    } as const)
+                  : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
               >
                 {item.itemTitle}
               </Link>

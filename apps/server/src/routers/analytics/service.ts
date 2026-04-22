@@ -72,6 +72,7 @@ export type AnalyticsSectionResult = {
 
 export type AnalyticsSectionItem = {
   readonly id: string;
+  readonly externalId: number | null;
   readonly title: string;
   readonly image: string | null;
 };
@@ -337,7 +338,7 @@ function buildSectionItemsResult(
   rows: readonly AnalyticsSectionItemPageRow[],
 ): AnalyticsSectionItemsResult {
   return {
-    items: rows.map(({ id, title, image }) => ({ id, title, image })),
+    items: rows.map(({ id, externalId, title, image }) => ({ id, externalId, title, image })),
     totalCount: rows[0]?.totalCount ?? 0,
     limit,
     offset,
@@ -535,6 +536,7 @@ class AnalyticsService {
       const rows = await db
         .select({
           id: item.id,
+          externalId: item.externalId,
           title: item.title,
           image: item.image,
           totalCount: sql<number>`COUNT(*) OVER()`,
@@ -559,6 +561,7 @@ class AnalyticsService {
       const rows = await db
         .select({
           id: item.id,
+          externalId: item.externalId,
           title: item.title,
           image: item.image,
           totalCount: sql<number>`COUNT(*) OVER()`,
@@ -583,6 +586,7 @@ class AnalyticsService {
     const rows = await db
       .select({
         id: item.id,
+        externalId: item.externalId,
         title: item.title,
         image: item.image,
         totalCount: sql<number>`COUNT(*) OVER()`,

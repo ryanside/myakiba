@@ -8,7 +8,7 @@
     "./orders/*": "./src/orders/*.ts",
     "./collection/*": "./src/collection/*.ts",
     "./sync/*": "./src/sync/*.ts",
-    "./items/*": "./src/items/*.ts",
+    "./item/*": "./src/item/*.ts",
     "./search/*": "./src/search/*.ts"
   },
   "dependencies": {

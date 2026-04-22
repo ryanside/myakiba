@@ -188,8 +188,12 @@ export function CollectionGalleryGrid({
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                 <DropdownMenuItem>
                   <Link
-                    to="/items/$id"
-                    params={{ id: item.itemId }}
+                    {...(item.itemExternalId !== null
+                      ? ({
+                          to: "/item/$externalId",
+                          params: { externalId: item.itemExternalId },
+                        } as const)
+                      : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
                     className="flex items-center gap-1.5"
                   >
                     <HugeiconsIcon icon={ViewIcon} />
@@ -249,7 +253,15 @@ export function CollectionGalleryGrid({
           </DropdownMenu>
         </div>
 
-        <Link to="/items/$id" params={{ id: item.itemId }} className="block">
+        <Link
+          {...(item.itemExternalId !== null
+            ? ({
+                to: "/item/$externalId",
+                params: { externalId: item.itemExternalId },
+              } as const)
+            : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
+          className="block"
+        >
           {item.itemImage ? (
             <img
               src={item.itemImage}

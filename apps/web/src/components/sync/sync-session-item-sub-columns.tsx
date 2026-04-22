@@ -29,8 +29,8 @@ export function createSyncSessionItemSubColumns(): ColumnDef<EnrichedSyncSession
               <div className="min-w-0 space-y-px">
                 <Link
                   className="font-medium text-foreground truncate block"
-                  to="/items/$id"
-                  params={{ id: item.itemId }}
+                  to="/item/$externalId"
+                  params={{ externalId: item.itemExternalId }}
                 >
                   {item.itemTitle ?? `Item ${item.itemExternalId}`}
                 </Link>

@@ -488,8 +488,12 @@ function ExpandedRowContent({
               {data.items.map((item, idx) => (
                 <Link
                   key={`${item.id}-${offset + idx}`}
-                  to="/items/$id"
-                  params={{ id: item.id }}
+                  {...(item.externalId !== null
+                    ? ({
+                        to: "/item/$externalId",
+                        params: { externalId: item.externalId },
+                      } as const)
+                    : ({ to: "/item/custom/$id", params: { id: item.id } } as const))}
                   title={item.title}
                   aria-label={item.title}
                   className="animate-data-in aspect-square rounded-md overflow-hidden bg-background"

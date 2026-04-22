@@ -181,8 +181,12 @@ export function CollectionCardGrid({
                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
                     <DropdownMenuItem>
                       <Link
-                        to="/items/$id"
-                        params={{ id: item.itemId }}
+                        {...(item.itemExternalId !== null
+                          ? ({
+                              to: "/item/$externalId",
+                              params: { externalId: item.itemExternalId },
+                            } as const)
+                          : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
                         className="flex items-center gap-1.5"
                       >
                         <HugeiconsIcon icon={ViewIcon} />
@@ -243,7 +247,15 @@ export function CollectionCardGrid({
             </div>
 
             {/* Image */}
-            <Link to="/items/$id" params={{ id: item.itemId }} className="block">
+            <Link
+              {...(item.itemExternalId !== null
+                ? ({
+                    to: "/item/$externalId",
+                    params: { externalId: item.itemExternalId },
+                  } as const)
+                : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
+              className="block"
+            >
               <div className="relative aspect-3/4 w-full overflow-hidden bg-muted">
                 {item.itemImage ? (
                   <img
@@ -263,8 +275,12 @@ export function CollectionCardGrid({
             <CardHeader>
               <CardTitle>
                 <Link
-                  to="/items/$id"
-                  params={{ id: item.itemId }}
+                  {...(item.itemExternalId !== null
+                    ? ({
+                        to: "/item/$externalId",
+                        params: { externalId: item.itemExternalId },
+                      } as const)
+                    : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
                   className="line-clamp-2 hover:underline underline-offset-2"
                 >
                   {item.itemTitle}

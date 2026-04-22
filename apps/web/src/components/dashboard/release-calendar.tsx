@@ -22,6 +22,7 @@ import Loader from "../loader";
 
 interface ReleaseItem {
   readonly itemId: string;
+  readonly itemExternalId: number | null;
   readonly title: string;
   readonly image: string | null;
   readonly category: string | null;
@@ -257,8 +258,12 @@ function ReleaseCard({
 
   return (
     <Link
-      to="/items/$id"
-      params={{ id: item.itemId }}
+      {...(item.itemExternalId !== null
+        ? ({
+            to: "/item/$externalId",
+            params: { externalId: item.itemExternalId },
+          } as const)
+        : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
       className="flex min-w-0 items-center gap-2.5 overflow-hidden rounded-md px-1.5 py-1.5 transition-colors hover:bg-accent duration-50"
     >
       <ImageThumbnail

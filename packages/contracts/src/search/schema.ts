@@ -1,5 +1,5 @@
 import * as z from "zod";
-import { itemReleaseSchema } from "../items/schema";
+import { itemReleaseSchema } from "../item/schema";
 
 export const sortDirectionSchema = z.enum(["asc", "desc"]);
 

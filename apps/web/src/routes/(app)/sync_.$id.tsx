@@ -233,6 +233,7 @@ function RouteComponent() {
           headerBackground: true,
           headerBorder: true,
         }}
+        skeletonRowCount={1}
       >
         <div className="w-full space-y-2.5">
           <DataGridContainer>

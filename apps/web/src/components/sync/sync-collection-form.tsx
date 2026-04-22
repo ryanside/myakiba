@@ -31,15 +31,17 @@ import { getCurrencyLocale } from "@/lib/locale";
 export default function SyncCollectionForm({
   handleSyncCollectionSubmit,
   currency,
+  initialItemExternalId,
 }: {
   handleSyncCollectionSubmit: (values: SyncCollectionItem[]) => void;
   currency: Currency;
+  initialItemExternalId?: string;
 }) {
   const userLocale = getCurrencyLocale(currency);
 
   const collectionForm = useForm({
     defaultValues: {
-      items: [createDefaultSyncFormCollectionItem()],
+      items: [createDefaultSyncFormCollectionItem(initialItemExternalId)],
     },
     onSubmit: async ({ value }) => {
       const toMinorUnits = (amount: string): number => majorStringToMinorUnits(amount);

@@ -1,7 +1,7 @@
 import { db } from "@myakiba/db/client";
 import { collection, entry, item, item_release, order } from "@myakiba/db/schema/figure";
 import { and, asc, desc, eq, ilike, sql } from "drizzle-orm";
-import type { ItemReleasesResponse } from "@myakiba/contracts/items/schema";
+import type { ItemReleasesResponse } from "@myakiba/contracts/item/schema";
 import {
   SEARCH_COLLECTION_RESULT_LIMIT,
   SEARCH_ORDER_RESULT_LIMIT,

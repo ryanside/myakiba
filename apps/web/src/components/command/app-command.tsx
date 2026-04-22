@@ -231,11 +231,21 @@ export function AppCommand(): React.JSX.Element {
     });
   };
 
-  const handleItemOpen = (itemId: string): void => {
+  const handleItemOpen = (item: {
+    readonly itemId: string;
+    readonly itemExternalId: number | null;
+  }): void => {
     closeCommand();
+    if (item.itemExternalId !== null) {
+      void navigate({
+        to: "/item/$externalId",
+        params: { externalId: item.itemExternalId },
+      });
+      return;
+    }
     void navigate({
-      to: "/items/$id",
-      params: { id: itemId },
+      to: "/item/custom/$id",
+      params: { id: item.itemId },
     });
   };
 
@@ -431,7 +441,7 @@ export function AppCommand(): React.JSX.Element {
                             className="size-8 rounded-md"
                           />
                         }
-                        onSelect={() => handleItemOpen(item.itemId)}
+                        onSelect={() => handleItemOpen(item)}
                       />
                     ))
                   : null}

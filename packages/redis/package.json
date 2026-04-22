@@ -9,7 +9,6 @@
     }
   },
   "scripts": {
-    "dev": "docker compose up -d",
     "redis:start": "docker compose up -d",
     "redis:stop": "docker compose stop",
     "redis:down": "docker compose down"

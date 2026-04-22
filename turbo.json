@@ -19,6 +19,21 @@
       "cache": false,
       "persistent": true
     },
+    "web#dev": {
+      "dependsOn": ["@myakiba/db#db:start", "@myakiba/redis#redis:start"],
+      "cache": false,
+      "persistent": true
+    },
+    "server#dev": {
+      "dependsOn": ["@myakiba/db#db:start", "@myakiba/redis#redis:start"],
+      "cache": false,
+      "persistent": true
+    },
+    "worker#dev": {
+      "dependsOn": ["@myakiba/db#db:start", "@myakiba/redis#redis:start"],
+      "cache": false,
+      "persistent": true
+    },
     "stop": {
       "cache": false
     },

@@ -187,10 +187,10 @@ export function extractMfcItemId(input: string): string | null {
   return null;
 }
 
-export function createDefaultSyncFormOrderItem(): SyncFormOrderItem {
+export function createDefaultSyncFormOrderItem(itemExternalId: string = ""): SyncFormOrderItem {
   return {
     formRowId: crypto.randomUUID(),
-    itemExternalId: "",
+    itemExternalId,
     price: "0.00",
     count: 1,
     status: "Ordered",
@@ -203,7 +203,7 @@ export function createDefaultSyncFormOrderItem(): SyncFormOrderItem {
   };
 }
 
-export function createDefaultSyncFormOrder(): SyncFormOrder {
+export function createDefaultSyncFormOrder(itemExternalId: string = ""): SyncFormOrder {
   return {
     status: "Ordered",
     title: "New Order",
@@ -220,14 +220,16 @@ export function createDefaultSyncFormOrder(): SyncFormOrder {
     tariffs: "0.00",
     miscFees: "0.00",
     notes: "",
-    items: [createDefaultSyncFormOrderItem()],
+    items: [createDefaultSyncFormOrderItem(itemExternalId)],
   };
 }
 
-export function createDefaultSyncFormCollectionItem(): SyncFormCollectionItem {
+export function createDefaultSyncFormCollectionItem(
+  itemExternalId: string = "",
+): SyncFormCollectionItem {
   return {
     formRowId: crypto.randomUUID(),
-    itemExternalId: "",
+    itemExternalId,
     price: "0.00",
     count: 1,
     score: 0,
