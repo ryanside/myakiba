@@ -207,7 +207,7 @@ function ActiveStatusCell({ session }: { readonly session: SyncSessionRow }) {
   const status = session.status;
   const config = SESSION_STATUS_CONFIG[status];
 
-  const { data: jobStatus, isError: isJobError } = useSyncJobStatusQuery(session.jobId);
+  const { data: jobStatus, isError: isJobError } = useSyncJobStatusQuery(session.jobId, session.id);
 
   const displayStatus = resolveSyncMessage(session, jobStatus ?? null, isJobError);
 

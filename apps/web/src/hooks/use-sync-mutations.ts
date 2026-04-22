@@ -1,6 +1,5 @@
 import { useCallback } from "react";
 import { useMutation, type QueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 import { tryCatch } from "@myakiba/utils/result";
 import type {
   SyncCollectionItem,
@@ -27,13 +26,6 @@ export type UseSyncMutationsReturn = {
   readonly isSyncing: boolean;
 };
 
-const toastSyncError =
-  (title: string) =>
-  (error: Error): void => {
-    const message = error.message.trim();
-    toast.error(message.length > 0 ? message : title);
-  };
-
 export function useSyncMutations(
   queryClient: QueryClient,
   onComplete?: () => void,
@@ -43,7 +35,8 @@ export function useSyncMutations(
       onComplete?.();
 
       showSyncToast({
-        finished: data.isFinished,
+        state: data.isFinished ? "success" : "queued",
+        sessionId: data.syncSessionId,
         existingItems: data.existingItemsToInsert,
         newItems: data.newItems,
       });
@@ -60,32 +53,45 @@ export function useSyncMutations(
   const csvMutation = useMutation({
     mutationFn: (userItems: UserItem[]) => sendItems(userItems),
     onSuccess: handleSuccess,
-    onError: toastSyncError("Failed to submit CSV."),
+    onError: (error: Error) =>
+      showSyncToast({ state: "error", message: error.message.trim() || "Failed to submit CSV." }),
   });
 
   const orderMutation = useMutation({
     mutationFn: (order: SyncOrder) => sendOrder(order),
     onSuccess: handleSuccess,
-    onError: toastSyncError("Failed to submit order."),
+    onError: (error: Error) =>
+      showSyncToast({ state: "error", message: error.message.trim() || "Failed to submit order." }),
   });
 
   const orderItemMutation = useMutation({
     mutationFn: (orderItems: SyncOrderItems) => sendOrderItems(orderItems),
     onSuccess: handleSuccess,
-    onError: toastSyncError("Failed to submit order items."),
+    onError: (error: Error) =>
+      showSyncToast({
+        state: "error",
+        message: error.message.trim() || "Failed to submit order items.",
+      }),
   });
 
   const collectionMutation = useMutation({
     mutationFn: (items: SyncCollectionItem[]) => sendCollection(items),
     onSuccess: handleSuccess,
-    onError: toastSyncError("Failed to submit collection."),
+    onError: (error: Error) =>
+      showSyncToast({
+        state: "error",
+        message: error.message.trim() || "Failed to submit collection.",
+      }),
   });
 
   const handleSyncCsvSubmit = useCallback(
     async (value: File | undefined): Promise<void> => {
       const { data: userItems, error } = await tryCatch(transformCSVData({ file: value }));
       if (error) {
-        toast.error(error instanceof Error ? error.message : "An error occurred");
+        showSyncToast({
+          state: "error",
+          message: error instanceof Error ? error.message : "An error occurred",
+        });
         return;
       }
 

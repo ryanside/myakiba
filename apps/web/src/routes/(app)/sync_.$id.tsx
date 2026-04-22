@@ -40,12 +40,13 @@ function SessionStatusPanel({
 }: {
   readonly session: Pick<
     SyncSessionRow,
-    "jobId" | "statusMessage" | "totalItems" | "successCount" | "failCount"
+    "id" | "jobId" | "statusMessage" | "totalItems" | "successCount" | "failCount"
   >;
   readonly isActive: boolean;
 }) {
   const { data: jobStatus, isError: isJobError } = useSyncJobStatusQuery(
     isActive ? session.jobId : null,
+    session.id,
   );
 
   const isLive = isActive && jobStatus?.terminalState == null;
