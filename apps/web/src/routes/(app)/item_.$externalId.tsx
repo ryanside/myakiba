@@ -30,7 +30,7 @@ import { SyncActionSheet, type LaunchableSyncType } from "@/components/sync/sync
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { formatDateOnlyForDisplay, formatRelativeTimeToNow } from "@/lib/date-display";
 import CollectionItemForm from "@/components/collection/collection-item-form";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { CollectionItemFormValues, CollectionItem } from "@myakiba/contracts/collection/types";
 import { deleteCollectionItems, updateCollectionItem } from "@/queries/collection";
 import { toast } from "sonner";
@@ -742,34 +742,21 @@ function RouteComponent() {
                                 currency={userCurrency}
                                 intent="add"
                               />
-                              <Popover>
-                                <PopoverTrigger
-                                  render={
-                                    <Button
-                                      variant="ghost"
-                                      size="icon-sm"
-                                      className="text-muted-foreground"
-                                    >
-                                      <HugeiconsIcon icon={Delete01Icon} className="size-3.5" />
-                                    </Button>
-                                  }
-                                />
-                                <PopoverContent>
-                                  <div className="flex flex-col gap-3">
-                                    <p className="text-sm">Delete this collection item?</p>
-                                    <div className="flex justify-end gap-2">
-                                      <Button
-                                        variant="destructive"
-                                        onClick={() =>
-                                          handleDeleteCollectionItem(collectionItem.id)
-                                        }
-                                      >
-                                        Delete
-                                      </Button>
-                                    </div>
-                                  </div>
-                                </PopoverContent>
-                              </Popover>
+                              <ConfirmDialog
+                                renderTrigger={
+                                  <Button
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    className="text-muted-foreground"
+                                  >
+                                    <HugeiconsIcon icon={Delete01Icon} className="size-3.5" />
+                                    <span className="sr-only">Delete collection item</span>
+                                  </Button>
+                                }
+                                title="Delete item?"
+                                description="This will permanently remove this item from your collection."
+                                onConfirm={() => handleDeleteCollectionItem(collectionItem.id)}
+                              />
                             </div>
                           </CardAction>
                         </CardHeader>

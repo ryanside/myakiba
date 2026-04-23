@@ -1,11 +1,12 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Edit03Icon, PackageIcon } from "@hugeicons/core-free-icons";
-import { createFileRoute, useParams } from "@tanstack/react-router";
-import { getOrder, editOrder, deleteOrderItem } from "@/queries/orders";
+import { Delete02Icon, Edit03Icon, PackageIcon } from "@hugeicons/core-free-icons";
+import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
+import { getOrder, editOrder, deleteOrders, deleteOrderItem } from "@/queries/orders";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ThemedBadge } from "@/components/reui/badge";
 import { BackLink } from "@/components/ui/back-link";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { formatDateOnlyForDisplay, formatTimestampForDisplay } from "@/lib/date-display";
 import { getStatusVariant } from "@/lib/orders";
@@ -69,6 +70,7 @@ function CostRow({
 function RouteComponent() {
   const { currency: userCurrency, locale: userLocale, dateFormat } = useUserPreferences();
   const { id } = useParams({ from: "/(app)/orders_/$id" });
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [itemSelection, setItemSelection] = useState<RowSelectionState>({});
   const [pendingCollectionItemIdList, setPendingCollectionItemIdList] = useState<readonly string[]>(
@@ -119,6 +121,24 @@ function RouteComponent() {
     onSuccess: () => {},
     onError: (error) => {
       toast.error("Failed to update item. Please try again.", {
+        description: `Error: ${error.message}`,
+      });
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries();
+    },
+  });
+
+  const deleteOrderMutation = useMutation({
+    mutationFn: async (orderId: string) => {
+      return await deleteOrders(new Set([orderId]));
+    },
+    onSuccess: async () => {
+      toast.success("Order deleted");
+      await navigate({ to: "/orders" });
+    },
+    onError: (error) => {
+      toast.error("Failed to delete order. Please try again.", {
         description: `Error: ${error.message}`,
       });
     },
@@ -247,18 +267,31 @@ function RouteComponent() {
             </div>
           </div>
 
-          <OrderForm
-            renderTrigger={
-              <Button variant="outline" size="sm">
-                <HugeiconsIcon icon={Edit03Icon} className="size-4" />
-                Edit
-              </Button>
-            }
-            type="edit-order"
-            orderData={order}
-            callbackFn={handleEditOrder}
-            currency={userCurrency}
-          />
+          <div className="flex items-center gap-2">
+            <OrderForm
+              renderTrigger={
+                <Button variant="outline" size="sm">
+                  <HugeiconsIcon icon={Edit03Icon} className="size-4" />
+                  Edit
+                </Button>
+              }
+              type="edit-order"
+              orderData={order}
+              callbackFn={handleEditOrder}
+              currency={userCurrency}
+            />
+            <ConfirmDialog
+              renderTrigger={
+                <Button variant="destructive" size="sm">
+                  <HugeiconsIcon icon={Delete02Icon} className="size-4" />
+                  Delete
+                </Button>
+              }
+              title="Delete order?"
+              description='This will permanently delete this order and all its items. Items with "Owned" status will not be deleted. You can delete owned items in the collection tab.'
+              onConfirm={() => deleteOrderMutation.mutateAsync(order.orderId)}
+            />
+          </div>
         </div>
       </div>
 

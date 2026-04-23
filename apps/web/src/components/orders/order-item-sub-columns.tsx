@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
+  Copy01Icon,
+  Delete02Icon,
   Edit03Icon,
   Loading03Icon,
   MoreHorizontalIcon,
   PackageIcon,
+  ViewIcon,
 } from "@hugeicons/core-free-icons";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { Button } from "@/components/ui/button";
@@ -12,21 +15,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
 import { cn } from "@/lib/utils";
 import type { Currency, DateFormat, OrderStatus } from "@myakiba/contracts/shared/types";
@@ -70,7 +63,8 @@ function OrderItemActionsCell({
 > & {
   readonly item: OrderItem;
   readonly isPending: boolean;
-}) {
+}): React.JSX.Element {
+  const [menuOpen, setMenuOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   return (
@@ -84,7 +78,7 @@ function OrderItemActionsCell({
               disabled={isPending}
               className="text-muted-foreground"
             >
-              <HugeiconsIcon icon={Edit03Icon} className="size-3" />
+              <HugeiconsIcon icon={Edit03Icon} />
               <span className="sr-only">Edit item</span>
             </Button>
           }
@@ -93,20 +87,20 @@ function OrderItemActionsCell({
           currency={currency}
           dateFormat={dateFormat}
         />
-        <DropdownMenu>
+        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
           <DropdownMenuTrigger
             render={
               <Button variant="ghost" size="icon-sm" disabled={isPending}>
                 <span className="sr-only">Open menu</span>
                 <HugeiconsIcon
                   icon={isPending ? Loading03Icon : MoreHorizontalIcon}
-                  className={cn("h-4 w-4", isPending && "animate-spin")}
+                  className={cn(isPending && "animate-spin")}
                 />
               </Button>
             }
           />
-          <DropdownMenuContent align="end">
-            <DropdownMenuGroup>
+          {menuOpen ? (
+            <DropdownMenuContent align="end">
               <DropdownMenuItem>
                 <Link
                   {...(item.itemExternalId !== null
@@ -115,7 +109,9 @@ function OrderItemActionsCell({
                         params: { externalId: item.itemExternalId },
                       } as const)
                     : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
+                  className="flex items-center gap-1.5"
                 >
+                  <HugeiconsIcon icon={ViewIcon} />
                   View details
                 </Link>
               </DropdownMenuItem>
@@ -129,42 +125,33 @@ function OrderItemActionsCell({
                   }
                 }}
               >
+                <HugeiconsIcon icon={Copy01Icon} />
                 Copy MFC ID
               </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              variant="destructive"
-              disabled={isPending}
-              onClick={() => setDeleteOpen(true)}
-            >
-              Remove item
-            </DropdownMenuItem>
-          </DropdownMenuContent>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setDeleteOpen(true);
+                }}
+              >
+                <HugeiconsIcon icon={Delete02Icon} />
+                Remove item
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          ) : null}
         </DropdownMenu>
       </div>
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent size="sm">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove item?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will remove this item from the order.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={() => {
-                setDeleteOpen(false);
-                onDeleteItem(orderId, item.id);
-              }}
-            >
-              Remove
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Remove item?"
+        description="This will remove this item from the order."
+        confirmLabel="Remove"
+        loadingLabel="Removing..."
+        onConfirm={() => onDeleteItem(orderId, item.id)}
+      />
     </>
   );
 }

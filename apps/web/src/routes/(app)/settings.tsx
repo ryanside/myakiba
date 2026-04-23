@@ -582,7 +582,7 @@ function DeleteAccountForm({
           <DialogTrigger
             render={
               <Button variant="destructive">
-                <HugeiconsIcon icon={Delete02Icon} className="mr-2 h-4 w-4" />
+                <HugeiconsIcon icon={Delete02Icon} className="h-4 w-4" />
                 Delete Account
               </Button>
             }

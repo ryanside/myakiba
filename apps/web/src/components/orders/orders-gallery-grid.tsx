@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Delete02Icon,
@@ -14,12 +15,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { OrderForm } from "./order-form";
 import { cn } from "@/lib/utils";
 import type { OrderListItem } from "@myakiba/contracts/orders/types";
@@ -41,7 +41,7 @@ interface OrdersGalleryGridProps {
     updater: RowSelectionState | ((prev: RowSelectionState) => RowSelectionState),
   ) => void;
   readonly onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
-  readonly onDeleteOrders: (orderIds: Set<string>) => Promise<void>;
+  readonly onDeleteOrders: (orderIds: ReadonlySet<string>) => Promise<void>;
   readonly currency: Currency;
   readonly isOrderPending: (orderId: string) => boolean;
   readonly isLoading: boolean;
@@ -105,6 +105,95 @@ function OrderImageMosaic({
         />
       ))}
     </div>
+  );
+}
+
+function OrderTileActions({
+  order,
+  isPending,
+  isSelected,
+  onEditOrder,
+  onDeleteOrders,
+  currency,
+}: {
+  readonly order: OrderListItem;
+  readonly isPending: boolean;
+  readonly isSelected: boolean;
+  readonly onEditOrder: OrdersGalleryGridProps["onEditOrder"];
+  readonly onDeleteOrders: OrdersGalleryGridProps["onDeleteOrders"];
+  readonly currency: Currency;
+}): React.JSX.Element {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  return (
+    <>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              className={cn(
+                "bg-black/30 text-white backdrop-blur-sm hover:bg-black/50 hover:text-white",
+                !isSelected &&
+                  "opacity-0 group-hover/tile:opacity-100 data-popup-open:opacity-100 transition-opacity",
+              )}
+              disabled={isPending}
+            >
+              <HugeiconsIcon
+                icon={isPending ? Loading03Icon : MoreHorizontalIcon}
+                className={cn("size-3.5", isPending && "animate-spin")}
+              />
+            </Button>
+          }
+        />
+        {menuOpen ? (
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem>
+              <Link
+                to="/orders/$id"
+                params={{ id: order.orderId }}
+                className="flex items-center gap-1.5"
+              >
+                <HugeiconsIcon icon={ViewIcon} />
+                View details
+              </Link>
+            </DropdownMenuItem>
+            <OrderForm
+              renderTrigger={
+                <DropdownMenuItem closeOnClick={false}>
+                  <HugeiconsIcon icon={Edit03Icon} />
+                  Edit order
+                </DropdownMenuItem>
+              }
+              type="edit-order"
+              orderData={order}
+              callbackFn={onEditOrder}
+              currency={currency}
+            />
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => {
+                setMenuOpen(false);
+                setDeleteOpen(true);
+              }}
+            >
+              <HugeiconsIcon icon={Delete02Icon} />
+              Delete order
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        ) : null}
+      </DropdownMenu>
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete order?"
+        description='This will permanently delete this order and all its items. Items with "Owned" status will not be deleted. You can delete owned items in the collection tab.'
+        onConfirm={() => onDeleteOrders(new Set([order.orderId]))}
+      />
+    </>
   );
 }
 
@@ -201,63 +290,14 @@ export function OrdersGalleryGrid({
               !isSelected && "opacity-0 group-hover/tile:opacity-100 transition-opacity",
             )}
           />
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  className={cn(
-                    "bg-black/30 text-white backdrop-blur-sm hover:bg-black/50 hover:text-white",
-                    !isSelected &&
-                      "opacity-0 group-hover/tile:opacity-100 data-popup-open:opacity-100 transition-opacity",
-                  )}
-                  disabled={isPending}
-                >
-                  <HugeiconsIcon
-                    icon={isPending ? Loading03Icon : MoreHorizontalIcon}
-                    className={cn("size-3.5", isPending && "animate-spin")}
-                  />
-                </Button>
-              }
-            />
-            <DropdownMenuContent align="end">
-              <DropdownMenuGroup>
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuItem>
-                  <Link
-                    to="/orders/$id"
-                    params={{ id: order.orderId }}
-                    className="flex items-center gap-1.5"
-                  >
-                    <HugeiconsIcon icon={ViewIcon} />
-                    View details
-                  </Link>
-                </DropdownMenuItem>
-                <OrderForm
-                  renderTrigger={
-                    <DropdownMenuItem closeOnClick={false} disabled={isPending}>
-                      <HugeiconsIcon icon={Edit03Icon} />
-                      {isPending ? "Saving..." : "Edit order"}
-                    </DropdownMenuItem>
-                  }
-                  type="edit-order"
-                  orderData={order}
-                  callbackFn={onEditOrder}
-                  currency={currency}
-                />
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                disabled={isPending}
-                onClick={() => onDeleteOrders(new Set([order.orderId]))}
-              >
-                <HugeiconsIcon icon={Delete02Icon} />
-                {isPending ? "Deleting..." : "Delete order"}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <OrderTileActions
+            order={order}
+            isPending={isPending}
+            isSelected={isSelected}
+            onEditOrder={onEditOrder}
+            onDeleteOrders={onDeleteOrders}
+            currency={currency}
+          />
         </div>
 
         {imageCount > 4 ? (

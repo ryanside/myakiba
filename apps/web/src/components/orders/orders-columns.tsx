@@ -3,32 +3,24 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   AddSquareIcon,
   ArrowRight01Icon,
+  Delete02Icon,
   Edit03Icon,
   Loading03Icon,
   MinusSignSquareIcon,
   MoreHorizontalIcon,
   PackageIcon,
+  ViewIcon,
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Link } from "@tanstack/react-router";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
 import {
@@ -93,7 +85,7 @@ function OrderActionsCell({
 }: Pick<OrdersColumnsParams, "onEditOrder" | "onDeleteOrders" | "currency"> & {
   readonly order: OrderListItem;
   readonly isPending: boolean;
-}) {
+}): React.JSX.Element {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -108,7 +100,7 @@ function OrderActionsCell({
               disabled={isPending}
               className="text-muted-foreground"
             >
-              <HugeiconsIcon icon={Edit03Icon} className="size-3" />
+              <HugeiconsIcon icon={Edit03Icon} />
               <span className="sr-only">Edit order</span>
             </Button>
           }
@@ -124,66 +116,52 @@ function OrderActionsCell({
                 <span className="sr-only">Open menu</span>
                 <HugeiconsIcon
                   icon={isPending ? Loading03Icon : MoreHorizontalIcon}
-                  className={cn("h-4 w-4", isPending && "animate-spin")}
+                  className={cn(isPending && "animate-spin")}
                 />
               </Button>
             }
           />
           {menuOpen ? (
             <DropdownMenuContent align="end">
-              <DropdownMenuGroup>
-                <DropdownMenuItem>
-                  <Link to="/orders/$id" params={{ id: order.orderId }}>
-                    View details
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
+              <DropdownMenuItem>
+                <Link
+                  to="/orders/$id"
+                  params={{ id: order.orderId }}
+                  className="flex items-center gap-1.5"
+                >
+                  <HugeiconsIcon icon={ViewIcon} />
+                  View details
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 variant="destructive"
-                disabled={isPending}
                 onClick={() => {
                   setMenuOpen(false);
                   setDeleteOpen(true);
                 }}
               >
+                <HugeiconsIcon icon={Delete02Icon} />
                 Delete order
               </DropdownMenuItem>
             </DropdownMenuContent>
           ) : null}
         </DropdownMenu>
       </div>
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        {deleteOpen ? (
-          <AlertDialogContent size="sm">
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete order?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will permanently delete this order and all its items.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                variant="destructive"
-                onClick={() => {
-                  setDeleteOpen(false);
-                  onDeleteOrders(new Set([order.orderId]));
-                }}
-              >
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        ) : null}
-      </AlertDialog>
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete order?"
+        description='This will permanently delete this order and all its items. Items with "Owned" status will not be deleted. You can delete owned items in the collection tab.'
+        onConfirm={() => onDeleteOrders(new Set([order.orderId]))}
+      />
     </>
   );
 }
 
 interface OrdersColumnsParams {
   onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
-  onDeleteOrders: (orderIds: Set<string>) => Promise<void>;
+  onDeleteOrders: (orderIds: ReadonlySet<string>) => Promise<void>;
   onEditItem: (values: CollectionItemFormValues) => Promise<void>;
   onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
   currency: Currency;
