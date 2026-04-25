@@ -23,10 +23,8 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
-  type DragEndEvent,
-  type Modifier,
 } from "@dnd-kit/core";
-import type { UniqueIdentifier } from "@dnd-kit/core";
+import type { DragEndEvent, Modifier, UniqueIdentifier } from "@dnd-kit/core";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -88,7 +86,7 @@ function DataGridTableDndRow<TData>({ row }: { row: Row<TData> }) {
 
   const style: CSSProperties = {
     transform: CSS.Transform.toString(transform),
-    transition: transition,
+    transition,
     opacity: isDragging ? 0.8 : 1,
     zIndex: isDragging ? 1 : 0,
     position: "relative",
@@ -162,14 +160,14 @@ function DataGridTableDndRows<TData>({
       <div ref={tableContainerRef} className="relative">
         <DataGridTableBase>
           <DataGridTableHead>
-            {table.getHeaderGroups().map((headerGroup: HeaderGroup<TData>, index) => {
+            {table.getHeaderGroups().map((headerGroup: HeaderGroup<TData>, groupIndex) => {
               return (
-                <DataGridTableHeadRow headerGroup={headerGroup} key={index}>
-                  {headerGroup.headers.map((header, index) => {
+                <DataGridTableHeadRow headerGroup={headerGroup} key={groupIndex}>
+                  {headerGroup.headers.map((header, headerIndex) => {
                     const { column } = header;
 
                     return (
-                      <DataGridTableHeadRowCell header={header} key={index}>
+                      <DataGridTableHeadRowCell header={header} key={headerIndex}>
                         {header.isPlaceholder
                           ? null
                           : flexRender(header.column.columnDef.header, header.getContext())}
@@ -189,27 +187,31 @@ function DataGridTableDndRows<TData>({
           )}
 
           <DataGridTableBody>
-            {props.loadingMode === "skeleton" && isLoading && skeletonRowCount ? (
-              Array.from({ length: skeletonRowCount }).map((_, rowIndex) => (
-                <DataGridTableBodyRowSkeleton key={rowIndex}>
-                  {table.getVisibleFlatColumns().map((column, colIndex) => {
-                    return (
-                      <DataGridTableBodyRowSkeletonCell column={column} key={colIndex}>
-                        {column.columnDef.meta?.skeleton}
-                      </DataGridTableBodyRowSkeletonCell>
-                    );
-                  })}
-                </DataGridTableBodyRowSkeleton>
-              ))
-            ) : table.getRowModel().rows.length ? (
-              <SortableContext items={dataIds} strategy={verticalListSortingStrategy}>
-                {table.getRowModel().rows.map((row: Row<TData>) => {
-                  return <DataGridTableDndRow row={row} key={row.id} />;
-                })}
-              </SortableContext>
-            ) : (
-              <DataGridTableEmpty />
-            )}
+            {(() => {
+              if (props.loadingMode === "skeleton" && isLoading && skeletonRowCount) {
+                return Array.from({ length: skeletonRowCount }).map((_, rowIndex) => (
+                  <DataGridTableBodyRowSkeleton key={rowIndex}>
+                    {table.getVisibleFlatColumns().map((column, colIndex) => {
+                      return (
+                        <DataGridTableBodyRowSkeletonCell column={column} key={colIndex}>
+                          {column.columnDef.meta?.skeleton}
+                        </DataGridTableBodyRowSkeletonCell>
+                      );
+                    })}
+                  </DataGridTableBodyRowSkeleton>
+                ));
+              }
+              if (table.getRowModel().rows.length) {
+                return (
+                  <SortableContext items={dataIds} strategy={verticalListSortingStrategy}>
+                    {table.getRowModel().rows.map((row: Row<TData>) => {
+                      return <DataGridTableDndRow row={row} key={row.id} />;
+                    })}
+                  </SortableContext>
+                );
+              }
+              return <DataGridTableEmpty />;
+            })()}
           </DataGridTableBody>
         </DataGridTableBase>
       </div>

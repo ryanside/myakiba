@@ -1,5 +1,6 @@
 import { useCallback } from "react";
-import { useMutation, type QueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { tryCatch } from "@myakiba/utils/result";
 import type {
   SyncCollectionItem,
@@ -97,28 +98,28 @@ export function useSyncMutations(
 
       await csvMutation.mutateAsync(userItems);
     },
-    [csvMutation.mutateAsync],
+    [csvMutation],
   );
 
   const handleSyncOrderSubmit = useCallback(
     async (values: SyncOrder): Promise<void> => {
       await orderMutation.mutateAsync(values);
     },
-    [orderMutation.mutateAsync],
+    [orderMutation],
   );
 
   const handleSyncCollectionSubmit = useCallback(
     async (values: SyncCollectionItem[]): Promise<void> => {
       await collectionMutation.mutateAsync(values);
     },
-    [collectionMutation.mutateAsync],
+    [collectionMutation],
   );
 
   const handleSyncOrderItemSubmit = useCallback(
     async (values: SyncOrderItems): Promise<void> => {
       await orderItemMutation.mutateAsync(values);
     },
-    [orderItemMutation.mutateAsync],
+    [orderItemMutation],
   );
 
   const isSyncing =

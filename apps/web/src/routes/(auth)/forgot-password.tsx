@@ -42,7 +42,7 @@ function RouteComponent() {
   const handleForgotPassword = async (email: string, turnstileToken: string) => {
     await authClient.requestPasswordReset(
       {
-        email: email,
+        email,
         redirectTo: import.meta.env.PROD
           ? "https://myakiba.app/reset-password"
           : "http://localhost:3001/reset-password",

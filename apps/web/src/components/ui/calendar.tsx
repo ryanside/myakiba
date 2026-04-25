@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { DayPicker, getDefaultClassNames, type DayButton, type Locale } from "react-day-picker";
+import { DayPicker, getDefaultClassNames } from "react-day-picker";
+import type { DayButton, Locale } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -114,17 +115,19 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        Root: ({ className, rootRef, ...props }) => {
-          return <div data-slot="calendar" ref={rootRef} className={cn(className)} {...props} />;
+        Root: ({ className: rootClassName, rootRef, ...rootProps }) => {
+          return (
+            <div data-slot="calendar" ref={rootRef} className={cn(rootClassName)} {...rootProps} />
+          );
         },
-        Chevron: ({ className, orientation, ...props }) => {
+        Chevron: ({ className: chevronClassName, orientation, ...chevronProps }) => {
           if (orientation === "left") {
             return (
               <HugeiconsIcon
                 icon={ArrowLeftIcon}
                 strokeWidth={2}
-                className={cn("size-4", className)}
-                {...props}
+                className={cn("size-4", chevronClassName)}
+                {...chevronProps}
               />
             );
           }
@@ -134,8 +137,8 @@ function Calendar({
               <HugeiconsIcon
                 icon={ArrowRightIcon}
                 strokeWidth={2}
-                className={cn("size-4", className)}
-                {...props}
+                className={cn("size-4", chevronClassName)}
+                {...chevronProps}
               />
             );
           }
@@ -144,15 +147,15 @@ function Calendar({
             <HugeiconsIcon
               icon={ArrowDownIcon}
               strokeWidth={2}
-              className={cn("size-4", className)}
-              {...props}
+              className={cn("size-4", chevronClassName)}
+              {...chevronProps}
             />
           );
         },
-        DayButton: ({ ...props }) => <CalendarDayButton locale={locale} {...props} />,
-        WeekNumber: ({ children, ...props }) => {
+        DayButton: (dayButtonProps) => <CalendarDayButton locale={locale} {...dayButtonProps} />,
+        WeekNumber: ({ children, ...weekNumberProps }) => {
           return (
-            <td {...props}>
+            <td {...weekNumberProps}>
               <div className="flex size-(--cell-size) items-center justify-center text-center">
                 {children}
               </div>

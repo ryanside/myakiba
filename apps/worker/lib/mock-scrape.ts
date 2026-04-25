@@ -21,11 +21,14 @@ import type Redis from "ioredis";
 const MOCK_SCRAPE_FLAG = false;
 export const MOCK_SCRAPE = MOCK_SCRAPE_FLAG && env.NODE_ENV !== "production";
 
-const MOCK_SCRAPE_DELAY_MS = 10000;
+const MOCK_SCRAPE_DELAY_MS = 10_000;
 const MOCK_SCRAPE_FAIL_RATE = 0;
 const MOCK_SCRAPE_STRATEGY = "standard" as const;
 
-const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 
 type SimulateScrapeParams = {
   readonly itemIds: readonly number[];
@@ -133,12 +136,16 @@ const finalizeMockSync = async ({
     mockedSuccesses: successfulIds.length,
   });
 
-  const statusMessage =
-    sessionStatus === "completed"
-      ? `Mock sync complete: ${successfulIds.length} item${successfulIds.length === 1 ? "" : "s"} processed`
-      : sessionStatus === "partial"
-        ? `Mock sync partial: ${successfulIds.length} succeeded, ${failCount} failed`
-        : `Mock sync failed: ${failCount} item${failCount === 1 ? "" : "s"} failed`;
+  const getStatusMessage = (): string => {
+    if (sessionStatus === "completed") {
+      return `Mock sync complete: ${successfulIds.length} item${successfulIds.length === 1 ? "" : "s"} processed`;
+    }
+    if (sessionStatus === "partial") {
+      return `Mock sync partial: ${successfulIds.length} succeeded, ${failCount} failed`;
+    }
+    return `Mock sync failed: ${failCount} item${failCount === 1 ? "" : "s"} failed`;
+  };
+  const statusMessage = getStatusMessage();
 
   state.phase = sessionStatusToPhase(sessionStatus);
   state.statusMessage = statusMessage;

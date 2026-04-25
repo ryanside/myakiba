@@ -20,10 +20,10 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  type DraggableAttributes,
-  type DraggableSyntheticListeners,
 } from "@dnd-kit/core";
 import type {
+  DraggableAttributes,
+  DraggableSyntheticListeners,
   DragEndEvent,
   DragOverEvent,
   DragStartEvent,
@@ -39,8 +39,8 @@ import {
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
-  type AnimateLayoutChanges,
 } from "@dnd-kit/sortable";
+import type { AnimateLayoutChanges } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { createPortal } from "react-dom";
 
@@ -58,7 +58,7 @@ interface KanbanContextProps<T> {
   modifiers?: Modifiers;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// oxlint-disable-next-line typescript/no-explicit-any
 const KanbanContext = createContext<KanbanContextProps<any>>({
   columns: {},
   setColumns: () => {},
@@ -66,6 +66,7 @@ const KanbanContext = createContext<KanbanContextProps<any>>({
   columnIds: [],
   activeId: null,
   setActiveId: () => {},
+  // oxlint-disable-next-line no-useless-undefined
   findContainer: () => undefined,
   isColumn: () => false,
   modifiers: undefined,
@@ -624,14 +625,17 @@ function KanbanOverlay({ children, className, ...props }: KanbanOverlayProps) {
 
   useLayoutEffect(() => setMounted(true), []);
 
-  const variant = activeId ? (isColumn(activeId) ? "column" : "item") : "item";
+  const getVariant = (): "column" | "item" => {
+    if (!activeId) return "item";
+    return isColumn(activeId) ? "column" : "item";
+  };
+  const variant = getVariant();
 
-  const content =
-    activeId && children
-      ? typeof children === "function"
-        ? children({ value: activeId, variant })
-        : children
-      : null;
+  const getContent = () => {
+    if (!(activeId && children)) return null;
+    return typeof children === "function" ? children({ value: activeId, variant }) : children;
+  };
+  const content = getContent();
 
   if (!mounted) return null;
 

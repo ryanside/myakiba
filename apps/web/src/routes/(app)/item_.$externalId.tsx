@@ -26,7 +26,8 @@ import {
   EmptyDescription,
   EmptyMedia,
 } from "@/components/ui/empty";
-import { SyncActionSheet, type LaunchableSyncType } from "@/components/sync/sync-launcher";
+import { SyncActionSheet } from "@/components/sync/sync-launcher";
+import type { LaunchableSyncType } from "@/components/sync/sync-launcher";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { formatDateOnlyForDisplay, formatRelativeTimeToNow } from "@/lib/date-display";
 import CollectionItemForm from "@/components/collection/collection-item-form";
@@ -230,7 +231,12 @@ function RouteComponent() {
     isCollectionOrderPending,
   } = useCollectionOrderMutations();
 
-  const { data, isPending, isError, error } = useQuery({
+  const {
+    data,
+    isPending,
+    isError,
+    error: itemError,
+  } = useQuery({
     queryKey: ["item", externalId],
     queryFn: () => getItem(externalId),
     staleTime: 1000 * 60 * 5,
@@ -244,7 +250,7 @@ function RouteComponent() {
     queryFn: () => getResyncStatus(externalId),
     staleTime: 1000 * 30,
     retry: false,
-    enabled: data !== null,
+    enabled: data != null,
   });
 
   const requestResyncMutation = useMutation({
@@ -265,7 +271,7 @@ function RouteComponent() {
     queryFn: () => getItemRelatedOrders(externalId),
     staleTime: 1000 * 60 * 5,
     retry: false,
-    enabled: data !== null,
+    enabled: data != null,
   });
 
   const {
@@ -278,7 +284,7 @@ function RouteComponent() {
     queryFn: () => getItemRelatedCollection(externalId),
     staleTime: 1000 * 60 * 5,
     retry: false,
-    enabled: data !== null,
+    enabled: data != null,
   });
 
   const editCollectionItemMutation = useMutation({
@@ -381,11 +387,11 @@ function RouteComponent() {
   }
 
   if (isError) {
-    console.error(error);
+    console.error(itemError);
     return (
       <div className="flex flex-col items-center justify-center gap-y-4">
         <BackLink to="/collection" text="Back" font="sans" className="self-start" />
-        <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
+        <div className="text-lg font-medium text-destructive">Error: {itemError.message}</div>
       </div>
     );
   }
@@ -614,281 +620,295 @@ function RouteComponent() {
           <SectionHeading>Your Collection</SectionHeading>
 
           <div className="mt-4">
-            {isPendingItemRelatedCollection ? (
-              <div className="flex items-center justify-center py-12">
-                <HugeiconsIcon
-                  icon={Loading03Icon}
-                  className="size-5 animate-spin text-muted-foreground"
-                />
-              </div>
-            ) : isErrorItemRelatedCollection ? (
-              <Empty>
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <HugeiconsIcon icon={Package01Icon} />
-                  </EmptyMedia>
-                  <EmptyTitle>Error Loading Collection</EmptyTitle>
-                  <EmptyDescription>{errorItemRelatedCollection.message}</EmptyDescription>
-                </EmptyHeader>
-              </Empty>
-            ) : collectionItems.length === 0 ? (
-              <Empty className="py-12">
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <HugeiconsIcon icon={Package01Icon} />
-                  </EmptyMedia>
-                  <EmptyTitle>Not in your collection</EmptyTitle>
-                  <EmptyDescription>
-                    Add this item to your collection or a new order.
-                  </EmptyDescription>
-                </EmptyHeader>
-                <EmptyContent>
-                  <div className="flex flex-col sm:flex-row gap-2 w-full justify-center">
-                    <Button variant="default" onClick={() => setSyncType("collection")}>
-                      <HugeiconsIcon icon={LibraryIcon} />
-                      Add to Collection
-                    </Button>
-                    <Button variant="outline" onClick={() => setSyncType("order")}>
-                      <HugeiconsIcon icon={PackageIcon} />
-                      Add to Order
-                    </Button>
+            {(() => {
+              if (isPendingItemRelatedCollection) {
+                return (
+                  <div className="flex items-center justify-center py-12">
+                    <HugeiconsIcon
+                      icon={Loading03Icon}
+                      className="size-5 animate-spin text-muted-foreground"
+                    />
                   </div>
-                </EmptyContent>
-              </Empty>
-            ) : (
-              <div className="space-y-5">
-                {collectionItems.map((collectionItem) => {
-                  const release = item.releases.find((r) => r.id === collectionItem.releaseId);
-                  const relatedOrder = collectionItem.orderId
-                    ? ordersList.find((o) => o.id === collectionItem.orderId)
-                    : undefined;
-                  const isOrderActionPending = isCollectionOrderPending(collectionItem.id);
-                  const activeStep = getTimelineActiveStep({
-                    orderDate: collectionItem.orderDate,
-                    paymentDate: collectionItem.paymentDate,
-                    shippingDate: collectionItem.shippingDate,
-                    collectionDate: collectionItem.collectionDate,
-                  });
+                );
+              }
+              if (isErrorItemRelatedCollection) {
+                return (
+                  <Empty>
+                    <EmptyHeader>
+                      <EmptyMedia variant="icon">
+                        <HugeiconsIcon icon={Package01Icon} />
+                      </EmptyMedia>
+                      <EmptyTitle>Error Loading Collection</EmptyTitle>
+                      <EmptyDescription>{errorItemRelatedCollection.message}</EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
+                );
+              }
+              if (collectionItems.length === 0) {
+                return (
+                  <Empty className="py-12">
+                    <EmptyHeader>
+                      <EmptyMedia variant="icon">
+                        <HugeiconsIcon icon={Package01Icon} />
+                      </EmptyMedia>
+                      <EmptyTitle>Not in your collection</EmptyTitle>
+                      <EmptyDescription>
+                        Add this item to your collection or a new order.
+                      </EmptyDescription>
+                    </EmptyHeader>
+                    <EmptyContent>
+                      <div className="flex flex-col sm:flex-row gap-2 w-full justify-center">
+                        <Button variant="default" onClick={() => setSyncType("collection")}>
+                          <HugeiconsIcon icon={LibraryIcon} />
+                          Add to Collection
+                        </Button>
+                        <Button variant="outline" onClick={() => setSyncType("order")}>
+                          <HugeiconsIcon icon={PackageIcon} />
+                          Add to Order
+                        </Button>
+                      </div>
+                    </EmptyContent>
+                  </Empty>
+                );
+              }
+              return (
+                <div className="space-y-5">
+                  {collectionItems.map((collectionItem) => {
+                    const release = item.releases.find((r) => r.id === collectionItem.releaseId);
+                    const relatedOrder = collectionItem.orderId
+                      ? ordersList.find((o) => o.id === collectionItem.orderId)
+                      : undefined;
+                    const isOrderActionPending = isCollectionOrderPending(collectionItem.id);
+                    const activeStep = getTimelineActiveStep({
+                      orderDate: collectionItem.orderDate,
+                      paymentDate: collectionItem.paymentDate,
+                      shippingDate: collectionItem.shippingDate,
+                      collectionDate: collectionItem.collectionDate,
+                    });
 
-                  return (
-                    <div key={collectionItem.id} className="animate-appear">
-                      <Card>
-                        <CardHeader>
-                          <div className="flex items-center gap-2">
-                            <ThemedBadge variant={getStatusVariant(collectionItem.status)}>
-                              {collectionItem.status}
-                            </ThemedBadge>
-                            {release && (
-                              <span className="text-xs text-muted-foreground/60 tabular-nums">
-                                {formatDateOnlyForDisplay(release.date, dateFormat)}
-                              </span>
-                            )}
-                          </div>
-                          <CardAction>
-                            <div className="flex items-center">
-                              <CollectionItemForm
-                                renderTrigger={
-                                  <Button
-                                    variant="ghost"
-                                    size="icon-sm"
-                                    className="text-muted-foreground"
-                                  >
-                                    <HugeiconsIcon icon={Edit03Icon} className="size-3.5" />
-                                  </Button>
-                                }
-                                itemData={{
-                                  ...collectionItem,
-                                  id: collectionItem.id,
-                                  itemExternalId: externalId,
-                                  itemTitle: item.title,
-                                  itemImage: item.image,
-                                  releaseDate: release?.date ?? null,
-                                  releasePrice: release?.price ?? null,
-                                  releaseCurrency: release?.priceCurrency ?? null,
-                                  releaseBarcode: release?.barcode ?? null,
-                                  releaseType: release?.type ?? null,
-                                }}
-                                callbackFn={handleEditCollectionItem}
-                                currency={userCurrency}
-                                dateFormat={dateFormat}
-                              />
-                              <UnifiedItemMoveForm
-                                renderTrigger={
-                                  <Button
-                                    variant="ghost"
-                                    size="icon-sm"
-                                    className="text-muted-foreground"
-                                    disabled={isOrderActionPending}
-                                  >
-                                    <HugeiconsIcon
-                                      icon={isOrderActionPending ? Loading03Icon : MoveIcon}
-                                      className={cn(
-                                        "size-3.5",
-                                        isOrderActionPending && "animate-spin",
-                                      )}
-                                    />
-                                    <span className="sr-only">Assign order</span>
-                                  </Button>
-                                }
-                                selectedItems={{
-                                  collectionIds: new Set([collectionItem.id]),
-                                  orderIds: collectionItem.orderId
-                                    ? new Set([collectionItem.orderId])
-                                    : new Set<string>(),
-                                }}
-                                onMoveToExisting={handleAddCollectionItemsToOrder}
-                                onMoveToNew={handleAddCollectionItemsToNewOrder}
-                                clearSelections={() => {}}
-                                currency={userCurrency}
-                                intent="add"
-                              />
-                              <ConfirmDialog
-                                renderTrigger={
-                                  <Button
-                                    variant="ghost"
-                                    size="icon-sm"
-                                    className="text-muted-foreground"
-                                  >
-                                    <HugeiconsIcon icon={Delete01Icon} className="size-3.5" />
-                                    <span className="sr-only">Delete collection item</span>
-                                  </Button>
-                                }
-                                title="Delete item?"
-                                description="This will permanently remove this item from your collection."
-                                onConfirm={() => handleDeleteCollectionItem(collectionItem.id)}
-                              />
-                            </div>
-                          </CardAction>
-                        </CardHeader>
-
-                        <CardContent className="space-y-5">
-                          <div className="space-y-0.5">
-                            <DetailRow label="Count">{collectionItem.count}</DetailRow>
-                            <DetailRow label="Price">
-                              {formatCurrencyFromMinorUnits(
-                                collectionItem.price,
-                                userCurrency,
-                                userLocale,
+                    return (
+                      <div key={collectionItem.id} className="animate-appear">
+                        <Card>
+                          <CardHeader>
+                            <div className="flex items-center gap-2">
+                              <ThemedBadge variant={getStatusVariant(collectionItem.status)}>
+                                {collectionItem.status}
+                              </ThemedBadge>
+                              {release && (
+                                <span className="text-xs text-muted-foreground/60 tabular-nums">
+                                  {formatDateOnlyForDisplay(release.date, dateFormat)}
+                                </span>
                               )}
-                            </DetailRow>
-                            <DetailRow label="Condition">{collectionItem.condition}</DetailRow>
-                            {collectionItem.shop && (
-                              <DetailRow label="Shop">{collectionItem.shop}</DetailRow>
-                            )}
-                            <DetailRow label="Shipping">{collectionItem.shippingMethod}</DetailRow>
-                          </div>
-
-                          {activeStep > 0 && (
-                            <div className="pt-1">
-                              <Timeline orientation="horizontal" value={activeStep}>
-                                <TimelineItem step={1}>
-                                  <TimelineIndicator />
-                                  <TimelineSeparator />
-                                  <TimelineHeader>
-                                    <TimelineTitle>Ordered</TimelineTitle>
-                                    <TimelineDate>
-                                      {formatDateOnlyForDisplay(
-                                        collectionItem.orderDate,
-                                        dateFormat,
-                                      )}
-                                    </TimelineDate>
-                                  </TimelineHeader>
-                                </TimelineItem>
-                                <TimelineItem step={2}>
-                                  <TimelineIndicator />
-                                  <TimelineSeparator />
-                                  <TimelineHeader>
-                                    <TimelineTitle>Paid</TimelineTitle>
-                                    <TimelineDate>
-                                      {formatDateOnlyForDisplay(
-                                        collectionItem.paymentDate,
-                                        dateFormat,
-                                      )}
-                                    </TimelineDate>
-                                  </TimelineHeader>
-                                </TimelineItem>
-                                <TimelineItem step={3}>
-                                  <TimelineIndicator />
-                                  <TimelineSeparator />
-                                  <TimelineHeader>
-                                    <TimelineTitle>Shipped</TimelineTitle>
-                                    <TimelineDate>
-                                      {formatDateOnlyForDisplay(
-                                        collectionItem.shippingDate,
-                                        dateFormat,
-                                      )}
-                                    </TimelineDate>
-                                  </TimelineHeader>
-                                </TimelineItem>
-                                <TimelineItem step={4}>
-                                  <TimelineIndicator />
-                                  <TimelineSeparator />
-                                  <TimelineHeader>
-                                    <TimelineTitle>Collected</TimelineTitle>
-                                    <TimelineDate>
-                                      {formatDateOnlyForDisplay(
-                                        collectionItem.collectionDate,
-                                        dateFormat,
-                                      )}
-                                    </TimelineDate>
-                                  </TimelineHeader>
-                                </TimelineItem>
-                              </Timeline>
                             </div>
-                          )}
+                            <CardAction>
+                              <div className="flex items-center">
+                                <CollectionItemForm
+                                  renderTrigger={
+                                    <Button
+                                      variant="ghost"
+                                      size="icon-sm"
+                                      className="text-muted-foreground"
+                                    >
+                                      <HugeiconsIcon icon={Edit03Icon} className="size-3.5" />
+                                    </Button>
+                                  }
+                                  itemData={{
+                                    ...collectionItem,
+                                    id: collectionItem.id,
+                                    itemExternalId: externalId,
+                                    itemTitle: item.title,
+                                    itemImage: item.image,
+                                    releaseDate: release?.date ?? null,
+                                    releasePrice: release?.price ?? null,
+                                    releaseCurrency: release?.priceCurrency ?? null,
+                                    releaseBarcode: release?.barcode ?? null,
+                                    releaseType: release?.type ?? null,
+                                  }}
+                                  callbackFn={handleEditCollectionItem}
+                                  currency={userCurrency}
+                                  dateFormat={dateFormat}
+                                />
+                                <UnifiedItemMoveForm
+                                  renderTrigger={
+                                    <Button
+                                      variant="ghost"
+                                      size="icon-sm"
+                                      className="text-muted-foreground"
+                                      disabled={isOrderActionPending}
+                                    >
+                                      <HugeiconsIcon
+                                        icon={isOrderActionPending ? Loading03Icon : MoveIcon}
+                                        className={cn(
+                                          "size-3.5",
+                                          isOrderActionPending && "animate-spin",
+                                        )}
+                                      />
+                                      <span className="sr-only">Assign order</span>
+                                    </Button>
+                                  }
+                                  selectedItems={{
+                                    collectionIds: new Set([collectionItem.id]),
+                                    orderIds: collectionItem.orderId
+                                      ? new Set([collectionItem.orderId])
+                                      : new Set<string>(),
+                                  }}
+                                  onMoveToExisting={handleAddCollectionItemsToOrder}
+                                  onMoveToNew={handleAddCollectionItemsToNewOrder}
+                                  clearSelections={() => {}}
+                                  currency={userCurrency}
+                                  intent="add"
+                                />
+                                <ConfirmDialog
+                                  renderTrigger={
+                                    <Button
+                                      variant="ghost"
+                                      size="icon-sm"
+                                      className="text-muted-foreground"
+                                    >
+                                      <HugeiconsIcon icon={Delete01Icon} className="size-3.5" />
+                                      <span className="sr-only">Delete collection item</span>
+                                    </Button>
+                                  }
+                                  title="Delete item?"
+                                  description="This will permanently remove this item from your collection."
+                                  onConfirm={() => handleDeleteCollectionItem(collectionItem.id)}
+                                />
+                              </div>
+                            </CardAction>
+                          </CardHeader>
 
-                          {(collectionItem.score ||
-                            collectionItem.tags.length > 0 ||
-                            collectionItem.notes) && (
-                            <div className="space-y-3 border-t border-border/40 pt-4">
-                              {collectionItem.score && parseFloat(collectionItem.score) !== 0 && (
-                                <DetailRow label="Score">{collectionItem.score}</DetailRow>
+                          <CardContent className="space-y-5">
+                            <div className="space-y-0.5">
+                              <DetailRow label="Count">{collectionItem.count}</DetailRow>
+                              <DetailRow label="Price">
+                                {formatCurrencyFromMinorUnits(
+                                  collectionItem.price,
+                                  userCurrency,
+                                  userLocale,
+                                )}
+                              </DetailRow>
+                              <DetailRow label="Condition">{collectionItem.condition}</DetailRow>
+                              {collectionItem.shop && (
+                                <DetailRow label="Shop">{collectionItem.shop}</DetailRow>
                               )}
-                              {collectionItem.tags.length > 0 && (
-                                <div>
-                                  <span className="text-[0.6875rem] text-muted-foreground">
-                                    Tags
-                                  </span>
-                                  <div className="flex flex-wrap gap-1.5 mt-1.5">
-                                    {collectionItem.tags.map((tag) => (
-                                      <Badge key={tag} variant="secondary" size="sm">
-                                        {tag}
-                                      </Badge>
-                                    ))}
+                              <DetailRow label="Shipping">
+                                {collectionItem.shippingMethod}
+                              </DetailRow>
+                            </div>
+
+                            {activeStep > 0 && (
+                              <div className="pt-1">
+                                <Timeline orientation="horizontal" value={activeStep}>
+                                  <TimelineItem step={1}>
+                                    <TimelineIndicator />
+                                    <TimelineSeparator />
+                                    <TimelineHeader>
+                                      <TimelineTitle>Ordered</TimelineTitle>
+                                      <TimelineDate>
+                                        {formatDateOnlyForDisplay(
+                                          collectionItem.orderDate,
+                                          dateFormat,
+                                        )}
+                                      </TimelineDate>
+                                    </TimelineHeader>
+                                  </TimelineItem>
+                                  <TimelineItem step={2}>
+                                    <TimelineIndicator />
+                                    <TimelineSeparator />
+                                    <TimelineHeader>
+                                      <TimelineTitle>Paid</TimelineTitle>
+                                      <TimelineDate>
+                                        {formatDateOnlyForDisplay(
+                                          collectionItem.paymentDate,
+                                          dateFormat,
+                                        )}
+                                      </TimelineDate>
+                                    </TimelineHeader>
+                                  </TimelineItem>
+                                  <TimelineItem step={3}>
+                                    <TimelineIndicator />
+                                    <TimelineSeparator />
+                                    <TimelineHeader>
+                                      <TimelineTitle>Shipped</TimelineTitle>
+                                      <TimelineDate>
+                                        {formatDateOnlyForDisplay(
+                                          collectionItem.shippingDate,
+                                          dateFormat,
+                                        )}
+                                      </TimelineDate>
+                                    </TimelineHeader>
+                                  </TimelineItem>
+                                  <TimelineItem step={4}>
+                                    <TimelineIndicator />
+                                    <TimelineSeparator />
+                                    <TimelineHeader>
+                                      <TimelineTitle>Collected</TimelineTitle>
+                                      <TimelineDate>
+                                        {formatDateOnlyForDisplay(
+                                          collectionItem.collectionDate,
+                                          dateFormat,
+                                        )}
+                                      </TimelineDate>
+                                    </TimelineHeader>
+                                  </TimelineItem>
+                                </Timeline>
+                              </div>
+                            )}
+
+                            {(collectionItem.score ||
+                              collectionItem.tags.length > 0 ||
+                              collectionItem.notes) && (
+                              <div className="space-y-3 border-t border-border/40 pt-4">
+                                {collectionItem.score &&
+                                  Number.parseFloat(collectionItem.score) !== 0 && (
+                                    <DetailRow label="Score">{collectionItem.score}</DetailRow>
+                                  )}
+                                {collectionItem.tags.length > 0 && (
+                                  <div>
+                                    <span className="text-[0.6875rem] text-muted-foreground">
+                                      Tags
+                                    </span>
+                                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                      {collectionItem.tags.map((tag) => (
+                                        <Badge key={tag} variant="secondary" size="sm">
+                                          {tag}
+                                        </Badge>
+                                      ))}
+                                    </div>
                                   </div>
-                                </div>
-                              )}
-                              {collectionItem.notes && (
-                                <div>
-                                  <span className="text-[0.6875rem] text-muted-foreground">
-                                    Notes
-                                  </span>
-                                  <p className="text-sm mt-1 leading-relaxed text-foreground/75 whitespace-pre-wrap">
-                                    {collectionItem.notes}
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </CardContent>
+                                )}
+                                {collectionItem.notes && (
+                                  <div>
+                                    <span className="text-[0.6875rem] text-muted-foreground">
+                                      Notes
+                                    </span>
+                                    <p className="text-sm mt-1 leading-relaxed text-foreground/75 whitespace-pre-wrap">
+                                      {collectionItem.notes}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </CardContent>
 
-                        {relatedOrder && (
-                          <CardFooter>
-                            <Link
-                              to="/orders/$id"
-                              params={{ id: collectionItem.orderId! }}
-                              className="flex items-center gap-2 text-sm text-primary transition-colors duration-150 ease-out hover:text-primary/80 underline-offset-4 hover:underline"
-                            >
-                              <span>View order: {relatedOrder.title}</span>
-                            </Link>
-                          </CardFooter>
-                        )}
-                      </Card>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                          {relatedOrder && (
+                            <CardFooter>
+                              <Link
+                                to="/orders/$id"
+                                params={{ id: relatedOrder.id }}
+                                className="flex items-center gap-2 text-sm text-primary transition-colors duration-150 ease-out hover:text-primary/80 underline-offset-4 hover:underline"
+                              >
+                                <span>View order: {relatedOrder.title}</span>
+                              </Link>
+                            </CardFooter>
+                          )}
+                        </Card>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>

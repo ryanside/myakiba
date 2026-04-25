@@ -160,13 +160,11 @@ export function OrdersCardGrid({
 }: OrdersCardGridProps): React.JSX.Element {
   const toggleSelection = (id: string): void => {
     onRowSelectionChange((prev: RowSelectionState) => {
-      const next = { ...prev };
-      if (next[id]) {
-        delete next[id];
-      } else {
-        next[id] = true;
+      if (prev[id]) {
+        const { [id]: _removed, ...next } = prev;
+        return next;
       }
-      return next;
+      return { ...prev, [id]: true };
     });
   };
 
@@ -243,40 +241,48 @@ export function OrdersCardGrid({
             {/* Image mosaic */}
             <Link to="/orders/$id" params={{ id: order.orderId }} className="block">
               <div className="relative aspect-video w-full overflow-hidden bg-muted">
-                {displayImages.length === 0 ? (
-                  <div className="flex h-full w-full items-center justify-center">
-                    <HugeiconsIcon
-                      icon={PackageIcon}
-                      className="size-10 text-muted-foreground/40"
-                    />
-                  </div>
-                ) : displayImages.length === 1 ? (
-                  <img
-                    src={displayImages[0]}
-                    alt={order.title}
-                    className="h-full w-full object-cover object-top"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div
-                    className={cn(
-                      "grid h-full w-full gap-px",
-                      displayImages.length === 2 && "grid-cols-2",
-                      displayImages.length === 3 && "grid-cols-3",
-                      displayImages.length >= 4 && "grid-cols-2 grid-rows-2",
-                    )}
-                  >
-                    {displayImages.map((src, idx) => (
+                {(() => {
+                  if (displayImages.length === 0) {
+                    return (
+                      <div className="flex h-full w-full items-center justify-center">
+                        <HugeiconsIcon
+                          icon={PackageIcon}
+                          className="size-10 text-muted-foreground/40"
+                        />
+                      </div>
+                    );
+                  }
+                  if (displayImages.length === 1) {
+                    return (
                       <img
-                        key={`${src}-${idx}`}
-                        src={src}
-                        alt={`${order.title} item ${idx + 1}`}
+                        src={displayImages[0]}
+                        alt={order.title}
                         className="h-full w-full object-cover object-top"
                         loading="lazy"
                       />
-                    ))}
-                  </div>
-                )}
+                    );
+                  }
+                  return (
+                    <div
+                      className={cn(
+                        "grid h-full w-full gap-px",
+                        displayImages.length === 2 && "grid-cols-2",
+                        displayImages.length === 3 && "grid-cols-3",
+                        displayImages.length >= 4 && "grid-cols-2 grid-rows-2",
+                      )}
+                    >
+                      {displayImages.map((src, idx) => (
+                        <img
+                          key={`${src}-${idx}`}
+                          src={src}
+                          alt={`${order.title} item ${idx + 1}`}
+                          className="h-full w-full object-cover object-top"
+                          loading="lazy"
+                        />
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             </Link>
 

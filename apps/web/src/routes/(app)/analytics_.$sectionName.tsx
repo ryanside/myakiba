@@ -1,4 +1,6 @@
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import type React from "react";
+import type { ReactNode } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
@@ -16,17 +18,11 @@ import {
   getCoreRowModel,
   getExpandedRowModel,
   useReactTable,
-  type ColumnDef,
-  type ExpandedState,
-  type Row,
 } from "@tanstack/react-table";
+import type { ColumnDef, ExpandedState, Row } from "@tanstack/react-table";
 import Loader from "@/components/loader";
-import {
-  getAnalyticsSection,
-  getAnalyticsSectionItems,
-  type AnalyticsSectionRow,
-} from "@/queries/analytics";
-import type React from "react";
+import { getAnalyticsSection, getAnalyticsSectionItems } from "@/queries/analytics";
+import type { AnalyticsSectionRow } from "@/queries/analytics";
 import { DebouncedInput } from "@/components/debounced-input";
 import {
   Pagination,
@@ -260,7 +256,7 @@ function SectionTable({
 }): ReactNode {
   const [expanded, setExpanded] = useState<ExpandedState>({});
 
-  const tableData = useMemo(() => Array.from(rows), [rows]);
+  const tableData = useMemo(() => [...rows], [rows]);
 
   const columns = useMemo<ColumnDef<AnalyticsSectionRow>[]>(
     () => [
@@ -464,73 +460,85 @@ function ExpandedRowContent({
           </Link>
         </div>
 
-        {isPending ? (
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-            {Array.from({ length: SECTION_ITEM_PAGE_SIZE }, (_, idx) => (
-              <div
-                key={idx}
-                className="aspect-square rounded-md border border-border/50 bg-muted animate-pulse"
-              />
-            ))}
-          </div>
-        ) : isError ? (
-          <p className="text-xs text-destructive">Failed to load items: {error.message}</p>
-        ) : data.totalCount === 0 ? (
-          <p className="text-xs text-muted-foreground">No owned items found for this row.</p>
-        ) : (
-          <>
-            <div
-              className={cn(
-                "grid grid-cols-3 sm:grid-cols-6 gap-2 transition-opacity duration-150",
-                isFetching && "opacity-60",
-              )}
-            >
-              {data.items.map((item, idx) => (
-                <Link
-                  key={`${item.id}-${offset + idx}`}
-                  {...(item.externalId !== null
-                    ? ({
-                        to: "/item/$externalId",
-                        params: { externalId: item.externalId },
-                      } as const)
-                    : ({ to: "/item/custom/$id", params: { id: item.id } } as const))}
-                  title={item.title}
-                  aria-label={item.title}
-                  className="animate-data-in aspect-square rounded-md overflow-hidden bg-background"
-                  style={{ "--data-in-delay": `${idx * 30}ms` } as React.CSSProperties}
-                >
-                  {item.image ? (
-                    <img
-                      src={item.image}
-                      alt={item.title}
-                      className="w-full h-full object-cover object-top"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-muted text-[10px] text-muted-foreground">
-                      No image
-                    </div>
-                  )}
-                </Link>
-              ))}
-            </div>
-
-            {data.totalCount > SECTION_ITEM_PAGE_SIZE ? (
-              <div className="flex items-center justify-between gap-3 pt-1">
-                <p className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
-                  Showing {offset + 1}–{Math.min(offset + SECTION_ITEM_PAGE_SIZE, data.totalCount)}{" "}
-                  of {data.totalCount}
-                </p>
-                <TablePagination
-                  totalCount={data.totalCount}
-                  limit={SECTION_ITEM_PAGE_SIZE}
-                  offset={offset}
-                  onOffsetChange={setOffset}
-                />
+        {(() => {
+          if (isPending) {
+            return (
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                {Array.from({ length: SECTION_ITEM_PAGE_SIZE }, (_, idx) => (
+                  <div
+                    key={idx}
+                    className="aspect-square rounded-md border border-border/50 bg-muted animate-pulse"
+                  />
+                ))}
               </div>
-            ) : null}
-          </>
-        )}
+            );
+          }
+          if (isError) {
+            return (
+              <p className="text-xs text-destructive">Failed to load items: {error.message}</p>
+            );
+          }
+          if (data.totalCount === 0) {
+            return (
+              <p className="text-xs text-muted-foreground">No owned items found for this row.</p>
+            );
+          }
+          return (
+            <>
+              <div
+                className={cn(
+                  "grid grid-cols-3 sm:grid-cols-6 gap-2 transition-opacity duration-150",
+                  isFetching && "opacity-60",
+                )}
+              >
+                {data.items.map((item, idx) => (
+                  <Link
+                    key={`${item.id}-${offset + idx}`}
+                    {...(item.externalId !== null
+                      ? ({
+                          to: "/item/$externalId",
+                          params: { externalId: item.externalId },
+                        } as const)
+                      : ({ to: "/item/custom/$id", params: { id: item.id } } as const))}
+                    title={item.title}
+                    aria-label={item.title}
+                    className="animate-data-in aspect-square rounded-md overflow-hidden bg-background"
+                    style={{ "--data-in-delay": `${idx * 30}ms` } as React.CSSProperties}
+                  >
+                    {item.image ? (
+                      <img
+                        src={item.image}
+                        alt={item.title}
+                        className="w-full h-full object-cover object-top"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-muted text-[10px] text-muted-foreground">
+                        No image
+                      </div>
+                    )}
+                  </Link>
+                ))}
+              </div>
+
+              {data.totalCount > SECTION_ITEM_PAGE_SIZE ? (
+                <div className="flex items-center justify-between gap-3 pt-1">
+                  <p className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
+                    Showing {offset + 1}–
+                    {Math.min(offset + SECTION_ITEM_PAGE_SIZE, data.totalCount)} of{" "}
+                    {data.totalCount}
+                  </p>
+                  <TablePagination
+                    totalCount={data.totalCount}
+                    limit={SECTION_ITEM_PAGE_SIZE}
+                    offset={offset}
+                    onOffsetChange={setOffset}
+                  />
+                </div>
+              ) : null}
+            </>
+          );
+        })()}
       </div>
     </div>
   );

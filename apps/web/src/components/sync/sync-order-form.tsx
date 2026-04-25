@@ -104,7 +104,7 @@ export default function SyncOrderForm({
 
         return {
           ...rest,
-          itemExternalId: parseInt(extractedId, 10),
+          itemExternalId: Number.parseInt(extractedId, 10),
           price: toMinorUnits(updatedItem.price),
           orderDate: updatedItem.orderDate || null,
           paymentDate: updatedItem.paymentDate || null,
@@ -653,7 +653,9 @@ export default function SyncOrderForm({
                                           type="number"
                                           min="1"
                                           onChange={(e) =>
-                                            countField.handleChange(parseInt(e.target.value) || 1)
+                                            countField.handleChange(
+                                              Number.parseInt(e.target.value, 10) || 1,
+                                            )
                                           }
                                           placeholder="1"
                                         />

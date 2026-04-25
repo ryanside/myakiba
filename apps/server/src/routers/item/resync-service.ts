@@ -7,8 +7,8 @@ import {
   getResyncJobId,
   ITEM_RESYNC_JOB_NAME,
   ITEM_RESYNC_QUEUE_NAME,
-  type ItemResyncState,
 } from "@myakiba/redis/item-resync";
+import type { ItemResyncState } from "@myakiba/redis/item-resync";
 import { db } from "@myakiba/db/client";
 import { item } from "@myakiba/db/schema/figure";
 import { and, eq } from "drizzle-orm";

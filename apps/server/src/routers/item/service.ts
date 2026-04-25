@@ -50,9 +50,7 @@ class ItemService {
       const entryLinks = input.entries ?? [];
       const entryIds = [
         ...new Set(
-          entryLinks
-            .map((entryLink) => entryLink.entryId)
-            .filter((entryId): entryId is string => Boolean(entryId)),
+          entryLinks.flatMap((entryLink) => (entryLink.entryId ? [entryLink.entryId] : [])),
         ),
       ];
 
@@ -133,14 +131,12 @@ class ItemService {
         (entryLink) => !existingNamedEntriesByKey.has(`${entryLink.name}|${entryLink.category}`),
       );
 
-      const entriesToInsert: Array<typeof entry.$inferInsert> = entriesToCreate.map(
-        (entryLink) => ({
-          name: entryLink.name ?? "",
-          category: entryLink.category,
-          source: "custom",
-          externalId: null,
-        }),
-      );
+      const entriesToInsert: (typeof entry.$inferInsert)[] = entriesToCreate.map((entryLink) => ({
+        name: entryLink.name ?? "",
+        category: entryLink.category,
+        source: "custom",
+        externalId: null,
+      }));
 
       const createdEntries =
         entriesToInsert.length > 0
@@ -348,7 +344,7 @@ class ItemService {
         miscFees: order.miscFees,
       })
       .from(order)
-      .leftJoin(collection, eq(order.id, collection.orderId))
+      .innerJoin(collection, eq(order.id, collection.orderId))
       .innerJoin(item, eq(collection.itemId, item.id))
       .where(and(eq(item.source, "mfc"), eq(item.externalId, externalId), eq(order.userId, userId)))
       .groupBy(order.id)

@@ -49,7 +49,7 @@ export function useCollectionQuery() {
 }
 
 function addPendingIds(previous: readonly string[], ids: readonly string[]): readonly string[] {
-  return Array.from(new Set([...previous, ...ids]));
+  return [...new Set([...previous, ...ids])];
 }
 
 function removePendingIds(previous: readonly string[], ids: readonly string[]): readonly string[] {
@@ -133,7 +133,7 @@ export function useCollectionOrderMutations() {
       collectionIds: ReadonlySet<string>,
       orderIds?: ReadonlySet<string>,
     ): Promise<void> => {
-      const ids = Array.from(collectionIds);
+      const ids = [...collectionIds];
       const loadingToastId = toast.loading("Assigning order...");
       setPendingCollectionIdList((previous) => addPendingIds(previous, ids));
 
@@ -153,7 +153,7 @@ export function useCollectionOrderMutations() {
       cascadeOptions: CascadeOptions,
       collectionIds: ReadonlySet<string>,
     ): Promise<void> => {
-      const ids = Array.from(collectionIds);
+      const ids = [...collectionIds];
       const loadingToastId = toast.loading("Creating order...");
       setPendingCollectionIdList((previous) => addPendingIds(previous, ids));
 
@@ -200,7 +200,7 @@ export function useCollectionMutations() {
     mutationFn: (values: CollectionItemFormValues) => updateCollectionItem(values),
     onMutate: async (values: CollectionItemFormValues) => {
       if (filtersActive) {
-        return undefined;
+        return;
       }
 
       await queryClient.cancelQueries({ queryKey: queryOpts.queryKey });
@@ -228,7 +228,7 @@ export function useCollectionMutations() {
   const deleteMutation = useMutation({
     mutationFn: (ids: readonly string[]) => deleteCollectionItems([...ids]),
     onMutate: async (ids: readonly string[]) => {
-      if (filtersActive) return undefined;
+      if (filtersActive) return;
 
       await queryClient.cancelQueries({ queryKey: queryOpts.queryKey });
       const previous = queryClient.getQueryData<CollectionItem[]>(queryOpts.queryKey);
@@ -277,7 +277,7 @@ export function useCollectionMutations() {
   const handleDeleteCollectionItems = useCallback(
     async (collectionIds: ReadonlySet<string>): Promise<void> => {
       const deleteMutationState = deleteMutationRef.current;
-      const ids = Array.from(collectionIds);
+      const ids = [...collectionIds];
 
       if (!filtersActiveRef.current) {
         deleteMutationState.mutate(ids);
@@ -287,7 +287,7 @@ export function useCollectionMutations() {
       const loadingToastId = toast.loading("Deleting collection items...");
       setPendingCollectionIdList((previous) => {
         const nextIds = new Set([...previous, ...ids]);
-        return Array.from(nextIds);
+        return [...nextIds];
       });
 
       try {
@@ -311,7 +311,7 @@ export function useCollectionMutations() {
       }
       setPendingCollectionIdList((previous) => {
         const nextIds = new Set([...previous, values.id]);
-        return Array.from(nextIds);
+        return [...nextIds];
       });
 
       try {

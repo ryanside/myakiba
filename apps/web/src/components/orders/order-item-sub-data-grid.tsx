@@ -4,14 +4,12 @@ import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-gr
 import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import {
-  type RowSelectionState,
-  getCoreRowModel,
-  type PaginationState,
-  type SortingState,
-  getSortedRowModel,
-  useReactTable,
-  type OnChangeFn,
+import { getCoreRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
+import type {
+  RowSelectionState,
+  PaginationState,
+  SortingState,
+  OnChangeFn,
 } from "@tanstack/react-table";
 import type { OrderItem } from "@myakiba/contracts/orders/types";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";

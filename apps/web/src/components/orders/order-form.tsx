@@ -136,12 +136,11 @@ function OrderFormContent(
     cascadeOptionsList,
   } = useCascadeOptions();
 
-  const selectedCount =
-    type === "merge"
-      ? (props as DeferredMergeOrderFormProps).orderIds.size
-      : type === "split"
-        ? (props as DeferredSplitOrderFormProps).collectionIds.size
-        : undefined;
+  const getSelectedCount = (): number | undefined => {
+    if (type === "merge") return (props as DeferredMergeOrderFormProps).orderIds.size;
+    if (type === "split") return (props as DeferredSplitOrderFormProps).collectionIds.size;
+  };
+  const selectedCount = getSelectedCount();
   const orderData =
     type === "edit-order" ? (props as DeferredEditOrderFormProps).orderData : undefined;
 
@@ -161,12 +160,11 @@ function OrderFormContent(
         }
       : {
           status: "Ordered" as const,
-          title:
-            type === "merge"
-              ? "New Merged Order"
-              : type === "split"
-                ? "New Split Order"
-                : "Edit Order",
+          title: (() => {
+            if (type === "merge") return "New Merged Order";
+            if (type === "split") return "New Split Order";
+            return "Edit Order";
+          })(),
           shop: "",
           orderDate: "",
           releaseDate: "",
@@ -201,8 +199,8 @@ function OrderFormContent(
       };
 
       if (type === "edit-order") {
-        const { callbackFn } = props as DeferredEditOrderFormProps;
-        const transformedValue: EditedOrder = { orderId: orderData!.orderId, ...base };
+        const { callbackFn, orderData: editOrderData } = props as DeferredEditOrderFormProps;
+        const transformedValue: EditedOrder = { orderId: editOrderData.orderId, ...base };
         await callbackFn(transformedValue, cascadeOptions);
         close();
       } else if (type === "split") {
@@ -676,13 +674,12 @@ function OrderFormContent(
             selector={(state) => [state.canSubmit, state.isSubmitting]}
             children={([canSubmit, isSubmitting]) => (
               <Button type="submit" disabled={!canSubmit || isSubmitting} variant="default">
-                {isSubmitting ? (
-                  <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />
-                ) : type === "merge" ? (
-                  "Merge"
-                ) : (
-                  "Split"
-                )}
+                {(() => {
+                  if (isSubmitting) {
+                    return <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />;
+                  }
+                  return type === "merge" ? "Merge" : "Split";
+                })()}
               </Button>
             )}
           />

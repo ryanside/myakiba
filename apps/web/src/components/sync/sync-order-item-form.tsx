@@ -69,7 +69,7 @@ export default function SyncOrderItemForm({
 
         return {
           ...rest,
-          itemExternalId: parseInt(extractedId, 10),
+          itemExternalId: Number.parseInt(extractedId, 10),
           price: majorStringToMinorUnits(item.price),
           orderDate: item.orderDate || null,
           paymentDate: item.paymentDate || null,
@@ -236,7 +236,9 @@ export default function SyncOrderItemForm({
                                         type="number"
                                         min="1"
                                         onChange={(e) =>
-                                          countField.handleChange(parseInt(e.target.value, 10) || 1)
+                                          countField.handleChange(
+                                            Number.parseInt(e.target.value, 10) || 1,
+                                          )
                                         }
                                         placeholder="1"
                                       />

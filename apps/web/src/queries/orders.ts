@@ -103,7 +103,7 @@ export async function getOrderItems(
   }
 
   const totalCount = (data[0] as { totalCount?: number }).totalCount ?? 0;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // oxlint-disable-next-line no-unused-vars
   const items = data.map(({ totalCount: _tc, ...item }) => item);
 
   return { items, totalCount };
@@ -115,7 +115,7 @@ export async function mergeOrders(
   cascadeOptions: CascadeOptions,
 ) {
   const { data, error } = await app.api.orders.merge.post({
-    orderIds: Array.from(orderIds),
+    orderIds: [...orderIds],
     newOrder: values,
     cascadeOptions,
   });
@@ -133,7 +133,7 @@ export async function splitOrders(
   cascadeOptions: CascadeOptions,
 ) {
   const { data, error } = await app.api.orders.split.post({
-    collectionIds: Array.from(collectionIds),
+    collectionIds: [...collectionIds],
     newOrder: values,
     cascadeOptions,
   });
@@ -158,7 +158,7 @@ export async function editOrder(values: EditedOrder, cascadeOptions: CascadeOpti
 
 export async function deleteOrders(orderIds: Set<string>) {
   const { error } = await app.api.orders.delete({
-    orderIds: Array.from(orderIds),
+    orderIds: [...orderIds],
   });
 
   if (error) {
@@ -176,7 +176,7 @@ export async function deleteOrderItem(orderId: string, collectionId: string) {
 
 export async function deleteOrderItems(collectionIds: Set<string>) {
   const { error } = await app.api.orders.items.delete({
-    collectionIds: Array.from(collectionIds),
+    collectionIds: [...collectionIds],
   });
 
   if (error) {
@@ -191,8 +191,8 @@ export async function moveItem(
 ): Promise<void> {
   const moveItemPayload = {
     targetOrderId,
-    collectionIds: Array.from(collectionIds),
-    orderIds: Array.from(orderIds ?? []),
+    collectionIds: [...collectionIds],
+    orderIds: [...(orderIds ?? [])],
   };
 
   const { error } = await app.api.orders["move-items"].put(moveItemPayload);

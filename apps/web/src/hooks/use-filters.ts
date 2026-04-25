@@ -1,9 +1,5 @@
-import {
-  getRouteApi,
-  type RegisteredRouter,
-  type RouteIds,
-  useNavigate,
-} from "@tanstack/react-router";
+import { getRouteApi, useNavigate } from "@tanstack/react-router";
+import type { RegisteredRouter, RouteIds } from "@tanstack/react-router";
 import { cleanEmptyParams } from "../lib/utils";
 
 interface UseFiltersOptions {

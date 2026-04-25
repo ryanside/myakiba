@@ -4,7 +4,8 @@ import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-gr
 import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { getCoreRowModel, type PaginationState, useReactTable } from "@tanstack/react-table";
+import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import type { PaginationState } from "@tanstack/react-table";
 import type { EnrichedSyncSessionItemRow } from "@myakiba/contracts/sync/types";
 import { SYNC_SESSION_SUBGRID_PAGE_SIZE } from "@myakiba/contracts/sync/constants";
 import { fetchSyncSessionDetail } from "@/queries/sync";

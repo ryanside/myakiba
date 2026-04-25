@@ -49,9 +49,7 @@ const scrollerVariants = cva("", {
 
 type ScrollDirection = "up" | "down" | "left" | "right";
 
-type ScrollVisibility = {
-  [key in ScrollDirection]: boolean;
-};
+type ScrollVisibility = Record<ScrollDirection, boolean>;
 
 interface ScrollerProps extends VariantProps<typeof scrollerVariants>, React.ComponentProps<"div"> {
   size?: number;

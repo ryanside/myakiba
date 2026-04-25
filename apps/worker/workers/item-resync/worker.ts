@@ -2,7 +2,8 @@ import { Worker } from "bullmq";
 import { createLogger, log } from "evlog";
 import { env } from "@myakiba/env/worker";
 import { ITEM_RESYNC_QUEUE_NAME } from "@myakiba/redis/item-resync";
-import { processItemResyncJob, type ItemResyncJobData } from "./process-item-resync-job";
+import { processItemResyncJob } from "./process-item-resync-job";
+import type { ItemResyncJobData } from "./process-item-resync-job";
 
 const DURATION = 30 * 60 * 1000;
 
@@ -14,7 +15,7 @@ export const itemResyncWorker = new Worker<ItemResyncJobData>(
       host: env.REDIS_HOST,
       port: env.REDIS_PORT,
       retryStrategy(times: number): number {
-        return Math.max(Math.min(Math.exp(times), 20000), 1000);
+        return Math.max(Math.min(Math.exp(times), 20_000), 1000);
       },
     },
     concurrency: 1,

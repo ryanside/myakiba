@@ -9,7 +9,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { DebouncedInput } from "@/components/debounced-input";
 import FiltersForm from "./filters-form";
-import { SortCombobox, type SortableColumn } from "@/components/ui/sort-combobox";
+import { SortCombobox } from "@/components/ui/sort-combobox";
+import type { SortableColumn } from "@/components/ui/sort-combobox";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   ActionBar,

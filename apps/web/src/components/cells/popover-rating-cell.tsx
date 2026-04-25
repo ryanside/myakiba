@@ -41,7 +41,7 @@ export function PopoverRatingCell({ value, onSubmit, disabled = false }: Popover
                 <Rating
                   size="md"
                   rating={Number(value) || 0}
-                  onRatingChange={(value) => handleSubmit(value.toFixed(1))}
+                  onRatingChange={(nextRating) => handleSubmit(nextRating.toFixed(1))}
                   editable={true}
                   showValue={true}
                   maxRating={10}

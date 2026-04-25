@@ -1,9 +1,9 @@
 import { db } from "@myakiba/db/client";
 import {
-  item,
-  collection,
+  item as itemTable,
+  collection as collectionTable,
   item_release,
-  order,
+  order as orderTable,
   syncSession,
   syncSessionItem,
 } from "@myakiba/db/schema/figure";
@@ -149,17 +149,17 @@ class SyncService {
     }
 
     const existingItems = await db
-      .selectDistinctOn([item.id], {
-        id: item.id,
-        externalId: item.externalId,
-        title: item.title,
+      .selectDistinctOn([itemTable.id], {
+        id: itemTable.id,
+        externalId: itemTable.externalId,
+        title: itemTable.title,
         releaseId: item_release.id,
         releaseDate: item_release.date,
       })
-      .from(item)
-      .leftJoin(item_release, eq(item_release.itemId, item.id))
-      .where(and(eq(item.source, "mfc"), inArray(item.externalId, [...externalIds])))
-      .orderBy(item.id, desc(item_release.date), desc(item_release.createdAt));
+      .from(itemTable)
+      .leftJoin(item_release, eq(item_release.itemId, itemTable.id))
+      .where(and(eq(itemTable.source, "mfc"), inArray(itemTable.externalId, [...externalIds])))
+      .orderBy(itemTable.id, desc(item_release.date), desc(item_release.createdAt));
 
     return existingItems.filter(
       (existingItem): existingItem is ExistingItemWithLatestRelease =>
@@ -176,23 +176,23 @@ class SyncService {
     }
 
     const existingItems = await db
-      .selectDistinctOn([item.id], {
-        id: item.id,
-        externalId: item.externalId,
-        title: item.title,
+      .selectDistinctOn([itemTable.id], {
+        id: itemTable.id,
+        externalId: itemTable.externalId,
+        title: itemTable.title,
         releaseId: item_release.id,
         releaseDate: item_release.date,
         isInCollection: sql<boolean>`exists (
           select 1
-          from ${collection}
-          where ${collection.itemId} = ${item.id}
-            and ${collection.userId} = ${userId}
+          from ${collectionTable}
+          where ${collectionTable.itemId} = ${itemTable.id}
+            and ${collectionTable.userId} = ${userId}
         )`,
       })
-      .from(item)
-      .leftJoin(item_release, eq(item_release.itemId, item.id))
-      .where(and(eq(item.source, "mfc"), inArray(item.externalId, [...externalIds])))
-      .orderBy(item.id, desc(item_release.date), desc(item_release.createdAt));
+      .from(itemTable)
+      .leftJoin(item_release, eq(item_release.itemId, itemTable.id))
+      .where(and(eq(itemTable.source, "mfc"), inArray(itemTable.externalId, [...externalIds])))
+      .orderBy(itemTable.id, desc(item_release.date), desc(item_release.createdAt));
 
     return existingItems.filter(
       (existingItem): existingItem is CsvSyncCandidate => existingItem.externalId !== null,
@@ -202,8 +202,8 @@ class SyncService {
   async getOrderByIdForUser(orderId: string, userId: string) {
     const [existingOrder] = await db
       .select()
-      .from(order)
-      .where(and(eq(order.id, orderId), eq(order.userId, userId)));
+      .from(orderTable)
+      .where(and(eq(orderTable.id, orderId), eq(orderTable.userId, userId)));
 
     return existingOrder ?? null;
   }
@@ -214,10 +214,10 @@ class SyncService {
   ): Promise<void> {
     await db.transaction(async (tx) => {
       if (orderItems && orderItems.length > 0) {
-        await tx.insert(order).values(orderItems);
-        await tx.insert(collection).values(collectionItems);
+        await tx.insert(orderTable).values(orderItems);
+        await tx.insert(collectionTable).values(collectionItems);
       } else {
-        await tx.insert(collection).values(collectionItems);
+        await tx.insert(collectionTable).values(collectionItems);
       }
     });
   }
@@ -274,11 +274,14 @@ class SyncService {
       itemsNeedingInsert.some((existingItem) => existingItem.externalId === item.itemExternalId),
     );
 
-    const idsToScrape = itemExternalIds.filter(
-      (externalId) => !existingItems.some((existingItem) => existingItem.externalId === externalId),
+    const idsToScrape = new Set(
+      itemExternalIds.filter(
+        (externalId) =>
+          !existingItems.some((existingItem) => existingItem.externalId === externalId),
+      ),
     );
     const csvItemsToScrape = items.filter((item: InternalCsvItem) =>
-      idsToScrape.includes(item.itemExternalId),
+      idsToScrape.has(item.itemExternalId),
     );
 
     const orderItems: OrderInsertType[] = [];
@@ -289,11 +292,11 @@ class SyncService {
         )?.title;
         const itemId = externalIdToInternalId.get(item.itemExternalId);
 
-        if (itemId) {
+        if (itemId && item.orderId) {
           orderItems.push({
-            id: item.orderId!,
-            userId: userId,
-            title: itemTitle ? itemTitle : `Order ${item.orderId}`,
+            id: item.orderId,
+            userId,
+            title: itemTitle || `Order ${item.orderId}`,
             shop: item.shop,
             orderDate: item.orderDate,
             releaseDate: existingItemsReleaseDates.get(itemId) ?? null,
@@ -314,7 +317,7 @@ class SyncService {
         }
 
         return {
-          userId: userId,
+          userId,
           itemId: internalItemId,
           status: i.status,
           count: i.count,
@@ -353,10 +356,10 @@ class SyncService {
         "sync-job",
         {
           type: "csv" as const,
-          userId: userId,
+          userId,
           syncSessionId,
           existingCount,
-          items: items,
+          items,
         },
         {
           removeOnComplete: true,
@@ -375,7 +378,7 @@ class SyncService {
       );
 
       if (jobStatusError) {
-        await job.remove().catch(() => undefined);
+        await job.remove().catch(() => {});
         throw new Error("FAILED_TO_SET_JOB_STATUS_IN_REDIS");
       }
 
@@ -383,7 +386,7 @@ class SyncService {
         jobId: job.id,
       });
       if (!updated) {
-        await job.remove().catch(() => undefined);
+        await job.remove().catch(() => {});
         throw new Error("SYNC_SESSION_NOT_FOUND");
       }
 
@@ -393,7 +396,7 @@ class SyncService {
 
       if (queuedJobId) {
         const queuedJob = await syncQueue.getJob(queuedJobId);
-        await queuedJob?.remove().catch(() => undefined);
+        await queuedJob?.remove().catch(() => {});
       }
       throw error;
     }
@@ -485,7 +488,7 @@ class SyncService {
       );
 
       if (jobStatusError) {
-        await job.remove().catch(() => undefined);
+        await job.remove().catch(() => {});
         throw new Error("FAILED_TO_SET_JOB_STATUS_IN_REDIS");
       }
 
@@ -493,7 +496,7 @@ class SyncService {
         jobId: job.id,
       });
       if (!updated) {
-        await job.remove().catch(() => undefined);
+        await job.remove().catch(() => {});
         throw new Error("SYNC_SESSION_NOT_FOUND");
       }
 
@@ -506,7 +509,7 @@ class SyncService {
 
       if (queuedJobId) {
         const queuedJob = await syncQueue.getJob(queuedJobId);
-        await queuedJob?.remove().catch(() => undefined);
+        await queuedJob?.remove().catch(() => {});
       }
       throw error;
     }
@@ -525,11 +528,11 @@ class SyncService {
         "sync-job",
         {
           type: "collection" as const,
-          userId: userId,
+          userId,
           syncSessionId,
           collection: {
-            itemsToScrape: itemsToScrape,
-            itemsToInsert: itemsToInsert,
+            itemsToScrape,
+            itemsToInsert,
             existingCount,
           },
         },
@@ -550,7 +553,7 @@ class SyncService {
       );
 
       if (jobStatusError) {
-        await job.remove().catch(() => undefined);
+        await job.remove().catch(() => {});
         throw new Error("FAILED_TO_SET_JOB_STATUS_IN_REDIS");
       }
 
@@ -558,7 +561,7 @@ class SyncService {
         jobId: job.id,
       });
       if (!updated) {
-        await job.remove().catch(() => undefined);
+        await job.remove().catch(() => {});
         throw new Error("SYNC_SESSION_NOT_FOUND");
       }
 
@@ -568,7 +571,7 @@ class SyncService {
 
       if (queuedJobId) {
         const queuedJob = await syncQueue.getJob(queuedJobId);
-        await queuedJob?.remove().catch(() => undefined);
+        await queuedJob?.remove().catch(() => {});
       }
       throw error;
     }
@@ -756,14 +759,14 @@ class SyncService {
         errorReason: syncSessionItem.errorReason,
         createdAt: syncSessionItem.createdAt,
         updatedAt: syncSessionItem.updatedAt,
-        itemId: item.id,
-        itemTitle: item.title,
-        itemImage: item.image,
+        itemId: itemTable.id,
+        itemTitle: itemTable.title,
+        itemImage: itemTable.image,
       })
       .from(syncSessionItem)
       .leftJoin(
-        item,
-        and(eq(item.externalId, syncSessionItem.itemExternalId), eq(item.source, "mfc")),
+        itemTable,
+        and(eq(itemTable.externalId, syncSessionItem.itemExternalId), eq(itemTable.source, "mfc")),
       )
       .where(eq(syncSessionItem.syncSessionId, sessionId))
       .orderBy(syncSessionItem.createdAt, syncSessionItem.id);

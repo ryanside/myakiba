@@ -15,7 +15,6 @@ export const commaSeparatedStringArraySchema = z.preprocess((value) => {
   if (typeof value === "string" && value.length > 0) {
     return splitCommaSeparatedValue(value);
   }
-  return undefined;
 }, z.array(z.string()).optional());
 
 export function createCommaSeparatedEnumArraySchema<const TValues extends NonEmptyStringTuple>(
@@ -28,6 +27,5 @@ export function createCommaSeparatedEnumArraySchema<const TValues extends NonEmp
     if (typeof value === "string" && value.length > 0) {
       return splitCommaSeparatedValue(value);
     }
-    return undefined;
   }, z.array(z.enum(values)).optional());
 }

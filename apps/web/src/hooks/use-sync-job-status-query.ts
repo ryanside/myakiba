@@ -5,11 +5,8 @@ import {
 } from "@tanstack/react-query";
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import { app } from "@/lib/treaty-client";
-import {
-  parseSSEJobStatusStream,
-  type JobStatusEvent,
-  type SSEJobStatusChunk,
-} from "@/lib/sync-job-status-stream";
+import { parseSSEJobStatusStream } from "@/lib/sync-job-status-stream";
+import type { JobStatusEvent, SSEJobStatusChunk } from "@/lib/sync-job-status-stream";
 import { resolveSyncMessage } from "@/lib/sync";
 import { showSyncToast } from "@/components/sync/sync-toast";
 

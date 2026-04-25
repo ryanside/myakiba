@@ -17,7 +17,7 @@ const CHART_PALETTE = [
 ] as const;
 
 interface ShopBreakdownProps {
-  readonly data: ReadonlyArray<ShopBreakdownEntry> | undefined;
+  readonly data: readonly ShopBreakdownEntry[] | undefined;
   readonly currency: Currency;
   readonly locale: string;
   readonly isLoading?: boolean;

@@ -94,7 +94,7 @@ function applyStatsDelta(base: OrderStats, delta: OrderStats): OrderStats {
 }
 
 function addPendingIds(previous: readonly string[], ids: readonly string[]): readonly string[] {
-  return Array.from(new Set([...previous, ...ids]));
+  return [...new Set([...previous, ...ids])];
 }
 
 function removePendingIds(previous: readonly string[], ids: readonly string[]): readonly string[] {
@@ -452,7 +452,7 @@ export function useOrdersMutations() {
     mutationFn: (values: CollectionItemFormValues) => updateCollectionItem(values),
     onMutate: async (values) => {
       const itemOrderId = values.orderId;
-      if (!itemOrderId) return undefined;
+      if (!itemOrderId) return;
 
       await queryClient.cancelQueries({ queryKey: ["orderItems", itemOrderId] });
       const previousOrderItems = queryClient.getQueriesData<PaginatedResult<OrderItem>>({
@@ -694,7 +694,7 @@ export function useOrdersMutations() {
         return;
       }
 
-      const ids = Array.from(mutableOrderIds);
+      const ids = [...mutableOrderIds];
       const loadingToastId = toast.loading("Merging orders...");
       setPendingOrderIdList((previous) => addPendingIds(previous, ids));
 
@@ -729,7 +729,7 @@ export function useOrdersMutations() {
         return;
       }
 
-      const ids = Array.from(mutableCollectionIds);
+      const ids = [...mutableCollectionIds];
       const loadingToastId = toast.loading("Creating order...");
       setPendingCollectionItemIdList((previous) => addPendingIds(previous, ids));
 
@@ -774,7 +774,7 @@ export function useOrdersMutations() {
       return;
     }
 
-    const ids = Array.from(mutableOrderIds);
+    const ids = [...mutableOrderIds];
     const loadingToastId = toast.loading("Deleting orders...");
     setPendingOrderIdList((previous) => addPendingIds(previous, ids));
 
@@ -827,7 +827,7 @@ export function useOrdersMutations() {
         return;
       }
 
-      const ids = Array.from(mutableCollectionIds);
+      const ids = [...mutableCollectionIds];
       const loadingToastId = toast.loading("Deleting items...");
       setPendingCollectionItemIdList((previous) => addPendingIds(previous, ids));
 
@@ -859,7 +859,7 @@ export function useOrdersMutations() {
         return;
       }
 
-      const ids = Array.from(mutableCollectionIds);
+      const ids = [...mutableCollectionIds];
       const loadingToastId = toast.loading("Moving items...");
       setPendingCollectionItemIdList((previous) => addPendingIds(previous, ids));
 

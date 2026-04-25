@@ -16,7 +16,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useForm } from "@tanstack/react-form";
-import { useId, useState, type ReactElement } from "react";
+import { useId, useState } from "react";
+import type { ReactElement } from "react";
 import { Field, FieldContent, FieldDescription, FieldTitle } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -402,7 +403,6 @@ export default function FiltersForm({
                                 role="combobox"
                                 aria-controls={entriesListId}
                                 aria-expanded={entriesPopoverOpen}
-                                aria-haspopup="listbox"
                                 className="w-full justify-between"
                               >
                                 Select entries...
@@ -856,20 +856,20 @@ export default function FiltersForm({
                       />
                       <DropdownMenuContent className="w-(--anchor-width)">
                         <ScrollArea className="h-[200px]">
-                          {CURRENCIES.map((currency) => (
+                          {CURRENCIES.map((currencyOption) => (
                             <DropdownMenuCheckboxItem
-                              key={currency}
-                              checked={field.state.value?.includes(currency)}
+                              key={currencyOption}
+                              checked={field.state.value?.includes(currencyOption)}
                               onCheckedChange={(checked) => {
                                 const current = field.state.value || [];
                                 const updated = checked
-                                  ? [...current, currency]
-                                  : current.filter((c) => c !== currency);
+                                  ? [...current, currencyOption]
+                                  : current.filter((c) => c !== currencyOption);
                                 field.handleChange(updated);
                               }}
                               onSelect={(e) => e.preventDefault()}
                             >
-                              {currency}
+                              {currencyOption}
                             </DropdownMenuCheckboxItem>
                           ))}
                         </ScrollArea>

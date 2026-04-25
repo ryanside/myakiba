@@ -214,13 +214,11 @@ export function CollectionCardGrid({
 }: CollectionCardGridProps): React.JSX.Element {
   const toggleSelection = (id: string): void => {
     onRowSelectionChange((prev: RowSelectionState) => {
-      const next = { ...prev };
-      if (next[id]) {
-        delete next[id];
-      } else {
-        next[id] = true;
+      if (prev[id]) {
+        const { [id]: _removed, ...next } = prev;
+        return next;
       }
-      return next;
+      return { ...prev, [id]: true };
     });
   };
 

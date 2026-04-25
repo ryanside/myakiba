@@ -42,7 +42,9 @@ function wrapArray<T>(array: T[], startIndex: number) {
 
 function getDirectionAwareKey(key: string, dir?: Direction) {
   if (dir !== "rtl") return key;
-  return key === "ArrowLeft" ? "ArrowRight" : key === "ArrowRight" ? "ArrowLeft" : key;
+  if (key === "ArrowLeft") return "ArrowRight";
+  if (key === "ArrowRight") return "ArrowLeft";
+  return key;
 }
 
 interface ItemData {
@@ -70,7 +72,7 @@ function useActionBarContext(consumerName: string) {
 
 interface FocusContextValue {
   tabStopId: string | null;
-  onItemFocus: (tabStopId: string) => void;
+  onItemFocus: (nextTabStopId: string) => void;
   onItemShiftTab: () => void;
   onFocusableItemAdd: () => void;
   onFocusableItemRemove: () => void;
@@ -246,8 +248,8 @@ function ActionBarGroup(props: DivProps) {
 
   const { dir, orientation } = useActionBarContext(GROUP_NAME);
 
-  const onItemFocus = React.useCallback((tabStopId: string) => {
-    setTabStopId(tabStopId);
+  const onItemFocus = React.useCallback((nextTabStopId: string) => {
+    setTabStopId(nextTabStopId);
   }, []);
 
   const onItemShiftTab = React.useCallback(() => {
@@ -271,16 +273,19 @@ function ActionBarGroup(props: DivProps) {
   }, []);
 
   const getItems = React.useCallback(() => {
-    return Array.from(itemsRef.current.values())
+    return [...itemsRef.current.values()]
       .filter((item) => item.ref.current)
-      .sort((a, b) => {
+      .toSorted((a, b) => {
         const elementA = a.ref.current;
         const elementB = b.ref.current;
         if (!elementA || !elementB) return 0;
         const position = elementA.compareDocumentPosition(elementB);
+        // compareDocumentPosition returns a bitmask; bitwise AND is the documented API.
+        // oxlint-disable-next-line no-bitwise
         if (position & Node.DOCUMENT_POSITION_FOLLOWING) {
           return -1;
         }
+        // oxlint-disable-next-line no-bitwise
         if (position & Node.DOCUMENT_POSITION_PRECEDING) {
           return 1;
         }
@@ -309,7 +314,7 @@ function ActionBarGroup(props: DivProps) {
         event.currentTarget.dispatchEvent(entryFocusEvent);
 
         if (!entryFocusEvent.defaultPrevented) {
-          const items = Array.from(itemsRef.current.values()).filter((item) => !item.disabled);
+          const items = [...itemsRef.current.values()].filter((item) => !item.disabled);
           const currentItem = items.find((item) => item.id === tabStopId);
 
           const candidateItems = [currentItem, ...items].filter(Boolean) as ItemData[];
@@ -448,7 +453,7 @@ function ActionBarItem(props: ActionBarItemProps) {
         cancelable: true,
       });
 
-      item.addEventListener(ITEM_SELECT, (event) => onSelect?.(event), {
+      item.addEventListener(ITEM_SELECT, (selectEvent) => onSelect?.(selectEvent), {
         once: true,
       });
 
@@ -492,12 +497,10 @@ function ActionBarItem(props: ActionBarItemProps) {
         else if (key === "ArrowRight") focusIntent = "next";
         else if (key === "Home") focusIntent = "first";
         else if (key === "End") focusIntent = "last";
-      } else {
-        if (key === "ArrowUp") focusIntent = "prev";
-        else if (key === "ArrowDown") focusIntent = "next";
-        else if (key === "Home") focusIntent = "first";
-        else if (key === "End") focusIntent = "last";
-      }
+      } else if (key === "ArrowUp") focusIntent = "prev";
+      else if (key === "ArrowDown") focusIntent = "next";
+      else if (key === "Home") focusIntent = "first";
+      else if (key === "End") focusIntent = "last";
 
       if (focusIntent !== undefined) {
         if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
@@ -511,7 +514,7 @@ function ActionBarItem(props: ActionBarItemProps) {
         } else if (focusIntent === "prev" || focusIntent === "next") {
           if (focusIntent === "prev") candidateRefs.reverse();
           const currentIndex = candidateRefs.findIndex(
-            (ref) => ref.current === event.currentTarget,
+            (itemRefEntry) => itemRefEntry.current === event.currentTarget,
           );
           candidateRefs = loop
             ? wrapArray(candidateRefs, currentIndex + 1)

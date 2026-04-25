@@ -7,7 +7,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon, Sun01Icon, Moon02Icon } from "@hugeicons/core-free-icons";
 import { useTheme } from "next-themes";
-import BounceCards from "@/components/BounceCards";
+import BounceCards from "@/components/bounce-cards";
 import MfcSyncSection from "@/components/homepage/integrations-1";
 import FAQsSection from "@/components/homepage/faqs";
 import FooterSection from "@/components/homepage/footer";

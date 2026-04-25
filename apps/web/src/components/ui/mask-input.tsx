@@ -209,9 +209,9 @@ const MASK_PATTERNS: Record<MaskPatternKey, MaskPattern> = {
     validate: (value) => {
       const cleaned = value.replace(REGEX_CACHE.nonDigits, "");
       if (cleaned.length !== 8) return false;
-      const month = parseInt(cleaned.substring(0, 2), 10);
-      const day = parseInt(cleaned.substring(2, 4), 10);
-      const year = parseInt(cleaned.substring(4, 8), 10);
+      const month = Number.parseInt(cleaned.slice(0, 2), 10);
+      const day = Number.parseInt(cleaned.slice(2, 4), 10);
+      const year = Number.parseInt(cleaned.slice(4, 8), 10);
 
       const currentYear = new Date().getFullYear();
       const minYear = currentYear - PAST_YEARS_LIMIT;
@@ -232,8 +232,8 @@ const MASK_PATTERNS: Record<MaskPatternKey, MaskPattern> = {
     validate: (value) => {
       const cleaned = value.replace(REGEX_CACHE.nonDigits, "");
       if (!REGEX_CACHE.time.test(cleaned)) return false;
-      const hours = parseInt(cleaned.substring(0, 2), 10);
-      const minutes = parseInt(cleaned.substring(2, 4), 10);
+      const hours = Number.parseInt(cleaned.slice(0, 2), 10);
+      const minutes = Number.parseInt(cleaned.slice(2, 4), 10);
       return hours <= 23 && minutes <= 59;
     },
   },
@@ -249,7 +249,7 @@ const MASK_PATTERNS: Record<MaskPatternKey, MaskPattern> = {
       for (let i = cleaned.length - 1; i >= 0; i--) {
         const digitChar = cleaned[i];
         if (!digitChar) continue;
-        let digit = parseInt(digitChar, 10);
+        let digit = Number.parseInt(digitChar, 10);
         if (isEven) {
           digit *= 2;
           if (digit > 9) {
@@ -269,8 +269,8 @@ const MASK_PATTERNS: Record<MaskPatternKey, MaskPattern> = {
       const cleaned = value.replace(REGEX_CACHE.nonDigits, "");
       if (!REGEX_CACHE.creditCardExpiry.test(cleaned)) return false;
 
-      const month = parseInt(cleaned.substring(0, 2), 10);
-      const year = parseInt(cleaned.substring(2, 4), 10);
+      const month = Number.parseInt(cleaned.slice(0, 2), 10);
+      const year = Number.parseInt(cleaned.slice(2, 4), 10);
 
       if (month < 1 || month > 12) return false;
 
@@ -332,7 +332,7 @@ const MASK_PATTERNS: Record<MaskPatternKey, MaskPattern> = {
       if (localeDecimalSeparator === ",") {
         const lastCommaIndex = cleaned.lastIndexOf(",");
         if (lastCommaIndex !== -1) {
-          const afterComma = cleaned.substring(lastCommaIndex + 1);
+          const afterComma = cleaned.slice(lastCommaIndex + 1);
           if (afterComma.length <= 2 && /^\d*$/.test(afterComma)) {
             hasDecimalSeparator = true;
             decimalIndex = lastCommaIndex;
@@ -340,7 +340,7 @@ const MASK_PATTERNS: Record<MaskPatternKey, MaskPattern> = {
         }
 
         if (!hasDecimalSeparator && dotIndex !== -1) {
-          const afterDot = cleaned.substring(dotIndex + 1);
+          const afterDot = cleaned.slice(dotIndex + 1);
           if (afterDot.length <= 2 && /^\d*$/.test(afterDot)) {
             hasDecimalSeparator = true;
             decimalIndex = dotIndex;
@@ -359,7 +359,7 @@ const MASK_PATTERNS: Record<MaskPatternKey, MaskPattern> = {
       } else {
         const lastDotIndex = cleaned.lastIndexOf(".");
         if (lastDotIndex !== -1) {
-          const afterDot = cleaned.substring(lastDotIndex + 1);
+          const afterDot = cleaned.slice(lastDotIndex + 1);
           if (afterDot.length <= 2 && /^\d*$/.test(afterDot)) {
             hasDecimalSeparator = true;
             decimalIndex = lastDotIndex;
@@ -367,7 +367,7 @@ const MASK_PATTERNS: Record<MaskPatternKey, MaskPattern> = {
         }
 
         if (!hasDecimalSeparator && commaIndex !== -1) {
-          const afterComma = cleaned.substring(commaIndex + 1);
+          const afterComma = cleaned.slice(commaIndex + 1);
           const looksLikeThousands = commaIndex <= 3 && afterComma.length >= 3;
           if (!looksLikeThousands && afterComma.length <= 2 && /^\d*$/.test(afterComma)) {
             hasDecimalSeparator = true;
@@ -377,24 +377,24 @@ const MASK_PATTERNS: Record<MaskPatternKey, MaskPattern> = {
       }
 
       if (hasDecimalSeparator && decimalIndex !== -1) {
-        const beforeDecimal = cleaned.substring(0, decimalIndex).replace(/[.,]/g, "");
-        const afterDecimal = cleaned.substring(decimalIndex + 1).replace(/[.,]/g, "");
+        const beforeDecimal = cleaned.slice(0, decimalIndex).replaceAll(/[.,]/g, "");
+        const afterDecimal = cleaned.slice(decimalIndex + 1).replaceAll(/[.,]/g, "");
 
         if (afterDecimal === "") {
           const result = `${beforeDecimal}.`;
           return result;
         }
 
-        const result = `${beforeDecimal}.${afterDecimal.substring(0, 2)}`;
+        const result = `${beforeDecimal}.${afterDecimal.slice(0, 2)}`;
         return result;
       }
 
-      const digitsOnly = cleaned.replace(/[.,]/g, "");
+      const digitsOnly = cleaned.replaceAll(/[.,]/g, "");
       return digitsOnly;
     },
     validate: (value) => {
       if (!REGEX_CACHE.currencyValidation.test(value)) return false;
-      const num = parseFloat(value);
+      const num = Number.parseFloat(value);
       return !Number.isNaN(num) && num >= 0;
     },
   },
@@ -407,12 +407,12 @@ const MASK_PATTERNS: Record<MaskPatternKey, MaskPattern> = {
         return `${parts[0]}.${parts.slice(1).join("")}`;
       }
       if (parts[1] && parts[1].length > 2) {
-        return `${parts[0]}.${parts[1].substring(0, 2)}`;
+        return `${parts[0]}.${parts[1].slice(0, 2)}`;
       }
       return cleaned;
     },
     validate: (value, opts = {}) => {
-      const num = parseFloat(value);
+      const num = Number.parseFloat(value);
       const min = opts.min ?? 0;
       const max = opts.max ?? 100;
       return !Number.isNaN(num) && num >= min && num <= max;
@@ -434,25 +434,24 @@ const MASK_PATTERNS: Record<MaskPatternKey, MaskPattern> = {
         return segments.every((segment) => {
           if (segment === "") return true;
           if (!REGEX_CACHE.ipv4Segment.test(segment)) return false;
-          const num = parseInt(segment, 10);
+          const num = Number.parseInt(segment, 10);
           return num <= 255;
         });
-      } else {
-        if (!REGEX_CACHE.digitsOnly.test(value)) return false;
-        if (value.length > 12) return false;
-
-        const chunks = [];
-        for (let i = 0; i < value.length; i += 3) {
-          chunks.push(value.substring(i, i + 3));
-        }
-
-        if (chunks.length > 4) return false;
-
-        return chunks.every((chunk) => {
-          const num = parseInt(chunk, 10);
-          return num >= 0 && num <= 255;
-        });
       }
+      if (!REGEX_CACHE.digitsOnly.test(value)) return false;
+      if (value.length > 12) return false;
+
+      const chunks = [];
+      for (let i = 0; i < value.length; i += 3) {
+        chunks.push(value.slice(i, i + 3));
+      }
+
+      if (chunks.length > 4) return false;
+
+      return chunks.every((chunk) => {
+        const num = Number.parseInt(chunk, 10);
+        return num >= 0 && num <= 255;
+      });
     },
   },
   macAddress: {
@@ -529,7 +528,10 @@ function applyCurrencyMask(opts: { value: string; currency?: string; locale?: st
   } = getCachedCurrencySymbols({ locale, currency });
 
   const normalizedValue = value
-    .replace(new RegExp(`\\${groupSeparator.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "g"), "")
+    .replaceAll(
+      new RegExp(`\\${groupSeparator.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "g"),
+      "",
+    )
     .replace(decimalSeparator, ".");
 
   const parts = normalizedValue.split(".");
@@ -544,7 +546,7 @@ function applyCurrencyMask(opts: { value: string; currency?: string; locale?: st
   const num = Number(`${intValue}.${fracValue ?? ""}`);
 
   if (Number.isNaN(num)) {
-    const cleanedDigits = value.replace(/[^\d]/g, "");
+    const cleanedDigits = value.replaceAll(/[^\d]/g, "");
     if (!cleanedDigits) return "";
     return `${currencySymbol}${cleanedDigits}`;
   }
@@ -560,18 +562,17 @@ function applyCurrencyMask(opts: { value: string; currency?: string; locale?: st
     const result = formatter.format(num);
 
     if (hasExplicitDecimal && !fracValue) {
-      if (result.match(/^[^\d\s]+/)) {
+      if (/^[^\d\s]+/.test(result)) {
         const finalResult = result.replace(/(\d)$/, `$1${decimalSeparator}`);
         return finalResult;
-      } else {
-        const finalResult = result.replace(/(\d)(\s*)([^\d\s]+)$/, `$1${decimalSeparator}$2$3`);
-        return finalResult;
       }
+      const finalResult = result.replace(/(\d)(\s*)([^\d\s]+)$/, `$1${decimalSeparator}$2$3`);
+      return finalResult;
     }
 
     return result;
   } catch {
-    const formattedInt = intValue.replace(/\B(?=(\d{3})+(?!\d))/g, groupSeparator);
+    const formattedInt = intValue.replaceAll(/\B(?=(\d{3})+(?!\d))/g, groupSeparator);
     let result = `${currencySymbol}${formattedInt}`;
     if (hasExplicitDecimal) {
       result += `${decimalSeparator}${fracValue}`;
@@ -588,7 +589,7 @@ function applyPercentageMask(value: string): string {
   let result = parts[0] ?? "0";
 
   if (value.includes(".")) {
-    result += `.${(parts[1] ?? "").substring(0, 2)}`;
+    result += `.${(parts[1] ?? "").slice(0, 2)}`;
   }
 
   return `${result}%`;
@@ -650,17 +651,20 @@ function getCurrencyCaretPosition(opts: {
 }): number {
   const { newValue, mask, transformOpts, oldCursorPosition, oldValue, previousUnmasked } = opts;
 
-  if (oldCursorPosition !== undefined && oldValue && previousUnmasked !== undefined) {
-    if (oldCursorPosition < oldValue.length) {
-      const digitsBeforeCursor = oldValue.substring(0, oldCursorPosition).replace(/\D/g, "").length;
+  if (
+    oldCursorPosition !== undefined &&
+    oldValue &&
+    previousUnmasked !== undefined &&
+    oldCursorPosition < oldValue.length
+  ) {
+    const digitsBeforeCursor = oldValue.slice(0, oldCursorPosition).replaceAll(/\D/g, "").length;
 
-      let digitCount = 0;
-      for (let i = 0; i < newValue.length; i++) {
-        if (/\d/.test(newValue[i] ?? "")) {
-          digitCount++;
-          if (digitCount === digitsBeforeCursor) {
-            return i + 1;
-          }
+    let digitCount = 0;
+    for (let i = 0; i < newValue.length; i++) {
+      if (/\d/.test(newValue[i] ?? "")) {
+        digitCount++;
+        if (digitCount === digitsBeforeCursor) {
+          return i + 1;
         }
       }
     }
@@ -672,15 +676,12 @@ function getCurrencyCaretPosition(opts: {
       const match = newValue.match(/(\d)\s*([^\d\s]+)$/);
       if (match?.[1]) {
         return newValue.lastIndexOf(match[1]) + 1;
-      } else {
-        return newValue.length;
       }
-    } else {
       return newValue.length;
     }
-  } else {
     return newValue.length;
   }
+  return newValue.length;
 }
 
 function getPatternCaretPosition(opts: {
@@ -834,7 +835,7 @@ function MaskInput(props: MaskInputProps) {
   }, [value, maskPattern, withoutMask, transformOpts, mask]);
 
   const tokenCount = React.useMemo(() => {
-    if (!maskPattern || CURRENCY_PERCENTAGE_SYMBOLS.test(maskPattern.pattern)) return undefined;
+    if (!maskPattern || CURRENCY_PERCENTAGE_SYMBOLS.test(maskPattern.pattern)) return;
     return maskPattern.pattern.match(REGEX_CACHE.hashPattern)?.length ?? 0;
   }, [maskPattern]);
 
@@ -842,7 +843,7 @@ function MaskInput(props: MaskInputProps) {
 
   const calculatedInputMode = React.useMemo(() => {
     if (inputMode) return inputMode;
-    if (!maskPattern) return undefined;
+    if (!maskPattern) return;
 
     if (mask === "currency" || mask === "percentage" || mask === "ipv4") {
       return "decimal";
@@ -851,7 +852,6 @@ function MaskInput(props: MaskInputProps) {
     if (typeof mask === "string" && NUMERIC_MASK_PATTERNS.test(mask)) {
       return "numeric";
     }
-    return undefined;
   }, [maskPattern, mask, inputMode]);
 
   const shouldValidate = React.useCallback(
@@ -878,8 +878,8 @@ function MaskInput(props: MaskInputProps) {
 
   const validationOpts = React.useMemo(
     () => ({
-      min: typeof min === "string" ? parseFloat(min) : min,
-      max: typeof max === "string" ? parseFloat(max) : max,
+      min: typeof min === "string" ? Number.parseFloat(min) : min,
+      max: typeof max === "string" ? Number.parseFloat(max) : max,
     }),
     [min, max],
   );
@@ -891,7 +891,7 @@ function MaskInput(props: MaskInputProps) {
         onValidate(isValid, unmaskedValue);
       }
     },
-    [onValidate, maskPattern?.validate, validationOpts],
+    [onValidate, maskPattern, validationOpts],
   );
 
   const onValueChange = React.useCallback(
@@ -1321,14 +1321,13 @@ function MaskInput(props: MaskInputProps) {
               const nextCaret = fromUnmaskedIndex({
                 masked: nextMasked,
                 pattern: maskPattern.pattern,
-                unmaskedIndex: unmaskedIndex,
+                unmaskedIndex,
               });
 
               target.setSelectionRange(nextCaret, nextCaret);
 
               onValueChangeProp?.(nextMasked, nextUnmasked);
             }
-            return;
           }
         }
       }

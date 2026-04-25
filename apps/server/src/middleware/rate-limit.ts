@@ -1,5 +1,5 @@
 import { Elysia, status } from "elysia";
-import { createHash } from "crypto";
+import { createHash } from "node:crypto";
 import { redis } from "@myakiba/redis/client";
 import { auth } from "@myakiba/auth/server";
 

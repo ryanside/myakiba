@@ -37,7 +37,7 @@ export default function SyncStatusWidget() {
     refetchOnWindowFocus: true,
   });
 
-  const sessions = recentData?.sessions ?? [];
+  const sessions = useMemo(() => recentData?.sessions ?? [], [recentData]);
 
   const { activeSessions, finishedSessions } = useMemo(() => {
     const active: typeof sessions = [];

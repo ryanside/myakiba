@@ -8,13 +8,14 @@ import { Input } from "../ui/input";
 import { MaskInput } from "../ui/mask-input";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "../ui/dialog";
-import { DialogFooter, DialogClose } from "../ui/dialog";
 import { Badge } from "@/components/reui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { DatePicker } from "../ui/date-picker";
@@ -54,7 +55,7 @@ export default function SyncCollectionForm({
         void formRowId;
         return {
           ...rest,
-          itemExternalId: parseInt(extractedId, 10),
+          itemExternalId: Number.parseInt(extractedId, 10),
           price: toMinorUnits(item.price),
           orderDate: item.orderDate || null,
           paymentDate: item.paymentDate || null,
@@ -228,7 +229,9 @@ export default function SyncCollectionForm({
                                           type="number"
                                           min="1"
                                           onChange={(e) =>
-                                            countField.handleChange(parseInt(e.target.value) || 1)
+                                            countField.handleChange(
+                                              Number.parseInt(e.target.value, 10) || 1,
+                                            )
                                           }
                                           placeholder="1"
                                         />

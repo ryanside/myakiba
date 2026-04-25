@@ -1,6 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading03Icon } from "@hugeicons/core-free-icons";
-import { type ComponentProps, useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import type { ComponentProps } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +12,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { PlusIcon, type PlusIconHandle } from "@/components/ui/plus";
+import { PlusIcon } from "@/components/ui/plus";
+import type { PlusIconHandle } from "@/components/ui/plus";
 import { SYNC_OPTION_META } from "@/lib/sync";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { useSyncMutations } from "@/hooks/use-sync-mutations";

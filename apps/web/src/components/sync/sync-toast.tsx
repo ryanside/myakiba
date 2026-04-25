@@ -51,29 +51,34 @@ function SyncToastContent({
     <div className="bg-popover text-popover-foreground border-border flex w-[356px] flex-col gap-2 rounded-md border p-4 shadow-lg">
       <div className="flex items-center gap-2">
         <span className={cn("flex size-2 rounded-full", dot)} />
-        <p className="text-sm font-medium">{nothingToDo ? "Already Synced" : title}</p>
+        <p className="text-sm font-medium">
+          {nothingToDo && state !== "queued" ? "Already Synced" : title}
+        </p>
       </div>
 
       <div className="text-muted-foreground space-y-1 text-xs">
-        {hasCounts ? (
-          state === "queued" ? (
-            <>
-              <DetailRow label="Processing" value={`${newItems} items`} />
-              {existingItems > 0 && (
-                <DetailRow label="Already synced" value={`${existingItems} items`} />
-              )}
-            </>
-          ) : nothingToDo ? (
-            <p>All items are already in your collection.</p>
-          ) : (
-            <DetailRow label="Items synced" value={existingItems + newItems} />
-          )
-        ) : (
-          <>
-            {message && <p className="text-foreground">{message}</p>}
-            {description && <p>{description}</p>}
-          </>
-        )}
+        {(() => {
+          if (!hasCounts) {
+            return (
+              <>
+                {message && <p className="text-foreground">{message}</p>}
+                {description && <p>{description}</p>}
+              </>
+            );
+          }
+          if (state === "queued") {
+            return (
+              <>
+                <DetailRow label="Processing" value={`${newItems} items`} />
+                {existingItems > 0 && (
+                  <DetailRow label="Already synced" value={`${existingItems} items`} />
+                )}
+              </>
+            );
+          }
+          if (nothingToDo) return <p>All items are already in your collection.</p>;
+          return <DetailRow label="Items synced" value={existingItems + newItems} />;
+        })()}
       </div>
 
       <div className="mt-1 flex gap-2">

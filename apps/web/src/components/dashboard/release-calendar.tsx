@@ -54,7 +54,7 @@ const RELEASE_DATE_GROUP_LABEL_FORMATTER = new Intl.DateTimeFormat("en-US", {
 
 function groupReleasesByReleaseDate(
   releases: readonly ReleaseItem[],
-): ReadonlyArray<readonly [string, readonly ReleaseItem[]]> {
+): readonly (readonly [string, readonly ReleaseItem[]])[] {
   const groups = new Map<string, ReleaseItem[]>();
   for (const item of releases) {
     const existing = groups.get(item.releaseDate);
@@ -64,7 +64,7 @@ function groupReleasesByReleaseDate(
       groups.set(item.releaseDate, [item]);
     }
   }
-  return Array.from(groups.entries()).sort(
+  return [...groups.entries()].toSorted(
     ([a], [b]) => new Date(a).getTime() - new Date(b).getTime(),
   );
 }
@@ -104,7 +104,7 @@ function ReleaseCalendar({
     retry: false,
   });
 
-  const releases = data?.releaseCalendar.releases ?? [];
+  const releases = useMemo(() => data?.releaseCalendar.releases ?? [], [data]);
   const grouped = useMemo(() => groupReleasesByReleaseDate(releases), [releases]);
 
   const goToPreviousMonth = useCallback((): void => {
@@ -175,21 +175,22 @@ function ReleaseCalendar({
         </div>
       </FrameHeader>
       <FramePanel className="shadow-none!">
-        {isPending ? (
-          <Loader className="justify-center text-muted" />
-        ) : isError ? (
-          <ReleaseCalendarError message={error.message} onRetry={refetch} />
-        ) : grouped.length > 0 ? (
-          <div className="animate-data-in space-y-3 [--data-in-delay:60ms]">
-            <div className="-mx-(--frame-panel-p) max-h-57 overflow-y-auto overflow-x-hidden">
-              {grouped.map(([dateKey, items]) => (
-                <DateGroup key={dateKey} dateKey={dateKey} items={items} currency={currency} />
-              ))}
-            </div>
-          </div>
-        ) : (
-          <ReleaseCalendarEmpty />
-        )}
+        {(() => {
+          if (isPending) return <Loader className="justify-center text-muted" />;
+          if (isError) return <ReleaseCalendarError message={error.message} onRetry={refetch} />;
+          if (grouped.length > 0) {
+            return (
+              <div className="animate-data-in space-y-3 [--data-in-delay:60ms]">
+                <div className="-mx-(--frame-panel-p) max-h-57 overflow-y-auto overflow-x-hidden">
+                  {grouped.map(([dateKey, items]) => (
+                    <DateGroup key={dateKey} dateKey={dateKey} items={items} currency={currency} />
+                  ))}
+                </div>
+              </div>
+            );
+          }
+          return <ReleaseCalendarEmpty />;
+        })()}
       </FramePanel>
     </Frame>
   );

@@ -19,9 +19,11 @@ import { CollectionCardGrid } from "./collection-card-grid";
 import { CollectionGalleryGrid } from "./collection-gallery-grid";
 import { createCollectionColumns } from "./collection-columns";
 import { SyncSheetButton } from "@/components/sync/sync-sheet-button";
-import { ViewToggle, type ViewMode } from "@/components/ui/view-toggle";
+import { ViewToggle } from "@/components/ui/view-toggle";
+import type { ViewMode } from "@/components/ui/view-toggle";
 import { GridSizeSlider } from "@/components/ui/grid-size-slider";
-import { GalleryLayoutToggle, type GalleryLayout } from "@/components/ui/gallery-layout-toggle";
+import { GalleryLayoutToggle } from "@/components/ui/gallery-layout-toggle";
+import type { GalleryLayout } from "@/components/ui/gallery-layout-toggle";
 import {
   useCollectionFilters,
   useCollectionOrderMutations,
@@ -271,48 +273,56 @@ export const CollectionDataGrid = () => {
           }}
         >
           <div className="w-full space-y-2.5">
-            {isTableView ? (
-              <DataGridContainer>
-                <ScrollArea>
-                  <DataGridTable />
-                  <ScrollBar orientation="horizontal" />
-                </ScrollArea>
-              </DataGridContainer>
-            ) : viewMode === "gallery" ? (
-              <CollectionGalleryGrid
-                items={items}
-                tileSize={cardWidth}
-                galleryLayout={galleryLayout}
-                rowSelection={collectionSelection}
-                onRowSelectionChange={setCollectionSelection}
-                onEditCollectionItem={handleEditCollectionItem}
-                onDeleteCollectionItems={handleDeleteCollectionItems}
-                onAddCollectionItemsToOrder={handleAddCollectionItemsToOrder}
-                onAddCollectionItemsToNewOrder={handleAddCollectionItemsToNewOrder}
-                currency={currency}
-                dateFormat={dateFormat}
-                isCollectionPending={isCollectionPending}
-                isCollectionOrderPending={isCollectionOrderPending}
-                isLoading={isPending}
-              />
-            ) : (
-              <CollectionCardGrid
-                items={items}
-                cardWidth={cardWidth}
-                rowSelection={collectionSelection}
-                onRowSelectionChange={setCollectionSelection}
-                onEditCollectionItem={handleEditCollectionItem}
-                onDeleteCollectionItems={handleDeleteCollectionItems}
-                onAddCollectionItemsToOrder={handleAddCollectionItemsToOrder}
-                onAddCollectionItemsToNewOrder={handleAddCollectionItemsToNewOrder}
-                currency={currency}
-                locale={locale}
-                dateFormat={dateFormat}
-                isCollectionPending={isCollectionPending}
-                isCollectionOrderPending={isCollectionOrderPending}
-                isLoading={isPending}
-              />
-            )}
+            {(() => {
+              if (isTableView) {
+                return (
+                  <DataGridContainer>
+                    <ScrollArea>
+                      <DataGridTable />
+                      <ScrollBar orientation="horizontal" />
+                    </ScrollArea>
+                  </DataGridContainer>
+                );
+              }
+              if (viewMode === "gallery") {
+                return (
+                  <CollectionGalleryGrid
+                    items={items}
+                    tileSize={cardWidth}
+                    galleryLayout={galleryLayout}
+                    rowSelection={collectionSelection}
+                    onRowSelectionChange={setCollectionSelection}
+                    onEditCollectionItem={handleEditCollectionItem}
+                    onDeleteCollectionItems={handleDeleteCollectionItems}
+                    onAddCollectionItemsToOrder={handleAddCollectionItemsToOrder}
+                    onAddCollectionItemsToNewOrder={handleAddCollectionItemsToNewOrder}
+                    currency={currency}
+                    dateFormat={dateFormat}
+                    isCollectionPending={isCollectionPending}
+                    isCollectionOrderPending={isCollectionOrderPending}
+                    isLoading={isPending}
+                  />
+                );
+              }
+              return (
+                <CollectionCardGrid
+                  items={items}
+                  cardWidth={cardWidth}
+                  rowSelection={collectionSelection}
+                  onRowSelectionChange={setCollectionSelection}
+                  onEditCollectionItem={handleEditCollectionItem}
+                  onDeleteCollectionItems={handleDeleteCollectionItems}
+                  onAddCollectionItemsToOrder={handleAddCollectionItemsToOrder}
+                  onAddCollectionItemsToNewOrder={handleAddCollectionItemsToNewOrder}
+                  currency={currency}
+                  locale={locale}
+                  dateFormat={dateFormat}
+                  isCollectionPending={isCollectionPending}
+                  isCollectionOrderPending={isCollectionOrderPending}
+                  isLoading={isPending}
+                />
+              );
+            })()}
             <div className="flex items-center justify-between">
               <div className="flex-1 text-sm text-muted-foreground">
                 {table.getFilteredSelectedRowModel().rows.length} of{" "}

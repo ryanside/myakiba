@@ -14,10 +14,10 @@ interface CostBreakdownProps {
   readonly isLoading?: boolean;
 }
 
-const COST_CATEGORIES: ReadonlyArray<{
+const COST_CATEGORIES: readonly {
   readonly key: keyof CostBreakdownData;
   readonly label: string;
-}> = [
+}[] = [
   { key: "items", label: "Items" },
   { key: "shipping", label: "Shipping" },
   { key: "taxes", label: "Taxes" },

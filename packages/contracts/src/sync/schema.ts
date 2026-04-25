@@ -6,6 +6,7 @@ import {
   SYNC_SESSION_STATUSES,
   SYNC_TYPES,
 } from "../shared/constants";
+import type { SyncSessionStatus } from "../shared/types";
 import { SYNC_CSV_ITEM_STATUSES } from "./constants";
 
 /**
@@ -18,7 +19,7 @@ const csvDateSchema = z
   .transform((value): string | null => {
     if (value.trim() === "") return null;
     if (value === "0000-00-00") return null;
-    return value.replace(/-00/g, "-01");
+    return value.replaceAll("-00", "-01");
   })
   .pipe(z.iso.date().nullable());
 
@@ -294,9 +295,7 @@ export type SyncJobStatus = z.infer<typeof syncJobStatusSchema>;
  * sessionStatusToPhase("partial")
  * // "completed"
  */
-export const sessionStatusToPhase = (
-  status: import("../shared/types").SyncSessionStatus,
-): SyncJobPhase => {
+export const sessionStatusToPhase = (status: SyncSessionStatus): SyncJobPhase => {
   switch (status) {
     case "pending":
       return "queued";
@@ -334,7 +333,7 @@ export const sessionStatusToPhase = (
  * // "error"
  */
 export const sessionStatusToTerminalState = (
-  status: import("../shared/types").SyncSessionStatus,
+  status: SyncSessionStatus,
 ): SyncTerminalState | null => {
   switch (status) {
     case "completed":

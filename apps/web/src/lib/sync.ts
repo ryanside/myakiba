@@ -187,7 +187,7 @@ export function extractMfcItemId(input: string): string | null {
   return null;
 }
 
-export function createDefaultSyncFormOrderItem(itemExternalId: string = ""): SyncFormOrderItem {
+export function createDefaultSyncFormOrderItem(itemExternalId = ""): SyncFormOrderItem {
   return {
     formRowId: crypto.randomUUID(),
     itemExternalId,
@@ -203,7 +203,7 @@ export function createDefaultSyncFormOrderItem(itemExternalId: string = ""): Syn
   };
 }
 
-export function createDefaultSyncFormOrder(itemExternalId: string = ""): SyncFormOrder {
+export function createDefaultSyncFormOrder(itemExternalId = ""): SyncFormOrder {
   return {
     status: "Ordered",
     title: "New Order",
@@ -224,9 +224,7 @@ export function createDefaultSyncFormOrder(itemExternalId: string = ""): SyncFor
   };
 }
 
-export function createDefaultSyncFormCollectionItem(
-  itemExternalId: string = "",
-): SyncFormCollectionItem {
+export function createDefaultSyncFormCollectionItem(itemExternalId = ""): SyncFormCollectionItem {
   return {
     formRowId: crypto.randomUUID(),
     itemExternalId,
@@ -253,7 +251,7 @@ export async function transformCSVData(value: { file: File | undefined }) {
   const parsedCSV = Papa.parse(text, {
     header: true,
     skipEmptyLines: true,
-    transformHeader: (header: string) => header.trim().toLowerCase().replace(/ /g, "_"),
+    transformHeader: (header: string) => header.trim().toLowerCase().replaceAll(" ", "_"),
   });
 
   const validatedCSV = csvSchema.safeParse(parsedCSV.data);

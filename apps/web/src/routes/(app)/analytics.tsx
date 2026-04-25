@@ -1,4 +1,5 @@
-import { useCallback, type ReactNode } from "react";
+import { useCallback } from "react";
+import type { ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { getAnalytics } from "@/queries/analytics";

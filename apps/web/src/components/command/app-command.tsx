@@ -5,7 +5,8 @@ import {
   PackageIcon,
   SearchIcon,
 } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import type { IconSvgElement } from "@hugeicons/react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
@@ -23,18 +24,12 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
-import {
-  APP_COMMAND_NAVIGATION_ITEMS,
-  type AppNavigationItem,
-  type AppNavigationTarget,
-} from "@/lib/app-navigation";
-import { searchCommandResults, type CommandSearchResults } from "@/queries/search";
-import {
-  LAUNCHABLE_SYNC_OPTIONS,
-  SyncActionSheet,
-  type LaunchableSyncType,
-  type SyncLauncherOption,
-} from "@/components/sync/sync-launcher";
+import { APP_COMMAND_NAVIGATION_ITEMS } from "@/lib/app-navigation";
+import type { AppNavigationItem, AppNavigationTarget } from "@/lib/app-navigation";
+import { searchCommandResults } from "@/queries/search";
+import type { CommandSearchResults } from "@/queries/search";
+import { LAUNCHABLE_SYNC_OPTIONS, SyncActionSheet } from "@/components/sync/sync-launcher";
+import type { LaunchableSyncType, SyncLauncherOption } from "@/components/sync/sync-launcher";
 import { SYNC_TYPE_CONFIG } from "@/lib/sync";
 const COMMAND_TOKEN_SPLIT_PATTERN = /[^a-z0-9]+/i;
 const COMMAND_SEARCH_DEBOUNCE_MS = 250;

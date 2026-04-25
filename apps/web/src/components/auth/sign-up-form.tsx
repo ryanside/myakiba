@@ -4,7 +4,7 @@ import { authClient } from "@/lib/auth-client";
 import { useForm } from "@tanstack/react-form";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import z from "zod";
+import { z } from "zod";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -169,16 +169,15 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
                   return;
                 } else if (value.length > 30) {
                   return;
-                } else {
-                  const { data, error } = await authClient.isUsernameAvailable({
-                    username: value,
-                  });
-                  if (data?.available === false) {
-                    return "Username is already taken";
-                  }
-                  if (error) {
-                    return error.message;
-                  }
+                }
+                const { data, error } = await authClient.isUsernameAvailable({
+                  username: value,
+                });
+                if (data?.available === false) {
+                  return "Username is already taken";
+                }
+                if (error) {
+                  return error.message;
                 }
               },
               onBlur: z

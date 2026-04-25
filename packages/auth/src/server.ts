@@ -30,14 +30,14 @@ export const auth = betterAuth({
   },
   database: drizzleAdapter(db, {
     provider: "pg",
-    schema: schema,
+    schema,
   }),
   databaseHooks: {
     user: {
       create: {
         async before(user) {
           if (!user.username) {
-            const generatedUsername = "user" + createId();
+            const generatedUsername = `user${createId()}`;
             return {
               data: {
                 ...user,
@@ -129,26 +129,41 @@ export const auth = betterAuth({
   },
 });
 
-let _schema: ReturnType<typeof auth.api.generateOpenAPISchema>;
-const getSchema = async () => (_schema ??= auth.api.generateOpenAPISchema());
+type OpenAPISchema = Awaited<ReturnType<typeof auth.api.generateOpenAPISchema>>;
+type OpenAPIOperation = { tags?: string[] };
+// Intentionally loose: `better-auth` and `@elysiajs/openapi` describe OpenAPI
+// shapes that do not assign to each other, so the consumer re-assigns via
+// structural duck-typing.
+type OpenAPIPaths = Record<string, Record<string, OpenAPIOperation>>;
+type OpenAPIComponents = Record<string, object>;
+
+let schemaPromise: ReturnType<typeof auth.api.generateOpenAPISchema> | undefined;
+const getSchema = async (): Promise<OpenAPISchema> => {
+  schemaPromise ??= auth.api.generateOpenAPISchema();
+  return await schemaPromise;
+};
 
 export const OpenAPI = {
-  getPaths: (prefix = "/auth/api") =>
-    getSchema().then(({ paths }) => {
-      const reference: typeof paths = Object.create(null);
+  getPaths: async (prefix = "/auth/api"): Promise<OpenAPIPaths> => {
+    const { paths } = await getSchema();
+    const reference: OpenAPIPaths = Object.create(null);
 
-      for (const path of Object.keys(paths)) {
-        const key = prefix + path;
-        reference[key] = paths[path];
+    for (const path of Object.keys(paths)) {
+      const key = prefix + path;
+      const pathItem = paths[path] as Record<string, OpenAPIOperation>;
+      reference[key] = pathItem;
 
-        for (const method of Object.keys(paths[path])) {
-          const operation = (reference[key] as any)[method];
+      for (const method of Object.keys(pathItem)) {
+        const operation = pathItem[method];
 
-          operation.tags = ["Better Auth"];
-        }
+        if (operation) operation.tags = ["Better Auth"];
       }
+    }
 
-      return reference;
-    }) as Promise<any>,
-  components: getSchema().then(({ components }) => components) as Promise<any>,
+    return reference;
+  },
+  components: (async (): Promise<OpenAPIComponents> => {
+    const { components } = await getSchema();
+    return components as OpenAPIComponents;
+  })(),
 } as const;

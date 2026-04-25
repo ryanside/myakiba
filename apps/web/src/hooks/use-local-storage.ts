@@ -16,7 +16,7 @@ function useLocalStorage<T>(
   const setValue = useCallback(
     (value: T | ((prev: T) => T)) => {
       setStoredValue((prev) => {
-        const nextValue = value instanceof Function ? value(prev) : value;
+        const nextValue = typeof value === "function" ? (value as (prev: T) => T)(prev) : value;
         try {
           globalThis.localStorage.setItem(key, JSON.stringify(nextValue));
         } catch {

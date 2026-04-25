@@ -10,7 +10,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { DebouncedInput } from "@/components/debounced-input";
 import OrdersFiltersForm from "./orders-filters-form";
-import { SortCombobox, type SortableColumn } from "@/components/ui/sort-combobox";
+import { SortCombobox } from "@/components/ui/sort-combobox";
+import type { SortableColumn } from "@/components/ui/sort-combobox";
 import { OrderForm } from "./order-form";
 import UnifiedItemMoveForm from "./unified-item-move-form";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";

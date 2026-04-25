@@ -1,6 +1,8 @@
-import { useMemo, type ReactNode } from "react";
+import { useMemo } from "react";
+import type { ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
+import { flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
 
 export interface RowNavigation {
@@ -32,7 +34,7 @@ export function LeaderboardTable<TRow extends Record<string, CellValue>>({
   readonly getRowNavigation?: (row: TRow) => RowNavigation | undefined;
 }): ReactNode {
   const navigate = useNavigate();
-  const tableData = useMemo(() => Array.from(rows), [rows]);
+  const tableData = useMemo(() => [...rows], [rows]);
   const tableColumns = useMemo<ColumnDef<TRow, CellValue>[]>(
     () => [
       {

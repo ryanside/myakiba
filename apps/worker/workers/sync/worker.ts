@@ -36,6 +36,7 @@ async function executeSyncJob({
   orderId,
   finalize,
 }: ExecuteSyncJobParams): Promise<ProcessSyncJobResult> {
+  const jobId = job.id ?? "";
   const jobLog = createLogger<WorkerJobContext>({
     ...createDefaultJobContext(),
     queue: { name: queueName, jobName: job.name },
@@ -75,7 +76,7 @@ async function executeSyncJob({
         existingCount,
         context: {
           redis,
-          jobId: job.id!,
+          jobId,
           syncSessionId,
           userId,
           log: jobLog,
@@ -92,13 +93,13 @@ async function executeSyncJob({
       throw error;
     }
 
+    const getOutcome = (): "success" | "partial" | "error" => {
+      if (result.sessionStatus === "completed") return "success";
+      if (result.sessionStatus === "partial") return "partial";
+      return "error";
+    };
     jobLog.set({
-      outcome:
-        result.sessionStatus === "completed"
-          ? "success"
-          : result.sessionStatus === "partial"
-            ? "partial"
-            : "error",
+      outcome: getOutcome(),
       sync: {
         sessionStatus: result.sessionStatus,
         statusMessage: result.statusMessage,
@@ -143,7 +144,7 @@ export const syncWorker = new Worker(
       await publishJobStatus({
         redis,
         state: createJobStatusState({
-          jobId: job.id!,
+          jobId: job.id ?? "",
           totalItems: 0,
           phase: "failed",
           statusMessage: invalidPayloadMessage,
@@ -168,7 +169,7 @@ export const syncWorker = new Worker(
 
     if (type === "csv") {
       const data = validatedData.data;
-      const itemIds = Array.from(new Set(data.items.map((item) => item.itemExternalId)));
+      const itemIds = [...new Set(data.items.map((item) => item.itemExternalId))];
 
       return executeSyncJob({
         job,
@@ -196,7 +197,7 @@ export const syncWorker = new Worker(
 
     if (type === "order") {
       const { order } = validatedData.data;
-      const itemIds = Array.from(new Set(order.itemsToScrape.map((item) => item.itemExternalId)));
+      const itemIds = [...new Set(order.itemsToScrape.map((item) => item.itemExternalId))];
 
       return executeSyncJob({
         job,
@@ -225,7 +226,7 @@ export const syncWorker = new Worker(
 
     if (type === "order-item") {
       const { order } = validatedData.data;
-      const itemIds = Array.from(new Set(order.itemsToScrape.map((item) => item.itemExternalId)));
+      const itemIds = [...new Set(order.itemsToScrape.map((item) => item.itemExternalId))];
 
       return executeSyncJob({
         job,
@@ -253,9 +254,7 @@ export const syncWorker = new Worker(
     }
 
     const { collection } = validatedData.data;
-    const itemIds = Array.from(
-      new Set(collection.itemsToScrape.map((item) => item.itemExternalId)),
-    );
+    const itemIds = [...new Set(collection.itemsToScrape.map((item) => item.itemExternalId))];
 
     return executeSyncJob({
       job,
@@ -284,7 +283,7 @@ export const syncWorker = new Worker(
       host: env.REDIS_HOST,
       port: env.REDIS_PORT,
       retryStrategy(times: number): number {
-        return Math.max(Math.min(Math.exp(times), 20000), 1000);
+        return Math.max(Math.min(Math.exp(times), 20_000), 1000);
       },
     },
     concurrency: 50,
@@ -318,18 +317,18 @@ syncWorker.on("failed", async (job, err) => {
 
   const { syncSessionId } = parsedJobData.data;
   const data = parsedJobData.data;
-  const existingCount =
-    data.type === "csv"
-      ? data.existingCount
-      : data.type === "order" || data.type === "order-item"
-        ? data.order.existingCount
-        : data.collection.existingCount;
-  const scrapeRowCount =
-    data.type === "csv"
-      ? data.items.length
-      : data.type === "order" || data.type === "order-item"
-        ? data.order.itemsToScrape.length
-        : data.collection.itemsToScrape.length;
+  const getExistingCount = (): number => {
+    if (data.type === "csv") return data.existingCount;
+    if (data.type === "order" || data.type === "order-item") return data.order.existingCount;
+    return data.collection.existingCount;
+  };
+  const existingCount = getExistingCount();
+  const getScrapeRowCount = (): number => {
+    if (data.type === "csv") return data.items.length;
+    if (data.type === "order" || data.type === "order-item") return data.order.itemsToScrape.length;
+    return data.collection.itemsToScrape.length;
+  };
+  const scrapeRowCount = getScrapeRowCount();
 
   const successCount = existingCount;
   const failCount = scrapeRowCount;

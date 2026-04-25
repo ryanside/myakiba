@@ -47,9 +47,9 @@ function groupReleases(releases: readonly OrderItemRelease[]): readonly GroupedR
       grouped.set(r.releaseDate, { image: r.itemImage });
     }
   }
-  return Array.from(grouped.entries())
+  return [...grouped.entries()]
     .map(([date, { image }]) => ({ date, image }))
-    .sort((a, b) => a.date.localeCompare(b.date));
+    .toSorted((a, b) => a.date.localeCompare(b.date));
 }
 
 const CLEAR_VALUE = "__clear__";
@@ -172,12 +172,13 @@ export function PopoverReleaseDateCell({
     setIsOpen(false);
   };
 
-  const displayValue =
-    value && dateValue
-      ? triggerVariant === "outline"
-        ? format(dateValue, "PPP")
-        : formatDateOnlyForDisplay(value, dateFormat)
-      : null;
+  const getDisplayValue = (): string | null => {
+    if (!(value && dateValue)) return null;
+    return triggerVariant === "outline"
+      ? format(dateValue, "PPP")
+      : formatDateOnlyForDisplay(value, dateFormat);
+  };
+  const displayValue = getDisplayValue();
 
   const defaultTrigger = (
     <Button

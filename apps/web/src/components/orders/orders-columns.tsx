@@ -23,12 +23,7 @@ import {
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Link } from "@tanstack/react-router";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
-import {
-  type ColumnDef,
-  type Row,
-  type RowSelectionState,
-  type OnChangeFn,
-} from "@tanstack/react-table";
+import type { ColumnDef, Row, RowSelectionState, OnChangeFn } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import type { CascadeOptions, EditedOrder } from "@myakiba/contracts/orders/schema";
@@ -577,12 +572,13 @@ export function createOrdersColumns({
       cell: ({ row }) => {
         const { itemCount } = row.original;
         return (
-          <div
+          <button
+            type="button"
             className="text-sm font-medium text-foreground hover:text-primary cursor-pointer"
             onClick={() => row.getToggleExpandedHandler()()}
           >
             {itemCount} {itemCount === 1 ? "item" : "items"}
-          </div>
+          </button>
         );
       },
       enableSorting: true,

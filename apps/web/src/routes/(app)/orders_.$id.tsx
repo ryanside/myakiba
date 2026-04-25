@@ -86,7 +86,12 @@ function RouteComponent() {
     return pendingCollectionItemIdsRef.current.has(collectionId);
   }, []);
 
-  const { data, isPending, isError, error } = useQuery({
+  const {
+    data,
+    isPending,
+    isError,
+    error: orderError,
+  } = useQuery({
     queryKey: ["order", id],
     queryFn: () => getOrder(id),
     staleTime: 1000 * 60 * 5,
@@ -167,7 +172,7 @@ function RouteComponent() {
   };
 
   const handleEditItem = async (values: CollectionItemFormValues) => {
-    setPendingCollectionItemIdList((previous) => Array.from(new Set([...previous, values.id])));
+    setPendingCollectionItemIdList((previous) => [...new Set([...previous, values.id])]);
     try {
       await editItemMutation.mutateAsync({ values });
     } finally {
@@ -178,7 +183,7 @@ function RouteComponent() {
   };
 
   const handleDeleteItem = async (orderId: string, collectionId: string) => {
-    setPendingCollectionItemIdList((previous) => Array.from(new Set([...previous, collectionId])));
+    setPendingCollectionItemIdList((previous) => [...new Set([...previous, collectionId])]);
     try {
       await deleteItemMutation.mutateAsync({ orderId, collectionId });
     } finally {
@@ -196,7 +201,7 @@ function RouteComponent() {
     return (
       <div className="flex flex-col gap-3">
         <BackLink to="/orders" text="Back" font="sans" className="self-start" />
-        <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
+        <div className="text-lg font-medium text-destructive">Error: {orderError.message}</div>
       </div>
     );
   }

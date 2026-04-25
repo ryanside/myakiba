@@ -24,8 +24,6 @@ apps/*/dist
 test.ts
 *.spec.ts
 *.spec.tsx
-.eslintrc*
-eslint.config.*
 .prettierrc*
 tsconfig.tsbuildinfo
 bts.jsonc

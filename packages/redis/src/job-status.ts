@@ -47,7 +47,7 @@ export const writeJobStatusSnapshotAndPublish = async (
 
   for (const [commandError] of results) {
     if (commandError) {
-      throw commandError;
+      throw commandError instanceof Error ? commandError : new Error(String(commandError));
     }
   }
 };

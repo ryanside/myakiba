@@ -23,10 +23,12 @@ import {
 import { Link, useLocation } from "@tanstack/react-router";
 import { useRef } from "react";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
-import { GitCompareIcon, type GitCompareIconHandle } from "../ui/git-compare";
+import { GitCompareIcon } from "../ui/git-compare";
+import type { GitCompareIconHandle } from "../ui/git-compare";
 import SyncWidget from "../sync/sync-widget";
 import { Button } from "../ui/button";
-import { PlusIcon, type PlusIconHandle } from "../ui/plus";
+import { PlusIcon } from "../ui/plus";
+import type { PlusIconHandle } from "../ui/plus";
 
 const data = {
   navMain: [

@@ -174,13 +174,11 @@ function RouteComponent() {
                   if (value !== fieldApi.form.getFieldValue("password")) {
                     return "Passwords do not match";
                   }
-                  return undefined;
                 },
                 onBlur: ({ value, fieldApi }) => {
                   if (value !== fieldApi.form.getFieldValue("password")) {
                     return "Passwords do not match";
                   }
-                  return undefined;
                 },
               }}
             >

@@ -35,7 +35,7 @@ const formatFailureMessage = (error?: Error | null): string => {
   return `${SYNC_STATUS_MESSAGES.failedPersist} - ${error.message}`;
 };
 
-export const createFetchOptions = (image: boolean = false) => ({
+export const createFetchOptions = (image = false) => ({
   proxy: env.HTTP_PROXY,
   tls: {
     rejectUnauthorized: false,
@@ -43,7 +43,7 @@ export const createFetchOptions = (image: boolean = false) => ({
   headers: {
     ...(!image && { "Accept-Encoding": "gzip, deflate, br" }),
   },
-  signal: AbortSignal.timeout(10000),
+  signal: AbortSignal.timeout(10_000),
 });
 
 /**
@@ -120,7 +120,12 @@ export const resolveTerminalState = ({
   totalRowCount,
   error = null,
 }: ResolveTerminalStateParams): ResolvedTerminalState => {
-  const sessionStatus = failCount === 0 ? "completed" : successCount > 0 ? "partial" : "failed";
+  const getSessionStatus = (): "completed" | "partial" | "failed" => {
+    if (failCount === 0) return "completed";
+    if (successCount > 0) return "partial";
+    return "failed";
+  };
+  const sessionStatus = getSessionStatus();
 
   if (error) {
     return {

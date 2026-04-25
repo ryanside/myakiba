@@ -1,6 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { DragDropVerticalIcon, Tick02Icon } from "@hugeicons/core-free-icons";
-import { useId, useState, type ReactElement } from "react";
+import { useId, useState } from "react";
+import type { ReactElement } from "react";
 import type { Table } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -27,7 +28,7 @@ export function DataGridColumnCombobox<TData>({
   const [isOpen, setIsOpen] = useState(false);
   const columns = table
     .getAllColumns()
-    .filter((column) => typeof column.accessorFn !== "undefined" && column.getCanHide());
+    .filter((column) => column.accessorFn !== undefined && column.getCanHide());
 
   const defaultTrigger = (
     <Button
@@ -35,7 +36,6 @@ export function DataGridColumnCombobox<TData>({
       role="combobox"
       aria-controls={listboxId}
       aria-expanded={isOpen}
-      aria-haspopup="listbox"
       className="justify-between"
     >
       <HugeiconsIcon icon={DragDropVerticalIcon} className="h-4 w-4" />

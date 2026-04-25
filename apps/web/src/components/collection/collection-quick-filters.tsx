@@ -42,7 +42,7 @@ const GROUP_BY_LABEL = new Map(QUICK_FILTER_GROUPS.map((g) => [g.label, g] as co
 
 export function CollectionQuickFilters(): React.ReactElement {
   const { filters, setFilters } = useCollectionFilters();
-  const activeCategories = new Set<Category>(filters.category ?? []);
+  const activeCategories = new Set<Category>(filters.category);
 
   const activeGroupLabels = QUICK_FILTER_GROUPS.filter((g) =>
     g.categories.every((cat) => activeCategories.has(cat)),
