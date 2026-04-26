@@ -12,6 +12,8 @@
   },
   "iconLibrary": "hugeicons",
   "rtl": false,
+  "menuColor": "default-translucent",
+  "menuAccent": "subtle",
   "aliases": {
     "components": "@/components",
     "utils": "@/lib/utils",
@@ -19,13 +21,12 @@
     "lib": "@/lib",
     "hooks": "@/hooks"
   },
-  "menuColor": "default-translucent",
-  "menuAccent": "subtle",
   "registries": {
     "@reui": "https://reui.io/r/{style}/{name}.json",
     "@react-bits": "https://reactbits.dev/r/{name}.json",
     "@tailark": "https://tailark.com/r/{name}.json",
     "@diceui": "https://diceui.com/r/{name}.json",
-    "@kibo-ui": "https://www.kibo-ui.com/r/{name}.json"
+    "@kibo-ui": "https://www.kibo-ui.com/r/{name}.json",
+    "@ncdai": "https://chanhdai.com/r/{name}.json"
   }
 }

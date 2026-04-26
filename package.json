@@ -60,7 +60,7 @@
     "ultracite": "7.6.1"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx,json,jsonc,css,scss,md,mdx}": [
+    "*.{js,jsx,ts,tsx,md,mdx}": [
       "bun x ultracite fix"
     ]
   },
