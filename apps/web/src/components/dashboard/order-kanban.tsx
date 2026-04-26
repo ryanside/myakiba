@@ -12,15 +12,16 @@ import {
   KanbanItem,
   KanbanItemHandle,
   KanbanOverlay,
-  type KanbanMoveEvent,
 } from "@/components/reui/kanban";
+import type { KanbanMoveEvent } from "@/components/reui/kanban";
 import { PopoverDatePickerCell } from "@/components/cells/popover-date-picker-cell";
 import { PopoverReleaseDateCell } from "@/components/cells/popover-release-date-cell";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { updateOrderStatus, updateOrderDate, type OrderDateField } from "@/queries/orders";
+import { updateOrderStatus, updateOrderDate } from "@/queries/orders";
+import type { OrderDateField } from "@/queries/orders";
 import type { DashboardKanbanOrder } from "@/queries/dashboard";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
@@ -45,7 +46,7 @@ const COLUMNS: Record<string, { readonly title: string; readonly color: string }
   Owned: { title: "Owned", color: ORDER_STATUS_COLORS.Owned },
 };
 
-const DATE_FIELDS: ReadonlyArray<{ readonly field: OrderDateField; readonly label: string }> = [
+const DATE_FIELDS: readonly { readonly field: OrderDateField; readonly label: string }[] = [
   { field: "releaseDate", label: "Release" },
   { field: "orderDate", label: "Ordered" },
   { field: "paymentDate", label: "Paid" },

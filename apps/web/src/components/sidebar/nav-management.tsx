@@ -1,4 +1,5 @@
-import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import type { IconSvgElement } from "@hugeicons/react";
 import { Collapsible } from "@/components/ui/collapsible";
 import {
   SidebarGroup,

@@ -157,24 +157,24 @@ class JobStatusSubscriptionRegistry {
     }
 
     const subscriber = this.ensureSubscriber();
-    channelState.subscribePromise = subscriber
-      .subscribe(channel)
-      .then(() => {
+    const subscribePromise = (async (): Promise<void> => {
+      try {
+        await subscriber.subscribe(channel);
         channelState.subscribed = true;
-      })
-      .catch((error: Error | string) => {
-        throw toError(error);
-      })
-      .finally(() => {
+      } catch (error) {
+        throw toError(error as Error | string);
+      } finally {
         channelState.subscribePromise = null;
-      });
+      }
+    })();
+    channelState.subscribePromise = subscribePromise;
 
-    await channelState.subscribePromise;
+    await subscribePromise;
   }
 
   private async releaseChannel(channel: string, channelState: ChannelState): Promise<void> {
     if (channelState.subscribePromise) {
-      await channelState.subscribePromise.catch(() => undefined);
+      await channelState.subscribePromise.catch(() => {});
     }
 
     if (channelState.consumers.size > 0) {
@@ -184,7 +184,7 @@ class JobStatusSubscriptionRegistry {
     this.channels.delete(channel);
 
     if (channelState.subscribed) {
-      await this.subscriber?.unsubscribe(channel).catch(() => undefined);
+      await this.subscriber?.unsubscribe(channel).catch(() => {});
     }
 
     if (this.channels.size === 0) {

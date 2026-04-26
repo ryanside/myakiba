@@ -7,11 +7,11 @@ import {
   getResyncJobId,
   ITEM_RESYNC_JOB_NAME,
   ITEM_RESYNC_QUEUE_NAME,
-  type ItemResyncState,
 } from "@myakiba/redis/item-resync";
+import type { ItemResyncState } from "@myakiba/redis/item-resync";
 import { db } from "@myakiba/db/client";
 import { item } from "@myakiba/db/schema/figure";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 const itemResyncQueue = new Queue(ITEM_RESYNC_QUEUE_NAME, {
   connection: {
@@ -34,7 +34,6 @@ itemResyncQueue.on("error", (error: Error) => {
 type ResyncableItem = {
   readonly id: string;
   readonly externalId: number;
-  readonly source: "mfc" | "custom";
 };
 
 async function deriveResyncStatus(itemId: string): Promise<ItemResyncState> {
@@ -61,21 +60,17 @@ async function deriveResyncStatus(itemId: string): Promise<ItemResyncState> {
 }
 
 class ItemResyncService {
-  async validateItemForResync(itemId: string): Promise<ResyncableItem> {
+  async validateItemForResync(externalId: number): Promise<ResyncableItem> {
     const [row] = await db
-      .select({ id: item.id, externalId: item.externalId, source: item.source })
+      .select({ id: item.id })
       .from(item)
-      .where(eq(item.id, itemId));
+      .where(and(eq(item.source, "mfc"), eq(item.externalId, externalId)));
 
     if (!row) {
       throw new Error("ITEM_NOT_FOUND");
     }
 
-    if (row.source !== "mfc" || row.externalId === null) {
-      throw new Error("ITEM_NOT_RESYNCABLE");
-    }
-
-    return { id: row.id, externalId: row.externalId, source: row.source };
+    return { id: row.id, externalId };
   }
 
   async getResyncStatus(itemId: string): Promise<ItemResyncState> {

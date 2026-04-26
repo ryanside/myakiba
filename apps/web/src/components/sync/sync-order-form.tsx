@@ -54,9 +54,11 @@ import { getCurrencyLocale } from "@/lib/locale";
 export default function SyncOrderForm({
   handleSyncOrderSubmit,
   currency,
+  initialItemExternalId,
 }: {
   handleSyncOrderSubmit: (values: SyncOrder) => void;
   currency: Currency;
+  initialItemExternalId?: string;
 }) {
   const userLocale = getCurrencyLocale(currency);
 
@@ -70,7 +72,7 @@ export default function SyncOrderForm({
   } = useCascadeOptions();
 
   const orderForm = useForm({
-    defaultValues: createDefaultSyncFormOrder(),
+    defaultValues: createDefaultSyncFormOrder(initialItemExternalId),
     onSubmit: async ({ value }) => {
       const toMinorUnits = (amount: string): number => majorStringToMinorUnits(amount);
       const updatedItems = value.items.map((item) => {
@@ -102,7 +104,7 @@ export default function SyncOrderForm({
 
         return {
           ...rest,
-          itemExternalId: parseInt(extractedId, 10),
+          itemExternalId: Number.parseInt(extractedId, 10),
           price: toMinorUnits(updatedItem.price),
           orderDate: updatedItem.orderDate || null,
           paymentDate: updatedItem.paymentDate || null,
@@ -651,7 +653,9 @@ export default function SyncOrderForm({
                                           type="number"
                                           min="1"
                                           onChange={(e) =>
-                                            countField.handleChange(parseInt(e.target.value) || 1)
+                                            countField.handleChange(
+                                              Number.parseInt(e.target.value, 10) || 1,
+                                            )
                                           }
                                           placeholder="1"
                                         />

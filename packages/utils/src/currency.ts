@@ -23,7 +23,7 @@ export function formatCurrencyFromMinorUnits(
 
   return new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: currency,
+    currency,
   }).format(amountMajorUnits);
 }
 
@@ -53,13 +53,13 @@ export function parseMoneyToMinorUnits(input: string): number {
   if (trimmed.length === 0) return 0;
 
   // Keep digits, minus sign, and dot. Strip commas/spaces/currency symbols.
-  const normalized = trimmed.replace(/[^\d.-]/g, "");
+  const normalized = trimmed.replaceAll(/[^\d.-]/g, "");
   const isNegative = normalized.startsWith("-");
   const withoutSign = isNegative ? normalized.slice(1) : normalized;
 
   const [rawWhole = "0", rawFraction = ""] = withoutSign.split(".", 2);
-  const whole = rawWhole.replace(/\D/g, "");
-  const fraction = rawFraction.replace(/\D/g, "");
+  const whole = rawWhole.replaceAll(/\D/g, "");
+  const fraction = rawFraction.replaceAll(/\D/g, "");
 
   const safeWhole = whole.length === 0 ? "0" : whole;
 

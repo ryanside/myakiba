@@ -1,15 +1,15 @@
 import { log } from "evlog";
-import type { ScrapedItem } from "./types";
 import { normalizeScrapedDate } from "@myakiba/utils/date-only";
 import { normalizeScale } from "@myakiba/contracts/shared/scale";
 import { v5 as uuidv5 } from "uuid";
 import type {
-  AssembledScrapedData,
-  AssembledItem,
-  AssembledItemRelease,
   AssembledEntry,
   AssembledEntryToItem,
+  AssembledItem,
+  AssembledItemRelease,
+  AssembledScrapedData,
   LatestReleaseInfo,
+  ScrapedItem,
 } from "./types";
 
 const RELEASE_UUID_NAMESPACE = "2c8ed313-3f54-4401-a280-2410ce639ef3";
@@ -164,7 +164,7 @@ export function assembleScrapedData(
     });
 
     if (releasesForItem.length > 0) {
-      const latest = [...releasesForItem].sort((a, b) => a.date.localeCompare(b.date))[
+      const latest = [...releasesForItem].toSorted((a, b) => a.date.localeCompare(b.date))[
         releasesForItem.length - 1
       ];
       latestReleaseIdByExternalId.set(scraped.id, {

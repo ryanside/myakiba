@@ -3,20 +3,18 @@ import {
   useQueryClient,
   experimental_streamedQuery as streamedQuery,
 } from "@tanstack/react-query";
-import { toast } from "sonner";
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import { app } from "@/lib/treaty-client";
-import {
-  parseSSEJobStatusStream,
-  type JobStatusEvent,
-  type SSEJobStatusChunk,
-} from "@/lib/sync-job-status-stream";
+import { parseSSEJobStatusStream } from "@/lib/sync-job-status-stream";
+import type { JobStatusEvent, SSEJobStatusChunk } from "@/lib/sync-job-status-stream";
 import { resolveSyncMessage } from "@/lib/sync";
+import { showSyncToast } from "@/components/sync/sync-toast";
 
-const buildInitialValue = (jobId: string): JobStatusEvent => {
+export function useSyncJobStatusQuery(jobId: string | null, sessionId: string | null = null) {
+  const queryClient = useQueryClient();
   const now = new Date().toISOString();
-  return {
-    jobId,
+  const initialValue: JobStatusEvent = {
+    jobId: jobId ?? "",
     phase: "queued",
     statusMessage: SYNC_STATUS_MESSAGES.connecting,
     progress: null,
@@ -26,10 +24,6 @@ const buildInitialValue = (jobId: string): JobStatusEvent => {
     updatedAt: now,
     terminalState: null,
   };
-};
-
-export function useSyncJobStatusQuery(jobId: string | null) {
-  const queryClient = useQueryClient();
 
   return useQuery({
     queryKey: ["syncJobStatus", jobId] as const,
@@ -63,30 +57,24 @@ export function useSyncJobStatusQuery(jobId: string | null) {
               false,
             );
 
-            if (terminalState === "success") {
-              toast.success(message);
-            } else if (terminalState === "partial") {
-              toast.warning(message);
-            } else if (terminalState === "timeout") {
-              toast.info(message);
-            } else {
-              const description =
-                chunk.data.error?.message && chunk.data.error.message !== message
-                  ? chunk.data.error.message
-                  : undefined;
-              if (description) {
-                toast.error(message, { description });
-              } else {
-                toast.error(message);
-              }
-            }
+            const description =
+              chunk.data.error?.message && chunk.data.error.message !== message
+                ? chunk.data.error.message
+                : undefined;
+
+            showSyncToast({
+              state: terminalState,
+              sessionId: sessionId ?? undefined,
+              message,
+              description,
+            });
           }
         }
 
         return withFinishedCheck();
       },
       reducer: (_prev: JobStatusEvent, chunk: SSEJobStatusChunk) => chunk.data,
-      initialValue: buildInitialValue(jobId ?? ""),
+      initialValue,
     }),
     refetchOnWindowFocus: false,
     retry: false,

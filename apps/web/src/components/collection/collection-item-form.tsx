@@ -40,7 +40,8 @@ import {
   SHIPPING_METHODS,
   CONDITIONS,
 } from "@myakiba/contracts/shared/constants";
-import { useState, type ReactElement } from "react";
+import { useState } from "react";
+import type { ReactElement } from "react";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { formatReleaseDate, getCurrencyLocale } from "@/lib/locale";
 
@@ -161,7 +162,9 @@ function CollectionItemFormContent({
                         onBlur={field.handleBlur}
                         type="number"
                         min="1"
-                        onChange={(e) => field.handleChange(parseInt(e.target.value) || 1)}
+                        onChange={(e) =>
+                          field.handleChange(Number.parseInt(e.target.value, 10) || 1)
+                        }
                         placeholder="1"
                       />
                       {!field.state.meta.isValid && (

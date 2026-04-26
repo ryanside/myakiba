@@ -49,8 +49,8 @@ export function InlineTextCell({
       setIsEditing(false);
       try {
         await onSubmit(newValue);
-      } catch (err) {
-        console.error("Failed to submit edit:", err);
+      } catch (error) {
+        console.error("Failed to submit edit:", error);
       }
     },
     [onSubmit, resetToPreviousValue, validate, value],

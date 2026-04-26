@@ -9,8 +9,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { DebouncedInput } from "@/components/debounced-input";
 import FiltersForm from "./filters-form";
-import { SortCombobox, type SortableColumn } from "@/components/ui/sort-combobox";
-import { ConfirmationPopover } from "@/components/ui/confirmation-popover";
+import { SortCombobox } from "@/components/ui/sort-combobox";
+import type { SortableColumn } from "@/components/ui/sort-combobox";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   ActionBar,
   ActionBarSelection,
@@ -179,8 +180,8 @@ export function CollectionToolbar({
             currency={currency}
             intent="add"
           />
-          <ConfirmationPopover
-            trigger={
+          <ConfirmDialog
+            renderTrigger={
               <ActionBarItem
                 disabled={selectedItems.collectionIds.size === 0 || isDeletingCollectionItems}
                 onSelect={(e) => e.preventDefault()}
@@ -190,8 +191,8 @@ export function CollectionToolbar({
                 <span>{isDeletingCollectionItems ? "Deleting..." : "Delete"}</span>
               </ActionBarItem>
             }
-            title="Delete the selected collection items?"
-            disabled={selectedItems.collectionIds.size === 0 || isDeletingCollectionItems}
+            title={`Delete ${selectedItems.collectionIds.size} ${selectedItems.collectionIds.size === 1 ? "item" : "items"}?`}
+            description={`This will permanently remove ${selectedItems.collectionIds.size === 1 ? "this item" : `${selectedItems.collectionIds.size} items`} from your collection.`}
             onConfirm={async () => {
               await onDeleteCollectionItems(selectedItems.collectionIds);
               clearSelections();

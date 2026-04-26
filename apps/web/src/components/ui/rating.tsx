@@ -112,12 +112,28 @@ function Rating({
       const fillPercentage = partiallyFilled ? (displayRating - (i - 1)) * 100 : 0;
 
       stars.push(
+        // oxlint-disable-next-line no-static-element-interactions
         <div
           key={i}
           className={cn("relative", editable && "cursor-pointer")}
-          onClick={() => handleStarClick(i)}
-          onMouseEnter={() => handleStarMouseEnter(i)}
-          onMouseLeave={handleStarMouseLeave}
+          onClick={editable ? () => handleStarClick(i) : undefined}
+          onKeyDown={
+            editable
+              ? (event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    handleStarClick(i);
+                  }
+                }
+              : undefined
+          }
+          onMouseEnter={editable ? () => handleStarMouseEnter(i) : undefined}
+          onMouseLeave={editable ? handleStarMouseLeave : undefined}
+          role={editable ? "slider" : undefined}
+          aria-valuemin={editable ? 0 : undefined}
+          aria-valuemax={editable ? maxRating : undefined}
+          aria-valuenow={editable ? displayRating : undefined}
+          tabIndex={editable ? 0 : undefined}
         >
           {/* Background star (empty) */}
           <HugeiconsIcon

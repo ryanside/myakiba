@@ -36,9 +36,9 @@ export interface MonthlyData {
   readonly unpaidOrderCount: number;
   readonly paidAmount: number;
   readonly unpaidAmount: number;
-  readonly shopBreakdown: ReadonlyArray<ShopBreakdownEntry>;
+  readonly shopBreakdown: readonly ShopBreakdownEntry[];
   readonly costBreakdown: CostBreakdownData;
-  readonly orders: ReadonlyArray<DashboardKanbanOrder>;
+  readonly orders: readonly DashboardKanbanOrder[];
 }
 
 export type DashboardResponse = NonNullable<

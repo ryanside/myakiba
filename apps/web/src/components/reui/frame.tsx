@@ -1,4 +1,5 @@
-import { cva, type VariantProps } from "class-variance-authority";
+import { cva } from "class-variance-authority";
+import type { VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 
@@ -84,7 +85,7 @@ function Frame({
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// oxlint-disable-next-line no-unused-vars
 function FramePanel({ className, fit, ...props }: React.ComponentProps<"div"> & { fit?: boolean }) {
   return (
     <div

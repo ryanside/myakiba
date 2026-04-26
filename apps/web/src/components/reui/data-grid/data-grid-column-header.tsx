@@ -85,15 +85,17 @@ function DataGridColumnHeaderInner<TData, TValue>({
     className,
   );
 
-  const sortIcon =
-    canSort &&
-    (isSorted === "desc" ? (
-      <HugeiconsIcon icon={ArrowDown02Icon} strokeWidth={2} className="size-3.25" />
-    ) : isSorted === "asc" ? (
-      <HugeiconsIcon icon={ArrowUp02Icon} strokeWidth={2} className="size-3.25" />
-    ) : (
-      <HugeiconsIcon icon={UnfoldMoreIcon} strokeWidth={2} className="mt-px size-3.25" />
-    ));
+  const renderSortIcon = (): ReactNode => {
+    if (!canSort) return null;
+    if (isSorted === "desc") {
+      return <HugeiconsIcon icon={ArrowDown02Icon} strokeWidth={2} className="size-3.25" />;
+    }
+    if (isSorted === "asc") {
+      return <HugeiconsIcon icon={ArrowUp02Icon} strokeWidth={2} className="size-3.25" />;
+    }
+    return <HugeiconsIcon icon={UnfoldMoreIcon} strokeWidth={2} className="mt-px size-3.25" />;
+  };
+  const sortIcon = renderSortIcon();
 
   const hasControls =
     props.tableLayout?.columnsMovable ||
@@ -279,7 +281,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
           <DropdownMenuSubContent side="right">
             {table
               .getAllColumns()
-              .filter((col) => typeof col.accessorFn !== "undefined" && col.getCanHide())
+              .filter((col) => col.accessorFn !== undefined && col.getCanHide())
               .map((col) => (
                 <DropdownMenuCheckboxItem
                   key={col.id}
@@ -297,6 +299,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
     }
 
     return items;
+    // oxlint-disable-next-line exhaustive-deps
   }, [
     filter,
     canSort,
@@ -313,7 +316,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
     table,
     columnIndex,
     columnOrder,
-    columnVisibilityKey, // Needed to update checkbox states when visibility changes
+    columnVisibilityKey,
   ]);
 
   if (hasControls) {
@@ -327,7 +330,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
                 className={headerButtonClassName}
                 disabled={isLoading || recordCount === 0}
               >
-                {icon && icon}
+                {icon}
                 {title}
                 {sortIcon}
               </Button>
@@ -367,7 +370,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
           disabled={isLoading || recordCount === 0}
           onClick={handleSort}
         >
-          {icon && icon}
+          {icon}
           {title}
           {sortIcon}
         </Button>
@@ -377,7 +380,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
 
   return (
     <div className={headerLabelClassName}>
-      {icon && icon}
+      {icon}
       {title}
     </div>
   );

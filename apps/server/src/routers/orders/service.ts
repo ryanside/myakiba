@@ -13,10 +13,10 @@ class OrdersService {
     sortBy: string,
     orderBy: string,
     search?: string,
-    shop?: Array<string>,
+    shop?: string[],
     releaseDateStart?: string,
     releaseDateEnd?: string,
-    shippingMethod?: ReadonlyArray<ShippingMethod>,
+    shippingMethod?: readonly ShippingMethod[],
     orderDateStart?: string,
     orderDateEnd?: string,
     paymentDateStart?: string,
@@ -25,7 +25,7 @@ class OrdersService {
     shippingDateEnd?: string,
     collectionDateStart?: string,
     collectionDateEnd?: string,
-    status?: Array<OrderStatus>,
+    status?: OrderStatus[],
     totalMin?: number,
     totalMax?: number,
     shippingFeeMin?: number,
@@ -226,13 +226,13 @@ class OrdersService {
     userId: string,
     orderIds: string[],
     newOrder: Omit<OrderInsertType, "userId">,
-    cascadeOptions: ReadonlyArray<OrderCascadeOption>,
+    cascadeOptions: readonly OrderCascadeOption[],
   ) {
     const merged = await db.transaction(async (tx) => {
       const newOrderInserted = await tx
         .insert(order)
         .values({
-          userId: userId,
+          userId,
           ...newOrder,
         })
         .returning();
@@ -278,13 +278,13 @@ class OrdersService {
     userId: string,
     collectionIds: string[],
     newOrder: Omit<OrderInsertType, "userId">,
-    cascadeOptions: ReadonlyArray<OrderCascadeOption>,
+    cascadeOptions: readonly OrderCascadeOption[],
   ) {
     const splitted = await db.transaction(async (tx) => {
       const newOrderInserted = await tx
         .insert(order)
         .values({
-          userId: userId,
+          userId,
           ...newOrder,
         })
         .returning();
@@ -322,7 +322,7 @@ class OrdersService {
     userId: string,
     orderId: string,
     updatedOrder: OrderUpdateType,
-    cascadeOptions: ReadonlyArray<OrderCascadeOption>,
+    cascadeOptions: readonly OrderCascadeOption[],
   ) {
     const updated = await db.transaction(async (tx) => {
       const orderUpdated = await tx

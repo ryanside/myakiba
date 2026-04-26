@@ -3,11 +3,8 @@ import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SYNC_TYPE_CONFIG } from "@/lib/sync";
-import {
-  LAUNCHABLE_SYNC_OPTIONS,
-  SyncActionSheet,
-  type LaunchableSyncType,
-} from "@/components/sync/sync-launcher";
+import { LAUNCHABLE_SYNC_OPTIONS, SyncActionSheet } from "@/components/sync/sync-launcher";
+import type { LaunchableSyncType } from "@/components/sync/sync-launcher";
 
 type SyncWidgetProps = {
   readonly TriggerWrapper: React.ReactElement;

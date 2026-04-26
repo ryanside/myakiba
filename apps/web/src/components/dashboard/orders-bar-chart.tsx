@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Bar, BarChart, Cell, XAxis, ReferenceLine } from "recharts";
-import { AnimatePresence } from "motion/react";
-import { useMotionValueEvent, useSpring } from "motion/react";
+import { AnimatePresence, useMotionValueEvent, useSpring } from "motion/react";
 import { useNavigate } from "@tanstack/react-router";
 import { toDateOnlyString } from "@myakiba/utils/date-only";
 import { ChartContainer } from "@/components/ui/chart";
@@ -40,7 +39,7 @@ interface MonthlyOrderData {
 }
 
 interface OrdersBarChartProps {
-  readonly data: ReadonlyArray<MonthlyOrderData>;
+  readonly data: readonly MonthlyOrderData[];
   readonly isLoading?: boolean;
 }
 

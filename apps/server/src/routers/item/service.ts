@@ -8,7 +8,7 @@ import {
   order,
 } from "@myakiba/db/schema/figure";
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
-import type { ItemRelease, ItemReleasesResponse } from "@myakiba/contracts/items/schema";
+import type { ItemRelease, ItemReleasesResponse } from "@myakiba/contracts/item/schema";
 import { normalizeScale } from "@myakiba/contracts/shared/scale";
 import type { EntriesWithRoles, CustomItemInput } from "./model";
 
@@ -50,9 +50,7 @@ class ItemService {
       const entryLinks = input.entries ?? [];
       const entryIds = [
         ...new Set(
-          entryLinks
-            .map((entryLink) => entryLink.entryId)
-            .filter((entryId): entryId is string => Boolean(entryId)),
+          entryLinks.flatMap((entryLink) => (entryLink.entryId ? [entryLink.entryId] : [])),
         ),
       ];
 
@@ -133,14 +131,12 @@ class ItemService {
         (entryLink) => !existingNamedEntriesByKey.has(`${entryLink.name}|${entryLink.category}`),
       );
 
-      const entriesToInsert: Array<typeof entry.$inferInsert> = entriesToCreate.map(
-        (entryLink) => ({
-          name: entryLink.name ?? "",
-          category: entryLink.category,
-          source: "custom",
-          externalId: null,
-        }),
-      );
+      const entriesToInsert: (typeof entry.$inferInsert)[] = entriesToCreate.map((entryLink) => ({
+        name: entryLink.name ?? "",
+        category: entryLink.category,
+        source: "custom",
+        externalId: null,
+      }));
 
       const createdEntries =
         entriesToInsert.length > 0
@@ -266,7 +262,7 @@ class ItemService {
     };
   }
 
-  async getItem(itemId: string) {
+  async getItem(externalId: number) {
     const itemData = await db
       .select({
         id: item.id,
@@ -323,7 +319,7 @@ class ItemService {
         `,
       })
       .from(item)
-      .where(eq(item.id, itemId));
+      .where(and(eq(item.source, "mfc"), eq(item.externalId, externalId)));
 
     if (itemData.length === 0) {
       throw new Error("ITEM_NOT_FOUND");
@@ -334,7 +330,7 @@ class ItemService {
       scale: normalizeScale(itemData[0].scale),
     };
   }
-  async getItemRelatedOrders(userId: string, itemId: string) {
+  async getItemRelatedOrders(userId: string, externalId: number) {
     const orders = await db
       .select({
         id: order.id,
@@ -348,14 +344,15 @@ class ItemService {
         miscFees: order.miscFees,
       })
       .from(order)
-      .leftJoin(collection, eq(order.id, collection.orderId))
-      .where(and(eq(collection.itemId, itemId), eq(order.userId, userId)))
+      .innerJoin(collection, eq(order.id, collection.orderId))
+      .innerJoin(item, eq(collection.itemId, item.id))
+      .where(and(eq(item.source, "mfc"), eq(item.externalId, externalId), eq(order.userId, userId)))
       .groupBy(order.id)
       .orderBy(desc(order.releaseDate));
 
     return orders;
   }
-  async getItemRelatedCollection(userId: string, itemId: string) {
+  async getItemRelatedCollection(userId: string, externalId: number) {
     const collectionItems = await db
       .select({
         id: collection.id,
@@ -379,7 +376,10 @@ class ItemService {
         updatedAt: collection.updatedAt,
       })
       .from(collection)
-      .where(and(eq(collection.itemId, itemId), eq(collection.userId, userId)))
+      .innerJoin(item, eq(collection.itemId, item.id))
+      .where(
+        and(eq(item.source, "mfc"), eq(item.externalId, externalId), eq(collection.userId, userId)),
+      )
       .groupBy(collection.id);
 
     return collectionItems;

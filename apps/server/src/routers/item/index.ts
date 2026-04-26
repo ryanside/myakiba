@@ -6,7 +6,7 @@ import { betterAuth } from "@/middleware/better-auth";
 import { evlog } from "evlog/elysia";
 import { itemParamSchema, customItemSchema } from "./model";
 
-const itemsRouter = new Elysia({ prefix: "/items" })
+const itemRouter = new Elysia({ prefix: "/item" })
   .use(betterAuth)
   .use(evlog())
   .post(
@@ -14,7 +14,7 @@ const itemsRouter = new Elysia({ prefix: "/items" })
     async ({ body, user, log }) => {
       if (!user) return status(401, "Unauthorized");
 
-      log.set({ action: "items.createCustom", user: { id: user.id } });
+      log.set({ action: "item.createCustom", user: { id: user.id } });
 
       const { data: customItem, error } = await tryCatch(ItemService.createCustomItem(body));
 
@@ -42,13 +42,17 @@ const itemsRouter = new Elysia({ prefix: "/items" })
     { body: customItemSchema, auth: true },
   )
   .get(
-    "/:itemId",
+    "/:externalId",
     async ({ params, log }) => {
-      log.set({ action: "items.get", item: { id: params.itemId } });
+      log.set({ action: "item.get", item: { externalId: params.externalId } });
 
-      const { data: item, error } = await tryCatch(ItemService.getItem(params.itemId));
+      const { data: item, error } = await tryCatch(ItemService.getItem(params.externalId));
 
       if (error) {
+        if (error.message === "ITEM_NOT_FOUND") {
+          log.set({ outcome: "not_found" });
+          return status(404, "Item not found");
+        }
         log.error(error, { step: "getItem", outcome: "error" });
         return status(500, "Failed to get item");
       }
@@ -59,18 +63,18 @@ const itemsRouter = new Elysia({ prefix: "/items" })
     { params: itemParamSchema },
   )
   .get(
-    "/:itemId/orders",
+    "/:externalId/orders",
     async ({ params, user, log }) => {
       if (!user) return status(401, "Unauthorized");
 
       log.set({
-        action: "items.getRelatedOrders",
+        action: "item.getRelatedOrders",
         user: { id: user.id },
-        item: { id: params.itemId },
+        item: { externalId: params.externalId },
       });
 
       const { data: orders, error } = await tryCatch(
-        ItemService.getItemRelatedOrders(user.id, params.itemId),
+        ItemService.getItemRelatedOrders(user.id, params.externalId),
       );
 
       if (error) {
@@ -84,18 +88,18 @@ const itemsRouter = new Elysia({ prefix: "/items" })
     { params: itemParamSchema, auth: true },
   )
   .get(
-    "/:itemId/collection",
+    "/:externalId/collection",
     async ({ params, user, log }) => {
       if (!user) return status(401, "Unauthorized");
 
       log.set({
-        action: "items.getRelatedCollection",
+        action: "item.getRelatedCollection",
         user: { id: user.id },
-        item: { id: params.itemId },
+        item: { externalId: params.externalId },
       });
 
       const { data: collection, error } = await tryCatch(
-        ItemService.getItemRelatedCollection(user.id, params.itemId),
+        ItemService.getItemRelatedCollection(user.id, params.externalId),
       );
 
       if (error) {
@@ -109,28 +113,24 @@ const itemsRouter = new Elysia({ prefix: "/items" })
     { params: itemParamSchema, auth: true },
   )
   .get(
-    "/:itemId/resync-status",
+    "/:externalId/resync-status",
     async ({ params, user, log }) => {
       if (!user) return status(401, "Unauthorized");
 
       log.set({
-        action: "items.resyncStatus",
+        action: "item.resyncStatus",
         user: { id: user.id },
-        item: { id: params.itemId },
+        item: { externalId: params.externalId },
       });
 
       const { data: resyncItem, error: validateError } = await tryCatch(
-        ItemResyncService.validateItemForResync(params.itemId),
+        ItemResyncService.validateItemForResync(params.externalId),
       );
 
       if (validateError) {
         if (validateError.message === "ITEM_NOT_FOUND") {
           log.set({ outcome: "not_found" });
           return status(404, "Item not found");
-        }
-        if (validateError.message === "ITEM_NOT_RESYNCABLE") {
-          log.set({ outcome: "not_resyncable" });
-          return { status: "idle" as const, cooldownExpiresAt: null };
         }
         log.error(validateError, { step: "validateItemForResync", outcome: "error" });
         return status(500, "Failed to check resync status");
@@ -151,28 +151,24 @@ const itemsRouter = new Elysia({ prefix: "/items" })
     { params: itemParamSchema, auth: true },
   )
   .post(
-    "/:itemId/resync",
+    "/:externalId/resync",
     async ({ params, user, log }) => {
       if (!user) return status(401, "Unauthorized");
 
       log.set({
-        action: "items.requestResync",
+        action: "item.requestResync",
         user: { id: user.id },
-        item: { id: params.itemId },
+        item: { externalId: params.externalId },
       });
 
       const { data: resyncItem, error: validateError } = await tryCatch(
-        ItemResyncService.validateItemForResync(params.itemId),
+        ItemResyncService.validateItemForResync(params.externalId),
       );
 
       if (validateError) {
         if (validateError.message === "ITEM_NOT_FOUND") {
           log.set({ outcome: "not_found" });
           return status(404, "Item not found");
-        }
-        if (validateError.message === "ITEM_NOT_RESYNCABLE") {
-          log.set({ outcome: "not_resyncable" });
-          return status(400, "Item cannot be resynced");
         }
         log.error(validateError, { step: "validateItemForResync", outcome: "error" });
         return status(500, "Failed to request resync");
@@ -205,4 +201,4 @@ const itemsRouter = new Elysia({ prefix: "/items" })
     { params: itemParamSchema, auth: true },
   );
 
-export default itemsRouter;
+export default itemRouter;

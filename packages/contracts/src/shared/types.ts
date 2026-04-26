@@ -1,4 +1,4 @@
-import {
+import type {
   ANALYTICS_SECTIONS,
   CATEGORIES,
   COLLECTION_STATUSES,

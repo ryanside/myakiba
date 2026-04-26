@@ -177,14 +177,11 @@ myakiba/
 ├── packages/
 │   ├── auth/           # Better Auth config + adapters/plugins
 │   ├── config/         # Shared TS config
-│   ├── constants/      # Shared constants (categories/currencies/etc.)
+│   ├── contracts/      # Shared zod schemas + types (collection/orders/item/search/sync)
 │   ├── db/             # Drizzle schema + migrations + db scripts
 │   ├── env/            # Typed env schemas (server/web/worker)
-│   ├── eslint-config/  # Shared ESLint configuration
-│   ├── redis /         # Redis
-│   ├── types/          # Shared TS types
-│   ├── utils/          # Shared utilities
-│   └── schemas/    # Shared zod schemas
+│   ├── redis/          # Redis client + docker compose
+│   └── utils/          # Shared utilities
 ├── docker-compose.yml  # Docker Compose (API + workers + Postgres + Redis)
 └── turbo.json          # Turborepo task pipeline
 ```

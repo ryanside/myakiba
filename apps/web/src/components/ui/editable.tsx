@@ -51,6 +51,7 @@ function createStore(
   onEditingChange?: (editing: boolean) => void,
 ): Store {
   const store: Store = {
+    // oxlint-disable-next-line prefer-await-to-callbacks
     subscribe: (cb) => {
       if (listenersRef.current) {
         listenersRef.current.add(cb);
@@ -82,6 +83,7 @@ function createStore(
     notify: () => {
       if (listenersRef.current) {
         for (const cb of listenersRef.current) {
+          // oxlint-disable-next-line prefer-await-to-callbacks
           cb();
         }
       }
@@ -407,7 +409,7 @@ function EditablePreview(props: EditablePreviewProps) {
   const onTrigger = React.useCallback(() => {
     if (context.disabled || context.readOnly) return;
     context.onEdit();
-  }, [context.onEdit, context.disabled, context.readOnly]);
+  }, [context]);
 
   const onClick = React.useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
@@ -416,7 +418,7 @@ function EditablePreview(props: EditablePreviewProps) {
 
       onTrigger();
     },
-    [previewProps.onClick, onTrigger, context.triggerMode],
+    [previewProps, onTrigger, context.triggerMode],
   );
 
   const onDoubleClick = React.useCallback(
@@ -426,7 +428,7 @@ function EditablePreview(props: EditablePreviewProps) {
 
       onTrigger();
     },
-    [previewProps.onDoubleClick, onTrigger, context.triggerMode],
+    [previewProps, onTrigger, context.triggerMode],
   );
 
   const onFocus = React.useCallback(
@@ -436,7 +438,7 @@ function EditablePreview(props: EditablePreviewProps) {
 
       onTrigger();
     },
-    [previewProps.onFocus, onTrigger, context.triggerMode],
+    [previewProps, onTrigger, context.triggerMode],
   );
 
   const onKeyDown = React.useCallback(
@@ -453,13 +455,14 @@ function EditablePreview(props: EditablePreviewProps) {
         onTrigger();
       }
     },
-    [previewProps.onKeyDown, onTrigger, context.onEnterKeyDown],
+    [previewProps, onTrigger, context],
   );
 
   if (editing || context.readOnly) return null;
 
   return (
     <div
+      // oxlint-disable-next-line prefer-tag-over-role
       role="button"
       aria-disabled={context.disabled || context.readOnly}
       data-empty={!value ? "" : undefined}
@@ -538,7 +541,7 @@ function EditableInput(props: EditableInputProps) {
         context.onSubmit(value);
       }
     },
-    [value, context.onSubmit, inputProps.onBlur, isDisabled, isReadOnly],
+    [value, context, inputProps, isDisabled, isReadOnly],
   );
 
   const onChange = React.useCallback(
@@ -551,7 +554,7 @@ function EditableInput(props: EditableInputProps) {
       store.setState("value", event.target.value);
       onAutosize(event.target);
     },
-    [store, inputProps.onChange, onAutosize, isDisabled, isReadOnly],
+    [store, inputProps, onAutosize, isDisabled, isReadOnly],
   );
 
   const onKeyDown = React.useCallback(
@@ -572,15 +575,7 @@ function EditableInput(props: EditableInputProps) {
         context.onSubmit(value);
       }
     },
-    [
-      value,
-      context.onSubmit,
-      context.onCancel,
-      context.onEscapeKeyDown,
-      inputProps.onKeyDown,
-      isDisabled,
-      isReadOnly,
-    ],
+    [value, context, inputProps, isDisabled, isReadOnly],
   );
 
   useIsomorphicLayoutEffect(() => {
@@ -641,7 +636,7 @@ function EditableTrigger(props: EditableTriggerProps) {
   const onTrigger = React.useCallback(() => {
     if (context.disabled || context.readOnly) return;
     context.onEdit();
-  }, [context.disabled, context.readOnly, context.onEdit]);
+  }, [context]);
 
   if (!forceMount && (editing || context.readOnly)) return null;
 
@@ -699,7 +694,7 @@ function EditableCancel(props: EditableCancelProps) {
 
       context.onCancel();
     },
-    [cancelProps.onClick, context.onCancel, context.disabled, context.readOnly],
+    [cancelProps, context],
   );
 
   if (!editing && !context.readOnly) return null;
@@ -733,7 +728,7 @@ function EditableSubmit(props: EditableSubmitProps) {
 
       context.onSubmit(value);
     },
-    [submitProps.onClick, context.onSubmit, value, context.disabled, context.readOnly],
+    [submitProps, context, value],
   );
 
   if (!editing && !context.readOnly) return null;

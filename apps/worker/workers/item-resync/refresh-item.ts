@@ -71,12 +71,11 @@ export async function refreshItemData(scrapedItem: ScrapedItem, itemId: string):
         .onConflictDoNothing({ target: [entry_to_item.entryId, entry_to_item.itemId] });
     }
 
-    const existingReleaseIds = (
-      await tx
-        .select({ id: item_release.id })
-        .from(item_release)
-        .where(eq(item_release.itemId, itemId))
-    ).map((release) => release.id);
+    const existingReleases = await tx
+      .select({ id: item_release.id })
+      .from(item_release)
+      .where(eq(item_release.itemId, itemId));
+    const existingReleaseIds = existingReleases.map((release) => release.id);
 
     const releasesToUpsert = assembled.itemReleases.map((release) => ({
       id: release.id,

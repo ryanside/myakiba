@@ -4,7 +4,7 @@ import {
   searchEntriesResponseSchema,
   searchOrdersResponseSchema,
 } from "@myakiba/contracts/search/schema";
-import type { ItemReleasesResponse } from "@myakiba/contracts/items/schema";
+import type { ItemReleasesResponse } from "@myakiba/contracts/item/schema";
 import { app, getErrorMessage } from "@/lib/treaty-client";
 import type { z } from "zod";
 

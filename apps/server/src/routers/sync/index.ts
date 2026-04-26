@@ -27,10 +27,8 @@ import SyncService from "./service";
 import { tryCatch } from "@myakiba/utils/result";
 import { SYNC_SESSION_STATUSES, SYNC_TYPES } from "@myakiba/contracts/shared/constants";
 import { createId } from "@paralleldrive/cuid2";
-import {
-  jobStatusSubscriptionRegistry,
-  type JobStatusSubscription,
-} from "./job-status-subscription-registry";
+import { jobStatusSubscriptionRegistry } from "./job-status-subscription-registry";
+import type { JobStatusSubscription } from "./job-status-subscription-registry";
 
 const MAX_JOB_STATUS_STREAM_DURATION_MS = 10 * 60 * 1000;
 
@@ -325,7 +323,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       return {
         status: statusMessage,
-        isFinished: jobId ? false : true,
+        isFinished: !jobId,
         existingItemsToInsert: collectionItems.length,
         newItems: itemsToScrape.length,
         jobId,
@@ -383,22 +381,19 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       const { externalIdToInternalId, releaseIdsByItemId, releaseDatesByItemId } =
         buildExistingItemLookups(existingItems);
 
-      const releaseDates = body.items
-        .map((item: SyncOrderItemInput) => {
-          const internalId = externalIdToInternalId.get(item.itemExternalId);
-          if (!internalId) {
-            return undefined;
-          }
-          return releaseDatesByItemId.get(internalId);
-        })
-        .filter((date): date is string => date !== undefined);
+      const releaseDates = body.items.flatMap((item: SyncOrderItemInput) => {
+        const internalId = externalIdToInternalId.get(item.itemExternalId);
+        if (!internalId) return [];
+        const date = releaseDatesByItemId.get(internalId);
+        return date ? [date] : [];
+      });
 
       const latestReleaseDate =
         releaseDates.length > 0
           ? releaseDates.reduce((latest, current) => (current > latest ? current : latest))
           : null;
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      // oxlint-disable-next-line no-unused-vars
       const { items, ...orderData } = body;
       const order: UpdatedSyncOrder = {
         ...orderData,
@@ -412,7 +407,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         .map((item: SyncOrderItemInput) => ({
           ...item,
           itemId: null,
-          orderId: orderId,
+          orderId,
           releaseId: null,
           userId: user.id,
         }));
@@ -427,7 +422,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             {
               ...item,
               itemId: internalItemId,
-              orderId: orderId,
+              orderId,
               releaseId: releaseIdsByItemId.get(internalItemId) ?? null,
               userId: user.id,
             },
@@ -590,31 +585,29 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         }
 
         jobId = jobIdData;
-      } else {
-        if (syncSessionId) {
-          const completedSessionUpdate = {
-            status: "completed" as const,
-            completedAt: new Date(),
-            statusMessage: SYNC_STATUS_MESSAGES.insertedWithoutScrape,
-            successCount: existingOrderItemExternalIds.length,
-            ...(orderWasPersistedImmediately ? { orderId } : {}),
-          };
-          const { error: updateSessionError } = await tryCatch(
-            SyncService.updateSyncSession(syncSessionId, completedSessionUpdate),
-          );
-          if (updateSessionError) {
-            log.error(updateSessionError, {
-              step: "updateSyncSession",
-              outcome: "error",
-              sync: {
-                type: "order",
-                sessionId: syncSessionId,
-                orderId,
-              },
-              order: { id: orderId },
-            });
-            return status(500, "Failed to update sync session");
-          }
+      } else if (syncSessionId) {
+        const completedSessionUpdate = {
+          status: "completed" as const,
+          completedAt: new Date(),
+          statusMessage: SYNC_STATUS_MESSAGES.insertedWithoutScrape,
+          successCount: existingOrderItemExternalIds.length,
+          ...(orderWasPersistedImmediately ? { orderId } : {}),
+        };
+        const { error: updateSessionError } = await tryCatch(
+          SyncService.updateSyncSession(syncSessionId, completedSessionUpdate),
+        );
+        if (updateSessionError) {
+          log.error(updateSessionError, {
+            step: "updateSyncSession",
+            outcome: "error",
+            sync: {
+              type: "order",
+              sessionId: syncSessionId,
+              orderId,
+            },
+            order: { id: orderId },
+          });
+          return status(500, "Failed to update sync session");
         }
       }
 
@@ -641,7 +634,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       return {
         status: statusMessage,
-        isFinished: jobId ? false : true,
+        isFinished: !jobId,
         existingItemsToInsert: itemsToInsert.length,
         newItems: itemsToScrape.length,
         jobId,
@@ -898,30 +891,28 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         }
 
         jobId = jobIdData;
-      } else {
-        if (syncSessionId) {
-          const { error: updateSessionError } = await tryCatch(
-            SyncService.updateSyncSession(syncSessionId, {
-              status: "completed",
-              completedAt: new Date(),
-              statusMessage: SYNC_STATUS_MESSAGES.insertedWithoutScrape,
+      } else if (syncSessionId) {
+        const { error: updateSessionError } = await tryCatch(
+          SyncService.updateSyncSession(syncSessionId, {
+            status: "completed",
+            completedAt: new Date(),
+            statusMessage: SYNC_STATUS_MESSAGES.insertedWithoutScrape,
+            orderId: existingOrder.id,
+            successCount: existingOrderItemExternalIds.length,
+          }),
+        );
+        if (updateSessionError) {
+          log.error(updateSessionError, {
+            step: "updateSyncSession",
+            outcome: "error",
+            sync: {
+              type: "order-item",
+              sessionId: syncSessionId,
               orderId: existingOrder.id,
-              successCount: existingOrderItemExternalIds.length,
-            }),
-          );
-          if (updateSessionError) {
-            log.error(updateSessionError, {
-              step: "updateSyncSession",
-              outcome: "error",
-              sync: {
-                type: "order-item",
-                sessionId: syncSessionId,
-                orderId: existingOrder.id,
-              },
-              order: { id: existingOrder.id },
-            });
-            return status(500, "Failed to update sync session");
-          }
+            },
+            order: { id: existingOrder.id },
+          });
+          return status(500, "Failed to update sync session");
         }
       }
 
@@ -948,7 +939,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       return {
         status: statusMessage,
-        isFinished: jobId ? false : true,
+        isFinished: !jobId,
         existingItemsToInsert: itemsToInsert.length,
         newItems: itemsToScrape.length,
         jobId,
@@ -1146,27 +1137,25 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         }
 
         jobId = jobIdData;
-      } else {
-        if (syncSessionId) {
-          const { error: updateSessionError } = await tryCatch(
-            SyncService.updateSyncSession(syncSessionId, {
-              status: "completed",
-              completedAt: new Date(),
-              statusMessage: SYNC_STATUS_MESSAGES.insertedWithoutScrape,
-              successCount: existingCollectionItemExternalIds.length,
-            }),
-          );
-          if (updateSessionError) {
-            log.error(updateSessionError, {
-              step: "updateSyncSession",
-              outcome: "error",
-              sync: {
-                type: "collection",
-                sessionId: syncSessionId,
-              },
-            });
-            return status(500, "Failed to update sync session");
-          }
+      } else if (syncSessionId) {
+        const { error: updateSessionError } = await tryCatch(
+          SyncService.updateSyncSession(syncSessionId, {
+            status: "completed",
+            completedAt: new Date(),
+            statusMessage: SYNC_STATUS_MESSAGES.insertedWithoutScrape,
+            successCount: existingCollectionItemExternalIds.length,
+          }),
+        );
+        if (updateSessionError) {
+          log.error(updateSessionError, {
+            step: "updateSyncSession",
+            outcome: "error",
+            sync: {
+              type: "collection",
+              sessionId: syncSessionId,
+            },
+          });
+          return status(500, "Failed to update sync session");
         }
       }
 
@@ -1191,7 +1180,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       return {
         status: statusMessage,
-        isFinished: jobId ? false : true,
+        isFinished: !jobId,
         existingItemsToInsert: itemsToInsert.length,
         newItems: itemsToScrape.length,
         jobId,
@@ -1212,8 +1201,8 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         return status(401, "Unauthorized");
       }
 
-      const page = query.page ? parseInt(query.page, 10) : 1;
-      const limit = query.limit ? parseInt(query.limit, 10) : 20;
+      const page = query.page ? Number.parseInt(query.page, 10) : 1;
+      const limit = query.limit ? Number.parseInt(query.limit, 10) : 20;
 
       log.set({
         action: "sync.sessions",
@@ -1225,11 +1214,11 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         },
       });
 
-      if (isNaN(page) || page < 1) {
+      if (Number.isNaN(page) || page < 1) {
         log.set({ outcome: "bad_request" });
         return status(400, "Invalid page parameter");
       }
-      if (isNaN(limit) || limit < 1 || limit > 100) {
+      if (Number.isNaN(limit) || limit < 1 || limit > 100) {
         log.set({ outcome: "bad_request" });
         return status(400, "Invalid limit parameter");
       }
@@ -1283,8 +1272,8 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         sync: { sessionId: params.id },
       });
 
-      const page = query.page ? parseInt(query.page, 10) : undefined;
-      const limit = query.limit ? parseInt(query.limit, 10) : undefined;
+      const page = query.page ? Number.parseInt(query.page, 10) : undefined;
+      const limit = query.limit ? Number.parseInt(query.limit, 10) : undefined;
 
       log.set({
         pagination: {
@@ -1293,11 +1282,11 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         },
       });
 
-      if (page !== undefined && (isNaN(page) || page < 1)) {
+      if (page !== undefined && (Number.isNaN(page) || page < 1)) {
         log.set({ outcome: "bad_request" });
         return status(400, "Invalid page parameter");
       }
-      if (limit !== undefined && (isNaN(limit) || limit < 1 || limit > 100)) {
+      if (limit !== undefined && (Number.isNaN(limit) || limit < 1 || limit > 100)) {
         log.set({ outcome: "bad_request" });
         return status(400, "Invalid limit parameter");
       }

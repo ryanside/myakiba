@@ -10,6 +10,11 @@ interface DefaultSortState {
   readonly order: string;
 }
 
+const DEFAULT_SORT_STATE: DefaultSortState = {
+  sort: "createdAt",
+  order: "desc",
+};
+
 export function hasActiveFilters<T extends Record<string, unknown>>(filters: T): boolean {
   return Object.entries(filters).some(([key, value]) => {
     if (NON_FILTER_KEYS.has(key)) return false;
@@ -22,10 +27,7 @@ export function hasActiveFilters<T extends Record<string, unknown>>(filters: T):
 
 export function hasActiveFiltersOrSorting<T extends Record<string, unknown> & SortState>(
   filters: T,
-  defaultSort: DefaultSortState = {
-    sort: "createdAt",
-    order: "desc",
-  },
+  defaultSort: DefaultSortState = DEFAULT_SORT_STATE,
 ): boolean {
   if (hasActiveFilters(filters)) {
     return true;

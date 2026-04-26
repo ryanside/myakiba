@@ -1,15 +1,15 @@
-import { type CSSProperties, type HTMLAttributes } from "react";
+import type { CSSProperties, HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
 type BannerVariant = "rainbow" | "normal";
 type BannerProps = HTMLAttributes<HTMLDivElement> & {
   /**
-   * @defaultValue 3rem
+   * @default 3rem
    */
   readonly height?: string;
 
   /**
-   * @defaultValue 'normal'
+   * @default 'normal'
    */
   readonly variant?: BannerVariant;
 
@@ -21,7 +21,7 @@ type BannerProps = HTMLAttributes<HTMLDivElement> & {
   /**
    * Change Fumadocs layout styles
    *
-   * @defaultValue true
+   * @default true
    */
   readonly changeLayout?: boolean;
 };

@@ -44,6 +44,15 @@ function getPinningStyles<TData>(column: Column<TData>): CSSProperties {
   };
 }
 
+function getLastColAttribute(
+  isLastLeftPinned: boolean,
+  isFirstRightPinned: boolean,
+): "left" | "right" | undefined {
+  if (isLastLeftPinned) return "left";
+  if (isFirstRightPinned) return "right";
+  return undefined;
+}
+
 type StableBodyRowRenderProps<TData> = {
   row: Row<TData>;
   isExpanded: boolean;
@@ -117,7 +126,7 @@ function StableBodyRowRenderInner<TData>({
                 ...(columnsPinnable && column.getCanPin() && getPinningStyles(column)),
               }}
               data-pinned={isPinned || undefined}
-              data-last-col={isLastLeftPinned ? "left" : isFirstRightPinned ? "right" : undefined}
+              data-last-col={getLastColAttribute(isLastLeftPinned, isFirstRightPinned)}
               className={cn(
                 "align-middle",
                 bodyCellSpacing,
@@ -266,10 +275,10 @@ function DataGridTableHeadRowCell<TData>({
           width: header.getSize(),
         }),
         ...(props.tableLayout?.columnsPinnable && column.getCanPin() && getPinningStyles(column)),
-        ...(dndStyle ? dndStyle : null),
+        ...dndStyle,
       }}
       data-pinned={isPinned || undefined}
-      data-last-col={isLastLeftPinned ? "left" : isFirstRightPinned ? "right" : undefined}
+      data-last-col={getLastColAttribute(isLastLeftPinned, isFirstRightPinned)}
       className={cn(
         "text-secondary-foreground/80 h-9 relative text-left align-middle font-normal rtl:text-right [&:has([role=checkbox])]:pe-0",
         headerCellSpacing,
@@ -464,10 +473,10 @@ function DataGridTableBodyRowCell<TData>({
           width: column.getSize(),
         }),
         ...(props.tableLayout?.columnsPinnable && column.getCanPin() && getPinningStyles(column)),
-        ...(dndStyle ? dndStyle : null),
+        ...dndStyle,
       }}
       data-pinned={isPinned || undefined}
-      data-last-col={isLastLeftPinned ? "left" : isFirstRightPinned ? "right" : undefined}
+      data-last-col={getLastColAttribute(isLastLeftPinned, isFirstRightPinned)}
       className={cn(
         "align-middle",
         bodyCellSpacing,
@@ -583,14 +592,14 @@ function DataGridTable<TData>() {
   return (
     <DataGridTableBase>
       <DataGridTableHead>
-        {table.getHeaderGroups().map((headerGroup: HeaderGroup<TData>, index) => {
+        {table.getHeaderGroups().map((headerGroup: HeaderGroup<TData>, groupIndex) => {
           return (
-            <DataGridTableHeadRow headerGroup={headerGroup} key={index}>
-              {headerGroup.headers.map((header, index) => {
+            <DataGridTableHeadRow headerGroup={headerGroup} key={groupIndex}>
+              {headerGroup.headers.map((header, headerIndex) => {
                 const { column } = header;
 
                 return (
-                  <DataGridTableHeadRowCell header={header} key={index}>
+                  <DataGridTableHeadRowCell header={header} key={headerIndex}>
                     {header.isPlaceholder
                       ? null
                       : flexRender(header.column.columnDef.header, header.getContext())}
@@ -608,51 +617,55 @@ function DataGridTable<TData>() {
       {(props.tableLayout?.stripped || !props.tableLayout?.rowBorder) && <DataGridTableRowSpacer />}
 
       <DataGridTableBody>
-        {isLoading && props.loadingMode === "skeleton" && skeletonRowCount ? (
-          // Show skeleton loading immediately
-          Array.from({ length: skeletonRowCount }).map((_, rowIndex) => (
-            <DataGridTableBodyRowSkeleton key={rowIndex}>
-              {table.getVisibleFlatColumns().map((column, colIndex) => {
-                return (
-                  <DataGridTableBodyRowSkeletonCell column={column} key={colIndex}>
-                    {column.columnDef.meta?.skeleton}
-                  </DataGridTableBodyRowSkeletonCell>
-                );
-              })}
-            </DataGridTableBodyRowSkeleton>
-          ))
-        ) : isLoading && props.loadingMode === "spinner" ? (
-          // Show spinner loading immediately
-          <tr>
-            <td colSpan={table.getVisibleFlatColumns().length} className="p-8">
-              <div className="flex items-center justify-center">
-                <svg
-                  className="text-muted-foreground mr-3 -ml-1 h-5 w-5 animate-spin"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                {props.loadingMessage || "Loading..."}
-              </div>
-            </td>
-          </tr>
-        ) : table.getRowModel().rows.length ? (
-          // Show actual data when not loading
-          table.getRowModel().rows.map((row: Row<TData>, index) => {
+        {(() => {
+          if (isLoading && props.loadingMode === "skeleton" && skeletonRowCount) {
+            return Array.from({ length: skeletonRowCount }).map((_, rowIndex) => (
+              <DataGridTableBodyRowSkeleton key={rowIndex}>
+                {table.getVisibleFlatColumns().map((column, colIndex) => {
+                  return (
+                    <DataGridTableBodyRowSkeletonCell column={column} key={colIndex}>
+                      {column.columnDef.meta?.skeleton}
+                    </DataGridTableBodyRowSkeletonCell>
+                  );
+                })}
+              </DataGridTableBodyRowSkeleton>
+            ));
+          }
+          if (isLoading && props.loadingMode === "spinner") {
+            return (
+              <tr>
+                <td colSpan={table.getVisibleFlatColumns().length} className="p-8">
+                  <div className="flex items-center justify-center">
+                    <svg
+                      className="text-muted-foreground mr-3 -ml-1 h-5 w-5 animate-spin"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    {props.loadingMessage || "Loading..."}
+                  </div>
+                </td>
+              </tr>
+            );
+          }
+          if (!table.getRowModel().rows.length) {
+            return <DataGridTableEmpty />;
+          }
+          return table.getRowModel().rows.map((row: Row<TData>, index) => {
             if (memoizeStableRows) {
               const visibleCells = row.getVisibleCells();
 
@@ -693,10 +706,8 @@ function DataGridTable<TData>() {
                 {row.getIsExpanded() && <DataGridTableBodyRowExpandded row={row} />}
               </Fragment>
             );
-          })
-        ) : (
-          <DataGridTableEmpty />
-        )}
+          });
+        })()}
       </DataGridTableBody>
     </DataGridTableBase>
   );

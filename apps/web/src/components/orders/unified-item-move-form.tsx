@@ -264,7 +264,6 @@ function UnifiedItemMoveFormContent({
                               role="combobox"
                               aria-controls={targetOrderListId}
                               aria-expanded={popoverOpen}
-                              aria-haspopup="listbox"
                               className="w-full justify-between"
                               type="button"
                             >

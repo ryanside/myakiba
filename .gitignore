@@ -26,6 +26,7 @@ dist/
 .cursor/
 .agents/
 skills-lock.json
+.vscode/
 
 # deps
 node_modules/
@@ -36,7 +37,6 @@ node_modules/
 # env
 .env*
 .env.production
-!.env.example
 .dev.vars
 
 # logs

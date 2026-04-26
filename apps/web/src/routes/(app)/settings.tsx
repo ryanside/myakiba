@@ -1,9 +1,9 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Delete02Icon, Loading03Icon } from "@hugeicons/core-free-icons";
-import { createFileRoute, type UseNavigateResult } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import type { UseNavigateResult } from "@tanstack/react-router";
 import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
-import { useNavigate } from "@tanstack/react-router";
 import { useForm } from "@tanstack/react-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -133,7 +133,6 @@ function ProfileForm({ user }: { user: User }) {
       }
 
       toast.success("Profile updated successfully");
-      return;
     },
     validators: {
       onSubmit: z.object({
@@ -582,7 +581,7 @@ function DeleteAccountForm({
           <DialogTrigger
             render={
               <Button variant="destructive">
-                <HugeiconsIcon icon={Delete02Icon} className="mr-2 h-4 w-4" />
+                <HugeiconsIcon icon={Delete02Icon} className="h-4 w-4" />
                 Delete Account
               </Button>
             }

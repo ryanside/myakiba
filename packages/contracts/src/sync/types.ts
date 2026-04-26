@@ -6,6 +6,7 @@ import type {
   SyncSessionStatus,
   SyncType,
 } from "../shared/types";
+import type { InternalCsvItem } from "./schema";
 
 export type SyncSessionRow = {
   readonly id: string;
@@ -46,7 +47,7 @@ export type SyncStatus = {
   status: string;
 };
 
-export type UserItem = import("./schema").InternalCsvItem;
+export type UserItem = InternalCsvItem;
 
 export type SyncFormOrderItem = {
   /** Stable id for list keys / dialog identity; duplicates may share the same MFC id. */

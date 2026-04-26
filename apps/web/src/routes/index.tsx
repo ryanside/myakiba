@@ -7,7 +7,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon, Sun01Icon, Moon02Icon } from "@hugeicons/core-free-icons";
 import { useTheme } from "next-themes";
-import BounceCards from "@/components/BounceCards";
+import BounceCards from "@/components/bounce-cards";
 import MfcSyncSection from "@/components/homepage/integrations-1";
 import FAQsSection from "@/components/homepage/faqs";
 import FooterSection from "@/components/homepage/footer";
@@ -25,17 +25,56 @@ const EXAMPLE_ITEMS = [
   "/example-item7.webp",
 ] as const;
 
+type HeroViewId = "overview" | "detail";
+
+type HeroView = {
+  readonly id: HeroViewId;
+  readonly label: string;
+  readonly imageSlug: string;
+};
+
+type HeroTab = {
+  readonly id: string;
+  readonly label: string;
+  readonly views: readonly HeroView[];
+};
+
 const HERO_TABS = [
-  { id: "dashboard", label: "Dashboard" },
-  { id: "orders", label: "Orders" },
-  { id: "collection", label: "Collection" },
-  { id: "analytics", label: "Analytics" },
-] as const;
+  {
+    id: "dashboard",
+    label: "Dashboard",
+    views: [{ id: "overview", label: "Overview", imageSlug: "dashboard" }],
+  },
+  {
+    id: "orders",
+    label: "Orders",
+    views: [
+      { id: "overview", label: "1", imageSlug: "orders" },
+      { id: "detail", label: "2", imageSlug: "order-detail" },
+    ],
+  },
+  {
+    id: "collection",
+    label: "Collection",
+    views: [
+      { id: "overview", label: "1", imageSlug: "collection" },
+      { id: "detail", label: "2", imageSlug: "item-detail" },
+    ],
+  },
+  {
+    id: "analytics",
+    label: "Analytics",
+    views: [
+      { id: "overview", label: "1", imageSlug: "analytics" },
+      { id: "detail", label: "2", imageSlug: "artists-analytics" },
+    ],
+  },
+] as const satisfies readonly HeroTab[];
 
 type HeroTabId = (typeof HERO_TABS)[number]["id"];
 
-function getHeroImage(tab: HeroTabId, isDark: boolean): string {
-  return `/${tab}-${isDark ? "dark" : "light"}.webp`;
+function getHeroImage(slug: string, isDark: boolean): string {
+  return `/${slug}-${isDark ? "dark" : "light"}.webp`;
 }
 
 export const Route = createFileRoute("/")({
@@ -113,6 +152,10 @@ function HomeComponent() {
   const { theme } = useTheme();
   const isDark = theme !== "light";
   const [activeTab, setActiveTab] = useState<HeroTabId>("dashboard");
+  const [activeView, setActiveView] = useState<HeroViewId>("overview");
+
+  const currentTab = HERO_TABS.find((tab) => tab.id === activeTab) ?? HERO_TABS[0];
+  const currentView = currentTab.views.find((v) => v.id === activeView) ?? currentTab.views[0];
 
   return (
     <div className="min-h-screen min-w-0 overflow-x-clip bg-background text-foreground">
@@ -226,33 +269,52 @@ function HomeComponent() {
         </section>
 
         <div className="animate-appear -mx-6 sm:-mx-24 md:-mx-36 lg:-mx-60 xl:-mx-84 [--appear-delay:380ms]">
-          <Tabs
-            value={activeTab}
-            onValueChange={(value) => setActiveTab(value as HeroTabId)}
-            className="mb-3"
-          >
-            <TabsList variant="line" className="px-6 sm:px-0">
-              {HERO_TABS.map((tab) => (
-                <TabsTrigger key={tab.id} value={tab.id}>
-                  {tab.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+          <div className="mb-3 flex items-center gap-4 px-6 sm:px-0">
+            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as HeroTabId)}>
+              <TabsList variant="line">
+                {HERO_TABS.map((tab) => (
+                  <TabsTrigger key={tab.id} value={tab.id}>
+                    {tab.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+
+            {currentTab.views.length > 1 && (
+              <Tabs
+                value={currentView.id}
+                onValueChange={(value) => setActiveView(value as HeroViewId)}
+                className="ml-auto transition-opacity duration-150 ease-out starting:opacity-0"
+              >
+                <TabsList variant="line">
+                  {currentTab.views.map((view) => (
+                    <TabsTrigger key={view.id} value={view.id} className="px-2.5 text-xs">
+                      {view.label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+            )}
+          </div>
 
           <div className="relative aspect-2992/1788 w-full overflow-hidden rounded-xl">
-            {HERO_TABS.map((tab) => (
-              <img
-                key={tab.id}
-                src={getHeroImage(tab.id, isDark)}
-                alt={`myakiba ${tab.id}`}
-                className={cn(
-                  "absolute inset-0 h-full w-full object-cover transition-opacity duration-150",
-                  tab.id === activeTab ? "opacity-100" : "opacity-0",
-                )}
-                loading="eager"
-              />
-            ))}
+            {HERO_TABS.flatMap((tab) =>
+              tab.views.map((view) => {
+                const isActive = tab.id === activeTab && view.id === currentView.id;
+                return (
+                  <img
+                    key={`${tab.id}-${view.id}`}
+                    src={getHeroImage(view.imageSlug, isDark)}
+                    alt={`myakiba ${tab.label.toLowerCase()} — ${view.label.toLowerCase()}`}
+                    className={cn(
+                      "absolute inset-0 h-full w-full object-cover transition-opacity duration-150 ease-out",
+                      isActive ? "opacity-100" : "opacity-0",
+                    )}
+                    loading={view.id === "overview" ? "eager" : "lazy"}
+                  />
+                );
+              }),
+            )}
           </div>
 
           <LogoCloud images={EXAMPLE_ITEMS} />

@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { getCoreRowModel, type PaginationState, useReactTable } from "@tanstack/react-table";
+import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import type { PaginationState } from "@tanstack/react-table";
 import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
 import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
@@ -40,12 +41,13 @@ function SessionStatusPanel({
 }: {
   readonly session: Pick<
     SyncSessionRow,
-    "jobId" | "statusMessage" | "totalItems" | "successCount" | "failCount"
+    "id" | "jobId" | "statusMessage" | "totalItems" | "successCount" | "failCount"
   >;
   readonly isActive: boolean;
 }) {
   const { data: jobStatus, isError: isJobError } = useSyncJobStatusQuery(
     isActive ? session.jobId : null,
+    session.id,
   );
 
   const isLive = isActive && jobStatus?.terminalState == null;
@@ -232,6 +234,7 @@ function RouteComponent() {
           headerBackground: true,
           headerBorder: true,
         }}
+        skeletonRowCount={1}
       >
         <div className="w-full space-y-2.5">
           <DataGridContainer>

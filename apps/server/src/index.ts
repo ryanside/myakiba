@@ -5,19 +5,18 @@ import { initLogger, log } from "evlog";
 import type { DrainContext } from "evlog";
 import { createPostHogDrain } from "evlog/posthog";
 import { createDrainPipeline } from "evlog/pipeline";
-import { auth } from "@myakiba/auth/server";
+import { auth, OpenAPI } from "@myakiba/auth/server";
 import { env } from "@myakiba/env/server";
 import { openapi } from "@elysiajs/openapi";
-import { OpenAPI } from "@myakiba/auth/server";
 import { staticPlugin } from "@elysiajs/static";
-import { resolve } from "path";
+import { resolve } from "node:path";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import * as z from "zod";
 import analyticsRouter from "./routers/analytics";
 import collectionRouter from "./routers/collection";
 import dashboardRouter from "./routers/dashboard";
-import itemsRouter from "./routers/items";
+import itemRouter from "./routers/item";
 import ordersRouter from "./routers/orders";
 import searchRouter from "./routers/search";
 import settingsRouter from "./routers/settings";
@@ -64,13 +63,13 @@ const isAssetPath = (pathname: string): boolean => pathname.includes(".");
 
 const serveIndexHtml = async (distDir: string): Promise<Response> => {
   const indexHtmlPath: string = resolve(distDir, "index.html");
-  const indexHtml: string = await readFile(indexHtmlPath, "utf8");
+  const indexHtml: string = await readFile(indexHtmlPath, "utf-8");
   return new Response(indexHtml, {
     headers: { "content-type": "text/html; charset=utf-8" },
   });
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// oxlint-disable-next-line no-unused-vars
 const app = new Elysia()
   .use(
     evlog({
@@ -108,7 +107,7 @@ const app = new Elysia()
       .use(analyticsRouter)
       .use(collectionRouter)
       .use(dashboardRouter)
-      .use(itemsRouter)
+      .use(itemRouter)
       .use(ordersRouter)
       .use(searchRouter)
       .use(settingsRouter)

@@ -8,11 +8,12 @@ type ShutdownSignal = "SIGINT" | "SIGTERM";
 let closeWorker: (() => Promise<void>) | null = null;
 let isShuttingDown = false;
 
-async function shutdown(signal: ShutdownSignal, exitCode: number): Promise<void> {
+async function shutdown(signal: ShutdownSignal, initialExitCode: number): Promise<void> {
   if (isShuttingDown) return;
 
   isShuttingDown = true;
 
+  let exitCode = initialExitCode;
   try {
     log.info({
       action: "worker.shutdown",

@@ -10,7 +10,7 @@ import { getCategoryColor } from "@/lib/category-colors";
 import Loader from "../loader";
 
 interface CollectionBreakdownProps {
-  readonly data: ReadonlyArray<{ name: Category; count: number; totalValue: number | null }>;
+  readonly data: readonly { name: Category; count: number; totalValue: number | null }[];
   readonly currency: Currency;
   readonly locale: string;
   readonly isLoading?: boolean;

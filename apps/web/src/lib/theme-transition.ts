@@ -11,12 +11,11 @@ export function setThemeWithTransition(newTheme: string, setTheme: SetThemeFn): 
     return;
   }
 
-  const resolved =
-    newTheme === "system"
-      ? matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light"
-      : newTheme;
+  const resolveTheme = (): "dark" | "light" | typeof newTheme => {
+    if (newTheme !== "system") return newTheme;
+    return matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  };
+  const resolved = resolveTheme();
 
   document.startViewTransition(() => {
     document.documentElement.classList.remove("light", "dark");

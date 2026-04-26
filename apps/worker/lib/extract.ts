@@ -1,4 +1,4 @@
-import * as cheerio from "cheerio";
+import type * as cheerio from "cheerio";
 import type { Element } from "domhandler";
 import { CURRENCIES } from "@myakiba/contracts/shared/constants";
 import { parseMoneyToMinorUnits } from "@myakiba/utils/currency";
@@ -24,8 +24,8 @@ export const extractArrayData = (
 ): string[] => {
   const items: string[] = [];
   const elements = $element.find(selector);
-  for (let i = 0; i < elements.length; i++) {
-    const text = $(elements[i]).text().trim();
+  for (const element of elements) {
+    const text = $(element).text().trim();
     if (text) items.push(text);
   }
   return items;
@@ -34,17 +34,17 @@ export const extractArrayData = (
 export const extractArrayDataWithIds = (
   $element: cheerio.Cheerio<Element>,
   $: cheerio.CheerioAPI,
-): Array<{ id: number; name: string }> => {
-  const items: Array<{ id: number; name: string }> = [];
+): { id: number; name: string }[] => {
+  const items: { id: number; name: string }[] = [];
   const links = $element.find(".item-entry");
-  for (let i = 0; i < links.length; i++) {
-    const $link = $(links[i]);
+  for (const link of links) {
+    const $link = $(link);
     const name = $link.find("span[switch]").text().trim();
     const href = $link.attr("href");
 
     if (name && href) {
       const entryMatch = href.match(REGEX_PATTERNS.entryId);
-      const id = entryMatch ? parseInt(entryMatch[1], 10) : 0;
+      const id = entryMatch ? Number.parseInt(entryMatch[1], 10) : 0;
       items.push({ id, name });
     }
   }
@@ -54,18 +54,17 @@ export const extractArrayDataWithIds = (
 export const extractEntitiesWithRoles = (
   $element: cheerio.Cheerio<Element>,
   $: cheerio.CheerioAPI,
-): Array<{ id: number; name: string; role: string }> => {
-  const entities: Array<{ id: number; name: string; role: string }> = [];
+): { id: number; name: string; role: string }[] => {
+  const entities: { id: number; name: string; role: string }[] = [];
   const entries = $element.find(".item-entries");
 
-  for (let i = 0; i < entries.length; i++) {
-    const $entry = $(entries[i]);
+  for (const entryElement of entries) {
+    const $entry = $(entryElement);
     const contents = $entry.contents();
     let currentRole = "";
-    let tempEntities: Array<{ id: number; name: string; role: string }> = [];
+    let tempEntities: { id: number; name: string; role: string }[] = [];
 
-    for (let j = 0; j < contents.length; j++) {
-      const node = contents[j];
+    for (const node of contents) {
       const $node = $(node);
 
       if ($node.hasClass("item-entry")) {
@@ -74,7 +73,7 @@ export const extractEntitiesWithRoles = (
 
         if (name && href) {
           const entryMatch = href.match(REGEX_PATTERNS.entryId);
-          const id = entryMatch ? parseInt(entryMatch[1], 10) : 0;
+          const id = entryMatch ? Number.parseInt(entryMatch[1], 10) : 0;
           tempEntities.push({ id, name, role: "" });
         }
       } else if ($node.is("small.light") && $node.find("em").length > 0) {
@@ -111,25 +110,25 @@ export const extractDimensions = (dimensionText: string, $element: cheerio.Cheer
   }
 
   const heightMatch = dimensionText.match(REGEX_PATTERNS.height);
-  if (heightMatch) height = parseInt(heightMatch[1], 10);
+  if (heightMatch) height = Number.parseInt(heightMatch[1], 10);
 
   const widthMatch = dimensionText.match(REGEX_PATTERNS.width);
-  if (widthMatch) width = parseInt(widthMatch[1], 10);
+  if (widthMatch) width = Number.parseInt(widthMatch[1], 10);
 
   const depthMatch = dimensionText.match(REGEX_PATTERNS.depth);
-  if (depthMatch) depth = parseInt(depthMatch[1], 10);
+  if (depthMatch) depth = Number.parseInt(depthMatch[1], 10);
 
   return { scale, height, width, depth };
 };
 
 export const extractReleaseData = ($element: cheerio.Cheerio<Element>, $: cheerio.CheerioAPI) => {
-  const releaseDate: Array<{
+  const releaseDate: {
     date: string;
     type: string;
     price: number;
     priceCurrency: string;
     barcode: string;
-  }> = [];
+  }[] = [];
 
   const allReleaseFields = $element.add(
     $element.nextAll(".data-field").filter((_, field) => {
@@ -138,8 +137,8 @@ export const extractReleaseData = ($element: cheerio.Cheerio<Element>, $: cheeri
     }),
   );
 
-  for (let i = 0; i < allReleaseFields.length; i++) {
-    const $releaseField = $(allReleaseFields[i]);
+  for (const releaseField of allReleaseFields) {
+    const $releaseField = $(releaseField);
     const dateElement = $releaseField.find("a.time");
 
     if (dateElement.length > 0) {
@@ -152,10 +151,9 @@ export const extractReleaseData = ($element: cheerio.Cheerio<Element>, $: cheeri
       const emElements = $smallLight.find("em");
 
       if (emElements.length > 0) {
-        // Concatenate all <em> tag contents to handle multiple em tags
         const typeComponents: string[] = [];
-        for (let j = 0; j < emElements.length; j++) {
-          const emText = $(emElements[j]).text().trim();
+        for (const emElement of emElements) {
+          const emText = $(emElement).text().trim();
           if (emText) {
             typeComponents.push(emText);
           }
@@ -182,17 +180,17 @@ export const extractReleaseData = ($element: cheerio.Cheerio<Element>, $: cheeri
 export const extractMaterialsData = (
   $element: cheerio.Cheerio<Element>,
   $: cheerio.CheerioAPI,
-): Array<{ id: number; name: string }> => {
-  const materials: Array<{ id: number; name: string }> = [];
+): { id: number; name: string }[] => {
+  const materials: { id: number; name: string }[] = [];
   const entries = $element.find(".item-entry");
-  for (let i = 0; i < entries.length; i++) {
-    const $entry = $(entries[i]);
+  for (const entryElement of entries) {
+    const $entry = $(entryElement);
     const name = $entry.find("span[switch]").text().trim();
     const href = $entry.attr("href");
 
     if (name && href) {
       const entryMatch = href.match(REGEX_PATTERNS.entryId);
-      const id = entryMatch ? parseInt(entryMatch[1], 10) : 0;
+      const id = entryMatch ? Number.parseInt(entryMatch[1], 10) : 0;
       materials.push({ id, name });
     }
   }

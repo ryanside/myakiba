@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Copy01Icon,
@@ -16,12 +17,11 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import CollectionItemForm from "./collection-item-form";
 import UnifiedItemMoveForm from "@/components/orders/unified-item-move-form";
@@ -63,6 +63,136 @@ interface CollectionGalleryGridProps {
   readonly isLoading: boolean;
 }
 
+function CollectionTileActions({
+  item,
+  isPending,
+  isSelected,
+  onEditCollectionItem,
+  onDeleteCollectionItems,
+  onAddCollectionItemsToOrder,
+  onAddCollectionItemsToNewOrder,
+  currency,
+  dateFormat,
+}: {
+  readonly item: CollectionItem;
+  readonly isPending: boolean;
+  readonly isSelected: boolean;
+  readonly onEditCollectionItem: CollectionGalleryGridProps["onEditCollectionItem"];
+  readonly onDeleteCollectionItems: CollectionGalleryGridProps["onDeleteCollectionItems"];
+  readonly onAddCollectionItemsToOrder: CollectionGalleryGridProps["onAddCollectionItemsToOrder"];
+  readonly onAddCollectionItemsToNewOrder: CollectionGalleryGridProps["onAddCollectionItemsToNewOrder"];
+  readonly currency: Currency;
+  readonly dateFormat: DateFormat;
+}): React.JSX.Element {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const selectedItems = {
+    collectionIds: new Set([item.id]),
+    orderIds: item.orderId ? new Set([item.orderId]) : new Set<string>(),
+  };
+
+  return (
+    <>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              className={cn(
+                "bg-black/30 text-white backdrop-blur-sm hover:bg-black/50 hover:text-white",
+                !isSelected &&
+                  "opacity-0 group-hover/tile:opacity-100 data-popup-open:opacity-100 transition-opacity",
+              )}
+              disabled={isPending}
+            >
+              <HugeiconsIcon
+                icon={isPending ? Loading03Icon : MoreHorizontalIcon}
+                className={cn("size-3.5", isPending && "animate-spin")}
+              />
+            </Button>
+          }
+        />
+        {menuOpen ? (
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem>
+              <Link
+                {...(item.itemExternalId !== null
+                  ? ({
+                      to: "/item/$externalId",
+                      params: { externalId: item.itemExternalId },
+                    } as const)
+                  : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
+                className="flex items-center gap-1.5"
+              >
+                <HugeiconsIcon icon={ViewIcon} />
+                View details
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                if (item.itemExternalId) {
+                  navigator.clipboard.writeText(item.itemExternalId.toString());
+                  toast.success("Copied MFC item ID to clipboard");
+                } else {
+                  toast.error("No MFC item ID for custom items");
+                }
+              }}
+            >
+              <HugeiconsIcon icon={Copy01Icon} />
+              Copy MFC ID
+            </DropdownMenuItem>
+            <CollectionItemForm
+              renderTrigger={
+                <DropdownMenuItem closeOnClick={false}>
+                  <HugeiconsIcon icon={Edit03Icon} />
+                  Edit item
+                </DropdownMenuItem>
+              }
+              itemData={item}
+              callbackFn={onEditCollectionItem}
+              currency={currency}
+              dateFormat={dateFormat}
+            />
+            <UnifiedItemMoveForm
+              renderTrigger={
+                <DropdownMenuItem closeOnClick={false}>
+                  <HugeiconsIcon icon={MoveIcon} />
+                  Assign order
+                </DropdownMenuItem>
+              }
+              selectedItems={selectedItems}
+              onMoveToExisting={onAddCollectionItemsToOrder}
+              onMoveToNew={onAddCollectionItemsToNewOrder}
+              clearSelections={() => {}}
+              currency={currency}
+              intent="add"
+            />
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => {
+                setMenuOpen(false);
+                setDeleteOpen(true);
+              }}
+            >
+              <HugeiconsIcon icon={Delete02Icon} />
+              Delete item
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        ) : null}
+      </DropdownMenu>
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete item?"
+        description="This will permanently remove this item from your collection."
+        onConfirm={() => onDeleteCollectionItems(new Set([item.id]))}
+      />
+    </>
+  );
+}
+
 export function CollectionGalleryGrid({
   items,
   tileSize,
@@ -81,13 +211,11 @@ export function CollectionGalleryGrid({
 }: CollectionGalleryGridProps): React.JSX.Element {
   const toggleSelection = (id: string): void => {
     onRowSelectionChange((prev: RowSelectionState) => {
-      const next = { ...prev };
-      if (next[id]) {
-        delete next[id];
-      } else {
-        next[id] = true;
+      if (prev[id]) {
+        const { [id]: _removed, ...next } = prev;
+        return next;
       }
-      return next;
+      return { ...prev, [id]: true };
     });
   };
 
@@ -130,10 +258,6 @@ export function CollectionGalleryGrid({
   const tiles = items.map((item, index) => {
     const isSelected = !!rowSelection[item.id];
     const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
-    const selectedItems = {
-      collectionIds: new Set([item.id]),
-      orderIds: item.orderId ? new Set([item.orderId]) : new Set<string>(),
-    };
     const staggerDelay = Math.min(index, MAX_STAGGER_INDEX) * STAGGER_DELAY_MS;
 
     return (
@@ -163,93 +287,28 @@ export function CollectionGalleryGrid({
               !isSelected && "opacity-0 group-hover/tile:opacity-100 transition-opacity",
             )}
           />
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  className={cn(
-                    "bg-black/30 text-white backdrop-blur-sm hover:bg-black/50 hover:text-white",
-                    !isSelected &&
-                      "opacity-0 group-hover/tile:opacity-100 data-popup-open:opacity-100 transition-opacity",
-                  )}
-                  disabled={isPending}
-                >
-                  <HugeiconsIcon
-                    icon={isPending ? Loading03Icon : MoreHorizontalIcon}
-                    className={cn("size-3.5", isPending && "animate-spin")}
-                  />
-                </Button>
-              }
-            />
-            <DropdownMenuContent align="end">
-              <DropdownMenuGroup>
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuItem>
-                  <Link
-                    to="/items/$id"
-                    params={{ id: item.itemId }}
-                    className="flex items-center gap-1.5"
-                  >
-                    <HugeiconsIcon icon={ViewIcon} />
-                    View details
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    if (item.itemExternalId) {
-                      navigator.clipboard.writeText(item.itemExternalId.toString());
-                      toast.success("Copied MFC item ID to clipboard");
-                    } else {
-                      toast.error("No MFC item ID for custom items");
-                    }
-                  }}
-                >
-                  <HugeiconsIcon icon={Copy01Icon} />
-                  Copy MFC ID
-                </DropdownMenuItem>
-                <CollectionItemForm
-                  renderTrigger={
-                    <DropdownMenuItem closeOnClick={false} disabled={isPending}>
-                      <HugeiconsIcon icon={Edit03Icon} />
-                      {isPending ? "Saving..." : "Edit item"}
-                    </DropdownMenuItem>
-                  }
-                  itemData={item}
-                  callbackFn={onEditCollectionItem}
-                  currency={currency}
-                  dateFormat={dateFormat}
-                />
-                <UnifiedItemMoveForm
-                  renderTrigger={
-                    <DropdownMenuItem closeOnClick={false} disabled={isPending}>
-                      <HugeiconsIcon icon={MoveIcon} />
-                      {isPending ? "Assigning..." : "Assign Order"}
-                    </DropdownMenuItem>
-                  }
-                  selectedItems={selectedItems}
-                  onMoveToExisting={onAddCollectionItemsToOrder}
-                  onMoveToNew={onAddCollectionItemsToNewOrder}
-                  clearSelections={() => {}}
-                  currency={currency}
-                  intent="add"
-                />
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                disabled={isPending}
-                onClick={() => onDeleteCollectionItems(new Set([item.id]))}
-              >
-                <HugeiconsIcon icon={Delete02Icon} />
-                {isPending ? "Deleting..." : "Delete item"}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <CollectionTileActions
+            item={item}
+            isPending={isPending}
+            isSelected={isSelected}
+            onEditCollectionItem={onEditCollectionItem}
+            onDeleteCollectionItems={onDeleteCollectionItems}
+            onAddCollectionItemsToOrder={onAddCollectionItemsToOrder}
+            onAddCollectionItemsToNewOrder={onAddCollectionItemsToNewOrder}
+            currency={currency}
+            dateFormat={dateFormat}
+          />
         </div>
 
-        <Link to="/items/$id" params={{ id: item.itemId }} className="block">
+        <Link
+          {...(item.itemExternalId !== null
+            ? ({
+                to: "/item/$externalId",
+                params: { externalId: item.itemExternalId },
+              } as const)
+            : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
+          className="block"
+        >
           {item.itemImage ? (
             <img
               src={item.itemImage}

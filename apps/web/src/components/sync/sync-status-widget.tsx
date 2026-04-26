@@ -37,7 +37,7 @@ export default function SyncStatusWidget() {
     refetchOnWindowFocus: true,
   });
 
-  const sessions = recentData?.sessions ?? [];
+  const sessions = useMemo(() => recentData?.sessions ?? [], [recentData]);
 
   const { activeSessions, finishedSessions } = useMemo(() => {
     const active: typeof sessions = [];
@@ -70,7 +70,11 @@ export default function SyncStatusWidget() {
     <>
       {activeSessions.map((activeSession) =>
         activeSession.jobId ? (
-          <SyncSessionObserver key={activeSession.id} jobId={activeSession.jobId} />
+          <SyncSessionObserver
+            key={activeSession.id}
+            jobId={activeSession.jobId}
+            sessionId={activeSession.id}
+          />
         ) : null,
       )}
 
@@ -173,8 +177,14 @@ export default function SyncStatusWidget() {
   );
 }
 
-function SyncSessionObserver({ jobId }: { readonly jobId: string }) {
-  useSyncJobStatusQuery(jobId);
+function SyncSessionObserver({
+  jobId,
+  sessionId,
+}: {
+  readonly jobId: string;
+  readonly sessionId: string;
+}) {
+  useSyncJobStatusQuery(jobId, sessionId);
   return null;
 }
 
@@ -193,7 +203,7 @@ type ActiveSessionProps = {
 };
 
 function ActiveSessionItem({ session, onNavigate }: ActiveSessionProps) {
-  const { data: jobStatus, isError: isJobError } = useSyncJobStatusQuery(session.jobId);
+  const { data: jobStatus, isError: isJobError } = useSyncJobStatusQuery(session.jobId, session.id);
 
   const typeConfig = SYNC_TYPE_CONFIG[session.syncType];
   const liveProgress = jobStatus?.progress ?? null;

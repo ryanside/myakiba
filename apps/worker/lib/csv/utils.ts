@@ -40,13 +40,13 @@ export async function finalizeCsvSync({
   const successfulResultsById = new Map(
     successfulResults.map((result) => [result.id, result] as const),
   );
-  const successfulCollectionItems = csvItems.filter((item) =>
-    successfulResultsById.has(item.itemExternalId),
+  const successfulCollectionItems = csvItems.filter((csvItem) =>
+    successfulResultsById.has(csvItem.itemExternalId),
   );
   const scrapeRowCount = csvItems.length;
   const totalRowCount = existingCount + scrapeRowCount;
   let scrapedPersistedRowCount = 0;
-  let collectionItems: Array<{
+  let collectionItems: {
     userId: string;
     itemId: string | null;
     itemExternalId: number;
@@ -63,8 +63,8 @@ export async function finalizeCsvSync({
     releaseId: string | null;
     orderId: string | null;
     orderDate: string | null;
-  }> = [];
-  let orders: Array<{
+  }[] = [];
+  let orders: {
     id: string;
     userId: string;
     title: string;
@@ -75,10 +75,10 @@ export async function finalizeCsvSync({
     collectionDate: string | null;
     shippingMethod: ShippingMethod;
     releaseDate: string | null;
-  }> = [];
+  }[] = [];
 
   collectionItems = successfulCollectionItems.map((ci) => ({
-    userId: userId,
+    userId,
     itemId: null,
     itemExternalId: ci.itemExternalId,
     status: ci.status as "Owned" | "Ordered",
@@ -96,20 +96,23 @@ export async function finalizeCsvSync({
     orderDate: ci.orderDate,
   }));
 
-  orders = successfulCollectionItems
-    .filter((ci) => ci.orderId !== null)
-    .map((ci) => ({
-      id: ci.orderId!,
-      userId: userId,
-      title: successfulResultsById.get(ci.itemExternalId)?.title ?? `Order ${ci.orderId}`,
-      shop: ci.shop,
-      orderDate: ci.orderDate,
-      paymentDate: ci.payment_date,
-      shippingDate: ci.shipping_date,
-      collectionDate: ci.collecting_date,
-      shippingMethod: ci.shipping_method,
-      releaseDate: latestReleaseIdByExternalId.get(ci.itemExternalId)?.date ?? null,
-    }));
+  orders = successfulCollectionItems.flatMap((ci) => {
+    if (ci.orderId === null) return [];
+    return [
+      {
+        id: ci.orderId,
+        userId,
+        title: successfulResultsById.get(ci.itemExternalId)?.title ?? `Order ${ci.orderId}`,
+        shop: ci.shop,
+        orderDate: ci.orderDate,
+        paymentDate: ci.payment_date,
+        shippingDate: ci.shipping_date,
+        collectionDate: ci.collecting_date,
+        shippingMethod: ci.shipping_method,
+        releaseDate: latestReleaseIdByExternalId.get(ci.itemExternalId)?.date ?? null,
+      },
+    ];
+  });
 
   const persistence: FinalizePersistenceSummary = {
     items: items.length,
@@ -246,8 +249,8 @@ export async function finalizeCsvSync({
         }
       }
 
-      const collectionItemsToInsert: Array<typeof collection.$inferInsert> =
-        collectionItems.flatMap((collectionItem) => {
+      const collectionItemsToInsert: (typeof collection.$inferInsert)[] = collectionItems.flatMap(
+        (collectionItem) => {
           const internalItemId = externalIdToInternalId.get(collectionItem.itemExternalId);
           if (!internalItemId) {
             return [];
@@ -271,7 +274,8 @@ export async function finalizeCsvSync({
               orderDate: collectionItem.orderDate,
             },
           ];
-        });
+        },
+      );
 
       scrapedPersistedRowCount = collectionItemsToInsert.length;
 

@@ -1,4 +1,5 @@
-import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import type { IconSvgElement } from "@hugeicons/react";
 import { Collapsible } from "@/components/ui/collapsible";
 import {
   SidebarGroup,
@@ -6,7 +7,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { Link, type ParsedLocation } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
+import type { ParsedLocation } from "@tanstack/react-router";
 
 export function NavMain({
   items,

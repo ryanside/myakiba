@@ -17,7 +17,8 @@ import SyncOrderForm from "@/components/sync/sync-order-form";
 import SyncCollectionForm from "@/components/sync/sync-collection-form";
 import { useSyncMutations } from "@/hooks/use-sync-mutations";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
-import { PlusIcon, type PlusIconHandle } from "@/components/ui/plus";
+import { PlusIcon } from "@/components/ui/plus";
+import type { PlusIconHandle } from "@/components/ui/plus";
 
 type SyncSheetButtonProps = {
   readonly syncType: Extract<SyncType, "collection" | "order">;

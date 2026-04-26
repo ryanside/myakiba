@@ -7,15 +7,26 @@
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": ["dist/**"]
     },
-    "lint": {
-      "dependsOn": ["^lint"],
-      "outputLogs": "full"
-    },
     "check-types": {
       "dependsOn": ["^check-types"],
       "cache": false
     },
     "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "web#dev": {
+      "dependsOn": ["@myakiba/db#db:start", "@myakiba/redis#redis:start"],
+      "cache": false,
+      "persistent": true
+    },
+    "server#dev": {
+      "dependsOn": ["@myakiba/db#db:start", "@myakiba/redis#redis:start"],
+      "cache": false,
+      "persistent": true
+    },
+    "worker#dev": {
+      "dependsOn": ["@myakiba/db#db:start", "@myakiba/redis#redis:start"],
       "cache": false,
       "persistent": true
     },

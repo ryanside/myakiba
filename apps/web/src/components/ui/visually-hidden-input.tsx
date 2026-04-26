@@ -93,11 +93,12 @@ function VisuallyHiddenInput<T = InputValue>(props: VisuallyHiddenInputProps<T>)
     const eventType = isCheckInput ? "click" : "input";
     const currentValue = isCheckInput ? checked : value;
 
-    const serializedCurrentValue = isCheckInput
-      ? checked
-      : typeof value === "object" && value !== null
-        ? JSON.stringify(value)
-        : value;
+    const getSerializedCurrentValue = () => {
+      if (isCheckInput) return checked;
+      if (typeof value === "object" && value !== null) return JSON.stringify(value);
+      return value;
+    };
+    const serializedCurrentValue = getSerializedCurrentValue();
 
     const descriptor = Object.getOwnPropertyDescriptor(inputProto, propertyKey);
 

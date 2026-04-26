@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Delete02Icon,
@@ -22,12 +23,11 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { OrderForm } from "./order-form";
 import { getStatusVariant } from "@/lib/orders";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
@@ -50,11 +50,100 @@ interface OrdersCardGridProps {
     updater: RowSelectionState | ((prev: RowSelectionState) => RowSelectionState),
   ) => void;
   readonly onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
-  readonly onDeleteOrders: (orderIds: Set<string>) => Promise<void>;
+  readonly onDeleteOrders: (orderIds: ReadonlySet<string>) => Promise<void>;
   readonly currency: Currency;
   readonly locale: string;
   readonly isOrderPending: (orderId: string) => boolean;
   readonly isLoading: boolean;
+}
+
+function OrderCardActions({
+  order,
+  isPending,
+  isSelected,
+  onEditOrder,
+  onDeleteOrders,
+  currency,
+}: {
+  readonly order: OrderListItem;
+  readonly isPending: boolean;
+  readonly isSelected: boolean;
+  readonly onEditOrder: OrdersCardGridProps["onEditOrder"];
+  readonly onDeleteOrders: OrdersCardGridProps["onDeleteOrders"];
+  readonly currency: Currency;
+}): React.JSX.Element {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  return (
+    <>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              className={cn(
+                "bg-black/20 text-white backdrop-blur-sm hover:bg-black/40 hover:text-white",
+                !isSelected &&
+                  "opacity-0 group-hover/card:opacity-100 data-popup-open:opacity-100 transition-opacity",
+              )}
+              disabled={isPending}
+            >
+              <HugeiconsIcon
+                icon={isPending ? Loading03Icon : MoreHorizontalIcon}
+                className={cn("size-3.5", isPending && "animate-spin")}
+              />
+            </Button>
+          }
+        />
+        {menuOpen ? (
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem>
+              <Link
+                to="/orders/$id"
+                params={{ id: order.orderId }}
+                className="flex items-center gap-1.5"
+              >
+                <HugeiconsIcon icon={ViewIcon} />
+                View details
+              </Link>
+            </DropdownMenuItem>
+            <OrderForm
+              renderTrigger={
+                <DropdownMenuItem closeOnClick={false}>
+                  <HugeiconsIcon icon={Edit03Icon} />
+                  Edit order
+                </DropdownMenuItem>
+              }
+              type="edit-order"
+              orderData={order}
+              callbackFn={onEditOrder}
+              currency={currency}
+            />
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => {
+                setMenuOpen(false);
+                setDeleteOpen(true);
+              }}
+            >
+              <HugeiconsIcon icon={Delete02Icon} />
+              Delete order
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        ) : null}
+      </DropdownMenu>
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete order?"
+        description='This will permanently delete this order and all its items. Items with "Owned" status will not be deleted. You can delete owned items in the collection tab.'
+        onConfirm={() => onDeleteOrders(new Set([order.orderId]))}
+      />
+    </>
+  );
 }
 
 export function OrdersCardGrid({
@@ -71,13 +160,11 @@ export function OrdersCardGrid({
 }: OrdersCardGridProps): React.JSX.Element {
   const toggleSelection = (id: string): void => {
     onRowSelectionChange((prev: RowSelectionState) => {
-      const next = { ...prev };
-      if (next[id]) {
-        delete next[id];
-      } else {
-        next[id] = true;
+      if (prev[id]) {
+        const { [id]: _removed, ...next } = prev;
+        return next;
       }
-      return next;
+      return { ...prev, [id]: true };
     });
   };
 
@@ -141,102 +228,61 @@ export function OrdersCardGrid({
                   !isSelected && "opacity-0 group-hover/card:opacity-100 transition-opacity",
                 )}
               />
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      className={cn(
-                        "bg-black/20 text-white backdrop-blur-sm hover:bg-black/40 hover:text-white",
-                        !isSelected &&
-                          "opacity-0 group-hover/card:opacity-100 data-popup-open:opacity-100 transition-opacity",
-                      )}
-                      disabled={isPending}
-                    >
-                      <HugeiconsIcon
-                        icon={isPending ? Loading03Icon : MoreHorizontalIcon}
-                        className={cn("size-3.5", isPending && "animate-spin")}
-                      />
-                    </Button>
-                  }
-                />
-                <DropdownMenuContent align="end">
-                  <DropdownMenuGroup>
-                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                    <DropdownMenuItem>
-                      <Link
-                        to="/orders/$id"
-                        params={{ id: order.orderId }}
-                        className="flex items-center gap-1.5"
-                      >
-                        <HugeiconsIcon icon={ViewIcon} />
-                        View details
-                      </Link>
-                    </DropdownMenuItem>
-                    <OrderForm
-                      renderTrigger={
-                        <DropdownMenuItem closeOnClick={false} disabled={isPending}>
-                          <HugeiconsIcon icon={Edit03Icon} />
-                          {isPending ? "Saving..." : "Edit order"}
-                        </DropdownMenuItem>
-                      }
-                      type="edit-order"
-                      orderData={order}
-                      callbackFn={onEditOrder}
-                      currency={currency}
-                    />
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    variant="destructive"
-                    disabled={isPending}
-                    onClick={() => onDeleteOrders(new Set([order.orderId]))}
-                  >
-                    <HugeiconsIcon icon={Delete02Icon} />
-                    {isPending ? "Deleting..." : "Delete order"}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <OrderCardActions
+                order={order}
+                isPending={isPending}
+                isSelected={isSelected}
+                onEditOrder={onEditOrder}
+                onDeleteOrders={onDeleteOrders}
+                currency={currency}
+              />
             </div>
 
             {/* Image mosaic */}
             <Link to="/orders/$id" params={{ id: order.orderId }} className="block">
               <div className="relative aspect-video w-full overflow-hidden bg-muted">
-                {displayImages.length === 0 ? (
-                  <div className="flex h-full w-full items-center justify-center">
-                    <HugeiconsIcon
-                      icon={PackageIcon}
-                      className="size-10 text-muted-foreground/40"
-                    />
-                  </div>
-                ) : displayImages.length === 1 ? (
-                  <img
-                    src={displayImages[0]}
-                    alt={order.title}
-                    className="h-full w-full object-cover object-top"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div
-                    className={cn(
-                      "grid h-full w-full gap-px",
-                      displayImages.length === 2 && "grid-cols-2",
-                      displayImages.length === 3 && "grid-cols-3",
-                      displayImages.length >= 4 && "grid-cols-2 grid-rows-2",
-                    )}
-                  >
-                    {displayImages.map((src, idx) => (
+                {(() => {
+                  if (displayImages.length === 0) {
+                    return (
+                      <div className="flex h-full w-full items-center justify-center">
+                        <HugeiconsIcon
+                          icon={PackageIcon}
+                          className="size-10 text-muted-foreground/40"
+                        />
+                      </div>
+                    );
+                  }
+                  if (displayImages.length === 1) {
+                    return (
                       <img
-                        key={`${src}-${idx}`}
-                        src={src}
-                        alt={`${order.title} item ${idx + 1}`}
+                        src={displayImages[0]}
+                        alt={order.title}
                         className="h-full w-full object-cover object-top"
                         loading="lazy"
                       />
-                    ))}
-                  </div>
-                )}
+                    );
+                  }
+                  return (
+                    <div
+                      className={cn(
+                        "grid h-full w-full gap-px",
+                        displayImages.length === 2 && "grid-cols-2",
+                        displayImages.length === 3 && "grid-cols-3",
+                        displayImages.length >= 4 && "grid-cols-2 grid-rows-2",
+                      )}
+                    >
+                      {displayImages.map((src, idx) => (
+                        <img
+                          key={`${src}-${idx}`}
+                          src={src}
+                          alt={`${order.title} item ${idx + 1}`}
+                          className="h-full w-full object-cover object-top"
+                          loading="lazy"
+                        />
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             </Link>
 

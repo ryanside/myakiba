@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { HeadContent, Outlet, createRootRouteWithContext } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import "../index.css";
-import { authClient } from "@/lib/auth-client";
+import type { authClient } from "@/lib/auth-client";
 
 export interface RouterAppContext {
   session: Awaited<ReturnType<typeof authClient.getSession>>["data"];

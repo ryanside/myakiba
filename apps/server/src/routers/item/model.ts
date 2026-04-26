@@ -43,6 +43,8 @@ export const entriesWithRolesSchema = z.object({
   role: z.string(),
 });
 
-export const itemParamSchema = z.object({ itemId: z.string().min(1) });
+export const itemParamSchema = z.object({
+  externalId: z.coerce.number().int().positive(),
+});
 
 export type EntriesWithRoles = z.infer<typeof entriesWithRolesSchema>;

@@ -8,15 +8,16 @@ import { cn } from "@/lib/utils";
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: "", dark: ".dark" } as const;
 
-export type ChartConfig = {
-  [k in string]: {
+export type ChartConfig = Record<
+  string,
+  {
     label?: React.ReactNode;
     icon?: React.ComponentType;
   } & (
     | { color?: string; theme?: never }
     | { color?: never; theme: Record<keyof typeof THEMES, string> }
-  );
-};
+  )
+>;
 
 type ChartContextProps = {
   config: ChartConfig;
@@ -45,7 +46,7 @@ function ChartContainer({
   children: React.ComponentProps<typeof RechartsPrimitive.ResponsiveContainer>["children"];
 }) {
   const uniqueId = React.useId();
-  const chartId = `chart-${id || uniqueId.replace(/:/g, "")}`;
+  const chartId = `chart-${id || uniqueId.replaceAll(":", "")}`;
 
   return (
     <ChartContext.Provider value={{ config }}>
@@ -66,7 +67,9 @@ function ChartContainer({
 }
 
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
-  const colorConfig = Object.entries(config).filter(([, config]) => config.theme || config.color);
+  const colorConfig = Object.entries(config).filter(
+    ([, entryConfig]) => entryConfig.theme || entryConfig.color,
+  );
 
   if (!colorConfig.length) {
     return null;
@@ -292,7 +295,7 @@ function ChartLegendContent({
 
 function getPayloadConfigFromPayload(config: ChartConfig, payload: unknown, key: string) {
   if (typeof payload !== "object" || payload === null) {
-    return undefined;
+    return;
   }
 
   const payloadPayload =

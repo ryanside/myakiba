@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
-import path from "path";
-import { URL } from "url";
+import path from "node:path";
+import { URL } from "node:url";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { createError } from "evlog";
 import {
@@ -88,8 +88,10 @@ export const scrapeImage = async ({
       const message = error instanceof Error ? error.message : String(error);
       log.warn(`Image scrape attempt ${attempt}/${maxRetries} failed: ${message}`);
 
-      const delayMs = baseDelayMs * Math.pow(2, attempt - 1);
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      const delayMs = baseDelayMs * 2 ** (attempt - 1);
+      await new Promise((resolve) => {
+        setTimeout(resolve, delayMs);
+      });
     }
   }
 
@@ -126,30 +128,30 @@ export const scrapeSingleItem = async ({
       const title = $("h1.title").text().trim();
 
       let category: Category | null = null;
-      const classification: Array<{ id: number; name: string; role: string }> = [];
+      const classification: { id: number; name: string; role: string }[] = [];
       const version: string[] = [];
       let scale = "";
       let height = 0;
       let width = 0;
       let depth = 0;
-      const origin: Array<{ id: number; name: string }> = [];
-      const character: Array<{ id: number; name: string }> = [];
-      const company: Array<{ id: number; name: string; role: string }> = [];
-      const artist: Array<{ id: number; name: string; role: string }> = [];
-      let releaseDate: Array<{
+      const origin: { id: number; name: string }[] = [];
+      const character: { id: number; name: string }[] = [];
+      const company: { id: number; name: string; role: string }[] = [];
+      const artist: { id: number; name: string; role: string }[] = [];
+      let releaseDate: {
         date: string;
         type: string;
         price: number;
         priceCurrency: string;
         barcode: string;
-      }> = [];
-      const event: Array<{ id: number; name: string; role: string }> = [];
-      const materials: Array<{ id: number; name: string }> = [];
+      }[] = [];
+      const event: { id: number; name: string; role: string }[] = [];
+      const materials: { id: number; name: string }[] = [];
 
       const dataFields = $(".data-field");
 
-      for (let i = 0; i < dataFields.length; i++) {
-        const $element = $(dataFields[i]);
+      for (const dataField of dataFields) {
+        const $element = $(dataField);
         const $label = $element.find(".data-label");
         const label = $label.text().trim();
 
@@ -288,8 +290,10 @@ export const scrapeSingleItem = async ({
 
       log.warn(`Item ${id} attempt ${attempt}/${maxRetries} failed: ${message}`);
 
-      const delayMs = baseDelayMs * Math.pow(2, attempt - 1);
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      const delayMs = baseDelayMs * 2 ** (attempt - 1);
+      await new Promise((resolve) => {
+        setTimeout(resolve, delayMs);
+      });
     }
   }
 
@@ -374,7 +378,9 @@ export const scrapedItemsWithRateLimit = async ({
     allFailures.push(...failures);
 
     if (i + batchSize < itemIds.length) {
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      await new Promise((resolve) => {
+        setTimeout(resolve, delayMs);
+      });
     }
   }
 

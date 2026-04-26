@@ -72,6 +72,7 @@ export type AnalyticsSectionResult = {
 
 export type AnalyticsSectionItem = {
   readonly id: string;
+  readonly externalId: number | null;
   readonly title: string;
   readonly image: string | null;
 };
@@ -223,11 +224,11 @@ function buildRankedAnalytics<T extends RankedRow, TResult>(
     uniqueOwned: rows.length,
     topByCount: rows
       .filter((row) => row.rankByCount <= TOP_LIMIT)
-      .sort((left, right) => left.rankByCount - right.rankByCount)
+      .toSorted((left, right) => left.rankByCount - right.rankByCount)
       .map(mapRow),
     topBySpend: rows
       .filter((row) => row.rankBySpend <= TOP_LIMIT)
-      .sort((left, right) => left.rankBySpend - right.rankBySpend)
+      .toSorted((left, right) => left.rankBySpend - right.rankBySpend)
       .map(mapRow),
   };
 }
@@ -276,7 +277,7 @@ function buildEntryAnalytics(rows: readonly EntryRankingRow[]): readonly EntryCa
       uniqueOwned: bucket?.uniqueOwned ?? 0,
       topByCount:
         bucket?.topByCount
-          .sort((left, right) => left.rankByCount - right.rankByCount)
+          .toSorted((left, right) => left.rankByCount - right.rankByCount)
           .map((row) => ({
             entryId: row.entryId,
             name: row.name,
@@ -285,7 +286,7 @@ function buildEntryAnalytics(rows: readonly EntryRankingRow[]): readonly EntryCa
           })) ?? [],
       topBySpend:
         bucket?.topBySpend
-          .sort((left, right) => left.rankBySpend - right.rankBySpend)
+          .toSorted((left, right) => left.rankBySpend - right.rankBySpend)
           .map((row) => ({
             entryId: row.entryId,
             name: row.name,
@@ -337,7 +338,7 @@ function buildSectionItemsResult(
   rows: readonly AnalyticsSectionItemPageRow[],
 ): AnalyticsSectionItemsResult {
   return {
-    items: rows.map(({ id, title, image }) => ({ id, title, image })),
+    items: rows.map(({ id, externalId, title, image }) => ({ id, externalId, title, image })),
     totalCount: rows[0]?.totalCount ?? 0,
     limit,
     offset,
@@ -535,6 +536,7 @@ class AnalyticsService {
       const rows = await db
         .select({
           id: item.id,
+          externalId: item.externalId,
           title: item.title,
           image: item.image,
           totalCount: sql<number>`COUNT(*) OVER()`,
@@ -559,6 +561,7 @@ class AnalyticsService {
       const rows = await db
         .select({
           id: item.id,
+          externalId: item.externalId,
           title: item.title,
           image: item.image,
           totalCount: sql<number>`COUNT(*) OVER()`,
@@ -583,6 +586,7 @@ class AnalyticsService {
     const rows = await db
       .select({
         id: item.id,
+        externalId: item.externalId,
         title: item.title,
         image: item.image,
         totalCount: sql<number>`COUNT(*) OVER()`,

@@ -89,20 +89,22 @@ function DataGridColumnFilter<TData, TValue>({
             <div className="p-1">
               {filteredOptions.map((option) => {
                 const isSelected = selectedValues.has(option.value);
+                const handleToggle = (): void => {
+                  if (isSelected) {
+                    selectedValues.delete(option.value);
+                  } else {
+                    selectedValues.add(option.value);
+                  }
+                  const filterValues = [...selectedValues];
+                  column?.setFilterValue(filterValues.length ? filterValues : undefined);
+                };
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={option.value}
-                    onClick={() => {
-                      if (isSelected) {
-                        selectedValues.delete(option.value);
-                      } else {
-                        selectedValues.add(option.value);
-                      }
-                      const filterValues = Array.from(selectedValues);
-                      column?.setFilterValue(filterValues.length ? filterValues : undefined);
-                    }}
+                    onClick={handleToggle}
                     className={cn(
-                      "relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none",
+                      "relative flex w-full cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden select-none",
                       "hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
                     )}
                   >
@@ -123,7 +125,7 @@ function DataGridColumnFilter<TData, TValue>({
                         {facets.get(option.value)}
                       </span>
                     )}
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -132,12 +134,13 @@ function DataGridColumnFilter<TData, TValue>({
             <>
               <div className="bg-border -mx-1 my-1 h-px" />
               <div className="p-1">
-                <div
+                <button
+                  type="button"
                   onClick={() => column?.setFilterValue(undefined)}
-                  className="hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center justify-center rounded-sm px-2 py-1.5 text-sm outline-hidden select-none"
+                  className="hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground relative flex w-full cursor-default items-center justify-center rounded-sm px-2 py-1.5 text-sm outline-hidden select-none"
                 >
                   Clear filters
-                </div>
+                </button>
               </div>
             </>
           )}

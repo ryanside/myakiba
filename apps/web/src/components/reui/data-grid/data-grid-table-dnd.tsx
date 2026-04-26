@@ -26,9 +26,8 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
-  type DragEndEvent,
 } from "@dnd-kit/core";
-import type { Modifier } from "@dnd-kit/core";
+import type { DragEndEvent, Modifier } from "@dnd-kit/core";
 import { horizontalListSortingStrategy, SortableContext, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { flexRender } from "@tanstack/react-table";
@@ -181,42 +180,44 @@ function DataGridTableDnd<TData>({
           )}
 
           <DataGridTableBody>
-            {props.loadingMode === "skeleton" && isLoading && skeletonRowCount ? (
-              Array.from({ length: skeletonRowCount }).map((_, rowIndex) => (
-                <DataGridTableBodyRowSkeleton key={rowIndex}>
-                  {table.getVisibleFlatColumns().map((column, colIndex) => {
-                    return (
-                      <DataGridTableBodyRowSkeletonCell column={column} key={colIndex}>
-                        {column.columnDef.meta?.skeleton}
-                      </DataGridTableBodyRowSkeletonCell>
-                    );
-                  })}
-                </DataGridTableBodyRowSkeleton>
-              ))
-            ) : table.getRowModel().rows.length ? (
-              table.getRowModel().rows.map((row: Row<TData>) => {
-                return (
-                  <Fragment key={row.id}>
-                    <DataGridTableBodyRow row={row}>
-                      {row.getVisibleCells().map((cell: Cell<TData, unknown>) => {
-                        return (
-                          <SortableContext
-                            key={cell.id}
-                            items={table.getState().columnOrder}
-                            strategy={horizontalListSortingStrategy}
-                          >
-                            <DataGridTableDndCell cell={cell} />
-                          </SortableContext>
-                        );
-                      })}
-                    </DataGridTableBodyRow>
-                    {row.getIsExpanded() && <DataGridTableBodyRowExpandded row={row} />}
-                  </Fragment>
-                );
-              })
-            ) : (
-              <DataGridTableEmpty />
-            )}
+            {(() => {
+              if (props.loadingMode === "skeleton" && isLoading && skeletonRowCount) {
+                return Array.from({ length: skeletonRowCount }).map((_, rowIndex) => (
+                  <DataGridTableBodyRowSkeleton key={rowIndex}>
+                    {table.getVisibleFlatColumns().map((column, colIndex) => {
+                      return (
+                        <DataGridTableBodyRowSkeletonCell column={column} key={colIndex}>
+                          {column.columnDef.meta?.skeleton}
+                        </DataGridTableBodyRowSkeletonCell>
+                      );
+                    })}
+                  </DataGridTableBodyRowSkeleton>
+                ));
+              }
+              if (table.getRowModel().rows.length) {
+                return table.getRowModel().rows.map((row: Row<TData>) => {
+                  return (
+                    <Fragment key={row.id}>
+                      <DataGridTableBodyRow row={row}>
+                        {row.getVisibleCells().map((cell: Cell<TData, unknown>) => {
+                          return (
+                            <SortableContext
+                              key={cell.id}
+                              items={table.getState().columnOrder}
+                              strategy={horizontalListSortingStrategy}
+                            >
+                              <DataGridTableDndCell cell={cell} />
+                            </SortableContext>
+                          );
+                        })}
+                      </DataGridTableBodyRow>
+                      {row.getIsExpanded() && <DataGridTableBodyRowExpandded row={row} />}
+                    </Fragment>
+                  );
+                });
+              }
+              return <DataGridTableEmpty />;
+            })()}
           </DataGridTableBody>
         </DataGridTableBase>
       </div>

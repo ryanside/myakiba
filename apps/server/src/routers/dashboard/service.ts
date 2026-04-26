@@ -238,6 +238,7 @@ class DashboardService {
     this.releaseCalendarPrepared = db
       .select({
         itemId: item.id,
+        itemExternalId: item.externalId,
         title: item.title,
         image: item.image,
         category: item.category,

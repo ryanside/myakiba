@@ -48,7 +48,7 @@ export function InlineCountCell({ value, onSubmit, disabled = false }: InlineCou
           }}
           type="number"
           min="1"
-          onChange={(e) => setNewValue(parseInt(e.target.value) || 1)}
+          onChange={(e) => setNewValue(Number.parseInt(e.target.value, 10) || 1)}
           placeholder="1"
           autoFocus
         />

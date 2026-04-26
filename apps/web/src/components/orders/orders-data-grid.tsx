@@ -3,14 +3,13 @@ import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-gr
 import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import {
-  type ExpandedState,
-  getCoreRowModel,
-  type PaginationState,
-  type SortingState,
-  type VisibilityState,
-  useReactTable,
-  type Updater,
+import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import type {
+  ExpandedState,
+  PaginationState,
+  SortingState,
+  VisibilityState,
+  Updater,
 } from "@tanstack/react-table";
 import type { OrderFilters } from "@myakiba/contracts/orders/schema";
 import type { OrderListItem } from "@myakiba/contracts/orders/types";
@@ -21,9 +20,11 @@ import { OrdersCardGrid } from "./orders-card-grid";
 import { OrdersGalleryGrid } from "./orders-gallery-grid";
 import { createOrdersColumns } from "./orders-columns";
 import { SyncSheetButton } from "@/components/sync/sync-sheet-button";
-import { ViewToggle, type ViewMode } from "@/components/ui/view-toggle";
+import { ViewToggle } from "@/components/ui/view-toggle";
+import type { ViewMode } from "@/components/ui/view-toggle";
 import { GridSizeSlider } from "@/components/ui/grid-size-slider";
-import { GalleryLayoutToggle, type GalleryLayout } from "@/components/ui/gallery-layout-toggle";
+import { GalleryLayoutToggle } from "@/components/ui/gallery-layout-toggle";
+import type { GalleryLayout } from "@/components/ui/gallery-layout-toggle";
 import { useOrdersFilters, useOrdersQuery, useOrdersMutations } from "@/hooks/use-orders";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
@@ -264,40 +265,48 @@ export default function OrdersDataGrid() {
           }}
         >
           <div className="w-full space-y-2.5">
-            {isTableView ? (
-              <DataGridContainer>
-                <ScrollArea>
-                  <DataGridTable />
-                  <ScrollBar orientation="horizontal" />
-                </ScrollArea>
-              </DataGridContainer>
-            ) : viewMode === "gallery" ? (
-              <OrdersGalleryGrid
-                orders={orders}
-                tileSize={cardWidth}
-                galleryLayout={galleryLayout}
-                rowSelection={rowSelection}
-                onRowSelectionChange={setRowSelection}
-                onEditOrder={handleEditOrder}
-                onDeleteOrders={handleDeleteOrders}
-                currency={currency}
-                isOrderPending={isOrderPending}
-                isLoading={isPending}
-              />
-            ) : (
-              <OrdersCardGrid
-                orders={orders}
-                cardWidth={cardWidth}
-                rowSelection={rowSelection}
-                onRowSelectionChange={setRowSelection}
-                onEditOrder={handleEditOrder}
-                onDeleteOrders={handleDeleteOrders}
-                currency={currency}
-                locale={locale}
-                isOrderPending={isOrderPending}
-                isLoading={isPending}
-              />
-            )}
+            {(() => {
+              if (isTableView) {
+                return (
+                  <DataGridContainer>
+                    <ScrollArea>
+                      <DataGridTable />
+                      <ScrollBar orientation="horizontal" />
+                    </ScrollArea>
+                  </DataGridContainer>
+                );
+              }
+              if (viewMode === "gallery") {
+                return (
+                  <OrdersGalleryGrid
+                    orders={orders}
+                    tileSize={cardWidth}
+                    galleryLayout={galleryLayout}
+                    rowSelection={rowSelection}
+                    onRowSelectionChange={setRowSelection}
+                    onEditOrder={handleEditOrder}
+                    onDeleteOrders={handleDeleteOrders}
+                    currency={currency}
+                    isOrderPending={isOrderPending}
+                    isLoading={isPending}
+                  />
+                );
+              }
+              return (
+                <OrdersCardGrid
+                  orders={orders}
+                  cardWidth={cardWidth}
+                  rowSelection={rowSelection}
+                  onRowSelectionChange={setRowSelection}
+                  onEditOrder={handleEditOrder}
+                  onDeleteOrders={handleDeleteOrders}
+                  currency={currency}
+                  locale={locale}
+                  isOrderPending={isOrderPending}
+                  isLoading={isPending}
+                />
+              );
+            })()}
             <div className="flex items-center justify-between">
               <div className="flex-1 text-sm text-muted-foreground">
                 {table.getFilteredSelectedRowModel().rows.length} of{" "}

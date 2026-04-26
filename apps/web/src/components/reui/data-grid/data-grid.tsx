@@ -7,7 +7,7 @@ import type { ColumnFiltersState, RowData, SortingState, Table } from "@tanstack
 import { cn } from "@/lib/utils";
 
 declare module "@tanstack/react-table" {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // oxlint-disable-next-line no-unused-vars
   interface ColumnMeta<TData extends RowData, TValue> {
     headerTitle?: string;
     headerClassName?: string;
@@ -90,7 +90,7 @@ export interface DataGridProps<TData extends object> {
 }
 
 const DataGridContext = createContext<
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // oxlint-disable-next-line typescript/no-explicit-any
   DataGridContextProps<any> | undefined
 >(undefined);
 
@@ -158,11 +158,11 @@ function DataGrid<TData extends object>({ children, table, ...props }: DataGridP
     ...props,
     tableLayout: {
       ...defaultProps.tableLayout,
-      ...(props.tableLayout || {}),
+      ...props.tableLayout,
     },
     tableClassNames: {
       ...defaultProps.tableClassNames,
-      ...(props.tableClassNames || {}),
+      ...props.tableClassNames,
     },
   };
 

@@ -10,10 +10,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { DebouncedInput } from "@/components/debounced-input";
 import OrdersFiltersForm from "./orders-filters-form";
-import { SortCombobox, type SortableColumn } from "@/components/ui/sort-combobox";
+import { SortCombobox } from "@/components/ui/sort-combobox";
+import type { SortableColumn } from "@/components/ui/sort-combobox";
 import { OrderForm } from "./order-form";
 import UnifiedItemMoveForm from "./unified-item-move-form";
-import { ConfirmationPopover } from "@/components/ui/confirmation-popover";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   ActionBar,
   ActionBarSelection,
@@ -26,6 +27,9 @@ import type { OrderFilters, CascadeOptions, NewOrder } from "@myakiba/contracts/
 import { useOrdersFilters } from "@/hooks/use-orders";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type { SelectedCollectionItems } from "@/hooks/use-selection";
+
+const OWNED_ITEMS_DELETE_HINT =
+  'Items with "Owned" status will not be deleted. You can delete owned items in the collection tab.';
 
 const SORTABLE_COLUMNS: SortableColumn[] = [
   { id: "title", label: "Order" },
@@ -211,8 +215,8 @@ export function OrdersToolbar({
             clearSelections={clearSelections}
             currency={currency}
           />
-          <ConfirmationPopover
-            trigger={
+          <ConfirmDialog
+            renderTrigger={
               <ActionBarItem
                 disabled={selectedOrderIds.size === 0 || isDeletingOrders}
                 onSelect={(e) => e.preventDefault()}
@@ -227,16 +231,15 @@ export function OrdersToolbar({
                 </span>
               </ActionBarItem>
             }
-            title="Delete the selected orders and their items?"
-            tooltipContent='Items with "Owned" status will not be deleted. You can delete owned items in the collection tab.'
-            disabled={selectedOrderIds.size === 0 || isDeletingOrders}
+            title={`Delete ${selectedOrderIds.size} ${selectedOrderIds.size === 1 ? "order" : "orders"}?`}
+            description={OWNED_ITEMS_DELETE_HINT}
             onConfirm={async () => {
               await onDeleteOrders(selectedOrderIds);
               clearSelections();
             }}
           />
-          <ConfirmationPopover
-            trigger={
+          <ConfirmDialog
+            renderTrigger={
               <ActionBarItem
                 disabled={selectedItems.collectionIds.size === 0 || isDeletingItems}
                 onSelect={(e) => e.preventDefault()}
@@ -251,9 +254,8 @@ export function OrdersToolbar({
                 </span>
               </ActionBarItem>
             }
-            title="Delete the selected items?"
-            tooltipContent='Items with "Owned" status will not be deleted. You can delete owned items in the collection tab.'
-            disabled={selectedItems.collectionIds.size === 0 || isDeletingItems}
+            title={`Delete ${selectedItems.collectionIds.size} ${selectedItems.collectionIds.size === 1 ? "item" : "items"}?`}
+            description={OWNED_ITEMS_DELETE_HINT}
             onConfirm={async () => {
               await onDeleteItems(selectedItems.collectionIds);
               clearSelections();

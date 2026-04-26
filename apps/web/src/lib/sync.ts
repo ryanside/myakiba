@@ -60,9 +60,15 @@ export const PHASE_CONFIG: Record<SyncJobPhase, { readonly bannerClass: string }
  *
  * Precedence:
  * 1. stream error copy
- * 2. latest recent-item outcome from the live stream
- * 3. live `jobStatus.statusMessage`
- * 4. persisted `session.statusMessage`
+ * 2. terminal `jobStatus.statusMessage` (summary — wins over per-item ticker)
+ * 3. latest recent-item outcome from the live stream
+ * 4. live `jobStatus.statusMessage`
+ * 5. persisted `session.statusMessage`
+ *
+ * The recent-item override is intentionally skipped once the job has reached a
+ * terminal state, otherwise a completion toast or final banner would show the
+ * per-item ticker ("Synced {last item}") instead of the aggregate summary
+ * ("Synced 10/10 items").
  *
  * This helper only decides the sentence. Badge label, spinner state, and
  * container styling should stay at the call site.
@@ -96,6 +102,10 @@ export function resolveSyncMessage(
 ): string {
   if (isStreamError) {
     return SYNC_STATUS_MESSAGES.streamError;
+  }
+
+  if (jobStatus?.terminalState != null) {
+    return jobStatus.statusMessage;
   }
 
   const recentItem = jobStatus?.recentItems[0];
@@ -177,10 +187,10 @@ export function extractMfcItemId(input: string): string | null {
   return null;
 }
 
-export function createDefaultSyncFormOrderItem(): SyncFormOrderItem {
+export function createDefaultSyncFormOrderItem(itemExternalId = ""): SyncFormOrderItem {
   return {
     formRowId: crypto.randomUUID(),
-    itemExternalId: "",
+    itemExternalId,
     price: "0.00",
     count: 1,
     status: "Ordered",
@@ -193,7 +203,7 @@ export function createDefaultSyncFormOrderItem(): SyncFormOrderItem {
   };
 }
 
-export function createDefaultSyncFormOrder(): SyncFormOrder {
+export function createDefaultSyncFormOrder(itemExternalId = ""): SyncFormOrder {
   return {
     status: "Ordered",
     title: "New Order",
@@ -210,14 +220,14 @@ export function createDefaultSyncFormOrder(): SyncFormOrder {
     tariffs: "0.00",
     miscFees: "0.00",
     notes: "",
-    items: [createDefaultSyncFormOrderItem()],
+    items: [createDefaultSyncFormOrderItem(itemExternalId)],
   };
 }
 
-export function createDefaultSyncFormCollectionItem(): SyncFormCollectionItem {
+export function createDefaultSyncFormCollectionItem(itemExternalId = ""): SyncFormCollectionItem {
   return {
     formRowId: crypto.randomUUID(),
-    itemExternalId: "",
+    itemExternalId,
     price: "0.00",
     count: 1,
     score: 0,
@@ -241,7 +251,7 @@ export async function transformCSVData(value: { file: File | undefined }) {
   const parsedCSV = Papa.parse(text, {
     header: true,
     skipEmptyLines: true,
-    transformHeader: (header: string) => header.trim().toLowerCase().replace(/ /g, "_"),
+    transformHeader: (header: string) => header.trim().toLowerCase().replaceAll(" ", "_"),
   });
 
   const validatedCSV = csvSchema.safeParse(parsedCSV.data);

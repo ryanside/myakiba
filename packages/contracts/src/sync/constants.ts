@@ -1,4 +1,4 @@
-import { SYNC_SESSION_STATUSES } from "../shared/constants";
+import type { SYNC_SESSION_STATUSES } from "../shared/constants";
 
 export type SyncSessionStatusValue = (typeof SYNC_SESSION_STATUSES)[number];
 

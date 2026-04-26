@@ -43,7 +43,8 @@ export default function SyncCsvForm({
               const parsedCSV = Papa.parse(text, {
                 header: true,
                 skipEmptyLines: true,
-                transformHeader: (header: string) => header.trim().toLowerCase().replace(/ /g, "_"),
+                transformHeader: (header: string) =>
+                  header.trim().toLowerCase().replaceAll(" ", "_"),
               });
 
               const validatedCSV = csvSchema.safeParse(parsedCSV.data);

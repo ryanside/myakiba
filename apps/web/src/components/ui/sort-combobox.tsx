@@ -1,6 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, ArrowUp01Icon, ArrowUpDownIcon } from "@hugeicons/core-free-icons";
-import { useId, useState, type ReactElement } from "react";
+import { useId, useState } from "react";
+import type { ReactElement } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -82,11 +83,10 @@ export function SortCombobox({
       role="combobox"
       aria-controls={listboxId}
       aria-expanded={isOpen}
-      aria-haspopup="listbox"
       className="justify-between"
     >
       {getSortButtonIcon()}
-      <span className="hidden md:block">{currentColumnName ? currentColumnName : "Sort By"}</span>
+      <span className="hidden md:block">{currentColumnName || "Sort By"}</span>
     </Button>
   );
 

@@ -50,12 +50,14 @@ type SyncActionSheetProps = {
   readonly syncType: LaunchableSyncType | null;
   readonly onSyncTypeChange: (syncType: LaunchableSyncType | null) => void;
   readonly side?: "left" | "right";
+  readonly initialItemExternalId?: string;
 };
 
 export function SyncActionSheet({
   syncType,
   onSyncTypeChange,
   side = "left",
+  initialItemExternalId,
 }: SyncActionSheetProps): React.JSX.Element {
   const queryClient = useQueryClient();
   const { currency: userCurrency } = useUserPreferences();
@@ -89,12 +91,14 @@ export function SyncActionSheet({
                 <SyncOrderForm
                   handleSyncOrderSubmit={handleSyncOrderSubmit}
                   currency={userCurrency}
+                  initialItemExternalId={initialItemExternalId}
                 />
               ) : null}
               {syncType === "collection" ? (
                 <SyncCollectionForm
                   handleSyncCollectionSubmit={handleSyncCollectionSubmit}
                   currency={userCurrency}
+                  initialItemExternalId={initialItemExternalId}
                 />
               ) : null}
             </div>

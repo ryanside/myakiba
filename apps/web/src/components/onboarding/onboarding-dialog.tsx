@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useState } from "react";
+import type { CSSProperties } from "react";
 import { useForm } from "@tanstack/react-form";
-import z from "zod";
+import { z } from "zod";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowLeft01Icon,
@@ -40,7 +41,8 @@ import { authClient } from "@/lib/auth-client";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { CURRENCY_LABELS } from "@/lib/locale";
 import { cn } from "@/lib/utils";
-import { SyncActionSheet, type LaunchableSyncType } from "@/components/sync/sync-launcher";
+import { SyncActionSheet } from "@/components/sync/sync-launcher";
+import type { LaunchableSyncType } from "@/components/sync/sync-launcher";
 import { CURRENCIES, DATE_FORMATS } from "@myakiba/contracts/shared/constants";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { getRouteApi, useRouter } from "@tanstack/react-router";
@@ -585,7 +587,12 @@ function StepFooter({
   onContinue,
   onSkip,
 }: StepFooterProps) {
-  const continueIcon = isSaving ? Loading03Icon : isLast ? Tick02Icon : ArrowRight01Icon;
+  const getContinueIcon = () => {
+    if (isSaving) return Loading03Icon;
+    if (isLast) return Tick02Icon;
+    return ArrowRight01Icon;
+  };
+  const continueIcon = getContinueIcon();
   const skipLabel = "Close";
 
   return (

@@ -1,10 +1,14 @@
 import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
+  Copy01Icon,
+  Delete02Icon,
   Edit03Icon,
   Loading03Icon,
   MoreHorizontalIcon,
+  MoveIcon,
   PackageIcon,
+  ViewIcon,
 } from "@hugeicons/core-free-icons";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -12,21 +16,11 @@ import { InlineTextCell } from "@/components/cells/inline-text-cell";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { Link } from "@tanstack/react-router";
@@ -86,7 +80,7 @@ function CollectionActionsCell({
 > & {
   readonly item: CollectionItem;
   readonly isPending: boolean;
-}) {
+}): React.JSX.Element {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const selectedItems = {
@@ -105,7 +99,7 @@ function CollectionActionsCell({
               disabled={isPending}
               className="text-muted-foreground"
             >
-              <HugeiconsIcon icon={Edit03Icon} className="size-3" />
+              <HugeiconsIcon icon={Edit03Icon} />
               <span className="sr-only">Edit item</span>
             </Button>
           }
@@ -121,84 +115,76 @@ function CollectionActionsCell({
                 <span className="sr-only">Open menu</span>
                 <HugeiconsIcon
                   icon={isPending ? Loading03Icon : MoreHorizontalIcon}
-                  className={cn("h-4 w-4", isPending && "animate-spin")}
+                  className={cn(isPending && "animate-spin")}
                 />
               </Button>
             }
           />
           {menuOpen ? (
             <DropdownMenuContent align="end">
-              <DropdownMenuGroup>
-                <DropdownMenuItem>
-                  <Link to="/items/$id" params={{ id: item.itemId }}>
-                    View details
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    if (item.itemExternalId) {
-                      navigator.clipboard.writeText(item.itemExternalId.toString());
-                      toast.success("Copied MFC item ID to clipboard");
-                    } else {
-                      toast.error("No MFC item ID for custom items");
-                    }
-                  }}
+              <DropdownMenuItem>
+                <Link
+                  {...(item.itemExternalId !== null
+                    ? ({
+                        to: "/item/$externalId",
+                        params: { externalId: item.itemExternalId },
+                      } as const)
+                    : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
+                  className="flex items-center gap-1.5"
                 >
-                  Copy MFC ID
-                </DropdownMenuItem>
-                <UnifiedItemMoveForm
-                  renderTrigger={
-                    <DropdownMenuItem closeOnClick={false} disabled={isPending}>
-                      {isPending ? "Assigning..." : "Assign Order"}
-                    </DropdownMenuItem>
+                  <HugeiconsIcon icon={ViewIcon} />
+                  View details
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  if (item.itemExternalId) {
+                    navigator.clipboard.writeText(item.itemExternalId.toString());
+                    toast.success("Copied MFC item ID to clipboard");
+                  } else {
+                    toast.error("No MFC item ID for custom items");
                   }
-                  selectedItems={selectedItems}
-                  onMoveToExisting={onAddCollectionItemsToOrder}
-                  onMoveToNew={onAddCollectionItemsToNewOrder}
-                  clearSelections={() => {}}
-                  currency={currency}
-                  intent="add"
-                />
-              </DropdownMenuGroup>
+                }}
+              >
+                <HugeiconsIcon icon={Copy01Icon} />
+                Copy MFC ID
+              </DropdownMenuItem>
+              <UnifiedItemMoveForm
+                renderTrigger={
+                  <DropdownMenuItem closeOnClick={false}>
+                    <HugeiconsIcon icon={MoveIcon} />
+                    Assign order
+                  </DropdownMenuItem>
+                }
+                selectedItems={selectedItems}
+                onMoveToExisting={onAddCollectionItemsToOrder}
+                onMoveToNew={onAddCollectionItemsToNewOrder}
+                clearSelections={() => {}}
+                currency={currency}
+                intent="add"
+              />
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 variant="destructive"
-                disabled={isPending}
                 onClick={() => {
                   setMenuOpen(false);
                   setDeleteOpen(true);
                 }}
               >
+                <HugeiconsIcon icon={Delete02Icon} />
                 Delete item
               </DropdownMenuItem>
             </DropdownMenuContent>
           ) : null}
         </DropdownMenu>
       </div>
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        {deleteOpen ? (
-          <AlertDialogContent size="sm">
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete item?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will permanently remove this item from your collection.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                variant="destructive"
-                onClick={() => {
-                  setDeleteOpen(false);
-                  onDeleteCollectionItems(new Set([item.id]));
-                }}
-              >
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        ) : null}
-      </AlertDialog>
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete item?"
+        description="This will permanently remove this item from your collection."
+        onConfirm={() => onDeleteCollectionItems(new Set([item.id]))}
+      />
     </>
   );
 }
@@ -268,8 +254,12 @@ export function createCollectionColumns({
             />
             <div className="min-w-0 space-y-px">
               <Link
-                to="/items/$id"
-                params={{ id: item.itemId }}
+                {...(item.itemExternalId !== null
+                  ? ({
+                      to: "/item/$externalId",
+                      params: { externalId: item.itemExternalId },
+                    } as const)
+                  : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
                 className="font-medium text-foreground truncate"
               >
                 {item.itemTitle}
