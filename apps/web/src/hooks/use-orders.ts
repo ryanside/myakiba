@@ -674,12 +674,14 @@ export function useOrdersMutations() {
   editItemMutationRef.current = editItemMutation;
   const deleteItemMutationRef = useRef(deleteItemMutation);
   deleteItemMutationRef.current = deleteItemMutation;
-  const isOrderPending = useCallback((orderId: string): boolean => {
-    return pendingOrderIdsRef.current.has(orderId);
-  }, []);
-  const isCollectionItemPending = useCallback((collectionId: string): boolean => {
-    return pendingCollectionItemIdsRef.current.has(collectionId);
-  }, []);
+  const isOrderPending = useCallback(
+    (orderId: string): boolean => pendingOrderIds.has(orderId),
+    [pendingOrderIds],
+  );
+  const isCollectionItemPending = useCallback(
+    (collectionId: string): boolean => pendingCollectionItemIds.has(collectionId),
+    [pendingCollectionItemIds],
+  );
 
   const handleMerge = useCallback(
     async (

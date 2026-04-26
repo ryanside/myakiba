@@ -167,9 +167,10 @@ export function useCollectionOrderMutations() {
     [],
   );
 
-  const isCollectionOrderPending = useCallback((collectionId: string): boolean => {
-    return pendingCollectionIdsRef.current.has(collectionId);
-  }, []);
+  const isCollectionOrderPending = useCallback(
+    (collectionId: string): boolean => pendingCollectionIds.has(collectionId),
+    [pendingCollectionIds],
+  );
 
   return {
     handleAddCollectionItemsToOrder,
@@ -270,9 +271,10 @@ export function useCollectionMutations() {
   const deleteMutationRef = useRef(deleteMutation);
   deleteMutationRef.current = deleteMutation;
 
-  const isCollectionPending = useCallback((collectionId: string): boolean => {
-    return pendingCollectionIdsRef.current.has(collectionId);
-  }, []);
+  const isCollectionPending = useCallback(
+    (collectionId: string): boolean => pendingCollectionIds.has(collectionId),
+    [pendingCollectionIds],
+  );
 
   const handleDeleteCollectionItems = useCallback(
     async (collectionIds: ReadonlySet<string>): Promise<void> => {
