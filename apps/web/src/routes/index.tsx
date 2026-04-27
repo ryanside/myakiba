@@ -25,50 +25,17 @@ const EXAMPLE_ITEMS = [
   "/example-item7.webp",
 ] as const;
 
-type HeroViewId = "overview" | "detail";
-
-type HeroView = {
-  readonly id: HeroViewId;
-  readonly label: string;
-  readonly imageSlug: string;
-};
-
 type HeroTab = {
   readonly id: string;
   readonly label: string;
-  readonly views: readonly HeroView[];
+  readonly views: readonly string[];
 };
 
 const HERO_TABS = [
-  {
-    id: "dashboard",
-    label: "Dashboard",
-    views: [{ id: "overview", label: "Overview", imageSlug: "dashboard" }],
-  },
-  {
-    id: "orders",
-    label: "Orders",
-    views: [
-      { id: "overview", label: "1", imageSlug: "orders" },
-      { id: "detail", label: "2", imageSlug: "order-detail" },
-    ],
-  },
-  {
-    id: "collection",
-    label: "Collection",
-    views: [
-      { id: "overview", label: "1", imageSlug: "collection" },
-      { id: "detail", label: "2", imageSlug: "item-detail" },
-    ],
-  },
-  {
-    id: "analytics",
-    label: "Analytics",
-    views: [
-      { id: "overview", label: "1", imageSlug: "analytics" },
-      { id: "detail", label: "2", imageSlug: "artists-analytics" },
-    ],
-  },
+  { id: "dashboard", label: "Dashboard", views: ["dashboard"] },
+  { id: "orders", label: "Orders", views: ["orders", "order-detail"] },
+  { id: "collection", label: "Collection", views: ["collection", "item-detail"] },
+  { id: "analytics", label: "Analytics", views: ["analytics", "artists-analytics"] },
 ] as const satisfies readonly HeroTab[];
 
 type HeroTabId = (typeof HERO_TABS)[number]["id"];
@@ -151,11 +118,17 @@ function ThemeToggle() {
 function HomeComponent() {
   const { theme } = useTheme();
   const isDark = theme !== "light";
-  const [activeTab, setActiveTab] = useState<HeroTabId>("dashboard");
-  const [activeView, setActiveView] = useState<HeroViewId>("overview");
+  const [hero, setHero] = useState<{
+    readonly tab: HeroTabId;
+    readonly views: Readonly<Record<HeroTabId, number>>;
+  }>({
+    tab: "dashboard",
+    views: { dashboard: 0, orders: 0, collection: 0, analytics: 0 },
+  });
 
-  const currentTab = HERO_TABS.find((tab) => tab.id === activeTab) ?? HERO_TABS[0];
-  const currentView = currentTab.views.find((v) => v.id === activeView) ?? currentTab.views[0];
+  const currentTab = HERO_TABS.find((tab) => tab.id === hero.tab) ?? HERO_TABS[0];
+  const currentViewIndex = hero.views[hero.tab];
+  const currentImageSlug = currentTab.views[currentViewIndex] ?? currentTab.views[0];
 
   return (
     <div className="min-h-screen min-w-0 overflow-x-clip bg-background text-foreground">
@@ -270,7 +243,10 @@ function HomeComponent() {
 
         <div className="animate-appear -mx-6 sm:-mx-24 md:-mx-36 lg:-mx-60 xl:-mx-84 [--appear-delay:380ms]">
           <div className="mb-3 flex items-center gap-4 px-6 sm:px-0">
-            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as HeroTabId)}>
+            <Tabs
+              value={hero.tab}
+              onValueChange={(value) => setHero((h) => ({ ...h, tab: value as HeroTabId }))}
+            >
               <TabsList variant="line">
                 {HERO_TABS.map((tab) => (
                   <TabsTrigger key={tab.id} value={tab.id}>
@@ -282,14 +258,19 @@ function HomeComponent() {
 
             {currentTab.views.length > 1 && (
               <Tabs
-                value={currentView.id}
-                onValueChange={(value) => setActiveView(value as HeroViewId)}
+                value={String(currentViewIndex)}
+                onValueChange={(value) =>
+                  setHero((h) => ({
+                    ...h,
+                    views: { ...h.views, [h.tab]: Number(value) },
+                  }))
+                }
                 className="ml-auto transition-opacity duration-150 ease-out starting:opacity-0"
               >
                 <TabsList variant="line">
-                  {currentTab.views.map((view) => (
-                    <TabsTrigger key={view.id} value={view.id} className="px-2.5 text-xs">
-                      {view.label}
+                  {currentTab.views.map((_, i) => (
+                    <TabsTrigger key={i} value={String(i)} className="px-2.5 text-xs">
+                      {i + 1}
                     </TabsTrigger>
                   ))}
                 </TabsList>
@@ -297,20 +278,22 @@ function HomeComponent() {
             )}
           </div>
 
-          <div className="relative aspect-2992/1788 w-full overflow-hidden rounded-xl">
+          <div className="relative aspect-2992/1788 w-full overflow-hidden shadow-xs ring-1 ring-foreground/5 dark:ring-foreground/1 rounded-xl">
             {HERO_TABS.flatMap((tab) =>
-              tab.views.map((view) => {
-                const isActive = tab.id === activeTab && view.id === currentView.id;
+              tab.views.map((slug, i) => {
+                const isActive = tab.id === hero.tab && slug === currentImageSlug;
                 return (
                   <img
-                    key={`${tab.id}-${view.id}`}
-                    src={getHeroImage(view.imageSlug, isDark)}
-                    alt={`myakiba ${tab.label.toLowerCase()} — ${view.label.toLowerCase()}`}
+                    key={`${tab.id}-${slug}`}
+                    src={getHeroImage(slug, isDark)}
+                    alt={`myakiba ${tab.label.toLowerCase()} — ${i + 1}`}
                     className={cn(
                       "absolute inset-0 h-full w-full object-cover transition-opacity duration-150 ease-out",
-                      isActive ? "opacity-100" : "opacity-0",
+                      isActive
+                        ? "pointer-events-auto opacity-100"
+                        : "pointer-events-none opacity-0",
                     )}
-                    loading={view.id === "overview" ? "eager" : "lazy"}
+                    loading={i === 0 ? "eager" : "lazy"}
                   />
                 );
               }),
