@@ -1,11 +1,9 @@
-import { Link } from "@tanstack/react-router";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { CollectionBreakdown } from "@/components/dashboard/collection-breakdown";
 import OrderKanban from "@/components/dashboard/order-kanban";
 import { OrdersBarChart } from "@/components/dashboard/orders-bar-chart";
 import { ReleaseCalendar } from "@/components/dashboard/release-calendar";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { KPICard } from "@/components/ui/kpi-card";
 import type { DateFormat, Currency } from "@myakiba/contracts/shared/types";
 import type { DashboardResponse } from "@/queries/dashboard";
@@ -105,29 +103,13 @@ export function OverviewTab({
         <OrdersBarChart data={monthlyOrders} isLoading={isLoading} />
         <ReleaseCalendar currency={currency} />
       </div>
-      <Card className="h-dvh">
-        <CardHeader className="flex flex-row items-center gap-2">
-          <div className="flex flex-col items-start gap-1">
-            <CardTitle className="text-base font-medium">Orders Board</CardTitle>
-            <CardDescription className="text-xs text-muted-foreground">
-              quickly manage upcoming active orders
-            </CardDescription>
-          </div>
-          <Link to="/orders" className="ml-auto">
-            <Button variant="outline" className="rounded-md">
-              View All
-            </Button>
-          </Link>
-        </CardHeader>
-        <CardContent className="flex-1 min-h-0">
-          <OrderKanban
-            orders={orders}
-            isLoading={isLoading}
-            currency={currency}
-            dateFormat={dateFormat}
-          />
-        </CardContent>
-      </Card>
+
+      <OrderKanban
+        orders={orders}
+        isLoading={isLoading}
+        currency={currency}
+        dateFormat={dateFormat}
+      />
     </>
   );
 }
