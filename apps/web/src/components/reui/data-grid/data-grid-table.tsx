@@ -1,4 +1,4 @@
-import { Fragment, memo } from "react";
+import { Fragment } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { useDataGrid } from "@/components/reui/data-grid/data-grid";
 import { flexRender } from "@tanstack/react-table";
@@ -52,137 +52,6 @@ function getLastColAttribute(
   if (isFirstRightPinned) return "right";
   return undefined;
 }
-
-type StableBodyRowRenderProps<TData> = {
-  row: Row<TData>;
-  isExpanded: boolean;
-  isSelected: boolean;
-  cellIds: string;
-  expandedContent?: (row: TData) => ReactNode;
-  onRowClick?: (row: TData) => void;
-  dense: boolean;
-  cellBorder: boolean;
-  rowBorder: boolean;
-  stripped: boolean;
-  columnsResizable: boolean;
-  columnsPinnable: boolean;
-  columnsDraggable: boolean;
-  bodyRowClassName?: string;
-  edgeCellClassName?: string;
-  enableRowSelection: boolean;
-};
-
-function StableBodyRowRenderInner<TData>({
-  row,
-  isExpanded,
-  isSelected,
-  expandedContent,
-  onRowClick,
-  dense,
-  cellBorder,
-  rowBorder,
-  stripped,
-  columnsResizable,
-  columnsPinnable,
-  columnsDraggable,
-  bodyRowClassName,
-  edgeCellClassName,
-  enableRowSelection,
-}: StableBodyRowRenderProps<TData>) {
-  const cells = row.getVisibleCells();
-  const bodyCellSpacing = bodyCellSpacingVariants({
-    size: dense ? "dense" : "default",
-  });
-
-  return (
-    <Fragment>
-      <tr
-        data-state={enableRowSelection && isSelected ? "selected" : undefined}
-        onClick={() => onRowClick?.(row.original)}
-        className={cn(
-          "animate-data-in group/row hover:bg-muted/40 data-[state=selected]:bg-muted/50",
-          onRowClick && "cursor-pointer",
-          !stripped && rowBorder && "border-border border-b [&:not(:last-child)>td]:border-b",
-          cellBorder && "*:last:border-e-0",
-          stripped && "odd:bg-muted/90 odd:hover:bg-muted hover:bg-transparent",
-          enableRowSelection && "*:first:relative",
-          bodyRowClassName,
-        )}
-      >
-        {cells.map((cell) => {
-          const { column } = cell;
-          const isPinned = column.getIsPinned();
-          const isLastLeftPinned = isPinned === "left" && column.getIsLastColumn("left");
-          const isFirstRightPinned = isPinned === "right" && column.getIsFirstColumn("right");
-
-          return (
-            <td
-              key={cell.id}
-              {...(columnsDraggable && !isPinned ? { cell } : {})}
-              style={{
-                ...(columnsResizable && {
-                  width: column.getSize(),
-                }),
-                ...(columnsPinnable && column.getCanPin() && getPinningStyles(column)),
-              }}
-              data-pinned={isPinned || undefined}
-              data-last-col={getLastColAttribute(isLastLeftPinned, isFirstRightPinned)}
-              className={cn(
-                "align-middle",
-                bodyCellSpacing,
-                cellBorder && "border-e",
-                columnsResizable && column.getCanResize() && "truncate",
-                cell.column.columnDef.meta?.cellClassName,
-                columnsPinnable &&
-                  column.getCanPin() &&
-                  '[&[data-pinned][data-last-col]]:border-border data-pinned:bg-background/90 data-pinned:backdrop-blur-xs" [&[data-pinned=left][data-last-col=left]]:border-e! [&[data-pinned=right][data-last-col=right]]:border-s!',
-                column.getIndex() === 0 || column.getIndex() === cells.length - 1
-                  ? edgeCellClassName
-                  : "",
-              )}
-            >
-              {flexRender(cell.column.columnDef.cell, cell.getContext())}
-            </td>
-          );
-        })}
-      </tr>
-      {isExpanded ? (
-        <tr className={cn(rowBorder && "[&:not(:last-child)>td]:border-b")}>
-          <td colSpan={cells.length}>{expandedContent?.(row.original)}</td>
-        </tr>
-      ) : null}
-    </Fragment>
-  );
-}
-
-function areStableBodyRowsEqual<TData>(
-  previousProps: StableBodyRowRenderProps<TData>,
-  nextProps: StableBodyRowRenderProps<TData>,
-) {
-  return (
-    previousProps.row === nextProps.row &&
-    previousProps.isExpanded === nextProps.isExpanded &&
-    previousProps.isSelected === nextProps.isSelected &&
-    previousProps.cellIds === nextProps.cellIds &&
-    previousProps.expandedContent === nextProps.expandedContent &&
-    previousProps.onRowClick === nextProps.onRowClick &&
-    previousProps.dense === nextProps.dense &&
-    previousProps.cellBorder === nextProps.cellBorder &&
-    previousProps.rowBorder === nextProps.rowBorder &&
-    previousProps.stripped === nextProps.stripped &&
-    previousProps.columnsResizable === nextProps.columnsResizable &&
-    previousProps.columnsPinnable === nextProps.columnsPinnable &&
-    previousProps.columnsDraggable === nextProps.columnsDraggable &&
-    previousProps.bodyRowClassName === nextProps.bodyRowClassName &&
-    previousProps.edgeCellClassName === nextProps.edgeCellClassName &&
-    previousProps.enableRowSelection === nextProps.enableRowSelection
-  );
-}
-
-const StableBodyRowRender = memo(
-  StableBodyRowRenderInner,
-  areStableBodyRowsEqual,
-) as typeof StableBodyRowRenderInner;
 
 function DataGridTableBase({ children }: { children: ReactNode }) {
   const { props, table } = useDataGrid();
@@ -584,10 +453,6 @@ function DataGridTable<TData>() {
   const { table, isLoading, props } = useDataGrid();
   const pagination = table.getState().pagination;
   const skeletonRowCount = props.skeletonRowCount ?? pagination?.pageSize;
-  const expandedContent = table
-    .getAllColumns()
-    .find((column) => column.columnDef.meta?.expandedContent)?.columnDef.meta?.expandedContent;
-  const memoizeStableRows = props.memoizeStableRows === true;
 
   return (
     <DataGridTableBase>
@@ -665,48 +530,20 @@ function DataGridTable<TData>() {
           if (!table.getRowModel().rows.length) {
             return <DataGridTableEmpty />;
           }
-          return table.getRowModel().rows.map((row: Row<TData>, index) => {
-            if (memoizeStableRows) {
-              const visibleCells = row.getVisibleCells();
-
-              return (
-                <StableBodyRowRender
-                  key={row.id}
-                  row={row}
-                  isExpanded={row.getIsExpanded()}
-                  isSelected={table.options.enableRowSelection ? row.getIsSelected() : false}
-                  cellIds={visibleCells.map((cell) => cell.id).join("|")}
-                  expandedContent={expandedContent}
-                  onRowClick={props.onRowClick}
-                  dense={props.tableLayout?.dense === true}
-                  cellBorder={props.tableLayout?.cellBorder === true}
-                  rowBorder={props.tableLayout?.rowBorder === true}
-                  stripped={props.tableLayout?.stripped === true}
-                  columnsResizable={props.tableLayout?.columnsResizable === true}
-                  columnsPinnable={props.tableLayout?.columnsPinnable === true}
-                  columnsDraggable={props.tableLayout?.columnsDraggable === true}
-                  bodyRowClassName={props.tableClassNames?.bodyRow}
-                  edgeCellClassName={props.tableClassNames?.edgeCell}
-                  enableRowSelection={table.options.enableRowSelection === true}
-                />
-              );
-            }
-
-            return (
-              <Fragment key={row.id}>
-                <DataGridTableBodyRow row={row} key={index}>
-                  {row.getVisibleCells().map((cell: Cell<TData, unknown>, colIndex) => {
-                    return (
-                      <DataGridTableBodyRowCell cell={cell} key={colIndex}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </DataGridTableBodyRowCell>
-                    );
-                  })}
-                </DataGridTableBodyRow>
-                {row.getIsExpanded() && <DataGridTableBodyRowExpandded row={row} />}
-              </Fragment>
-            );
-          });
+          return table.getRowModel().rows.map((row: Row<TData>) => (
+            <Fragment key={row.id}>
+              <DataGridTableBodyRow row={row}>
+                {row.getVisibleCells().map((cell: Cell<TData, unknown>, colIndex) => {
+                  return (
+                    <DataGridTableBodyRowCell cell={cell} key={colIndex}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </DataGridTableBodyRowCell>
+                  );
+                })}
+              </DataGridTableBodyRow>
+              {row.getIsExpanded() && <DataGridTableBodyRowExpandded row={row} />}
+            </Fragment>
+          ));
         })()}
       </DataGridTableBody>
     </DataGridTableBase>

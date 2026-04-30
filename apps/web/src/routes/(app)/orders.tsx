@@ -4,7 +4,7 @@ import { OrdersQuickFilters } from "@/components/orders/orders-quick-filters";
 import { searchSchema } from "@myakiba/contracts/orders/schema";
 import { KPICard } from "@/components/ui/kpi-card";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import { useOrdersQuery, useOrderStatsQuery } from "@/hooks/use-orders";
+import { useOrdersQuery } from "@/hooks/use-orders";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 export const Route = createFileRoute("/(app)/orders")({
@@ -25,8 +25,8 @@ export const Route = createFileRoute("/(app)/orders")({
 
 function RouteComponent() {
   const { currency, locale } = useUserPreferences();
-  const { isError, status } = useOrdersQuery();
-  const { orderStats, isStatsPending } = useOrderStatsQuery();
+  const { isError, status, isPending, totalCount, totalSpent, activeOrders, unpaidCosts } =
+    useOrdersQuery();
 
   if (isError) {
     return (
@@ -55,35 +55,29 @@ function RouteComponent() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         <KPICard
           title="Total Orders"
-          subtitle="all time"
-          value={orderStats?.totalOrders}
-          isLoading={isStatsPending}
+          subtitle="across current filters"
+          value={isPending ? undefined : totalCount}
+          isLoading={isPending}
         />
         <KPICard
           title="Total Spent"
-          subtitle="all time, including all fees"
-          value={
-            orderStats
-              ? formatCurrencyFromMinorUnits(orderStats.totalSpent, currency, locale)
-              : undefined
-          }
-          isLoading={isStatsPending}
+          subtitle="including all fees"
+          value={isPending ? undefined : formatCurrencyFromMinorUnits(totalSpent, currency, locale)}
+          isLoading={isPending}
         />
         <KPICard
           title="Active Orders"
           subtitle="orders without status 'Owned'"
-          value={orderStats?.activeOrders}
-          isLoading={isStatsPending}
+          value={isPending ? undefined : activeOrders}
+          isLoading={isPending}
         />
         <KPICard
           title="Unpaid Costs"
           subtitle="costs with status 'Ordered'"
           value={
-            orderStats
-              ? formatCurrencyFromMinorUnits(orderStats.unpaidCosts, currency, locale)
-              : undefined
+            isPending ? undefined : formatCurrencyFromMinorUnits(unpaidCosts, currency, locale)
           }
-          isLoading={isStatsPending}
+          isLoading={isPending}
         />
       </div>
       <OrdersQuickFilters />

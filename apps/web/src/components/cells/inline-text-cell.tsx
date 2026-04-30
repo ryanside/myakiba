@@ -1,7 +1,8 @@
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 import * as Editable from "@/components/ui/editable";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { usePendingValue } from "@/hooks/use-pending-value";
 
 interface InlineTextCellProps {
   value: string;
@@ -25,49 +26,38 @@ export function InlineTextCell({
   readOnly,
 }: InlineTextCellProps): React.ReactElement {
   const [isEditing, setIsEditing] = useState(false);
-  const [currentValue, setCurrentValue] = useState(value);
-
-  const resetToPreviousValue = useCallback(() => {
-    setCurrentValue(value);
-  }, [value]);
-
-  const handleSubmit = useCallback(
-    async (newValue: string) => {
-      if (value === newValue) {
-        setIsEditing(false);
-        return;
-      }
-
-      if (validate) {
-        const validationResult = validate(newValue);
-        if (validationResult !== true) {
-          toast.error(validationResult as string);
-          resetToPreviousValue();
-          return;
-        }
-      }
-      setIsEditing(false);
-      try {
-        await onSubmit(newValue);
-      } catch (error) {
-        console.error("Failed to submit edit:", error);
-      }
-    },
-    [onSubmit, resetToPreviousValue, validate, value],
-  );
+  const [editingValue, setEditingValue] = useState("");
+  const [displayValue, submit] = usePendingValue(value, onSubmit);
 
   const handleEdit = useCallback(() => {
+    setEditingValue(displayValue);
     setIsEditing(true);
-  }, []);
+  }, [displayValue]);
 
   const handleCancel = useCallback(() => {
     setIsEditing(false);
   }, []);
 
+  const handleSubmit = useCallback(
+    async (typed: string): Promise<void> => {
+      setIsEditing(false);
+      if (typed === value) return;
+      if (validate) {
+        const validationResult = validate(typed);
+        if (validationResult !== true) {
+          toast.error(validationResult as string);
+          return;
+        }
+      }
+      await submit(typed);
+    },
+    [submit, validate, value],
+  );
+
   return (
     <Editable.Root
-      value={currentValue}
-      onValueChange={setCurrentValue}
+      value={isEditing ? editingValue : displayValue}
+      onValueChange={setEditingValue}
       onSubmit={handleSubmit}
       onEdit={handleEdit}
       onCancel={handleCancel}
@@ -81,7 +71,6 @@ export function InlineTextCell({
       <Editable.Area
         className="w-full"
         onClick={(e) => {
-          // Stop propagation to prevent row selection/expand
           e.stopPropagation();
         }}
       >
@@ -91,7 +80,6 @@ export function InlineTextCell({
         <Editable.Input
           className={cn("w-full", inputClassName)}
           onClick={(e) => {
-            // Stop propagation to prevent row selection/expand
             e.stopPropagation();
           }}
         />

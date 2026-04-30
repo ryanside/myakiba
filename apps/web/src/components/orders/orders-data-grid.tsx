@@ -70,7 +70,7 @@ export default function OrdersDataGrid() {
     isDeletingOrders,
     isDeletingItems,
     isMovingItems,
-  } = useOrdersMutations();
+  } = useOrdersMutations({ filters });
   const { currency, locale, dateFormat } = useUserPreferences();
 
   const limit = filters.limit ?? DEFAULT_LIMIT;
@@ -255,7 +255,6 @@ export default function OrdersDataGrid() {
           table={table}
           isLoading={isPending}
           recordCount={totalCount}
-          memoizeStableRows
           tableLayout={{
             dense: viewMode === "compact",
             columnsPinnable: true,

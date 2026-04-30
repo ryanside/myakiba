@@ -9,7 +9,6 @@ import type {
   Order,
   OrderItem,
   OrderListItem,
-  OrderStats,
   PaginatedResult,
 } from "@myakiba/contracts/orders/types";
 import type { OrderStatus } from "@myakiba/contracts/shared/types";
@@ -55,18 +54,6 @@ export async function getOrders(filters: OrderFilters): Promise<OrderListItem[]>
   }
   if (!data) {
     throw new Error("Failed to get orders");
-  }
-
-  return data;
-}
-
-export async function getOrderStats(): Promise<OrderStats> {
-  const { data, error } = await app.api.orders.stats.get();
-  if (error) {
-    throw new Error(getErrorMessage(error, "Failed to get order stats"));
-  }
-  if (!data) {
-    throw new Error("Failed to get order stats");
   }
 
   return data;

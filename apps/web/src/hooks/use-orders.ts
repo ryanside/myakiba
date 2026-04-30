@@ -10,7 +10,6 @@ import { toast } from "sonner";
 import { useFilters } from "@/hooks/use-filters";
 import {
   getOrders,
-  getOrderStats,
   getOrderItems,
   getOrderItemReleases,
   mergeOrders,
@@ -30,10 +29,10 @@ import type {
   OrderFilters,
 } from "@myakiba/contracts/orders/schema";
 import type {
+  Order,
   OrderItem,
   OrderListItem,
   PaginatedResult,
-  OrderStats,
 } from "@myakiba/contracts/orders/types";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 
@@ -42,13 +41,6 @@ export function ordersQueryOptions(filters: OrderFilters) {
     queryKey: ["orders", filters] as const,
     queryFn: () => getOrders(filters),
     placeholderData: keepPreviousData,
-  });
-}
-
-export function orderStatsQueryOptions() {
-  return queryOptions({
-    queryKey: ["orderStats"] as const,
-    queryFn: () => getOrderStats(),
   });
 }
 
@@ -69,30 +61,6 @@ export function orderItemReleasesQueryOptions(orderId: string) {
   });
 }
 
-function computeStatsDelta(orders: readonly OrderListItem[], sign: 1 | -1): OrderStats {
-  let totalOrders = 0;
-  let totalSpent = 0;
-  let activeOrders = 0;
-  let unpaidCosts = 0;
-  for (const o of orders) {
-    const total = Number(o.total);
-    totalOrders += sign;
-    if (o.status !== "Owned") activeOrders += sign;
-    if (o.status !== "Ordered") totalSpent += sign * total;
-    if (o.status === "Ordered") unpaidCosts += sign * total;
-  }
-  return { totalOrders, totalSpent, activeOrders, unpaidCosts };
-}
-
-function applyStatsDelta(base: OrderStats, delta: OrderStats): OrderStats {
-  return {
-    totalOrders: Number(base.totalOrders) + delta.totalOrders,
-    totalSpent: Number(base.totalSpent) + delta.totalSpent,
-    activeOrders: Number(base.activeOrders) + delta.activeOrders,
-    unpaidCosts: Number(base.unpaidCosts) + delta.unpaidCosts,
-  };
-}
-
 function addPendingIds(previous: readonly string[], ids: readonly string[]): readonly string[] {
   return [...new Set([...previous, ...ids])];
 }
@@ -107,7 +75,7 @@ function removePendingIds(previous: readonly string[], ids: readonly string[]): 
 }
 
 export function useOrdersFilters() {
-  return useFilters("/(app)/orders");
+  return useFilters("/(app)/orders", { resetOffsetOnFilterChange: true });
 }
 
 export function useOrdersQuery() {
@@ -118,10 +86,14 @@ export function useOrdersQuery() {
   const { data, isPending, isError, status } = useQuery(queryOpts);
 
   const orders = data ?? [];
+  const head = orders[0];
 
   return {
     orders,
-    totalCount: orders[0]?.totalCount ?? 0,
+    totalCount: head?.totalCount ?? 0,
+    totalSpent: head?.totalSpent ?? 0,
+    activeOrders: head?.activeOrders ?? 0,
+    unpaidCosts: head?.unpaidCosts ?? 0,
     isPending,
     isError,
     status,
@@ -130,23 +102,14 @@ export function useOrdersQuery() {
   } as const;
 }
 
-export function useOrderStatsQuery() {
-  const statsOpts = orderStatsQueryOptions();
-  const { data: orderStats, isPending: isStatsPending } = useQuery(statsOpts);
-
-  return {
-    orderStats,
-    isStatsPending,
-    statsOpts,
-  } as const;
-}
-
-export function useOrdersMutations() {
+export function useOrdersMutations(options?: { readonly filters?: OrderFilters }) {
   const queryClient = useQueryClient();
-  const { filters } = useOrdersFilters();
-  const ordersOpts = ordersQueryOptions(filters);
-  const statsOpts = orderStatsQueryOptions();
-  const filtersActive = hasActiveFiltersOrSorting(filters);
+  const filters = options?.filters;
+  const ordersOpts = ordersQueryOptions(filters ?? {});
+  // The order detail route renders this hook without filters and cannot apply
+  // any. Treat that case as "no filters active" so it gets the same
+  // optimistic, fire-and-forget path as the unfiltered list view.
+  const filtersActive = filters === undefined ? false : hasActiveFiltersOrSorting(filters);
 
   const [pendingOrderIdList, setPendingOrderIdList] = useState<readonly string[]>([]);
   const [pendingCollectionItemIdList, setPendingCollectionItemIdList] = useState<readonly string[]>(
@@ -173,38 +136,32 @@ export function useOrdersMutations() {
       cascadeOptions: CascadeOptions;
     }) => editOrder(values, cascadeOptions),
     onMutate: async ({ values }) => {
-      await queryClient.cancelQueries({ queryKey: statsOpts.queryKey });
-      const previousStats = queryClient.getQueryData<OrderStats>(statsOpts.queryKey);
+      // Always patch the order detail cache (`["order", orderId]`); it is keyed
+      // by id, so it is safe to update regardless of any list-page filter state.
+      const orderDetailKey = ["order", values.orderId] as const;
+      await queryClient.cancelQueries({ queryKey: orderDetailKey });
+      const previousOrderDetail = queryClient.getQueryData<Order>(orderDetailKey);
+      const detailNewTotal = previousOrderDetail
+        ? Number(previousOrderDetail.total) +
+          (values.shippingFee - Number(previousOrderDetail.shippingFee)) +
+          (values.taxes - Number(previousOrderDetail.taxes)) +
+          (values.duties - Number(previousOrderDetail.duties)) +
+          (values.tariffs - Number(previousOrderDetail.tariffs)) +
+          (values.miscFees - Number(previousOrderDetail.miscFees))
+        : undefined;
+      queryClient.setQueryData<Order>(orderDetailKey, (old) =>
+        old
+          ? { ...old, ...values, ...(detailNewTotal !== undefined && { total: detailNewTotal }) }
+          : old,
+      );
 
       if (filtersActive) {
-        if (previousStats) {
-          const allOrders = queryClient.getQueriesData<OrderListItem[]>({ queryKey: ["orders"] });
-          const oldOrder = allOrders
-            .flatMap(([, data]) => data ?? [])
-            .find((o) => o.orderId === values.orderId);
-          if (oldOrder) {
-            const removeDelta = computeStatsDelta([oldOrder], -1);
-            const newTotal =
-              Number(oldOrder.total) +
-              (values.shippingFee - Number(oldOrder.shippingFee)) +
-              (values.taxes - Number(oldOrder.taxes)) +
-              (values.duties - Number(oldOrder.duties)) +
-              (values.tariffs - Number(oldOrder.tariffs)) +
-              (values.miscFees - Number(oldOrder.miscFees));
-            const updatedOrder: OrderListItem = { ...oldOrder, ...values, total: newTotal };
-            const addDelta = computeStatsDelta([updatedOrder], 1);
-            queryClient.setQueryData<OrderStats>(
-              statsOpts.queryKey,
-              applyStatsDelta(applyStatsDelta(previousStats, removeDelta), addDelta),
-            );
-          }
-        }
-        return { previousStats };
+        return { previousOrderDetail };
       }
 
       await queryClient.cancelQueries({ queryKey: ordersOpts.queryKey });
-      const previous = queryClient.getQueryData<OrderListItem[]>(ordersOpts.queryKey);
-      const oldOrder = previous?.find((o) => o.orderId === values.orderId);
+      const previousList = queryClient.getQueryData<OrderListItem[]>(ordersOpts.queryKey);
+      const oldOrder = previousList?.find((o) => o.orderId === values.orderId);
 
       const newTotal = oldOrder
         ? Number(oldOrder.total) +
@@ -223,27 +180,20 @@ export function useOrdersMutations() {
         ),
       );
 
-      if (previousStats && oldOrder && newTotal !== undefined) {
-        const removeDelta = computeStatsDelta([oldOrder], -1);
-        const updatedOrder: OrderListItem = { ...oldOrder, ...values, total: newTotal };
-        const addDelta = computeStatsDelta([updatedOrder], 1);
-        queryClient.setQueryData<OrderStats>(
-          statsOpts.queryKey,
-          applyStatsDelta(applyStatsDelta(previousStats, removeDelta), addDelta),
-        );
-      }
-
-      return { previous, previousStats };
+      return { previousList, previousOrderDetail };
     },
     onSuccess: () => {
       toast.success("Order updated");
     },
     onError: (_err, _vars, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData<OrderListItem[]>(ordersOpts.queryKey, context.previous);
+      if (context?.previousList) {
+        queryClient.setQueryData<OrderListItem[]>(ordersOpts.queryKey, context.previousList);
       }
-      if (context?.previousStats) {
-        queryClient.setQueryData<OrderStats>(statsOpts.queryKey, context.previousStats);
+      if (context?.previousOrderDetail) {
+        queryClient.setQueryData<Order>(
+          ["order", context.previousOrderDetail.orderId],
+          context.previousOrderDetail,
+        );
       }
       toast.error("Failed to update order. Please try again.");
     },
@@ -255,29 +205,10 @@ export function useOrdersMutations() {
   const deleteOrdersMutation = useMutation({
     mutationFn: (orderIds: Set<string>) => deleteOrders(orderIds),
     onMutate: async (orderIds) => {
-      await queryClient.cancelQueries({ queryKey: statsOpts.queryKey });
-      const previousStats = queryClient.getQueryData<OrderStats>(statsOpts.queryKey);
-
-      if (filtersActive) {
-        if (previousStats) {
-          const allOrders = queryClient.getQueriesData<OrderListItem[]>({ queryKey: ["orders"] });
-          const deletedOrders = allOrders.flatMap(([, data]) =>
-            (data ?? []).filter((o) => orderIds.has(o.orderId)),
-          );
-          if (deletedOrders.length > 0) {
-            const delta = computeStatsDelta(deletedOrders, -1);
-            queryClient.setQueryData<OrderStats>(
-              statsOpts.queryKey,
-              applyStatsDelta(previousStats, delta),
-            );
-          }
-        }
-        return { previousStats };
-      }
+      if (filtersActive) return;
 
       await queryClient.cancelQueries({ queryKey: ordersOpts.queryKey });
       const previous = queryClient.getQueryData<OrderListItem[]>(ordersOpts.queryKey);
-      const deletedOrders = previous?.filter((o) => orderIds.has(o.orderId)) ?? [];
 
       queryClient.setQueryData<OrderListItem[]>(ordersOpts.queryKey, (old) => {
         if (!old) return old;
@@ -289,15 +220,7 @@ export function useOrdersMutations() {
           }));
       });
 
-      if (previousStats && deletedOrders.length > 0) {
-        const delta = computeStatsDelta(deletedOrders, -1);
-        queryClient.setQueryData<OrderStats>(
-          statsOpts.queryKey,
-          applyStatsDelta(previousStats, delta),
-        );
-      }
-
-      return { previous, previousStats };
+      return { previous };
     },
     onSuccess: (_data, orderIds) => {
       toast.success(
@@ -307,9 +230,6 @@ export function useOrdersMutations() {
     onError: (_err, _ids, context) => {
       if (context?.previous) {
         queryClient.setQueryData<OrderListItem[]>(ordersOpts.queryKey, context.previous);
-      }
-      if (context?.previousStats) {
-        queryClient.setQueryData<OrderStats>(statsOpts.queryKey, context.previousStats);
       }
       toast.error("Failed to delete order(s). Please try again.");
     },
@@ -328,94 +248,22 @@ export function useOrdersMutations() {
       orderIds: Set<string>;
       cascadeOptions: CascadeOptions;
     }) => mergeOrders(values, orderIds, cascadeOptions),
-    onMutate: async ({ values, orderIds }) => {
-      await queryClient.cancelQueries({ queryKey: statsOpts.queryKey });
-      const previousStats = queryClient.getQueryData<OrderStats>(statsOpts.queryKey);
-
-      const resolveOldOrders = (): readonly OrderListItem[] => {
-        const allOrders = queryClient.getQueriesData<OrderListItem[]>({ queryKey: ["orders"] });
-        return allOrders.flatMap(([, data]) => (data ?? []).filter((o) => orderIds.has(o.orderId)));
-      };
-
-      if (filtersActive) {
-        if (previousStats) {
-          const oldOrders = resolveOldOrders();
-          if (oldOrders.length > 0) {
-            const removeDelta = computeStatsDelta(oldOrders, -1);
-            const itemTotal = oldOrders.reduce(
-              (sum, o) =>
-                sum +
-                Number(o.total) -
-                Number(o.shippingFee) -
-                Number(o.taxes) -
-                Number(o.duties) -
-                Number(o.tariffs) -
-                Number(o.miscFees),
-              0,
-            );
-            const mergedTotal =
-              itemTotal +
-              values.shippingFee +
-              values.taxes +
-              values.duties +
-              values.tariffs +
-              values.miscFees;
-            const mergedOrder = { status: values.status, total: mergedTotal } as OrderListItem;
-            const addDelta = computeStatsDelta([mergedOrder], 1);
-            queryClient.setQueryData<OrderStats>(
-              statsOpts.queryKey,
-              applyStatsDelta(applyStatsDelta(previousStats, removeDelta), addDelta),
-            );
-          }
-        }
-        return { previousStats };
-      }
+    onMutate: async ({ orderIds }) => {
+      if (filtersActive) return;
 
       await queryClient.cancelQueries({ queryKey: ordersOpts.queryKey });
       const previous = queryClient.getQueryData<OrderListItem[]>(ordersOpts.queryKey);
-      const oldOrders = previous?.filter((o) => orderIds.has(o.orderId)) ?? [];
 
       queryClient.setQueryData<OrderListItem[]>(ordersOpts.queryKey, (old) => {
         if (!old) return old;
         return old.filter((order) => !orderIds.has(order.orderId));
       });
 
-      if (previousStats && oldOrders.length > 0) {
-        const removeDelta = computeStatsDelta(oldOrders, -1);
-        const itemTotal = oldOrders.reduce(
-          (sum, o) =>
-            sum +
-            Number(o.total) -
-            Number(o.shippingFee) -
-            Number(o.taxes) -
-            Number(o.duties) -
-            Number(o.tariffs) -
-            Number(o.miscFees),
-          0,
-        );
-        const mergedTotal =
-          itemTotal +
-          values.shippingFee +
-          values.taxes +
-          values.duties +
-          values.tariffs +
-          values.miscFees;
-        const mergedOrder = { status: values.status, total: mergedTotal } as OrderListItem;
-        const addDelta = computeStatsDelta([mergedOrder], 1);
-        queryClient.setQueryData<OrderStats>(
-          statsOpts.queryKey,
-          applyStatsDelta(applyStatsDelta(previousStats, removeDelta), addDelta),
-        );
-      }
-
-      return { previous, previousStats };
+      return { previous };
     },
     onError: (_err, _vars, context) => {
       if (context?.previous) {
         queryClient.setQueryData<OrderListItem[]>(ordersOpts.queryKey, context.previous);
-      }
-      if (context?.previousStats) {
-        queryClient.setQueryData<OrderStats>(statsOpts.queryKey, context.previousStats);
       }
       toast.error("Failed to merge orders. Please try again.");
     },
@@ -477,12 +325,23 @@ export function useOrdersMutations() {
         },
       );
 
+      const priceChanged = oldPrice !== undefined && oldPrice !== values.price;
+      const priceDelta = priceChanged ? values.price - (oldPrice as number) : 0;
+
+      const orderDetailKey = ["order", itemOrderId] as const;
+      await queryClient.cancelQueries({ queryKey: orderDetailKey });
+      const previousOrderDetail = queryClient.getQueryData<Order>(orderDetailKey);
+      if (priceChanged) {
+        queryClient.setQueryData<Order>(orderDetailKey, (old) =>
+          old ? { ...old, total: Number(old.total) + priceDelta } : old,
+        );
+      }
+
       let previousOrders: OrderListItem[] | undefined;
 
-      if (!filtersActive && oldPrice !== undefined && oldPrice !== values.price) {
+      if (!filtersActive && priceChanged) {
         await queryClient.cancelQueries({ queryKey: ordersOpts.queryKey });
         previousOrders = queryClient.getQueryData<OrderListItem[]>(ordersOpts.queryKey);
-        const priceDelta = values.price - oldPrice;
         const nextOrders = previousOrders?.map((order) =>
           order.orderId === itemOrderId
             ? { ...order, total: Number(order.total) + priceDelta }
@@ -491,31 +350,7 @@ export function useOrdersMutations() {
         queryClient.setQueryData<OrderListItem[]>(ordersOpts.queryKey, nextOrders);
       }
 
-      await queryClient.cancelQueries({ queryKey: statsOpts.queryKey });
-      const previousStats = queryClient.getQueryData<OrderStats>(statsOpts.queryKey);
-
-      if (previousStats && oldPrice !== undefined && oldPrice !== values.price) {
-        const priceDelta = values.price - oldPrice;
-        const allOrders = queryClient.getQueriesData<OrderListItem[]>({ queryKey: ["orders"] });
-        const parentOrder = allOrders
-          .flatMap(([, data]) => data ?? [])
-          .find((o) => o.orderId === itemOrderId);
-
-        if (parentOrder) {
-          const delta: OrderStats = {
-            totalOrders: 0,
-            activeOrders: 0,
-            totalSpent: parentOrder.status !== "Ordered" ? priceDelta : 0,
-            unpaidCosts: parentOrder.status === "Ordered" ? priceDelta : 0,
-          };
-          queryClient.setQueryData<OrderStats>(
-            statsOpts.queryKey,
-            applyStatsDelta(previousStats, delta),
-          );
-        }
-      }
-
-      return { previousOrderItems, previousOrders, previousStats };
+      return { previousOrderItems, previousOrders, previousOrderDetail, orderDetailKey };
     },
     onSuccess: () => {
       toast.success("Item updated");
@@ -529,8 +364,8 @@ export function useOrdersMutations() {
       if (context?.previousOrders) {
         queryClient.setQueryData<OrderListItem[]>(ordersOpts.queryKey, context.previousOrders);
       }
-      if (context?.previousStats) {
-        queryClient.setQueryData<OrderStats>(statsOpts.queryKey, context.previousStats);
+      if (context?.previousOrderDetail && context.orderDetailKey) {
+        queryClient.setQueryData<Order>(context.orderDetailKey, context.previousOrderDetail);
       }
       toast.error("Failed to update item. Please try again.");
     },
@@ -562,6 +397,19 @@ export function useOrdersMutations() {
         },
       );
 
+      const orderDetailKey = ["order", orderId] as const;
+      await queryClient.cancelQueries({ queryKey: orderDetailKey });
+      const previousOrderDetail = queryClient.getQueryData<Order>(orderDetailKey);
+      queryClient.setQueryData<Order>(orderDetailKey, (old) =>
+        old
+          ? {
+              ...old,
+              total: old.total - removedPrice,
+              itemCount: old.itemCount - 1,
+            }
+          : old,
+      );
+
       let previousOrders: OrderListItem[] | undefined;
 
       if (!filtersActive) {
@@ -580,30 +428,7 @@ export function useOrdersMutations() {
         );
       }
 
-      await queryClient.cancelQueries({ queryKey: statsOpts.queryKey });
-      const previousStats = queryClient.getQueryData<OrderStats>(statsOpts.queryKey);
-
-      if (previousStats && removedPrice !== 0) {
-        const allOrders = queryClient.getQueriesData<OrderListItem[]>({ queryKey: ["orders"] });
-        const parentOrder = allOrders
-          .flatMap(([, data]) => data ?? [])
-          .find((o) => o.orderId === orderId);
-
-        if (parentOrder) {
-          const delta: OrderStats = {
-            totalOrders: 0,
-            activeOrders: 0,
-            totalSpent: parentOrder.status !== "Ordered" ? -removedPrice : 0,
-            unpaidCosts: parentOrder.status === "Ordered" ? -removedPrice : 0,
-          };
-          queryClient.setQueryData<OrderStats>(
-            statsOpts.queryKey,
-            applyStatsDelta(previousStats, delta),
-          );
-        }
-      }
-
-      return { previousOrderItems, previousOrders, previousStats };
+      return { previousOrderItems, previousOrders, previousOrderDetail, orderDetailKey };
     },
     onSuccess: () => {
       toast.success("Item deleted");
@@ -617,8 +442,8 @@ export function useOrdersMutations() {
       if (context?.previousOrders) {
         queryClient.setQueryData<OrderListItem[]>(ordersOpts.queryKey, context.previousOrders);
       }
-      if (context?.previousStats) {
-        queryClient.setQueryData<OrderStats>(statsOpts.queryKey, context.previousStats);
+      if (context?.previousOrderDetail && context.orderDetailKey) {
+        queryClient.setQueryData<Order>(context.orderDetailKey, context.previousOrderDetail);
       }
       toast.error("Failed to delete item. Please try again.");
     },
@@ -675,12 +500,12 @@ export function useOrdersMutations() {
   const deleteItemMutationRef = useRef(deleteItemMutation);
   deleteItemMutationRef.current = deleteItemMutation;
   const isOrderPending = useCallback(
-    (orderId: string): boolean => pendingOrderIds.has(orderId),
-    [pendingOrderIds],
+    (orderId: string): boolean => pendingOrderIdsRef.current.has(orderId),
+    [],
   );
   const isCollectionItemPending = useCallback(
-    (collectionId: string): boolean => pendingCollectionItemIds.has(collectionId),
-    [pendingCollectionItemIds],
+    (collectionId: string): boolean => pendingCollectionItemIdsRef.current.has(collectionId),
+    [],
   );
 
   const handleMerge = useCallback(
@@ -753,7 +578,7 @@ export function useOrdersMutations() {
     async (values: EditedOrder, cascadeOptions: CascadeOptions): Promise<void> => {
       const editOrderMutationState = editOrderMutationRef.current;
       if (!filtersActiveRef.current) {
-        editOrderMutationState.mutate({ values, cascadeOptions });
+        await editOrderMutationState.mutateAsync({ values, cascadeOptions });
         return;
       }
 
@@ -772,7 +597,7 @@ export function useOrdersMutations() {
     const deleteOrdersMutationState = deleteOrdersMutationRef.current;
     const mutableOrderIds = new Set(orderIds);
     if (!filtersActiveRef.current) {
-      deleteOrdersMutationState.mutate(mutableOrderIds);
+      await deleteOrdersMutationState.mutateAsync(mutableOrderIds);
       return;
     }
 
@@ -791,7 +616,7 @@ export function useOrdersMutations() {
   const handleEditItem = useCallback(async (values: CollectionItemFormValues): Promise<void> => {
     const editItemMutationState = editItemMutationRef.current;
     if (!filtersActiveRef.current) {
-      editItemMutationState.mutate(values);
+      await editItemMutationState.mutateAsync(values);
       return;
     }
 
@@ -807,7 +632,7 @@ export function useOrdersMutations() {
   const handleDeleteItem = useCallback(async (orderId: string, itemId: string): Promise<void> => {
     const deleteItemMutationState = deleteItemMutationRef.current;
     if (!filtersActiveRef.current) {
-      deleteItemMutationState.mutate({ orderId, itemId });
+      await deleteItemMutationState.mutateAsync({ orderId, itemId });
       return;
     }
 
@@ -888,8 +713,6 @@ export function useOrdersMutations() {
     handleDeleteItem,
     handleDeleteItems,
     handleMoveItem,
-    pendingOrderIds,
-    pendingCollectionItemIds,
     isOrderPending,
     isCollectionItemPending,
     isMerging: mergeOrdersMutation.isPending,

@@ -59,7 +59,6 @@ export interface DataGridProps<TData extends object> {
   skeletonRowCount?: number;
   loadingMessage?: ReactNode | string;
   emptyMessage?: ReactNode | string;
-  memoizeStableRows?: boolean;
   tableLayout?: {
     dense?: boolean;
     cellBorder?: boolean;

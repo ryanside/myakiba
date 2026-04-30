@@ -18,6 +18,7 @@ export function NavMain({
     title: string;
     url: string;
     icon: IconSvgElement;
+    pathnameMatch?: "prefix";
     isActive?: boolean;
     items?: {
       title: string;
@@ -35,7 +36,11 @@ export function NavMain({
               <SidebarMenuButton
                 className="data-[active=true]:shadow-[0_0_0_1px_var(--color-border),0_1px_2px_0_rgb(0_0_0/0.05)] data-[active=true]:text-sidebar-accent-foreground text-muted-foreground"
                 tooltip={item.title}
-                isActive={location.pathname === `${item.url}`}
+                isActive={
+                  item.pathnameMatch === "prefix"
+                    ? location.pathname.startsWith(item.url)
+                    : location.pathname === item.url
+                }
               >
                 <Link to={item.url}>
                   <HugeiconsIcon icon={item.icon} />

@@ -1,24 +1,37 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Delete02Icon, Edit03Icon, PackageIcon } from "@hugeicons/core-free-icons";
+import {
+  Cancel01Icon,
+  Delete01Icon,
+  Delete02Icon,
+  Edit03Icon,
+  MoveIcon,
+  PackageIcon,
+} from "@hugeicons/core-free-icons";
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
-import { getOrder, editOrder, deleteOrders, deleteOrderItem } from "@/queries/orders";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getOrder } from "@/queries/orders";
+import { useQuery } from "@tanstack/react-query";
 import { ThemedBadge } from "@/components/reui/badge";
 import { BackLink } from "@/components/ui/back-link";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  ActionBar,
+  ActionBarSelection,
+  ActionBarGroup,
+  ActionBarItem,
+  ActionBarClose,
+  ActionBarSeparator,
+} from "@/components/ui/action-bar";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { formatDateOnlyForDisplay, formatTimestampForDisplay } from "@/lib/date-display";
 import { getStatusVariant } from "@/lib/orders";
 import { OrderItemSubDataGrid } from "@/components/orders/order-item-sub-data-grid";
 import { OrderItemSyncSheet } from "@/components/orders/order-item-sync-sheet";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import type { RowSelectionState } from "@tanstack/react-table";
 import { OrderForm } from "@/components/orders/order-form";
-import type { EditedOrder, CascadeOptions } from "@myakiba/contracts/orders/schema";
-import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
-import { toast } from "sonner";
-import { updateCollectionItem } from "@/queries/collection";
+import UnifiedItemMoveForm from "@/components/orders/unified-item-move-form";
+import type { SelectedCollectionItems } from "@/hooks/use-selection";
 import Loader from "@/components/loader";
 import {
   Timeline,
@@ -30,6 +43,7 @@ import {
   TimelineDate,
 } from "@/components/reui/timeline";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
+import { useOrdersMutations } from "@/hooks/use-orders";
 
 export const Route = createFileRoute("/(app)/orders_/$id")({
   component: RouteComponent,
@@ -71,20 +85,22 @@ function RouteComponent() {
   const { currency: userCurrency, locale: userLocale, dateFormat } = useUserPreferences();
   const { id } = useParams({ from: "/(app)/orders_/$id" });
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [itemSelection, setItemSelection] = useState<RowSelectionState>({});
-  const [pendingCollectionItemIdList, setPendingCollectionItemIdList] = useState<readonly string[]>(
-    [],
-  );
-  const pendingCollectionItemIds = useMemo(
-    () => new Set(pendingCollectionItemIdList),
-    [pendingCollectionItemIdList],
-  );
-  const pendingCollectionItemIdsRef = useRef<ReadonlySet<string>>(pendingCollectionItemIds);
-  pendingCollectionItemIdsRef.current = pendingCollectionItemIds;
-  const isCollectionItemPending = useCallback((collectionId: string): boolean => {
-    return pendingCollectionItemIdsRef.current.has(collectionId);
-  }, []);
+
+  const {
+    handleEditOrder,
+    handleDeleteOrders,
+    handleEditItem,
+    handleDeleteItem,
+    handleDeleteItems,
+    handleMoveItem,
+    handleSplit,
+    isCollectionItemPending,
+    isDeletingOrders,
+    isDeletingItems,
+    isMovingItems,
+    isSplitting,
+  } = useOrdersMutations();
 
   const {
     data,
@@ -98,100 +114,17 @@ function RouteComponent() {
     retry: false,
   });
 
-  const editOrderMutation = useMutation({
-    mutationFn: async ({
-      values,
-      cascadeOptions,
-    }: {
-      values: EditedOrder;
-      cascadeOptions: CascadeOptions;
-    }) => {
-      return await editOrder(values, cascadeOptions);
-    },
-    onSuccess: () => {},
-    onError: (error) => {
-      toast.error("Failed to update order. Please try again.", {
-        description: `Error: ${error.message}`,
-      });
-    },
-    onSettled: async () => {
-      await queryClient.invalidateQueries();
-    },
-  });
-
-  const editItemMutation = useMutation({
-    mutationFn: async ({ values }: { values: CollectionItemFormValues }) => {
-      return await updateCollectionItem(values);
-    },
-    onSuccess: () => {},
-    onError: (error) => {
-      toast.error("Failed to update item. Please try again.", {
-        description: `Error: ${error.message}`,
-      });
-    },
-    onSettled: async () => {
-      await queryClient.invalidateQueries();
-    },
-  });
-
-  const deleteOrderMutation = useMutation({
-    mutationFn: async (orderId: string) => {
-      return await deleteOrders(new Set([orderId]));
-    },
-    onSuccess: async () => {
-      toast.success("Order deleted");
+  const handleDeleteOrder = useCallback(
+    async (orderId: string): Promise<void> => {
+      await handleDeleteOrders(new Set([orderId]));
       await navigate({ to: "/orders" });
     },
-    onError: (error) => {
-      toast.error("Failed to delete order. Please try again.", {
-        description: `Error: ${error.message}`,
-      });
-    },
-    onSettled: async () => {
-      await queryClient.invalidateQueries();
-    },
-  });
+    [handleDeleteOrders, navigate],
+  );
 
-  const deleteItemMutation = useMutation({
-    mutationFn: async ({ orderId, collectionId }: { orderId: string; collectionId: string }) => {
-      return await deleteOrderItem(orderId, collectionId);
-    },
-    onSuccess: () => {},
-    onError: (error) => {
-      toast.error("Failed to delete item. Please try again.", {
-        description: `Error: ${error.message}`,
-      });
-    },
-    onSettled: async () => {
-      await queryClient.invalidateQueries();
-    },
-  });
-
-  const handleEditOrder = async (values: EditedOrder, cascadeOptions: CascadeOptions) => {
-    await editOrderMutation.mutateAsync({ values, cascadeOptions });
-  };
-
-  const handleEditItem = async (values: CollectionItemFormValues) => {
-    setPendingCollectionItemIdList((previous) => [...new Set([...previous, values.id])]);
-    try {
-      await editItemMutation.mutateAsync({ values });
-    } finally {
-      setPendingCollectionItemIdList((previous) =>
-        previous.filter((collectionId) => collectionId !== values.id),
-      );
-    }
-  };
-
-  const handleDeleteItem = async (orderId: string, collectionId: string) => {
-    setPendingCollectionItemIdList((previous) => [...new Set([...previous, collectionId])]);
-    try {
-      await deleteItemMutation.mutateAsync({ orderId, collectionId });
-    } finally {
-      setPendingCollectionItemIdList((previous) =>
-        previous.filter((pendingId) => pendingId !== collectionId),
-      );
-    }
-  };
+  const clearItemSelection = useCallback((): void => {
+    setItemSelection({});
+  }, []);
 
   if (isPending) {
     return <Loader />;
@@ -230,6 +163,16 @@ function RouteComponent() {
     { label: "Tariffs", amount: tariffs },
     { label: "Other fees", amount: miscFees },
   ].filter(({ amount }) => amount > 0);
+
+  const selectedCollectionIds = new Set(
+    Object.keys(itemSelection).map((rowKey) => rowKey.split("-")[1]),
+  );
+  const selectedItems: SelectedCollectionItems = {
+    collectionIds: selectedCollectionIds,
+    orderIds: new Set([order.orderId]),
+  };
+  const selectedItemCount = selectedCollectionIds.size;
+  const isItemActionBarOpen = selectedItemCount > 0;
 
   return (
     <div className="flex flex-col gap-8 min-h-full mx-auto max-w-[88rem]">
@@ -294,7 +237,7 @@ function RouteComponent() {
               }
               title="Delete order?"
               description='This will permanently delete this order and all its items. Items with "Owned" status will not be deleted. You can delete owned items in the collection tab.'
-              onConfirm={() => deleteOrderMutation.mutateAsync(order.orderId)}
+              onConfirm={() => handleDeleteOrder(order.orderId)}
             />
           </div>
         </div>
@@ -322,36 +265,34 @@ function RouteComponent() {
 
         <section className="flex flex-col gap-3">
           <h2 className="text-xs font-medium text-muted-foreground">Cost Breakdown</h2>
-          <div className="rounded-xl bg-card ring-1 ring-foreground/10 overflow-hidden">
-            <div className="flex flex-col gap-2.5 p-5">
+          <div className="flex flex-col gap-2.5">
+            <CostRow
+              label="Items"
+              amount={itemsTotal}
+              currency={userCurrency}
+              locale={userLocale}
+            />
+            <CostRow
+              label="Shipping"
+              amount={shippingFee}
+              currency={userCurrency}
+              locale={userLocale}
+            />
+            {optionalFees.map(({ label, amount }) => (
               <CostRow
-                label="Items"
-                amount={itemsTotal}
+                key={label}
+                label={label}
+                amount={amount}
                 currency={userCurrency}
                 locale={userLocale}
               />
-              <CostRow
-                label="Shipping"
-                amount={shippingFee}
-                currency={userCurrency}
-                locale={userLocale}
-              />
-              {optionalFees.map(({ label, amount }) => (
-                <CostRow
-                  key={label}
-                  label={label}
-                  amount={amount}
-                  currency={userCurrency}
-                  locale={userLocale}
-                />
-              ))}
-            </div>
-            <div className="flex items-center justify-between px-5 py-3.5 border-t bg-muted/30">
-              <span className="text-sm font-medium">Total</span>
-              <span className="text-lg font-semibold tracking-tight tabular-nums">
-                {formatCurrencyFromMinorUnits(totalAmount, userCurrency, userLocale)}
-              </span>
-            </div>
+            ))}
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">Total</span>
+            <span className="text-lg font-medium tracking-tight tabular-nums">
+              {formatCurrencyFromMinorUnits(totalAmount, userCurrency, userLocale)}
+            </span>
           </div>
         </section>
       </div>
@@ -370,18 +311,22 @@ function RouteComponent() {
 
       {/* Order Items */}
       <section className="flex flex-col gap-3 flex-1 animate-appear">
-        <h2 className="text-xs font-medium text-muted-foreground">Items ({order.itemCount})</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-medium text-muted-foreground">Items ({order.itemCount})</h2>
+          {order.itemCount > 0 ? (
+            <OrderItemSyncSheet orderId={order.orderId} label="Add Item" />
+          ) : null}
+        </div>
         {order.itemCount > 0 ? (
-          <div className="rounded-xl ring-1 ring-foreground/10 bg-card overflow-hidden">
-            <OrderItemSubDataGrid
-              orderId={order.orderId}
-              itemSelection={itemSelection}
-              setItemSelection={setItemSelection}
-              onEditItem={handleEditItem}
-              onDeleteItem={handleDeleteItem}
-              isCollectionItemPending={isCollectionItemPending}
-            />
-          </div>
+          <OrderItemSubDataGrid
+            wrapped={false}
+            orderId={order.orderId}
+            itemSelection={itemSelection}
+            setItemSelection={setItemSelection}
+            onEditItem={handleEditItem}
+            onDeleteItem={handleDeleteItem}
+            isCollectionItemPending={isCollectionItemPending}
+          />
         ) : (
           <div className="flex flex-col items-center justify-center py-20 gap-4 rounded-xl border border-dashed">
             <div className="flex flex-col items-center gap-2">
@@ -399,6 +344,66 @@ function RouteComponent() {
         <span aria-hidden="true">&middot;</span>
         <span>Updated {formatTimestampForDisplay(order.updatedAt, dateFormat)}</span>
       </div>
+
+      <ActionBar
+        open={isItemActionBarOpen}
+        onOpenChange={(open) => {
+          if (!open) clearItemSelection();
+        }}
+      >
+        <ActionBarSelection className="border-none">
+          {selectedItemCount} {selectedItemCount === 1 ? "item" : "items"} selected
+        </ActionBarSelection>
+        <ActionBarSeparator />
+        <ActionBarGroup>
+          <UnifiedItemMoveForm
+            renderTrigger={
+              <ActionBarItem
+                disabled={selectedItemCount === 0 || isMovingItems || isSplitting}
+                onSelect={(e) => e.preventDefault()}
+                variant="default"
+              >
+                <HugeiconsIcon icon={MoveIcon} />
+                <span className="hidden md:block">
+                  {isMovingItems || isSplitting ? "Moving..." : "Move Item"}
+                </span>
+              </ActionBarItem>
+            }
+            selectedItems={selectedItems}
+            onMoveToExisting={handleMoveItem}
+            onMoveToNew={handleSplit}
+            clearSelections={clearItemSelection}
+            currency={userCurrency}
+          />
+          <ConfirmDialog
+            renderTrigger={
+              <ActionBarItem
+                disabled={selectedItemCount === 0 || isDeletingItems || isDeletingOrders}
+                onSelect={(e) => e.preventDefault()}
+                variant="destructive"
+              >
+                <HugeiconsIcon icon={Delete01Icon} />
+                <span>
+                  <span className="hidden md:inline">
+                    {isDeletingItems ? "Deleting " : "Delete "}
+                  </span>
+                  Items
+                </span>
+              </ActionBarItem>
+            }
+            title={`Delete ${selectedItemCount} ${selectedItemCount === 1 ? "item" : "items"}?`}
+            description='Items with "Owned" status will not be deleted. You can delete owned items in the collection tab.'
+            onConfirm={async () => {
+              await handleDeleteItems(selectedCollectionIds);
+              clearItemSelection();
+            }}
+          />
+        </ActionBarGroup>
+        <ActionBarSeparator />
+        <ActionBarClose>
+          <HugeiconsIcon icon={Cancel01Icon} />
+        </ActionBarClose>
+      </ActionBar>
     </div>
   );
 }

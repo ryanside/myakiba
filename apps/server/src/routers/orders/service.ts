@@ -67,6 +67,8 @@ class OrdersService {
       miscFeesMax !== undefined ? lte(order.miscFees, miscFeesMax) : undefined,
     );
 
+    const perRowTotal = sql<number>`COALESCE(SUM(${collection.price}), 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`;
+
     const sortByColumn = (() => {
       switch (sortBy) {
         case "title":
@@ -86,7 +88,7 @@ class OrdersService {
         case "shippingMethod":
           return order.shippingMethod;
         case "total":
-          return sql<number>`COALESCE(SUM(${collection.price}), 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`;
+          return perRowTotal;
         case "shippingFee":
           return order.shippingFee;
         case "taxes":
@@ -120,7 +122,7 @@ class OrdersService {
         shippingDate: order.shippingDate,
         collectionDate: order.collectionDate,
         status: order.status,
-        total: sql<number>`COALESCE(SUM(${collection.price}), 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`,
+        total: perRowTotal,
         shippingFee: order.shippingFee,
         taxes: order.taxes,
         duties: order.duties,
@@ -136,7 +138,10 @@ class OrdersService {
         `,
         createdAt: order.createdAt,
         updatedAt: order.updatedAt,
-        totalCount: sql<number>`COUNT(*) OVER()`,
+        totalCount: sql<number>`COUNT(*) OVER ()`,
+        totalSpent: sql<number>`COALESCE(SUM(${perRowTotal}) FILTER (WHERE ${order.status} != 'Ordered') OVER (), 0)`,
+        activeOrders: sql<number>`COUNT(*) FILTER (WHERE ${order.status} != 'Owned') OVER ()`,
+        unpaidCosts: sql<number>`COALESCE(SUM(${perRowTotal}) FILTER (WHERE ${order.status} = 'Ordered') OVER (), 0)`,
       })
       .from(order)
       .leftJoin(collection, eq(order.id, collection.orderId))
@@ -164,12 +169,8 @@ class OrdersService {
       )
       .having(
         and(
-          totalMin !== undefined
-            ? sql`COALESCE(SUM(${collection.price}), 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0) >= ${totalMin}`
-            : undefined,
-          totalMax !== undefined
-            ? sql`COALESCE(SUM(${collection.price}), 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0) <= ${totalMax}`
-            : undefined,
+          totalMin !== undefined ? sql`${perRowTotal} >= ${totalMin}` : undefined,
+          totalMax !== undefined ? sql`${perRowTotal} <= ${totalMax}` : undefined,
         ),
       )
       .orderBy(
@@ -485,47 +486,6 @@ class OrdersService {
     }
 
     return {};
-  }
-
-  async getOrderStats(userId: string): Promise<{
-    totalOrders: number;
-    totalSpent: number;
-    activeOrders: number;
-    unpaidCosts: number;
-  }> {
-    const orderTotals = db
-      .select({
-        orderId: order.id,
-        status: order.status,
-        total:
-          sql<number>`COALESCE(SUM(${collection.price}), 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`.as(
-            "total",
-          ),
-      })
-      .from(order)
-      .leftJoin(collection, eq(order.id, collection.orderId))
-      .where(eq(order.userId, userId))
-      .groupBy(
-        order.id,
-        order.status,
-        order.shippingFee,
-        order.taxes,
-        order.duties,
-        order.tariffs,
-        order.miscFees,
-      )
-      .as("order_totals");
-
-    const [stats] = await db
-      .select({
-        totalOrders: sql<number>`COUNT(*)`,
-        totalSpent: sql<number>`COALESCE(SUM(${orderTotals.total}) FILTER (WHERE ${orderTotals.status} != 'Ordered'), 0)`,
-        activeOrders: sql<number>`COUNT(*) FILTER (WHERE ${orderTotals.status} != 'Owned')`,
-        unpaidCosts: sql<number>`COALESCE(SUM(${orderTotals.total}) FILTER (WHERE ${orderTotals.status} = 'Ordered'), 0)`,
-      })
-      .from(orderTotals);
-
-    return stats ?? { totalOrders: 0, totalSpent: 0, activeOrders: 0, unpaidCosts: 0 };
   }
 
   async getOrderItemReleases(userId: string, orderId: string) {

@@ -25,11 +25,13 @@ export const Route = createFileRoute("/(app)/collection")({
 
 function RouteComponent() {
   const { currency, locale } = useUserPreferences();
-  const { isPending, isError, status, totalCount, totalValue } = useCollectionQuery();
+  const { isPending, isError, status, totalCount, totalValue, totalItemsThisMonth } =
+    useCollectionQuery();
+  const averageItemCost = totalCount > 0 ? Math.round(totalValue / totalCount) : 0;
 
   if (isError) {
     return (
-      <div className="flex flex-col gap-4 mx-auto max-w-[88rem]">
+      <div className="flex flex-col gap-4 mx-auto max-w-352">
         <div className="flex flex-col gap-2">
           <div className="flex flex-row items-start gap-4">
             <h1 className="text-2xl tracking-tight font-heading font-medium">Collection</h1>
@@ -46,7 +48,7 @@ function RouteComponent() {
   }
 
   return (
-    <div className="flex flex-col gap-4 mx-auto max-w-[88rem]">
+    <div className="flex flex-col gap-4 mx-auto max-w-352">
       <div className="flex flex-col gap-2 mb-2">
         <div className="flex flex-row items-start gap-4">
           <h1 className="text-2xl tracking-tight font-heading font-medium">Collection</h1>
@@ -66,6 +68,20 @@ function RouteComponent() {
           title="Total Spent"
           subtitle="based on total item prices"
           value={isPending ? undefined : formatCurrencyFromMinorUnits(totalValue, currency, locale)}
+          isLoading={isPending}
+        />
+        <KPICard
+          title="Added This Month"
+          subtitle="based on collection dates"
+          value={isPending ? undefined : totalItemsThisMonth}
+          isLoading={isPending}
+        />
+        <KPICard
+          title="Average Cost"
+          subtitle="per collection item"
+          value={
+            isPending ? undefined : formatCurrencyFromMinorUnits(averageItemCost, currency, locale)
+          }
           isLoading={isPending}
         />
       </div>

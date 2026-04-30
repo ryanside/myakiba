@@ -113,7 +113,7 @@ function RouteComponent() {
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground mx-1">Add:</span>
           <Button
-            variant="default"
+            variant="secondary"
             size="sm"
             onClick={() => setActiveSyncType("collection")}
             disabled={isSyncing}
@@ -122,7 +122,7 @@ function RouteComponent() {
             Collection
           </Button>
           <Button
-            variant="default"
+            variant="secondary"
             size="sm"
             onClick={() => setActiveSyncType("order")}
             disabled={isSyncing}
@@ -131,7 +131,7 @@ function RouteComponent() {
             Order
           </Button>
           <Button
-            variant="default"
+            variant="secondary"
             size="sm"
             onClick={() => setActiveSyncType("csv")}
             disabled={isSyncing}

@@ -1,13 +1,6 @@
 import type { CollectionItem } from "../collection/types";
 import type { OrderStatus, ShippingMethod } from "../shared/types";
 
-export type OrderStats = {
-  totalOrders: number;
-  totalSpent: number;
-  activeOrders: number;
-  unpaidCosts: number;
-};
-
 export type PaginatedResult<T> = {
   readonly items: readonly T[];
   readonly totalCount: number;
@@ -38,10 +31,13 @@ export type Order = {
 
 export type OrderListItem = Order & {
   readonly totalCount: number;
+  readonly totalSpent: number;
+  readonly activeOrders: number;
+  readonly unpaidCosts: number;
   readonly images: readonly string[];
 };
 
 export type OrderItem = Omit<
   CollectionItem,
-  "itemScale" | "createdAt" | "updatedAt" | "totalCount" | "totalValue"
+  "itemScale" | "createdAt" | "updatedAt" | "totalCount" | "totalValue" | "totalItemsThisMonth"
 >;

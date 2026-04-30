@@ -81,29 +81,6 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
     { query: ordersQuerySchema, auth: true },
   )
   .get(
-    "/stats",
-    async ({ user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
-      log.set({ action: "orders.stats", user: { id: user.id } });
-
-      const { data: stats, error } = await tryCatch(OrdersService.getOrderStats(user.id));
-
-      if (error) {
-        log.error(error, { step: "get_order_stats" });
-        log.set({ outcome: "error" });
-        return status(500, "Failed to get order stats");
-      }
-
-      log.set({ outcome: "success" });
-      return stats;
-    },
-    { auth: true },
-  )
-  .get(
     "/:orderId",
     async ({ params, user, log }) => {
       if (!user) {

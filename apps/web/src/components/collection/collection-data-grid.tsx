@@ -59,7 +59,7 @@ export const CollectionDataGrid = () => {
     handleDeleteCollectionItems,
     isCollectionPending,
     isDeletingCollectionItems,
-  } = useCollectionMutations();
+  } = useCollectionMutations({ filters });
   const {
     handleAddCollectionItemsToOrder,
     handleAddCollectionItemsToNewOrder,

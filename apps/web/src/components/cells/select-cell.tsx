@@ -9,6 +9,7 @@ import {
 import { Field } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
 import { useMemo } from "react";
+import { usePendingValue } from "@/hooks/use-pending-value";
 
 type ColoredOption = {
   readonly value: string;
@@ -31,6 +32,8 @@ export function SelectCell({
   disabled = false,
   colorMap,
 }: SelectCellProps) {
+  const [displayValue, submit] = usePendingValue(value, onSubmit);
+
   const coloredItems = useMemo(() => {
     if (!colorMap) return null;
     return options.map((option) => ({
@@ -41,14 +44,14 @@ export function SelectCell({
   }, [options, colorMap]);
 
   if (coloredItems) {
-    const currentItem = coloredItems.find((item) => item.value === value);
+    const currentItem = coloredItems.find((item) => item.value === displayValue);
 
     return (
       <Field>
         <Select
           value={currentItem}
           onValueChange={(item: ColoredOption | null) => {
-            if (item) onSubmit(item.value);
+            if (item) submit(item.value);
           }}
           disabled={disabled}
           items={coloredItems}
@@ -83,9 +86,9 @@ export function SelectCell({
   return (
     <Field>
       <Select
-        value={value}
+        value={displayValue}
         onValueChange={(val: string | null) => {
-          if (val) onSubmit(val);
+          if (val) submit(val);
         }}
         disabled={disabled}
       >

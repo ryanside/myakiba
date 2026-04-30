@@ -9,6 +9,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame";
+import { Scroller } from "@/components/ui/scroller";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/reui/badge";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
@@ -43,7 +44,7 @@ interface ReleaseCalendarProps {
 }
 
 const CALENDAR_MONTH_LABEL_FORMATTER = new Intl.DateTimeFormat("en-US", {
-  month: "short",
+  month: "long",
   year: "numeric",
 });
 
@@ -64,9 +65,11 @@ function groupReleasesByReleaseDate(
       groups.set(item.releaseDate, [item]);
     }
   }
-  return [...groups.entries()].toSorted(
+  const grouped = [...groups.entries()].toSorted(
     ([a], [b]) => new Date(a).getTime() - new Date(b).getTime(),
   );
+
+  return grouped;
 }
 
 function ReleaseCalendar({
@@ -131,13 +134,14 @@ function ReleaseCalendar({
 
   return (
     <Frame
+      spacing="sm"
       className={cn("border-none ring-1 ring-foreground/10 shadow-xs! min-h-[320px]", className)}
     >
       <FrameHeader>
         <div className="flex items-center justify-between">
           <div className="flex min-w-0 items-center gap-1.5">
             <FrameTitle className="text-base font-medium select-none">
-              {CALENDAR_MONTH_LABEL_FORMATTER.format(displayDate)} Releases
+              {CALENDAR_MONTH_LABEL_FORMATTER.format(displayDate)}
             </FrameTitle>
             {isPending ? (
               <Badge variant="outline">
@@ -174,19 +178,17 @@ function ReleaseCalendar({
           )}
         </div>
       </FrameHeader>
-      <FramePanel className="shadow-none!">
+      <FramePanel className="shadow-none! border-none m-1 mt-0">
         {(() => {
           if (isPending) return <Loader className="justify-center text-muted" />;
           if (isError) return <ReleaseCalendarError message={error.message} onRetry={refetch} />;
           if (grouped.length > 0) {
             return (
-              <div className="animate-data-in space-y-3 [--data-in-delay:60ms]">
-                <div className="-mx-(--frame-panel-p) max-h-57 overflow-y-auto overflow-x-hidden">
-                  {grouped.map(([dateKey, items]) => (
-                    <DateGroup key={dateKey} dateKey={dateKey} items={items} currency={currency} />
-                  ))}
-                </div>
-              </div>
+              <Scroller className="animate-data-in -mx-(--frame-panel-p) max-h-56 pb-6 [--data-in-delay:60ms]">
+                {grouped.map(([dateKey, items]) => (
+                  <DateGroup key={dateKey} dateKey={dateKey} items={items} currency={currency} />
+                ))}
+              </Scroller>
             );
           }
           return <ReleaseCalendarEmpty />;

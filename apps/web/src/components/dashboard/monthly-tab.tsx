@@ -67,13 +67,13 @@ export function MonthlyTab({
     <>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <KPICard
-          title="Items"
+          title="Total Items"
           subtitle="items in orders this month"
           value={itemCount}
           isLoading={isLoading}
         />
         <KPICard
-          title="Orders"
+          title="Total Orders"
           subtitle="orders releasing this month"
           value={orderCount}
           subvalueTitle="unpaid"
@@ -81,13 +81,13 @@ export function MonthlyTab({
           isLoading={isLoading}
         />
         <KPICard
-          title="Paid"
+          title="Paid Costs"
           subtitle="total paid order costs"
           value={formatCurrencyFromMinorUnits(paidAmount, currency, locale)}
           isLoading={isLoading}
         />
         <KPICard
-          title="Unpaid"
+          title="Unpaid Costs"
           subtitle="total unpaid order costs"
           value={formatCurrencyFromMinorUnits(unpaidAmount, currency, locale)}
           isLoading={isLoading}

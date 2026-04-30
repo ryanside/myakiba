@@ -43,11 +43,14 @@ export function CollectionBreakdown({
 
   if (isLoading) {
     return (
-      <Frame className="border-none ring-1 ring-foreground/10 shadow-xs! min-h-[320px]">
+      <Frame
+        spacing="sm"
+        className="border-none ring-1 ring-foreground/10 shadow-xs! min-h-[320px]"
+      >
         <FrameHeader>
           <Skeleton className="h-4 my-1 w-32" />
         </FrameHeader>
-        <FramePanel className="space-y-3 shadow-none!">
+        <FramePanel className="space-y-3 shadow-none! border-none m-1 mt-0">
           <Loader className="justify-center text-muted" />
         </FramePanel>
       </Frame>
@@ -57,14 +60,14 @@ export function CollectionBreakdown({
   const categoryCount = entries.length;
 
   return (
-    <Frame className="border-none ring-1 ring-foreground/10 shadow-xs! min-h-[320px]">
+    <Frame spacing="sm" className="border-none ring-1 ring-foreground/10 shadow-xs! min-h-[320px]">
       <FrameHeader>
         <FrameTitle className="animate-data-in text-base font-medium">
           {totalItems} {totalItems === 1 ? "item" : "items"} across {categoryCount}{" "}
           {categoryCount === 1 ? "category" : "categories"}
         </FrameTitle>
       </FrameHeader>
-      <FramePanel className="space-y-3 shadow-none!">
+      <FramePanel className="space-y-3 shadow-none! border-none m-1 mt-0">
         {entries.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">No items in collection</p>
         ) : (

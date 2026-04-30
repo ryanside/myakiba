@@ -3,13 +3,11 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   AddSquareIcon,
   ArrowRight01Icon,
-  Delete02Icon,
   Edit03Icon,
   Loading03Icon,
   MinusSignSquareIcon,
   MoreHorizontalIcon,
   PackageIcon,
-  ViewIcon,
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -25,7 +23,6 @@ import { Link } from "@tanstack/react-router";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
 import type { ColumnDef, Row, RowSelectionState, OnChangeFn } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
-import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import type { CascadeOptions, EditedOrder } from "@myakiba/contracts/orders/schema";
 import type { OrderListItem } from "@myakiba/contracts/orders/types";
 import { OrderForm } from "./order-form";
@@ -119,12 +116,7 @@ function OrderActionsCell({
           {menuOpen ? (
             <DropdownMenuContent align="end">
               <DropdownMenuItem>
-                <Link
-                  to="/orders/$id"
-                  params={{ id: order.orderId }}
-                  className="flex items-center gap-1.5"
-                >
-                  <HugeiconsIcon icon={ViewIcon} />
+                <Link to="/orders/$id" params={{ id: order.orderId }}>
                   View details
                 </Link>
               </DropdownMenuItem>
@@ -136,7 +128,6 @@ function OrderActionsCell({
                   setDeleteOpen(true);
                 }}
               >
-                <HugeiconsIcon icon={Delete02Icon} />
                 Delete order
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -635,7 +626,7 @@ export function createOrdersColumns({
             inputs={inputs}
             title="Fees & Charges"
             description="Expand order to edit item prices"
-            total={formatCurrencyFromMinorUnits(order.total, currency, locale)}
+            totalAmount={order.total}
             currency={currency}
             locale={locale}
             disabled={isPending}

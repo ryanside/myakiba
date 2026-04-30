@@ -20,7 +20,7 @@ import { resolveSyncMessage, SESSION_STATUS_CONFIG, SYNC_TYPE_CONFIG } from "@/l
 import { formatRelativeTimeToNow } from "@/lib/date-display";
 import { ACTIVE_SYNC_SESSION_STATUS_SET } from "@myakiba/contracts/sync/constants";
 import { useSyncJobStatusQuery } from "@/hooks/use-sync-job-status-query";
-import { PulsingDot } from "@/components/ui/pulsing-dot";
+import { DotmRandom } from "@/components/ui/dotm-random";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SparkleTrail } from "@/components/ui/sparkle-trail";
 
@@ -88,7 +88,12 @@ export default function SyncStatusWidget() {
                 >
                   {hasActive && (
                     <>
-                      <PulsingDot />
+                      <DotmRandom
+                        size={12}
+                        dotSize={2}
+                        ariaLabel="Sync in progress"
+                        className="shrink-0"
+                      />
                       <ShimmeringText
                         text="Syncing..."
                         duration={1}
@@ -222,7 +227,7 @@ function ActiveSessionItem({ session, onNavigate }: ActiveSessionProps) {
       to="/sync/$id"
       params={{ id: session.id }}
       onClick={onNavigate}
-      className="group block rounded-md py-2 transition-colors duration-150 hover:bg-accent"
+      className="group block rounded-md p-2 hover:bg-accent"
       aria-label={`View ${typeConfig.label} sync session`}
     >
       <div className="flex items-center justify-between">
@@ -297,7 +302,7 @@ function RecentSessionItem({ session, onNavigate }: RecentSessionProps) {
       to="/sync/$id"
       params={{ id: session.id }}
       onClick={onNavigate}
-      className="group flex items-start gap-2.5 rounded-md  py-2 transition-colors duration-150 hover:bg-accent"
+      className="group flex items-start gap-2.5 rounded-md p-2 hover:bg-accent"
       aria-label={`View ${typeConfig.label} sync session from ${formatRelativeTimeToNow(session.createdAt)}`}
     >
       <div className="mt-0.5 flex size-5 shrink-0 items-center justify-center">

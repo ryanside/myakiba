@@ -1,13 +1,10 @@
 import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  Copy01Icon,
-  Delete02Icon,
   Edit03Icon,
   Loading03Icon,
   MoreHorizontalIcon,
   PackageIcon,
-  ViewIcon,
 } from "@hugeicons/core-free-icons";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { Button } from "@/components/ui/button";
@@ -109,9 +106,7 @@ function OrderItemActionsCell({
                         params: { externalId: item.itemExternalId },
                       } as const)
                     : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
-                  className="flex items-center gap-1.5"
                 >
-                  <HugeiconsIcon icon={ViewIcon} />
                   View details
                 </Link>
               </DropdownMenuItem>
@@ -125,7 +120,6 @@ function OrderItemActionsCell({
                   }
                 }}
               >
-                <HugeiconsIcon icon={Copy01Icon} />
                 Copy MFC ID
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -136,7 +130,6 @@ function OrderItemActionsCell({
                   setDeleteOpen(true);
                 }}
               >
-                <HugeiconsIcon icon={Delete02Icon} />
                 Remove item
               </DropdownMenuItem>
             </DropdownMenuContent>
