@@ -1,5 +1,4 @@
 import { useCallback, useState } from "react";
-import { tryCatch } from "@myakiba/utils/result";
 
 /**
  * Optimistically display the value being submitted while a mutation is in
@@ -21,8 +20,11 @@ function usePendingValue<T>(
     async (newValue: T): Promise<void> => {
       if (Object.is(newValue, value)) return;
       setPending({ value: newValue });
-      await tryCatch(Promise.resolve(onSubmit(newValue)));
-      setPending(null);
+      try {
+        await onSubmit(newValue);
+      } finally {
+        setPending(null);
+      }
     },
     [onSubmit, value],
   );

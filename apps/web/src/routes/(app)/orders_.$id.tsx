@@ -165,7 +165,7 @@ function RouteComponent() {
   ].filter(({ amount }) => amount > 0);
 
   const selectedCollectionIds = new Set(
-    Object.keys(itemSelection).map((rowKey) => rowKey.split("-")[1]),
+    Object.keys(itemSelection).map((rowKey) => rowKey.slice(order.orderId.length + 1)),
   );
   const selectedItems: SelectedCollectionItems = {
     collectionIds: selectedCollectionIds,
@@ -175,7 +175,7 @@ function RouteComponent() {
   const isItemActionBarOpen = selectedItemCount > 0;
 
   return (
-    <div className="flex flex-col gap-8 min-h-full mx-auto max-w-[88rem]">
+    <div className="flex flex-col gap-8 min-h-full mx-auto max-w-352">
       {/* Header */}
       <div className="flex flex-col gap-3 animate-appear">
         <BackLink to="/orders" text="Back" font="sans" className="self-start" />
