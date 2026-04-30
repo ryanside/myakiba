@@ -39,6 +39,9 @@ interface OrdersKanbanProps {
   dateFormat: DateFormat;
 }
 
+type OrderColumns = Record<string, DashboardKanbanOrder[]>;
+type OrderColumnsUpdate = React.SetStateAction<OrderColumns>;
+
 const COLUMNS: Record<string, { readonly title: string; readonly color: string }> = {
   Ordered: { title: "Ordered", color: ORDER_STATUS_COLORS.Ordered },
   Paid: { title: "Paid", color: ORDER_STATUS_COLORS.Paid },
@@ -73,6 +76,10 @@ function withDateUpdate(
   }
 }
 
+function columnsReducer(columns: OrderColumns, update: OrderColumnsUpdate): OrderColumns {
+  return typeof update === "function" ? update(columns) : update;
+}
+
 interface OrderCardProps extends Omit<
   React.ComponentProps<typeof KanbanItem>,
   "value" | "children"
@@ -99,8 +106,12 @@ function OrderCard({
   const locale = getCurrencyLocale(currency);
 
   const content = (
-    <Frame variant="ghost" spacing="sm" className="animate-data-in group/card relative p-0">
-      <FramePanel className="p-3">
+    <Frame
+      variant="ghost"
+      spacing="sm"
+      className="bg-background animate-data-in group/card relative p-0"
+    >
+      <FramePanel className="p-3 border-none hover:ring-1 hover:ring-foreground/10">
         {columnId !== "Owned" && (
           <Tooltip>
             <TooltipTrigger
@@ -149,7 +160,7 @@ function OrderCard({
             <Link
               to="/orders/$id"
               params={{ id: order.orderId }}
-              className="line-clamp-1 text-sm font-medium leading-tight hover:underline"
+              className="line-clamp-1 text-sm font-medium leading-tight hover:underline w-fit"
               onPointerDown={(e) => e.stopPropagation()}
             >
               {order.title}
@@ -297,33 +308,19 @@ function OrderColumn({
   );
 }
 
-export default function OrderKanban({
-  orders,
+function OrderKanbanBoard({
+  initialColumns,
   isLoading,
   currency,
   dateFormat,
-}: OrdersKanbanProps) {
+}: Omit<OrdersKanbanProps, "orders"> & {
+  initialColumns: OrderColumns;
+}) {
   const queryClient = useQueryClient();
 
-  const initialColumns = React.useMemo(() => {
-    const grouped: Record<string, DashboardKanbanOrder[]> = {
-      Ordered: [],
-      Paid: [],
-      Shipped: [],
-      Owned: [],
-    };
+  const [columns, setColumns] = React.useReducer(columnsReducer, initialColumns);
 
-    for (const order of orders) {
-      grouped[order.status]?.push(order);
-    }
-
-    return grouped;
-  }, [orders]);
-
-  const [columns, setColumns] =
-    React.useState<Record<string, DashboardKanbanOrder[]>>(initialColumns);
-
-  React.useEffect(() => {
+  React.useEffect((): void => {
     setColumns(initialColumns);
   }, [initialColumns]);
 
@@ -459,5 +456,36 @@ export default function OrderKanban({
       </KanbanBoard>
       <KanbanOverlay className="rounded-md border-2 border-dashed bg-muted/10" />
     </Kanban>
+  );
+}
+
+export default function OrderKanban({
+  orders,
+  isLoading,
+  currency,
+  dateFormat,
+}: OrdersKanbanProps) {
+  const initialColumns = React.useMemo(() => {
+    const grouped: OrderColumns = {
+      Ordered: [],
+      Paid: [],
+      Shipped: [],
+      Owned: [],
+    };
+
+    for (const order of orders) {
+      grouped[order.status]?.push(order);
+    }
+
+    return grouped;
+  }, [orders]);
+
+  return (
+    <OrderKanbanBoard
+      initialColumns={initialColumns}
+      isLoading={isLoading}
+      currency={currency}
+      dateFormat={dateFormat}
+    />
   );
 }

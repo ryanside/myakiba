@@ -137,6 +137,7 @@ class CollectionService {
         updatedAt: collection.updatedAt,
         totalCount: sql<number>`COUNT(*) OVER()`,
         totalValue: sql<number>`COALESCE(SUM(${collection.price}) OVER(), 0)`,
+        totalItemsThisMonth: sql<number>`COUNT(*) FILTER (WHERE ${collection.collectionDate} >= date_trunc('month', CURRENT_DATE)::date) OVER()`,
       })
       .from(collection)
       .innerJoin(item, eq(collection.itemId, item.id))

@@ -63,7 +63,8 @@ const STEPS: readonly StepMeta[] = [
     step: 1,
     eyebrow: "Onboarding",
     title: "Welcome to myakiba.",
-    description: "A quick first setup.",
+    description:
+      "A quick first setup. myakiba is in early access so expect rough edges and limited features - but we're working hard to make it better. thanks :D",
   },
   {
     id: "preferences",
@@ -121,8 +122,9 @@ function OnboardingDialog() {
   const goToStep = useCallback(
     (next: number) => {
       const clamped = Math.min(Math.max(next, FIRST_STEP), LAST_STEP);
+      const animationStep = clamped - 1;
       setCurrentStep(clamped);
-      setStep(clamped - 1);
+      setStep(animationStep);
     },
     [setStep],
   );
@@ -250,7 +252,7 @@ function OnboardingDialog() {
         />
 
         <DialogContent
-          className="sm:max-w-xl gap-0 overflow-hidden p-0 bg-background/90 backdrop-blur-xs"
+          className="sm:max-w-xl gap-0 overflow-hidden p-0 bg-background/80 backdrop-blur-sm"
           showCloseButton={false}
         >
           <Stepper value={currentStep} onValueChange={setCurrentStep}>

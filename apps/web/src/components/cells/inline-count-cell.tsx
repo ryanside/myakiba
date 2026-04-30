@@ -1,7 +1,7 @@
-import { Input } from "../ui/input";
 import { useCallback, useState } from "react";
+import { Input } from "../ui/input";
 import { Button } from "../ui/button";
-import { tryCatch } from "@myakiba/utils/result";
+import { usePendingValue } from "@/hooks/use-pending-value";
 
 interface InlineCountCellProps {
   value: number;
@@ -11,24 +11,22 @@ interface InlineCountCellProps {
 
 export function InlineCountCell({ value, onSubmit, disabled = false }: InlineCountCellProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [newValue, setNewValue] = useState(value);
+  const [editingValue, setEditingValue] = useState(1);
+  const [displayValue, submit] = usePendingValue(value, onSubmit);
+
+  const handleEdit = useCallback(() => {
+    setEditingValue(displayValue);
+    setIsEditing(true);
+  }, [displayValue]);
+
+  const handleCancel = useCallback(() => {
+    setIsEditing(false);
+  }, []);
 
   const handleSubmit = useCallback(async () => {
-    if (newValue === value) {
-      setIsEditing(false);
-      return;
-    }
-    const { error } = await tryCatch(onSubmit(newValue));
-    if (error) {
-      setNewValue(value);
-    }
     setIsEditing(false);
-  }, [newValue, value, onSubmit]);
-
-  const handleCancel = () => {
-    setNewValue(value);
-    setIsEditing(false);
-  };
+    await submit(editingValue);
+  }, [editingValue, submit]);
 
   if (isEditing) {
     return (
@@ -37,7 +35,7 @@ export function InlineCountCell({ value, onSubmit, disabled = false }: InlineCou
           id="count"
           name="count"
           className="w-full text-foreground pl-0"
-          value={newValue}
+          value={editingValue}
           onBlur={handleCancel}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -48,9 +46,8 @@ export function InlineCountCell({ value, onSubmit, disabled = false }: InlineCou
           }}
           type="number"
           min="1"
-          onChange={(e) => setNewValue(Number.parseInt(e.target.value, 10) || 1)}
+          onChange={(e) => setEditingValue(Number.parseInt(e.target.value, 10) || 1)}
           placeholder="1"
-          autoFocus
         />
       </div>
     );
@@ -58,12 +55,12 @@ export function InlineCountCell({ value, onSubmit, disabled = false }: InlineCou
 
   return (
     <Button
-      onClick={() => setIsEditing(true)}
+      onClick={handleEdit}
       className="w-full justify-start text-foreground pl-0"
       variant="ghost"
       disabled={disabled}
     >
-      {newValue}
+      {displayValue}
     </Button>
   );
 }

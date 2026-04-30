@@ -8,6 +8,7 @@ import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import type { DateFormat } from "@myakiba/contracts/shared/types";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { usePendingValue } from "@/hooks/use-pending-value";
 
 interface PopoverDatePickerCellProps {
   value: string | null;
@@ -27,15 +28,12 @@ export function PopoverDatePickerCell({
   triggerClassName,
 }: PopoverDatePickerCellProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const dateValue = value ? parseDateOnly(value) : undefined;
+  const [displayValue, submit] = usePendingValue(value, onSubmit);
+  const dateValue = displayValue ? parseDateOnly(displayValue) : undefined;
+
   const handleSelect = async (date: Date | undefined): Promise<void> => {
-    if (date) {
-      const formattedDate = format(date, "yyyy-MM-dd");
-      await onSubmit(formattedDate);
-    } else {
-      await onSubmit(null);
-    }
     setIsOpen(false);
+    await submit(date ? format(date, "yyyy-MM-dd") : null);
   };
 
   const defaultTrigger = (
@@ -45,7 +43,7 @@ export function PopoverDatePickerCell({
       className={cn("w-full justify-start text-foreground pl-0", triggerClassName)}
       disabled={disabled}
     >
-      {value ? formatDateOnlyForDisplay(value, dateFormat) : "n/a"}
+      {displayValue ? formatDateOnlyForDisplay(displayValue, dateFormat) : "n/a"}
     </Button>
   );
 

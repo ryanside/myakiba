@@ -22,6 +22,7 @@ import type { OrderItemRelease } from "@/queries/orders";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { usePendingValue } from "@/hooks/use-pending-value";
 
 interface PopoverReleaseDateCellProps {
   readonly value: string | null;
@@ -155,30 +156,26 @@ export function PopoverReleaseDateCell({
   orderId,
 }: PopoverReleaseDateCellProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const dateValue = value ? parseDateOnly(value) : undefined;
+  const [displayValue, submit] = usePendingValue(value, onSubmit);
+  const dateValue = displayValue ? parseDateOnly(displayValue) : undefined;
 
   const handleSelect = async (date: Date | undefined): Promise<void> => {
-    if (date) {
-      const formattedDate = format(date, "yyyy-MM-dd");
-      await onSubmit(formattedDate);
-    } else {
-      await onSubmit(null);
-    }
     setIsOpen(false);
+    await submit(date ? format(date, "yyyy-MM-dd") : null);
   };
 
   const handleReleaseSelect = async (dateOrNull: string | null): Promise<void> => {
-    await onSubmit(dateOrNull);
     setIsOpen(false);
+    await submit(dateOrNull);
   };
 
   const getDisplayValue = (): string | null => {
-    if (!(value && dateValue)) return null;
+    if (!(displayValue && dateValue)) return null;
     return triggerVariant === "outline"
       ? format(dateValue, "PPP")
-      : formatDateOnlyForDisplay(value, dateFormat);
+      : formatDateOnlyForDisplay(displayValue, dateFormat);
   };
-  const displayValue = getDisplayValue();
+  const formattedDisplay = getDisplayValue();
 
   const defaultTrigger = (
     <Button
@@ -196,7 +193,7 @@ export function PopoverReleaseDateCell({
       {triggerVariant === "outline" && (
         <HugeiconsIcon icon={Calendar01Icon} className="mr-2 h-4 w-4" />
       )}
-      {displayValue ?? (placeholder ? <span>{placeholder}</span> : "n/a")}
+      {formattedDisplay ?? (placeholder ? <span>{placeholder}</span> : "n/a")}
     </Button>
   );
 
@@ -208,7 +205,7 @@ export function PopoverReleaseDateCell({
           {orderId && (
             <ReleaseSelect
               orderId={orderId}
-              value={value}
+              value={displayValue}
               dateFormat={dateFormat}
               onSelect={handleReleaseSelect}
             />

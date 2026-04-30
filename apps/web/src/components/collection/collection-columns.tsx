@@ -1,14 +1,10 @@
 import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  Copy01Icon,
-  Delete02Icon,
   Edit03Icon,
   Loading03Icon,
   MoreHorizontalIcon,
-  MoveIcon,
   PackageIcon,
-  ViewIcon,
 } from "@hugeicons/core-free-icons";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -130,9 +126,7 @@ function CollectionActionsCell({
                         params: { externalId: item.itemExternalId },
                       } as const)
                     : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
-                  className="flex items-center gap-1.5"
                 >
-                  <HugeiconsIcon icon={ViewIcon} />
                   View details
                 </Link>
               </DropdownMenuItem>
@@ -146,15 +140,11 @@ function CollectionActionsCell({
                   }
                 }}
               >
-                <HugeiconsIcon icon={Copy01Icon} />
                 Copy MFC ID
               </DropdownMenuItem>
               <UnifiedItemMoveForm
                 renderTrigger={
-                  <DropdownMenuItem closeOnClick={false}>
-                    <HugeiconsIcon icon={MoveIcon} />
-                    Assign order
-                  </DropdownMenuItem>
+                  <DropdownMenuItem closeOnClick={false}>Assign order</DropdownMenuItem>
                 }
                 selectedItems={selectedItems}
                 onMoveToExisting={onAddCollectionItemsToOrder}
@@ -171,7 +161,6 @@ function CollectionActionsCell({
                   setDeleteOpen(true);
                 }}
               >
-                <HugeiconsIcon icon={Delete02Icon} />
                 Delete item
               </DropdownMenuItem>
             </DropdownMenuContent>

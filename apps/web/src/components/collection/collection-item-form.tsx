@@ -44,6 +44,7 @@ import { useState } from "react";
 import type { ReactElement } from "react";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { formatReleaseDate, getCurrencyLocale } from "@/lib/locale";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 type CollectionItemFormProps = {
   renderTrigger: ReactElement;
@@ -75,6 +76,7 @@ function CollectionItemFormContent({
   readonly close: () => void;
 }) {
   const userLocale = getCurrencyLocale(currency);
+  const requiresOrderBeforeStatusChange = itemData.orderId === null;
 
   const form = useForm({
     defaultValues: {
@@ -196,11 +198,30 @@ function CollectionItemFormContent({
                           <SelectValue placeholder="Select status" />
                         </SelectTrigger>
                         <SelectContent>
-                          {COLLECTION_STATUSES.map((status) => (
-                            <SelectItem key={status} value={status}>
-                              {status}
-                            </SelectItem>
-                          ))}
+                          {COLLECTION_STATUSES.map((status) => {
+                            const disabled = requiresOrderBeforeStatusChange && status !== "Owned";
+
+                            return (
+                              <SelectItem
+                                key={status}
+                                value={status}
+                                disabled={disabled}
+                                className={disabled ? "data-disabled:pointer-events-auto" : ""}
+                              >
+                                {disabled ? (
+                                  <Tooltip>
+                                    <TooltipTrigger render={<span>{status}</span>} />
+                                    <TooltipContent side="right">
+                                      Assign this item to an order before changing it to Ordered,
+                                      Paid, or Shipped.
+                                    </TooltipContent>
+                                  </Tooltip>
+                                ) : (
+                                  status
+                                )}
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                       {!field.state.meta.isValid && (

@@ -50,7 +50,7 @@ function CommandDialog({
       <DialogContent
         className={cn(
           "top-1/2 -translate-y-1/2 overflow-hidden rounded-xl! p-0",
-          "bg-background/90 ring-1 ring-foreground/10 backdrop-blur-xs",
+          "bg-background/80 ring-1 ring-foreground/10 backdrop-blur-sm",
           className,
         )}
         showCloseButton={showCloseButton}

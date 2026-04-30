@@ -1,8 +1,8 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Loading03Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import type { SyncType } from "@myakiba/contracts/shared/types";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -17,9 +17,6 @@ import SyncOrderForm from "@/components/sync/sync-order-form";
 import SyncCollectionForm from "@/components/sync/sync-collection-form";
 import { useSyncMutations } from "@/hooks/use-sync-mutations";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
-import { PlusIcon } from "@/components/ui/plus";
-import type { PlusIconHandle } from "@/components/ui/plus";
-
 type SyncSheetButtonProps = {
   readonly syncType: Extract<SyncType, "collection" | "order">;
   readonly label: string;
@@ -30,7 +27,6 @@ export function SyncSheetButton({ syncType, label, className }: SyncSheetButtonP
   const queryClient = useQueryClient();
   const { currency } = useUserPreferences();
   const [open, setOpen] = useState(false);
-  const addItemsIconRef = useRef<PlusIconHandle>(null);
 
   const { handleSyncOrderSubmit, handleSyncCollectionSubmit, isSyncing } = useSyncMutations(
     queryClient,
@@ -45,18 +41,11 @@ export function SyncSheetButton({ syncType, label, className }: SyncSheetButtonP
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger
         render={
-          <Button
-            variant="default"
-            className={className}
-            aria-label={label}
-            onMouseEnter={() => addItemsIconRef.current?.startAnimation()}
-            onMouseLeave={() => addItemsIconRef.current?.stopAnimation()}
-            disabled={isSyncing}
-          >
+          <Button variant="default" className={className} aria-label={label} disabled={isSyncing}>
             {isSyncing ? (
               <HugeiconsIcon icon={Loading03Icon} className="size-3 animate-spin" />
             ) : (
-              <PlusIcon ref={addItemsIconRef} size={17} />
+              <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
             )}
             <span className="hidden sm:inline">{label}</span>
           </Button>

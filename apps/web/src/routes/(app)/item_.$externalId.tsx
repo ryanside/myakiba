@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Calendar01Icon,
@@ -32,12 +32,9 @@ import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { formatDateOnlyForDisplay, formatRelativeTimeToNow } from "@/lib/date-display";
 import CollectionItemForm from "@/components/collection/collection-item-form";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import type { CollectionItemFormValues, CollectionItem } from "@myakiba/contracts/collection/types";
-import { deleteCollectionItems, updateCollectionItem } from "@/queries/collection";
 import { toast } from "sonner";
 import Loader from "@/components/loader";
 import { getCategoryColor } from "@/lib/category-colors";
-import { Card, CardHeader, CardAction, CardContent, CardFooter } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import UnifiedItemMoveForm from "@/components/orders/unified-item-move-form";
 import {
@@ -52,15 +49,8 @@ import {
 import { getStatusVariant } from "@/lib/orders";
 import { formatReleaseDate } from "@/lib/locale";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
-import { useCollectionOrderMutations } from "@/hooks/use-collection";
+import { useCollectionMutations, useCollectionOrderMutations } from "@/hooks/use-collection";
 import { NO_SCALE, normalizeScale } from "@myakiba/contracts/shared/scale";
-
-type ItemRelatedCollection = {
-  collection: Omit<
-    CollectionItem,
-    "itemCategory" | "itemScale" | "createdAt" | "updatedAt" | "totalCount" | "totalValue"
-  >[];
-};
 
 export const Route = createFileRoute("/(app)/item_/$externalId")({
   parseParams: ({ externalId }) => {
@@ -150,9 +140,9 @@ function DetailRow({
   readonly children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 py-1">
-      <span className="text-[0.8125rem] text-muted-foreground shrink-0">{label}</span>
-      <span className="text-[0.8125rem] font-medium text-right tabular-nums">{children}</span>
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="tabular-nums">{children}</span>
     </div>
   );
 }
@@ -287,100 +277,12 @@ function RouteComponent() {
     enabled: data != null,
   });
 
-  const editCollectionItemMutation = useMutation({
-    mutationFn: (values: CollectionItemFormValues) => updateCollectionItem(values),
-    onMutate: async (values) => {
-      await queryClient.cancelQueries({
-        queryKey: ["item", externalId, "itemRelatedCollection"],
-      });
-      const previousData = queryClient.getQueryData(["item", externalId, "itemRelatedCollection"]);
-      queryClient.setQueryData(
-        ["item", externalId, "itemRelatedCollection"],
-        (old: ItemRelatedCollection) => ({
-          ...old,
-          collection: old.collection.map((collectionItem) => {
-            if (collectionItem.id === values.id) {
-              return {
-                ...collectionItem,
-                status: values.status,
-                count: values.count,
-                score: values.score,
-                price: values.price,
-                shop: values.shop,
-                condition: values.condition,
-                orderDate: values.orderDate,
-                paymentDate: values.paymentDate,
-                shippingDate: values.shippingDate,
-                collectionDate: values.collectionDate,
-                shippingMethod: values.shippingMethod,
-                notes: values.notes,
-                tags: values.tags,
-                releaseId: values.releaseId,
-              };
-            }
-            return collectionItem;
-          }),
-        }),
-      );
-      return { previousData };
-    },
-    onSuccess: () => {},
-    onError: (error, _, context) => {
-      if (context?.previousData) {
-        queryClient.setQueryData(
-          ["item", externalId, "itemRelatedCollection"],
-          context.previousData,
-        );
-      }
-      toast.error("Failed to update collection item. Please try again.", {
-        description: `Error: ${error.message}`,
-      });
-    },
-    onSettled: async () => {
-      await queryClient.invalidateQueries();
-    },
-  });
+  const { handleEditCollectionItem, handleDeleteCollectionItems } = useCollectionMutations();
 
-  const deleteCollectionItemMutation = useMutation({
-    mutationFn: (collectionId: string) => deleteCollectionItems([collectionId]),
-    onMutate: async (collectionId) => {
-      await queryClient.cancelQueries({
-        queryKey: ["item", externalId, "itemRelatedCollection"],
-      });
-      const previousData = queryClient.getQueryData(["item", externalId, "itemRelatedCollection"]);
-      queryClient.setQueryData(
-        ["item", externalId, "itemRelatedCollection"],
-        (old: ItemRelatedCollection) => ({
-          ...old,
-          collection: old.collection.filter((collectionItem) => collectionItem.id !== collectionId),
-        }),
-      );
-      return { previousData };
-    },
-    onError: (error, _, context) => {
-      if (context?.previousData) {
-        queryClient.setQueryData(
-          ["item", externalId, "itemRelatedCollection"],
-          context.previousData,
-        );
-      }
-      toast.error("Failed to delete collection item(s). Please try again.", {
-        description: `Error: ${error.message}`,
-      });
-    },
-    onSuccess: () => {},
-    onSettled: async () => {
-      await queryClient.invalidateQueries();
-    },
-  });
-
-  const handleEditCollectionItem = async (values: CollectionItemFormValues): Promise<void> => {
-    await editCollectionItemMutation.mutateAsync(values);
-  };
-
-  const handleDeleteCollectionItem = async (collectionId: string): Promise<void> => {
-    await deleteCollectionItemMutation.mutateAsync(collectionId);
-  };
+  const handleDeleteCollectionItem = useCallback(
+    (collectionId: string): Promise<void> => handleDeleteCollectionItems(new Set([collectionId])),
+    [handleDeleteCollectionItems],
+  );
 
   if (isPending) {
     return <Loader />;
@@ -672,8 +574,8 @@ function RouteComponent() {
                 );
               }
               return (
-                <div className="space-y-5">
-                  {collectionItems.map((collectionItem) => {
+                <div className="flex flex-col gap-8">
+                  {collectionItems.map((collectionItem, idx) => {
                     const release = item.releases.find((r) => r.id === collectionItem.releaseId);
                     const relatedOrder = collectionItem.orderId
                       ? ordersList.find((o) => o.id === collectionItem.orderId)
@@ -685,224 +587,210 @@ function RouteComponent() {
                       shippingDate: collectionItem.shippingDate,
                       collectionDate: collectionItem.collectionDate,
                     });
+                    const hasExtras =
+                      (collectionItem.score && Number.parseFloat(collectionItem.score) !== 0) ||
+                      collectionItem.tags.length > 0 ||
+                      Boolean(collectionItem.notes);
 
                     return (
-                      <div key={collectionItem.id} className="animate-appear">
-                        <Card>
-                          <CardHeader>
-                            <div className="flex items-center gap-2">
-                              <ThemedBadge variant={getStatusVariant(collectionItem.status)}>
-                                {collectionItem.status}
-                              </ThemedBadge>
-                              {release && (
-                                <span className="text-xs text-muted-foreground/60 tabular-nums">
-                                  {formatDateOnlyForDisplay(release.date, dateFormat)}
-                                </span>
-                              )}
-                            </div>
-                            <CardAction>
-                              <div className="flex items-center">
-                                <CollectionItemForm
-                                  renderTrigger={
-                                    <Button
-                                      variant="ghost"
-                                      size="icon-sm"
-                                      className="text-muted-foreground"
-                                    >
-                                      <HugeiconsIcon icon={Edit03Icon} className="size-3.5" />
-                                    </Button>
-                                  }
-                                  itemData={{
-                                    ...collectionItem,
-                                    id: collectionItem.id,
-                                    itemExternalId: externalId,
-                                    itemTitle: item.title,
-                                    itemImage: item.image,
-                                    releaseDate: release?.date ?? null,
-                                    releasePrice: release?.price ?? null,
-                                    releaseCurrency: release?.priceCurrency ?? null,
-                                    releaseBarcode: release?.barcode ?? null,
-                                    releaseType: release?.type ?? null,
-                                  }}
-                                  callbackFn={handleEditCollectionItem}
-                                  currency={userCurrency}
-                                  dateFormat={dateFormat}
-                                />
-                                <UnifiedItemMoveForm
-                                  renderTrigger={
-                                    <Button
-                                      variant="ghost"
-                                      size="icon-sm"
-                                      className="text-muted-foreground"
-                                      disabled={isOrderActionPending}
-                                    >
-                                      <HugeiconsIcon
-                                        icon={isOrderActionPending ? Loading03Icon : MoveIcon}
-                                        className={cn(
-                                          "size-3.5",
-                                          isOrderActionPending && "animate-spin",
-                                        )}
-                                      />
-                                      <span className="sr-only">Assign order</span>
-                                    </Button>
-                                  }
-                                  selectedItems={{
-                                    collectionIds: new Set([collectionItem.id]),
-                                    orderIds: collectionItem.orderId
-                                      ? new Set([collectionItem.orderId])
-                                      : new Set<string>(),
-                                  }}
-                                  onMoveToExisting={handleAddCollectionItemsToOrder}
-                                  onMoveToNew={handleAddCollectionItemsToNewOrder}
-                                  clearSelections={() => {}}
-                                  currency={userCurrency}
-                                  intent="add"
-                                />
-                                <ConfirmDialog
-                                  renderTrigger={
-                                    <Button
-                                      variant="ghost"
-                                      size="icon-sm"
-                                      className="text-muted-foreground"
-                                    >
-                                      <HugeiconsIcon icon={Delete01Icon} className="size-3.5" />
-                                      <span className="sr-only">Delete collection item</span>
-                                    </Button>
-                                  }
-                                  title="Delete item?"
-                                  description="This will permanently remove this item from your collection."
-                                  onConfirm={() => handleDeleteCollectionItem(collectionItem.id)}
-                                />
-                              </div>
-                            </CardAction>
-                          </CardHeader>
-
-                          <CardContent className="space-y-5">
-                            <div className="space-y-0.5">
-                              <DetailRow label="Count">{collectionItem.count}</DetailRow>
-                              <DetailRow label="Price">
-                                {formatCurrencyFromMinorUnits(
-                                  collectionItem.price,
-                                  userCurrency,
-                                  userLocale,
-                                )}
-                              </DetailRow>
-                              <DetailRow label="Condition">{collectionItem.condition}</DetailRow>
-                              {collectionItem.shop && (
-                                <DetailRow label="Shop">{collectionItem.shop}</DetailRow>
-                              )}
-                              <DetailRow label="Shipping">
-                                {collectionItem.shippingMethod}
-                              </DetailRow>
-                            </div>
-
-                            {activeStep > 0 && (
-                              <div className="pt-1">
-                                <Timeline orientation="horizontal" value={activeStep}>
-                                  <TimelineItem step={1}>
-                                    <TimelineIndicator />
-                                    <TimelineSeparator />
-                                    <TimelineHeader>
-                                      <TimelineTitle>Ordered</TimelineTitle>
-                                      <TimelineDate>
-                                        {formatDateOnlyForDisplay(
-                                          collectionItem.orderDate,
-                                          dateFormat,
-                                        )}
-                                      </TimelineDate>
-                                    </TimelineHeader>
-                                  </TimelineItem>
-                                  <TimelineItem step={2}>
-                                    <TimelineIndicator />
-                                    <TimelineSeparator />
-                                    <TimelineHeader>
-                                      <TimelineTitle>Paid</TimelineTitle>
-                                      <TimelineDate>
-                                        {formatDateOnlyForDisplay(
-                                          collectionItem.paymentDate,
-                                          dateFormat,
-                                        )}
-                                      </TimelineDate>
-                                    </TimelineHeader>
-                                  </TimelineItem>
-                                  <TimelineItem step={3}>
-                                    <TimelineIndicator />
-                                    <TimelineSeparator />
-                                    <TimelineHeader>
-                                      <TimelineTitle>Shipped</TimelineTitle>
-                                      <TimelineDate>
-                                        {formatDateOnlyForDisplay(
-                                          collectionItem.shippingDate,
-                                          dateFormat,
-                                        )}
-                                      </TimelineDate>
-                                    </TimelineHeader>
-                                  </TimelineItem>
-                                  <TimelineItem step={4}>
-                                    <TimelineIndicator />
-                                    <TimelineSeparator />
-                                    <TimelineHeader>
-                                      <TimelineTitle>Collected</TimelineTitle>
-                                      <TimelineDate>
-                                        {formatDateOnlyForDisplay(
-                                          collectionItem.collectionDate,
-                                          dateFormat,
-                                        )}
-                                      </TimelineDate>
-                                    </TimelineHeader>
-                                  </TimelineItem>
-                                </Timeline>
-                              </div>
+                      <div
+                        key={collectionItem.id}
+                        className={cn(
+                          "flex flex-col gap-5 animate-appear",
+                          idx > 0 && "border-t border-border/40 pt-8",
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <ThemedBadge variant={getStatusVariant(collectionItem.status)}>
+                              {collectionItem.status}
+                            </ThemedBadge>
+                            {release && (
+                              <span className="text-xs text-muted-foreground/60 tabular-nums">
+                                {formatDateOnlyForDisplay(release.date, dateFormat)}
+                              </span>
                             )}
+                          </div>
+                          <div className="flex items-center -mr-2">
+                            <CollectionItemForm
+                              renderTrigger={
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  className="text-muted-foreground"
+                                >
+                                  <HugeiconsIcon icon={Edit03Icon} className="size-3.5" />
+                                </Button>
+                              }
+                              itemData={{
+                                ...collectionItem,
+                                id: collectionItem.id,
+                                itemExternalId: externalId,
+                                itemTitle: item.title,
+                                itemImage: item.image,
+                                releaseDate: release?.date ?? null,
+                                releasePrice: release?.price ?? null,
+                                releaseCurrency: release?.priceCurrency ?? null,
+                                releaseBarcode: release?.barcode ?? null,
+                                releaseType: release?.type ?? null,
+                              }}
+                              callbackFn={handleEditCollectionItem}
+                              currency={userCurrency}
+                              dateFormat={dateFormat}
+                            />
+                            <UnifiedItemMoveForm
+                              renderTrigger={
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  className="text-muted-foreground"
+                                  disabled={isOrderActionPending}
+                                >
+                                  <HugeiconsIcon
+                                    icon={isOrderActionPending ? Loading03Icon : MoveIcon}
+                                    className={cn(
+                                      "size-3.5",
+                                      isOrderActionPending && "animate-spin",
+                                    )}
+                                  />
+                                  <span className="sr-only">Assign order</span>
+                                </Button>
+                              }
+                              selectedItems={{
+                                collectionIds: new Set([collectionItem.id]),
+                                orderIds: collectionItem.orderId
+                                  ? new Set([collectionItem.orderId])
+                                  : new Set<string>(),
+                              }}
+                              onMoveToExisting={handleAddCollectionItemsToOrder}
+                              onMoveToNew={handleAddCollectionItemsToNewOrder}
+                              clearSelections={() => {}}
+                              currency={userCurrency}
+                              intent="add"
+                            />
+                            <ConfirmDialog
+                              renderTrigger={
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  className="text-muted-foreground"
+                                >
+                                  <HugeiconsIcon icon={Delete01Icon} className="size-3.5" />
+                                  <span className="sr-only">Delete collection item</span>
+                                </Button>
+                              }
+                              title="Delete item?"
+                              description="This will permanently remove this item from your collection."
+                              onConfirm={() => handleDeleteCollectionItem(collectionItem.id)}
+                            />
+                          </div>
+                        </div>
 
-                            {(collectionItem.score ||
-                              collectionItem.tags.length > 0 ||
-                              collectionItem.notes) && (
-                              <div className="space-y-3 border-t border-border/40 pt-4">
-                                {collectionItem.score &&
-                                  Number.parseFloat(collectionItem.score) !== 0 && (
-                                    <DetailRow label="Score">{collectionItem.score}</DetailRow>
-                                  )}
-                                {collectionItem.tags.length > 0 && (
-                                  <div>
-                                    <span className="text-[0.6875rem] text-muted-foreground">
-                                      Tags
-                                    </span>
-                                    <div className="flex flex-wrap gap-1.5 mt-1.5">
-                                      {collectionItem.tags.map((tag) => (
-                                        <Badge key={tag} variant="secondary" size="sm">
-                                          {tag}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                                {collectionItem.notes && (
-                                  <div>
-                                    <span className="text-[0.6875rem] text-muted-foreground">
-                                      Notes
-                                    </span>
-                                    <p className="text-sm mt-1 leading-relaxed text-foreground/75 whitespace-pre-wrap">
-                                      {collectionItem.notes}
-                                    </p>
-                                  </div>
-                                )}
-                              </div>
+                        <div className="flex flex-col gap-2.5">
+                          <DetailRow label="Count">{collectionItem.count}</DetailRow>
+                          <DetailRow label="Price">
+                            {formatCurrencyFromMinorUnits(
+                              collectionItem.price,
+                              userCurrency,
+                              userLocale,
                             )}
-                          </CardContent>
-
-                          {relatedOrder && (
-                            <CardFooter>
-                              <Link
-                                to="/orders/$id"
-                                params={{ id: relatedOrder.id }}
-                                className="flex items-center gap-2 text-sm text-primary transition-colors duration-150 ease-out hover:text-primary/80 underline-offset-4 hover:underline"
-                              >
-                                <span>View order: {relatedOrder.title}</span>
-                              </Link>
-                            </CardFooter>
+                          </DetailRow>
+                          <DetailRow label="Condition">{collectionItem.condition}</DetailRow>
+                          {collectionItem.shop && (
+                            <DetailRow label="Shop">{collectionItem.shop}</DetailRow>
                           )}
-                        </Card>
+                          <DetailRow label="Shipping">{collectionItem.shippingMethod}</DetailRow>
+                        </div>
+
+                        {activeStep > 0 && (
+                          <Timeline orientation="horizontal" value={activeStep}>
+                            <TimelineItem step={1}>
+                              <TimelineIndicator />
+                              <TimelineSeparator />
+                              <TimelineHeader>
+                                <TimelineTitle>Ordered</TimelineTitle>
+                                <TimelineDate>
+                                  {formatDateOnlyForDisplay(collectionItem.orderDate, dateFormat)}
+                                </TimelineDate>
+                              </TimelineHeader>
+                            </TimelineItem>
+                            <TimelineItem step={2}>
+                              <TimelineIndicator />
+                              <TimelineSeparator />
+                              <TimelineHeader>
+                                <TimelineTitle>Paid</TimelineTitle>
+                                <TimelineDate>
+                                  {formatDateOnlyForDisplay(collectionItem.paymentDate, dateFormat)}
+                                </TimelineDate>
+                              </TimelineHeader>
+                            </TimelineItem>
+                            <TimelineItem step={3}>
+                              <TimelineIndicator />
+                              <TimelineSeparator />
+                              <TimelineHeader>
+                                <TimelineTitle>Shipped</TimelineTitle>
+                                <TimelineDate>
+                                  {formatDateOnlyForDisplay(
+                                    collectionItem.shippingDate,
+                                    dateFormat,
+                                  )}
+                                </TimelineDate>
+                              </TimelineHeader>
+                            </TimelineItem>
+                            <TimelineItem step={4}>
+                              <TimelineIndicator />
+                              <TimelineSeparator />
+                              <TimelineHeader>
+                                <TimelineTitle>Collected</TimelineTitle>
+                                <TimelineDate>
+                                  {formatDateOnlyForDisplay(
+                                    collectionItem.collectionDate,
+                                    dateFormat,
+                                  )}
+                                </TimelineDate>
+                              </TimelineHeader>
+                            </TimelineItem>
+                          </Timeline>
+                        )}
+
+                        {hasExtras && (
+                          <div className="flex flex-col gap-3">
+                            {collectionItem.score &&
+                              Number.parseFloat(collectionItem.score) !== 0 && (
+                                <DetailRow label="Score">{collectionItem.score}</DetailRow>
+                              )}
+                            {collectionItem.tags.length > 0 && (
+                              <div className="flex items-start justify-between gap-4 text-sm">
+                                <span className="text-muted-foreground shrink-0">Tags</span>
+                                <div className="flex flex-wrap justify-end gap-1.5">
+                                  {collectionItem.tags.map((tag) => (
+                                    <Badge key={tag} variant="secondary" size="sm">
+                                      {tag}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {collectionItem.notes && (
+                              <div className="flex flex-col gap-1.5">
+                                <span className="text-sm text-muted-foreground">Notes</span>
+                                <p className="text-sm leading-relaxed text-foreground/75 whitespace-pre-wrap">
+                                  {collectionItem.notes}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {relatedOrder && (
+                          <Link
+                            to="/orders/$id"
+                            params={{ id: relatedOrder.id }}
+                            className="text-sm text-primary transition-colors duration-150 ease-out hover:text-primary/80 underline-offset-4 hover:underline"
+                          >
+                            View order: {relatedOrder.title}
+                          </Link>
+                        )}
                       </div>
                     );
                   })}

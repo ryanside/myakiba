@@ -1,6 +1,7 @@
 import type { IconSvgElement } from "@hugeicons/react";
 import {
   ChartColumnIcon,
+  GitCompareIcon,
   Home01Icon,
   LibraryIcon,
   PackageIcon,
@@ -12,6 +13,7 @@ export type AppNavigationTarget =
   | "/analytics"
   | "/orders"
   | "/collection"
+  | "/sync"
   | "/settings";
 
 export type AppNavigationItem = {
@@ -40,6 +42,12 @@ export const APP_PRIMARY_NAVIGATION_ITEMS = [
 
 export const APP_COMMAND_NAVIGATION_ITEMS = [
   ...APP_PRIMARY_NAVIGATION_ITEMS,
+  {
+    title: "Sync History",
+    to: "/sync",
+    icon: GitCompareIcon,
+    keywords: ["history", "sessions", "import", "csv", "mfc"],
+  },
   {
     title: "Settings",
     to: "/settings",

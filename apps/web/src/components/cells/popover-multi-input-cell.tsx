@@ -10,8 +10,12 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { MaskInput } from "@/components/ui/mask-input";
 import { useForm } from "@tanstack/react-form";
-import { useRef, useState } from "react";
-import { majorStringToMinorUnits, minorUnitsToMajorString } from "@myakiba/utils/currency";
+import { useMemo, useRef, useState } from "react";
+import {
+  formatCurrencyFromMinorUnits,
+  majorStringToMinorUnits,
+  minorUnitsToMajorString,
+} from "@myakiba/utils/currency";
 import { tryCatch } from "@myakiba/utils/result";
 import { toast } from "sonner";
 
@@ -24,7 +28,7 @@ interface PopoverInput {
 
 interface PopoverMultiInputCellProps {
   readonly inputs: readonly PopoverInput[];
-  readonly total: string;
+  readonly totalAmount: number;
   readonly currency: string;
   readonly locale: string;
   readonly onSubmit: (newValues: Record<string, number>) => Promise<void>;
@@ -33,9 +37,15 @@ interface PopoverMultiInputCellProps {
   readonly description?: string;
 }
 
+function sumValues(values: Iterable<number>): number {
+  let sum = 0;
+  for (const v of values) sum += v;
+  return sum;
+}
+
 export function PopoverMultiInputCell({
   inputs,
-  total,
+  totalAmount,
   currency,
   locale,
   onSubmit,
@@ -44,6 +54,29 @@ export function PopoverMultiInputCell({
   description,
 }: PopoverMultiInputCellProps): React.JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
+  const [pending, setPending] = useState<Record<string, number> | null>(null);
+
+  const inputsSum = useMemo(() => sumValues(inputs.map((input) => input.value)), [inputs]);
+
+  const pendingMatchesInputs = useMemo<boolean>(() => {
+    if (!pending) return false;
+    if (Object.keys(pending).length !== inputs.length) return false;
+    return inputs.every((input) => pending[input.name] === input.value);
+  }, [pending, inputs]);
+
+  const displayInputsSum =
+    pending && !pendingMatchesInputs ? sumValues(Object.values(pending)) : inputsSum;
+  const displayTotal = totalAmount - inputsSum + displayInputsSum;
+  const formattedTotal = formatCurrencyFromMinorUnits(displayTotal, currency, locale);
+
+  const handleSubmit = async (newValues: Record<string, number>): Promise<void> => {
+    setPending(newValues);
+    const { error } = await tryCatch(onSubmit(newValues));
+    if (error) {
+      setPending(null);
+      toast.error(error.message);
+    }
+  };
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -54,7 +87,7 @@ export function PopoverMultiInputCell({
             className="w-full justify-start text-foreground pl-0"
             disabled={disabled}
           >
-            {total}
+            {formattedTotal}
           </Button>
         }
       />
@@ -63,7 +96,7 @@ export function PopoverMultiInputCell({
           inputs={inputs}
           currency={currency}
           locale={locale}
-          onSubmit={onSubmit}
+          onSubmit={handleSubmit}
           title={title}
           description={description}
           close={() => setIsOpen(false)}
@@ -81,7 +114,13 @@ function PopoverMultiInputCellContent({
   title,
   description,
   close,
-}: Omit<PopoverMultiInputCellProps, "total" | "disabled"> & {
+}: {
+  readonly inputs: readonly PopoverInput[];
+  readonly currency: string;
+  readonly locale: string;
+  readonly onSubmit: (newValues: Record<string, number>) => Promise<void>;
+  readonly title?: string;
+  readonly description?: string;
   readonly close: () => void;
 }) {
   const firstInputRef = useRef<HTMLInputElement>(null);
@@ -94,8 +133,7 @@ function PopoverMultiInputCellContent({
       const converted = Object.fromEntries(
         Object.entries(value).map(([key, amount]) => [key, majorStringToMinorUnits(amount)]),
       );
-      const { error } = await tryCatch(onSubmit(converted));
-      if (error) toast.error(error.message);
+      await onSubmit(converted);
     },
   });
 

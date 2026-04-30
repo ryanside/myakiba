@@ -1,13 +1,13 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface KPICardProps {
-  title: string;
-  subtitle?: string;
-  value: string | number | undefined;
-  subvalueTitle?: string;
-  subvalue?: string | number | undefined;
-  isLoading?: boolean;
+  readonly title: string;
+  readonly subtitle?: string;
+  readonly value: string | number | undefined;
+  readonly subvalueTitle?: string;
+  readonly subvalue?: string | number | undefined;
+  readonly isLoading?: boolean;
 }
 
 export function KPICard({
@@ -19,28 +19,28 @@ export function KPICard({
   isLoading,
 }: KPICardProps): React.ReactNode {
   return (
-    <Card className="flex-1 flex flex-col">
-      <CardHeader className="flex flex-col items-start">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        {subtitle && (
-          <CardDescription className="text-xs text-muted-foreground">{subtitle}</CardDescription>
+    <Frame className="border-none ring-1 ring-foreground/10 shadow-xs!" spacing="sm">
+      <FrameHeader>
+        <FrameTitle className="text-xs lowercase font-orbitron font-medium">{title}</FrameTitle>
+      </FrameHeader>
+      <FramePanel className="shadow-none! border-none flex m-0.5 mt-0 flex-col justify-end gap-1">
+        {isLoading ? (
+          <Skeleton className="h-8 w-24" />
+        ) : (
+          <div className="flex items-baseline gap-2">
+            <p className="animate-data-in text-2xl font-medium tracking-tight text-foreground">
+              {value}
+            </p>
+            {subvalueTitle && subvalue !== undefined && (
+              <div className="animate-data-in flex items-baseline gap-1 [--data-in-delay:60ms]">
+                <span className="text-xs text-muted-foreground tabular-nums">{subvalue}</span>
+                <span className="text-xs text-muted-foreground">{subvalueTitle}</span>
+              </div>
+            )}
+          </div>
         )}
-      </CardHeader>
-      <CardContent className="mt-auto">
-        <div className="flex flex-row items-baseline w-full">
-          {isLoading ? (
-            <Skeleton className="h-7 w-24" />
-          ) : (
-            <p className="animate-data-in text-xl font-medium">{value}</p>
-          )}
-          {!isLoading && subvalueTitle && subvalue !== undefined && (
-            <div className="animate-data-in flex-row gap-1 ml-2 flex [--data-in-delay:40ms]">
-              <p className="text-xs text-muted-foreground font-normal">{subvalue}</p>
-              <p className="text-xs text-muted-foreground font-normal">{subvalueTitle}</p>
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+        {subtitle && <p className="italic text-xs text-muted-foreground">{subtitle}</p>}
+      </FramePanel>
+    </Frame>
   );
 }

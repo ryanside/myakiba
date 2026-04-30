@@ -100,7 +100,7 @@ function RouteComponent() {
     <div className="container max-w-4xl mx-auto py-8 space-y-8">
       <div className="flex flex-col gap-2">
         <div className="flex flex-row items-start gap-4">
-          <h1 className="text-2xl tracking-tight">Settings</h1>
+          <h1 className="text-2xl font-medium tracking-tight">Settings</h1>
         </div>
         <p className="text-muted-foreground text-sm font-normal">
           Manage your settings and preferences.
@@ -148,7 +148,6 @@ function ProfileForm({ user }: { user: User }) {
     <Card>
       <CardHeader>
         <CardTitle className="font-medium">Profile Information</CardTitle>
-        <CardDescription>Update your profile information and display name</CardDescription>
       </CardHeader>
       <CardContent>
         <form
@@ -387,7 +386,6 @@ function PreferencesForm({ user }: { user: User }) {
     <Card>
       <CardHeader>
         <CardTitle className="font-medium">Preferences</CardTitle>
-        <CardDescription>Customize your application preferences</CardDescription>
       </CardHeader>
       <CardContent>
         <form
@@ -514,6 +512,7 @@ function DeleteAccountForm({
     },
     onSuccess: async () => {
       toast.success("Account deleted successfully");
+      await queryClient.invalidateQueries({ queryKey: ["account-type"] });
       await authClient.signOut({
         fetchOptions: {
           onSuccess: () => {

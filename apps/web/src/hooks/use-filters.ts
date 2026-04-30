@@ -6,7 +6,10 @@ interface UseFiltersOptions {
   readonly paginationDefaults?: {
     readonly limit?: number;
   };
+  readonly resetOffsetOnFilterChange?: boolean;
 }
+
+const PAGINATION_KEYS = new Set(["limit", "offset"]);
 
 export function useFilters<T extends RouteIds<RegisteredRouter["routeTree"]>>(
   routeId: T,
@@ -16,12 +19,25 @@ export function useFilters<T extends RouteIds<RegisteredRouter["routeTree"]>>(
   const navigate = useNavigate();
   const filters = routeApi.useSearch();
 
-  const setFilters = (partialFilters: Partial<typeof filters>) =>
-    navigate({
+  const setFilters = (partialFilters: Partial<typeof filters>) => {
+    const shouldResetOffset =
+      options?.resetOffsetOnFilterChange === true &&
+      !("offset" in partialFilters) &&
+      Object.keys(partialFilters).some((key) => !PAGINATION_KEYS.has(key));
+
+    return navigate({
       to: ".",
-      search: (prev) =>
-        cleanEmptyParams({ ...prev, ...partialFilters }, options?.paginationDefaults),
+      search: (prev) => {
+        const nextSearch = {
+          ...prev,
+          ...(shouldResetOffset ? { offset: 0 } : {}),
+          ...partialFilters,
+        };
+
+        return cleanEmptyParams(nextSearch, options?.paginationDefaults);
+      },
     });
+  };
   const resetFilters = () => navigate({ to: ".", search: {} });
 
   return { filters, setFilters, resetFilters };

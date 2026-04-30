@@ -98,7 +98,7 @@ export function ConfirmDialog({
               <HugeiconsIcon icon={icon} strokeWidth={2} className={cn("size-5", accent.fg)} />
             </div>
             <div className="flex flex-col justify-center gap-1">
-              <DialogTitle className="text-sm font-semibold">{title}</DialogTitle>
+              <DialogTitle className="text-sm font-medium">{title}</DialogTitle>
               {description ? (
                 <DialogDescription className="text-muted-foreground text-sm">
                   {description}

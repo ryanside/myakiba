@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Loading03Icon } from "@hugeicons/core-free-icons";
-import { useCallback, useRef, useState } from "react";
+import { Add01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
+import { useCallback, useState } from "react";
 import type { ComponentProps } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -12,8 +12,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { PlusIcon } from "@/components/ui/plus";
-import type { PlusIconHandle } from "@/components/ui/plus";
 import { SYNC_OPTION_META } from "@/lib/sync";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { useSyncMutations } from "@/hooks/use-sync-mutations";
@@ -37,13 +35,11 @@ export function OrderItemSyncSheet({
   const queryClient = useQueryClient();
   const { currency } = useUserPreferences();
   const [open, setOpen] = useState(false);
-  const addItemIconRef = useRef<PlusIconHandle>(null);
 
   const handleComplete = useCallback((): void => {
     setOpen(false);
     void Promise.all([
       queryClient.invalidateQueries({ queryKey: ["orders"] }),
-      queryClient.invalidateQueries({ queryKey: ["orderStats"] }),
       queryClient.invalidateQueries({ queryKey: ["orderItems", orderId] }),
     ]);
   }, [orderId, queryClient]);
@@ -60,14 +56,12 @@ export function OrderItemSyncSheet({
             size={size}
             className={className}
             aria-label={label}
-            onMouseEnter={() => addItemIconRef.current?.startAnimation()}
-            onMouseLeave={() => addItemIconRef.current?.stopAnimation()}
             disabled={isSyncing}
           >
             {isSyncing ? (
               <HugeiconsIcon icon={Loading03Icon} className="size-3 animate-spin" />
             ) : (
-              <PlusIcon ref={addItemIconRef} size={17} />
+              <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
             )}
             {label}
           </Button>

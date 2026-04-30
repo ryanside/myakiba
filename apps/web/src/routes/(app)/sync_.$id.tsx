@@ -9,7 +9,7 @@ import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { ThemedBadge } from "@/components/reui/badge";
 import { BackLink } from "@/components/ui/back-link";
-import { PulsingDot } from "@/components/ui/pulsing-dot";
+import { DotmRandom } from "@/components/ui/dotm-random";
 import { Progress } from "@/components/ui/progress";
 import type { EnrichedSyncSessionItemRow, SyncSessionRow } from "@myakiba/contracts/sync/types";
 import type { SyncSessionStatus, SyncType } from "@myakiba/contracts/shared/types";
@@ -67,7 +67,7 @@ function SessionStatusPanel({
     <div className="space-y-2" role="status" aria-live={isLive ? "polite" : "off"}>
       <div className="flex items-center gap-2">
         {isLive ? (
-          <PulsingDot />
+          <DotmRandom size={12} dotSize={2} ariaLabel="Sync in progress" className="shrink-0" />
         ) : (
           <span aria-hidden className="size-2 shrink-0 rounded-full bg-muted-foreground/50" />
         )}

@@ -1,12 +1,13 @@
-import { MaskInput } from "@/components/ui/mask-input";
 import { useCallback, useState } from "react";
+import { MaskInput } from "@/components/ui/mask-input";
 import {
   formatCurrencyFromMinorUnits,
   majorStringToMinorUnits,
   minorUnitsToMajorString,
 } from "@myakiba/utils/currency";
-import { tryCatch } from "@myakiba/utils/result";
 import { Button } from "../ui/button";
+import { usePendingValue } from "@/hooks/use-pending-value";
+
 interface InlineCurrencyCellProps {
   value: number;
   currency: string;
@@ -23,45 +24,24 @@ export function InlineCurrencyCell({
   disabled,
 }: InlineCurrencyCellProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [newValue, setNewValue] = useState<string | null>(null);
-  const [pendingValue, setPendingValue] = useState<number | null>(null);
-  const displayValue = pendingValue !== null && pendingValue !== value ? pendingValue : value;
-  const currentValue = minorUnitsToMajorString(displayValue);
+  const [editingValue, setEditingValue] = useState("");
+  const [displayValue, submit] = usePendingValue(value, onSubmit);
 
-  const handleSubmit = useCallback(async () => {
-    const submittedValue = newValue ?? currentValue;
-
-    if (submittedValue === currentValue) {
-      setNewValue(null);
-      setIsEditing(false);
-      return;
-    }
-    if (submittedValue === "") {
-      setNewValue(null);
-      setIsEditing(false);
-      return;
-    }
-
-    const nextValue = majorStringToMinorUnits(submittedValue);
-    setPendingValue(nextValue);
-    setNewValue(null);
-    setIsEditing(false);
-
-    const { error } = await tryCatch(onSubmit(nextValue));
-    if (error) {
-      setPendingValue(null);
-    }
-  }, [currentValue, newValue, onSubmit]);
+  const handleEdit = useCallback(() => {
+    setEditingValue(minorUnitsToMajorString(displayValue));
+    setIsEditing(true);
+  }, [displayValue]);
 
   const handleCancel = useCallback(() => {
-    setNewValue(null);
     setIsEditing(false);
   }, []);
 
-  const handleStartEditing = useCallback(() => {
-    setNewValue(currentValue);
-    setIsEditing(true);
-  }, [currentValue]);
+  const handleSubmit = useCallback(async () => {
+    setIsEditing(false);
+    if (editingValue === "") return;
+    const nextValue = majorStringToMinorUnits(editingValue);
+    await submit(nextValue);
+  }, [editingValue, submit]);
 
   const handleInputRef = useCallback((node: HTMLInputElement | null) => {
     node?.focus();
@@ -74,9 +54,9 @@ export function InlineCurrencyCell({
         mask="currency"
         currency={currency}
         locale={locale}
-        value={newValue ?? currentValue}
+        value={editingValue}
         onValueChange={(_, unmaskedValue) => {
-          setNewValue(unmaskedValue);
+          setEditingValue(unmaskedValue);
         }}
         onBlur={handleCancel}
         onKeyDown={(e) => {
@@ -93,7 +73,7 @@ export function InlineCurrencyCell({
 
   return (
     <Button
-      onClick={handleStartEditing}
+      onClick={handleEdit}
       className="w-full justify-start text-foreground pl-0"
       variant="ghost"
       disabled={disabled}

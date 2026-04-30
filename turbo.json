@@ -17,16 +17,19 @@
     },
     "web#dev": {
       "dependsOn": ["@myakiba/db#db:start", "@myakiba/redis#redis:start"],
+      "with": ["@myakiba/db#db:studio"],
       "cache": false,
       "persistent": true
     },
     "server#dev": {
       "dependsOn": ["@myakiba/db#db:start", "@myakiba/redis#redis:start"],
+      "with": ["@myakiba/db#db:studio"],
       "cache": false,
       "persistent": true
     },
     "worker#dev": {
       "dependsOn": ["@myakiba/db#db:start", "@myakiba/redis#redis:start"],
+      "with": ["@myakiba/db#db:studio"],
       "cache": false,
       "persistent": true
     },
@@ -38,6 +41,11 @@
       "persistent": true
     },
     "db:studio": {
+      "cache": false,
+      "persistent": true
+    },
+    "@myakiba/db#db:studio": {
+      "dependsOn": ["@myakiba/db#db:start"],
       "cache": false,
       "persistent": true
     },

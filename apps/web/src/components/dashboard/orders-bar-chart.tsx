@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Bar, BarChart, Cell, XAxis, ReferenceLine } from "recharts";
 import { AnimatePresence, useMotionValueEvent, useSpring } from "motion/react";
 import { useNavigate } from "@tanstack/react-router";
@@ -107,17 +107,28 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
     setSpringyValue(Number(latest));
   });
 
+  const hasInitializedSpringRef = useRef(false);
   useEffect(() => {
+    if (isLoading) return;
+    if (!hasInitializedSpringRef.current) {
+      hasInitializedSpringRef.current = true;
+      maxValueIndexSpring.jump(maxValueIndex.value);
+      setSpringyValue(maxValueIndex.value);
+      return;
+    }
     maxValueIndexSpring.set(maxValueIndex.value);
-  }, [maxValueIndex.value, maxValueIndexSpring]);
+  }, [isLoading, maxValueIndex.value, maxValueIndexSpring]);
 
   if (isLoading) {
     return (
-      <Frame className="border-none ring-1 ring-foreground/10 shadow-xs! min-h-[320px]">
+      <Frame
+        spacing="sm"
+        className="border-none ring-1 ring-foreground/10 shadow-xs! min-h-[320px]"
+      >
         <FrameHeader>
           <Skeleton className="h-4 my-1 w-32" />
         </FrameHeader>
-        <FramePanel className="shadow-none!">
+        <FramePanel className="shadow-none! border-none m-1 mt-0">
           <Loader className="justify-center text-muted" />
         </FramePanel>
       </Frame>
@@ -125,7 +136,10 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
   }
 
   return (
-    <Frame className="border-none ring-1 ring-foreground/10 shadow-xs! lg:max-h-[320px]">
+    <Frame
+      spacing="sm"
+      className="border-none ring-1 ring-foreground/10 shadow-xs! lg:max-h-[320px]"
+    >
       <FrameHeader>
         <FrameTitle className="animate-data-in text-base font-medium">
           {maxValueIndex.value}{" "}
@@ -135,7 +149,7 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
           </span>
         </FrameTitle>
       </FrameHeader>
-      <FramePanel className="shadow-none!">
+      <FramePanel className="shadow-none! border-none m-1 mt-0">
         <AnimatePresence mode="wait">
           <ChartContainer
             config={chartConfig}
@@ -159,12 +173,18 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
                 tickFormatter={(value: string) => value.slice(0, 3)}
                 allowDataOverflow={true}
               />
-              <Bar dataKey="desktop" fill="var(--primary)" radius={6.25}>
-                {chartData.map((_, index) => (
+              <Bar
+                dataKey="desktop"
+                fill="var(--primary)"
+                radius={6.25}
+                animationDuration={300}
+                animationEasing="ease-in-out"
+              >
+                {chartData.map((monthData, index) => (
                   <Cell
                     className="duration-200 cursor-pointer"
                     opacity={index === maxValueIndex.index ? 1 : 0.2}
-                    key={index}
+                    key={monthData.month}
                     onMouseEnter={() => setActiveIndex(index)}
                     onClick={() => handleBarClick(index)}
                   />

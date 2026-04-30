@@ -11,6 +11,7 @@ import { searchReleases } from "@/queries/search";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { formatReleaseDate } from "@/lib/locale";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
+import { usePendingValue } from "@/hooks/use-pending-value";
 
 type ReleaseFallback = {
   readonly releaseDate: string | null;
@@ -52,7 +53,11 @@ export function InlineReleaseCell({
     enabled: false,
   });
 
-  const selectedRelease = releasesData?.releases.find((r) => r.id === releaseId);
+  const [displayReleaseId, submit] = usePendingValue<string | null>(releaseId, async (next) => {
+    if (next !== null) await onSubmit(next);
+  });
+
+  const selectedRelease = releasesData?.releases.find((r) => r.id === displayReleaseId);
   const displayData = selectedRelease ?? {
     date: fallback.releaseDate,
     type: fallback.releaseType,
@@ -64,9 +69,9 @@ export function InlineReleaseCell({
   return (
     <Field>
       <Select
-        value={releaseId ?? ""}
+        value={displayReleaseId ?? ""}
         onValueChange={(value: string | null) => {
-          if (value) onSubmit(value);
+          if (value) submit(value);
         }}
         onOpenChange={(open) => {
           if (open) refetchReleases();
@@ -75,7 +80,7 @@ export function InlineReleaseCell({
       >
         <SelectTrigger>
           <SelectValue placeholder="Select release">
-            {releaseId && displayData.date && (
+            {displayReleaseId && displayData.date && (
               <span className="text-sm font-medium">
                 {formatDateOnlyForDisplay(displayData.date, dateFormat)}
               </span>

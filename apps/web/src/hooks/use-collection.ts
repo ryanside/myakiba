@@ -15,6 +15,29 @@ import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
 
+// Shape of the cache backing the item detail route at `["item", externalId, "itemRelatedCollection"]`.
+// The route returns a subset of CollectionItem fields under `collection`.
+type ItemRelatedCollectionRow = Pick<
+  CollectionItem,
+  | "id"
+  | "orderId"
+  | "status"
+  | "count"
+  | "releaseId"
+  | "score"
+  | "price"
+  | "shop"
+  | "orderDate"
+  | "paymentDate"
+  | "shippingDate"
+  | "collectionDate"
+  | "shippingMethod"
+  | "tags"
+  | "condition"
+  | "notes"
+>;
+type ItemRelatedCollectionData = { readonly collection: readonly ItemRelatedCollectionRow[] };
+
 export function collectionQueryOptions(filters: CollectionFilters) {
   return queryOptions({
     queryKey: ["collection", filters] as const,
@@ -24,7 +47,7 @@ export function collectionQueryOptions(filters: CollectionFilters) {
 }
 
 export function useCollectionFilters() {
-  return useFilters("/(app)/collection");
+  return useFilters("/(app)/collection", { resetOffsetOnFilterChange: true });
 }
 
 export function useCollectionQuery() {
@@ -40,6 +63,7 @@ export function useCollectionQuery() {
     items,
     totalCount: items[0]?.totalCount ?? 0,
     totalValue: items[0]?.totalValue ?? 0,
+    totalItemsThisMonth: items[0]?.totalItemsThisMonth ?? 0,
     isPending,
     isError,
     status,
@@ -168,8 +192,8 @@ export function useCollectionOrderMutations() {
   );
 
   const isCollectionOrderPending = useCallback(
-    (collectionId: string): boolean => pendingCollectionIds.has(collectionId),
-    [pendingCollectionIds],
+    (collectionId: string): boolean => pendingCollectionIdsRef.current.has(collectionId),
+    [],
   );
 
   return {
@@ -181,11 +205,14 @@ export function useCollectionOrderMutations() {
   } as const;
 }
 
-export function useCollectionMutations() {
+export function useCollectionMutations(options?: { readonly filters?: CollectionFilters }) {
   const queryClient = useQueryClient();
-  const { filters } = useCollectionFilters();
-  const queryOpts = collectionQueryOptions(filters);
-  const filtersActive = hasActiveFiltersOrSorting(filters);
+  const filters = options?.filters;
+  const queryOpts = collectionQueryOptions(filters ?? {});
+  // The item detail route renders this hook without filters and cannot apply
+  // any. Treat that case as "no filters active" so it benefits from the same
+  // optimistic, fire-and-forget path as the unfiltered list view.
+  const filtersActive = filters === undefined ? false : hasActiveFiltersOrSorting(filters);
 
   const [pendingCollectionIdList, setPendingCollectionIdList] = useState<readonly string[]>([]);
   const pendingCollectionIds = useMemo(
@@ -200,21 +227,53 @@ export function useCollectionMutations() {
   const updateMutation = useMutation({
     mutationFn: (values: CollectionItemFormValues) => updateCollectionItem(values),
     onMutate: async (values: CollectionItemFormValues) => {
+      // Always patch the item detail cache (`["item", *, "itemRelatedCollection"]`).
+      // It is keyed by item externalId, so this update is safe regardless of
+      // any list-page filter state.
+      await queryClient.cancelQueries({
+        predicate: (query) =>
+          query.queryKey[0] === "item" && query.queryKey[2] === "itemRelatedCollection",
+      });
+      const previousItemRelated = queryClient.getQueriesData<ItemRelatedCollectionData>({
+        predicate: (query) =>
+          query.queryKey[0] === "item" && query.queryKey[2] === "itemRelatedCollection",
+      });
+      queryClient.setQueriesData<ItemRelatedCollectionData>(
+        {
+          predicate: (query) =>
+            query.queryKey[0] === "item" && query.queryKey[2] === "itemRelatedCollection",
+        },
+        (old) =>
+          old
+            ? {
+                ...old,
+                collection: old.collection.map((item) =>
+                  item.id === values.id ? { ...item, ...values } : item,
+                ),
+              }
+            : old,
+      );
+
       if (filtersActive) {
-        return;
+        return { previousItemRelated };
       }
 
       await queryClient.cancelQueries({ queryKey: queryOpts.queryKey });
-      const previous = queryClient.getQueryData<CollectionItem[]>(queryOpts.queryKey);
+      const previousList = queryClient.getQueryData<CollectionItem[]>(queryOpts.queryKey);
       queryClient.setQueryData<CollectionItem[]>(queryOpts.queryKey, (old) =>
         old?.map((item) => (item.id === values.id ? { ...item, ...values } : item)),
       );
 
-      return { previous };
+      return { previousList, previousItemRelated };
     },
     onError: (_err, _values, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData<CollectionItem[]>(queryOpts.queryKey, context.previous);
+      if (context?.previousList) {
+        queryClient.setQueryData<CollectionItem[]>(queryOpts.queryKey, context.previousList);
+      }
+      if (context?.previousItemRelated) {
+        for (const [queryKey, data] of context.previousItemRelated) {
+          queryClient.setQueryData(queryKey, data);
+        }
       }
       toast.error("Failed to update collection item. Please try again.");
     },
@@ -229,14 +288,34 @@ export function useCollectionMutations() {
   const deleteMutation = useMutation({
     mutationFn: (ids: readonly string[]) => deleteCollectionItems([...ids]),
     onMutate: async (ids: readonly string[]) => {
-      if (filtersActive) return;
+      const idSet = new Set(ids);
+
+      await queryClient.cancelQueries({
+        predicate: (query) =>
+          query.queryKey[0] === "item" && query.queryKey[2] === "itemRelatedCollection",
+      });
+      const previousItemRelated = queryClient.getQueriesData<ItemRelatedCollectionData>({
+        predicate: (query) =>
+          query.queryKey[0] === "item" && query.queryKey[2] === "itemRelatedCollection",
+      });
+      queryClient.setQueriesData<ItemRelatedCollectionData>(
+        {
+          predicate: (query) =>
+            query.queryKey[0] === "item" && query.queryKey[2] === "itemRelatedCollection",
+        },
+        (old) =>
+          old ? { ...old, collection: old.collection.filter((item) => !idSet.has(item.id)) } : old,
+      );
+
+      if (filtersActive) {
+        return { previousItemRelated };
+      }
 
       await queryClient.cancelQueries({ queryKey: queryOpts.queryKey });
-      const previous = queryClient.getQueryData<CollectionItem[]>(queryOpts.queryKey);
+      const previousList = queryClient.getQueryData<CollectionItem[]>(queryOpts.queryKey);
 
       queryClient.setQueryData<CollectionItem[]>(queryOpts.queryKey, (old) => {
         if (!old) return old;
-        const idSet = new Set(ids);
         const deletedValue = old
           .filter((item) => idSet.has(item.id))
           .reduce((sum, item) => sum + item.price, 0);
@@ -251,11 +330,16 @@ export function useCollectionMutations() {
           }));
       });
 
-      return { previous };
+      return { previousList, previousItemRelated };
     },
     onError: (_err, _ids, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData<CollectionItem[]>(queryOpts.queryKey, context.previous);
+      if (context?.previousList) {
+        queryClient.setQueryData<CollectionItem[]>(queryOpts.queryKey, context.previousList);
+      }
+      if (context?.previousItemRelated) {
+        for (const [queryKey, data] of context.previousItemRelated) {
+          queryClient.setQueryData(queryKey, data);
+        }
       }
       toast.error("Failed to delete collection item(s). Please try again.");
     },
@@ -272,8 +356,8 @@ export function useCollectionMutations() {
   deleteMutationRef.current = deleteMutation;
 
   const isCollectionPending = useCallback(
-    (collectionId: string): boolean => pendingCollectionIds.has(collectionId),
-    [pendingCollectionIds],
+    (collectionId: string): boolean => pendingCollectionIdsRef.current.has(collectionId),
+    [],
   );
 
   const handleDeleteCollectionItems = useCallback(
@@ -282,7 +366,7 @@ export function useCollectionMutations() {
       const ids = [...collectionIds];
 
       if (!filtersActiveRef.current) {
-        deleteMutationState.mutate(ids);
+        await deleteMutationState.mutateAsync(ids);
         return;
       }
 
@@ -308,7 +392,7 @@ export function useCollectionMutations() {
     async (values: CollectionItemFormValues): Promise<void> => {
       const updateMutationState = updateMutationRef.current;
       if (!filtersActiveRef.current) {
-        updateMutationState.mutate(values);
+        await updateMutationState.mutateAsync(values);
         return;
       }
       setPendingCollectionIdList((previous) => {

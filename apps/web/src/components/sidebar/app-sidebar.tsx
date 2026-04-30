@@ -1,10 +1,13 @@
 import {
+  Add01Icon,
   Home01Icon,
-  PieChartIcon,
   ChartColumnIcon,
   LibraryIcon,
   PackageIcon,
+  Settings01Icon,
+  GitCompareIcon,
 } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { DiscordLogo, GitHubLogo } from "@/components/ui/brand-icons";
 
 import { NavMain } from "@/components/sidebar/nav-main";
@@ -21,14 +24,9 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "@tanstack/react-router";
-import { useRef } from "react";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
-import { GitCompareIcon } from "../ui/git-compare";
-import type { GitCompareIconHandle } from "../ui/git-compare";
 import SyncWidget from "../sync/sync-widget";
 import { Button } from "../ui/button";
-import { PlusIcon } from "../ui/plus";
-import type { PlusIconHandle } from "../ui/plus";
 
 const data = {
   navMain: [
@@ -41,21 +39,29 @@ const data = {
       title: "Analytics",
       url: "/analytics",
       icon: ChartColumnIcon,
-    },
-    {
-      title: "Expenses",
-      url: "/expenses",
-      icon: PieChartIcon,
+      pathnameMatch: "prefix" as const,
     },
     {
       title: "Orders",
       url: "/orders",
       icon: PackageIcon,
+      pathnameMatch: "prefix" as const,
     },
     {
       title: "Collection",
       url: "/collection",
       icon: LibraryIcon,
+    },
+    {
+      title: "Sync History",
+      url: "/sync",
+      icon: GitCompareIcon,
+      pathnameMatch: "prefix" as const,
+    },
+    {
+      title: "Settings",
+      url: "/settings",
+      icon: Settings01Icon,
     },
   ],
   navSecondary: [
@@ -74,8 +80,6 @@ const data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const location = useLocation();
-  const syncIconRef = useRef<GitCompareIconHandle>(null);
-  const addItemsIconRef = useRef<PlusIconHandle>(null);
 
   return (
     <Sidebar variant="inset" collapsible="icon" {...props}>
@@ -103,45 +107,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent className="gap-0">
         <SidebarGroup>
-          <SidebarMenu className="space-y-1">
+          <SidebarMenu>
             <SidebarMenuItem>
               <SyncWidget
                 TriggerWrapper={
                   <SidebarMenuButton
-                    className="transition-all"
+                    className="transition-all hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground data-active:bg-primary data-active:text-primary-foreground data-open:hover:bg-primary/90 data-open:hover:text-primary-foreground"
                     tooltip="Sync Items"
                     render={
-                      <Button
-                        variant="default"
-                        className="justify-start"
-                        onMouseEnter={() => addItemsIconRef.current?.startAnimation()}
-                        onMouseLeave={() => addItemsIconRef.current?.stopAnimation()}
-                      >
-                        <PlusIcon ref={addItemsIconRef} />
+                      <Button variant="default" className="justify-start">
+                        <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
                         <span>Sync Items</span>
                       </Button>
                     }
                   />
                 }
               />
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                className="transition-all"
-                tooltip="Sync History"
-                render={
-                  <Button
-                    variant={location.pathname.startsWith("/sync") ? "secondary" : "outline"}
-                    onMouseEnter={() => syncIconRef.current?.startAnimation()}
-                    onMouseLeave={() => syncIconRef.current?.stopAnimation()}
-                  >
-                    <Link to="/sync">
-                      <GitCompareIcon ref={syncIconRef} size={17} />
-                      <span>Sync History</span>
-                    </Link>
-                  </Button>
-                }
-              ></SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>

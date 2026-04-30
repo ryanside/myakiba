@@ -34,7 +34,7 @@ export default function MfcSyncSection() {
           </p>
           <div className="mt-5">
             <Button
-              variant="secondary"
+              variant="default"
               size="sm"
               className="gap-1 rounded-full pr-1.5"
               render={<Link to="/login" />}

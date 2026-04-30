@@ -233,7 +233,7 @@ function HomeComponent() {
               <li key={feature.label} className="flex items-baseline gap-3">
                 <span className="select-none text-muted-foreground">–</span>
                 <span>
-                  <span className="font-semibold text-foreground">{feature.label}</span>
+                  <span className="font-medium text-foreground">{feature.label}</span>
                   <span className="text-muted-foreground">: {feature.description}</span>
                 </span>
               </li>
@@ -268,8 +268,8 @@ function HomeComponent() {
                 className="ml-auto transition-opacity duration-150 ease-out starting:opacity-0"
               >
                 <TabsList variant="line">
-                  {currentTab.views.map((_, i) => (
-                    <TabsTrigger key={i} value={String(i)} className="px-2.5 text-xs">
+                  {currentTab.views.map((viewSlug, i) => (
+                    <TabsTrigger key={viewSlug} value={String(i)} className="px-2.5 text-xs">
                       {i + 1}
                     </TabsTrigger>
                   ))}

@@ -3,6 +3,7 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Rating } from "../ui/rating";
 import { useState } from "react";
+import { usePendingValue } from "@/hooks/use-pending-value";
 
 interface PopoverRatingCellProps {
   value: string;
@@ -12,11 +13,11 @@ interface PopoverRatingCellProps {
 
 export function PopoverRatingCell({ value, onSubmit, disabled = false }: PopoverRatingCellProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [displayValue, submit] = usePendingValue(value, onSubmit);
+
   const handleSubmit = async (newValue: string) => {
-    if (Number(newValue) === Number(value)) {
-      return;
-    }
-    await onSubmit(newValue);
+    if (Number(newValue) === Number(displayValue)) return;
+    await submit(newValue);
   };
 
   return (
@@ -28,7 +29,7 @@ export function PopoverRatingCell({ value, onSubmit, disabled = false }: Popover
             className="w-full justify-start text-foreground pl-0"
             disabled={disabled}
           >
-            {value}
+            {displayValue}
           </Button>
         }
       />
@@ -40,7 +41,7 @@ export function PopoverRatingCell({ value, onSubmit, disabled = false }: Popover
               <div>
                 <Rating
                   size="md"
-                  rating={Number(value) || 0}
+                  rating={Number(displayValue) || 0}
                   onRatingChange={(nextRating) => handleSubmit(nextRating.toFixed(1))}
                   editable={true}
                   showValue={true}

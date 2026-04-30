@@ -32,11 +32,18 @@ export type CollectionItem = {
   updatedAt: string;
   totalCount: number;
   totalValue: number;
+  totalItemsThisMonth: number;
 };
 
 export type CollectionItemFormValues = Omit<
   CollectionItem,
-  "createdAt" | "updatedAt" | "totalCount" | "totalValue" | "itemCategory" | "itemScale"
+  | "createdAt"
+  | "updatedAt"
+  | "totalCount"
+  | "totalValue"
+  | "totalItemsThisMonth"
+  | "itemCategory"
+  | "itemScale"
 >;
 
 export type CollectionStats = {

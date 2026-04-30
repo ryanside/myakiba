@@ -27,6 +27,7 @@ export function OrderItemSubDataGrid({
   onEditItem,
   onDeleteItem,
   isCollectionItemPending,
+  wrapped = true,
 }: {
   orderId: string;
   itemSelection: RowSelectionState;
@@ -34,6 +35,7 @@ export function OrderItemSubDataGrid({
   onEditItem: (values: CollectionItemFormValues) => Promise<void>;
   onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
   isCollectionItemPending: (collectionId: string) => boolean;
+  wrapped?: boolean;
 }) {
   const { currency, locale, dateFormat } = useUserPreferences();
 
@@ -101,15 +103,51 @@ export function OrderItemSubDataGrid({
     enableRowSelection: true,
   });
 
-  if (isError) {
-    return (
-      <div className="bg-muted/30 p-4">
-        <p className="py-3 text-center text-sm text-destructive">
-          Failed to load order items: {error.message}
-        </p>
+  const content = isError ? (
+    <p className="py-3 text-center text-sm text-destructive">
+      Failed to load order items: {error.message}
+    </p>
+  ) : (
+    <DataGrid
+      table={subTable}
+      recordCount={totalCount}
+      isLoading={isPending}
+      loadingMode="skeleton"
+      skeletonRowCount={1}
+      tableLayout={{
+        dense: true,
+        rowBorder: true,
+        headerBackground: true,
+        headerBorder: true,
+        columnsPinnable: true,
+        columnsResizable: true,
+        columnsMovable: true,
+        columnsVisibility: true,
+      }}
+    >
+      <div className="w-full space-y-2.5 overflow-x-auto">
+        {wrapped ? (
+          <div className="flex items-center justify-end">
+            <OrderItemSyncSheet orderId={orderId} label="Add Item" />
+          </div>
+        ) : null}
+        <DataGridContainer className={wrapped ? "bg-card" : undefined}>
+          <ScrollArea>
+            <DataGridTable />
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        </DataGridContainer>
+        <div className="flex items-center justify-between">
+          <div className="flex-1 text-sm text-muted-foreground">
+            {subTable.getFilteredSelectedRowModel().rows.length} of {totalCount} item(s) selected
+          </div>
+          <DataGridPagination className="pb-1.5" />
+        </div>
       </div>
-    );
-  }
+    </DataGrid>
+  );
+
+  if (!wrapped) return content;
 
   return (
     <div
@@ -118,43 +156,7 @@ export function OrderItemSubDataGrid({
       onClick={(e) => e.stopPropagation()}
       onKeyDown={(e) => e.stopPropagation()}
     >
-      <DataGrid
-        table={subTable}
-        recordCount={totalCount}
-        isLoading={isPending}
-        loadingMode="skeleton"
-        skeletonRowCount={1}
-        tableLayout={{
-          dense: true,
-          rowBorder: true,
-          headerBackground: true,
-          headerBorder: true,
-          columnsPinnable: true,
-          columnsResizable: true,
-          columnsMovable: true,
-          columnsVisibility: true,
-        }}
-      >
-        <div className="w-full space-y-2.5 overflow-x-auto">
-          <div className="flex items-center justify-end">
-            <OrderItemSyncSheet orderId={orderId} label="Add Item" />
-          </div>
-          <div className="bg-card rounded-lg">
-            <DataGridContainer>
-              <ScrollArea>
-                <DataGridTable />
-                <ScrollBar orientation="horizontal" />
-              </ScrollArea>
-            </DataGridContainer>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex-1 text-sm text-muted-foreground">
-              {subTable.getFilteredSelectedRowModel().rows.length} of {totalCount} item(s) selected
-            </div>
-            <DataGridPagination className="pb-1.5" />
-          </div>
-        </div>
-      </DataGrid>
+      {content}
     </div>
   );
 }
