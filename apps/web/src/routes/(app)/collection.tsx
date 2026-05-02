@@ -60,7 +60,7 @@ function RouteComponent() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         <KPICard
           title="Total Items"
-          subtitle="all collection items"
+          subtitle="collection items"
           value={isPending ? undefined : totalCount}
           isLoading={isPending}
         />

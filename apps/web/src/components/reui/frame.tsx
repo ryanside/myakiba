@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
  */
 const frameVariants = cva(
   [
-    "relative flex flex-col bg-muted/50 dark:bg-muted/30 gap-0.75 p-0.75 rounded-(--frame-radius)",
+    "relative flex flex-col bg-muted/70 gap-0.75 p-0.75 rounded-(--frame-radius)",
     "[--frame-radius:var(--radius-xl)]",
     // Default panel token values — overridden per-variant below
     "[--frame-panel-bg:var(--color-background)] [--frame-panel-border-color:var(--color-border)] [--frame-border-color:var(--color-border)]",
