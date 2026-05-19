@@ -87,7 +87,7 @@ export const syncOrderSchema = z.object({
   userId: z.string(),
   status: z.enum(ORDER_STATUSES),
   title: z.string(),
-  shop: z.string(),
+  shop: z.string().trim(),
   orderDate: z.iso.date().nullable(),
   releaseDate: z.iso.date().nullable(),
   paymentDate: z.iso.date().nullable(),
@@ -139,7 +139,7 @@ export const syncCollectionItemSchema = z.object({
   price: z.number().int(),
   count: z.number(),
   score: z.string(),
-  shop: z.string(),
+  shop: z.string().trim(),
   orderDate: z.iso.date().nullable(),
   paymentDate: z.iso.date().nullable(),
   shippingDate: z.iso.date().nullable(),
@@ -172,7 +172,7 @@ export const csvItemSchema = z.object({
   shipping_date: csvDateSchema,
   collecting_date: csvDateSchema,
   price_1: z.string(),
-  shop: z.string(),
+  shop: z.string().trim(),
   shipping_method: z
     .string()
     .transform((value) => (value === "" ? undefined : value))
@@ -193,7 +193,7 @@ export const internalCsvItemSchema = z.object({
   shipping_date: z.iso.date().nullable(),
   collecting_date: z.iso.date().nullable(),
   price: z.string(),
-  shop: z.string(),
+  shop: z.string().trim(),
   shipping_method: z.enum(SHIPPING_METHODS),
   note: z.string(),
   orderId: z.string().nullable(),

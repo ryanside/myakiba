@@ -2,6 +2,7 @@ import {
   Add01Icon,
   Home01Icon,
   ChartColumnIcon,
+  CreditCardIcon,
   LibraryIcon,
   PackageIcon,
   Settings01Icon,
@@ -39,6 +40,12 @@ const data = {
       title: "Analytics",
       url: "/analytics",
       icon: ChartColumnIcon,
+      pathnameMatch: "prefix" as const,
+    },
+    {
+      title: "Expenses",
+      url: "/expenses",
+      icon: CreditCardIcon,
       pathnameMatch: "prefix" as const,
     },
     {

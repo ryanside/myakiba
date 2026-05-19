@@ -16,6 +16,7 @@ import * as z from "zod";
 import analyticsRouter from "./routers/analytics";
 import collectionRouter from "./routers/collection";
 import dashboardRouter from "./routers/dashboard";
+import expensesRouter from "./routers/expenses";
 import itemRouter from "./routers/item";
 import ordersRouter from "./routers/orders";
 import searchRouter from "./routers/search";
@@ -107,6 +108,7 @@ const app = new Elysia()
       .use(analyticsRouter)
       .use(collectionRouter)
       .use(dashboardRouter)
+      .use(expensesRouter)
       .use(itemRouter)
       .use(ordersRouter)
       .use(searchRouter)

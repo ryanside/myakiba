@@ -215,6 +215,7 @@ function RouteComponent(): ReactNode {
                 rows={data.rows}
                 formatCell={formatCell}
                 sectionName={sectionName}
+                offset={offset}
                 isLoading={isFetching && !isPending}
               />
             </div>
@@ -247,11 +248,13 @@ function SectionTable({
   rows,
   formatCell,
   sectionName,
+  offset,
   isLoading,
 }: {
   readonly rows: readonly AnalyticsSectionRow[];
   readonly formatCell: (column: string, value: string | number | null) => string | number | null;
   readonly sectionName: AnalyticsSection;
+  readonly offset: number;
   readonly isLoading: boolean;
 }): ReactNode {
   const [expanded, setExpanded] = useState<ExpandedState>({});
@@ -285,7 +288,7 @@ function SectionTable({
       {
         id: ROW_NUMBER_COLUMN_ID,
         header: "#",
-        cell: ({ row }) => row.index + 1,
+        cell: ({ row }) => offset + row.index + 1,
         size: 40,
       },
       {
@@ -309,7 +312,7 @@ function SectionTable({
         size: 100,
       },
     ],
-    [formatCell],
+    [formatCell, offset],
   );
 
   const table = useReactTable({

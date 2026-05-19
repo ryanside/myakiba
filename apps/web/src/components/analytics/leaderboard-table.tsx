@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 export interface RowNavigation {
   to: string;
-  search?: Record<string, string[] | number[]>;
+  search?: Record<string, string | number | string[] | number[]>;
 }
 
 type CellValue = string | number | null;

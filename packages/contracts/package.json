@@ -9,6 +9,7 @@
     "./collection/*": "./src/collection/*.ts",
     "./sync/*": "./src/sync/*.ts",
     "./item/*": "./src/item/*.ts",
+    "./expenses/*": "./src/expenses/*.ts",
     "./search/*": "./src/search/*.ts"
   },
   "dependencies": {

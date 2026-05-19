@@ -23,7 +23,7 @@ export function KPICard({
       <FrameHeader>
         <FrameTitle className="text-xs lowercase font-orbitron font-medium">{title}</FrameTitle>
       </FrameHeader>
-      <FramePanel className="shadow-none! border-none flex m-0.5 mt-0 flex-col justify-end gap-1">
+      <FramePanel className="shadow-none! border-none flex m-0.5 mt-0 flex-col justify-end gap-1 before:rounded-(--frame-radius)">
         {isLoading ? (
           <Skeleton className="h-8 w-24" />
         ) : (

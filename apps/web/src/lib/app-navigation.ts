@@ -1,6 +1,7 @@
 import type { IconSvgElement } from "@hugeicons/react";
 import {
   ChartColumnIcon,
+  CreditCardIcon,
   GitCompareIcon,
   Home01Icon,
   LibraryIcon,
@@ -11,6 +12,7 @@ import {
 export type AppNavigationTarget =
   | "/dashboard"
   | "/analytics"
+  | "/expenses"
   | "/orders"
   | "/collection"
   | "/sync"
@@ -30,6 +32,12 @@ export const APP_PRIMARY_NAVIGATION_ITEMS = [
     to: "/analytics",
     icon: ChartColumnIcon,
     keywords: ["reports", "insights", "stats"],
+  },
+  {
+    title: "Expenses",
+    to: "/expenses",
+    icon: CreditCardIcon,
+    keywords: ["costs", "spending", "budget", "payments"],
   },
   { title: "Orders", to: "/orders", icon: PackageIcon, keywords: ["purchases", "order history"] },
   {
