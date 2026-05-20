@@ -4,7 +4,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 interface ExpenseLedgerBandProps {
   readonly title?: string;
-  readonly leading?: boolean;
   readonly headerAction?: ReactNode;
   readonly children: ReactNode;
   readonly className?: string;

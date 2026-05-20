@@ -33,6 +33,10 @@ interface ExpensesFiltersFormProps {
   readonly onClearFilters: () => void;
 }
 
+type ExpensesFiltersDialogFormProps = Omit<ExpensesFiltersFormProps, "activeFilterCount"> & {
+  readonly onClose: () => void;
+};
+
 function multiSelectDisplay(items: readonly string[] | undefined, label: string): string {
   if (!items || items.length === 0) return `Select ${label}`;
   if (items.length === 1) return items[0] ?? `Select ${label}`;
@@ -48,15 +52,23 @@ function toggleValue<T extends string>(
   return checked ? [...current, item] : current.filter((value) => value !== item);
 }
 
-export function ExpensesFiltersForm({
+function filtersKey(filters: ExpenseFilters): string {
+  return [
+    filters.dateStart ?? "",
+    filters.dateEnd ?? "",
+    filters.status?.join(",") ?? "",
+    filters.shop?.join(",") ?? "",
+  ].join("|");
+}
+
+function ExpensesFiltersDialogForm({
   currentFilters,
   shopOptions,
-  activeFilterCount,
   showShopFilter = true,
   onApplyFilters,
   onClearFilters,
-}: ExpensesFiltersFormProps): React.ReactNode {
-  const [isOpen, setIsOpen] = useState(false);
+  onClose,
+}: ExpensesFiltersDialogFormProps): React.ReactNode {
   const form = useForm({
     defaultValues: {
       dateStart: currentFilters.dateStart ?? "",
@@ -74,11 +86,141 @@ export function ExpensesFiltersForm({
     },
   });
 
-  const handleSubmit = (event: React.FormEvent): void => {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     event.stopPropagation();
     form.handleSubmit();
   };
+
+  return (
+    <form className="grid gap-4" onSubmit={handleSubmit}>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <form.Field
+          name="dateStart"
+          children={(field) => (
+            <Field>
+              <FieldTitle>Start date</FieldTitle>
+              <DatePicker
+                value={field.state.value}
+                onChange={(value) => field.handleChange(value ?? "")}
+                onBlur={field.handleBlur}
+                placeholder="Start date"
+              />
+            </Field>
+          )}
+        />
+        <form.Field
+          name="dateEnd"
+          children={(field) => (
+            <Field>
+              <FieldTitle>End date</FieldTitle>
+              <DatePicker
+                value={field.state.value}
+                onChange={(value) => field.handleChange(value ?? "")}
+                onBlur={field.handleBlur}
+                placeholder="End date"
+              />
+            </Field>
+          )}
+        />
+      </div>
+
+      <form.Field
+        name="status"
+        children={(field) => (
+          <Field>
+            <FieldTitle>Status</FieldTitle>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button variant="outline" className="w-full justify-between" type="button">
+                    {multiSelectDisplay(field.state.value, "status")}
+                    <HugeiconsIcon icon={ArrowDown01Icon} className="size-4" />
+                  </Button>
+                }
+              />
+              <DropdownMenuContent className="w-(--anchor-width)">
+                {ORDER_STATUSES.map((status) => (
+                  <DropdownMenuCheckboxItem
+                    key={status}
+                    checked={field.state.value.includes(status)}
+                    onCheckedChange={(checked) =>
+                      field.handleChange(toggleValue(field.state.value, status, checked))
+                    }
+                    onSelect={(event) => event.preventDefault()}
+                  >
+                    {status}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </Field>
+        )}
+      />
+
+      {showShopFilter && (
+        <form.Field
+          name="shop"
+          children={(field) => (
+            <Field>
+              <FieldTitle>Shop</FieldTitle>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button variant="outline" className="w-full justify-between" type="button">
+                      {multiSelectDisplay(field.state.value, "shops")}
+                      <HugeiconsIcon icon={ArrowDown01Icon} className="size-4" />
+                    </Button>
+                  }
+                />
+                <DropdownMenuContent className="w-(--anchor-width)">
+                  <ScrollArea className="max-h-56">
+                    {shopOptions.length === 0 ? (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">No shops yet</div>
+                    ) : (
+                      shopOptions.map((shop) => (
+                        <DropdownMenuCheckboxItem
+                          key={shop}
+                          checked={field.state.value.includes(shop)}
+                          onCheckedChange={(checked) =>
+                            field.handleChange(toggleValue(field.state.value, shop, checked))
+                          }
+                          onSelect={(event) => event.preventDefault()}
+                        >
+                          {shop}
+                        </DropdownMenuCheckboxItem>
+                      ))
+                    )}
+                  </ScrollArea>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </Field>
+          )}
+        />
+      )}
+
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onClearFilters}>
+          Clear
+        </Button>
+        <Button type="submit" onClick={onClose}>
+          Apply filters
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+}
+
+export function ExpensesFiltersForm({
+  currentFilters,
+  shopOptions,
+  activeFilterCount,
+  showShopFilter = true,
+  onApplyFilters,
+  onClearFilters,
+}: ExpensesFiltersFormProps): React.ReactNode {
+  const [isOpen, setIsOpen] = useState(false);
+  const currentFiltersKey = filtersKey(currentFilters);
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -102,123 +244,15 @@ export function ExpensesFiltersForm({
             Narrow expense analytics by date, status{showShopFilter ? ", or shop" : ""}.
           </DialogDescription>
         </DialogHeader>
-        <form className="grid gap-4" onSubmit={handleSubmit}>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <form.Field
-              name="dateStart"
-              children={(field) => (
-                <Field>
-                  <FieldTitle>Start date</FieldTitle>
-                  <DatePicker
-                    value={field.state.value}
-                    onChange={(value) => field.handleChange(value ?? "")}
-                    onBlur={field.handleBlur}
-                    placeholder="Start date"
-                  />
-                </Field>
-              )}
-            />
-            <form.Field
-              name="dateEnd"
-              children={(field) => (
-                <Field>
-                  <FieldTitle>End date</FieldTitle>
-                  <DatePicker
-                    value={field.state.value}
-                    onChange={(value) => field.handleChange(value ?? "")}
-                    onBlur={field.handleBlur}
-                    placeholder="End date"
-                  />
-                </Field>
-              )}
-            />
-          </div>
-
-          <form.Field
-            name="status"
-            children={(field) => (
-              <Field>
-                <FieldTitle>Status</FieldTitle>
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <Button variant="outline" className="w-full justify-between" type="button">
-                        {multiSelectDisplay(field.state.value, "status")}
-                        <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4" />
-                      </Button>
-                    }
-                  />
-                  <DropdownMenuContent className="w-(--anchor-width)">
-                    {ORDER_STATUSES.map((status) => (
-                      <DropdownMenuCheckboxItem
-                        key={status}
-                        checked={field.state.value.includes(status)}
-                        onCheckedChange={(checked) =>
-                          field.handleChange(toggleValue(field.state.value, status, checked))
-                        }
-                        onSelect={(event) => event.preventDefault()}
-                      >
-                        {status}
-                      </DropdownMenuCheckboxItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </Field>
-            )}
-          />
-
-          {showShopFilter && (
-            <form.Field
-              name="shop"
-              children={(field) => (
-                <Field>
-                  <FieldTitle>Shop</FieldTitle>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      render={
-                        <Button variant="outline" className="w-full justify-between" type="button">
-                          {multiSelectDisplay(field.state.value, "shops")}
-                          <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4" />
-                        </Button>
-                      }
-                    />
-                    <DropdownMenuContent className="w-(--anchor-width)">
-                      <ScrollArea className="max-h-56">
-                        {shopOptions.length === 0 ? (
-                          <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                            No shops yet
-                          </div>
-                        ) : (
-                          shopOptions.map((shop) => (
-                            <DropdownMenuCheckboxItem
-                              key={shop}
-                              checked={field.state.value.includes(shop)}
-                              onCheckedChange={(checked) =>
-                                field.handleChange(toggleValue(field.state.value, shop, checked))
-                              }
-                              onSelect={(event) => event.preventDefault()}
-                            >
-                              {shop}
-                            </DropdownMenuCheckboxItem>
-                          ))
-                        )}
-                      </ScrollArea>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </Field>
-              )}
-            />
-          )}
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClearFilters}>
-              Clear
-            </Button>
-            <Button type="submit" onClick={() => setIsOpen(false)}>
-              Apply filters
-            </Button>
-          </DialogFooter>
-        </form>
+        <ExpensesFiltersDialogForm
+          key={currentFiltersKey}
+          currentFilters={currentFilters}
+          shopOptions={shopOptions}
+          showShopFilter={showShopFilter}
+          onApplyFilters={onApplyFilters}
+          onClearFilters={onClearFilters}
+          onClose={() => setIsOpen(false)}
+        />
       </DialogContent>
     </Dialog>
   );

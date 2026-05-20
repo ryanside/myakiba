@@ -436,7 +436,7 @@ async function loadShopAggregates(
   search?: string,
 ): Promise<readonly ShopAggregate[]> {
   const base = orderBase(q);
-  const searchFilter = search ? ilike(order.shop, `%${search}%`) : undefined;
+  const searchFilter = search ? ilike(base.shop, `%${search}%`) : undefined;
   const itemSearchFilter = search ? ilike(collection.shop, `%${search}%`) : undefined;
   const [orderRows, itemRows] = await Promise.all([
     db
