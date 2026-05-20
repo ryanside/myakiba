@@ -14,6 +14,7 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import * as z from "zod";
 import analyticsRouter from "./routers/analytics";
+import calendarRouter from "./routers/calendar";
 import collectionRouter from "./routers/collection";
 import dashboardRouter from "./routers/dashboard";
 import expensesRouter from "./routers/expenses";
@@ -106,6 +107,7 @@ const app = new Elysia()
         response: z.object({ buildId: z.string() }),
       })
       .use(analyticsRouter)
+      .use(calendarRouter)
       .use(collectionRouter)
       .use(dashboardRouter)
       .use(expensesRouter)

@@ -68,7 +68,7 @@ export function ExpenseBreakdownChart({
   if (isLoading) {
     return (
       <section className="border-t border-border">
-        <ExpenseLedgerBand title="by expense type" leading>
+        <ExpenseLedgerBand title="by expense type">
           <Skeleton className="h-2.5 w-full rounded-sm" />
           <div className="space-y-2 pt-1">
             <Skeleton className="h-4 w-full" />
@@ -82,7 +82,7 @@ export function ExpenseBreakdownChart({
 
   return (
     <section className="border-t border-border">
-      <ExpenseLedgerBand title={title} leading>
+      <ExpenseLedgerBand title={title}>
         {entries.length === 0 ? (
           <ExpenseLedgerEmpty>No expenses yet</ExpenseLedgerEmpty>
         ) : (

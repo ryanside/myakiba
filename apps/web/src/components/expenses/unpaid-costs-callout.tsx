@@ -38,7 +38,7 @@ const ORDER_ROW_STAGGER_MS = 30;
 function UnpaidCostsLoadingSkeleton(): ReactNode {
   return (
     <section className="border-t border-border">
-      <ExpenseLedgerBand title="unpaid" leading>
+      <ExpenseLedgerBand title="unpaid">
         <div className="space-y-3">
           <Skeleton className="h-4 w-12" />
           <Skeleton className="h-8 w-28" />
@@ -90,7 +90,7 @@ export function UnpaidCostsSection({
 
   return (
     <section className="border-t border-border">
-      <ExpenseLedgerBand title="unpaid" leading>
+      <ExpenseLedgerBand title="unpaid">
         <div className="animate-data-in space-y-3 [--data-in-delay:60ms]">
           <p className="text-xs font-medium text-muted-foreground">Total</p>
           <p className="text-2xl font-medium tabular-nums leading-none tracking-tight">
@@ -138,7 +138,7 @@ export function UnpaidCostsSection({
               No unpaid orders
             </ExpenseLedgerEmpty>
           ) : (
-            <div className="divide-y divide-border/60">
+            <div>
               {orders.map((order, idx) => (
                 <ExpenseOrderRow
                   key={order.orderId}

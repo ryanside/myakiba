@@ -1,5 +1,6 @@
 import {
   Add01Icon,
+  Calendar01Icon,
   Home01Icon,
   ChartColumnIcon,
   CreditCardIcon,
@@ -58,6 +59,11 @@ const data = {
       title: "Collection",
       url: "/collection",
       icon: LibraryIcon,
+    },
+    {
+      title: "Calendar",
+      url: "/calendar",
+      icon: Calendar01Icon,
     },
     {
       title: "Sync History",

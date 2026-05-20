@@ -10,7 +10,8 @@
     "./sync/*": "./src/sync/*.ts",
     "./item/*": "./src/item/*.ts",
     "./expenses/*": "./src/expenses/*.ts",
-    "./search/*": "./src/search/*.ts"
+    "./search/*": "./src/search/*.ts",
+    "./calendar/*": "./src/calendar/*.ts"
   },
   "dependencies": {
     "zod": "catalog:"

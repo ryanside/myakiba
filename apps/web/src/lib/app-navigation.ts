@@ -1,5 +1,6 @@
 import type { IconSvgElement } from "@hugeicons/react";
 import {
+  Calendar01Icon,
   ChartColumnIcon,
   CreditCardIcon,
   GitCompareIcon,
@@ -15,6 +16,7 @@ export type AppNavigationTarget =
   | "/expenses"
   | "/orders"
   | "/collection"
+  | "/calendar"
   | "/sync"
   | "/settings";
 
@@ -45,6 +47,12 @@ export const APP_PRIMARY_NAVIGATION_ITEMS = [
     to: "/collection",
     icon: LibraryIcon,
     keywords: ["items", "figures", "owned"],
+  },
+  {
+    title: "Calendar",
+    to: "/calendar",
+    icon: Calendar01Icon,
+    keywords: ["releases", "schedule", "dates", "month"],
   },
 ] as const satisfies readonly AppNavigationItem[];
 

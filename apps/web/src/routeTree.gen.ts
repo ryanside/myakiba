@@ -21,6 +21,7 @@ import { Route as appOrdersRouteImport } from './routes/(app)/orders'
 import { Route as appExpensesRouteImport } from './routes/(app)/expenses'
 import { Route as appDashboardRouteImport } from './routes/(app)/dashboard'
 import { Route as appCollectionRouteImport } from './routes/(app)/collection'
+import { Route as appCalendarRouteImport } from './routes/(app)/calendar'
 import { Route as appAnalyticsRouteImport } from './routes/(app)/analytics'
 import { Route as appSyncIdRouteImport } from './routes/(app)/sync_.$id'
 import { Route as appOrdersIdRouteImport } from './routes/(app)/orders_.$id'
@@ -87,6 +88,11 @@ const appCollectionRoute = appCollectionRouteImport.update({
   path: '/collection',
   getParentRoute: () => appRouteRoute,
 } as any)
+const appCalendarRoute = appCalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
+  getParentRoute: () => appRouteRoute,
+} as any)
 const appAnalyticsRoute = appAnalyticsRouteImport.update({
   id: '/analytics',
   path: '/analytics',
@@ -121,6 +127,7 @@ const appItemCustomIdRoute = appItemCustomIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/analytics': typeof appAnalyticsRoute
+  '/calendar': typeof appCalendarRoute
   '/collection': typeof appCollectionRoute
   '/dashboard': typeof appDashboardRoute
   '/expenses': typeof appExpensesRoute
@@ -140,6 +147,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/analytics': typeof appAnalyticsRoute
+  '/calendar': typeof appCalendarRoute
   '/collection': typeof appCollectionRoute
   '/dashboard': typeof appDashboardRoute
   '/expenses': typeof appExpensesRoute
@@ -161,6 +169,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/(app)': typeof appRouteRouteWithChildren
   '/(app)/analytics': typeof appAnalyticsRoute
+  '/(app)/calendar': typeof appCalendarRoute
   '/(app)/collection': typeof appCollectionRoute
   '/(app)/dashboard': typeof appDashboardRoute
   '/(app)/expenses': typeof appExpensesRoute
@@ -182,6 +191,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/analytics'
+    | '/calendar'
     | '/collection'
     | '/dashboard'
     | '/expenses'
@@ -201,6 +211,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/analytics'
+    | '/calendar'
     | '/collection'
     | '/dashboard'
     | '/expenses'
@@ -221,6 +232,7 @@ export interface FileRouteTypes {
     | '/'
     | '/(app)'
     | '/(app)/analytics'
+    | '/(app)/calendar'
     | '/(app)/collection'
     | '/(app)/dashboard'
     | '/(app)/expenses'
@@ -333,6 +345,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appCollectionRouteImport
       parentRoute: typeof appRouteRoute
     }
+    '/(app)/calendar': {
+      id: '/(app)/calendar'
+      path: '/calendar'
+      fullPath: '/calendar'
+      preLoaderRoute: typeof appCalendarRouteImport
+      parentRoute: typeof appRouteRoute
+    }
     '/(app)/analytics': {
       id: '/(app)/analytics'
       path: '/analytics'
@@ -380,6 +399,7 @@ declare module '@tanstack/react-router' {
 
 interface appRouteRouteChildren {
   appAnalyticsRoute: typeof appAnalyticsRoute
+  appCalendarRoute: typeof appCalendarRoute
   appCollectionRoute: typeof appCollectionRoute
   appDashboardRoute: typeof appDashboardRoute
   appExpensesRoute: typeof appExpensesRoute
@@ -395,6 +415,7 @@ interface appRouteRouteChildren {
 
 const appRouteRouteChildren: appRouteRouteChildren = {
   appAnalyticsRoute: appAnalyticsRoute,
+  appCalendarRoute: appCalendarRoute,
   appCollectionRoute: appCollectionRoute,
   appDashboardRoute: appDashboardRoute,
   appExpensesRoute: appExpensesRoute,

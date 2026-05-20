@@ -16,7 +16,7 @@ interface TopExpenseDriversProps {
 function TopExpenseDriversLoadingSkeleton(): ReactNode {
   return (
     <section className="border-t border-border">
-      <ExpenseLedgerBand title="top expenses" leading>
+      <ExpenseLedgerBand title="top expenses">
         <div className="space-y-3">
           <Skeleton className="h-12 w-full" />
           <Skeleton className="h-12 w-full" />
@@ -40,11 +40,11 @@ export function TopExpenseDrivers({
 
   return (
     <section className="border-t border-border">
-      <ExpenseLedgerBand title="top expenses" leading>
+      <ExpenseLedgerBand title="top expenses">
         {!drivers || drivers.length === 0 ? (
           <ExpenseLedgerEmpty>No expense drivers yet</ExpenseLedgerEmpty>
         ) : (
-          <div className="divide-y divide-border/60">
+          <div>
             {drivers.map((driver, idx) => (
               <ExpenseOrderRow
                 key={driver.orderId}

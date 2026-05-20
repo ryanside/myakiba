@@ -70,7 +70,7 @@ function RouteComponent(): ReactNode {
           <h1 className="text-2xl font-orbitron font-medium">
             expenses <span className="hidden sm:inline"> (・∀・)つ⑩</span>
           </h1>
-          <p className="max-w-3xl text-sm text-muted-foreground">[early development]</p>
+          <p className="max-w-3xl text-sm text-muted-foreground">{"[early development]"}</p>
         </div>
         <div className="ml-auto">
           <ExpensesFiltersForm

@@ -22,7 +22,7 @@ export function ExpensesSummaryCards({
 }: ExpensesSummaryCardsProps): React.ReactNode {
   return (
     <section className="border-t border-border">
-      <ExpenseLedgerBand title="spend" leading>
+      <ExpenseLedgerBand title="spend">
         <ExpenseLedgerMetricsGrid>
           <ExpenseLedgerMetric
             title="total"

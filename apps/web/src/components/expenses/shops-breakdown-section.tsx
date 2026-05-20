@@ -161,7 +161,6 @@ export function ShopsBreakdownSection({
     <section className="border-t border-border">
       <ExpenseLedgerBand
         title="shops you've purchased from"
-        leading
         headerAction={shopSearchInput}
         className="space-y-3"
       >

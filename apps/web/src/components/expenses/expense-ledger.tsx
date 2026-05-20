@@ -12,17 +12,16 @@ interface ExpenseLedgerBandProps {
 
 export function ExpenseLedgerBand({
   title,
-  leading = false,
   headerAction,
   children,
   className,
 }: ExpenseLedgerBandProps): ReactNode {
   return (
-    <section className={cn("space-y-3 py-4", !leading && "border-t border-border/60", className)}>
+    <section className={cn("space-y-3 py-4", className)}>
       {title || headerAction ? (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
           {title ? (
-            <h2 className="text-sm font-orbitron font-medium lowercase">{title}</h2>
+            <h2 className="text-md tracking-tight font-heading font-medium">{title}</h2>
           ) : (
             <div />
           )}
