@@ -235,12 +235,22 @@ export function createCollectionColumns({
         const item = row.original;
         return (
           <div className="flex items-center gap-3">
-            <ImageThumbnail
-              images={item.itemImage ? [item.itemImage] : []}
-              title={item.itemTitle}
-              fallbackIcon={<HugeiconsIcon icon={PackageIcon} className="size-4" />}
-              className="size-8 rounded-md"
-            />
+            <Link
+              {...(item.itemExternalId !== null
+                ? ({
+                    to: "/item/$externalId",
+                    params: { externalId: item.itemExternalId },
+                  } as const)
+                : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
+              aria-label={`View ${item.itemTitle}`}
+            >
+              <ImageThumbnail
+                images={item.itemImage ? [item.itemImage] : []}
+                title={item.itemTitle}
+                fallbackIcon={<HugeiconsIcon icon={PackageIcon} className="size-4" />}
+                className="size-8 rounded-md"
+              />
+            </Link>
             <div className="min-w-0 space-y-px">
               <Link
                 {...(item.itemExternalId !== null

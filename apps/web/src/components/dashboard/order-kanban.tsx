@@ -187,10 +187,11 @@ function OrderCard({
             {DATE_FIELDS.map(({ field, label }) => {
               const dateValue = order[field] ?? null;
               const triggerButton = (
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
                   className={cn(
-                    "flex w-full items-center justify-between gap-2 rounded px-1.5 py-0.5 text-left",
+                    "h-auto w-full justify-between gap-2 rounded px-1.5 py-0.5 text-left font-normal",
                     "transition-colors hover:bg-muted/80",
                     "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
                   )}
@@ -206,7 +207,7 @@ function OrderCard({
                   >
                     {dateValue ? formatDateOnlyForDisplay(dateValue, dateFormat) : "—"}
                   </span>
-                </button>
+                </Button>
               );
 
               const DateCell =
@@ -286,7 +287,7 @@ function OrderColumn({
           className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-0.5"
         >
           {isLoading ? (
-            <Loader className="justify-start text-muted pt-4" />
+            <Loader className="justify-start pt-4" />
           ) : (
             orders.map((order, index) => (
               <OrderCard

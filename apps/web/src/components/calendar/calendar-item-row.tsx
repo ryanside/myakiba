@@ -2,16 +2,18 @@ import type { ReactNode } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Image01Icon } from "@hugeicons/core-free-icons";
 import { Link } from "@tanstack/react-router";
-import type { Category } from "@myakiba/contracts/shared/types";
+import type { Category, Currency } from "@myakiba/contracts/shared/types";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { getCategoryColor } from "@/lib/category-colors";
+import { formatReleaseDate } from "@/lib/locale";
 import type { CalendarItem } from "@/queries/calendar";
 
 interface CalendarItemRowProps {
   readonly item: CalendarItem;
+  readonly currency: Currency;
 }
 
-export function CalendarItemRow({ item }: CalendarItemRowProps): ReactNode {
+export function CalendarItemRow({ item, currency }: CalendarItemRowProps): ReactNode {
   const categoryColor = getCategoryColor((item.category as Category | null) ?? null);
 
   return (
@@ -22,7 +24,7 @@ export function CalendarItemRow({ item }: CalendarItemRowProps): ReactNode {
             params: { externalId: item.itemExternalId },
           } as const)
         : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
-      className="group/row flex min-w-0 items-center gap-3 rounded-md px-1.5 py-2 transition-colors duration-150 ease-out hover:bg-muted/40"
+      className="flex min-w-0 items-center gap-2.5 overflow-hidden rounded-md px-1.5 py-1.5 transition-colors duration-50 hover:bg-accent"
     >
       <ImageThumbnail
         images={item.image ? [item.image] : []}
@@ -43,10 +45,12 @@ export function CalendarItemRow({ item }: CalendarItemRowProps): ReactNode {
               <span className="truncate">{item.category}</span>
             </>
           )}
-          {item.status && (
+          {item.price != null && item.price > 0 && item.priceCurrency?.trim() && (
             <>
               {item.category != null && <span aria-hidden>·</span>}
-              <span className="truncate">{item.status}</span>
+              <span className="shrink-0">
+                {formatReleaseDate(item.price, item.priceCurrency, currency)}
+              </span>
             </>
           )}
         </div>

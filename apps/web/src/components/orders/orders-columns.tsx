@@ -242,12 +242,19 @@ export function createOrdersColumns({
         const order = row.original;
         return (
           <div className="flex items-center gap-3">
-            <ImageThumbnail
-              images={order.images}
-              title={order.title}
-              fallbackIcon={<HugeiconsIcon icon={PackageIcon} className="size-4" />}
-              className="size-8 rounded-md"
-            />
+            <Link
+              to="/orders/$id"
+              params={{ id: order.orderId }}
+              aria-label={`View ${order.title}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ImageThumbnail
+                images={order.images}
+                title={order.title}
+                fallbackIcon={<HugeiconsIcon icon={PackageIcon} className="size-4" />}
+                className="size-8 rounded-md"
+              />
+            </Link>
             <div className="min-w-0 flex-1">
               <InlineTextCell
                 value={order.title}
@@ -563,13 +570,9 @@ export function createOrdersColumns({
       cell: ({ row }) => {
         const { itemCount } = row.original;
         return (
-          <button
-            type="button"
-            className="text-sm font-medium text-foreground hover:text-primary cursor-pointer"
-            onClick={() => row.getToggleExpandedHandler()()}
-          >
+          <Button type="button" variant="ghost" onClick={() => row.getToggleExpandedHandler()()}>
             {itemCount} {itemCount === 1 ? "item" : "items"}
-          </button>
+          </Button>
         );
       },
       enableSorting: true,

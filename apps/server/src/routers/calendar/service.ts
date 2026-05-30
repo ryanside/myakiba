@@ -24,7 +24,8 @@ class CalendarService {
         title: item.title,
         image: item.image,
         category: item.category,
-        status: collection.status,
+        price: item_release.price,
+        priceCurrency: item_release.priceCurrency,
         releaseDate: item_release.date,
       })
       .from(collection)

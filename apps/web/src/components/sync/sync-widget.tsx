@@ -1,6 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SYNC_TYPE_CONFIG } from "@/lib/sync";
 import { LAUNCHABLE_SYNC_OPTIONS, SyncActionSheet } from "@/components/sync/sync-launcher";
@@ -27,11 +28,12 @@ export default function SyncWidget({ TriggerWrapper }: SyncWidgetProps) {
           {LAUNCHABLE_SYNC_OPTIONS.map((option) => {
             const config = SYNC_TYPE_CONFIG[option.type];
             return (
-              <button
+              <Button
                 key={option.type}
                 type="button"
+                variant="ghost"
                 onClick={() => handleOptionSelect(option.type)}
-                className="group/item flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors duration-150 hover:bg-accent cursor-pointer"
+                className="group/item h-auto w-full justify-start gap-2.5 rounded-md px-2 py-1.5 text-left font-normal transition-colors duration-150 hover:bg-accent"
               >
                 <HugeiconsIcon
                   icon={option.icon}
@@ -42,7 +44,7 @@ export default function SyncWidget({ TriggerWrapper }: SyncWidgetProps) {
                   icon={ArrowRight01Icon}
                   className="size-3 shrink-0 text-muted-foreground/50 -translate-x-0.5 opacity-0 transition-[transform,opacity] duration-150 group-hover/item:translate-x-0 group-hover/item:opacity-100"
                 />
-              </button>
+              </Button>
             );
           })}
         </PopoverContent>

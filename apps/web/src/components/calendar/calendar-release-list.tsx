@@ -1,9 +1,13 @@
 import type { ReactNode } from "react";
 import { useMemo } from "react";
-import { Badge } from "@/components/reui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-
-export const CALENDAR_DAY_SECTION_ATTR = "data-calendar-day-section";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { CryingIcon } from "@hugeicons/core-free-icons";
+import type { Currency } from "@myakiba/contracts/shared/types";
+import { CalendarItemRow } from "@/components/calendar/calendar-item-row";
+import { CalendarOrderRow } from "@/components/calendar/calendar-order-row";
+import Loader from "@/components/loader";
+import { cn } from "@/lib/utils";
+import type { CalendarResponse } from "@/queries/calendar";
 
 const DATE_GROUP_LABEL_FORMATTER = new Intl.DateTimeFormat("en-US", {
   weekday: "short",
@@ -17,6 +21,7 @@ interface CalendarReleaseListProps<TItem> {
   readonly getKey: (item: TItem) => string;
   readonly renderRow: (item: TItem) => ReactNode;
   readonly emptyLabel: string;
+  readonly selectedDays?: ReadonlySet<number>;
 }
 
 export function CalendarReleaseList<TItem>({
@@ -25,7 +30,9 @@ export function CalendarReleaseList<TItem>({
   getKey,
   renderRow,
   emptyLabel,
+  selectedDays,
 }: CalendarReleaseListProps<TItem>): ReactNode {
+  const isFilteringByDay = selectedDays != null && selectedDays.size > 0;
   const groups = useMemo(() => {
     const map = new Map<string, TItem[]>();
     for (const item of items) {
@@ -43,64 +50,156 @@ export function CalendarReleaseList<TItem>({
 
   if (groups.length === 0) {
     return (
-      <div className="flex h-40 items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground">
-        {emptyLabel}
+      <div className="flex flex-col items-center justify-center gap-1.5 py-10 text-center">
+        <HugeiconsIcon icon={CryingIcon} className="size-5 text-muted-foreground/50" />
+        <p className="text-xs text-muted-foreground">{emptyLabel}</p>
       </div>
     );
   }
 
   return (
-    <ol className="flex flex-col gap-6">
-      {groups.map(([date, dayItems]) => (
-        <li
-          key={date}
-          tabIndex={-1}
-          {...{ [CALENDAR_DAY_SECTION_ATTR]: date }}
-          className="flex scroll-mt-4 flex-col gap-1.5 focus:outline-none focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <div className="flex items-center gap-2">
-            <span className="shrink-0 text-[0.6875rem] font-medium uppercase tracking-wider text-muted-foreground">
-              {DATE_GROUP_LABEL_FORMATTER.format(new Date(`${date}T00:00:00`))}
-            </span>
-            <Badge variant="secondary" size="xs" aria-label={`${dayItems.length} releases`}>
-              {dayItems.length}
-            </Badge>
-            <div className="h-px flex-1 bg-border/60" />
-          </div>
-          <ul className="divide-y divide-border/40">
-            {dayItems.map((item) => (
-              <li key={getKey(item)}>{renderRow(item)}</li>
-            ))}
-          </ul>
-        </li>
-      ))}
+    <ol className="animate-data-in flex flex-col gap-5 [--data-in-delay:60ms]">
+      {groups.map(([date, dayItems]) => {
+        const dayNumber = Number(date.slice(8, 10));
+        const isSelected = isFilteringByDay && selectedDays.has(dayNumber);
+
+        return (
+          <li key={date} className="flex flex-col gap-1.5">
+            <div className="sticky top-0 z-10 flex items-center gap-2 bg-background pb-1">
+              <span
+                className={cn(
+                  "inline-flex shrink-0 items-center gap-1.5 text-xs font-medium tabular-nums",
+                  isSelected
+                    ? "rounded-md bg-primary/10 px-2 py-0.5 text-primary ring-1 ring-inset ring-primary/30"
+                    : "text-muted-foreground",
+                )}
+              >
+                {isSelected && (
+                  <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-primary" />
+                )}
+                {DATE_GROUP_LABEL_FORMATTER.format(new Date(`${date}T00:00:00`))}
+              </span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+            <ul>
+              {dayItems.map((item) => (
+                <li key={getKey(item)}>{renderRow(item)}</li>
+              ))}
+            </ul>
+          </li>
+        );
+      })}
     </ol>
   );
 }
 
-export function CalendarReleaseListSkeleton(): ReactNode {
-  return (
-    <div className="flex flex-col gap-6" aria-hidden>
-      {[0, 1, 2].map((groupIdx) => (
-        <div key={groupIdx} className="flex flex-col gap-1.5">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-3 w-20" />
-            <Skeleton className="h-4 min-w-4 rounded-sm" />
-            <div className="h-px flex-1 bg-border/60" />
-          </div>
-          <div className="flex flex-col">
-            {[0, 1].map((rowIdx) => (
-              <div key={rowIdx} className="flex items-center gap-3 px-1.5 py-2">
-                <Skeleton className="size-9 rounded-md" />
-                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                  <Skeleton className="h-3.5 w-1/2" />
-                  <Skeleton className="h-3 w-1/3" />
-                </div>
-              </div>
-            ))}
-          </div>
+interface CalendarReleasePanelProps {
+  readonly data: CalendarResponse | undefined;
+  readonly isPending: boolean;
+  readonly selectedDays: ReadonlySet<number>;
+  readonly currency: Currency;
+  readonly locale: string;
+}
+
+export function CalendarReleasePanel({
+  data,
+  isPending,
+  selectedDays,
+  currency,
+  locale,
+}: CalendarReleasePanelProps): ReactNode {
+  if (isPending || !data) {
+    return (
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="flex min-h-0 w-full flex-1 items-start justify-center overflow-y-auto pt-16">
+          <Loader className="h-auto w-auto" />
         </div>
-      ))}
+      </div>
+    );
+  }
+
+  if (data.view === "items") {
+    return (
+      <FilteredReleaseList
+        rows={data.items}
+        selectedDays={selectedDays}
+        getDate={(item) => item.releaseDate}
+        getKey={(item) => `${item.collectionId}:${item.releaseDate}`}
+        renderRow={(item) => <CalendarItemRow item={item} currency={currency} />}
+        emptyMonthLabel="Nothing releasing this month"
+        emptyFilteredLabel="No releases on the selected days"
+      />
+    );
+  }
+
+  return (
+    <FilteredReleaseList
+      rows={data.orders}
+      selectedDays={selectedDays}
+      getDate={(order) => order.releaseDate}
+      getKey={(order) => order.orderId}
+      renderRow={(order) => <CalendarOrderRow order={order} currency={currency} locale={locale} />}
+      emptyMonthLabel="No orders releasing this month"
+      emptyFilteredLabel="No orders on the selected days"
+    />
+  );
+}
+
+interface FilteredReleaseListProps<TItem> {
+  readonly rows: readonly TItem[];
+  readonly selectedDays: ReadonlySet<number>;
+  readonly getDate: (row: TItem) => string | null;
+  readonly getKey: (row: TItem) => string;
+  readonly renderRow: (row: TItem) => ReactNode;
+  readonly emptyMonthLabel: string;
+  readonly emptyFilteredLabel: string;
+}
+
+function FilteredReleaseList<TItem>({
+  rows,
+  selectedDays,
+  getDate,
+  getKey,
+  renderRow,
+  emptyMonthLabel,
+  emptyFilteredLabel,
+}: FilteredReleaseListProps<TItem>): ReactNode {
+  const sortedRows = useMemo(() => {
+    const valid = rows.filter((row): row is TItem => getDate(row) != null);
+    return valid.toSorted((a, b) => {
+      const dateA = getDate(a);
+      const dateB = getDate(b);
+      if (!dateA || !dateB) return 0;
+      return new Date(dateA).getTime() - new Date(dateB).getTime();
+    });
+  }, [rows, getDate]);
+
+  const filteredRows = useMemo(() => {
+    if (selectedDays.size === 0) return sortedRows;
+    return sortedRows.filter((row) => {
+      const date = getDate(row);
+      if (!date) return false;
+      const day = Number(date.slice(8, 10));
+      return Number.isFinite(day) && selectedDays.has(day);
+    });
+  }, [sortedRows, selectedDays, getDate]);
+
+  const hasMonthData = sortedRows.length > 0;
+  const isFilteringEmpty = hasMonthData && filteredRows.length === 0;
+  const emptyLabel = isFilteringEmpty ? emptyFilteredLabel : emptyMonthLabel;
+
+  return (
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <CalendarReleaseList
+          items={filteredRows}
+          getDate={getDate}
+          getKey={getKey}
+          renderRow={renderRow}
+          emptyLabel={emptyLabel}
+          selectedDays={selectedDays}
+        />
+      </div>
     </div>
   );
 }

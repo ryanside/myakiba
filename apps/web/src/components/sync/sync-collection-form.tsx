@@ -454,16 +454,18 @@ export default function SyncCollectionForm({
                                             className="flex items-center gap-1 text-foreground"
                                           >
                                             {tag}
-                                            <button
+                                            <Button
                                               type="button"
+                                              variant="ghost"
+                                              size="icon-xs"
                                               onClick={() => tagsField.removeValue(tagIndex)}
-                                              className="ml-1 hover:text-destructive"
+                                              className="ml-1 h-auto w-auto min-w-0 p-0 hover:text-destructive"
                                             >
                                               <HugeiconsIcon
                                                 icon={Cancel01Icon}
                                                 className="w-3 h-3"
                                               />
-                                            </button>
+                                            </Button>
                                           </Badge>
                                         ))}
                                       </div>

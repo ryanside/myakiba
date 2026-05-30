@@ -1,9 +1,9 @@
 import { useMemo } from "react";
 import type { ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type { ColumnDef } from "@tanstack/react-table";
-import { cn } from "@/lib/utils";
+import { DataTable } from "@/components/data-table/data-table";
 
 export interface RowNavigation {
   to: string;
@@ -82,60 +82,30 @@ export function LeaderboardTable<TRow extends Record<string, CellValue>>({
     },
   });
 
-  if (rows.length === 0) {
-    return <p className="text-muted-foreground text-xs italic">No data</p>;
-  }
-
   return (
-    <table className="w-full text-xs border-collapse">
-      <thead>
-        {table.getHeaderGroups().map((headerGroup) => (
-          <tr key={headerGroup.id}>
-            {headerGroup.headers.map((header) => (
-              <th
-                key={header.id}
-                className="text-left p-1.5 border-b font-medium text-muted-foreground"
-              >
-                {header.isPlaceholder
-                  ? null
-                  : flexRender(header.column.columnDef.header, header.getContext())}
-              </th>
-            ))}
-          </tr>
-        ))}
-      </thead>
-      <tbody>
-        {table.getRowModel().rows.map((row) => {
-          const rowNav = getRowNavigation?.(row.original);
+    <DataTable.Root
+      table={table}
+      empty={<p className="text-muted-foreground text-xs italic">No data</p>}
+    >
+      <DataTable.Table>
+        <DataTable.Header />
+        <DataTable.Body
+          onRowClick={(row) => {
+            const originalRow = row.original as TRow;
+            const rowNav = getRowNavigation?.(originalRow);
 
-          return (
-            <tr
-              key={row.id}
-              className={cn(
-                "border-b border-border/50 hover:bg-muted/40",
-                rowNav && "cursor-pointer",
-              )}
-              onClick={() => {
-                if (rowNav) {
-                  navigate({ to: rowNav.to, search: rowNav.search });
-                }
-              }}
-            >
-              {row.getVisibleCells().map((cell) => (
-                <td
-                  key={cell.id}
-                  className={cn(
-                    "p-1.5",
-                    cell.column.id === ROW_NUMBER_COLUMN_ID && "text-muted-foreground",
-                  )}
-                >
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </td>
-              ))}
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
+            if (rowNav) {
+              navigate({ to: rowNav.to, search: rowNav.search });
+            }
+          }}
+          getRowClassName={(row) =>
+            !getRowNavigation?.(row.original as TRow) ? "cursor-default" : undefined
+          }
+          getCellClassName={(_, columnId) =>
+            columnId === ROW_NUMBER_COLUMN_ID ? "text-muted-foreground" : undefined
+          }
+        />
+      </DataTable.Table>
+    </DataTable.Root>
   );
 }

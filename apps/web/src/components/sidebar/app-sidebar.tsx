@@ -48,6 +48,7 @@ const data = {
       url: "/expenses",
       icon: CreditCardIcon,
       pathnameMatch: "prefix" as const,
+      badge: "New",
     },
     {
       title: "Orders",
@@ -64,6 +65,7 @@ const data = {
       title: "Calendar",
       url: "/calendar",
       icon: Calendar01Icon,
+      badge: "New",
     },
     {
       title: "Sync History",

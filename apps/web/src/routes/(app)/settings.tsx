@@ -97,7 +97,7 @@ function RouteComponent() {
   const hasCredentialAccount = accountTypeData.hasCredentialAccount;
 
   return (
-    <div className="container max-w-4xl mx-auto space-y-8">
+    <div className="container max-w-4xl mx-auto py-8 space-y-8">
       <div className="flex flex-col gap-2">
         <div className="flex flex-row items-start gap-4">
           <h1 className="text-2xl font-medium tracking-tight">Settings</h1>

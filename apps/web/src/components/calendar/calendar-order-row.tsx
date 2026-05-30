@@ -20,7 +20,7 @@ export function CalendarOrderRow({ order, currency, locale }: CalendarOrderRowPr
     <Link
       to="/orders/$id"
       params={{ id: order.orderId }}
-      className="group/row grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-md px-1.5 py-2 transition-colors duration-150 ease-out hover:bg-muted/40"
+      className="grid grid-cols-[auto_1fr_auto] items-center gap-2.5 overflow-hidden rounded-md px-1.5 py-1.5 transition-colors duration-50 hover:bg-accent"
     >
       <ImageThumbnail
         images={order.images}

@@ -1,6 +1,15 @@
 import { useState, useRef, useMemo } from "react";
 import { motion } from "motion/react";
 
+const DEFAULT_IMAGES: readonly string[] = [];
+const DEFAULT_TRANSFORM_STYLES = [
+  "rotate(10deg) translate(-170px)",
+  "rotate(5deg) translate(-85px)",
+  "rotate(-3deg)",
+  "rotate(-10deg) translate(85px)",
+  "rotate(2deg) translate(170px)",
+] as const;
+
 interface BounceCardsProps {
   readonly className?: string;
   readonly images?: readonly string[];
@@ -19,11 +28,6 @@ interface DecomposedTransform {
   readonly y: number;
 }
 
-/**
- * CSS `rotate(R) translate(T)` applies translation in the rotated coordinate
- * frame. Motion decomposes transforms as translate → scale → rotate, so we
- * project the translation into screen-space to get equivalent x/y values.
- */
 function decomposeTransform(transformStr: string): DecomposedTransform {
   const rotateMatch = transformStr.match(/rotate\(([-\d.]+)deg\)/);
   const translateMatch = transformStr.match(/translate\(([-\d.]+)px\)/);
@@ -57,7 +61,6 @@ function decomposeWithOverrides(
 
 const HOVER_PUSH_PX = 160;
 
-/** Port of GSAP `elastic.out(1, 0.8)`. */
 function elasticOut(t: number): number {
   if (t === 0) return 0;
   if (t === 1) return 1;
@@ -66,7 +69,6 @@ function elasticOut(t: number): number {
   return 2 ** (-10 * t) * Math.sin(((t - s) * (2 * Math.PI)) / period) + 1;
 }
 
-/** Port of GSAP `back.out(1.4)`. */
 function backOut(t: number): number {
   const s = 1.4;
   const c = t - 1;
@@ -75,18 +77,12 @@ function backOut(t: number): number {
 
 export default function BounceCards({
   className = "",
-  images = [],
+  images = DEFAULT_IMAGES,
   containerWidth = 400,
   containerHeight = 400,
   animationDelay = 0.5,
   animationStagger = 0.06,
-  transformStyles = [
-    "rotate(10deg) translate(-170px)",
-    "rotate(5deg) translate(-85px)",
-    "rotate(-3deg)",
-    "rotate(-10deg) translate(85px)",
-    "rotate(2deg) translate(170px)",
-  ],
+  transformStyles = DEFAULT_TRANSFORM_STYLES,
   enableHover = false,
   cardSize = 200,
 }: BounceCardsProps) {
@@ -136,7 +132,7 @@ export default function BounceCards({
 
         return (
           <motion.div
-            key={idx}
+            key={src}
             className="absolute aspect-square overflow-hidden"
             style={{
               width: cardSize,
