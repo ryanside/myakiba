@@ -110,18 +110,18 @@ function DataGridColumnFilter<TData, TValue>({
                   >
                     <div
                       className={cn(
-                        "border-primary me-2 flex h-4 w-4 items-center justify-center rounded-sm border",
+                        "border-primary me-2 flex size-4 items-center justify-center rounded-sm border",
                         isSelected
                           ? "bg-primary text-primary-foreground"
                           : "opacity-50 [&_svg]:invisible",
                       )}
                     >
-                      <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} className="h-4 w-4" />
+                      <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} className="size-4" />
                     </div>
-                    {option.icon && <option.icon className="text-muted-foreground mr-2 h-4 w-4" />}
+                    {option.icon && <option.icon className="text-muted-foreground mr-2 size-4" />}
                     <span>{option.label}</span>
                     {facets?.get(option.value) && (
-                      <span className="ms-auto flex h-4 w-4 items-center justify-center font-mono text-xs">
+                      <span className="ms-auto flex size-4 items-center justify-center font-mono text-xs">
                         {facets.get(option.value)}
                       </span>
                     )}

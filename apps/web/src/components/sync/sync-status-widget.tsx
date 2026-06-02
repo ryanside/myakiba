@@ -163,7 +163,7 @@ export default function SyncStatusWidget() {
               </>
             )}
 
-            <div className="border-t px-1.5 py-1.5">
+            <div className="border-t p-1.5">
               <Link to="/sync" onClick={closePopover}>
                 <Button
                   variant="ghost"

@@ -83,7 +83,7 @@ export default function SyncCsvForm({
                         className="ml-auto"
                       >
                         {isSubmitting ? (
-                          <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />
+                          <HugeiconsIcon icon={Loading03Icon} className="size-4 animate-spin" />
                         ) : (
                           "Submit CSV"
                         )}

@@ -210,7 +210,7 @@ export default function FiltersForm({
                             type="button"
                           >
                             {getMultiSelectDisplay(field.state.value, "shipping method")}
-                            <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4" />
+                            <HugeiconsIcon icon={ArrowDown01Icon} className="size-4" />
                           </Button>
                         }
                       />
@@ -254,7 +254,7 @@ export default function FiltersForm({
                             type="button"
                           >
                             {getMultiSelectDisplay(field.state.value, "condition")}
-                            <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4" />
+                            <HugeiconsIcon icon={ArrowDown01Icon} className="size-4" />
                           </Button>
                         }
                       />
@@ -296,7 +296,7 @@ export default function FiltersForm({
                             type="button"
                           >
                             {getMultiSelectDisplay(field.state.value, "category")}
-                            <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4" />
+                            <HugeiconsIcon icon={ArrowDown01Icon} className="size-4" />
                           </Button>
                         }
                       />
@@ -408,7 +408,7 @@ export default function FiltersForm({
                                 Select entries...
                                 <HugeiconsIcon
                                   icon={ArrowUpDownIcon}
-                                  className="ml-2 h-4 w-4 shrink-0 opacity-50"
+                                  className="ml-2 size-4 shrink-0 opacity-50"
                                 />
                               </Button>
                             }
@@ -438,7 +438,7 @@ export default function FiltersForm({
                                   <div className="flex items-center justify-center gap-2 px-2 py-6 text-sm text-muted-foreground">
                                     <HugeiconsIcon
                                       icon={Loading03Icon}
-                                      className="h-4 w-4 animate-spin"
+                                      className="size-4 animate-spin"
                                     />
                                     Searching...
                                   </div>
@@ -498,7 +498,7 @@ export default function FiltersForm({
                                             <>
                                               <HugeiconsIcon
                                                 icon={Loading03Icon}
-                                                className="mr-1.5 h-3 w-3 animate-spin"
+                                                className="mr-1.5 size-3 animate-spin"
                                               />
                                               Loading...
                                             </>
@@ -850,7 +850,7 @@ export default function FiltersForm({
                             type="button"
                           >
                             {getMultiSelectDisplay(field.state.value, "currency")}
-                            <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4" />
+                            <HugeiconsIcon icon={ArrowDown01Icon} className="size-4" />
                           </Button>
                         }
                       />

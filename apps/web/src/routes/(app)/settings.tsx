@@ -97,7 +97,7 @@ function RouteComponent() {
   const hasCredentialAccount = accountTypeData.hasCredentialAccount;
 
   return (
-    <div className="container max-w-4xl mx-auto py-8 space-y-8">
+    <div className="container max-w-4xl mx-auto space-y-8">
       <div className="flex flex-col gap-2">
         <div className="flex flex-row items-start gap-4">
           <h1 className="text-2xl font-medium tracking-tight">Settings</h1>
@@ -206,7 +206,7 @@ function ProfileForm({ user }: { user: User }) {
               <Button type="submit" disabled={!state.canSubmit || state.isSubmitting}>
                 {state.isSubmitting ? (
                   <>
-                    <HugeiconsIcon icon={Loading03Icon} className="mr-2 h-4 w-4 animate-spin" />
+                    <HugeiconsIcon icon={Loading03Icon} className="mr-2 size-4 animate-spin" />
                     Saving...
                   </>
                 ) : (
@@ -340,7 +340,7 @@ function PasswordForm() {
               <Button type="submit" disabled={!state.canSubmit || state.isSubmitting}>
                 {state.isSubmitting ? (
                   <>
-                    <HugeiconsIcon icon={Loading03Icon} className="mr-2 h-4 w-4 animate-spin" />
+                    <HugeiconsIcon icon={Loading03Icon} className="mr-2 size-4 animate-spin" />
                     Changing...
                   </>
                 ) : (
@@ -473,7 +473,7 @@ function PreferencesForm({ user }: { user: User }) {
               <Button type="submit" disabled={!state.canSubmit || state.isSubmitting}>
                 {state.isSubmitting ? (
                   <>
-                    <HugeiconsIcon icon={Loading03Icon} className="mr-2 h-4 w-4 animate-spin" />
+                    <HugeiconsIcon icon={Loading03Icon} className="mr-2 size-4 animate-spin" />
                     Saving...
                   </>
                 ) : (
@@ -580,7 +580,7 @@ function DeleteAccountForm({
           <DialogTrigger
             render={
               <Button variant="destructive">
-                <HugeiconsIcon icon={Delete02Icon} className="h-4 w-4" />
+                <HugeiconsIcon icon={Delete02Icon} className="size-4" />
                 Delete Account
               </Button>
             }
@@ -679,7 +679,7 @@ function DeleteAccountForm({
                         <>
                           <HugeiconsIcon
                             icon={Loading03Icon}
-                            className="mr-2 h-4 w-4 animate-spin"
+                            className="mr-2 size-4 animate-spin"
                           />
                           Deleting...
                         </>

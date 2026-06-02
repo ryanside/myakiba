@@ -102,7 +102,7 @@ export default function SyncOrderItemForm({
           children={([canSubmit, isSubmitting]) => (
             <Button type="submit" disabled={!canSubmit} variant="default" className="ml-auto">
               {isSubmitting ? (
-                <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />
+                <HugeiconsIcon icon={Loading03Icon} className="size-4 animate-spin" />
               ) : (
                 "Add to Order"
               )}
@@ -131,7 +131,7 @@ export default function SyncOrderItemForm({
               </Badge>
               <Tooltip>
                 <TooltipTrigger>
-                  <HugeiconsIcon icon={InformationCircleIcon} className="w-4 h-4" />
+                  <HugeiconsIcon icon={InformationCircleIcon} className="size-4" />
                 </TooltipTrigger>
                 <TooltipContent className="max-h-40">
                   <p>
@@ -186,7 +186,7 @@ export default function SyncOrderItemForm({
                               MFC Item: {subField.state.value || "Not set"}
                             </DialogDescription>
                           </DialogHeader>
-                          <div className="flex flex-col gap-3 py-4 px-4">
+                          <div className="flex flex-col gap-3 p-4">
                             <FormSection title="Basics">
                               <div className="grid grid-cols-2 gap-3">
                                 <orderItemForm.Field

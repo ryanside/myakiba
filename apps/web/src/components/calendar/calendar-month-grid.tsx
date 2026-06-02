@@ -119,29 +119,6 @@ export function CalendarMonthGrid({
               "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
           );
 
-          const header = (
-            <span
-              className={cn(
-                "inline-flex h-5 min-w-5 items-center justify-start self-start text-[0.6875rem] font-medium tabular-nums transition-colors duration-150 ease-out",
-                isToday && "rounded-full bg-primary px-1 text-primary-foreground",
-                !isToday && inMonth && "text-foreground",
-                !isToday && !inMonth && "text-muted-foreground/60",
-              )}
-            >
-              {dayNumber}
-            </span>
-          );
-
-          let body: ReactNode = null;
-          if (bucket != null && bucket.thumbs.length > 0) {
-            body = (
-              <CalendarDayThumbStack
-                thumbs={bucket.thumbs}
-                className="animate-data-in mt-auto [--data-in-delay:60ms]"
-              />
-            );
-          }
-
           if (isClickable) {
             const releaseLabel = releaseCount === 1 ? "release" : "releases";
             const stateLabel = isSelected ? "selected" : "filter";
@@ -157,8 +134,12 @@ export function CalendarMonthGrid({
                 aria-label={`${stateLabel} ${date} (${releaseCount} ${releaseLabel})`}
                 className={cellClassName}
               >
-                {header}
-                {body}
+                <CalendarDayCellContent
+                  dayNumber={dayNumber}
+                  isToday={isToday}
+                  inMonth={inMonth}
+                  bucket={bucket}
+                />
                 {isSelected && (
                   <span
                     aria-hidden
@@ -171,13 +152,51 @@ export function CalendarMonthGrid({
 
           return (
             <div key={date} data-in-month={inMonth} data-today={isToday} className={cellClassName}>
-              {header}
-              {body}
+              <CalendarDayCellContent
+                dayNumber={dayNumber}
+                isToday={isToday}
+                inMonth={inMonth}
+                bucket={bucket}
+              />
             </div>
           );
         })}
       </div>
     </div>
+  );
+}
+
+function CalendarDayCellContent({
+  dayNumber,
+  isToday,
+  inMonth,
+  bucket,
+}: {
+  readonly dayNumber: number;
+  readonly isToday: boolean;
+  readonly inMonth: boolean;
+  readonly bucket: CalendarDayBucket | undefined;
+}): ReactNode {
+  return (
+    <>
+      <span
+        className={cn(
+          "inline-flex h-5 items-center self-start text-[0.6875rem] font-medium tabular-nums transition-colors duration-150 ease-out",
+          isToday &&
+            "min-w-5 justify-center rounded-full bg-primary px-1.5 text-primary-foreground",
+          !isToday && inMonth && "text-foreground",
+          !isToday && !inMonth && "text-muted-foreground/60",
+        )}
+      >
+        {dayNumber}
+      </span>
+      {bucket != null && bucket.thumbs.length > 0 && (
+        <CalendarDayThumbStack
+          thumbs={bucket.thumbs}
+          className="animate-data-in mt-auto [--data-in-delay:60ms]"
+        />
+      )}
+    </>
   );
 }
 

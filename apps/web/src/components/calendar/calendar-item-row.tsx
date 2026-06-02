@@ -24,7 +24,7 @@ export function CalendarItemRow({ item, currency }: CalendarItemRowProps): React
             params: { externalId: item.itemExternalId },
           } as const)
         : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
-      className="flex min-w-0 items-center gap-2.5 overflow-hidden rounded-md px-1.5 py-1.5 transition-colors duration-50 hover:bg-accent"
+      className="flex min-w-0 items-center gap-2.5 overflow-hidden rounded-md p-1.5 transition-colors duration-50 hover:bg-accent"
     >
       <ImageThumbnail
         images={item.image ? [item.image] : []}

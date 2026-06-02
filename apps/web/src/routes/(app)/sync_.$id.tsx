@@ -135,7 +135,7 @@ function RouteComponent() {
 
   if (isError) {
     return (
-      <div className="flex flex-col gap-4 mx-auto max-w-4xl">
+      <div className="flex flex-col gap-4 mx-auto max-w-[88rem]">
         <div>
           <BackLink to="/sync" text="Back" font="sans" className="self-start" />
 
@@ -152,7 +152,7 @@ function RouteComponent() {
 
   if (!session) {
     return (
-      <div className="flex flex-col gap-4 mx-auto max-w-4xl">
+      <div className="flex flex-col gap-4 mx-auto max-w-[88rem]">
         <div>
           <BackLink to="/sync" text="Back" font="sans" className="self-start" />
 
@@ -171,7 +171,7 @@ function RouteComponent() {
   const typeConfig = SYNC_TYPE_CONFIG[sessionSyncType];
 
   return (
-    <div className="flex flex-col gap-4 mx-auto max-w-4xl">
+    <div className="flex flex-col gap-4 mx-auto max-w-[88rem]">
       <div>
         <BackLink to="/sync" text="Back" font="sans" className="self-start" />
 

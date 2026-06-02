@@ -126,7 +126,7 @@ function OrderCard({
                     onMarkOwned(order.orderId);
                   }}
                 >
-                  <HugeiconsIcon icon={Tick02Icon} className="h-4 w-4" />
+                  <HugeiconsIcon icon={Tick02Icon} className="size-4" />
                 </Button>
               }
             />

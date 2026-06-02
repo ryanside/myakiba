@@ -364,14 +364,14 @@ function CollectionItemFormContent({
                       <SelectContent className="min-w-(--anchor-width)">
                         {releasesLoading && (
                           <div className="flex items-center justify-center py-4">
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
+                            <div className="animate-spin rounded-full size-4 border-b-2 border-primary" />
                             <span className="ml-2 text-sm text-muted-foreground">
                               Loading releases...
                             </span>
                           </div>
                         )}
                         {releasesError && (
-                          <div className="py-3 px-3 text-sm text-destructive">
+                          <div className="p-3 text-sm text-destructive">
                             {releasesError.message}
                           </div>
                         )}
@@ -618,7 +618,7 @@ function CollectionItemFormContent({
             children={([canSubmit, isSubmitting]) => (
               <Button type="submit" disabled={!canSubmit || isSubmitting} className="w-full flex-1">
                 {isSubmitting ? (
-                  <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />
+                  <HugeiconsIcon icon={Loading03Icon} className="size-4 animate-spin" />
                 ) : (
                   "Update"
                 )}

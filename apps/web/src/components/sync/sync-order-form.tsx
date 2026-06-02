@@ -150,7 +150,7 @@ export default function SyncOrderForm({
             children={([canSubmit, isSubmitting]) => (
               <Button type="submit" disabled={!canSubmit} variant="default" className="ml-auto">
                 {isSubmitting ? (
-                  <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />
+                  <HugeiconsIcon icon={Loading03Icon} className="size-4 animate-spin" />
                 ) : (
                   "Submit Order"
                 )}
@@ -464,7 +464,7 @@ export default function SyncOrderForm({
                     className="justify-start hover:bg-background active:bg-background data-open:bg-background w-full"
                   >
                     <span className="truncate">{cascadeDisplayText}</span>
-                    <HugeiconsIcon icon={ArrowDown01Icon} className="ml-auto h-4 w-4 z-10" />
+                    <HugeiconsIcon icon={ArrowDown01Icon} className="ml-auto size-4 z-10" />
                   </Button>
                 }
               />
@@ -551,7 +551,7 @@ export default function SyncOrderForm({
                 </Badge>
                 <Tooltip>
                   <TooltipTrigger>
-                    <HugeiconsIcon icon={InformationCircleIcon} className="w-4 h-4" />
+                    <HugeiconsIcon icon={InformationCircleIcon} className="size-4" />
                   </TooltipTrigger>
                   <TooltipContent className="max-h-40">
                     <p>
@@ -605,7 +605,7 @@ export default function SyncOrderForm({
                                 MFC Item: {subField.state.value || "Not set"}
                               </DialogDescription>
                             </DialogHeader>
-                            <div className="flex flex-col gap-3 py-4 px-4">
+                            <div className="flex flex-col gap-3 p-4">
                               <FormSection title="Basics">
                                 <div className="grid grid-cols-2 gap-3">
                                   <orderForm.Field

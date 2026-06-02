@@ -191,7 +191,7 @@ export function PopoverReleaseDateCell({
       disabled={disabled}
     >
       {triggerVariant === "outline" && (
-        <HugeiconsIcon icon={Calendar01Icon} className="mr-2 h-4 w-4" />
+        <HugeiconsIcon icon={Calendar01Icon} className="mr-2 size-4" />
       )}
       {formattedDisplay ?? (placeholder ? <span>{placeholder}</span> : "n/a")}
     </Button>
