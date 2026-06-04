@@ -90,12 +90,12 @@ export function InlineReleaseCell({
         <SelectContent align="start" className="w-auto min-w-64">
           {releasesLoading && (
             <div className="flex items-center justify-center py-4 px-3">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
+              <div className="animate-spin rounded-full size-4 border-b-2 border-primary" />
               <span className="ml-2 text-sm text-muted-foreground">Loading releases...</span>
             </div>
           )}
           {releasesError && (
-            <div className="py-3 px-3 text-sm text-destructive">{releasesError.message}</div>
+            <div className="p-3 text-sm text-destructive">{releasesError.message}</div>
           )}
           {releasesData?.releases.map((release) => (
             <SelectItem key={release.id} value={release.id} className="py-2.5">

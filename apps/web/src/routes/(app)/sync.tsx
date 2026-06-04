@@ -108,7 +108,7 @@ function RouteComponent() {
       <div className="flex flex-col gap-2 mb-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-medium tracking-tight">Sync</h1>
-          <p className="text-muted-foreground text-sm font-normal">View your sync history.</p>
+          <p className="text-muted-foreground text-sm font-normal">View your sync history</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground mx-1">Add:</span>

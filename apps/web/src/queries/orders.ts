@@ -29,6 +29,8 @@ export async function getOrders(filters: OrderFilters): Promise<OrderListItem[]>
     orderDateEnd: filters.orderDateEnd,
     payDateStart: filters.payDateStart,
     payDateEnd: filters.payDateEnd,
+    expenseDateStart: filters.expenseDateStart,
+    expenseDateEnd: filters.expenseDateEnd,
     shipDateStart: filters.shipDateStart,
     shipDateEnd: filters.shipDateEnd,
     colDateStart: filters.colDateStart,

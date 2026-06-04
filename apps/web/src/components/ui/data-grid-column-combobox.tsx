@@ -38,7 +38,7 @@ export function DataGridColumnCombobox<TData>({
       aria-expanded={isOpen}
       className="justify-between"
     >
-      <HugeiconsIcon icon={DragDropVerticalIcon} className="h-4 w-4" />
+      <HugeiconsIcon icon={DragDropVerticalIcon} className="size-4" />
       <span className="hidden md:block">Columns</span>
     </Button>
   );
@@ -68,7 +68,7 @@ export function DataGridColumnCombobox<TData>({
                     <HugeiconsIcon
                       icon={Tick02Icon}
                       className={cn(
-                        "mr-2 h-4 w-4 text-primary",
+                        "mr-2 size-4 text-primary",
                         isVisible ? "opacity-100" : "opacity-0",
                       )}
                     />

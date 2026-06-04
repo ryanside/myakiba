@@ -41,7 +41,7 @@ export const collectionUpdateSchema = z.object({
   count: z.number(),
   score: z.string(),
   price: z.number().int(),
-  shop: z.string(),
+  shop: z.string().trim(),
   orderDate: z.iso.date().nullable(),
   paymentDate: z.iso.date().nullable(),
   shippingDate: z.iso.date().nullable(),

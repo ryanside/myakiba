@@ -129,7 +129,7 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
           <Skeleton className="h-4 my-1 w-32" />
         </FrameHeader>
         <FramePanel className="shadow-none! border-none m-1 mt-0">
-          <Loader className="justify-center text-muted" />
+          <Loader className="justify-center" />
         </FramePanel>
       </Frame>
     );

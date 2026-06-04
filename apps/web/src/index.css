@@ -50,6 +50,10 @@
   --chart-4: var(--color-amber-500);
   --chart-5: var(--color-rose-500);
   --chart-6: var(--color-sky-500);
+  --chart-7: var(--color-teal-600);
+  --chart-8: var(--color-orange-600);
+  --chart-9: var(--color-indigo-600);
+  --chart-10: var(--color-fuchsia-600);
   --sidebar: var(--color-neutral-50);
   --sidebar-foreground: color-mix(in srgb, var(--color-neutral-800) 64%, var(--sidebar));
   --sidebar-primary: var(--color-neutral-800);
@@ -122,6 +126,10 @@
   --chart-4: var(--color-amber-500);
   --chart-5: var(--color-rose-500);
   --chart-6: var(--color-sky-500);
+  --chart-7: var(--color-teal-600);
+  --chart-8: var(--color-orange-600);
+  --chart-9: var(--color-indigo-600);
+  --chart-10: var(--color-fuchsia-600);
   --sidebar: color-mix(in srgb, var(--color-neutral-950) 100%, var(--color-neutral-50));
   --sidebar-foreground: color-mix(in srgb, var(--color-neutral-100) 64%, var(--sidebar));
   --sidebar-primary: var(--color-neutral-100);
@@ -181,6 +189,10 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
+  --color-chart-10: var(--chart-10);
+  --color-chart-9: var(--chart-9);
+  --color-chart-8: var(--chart-8);
+  --color-chart-7: var(--chart-7);
   --color-chart-6: var(--chart-6);
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
@@ -291,6 +303,14 @@ body {
   from {
     opacity: 0;
     transform: translateY(3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes data-in {
+    from {
+      opacity: 0;
+    }
   }
 }
 

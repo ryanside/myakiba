@@ -118,13 +118,14 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
         </div>
         <div className="text-center text-sm text-muted-foreground">
           Already have an account?{" "}
-          <button
+          <Button
             type="button"
+            variant="link"
             onClick={onSwitchToSignIn}
-            className="text-foreground underline underline-offset-4 transition-colors duration-150 hover:text-foreground/80"
+            className="h-auto p-0 text-foreground underline underline-offset-4 transition-colors duration-150 hover:text-foreground/80"
           >
             Login
-          </button>
+          </Button>
         </div>
       </div>
 

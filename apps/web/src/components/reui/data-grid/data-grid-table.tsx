@@ -387,7 +387,7 @@ function DataGridTableLoader() {
     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
       <div className="text-muted-foreground bg-card rounded-lg text-sm flex items-center gap-2 border px-4 py-2 leading-none font-medium">
         <svg
-          className="text-muted-foreground -ml-1 h-5 w-5 animate-spin"
+          className="text-muted-foreground -ml-1 size-5 animate-spin"
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
@@ -502,7 +502,7 @@ function DataGridTable<TData>() {
                 <td colSpan={table.getVisibleFlatColumns().length} className="p-8">
                   <div className="flex items-center justify-center">
                     <svg
-                      className="text-muted-foreground mr-3 -ml-1 h-5 w-5 animate-spin"
+                      className="text-muted-foreground mr-3 -ml-1 size-5 animate-spin"
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
                       viewBox="0 0 24 24"

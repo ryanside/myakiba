@@ -1,4 +1,3 @@
-import type React from "react";
 import type { ReactNode } from "react";
 import { useCallback, useMemo, useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
@@ -13,27 +12,15 @@ import { SECTION_GRADIENT_COLORS } from "@/components/analytics/section";
 import { z } from "zod";
 import { Search01Icon, AddSquareIcon, MinusSignSquareIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  flexRender,
-  getCoreRowModel,
-  getExpandedRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
+import { getCoreRowModel, getExpandedRowModel, useReactTable } from "@tanstack/react-table";
 import type { ColumnDef, ExpandedState, Row } from "@tanstack/react-table";
 import Loader from "@/components/loader";
 import { getAnalyticsSection, getAnalyticsSectionItems } from "@/queries/analytics";
 import type { AnalyticsSectionRow } from "@/queries/analytics";
 import { DebouncedInput } from "@/components/debounced-input";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-  PaginationEllipsis,
-} from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
+import { DataTable } from "@/components/data-table/data-table";
+import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { useFilters } from "@/hooks/use-filters";
@@ -215,6 +202,7 @@ function RouteComponent(): ReactNode {
                 rows={data.rows}
                 formatCell={formatCell}
                 sectionName={sectionName}
+                offset={offset}
                 isLoading={isFetching && !isPending}
               />
             </div>
@@ -226,7 +214,7 @@ function RouteComponent(): ReactNode {
                   {data.totalCount}
                 </p>
               ) : null}
-              <TablePagination
+              <DataTablePagination
                 totalCount={data.totalCount}
                 limit={limit}
                 offset={offset}
@@ -247,11 +235,13 @@ function SectionTable({
   rows,
   formatCell,
   sectionName,
+  offset,
   isLoading,
 }: {
   readonly rows: readonly AnalyticsSectionRow[];
   readonly formatCell: (column: string, value: string | number | null) => string | number | null;
   readonly sectionName: AnalyticsSection;
+  readonly offset: number;
   readonly isLoading: boolean;
 }): ReactNode {
   const [expanded, setExpanded] = useState<ExpandedState>({});
@@ -263,29 +253,13 @@ function SectionTable({
       {
         id: EXPAND_COLUMN_ID,
         header: "",
-        cell: ({ row }) => (
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              row.toggleExpanded();
-            }}
-            aria-label={row.getIsExpanded() ? "Collapse row" : "Expand row"}
-            aria-expanded={row.getIsExpanded()}
-          >
-            <HugeiconsIcon
-              icon={row.getIsExpanded() ? MinusSignSquareIcon : AddSquareIcon}
-              className="size-3.5 text-muted-foreground transition-transform duration-200 ease-out"
-            />
-          </Button>
-        ),
+        cell: ({ row }) => <ExpandButton row={row} />,
         size: 32,
       },
       {
         id: ROW_NUMBER_COLUMN_ID,
         header: "#",
-        cell: ({ row }) => row.index + 1,
+        cell: ({ row }) => offset + row.index + 1,
         size: 40,
       },
       {
@@ -309,7 +283,7 @@ function SectionTable({
         size: 100,
       },
     ],
-    [formatCell],
+    [formatCell, offset],
   );
 
   const table = useReactTable({
@@ -323,82 +297,60 @@ function SectionTable({
     getRowCanExpand: () => true,
   });
 
-  if (rows.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-        <p className="text-sm">No {sectionName} found</p>
-        <p className="text-xs mt-1">Try adjusting your search</p>
-      </div>
-    );
-  }
-
   return (
-    <div className={cn("transition-opacity duration-150", isLoading && "opacity-60")}>
-      <table className="w-full text-xs border-collapse">
-        <thead>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <th
-                  key={header.id}
-                  className="text-left p-1.5 border-b font-medium text-muted-foreground"
-                  style={{ width: header.column.getSize() }}
-                >
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(header.column.columnDef.header, header.getContext())}
-                </th>
-              ))}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows.map((row) => (
-            <TableRow key={row.id} row={row} sectionName={sectionName} />
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <DataTable.Root
+      table={table}
+      isLoading={isLoading}
+      empty={
+        <DataTable.Empty
+          title={`No ${sectionName} found`}
+          description="Try adjusting your search"
+        />
+      }
+    >
+      <DataTable.LoadingSurface>
+        <DataTable.Table>
+          <DataTable.Header useColumnSizing />
+          <DataTable.Body
+            onRowClick={(row) => row.toggleExpanded()}
+            renderExpandedRow={(row) => (
+              <ExpandedRowContent
+                row={row.original as AnalyticsSectionRow}
+                sectionName={sectionName}
+              />
+            )}
+            getCellClassName={(_, columnId) =>
+              cn(
+                columnId === ROW_NUMBER_COLUMN_ID && "text-muted-foreground",
+                columnId === EXPAND_COLUMN_ID && "w-8",
+              )
+            }
+          />
+        </DataTable.Table>
+      </DataTable.LoadingSurface>
+    </DataTable.Root>
   );
 }
 
-function TableRow({
-  row,
-  sectionName,
-}: {
-  readonly row: Row<AnalyticsSectionRow>;
-  readonly sectionName: AnalyticsSection;
-}): ReactNode {
+function ExpandButton({ row }: { readonly row: Row<AnalyticsSectionRow> }): ReactNode {
   const isExpanded = row.getIsExpanded();
-  const colSpan = row.getVisibleCells().length;
 
   return (
-    <>
-      <tr
-        onClick={() => row.toggleExpanded()}
-        className="border-b border-border/50 hover:bg-muted/40 cursor-pointer"
-      >
-        {row.getVisibleCells().map((cell) => (
-          <td
-            key={cell.id}
-            className={cn(
-              "p-1.5",
-              cell.column.id === ROW_NUMBER_COLUMN_ID && "text-muted-foreground",
-              cell.column.id === EXPAND_COLUMN_ID && "w-8",
-            )}
-          >
-            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-          </td>
-        ))}
-      </tr>
-      {isExpanded && (
-        <tr className="animate-data-in">
-          <td colSpan={colSpan} className="p-0">
-            <ExpandedRowContent row={row.original} sectionName={sectionName} />
-          </td>
-        </tr>
-      )}
-    </>
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      onClick={(event) => {
+        event.stopPropagation();
+        row.toggleExpanded();
+      }}
+      aria-label={isExpanded ? "Collapse row" : "Expand row"}
+      aria-expanded={isExpanded}
+    >
+      <HugeiconsIcon
+        icon={isExpanded ? MinusSignSquareIcon : AddSquareIcon}
+        className="size-3.5 text-muted-foreground transition-transform duration-200 ease-out"
+      />
+    </Button>
   );
 }
 
@@ -528,7 +480,7 @@ function ExpandedRowContent({
                     {Math.min(offset + SECTION_ITEM_PAGE_SIZE, data.totalCount)} of{" "}
                     {data.totalCount}
                   </p>
-                  <TablePagination
+                  <DataTablePagination
                     totalCount={data.totalCount}
                     limit={SECTION_ITEM_PAGE_SIZE}
                     offset={offset}
@@ -541,111 +493,5 @@ function ExpandedRowContent({
         })()}
       </div>
     </div>
-  );
-}
-
-function TablePagination({
-  totalCount,
-  limit,
-  offset,
-  onOffsetChange,
-}: {
-  readonly totalCount: number;
-  readonly limit: number;
-  readonly offset: number;
-  readonly onOffsetChange: (offset: number) => void;
-}): ReactNode {
-  const totalPages = Math.ceil(totalCount / limit);
-  const currentPage = Math.floor(offset / limit) + 1;
-
-  if (totalPages <= 1) {
-    return null;
-  }
-
-  const getPageNumbers = (): (number | "ellipsis")[] => {
-    const pages: (number | "ellipsis")[] = [];
-    const maxVisible = 5;
-
-    if (totalPages <= maxVisible) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
-      pages.push(1);
-
-      if (currentPage > 3) {
-        pages.push("ellipsis");
-      }
-
-      const start = Math.max(2, currentPage - 1);
-      const end = Math.min(totalPages - 1, currentPage + 1);
-
-      for (let i = start; i <= end; i++) {
-        pages.push(i);
-      }
-
-      if (currentPage < totalPages - 2) {
-        pages.push("ellipsis");
-      }
-
-      pages.push(totalPages);
-    }
-
-    return pages;
-  };
-
-  const goToPage = (page: number, e: React.MouseEvent): void => {
-    e.preventDefault();
-    onOffsetChange((page - 1) * limit);
-  };
-
-  return (
-    <Pagination className="mx-0 w-auto">
-      <PaginationContent>
-        <PaginationItem>
-          <PaginationPrevious
-            href="#"
-            onClick={(e) => goToPage(currentPage - 1, e)}
-            className={cn(
-              "cursor-pointer transition-colors duration-150 active:scale-[0.97]",
-              currentPage === 1 && "pointer-events-none opacity-50",
-            )}
-            aria-disabled={currentPage === 1}
-            text="Prev"
-          />
-        </PaginationItem>
-
-        {getPageNumbers().map((page, idx) =>
-          page === "ellipsis" ? (
-            <PaginationItem key={`ellipsis-${idx}`}>
-              <PaginationEllipsis />
-            </PaginationItem>
-          ) : (
-            <PaginationItem key={page}>
-              <PaginationLink
-                href="#"
-                onClick={(e) => goToPage(page, e)}
-                isActive={page === currentPage}
-                className="cursor-pointer transition-colors duration-150 active:scale-[0.97]"
-              >
-                {page}
-              </PaginationLink>
-            </PaginationItem>
-          ),
-        )}
-
-        <PaginationItem>
-          <PaginationNext
-            href="#"
-            onClick={(e) => goToPage(currentPage + 1, e)}
-            className={cn(
-              "cursor-pointer transition-colors duration-150 active:scale-[0.97]",
-              currentPage === totalPages && "pointer-events-none opacity-50",
-            )}
-            aria-disabled={currentPage === totalPages}
-          />
-        </PaginationItem>
-      </PaginationContent>
-    </Pagination>
   );
 }

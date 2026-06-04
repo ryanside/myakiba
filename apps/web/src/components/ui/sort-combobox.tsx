@@ -56,20 +56,20 @@ export function SortCombobox({
     if (currentSort?.columnId !== columnId) return null;
 
     return currentSort.direction === "desc" ? (
-      <HugeiconsIcon icon={ArrowDown01Icon} className="ml-auto h-4 w-4 text-primary" />
+      <HugeiconsIcon icon={ArrowDown01Icon} className="ml-auto size-4 text-primary" />
     ) : (
-      <HugeiconsIcon icon={ArrowUp01Icon} className="ml-auto h-4 w-4 text-primary" />
+      <HugeiconsIcon icon={ArrowUp01Icon} className="ml-auto size-4 text-primary" />
     );
   };
 
   const getSortButtonIcon = (): React.ReactElement => {
     if (!currentSort) {
-      return <HugeiconsIcon icon={ArrowUpDownIcon} className="h-4 w-4" />;
+      return <HugeiconsIcon icon={ArrowUpDownIcon} className="size-4" />;
     }
     return currentSort.direction === "desc" ? (
-      <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4" />
+      <HugeiconsIcon icon={ArrowDown01Icon} className="size-4" />
     ) : (
-      <HugeiconsIcon icon={ArrowUp01Icon} className="h-4 w-4" />
+      <HugeiconsIcon icon={ArrowUp01Icon} className="size-4" />
     );
   };
 

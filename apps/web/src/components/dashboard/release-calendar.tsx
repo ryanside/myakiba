@@ -180,7 +180,7 @@ function ReleaseCalendar({
       </FrameHeader>
       <FramePanel className="shadow-none! border-none m-1 mt-0">
         {(() => {
-          if (isPending) return <Loader className="justify-center text-muted" />;
+          if (isPending) return <Loader className="justify-center" />;
           if (isError) return <ReleaseCalendarError message={error.message} onRetry={refetch} />;
           if (grouped.length > 0) {
             return (
@@ -210,7 +210,7 @@ function DateGroup({
   return (
     <div>
       <div className="sticky top-0 z-10 flex items-center gap-2 bg-(--frame-panel-bg) px-(--frame-panel-p) pb-1">
-        <span className="shrink-0 text-[0.6875rem] font-medium uppercase tracking-wider text-muted-foreground">
+        <span className="shrink-0 text-xs font-medium text-muted-foreground">
           {RELEASE_DATE_GROUP_LABEL_FORMATTER.format(new Date(dateKey))}
         </span>
         <div className="h-px flex-1 bg-border" />
@@ -267,7 +267,7 @@ function ReleaseCard({
             params: { externalId: item.itemExternalId },
           } as const)
         : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
-      className="flex min-w-0 items-center gap-2.5 overflow-hidden rounded-md px-1.5 py-1.5 transition-colors hover:bg-accent duration-50"
+      className="flex min-w-0 items-center gap-2.5 overflow-hidden rounded-md p-1.5 transition-colors hover:bg-accent duration-50"
     >
       <ImageThumbnail
         images={item.image ? [item.image] : []}

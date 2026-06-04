@@ -624,7 +624,7 @@ function OrderFormContent(
                   className="w-full flex-1"
                 >
                   {isSubmitting ? (
-                    <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />
+                    <HugeiconsIcon icon={Loading03Icon} className="size-4 animate-spin" />
                   ) : (
                     "Update"
                   )}
@@ -676,7 +676,7 @@ function OrderFormContent(
               <Button type="submit" disabled={!canSubmit || isSubmitting} variant="default">
                 {(() => {
                   if (isSubmitting) {
-                    return <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />;
+                    return <HugeiconsIcon icon={Loading03Icon} className="size-4 animate-spin" />;
                   }
                   return type === "merge" ? "Merge" : "Split";
                 })()}

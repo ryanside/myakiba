@@ -81,10 +81,10 @@ function RouteComponent() {
             className="text-center space-y-4 animate-appear"
             style={{ "--appear-delay": "80ms" } as React.CSSProperties}
           >
-            <div className="mx-auto w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
+            <div className="mx-auto size-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
               <HugeiconsIcon
                 icon={Mail01Icon}
-                className="w-6 h-6 text-green-600 dark:text-green-400"
+                className="size-6 text-green-600 dark:text-green-400"
               />
             </div>
             <p className="text-muted-foreground">

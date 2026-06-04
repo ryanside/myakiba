@@ -107,7 +107,7 @@ export default function SyncCollectionForm({
                       className="ml-auto"
                     >
                       {isSubmitting ? (
-                        <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin" />
+                        <HugeiconsIcon icon={Loading03Icon} className="size-4 animate-spin" />
                       ) : (
                         "Submit Items"
                       )}
@@ -181,7 +181,7 @@ export default function SyncCollectionForm({
                                 MFC Item: {subField.state.value || "Not set"}
                               </DialogDescription>
                             </DialogHeader>
-                            <div className="flex flex-col gap-3 py-4 px-4">
+                            <div className="flex flex-col gap-3 p-4">
                               <FormSection title="Basics">
                                 <div className="grid grid-cols-2 gap-3">
                                   <collectionForm.Field
@@ -454,16 +454,18 @@ export default function SyncCollectionForm({
                                             className="flex items-center gap-1 text-foreground"
                                           >
                                             {tag}
-                                            <button
+                                            <Button
                                               type="button"
+                                              variant="ghost"
+                                              size="icon-xs"
                                               onClick={() => tagsField.removeValue(tagIndex)}
-                                              className="ml-1 hover:text-destructive"
+                                              className="ml-1 size-auto min-w-0 p-0 hover:text-destructive"
                                             >
                                               <HugeiconsIcon
                                                 icon={Cancel01Icon}
-                                                className="w-3 h-3"
+                                                className="size-3"
                                               />
-                                            </button>
+                                            </Button>
                                           </Badge>
                                         ))}
                                       </div>

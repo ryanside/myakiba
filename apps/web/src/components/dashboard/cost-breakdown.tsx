@@ -1,11 +1,11 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { CostBreakdownData } from "@/queries/dashboard";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import Loader from "../loader";
+import { BreakdownChart } from "./breakdown-chart";
 
 interface CostBreakdownProps {
   readonly data: CostBreakdownData | undefined;
@@ -35,35 +35,60 @@ const CHART_PALETTE = [
   "var(--chart-6)",
 ] as const;
 
+interface CostBreakdownEntry {
+  readonly amount: number;
+  readonly color: string;
+  readonly id: keyof CostBreakdownData;
+  readonly key: keyof CostBreakdownData;
+  readonly label: string;
+  readonly percentage: number;
+  readonly tooltip: React.ReactNode;
+}
+
 export function CostBreakdown({
   data,
   currency,
   locale,
   isLoading,
 }: CostBreakdownProps): React.ReactNode {
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-
   const { total, entries } = useMemo(() => {
     if (!data) return { total: 0, entries: [] };
 
-    const allEntries = COST_CATEGORIES.map((cat, i) => ({
+    const allEntries = COST_CATEGORIES.map((cat, index) => ({
       ...cat,
       amount: data[cat.key],
-      color: CHART_PALETTE[i],
+      color: CHART_PALETTE[index],
     }));
 
     const totalAmount = allEntries.reduce((acc, e) => acc + e.amount, 0);
+    const chartEntries: CostBreakdownEntry[] = [];
+
+    for (const e of allEntries) {
+      if (e.amount <= 0) {
+        continue;
+      }
+
+      chartEntries.push({
+        ...e,
+        id: e.key,
+        percentage: totalAmount > 0 ? (e.amount / totalAmount) * 100 : 0,
+        tooltip: (
+          <div className="flex flex-col gap-0.5">
+            <p className="text-xs font-medium">{e.label}</p>
+            <p className="text-xs">
+              {formatCurrencyFromMinorUnits(e.amount, currency, locale)} ·{" "}
+              {totalAmount > 0 ? ((e.amount / totalAmount) * 100).toFixed(1) : "0.0"}%
+            </p>
+          </div>
+        ),
+      });
+    }
 
     return {
       total: totalAmount,
-      entries: allEntries
-        .filter((e) => e.amount > 0)
-        .map((e) => ({
-          ...e,
-          percentage: totalAmount > 0 ? (e.amount / totalAmount) * 100 : 0,
-        })),
+      entries: chartEntries,
     };
-  }, [data]);
+  }, [currency, data, locale]);
 
   if (isLoading) {
     return (
@@ -75,7 +100,7 @@ export function CostBreakdown({
           <Skeleton className="h-4 my-1 w-32" />
         </FrameHeader>
         <FramePanel className="space-y-3 shadow-none! border-none m-1 mt-0">
-          <Loader className="justify-center text-muted" />
+          <Loader className="justify-center" />
         </FramePanel>
       </Frame>
     );
@@ -92,75 +117,27 @@ export function CostBreakdown({
         {entries.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">No costs this month</p>
         ) : (
-          <>
-            <TooltipProvider>
-              <div className="animate-data-in flex h-2.5 w-full rounded-sm overflow-hidden [--data-in-delay:60ms]">
-                {entries.map((entry, index) => {
-                  const isOtherHovered = hoveredIndex !== null && hoveredIndex !== index;
-                  const minWidth =
-                    entry.percentage < 3 && entry.percentage > 0 ? 3 : entry.percentage;
-                  return (
-                    <Tooltip key={entry.key} open={hoveredIndex === index}>
-                      <TooltipTrigger
-                        render={
-                          <div
-                            className="transition-opacity duration-200 cursor-default first:rounded-l-sm last:rounded-r-sm"
-                            style={{
-                              width: `${minWidth}%`,
-                              backgroundColor: entry.color,
-                              opacity: isOtherHovered ? 0.3 : 1,
-                            }}
-                            onMouseEnter={() => setHoveredIndex(index)}
-                            onMouseLeave={() => setHoveredIndex(null)}
-                          />
-                        }
-                      />
-                      <TooltipContent side="top">
-                        <div className="flex flex-col gap-0.5">
-                          <p className="text-xs font-medium">{entry.label}</p>
-                          <p className="text-xs">
-                            {formatCurrencyFromMinorUnits(entry.amount, currency, locale)} ·{" "}
-                            {entry.percentage.toFixed(1)}%
-                          </p>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  );
-                })}
-              </div>
-            </TooltipProvider>
-
-            <div className="animate-data-in flex flex-col gap-0.5 [--data-in-delay:100ms]">
-              {entries.map((entry, index) => {
-                const isHovered = hoveredIndex === index;
-                const isOtherHovered = hoveredIndex !== null && hoveredIndex !== index;
-                return (
-                  <div
-                    key={entry.key}
-                    className="flex items-center gap-2.5 py-1 transition-opacity duration-200 cursor-default"
-                    style={{ opacity: isOtherHovered ? 0.4 : 1 }}
-                    onMouseEnter={() => setHoveredIndex(index)}
-                    onMouseLeave={() => setHoveredIndex(null)}
-                  >
-                    <div
-                      className="h-4 rounded-full shrink-0 transition-[width] duration-200"
-                      style={{
-                        backgroundColor: entry.color,
-                        width: isHovered ? "0.5rem" : "0.375rem",
-                      }}
-                    />
-                    <span className="text-sm text-foreground">{entry.label}</span>
-                    <span className="text-xs text-muted-foreground tabular-nums">
-                      {entry.percentage.toFixed(1)}%
-                    </span>
-                    <span className="ml-auto text-sm tabular-nums font-medium shrink-0">
-                      {formatCurrencyFromMinorUnits(entry.amount, currency, locale)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </>
+          <BreakdownChart.Root entries={entries}>
+            <BreakdownChart.Bar />
+            <BreakdownChart.Legend>
+              {entries.map((entry) => (
+                <BreakdownChart.LegendItem key={entry.key} entryId={entry.id}>
+                  {({ rowProps, markerProps }) => (
+                    <div {...rowProps}>
+                      <div {...markerProps} />
+                      <span className="text-sm text-foreground">{entry.label}</span>
+                      <span className="text-xs text-muted-foreground tabular-nums">
+                        {entry.percentage.toFixed(1)}%
+                      </span>
+                      <span className="ml-auto text-sm tabular-nums font-medium shrink-0">
+                        {formatCurrencyFromMinorUnits(entry.amount, currency, locale)}
+                      </span>
+                    </div>
+                  )}
+                </BreakdownChart.LegendItem>
+              ))}
+            </BreakdownChart.Legend>
+          </BreakdownChart.Root>
         )}
       </FramePanel>
     </Frame>

@@ -1,7 +1,9 @@
 import {
   Add01Icon,
+  Calendar01Icon,
   Home01Icon,
   ChartColumnIcon,
+  CreditCardIcon,
   LibraryIcon,
   PackageIcon,
   Settings01Icon,
@@ -42,6 +44,13 @@ const data = {
       pathnameMatch: "prefix" as const,
     },
     {
+      title: "Expenses",
+      url: "/expenses",
+      icon: CreditCardIcon,
+      pathnameMatch: "prefix" as const,
+      badge: "New",
+    },
+    {
       title: "Orders",
       url: "/orders",
       icon: PackageIcon,
@@ -51,6 +60,12 @@ const data = {
       title: "Collection",
       url: "/collection",
       icon: LibraryIcon,
+    },
+    {
+      title: "Calendar",
+      url: "/calendar",
+      icon: Calendar01Icon,
+      badge: "New",
     },
     {
       title: "Sync History",

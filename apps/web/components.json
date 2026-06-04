@@ -27,6 +27,7 @@
     "@tailark": "https://tailark.com/r/{name}.json",
     "@diceui": "https://diceui.com/r/{name}.json",
     "@kibo-ui": "https://www.kibo-ui.com/r/{name}.json",
-    "@dotmatrix": "https://dotmatrix.zzzzshawn.cloud/r/{name}.json"
+    "@dotmatrix": "https://dotmatrix.zzzzshawn.cloud/r/{name}.json",
+    "@evilcharts": "https://evilcharts.com/r/{name}.json"
   }
 }

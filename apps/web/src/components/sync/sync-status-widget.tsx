@@ -129,7 +129,7 @@ export default function SyncStatusWidget() {
               <>
                 {hasActive && (
                   <div className="px-4 pt-3 pb-2">
-                    <p className="mb-2.5 text-[0.6875rem] font-medium tracking-wide text-muted-foreground">
+                    <p className="mb-2.5 text-[0.6875rem] font-medium text-muted-foreground">
                       Active
                     </p>
                     <div className="space-y-1.5">
@@ -144,7 +144,7 @@ export default function SyncStatusWidget() {
 
                 {finishedSessions.length > 0 && (
                   <div className="px-4 pt-3 pb-2">
-                    <p className="mb-2.5 text-[0.6875rem] font-medium tracking-wide text-muted-foreground">
+                    <p className="mb-2.5 text-[0.6875rem] font-medium text-muted-foreground">
                       Recent
                     </p>
                     <div className="space-y-1.5">
@@ -163,7 +163,7 @@ export default function SyncStatusWidget() {
               </>
             )}
 
-            <div className="border-t px-1.5 py-1.5">
+            <div className="border-t p-1.5">
               <Link to="/sync" onClick={closePopover}>
                 <Button
                   variant="ghost"
