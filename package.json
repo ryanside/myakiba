@@ -47,7 +47,8 @@
     "redis:down": "turbo -F @myakiba/redis redis:down",
     "check": "ultracite check",
     "fix": "ultracite fix",
-    "prepare": "husky"
+    "prepare": "husky",
+    "doctor": "npx react-doctor@latest"
   },
   "dependencies": {},
   "devDependencies": {
@@ -55,6 +56,7 @@
     "lint-staged": "^16.4.0",
     "oxfmt": "latest",
     "oxlint": "latest",
+    "react-doctor": "^0.2.16",
     "turbo": "^2.8.17",
     "typescript": "^5.9.3",
     "ultracite": "7.6.1"

@@ -1,5 +1,7 @@
 import { useCallback, useMemo } from "react";
 import type { ReactNode } from "react";
+import { InformationCircleIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { calendarSearchSchema } from "@myakiba/contracts/calendar/schema";
@@ -9,6 +11,8 @@ import { CalendarReleasePanel } from "@/components/calendar/calendar-release-lis
 import { CalendarToolbar } from "@/components/calendar/calendar-toolbar";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { getCalendar } from "@/queries/calendar";
+import { ThemedBadge } from "@/components/reui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const CALENDAR_MIN_YEAR = 2000;
 const YEAR_FORWARD_RANGE = 10;
@@ -121,9 +125,38 @@ function RouteComponent(): ReactNode {
     <div className="mx-auto flex w-full max-w-[88rem] flex-col gap-6">
       <div className="flex flex-col gap-4 sm:flex-row">
         <div className="flex shrink-0 flex-col gap-2">
-          <h1 className="text-2xl tracking-tight font-heading font-medium text-balance">
-            Calendar
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl tracking-tight font-heading font-medium text-balance">
+              Calendar
+            </h1>
+            <ThemedBadge variant="default" className="mt-1">
+              New
+            </ThemedBadge>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <HugeiconsIcon
+                    icon={InformationCircleIcon}
+                    className="size-4 mt-1 text-muted-foreground"
+                  />
+                }
+              />
+              <TooltipContent side="right" sideOffset={12}>
+                <div className="flex max-w-xs flex-col gap-2">
+                  <div className="flex flex-col gap-1">
+                    <h3 className="text-sm font-medium">dev note:</h3>
+                    <p className="text-pretty">
+                      This is an early implementation of the calendar page.
+                    </p>
+                  </div>
+                  <p className="text-pretty">
+                    For the fullest calendar, pick or add release dates to your orders and synced
+                    collection items.
+                  </p>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </div>
         <div className="w-full min-w-0 lg:flex-1">
           <CalendarToolbar

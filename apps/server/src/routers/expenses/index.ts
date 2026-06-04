@@ -2,19 +2,34 @@ import { tryCatch } from "@myakiba/utils/result";
 import { Elysia, status } from "elysia";
 import { evlog } from "evlog/elysia";
 import { betterAuth } from "@/middleware/better-auth";
-import {
-  expenseFiltersSchema,
-  expenseShopsFiltersSchema,
-  shopExpansionQuerySchema,
-  shopParamSchema,
-} from "./model";
+import { expenseFiltersSchema, expenseShopFiltersSchema, shopParamSchema } from "./model";
 import ExpensesService from "./service";
 
 const expensesRouter = new Elysia({ prefix: "/expenses" })
   .use(betterAuth)
   .use(evlog())
   .get(
-    "/",
+    "/filter-options",
+    async ({ user, log }) => {
+      if (!user) return status(401, "Unauthorized");
+
+      log.set({ action: "get_expense_filter_options", user: { id: user.id } });
+
+      const { data, error } = await tryCatch(ExpensesService.getExpenseFilterOptions(user.id));
+
+      if (error) {
+        log.error(error, { step: "getExpenseFilterOptions" });
+        log.set({ outcome: "error" });
+        return status(500, "Failed to get expense filter options");
+      }
+
+      log.set({ outcome: "success" });
+      return data;
+    },
+    { auth: true },
+  )
+  .get(
+    "/overview",
     async ({ query, user, log }) => {
       if (!user) return status(401, "Unauthorized");
 
@@ -40,18 +55,58 @@ const expensesRouter = new Elysia({ prefix: "/expenses" })
 
       log.set({ action: "get_expenses_shops", user: { id: user.id }, query });
 
-      const { data, error } = await tryCatch(ExpensesService.getShopsBreakdown(user.id, query));
+      const { data, error } = await tryCatch(ExpensesService.getExpensesShops(user.id, query));
 
       if (error) {
-        log.error(error, { step: "getShopsBreakdown" });
+        log.error(error, { step: "getExpensesShops" });
         log.set({ outcome: "error" });
-        return status(500, "Failed to get shops breakdown");
+        return status(500, "Failed to get expense shops");
       }
 
       log.set({ outcome: "success" });
       return data;
     },
-    { query: expenseShopsFiltersSchema, auth: true },
+    { query: expenseShopFiltersSchema, auth: true },
+  )
+  .get(
+    "/trends",
+    async ({ query, user, log }) => {
+      if (!user) return status(401, "Unauthorized");
+
+      log.set({ action: "get_expenses_trends", user: { id: user.id }, query });
+
+      const { data, error } = await tryCatch(ExpensesService.getExpensesTrends(user.id, query));
+
+      if (error) {
+        log.error(error, { step: "getExpensesTrends" });
+        log.set({ outcome: "error" });
+        return status(500, "Failed to get expenses trends");
+      }
+
+      log.set({ outcome: "success" });
+      return data;
+    },
+    { query: expenseFiltersSchema, auth: true },
+  )
+  .get(
+    "/shipping",
+    async ({ query, user, log }) => {
+      if (!user) return status(401, "Unauthorized");
+
+      log.set({ action: "get_expenses_shipping", user: { id: user.id }, query });
+
+      const { data, error } = await tryCatch(ExpensesService.getExpensesShipping(user.id, query));
+
+      if (error) {
+        log.error(error, { step: "getExpensesShipping" });
+        log.set({ outcome: "error" });
+        return status(500, "Failed to get expenses shipping");
+      }
+
+      log.set({ outcome: "success" });
+      return data;
+    },
+    { query: expenseFiltersSchema, auth: true },
   )
   .get(
     "/shops/:shop/expansion",
@@ -59,7 +114,7 @@ const expensesRouter = new Elysia({ prefix: "/expenses" })
       if (!user) return status(401, "Unauthorized");
 
       log.set({
-        action: "get_shop_expansion",
+        action: "get_expenses_shop_expansion",
         user: { id: user.id },
         shop: params.shop,
         query,
@@ -78,11 +133,7 @@ const expensesRouter = new Elysia({ prefix: "/expenses" })
       log.set({ outcome: "success" });
       return data;
     },
-    {
-      params: shopParamSchema,
-      query: shopExpansionQuerySchema,
-      auth: true,
-    },
+    { params: shopParamSchema, query: expenseFiltersSchema, auth: true },
   );
 
 export default expensesRouter;

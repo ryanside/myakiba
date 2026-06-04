@@ -43,6 +43,8 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
           query.orderDateEnd,
           query.payDateStart,
           query.payDateEnd,
+          query.expenseDateStart,
+          query.expenseDateEnd,
           query.shipDateStart,
           query.shipDateEnd,
           query.colDateStart,

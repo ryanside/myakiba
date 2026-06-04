@@ -21,6 +21,8 @@ class OrdersService {
     orderDateEnd?: string,
     paymentDateStart?: string,
     paymentDateEnd?: string,
+    expenseDateStart?: string,
+    expenseDateEnd?: string,
     shippingDateStart?: string,
     shippingDateEnd?: string,
     collectionDateStart?: string,
@@ -39,6 +41,8 @@ class OrdersService {
     miscFeesMin?: number,
     miscFeesMax?: number,
   ) {
+    const realizedOrderDateSql = sql`COALESCE(${order.paymentDate}, ${order.collectionDate}, ${order.shippingDate}, ${order.orderDate}, ${order.releaseDate})`;
+
     const whereConditions = and(
       eq(order.userId, userId),
       search ? ilike(order.title, `%${search}%`) : undefined,
@@ -50,6 +54,8 @@ class OrdersService {
       orderDateEnd ? lte(order.orderDate, orderDateEnd) : undefined,
       paymentDateStart ? gte(order.paymentDate, paymentDateStart) : undefined,
       paymentDateEnd ? lte(order.paymentDate, paymentDateEnd) : undefined,
+      expenseDateStart ? gte(realizedOrderDateSql, expenseDateStart) : undefined,
+      expenseDateEnd ? lte(realizedOrderDateSql, expenseDateEnd) : undefined,
       shippingDateStart ? gte(order.shippingDate, shippingDateStart) : undefined,
       shippingDateEnd ? lte(order.shippingDate, shippingDateEnd) : undefined,
       collectionDateStart ? gte(order.collectionDate, collectionDateStart) : undefined,

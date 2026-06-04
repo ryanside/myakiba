@@ -18,6 +18,8 @@ export const orderFiltersSchema = z.object({
   orderDateEnd: z.iso.date().optional(),
   payDateStart: z.iso.date().optional(),
   payDateEnd: z.iso.date().optional(),
+  expenseDateStart: z.iso.date().optional(),
+  expenseDateEnd: z.iso.date().optional(),
   shipDateStart: z.iso.date().optional(),
   shipDateEnd: z.iso.date().optional(),
   colDateStart: z.iso.date().optional(),

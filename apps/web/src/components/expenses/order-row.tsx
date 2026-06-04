@@ -7,6 +7,7 @@ import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import type { ExpenseOrder } from "@/queries/expenses";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 interface ExpenseOrderRowProps {
@@ -58,9 +59,27 @@ export function ExpenseOrderRow({
           {formatCurrencyFromMinorUnits(order.totalSpend, currency, locale)}
         </p>
         <p className="text-xs text-muted-foreground tabular-nums">
-          {formatCurrencyFromMinorUnits(order.feeSpend, currency, locale)} fees
+          {formatCurrencyFromMinorUnits(order.feeSpend, currency, locale)} in fees
         </p>
       </div>
     </Link>
+  );
+}
+
+export function ExpenseOrderRowSkeleton(): ReactNode {
+  return (
+    <div className="grid gap-1 py-3 sm:grid-cols-[1fr_auto]">
+      <div className="flex min-w-0 items-center gap-3">
+        <Skeleton className="size-8 shrink-0 rounded-md" />
+        <div className="min-w-0 space-y-1.5">
+          <Skeleton className="h-4 w-32 max-w-full" />
+          <Skeleton className="h-3.5 w-24 max-w-full" />
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <Skeleton className="h-4 w-16 sm:ml-auto" />
+        <Skeleton className="h-3.5 w-14 sm:ml-auto" />
+      </div>
+    </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import * as RechartsPrimitive from "recharts";
+import type { NameType, ValueType } from "recharts/types/component/DefaultTooltipContent";
 
 import { cn } from "@/lib/utils";
 
@@ -120,7 +121,10 @@ function ChartTooltipContent({
     indicator?: "line" | "dot" | "dashed";
     nameKey?: string;
     labelKey?: string;
-  }) {
+  } & Omit<
+    RechartsPrimitive.DefaultTooltipContentProps<ValueType, NameType>,
+    "accessibilityLayer"
+  >) {
   const { config } = useChart();
 
   const tooltipLabel = React.useMemo(() => {
@@ -173,7 +177,7 @@ function ChartTooltipContent({
 
             return (
               <div
-                key={item.dataKey}
+                key={key}
                 className={cn(
                   "flex w-full flex-wrap items-stretch gap-2 [&>svg]:h-2.5 [&>svg]:w-2.5 [&>svg]:text-muted-foreground",
                   indicator === "dot" && "items-center",
@@ -191,7 +195,7 @@ function ChartTooltipContent({
                           className={cn(
                             "shrink-0 rounded-[2px] border-(--color-border) bg-(--color-bg)",
                             {
-                              "h-2.5 w-2.5": indicator === "dot",
+                              "size-2.5": indicator === "dot",
                               "w-1": indicator === "line",
                               "w-0 border-[1.5px] border-dashed bg-transparent":
                                 indicator === "dashed",
@@ -243,11 +247,10 @@ function ChartLegendContent({
   payload,
   verticalAlign = "bottom",
   nameKey,
-}: React.ComponentProps<"div"> &
-  Pick<RechartsPrimitive.LegendProps, "payload" | "verticalAlign"> & {
-    hideIcon?: boolean;
-    nameKey?: string;
-  }) {
+}: React.ComponentProps<"div"> & {
+  hideIcon?: boolean;
+  nameKey?: string;
+} & RechartsPrimitive.DefaultLegendContentProps) {
   const { config } = useChart();
 
   if (!payload?.length) {
@@ -279,7 +282,7 @@ function ChartLegendContent({
                 <itemConfig.icon />
               ) : (
                 <div
-                  className="h-2 w-2 shrink-0 rounded-[2px]"
+                  className="size-2 shrink-0 rounded-[2px]"
                   style={{
                     backgroundColor: item.color,
                   }}
