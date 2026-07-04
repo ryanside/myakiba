@@ -20,12 +20,18 @@ export function createSyncSessionItemSubColumns(): ColumnDef<EnrichedSyncSession
         if (item.itemId) {
           return (
             <div className="flex items-center gap-3">
-              <ImageThumbnail
-                images={item.itemImage ? [item.itemImage] : []}
-                title={item.itemTitle ?? ""}
-                fallbackIcon={<HugeiconsIcon icon={PackageIcon} className="size-4" />}
-                className="size-8 rounded-md"
-              />
+              <Link
+                className="font-medium text-foreground truncate block"
+                to="/item/$externalId"
+                params={{ externalId: item.itemExternalId }}
+              >
+                <ImageThumbnail
+                  images={item.itemImage ? [item.itemImage] : []}
+                  title={item.itemTitle ?? ""}
+                  fallbackIcon={<HugeiconsIcon icon={PackageIcon} className="size-4" />}
+                  className="size-8 rounded-md"
+                />
+              </Link>
               <div className="min-w-0 space-y-px">
                 <Link
                   className="font-medium text-foreground truncate block"

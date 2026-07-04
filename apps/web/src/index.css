@@ -33,22 +33,22 @@
   --popover-foreground: var(--color-neutral-800);
   --primary: var(--color-neutral-800);
   --primary-foreground: var(--color-neutral-50);
-  --secondary: color-mix(in srgb, var(--color-neutral-950) 4%, var(--background));
+  --secondary: color-mix(in srgb, var(--color-neutral-950) 6%, var(--background));
   --secondary-foreground: var(--color-neutral-800);
-  --muted: color-mix(in srgb, var(--color-neutral-950) 4%, var(--background));
-  --muted-foreground: color-mix(in srgb, var(--color-neutral-500) 90%, var(--color-neutral-950));
-  --accent: color-mix(in srgb, var(--color-neutral-950) 4%, var(--background));
+  --muted: color-mix(in srgb, var(--color-neutral-950) 6%, var(--background));
+  --muted-foreground: color-mix(in srgb, var(--color-neutral-500) 80%, var(--color-neutral-950));
+  --accent: color-mix(in srgb, var(--color-neutral-950) 6%, var(--background));
   --accent-foreground: var(--color-neutral-800);
   --destructive: var(--color-red-500);
   --destructive-foreground: var(--color-red-700);
-  --border: color-mix(in srgb, var(--color-neutral-950) 8%, var(--background));
-  --input: color-mix(in srgb, var(--color-neutral-950) 10%, var(--background));
+  --border: color-mix(in srgb, var(--color-neutral-950) 12%, var(--background));
+  --input: color-mix(in srgb, var(--color-neutral-950) 13%, var(--background));
   --ring: var(--color-neutral-400);
-  --chart-1: var(--color-blue-600);
-  --chart-2: var(--color-violet-600);
-  --chart-3: var(--color-emerald-600);
-  --chart-4: var(--color-amber-500);
-  --chart-5: var(--color-rose-500);
+  --chart-1: var(--color-orange-600);
+  --chart-2: var(--color-teal-600);
+  --chart-3: var(--color-cyan-900);
+  --chart-4: var(--color-amber-400);
+  --chart-5: var(--color-amber-500);
   --chart-6: var(--color-sky-500);
   --chart-7: var(--color-teal-600);
   --chart-8: var(--color-orange-600);
@@ -58,9 +58,9 @@
   --sidebar-foreground: color-mix(in srgb, var(--color-neutral-800) 64%, var(--sidebar));
   --sidebar-primary: var(--color-neutral-800);
   --sidebar-primary-foreground: var(--color-neutral-50);
-  --sidebar-accent: color-mix(in srgb, var(--color-neutral-950) 4%, var(--sidebar));
+  --sidebar-accent: color-mix(in srgb, var(--color-neutral-950) 6%, var(--sidebar));
   --sidebar-accent-foreground: var(--color-neutral-800);
-  --sidebar-border: color-mix(in srgb, var(--color-neutral-950) 6%, var(--sidebar));
+  --sidebar-border: color-mix(in srgb, var(--color-neutral-950) 11%, var(--sidebar));
   --sidebar-ring: var(--color-neutral-400);
   --radius: 0.625rem;
   --font-sans: "Instrument Sans Variable", ui-sans-serif, sans-serif, system-ui;
@@ -101,42 +101,42 @@
 
 .dark {
   /* shadcn */
-  --background: color-mix(in srgb, var(--color-neutral-950) 100%, var(--color-neutral-50));
+  --background: var(--color-neutral-950);
   --foreground: var(--color-neutral-100);
   --card: color-mix(in srgb, var(--background) 98%, var(--color-neutral-50));
   --card-foreground: var(--color-neutral-100);
-  --popover: color-mix(in srgb, var(--background) 100%, var(--color-neutral-50));
+  --popover: color-mix(in srgb, var(--background) 96%, var(--color-neutral-50));
   --popover-foreground: var(--color-neutral-100);
   --primary: var(--color-neutral-100);
   --primary-foreground: var(--color-neutral-800);
-  --secondary: color-mix(in srgb, var(--color-neutral-50) 4%, var(--background));
+  --secondary: color-mix(in srgb, var(--color-neutral-50) 8%, var(--background));
   --secondary-foreground: var(--color-neutral-100);
-  --muted: color-mix(in srgb, var(--color-neutral-50) 4%, var(--background));
-  --muted-foreground: color-mix(in srgb, var(--color-neutral-500) 90%, var(--color-neutral-50));
-  --accent: color-mix(in srgb, var(--color-neutral-50) 4%, var(--background));
+  --muted: color-mix(in srgb, var(--color-neutral-50) 8%, var(--background));
+  --muted-foreground: color-mix(in srgb, var(--color-neutral-500) 70%, var(--color-neutral-50));
+  --accent: color-mix(in srgb, var(--color-neutral-50) 8%, var(--background));
   --accent-foreground: var(--color-neutral-100);
   --destructive: color-mix(in srgb, var(--color-red-600) 90%, var(--color-neutral-50));
   --destructive-foreground: var(--color-red-400);
-  --border: color-mix(in srgb, var(--color-neutral-50) 6%, var(--background));
-  --input: color-mix(in srgb, var(--color-neutral-50) 8%, var(--background));
+  --border: color-mix(in srgb, var(--color-neutral-50) 12%, var(--background));
+  --input: color-mix(in srgb, var(--color-neutral-50) 13%, var(--background));
   --ring: var(--color-neutral-500);
-  --chart-1: var(--color-blue-600);
-  --chart-2: var(--color-violet-600);
-  --chart-3: var(--color-emerald-600);
-  --chart-4: var(--color-amber-500);
+  --chart-1: var(--color-blue-700);
+  --chart-2: var(--color-emerald-500);
+  --chart-3: var(--color-amber-500);
+  --chart-4: var(--color-purple-500);
   --chart-5: var(--color-rose-500);
   --chart-6: var(--color-sky-500);
   --chart-7: var(--color-teal-600);
   --chart-8: var(--color-orange-600);
   --chart-9: var(--color-indigo-600);
   --chart-10: var(--color-fuchsia-600);
-  --sidebar: color-mix(in srgb, var(--color-neutral-950) 100%, var(--color-neutral-50));
+  --sidebar: color-mix(in srgb, var(--color-neutral-950) 97%, var(--color-neutral-50));
   --sidebar-foreground: color-mix(in srgb, var(--color-neutral-100) 64%, var(--sidebar));
   --sidebar-primary: var(--color-neutral-100);
   --sidebar-primary-foreground: var(--color-neutral-800);
-  --sidebar-accent: color-mix(in srgb, var(--color-neutral-50) 4%, var(--sidebar));
+  --sidebar-accent: color-mix(in srgb, var(--color-neutral-50) 8%, var(--sidebar));
   --sidebar-accent-foreground: var(--color-neutral-100);
-  --sidebar-border: color-mix(in srgb, var(--color-neutral-50) 5%, var(--sidebar));
+  --sidebar-border: color-mix(in srgb, var(--color-neutral-50) 11%, var(--sidebar));
   --sidebar-ring: var(--color-neutral-400);
   --font-sans: "Instrument Sans Variable", ui-sans-serif, sans-serif, system-ui;
   --font-orbitron: "Orbitron Variable", ui-sans-serif, sans-serif, system-ui;
@@ -275,6 +275,7 @@ body {
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;
   }
   body {

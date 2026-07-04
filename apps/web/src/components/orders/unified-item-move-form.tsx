@@ -64,7 +64,7 @@ type UnifiedItemMoveFormProps = {
     cascadeOptions: CascadeOptions,
     collectionIds: ReadonlySet<string>,
   ) => Promise<void>;
-  readonly clearSelections: () => void;
+  readonly clearSelections?: () => void;
   readonly currency: Currency;
   readonly intent?: "move" | "add";
 };
@@ -159,7 +159,7 @@ function UnifiedItemMoveFormContent({
     },
     onSubmit: async ({ value }) => {
       await onMoveToExisting(value.targetOrderId, selectedItems.collectionIds, sourceOrderIds);
-      clearSelections();
+      clearSelections?.();
       close();
     },
   });
@@ -201,7 +201,7 @@ function UnifiedItemMoveFormContent({
         notes: value.notes,
       };
       await onMoveToNew(transformedValue, cascadeOptions, selectedItems.collectionIds);
-      clearSelections();
+      clearSelections?.();
       close();
     },
   });

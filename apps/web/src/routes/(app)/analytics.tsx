@@ -51,13 +51,14 @@ function RouteComponent(): ReactNode {
   );
 
   return (
-    <div className="flex flex-col gap-6 mx-auto max-w-4xl">
+    <div className="flex flex-col gap-4 mx-auto max-w-[88rem]">
       <div className="flex flex-col gap-2 mb-2">
-        <h1 className="text-2xl font-orbitron font-medium">
-          analytics
-          <span className="hidden sm:inline"> ⭑.ᐟ</span>
-        </h1>
-        <p className="text-muted-foreground text-sm">See what shapes your collection</p>
+        <div className="flex flex-row items-start gap-4">
+          <h1 className="text-2xl font-orbitron font-medium">
+            analytics
+            <span className="hidden sm:inline"> ⭑.ᐟ</span>
+          </h1>
+        </div>
       </div>
 
       {isPending && <Loader className="h-64" />}
@@ -69,7 +70,7 @@ function RouteComponent(): ReactNode {
       )}
 
       {analytics && (
-        <>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {analytics.entries.map((entry, idx) => (
             <Section
               key={entry.category}
@@ -81,7 +82,7 @@ function RouteComponent(): ReactNode {
                 label: `View all ${entry.category}`,
               }}
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <h4 className="text-xs font-medium text-muted-foreground">Top by Count</h4>
                   <LeaderboardTable
@@ -193,7 +194,7 @@ function RouteComponent(): ReactNode {
               </div>
             </div>
           </Section>
-        </>
+        </div>
       )}
     </div>
   );

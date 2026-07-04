@@ -280,14 +280,9 @@ function ReleaseCard({
         <p className="truncate text-sm leading-tight font-medium">{item.title}</p>
         <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
           {item.category != null && (
-            <>
-              <span
-                className="size-1.5 shrink-0 rounded-full"
-                style={{ backgroundColor: categoryColor }}
-                aria-hidden
-              />
-              <span className="truncate">{item.category}</span>
-            </>
+            <span className="truncate" style={{ color: categoryColor }}>
+              {item.category}
+            </span>
           )}
           {item.price != null && item.price > 0 && item.priceCurrency?.trim() && (
             <>

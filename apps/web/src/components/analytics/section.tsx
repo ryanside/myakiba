@@ -1,7 +1,26 @@
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
+import { ENTRY_CATEGORIES } from "@myakiba/contracts/shared/constants";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { cn } from "@/lib/utils";
+
+// Matches the overview page, which colors sections by display position.
+export const SECTION_DISPLAY_ORDER: readonly string[] = [
+  ...ENTRY_CATEGORIES.map((c) => c.toLowerCase()),
+  "shops",
+  "scales",
+];
+
+export function sectionLabel(sectionName: string): string {
+  return sectionName.charAt(0).toUpperCase() + sectionName.slice(1);
+}
+
+export function sectionGradientColor(sectionName: string): string {
+  return SECTION_GRADIENT_COLORS[
+    SECTION_DISPLAY_ORDER.indexOf(sectionName) % SECTION_GRADIENT_COLORS.length
+  ];
+}
 
 export const SECTION_GRADIENT_COLORS = [
   "var(--color-blue-600)",
@@ -11,6 +30,31 @@ export const SECTION_GRADIENT_COLORS = [
   "var(--color-rose-500)",
   "var(--color-sky-500)",
 ] as const;
+
+export function SectionShell({
+  gradientColor,
+  children,
+  className,
+}: {
+  readonly gradientColor: string;
+  readonly children: ReactNode;
+  readonly className?: string;
+}): ReactNode {
+  return (
+    <div
+      className={cn("animate-data-in relative overflow-hidden border rounded-lg p-4", className)}
+    >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-10"
+        style={{
+          background: `radial-gradient(125% 125% at 50% 0%, transparent 40%, ${gradientColor} 60%, transparent 80%)`,
+        }}
+      />
+      {children}
+    </div>
+  );
+}
 
 export function Section({
   title,
@@ -26,14 +70,7 @@ export function Section({
   readonly children: ReactNode;
 }): ReactNode {
   return (
-    <div className="animate-data-in relative overflow-hidden border rounded-lg p-4 space-y-3">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-10"
-        style={{
-          background: `radial-gradient(125% 125% at 50% 0%, transparent 40%, ${gradientColor} 60%, transparent 80%)`,
-        }}
-      />
+    <SectionShell gradientColor={gradientColor} className="space-y-3">
       <div className="relative flex items-baseline lowercase justify-between">
         <h3 className="text-sm font-medium font-orbitron">{title}</h3>
         <span className="text-xs text-muted-foreground font-orbitron">
@@ -53,6 +90,6 @@ export function Section({
           />
         </Link>
       )}
-    </div>
+    </SectionShell>
   );
 }
