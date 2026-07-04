@@ -1,10 +1,8 @@
 import SignInForm from "@/components/auth/sign-in-form";
-import SignUpForm from "@/components/auth/sign-up-form";
 import { AuthLayout } from "@/components/auth/auth-layout";
 import { VerifyEmailView } from "@/components/auth/verify-email-view";
 import { authClient } from "@/lib/auth-client";
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useState } from "react";
 import * as z from "zod";
 
 const loginSearchSchema = z.object({
@@ -39,7 +37,6 @@ export const Route = createFileRoute("/(auth)/login")({
 
 function RouteComponent() {
   const { view, email } = Route.useSearch();
-  const [showSignIn, setShowSignIn] = useState(true);
 
   if (view === "verify-email") {
     return (
@@ -51,11 +48,7 @@ function RouteComponent() {
 
   return (
     <AuthLayout>
-      {showSignIn ? (
-        <SignInForm onSwitchToSignUp={() => setShowSignIn(false)} />
-      ) : (
-        <SignUpForm onSwitchToSignIn={() => setShowSignIn(true)} />
-      )}
+      <SignInForm />
     </AuthLayout>
   );
 }

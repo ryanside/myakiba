@@ -14,14 +14,14 @@ export function AuthLayout({ children }: AuthLayoutProps) {
         </div>
 
         <div className="flex flex-1 items-center justify-center px-6 pb-12 md:px-10">
-          <div className="w-full max-w-md">{children}</div>
+          <div className="animate-appear w-full max-w-md">{children}</div>
         </div>
       </div>
-      <div className="bg-[#DEDEDE] hidden lg:flex lg:w-1/2 relative overflow-hidden animate-appear ">
+      <div className="bg-[#DEDEDE] hidden lg:flex lg:w-1/2 relative overflow-hidden">
         <img
           src="/ma-black-white.webp"
           alt=""
-          className="absolute inset-0 h-full w-full object-cover object-center scale-50"
+          className="absolute inset-0 h-full w-full object-cover object-center scale-50 animate-appear"
         />
       </div>
     </div>

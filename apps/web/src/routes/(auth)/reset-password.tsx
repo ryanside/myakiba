@@ -66,10 +66,7 @@ function RouteComponent() {
     return (
       <AuthLayout>
         <div className="flex flex-col gap-6">
-          <div
-            className="flex flex-col items-center justify-center gap-2 animate-appear"
-            style={{ "--appear-delay": "0ms" } as React.CSSProperties}
-          >
+          <div className="flex flex-col items-center justify-center gap-2">
             <Link to="/">
               <MyAkibaLogo size="full" className="size-28" />
             </Link>
@@ -77,10 +74,7 @@ function RouteComponent() {
               <h1 className="text-2xl font-medium">Invalid Reset Link</h1>
             </div>
           </div>
-          <div
-            className="text-center space-y-4 animate-appear"
-            style={{ "--appear-delay": "80ms" } as React.CSSProperties}
-          >
+          <div className="text-center space-y-4">
             <p className="text-muted-foreground">
               This password reset link is invalid or has expired.
             </p>
@@ -88,17 +82,9 @@ function RouteComponent() {
               Please request a new password reset link.
             </p>
           </div>
-          <div
-            className="flex flex-col gap-2 animate-appear"
-            style={{ "--appear-delay": "160ms" } as React.CSSProperties}
-          >
+          <div className="flex flex-col gap-2">
             <Link to="/forgot-password">
-              <Button
-                className="w-full active:scale-[0.97] transition-transform duration-150"
-                style={{ transitionTimingFunction: "cubic-bezier(0.23, 1, 0.32, 1)" }}
-              >
-                Request New Reset Link
-              </Button>
+              <Button className="w-full">Request New Reset Link</Button>
             </Link>
             <BackLink to="/login" text="Back to Login" font="sans" className="self-center" />
           </div>
@@ -110,10 +96,7 @@ function RouteComponent() {
   return (
     <AuthLayout>
       <div className="flex flex-col gap-6">
-        <div
-          className="flex flex-col items-center justify-center gap-2 animate-appear"
-          style={{ "--appear-delay": "0ms" } as React.CSSProperties}
-        >
+        <div className="flex flex-col items-center justify-center gap-2">
           <Link to="/">
             <MyAkibaLogo size="full" className="size-28" />
           </Link>
@@ -130,110 +113,91 @@ function RouteComponent() {
           }}
           className="grid gap-4"
         >
-          <div
-            className="animate-appear"
-            style={{ "--appear-delay": "80ms" } as React.CSSProperties}
+          <form.Field
+            name="password"
+            validators={{
+              onBlur: z.string().min(8, "Password must be at least 8 characters"),
+            }}
           >
-            <form.Field
-              name="password"
-              validators={{
-                onBlur: z.string().min(8, "Password must be at least 8 characters"),
-              }}
-            >
-              {(field) => (
-                <div className="space-y-2">
-                  <Label htmlFor={field.name}>New Password</Label>
-                  <Input
-                    id={field.name}
-                    name={field.name}
-                    type="password"
-                    placeholder="Enter new password"
-                    value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                  />
-                  {field.state.meta.errors.map((error) => (
-                    <p key={error?.message} className="text-red-500 text-sm">
-                      {error?.message}
+            {(field) => (
+              <div className="space-y-2">
+                <Label htmlFor={field.name}>New Password</Label>
+                <Input
+                  id={field.name}
+                  name={field.name}
+                  type="password"
+                  placeholder="Enter new password"
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                />
+                {field.state.meta.errors.map((error) => (
+                  <p key={error?.message} className="text-red-500 text-sm">
+                    {error?.message}
+                  </p>
+                ))}
+              </div>
+            )}
+          </form.Field>
+
+          <form.Field
+            name="confirm_password"
+            validators={{
+              onChangeListenTo: ["password"],
+              onChange: ({ value, fieldApi }) => {
+                if (value !== fieldApi.form.getFieldValue("password")) {
+                  return "Passwords do not match";
+                }
+              },
+              onBlur: ({ value, fieldApi }) => {
+                if (value !== fieldApi.form.getFieldValue("password")) {
+                  return "Passwords do not match";
+                }
+              },
+            }}
+          >
+            {(field) => (
+              <div className="space-y-2">
+                <Label htmlFor={field.name}>Confirm Password</Label>
+                <Input
+                  id={field.name}
+                  name={field.name}
+                  type="password"
+                  placeholder="Confirm new password"
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                />
+                {field.state.meta.errors.map((err) => {
+                  const errorMessage =
+                    typeof err === "string" ? err : err?.message || "Invalid input";
+                  return (
+                    <p key={errorMessage} className="text-red-500 text-sm">
+                      {errorMessage}
                     </p>
-                  ))}
-                </div>
-              )}
-            </form.Field>
-          </div>
+                  );
+                })}
+              </div>
+            )}
+          </form.Field>
 
-          <div
-            className="animate-appear"
-            style={{ "--appear-delay": "160ms" } as React.CSSProperties}
-          >
-            <form.Field
-              name="confirm_password"
-              validators={{
-                onChangeListenTo: ["password"],
-                onChange: ({ value, fieldApi }) => {
-                  if (value !== fieldApi.form.getFieldValue("password")) {
-                    return "Passwords do not match";
-                  }
-                },
-                onBlur: ({ value, fieldApi }) => {
-                  if (value !== fieldApi.form.getFieldValue("password")) {
-                    return "Passwords do not match";
-                  }
-                },
-              }}
-            >
-              {(field) => (
-                <div className="space-y-2">
-                  <Label htmlFor={field.name}>Confirm Password</Label>
-                  <Input
-                    id={field.name}
-                    name={field.name}
-                    type="password"
-                    placeholder="Confirm new password"
-                    value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                  />
-                  {field.state.meta.errors.map((err) => {
-                    const errorMessage =
-                      typeof err === "string" ? err : err?.message || "Invalid input";
-                    return (
-                      <p key={errorMessage} className="text-red-500 text-sm">
-                        {errorMessage}
-                      </p>
-                    );
-                  })}
-                </div>
-              )}
-            </form.Field>
-          </div>
-
-          <div
-            className="animate-appear"
-            style={{ "--appear-delay": "240ms" } as React.CSSProperties}
-          >
-            <form.Subscribe>
-              {(state) => (
-                <Button
-                  type="submit"
-                  className="w-full active:scale-[0.97] transition-transform duration-150"
-                  style={{ transitionTimingFunction: "cubic-bezier(0.23, 1, 0.32, 1)" }}
-                  disabled={!state.canSubmit || state.isSubmitting}
-                >
-                  {state.isSubmitting ? (
-                    <HugeiconsIcon icon={Loading03Icon} className="animate-spin" />
-                  ) : (
-                    "Reset Password"
-                  )}
-                </Button>
-              )}
-            </form.Subscribe>
-          </div>
+          <form.Subscribe>
+            {(state) => (
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={!state.canSubmit || state.isSubmitting}
+              >
+                {state.isSubmitting ? (
+                  <HugeiconsIcon icon={Loading03Icon} className="animate-spin" />
+                ) : (
+                  "Reset Password"
+                )}
+              </Button>
+            )}
+          </form.Subscribe>
         </form>
-        <div
-          className="text-center text-sm animate-appear"
-          style={{ "--appear-delay": "300ms" } as React.CSSProperties}
-        >
+        <div className="text-center text-sm">
           Remember your password?{" "}
           <BackLink
             to="/login"
