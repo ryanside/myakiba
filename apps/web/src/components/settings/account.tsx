@@ -1,5 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading03Icon } from "@hugeicons/core-free-icons";
+import { useQuery } from "@tanstack/react-query";
+import { getAccountType } from "@/queries/settings";
 import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { useForm } from "@tanstack/react-form";
@@ -21,6 +23,16 @@ const PASSWORD_FIELDS = [
 ] as const;
 
 export function Account() {
+  const { data, isPending, isError, error } = useQuery({
+    queryKey: ["account-type"],
+    queryFn: getAccountType,
+    staleTime: 1000 * 60 * 5,
+    retry: false,
+  });
+  const hasCredentialAccount = data?.hasCredentialAccount ?? false;
+  const isFormDisabled = isPending || isError || !hasCredentialAccount;
+  const showOAuthNote = !isPending && !isError && !hasCredentialAccount;
+
   const form = useForm({
     defaultValues: {
       currentPassword: "",
@@ -44,8 +56,8 @@ export function Account() {
             toast.success("Password changed successfully");
             form.reset();
           },
-          onError: (error) => {
-            toast.error(error.error.message || "Failed to change password");
+          onError: (changePasswordError) => {
+            toast.error(changePasswordError.error.message || "Failed to change password");
           },
         },
       );
@@ -61,6 +73,16 @@ export function Account() {
 
   return (
     <SettingsSection title="Change Password">
+      {showOAuthNote && (
+        <p className="text-sm text-muted-foreground mb-4">
+          Password is managed by your sign-in provider.
+        </p>
+      )}
+      {isError && (
+        <p className="text-sm text-destructive text-pretty mb-4">
+          Failed to load account settings: {error?.message}
+        </p>
+      )}
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -82,6 +104,7 @@ export function Account() {
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
                   placeholder={placeholder}
+                  disabled={isFormDisabled}
                 />
                 <FieldError errors={field.state.meta.errors} />
               </div>
@@ -91,7 +114,10 @@ export function Account() {
 
         <form.Subscribe>
           {(state) => (
-            <Button type="submit" disabled={!state.canSubmit || state.isSubmitting}>
+            <Button
+              type="submit"
+              disabled={isFormDisabled || !state.canSubmit || state.isSubmitting}
+            >
               {state.isSubmitting ? (
                 <>
                   <HugeiconsIcon icon={Loading03Icon} className="mr-2 size-4 animate-spin" />

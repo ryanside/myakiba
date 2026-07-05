@@ -4,7 +4,8 @@ import { useNavigate } from "@tanstack/react-router";
 import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { useForm } from "@tanstack/react-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getAccountType } from "@/queries/settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,9 +23,17 @@ import * as z from "zod";
 import { app } from "@/lib/treaty-client";
 import { SettingsSection } from "./settings-section";
 
-export function DeleteAccount({ hasCredentialAccount }: { hasCredentialAccount: boolean }) {
+export function DeleteAccount() {
+  const { data, isPending, isError, error } = useQuery({
+    queryKey: ["account-type"],
+    queryFn: getAccountType,
+    staleTime: 1000 * 60 * 5,
+    retry: false,
+  });
+  const hasCredentialAccount = data?.hasCredentialAccount ?? false;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const isTriggerDisabled = isPending || isError;
 
   const signOutAndRedirect = () => {
     void authClient.signOut({
@@ -45,22 +54,22 @@ export function DeleteAccount({ hasCredentialAccount }: { hasCredentialAccount: 
 
   const deleteAccountMutation = useMutation({
     mutationFn: async (confirmationPhrase: string) => {
-      const { data, error } = await app.api.settings.account.delete({
+      const { data: deleteResult, error: deleteError } = await app.api.settings.account.delete({
         confirmationPhrase,
       });
-      if (error) {
-        if (error.status === 422) {
-          throw new Error(error.value.message || "Failed to delete account");
+      if (deleteError) {
+        if (deleteError.status === 422) {
+          throw new Error(deleteError.value.message || "Failed to delete account");
         }
-        throw new Error(error.value || "Failed to delete account");
+        throw new Error(deleteError.value || "Failed to delete account");
       }
-      return data;
+      return deleteResult;
     },
     onSuccess: () => {
       completeAccountDeletion();
     },
-    onError: (error) => {
-      toast.error(error.message || "Failed to delete account");
+    onError: (mutationError) => {
+      toast.error(mutationError.message || "Failed to delete account");
     },
   });
 
@@ -77,8 +86,8 @@ export function DeleteAccount({ hasCredentialAccount }: { hasCredentialAccount: 
             onSuccess: () => {
               completeAccountDeletion();
             },
-            onError: (error) => {
-              toast.error(error.error.message || "Failed to delete account");
+            onError: (authError) => {
+              toast.error(authError.error.message || "Failed to delete account");
             },
           },
         );
@@ -90,10 +99,16 @@ export function DeleteAccount({ hasCredentialAccount }: { hasCredentialAccount: 
 
   return (
     <SettingsSection title="Delete Account">
+      {isError && (
+        <p className="text-sm text-destructive text-pretty mb-4">
+          Failed to load account settings: {error?.message}
+        </p>
+      )}
       <Dialog>
         <DialogTrigger
+          disabled={isTriggerDisabled}
           render={
-            <Button variant="destructive">
+            <Button variant="destructive" disabled={isTriggerDisabled}>
               <HugeiconsIcon icon={Delete02Icon} className="size-4" />
               Delete Account
             </Button>
