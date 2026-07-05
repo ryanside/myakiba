@@ -2,11 +2,15 @@ import { createContext, Fragment, useContext } from "react";
 import type { ReactNode } from "react";
 import { flexRender } from "@tanstack/react-table";
 import type { Row, RowData, Table as TanStackTable } from "@tanstack/react-table";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+
+const DEFAULT_SKELETON_ROW_COUNT = 10;
 
 interface DataTableContextValue<TData extends RowData> {
   readonly table: TanStackTable<TData>;
   readonly isLoading: boolean;
+  readonly skeletonRowCount: number;
   readonly empty: ReactNode;
 }
 
@@ -25,17 +29,20 @@ function useDataTable<TData extends RowData>(): DataTableContextValue<TData> {
 function Root<TData extends RowData>({
   table,
   isLoading = false,
+  skeletonRowCount = DEFAULT_SKELETON_ROW_COUNT,
   empty,
   children,
 }: {
   readonly table: TanStackTable<TData>;
   readonly isLoading?: boolean;
+  readonly skeletonRowCount?: number;
   readonly empty: ReactNode;
   readonly children: ReactNode;
 }): ReactNode {
   const value: DataTableContextValue<TData> = {
     table,
     isLoading,
+    skeletonRowCount,
     empty,
   };
 
@@ -95,8 +102,25 @@ function Body<TData extends RowData>({
   readonly getRowClassName?: (row: Row<TData>) => string | undefined;
   readonly getCellClassName?: (row: Row<TData>, columnId: string) => string | undefined;
 }): ReactNode {
-  const { table, empty } = useDataTable<TData>();
+  const { table, empty, isLoading, skeletonRowCount } = useDataTable<TData>();
   const rows = table.getRowModel().rows;
+  const columns = table.getVisibleFlatColumns();
+
+  if (isLoading && rows.length === 0) {
+    return (
+      <tbody>
+        {Array.from({ length: skeletonRowCount }).map((_, rowIndex) => (
+          <tr key={rowIndex} className="border-b border-border/50">
+            {columns.map((column) => (
+              <td key={column.id} className="p-1.5">
+                <Skeleton className="h-4 w-full" />
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    );
+  }
 
   if (rows.length === 0) {
     return (
@@ -119,7 +143,7 @@ function Body<TData extends RowData>({
             <tr
               onClick={onRowClick ? () => onRowClick(row) : undefined}
               className={cn(
-                "border-b border-border/50 hover:bg-muted/40",
+                "animate-data-in border-b border-border/50 hover:bg-muted/40",
                 isInteractive && "cursor-pointer",
                 getRowClassName?.(row),
               )}

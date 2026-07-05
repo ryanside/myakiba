@@ -6,12 +6,12 @@ import { ANALYTICS_SECTIONS, DEFAULT_LIMIT } from "@myakiba/contracts/shared/con
 import { Search01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { z } from "zod";
-import Loader from "@/components/loader";
 import { SectionTable } from "@/components/analytics/section-table";
 import { SectionShell, sectionGradientColor, sectionLabel } from "@/components/analytics/section";
 import { DebouncedInput } from "@/components/debounced-input";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { BackLink } from "@/components/ui/back-link";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useFilters } from "@/hooks/use-filters";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { getAnalyticsSection } from "@/queries/analytics";
@@ -24,6 +24,8 @@ const sectionSearchSchema = z.object({
   limit: z.coerce.number().int().positive().optional(),
   offset: z.coerce.number().int().min(0).optional(),
 });
+
+const KPI_LABELS = ["Unique", "Total Items", "Total Spent", "Avg. Spent"] as const;
 
 export const Route = createFileRoute("/(app)/analytics_/$sectionName")({
   validateSearch: sectionSearchSchema,
@@ -76,9 +78,25 @@ function RouteComponent(): ReactNode {
 
   const label = sectionLabel(sectionName);
   const gradientColor = sectionGradientColor(sectionName);
+  const isLoading = isPending || isFetching;
+
+  const kpis = data
+    ? [
+        { label: KPI_LABELS[0], value: String(data.kpis.uniqueCount) },
+        { label: KPI_LABELS[1], value: String(data.kpis.totalItemCount) },
+        {
+          label: KPI_LABELS[2],
+          value: formatCurrencyFromMinorUnits(data.kpis.totalSpent, currency, locale),
+        },
+        {
+          label: KPI_LABELS[3],
+          value: formatCurrencyFromMinorUnits(data.kpis.averageSpent, currency, locale),
+        },
+      ]
+    : KPI_LABELS.map((kpiLabel) => ({ label: kpiLabel, value: "" }));
 
   return (
-    <div className="flex flex-col gap-6 mx-auto max-w-352">
+    <div className="flex flex-col gap-6 mx-auto max-w-4xl">
       <div className="flex flex-col gap-4">
         <BackLink to="/analytics" text="Back" font="orbitron" />
         <h1 className="text-2xl font-orbitron font-medium lowercase">
@@ -87,34 +105,21 @@ function RouteComponent(): ReactNode {
         </h1>
       </div>
 
-      {isPending && <Loader className="h-64" />}
-
-      {isError && (
+      {isError ? (
         <div className="flex flex-col items-center justify-center h-64 gap-y-4">
           <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
         </div>
-      )}
-
-      {data && (
+      ) : (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-2">
-            {[
-              { label: "Unique", value: data.kpis.uniqueCount },
-              { label: "Total Items", value: data.kpis.totalItemCount },
-              {
-                label: "Total Spent",
-                value: formatCurrencyFromMinorUnits(data.kpis.totalSpent, currency, locale),
-              },
-              {
-                label: "Avg. Spent",
-                value: formatCurrencyFromMinorUnits(data.kpis.averageSpent, currency, locale),
-              },
-            ].map((kpi) => (
-              <p
-                key={kpi.label}
-                className="animate-data-in text-md text-muted-foreground font-orbitron lowercase"
-              >
-                {kpi.label}: <span className="font-medium text-foreground">{kpi.value}</span>
+            {kpis.map((kpi) => (
+              <p key={kpi.label} className="text-md text-muted-foreground font-orbitron lowercase">
+                {kpi.label}:{" "}
+                {isPending ? (
+                  <Skeleton className="inline-block h-5 w-16 align-middle" />
+                ) : (
+                  <span className="animate-data-in font-medium text-foreground">{kpi.value}</span>
+                )}
               </p>
             ))}
           </div>
@@ -139,26 +144,28 @@ function RouteComponent(): ReactNode {
 
             <div className="relative">
               <SectionTable
-                rows={data.rows}
+                rows={data?.rows ?? []}
                 sectionName={sectionName}
                 offset={offset}
-                isLoading={isFetching && !isPending}
+                isLoading={isLoading}
               />
             </div>
 
             <div className="relative flex items-center justify-between gap-3 pt-2">
-              {data.totalCount > 0 ? (
+              {data && data.totalCount > 0 ? (
                 <p className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
                   Showing {offset + 1}–{Math.min(offset + limit, data.totalCount)} of{" "}
                   {data.totalCount}
                 </p>
               ) : null}
-              <DataTablePagination
-                totalCount={data.totalCount}
-                limit={limit}
-                offset={offset}
-                onOffsetChange={(newOffset) => setFilters({ offset: newOffset })}
-              />
+              {data ? (
+                <DataTablePagination
+                  totalCount={data.totalCount}
+                  limit={limit}
+                  offset={offset}
+                  onOffsetChange={(newOffset) => setFilters({ offset: newOffset })}
+                />
+              ) : null}
             </div>
           </SectionShell>
         </>

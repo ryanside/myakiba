@@ -27,11 +27,13 @@ export function LeaderboardTable<TRow extends Record<string, CellValue>>({
   columns,
   formatCell,
   getRowNavigation,
+  isLoading = false,
 }: {
   readonly rows: readonly TRow[];
   readonly columns: readonly string[];
   readonly formatCell?: (column: string, value: CellValue) => CellValue;
   readonly getRowNavigation?: (row: TRow) => RowNavigation | undefined;
+  readonly isLoading?: boolean;
 }): ReactNode {
   const navigate = useNavigate();
   const tableData = useMemo(() => [...rows], [rows]);
@@ -85,27 +87,30 @@ export function LeaderboardTable<TRow extends Record<string, CellValue>>({
   return (
     <DataTable.Root
       table={table}
+      isLoading={isLoading}
       empty={<p className="text-muted-foreground text-xs italic">No data</p>}
     >
-      <DataTable.Table>
-        <DataTable.Header />
-        <DataTable.Body
-          onRowClick={(row) => {
-            const originalRow = row.original as TRow;
-            const rowNav = getRowNavigation?.(originalRow);
+      <DataTable.LoadingSurface>
+        <DataTable.Table>
+          <DataTable.Header />
+          <DataTable.Body
+            onRowClick={(row) => {
+              const originalRow = row.original as TRow;
+              const rowNav = getRowNavigation?.(originalRow);
 
-            if (rowNav) {
-              navigate({ to: rowNav.to, search: rowNav.search });
+              if (rowNav) {
+                navigate({ to: rowNav.to, search: rowNav.search });
+              }
+            }}
+            getRowClassName={(row) =>
+              !getRowNavigation?.(row.original as TRow) ? "cursor-default" : undefined
             }
-          }}
-          getRowClassName={(row) =>
-            !getRowNavigation?.(row.original as TRow) ? "cursor-default" : undefined
-          }
-          getCellClassName={(_, columnId) =>
-            columnId === ROW_NUMBER_COLUMN_ID ? "text-muted-foreground" : undefined
-          }
-        />
-      </DataTable.Table>
+            getCellClassName={(_, columnId) =>
+              columnId === ROW_NUMBER_COLUMN_ID ? "text-muted-foreground" : undefined
+            }
+          />
+        </DataTable.Table>
+      </DataTable.LoadingSurface>
     </DataTable.Root>
   );
 }
