@@ -11,6 +11,14 @@ const loginSearchSchema = z.object({
   redirect: z.string().optional(),
 });
 
+function resolvePostAuthRedirect(redirectTo: string | undefined): string {
+  if (!redirectTo?.startsWith("/") || redirectTo.startsWith("//")) {
+    return "/dashboard";
+  }
+
+  return redirectTo;
+}
+
 export const Route = createFileRoute("/(auth)/login")({
   component: RouteComponent,
   validateSearch: loginSearchSchema,
@@ -25,18 +33,19 @@ export const Route = createFileRoute("/(auth)/login")({
       },
     ],
   }),
-  beforeLoad: async () => {
+  beforeLoad: async ({ search }) => {
     const { data: session } = await authClient.getSession();
     if (session) {
       throw redirect({
-        to: "/dashboard",
+        href: resolvePostAuthRedirect(search.redirect),
       });
     }
   },
 });
 
 function RouteComponent() {
-  const { view, email } = Route.useSearch();
+  const { view, email, redirect: searchRedirect } = Route.useSearch();
+  const redirectTo = resolvePostAuthRedirect(searchRedirect);
 
   if (view === "verify-email") {
     return (
@@ -48,7 +57,7 @@ function RouteComponent() {
 
   return (
     <AuthLayout>
-      <SignInForm />
+      <SignInForm redirectTo={redirectTo} />
     </AuthLayout>
   );
 }

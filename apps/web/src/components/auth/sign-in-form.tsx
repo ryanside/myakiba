@@ -2,7 +2,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { authClient } from "@/lib/auth-client";
 import { useForm } from "@tanstack/react-form";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "../ui/button";
@@ -35,20 +35,24 @@ function GoogleIcon() {
   );
 }
 
-export default function SignInForm() {
-  const navigate = useNavigate();
+function getGoogleCallbackUrl(redirectTo: string): string {
+  if (import.meta.env.PROD) {
+    return redirectTo;
+  }
 
+  return new URL(redirectTo, "http://localhost:3001").toString();
+}
+
+export default function SignInForm({ redirectTo }: { redirectTo: string }) {
   const handleGoogleAuth = async () => {
     await authClient.signIn.social(
       {
         provider: "google",
-        callbackURL: import.meta.env.PROD ? "/dashboard" : "http://localhost:3001/dashboard",
+        callbackURL: getGoogleCallbackUrl(redirectTo),
       },
       {
         onSuccess: () => {
-          navigate({
-            to: "/dashboard",
-          });
+          window.location.assign(redirectTo);
         },
         onError: (error) => {
           toast.error(error.error.message || error.error.statusText);
@@ -74,9 +78,7 @@ export default function SignInForm() {
             "x-captcha-response": value.turnstileToken,
           },
           onSuccess: () => {
-            navigate({
-              to: "/dashboard",
-            });
+            window.location.assign(redirectTo);
           },
           onError: (error) => {
             if (error.error.status === 403) {
