@@ -44,7 +44,6 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { ScrollArea } from "../ui/scroll-area";
-import { Scroller } from "../ui/scroller";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import type { Currency, OrderStatus, ShippingMethod } from "@myakiba/contracts/shared/types";
 import { getCurrencyLocale } from "@/lib/locale";
@@ -401,7 +400,7 @@ function UnifiedItemMoveFormContent({
               newOrderForm.handleSubmit();
             }}
           >
-            <Scroller className="w-full max-h-[60vh] py-2">
+            <div className="scroll-fade overflow-y-auto w-full max-h-[60vh] py-2">
               <div className="flex flex-col gap-3 px-4">
                 <FormSection title="Basics">
                   <div className="grid grid-cols-2 gap-3">
@@ -742,7 +741,7 @@ function UnifiedItemMoveFormContent({
                   />
                 </FormSection>
               </div>
-            </Scroller>
+            </div>
             <DialogFooter className="px-4! mx-0">
               <newOrderForm.Subscribe
                 selector={(state) => [state.isSubmitting]}

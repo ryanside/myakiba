@@ -34,7 +34,6 @@ import { Badge } from "@/components/reui/badge";
 import { FormSection } from "@/components/ui/form-section";
 import { majorStringToMinorUnits, minorUnitsToMajorString } from "@myakiba/utils/currency";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
-import { Scroller } from "../ui/scroller";
 import {
   COLLECTION_STATUSES,
   SHIPPING_METHODS,
@@ -119,7 +118,7 @@ function CollectionItemFormContent({
           <SheetTitle>Edit Item</SheetTitle>
           <SheetDescription>{itemData.itemTitle}</SheetDescription>
         </SheetHeader>
-        <Scroller className="max-h-[70vh] px-2">
+        <div className="scroll-fade overflow-y-auto max-h-[70vh] px-2">
           <div className="flex flex-col gap-3 p-2">
             <FormSection title="Basics">
               <div className="grid grid-cols-2 gap-3">
@@ -596,7 +595,7 @@ function CollectionItemFormContent({
               />
             </FormSection>
           </div>
-        </Scroller>
+        </div>
         <SheetFooter className="flex flex-row w-full">
           <form.Subscribe
             selector={(state) => [state.isSubmitting]}
