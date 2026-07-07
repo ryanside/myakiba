@@ -84,7 +84,8 @@ services:
       context: .
       dockerfile: apps/worker/Dockerfile
     environment:
-      - HTTP_PROXY=${HTTP_PROXY}
+      - WORKER_PROXY_URL=${WORKER_PROXY_URL}
+      - IMAGE_BASE_URL=${IMAGE_BASE_URL}
       - DATABASE_URL=${DATABASE_URL}
       - AWS_BUCKET_NAME=${AWS_BUCKET_NAME}
       - AWS_BUCKET_REGION=${AWS_BUCKET_REGION}

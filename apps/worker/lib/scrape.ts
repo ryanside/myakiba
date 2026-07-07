@@ -29,6 +29,12 @@ const s3Client = new S3Client({
   region: env.AWS_BUCKET_REGION,
 });
 
+// Prod serves the bucket through a CDN (IMAGE_BASE_URL); self-hosted
+// deployments fall back to the bucket's native S3 URL.
+const imageBaseUrl = (
+  env.IMAGE_BASE_URL ?? `https://${env.AWS_BUCKET_NAME}.s3.${env.AWS_BUCKET_REGION}.amazonaws.com`
+).replace(/\/$/, "");
+
 export const scrapeImage = async ({
   imageUrl,
   log,
@@ -76,7 +82,7 @@ export const scrapeImage = async ({
         });
       }
 
-      const imageS3Url = `https://static.myakiba.app/${filename}`;
+      const imageS3Url = `${imageBaseUrl}/${filename}`;
 
       return imageS3Url;
     } catch (error) {

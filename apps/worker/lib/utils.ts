@@ -36,7 +36,7 @@ const formatFailureMessage = (error?: Error | null): string => {
 };
 
 export const createFetchOptions = (image = false) => ({
-  proxy: env.HTTP_PROXY,
+  proxy: env.WORKER_PROXY_URL,
   tls: {
     rejectUnauthorized: false,
   },
