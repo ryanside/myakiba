@@ -50,6 +50,7 @@ import {
 import { SHIPPING_METHODS, ORDER_STATUSES, CONDITIONS } from "@myakiba/contracts/shared/constants";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import { getCurrencyLocale } from "@/lib/locale";
+import { SyncNotice } from "@/components/sync/sync-notice";
 
 export default function SyncOrderForm({
   handleSyncOrderSubmit,
@@ -143,6 +144,7 @@ export default function SyncOrderForm({
         }}
         className="space-y-3 w-full"
       >
+        <SyncNotice />
         <div className="flex flex-row gap-2 items-center">
           <Label className="text-lg text-foreground">Order Details</Label>
           <orderForm.Subscribe

@@ -40,6 +40,7 @@ import { majorStringToMinorUnits } from "@myakiba/utils/currency";
 import { createDefaultSyncFormOrderItem, extractMfcItemId } from "@/lib/sync";
 import { getCurrencyLocale } from "@/lib/locale";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
+import { SyncNotice } from "@/components/sync/sync-notice";
 
 type SyncOrderItemFormProps = {
   readonly orderId: string;
@@ -95,6 +96,7 @@ export default function SyncOrderItemForm({
       }}
       className="space-y-3 w-full"
     >
+      <SyncNotice />
       <div className="flex flex-row gap-2">
         <Label className="text-lg text-foreground">Order Items</Label>
         <orderItemForm.Subscribe
