@@ -51,6 +51,8 @@ services:
     build:
       context: .
       dockerfile: apps/server/Dockerfile
+      args:
+        SOURCE_COMMIT: ${SOURCE_COMMIT:-dev}
     ports:
       - "3000:3000"
     environment:
