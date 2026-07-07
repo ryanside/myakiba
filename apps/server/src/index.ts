@@ -43,12 +43,7 @@ log.info({
   nodeEnv: process.env.NODE_ENV,
 });
 
-// Better Auth schema generation triggers the full auth context init at module
-// scope; a hang there would block startup with zero output. Only block on it
-// when explicitly enabled (e.g. local/dev), never by default in production.
-const includeAuthDocs: boolean = process.env.OPENAPI_AUTH_DOCS
-  ? process.env.OPENAPI_AUTH_DOCS === "true"
-  : process.env.NODE_ENV !== "production";
+const includeAuthDocs: boolean = process.env.OPENAPI_AUTH_DOCS === "true";
 
 const authDocs = includeAuthDocs
   ? {
