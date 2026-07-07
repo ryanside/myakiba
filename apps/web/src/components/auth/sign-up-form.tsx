@@ -7,10 +7,12 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { PasswordInput } from "../ui/password-input";
 import { Label } from "../ui/label";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { MyAkibaLogo } from "../myakiba-logo";
 import { env } from "@myakiba/env/web";
+import { getAuthRedirectUrl } from "@/lib/auth-redirect-url";
 
 function GoogleIcon() {
   return (
@@ -42,7 +44,7 @@ export default function SignUpForm() {
     await authClient.signIn.social(
       {
         provider: "google",
-        callbackURL: import.meta.env.PROD ? "/dashboard" : "http://localhost:3001/dashboard",
+        callbackURL: getAuthRedirectUrl("/dashboard"),
       },
       {
         onSuccess: () => {
@@ -71,9 +73,7 @@ export default function SignUpForm() {
           password: value.password,
           name: value.username,
           username: value.username,
-          callbackURL: import.meta.env.PROD
-            ? "https://myakiba.app/dashboard"
-            : "http://localhost:3001/dashboard",
+          callbackURL: getAuthRedirectUrl("/dashboard"),
         },
         {
           headers: {
@@ -222,10 +222,9 @@ export default function SignUpForm() {
           {(field) => (
             <div className="space-y-2">
               <Label htmlFor={field.name}>Password</Label>
-              <Input
+              <PasswordInput
                 id={field.name}
                 name={field.name}
-                type="password"
                 value={field.state.value}
                 onBlur={field.handleBlur}
                 onChange={(e) => field.handleChange(e.target.value)}

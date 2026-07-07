@@ -7,7 +7,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { BackLink } from "@/components/ui/back-link";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
 import { AuthLayout } from "@/components/auth/auth-layout";
@@ -122,10 +122,9 @@ function RouteComponent() {
             {(field) => (
               <div className="space-y-2">
                 <Label htmlFor={field.name}>New Password</Label>
-                <Input
+                <PasswordInput
                   id={field.name}
                   name={field.name}
-                  type="password"
                   placeholder="Enter new password"
                   value={field.state.value}
                   onBlur={field.handleBlur}
@@ -159,10 +158,9 @@ function RouteComponent() {
             {(field) => (
               <div className="space-y-2">
                 <Label htmlFor={field.name}>Confirm Password</Label>
-                <Input
+                <PasswordInput
                   id={field.name}
                   name={field.name}
-                  type="password"
                   placeholder="Confirm new password"
                   value={field.state.value}
                   onBlur={field.handleBlur}
