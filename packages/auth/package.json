@@ -9,6 +9,7 @@
     }
   },
   "dependencies": {
+    "@better-auth/infra": "^0.3.4",
     "@myakiba/db": "workspace:*",
     "@myakiba/env": "workspace:*",
     "@myakiba/redis": "workspace:*",
