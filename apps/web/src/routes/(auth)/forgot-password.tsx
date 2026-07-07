@@ -14,6 +14,7 @@ import { MyAkibaLogo } from "@/components/myakiba-logo";
 import { useState } from "react";
 import { env } from "@myakiba/env/web";
 import { AuthLayout } from "@/components/auth/auth-layout";
+import { getAuthRedirectUrl } from "@/lib/auth-redirect-url";
 
 export const Route = createFileRoute("/(auth)/forgot-password")({
   component: RouteComponent,
@@ -43,9 +44,7 @@ function RouteComponent() {
     await authClient.requestPasswordReset(
       {
         email,
-        redirectTo: import.meta.env.PROD
-          ? "https://myakiba.app/reset-password"
-          : "http://localhost:3001/reset-password",
+        redirectTo: getAuthRedirectUrl("/reset-password"),
       },
       {
         headers: {

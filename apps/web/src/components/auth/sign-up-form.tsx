@@ -11,6 +11,7 @@ import { Label } from "../ui/label";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { MyAkibaLogo } from "../myakiba-logo";
 import { env } from "@myakiba/env/web";
+import { getAuthRedirectUrl } from "@/lib/auth-redirect-url";
 
 function GoogleIcon() {
   return (
@@ -42,7 +43,7 @@ export default function SignUpForm() {
     await authClient.signIn.social(
       {
         provider: "google",
-        callbackURL: import.meta.env.PROD ? "/dashboard" : "http://localhost:3001/dashboard",
+        callbackURL: getAuthRedirectUrl("/dashboard"),
       },
       {
         onSuccess: () => {
@@ -71,9 +72,7 @@ export default function SignUpForm() {
           password: value.password,
           name: value.username,
           username: value.username,
-          callbackURL: import.meta.env.PROD
-            ? "https://myakiba.app/dashboard"
-            : "http://localhost:3001/dashboard",
+          callbackURL: getAuthRedirectUrl("/dashboard"),
         },
         {
           headers: {

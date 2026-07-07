@@ -11,6 +11,7 @@ import { Label } from "../ui/label";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { MyAkibaLogo } from "../myakiba-logo";
 import { env } from "@myakiba/env/web";
+import { getAuthRedirectUrl } from "@/lib/auth-redirect-url";
 
 function GoogleIcon() {
   return (
@@ -35,24 +36,16 @@ function GoogleIcon() {
   );
 }
 
-function getGoogleCallbackUrl(redirectTo: string): string {
-  if (import.meta.env.PROD) {
-    return redirectTo;
-  }
-
-  return new URL(redirectTo, "http://localhost:3001").toString();
-}
-
 export default function SignInForm({ redirectTo }: { redirectTo: string }) {
   const handleGoogleAuth = async () => {
     await authClient.signIn.social(
       {
         provider: "google",
-        callbackURL: getGoogleCallbackUrl(redirectTo),
+        callbackURL: getAuthRedirectUrl(redirectTo),
       },
       {
         onSuccess: () => {
-          window.location.assign(redirectTo);
+          window.location.assign(getAuthRedirectUrl(redirectTo));
         },
         onError: (error) => {
           toast.error(error.error.message || error.error.statusText);
@@ -78,7 +71,7 @@ export default function SignInForm({ redirectTo }: { redirectTo: string }) {
             "x-captcha-response": value.turnstileToken,
           },
           onSuccess: () => {
-            window.location.assign(redirectTo);
+            window.location.assign(getAuthRedirectUrl(redirectTo));
           },
           onError: (error) => {
             if (error.error.status === 403) {
