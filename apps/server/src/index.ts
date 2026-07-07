@@ -37,6 +37,28 @@ const drain = env.POSTHOG_API_KEY
   : undefined;
 initLogger({ env: { service: "api" } });
 
+log.info({
+  msg: "server booting",
+  buildId: env.BUILD_ID,
+  nodeEnv: process.env.NODE_ENV,
+});
+
+// Better Auth schema generation triggers the full auth context init at module
+// scope; a hang there would block startup with zero output. Only block on it
+// when explicitly enabled (e.g. local/dev), never by default in production.
+const includeAuthDocs: boolean = process.env.OPENAPI_AUTH_DOCS
+  ? process.env.OPENAPI_AUTH_DOCS === "true"
+  : process.env.NODE_ENV !== "production";
+
+const authDocs = includeAuthDocs
+  ? {
+      components: await OpenAPI.components,
+      paths: await OpenAPI.getPaths(),
+    }
+  : undefined;
+
+log.info({ msg: "auth docs resolved", includeAuthDocs });
+
 const resolveServerDistPath = (): string => {
   const fromEnv: string | undefined = process.env.STATIC_ASSETS_DIR;
 
@@ -92,10 +114,7 @@ const app = new Elysia()
       mapJsonSchema: {
         zod: z.toJSONSchema,
       },
-      documentation: {
-        components: await OpenAPI.components,
-        paths: await OpenAPI.getPaths(),
-      },
+      ...(authDocs ? { documentation: authDocs } : {}),
     }),
   )
   .get("/api/auth/*", ({ request }) => auth.handler(request))
