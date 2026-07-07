@@ -17,6 +17,9 @@ RUN bun install --frozen-lockfile --ignore-scripts --linker=hoisted
 # Build stage - compile the application
 FROM base AS build
 WORKDIR /app
+# Bun inlines process.env.NODE_ENV at bundle time; without this the compiled
+# binary is permanently in development mode regardless of runtime env.
+ENV NODE_ENV=production
 COPY --from=install /app/node_modules ./node_modules
 COPY --from=prune /app/out/full/ .
 
