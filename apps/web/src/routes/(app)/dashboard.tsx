@@ -144,11 +144,6 @@ function RouteComponent(): ReactElement {
             </TabsList>
           </Tabs>
         </div>
-        <p className="text-muted-foreground text-sm font-normal">
-          {activeTab === "overview"
-            ? "Here's your collection and orders at a glance"
-            : "Spending, releases, and orders for this month"}
-        </p>
       </div>
       {activeTab === "overview" && (
         <OverviewTab

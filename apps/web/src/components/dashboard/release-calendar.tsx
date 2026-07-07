@@ -9,7 +9,6 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame";
-import { Scroller } from "@/components/ui/scroller";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/reui/badge";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
@@ -184,11 +183,11 @@ function ReleaseCalendar({
           if (isError) return <ReleaseCalendarError message={error.message} onRetry={refetch} />;
           if (grouped.length > 0) {
             return (
-              <Scroller className="animate-data-in -mx-(--frame-panel-p) max-h-56 pb-6 [--data-in-delay:60ms]">
+              <div className="scroll-fade overflow-y-auto animate-data-in -mx-(--frame-panel-p) max-h-56 pb-6 [--data-in-delay:60ms]">
                 {grouped.map(([dateKey, items]) => (
                   <DateGroup key={dateKey} dateKey={dateKey} items={items} currency={currency} />
                 ))}
-              </Scroller>
+              </div>
             );
           }
           return <ReleaseCalendarEmpty />;
@@ -280,14 +279,9 @@ function ReleaseCard({
         <p className="truncate text-sm leading-tight font-medium">{item.title}</p>
         <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
           {item.category != null && (
-            <>
-              <span
-                className="size-1.5 shrink-0 rounded-full"
-                style={{ backgroundColor: categoryColor }}
-                aria-hidden
-              />
-              <span className="truncate">{item.category}</span>
-            </>
+            <span className="truncate" style={{ color: categoryColor }}>
+              {item.category}
+            </span>
           )}
           {item.price != null && item.price > 0 && item.priceCurrency?.trim() && (
             <>

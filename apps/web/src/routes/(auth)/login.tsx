@@ -1,10 +1,8 @@
 import SignInForm from "@/components/auth/sign-in-form";
-import SignUpForm from "@/components/auth/sign-up-form";
 import { AuthLayout } from "@/components/auth/auth-layout";
 import { VerifyEmailView } from "@/components/auth/verify-email-view";
 import { authClient } from "@/lib/auth-client";
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useState } from "react";
 import * as z from "zod";
 
 const loginSearchSchema = z.object({
@@ -12,6 +10,14 @@ const loginSearchSchema = z.object({
   email: z.email().optional(),
   redirect: z.string().optional(),
 });
+
+function resolvePostAuthRedirect(redirectTo: string | undefined): string {
+  if (!redirectTo?.startsWith("/") || redirectTo.startsWith("//")) {
+    return "/dashboard";
+  }
+
+  return redirectTo;
+}
 
 export const Route = createFileRoute("/(auth)/login")({
   component: RouteComponent,
@@ -27,19 +33,19 @@ export const Route = createFileRoute("/(auth)/login")({
       },
     ],
   }),
-  beforeLoad: async () => {
+  beforeLoad: async ({ search }) => {
     const { data: session } = await authClient.getSession();
     if (session) {
       throw redirect({
-        to: "/dashboard",
+        href: resolvePostAuthRedirect(search.redirect),
       });
     }
   },
 });
 
 function RouteComponent() {
-  const { view, email } = Route.useSearch();
-  const [showSignIn, setShowSignIn] = useState(true);
+  const { view, email, redirect: searchRedirect } = Route.useSearch();
+  const redirectTo = resolvePostAuthRedirect(searchRedirect);
 
   if (view === "verify-email") {
     return (
@@ -51,11 +57,7 @@ function RouteComponent() {
 
   return (
     <AuthLayout>
-      {showSignIn ? (
-        <SignInForm onSwitchToSignUp={() => setShowSignIn(false)} />
-      ) : (
-        <SignUpForm onSwitchToSignIn={() => setShowSignIn(true)} />
-      )}
+      <SignInForm redirectTo={redirectTo} />
     </AuthLayout>
   );
 }

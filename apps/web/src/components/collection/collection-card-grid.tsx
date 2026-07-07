@@ -167,7 +167,6 @@ function CollectionCardActions({
               selectedItems={selectedItems}
               onMoveToExisting={onAddCollectionItemsToOrder}
               onMoveToNew={onAddCollectionItemsToNewOrder}
-              clearSelections={() => {}}
               currency={currency}
               intent="add"
             />

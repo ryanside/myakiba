@@ -1,12 +1,11 @@
-import { toast } from "sonner";
-import { Link } from "@tanstack/react-router";
 import type { SyncTerminalState } from "@myakiba/contracts/sync/schema";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { ArrowRight01Icon, GitCompareIcon } from "@hugeicons/core-free-icons";
+import { showPixelToast } from "@/components/ui/pixel-toast";
+import type { PixelToastAction, PixelToastVariant } from "@/components/ui/pixel-toast";
 
 type SyncToastState = SyncTerminalState | "queued";
 
-type SyncToastData = {
+export type SyncToastData = {
   readonly state: SyncToastState;
   readonly sessionId?: string;
   readonly message?: string;
@@ -15,95 +14,96 @@ type SyncToastData = {
   readonly newItems?: number;
 };
 
-const STATE_CONFIG: Record<SyncToastState, { readonly dot: string; readonly title: string }> = {
-  queued: { dot: "bg-warning", title: "Sync Queued" },
-  success: { dot: "bg-success", title: "Sync Complete" },
-  partial: { dot: "bg-warning", title: "Sync Partial" },
-  timeout: { dot: "bg-info", title: "Sync Timed Out" },
-  error: { dot: "bg-destructive", title: "Sync Failed" },
+const STATE_CONFIG: Record<SyncToastState, { readonly title: string }> = {
+  queued: { title: "Sync Queued" },
+  success: { title: "Sync Complete" },
+  partial: { title: "Sync Partial" },
+  timeout: { title: "Sync Timed Out" },
+  error: { title: "Sync Failed" },
 };
 
-function DetailRow({ label, value }: { readonly label: string; readonly value: string | number }) {
-  return (
-    <div className="flex items-center justify-between">
-      <span>{label}</span>
-      <span className="text-foreground font-medium">{value}</span>
-    </div>
-  );
+function stateToVariant(state: SyncToastState): PixelToastVariant {
+  switch (state) {
+    case "queued":
+      return "info";
+    case "success":
+      return "success";
+    case "partial":
+      return "warning";
+    case "timeout":
+      return "info";
+    case "error":
+      return "error";
+    default: {
+      const exhaustive: never = state;
+      return exhaustive;
+    }
+  }
 }
 
-function SyncToastContent({
-  toastId,
-  state,
-  sessionId,
-  message,
-  description,
-  existingItems,
-  newItems,
-}: SyncToastData & { readonly toastId: string | number }) {
+function buildSyncToastTitle(data: SyncToastData): string {
+  const hasCounts = data.existingItems !== undefined && data.newItems !== undefined;
+  const nothingToDo = hasCounts && data.existingItems + data.newItems === 0;
+  const { title } = STATE_CONFIG[data.state];
+
+  if (nothingToDo && data.state !== "queued") {
+    return "Already Synced";
+  }
+
+  return title;
+}
+
+function buildSyncToastDescription(data: SyncToastData): string | undefined {
+  const { state, message, description, existingItems, newItems } = data;
   const hasCounts = existingItems !== undefined && newItems !== undefined;
   const nothingToDo = hasCounts && existingItems + newItems === 0;
-  const { dot, title } = STATE_CONFIG[state];
-  const dismiss = () => toast.dismiss(toastId);
-  const linkClassName = cn(buttonVariants({ size: "xs", variant: "outline" }), "flex-1");
 
-  return (
-    <div className="bg-popover text-popover-foreground border-border flex w-[356px] flex-col gap-2 rounded-md border p-4 shadow-lg">
-      <div className="flex items-center gap-2">
-        <span className={cn("flex size-2 rounded-full", dot)} />
-        <p className="text-sm font-medium">
-          {nothingToDo && state !== "queued" ? "Already Synced" : title}
-        </p>
-      </div>
+  if (hasCounts) {
+    if (state === "queued") {
+      const parts = [`Processing ${newItems} items`];
+      if (existingItems > 0) {
+        parts.push(`${existingItems} already synced`);
+      }
+      return parts.join(" · ");
+    }
 
-      <div className="text-muted-foreground space-y-1 text-xs">
-        {(() => {
-          if (!hasCounts) {
-            return (
-              <>
-                {message && <p className="text-foreground">{message}</p>}
-                {description && <p>{description}</p>}
-              </>
-            );
-          }
-          if (state === "queued") {
-            return (
-              <>
-                <DetailRow label="Processing" value={`${newItems} items`} />
-                {existingItems > 0 && (
-                  <DetailRow label="Already synced" value={`${existingItems} items`} />
-                )}
-              </>
-            );
-          }
-          if (nothingToDo) return <p>All items are already in your collection.</p>;
-          return <DetailRow label="Items synced" value={existingItems + newItems} />;
-        })()}
-      </div>
+    if (nothingToDo) {
+      return "All items are already in your collection.";
+    }
 
-      <div className="mt-1 flex gap-2">
-        {sessionId !== undefined ? (
-          <Link
-            to="/sync/$id"
-            params={{ id: sessionId }}
-            onClick={dismiss}
-            className={linkClassName}
-          >
-            View Status
-          </Link>
-        ) : (
-          <Link to="/sync" onClick={dismiss} className={linkClassName}>
-            View History
-          </Link>
-        )}
-        <Button size="xs" onClick={dismiss} className="flex-1">
-          Dismiss
-        </Button>
-      </div>
-    </div>
-  );
+    return `${existingItems + newItems} items synced`;
+  }
+
+  if (message !== undefined && description !== undefined) {
+    return `${message} — ${description}`;
+  }
+
+  return message ?? description;
+}
+
+function buildSyncToastAction(data: SyncToastData): PixelToastAction {
+  const sessionId = data.sessionId;
+  if (sessionId !== undefined) {
+    return {
+      label: "View Status",
+      icon: ArrowRight01Icon,
+      to: "/sync/$id",
+      params: { id: sessionId },
+    };
+  }
+
+  return {
+    label: "View History",
+    icon: GitCompareIcon,
+    to: "/sync",
+  };
 }
 
 export function showSyncToast(data: SyncToastData): void {
-  toast.custom((id) => <SyncToastContent toastId={id} {...data} />);
+  showPixelToast({
+    title: buildSyncToastTitle(data),
+    description: buildSyncToastDescription(data),
+    variant: stateToVariant(data.state),
+    action: buildSyncToastAction(data),
+  });
 }

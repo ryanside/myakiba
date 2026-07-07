@@ -66,10 +66,7 @@ function RouteComponent() {
     return (
       <AuthLayout>
         <div className="flex flex-col gap-6">
-          <div
-            className="flex flex-col items-center justify-center gap-2 animate-appear"
-            style={{ "--appear-delay": "0ms" } as React.CSSProperties}
-          >
+          <div className="flex flex-col items-center justify-center gap-2">
             <Link to="/">
               <MyAkibaLogo size="full" className="size-28" />
             </Link>
@@ -77,10 +74,7 @@ function RouteComponent() {
               <h1 className="text-2xl font-medium">Check your email</h1>
             </div>
           </div>
-          <div
-            className="text-center space-y-4 animate-appear"
-            style={{ "--appear-delay": "80ms" } as React.CSSProperties}
-          >
+          <div className="text-center space-y-4">
             <div className="mx-auto size-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
               <HugeiconsIcon
                 icon={Mail01Icon}
@@ -96,10 +90,7 @@ function RouteComponent() {
               your spam folder.
             </p>
           </div>
-          <div
-            className="flex justify-center animate-appear"
-            style={{ "--appear-delay": "160ms" } as React.CSSProperties}
-          >
+          <div className="flex justify-center">
             <BackLink to="/login" text="Back to Login" font="sans" />
           </div>
         </div>
@@ -110,10 +101,7 @@ function RouteComponent() {
   return (
     <AuthLayout>
       <div className="flex flex-col gap-6">
-        <div
-          className="flex flex-col items-center justify-center gap-2 animate-appear"
-          style={{ "--appear-delay": "0ms" } as React.CSSProperties}
-        >
+        <div className="flex flex-col items-center justify-center gap-2">
           <Link to="/">
             <MyAkibaLogo size="full" className="size-28" />
           </Link>
@@ -132,72 +120,53 @@ function RouteComponent() {
           }}
           className="grid gap-4"
         >
-          <div
-            className="animate-appear"
-            style={{ "--appear-delay": "80ms" } as React.CSSProperties}
-          >
-            <form.Field name="email">
-              {(field) => (
-                <div className="space-y-2">
-                  <Label htmlFor={field.name}>Email</Label>
-                  <Input
-                    id={field.name}
-                    name={field.name}
-                    type="email"
-                    placeholder="your@email.com"
-                    value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                  />
-                  {field.state.meta.errors.map((error) => (
-                    <p key={error?.message} className="text-red-500 text-sm">
-                      {error?.message}
-                    </p>
-                  ))}
-                </div>
-              )}
-            </form.Field>
-          </div>
+          <form.Field name="email">
+            {(field) => (
+              <div className="space-y-2">
+                <Label htmlFor={field.name}>Email</Label>
+                <Input
+                  id={field.name}
+                  name={field.name}
+                  type="email"
+                  placeholder="your@email.com"
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                />
+                {field.state.meta.errors.map((error) => (
+                  <p key={error?.message} className="text-red-500 text-sm">
+                    {error?.message}
+                  </p>
+                ))}
+              </div>
+            )}
+          </form.Field>
 
-          <div
-            className="animate-appear"
-            style={{ "--appear-delay": "160ms" } as React.CSSProperties}
-          >
-            <form.Field name="turnstileToken">
-              {(field) => (
-                <div className="space-y-2">
-                  <Turnstile siteKey={env.VITE_TURNSTILE_SITE_KEY} onSuccess={field.handleChange} />
-                </div>
-              )}
-            </form.Field>
-          </div>
+          <form.Field name="turnstileToken">
+            {(field) => (
+              <div className="space-y-2">
+                <Turnstile siteKey={env.VITE_TURNSTILE_SITE_KEY} onSuccess={field.handleChange} />
+              </div>
+            )}
+          </form.Field>
 
-          <div
-            className="animate-appear"
-            style={{ "--appear-delay": "240ms" } as React.CSSProperties}
-          >
-            <form.Subscribe>
-              {(state) => (
-                <Button
-                  type="submit"
-                  className="w-full active:scale-[0.97] transition-transform duration-150"
-                  style={{ transitionTimingFunction: "cubic-bezier(0.23, 1, 0.32, 1)" }}
-                  disabled={!state.canSubmit || state.isSubmitting}
-                >
-                  {state.isSubmitting ? (
-                    <HugeiconsIcon icon={Loading03Icon} className="animate-spin" />
-                  ) : (
-                    "Send Reset Link"
-                  )}
-                </Button>
-              )}
-            </form.Subscribe>
-          </div>
+          <form.Subscribe>
+            {(state) => (
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={!state.canSubmit || state.isSubmitting}
+              >
+                {state.isSubmitting ? (
+                  <HugeiconsIcon icon={Loading03Icon} className="animate-spin" />
+                ) : (
+                  "Send Reset Link"
+                )}
+              </Button>
+            )}
+          </form.Subscribe>
         </form>
-        <div
-          className="text-center text-sm animate-appear"
-          style={{ "--appear-delay": "300ms" } as React.CSSProperties}
-        >
+        <div className="text-center text-sm">
           Remember your password?{" "}
           <BackLink
             to="/login"

@@ -1,15 +1,9 @@
-import { clsx } from "clsx";
-import type { ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
 import {
   DEFAULT_PAGE_INDEX,
   DEFAULT_PAGE_SIZE,
   DEFAULT_LIMIT,
 } from "@myakiba/contracts/shared/constants";
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+export { cn, type ClassValue } from "cnfast";
 
 interface PaginationDefaults {
   readonly limit?: number;

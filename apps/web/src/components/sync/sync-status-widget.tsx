@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ThemedBadge } from "@/components/reui/badge";
 import { Progress } from "@/components/ui/progress";
-import { ShimmeringText } from "@/components/ui/shimmering-text";
 import type { SyncSessionStatus, SyncType } from "@myakiba/contracts/shared/types";
 import { fetchSyncSessions } from "@/queries/sync";
 import { resolveSyncMessage, SESSION_STATUS_CONFIG, SYNC_TYPE_CONFIG } from "@/lib/sync";
@@ -94,14 +93,9 @@ export default function SyncStatusWidget() {
                         ariaLabel="Sync in progress"
                         className="shrink-0"
                       />
-                      <ShimmeringText
-                        text="Syncing..."
-                        duration={1}
-                        repeat={true}
-                        startOnView={false}
-                        className="text-xs font-medium"
-                        spread={1.5}
-                      />
+                      <span className="shimmer text-muted-foreground text-xs font-medium">
+                        Syncing...
+                      </span>
                       <SparkleTrail />
                     </>
                   )}

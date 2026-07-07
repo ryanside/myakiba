@@ -28,6 +28,7 @@ import { createDefaultSyncFormCollectionItem, extractMfcItemId } from "@/lib/syn
 import { CONDITIONS, SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import { getCurrencyLocale } from "@/lib/locale";
+import { SyncNotice } from "@/components/sync/sync-notice";
 
 export default function SyncCollectionForm({
   handleSyncCollectionSubmit,
@@ -79,6 +80,7 @@ export default function SyncCollectionForm({
         }}
         className="space-y-3 w-full"
       >
+        <SyncNotice />
         <collectionForm.Field
           name="items"
           mode="array"

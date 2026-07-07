@@ -33,22 +33,21 @@ export function ShopBreakdown({
     if (!data || data.length === 0) {
       return { totalOrders: 0, entries: [] };
     }
-    const total = data.reduce((acc, s) => acc + s.totalAmount, 0);
-    const orders = data.reduce((acc, s) => acc + s.orderCount, 0);
+    const totalOrderCount = data.reduce((acc, s) => acc + s.orderCount, 0);
     return {
-      totalOrders: orders,
+      totalOrders: totalOrderCount,
       entries: data.map((s, i) => ({
         ...s,
         id: s.shopName,
         label: s.shopName,
         color: CHART_PALETTE[i % CHART_PALETTE.length],
-        percentage: total > 0 ? (s.totalAmount / total) * 100 : 0,
+        percentage: totalOrderCount > 0 ? (s.orderCount / totalOrderCount) * 100 : 0,
         tooltip: (
           <div className="flex flex-col gap-0.5">
             <p className="text-xs font-medium">{s.shopName}</p>
             <p className="text-xs">
               {s.orderCount} {s.orderCount === 1 ? "order" : "orders"} ·{" "}
-              {total > 0 ? ((s.totalAmount / total) * 100).toFixed(1) : "0.0"}%
+              {totalOrderCount > 0 ? ((s.orderCount / totalOrderCount) * 100).toFixed(1) : "0.0"}%
             </p>
           </div>
         ),

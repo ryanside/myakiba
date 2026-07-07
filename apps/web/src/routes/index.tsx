@@ -196,7 +196,7 @@ function HomeComponent() {
           <Button
             size="lg"
             className="h-10 rounded-xl px-4"
-            render={<Link to="/login" />}
+            render={<Link to="/signup" />}
             nativeButton={false}
           >
             Get started

@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import { Scroller } from "@/components/ui/scroller";
 import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Category, Currency } from "@myakiba/contracts/shared/types";
@@ -83,7 +82,7 @@ export function CollectionBreakdown({
           <BreakdownChart.Root entries={entries}>
             <BreakdownChart.Bar />
             <BreakdownChart.Legend className="contents">
-              <Scroller className="animate-data-in -mx-(--frame-panel-p) max-h-50 flex flex-col gap-0 [--data-in-delay:100ms]">
+              <div className="scroll-fade overflow-y-auto animate-data-in -mx-(--frame-panel-p) max-h-50 flex flex-col gap-0 [--data-in-delay:100ms]">
                 {entries.map((entry) => (
                   <BreakdownChart.LegendItem
                     key={entry.name}
@@ -104,7 +103,7 @@ export function CollectionBreakdown({
                     )}
                   </BreakdownChart.LegendItem>
                 ))}
-              </Scroller>
+              </div>
             </BreakdownChart.Legend>
           </BreakdownChart.Root>
         )}

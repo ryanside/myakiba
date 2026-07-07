@@ -2,8 +2,8 @@ import { useCallback } from "react";
 import type { ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { ENTRY_CATEGORIES } from "@myakiba/contracts/shared/constants";
 import { getAnalytics } from "@/queries/analytics";
-import Loader from "@/components/loader";
 import { LeaderboardTable } from "@/components/analytics/leaderboard-table";
 import { SECTION_GRADIENT_COLORS, Section } from "@/components/analytics/section";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
@@ -12,6 +12,13 @@ import { useUserPreferences } from "@/hooks/use-user-preferences";
 const ENTRY_LEADERBOARD_COLUMNS = ["name", "itemCount", "totalSpent"] as const;
 const SHOP_LEADERBOARD_COLUMNS = ["shop", "itemCount", "totalSpent"] as const;
 const SCALE_LEADERBOARD_COLUMNS = ["scale", "itemCount", "totalSpent"] as const;
+
+const PLACEHOLDER_ENTRIES = ENTRY_CATEGORIES.map((category) => ({
+  category,
+  uniqueOwned: 0,
+  topByCount: [],
+  topBySpend: [],
+}));
 
 export const Route = createFileRoute("/(app)/analytics")({
   component: RouteComponent,
@@ -38,6 +45,7 @@ function RouteComponent(): ReactNode {
   });
 
   const analytics = data?.analytics;
+  const isLoading = isPending;
 
   const formatCell = useCallback(
     (column: string, value: string | number | null): string | number | null => {
@@ -50,151 +58,189 @@ function RouteComponent(): ReactNode {
     [currency, locale],
   );
 
-  return (
-    <div className="flex flex-col gap-6 mx-auto max-w-4xl">
-      <div className="flex flex-col gap-2 mb-2">
-        <h1 className="text-2xl font-orbitron font-medium">
-          analytics
-          <span className="hidden sm:inline"> ⭑.ᐟ</span>
-        </h1>
-        <p className="text-muted-foreground text-sm">See what shapes your collection</p>
-      </div>
-
-      {isPending && <Loader className="h-64" />}
-
-      {isError && (
+  if (isError) {
+    return (
+      <div className="flex flex-col gap-4 mx-auto max-w-4xl">
+        <div className="flex flex-col gap-2 mb-2">
+          <div className="flex flex-row items-start gap-4">
+            <h1 className="text-2xl font-orbitron font-medium">
+              analytics
+              <span className="hidden sm:inline"> ⭑.ᐟ</span>
+            </h1>
+          </div>
+        </div>
         <div className="flex flex-col items-center justify-center h-64 gap-y-4">
           <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
         </div>
-      )}
+      </div>
+    );
+  }
 
-      {analytics && (
-        <>
-          {analytics.entries.map((entry, idx) => (
-            <Section
-              key={entry.category}
-              title={entry.category}
-              uniqueOwned={entry.uniqueOwned}
-              gradientColor={SECTION_GRADIENT_COLORS[idx % SECTION_GRADIENT_COLORS.length]}
-              link={{
-                to: `/analytics/${entry.category.toLowerCase()}`,
-                label: `View all ${entry.category}`,
-              }}
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <h4 className="text-xs font-medium text-muted-foreground">Top by Count</h4>
-                  <LeaderboardTable
-                    rows={entry.topByCount}
-                    columns={ENTRY_LEADERBOARD_COLUMNS}
-                    formatCell={formatCell}
-                    getRowNavigation={(row) => ({
-                      to: "/collection",
-                      search: { entries: [String(row.entryId)] },
-                    })}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <h4 className="text-xs font-medium text-muted-foreground">Top by Spend</h4>
-                  <LeaderboardTable
-                    rows={entry.topBySpend}
-                    columns={ENTRY_LEADERBOARD_COLUMNS}
-                    formatCell={formatCell}
-                    getRowNavigation={(row) => ({
-                      to: "/collection",
-                      search: { entries: [String(row.entryId)] },
-                    })}
-                  />
-                </div>
-              </div>
-            </Section>
-          ))}
+  const entries = analytics?.entries ?? PLACEHOLDER_ENTRIES;
+  const shops = analytics?.shops ?? { uniqueOwned: 0, topByCount: [], topBySpend: [] };
+  const scales = analytics?.scales ?? { uniqueOwned: 0, topByCount: [], topBySpend: [] };
 
+  return (
+    <div className="flex flex-col gap-4 mx-auto max-w-4xl">
+      <div className="flex flex-col gap-2 mb-2">
+        <div className="flex flex-row items-start gap-4">
+          <h1 className="text-2xl font-orbitron font-medium">
+            analytics
+            <span className="hidden sm:inline"> ⭑.ᐟ</span>
+          </h1>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-4">
+        {entries.map((entry, idx) => (
           <Section
-            title="Shops"
-            uniqueOwned={analytics.shops.uniqueOwned}
-            gradientColor={
-              SECTION_GRADIENT_COLORS[analytics.entries.length % SECTION_GRADIENT_COLORS.length]
-            }
-            link={{ to: "/analytics/shops", label: "View all shops" }}
+            key={entry.category}
+            title={entry.category}
+            uniqueOwned={entry.uniqueOwned}
+            gradientColor={SECTION_GRADIENT_COLORS[idx % SECTION_GRADIENT_COLORS.length]}
+            isLoading={isLoading}
+            link={{
+              to: `/analytics/${entry.category.toLowerCase()}`,
+              label: `View all ${entry.category}`,
+            }}
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <h4 className="text-xs font-medium text-muted-foreground">Top by Count</h4>
                 <LeaderboardTable
-                  rows={analytics.shops.topByCount}
-                  columns={SHOP_LEADERBOARD_COLUMNS}
+                  rows={entry.topByCount}
+                  columns={ENTRY_LEADERBOARD_COLUMNS}
                   formatCell={formatCell}
-                  getRowNavigation={(row) =>
-                    row.shop
-                      ? { to: "/collection", search: { shop: [String(row.shop)] } }
-                      : undefined
+                  isLoading={isLoading}
+                  getRowNavigation={
+                    isLoading
+                      ? undefined
+                      : (row) => ({
+                          to: "/collection",
+                          search: { entries: [String(row.entryId)] },
+                        })
                   }
                 />
               </div>
               <div className="space-y-1">
                 <h4 className="text-xs font-medium text-muted-foreground">Top by Spend</h4>
                 <LeaderboardTable
-                  rows={analytics.shops.topBySpend}
-                  columns={SHOP_LEADERBOARD_COLUMNS}
+                  rows={entry.topBySpend}
+                  columns={ENTRY_LEADERBOARD_COLUMNS}
                   formatCell={formatCell}
-                  getRowNavigation={(row) =>
-                    row.shop
-                      ? { to: "/collection", search: { shop: [String(row.shop)] } }
-                      : undefined
+                  isLoading={isLoading}
+                  getRowNavigation={
+                    isLoading
+                      ? undefined
+                      : (row) => ({
+                          to: "/collection",
+                          search: { entries: [String(row.entryId)] },
+                        })
                   }
                 />
               </div>
             </div>
           </Section>
+        ))}
 
-          <Section
-            title="Scales"
-            uniqueOwned={analytics.scales.uniqueOwned}
-            gradientColor={
-              SECTION_GRADIENT_COLORS[
-                (analytics.entries.length + 1) % SECTION_GRADIENT_COLORS.length
-              ]
-            }
-            link={{ to: "/analytics/scales", label: "View all scales" }}
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <h4 className="text-xs font-medium text-muted-foreground">Top by Count</h4>
-                <LeaderboardTable
-                  rows={analytics.scales.topByCount}
-                  columns={SCALE_LEADERBOARD_COLUMNS}
-                  formatCell={formatCell}
-                  getRowNavigation={(row) =>
-                    row.scale
-                      ? {
-                          to: "/collection",
-                          search: { scale: [String(row.scale)], category: ["Prepainted"] },
-                        }
-                      : undefined
-                  }
-                />
-              </div>
-              <div className="space-y-1">
-                <h4 className="text-xs font-medium text-muted-foreground">Top by Spend</h4>
-                <LeaderboardTable
-                  rows={analytics.scales.topBySpend}
-                  columns={SCALE_LEADERBOARD_COLUMNS}
-                  formatCell={formatCell}
-                  getRowNavigation={(row) =>
-                    row.scale
-                      ? {
-                          to: "/collection",
-                          search: { scale: [String(row.scale)], category: ["Prepainted"] },
-                        }
-                      : undefined
-                  }
-                />
-              </div>
+        <Section
+          title="Shops"
+          uniqueOwned={shops.uniqueOwned}
+          gradientColor={SECTION_GRADIENT_COLORS[entries.length % SECTION_GRADIENT_COLORS.length]}
+          isLoading={isLoading}
+          link={{ to: "/analytics/shops", label: "View all shops" }}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <h4 className="text-xs font-medium text-muted-foreground">Top by Count</h4>
+              <LeaderboardTable
+                rows={shops.topByCount}
+                columns={SHOP_LEADERBOARD_COLUMNS}
+                formatCell={formatCell}
+                isLoading={isLoading}
+                getRowNavigation={
+                  isLoading
+                    ? undefined
+                    : (row) =>
+                        row.shop
+                          ? { to: "/collection", search: { shop: [String(row.shop)] } }
+                          : undefined
+                }
+              />
             </div>
-          </Section>
-        </>
-      )}
+            <div className="space-y-1">
+              <h4 className="text-xs font-medium text-muted-foreground">Top by Spend</h4>
+              <LeaderboardTable
+                rows={shops.topBySpend}
+                columns={SHOP_LEADERBOARD_COLUMNS}
+                formatCell={formatCell}
+                isLoading={isLoading}
+                getRowNavigation={
+                  isLoading
+                    ? undefined
+                    : (row) =>
+                        row.shop
+                          ? { to: "/collection", search: { shop: [String(row.shop)] } }
+                          : undefined
+                }
+              />
+            </div>
+          </div>
+        </Section>
+
+        <Section
+          title="Scales"
+          uniqueOwned={scales.uniqueOwned}
+          gradientColor={
+            SECTION_GRADIENT_COLORS[(entries.length + 1) % SECTION_GRADIENT_COLORS.length]
+          }
+          isLoading={isLoading}
+          link={{ to: "/analytics/scales", label: "View all scales" }}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <h4 className="text-xs font-medium text-muted-foreground">Top by Count</h4>
+              <LeaderboardTable
+                rows={scales.topByCount}
+                columns={SCALE_LEADERBOARD_COLUMNS}
+                formatCell={formatCell}
+                isLoading={isLoading}
+                getRowNavigation={
+                  isLoading
+                    ? undefined
+                    : (row) =>
+                        row.scale
+                          ? {
+                              to: "/collection",
+                              search: { scale: [String(row.scale)], category: ["Prepainted"] },
+                            }
+                          : undefined
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <h4 className="text-xs font-medium text-muted-foreground">Top by Spend</h4>
+              <LeaderboardTable
+                rows={scales.topBySpend}
+                columns={SCALE_LEADERBOARD_COLUMNS}
+                formatCell={formatCell}
+                isLoading={isLoading}
+                getRowNavigation={
+                  isLoading
+                    ? undefined
+                    : (row) =>
+                        row.scale
+                          ? {
+                              to: "/collection",
+                              search: { scale: [String(row.scale)], category: ["Prepainted"] },
+                            }
+                          : undefined
+                }
+              />
+            </div>
+          </div>
+        </Section>
+      </div>
     </div>
   );
 }

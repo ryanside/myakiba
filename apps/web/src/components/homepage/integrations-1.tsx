@@ -37,7 +37,7 @@ export default function MfcSyncSection() {
               variant="default"
               size="sm"
               className="gap-1 rounded-full pr-1.5"
-              render={<Link to="/login" />}
+              render={<Link to="/signup" />}
               nativeButton={false}
             >
               Get started

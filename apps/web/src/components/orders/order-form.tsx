@@ -42,7 +42,6 @@ import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import { CascadeOptionsDropdown } from "@/components/cascade-options-dropdown";
 import { Textarea } from "../ui/textarea";
 import { majorStringToMinorUnits, minorUnitsToMajorString } from "@myakiba/utils/currency";
-import { Scroller } from "../ui/scroller";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { useState } from "react";
 import { getCurrencyLocale } from "@/lib/locale";
@@ -597,7 +596,7 @@ function OrderFormContent(
               {orderData ? orderData.title : "Edit the selected order."}
             </SheetDescription>
           </SheetHeader>
-          <Scroller className="max-h-[70vh] px-2">{formFields}</Scroller>
+          <div className="scroll-fade overflow-y-auto max-h-[70vh] px-2">{formFields}</div>
           <SheetFooter className="flex flex-row w-full">
             <form.Subscribe
               selector={(state) => [state.isSubmitting]}
@@ -657,7 +656,9 @@ function OrderFormContent(
           )}
         </DialogHeader>
 
-        <Scroller className="max-h-[70vh] py-4 no-scrollbar">{formFields}</Scroller>
+        <div className="scroll-fade overflow-y-auto max-h-[70vh] py-4 no-scrollbar">
+          {formFields}
+        </div>
 
         <DialogFooter>
           <form.Subscribe

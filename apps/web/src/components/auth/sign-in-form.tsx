@@ -2,7 +2,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { authClient } from "@/lib/auth-client";
 import { useForm } from "@tanstack/react-form";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "../ui/button";
@@ -35,20 +35,24 @@ function GoogleIcon() {
   );
 }
 
-export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () => void }) {
-  const navigate = useNavigate();
+function getGoogleCallbackUrl(redirectTo: string): string {
+  if (import.meta.env.PROD) {
+    return redirectTo;
+  }
 
+  return new URL(redirectTo, "http://localhost:3001").toString();
+}
+
+export default function SignInForm({ redirectTo }: { redirectTo: string }) {
   const handleGoogleAuth = async () => {
     await authClient.signIn.social(
       {
         provider: "google",
-        callbackURL: import.meta.env.PROD ? "/dashboard" : "http://localhost:3001/dashboard",
+        callbackURL: getGoogleCallbackUrl(redirectTo),
       },
       {
         onSuccess: () => {
-          navigate({
-            to: "/dashboard",
-          });
+          window.location.assign(redirectTo);
         },
         onError: (error) => {
           toast.error(error.error.message || error.error.statusText);
@@ -74,9 +78,7 @@ export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () 
             "x-captcha-response": value.turnstileToken,
           },
           onSuccess: () => {
-            navigate({
-              to: "/dashboard",
-            });
+            window.location.assign(redirectTo);
           },
           onError: (error) => {
             if (error.error.status === 403) {
@@ -101,44 +103,28 @@ export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () 
 
   return (
     <div className="flex flex-col gap-6">
-      <div
-        className="flex flex-col items-center justify-center gap-2 animate-appear"
-        style={{ "--appear-delay": "0ms" } as React.CSSProperties}
-      >
+      <div className="flex flex-col items-center justify-center gap-2">
         <div className="text-xl font-medium flex items-center gap-2">
           <span>Login to</span>
           <MyAkibaLogo size="full" className="size-28 inline-block" />
         </div>
         <div className="text-center text-sm text-muted-foreground">
           Don't have an account?{" "}
-          <Button
-            type="button"
-            variant="link"
-            onClick={onSwitchToSignUp}
-            className="h-auto p-0 text-foreground underline underline-offset-4 transition-colors duration-150 hover:text-foreground/80"
+          <Link
+            to="/signup"
+            className="text-foreground underline underline-offset-4 hover:text-foreground/80"
           >
             Register
-          </Button>
+          </Link>
         </div>
       </div>
 
-      <div className="animate-appear" style={{ "--appear-delay": "60ms" } as React.CSSProperties}>
-        <Button
-          variant="outline"
-          type="button"
-          className="w-full active:scale-[0.97] transition-transform duration-150"
-          style={{ transitionTimingFunction: "cubic-bezier(0.23, 1, 0.32, 1)" }}
-          onClick={handleGoogleAuth}
-        >
-          <GoogleIcon />
-          Continue with Google
-        </Button>
-      </div>
+      <Button variant="outline" type="button" className="w-full" onClick={handleGoogleAuth}>
+        <GoogleIcon />
+        Continue with Google
+      </Button>
 
-      <div
-        className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t animate-appear"
-        style={{ "--appear-delay": "120ms" } as React.CSSProperties}
-      >
+      <div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
         <span className="bg-background text-muted-foreground relative z-10 px-2">or</span>
       </div>
 
@@ -150,100 +136,79 @@ export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () 
         }}
         className="grid gap-4"
       >
-        <div
-          className="animate-appear"
-          style={{ "--appear-delay": "180ms" } as React.CSSProperties}
-        >
-          <form.Field name="email">
-            {(field) => (
-              <div className="space-y-2">
-                <Label htmlFor={field.name}>Email</Label>
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  type="email"
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                />
-                {field.state.meta.errors.map((error) => (
-                  <p key={error?.message} className="text-red-500 text-sm">
-                    {error?.message}
-                  </p>
-                ))}
-              </div>
-            )}
-          </form.Field>
-        </div>
+        <form.Field name="email">
+          {(field) => (
+            <div className="space-y-2">
+              <Label htmlFor={field.name}>Email</Label>
+              <Input
+                id={field.name}
+                name={field.name}
+                type="email"
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(e) => field.handleChange(e.target.value)}
+              />
+              {field.state.meta.errors.map((error) => (
+                <p key={error?.message} className="text-red-500 text-sm">
+                  {error?.message}
+                </p>
+              ))}
+            </div>
+          )}
+        </form.Field>
 
-        <div
-          className="animate-appear"
-          style={{ "--appear-delay": "240ms" } as React.CSSProperties}
-        >
-          <form.Field name="password">
-            {(field) => (
-              <div className="space-y-2">
-                <Label htmlFor={field.name}>Password</Label>
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  type="password"
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                />
-                {field.state.meta.errors.map((error) => (
-                  <p key={error?.message} className="text-red-500 text-sm">
-                    {error?.message}
-                  </p>
-                ))}
-                <div className="flex items-center justify-end">
-                  <Link
-                    to="/forgot-password"
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-150 underline underline-offset-4"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
+        <form.Field name="password">
+          {(field) => (
+            <div className="space-y-2">
+              <Label htmlFor={field.name}>Password</Label>
+              <Input
+                id={field.name}
+                name={field.name}
+                type="password"
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(e) => field.handleChange(e.target.value)}
+              />
+              {field.state.meta.errors.map((error) => (
+                <p key={error?.message} className="text-red-500 text-sm">
+                  {error?.message}
+                </p>
+              ))}
+              <div className="flex items-center justify-end">
+                <Link
+                  to="/forgot-password"
+                  className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4"
+                >
+                  Forgot password?
+                </Link>
               </div>
-            )}
-          </form.Field>
-        </div>
+            </div>
+          )}
+        </form.Field>
 
-        <div
-          className="animate-appear"
-          style={{ "--appear-delay": "300ms" } as React.CSSProperties}
-        >
-          <form.Field name="turnstileToken">
-            {(field) => (
-              <div className="space-y-2">
-                <Turnstile siteKey={env.VITE_TURNSTILE_SITE_KEY} onSuccess={field.handleChange} />
-              </div>
-            )}
-          </form.Field>
-        </div>
+        <form.Field name="turnstileToken">
+          {(field) => (
+            <div className="space-y-2">
+              <Turnstile siteKey={env.VITE_TURNSTILE_SITE_KEY} onSuccess={field.handleChange} />
+            </div>
+          )}
+        </form.Field>
 
-        <div
-          className="animate-appear"
-          style={{ "--appear-delay": "360ms" } as React.CSSProperties}
-        >
-          <form.Subscribe>
-            {(state) => (
-              <Button
-                type="submit"
-                className="w-full active:scale-[0.97] transition-transform duration-150"
-                style={{ transitionTimingFunction: "cubic-bezier(0.23, 1, 0.32, 1)" }}
-                disabled={!state.canSubmit || state.isSubmitting}
-              >
-                {state.isSubmitting ? (
-                  <HugeiconsIcon icon={Loading03Icon} className="animate-spin" />
-                ) : (
-                  "Login"
-                )}
-              </Button>
-            )}
-          </form.Subscribe>
-        </div>
+        <form.Subscribe>
+          {(state) => (
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={!state.canSubmit || state.isSubmitting}
+            >
+              {state.isSubmitting ? (
+                <HugeiconsIcon icon={Loading03Icon} className="animate-spin" />
+              ) : (
+                "Login"
+              )}
+            </Button>
+          )}
+        </form.Subscribe>
       </form>
     </div>
   );

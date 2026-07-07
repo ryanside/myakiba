@@ -11,10 +11,7 @@ type VerifyEmailViewProps = {
 export function VerifyEmailView({ email }: VerifyEmailViewProps) {
   return (
     <div className="flex flex-col gap-6">
-      <div
-        className="flex flex-col items-center justify-center gap-2 animate-appear"
-        style={{ "--appear-delay": "0ms" } as React.CSSProperties}
-      >
+      <div className="flex flex-col items-center justify-center gap-2">
         <Link to="/">
           <MyAkibaLogo size="full" className="size-28" />
         </Link>
@@ -23,10 +20,7 @@ export function VerifyEmailView({ email }: VerifyEmailViewProps) {
         </div>
       </div>
 
-      <div
-        className="text-center space-y-4 animate-appear"
-        style={{ "--appear-delay": "80ms" } as React.CSSProperties}
-      >
+      <div className="text-center space-y-4">
         <div className="mx-auto size-12 bg-primary/10 rounded-full flex items-center justify-center">
           <HugeiconsIcon icon={Mail01Icon} className="size-6 text-primary" />
         </div>
@@ -47,10 +41,7 @@ export function VerifyEmailView({ email }: VerifyEmailViewProps) {
         </p>
       </div>
 
-      <div
-        className="flex justify-center animate-appear"
-        style={{ "--appear-delay": "160ms" } as React.CSSProperties}
-      >
+      <div className="flex justify-center">
         <BackLink to="/login" text="Back to Login" font="sans" />
       </div>
     </div>

@@ -93,8 +93,7 @@ function RouteComponent() {
     return (
       <div className="flex flex-col gap-4 mx-auto max-w-[88rem]">
         <div className="flex flex-col gap-2">
-          <h1 className="text-2xl tracking-tight">Sync</h1>
-          <p className="text-muted-foreground text-sm font-normal">View your sync history</p>
+          <h1 className="text-2xl tracking-tight">Sync History</h1>
         </div>
         <div className="flex flex-col items-center justify-center h-64 gap-y-4">
           <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
@@ -107,8 +106,7 @@ function RouteComponent() {
     <div className="flex flex-col gap-4 mx-auto max-w-[88rem]">
       <div className="flex flex-col gap-2 mb-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-medium tracking-tight">Sync</h1>
-          <p className="text-muted-foreground text-sm font-normal">View your sync history</p>
+          <h1 className="text-2xl font-medium tracking-tight">Sync History</h1>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground mx-1">Add:</span>

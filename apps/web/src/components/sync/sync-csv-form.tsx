@@ -6,6 +6,7 @@ import { csvSchema } from "@myakiba/contracts/sync/schema";
 import Papa from "papaparse";
 import { Label } from "../ui/label";
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from "@/components/kibo-ui/dropzone";
+import { SyncNotice } from "@/components/sync/sync-notice";
 
 export default function SyncCsvForm({
   handleSyncCsvSubmit,
@@ -31,6 +32,7 @@ export default function SyncCsvForm({
         }}
         className="rounded-lg space-y-4 w-full"
       >
+        <SyncNotice />
         <csvForm.Field
           name="file"
           validators={{
