@@ -14,6 +14,7 @@ export const env = createEnv({
     TURNSTILE_SECRET_KEY: z.string().min(1),
     BETTER_AUTH_SECRET: z.string().min(1),
     BETTER_AUTH_URL: z.url(),
+    BETTER_AUTH_API_KEY: z.string().min(1).optional(),
     BUILD_ID: z.string().optional().default("dev"),
     POSTHOG_API_KEY: z.string().min(1).optional(),
   },

@@ -100,8 +100,13 @@ export const auth = betterAuth({
     emailHarmony({}),
     openAPI(),
     admin(),
-    // Connects the app to the hosted auth dashboard on the Better Auth website.
-    dash(),
+    ...(env.BETTER_AUTH_API_KEY
+      ? [
+          dash({
+            apiKey: env.BETTER_AUTH_API_KEY,
+          }),
+        ]
+      : []),
   ],
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
