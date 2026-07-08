@@ -53,6 +53,8 @@ services:
       dockerfile: apps/server/Dockerfile
       args:
         SOURCE_COMMIT: ${SOURCE_COMMIT:-dev}
+        VITE_SERVER_URL: ${VITE_SERVER_URL}
+        VITE_TURNSTILE_SITE_KEY: ${VITE_TURNSTILE_SITE_KEY}
     ports:
       - "3000:3000"
     environment:
@@ -61,7 +63,6 @@ services:
       - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
       - BETTER_AUTH_URL=${BETTER_AUTH_URL}
       - TURNSTILE_SECRET_KEY=${TURNSTILE_SECRET_KEY}
-      - VITE_TURNSTILE_SITE_KEY=${VITE_TURNSTILE_SITE_KEY}
       - RESEND_API_KEY=${RESEND_API_KEY}
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
