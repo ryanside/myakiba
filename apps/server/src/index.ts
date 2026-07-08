@@ -41,6 +41,10 @@ log.info({
   msg: "server booting",
   buildId: env.BUILD_ID,
   nodeEnv: process.env.NODE_ENV,
+  optionals: {
+    posthog: env.POSTHOG_API_KEY !== undefined,
+    betterAuthDashboard: env.BETTER_AUTH_API_KEY !== undefined,
+  },
 });
 
 const includeAuthDocs: boolean = process.env.OPENAPI_AUTH_DOCS === "true";

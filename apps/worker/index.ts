@@ -51,6 +51,10 @@ log.info({
   action: "worker.boot",
   outcome: "success",
   runtime: { nodeEnv: env.NODE_ENV },
+  optionals: {
+    proxied: env.WORKER_PROXY_URL !== undefined,
+    posthog: env.POSTHOG_API_KEY !== undefined,
+  },
 });
 
 const { data: workerModule, error } = await tryCatch(import("./worker"));
