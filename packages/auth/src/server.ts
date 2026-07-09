@@ -9,6 +9,7 @@ import { Resend } from "resend";
 import { createId } from "@paralleldrive/cuid2";
 import { redis } from "@myakiba/redis/client";
 import { env } from "@myakiba/env/server";
+import { dash } from "@better-auth/infra";
 
 const resend = new Resend(env.RESEND_API_KEY);
 
@@ -99,6 +100,13 @@ export const auth = betterAuth({
     emailHarmony({}),
     openAPI(),
     admin(),
+    ...(env.BETTER_AUTH_API_KEY
+      ? [
+          dash({
+            apiKey: env.BETTER_AUTH_API_KEY,
+          }),
+        ]
+      : []),
   ],
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,

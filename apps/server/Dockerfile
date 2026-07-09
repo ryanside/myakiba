@@ -17,12 +17,19 @@ RUN bun install --frozen-lockfile --ignore-scripts --linker=hoisted
 # Build stage - compile the application
 FROM base AS build
 WORKDIR /app
+# Bun inlines process.env.NODE_ENV at bundle time; without this the compiled
+# binary is permanently in development mode regardless of runtime env.
+ENV NODE_ENV=production
 COPY --from=install /app/node_modules ./node_modules
 COPY --from=prune /app/out/full/ .
 
 # Build the frontend
 ARG SOURCE_COMMIT
-ENV VITE_BUILD_ID=${SOURCE_COMMIT:-dev}
+ARG VITE_SERVER_URL
+ARG VITE_TURNSTILE_SITE_KEY
+ENV VITE_BUILD_ID=${SOURCE_COMMIT:-dev} \
+    VITE_SERVER_URL=${VITE_SERVER_URL:?VITE_SERVER_URL_required} \
+    VITE_TURNSTILE_SITE_KEY=${VITE_TURNSTILE_SITE_KEY:?VITE_TURNSTILE_SITE_KEY_required}
 WORKDIR /app/apps/web
 RUN bun run build
 
