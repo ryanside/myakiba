@@ -3,98 +3,15 @@ import { collection, item, entry, entry_to_item } from "@myakiba/db/schema/figur
 import { asc, eq, count, and, desc, ilike, sql, not } from "drizzle-orm";
 import { ENTRY_CATEGORIES } from "@myakiba/contracts/shared/constants";
 import type { AnalyticsSection, EntryCategory } from "@myakiba/contracts/shared/types";
-
-type RankedRow = {
-  readonly rankByCount: number;
-  readonly rankBySpend: number;
-};
-
-type EntryLeaderboardRow = {
-  readonly entryId: string;
-  readonly name: string;
-  readonly itemCount: number;
-  readonly totalSpent: number;
-};
-
-type EntryCategoryAnalytics = {
-  readonly category: EntryCategory;
-  readonly uniqueOwned: number;
-  readonly topByCount: readonly EntryLeaderboardRow[];
-  readonly topBySpend: readonly EntryLeaderboardRow[];
-};
-
-type ShopLeaderboardRow = {
-  readonly shop: string;
-  readonly itemCount: number;
-  readonly totalSpent: number;
-};
-
-type ScaleLeaderboardRow = {
-  readonly scale: string;
-  readonly itemCount: number;
-  readonly totalSpent: number;
-};
-
-type RankedAnalytics<T> = {
-  readonly uniqueOwned: number;
-  readonly topByCount: readonly T[];
-  readonly topBySpend: readonly T[];
-};
-
-export type AnalyticsResult = {
-  readonly entries: readonly EntryCategoryAnalytics[];
-  readonly shops: RankedAnalytics<ShopLeaderboardRow>;
-  readonly scales: RankedAnalytics<ScaleLeaderboardRow>;
-};
-
-type AnalyticsSectionRow = {
-  readonly id: string | null;
-  readonly name: string;
-  readonly itemCount: number;
-  readonly totalSpent: number;
-};
-
-type AnalyticsSectionKpis = {
-  readonly uniqueCount: number;
-  readonly totalItemCount: number;
-  readonly totalSpent: number;
-  readonly averageSpent: number;
-};
-
-export type AnalyticsSectionResult = {
-  readonly section: AnalyticsSection;
-  readonly rows: readonly AnalyticsSectionRow[];
-  readonly kpis: AnalyticsSectionKpis;
-  readonly totalCount: number;
-  readonly limit: number;
-  readonly offset: number;
-};
-
-export type AnalyticsSectionItem = {
-  readonly id: string;
-  readonly externalId: number | null;
-  readonly title: string;
-  readonly image: string | null;
-};
-
-export type AnalyticsSectionItemsResult = {
-  readonly items: readonly AnalyticsSectionItem[];
-  readonly totalCount: number;
-  readonly limit: number;
-  readonly offset: number;
-};
-
-type AnalyticsSectionPageRow = AnalyticsSectionRow & {
-  readonly totalCount: number;
-  readonly totalItemCount?: number;
-  readonly totalSpentAll?: number;
-};
-
-type AnalyticsSectionItemPageRow = AnalyticsSectionItem & {
-  readonly totalCount: number;
-};
-
-type EntrySection = Exclude<AnalyticsSection, "shops" | "scales">;
+import type {
+  AnalyticsResult,
+  AnalyticsSectionItemPageRow,
+  AnalyticsSectionItemsResult,
+  AnalyticsSectionKpis,
+  AnalyticsSectionPageRow,
+  AnalyticsSectionResult,
+  EntrySection,
+} from "./model";
 
 const TOP_LIMIT = 10;
 
@@ -214,137 +131,6 @@ const scaleRankingsPrepared = db
   .from(scaleSummaryQuery)
   .prepare("analytics_scale_rankings");
 
-type EntryRankingRow = Awaited<ReturnType<typeof entryRankingsPrepared.execute>>[number];
-
-function buildRankedAnalytics<T extends RankedRow, TResult>(
-  rows: readonly T[],
-  mapRow: (row: T) => TResult,
-): RankedAnalytics<TResult> {
-  return {
-    uniqueOwned: rows.length,
-    topByCount: rows
-      .filter((row) => row.rankByCount <= TOP_LIMIT)
-      .toSorted((left, right) => left.rankByCount - right.rankByCount)
-      .map(mapRow),
-    topBySpend: rows
-      .filter((row) => row.rankBySpend <= TOP_LIMIT)
-      .toSorted((left, right) => left.rankBySpend - right.rankBySpend)
-      .map(mapRow),
-  };
-}
-
-function buildEntryAnalytics(rows: readonly EntryRankingRow[]): readonly EntryCategoryAnalytics[] {
-  const buckets = new Map<
-    EntryCategory,
-    {
-      uniqueOwned: number;
-      topByCount: EntryRankingRow[];
-      topBySpend: EntryRankingRow[];
-    }
-  >(
-    ENTRY_CATEGORIES.map((category) => [
-      category,
-      {
-        uniqueOwned: 0,
-        topByCount: [],
-        topBySpend: [],
-      },
-    ]),
-  );
-
-  for (const row of rows) {
-    const bucket = buckets.get(row.category as EntryCategory);
-    if (!bucket) {
-      continue;
-    }
-
-    bucket.uniqueOwned += 1;
-
-    if (row.rankByCount <= TOP_LIMIT) {
-      bucket.topByCount.push(row);
-    }
-
-    if (row.rankBySpend <= TOP_LIMIT) {
-      bucket.topBySpend.push(row);
-    }
-  }
-
-  return ENTRY_CATEGORIES.map((category) => {
-    const bucket = buckets.get(category);
-
-    return {
-      category,
-      uniqueOwned: bucket?.uniqueOwned ?? 0,
-      topByCount:
-        bucket?.topByCount
-          .toSorted((left, right) => left.rankByCount - right.rankByCount)
-          .map((row) => ({
-            entryId: row.entryId,
-            name: row.name,
-            itemCount: row.itemCount,
-            totalSpent: row.totalSpent,
-          })) ?? [],
-      topBySpend:
-        bucket?.topBySpend
-          .toSorted((left, right) => left.rankBySpend - right.rankBySpend)
-          .map((row) => ({
-            entryId: row.entryId,
-            name: row.name,
-            itemCount: row.itemCount,
-            totalSpent: row.totalSpent,
-          })) ?? [],
-    };
-  });
-}
-
-function buildSectionResult(
-  section: AnalyticsSection,
-  limit: number,
-  offset: number,
-  rows: readonly AnalyticsSectionPageRow[],
-  kpiOverrides?: Partial<Pick<AnalyticsSectionKpis, "totalItemCount" | "totalSpent">>,
-): AnalyticsSectionResult {
-  const firstRow = rows[0];
-  const totalCount = firstRow?.totalCount ?? 0;
-  const totalItemCount = kpiOverrides?.totalItemCount ?? firstRow?.totalItemCount ?? 0;
-  const totalSpent = kpiOverrides?.totalSpent ?? firstRow?.totalSpentAll ?? 0;
-
-  return {
-    section,
-    limit,
-    offset,
-    totalCount,
-    kpis:
-      totalCount === 0
-        ? EMPTY_SECTION_KPIS
-        : {
-            uniqueCount: totalCount,
-            totalItemCount,
-            totalSpent,
-            averageSpent: totalItemCount === 0 ? 0 : totalSpent / totalItemCount,
-          },
-    rows: rows.map(({ id, name, itemCount, totalSpent: rowTotalSpent }) => ({
-      id,
-      name,
-      itemCount,
-      totalSpent: rowTotalSpent,
-    })),
-  };
-}
-
-function buildSectionItemsResult(
-  limit: number,
-  offset: number,
-  rows: readonly AnalyticsSectionItemPageRow[],
-): AnalyticsSectionItemsResult {
-  return {
-    items: rows.map(({ id, externalId, title, image }) => ({ id, externalId, title, image })),
-    totalCount: rows[0]?.totalCount ?? 0,
-    limit,
-    offset,
-  };
-}
-
 class AnalyticsService {
   async getAnalytics(userId: string): Promise<AnalyticsResult> {
     const [entryRows, shopRows, scaleRows] = await Promise.all([
@@ -354,17 +140,54 @@ class AnalyticsService {
     ]);
 
     return {
-      entries: buildEntryAnalytics(entryRows),
-      shops: buildRankedAnalytics(shopRows, (row) => ({
-        shop: row.shop,
-        itemCount: row.itemCount,
-        totalSpent: row.totalSpent,
-      })),
-      scales: buildRankedAnalytics(scaleRows, (row) => ({
-        scale: row.scale,
-        itemCount: row.itemCount,
-        totalSpent: row.totalSpent,
-      })),
+      entries: ENTRY_CATEGORIES.map((category) => {
+        const categoryRows = entryRows.filter((row) => row.category === category);
+
+        return {
+          category,
+          uniqueOwned: categoryRows.length,
+          topByCount: categoryRows
+            .filter((row) => row.rankByCount <= TOP_LIMIT)
+            .toSorted((left, right) => left.rankByCount - right.rankByCount)
+            .map(({ entryId, name, itemCount, totalSpent }) => ({
+              entryId,
+              name,
+              itemCount,
+              totalSpent,
+            })),
+          topBySpend: categoryRows
+            .filter((row) => row.rankBySpend <= TOP_LIMIT)
+            .toSorted((left, right) => left.rankBySpend - right.rankBySpend)
+            .map(({ entryId, name, itemCount, totalSpent }) => ({
+              entryId,
+              name,
+              itemCount,
+              totalSpent,
+            })),
+        };
+      }),
+      shops: {
+        uniqueOwned: shopRows.length,
+        topByCount: shopRows
+          .filter((row) => row.rankByCount <= TOP_LIMIT)
+          .toSorted((left, right) => left.rankByCount - right.rankByCount)
+          .map(({ shop, itemCount, totalSpent }) => ({ shop, itemCount, totalSpent })),
+        topBySpend: shopRows
+          .filter((row) => row.rankBySpend <= TOP_LIMIT)
+          .toSorted((left, right) => left.rankBySpend - right.rankBySpend)
+          .map(({ shop, itemCount, totalSpent }) => ({ shop, itemCount, totalSpent })),
+      },
+      scales: {
+        uniqueOwned: scaleRows.length,
+        topByCount: scaleRows
+          .filter((row) => row.rankByCount <= TOP_LIMIT)
+          .toSorted((left, right) => left.rankByCount - right.rankByCount)
+          .map(({ scale, itemCount, totalSpent }) => ({ scale, itemCount, totalSpent })),
+        topBySpend: scaleRows
+          .filter((row) => row.rankBySpend <= TOP_LIMIT)
+          .toSorted((left, right) => left.rankBySpend - right.rankBySpend)
+          .map(({ scale, itemCount, totalSpent }) => ({ scale, itemCount, totalSpent })),
+      },
     };
   }
 
@@ -376,6 +199,9 @@ class AnalyticsService {
     search?: string,
   ): Promise<AnalyticsSectionResult> {
     const trimmedSearch = search?.trim();
+    let rows: readonly AnalyticsSectionPageRow[];
+    let totalItemCount: number;
+    let totalSpent: number;
 
     if (section === "shops") {
       const shopSummary = db
@@ -397,7 +223,7 @@ class AnalyticsService {
         .groupBy(collection.shop)
         .as("analytics_shops_page_summary");
 
-      const rows = await db
+      rows = await db
         .select({
           id: shopSummary.id,
           name: shopSummary.name,
@@ -416,10 +242,9 @@ class AnalyticsService {
         .limit(limit)
         .offset(offset);
 
-      return buildSectionResult(section, limit, offset, rows);
-    }
-
-    if (section === "scales") {
+      totalItemCount = rows[0]?.totalItemCount ?? 0;
+      totalSpent = rows[0]?.totalSpentAll ?? 0;
+    } else if (section === "scales") {
       const scaleSummary = db
         .select({
           id: sql<string | null>`NULL`.as("id"),
@@ -440,7 +265,7 @@ class AnalyticsService {
         .groupBy(item.scale)
         .as("analytics_scales_page_summary");
 
-      const rows = await db
+      rows = await db
         .select({
           id: scaleSummary.id,
           name: scaleSummary.name,
@@ -459,70 +284,94 @@ class AnalyticsService {
         .limit(limit)
         .offset(offset);
 
-      return buildSectionResult(section, limit, offset, rows);
+      totalItemCount = rows[0]?.totalItemCount ?? 0;
+      totalSpent = rows[0]?.totalSpentAll ?? 0;
+    } else {
+      const entryFilters = and(
+        eq(collection.userId, userId),
+        eq(collection.status, "Owned"),
+        eq(entry.category, entryCategoryBySection[section]),
+        trimmedSearch ? ilike(entry.name, `%${trimmedSearch}%`) : undefined,
+      );
+
+      const matchedCollections = db
+        .selectDistinct({
+          id: collection.id,
+          price: collection.price,
+        })
+        .from(collection)
+        .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
+        .innerJoin(entry, eq(entry_to_item.entryId, entry.id))
+        .where(entryFilters)
+        .as("analytics_entry_matched_collections");
+
+      const entrySummary = db
+        .select({
+          id: entry.id,
+          name: entry.name,
+          itemCount: sql<number>`COUNT(DISTINCT ${collection.id})`.as("itemCount"),
+          totalSpent: sql<number>`COALESCE(SUM(${collection.price}), 0)`.as("totalSpent"),
+        })
+        .from(collection)
+        .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
+        .innerJoin(entry, eq(entry_to_item.entryId, entry.id))
+        .where(entryFilters)
+        .groupBy(entry.id, entry.name)
+        .as("analytics_entries_page_summary");
+
+      const [entryRows, totalsRow] = await Promise.all([
+        db
+          .select({
+            id: entrySummary.id,
+            name: entrySummary.name,
+            itemCount: entrySummary.itemCount,
+            totalSpent: entrySummary.totalSpent,
+            totalCount: sql<number>`COUNT(*) OVER()`,
+          })
+          .from(entrySummary)
+          .orderBy(
+            desc(entrySummary.itemCount),
+            desc(entrySummary.totalSpent),
+            asc(sql`LOWER(${entrySummary.name})`),
+          )
+          .limit(limit)
+          .offset(offset),
+        db
+          .select({
+            totalItemCount: count().as("totalItemCount"),
+            totalSpent: sql<number>`COALESCE(SUM(${matchedCollections.price}), 0)`.as("totalSpent"),
+          })
+          .from(matchedCollections),
+      ]);
+
+      rows = entryRows;
+      totalItemCount = totalsRow[0]?.totalItemCount ?? 0;
+      totalSpent = totalsRow[0]?.totalSpent ?? 0;
     }
 
-    const entryFilters = and(
-      eq(collection.userId, userId),
-      eq(collection.status, "Owned"),
-      eq(entry.category, entryCategoryBySection[section]),
-      trimmedSearch ? ilike(entry.name, `%${trimmedSearch}%`) : undefined,
-    );
+    const totalCount = rows[0]?.totalCount ?? 0;
 
-    const matchedCollections = db
-      .selectDistinct({
-        id: collection.id,
-        price: collection.price,
-      })
-      .from(collection)
-      .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
-      .innerJoin(entry, eq(entry_to_item.entryId, entry.id))
-      .where(entryFilters)
-      .as("analytics_entry_matched_collections");
-
-    const entrySummary = db
-      .select({
-        id: entry.id,
-        name: entry.name,
-        itemCount: sql<number>`COUNT(DISTINCT ${collection.id})`.as("itemCount"),
-        totalSpent: sql<number>`COALESCE(SUM(${collection.price}), 0)`.as("totalSpent"),
-      })
-      .from(collection)
-      .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
-      .innerJoin(entry, eq(entry_to_item.entryId, entry.id))
-      .where(entryFilters)
-      .groupBy(entry.id, entry.name)
-      .as("analytics_entries_page_summary");
-
-    const [rows, totalsRow] = await Promise.all([
-      db
-        .select({
-          id: entrySummary.id,
-          name: entrySummary.name,
-          itemCount: entrySummary.itemCount,
-          totalSpent: entrySummary.totalSpent,
-          totalCount: sql<number>`COUNT(*) OVER()`,
-        })
-        .from(entrySummary)
-        .orderBy(
-          desc(entrySummary.itemCount),
-          desc(entrySummary.totalSpent),
-          asc(sql`LOWER(${entrySummary.name})`),
-        )
-        .limit(limit)
-        .offset(offset),
-      db
-        .select({
-          totalItemCount: count().as("totalItemCount"),
-          totalSpent: sql<number>`COALESCE(SUM(${matchedCollections.price}), 0)`.as("totalSpent"),
-        })
-        .from(matchedCollections),
-    ]);
-
-    return buildSectionResult(section, limit, offset, rows, {
-      totalItemCount: totalsRow[0]?.totalItemCount ?? 0,
-      totalSpent: totalsRow[0]?.totalSpent ?? 0,
-    });
+    return {
+      section,
+      limit,
+      offset,
+      totalCount,
+      kpis:
+        totalCount === 0
+          ? EMPTY_SECTION_KPIS
+          : {
+              uniqueCount: totalCount,
+              totalItemCount,
+              totalSpent,
+              averageSpent: totalItemCount === 0 ? 0 : totalSpent / totalItemCount,
+            },
+      rows: rows.map(({ id, name, itemCount, totalSpent: rowTotalSpent }) => ({
+        id,
+        name,
+        itemCount,
+        totalSpent: rowTotalSpent,
+      })),
+    };
   }
 
   async getSectionItems(
@@ -532,8 +381,10 @@ class AnalyticsService {
     limit: number,
     offset: number,
   ): Promise<AnalyticsSectionItemsResult> {
+    let rows: readonly AnalyticsSectionItemPageRow[];
+
     if (section === "shops") {
-      const rows = await db
+      rows = await db
         .select({
           id: item.id,
           externalId: item.externalId,
@@ -553,12 +404,8 @@ class AnalyticsService {
         .orderBy(asc(sql`LOWER(${item.title})`), asc(item.id))
         .limit(limit)
         .offset(offset);
-
-      return buildSectionItemsResult(limit, offset, rows);
-    }
-
-    if (section === "scales") {
-      const rows = await db
+    } else if (section === "scales") {
+      rows = await db
         .select({
           id: item.id,
           externalId: item.externalId,
@@ -579,35 +426,38 @@ class AnalyticsService {
         .orderBy(asc(sql`LOWER(${item.title})`), asc(item.id))
         .limit(limit)
         .offset(offset);
-
-      return buildSectionItemsResult(limit, offset, rows);
+    } else {
+      rows = await db
+        .select({
+          id: item.id,
+          externalId: item.externalId,
+          title: item.title,
+          image: item.image,
+          totalCount: sql<number>`COUNT(*) OVER()`,
+        })
+        .from(collection)
+        .innerJoin(item, eq(collection.itemId, item.id))
+        .innerJoin(entry_to_item, eq(item.id, entry_to_item.itemId))
+        .innerJoin(entry, eq(entry_to_item.entryId, entry.id))
+        .where(
+          and(
+            eq(collection.userId, userId),
+            eq(collection.status, "Owned"),
+            eq(entry.category, entryCategoryBySection[section]),
+            eq(entry.id, match),
+          ),
+        )
+        .orderBy(asc(sql`LOWER(${item.title})`), asc(item.id))
+        .limit(limit)
+        .offset(offset);
     }
 
-    const rows = await db
-      .select({
-        id: item.id,
-        externalId: item.externalId,
-        title: item.title,
-        image: item.image,
-        totalCount: sql<number>`COUNT(*) OVER()`,
-      })
-      .from(collection)
-      .innerJoin(item, eq(collection.itemId, item.id))
-      .innerJoin(entry_to_item, eq(item.id, entry_to_item.itemId))
-      .innerJoin(entry, eq(entry_to_item.entryId, entry.id))
-      .where(
-        and(
-          eq(collection.userId, userId),
-          eq(collection.status, "Owned"),
-          eq(entry.category, entryCategoryBySection[section]),
-          eq(entry.id, match),
-        ),
-      )
-      .orderBy(asc(sql`LOWER(${item.title})`), asc(item.id))
-      .limit(limit)
-      .offset(offset);
-
-    return buildSectionItemsResult(limit, offset, rows);
+    return {
+      items: rows.map(({ id, externalId, title, image }) => ({ id, externalId, title, image })),
+      totalCount: rows[0]?.totalCount ?? 0,
+      limit,
+      offset,
+    };
   }
 }
 
