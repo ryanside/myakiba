@@ -144,13 +144,11 @@ const app = new Elysia()
     }),
   )
   // SPA fallback (TanStack Router) for deep links, but only for real HTML navigations.
-  .onError(({ code, request }) => {
-    if (code !== "NOT_FOUND") return;
-
+  .get("/*", ({ request, status }) => {
     const pathname: string = new URL(request.url).pathname;
-    if (pathname.startsWith("/api")) return;
-    if (isAssetPath(pathname)) return;
-    if (!isHtmlNavigationRequest(request)) return;
+    if (pathname.startsWith("/api")) return status(404, "Not Found");
+    if (isAssetPath(pathname)) return status(404, "Not Found");
+    if (!isHtmlNavigationRequest(request)) return status(404, "Not Found");
 
     return serveIndexHtml(serverDistPath);
   })
