@@ -66,5 +66,5 @@
       "bun x ultracite fix"
     ]
   },
-  "packageManager": "bun@1.3.0"
+  "packageManager": "bun@1.3.9"
 }
