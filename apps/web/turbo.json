@@ -1,0 +1,8 @@
+{
+  "extends": ["//"],
+  "tasks": {
+    "check-types": {
+      "dependsOn": ["$TURBO_EXTENDS$", "server#check-types"]
+    }
+  }
+}
