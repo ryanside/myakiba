@@ -10,11 +10,25 @@ export const analyticsSectionQuerySchema = z.object({
   search: z.string().trim().optional(),
   limit: z.coerce.number().int().positive().optional().default(DEFAULT_LIMIT),
   offset: z.coerce.number().int().min(0).optional().default(0),
+  sort: z.enum(["name", "itemCount", "totalSpent"]).optional(),
+  order: z.enum(["asc", "desc"]).optional(),
 });
+
+export type AnalyticsSectionSort = NonNullable<z.infer<typeof analyticsSectionQuerySchema>["sort"]>;
+export type AnalyticsSectionSortOrder = NonNullable<
+  z.infer<typeof analyticsSectionQuerySchema>["order"]
+>;
 
 export const analyticsSectionItemsQuerySchema = z.object({
   match: z.string().min(1),
   limit: z.coerce.number().int().positive().optional().default(6),
+  offset: z.coerce.number().int().min(0).optional().default(0),
+});
+
+export const analyticsSectionRelationshipsQuerySchema = z.object({
+  match: z.string().min(1),
+  relatedSection: z.enum(ANALYTICS_SECTIONS),
+  limit: z.coerce.number().int().positive().max(25).optional().default(5),
   offset: z.coerce.number().int().min(0).optional().default(0),
 });
 
@@ -89,6 +103,28 @@ export type AnalyticsSectionItem = {
 export type AnalyticsSectionItemsResult = {
   readonly items: readonly AnalyticsSectionItem[];
   readonly totalCount: number;
+  readonly limit: number;
+  readonly offset: number;
+};
+
+export type AnalyticsSectionRelationshipPreviewItem = {
+  readonly id: string;
+  readonly externalId: number | null;
+  readonly title: string;
+  readonly image: string;
+};
+
+export type AnalyticsSectionRelationshipValue = {
+  readonly id: string | null;
+  readonly name: string;
+  readonly itemCount: number;
+  readonly previewItems: readonly AnalyticsSectionRelationshipPreviewItem[];
+};
+
+export type AnalyticsSectionRelationshipsResult = {
+  readonly section: AnalyticsSection;
+  readonly totalCount: number;
+  readonly values: readonly AnalyticsSectionRelationshipValue[];
   readonly limit: number;
   readonly offset: number;
 };

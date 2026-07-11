@@ -5,6 +5,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { AnalyticsSection } from "@myakiba/contracts/shared/types";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { SectionRelationships } from "@/components/analytics/section-relationships";
 import { getAnalyticsSectionItems } from "@/queries/analytics";
 import type { AnalyticsSectionItemsData, AnalyticsSectionRow } from "@/queries/analytics";
 import { cn } from "@/lib/utils";
@@ -35,7 +36,7 @@ export function ExpandedRowContent({
 
   return (
     <div className="bg-muted/30 border-t border-border/30 p-4">
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
             Items for <span className="font-medium text-foreground">{row.name}</span>
@@ -57,6 +58,12 @@ export function ExpandedRowContent({
           isFetching={isFetching}
           offset={offset}
           onOffsetChange={setOffset}
+        />
+
+        <SectionRelationships
+          key={`${sectionName}:${match}`}
+          match={match}
+          sectionName={sectionName}
         />
       </div>
     </div>

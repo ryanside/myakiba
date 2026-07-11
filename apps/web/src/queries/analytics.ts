@@ -60,7 +60,12 @@ export interface AnalyticsSectionFilters {
   readonly search?: string;
   readonly limit?: number;
   readonly offset?: number;
+  readonly sort?: AnalyticsSectionSort;
+  readonly order?: AnalyticsSectionSortOrder;
 }
+
+export type AnalyticsSectionSort = "name" | "itemCount" | "totalSpent";
+export type AnalyticsSectionSortOrder = "asc" | "desc";
 
 export interface AnalyticsSectionItemsFilters {
   readonly match: string;
@@ -110,6 +115,22 @@ export interface AnalyticsSectionItemsData {
   readonly offset: number;
 }
 
+type AnalyticsSectionClient = ReturnType<typeof app.api.analytics>;
+
+export type AnalyticsSectionRelationshipsData = NonNullable<
+  Awaited<ReturnType<AnalyticsSectionClient["relationships"]["get"]>>["data"]
+>;
+export type AnalyticsSectionRelationshipValue = AnalyticsSectionRelationshipsData["values"][number];
+export type AnalyticsSectionRelationshipPreviewItem =
+  AnalyticsSectionRelationshipValue["previewItems"][number];
+
+export interface AnalyticsSectionRelationshipsFilters {
+  readonly match: string;
+  readonly relatedSection: AnalyticsSection;
+  readonly limit?: number;
+  readonly offset?: number;
+}
+
 export async function getAnalytics(): Promise<AnalyticsOverviewResponse> {
   const { data, error } = await app.api.analytics.get();
 
@@ -133,6 +154,8 @@ export async function getAnalyticsSection(
     search: search && search.length > 0 ? search : undefined,
     limit: filters.limit ?? DEFAULT_LIMIT,
     offset: filters.offset ?? 0,
+    sort: filters.sort,
+    order: filters.order,
   };
 
   const { data, error } = await app.api.analytics({ sectionName }).get({ query });
@@ -166,6 +189,29 @@ export async function getAnalyticsSectionItems(
 
   if (!data?.items) {
     throw new Error("Failed to get analytics section items");
+  }
+
+  return data;
+}
+
+export async function getAnalyticsSectionRelationships(
+  sectionName: AnalyticsSection,
+  filters: AnalyticsSectionRelationshipsFilters,
+): Promise<AnalyticsSectionRelationshipsData> {
+  const query = {
+    match: filters.match,
+    relatedSection: filters.relatedSection,
+    limit: filters.limit ?? 5,
+    offset: filters.offset ?? 0,
+  };
+  const { data, error } = await app.api.analytics({ sectionName }).relationships.get({ query });
+
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to get analytics section relationships"));
+  }
+
+  if (!data?.values) {
+    throw new Error("Failed to get analytics section relationships");
   }
 
   return data;

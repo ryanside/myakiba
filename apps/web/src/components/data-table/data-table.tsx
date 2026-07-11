@@ -1,7 +1,7 @@
 import { createContext, Fragment, useContext } from "react";
 import type { ReactNode } from "react";
 import { flexRender } from "@tanstack/react-table";
-import type { Row, RowData, Table as TanStackTable } from "@tanstack/react-table";
+import type { Column, Row, RowData, Table as TanStackTable } from "@tanstack/react-table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -65,8 +65,10 @@ function Table({
 
 function Header<TData extends RowData>({
   useColumnSizing = false,
+  showSortState = false,
 }: {
   readonly useColumnSizing?: boolean;
+  readonly showSortState?: boolean;
 }): ReactNode {
   const { table } = useDataTable<TData>();
 
@@ -77,6 +79,7 @@ function Header<TData extends RowData>({
           {headerGroup.headers.map((header) => (
             <th
               key={header.id}
+              aria-sort={showSortState ? getAriaSort(header.column) : undefined}
               className="text-left p-1.5 border-b font-medium text-muted-foreground"
               style={useColumnSizing ? { width: header.column.getSize() } : undefined}
             >
@@ -89,6 +92,16 @@ function Header<TData extends RowData>({
       ))}
     </thead>
   );
+}
+
+function getAriaSort<TData extends RowData>(
+  column: Column<TData>,
+): "ascending" | "descending" | "none" | undefined {
+  const sorted = column.getIsSorted();
+
+  if (sorted === "asc") return "ascending";
+  if (sorted === "desc") return "descending";
+  return column.getCanSort() ? "none" : undefined;
 }
 
 function Body<TData extends RowData>({
