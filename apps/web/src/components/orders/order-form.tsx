@@ -647,7 +647,7 @@ function OrderFormContent(
       >
         <DialogHeader>
           <DialogTitle>{type === "merge" ? "Merge Orders" : "Split Items"}</DialogTitle>
-          {selectedCount && (
+          {selectedCount !== undefined && selectedCount > 0 && (
             <DialogDescription>
               {type === "merge"
                 ? `Merge the selected ${selectedCount} orders into a new order.`
