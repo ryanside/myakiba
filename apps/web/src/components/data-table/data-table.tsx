@@ -142,9 +142,22 @@ function Body<TData extends RowData>({
           <Fragment key={row.id}>
             <tr
               onClick={onRowClick ? () => onRowClick(row) : undefined}
+              onKeyDown={
+                onRowClick
+                  ? (event) => {
+                      if (event.target !== event.currentTarget) return;
+                      if (event.key !== "Enter" && event.key !== " ") return;
+
+                      event.preventDefault();
+                      onRowClick(row);
+                    }
+                  : undefined
+              }
+              tabIndex={isInteractive ? 0 : undefined}
               className={cn(
                 "animate-data-in border-b border-border/50 hover:bg-muted/40",
-                isInteractive && "cursor-pointer",
+                isInteractive &&
+                  "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
                 getRowClassName?.(row),
               )}
             >
