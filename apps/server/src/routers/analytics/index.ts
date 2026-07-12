@@ -7,6 +7,7 @@ import {
   analyticsSectionItemsQuerySchema,
   analyticsSectionParamSchema,
   analyticsSectionQuerySchema,
+  analyticsSectionRelationshipsQuerySchema,
 } from "./model";
 
 const analyticsRouter = new Elysia({ prefix: "/analytics" })
@@ -49,6 +50,8 @@ const analyticsRouter = new Elysia({ prefix: "/analytics" })
           query.limit,
           query.offset,
           query.search,
+          query.sort,
+          query.order,
         ),
       );
 
@@ -113,6 +116,58 @@ const analyticsRouter = new Elysia({ prefix: "/analytics" })
     {
       params: analyticsSectionParamSchema,
       query: analyticsSectionItemsQuerySchema,
+      auth: true,
+    },
+  )
+  .get(
+    "/:sectionName/relationships",
+    async ({ params, query, user, log }) => {
+      if (!user) return status(401, "Unauthorized");
+      if (params.sectionName === query.relatedSection) {
+        return status(400, "Related section must differ from source section");
+      }
+
+      log.set({
+        action: "analytics.section_relationships",
+        user: { id: user.id },
+        analytics: {
+          section: params.sectionName,
+          relatedSection: query.relatedSection,
+          match: query.match,
+        },
+      });
+
+      const { data: relationships, error } = await tryCatch(
+        AnalyticsService.getSectionRelationships(
+          user.id,
+          params.sectionName,
+          query.match,
+          query.relatedSection,
+          query.limit,
+          query.offset,
+        ),
+      );
+
+      if (error) {
+        log.error(error, { step: "getSectionRelationships" });
+        return status(500, "Failed to get analytics section relationships");
+      }
+
+      log.set({
+        analytics: {
+          section: params.sectionName,
+          relatedSection: query.relatedSection,
+          match: query.match,
+          resultCount: relationships.values.length,
+          totalCount: relationships.totalCount,
+        },
+        outcome: "success",
+      });
+      return relationships;
+    },
+    {
+      params: analyticsSectionParamSchema,
+      query: analyticsSectionRelationshipsQuerySchema,
       auth: true,
     },
   );

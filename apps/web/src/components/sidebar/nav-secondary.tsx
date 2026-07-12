@@ -1,6 +1,7 @@
 import * as React from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { IconSvgElement } from "@hugeicons/react";
+import { Link } from "@tanstack/react-router";
 
 import {
   SidebarGroup,
@@ -18,6 +19,7 @@ export function NavSecondary({
     title: string;
     url: string;
     icon: IconSvgElement | React.ComponentType<React.SVGProps<SVGSVGElement>>;
+    external: boolean;
   }[];
 } & React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
   return (
@@ -27,19 +29,34 @@ export function NavSecondary({
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton size="sm">
-                <a href={item.url} target="_blank" rel="noopener noreferrer">
-                  {typeof item.icon === "function" ? (
-                    <item.icon />
-                  ) : (
-                    <HugeiconsIcon icon={item.icon} />
-                  )}
-                  <span>{item.title}</span>
-                </a>
+                {item.external ? (
+                  <a href={item.url} target="_blank" rel="noopener noreferrer">
+                    <NavIcon icon={item.icon} />
+                    <span>{item.title}</span>
+                  </a>
+                ) : (
+                  <Link to={item.url}>
+                    <NavIcon icon={item.icon} />
+                    <span>{item.title}</span>
+                  </Link>
+                )}
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>
+  );
+}
+
+function NavIcon({
+  icon: Icon,
+}: {
+  icon: IconSvgElement | React.ComponentType<React.SVGProps<SVGSVGElement>>;
+}) {
+  return typeof Icon === "function" ? (
+    <Icon className="size-4 [&_path]:fill-current" />
+  ) : (
+    <HugeiconsIcon icon={Icon} />
   );
 }

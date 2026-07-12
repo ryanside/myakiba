@@ -272,16 +272,31 @@ function DataGridTableBodyRow<TData>({
   dndStyle?: CSSProperties;
 }) {
   const { props, table } = useDataGrid();
+  const onRowClick = props.onRowClick;
+  const isInteractive = Boolean(onRowClick);
 
   return (
     <tr
       ref={dndRef}
       style={dndStyle ?? undefined}
       data-state={table.options.enableRowSelection && row.getIsSelected() ? "selected" : undefined}
-      onClick={() => props.onRowClick && props.onRowClick(row.original)}
+      onClick={onRowClick ? () => onRowClick(row.original) : undefined}
+      onKeyDown={
+        onRowClick
+          ? (event) => {
+              if (event.target !== event.currentTarget) return;
+              if (event.key !== "Enter" && event.key !== " ") return;
+
+              event.preventDefault();
+              onRowClick(row.original);
+            }
+          : undefined
+      }
+      tabIndex={isInteractive ? 0 : undefined}
       className={cn(
         "animate-data-in group/row hover:bg-muted/40 data-[state=selected]:bg-muted/50",
-        props.onRowClick && "cursor-pointer",
+        isInteractive &&
+          "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
         !props.tableLayout?.stripped &&
           props.tableLayout?.rowBorder &&
           "border-border border-b [&:not(:last-child)>td]:border-b",

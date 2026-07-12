@@ -2,18 +2,20 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
 import { TextLoop } from "@/components/homepage/text-loop";
+import { TyperHeadline } from "@/components/homepage/typer-headline";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon, Sun01Icon, Moon02Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { useTheme } from "next-themes";
 import BounceCards from "@/components/bounce-cards";
 import MfcSyncSection from "@/components/homepage/integrations-1";
 import FAQsSection from "@/components/homepage/faqs";
 import FooterSection from "@/components/homepage/footer";
 import LogoCloud from "@/components/homepage/logo-cloud";
+import { DiscordLogo, GitHubLogo } from "@/components/ui/brand-icons";
 import { cn } from "@/lib/utils";
-import { setThemeWithTransition } from "@/lib/theme-transition";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const EXAMPLE_ITEMS = [
   "/example-item1.webp",
@@ -51,12 +53,10 @@ export const Route = createFileRoute("/")({
 const NAV_LINKS: readonly {
   readonly name: string;
   readonly href: string;
-  readonly external?: boolean;
 }[] = [
   { name: "Features", href: "#features" },
   { name: "FAQs", href: "#faqs" },
-  { name: "Discord", href: "https://discord.gg/VKHVvhcC2z", external: true },
-  { name: "GitHub", href: "https://github.com/ryanside/myakiba", external: true },
+  { name: "Changelog", href: "/changelog" },
 ];
 
 type Feature = {
@@ -99,22 +99,6 @@ const FEATURES: readonly Feature[] = [
   },
 ];
 
-function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
-  const isDark = theme !== "light";
-
-  return (
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      onClick={() => setThemeWithTransition(isDark ? "light" : "dark", setTheme)}
-      aria-label="Toggle theme"
-    >
-      <HugeiconsIcon icon={isDark ? Sun01Icon : Moon02Icon} />
-    </Button>
-  );
-}
-
 function HomeComponent() {
   const { theme } = useTheme();
   const isDark = theme !== "light";
@@ -136,28 +120,50 @@ function HomeComponent() {
         <nav className="mx-auto flex h-12 max-w-6xl items-center px-6 min-[940px]:grid min-[940px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] min-[940px]:gap-4">
           <div />
           <div className="hidden min-[940px]:flex items-center gap-6">
-            {NAV_LINKS.map((item) => {
-              const linkClass =
-                "text-sm text-muted-foreground transition-colors duration-150 hover:text-foreground";
-              return item.external ? (
-                <a
-                  key={item.name}
-                  href={item.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={linkClass}
-                >
-                  {item.name}
-                </a>
-              ) : (
-                <a key={item.name} href={item.href} className={linkClass}>
-                  {item.name}
-                </a>
-              );
-            })}
+            {NAV_LINKS.map((item) => (
+              <a
+                key={item.name}
+                href={item.href}
+                className="text-sm text-muted-foreground transition-colors duration-150 hover:text-foreground"
+              >
+                {item.name}
+              </a>
+            ))}
           </div>
 
           <div className="ml-auto flex items-center justify-end gap-2 min-[940px]:ml-0">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              render={
+                <a
+                  href="https://discord.gg/VKHVvhcC2z"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Join myakiba on Discord"
+                  title="Discord"
+                />
+              }
+              nativeButton={false}
+            >
+              <DiscordLogo className="size-4 [&_path]:fill-current" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              render={
+                <a
+                  href="https://github.com/ryanside/myakiba"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="View myakiba on GitHub"
+                  title="GitHub"
+                />
+              }
+              nativeButton={false}
+            >
+              <GitHubLogo className="size-4" />
+            </Button>
             <ThemeToggle />
             <Button
               size="sm"
@@ -183,16 +189,23 @@ function HomeComponent() {
           </span>
         </div>
 
-        <h1 className="animate-appear text-xl font-medium tracking-tight [--appear-delay:80ms]">
-          A modern anime figure collection manager
+        <h1
+          className="text-xl font-medium tracking-tight"
+          aria-label="A modern anime figure collection manager."
+        >
+          <TyperHeadline
+            text="A modern anime figure collection manager."
+            delayMs={200}
+            aria-hidden
+          />
         </h1>
 
-        <p className="animate-appear mt-3 text-[15px] text-balance leading-normal text-muted-foreground [--appear-delay:140ms]">
+        <p className="animate-appear mt-3 text-[15px] text-balance leading-normal text-muted-foreground [--appear-delay:400ms]">
           Your MyFigureCollection catalog and the flexibility of spreadsheets, unified into a modern
           collection manager. Track orders, analyze your collection, and sync with MFC.
         </p>
 
-        <div className="animate-appear mt-5 mb-7 flex flex-wrap items-center gap-3 [--appear-delay:200ms]">
+        <div className="animate-appear mt-5 mb-7 flex flex-wrap items-center gap-3 [--appear-delay:500ms]">
           <Button
             size="lg"
             className="h-10 rounded-xl px-4"
@@ -207,13 +220,14 @@ function HomeComponent() {
           </div>{" "}
         </div>
 
-        <div className="animate-appear flex justify-start my-2 [--appear-delay:240ms]">
+        <div className="animate-appear flex justify-start my-2 [--appear-delay:880ms]">
           <BounceCards
             images={[...EXAMPLE_ITEMS].slice(0, 5)}
             containerWidth={240}
             containerHeight={120}
             cardSize={70}
-            animationDelay={0.3}
+            animationDelay={0.88}
+            animationStagger={0.05}
             transformStyles={[
               "rotate(10deg) translate(-76px)",
               "rotate(5deg) translate(-38px)",
@@ -224,7 +238,7 @@ function HomeComponent() {
           />
         </div>
 
-        <section id="features" className="animate-appear mb-12 [--appear-delay:300ms]">
+        <section id="features" className="animate-appear mb-12 [--appear-delay:1200ms]">
           <h2 className="text-xs font-medium text-muted-foreground tracking-tight mb-4">
             Features
           </h2>
@@ -241,7 +255,7 @@ function HomeComponent() {
           </ul>
         </section>
 
-        <div className="animate-appear -mx-6 sm:-mx-24 md:-mx-36 lg:-mx-60 xl:-mx-84 [--appear-delay:380ms]">
+        <div className="animate-appear -mx-6 sm:-mx-24 md:-mx-36 lg:-mx-60 xl:-mx-84 [--appear-delay:1260ms]">
           <div className="mb-3 flex items-center gap-4 px-6 sm:px-0">
             <Tabs
               value={hero.tab}
@@ -304,13 +318,13 @@ function HomeComponent() {
         </div>
       </main>
 
-      <div className="animate-appear [--appear-delay:460ms]">
+      <div className="animate-appear [--appear-delay:1320ms]">
         <MfcSyncSection />
       </div>
-      <div className="animate-appear [--appear-delay:520ms]">
+      <div className="animate-appear [--appear-delay:1380ms]">
         <FAQsSection />
       </div>
-      <div className="animate-appear [--appear-delay:560ms]">
+      <div className="animate-appear [--appear-delay:1440ms]">
         <FooterSection />
       </div>
     </div>

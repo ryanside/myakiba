@@ -8,6 +8,7 @@ import {
   PackageIcon,
   Settings01Icon,
   GitCompareIcon,
+  Clock02Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { DiscordLogo, GitHubLogo } from "@/components/ui/brand-icons";
@@ -81,14 +82,22 @@ const data = {
   ],
   navSecondary: [
     {
+      title: "Changelog",
+      url: "/changelog" as const,
+      icon: Clock02Icon,
+      external: false as const,
+    },
+    {
       title: "Discord",
       url: "https://discord.gg/VKHVvhcC2z",
       icon: DiscordLogo,
+      external: true as const,
     },
     {
       title: "GitHub",
       url: "https://github.com/ryanside/myakiba",
       icon: GitHubLogo,
+      external: true as const,
     },
   ],
 };

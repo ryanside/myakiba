@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useFilters } from "@/hooks/use-filters";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { getAnalyticsSection } from "@/queries/analytics";
+import type { AnalyticsSectionSort, AnalyticsSectionSortOrder } from "@/queries/analytics";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 
 const analyticsSectionSchema = z.enum(ANALYTICS_SECTIONS);
@@ -23,6 +24,8 @@ const sectionSearchSchema = z.object({
   search: z.string().optional(),
   limit: z.coerce.number().int().positive().optional(),
   offset: z.coerce.number().int().min(0).optional(),
+  sort: z.enum(["name", "itemCount", "totalSpent"]).optional(),
+  order: z.enum(["asc", "desc"]).optional(),
 });
 
 const KPI_LABELS = ["Unique", "Total Items", "Total Spent", "Avg. Spent"] as const;
@@ -60,10 +63,12 @@ function RouteComponent(): ReactNode {
   const limit = filters.limit ?? DEFAULT_LIMIT;
   const offset = filters.offset ?? 0;
   const search = filters.search ?? "";
+  const sort = filters.sort;
+  const order = filters.order;
 
   const { data, isPending, isError, error, isFetching } = useQuery({
-    queryKey: ["analytics", "section", sectionName, { search, limit, offset }],
-    queryFn: () => getAnalyticsSection(sectionName, { search, limit, offset }),
+    queryKey: ["analytics", "section", sectionName, { search, limit, offset, sort, order }],
+    queryFn: () => getAnalyticsSection(sectionName, { search, limit, offset, sort, order }),
     staleTime: 1000 * 60 * 5,
     retry: false,
     placeholderData: keepPreviousData,
@@ -72,6 +77,16 @@ function RouteComponent(): ReactNode {
   const handleSearchChange = useCallback(
     (value: string | number) => {
       setFilters({ search: String(value) || undefined, offset: 0 });
+    },
+    [setFilters],
+  );
+
+  const handleSortChange = useCallback(
+    (
+      nextSort: AnalyticsSectionSort | undefined,
+      nextOrder: AnalyticsSectionSortOrder | undefined,
+    ) => {
+      setFilters({ sort: nextSort, order: nextOrder, offset: 0 });
     },
     [setFilters],
   );
@@ -148,6 +163,9 @@ function RouteComponent(): ReactNode {
                 sectionName={sectionName}
                 offset={offset}
                 isLoading={isLoading}
+                sort={sort}
+                order={order}
+                onSortChange={handleSortChange}
               />
             </div>
 
