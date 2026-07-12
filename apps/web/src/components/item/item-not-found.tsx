@@ -12,7 +12,7 @@ import {
   EmptyMedia,
 } from "@/components/ui/empty";
 import { SyncActionSheet } from "@/components/sync/sync-launcher";
-import type { LaunchableSyncType } from "@/components/sync/sync-launcher";
+import type { LaunchableSyncType } from "@/components/sync/sync-launcher-options";
 
 export function ItemNotFound({
   externalId,

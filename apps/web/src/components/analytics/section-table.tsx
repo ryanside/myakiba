@@ -20,7 +20,7 @@ import type {
 } from "@tanstack/react-table";
 import type { AnalyticsSection } from "@myakiba/contracts/shared/types";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import { DataTable } from "@/components/data-table/data-table";
+import * as DataTable from "@/components/data-table/data-table";
 import { Button } from "@/components/ui/button";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type {

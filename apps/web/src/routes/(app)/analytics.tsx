@@ -5,7 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { ENTRY_CATEGORIES } from "@myakiba/contracts/shared/constants";
 import { getAnalytics } from "@/queries/analytics";
 import { LeaderboardTable } from "@/components/analytics/leaderboard-table";
-import { SECTION_GRADIENT_COLORS, Section } from "@/components/analytics/section";
+import { Section } from "@/components/analytics/section";
+import { SECTION_GRADIENT_COLORS } from "@/components/analytics/section-utils";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 

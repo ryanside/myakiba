@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { CostBreakdownData } from "@/queries/dashboard";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import Loader from "../loader";
-import { BreakdownChart } from "./breakdown-chart";
+import * as BreakdownChart from "./breakdown-chart";
 
 interface CostBreakdownProps {
   readonly data: CostBreakdownData | undefined;

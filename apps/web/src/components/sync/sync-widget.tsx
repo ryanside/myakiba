@@ -4,8 +4,9 @@ import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SYNC_TYPE_CONFIG } from "@/lib/sync";
-import { LAUNCHABLE_SYNC_OPTIONS, SyncActionSheet } from "@/components/sync/sync-launcher";
-import type { LaunchableSyncType } from "@/components/sync/sync-launcher";
+import { SyncActionSheet } from "@/components/sync/sync-launcher";
+import { LAUNCHABLE_SYNC_OPTIONS } from "@/components/sync/sync-launcher-options";
+import type { LaunchableSyncType } from "@/components/sync/sync-launcher-options";
 
 type SyncWidgetProps = {
   readonly TriggerWrapper: React.ReactElement;

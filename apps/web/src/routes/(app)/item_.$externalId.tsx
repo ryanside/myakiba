@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { BackLink } from "@/components/ui/back-link";
 import { SyncActionSheet } from "@/components/sync/sync-launcher";
-import type { LaunchableSyncType } from "@/components/sync/sync-launcher";
+import type { LaunchableSyncType } from "@/components/sync/sync-launcher-options";
 import Loader from "@/components/loader";
 import { ItemCollection } from "@/components/item/item-collection";
 import { ItemDetails } from "@/components/item/item-details";

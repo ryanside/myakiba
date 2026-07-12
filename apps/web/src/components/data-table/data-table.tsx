@@ -26,7 +26,7 @@ function useDataTable<TData extends RowData>(): DataTableContextValue<TData> {
   return context as DataTableContextValue<TData>;
 }
 
-function Root<TData extends RowData>({
+export function Root<TData extends RowData>({
   table,
   isLoading = false,
   skeletonRowCount = DEFAULT_SKELETON_ROW_COUNT,
@@ -53,7 +53,7 @@ function Root<TData extends RowData>({
   );
 }
 
-function Table({
+export function Table({
   children,
   className,
 }: {
@@ -63,7 +63,7 @@ function Table({
   return <table className={cn("w-full text-xs border-collapse", className)}>{children}</table>;
 }
 
-function Header<TData extends RowData>({
+export function Header<TData extends RowData>({
   useColumnSizing = false,
   showSortState = false,
 }: {
@@ -104,7 +104,7 @@ function getAriaSort<TData extends RowData>(
   return column.getCanSort() ? "none" : undefined;
 }
 
-function Body<TData extends RowData>({
+export function Body<TData extends RowData>({
   onRowClick,
   renderExpandedRow,
   getRowClassName,
@@ -194,7 +194,7 @@ function Body<TData extends RowData>({
   );
 }
 
-function LoadingSurface({
+export function LoadingSurface({
   children,
   className,
 }: {
@@ -210,7 +210,7 @@ function LoadingSurface({
   );
 }
 
-function Empty({
+export function Empty({
   title,
   description,
 }: {
@@ -224,12 +224,3 @@ function Empty({
     </div>
   );
 }
-
-export const DataTable = {
-  Root,
-  Table,
-  Header,
-  Body,
-  LoadingSurface,
-  Empty,
-};

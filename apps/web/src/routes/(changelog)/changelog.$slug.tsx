@@ -1,7 +1,19 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import { ChangelogCoverImage, changelogMdxComponents } from "@/components/changelog/changelog-mdx";
+import type { MDXComponents } from "mdx/types";
+import {
+  ChangelogCoverImage,
+  ChangelogImage,
+  ChangelogLink,
+  ChangelogTable,
+} from "@/components/changelog/changelog-mdx";
 import { formatChangelogDate, loadChangelogEntry } from "@/lib/changelog";
 import "@/components/changelog/changelog.css";
+
+const changelogMdxComponents = {
+  a: ChangelogLink,
+  img: ChangelogImage,
+  table: ChangelogTable,
+} satisfies MDXComponents;
 
 export const Route = createFileRoute("/(changelog)/changelog/$slug")({
   loader: ({ params }) => {

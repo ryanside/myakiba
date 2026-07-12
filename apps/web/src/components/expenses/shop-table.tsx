@@ -12,7 +12,7 @@ import type {
 } from "@myakiba/contracts/expenses/schema";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
-import { DataTable } from "@/components/data-table/data-table";
+import * as DataTable from "@/components/data-table/data-table";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { DebouncedInput } from "@/components/debounced-input";
 import { Section } from "@/components/expenses/section";

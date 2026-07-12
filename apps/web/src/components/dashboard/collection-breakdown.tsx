@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { Category, Currency } from "@myakiba/contracts/shared/types";
 import { getCategoryColor } from "@/lib/category-colors";
 import Loader from "../loader";
-import { BreakdownChart } from "./breakdown-chart";
+import * as BreakdownChart from "./breakdown-chart";
 
 interface CollectionBreakdownProps {
   readonly data: readonly { name: Category; count: number; totalValue: number | null }[];

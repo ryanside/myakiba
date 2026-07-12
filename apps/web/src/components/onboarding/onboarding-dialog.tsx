@@ -42,7 +42,7 @@ import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { CURRENCY_LABELS } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 import { SyncActionSheet } from "@/components/sync/sync-launcher";
-import type { LaunchableSyncType } from "@/components/sync/sync-launcher";
+import type { LaunchableSyncType } from "@/components/sync/sync-launcher-options";
 import { CURRENCIES, DATE_FORMATS } from "@myakiba/contracts/shared/constants";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { getRouteApi, useRouter } from "@tanstack/react-router";

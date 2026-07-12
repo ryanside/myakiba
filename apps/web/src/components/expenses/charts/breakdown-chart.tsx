@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import type { ExpenseBreakdownEntry } from "@myakiba/contracts/expenses/schema";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import { BreakdownChart } from "@/components/dashboard/breakdown-chart";
+import * as BreakdownChart from "@/components/dashboard/breakdown-chart";
 import type { BreakdownChartEntry } from "@/components/dashboard/breakdown-chart";
 import { Section } from "@/components/expenses/section";
 import { EXPENSE_CHART_COLORS } from "@/components/expenses/chart-utils";

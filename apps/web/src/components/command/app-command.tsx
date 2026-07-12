@@ -28,8 +28,12 @@ import { APP_COMMAND_NAVIGATION_ITEMS } from "@/lib/app-navigation";
 import type { AppNavigationItem, AppNavigationTarget } from "@/lib/app-navigation";
 import { searchCommandResults } from "@/queries/search";
 import type { CommandSearchResults } from "@/queries/search";
-import { LAUNCHABLE_SYNC_OPTIONS, SyncActionSheet } from "@/components/sync/sync-launcher";
-import type { LaunchableSyncType, SyncLauncherOption } from "@/components/sync/sync-launcher";
+import { SyncActionSheet } from "@/components/sync/sync-launcher";
+import { LAUNCHABLE_SYNC_OPTIONS } from "@/components/sync/sync-launcher-options";
+import type {
+  LaunchableSyncType,
+  SyncLauncherOption,
+} from "@/components/sync/sync-launcher-options";
 import { SYNC_TYPE_CONFIG } from "@/lib/sync";
 const TOKEN_SEPARATOR = /[^a-z0-9]+/i;
 const SEARCH_DEBOUNCE_MS = 250;

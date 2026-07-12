@@ -1,7 +1,4 @@
-import type { IconSvgElement } from "@hugeicons/react";
-import { FileUploadIcon, LibraryIcon, PackageIcon } from "@hugeicons/core-free-icons";
 import { useQueryClient } from "@tanstack/react-query";
-import type { SyncType } from "@myakiba/contracts/shared/types";
 import {
   Sheet,
   SheetContent,
@@ -15,36 +12,7 @@ import SyncCollectionForm from "@/components/sync/sync-collection-form";
 import { useSyncMutations } from "@/hooks/use-sync-mutations";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { SYNC_OPTION_META } from "@/lib/sync";
-
-export type LaunchableSyncType = Extract<SyncType, "collection" | "csv" | "order">;
-
-export type SyncLauncherOption = {
-  readonly type: LaunchableSyncType;
-  readonly icon: IconSvgElement;
-  readonly description: string;
-  readonly keywords: readonly string[];
-};
-
-export const LAUNCHABLE_SYNC_OPTIONS = [
-  {
-    type: "collection",
-    icon: LibraryIcon,
-    description: "Add items by MFC ID",
-    keywords: ["sync", "collection", "item", "mfc"],
-  },
-  {
-    type: "order",
-    icon: PackageIcon,
-    description: "Create an order with MFC items",
-    keywords: ["sync", "order", "purchase", "mfc"],
-  },
-  {
-    type: "csv",
-    icon: FileUploadIcon,
-    description: "Import from MFC CSV export",
-    keywords: ["sync", "csv", "import", "upload"],
-  },
-] as const satisfies readonly SyncLauncherOption[];
+import type { LaunchableSyncType } from "@/components/sync/sync-launcher-options";
 
 type SyncActionSheetProps = {
   readonly syncType: LaunchableSyncType | null;

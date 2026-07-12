@@ -10,7 +10,7 @@ import { Empty, EmptyContent, EmptyDescription, EmptyHeader } from "@/components
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
-import { sectionLabel } from "@/components/analytics/section";
+import { sectionLabel } from "@/components/analytics/section-utils";
 import { getAnalyticsSectionRelationships } from "@/queries/analytics";
 import type {
   AnalyticsSectionRelationshipPreviewItem,
