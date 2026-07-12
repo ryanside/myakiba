@@ -16,8 +16,6 @@ const TIMESTAMP_PATTERN_BY_FORMAT: Readonly<Record<DateFormat, string>> = {
   "YYYY/DD/MM": "yyyy/dd/MM, HH:mm",
 };
 
-const YEAR_FIRST_FORMATS = new Set<DateFormat>(["YYYY/MM/DD", "YYYY/DD/MM"]);
-
 const RELATIVE_TIME_FORMATTER = new Intl.RelativeTimeFormat("en-US", {
   numeric: "auto",
   style: "narrow",
@@ -53,33 +51,6 @@ export function formatDateOnlyForDisplay(
   if (!date) return "Invalid date";
 
   return formatDateFns(date, DATE_PATTERN_BY_FORMAT[format]);
-}
-
-/**
- * Formats a date-only value as month and year for compact UI labels.
- *
- * @example
- * formatMonthYearForDisplay("2024-03-15", "MM/DD/YYYY")
- * // "Mar 2024"
- *
- * @example
- * formatMonthYearForDisplay("2024-03-15", "YYYY/MM/DD")
- * // "2024 Mar"
- *
- * @example
- * formatMonthYearForDisplay(null)
- * // "n/a"
- */
-export function formatMonthYearForDisplay(
-  value: string | Date | null | undefined,
-  format: DateFormat = "MM/DD/YYYY",
-): string {
-  if (!value) return "n/a";
-
-  const date = parseDateOnly(value);
-  if (!date) return "Invalid date";
-
-  return formatDateFns(date, YEAR_FIRST_FORMATS.has(format) ? "yyyy LLL" : "LLL yyyy");
 }
 
 /**

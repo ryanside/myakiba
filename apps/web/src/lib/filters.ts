@@ -15,7 +15,7 @@ const DEFAULT_SORT_STATE: DefaultSortState = {
   order: "desc",
 };
 
-export function hasActiveFilters<T extends Record<string, unknown>>(filters: T): boolean {
+function hasActiveFilters<T extends Record<string, unknown>>(filters: T): boolean {
   return Object.entries(filters).some(([key, value]) => {
     if (NON_FILTER_KEYS.has(key)) return false;
     if (value === undefined || value === null) return false;

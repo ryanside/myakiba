@@ -36,7 +36,7 @@ import type {
 } from "@myakiba/contracts/orders/types";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 
-export function ordersQueryOptions(filters: OrderFilters) {
+function ordersQueryOptions(filters: OrderFilters) {
   return queryOptions({
     queryKey: ["orders", filters] as const,
     queryFn: () => getOrders(filters),

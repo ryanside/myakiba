@@ -7,7 +7,7 @@ const coverSchema = z
   })
   .strict();
 
-export const changelogFrontmatterSchema = z
+const changelogFrontmatterSchema = z
   .object({
     title: z.string().trim().min(1),
     date: z.iso.date(),
@@ -25,7 +25,7 @@ export type ChangelogSource = Readonly<{
 
 const MDX_EXTENSION = /\.mdx$/;
 
-export function getChangelogSlug(sourcePath: string): string {
+function getChangelogSlug(sourcePath: string): string {
   const filename = sourcePath.split("/").at(-1);
   if (!filename?.endsWith(".mdx")) {
     throw new Error(`Invalid changelog source path: ${sourcePath}`);

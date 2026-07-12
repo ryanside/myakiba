@@ -14,7 +14,7 @@ import type {
   SyncSessionStatus,
   SyncSessionItemStatus,
 } from "@myakiba/contracts/shared/types";
-import type { SyncJobPhase, SyncJobStatus } from "@myakiba/contracts/sync/schema";
+import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
 
 export const SESSION_STATUS_CONFIG: Record<
   SyncSessionStatus,
@@ -41,14 +41,6 @@ export const SYNC_TYPE_CONFIG: Record<
   order: { label: "Order", variant: "info" },
   "order-item": { label: "Order Item", variant: "secondary" },
   collection: { label: "Collection", variant: "secondary" },
-};
-
-export const PHASE_CONFIG: Record<SyncJobPhase, { readonly bannerClass: string }> = {
-  queued: { bannerClass: "border-border bg-muted/40 text-muted-foreground" },
-  scraping: { bannerClass: "border-info/30 bg-info/5 text-info" },
-  persisting: { bannerClass: "border-info/30 bg-info/5 text-info" },
-  completed: { bannerClass: "border-success/30 bg-success/5 text-success" },
-  failed: { bannerClass: "border-destructive/30 bg-destructive/5 text-destructive" },
 };
 
 /**

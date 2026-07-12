@@ -38,7 +38,7 @@ type ItemRelatedCollectionRow = Pick<
 >;
 type ItemRelatedCollectionData = { readonly collection: readonly ItemRelatedCollectionRow[] };
 
-export function collectionQueryOptions(filters: CollectionFilters) {
+function collectionQueryOptions(filters: CollectionFilters) {
   return queryOptions({
     queryKey: ["collection", filters] as const,
     queryFn: () => getCollection(filters),
