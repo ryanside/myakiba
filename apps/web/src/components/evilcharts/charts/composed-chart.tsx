@@ -14,25 +14,13 @@ import { ChartLegend, ChartLegendContent } from "@/components/evilcharts/ui/lege
 import type { ChartLegendVariant } from "@/components/evilcharts/ui/legend";
 import { ChartTooltip, ChartTooltipContent } from "@/components/evilcharts/ui/tooltip";
 import type { TooltipRoundness, TooltipVariant } from "@/components/evilcharts/ui/tooltip";
-import { ChartDot } from "@/components/evilcharts/ui/dot";
-import type { DotVariant } from "@/components/evilcharts/ui/dot";
-import {
-  Children,
-  createContext,
-  isValidElement,
-  use,
-  useCallback,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import type { ComponentProps, FC, ReactElement, ReactNode } from "react";
+import { createContext, use, useCallback, useId, useMemo, useRef, useState } from "react";
+import type { ComponentProps, ReactNode } from "react";
+import type { Line as RechartsLine } from "recharts";
 import {
   Bar as RechartsBar,
   CartesianGrid,
   ComposedChart as RechartsComposedChart,
-  Line as RechartsLine,
   XAxis as RechartsXAxis,
   YAxis as RechartsYAxis,
 } from "recharts";
@@ -43,15 +31,11 @@ const STROKE_WIDTH = 2;
 const DEFAULT_BAR_RADIUS = 4;
 const LOADING_DATA_KEY = "loading";
 const LOADING_ANIMATION_DURATION = 2000; // in milliseconds
-const REVEAL_DURATION = 1; // line intro wipe length, in seconds
 const REVEAL_EASE: [number, number, number, number] = [0, 0.7, 0.5, 1]; // intro easing
 const BAR_GROW_DURATION = 0.5; // per-bar grow-in length, in seconds
 const BAR_STAGGER = 0.05; // delay between consecutive bars, in seconds
 
 type CurveType = ComponentProps<typeof RechartsLine>["type"];
-type LineDotProp = ComponentProps<typeof RechartsLine>["dot"];
-type LineActiveDotProp = ComponentProps<typeof RechartsLine>["activeDot"];
-type StrokeVariant = "solid" | "dashed" | "animated-dashed";
 type BarVariant = "default" | "hatched" | "duotone" | "duotone-reverse" | "gradient" | "stripped";
 
 /**
@@ -63,7 +47,6 @@ type BarVariant = "default" | "hatched" | "duotone" | "duotone-reverse" | "gradi
  * `"none"` opts out — as does a device with the OS "reduce motion" preference.
  */
 type ComposedAnimationType = "none" | "left-to-right" | "right-to-left" | "center-out" | "edges-in";
-type RevealAnimationType = Exclude<ComposedAnimationType, "none">;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared context
@@ -380,141 +363,6 @@ export function Bar({
   );
 }
 
-type LineProps = {
-  dataKey: string; // series key — must exist on the data and config
-  strokeVariant?: StrokeVariant; // stroke style for this line only
-  curveType?: CurveType; // curve interpolation — falls back to the chart default
-  animationType?: ComposedAnimationType; // intro reveal — falls back to the chart default
-  connectNulls?: boolean; // join segments across null/missing values
-  glow?: boolean; // applies a soft neon glow to this line
-  isClickable?: boolean; // lets this line be selected by clicking it
-  children?: ReactNode; // optional <Dot /> and <ActiveDot /> composition
-  lineProps?: ComponentProps<typeof RechartsLine>; // escape hatch for raw Recharts Line props
-};
-
-/**
- * A single line series. Each <Line /> is fully self-contained: it generates its
- * own color gradient and glow filter under a unique id, so any number of lines —
- * each with its own stroke, curve, glow, and clickability — can live in one chart
- * without style collisions. Compose <Dot /> and <ActiveDot /> inside it to add
- * point markers.
- */
-export function Line({
-  dataKey,
-  strokeVariant = "solid",
-  curveType,
-  animationType,
-  connectNulls = false,
-  glow = false,
-  isClickable = false,
-  children,
-  lineProps,
-}: LineProps) {
-  const {
-    config,
-    curveType: defaultCurve,
-    animationType: defaultAnimation,
-    isLoading,
-    selectedDataKey,
-    selectDataKey,
-  } = useComposedChart();
-  const id = useId().replaceAll(":", ""); // unique id scopes this line's style defs
-  // Devices set to "reduce motion" skip the intro reveal entirely
-  const shouldReduceMotion = useReducedMotion();
-
-  // The root renders the skeleton bar while loading, so real lines step aside
-  if (isLoading) return null;
-
-  const resolvedCurve = curveType ?? defaultCurve;
-
-  // The reveal is an animated SVG mask — heavier than a static chart — so
-  // `"none"` and the OS reduce-motion preference both opt out of it.
-  const revealType: ComposedAnimationType = shouldReduceMotion
-    ? "none"
-    : (animationType ?? defaultAnimation);
-  const maskId = revealType === "none" ? undefined : `${id}-reveal-mask`;
-
-  const opacity = getOpacity(selectedDataKey, dataKey);
-  const hasSelection = selectedDataKey !== null;
-  const filter = glow ? `url(#${id}-glow)` : undefined;
-  const colorKey = toChartColorVarKey(dataKey);
-
-  const { dot, activeDot } = resolveDots(children, id, dataKey, opacity.dot, maskId);
-
-  const isAnimatedDashed = strokeVariant === "animated-dashed";
-  const isDashed = strokeVariant === "dashed" || isAnimatedDashed;
-
-  const handleLineClick = () => {
-    if (!isClickable) return;
-    selectDataKey(selectedDataKey === dataKey ? null : dataKey);
-  };
-
-  return (
-    <>
-      {isClickable && (
-        <RechartsLine
-          type={resolvedCurve}
-          dataKey={dataKey}
-          connectNulls={connectNulls}
-          stroke="transparent"
-          strokeWidth={20}
-          dot={false}
-          activeDot={false}
-          isAnimationActive={false}
-          legendType="none"
-          tooltipType="none"
-          style={{ cursor: "pointer" }}
-          onClick={handleLineClick}
-        />
-      )}
-      <RechartsLine
-        type={resolvedCurve}
-        dataKey={dataKey}
-        connectNulls={connectNulls}
-        strokeOpacity={opacity.stroke}
-        stroke={`url(#${id}-line-colors-${colorKey})`}
-        filter={filter}
-        dot={dot}
-        activeDot={activeDot}
-        strokeWidth={STROKE_WIDTH}
-        strokeDasharray={isDashed ? "5 5" : undefined}
-        // Recharts' built-in line animation is permanently disabled — the
-        // motion.dev reveal mask drives the intro, wiping stroke and dots in together.
-        isAnimationActive={false}
-        style={{
-          ...(maskId ? { mask: `url(#${maskId})` } : {}),
-          ...(isClickable ? { cursor: "pointer", pointerEvents: "none" } : {}),
-        }}
-        {...lineProps}
-      >
-        {isAnimatedDashed && !hasSelection && <AnimatedDashedStroke />}
-      </RechartsLine>
-      <defs>
-        {revealType !== "none" && <RevealMask id={id} type={revealType} />}
-        <HorizontalColorGradient id={id} dataKey={dataKey} config={config} />
-        {glow && <LineGlowFilter id={id} />}
-      </defs>
-    </>
-  );
-}
-
-type DotProps = {
-  variant?: DotVariant; // visual style of the point marker
-};
-
-/**
- * Declares a resting point marker for the <Line /> it is composed inside.
- * It renders nothing on its own — the parent <Line /> reads its variant and
- * wires it into the Recharts dot slot.
- */
-export const Dot: FC<DotProps> = () => null;
-
-/**
- * Declares the hovered/active point marker for the <Line /> it is composed
- * inside. Like <Dot />, it is a configuration slot and renders nothing itself.
- */
-export const ActiveDot: FC<DotProps> = () => null;
-
 type XAxisProps = ComponentProps<typeof RechartsXAxis>;
 
 /**
@@ -682,15 +530,6 @@ export function Legend({
 // Selection + dot helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Returns stroke/dot opacity for a line — dims a series only when another is selected
-const getOpacity = (selectedDataKey: string | null, dataKey: string) => {
-  if (selectedDataKey === null) {
-    return { stroke: 1, dot: 1 };
-  }
-
-  return selectedDataKey === dataKey ? { stroke: 1, dot: 1 } : { stroke: 0.3, dot: 0.3 };
-};
-
 // Returns the fill opacity for a bar, accounting for both selection and hover state
 const getBarOpacity = ({
   isClickable,
@@ -717,52 +556,6 @@ const getBarOpacity = ({
   }
 
   return clickOpacity;
-};
-
-// Pulls <Dot /> and <ActiveDot /> out of a line's children into Recharts dot slots.
-// When a `maskId` is given the resting dot is wired to the intro reveal mask so it
-// wipes in with the line; the active dot is always left unmasked since it only
-// appears on hover, after the intro has finished.
-const resolveDots = (
-  children: ReactNode,
-  id: string,
-  dataKey: string,
-  dotOpacity: number,
-  maskId: string | undefined,
-): { dot: LineDotProp; activeDot: LineActiveDotProp } => {
-  let dot: LineDotProp = false;
-  let activeDot: LineActiveDotProp = false;
-
-  Children.forEach(children, (child) => {
-    if (!isValidElement(child)) return;
-
-    if (child.type === Dot) {
-      const { variant } = (child as ReactElement<DotProps>).props;
-      dot = (
-        <ChartDot
-          type={variant}
-          dataKey={dataKey}
-          chartId={`${id}-line`}
-          fillOpacity={dotOpacity}
-          maskId={maskId}
-        />
-      );
-    }
-
-    if (child.type === ActiveDot) {
-      const { variant } = (child as ReactElement<DotProps>).props;
-      activeDot = (
-        <ChartDot
-          type={variant}
-          dataKey={dataKey}
-          chartId={`${id}-line`}
-          fillOpacity={dotOpacity}
-        />
-      );
-    }
-  });
-
-  return { dot, activeDot };
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -957,73 +750,6 @@ const getBarGrowAnimation = (
   };
 };
 
-// motion `originX` for each single-rect line reveal — the edge the wipe grows from
-const SINGLE_REVEAL_ORIGIN: Record<Exclude<RevealAnimationType, "edges-in">, number> = {
-  "left-to-right": 0,
-  "right-to-left": 1,
-  "center-out": 0.5,
-};
-
-/**
- * Wipe mask driven by motion.dev, played once when a <Line /> mounts. The same
- * mask is applied to the line's stroke and its resting dots so both reveal in
- * lockstep, replacing Recharts' built-in animation.
- */
-const RevealMask = ({ id, type }: { id: string; type: RevealAnimationType }) => {
-  const reveal = {
-    initial: { scaleX: 0 },
-    animate: { scaleX: 1 },
-    transition: { duration: REVEAL_DURATION, ease: REVEAL_EASE },
-  };
-
-  return (
-    <mask
-      id={`${id}-reveal-mask`}
-      maskUnits="userSpaceOnUse"
-      maskContentUnits="userSpaceOnUse"
-      x="0"
-      y="0"
-      width="100%"
-      height="100%"
-    >
-      {type === "edges-in" ? (
-        <>
-          {/* left half wipes inward from the left edge toward the centre */}
-          <motion.rect
-            {...reveal}
-            x="0"
-            y="0"
-            width="50%"
-            height="100%"
-            fill="white"
-            style={{ originX: 0 }}
-          />
-          {/* right half wipes inward from the right edge toward the centre */}
-          <motion.rect
-            {...reveal}
-            x="50%"
-            y="0"
-            width="50%"
-            height="100%"
-            fill="white"
-            style={{ originX: 1 }}
-          />
-        </>
-      ) : (
-        <motion.rect
-          {...reveal}
-          x="0"
-          y="0"
-          width="100%"
-          height="100%"
-          fill="white"
-          style={{ originX: SINGLE_REVEAL_ORIGIN[type] }}
-        />
-      )}
-    </mask>
-  );
-};
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Style definitions — one set per <Bar /> / <Line />, scoped to its unique id
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1033,28 +759,6 @@ type StyleProps = {
   dataKey: string; // series key the colors belong to
 };
 
-// Animated dashed-stroke effect, rendered as a child of the Recharts Line
-const AnimatedDashedStroke = () => {
-  return (
-    <>
-      <animate
-        attributeName="stroke-dasharray"
-        values="5 5; 0 5; 5 5"
-        dur="1s"
-        repeatCount="indefinite"
-        keyTimes="0;0.5;1"
-      />
-      <animate
-        attributeName="stroke-dashoffset"
-        values="0; -10"
-        dur="1s"
-        repeatCount="indefinite"
-        keyTimes="0;1"
-      />
-    </>
-  );
-};
-
 /** Vertical top-to-bottom color gradient — the fill source for every bar variant. */
 const VerticalColorGradient = ({ id, dataKey, config }: StyleProps & { config: ChartConfig }) => {
   const colorsCount = getColorsCount(config[dataKey] ?? {});
@@ -1062,34 +766,6 @@ const VerticalColorGradient = ({ id, dataKey, config }: StyleProps & { config: C
 
   return (
     <linearGradient id={`${id}-bar-colors`} x1="0" y1="0" x2="0" y2="1">
-      {colorsCount === 1 ? (
-        <>
-          <stop offset="0%" stopColor={`var(--color-${colorKey}-0)`} />
-          <stop offset="100%" stopColor={`var(--color-${colorKey}-0)`} />
-        </>
-      ) : (
-        Array.from({ length: colorsCount }, (_, index) => {
-          const offset = `${(index / (colorsCount - 1)) * 100}%`;
-          return (
-            <stop
-              key={offset}
-              offset={offset}
-              stopColor={`var(--color-${colorKey}-${index}, var(--color-${colorKey}-0))`}
-            />
-          );
-        })
-      )}
-    </linearGradient>
-  );
-};
-
-/** Horizontal left-to-right color gradient — the stroke source for a line series. */
-const HorizontalColorGradient = ({ id, dataKey, config }: StyleProps & { config: ChartConfig }) => {
-  const colorsCount = getColorsCount(config[dataKey] ?? {});
-  const colorKey = toChartColorVarKey(dataKey);
-
-  return (
-    <linearGradient id={`${id}-line-colors-${colorKey}`} x1="0" y1="0" x2="1" y2="0">
       {colorsCount === 1 ? (
         <>
           <stop offset="0%" stopColor={`var(--color-${colorKey}-0)`} />
@@ -1331,25 +1007,6 @@ const BarGlowFilter = ({ id }: { id: string }) => {
         in="blur"
         type="matrix"
         values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.5 0"
-        result="glow"
-      />
-      <feMerge>
-        <feMergeNode in="glow" />
-        <feMergeNode in="SourceGraphic" />
-      </feMerge>
-    </filter>
-  );
-};
-
-/** Soft outer-glow filter applied to a glowing line. */
-const LineGlowFilter = ({ id }: { id: string }) => {
-  return (
-    <filter id={`${id}-glow`} x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
-      <feColorMatrix
-        in="blur"
-        type="matrix"
-        values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 2 0"
         result="glow"
       />
       <feMerge>
