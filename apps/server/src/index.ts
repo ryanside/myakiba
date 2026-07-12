@@ -121,9 +121,16 @@ const app = new Elysia()
   .get("/health", () => ({ status: "ok" }))
   .group("/api", (api) =>
     api
-      .get("/version", () => ({ buildId: env.BUILD_ID }), {
-        response: z.object({ buildId: z.string() }),
-      })
+      .get(
+        "/version",
+        ({ set }) => {
+          set.headers["cache-control"] = "no-store";
+          return { buildId: env.BUILD_ID };
+        },
+        {
+          response: z.object({ buildId: z.string() }),
+        },
+      )
       .use(analyticsRouter)
       .use(calendarRouter)
       .use(collectionRouter)

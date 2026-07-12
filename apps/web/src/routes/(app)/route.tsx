@@ -38,9 +38,9 @@ function RouteComponent() {
     queryKey: ["version"],
     queryFn: getVersion,
     refetchOnWindowFocus: true,
-    refetchInterval: 5 * 60 * 1000,
+    refetchInterval: 60 * 1000,
     refetchIntervalInBackground: false,
-    staleTime: 60 * 1000,
+    retry: false,
   });
 
   useEffect(() => {
