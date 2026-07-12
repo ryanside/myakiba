@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   keepPreviousData,
   useMutation,
@@ -121,7 +121,6 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
     [pendingCollectionItemIdList],
   );
   const filtersActiveRef = useRef(filtersActive);
-  filtersActiveRef.current = filtersActive;
   const pendingOrderIdsRef = useRef<ReadonlySet<string>>(pendingOrderIds);
   pendingOrderIdsRef.current = pendingOrderIds;
   const pendingCollectionItemIdsRef = useRef<ReadonlySet<string>>(pendingCollectionItemIds);
@@ -491,13 +490,24 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
     },
   });
   const editOrderMutationRef = useRef(editOrderMutation);
-  editOrderMutationRef.current = editOrderMutation;
   const deleteOrdersMutationRef = useRef(deleteOrdersMutation);
-  deleteOrdersMutationRef.current = deleteOrdersMutation;
   const editItemMutationRef = useRef(editItemMutation);
-  editItemMutationRef.current = editItemMutation;
   const deleteItemMutationRef = useRef(deleteItemMutation);
-  deleteItemMutationRef.current = deleteItemMutation;
+
+  useLayoutEffect(() => {
+    filtersActiveRef.current = filtersActive;
+    editOrderMutationRef.current = editOrderMutation;
+    deleteOrdersMutationRef.current = deleteOrdersMutation;
+    editItemMutationRef.current = editItemMutation;
+    deleteItemMutationRef.current = deleteItemMutation;
+  }, [
+    filtersActive,
+    editOrderMutation,
+    deleteOrdersMutation,
+    editItemMutation,
+    deleteItemMutation,
+  ]);
+
   const isOrderPending = useCallback(
     (orderId: string): boolean => pendingOrderIdsRef.current.has(orderId),
     [],

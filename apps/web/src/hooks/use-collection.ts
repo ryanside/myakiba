@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   keepPreviousData,
   useMutation,
@@ -147,9 +147,11 @@ export function useCollectionOrderMutations() {
   // Keep the latest mutation objects in refs so these action callbacks can stay stable.
   // Recreating them churns CollectionDataGrid columns and causes editable cells to remount.
   const moveItemsMutationRef = useRef(moveItemsMutation);
-  moveItemsMutationRef.current = moveItemsMutation;
   const splitItemsMutationRef = useRef(splitItemsMutation);
-  splitItemsMutationRef.current = splitItemsMutation;
+  useLayoutEffect(() => {
+    moveItemsMutationRef.current = moveItemsMutation;
+    splitItemsMutationRef.current = splitItemsMutation;
+  }, [moveItemsMutation, splitItemsMutation]);
 
   const handleAddCollectionItemsToOrder = useCallback(
     async (
@@ -220,9 +222,11 @@ export function useCollectionMutations(options?: { readonly filters?: Collection
     [pendingCollectionIdList],
   );
   const filtersActiveRef = useRef(filtersActive);
-  filtersActiveRef.current = filtersActive;
   const pendingCollectionIdsRef = useRef<ReadonlySet<string>>(pendingCollectionIds);
   pendingCollectionIdsRef.current = pendingCollectionIds;
+  useLayoutEffect(() => {
+    filtersActiveRef.current = filtersActive;
+  }, [filtersActive]);
 
   const updateMutation = useMutation({
     mutationFn: (values: CollectionItemFormValues) => updateCollectionItem(values),
@@ -355,9 +359,11 @@ export function useCollectionMutations(options?: { readonly filters?: Collection
     },
   });
   const updateMutationRef = useRef(updateMutation);
-  updateMutationRef.current = updateMutation;
   const deleteMutationRef = useRef(deleteMutation);
-  deleteMutationRef.current = deleteMutation;
+  useLayoutEffect(() => {
+    updateMutationRef.current = updateMutation;
+    deleteMutationRef.current = deleteMutation;
+  }, [deleteMutation, updateMutation]);
 
   const isCollectionPending = useCallback(
     (collectionId: string): boolean => pendingCollectionIdsRef.current.has(collectionId),
