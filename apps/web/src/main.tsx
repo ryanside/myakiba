@@ -8,6 +8,8 @@ import { routeTree } from "./routeTree.gen";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import type { RouterAppContext } from "./routes/__root";
+import { NotFound } from "@/components/errors/not-found";
+import { RouteError } from "@/components/errors/route-error";
 
 const queryClient = new QueryClient();
 
@@ -22,7 +24,8 @@ const router = createRouter({
       <HugeiconsIcon icon={Loading03Icon} className="animate-spin" />
     </div>
   ),
-  defaultNotFoundComponent: () => <div>404 Not Found</div>,
+  defaultNotFoundComponent: NotFound,
+  defaultErrorComponent: RouteError,
   scrollRestoration: true,
 });
 
