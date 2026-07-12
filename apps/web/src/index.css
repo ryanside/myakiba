@@ -1,10 +1,22 @@
 @import "tailwindcss";
+@import "./typeset.css";
+@import "@fontsource-variable/instrument-sans";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+
+.typeset-docs {
+  --typeset-font-body: var(--font-instrument-sans);
+  --typeset-font-heading: var(--font-instrument-sans);
+  --typeset-font-mono: var(--font-instrument-sans);
+  --typeset-size: 15px;
+  --typeset-leading: 1.75;
+  --typeset-flow: 1.25em;
+}
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  --font-instrument-sans: "Instrument Sans Variable", sans-serif;
   --expo-in: linear(
     0 0%,
     0.0085 31.26%,

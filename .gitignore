@@ -25,6 +25,7 @@ dist/
 .vercel
 .cursor/
 .agents/
+/plans/
 skills-lock.json
 .vscode/
 

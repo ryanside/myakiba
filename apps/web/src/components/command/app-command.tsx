@@ -31,27 +31,27 @@ import type { CommandSearchResults } from "@/queries/search";
 import { LAUNCHABLE_SYNC_OPTIONS, SyncActionSheet } from "@/components/sync/sync-launcher";
 import type { LaunchableSyncType, SyncLauncherOption } from "@/components/sync/sync-launcher";
 import { SYNC_TYPE_CONFIG } from "@/lib/sync";
-const COMMAND_TOKEN_SPLIT_PATTERN = /[^a-z0-9]+/i;
-const COMMAND_SEARCH_DEBOUNCE_MS = 250;
-const EMPTY_COMMAND_SEARCH_RESULTS: CommandSearchResults = {
+const TOKEN_SEPARATOR = /[^a-z0-9]+/i;
+const SEARCH_DEBOUNCE_MS = 250;
+const EMPTY_RESULTS: CommandSearchResults = {
   orderMatches: [],
   itemMatches: [],
 };
 
-function getCommandTerms(value: string): readonly string[] {
+function getTerms(value: string): readonly string[] {
   return value
     .toLowerCase()
-    .split(COMMAND_TOKEN_SPLIT_PATTERN)
+    .split(TOKEN_SEPARATOR)
     .filter((term) => term.length > 0);
 }
 
-function matchesCommandQuery(label: string, keywords: readonly string[], query: string): boolean {
+function matchesQuery(label: string, keywords: readonly string[], query: string): boolean {
   if (query.length === 0) {
     return true;
   }
 
-  const queryTerms = getCommandTerms(query);
-  const haystackTerms = [label, ...keywords].flatMap((value) => getCommandTerms(value));
+  const queryTerms = getTerms(query);
+  const haystackTerms = [label, ...keywords].flatMap(getTerms);
 
   return queryTerms.every((queryTerm) =>
     haystackTerms.some((haystackTerm) => haystackTerm.startsWith(queryTerm)),
@@ -161,37 +161,30 @@ export function AppCommand(): React.JSX.Element {
   const [open, setOpen] = useState(false);
   const [syncType, setSyncType] = useState<LaunchableSyncType | null>(null);
   const [inputValue, setInputValue] = useState("");
-  const trimmedInputQuery = inputValue.trim();
-  const debouncedInputQuery = useDebouncedValue(trimmedInputQuery, COMMAND_SEARCH_DEBOUNCE_MS);
-  const normalizedInputQuery = trimmedInputQuery.toLowerCase();
-  const normalizedDebouncedQuery = debouncedInputQuery.toLowerCase();
-  const shouldShowSearchGroups = normalizedInputQuery.length > 0;
-  const isSearchPending = shouldShowSearchGroups && trimmedInputQuery !== debouncedInputQuery;
+  const query = inputValue.trim();
+  const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
+  const isSearchPending = query.length > 0 && query !== debouncedQuery;
 
   const visibleNavigationItems = useMemo<readonly AppNavigationItem[]>(() => {
     return APP_COMMAND_NAVIGATION_ITEMS.filter((item) =>
-      matchesCommandQuery(item.title, item.keywords, normalizedInputQuery),
+      matchesQuery(item.title, item.keywords, query),
     );
-  }, [normalizedInputQuery]);
+  }, [query]);
 
   const visibleSyncItems = useMemo<readonly SyncLauncherOption[]>(() => {
     return LAUNCHABLE_SYNC_OPTIONS.filter((item) =>
-      matchesCommandQuery(
-        `${item.type} ${item.description}`,
-        [...item.keywords, item.type],
-        normalizedInputQuery,
-      ),
+      matchesQuery(`${item.type} ${item.description}`, [...item.keywords, item.type], query),
     );
-  }, [normalizedInputQuery]);
+  }, [query]);
 
   const {
-    data: { orderMatches, itemMatches } = EMPTY_COMMAND_SEARCH_RESULTS,
+    data: { orderMatches, itemMatches } = EMPTY_RESULTS,
     isLoading: isSearchLoading,
     error: searchError,
   } = useQuery({
-    queryKey: ["app-command", "search", normalizedDebouncedQuery],
-    queryFn: () => searchCommandResults(debouncedInputQuery),
-    enabled: normalizedDebouncedQuery.length > 0,
+    queryKey: ["app-command", "search", debouncedQuery.toLowerCase()],
+    queryFn: () => searchCommandResults(debouncedQuery),
+    enabled: debouncedQuery.length > 0,
     staleTime: 30_000,
   });
 
@@ -249,7 +242,7 @@ export function AppCommand(): React.JSX.Element {
     void navigate({
       to: "/orders",
       search: {
-        search: trimmedInputQuery,
+        search: query,
         offset: 0,
       },
     });
@@ -260,7 +253,7 @@ export function AppCommand(): React.JSX.Element {
     void navigate({
       to: "/collection",
       search: {
-        search: trimmedInputQuery,
+        search: query,
         offset: 0,
       },
     });
@@ -288,7 +281,7 @@ export function AppCommand(): React.JSX.Element {
 
   const showNavigationGroup = visibleNavigationItems.length > 0;
   const showSyncGroup = visibleSyncItems.length > 0;
-  const showSearchGroups = shouldShowSearchGroups;
+  const showSearchGroups = query.length > 0;
   const hasVisibleResults = showNavigationGroup || showSyncGroup || showSearchGroups;
 
   return (
@@ -367,7 +360,7 @@ export function AppCommand(): React.JSX.Element {
                 !isSearchLoading &&
                 !searchError &&
                 orderMatches.length === 0 ? (
-                  <StatusCommandItem title={`No orders matched "${trimmedInputQuery}"`} />
+                  <StatusCommandItem title={`No orders matched "${query}"`} />
                 ) : null}
                 {!isSearchPending
                   ? orderMatches.map((order) => (
@@ -389,8 +382,8 @@ export function AppCommand(): React.JSX.Element {
                     ))
                   : null}
                 <ActionCommandItem
-                  value={`orders-all-${trimmedInputQuery}`}
-                  title={`View all orders for "${trimmedInputQuery}"`}
+                  value={`orders-all-${query}`}
+                  title={`View all orders for "${query}"`}
                   subtitle="Open the full orders page with this query"
                   leading={<CommandLeadIcon icon={ArrowRight01Icon} />}
                   onSelect={handleViewAllOrders}
@@ -415,7 +408,7 @@ export function AppCommand(): React.JSX.Element {
                 !isSearchLoading &&
                 !searchError &&
                 itemMatches.length === 0 ? (
-                  <StatusCommandItem title={`No items matched "${trimmedInputQuery}"`} />
+                  <StatusCommandItem title={`No items matched "${query}"`} />
                 ) : null}
                 {!isSearchPending
                   ? itemMatches.map((item) => (
@@ -441,8 +434,8 @@ export function AppCommand(): React.JSX.Element {
                     ))
                   : null}
                 <ActionCommandItem
-                  value={`items-all-${trimmedInputQuery}`}
-                  title={`View all items for "${trimmedInputQuery}"`}
+                  value={`items-all-${query}`}
+                  title={`View all items for "${query}"`}
                   subtitle="Open the collection page with this query"
                   leading={<CommandLeadIcon icon={ArrowRight01Icon} />}
                   onSelect={handleViewAllItems}

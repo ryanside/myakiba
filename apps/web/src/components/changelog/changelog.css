@@ -1,0 +1,22 @@
+.changelog-image {
+  outline: 1px solid rgb(0 0 0 / 10%);
+  outline-offset: -1px;
+}
+
+.dark .changelog-image {
+  outline-color: rgb(255 255 255 / 10%);
+}
+
+.changelog-cover::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  border: 1px solid rgb(0 0 0 / 10%);
+  border-radius: inherit;
+  content: "";
+  pointer-events: none;
+}
+
+.dark .changelog-cover::after {
+  border-color: rgb(255 255 255 / 10%);
+}

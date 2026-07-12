@@ -55,16 +55,20 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@mdx-js/rollup": "^3.1.1",
     "@tanstack/react-query-devtools": "^5.91.1",
     "@tanstack/react-router-devtools": "^1.159.5",
     "@tanstack/router-plugin": "^1.159.5",
     "@types/bun": "catalog:",
+    "@types/mdx": "^2.0.14",
     "@types/node": "^22.19.11",
     "@types/papaparse": "^5.5.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.4",
     "elysia": "catalog:",
+    "remark-frontmatter": "^5.0.0",
+    "remark-mdx-frontmatter": "^5.2.0",
     "tailwindcss": "^4.1.18",
     "typescript": "catalog:",
     "vite": "^7.3.1"
