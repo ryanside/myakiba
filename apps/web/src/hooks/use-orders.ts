@@ -212,12 +212,11 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
 
       queryClient.setQueryData<OrderListItem[]>(ordersOpts.queryKey, (old) => {
         if (!old) return old;
-        return old
-          .filter((order) => !orderIds.has(order.orderId))
-          .map((order) => ({
-            ...order,
-            totalCount: order.totalCount - orderIds.size,
-          }));
+        return old.flatMap((order) =>
+          orderIds.has(order.orderId)
+            ? []
+            : [{ ...order, totalCount: order.totalCount - orderIds.size }],
+        );
       });
 
       return { previous };

@@ -20,9 +20,12 @@ export default function ExpenseBreakdownChart({
   currency,
   locale,
 }: ExpenseBreakdownChartProps): ReactNode {
-  const entries: readonly (BreakdownChartEntry & { readonly amount: number })[] = breakdown
-    .filter((entry) => entry.value > 0)
-    .map((entry, index) => ({
+  const entries: readonly (BreakdownChartEntry & { readonly amount: number })[] = breakdown.reduce<
+    (BreakdownChartEntry & { readonly amount: number })[]
+  >((visibleEntries, entry) => {
+    if (entry.value <= 0) return visibleEntries;
+    const index = visibleEntries.length;
+    visibleEntries.push({
       id: entry.key,
       label: entry.label,
       amount: entry.value,
@@ -37,7 +40,9 @@ export default function ExpenseBreakdownChart({
           </p>
         </div>
       ),
-    }));
+    });
+    return visibleEntries;
+  }, []);
 
   return (
     <Section title="expense breakdown" isLoading={isLoading} chartSkeleton>

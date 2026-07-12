@@ -316,18 +316,22 @@ export function useCollectionMutations(options?: { readonly filters?: Collection
 
       queryClient.setQueryData<CollectionItem[]>(queryOpts.queryKey, (old) => {
         if (!old) return old;
-        const deletedValue = old
-          .filter((item) => idSet.has(item.id))
-          .reduce((sum, item) => sum + item.price, 0);
+        let deletedValue = 0;
+        const retainedItems: CollectionItem[] = [];
+        for (const item of old) {
+          if (idSet.has(item.id)) {
+            deletedValue += item.price;
+          } else {
+            retainedItems.push(item);
+          }
+        }
         const deletedCount = ids.length;
 
-        return old
-          .filter((item) => !idSet.has(item.id))
-          .map((item) => ({
-            ...item,
-            totalCount: item.totalCount - deletedCount,
-            totalValue: item.totalValue - deletedValue,
-          }));
+        return retainedItems.map((item) => ({
+          ...item,
+          totalCount: item.totalCount - deletedCount,
+          totalValue: item.totalValue - deletedValue,
+        }));
       });
 
       return { previousList, previousItemRelated };
