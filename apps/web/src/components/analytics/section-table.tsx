@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AddSquareIcon,
   ArrowDown02Icon,
@@ -62,12 +62,19 @@ export function SectionTable({
     () => (sort && order ? [{ id: sort, desc: order === "desc" }] : []),
     [order, sort],
   );
+  const sortingRef = useRef(sorting);
+
+  useEffect(() => {
+    sortingRef.current = sorting;
+  }, [sorting]);
 
   const handleSortingChange = useCallback<OnChangeFn<SortingState>>(
     (updater) => {
-      const nextSorting = typeof updater === "function" ? updater(sorting) : updater;
+      const nextSorting = typeof updater === "function" ? updater(sortingRef.current) : updater;
       const nextSort = nextSorting[0];
       let nextOrder: AnalyticsSectionSortOrder | undefined;
+
+      sortingRef.current = nextSorting;
 
       if (nextSort) {
         nextOrder = nextSort.desc ? "desc" : "asc";
@@ -75,7 +82,7 @@ export function SectionTable({
 
       onSortChange(nextSort?.id as AnalyticsSectionSort | undefined, nextOrder);
     },
-    [onSortChange, sorting],
+    [onSortChange],
   );
 
   const columns = useMemo<ColumnDef<AnalyticsSectionRow>[]>(

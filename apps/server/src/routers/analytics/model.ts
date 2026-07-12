@@ -129,14 +129,4 @@ export type AnalyticsSectionRelationshipsResult = {
   readonly offset: number;
 };
 
-export type AnalyticsSectionPageRow = AnalyticsSectionRow & {
-  readonly totalCount: number;
-  readonly totalItemCount?: number;
-  readonly totalSpentAll?: number;
-};
-
-export type AnalyticsSectionItemPageRow = AnalyticsSectionItem & {
-  readonly totalCount: number;
-};
-
 export type EntrySection = Exclude<AnalyticsSection, "shops" | "scales">;

@@ -6,7 +6,7 @@ import { ANALYTICS_SECTIONS } from "@myakiba/contracts/shared/constants";
 import type { AnalyticsSection } from "@myakiba/contracts/shared/types";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Empty, EmptyDescription, EmptyHeader } from "@/components/ui/empty";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
@@ -147,11 +147,24 @@ function RelationshipPage({
   }
 
   if (!data || data.values.length === 0) {
+    const canRecover = offset > 0;
+
     return (
       <Empty className="min-h-24 p-4">
         <EmptyHeader>
-          <EmptyDescription>No relationships found for these items.</EmptyDescription>
+          <EmptyDescription>
+            {canRecover
+              ? "This relationship page is no longer available."
+              : "No relationships found for these items."}
+          </EmptyDescription>
         </EmptyHeader>
+        {canRecover ? (
+          <EmptyContent>
+            <Button type="button" variant="outline" size="xs" onClick={() => onOffsetChange(0)}>
+              Return to first page
+            </Button>
+          </EmptyContent>
+        ) : null}
       </Empty>
     );
   }

@@ -19,10 +19,9 @@ import { ENTRY_CATEGORIES } from "@myakiba/contracts/shared/constants";
 import type { AnalyticsSection, EntryCategory } from "@myakiba/contracts/shared/types";
 import type {
   AnalyticsResult,
-  AnalyticsSectionItemPageRow,
   AnalyticsSectionItemsResult,
   AnalyticsSectionKpis,
-  AnalyticsSectionPageRow,
+  AnalyticsSectionRow,
   AnalyticsSectionRelationshipPreviewItem,
   AnalyticsSectionRelationshipValue,
   AnalyticsSectionRelationshipsResult,
@@ -81,6 +80,26 @@ const entryCategoryBySection = {
   events: "Events",
   materials: "Materials",
 } as const satisfies Record<EntrySection, EntryCategory>;
+
+function getSectionCollectionFilter(section: AnalyticsSection, match: string) {
+  if (section === "shops") {
+    return eq(collection.shop, match);
+  }
+
+  if (section === "scales") {
+    return and(eq(item.category, "Prepainted"), eq(item.scale, match));
+  }
+
+  const sourceItemIds = db
+    .select({ itemId: entry_to_item.itemId })
+    .from(entry_to_item)
+    .innerJoin(entry, eq(entry_to_item.entryId, entry.id))
+    .where(
+      and(eq(entry_to_item.entryId, match), eq(entry.category, entryCategoryBySection[section])),
+    );
+
+  return inArray(collection.itemId, sourceItemIds);
+}
 
 const entrySummaryQuery = db
   .select({
@@ -251,7 +270,8 @@ class AnalyticsService {
     order?: AnalyticsSectionSortOrder,
   ): Promise<AnalyticsSectionResult> {
     const trimmedSearch = search?.trim();
-    let rows: readonly AnalyticsSectionPageRow[];
+    let rows: readonly AnalyticsSectionRow[];
+    let totalCount: number;
     let totalItemCount: number;
     let totalSpent: number;
 
@@ -275,23 +295,34 @@ class AnalyticsService {
         .groupBy(collection.shop)
         .as("analytics_shops_page_summary");
 
-      rows = await db
-        .select({
-          id: shopSummary.id,
-          name: shopSummary.name,
-          itemCount: shopSummary.itemCount,
-          totalSpent: shopSummary.totalSpent,
-          totalCount: sql<number>`COUNT(*) OVER()`,
-          totalItemCount: sql<number>`COALESCE(SUM(${shopSummary.itemCount}) OVER(), 0)`,
-          totalSpentAll: sql<number>`COALESCE(SUM(${shopSummary.totalSpent}) OVER(), 0)`,
-        })
-        .from(shopSummary)
-        .orderBy(...getSectionOrderBy(shopSummary, sort, order))
-        .limit(limit)
-        .offset(offset);
+      const [shopRows, totalsRows] = await Promise.all([
+        db
+          .select({
+            id: shopSummary.id,
+            name: shopSummary.name,
+            itemCount: shopSummary.itemCount,
+            totalSpent: shopSummary.totalSpent,
+          })
+          .from(shopSummary)
+          .orderBy(...getSectionOrderBy(shopSummary, sort, order))
+          .limit(limit)
+          .offset(offset),
+        db
+          .select({
+            totalCount: count().as("totalCount"),
+            totalItemCount: sql<number>`COALESCE(SUM(${shopSummary.itemCount}), 0)`.as(
+              "totalItemCount",
+            ),
+            totalSpent: sql<number>`COALESCE(SUM(${shopSummary.totalSpent}), 0)`.as("totalSpent"),
+          })
+          .from(shopSummary),
+      ]);
 
-      totalItemCount = rows[0]?.totalItemCount ?? 0;
-      totalSpent = rows[0]?.totalSpentAll ?? 0;
+      const totals = totalsRows[0];
+      rows = shopRows;
+      totalCount = totals?.totalCount ?? 0;
+      totalItemCount = totals?.totalItemCount ?? 0;
+      totalSpent = totals?.totalSpent ?? 0;
     } else if (section === "scales") {
       const scaleSummary = db
         .select({
@@ -313,23 +344,34 @@ class AnalyticsService {
         .groupBy(item.scale)
         .as("analytics_scales_page_summary");
 
-      rows = await db
-        .select({
-          id: scaleSummary.id,
-          name: scaleSummary.name,
-          itemCount: scaleSummary.itemCount,
-          totalSpent: scaleSummary.totalSpent,
-          totalCount: sql<number>`COUNT(*) OVER()`,
-          totalItemCount: sql<number>`COALESCE(SUM(${scaleSummary.itemCount}) OVER(), 0)`,
-          totalSpentAll: sql<number>`COALESCE(SUM(${scaleSummary.totalSpent}) OVER(), 0)`,
-        })
-        .from(scaleSummary)
-        .orderBy(...getSectionOrderBy(scaleSummary, sort, order))
-        .limit(limit)
-        .offset(offset);
+      const [scaleRows, totalsRows] = await Promise.all([
+        db
+          .select({
+            id: scaleSummary.id,
+            name: scaleSummary.name,
+            itemCount: scaleSummary.itemCount,
+            totalSpent: scaleSummary.totalSpent,
+          })
+          .from(scaleSummary)
+          .orderBy(...getSectionOrderBy(scaleSummary, sort, order))
+          .limit(limit)
+          .offset(offset),
+        db
+          .select({
+            totalCount: count().as("totalCount"),
+            totalItemCount: sql<number>`COALESCE(SUM(${scaleSummary.itemCount}), 0)`.as(
+              "totalItemCount",
+            ),
+            totalSpent: sql<number>`COALESCE(SUM(${scaleSummary.totalSpent}), 0)`.as("totalSpent"),
+          })
+          .from(scaleSummary),
+      ]);
 
-      totalItemCount = rows[0]?.totalItemCount ?? 0;
-      totalSpent = rows[0]?.totalSpentAll ?? 0;
+      const totals = totalsRows[0];
+      rows = scaleRows;
+      totalCount = totals?.totalCount ?? 0;
+      totalItemCount = totals?.totalItemCount ?? 0;
+      totalSpent = totals?.totalSpent ?? 0;
     } else {
       const entryFilters = and(
         eq(collection.userId, userId),
@@ -363,19 +405,19 @@ class AnalyticsService {
         .groupBy(entry.id, entry.name)
         .as("analytics_entries_page_summary");
 
-      const [entryRows, totalsRow] = await Promise.all([
+      const [entryRows, countRows, totalsRows] = await Promise.all([
         db
           .select({
             id: entrySummary.id,
             name: entrySummary.name,
             itemCount: entrySummary.itemCount,
             totalSpent: entrySummary.totalSpent,
-            totalCount: sql<number>`COUNT(*) OVER()`,
           })
           .from(entrySummary)
           .orderBy(...getSectionOrderBy(entrySummary, sort, order))
           .limit(limit)
           .offset(offset),
+        db.select({ totalCount: count().as("totalCount") }).from(entrySummary),
         db
           .select({
             totalItemCount: count().as("totalItemCount"),
@@ -385,11 +427,10 @@ class AnalyticsService {
       ]);
 
       rows = entryRows;
-      totalItemCount = totalsRow[0]?.totalItemCount ?? 0;
-      totalSpent = totalsRow[0]?.totalSpent ?? 0;
+      totalCount = countRows[0]?.totalCount ?? 0;
+      totalItemCount = totalsRows[0]?.totalItemCount ?? 0;
+      totalSpent = totalsRows[0]?.totalSpent ?? 0;
     }
-
-    const totalCount = rows[0]?.totalCount ?? 0;
 
     return {
       section,
@@ -421,76 +462,32 @@ class AnalyticsService {
     limit: number,
     offset: number,
   ): Promise<AnalyticsSectionItemsResult> {
-    let rows: readonly AnalyticsSectionItemPageRow[];
+    const sourceFilter = getSectionCollectionFilter(section, match);
 
-    if (section === "shops") {
-      rows = await db
-        .select({
-          id: item.id,
-          externalId: item.externalId,
-          title: item.title,
-          image: item.image,
-          totalCount: sql<number>`COUNT(*) OVER()`,
-        })
-        .from(collection)
-        .innerJoin(item, eq(collection.itemId, item.id))
-        .where(
-          and(
-            eq(collection.userId, userId),
-            eq(collection.status, "Owned"),
-            eq(collection.shop, match),
-          ),
-        )
-        .orderBy(asc(sql`LOWER(${item.title})`), asc(item.id))
-        .limit(limit)
-        .offset(offset);
-    } else if (section === "scales") {
-      rows = await db
-        .select({
-          id: item.id,
-          externalId: item.externalId,
-          title: item.title,
-          image: item.image,
-          totalCount: sql<number>`COUNT(*) OVER()`,
-        })
-        .from(collection)
-        .innerJoin(item, eq(collection.itemId, item.id))
-        .where(
-          and(
-            eq(collection.userId, userId),
-            eq(collection.status, "Owned"),
-            eq(item.category, "Prepainted"),
-            eq(item.scale, match),
-          ),
-        )
-        .orderBy(asc(sql`LOWER(${item.title})`), asc(item.id))
-        .limit(limit)
-        .offset(offset);
-    } else {
-      rows = await db
-        .select({
-          id: item.id,
-          externalId: item.externalId,
-          title: item.title,
-          image: item.image,
-          totalCount: sql<number>`COUNT(*) OVER()`,
-        })
-        .from(collection)
-        .innerJoin(item, eq(collection.itemId, item.id))
-        .innerJoin(entry_to_item, eq(item.id, entry_to_item.itemId))
-        .innerJoin(entry, eq(entry_to_item.entryId, entry.id))
-        .where(
-          and(
-            eq(collection.userId, userId),
-            eq(collection.status, "Owned"),
-            eq(entry.category, entryCategoryBySection[section]),
-            eq(entry.id, match),
-          ),
-        )
-        .orderBy(asc(sql`LOWER(${item.title})`), asc(item.id))
-        .limit(limit)
-        .offset(offset);
-    }
+    const matchedItems = db
+      .select({
+        id: item.id,
+        externalId: item.externalId,
+        title: item.title,
+        image: item.image,
+      })
+      .from(collection)
+      .innerJoin(item, eq(collection.itemId, item.id))
+      .where(and(eq(collection.userId, userId), eq(collection.status, "Owned"), sourceFilter))
+      .as("analytics_section_items");
+
+    const rows = await db
+      .select({
+        id: matchedItems.id,
+        externalId: matchedItems.externalId,
+        title: matchedItems.title,
+        image: matchedItems.image,
+        totalCount: sql<number>`(COUNT(*) OVER ())::integer`.as("totalCount"),
+      })
+      .from(matchedItems)
+      .orderBy(asc(sql`LOWER(${matchedItems.title})`), asc(matchedItems.id))
+      .limit(limit)
+      .offset(offset);
 
     return {
       items: rows.map(({ id, externalId, title, image }) => ({ id, externalId, title, image })),
@@ -508,28 +505,7 @@ class AnalyticsService {
     limit: number,
     offset: number,
   ): Promise<AnalyticsSectionRelationshipsResult> {
-    const sourceFilter = (() => {
-      if (section === "shops") {
-        return eq(collection.shop, match);
-      }
-
-      if (section === "scales") {
-        return and(eq(item.category, "Prepainted"), eq(item.scale, match));
-      }
-
-      const sourceItemIds = db
-        .select({ itemId: entry_to_item.itemId })
-        .from(entry_to_item)
-        .innerJoin(entry, eq(entry_to_item.entryId, entry.id))
-        .where(
-          and(
-            eq(entry_to_item.entryId, match),
-            eq(entry.category, entryCategoryBySection[section]),
-          ),
-        );
-
-      return inArray(collection.itemId, sourceItemIds);
-    })();
+    const sourceFilter = getSectionCollectionFilter(section, match);
 
     const matchedCollections = db
       .select({
