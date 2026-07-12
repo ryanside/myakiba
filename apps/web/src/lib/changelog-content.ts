@@ -1,20 +1,16 @@
 import { z } from "zod";
 
-const coverSchema = z
-  .object({
-    src: z.string().trim().min(1),
-    alt: z.string().trim().min(1),
-  })
-  .strict();
+const coverSchema = z.strictObject({
+  src: z.string().trim().min(1),
+  alt: z.string().trim().min(1),
+});
 
-const changelogFrontmatterSchema = z
-  .object({
-    title: z.string().trim().min(1),
-    date: z.iso.date(),
-    summary: z.string().trim().min(1),
-    cover: coverSchema.optional(),
-  })
-  .strict();
+const changelogFrontmatterSchema = z.strictObject({
+  title: z.string().trim().min(1),
+  date: z.iso.date(),
+  summary: z.string().trim().min(1),
+  cover: coverSchema.optional(),
+});
 
 export type ChangelogFrontmatter = z.infer<typeof changelogFrontmatterSchema>;
 export type ChangelogEntryMetadata = Readonly<ChangelogFrontmatter & { slug: string }>;

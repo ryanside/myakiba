@@ -34,8 +34,8 @@ function RouteComponent() {
     },
     validators: {
       onSubmit: z.object({
-        email: z.string().email("Invalid email address"),
-        turnstileToken: z.string("Captcha is required"),
+        email: z.email({ error: "Invalid email address" }),
+        turnstileToken: z.string({ error: "Captcha is required" }),
       }),
     },
   });
