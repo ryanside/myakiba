@@ -310,6 +310,11 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
       );
 
       if (error) {
+        if (error.message === "ORDER_NOT_FOUND") {
+          log.set({ outcome: "not_found" });
+          return status(404, "Order not found");
+        }
+
         log.error(error, { step: "move_items" });
         log.set({ outcome: "error" });
         return status(500, "Failed to move items");

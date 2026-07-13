@@ -29,9 +29,16 @@ export const ordersQuerySchema = searchSchema.extend({
 export const orderInsertSchema = createInsertSchema(order).extend({
   shop: z.string().trim(),
 });
-export const orderUpdateSchema = createUpdateSchema(order).extend({
-  shop: z.string().trim().optional(),
-});
+export const orderUpdateSchema = createUpdateSchema(order)
+  .omit({
+    id: true,
+    userId: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .extend({
+    shop: z.string().trim().optional(),
+  });
 
 export const orderIdParamSchema = z.object({ orderId: z.string() });
 
