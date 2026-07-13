@@ -578,41 +578,6 @@ class SyncService {
   }
 
   async getJobStatus(jobId: string, userId: string): Promise<SyncJobStatus> {
-    const cached = await redis.get(getJobStatusSnapshotKey(jobId));
-    if (cached) {
-      const parsedStatus = parseJobStatusPayload(cached);
-
-      if (parsedStatus) {
-        // Defensive backfill: if the worker crashed between marking the session
-        // terminal and writing a terminal-state snapshot, derive it from the session.
-        const isPhaseTerminal =
-          parsedStatus.phase === "completed" || parsedStatus.phase === "failed";
-        if (isPhaseTerminal && parsedStatus.terminalState === null) {
-          const [cachedSession] = await db
-            .select({ status: syncSession.status })
-            .from(syncSession)
-            .where(and(eq(syncSession.jobId, jobId), eq(syncSession.userId, userId)));
-
-          if (cachedSession) {
-            return {
-              ...parsedStatus,
-              terminalState: sessionStatusToTerminalState(cachedSession.status),
-            };
-          }
-        }
-
-        return syncJobStatusSchema.parse(parsedStatus);
-      }
-
-      createLogger({
-        action: "sync.getJobStatus",
-        outcome: "warn",
-        jobId,
-        message: "Corrupt Redis job status cache; falling back to DB",
-      }).emit();
-    }
-
-    // Redis key expired — synthesize a v2 snapshot from the durable session row.
     const [session] = await db
       .select({
         status: syncSession.status,
@@ -630,6 +595,34 @@ class SyncService {
       throw new Error("SYNC_JOB_NOT_FOUND");
     }
 
+    const cached = await redis.get(getJobStatusSnapshotKey(jobId));
+    if (cached) {
+      const parsedStatus = parseJobStatusPayload(cached);
+
+      if (parsedStatus) {
+        // Defensive backfill: if the worker crashed between marking the session
+        // terminal and writing a terminal-state snapshot, derive it from the session.
+        const isPhaseTerminal =
+          parsedStatus.phase === "completed" || parsedStatus.phase === "failed";
+        if (isPhaseTerminal && parsedStatus.terminalState === null) {
+          return syncJobStatusSchema.parse({
+            ...parsedStatus,
+            terminalState: sessionStatusToTerminalState(session.status),
+          });
+        }
+
+        return syncJobStatusSchema.parse(parsedStatus);
+      }
+
+      createLogger({
+        action: "sync.getJobStatus",
+        outcome: "warn",
+        jobId,
+        message: "Corrupt Redis job status cache; falling back to DB",
+      }).emit();
+    }
+
+    // Redis key expired — synthesize a v2 snapshot from the durable session row.
     const statusMessage = resolveFallbackJobStatusMessage(session);
     const terminalState = sessionStatusToTerminalState(session.status);
     const progress: SyncJobProgress | null =
