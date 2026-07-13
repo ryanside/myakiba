@@ -201,16 +201,10 @@ export const syncWorker = new Worker(
 
     if (type === "csv") {
       const data = validatedData.data;
-      const isV2 = data.payloadVersion === 2;
-      const csvItems = isV2
-        ? data.items
-        : data.items.map((item, index) => ({
-            ...item,
-            collectionId: `${syncSessionId}:legacy:${index}`,
-          }));
-      const itemsToInsert = isV2 ? data.itemsToInsert : [];
-      const ordersToInsert = isV2 ? data.ordersToInsert : [];
-      const existingCount = isV2 ? itemsToInsert.length : data.existingCount;
+      const csvItems = data.items;
+      const itemsToInsert = data.itemsToInsert;
+      const ordersToInsert = data.ordersToInsert;
+      const existingCount = itemsToInsert.length;
       const itemIds = [...new Set(csvItems.map((item) => item.itemExternalId))];
 
       return executeSyncJob({
@@ -242,16 +236,9 @@ export const syncWorker = new Worker(
     if (type === "order") {
       const data = validatedData.data;
       const order = data.order;
-      const itemsToScrape =
-        data.payloadVersion === 2
-          ? data.order.itemsToScrape
-          : data.order.itemsToScrape.map((item, index) => ({
-              ...item,
-              collectionId: `${syncSessionId}:legacy:${index}`,
-            }));
-      const itemsToInsert = data.payloadVersion === 2 ? data.order.itemsToInsert : [];
-      const existingCount =
-        data.payloadVersion === 2 ? data.order.itemsToInsert.length : data.order.existingCount;
+      const itemsToScrape = data.order.itemsToScrape;
+      const itemsToInsert = data.order.itemsToInsert;
+      const existingCount = itemsToInsert.length;
       const itemIds = [...new Set(itemsToScrape.map((item) => item.itemExternalId))];
 
       return executeSyncJob({
@@ -283,16 +270,9 @@ export const syncWorker = new Worker(
     if (type === "order-item") {
       const data = validatedData.data;
       const order = data.order;
-      const itemsToScrape =
-        data.payloadVersion === 2
-          ? data.order.itemsToScrape
-          : data.order.itemsToScrape.map((item, index) => ({
-              ...item,
-              collectionId: `${syncSessionId}:legacy:${index}`,
-            }));
-      const itemsToInsert = data.payloadVersion === 2 ? data.order.itemsToInsert : [];
-      const existingCount =
-        data.payloadVersion === 2 ? data.order.itemsToInsert.length : data.order.existingCount;
+      const itemsToScrape = data.order.itemsToScrape;
+      const itemsToInsert = data.order.itemsToInsert;
+      const existingCount = itemsToInsert.length;
       const itemIds = [...new Set(itemsToScrape.map((item) => item.itemExternalId))];
 
       return executeSyncJob({
@@ -322,18 +302,9 @@ export const syncWorker = new Worker(
     }
 
     const data = validatedData.data;
-    const itemsToScrape =
-      data.payloadVersion === 2
-        ? data.collection.itemsToScrape
-        : data.collection.itemsToScrape.map((item, index) => ({
-            ...item,
-            collectionId: `${syncSessionId}:legacy:${index}`,
-          }));
-    const itemsToInsert = data.payloadVersion === 2 ? data.collection.itemsToInsert : [];
-    const existingCount =
-      data.payloadVersion === 2
-        ? data.collection.itemsToInsert.length
-        : data.collection.existingCount;
+    const itemsToScrape = data.collection.itemsToScrape;
+    const itemsToInsert = data.collection.itemsToInsert;
+    const existingCount = itemsToInsert.length;
     const itemIds = [...new Set(itemsToScrape.map((item) => item.itemExternalId))];
 
     return executeSyncJob({
@@ -430,16 +401,11 @@ syncWorker.on("failed", async (job, err) => {
   }
 
   const getExistingCount = (): number => {
-    if (data.payloadVersion === 2) {
-      if (data.type === "csv") return data.itemsToInsert.length;
-      if (data.type === "order" || data.type === "order-item") {
-        return data.order.itemsToInsert.length;
-      }
-      return data.collection.itemsToInsert.length;
+    if (data.type === "csv") return data.itemsToInsert.length;
+    if (data.type === "order" || data.type === "order-item") {
+      return data.order.itemsToInsert.length;
     }
-    if (data.type === "csv") return data.existingCount;
-    if (data.type === "order" || data.type === "order-item") return data.order.existingCount;
-    return data.collection.existingCount;
+    return data.collection.itemsToInsert.length;
   };
   const existingCount = getExistingCount();
   const getScrapeRowCount = (): number => {
@@ -449,10 +415,9 @@ syncWorker.on("failed", async (job, err) => {
   };
   const scrapeRowCount = getScrapeRowCount();
 
-  const isV2 = data.payloadVersion === 2;
-  const successCount = isV2 ? 0 : existingCount;
-  const failCount = scrapeRowCount + (isV2 ? existingCount : 0);
-  const sessionStatus = successCount > 0 ? ("partial" as const) : ("failed" as const);
+  const successCount = 0;
+  const failCount = scrapeRowCount + existingCount;
+  const sessionStatus = "failed" as const;
 
   const failedStatusMessage = SYNC_STATUS_MESSAGES.failedBeforeStartWithReason(err.message);
   const { error: statusError } = await tryCatch(

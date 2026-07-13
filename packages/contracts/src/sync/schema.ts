@@ -250,57 +250,7 @@ export const queuedCollectionItemSchema = z.object({
   notes: z.string(),
 });
 
-const legacyInternalCsvItemSchema = internalCsvItemSchema.omit({ collectionId: true });
-const legacySyncOrderItemSchema = syncOrderItemSchema.omit({ collectionId: true });
-const legacySyncCollectionItemSchema = syncCollectionItemSchema.omit({ collectionId: true });
-
-export const legacyJobDataSchema = z.discriminatedUnion("type", [
-  z.object({
-    type: z.literal("csv"),
-    payloadVersion: z.never().optional(),
-    userId: z.string(),
-    syncSessionId: z.string(),
-    existingCount: z.number().int().nonnegative(),
-    items: z.array(legacyInternalCsvItemSchema),
-  }),
-  z.object({
-    type: z.literal("order"),
-    payloadVersion: z.never().optional(),
-    userId: z.string(),
-    syncSessionId: z.string(),
-    order: z.object({
-      details: syncOrderSchema,
-      itemsToScrape: z.array(legacySyncOrderItemSchema),
-      itemsToInsert: z.array(legacySyncOrderItemSchema),
-      existingCount: z.number().int().nonnegative(),
-    }),
-  }),
-  z.object({
-    type: z.literal("order-item"),
-    payloadVersion: z.never().optional(),
-    userId: z.string(),
-    syncSessionId: z.string(),
-    order: z.object({
-      details: syncOrderSchema,
-      itemsToScrape: z.array(legacySyncOrderItemSchema),
-      itemsToInsert: z.array(legacySyncOrderItemSchema),
-      existingCount: z.number().int().nonnegative(),
-    }),
-  }),
-  z.object({
-    type: z.literal("collection"),
-    payloadVersion: z.never().optional(),
-    userId: z.string(),
-    syncSessionId: z.string(),
-    collection: z.object({
-      itemsToScrape: z.array(legacySyncCollectionItemSchema),
-      itemsToInsert: z.array(legacySyncCollectionItemSchema),
-      existingCount: z.number().int().nonnegative(),
-    }),
-  }),
-]);
-
-export const jobDataV2Schema = z.discriminatedUnion("type", [
+export const jobDataSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("csv"),
     payloadVersion: z.literal(2),
@@ -343,11 +293,6 @@ export const jobDataV2Schema = z.discriminatedUnion("type", [
     }),
   }),
 ]);
-
-// Rolling deploy: dual-reading worker first, then v2 server; drain v1 jobs before
-// legacy handling is removed in a later release. Keep v2 first so Zod cannot
-// strip payloadVersion and accidentally parse a v2 job as legacy.
-export const jobDataSchema = z.union([jobDataV2Schema, legacyJobDataSchema]);
 
 export type SyncTerminalState = z.infer<typeof syncTerminalStateSchema>;
 export type SyncJobPhase = z.infer<typeof syncJobPhaseSchema>;
@@ -445,6 +390,4 @@ export type UpdatedSyncOrderItem = z.infer<typeof syncOrderItemSchema>;
 export type UpdatedSyncCollection = z.infer<typeof syncCollectionItemSchema>;
 export type SyncOrderItemInput = z.infer<typeof syncOrderItemInputSchema>;
 export type SyncOrderItemsInput = z.infer<typeof syncOrderItemsSchema>;
-export type LegacyJobData = z.infer<typeof legacyJobDataSchema>;
-export type JobDataV2 = z.infer<typeof jobDataV2Schema>;
 export type JobData = z.infer<typeof jobDataSchema>;
