@@ -1,7 +1,12 @@
 import { Worker } from "bullmq";
 import { createError, createLogger, log } from "evlog";
 import { tryCatch } from "@myakiba/utils/result";
-import { createJobStatusState, publishJobStatus, updateSyncSessionCounts } from "../../lib/utils";
+import {
+  allowTerminalSessionUpdates,
+  createJobStatusState,
+  deferTerminalSessionUpdates,
+  publishJobStatus,
+} from "../../lib/utils";
 import type {
   ExecuteSyncJobParams,
   FullJobData,
@@ -18,9 +23,13 @@ import { finalizeCollectionSync } from "../../lib/collection/utils";
 import { finalizeOrderSync } from "../../lib/order/utils";
 import { finalizeCsvSync } from "../../lib/csv/utils";
 import { processSyncJob } from "../../lib/process-sync-job";
+import { MOCK_SCRAPE } from "../../lib/mock-scrape";
 import { env } from "@myakiba/env/worker";
 import { redis } from "@myakiba/redis/client";
 import { createDefaultJobContext } from "../../lib/evlog";
+import { db } from "@myakiba/db/client";
+import { syncSession } from "@myakiba/db/schema/figure";
+import { eq } from "drizzle-orm";
 
 const SYNC_QUEUE_NAME = "sync-queue";
 
@@ -68,6 +77,8 @@ async function executeSyncJob({
     order: { id: orderId, shop: null, status: null },
   });
 
+  if (!MOCK_SCRAPE) deferTerminalSessionUpdates(jobId, syncSessionId);
+
   try {
     const { data: result, error } = await tryCatch(
       processSyncJob({
@@ -93,29 +104,50 @@ async function executeSyncJob({
       throw error;
     }
 
+    let completedResult = result;
+    if (result.persistence === null && !MOCK_SCRAPE) {
+      const state = createJobStatusState({
+        jobId,
+        totalItems: scrapeRowCount,
+        phase: "persisting",
+        statusMessage: SYNC_STATUS_MESSAGES.persisting(0),
+      });
+      const finalized = await finalize([], state, jobLog);
+      completedResult = {
+        ...result,
+        processedAt: finalized.processedAt,
+        successCount: finalized.successCount,
+        failCount: finalized.failCount,
+        sessionStatus: finalized.sessionStatus,
+        statusMessage: finalized.statusMessage,
+        persistence: finalized.persistence,
+      };
+    }
+
     const getOutcome = (): "success" | "partial" | "error" => {
-      if (result.sessionStatus === "completed") return "success";
-      if (result.sessionStatus === "partial") return "partial";
+      if (completedResult.sessionStatus === "completed") return "success";
+      if (completedResult.sessionStatus === "partial") return "partial";
       return "error";
     };
     jobLog.set({
       outcome: getOutcome(),
       sync: {
-        sessionStatus: result.sessionStatus,
-        statusMessage: result.statusMessage,
+        sessionStatus: completedResult.sessionStatus,
+        statusMessage: completedResult.statusMessage,
       },
       items: {
-        scraped: result.scrapedCount,
-        failed: result.failedCount,
-        successCount: result.successCount,
-        failCount: result.failCount,
-        failedIds: result.failedItemIds,
+        scraped: completedResult.scrapedCount,
+        failed: completedResult.failedCount,
+        successCount: completedResult.successCount,
+        failCount: completedResult.failCount,
+        failedIds: completedResult.failedItemIds,
       },
-      persistence: result.persistence,
-      processedAt: result.processedAt,
+      persistence: completedResult.persistence,
+      processedAt: completedResult.processedAt,
     });
-    return result;
+    return completedResult;
   } finally {
+    allowTerminalSessionUpdates(jobId, syncSessionId);
     jobLog.emit();
   }
 }
@@ -169,7 +201,17 @@ export const syncWorker = new Worker(
 
     if (type === "csv") {
       const data = validatedData.data;
-      const itemIds = [...new Set(data.items.map((item) => item.itemExternalId))];
+      const isV2 = data.payloadVersion === 2;
+      const csvItems = isV2
+        ? data.items
+        : data.items.map((item, index) => ({
+            ...item,
+            collectionId: `${syncSessionId}:legacy:${index}`,
+          }));
+      const itemsToInsert = isV2 ? data.itemsToInsert : [];
+      const ordersToInsert = isV2 ? data.ordersToInsert : [];
+      const existingCount = isV2 ? itemsToInsert.length : data.existingCount;
+      const itemIds = [...new Set(csvItems.map((item) => item.itemExternalId))];
 
       return executeSyncJob({
         job,
@@ -178,8 +220,8 @@ export const syncWorker = new Worker(
         syncSessionId,
         userId,
         itemIds,
-        scrapeRowCount: data.items.length,
-        existingCount: data.existingCount,
+        scrapeRowCount: csvItems.length,
+        existingCount,
         orderId: null,
         finalize: (successfulResults, state, jobLog) =>
           finalizeCsvSync({
@@ -188,16 +230,29 @@ export const syncWorker = new Worker(
             userId,
             redis,
             state,
-            csvItems: data.items,
-            existingCount: data.existingCount,
+            csvItems,
+            itemsToInsert,
+            ordersToInsert,
+            existingCount,
             syncSessionId,
           }),
       });
     }
 
     if (type === "order") {
-      const { order } = validatedData.data;
-      const itemIds = [...new Set(order.itemsToScrape.map((item) => item.itemExternalId))];
+      const data = validatedData.data;
+      const order = data.order;
+      const itemsToScrape =
+        data.payloadVersion === 2
+          ? data.order.itemsToScrape
+          : data.order.itemsToScrape.map((item, index) => ({
+              ...item,
+              collectionId: `${syncSessionId}:legacy:${index}`,
+            }));
+      const itemsToInsert = data.payloadVersion === 2 ? data.order.itemsToInsert : [];
+      const existingCount =
+        data.payloadVersion === 2 ? data.order.itemsToInsert.length : data.order.existingCount;
+      const itemIds = [...new Set(itemsToScrape.map((item) => item.itemExternalId))];
 
       return executeSyncJob({
         job,
@@ -206,8 +261,8 @@ export const syncWorker = new Worker(
         syncSessionId,
         userId,
         itemIds,
-        scrapeRowCount: order.itemsToScrape.length,
-        existingCount: order.existingCount,
+        scrapeRowCount: itemsToScrape.length,
+        existingCount,
         orderId: order.details.id,
         finalize: (successfulResults, state, jobLog) =>
           finalizeOrderSync({
@@ -216,8 +271,9 @@ export const syncWorker = new Worker(
             redis,
             state,
             details: order.details,
-            itemsToScrape: order.itemsToScrape,
-            existingCount: order.existingCount,
+            itemsToScrape,
+            itemsToInsert,
+            existingCount,
             syncSessionId,
             syncMode: "create",
           }),
@@ -225,8 +281,19 @@ export const syncWorker = new Worker(
     }
 
     if (type === "order-item") {
-      const { order } = validatedData.data;
-      const itemIds = [...new Set(order.itemsToScrape.map((item) => item.itemExternalId))];
+      const data = validatedData.data;
+      const order = data.order;
+      const itemsToScrape =
+        data.payloadVersion === 2
+          ? data.order.itemsToScrape
+          : data.order.itemsToScrape.map((item, index) => ({
+              ...item,
+              collectionId: `${syncSessionId}:legacy:${index}`,
+            }));
+      const itemsToInsert = data.payloadVersion === 2 ? data.order.itemsToInsert : [];
+      const existingCount =
+        data.payloadVersion === 2 ? data.order.itemsToInsert.length : data.order.existingCount;
+      const itemIds = [...new Set(itemsToScrape.map((item) => item.itemExternalId))];
 
       return executeSyncJob({
         job,
@@ -235,8 +302,8 @@ export const syncWorker = new Worker(
         syncSessionId,
         userId,
         itemIds,
-        scrapeRowCount: order.itemsToScrape.length,
-        existingCount: order.existingCount,
+        scrapeRowCount: itemsToScrape.length,
+        existingCount,
         orderId: order.details.id,
         finalize: (successfulResults, state, jobLog) =>
           finalizeOrderSync({
@@ -245,16 +312,29 @@ export const syncWorker = new Worker(
             redis,
             state,
             details: order.details,
-            itemsToScrape: order.itemsToScrape,
-            existingCount: order.existingCount,
+            itemsToScrape,
+            itemsToInsert,
+            existingCount,
             syncSessionId,
             syncMode: "append",
           }),
       });
     }
 
-    const { collection } = validatedData.data;
-    const itemIds = [...new Set(collection.itemsToScrape.map((item) => item.itemExternalId))];
+    const data = validatedData.data;
+    const itemsToScrape =
+      data.payloadVersion === 2
+        ? data.collection.itemsToScrape
+        : data.collection.itemsToScrape.map((item, index) => ({
+            ...item,
+            collectionId: `${syncSessionId}:legacy:${index}`,
+          }));
+    const itemsToInsert = data.payloadVersion === 2 ? data.collection.itemsToInsert : [];
+    const existingCount =
+      data.payloadVersion === 2
+        ? data.collection.itemsToInsert.length
+        : data.collection.existingCount;
+    const itemIds = [...new Set(itemsToScrape.map((item) => item.itemExternalId))];
 
     return executeSyncJob({
       job,
@@ -263,8 +343,8 @@ export const syncWorker = new Worker(
       syncSessionId,
       userId,
       itemIds,
-      scrapeRowCount: collection.itemsToScrape.length,
-      existingCount: collection.existingCount,
+      scrapeRowCount: itemsToScrape.length,
+      existingCount,
       orderId: null,
       finalize: (successfulResults, state, jobLog) =>
         finalizeCollectionSync({
@@ -272,8 +352,9 @@ export const syncWorker = new Worker(
           log: jobLog,
           redis,
           state,
-          itemsToScrape: collection.itemsToScrape,
-          existingCount: collection.existingCount,
+          itemsToScrape,
+          itemsToInsert,
+          existingCount,
           syncSessionId,
         }),
     });
@@ -317,7 +398,45 @@ syncWorker.on("failed", async (job, err) => {
 
   const { syncSessionId } = parsedJobData.data;
   const data = parsedJobData.data;
+  const [durableSession] = await db
+    .select({ status: syncSession.status })
+    .from(syncSession)
+    .where(eq(syncSession.id, syncSessionId));
+
+  if (!durableSession) {
+    const cleanupLog = createLogger({
+      action: "worker.cleanup",
+      outcome: "error",
+      queue: { name: SYNC_QUEUE_NAME },
+      job: { id: job.id, jobName: job.name },
+      syncSessionId,
+      message: "Durable sync session not found; cleanup skipped",
+    });
+    cleanupLog.emit();
+    return;
+  }
+
+  if (["completed", "partial", "failed"].includes(durableSession.status)) {
+    createLogger({
+      action: "worker.cleanup",
+      outcome: "skipped",
+      queue: { name: SYNC_QUEUE_NAME },
+      job: { id: job.id, jobName: job.name },
+      syncSessionId,
+      sessionStatus: durableSession.status,
+      message: "Cleanup skipped because durable session is already terminal",
+    }).emit();
+    return;
+  }
+
   const getExistingCount = (): number => {
+    if (data.payloadVersion === 2) {
+      if (data.type === "csv") return data.itemsToInsert.length;
+      if (data.type === "order" || data.type === "order-item") {
+        return data.order.itemsToInsert.length;
+      }
+      return data.collection.itemsToInsert.length;
+    }
     if (data.type === "csv") return data.existingCount;
     if (data.type === "order" || data.type === "order-item") return data.order.existingCount;
     return data.collection.existingCount;
@@ -330,8 +449,9 @@ syncWorker.on("failed", async (job, err) => {
   };
   const scrapeRowCount = getScrapeRowCount();
 
-  const successCount = existingCount;
-  const failCount = scrapeRowCount;
+  const isV2 = data.payloadVersion === 2;
+  const successCount = isV2 ? 0 : existingCount;
+  const failCount = scrapeRowCount + (isV2 ? existingCount : 0);
   const sessionStatus = successCount > 0 ? ("partial" as const) : ("failed" as const);
 
   const failedStatusMessage = SYNC_STATUS_MESSAGES.failedBeforeStartWithReason(err.message);
@@ -346,19 +466,14 @@ syncWorker.on("failed", async (job, err) => {
       }),
       syncSessionId,
       sessionStatus,
+      successCount,
+      failCount,
+      forceDurableUpdate: true,
       terminalState: sessionStatusToTerminalState(sessionStatus),
       error: { code: "unknown", message: err.message },
     }),
   );
-  const { error: countsError } = await tryCatch(
-    updateSyncSessionCounts({
-      syncSessionId,
-      successCount,
-      failCount,
-    }),
-  );
-
-  const cleanupError = statusError ?? countsError;
+  const cleanupError = statusError;
   if (cleanupError && cleanupError instanceof Error) {
     const cleanupLog = createLogger({
       action: "worker.cleanup",

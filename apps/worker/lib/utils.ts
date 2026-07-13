@@ -13,8 +13,24 @@ import { writeJobStatusSnapshotAndPublish } from "@myakiba/redis/job-status";
 import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import type { SyncSessionStatus } from "@myakiba/contracts/shared/types";
+import { createLogger } from "evlog";
 
 const RECENT_ITEMS_LIMIT = 5;
+// The shared process helper can publish all-scrapes-failed terminal state before
+// v2 known rows reach their finalizer. Defer its status, count, and cache writes
+// so the finalizer commits domain rows and terminal truth before publication.
+const terminalSessionUpdatesDeferredForJobs = new Set<string>();
+const terminalCountUpdatesDeferredForSessions = new Set<string>();
+
+export const deferTerminalSessionUpdates = (jobId: string, syncSessionId: string): void => {
+  terminalSessionUpdatesDeferredForJobs.add(jobId);
+  terminalCountUpdatesDeferredForSessions.add(syncSessionId);
+};
+
+export const allowTerminalSessionUpdates = (jobId: string, syncSessionId: string): void => {
+  terminalSessionUpdatesDeferredForJobs.delete(jobId);
+  terminalCountUpdatesDeferredForSessions.delete(syncSessionId);
+};
 
 type ResolveTerminalStateParams = {
   readonly successCount: number;
@@ -192,8 +208,10 @@ export const recordItemOutcome = (state: SyncJobStatusState, item: RecordItemPar
 };
 
 /**
- * Stamps `updatedAt`, writes the snapshot to Redis (SET + PUBLISH), and
- * dual-writes durable session state to Postgres when a session id is supplied.
+ * Persists supplied session state first, then publishes the Redis snapshot as
+ * a best-effort cache update. A job finalizer may defer terminal persistence so
+ * it can commit that state with domain rows. Redis failures never fail durable
+ * worker work.
  */
 export const publishJobStatus = async ({
   redis,
@@ -201,6 +219,11 @@ export const publishJobStatus = async ({
   terminalState,
   syncSessionId,
   sessionStatus,
+  successCount,
+  failCount,
+  orderId,
+  skipDurableUpdate = false,
+  forceDurableUpdate = false,
   error,
 }: PublishJobStatusParams): Promise<void> => {
   const payload: SyncJobStatus = {
@@ -215,18 +238,41 @@ export const publishJobStatus = async ({
     terminalState,
   };
 
-  await writeJobStatusSnapshotAndPublish(redis, state.jobId, payload);
+  const terminalUpdateIsDeferred =
+    terminalState !== null &&
+    terminalSessionUpdatesDeferredForJobs.has(state.jobId) &&
+    !forceDurableUpdate &&
+    !skipDurableUpdate;
 
-  if (syncSessionId && sessionStatus) {
+  if (terminalUpdateIsDeferred) return;
+
+  if (syncSessionId && sessionStatus && !skipDurableUpdate) {
     await db
       .update(syncSession)
       .set({
         statusMessage: state.statusMessage,
         status: sessionStatus,
         updatedAt: new Date(),
+        ...(successCount !== undefined ? { successCount } : {}),
+        ...(failCount !== undefined ? { failCount } : {}),
+        ...(orderId !== undefined ? { orderId } : {}),
         ...(terminalState !== null ? { completedAt: new Date() } : {}),
       })
       .where(eq(syncSession.id, syncSessionId));
+  }
+
+  try {
+    await writeJobStatusSnapshotAndPublish(redis, state.jobId, payload);
+  } catch (cacheError) {
+    const cacheLog = createLogger({
+      action: "worker.jobStatusCache",
+      outcome: "warn",
+      jobId: state.jobId,
+      syncSessionId: syncSessionId ?? null,
+      message: "Failed to publish job status cache; durable session remains authoritative",
+    });
+    if (cacheError instanceof Error) cacheLog.error(cacheError);
+    cacheLog.emit();
   }
 };
 
@@ -312,6 +358,8 @@ export const updateSyncSessionCounts = async ({
   successCount,
   failCount,
 }: UpdateSyncSessionCountsParams): Promise<void> => {
+  if (terminalCountUpdatesDeferredForSessions.has(syncSessionId)) return;
+
   await db
     .update(syncSession)
     .set({

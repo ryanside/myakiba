@@ -12,12 +12,14 @@ import { and, inArray, eq, desc, count, sql } from "drizzle-orm";
 import { syncJobStatusSchema } from "./model";
 import type {
   SyncJobProgress,
+  QueuedCollectionItem,
+  NormalizedInternalCsvItem,
   UpdatedSyncCollection,
   UpdatedSyncOrder,
   UpdatedSyncOrderItem,
 } from "@myakiba/contracts/sync/schema";
 import { sessionStatusToPhase, sessionStatusToTerminalState } from "@myakiba/contracts/sync/schema";
-import type { InternalCsvItem, SyncJobStatus, CollectionInsertType } from "./model";
+import type { SyncJobStatus, CollectionInsertType } from "./model";
 import type { OrderInsertType } from "../orders/model";
 import type {
   SyncSessionItemStatus,
@@ -141,6 +143,24 @@ class SyncService {
     });
   }
 
+  private async writeQueuedJobStatusBestEffort(
+    jobId: string,
+    syncSessionId: string,
+  ): Promise<void> {
+    const { error } = await tryCatch(this.writeQueuedJobStatus(jobId, SYNC_STATUS_MESSAGES.queued));
+    if (!error) return;
+
+    const cacheLog = createLogger({
+      action: "sync.queueStatusCache",
+      outcome: "warn",
+      jobId,
+      syncSessionId,
+      message: "Failed to publish queued status; durable session remains available",
+    });
+    cacheLog.error(error);
+    cacheLog.emit();
+  }
+
   async getExistingItemsWithLatestReleaseByExternalIds(
     externalIds: readonly number[],
   ): Promise<readonly ExistingItemWithLatestRelease[]> {
@@ -222,15 +242,18 @@ class SyncService {
     });
   }
 
-  assignOrderIds(items: InternalCsvItem[]): InternalCsvItem[] {
+  assignOrderIds(
+    items: Omit<NormalizedInternalCsvItem, "collectionId">[],
+  ): NormalizedInternalCsvItem[] {
     return items.map((item) => ({
       ...item,
+      collectionId: createId(),
       orderId: item.status === "Ordered" ? createId() : item.orderId,
     }));
   }
 
-  async processItems(items: InternalCsvItem[], userId: string) {
-    const itemExternalIds = items.map((item: InternalCsvItem) => item.itemExternalId);
+  async processItems(items: NormalizedInternalCsvItem[], userId: string) {
+    const itemExternalIds = items.map((item) => item.itemExternalId);
 
     const existingCandidates = await this.getCsvSyncCandidates(itemExternalIds, userId);
 
@@ -270,7 +293,7 @@ class SyncService {
       }
     }
 
-    const csvItemsToInsert = items.filter((item: InternalCsvItem) =>
+    const csvItemsToInsert = items.filter((item) =>
       itemsNeedingInsert.some((existingItem) => existingItem.externalId === item.itemExternalId),
     );
 
@@ -280,11 +303,9 @@ class SyncService {
           !existingItems.some((existingItem) => existingItem.externalId === externalId),
       ),
     );
-    const csvItemsToScrape = items.filter((item: InternalCsvItem) =>
-      idsToScrape.has(item.itemExternalId),
-    );
+    const csvItemsToScrape = items.filter((item) => idsToScrape.has(item.itemExternalId));
 
-    const orderItems: OrderInsertType[] = [];
+    const orderItems: UpdatedSyncOrder[] = [];
     csvItemsToInsert.forEach((item) => {
       if (item.status === "Ordered") {
         const itemTitle = existingItems.find(
@@ -296,6 +317,7 @@ class SyncService {
           orderItems.push({
             id: item.orderId,
             userId,
+            status: "Ordered",
             title: itemTitle || `Order ${item.orderId}`,
             shop: item.shop,
             orderDate: item.orderDate,
@@ -304,19 +326,26 @@ class SyncService {
             shippingDate: item.shipping_date,
             collectionDate: item.collecting_date,
             shippingMethod: item.shipping_method,
+            shippingFee: 0,
+            taxes: 0,
+            duties: 0,
+            tariffs: 0,
+            miscFees: 0,
+            notes: "",
           });
         }
       }
     });
 
     const collectionItems = csvItemsToInsert
-      .map((i): CollectionInsertType | null => {
+      .map((i): QueuedCollectionItem | null => {
         const internalItemId = externalIdToInternalId.get(i.itemExternalId);
         if (!internalItemId) {
           return null;
         }
 
         return {
+          id: i.collectionId,
           userId,
           itemId: internalItemId,
           status: i.status,
@@ -328,13 +357,15 @@ class SyncService {
           price: i.price && i.price.trim() !== "" ? parseMoneyToMinorUnits(i.price) : 0,
           shop: i.shop,
           shippingMethod: i.shipping_method,
+          tags: [],
+          condition: "New",
           notes: i.note,
           releaseId: existingItemsReleases.get(internalItemId) ?? null,
           orderId: i.orderId,
           orderDate: i.orderDate,
         };
       })
-      .filter((item): item is CollectionInsertType => item !== null);
+      .filter((item): item is QueuedCollectionItem => item !== null);
 
     return {
       collectionItems,
@@ -345,10 +376,11 @@ class SyncService {
   }
 
   async queueCSVSyncJob(
-    items: InternalCsvItem[],
+    items: NormalizedInternalCsvItem[],
+    itemsToInsert: QueuedCollectionItem[],
+    ordersToInsert: UpdatedSyncOrder[],
     userId: string,
     syncSessionId: string,
-    existingCount: number,
   ) {
     let queuedJobId: string | null = null;
     try {
@@ -356,15 +388,17 @@ class SyncService {
         "sync-job",
         {
           type: "csv" as const,
+          payloadVersion: 2 as const,
           userId,
           syncSessionId,
-          existingCount,
           items,
+          itemsToInsert,
+          ordersToInsert,
         },
         {
           removeOnComplete: true,
           removeOnFail: true,
-          jobId: createId(),
+          jobId: syncSessionId,
         },
       );
 
@@ -373,15 +407,6 @@ class SyncService {
       }
 
       queuedJobId = job.id;
-      const { error: jobStatusError } = await tryCatch(
-        this.writeQueuedJobStatus(job.id, SYNC_STATUS_MESSAGES.queued),
-      );
-
-      if (jobStatusError) {
-        await job.remove().catch(() => {});
-        throw new Error("FAILED_TO_SET_JOB_STATUS_IN_REDIS");
-      }
-
       const updated = await this.updateSyncSession(syncSessionId, {
         jobId: job.id,
       });
@@ -389,6 +414,8 @@ class SyncService {
         await job.remove().catch(() => {});
         throw new Error("SYNC_SESSION_NOT_FOUND");
       }
+
+      await this.writeQueuedJobStatusBestEffort(job.id, syncSessionId);
 
       return job.id;
     } catch (error) {
@@ -406,9 +433,8 @@ class SyncService {
     userId: string,
     order: UpdatedSyncOrder,
     itemsToScrape: UpdatedSyncOrderItem[],
-    itemsToInsert: UpdatedSyncOrderItem[],
+    itemsToInsert: QueuedCollectionItem[],
     syncSessionId: string,
-    existingCount: number,
   ) {
     return this.queueOrderLikeSyncJob({
       type: "order",
@@ -417,7 +443,6 @@ class SyncService {
       itemsToScrape,
       itemsToInsert,
       syncSessionId,
-      existingCount,
       queueErrorCode: "FAILED_TO_QUEUE_ORDER_SYNC_JOB",
     });
   }
@@ -426,9 +451,8 @@ class SyncService {
     userId: string,
     order: UpdatedSyncOrder,
     itemsToScrape: UpdatedSyncOrderItem[],
-    itemsToInsert: UpdatedSyncOrderItem[],
+    itemsToInsert: QueuedCollectionItem[],
     syncSessionId: string,
-    existingCount: number,
   ) {
     return this.queueOrderLikeSyncJob({
       type: "order-item",
@@ -437,7 +461,6 @@ class SyncService {
       itemsToScrape,
       itemsToInsert,
       syncSessionId,
-      existingCount,
       queueErrorCode: "FAILED_TO_QUEUE_ORDER_ITEM_SYNC_JOB",
     });
   }
@@ -447,9 +470,8 @@ class SyncService {
     readonly userId: string;
     readonly order: UpdatedSyncOrder;
     readonly itemsToScrape: UpdatedSyncOrderItem[];
-    readonly itemsToInsert: UpdatedSyncOrderItem[];
+    readonly itemsToInsert: QueuedCollectionItem[];
     readonly syncSessionId: string;
-    readonly existingCount: number;
     readonly queueErrorCode:
       | "FAILED_TO_QUEUE_ORDER_SYNC_JOB"
       | "FAILED_TO_QUEUE_ORDER_ITEM_SYNC_JOB";
@@ -462,19 +484,19 @@ class SyncService {
         "sync-job",
         {
           type: params.type,
+          payloadVersion: 2 as const,
           userId: params.userId,
           syncSessionId: params.syncSessionId,
           order: {
             details: params.order,
             itemsToScrape: params.itemsToScrape,
             itemsToInsert: params.itemsToInsert,
-            existingCount: params.existingCount,
           },
         },
         {
           removeOnComplete: true,
           removeOnFail: true,
-          jobId: createId(),
+          jobId: params.syncSessionId,
         },
       );
 
@@ -483,15 +505,6 @@ class SyncService {
       }
 
       queuedJobId = job.id;
-      const { error: jobStatusError } = await tryCatch(
-        this.writeQueuedJobStatus(job.id, SYNC_STATUS_MESSAGES.queued),
-      );
-
-      if (jobStatusError) {
-        await job.remove().catch(() => {});
-        throw new Error("FAILED_TO_SET_JOB_STATUS_IN_REDIS");
-      }
-
       const updated = await this.updateSyncSession(params.syncSessionId, {
         jobId: job.id,
       });
@@ -499,6 +512,8 @@ class SyncService {
         await job.remove().catch(() => {});
         throw new Error("SYNC_SESSION_NOT_FOUND");
       }
+
+      await this.writeQueuedJobStatusBestEffort(job.id, params.syncSessionId);
 
       return job.id;
     } catch (error) {
@@ -518,9 +533,8 @@ class SyncService {
   async queueCollectionSyncJob(
     userId: string,
     itemsToScrape: UpdatedSyncCollection[],
-    itemsToInsert: UpdatedSyncCollection[],
+    itemsToInsert: QueuedCollectionItem[],
     syncSessionId: string,
-    existingCount: number,
   ) {
     let queuedJobId: string | null = null;
     try {
@@ -528,18 +542,18 @@ class SyncService {
         "sync-job",
         {
           type: "collection" as const,
+          payloadVersion: 2 as const,
           userId,
           syncSessionId,
           collection: {
             itemsToScrape,
             itemsToInsert,
-            existingCount,
           },
         },
         {
           removeOnComplete: true,
           removeOnFail: true,
-          jobId: createId(),
+          jobId: syncSessionId,
         },
       );
 
@@ -548,15 +562,6 @@ class SyncService {
       }
 
       queuedJobId = job.id;
-      const { error: jobStatusError } = await tryCatch(
-        this.writeQueuedJobStatus(job.id, SYNC_STATUS_MESSAGES.queued),
-      );
-
-      if (jobStatusError) {
-        await job.remove().catch(() => {});
-        throw new Error("FAILED_TO_SET_JOB_STATUS_IN_REDIS");
-      }
-
       const updated = await this.updateSyncSession(syncSessionId, {
         jobId: job.id,
       });
@@ -564,6 +569,8 @@ class SyncService {
         await job.remove().catch(() => {});
         throw new Error("SYNC_SESSION_NOT_FOUND");
       }
+
+      await this.writeQueuedJobStatusBestEffort(job.id, syncSessionId);
 
       return job.id;
     } catch (error) {

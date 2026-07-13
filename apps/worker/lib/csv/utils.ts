@@ -13,7 +13,6 @@ import {
   markPersistFailedSyncSessionItemStatuses,
   publishJobStatus,
   resolveTerminalState,
-  updateSyncSessionCounts,
 } from "../utils";
 import { sessionStatusToPhase, sessionStatusToTerminalState } from "@myakiba/contracts/sync/schema";
 import {
@@ -23,6 +22,7 @@ import {
   entry_to_item,
   order,
   collection,
+  syncSession,
 } from "@myakiba/db/schema/figure";
 
 export async function finalizeCsvSync({
@@ -32,6 +32,8 @@ export async function finalizeCsvSync({
   redis,
   state,
   csvItems,
+  itemsToInsert,
+  ordersToInsert,
   existingCount,
   syncSessionId,
 }: FinalizeCsvSyncParams): Promise<FinalizeSyncResult> {
@@ -47,6 +49,7 @@ export async function finalizeCsvSync({
   const totalRowCount = existingCount + scrapeRowCount;
   let scrapedPersistedRowCount = 0;
   let collectionItems: {
+    id: string;
     userId: string;
     itemId: string | null;
     itemExternalId: number;
@@ -75,9 +78,17 @@ export async function finalizeCsvSync({
     collectionDate: string | null;
     shippingMethod: ShippingMethod;
     releaseDate: string | null;
+    status: "Ordered";
+    shippingFee: number;
+    taxes: number;
+    duties: number;
+    tariffs: number;
+    miscFees: number;
+    notes: string;
   }[] = [];
 
   collectionItems = successfulCollectionItems.map((ci) => ({
+    id: ci.collectionId,
     userId,
     itemId: null,
     itemExternalId: ci.itemExternalId,
@@ -110,6 +121,13 @@ export async function finalizeCsvSync({
         collectionDate: ci.collecting_date,
         shippingMethod: ci.shipping_method,
         releaseDate: latestReleaseIdByExternalId.get(ci.itemExternalId)?.date ?? null,
+        status: "Ordered" as const,
+        shippingFee: 0,
+        taxes: 0,
+        duties: 0,
+        tariffs: 0,
+        miscFees: 0,
+        notes: "",
       },
     ];
   });
@@ -119,8 +137,8 @@ export async function finalizeCsvSync({
     itemReleases: itemReleases.length,
     entries: entries.length,
     entryToItems: entryToItems.length,
-    collectionItems: collectionItems.length,
-    orders: orders.length,
+    collectionItems: itemsToInsert.length + collectionItems.length,
+    orders: new Set([...ordersToInsert, ...orders].map((orderRow) => orderRow.id)).size,
   };
 
   log.set({ persistence });
@@ -257,6 +275,7 @@ export async function finalizeCsvSync({
           }
           return [
             {
+              id: collectionItem.id,
               userId: collectionItem.userId,
               itemId: internalItemId,
               orderId: collectionItem.orderId,
@@ -279,19 +298,47 @@ export async function finalizeCsvSync({
 
       scrapedPersistedRowCount = collectionItemsToInsert.length;
 
-      if (orders.length > 0) {
-        await tx.insert(order).values(orders);
+      const dedupedOrders = [
+        ...new Map(
+          [...ordersToInsert, ...orders].map((orderRow) => [orderRow.id, orderRow] as const),
+        ).values(),
+      ];
+      if (dedupedOrders.length > 0) {
+        await tx.insert(order).values(dedupedOrders).onConflictDoNothing({ target: order.id });
       }
-      if (collectionItemsToInsert.length > 0) {
-        await tx.insert(collection).values(collectionItemsToInsert);
+      const collectionRows = [...itemsToInsert, ...collectionItemsToInsert];
+      if (collectionRows.length > 0) {
+        await tx
+          .insert(collection)
+          .values(collectionRows)
+          .onConflictDoNothing({ target: collection.id });
       }
+
+      const successCount = existingCount + scrapedPersistedRowCount;
+      const failCount = scrapeRowCount - scrapedPersistedRowCount;
+      const { sessionStatus, statusMessage } = resolveTerminalState({
+        successCount,
+        failCount,
+        totalRowCount,
+      });
+      await tx
+        .update(syncSession)
+        .set({
+          status: sessionStatus,
+          statusMessage,
+          successCount,
+          failCount,
+          completedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(syncSession.id, syncSessionId));
     }),
   );
 
   if (error) {
     const scrapedItemIds = successfulResults.map((result) => result.id);
-    const successCount = existingCount;
-    const failCount = scrapeRowCount;
+    const successCount = itemsToInsert.length > 0 ? 0 : existingCount;
+    const failCount = itemsToInsert.length > 0 ? totalRowCount : scrapeRowCount;
     const persistenceError = error instanceof Error ? error : null;
     const { sessionStatus, statusMessage } = resolveTerminalState({
       successCount,
@@ -312,16 +359,14 @@ export async function finalizeCsvSync({
       state,
       syncSessionId,
       sessionStatus,
+      successCount,
+      failCount,
+      forceDurableUpdate: true,
       terminalState: sessionStatusToTerminalState(sessionStatus),
       error: {
         code: "persistence_failed",
         message: persistenceError?.message ?? statusMessage,
       },
-    });
-    await updateSyncSessionCounts({
-      syncSessionId,
-      successCount,
-      failCount,
     });
 
     if (error instanceof Error) {
@@ -357,13 +402,9 @@ export async function finalizeCsvSync({
     state,
     syncSessionId,
     sessionStatus,
+    skipDurableUpdate: true,
     terminalState: sessionStatusToTerminalState(sessionStatus),
     error: null,
-  });
-  await updateSyncSessionCounts({
-    syncSessionId,
-    successCount,
-    failCount,
   });
 
   return {

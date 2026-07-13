@@ -12,7 +12,6 @@ import {
   markPersistFailedSyncSessionItemStatuses,
   publishJobStatus,
   resolveTerminalState,
-  updateSyncSessionCounts,
 } from "../utils";
 import { sessionStatusToPhase, sessionStatusToTerminalState } from "@myakiba/contracts/sync/schema";
 import {
@@ -32,6 +31,7 @@ export async function finalizeOrderSync({
   state,
   details,
   itemsToScrape,
+  itemsToInsert,
   existingCount,
   syncSessionId,
   syncMode,
@@ -73,7 +73,7 @@ export async function finalizeOrderSync({
     itemReleases: itemReleases.length,
     entries: entries.length,
     entryToItems: entryToItems.length,
-    collectionItems: successfulOrderItems.length,
+    collectionItems: itemsToInsert.length + successfulOrderItems.length,
     orders: shouldPersistOrderRecord || shouldUpdateExistingOrder ? 1 : 0,
   };
 
@@ -225,9 +225,24 @@ export async function finalizeOrderSync({
             orderItem.itemId !== null,
         )
         .map((orderItem) => ({
-          ...orderItem,
+          id: orderItem.collectionId,
+          userId: orderItem.userId,
           itemId: orderItem.itemId,
+          orderId: orderItem.orderId,
+          status: orderItem.status,
+          count: orderItem.count,
           releaseId: orderItem.releaseId && orderItem.releaseId !== "" ? orderItem.releaseId : null,
+          score: "0.0",
+          price: orderItem.price,
+          shop: details.shop,
+          orderDate: orderItem.orderDate,
+          paymentDate: orderItem.paymentDate,
+          shippingDate: orderItem.shippingDate,
+          collectionDate: orderItem.collectionDate,
+          shippingMethod: orderItem.shippingMethod,
+          tags: [],
+          condition: orderItem.condition,
+          notes: "",
         }));
 
       scrapedPersistedRowCount = scrapedOrderItems.length;
@@ -267,21 +282,40 @@ export async function finalizeOrderSync({
           .where(eq(order.id, details.id));
       }
 
-      if (scrapedOrderItems.length > 0) {
-        await tx.insert(collection).values(scrapedOrderItems);
+      const collectionRows = [...itemsToInsert, ...scrapedOrderItems];
+      if (collectionRows.length > 0) {
+        await tx
+          .insert(collection)
+          .values(collectionRows)
+          .onConflictDoNothing({ target: collection.id });
       }
 
+      const successCount = existingCount + scrapedPersistedRowCount;
+      const failCount = scrapeRowCount - scrapedPersistedRowCount;
+      const { sessionStatus, statusMessage } = resolveTerminalState({
+        successCount,
+        failCount,
+        totalRowCount,
+      });
       await tx
         .update(syncSession)
-        .set({ orderId: details.id, updatedAt: new Date() })
+        .set({
+          orderId: details.id,
+          status: sessionStatus,
+          statusMessage,
+          successCount,
+          failCount,
+          completedAt: new Date(),
+          updatedAt: new Date(),
+        })
         .where(eq(syncSession.id, syncSessionId));
     }),
   );
 
   if (error) {
     const scrapedItemIds = successfulResults.map((result) => result.id);
-    const successCount = existingCount;
-    const failCount = scrapeRowCount;
+    const successCount = itemsToInsert.length > 0 ? 0 : existingCount;
+    const failCount = itemsToInsert.length > 0 ? totalRowCount : scrapeRowCount;
     const persistenceError = error instanceof Error ? error : null;
     const { sessionStatus, statusMessage } = resolveTerminalState({
       successCount,
@@ -302,16 +336,15 @@ export async function finalizeOrderSync({
       state,
       syncSessionId,
       sessionStatus,
+      successCount,
+      failCount,
+      orderId: details.id,
+      forceDurableUpdate: true,
       terminalState: sessionStatusToTerminalState(sessionStatus),
       error: {
         code: "persistence_failed",
         message: persistenceError?.message ?? statusMessage,
       },
-    });
-    await updateSyncSessionCounts({
-      syncSessionId,
-      successCount,
-      failCount,
     });
 
     if (error instanceof Error) {
@@ -347,13 +380,9 @@ export async function finalizeOrderSync({
     state,
     syncSessionId,
     sessionStatus,
+    skipDurableUpdate: true,
     terminalState: sessionStatusToTerminalState(sessionStatus),
     error: null,
-  });
-  await updateSyncSessionCounts({
-    syncSessionId,
-    successCount,
-    failCount,
   });
 
   return {

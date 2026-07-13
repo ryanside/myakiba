@@ -103,6 +103,7 @@ export const syncOrderSchema = z.object({
 });
 
 export const syncOrderItemSchema = z.object({
+  collectionId: z.string(),
   userId: z.string(),
   orderId: z.string(),
   releaseId: z.string().nullable(),
@@ -120,6 +121,7 @@ export const syncOrderItemSchema = z.object({
 });
 
 export const syncOrderItemInputSchema = syncOrderItemSchema.omit({
+  collectionId: true,
   userId: true,
   orderId: true,
   releaseId: true,
@@ -132,6 +134,7 @@ export const syncOrderItemsSchema = z.object({
 });
 
 export const syncCollectionItemSchema = z.object({
+  collectionId: z.string(),
   userId: z.string(),
   releaseId: z.string().nullable(),
   itemId: z.string().nullable(),
@@ -185,6 +188,7 @@ export const csvItemSchema = z.object({
 export const csvSchema = z.array(csvItemSchema);
 
 export const internalCsvItemSchema = z.object({
+  collectionId: z.string(),
   itemExternalId: z.number(),
   status: z.enum(SYNC_CSV_ITEM_STATUSES),
   count: z.number(),
@@ -201,6 +205,7 @@ export const internalCsvItemSchema = z.object({
 });
 
 export const csvItemMetadataSchema = internalCsvItemSchema.omit({
+  collectionId: true,
   itemExternalId: true,
 });
 
@@ -217,53 +222,132 @@ export const orderItemMetadataSchema = syncOrderItemSchema.pick({
 });
 
 export const collectionItemMetadataSchema = syncCollectionItemSchema.omit({
+  collectionId: true,
   userId: true,
   releaseId: true,
   itemId: true,
   itemExternalId: true,
 });
 
-export const jobDataSchema = z.discriminatedUnion("type", [
+export const queuedCollectionItemSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  itemId: z.string(),
+  orderId: z.string().nullable(),
+  status: z.enum(ORDER_STATUSES),
+  count: z.number(),
+  releaseId: z.string().nullable(),
+  score: z.string(),
+  price: z.number().int(),
+  shop: z.string().trim(),
+  orderDate: z.iso.date().nullable(),
+  paymentDate: z.iso.date().nullable(),
+  shippingDate: z.iso.date().nullable(),
+  collectionDate: z.iso.date().nullable(),
+  shippingMethod: z.enum(SHIPPING_METHODS),
+  tags: z.array(z.string()),
+  condition: z.enum(CONDITIONS),
+  notes: z.string(),
+});
+
+const legacyInternalCsvItemSchema = internalCsvItemSchema.omit({ collectionId: true });
+const legacySyncOrderItemSchema = syncOrderItemSchema.omit({ collectionId: true });
+const legacySyncCollectionItemSchema = syncCollectionItemSchema.omit({ collectionId: true });
+
+export const legacyJobDataSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("csv"),
+    payloadVersion: z.never().optional(),
     userId: z.string(),
     syncSessionId: z.string(),
     existingCount: z.number().int().nonnegative(),
-    items: z.array(internalCsvItemSchema),
+    items: z.array(legacyInternalCsvItemSchema),
   }),
   z.object({
     type: z.literal("order"),
+    payloadVersion: z.never().optional(),
     userId: z.string(),
     syncSessionId: z.string(),
     order: z.object({
       details: syncOrderSchema,
-      itemsToScrape: z.array(syncOrderItemSchema),
-      itemsToInsert: z.array(syncOrderItemSchema),
+      itemsToScrape: z.array(legacySyncOrderItemSchema),
+      itemsToInsert: z.array(legacySyncOrderItemSchema),
       existingCount: z.number().int().nonnegative(),
     }),
   }),
   z.object({
     type: z.literal("order-item"),
+    payloadVersion: z.never().optional(),
     userId: z.string(),
     syncSessionId: z.string(),
     order: z.object({
       details: syncOrderSchema,
-      itemsToScrape: z.array(syncOrderItemSchema),
-      itemsToInsert: z.array(syncOrderItemSchema),
+      itemsToScrape: z.array(legacySyncOrderItemSchema),
+      itemsToInsert: z.array(legacySyncOrderItemSchema),
       existingCount: z.number().int().nonnegative(),
     }),
   }),
   z.object({
     type: z.literal("collection"),
+    payloadVersion: z.never().optional(),
     userId: z.string(),
     syncSessionId: z.string(),
     collection: z.object({
-      itemsToScrape: z.array(syncCollectionItemSchema),
-      itemsToInsert: z.array(syncCollectionItemSchema),
+      itemsToScrape: z.array(legacySyncCollectionItemSchema),
+      itemsToInsert: z.array(legacySyncCollectionItemSchema),
       existingCount: z.number().int().nonnegative(),
     }),
   }),
 ]);
+
+export const jobDataV2Schema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("csv"),
+    payloadVersion: z.literal(2),
+    userId: z.string(),
+    syncSessionId: z.string(),
+    items: z.array(internalCsvItemSchema),
+    itemsToInsert: z.array(queuedCollectionItemSchema),
+    ordersToInsert: z.array(syncOrderSchema),
+  }),
+  z.object({
+    type: z.literal("order"),
+    payloadVersion: z.literal(2),
+    userId: z.string(),
+    syncSessionId: z.string(),
+    order: z.object({
+      details: syncOrderSchema,
+      itemsToScrape: z.array(syncOrderItemSchema),
+      itemsToInsert: z.array(queuedCollectionItemSchema),
+    }),
+  }),
+  z.object({
+    type: z.literal("order-item"),
+    payloadVersion: z.literal(2),
+    userId: z.string(),
+    syncSessionId: z.string(),
+    order: z.object({
+      details: syncOrderSchema,
+      itemsToScrape: z.array(syncOrderItemSchema),
+      itemsToInsert: z.array(queuedCollectionItemSchema),
+    }),
+  }),
+  z.object({
+    type: z.literal("collection"),
+    payloadVersion: z.literal(2),
+    userId: z.string(),
+    syncSessionId: z.string(),
+    collection: z.object({
+      itemsToScrape: z.array(syncCollectionItemSchema),
+      itemsToInsert: z.array(queuedCollectionItemSchema),
+    }),
+  }),
+]);
+
+// Rolling deploy: dual-reading worker first, then v2 server; drain v1 jobs before
+// legacy handling is removed in a later release. Keep v2 first so Zod cannot
+// strip payloadVersion and accidentally parse a v2 job as legacy.
+export const jobDataSchema = z.union([jobDataV2Schema, legacyJobDataSchema]);
 
 export type SyncTerminalState = z.infer<typeof syncTerminalStateSchema>;
 export type SyncJobPhase = z.infer<typeof syncJobPhaseSchema>;
@@ -348,7 +432,11 @@ export const sessionStatusToTerminalState = (
   }
 };
 export type CsvItem = z.infer<typeof csvItemSchema>;
-export type InternalCsvItem = z.infer<typeof internalCsvItemSchema>;
+export type NormalizedInternalCsvItem = z.infer<typeof internalCsvItemSchema>;
+export type InternalCsvItem = Omit<NormalizedInternalCsvItem, "collectionId"> & {
+  readonly collectionId?: string;
+};
+export type QueuedCollectionItem = z.infer<typeof queuedCollectionItemSchema>;
 export type CsvItemMetadata = z.infer<typeof csvItemMetadataSchema>;
 export type OrderItemMetadata = z.infer<typeof orderItemMetadataSchema>;
 export type CollectionItemMetadata = z.infer<typeof collectionItemMetadataSchema>;
@@ -357,4 +445,6 @@ export type UpdatedSyncOrderItem = z.infer<typeof syncOrderItemSchema>;
 export type UpdatedSyncCollection = z.infer<typeof syncCollectionItemSchema>;
 export type SyncOrderItemInput = z.infer<typeof syncOrderItemInputSchema>;
 export type SyncOrderItemsInput = z.infer<typeof syncOrderItemsSchema>;
+export type LegacyJobData = z.infer<typeof legacyJobDataSchema>;
+export type JobDataV2 = z.infer<typeof jobDataV2Schema>;
 export type JobData = z.infer<typeof jobDataSchema>;

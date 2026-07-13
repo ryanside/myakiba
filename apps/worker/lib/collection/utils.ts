@@ -12,10 +12,16 @@ import {
   markPersistFailedSyncSessionItemStatuses,
   publishJobStatus,
   resolveTerminalState,
-  updateSyncSessionCounts,
 } from "../utils";
 import { sessionStatusToPhase, sessionStatusToTerminalState } from "@myakiba/contracts/sync/schema";
-import { item, item_release, entry, entry_to_item, collection } from "@myakiba/db/schema/figure";
+import {
+  item,
+  item_release,
+  entry,
+  entry_to_item,
+  collection,
+  syncSession,
+} from "@myakiba/db/schema/figure";
 
 export async function finalizeCollectionSync({
   successfulResults,
@@ -23,6 +29,7 @@ export async function finalizeCollectionSync({
   redis,
   state,
   itemsToScrape,
+  itemsToInsert,
   existingCount,
   syncSessionId,
 }: FinalizeCollectionSyncParams): Promise<FinalizeSyncResult> {
@@ -41,7 +48,7 @@ export async function finalizeCollectionSync({
     itemReleases: itemReleases.length,
     entries: entries.length,
     entryToItems: entryToItems.length,
-    collectionItems: successfulCollectionItems.length,
+    collectionItems: itemsToInsert.length + successfulCollectionItems.length,
     orders: 0,
   };
 
@@ -187,26 +194,64 @@ export async function finalizeCollectionSync({
             collectionItem.itemId !== null,
         )
         .map((collectionItem) => ({
-          ...collectionItem,
+          id: collectionItem.collectionId,
+          userId: collectionItem.userId,
           itemId: collectionItem.itemId,
+          orderId: null,
+          status: "Owned" as const,
+          count: collectionItem.count,
           releaseId:
             collectionItem.releaseId && collectionItem.releaseId !== ""
               ? collectionItem.releaseId
               : null,
+          score: collectionItem.score,
+          price: collectionItem.price,
+          shop: collectionItem.shop,
+          orderDate: collectionItem.orderDate,
+          paymentDate: collectionItem.paymentDate,
+          shippingDate: collectionItem.shippingDate,
+          collectionDate: collectionItem.collectionDate,
+          shippingMethod: collectionItem.shippingMethod,
+          tags: collectionItem.tags,
+          condition: collectionItem.condition,
+          notes: collectionItem.notes,
         }));
 
       scrapedPersistedRowCount = scrapedCollectionItems.length;
 
-      if (scrapedCollectionItems.length > 0) {
-        await tx.insert(collection).values(scrapedCollectionItems);
+      const collectionRows = [...itemsToInsert, ...scrapedCollectionItems];
+      if (collectionRows.length > 0) {
+        await tx
+          .insert(collection)
+          .values(collectionRows)
+          .onConflictDoNothing({ target: collection.id });
       }
+
+      const successCount = existingCount + scrapedPersistedRowCount;
+      const failCount = scrapeRowCount - scrapedPersistedRowCount;
+      const { sessionStatus, statusMessage } = resolveTerminalState({
+        successCount,
+        failCount,
+        totalRowCount,
+      });
+      await tx
+        .update(syncSession)
+        .set({
+          status: sessionStatus,
+          statusMessage,
+          successCount,
+          failCount,
+          completedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(syncSession.id, syncSessionId));
     }),
   );
 
   if (error) {
     const scrapedItemIds = successfulResults.map((result) => result.id);
-    const successCount = existingCount;
-    const failCount = scrapeRowCount;
+    const successCount = itemsToInsert.length > 0 ? 0 : existingCount;
+    const failCount = itemsToInsert.length > 0 ? totalRowCount : scrapeRowCount;
     const persistenceError = error instanceof Error ? error : null;
     const { sessionStatus, statusMessage } = resolveTerminalState({
       successCount,
@@ -227,16 +272,14 @@ export async function finalizeCollectionSync({
       state,
       syncSessionId,
       sessionStatus,
+      successCount,
+      failCount,
+      forceDurableUpdate: true,
       terminalState: sessionStatusToTerminalState(sessionStatus),
       error: {
         code: "persistence_failed",
         message: persistenceError?.message ?? statusMessage,
       },
-    });
-    await updateSyncSessionCounts({
-      syncSessionId,
-      successCount,
-      failCount,
     });
 
     if (error instanceof Error) {
@@ -272,13 +315,9 @@ export async function finalizeCollectionSync({
     state,
     syncSessionId,
     sessionStatus,
+    skipDurableUpdate: true,
     terminalState: sessionStatusToTerminalState(sessionStatus),
     error: null,
-  });
-  await updateSyncSessionCounts({
-    syncSessionId,
-    successCount,
-    failCount,
   });
 
   return {
