@@ -135,9 +135,7 @@ export function realizedOrderDateSql(): ReturnType<typeof sql> {
 }
 
 function realizedItemDateSql(): ReturnType<typeof sql> {
-  const itemLifecycleDate = sql`COALESCE(${collection.paymentDate}, ${collection.collectionDate}, ${collection.shippingDate}, ${collection.orderDate}, ${order.paymentDate}, ${order.collectionDate}, ${order.shippingDate}, ${order.orderDate}, ${order.releaseDate})`;
-
-  return sql`COALESCE(${itemLifecycleDate}, ${collection.createdAt}::date)`;
+  return sql`COALESCE(${collection.paymentDate}, ${collection.collectionDate}, ${collection.shippingDate}, ${collection.orderDate}, ${order.paymentDate}, ${order.collectionDate}, ${order.shippingDate}, ${order.orderDate}, ${order.releaseDate})`;
 }
 
 function bucketSql(

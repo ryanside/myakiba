@@ -1,7 +1,7 @@
 import { EXPENSE_BREAKDOWN_KEYS } from "@myakiba/contracts/expenses/schema";
 import { db } from "@myakiba/db/client";
-import { order } from "@myakiba/db/schema/figure";
-import { and, asc, eq, ne } from "drizzle-orm";
+import { collection, order } from "@myakiba/db/schema/figure";
+import { and, eq, ne } from "drizzle-orm";
 import type {
   ExpenseFilterOptions,
   ExpenseFilters,
@@ -125,15 +125,30 @@ const ExpensesService = {
   },
 
   async getExpenseFilterOptions(userId: string): Promise<ExpenseFilterOptions> {
-    const shopOptions = await db
-      .select({ shop: order.shop })
-      .from(order)
-      .where(and(eq(order.userId, userId), ne(order.shop, "")))
-      .groupBy(order.shop)
-      .orderBy(asc(order.shop));
+    const [collectionShops, orderShops] = await Promise.all([
+      db
+        .select({ shop: collection.shop })
+        .from(collection)
+        .where(
+          and(
+            eq(collection.userId, userId),
+            ne(collection.status, "Ordered"),
+            ne(collection.shop, ""),
+          ),
+        )
+        .groupBy(collection.shop),
+      db
+        .select({ shop: order.shop })
+        .from(order)
+        .where(and(eq(order.userId, userId), ne(order.status, "Ordered"), ne(order.shop, "")))
+        .groupBy(order.shop),
+    ]);
+    const shopOptions = [
+      ...new Set([...collectionShops, ...orderShops].map(({ shop }) => shop)),
+    ].toSorted((left, right) => left.localeCompare(right));
 
     return {
-      shopOptions: shopOptions.map(({ shop }) => shop),
+      shopOptions,
     };
   },
 
