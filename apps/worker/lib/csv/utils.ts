@@ -6,24 +6,17 @@ import type {
 } from "../types";
 import { parseMoneyToMinorUnits } from "@myakiba/utils/currency";
 import { tryCatch } from "@myakiba/utils/result";
-import { and, eq, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@myakiba/db/client";
 import { assembleScrapedData } from "../assemble-scraped-data";
+import { persistScrapedCatalog } from "../persist-scraped-catalog";
 import {
   markPersistFailedSyncSessionItemStatuses,
   publishJobStatus,
   resolveTerminalState,
 } from "../utils";
 import { sessionStatusToPhase, sessionStatusToTerminalState } from "@myakiba/contracts/sync/schema";
-import {
-  item,
-  item_release,
-  entry,
-  entry_to_item,
-  order,
-  collection,
-  syncSession,
-} from "@myakiba/db/schema/figure";
+import { order, collection, syncSession } from "@myakiba/db/schema/figure";
 
 export async function finalizeCsvSync({
   successfulResults,
@@ -37,8 +30,8 @@ export async function finalizeCsvSync({
   existingCount,
   syncSessionId,
 }: FinalizeCsvSyncParams): Promise<FinalizeSyncResult> {
-  const { items, entries, entryToItems, itemReleases, latestReleaseIdByExternalId } =
-    assembleScrapedData(successfulResults);
+  const assembledData = assembleScrapedData(successfulResults);
+  const { items, entries, entryToItems, itemReleases, latestReleaseIdByExternalId } = assembledData;
   const successfulResultsById = new Map(
     successfulResults.map((result) => [result.id, result] as const),
   );
@@ -145,127 +138,10 @@ export async function finalizeCsvSync({
 
   const { error } = await tryCatch(
     db.transaction(async (tx) => {
-      if (items.length > 0) {
-        await tx
-          .insert(item)
-          .values(items)
-          .onConflictDoNothing({ target: [item.source, item.externalId] });
-      }
-
-      const itemExternalIds = items
-        .map((dbItem) => dbItem.externalId)
-        .filter((externalId): externalId is number => externalId !== null);
-      const dbItems =
-        itemExternalIds.length > 0
-          ? await tx
-              .select({ id: item.id, externalId: item.externalId })
-              .from(item)
-              .where(and(eq(item.source, "mfc"), inArray(item.externalId, itemExternalIds)))
-          : [];
-      const externalIdToInternalId = new Map(
-        dbItems.map((dbItem) => [dbItem.externalId, dbItem.id]),
+      const { externalIdToInternalId, latestReleaseIdByInternalId } = await persistScrapedCatalog(
+        tx,
+        assembledData,
       );
-
-      if (entries.length > 0) {
-        await tx
-          .insert(entry)
-          .values(entries)
-          .onConflictDoNothing({ target: [entry.source, entry.externalId] });
-      }
-
-      const entryExternalIds = entries
-        .map((dbEntry) => dbEntry.externalId)
-        .filter((externalId): externalId is number => externalId !== null);
-      const dbEntries =
-        entryExternalIds.length > 0
-          ? await tx
-              .select({ id: entry.id, externalId: entry.externalId })
-              .from(entry)
-              .where(and(eq(entry.source, "mfc"), inArray(entry.externalId, entryExternalIds)))
-          : [];
-      const externalIdToEntryId = new Map(
-        dbEntries.map((dbEntry) => [dbEntry.externalId, dbEntry.id]),
-      );
-
-      const itemReleasesToInsert = itemReleases
-        .map((release) => {
-          const internalItemId = externalIdToInternalId.get(release.itemExternalId);
-          if (!internalItemId) {
-            return null;
-          }
-          return {
-            id: release.id,
-            itemId: internalItemId,
-            date: release.date,
-            type: release.type,
-            price: release.price,
-            priceCurrency: release.priceCurrency,
-            barcode: release.barcode,
-          };
-        })
-        .filter(
-          (
-            release,
-          ): release is {
-            id: string;
-            itemId: string;
-            date: string;
-            type: string;
-            price: number;
-            priceCurrency: string;
-            barcode: string;
-          } => release !== null,
-        );
-
-      if (itemReleasesToInsert.length > 0) {
-        await tx
-          .insert(item_release)
-          .values(itemReleasesToInsert)
-          .onConflictDoNothing({ target: [item_release.id] });
-      }
-
-      const entryToItemsToInsert = entryToItems
-        .map((link) => {
-          const entryId = externalIdToEntryId.get(link.entryExternalId);
-          const itemId = externalIdToInternalId.get(link.itemExternalId);
-          if (!entryId || !itemId) {
-            return null;
-          }
-          return {
-            entryId,
-            itemId,
-            role: link.role,
-          };
-        })
-        .filter(
-          (
-            link,
-          ): link is {
-            entryId: string;
-            itemId: string;
-            role: string;
-          } => link !== null,
-        );
-
-      if (entryToItemsToInsert.length > 0) {
-        await tx
-          .insert(entry_to_item)
-          .values(entryToItemsToInsert)
-          .onConflictDoNothing({
-            target: [entry_to_item.entryId, entry_to_item.itemId],
-          });
-      }
-
-      const latestReleaseIdByInternalId = new Map<
-        string,
-        { releaseId: string | null; date: string | null }
-      >();
-      for (const [externalId, releaseInfo] of latestReleaseIdByExternalId) {
-        const internalItemId = externalIdToInternalId.get(externalId);
-        if (internalItemId) {
-          latestReleaseIdByInternalId.set(internalItemId, releaseInfo);
-        }
-      }
 
       const collectionItemsToInsert: (typeof collection.$inferInsert)[] = collectionItems.flatMap(
         (collectionItem) => {
