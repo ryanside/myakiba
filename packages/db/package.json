@@ -12,12 +12,12 @@
     }
   },
   "scripts": {
-    "db:push": "drizzle-kit push",
-    "db:push:force": "drizzle-kit push --force",
+    "db:push": "bun src/scripts/push-schema.ts",
+    "db:push:interactive": "drizzle-kit push --verbose",
     "db:studio": "drizzle-kit studio",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:start": "docker compose up -d",
+    "db:start": "docker compose up -d --wait && bun run db:push",
     "db:watch": "docker compose up",
     "db:stop": "docker compose stop",
     "db:down": "docker compose down"

@@ -21,4 +21,4 @@ COPY --from=install /app/node_modules ./node_modules
 COPY --from=prune /app/out/full/ .
 
 WORKDIR /app/packages/db
-CMD ["bun", "run", "db:push:force"]
+CMD ["bun", "run", "db:push"]

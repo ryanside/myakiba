@@ -4,7 +4,6 @@ import {
   timestamp,
   integer,
   date,
-  primaryKey,
   uuid,
   decimal,
   bigint,
@@ -108,7 +107,8 @@ export const entry_to_item = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
-    primaryKey({ columns: [t.entryId, t.itemId] }),
+    // Drizzle Kit 0.31 repeatedly rebuilds composite primary keys during push.
+    uniqueIndex("entry_to_item_entry_id_item_id_idx").on(t.entryId, t.itemId),
     index("entry_to_item_item_id_idx").on(t.itemId),
     index("entry_to_item_item_id_entry_id_idx").on(t.itemId, t.entryId),
   ],
@@ -152,7 +152,11 @@ export const collection = pgTable(
       .notNull(),
     soldFor: bigint("sold_for", { mode: "number" }),
     soldDate: date("sold_date", { mode: "string" }),
-    tags: text("tags").array().default([]).notNull(),
+    // A database array default produces a non-idempotent diff in Drizzle Kit 0.31.
+    tags: text("tags")
+      .array()
+      .$defaultFn(() => [])
+      .notNull(),
     condition: text("condition", {
       enum: CONDITIONS,
     })

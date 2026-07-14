@@ -35,6 +35,7 @@
     "dev:server": "turbo -F server dev",
     "dev:worker": "turbo -F worker dev",
     "db:push": "turbo -F @myakiba/db db:push",
+    "db:push:interactive": "turbo -F @myakiba/db db:push:interactive",
     "db:studio": "turbo -F @myakiba/db db:studio",
     "db:generate": "turbo -F @myakiba/db db:generate",
     "db:migrate": "turbo -F @myakiba/db db:migrate",

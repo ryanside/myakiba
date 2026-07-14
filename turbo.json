@@ -38,6 +38,11 @@
     },
     "db:push": {
       "cache": false,
+      "env": ["DATABASE_URL"]
+    },
+    "db:push:interactive": {
+      "cache": false,
+      "env": ["DATABASE_URL"],
       "persistent": true
     },
     "db:studio": {
@@ -49,16 +54,16 @@
       "cache": false,
       "persistent": true
     },
+    "db:generate": {
+      "cache": false
+    },
     "db:migrate": {
       "cache": false,
-      "persistent": true
-    },
-    "db:generate": {
-      "cache": false,
-      "persistent": true
+      "env": ["DATABASE_URL"]
     },
     "db:start": {
-      "cache": false
+      "cache": false,
+      "env": ["DATABASE_URL"]
     },
     "db:watch": {
       "cache": false,
