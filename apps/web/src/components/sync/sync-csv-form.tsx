@@ -2,11 +2,10 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "../ui/button";
-import { csvSchema } from "@myakiba/contracts/sync/schema";
-import Papa from "papaparse";
 import { Label } from "../ui/label";
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from "@/components/kibo-ui/dropzone";
 import { SyncNotice } from "@/components/sync/sync-notice";
+import { transformCSVData } from "@/lib/sync";
 
 export default function SyncCsvForm({
   handleSyncCsvSubmit,
@@ -37,34 +36,12 @@ export default function SyncCsvForm({
           name="file"
           validators={{
             onSubmitAsync: async ({ value }) => {
-              if (!value) {
-                return "No file selected";
-              }
-
-              const text = await value.text();
-              const parsedCSV = Papa.parse(text, {
-                header: true,
-                skipEmptyLines: true,
-                transformHeader: (header: string) =>
-                  header.trim().toLowerCase().replaceAll(" ", "_"),
-              });
-
-              const validatedCSV = csvSchema.safeParse(parsedCSV.data);
-              if (!validatedCSV.success) {
-                if (import.meta.env.DEV) {
-                  console.log("Invalid CSV file", validatedCSV.error);
-                }
-                return "Please select a valid MyFigureCollection CSV file";
-              }
-
-              const filteredData = validatedCSV.data.filter((item) => {
-                return (
-                  (item.status === "Owned" || item.status === "Ordered") &&
-                  !item.title.startsWith("[NSFW")
-                );
-              });
-              if (filteredData.length === 0) {
-                return "No Owned or Ordered items to sync";
+              try {
+                await transformCSVData({ file: value });
+              } catch (error) {
+                return error instanceof Error
+                  ? error.message
+                  : "Please select a valid MyFigureCollection CSV file";
               }
             },
           }}

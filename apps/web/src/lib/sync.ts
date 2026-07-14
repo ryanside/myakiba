@@ -144,6 +144,7 @@ export const SYNC_OPTION_META: Record<
 } as const;
 
 const SYNC_CSV_STATUS_SET: ReadonlySet<string> = new Set(SYNC_CSV_ITEM_STATUSES);
+const csvTransformationCache = new WeakMap<File, Promise<UserItem[]>>();
 
 /**
  * Extracts the MyFigureCollection item ID from a URL or returns the ID if it's already a number.
@@ -235,51 +236,62 @@ export function createDefaultSyncFormCollectionItem(itemExternalId = ""): SyncFo
   };
 }
 
-export async function transformCSVData(value: { file: File | undefined }) {
+export function transformCSVData(value: { file: File | undefined }): Promise<UserItem[]> {
   if (!value.file) {
-    throw new Error("No file selected");
+    return Promise.reject(new Error("No file selected"));
   }
-  const text = await value.file.text();
-  const parsedCSV = Papa.parse(text, {
-    header: true,
-    skipEmptyLines: true,
-    transformHeader: (header: string) => header.trim().toLowerCase().replaceAll(" ", "_"),
-  });
 
-  const validatedCSV = csvSchema.safeParse(parsedCSV.data);
-  if (!validatedCSV.success) {
-    if (import.meta.env.DEV) {
-      console.log("Invalid CSV file", validatedCSV.error);
+  const cachedTransformation = csvTransformationCache.get(value.file);
+  if (cachedTransformation) {
+    return cachedTransformation;
+  }
+
+  // oxlint-disable-next-line promise/prefer-await-to-then -- Preserve one cached promise per File.
+  const transformation = value.file.text().then((text) => {
+    const parsedCSV = Papa.parse(text, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: (header: string) => header.trim().toLowerCase().replaceAll(" ", "_"),
+    });
+
+    const validatedCSV = csvSchema.safeParse(parsedCSV.data);
+    if (!validatedCSV.success) {
+      if (import.meta.env.DEV) {
+        console.log("Invalid CSV file", validatedCSV.error);
+      }
+      throw new Error("Please select a valid MyFigureCollection CSV file");
     }
-    throw new Error("Please select a valid MyFigureCollection CSV file");
-  }
 
-  const filteredData = validatedCSV.data.filter((item) => {
-    return SYNC_CSV_STATUS_SET.has(item.status) && !item.title.startsWith("[NSFW");
+    const filteredData = validatedCSV.data.filter((item) => {
+      return SYNC_CSV_STATUS_SET.has(item.status) && !item.title.startsWith("[NSFW");
+    });
+    if (filteredData.length === 0) {
+      throw new Error("No Owned or Ordered items to sync");
+    }
+    if (import.meta.env.DEV) {
+      console.log("Filtered data:", filteredData);
+    }
+    const userItems: UserItem[] = filteredData.map((item) => {
+      const normalizedStatus = item.status === "Ordered" ? "Ordered" : "Owned";
+      return {
+        itemExternalId: Number(item.id),
+        status: normalizedStatus,
+        count: Number(item.count),
+        score: item.score.split("/")[0],
+        payment_date: item.payment_date,
+        shipping_date: item.shipping_date,
+        collecting_date: item.collecting_date,
+        price: item.price_1,
+        shop: item.shop,
+        shipping_method: item.shipping_method,
+        note: item.note,
+        orderId: null,
+        orderDate: item.payment_date,
+      };
+    });
+    return userItems;
   });
-  if (filteredData.length === 0) {
-    throw new Error("No Owned or Ordered items to sync");
-  }
-  if (import.meta.env.DEV) {
-    console.log("Filtered data:", filteredData);
-  }
-  const userItems: UserItem[] = filteredData.map((item) => {
-    const normalizedStatus = item.status === "Ordered" ? "Ordered" : "Owned";
-    return {
-      itemExternalId: Number(item.id),
-      status: normalizedStatus,
-      count: Number(item.count),
-      score: item.score.split("/")[0],
-      payment_date: item.payment_date,
-      shipping_date: item.shipping_date,
-      collecting_date: item.collecting_date,
-      price: item.price_1,
-      shop: item.shop,
-      shipping_method: item.shipping_method,
-      note: item.note,
-      orderId: null,
-      orderDate: item.payment_date,
-    };
-  });
-  return userItems;
+
+  csvTransformationCache.set(value.file, transformation);
+  return transformation;
 }

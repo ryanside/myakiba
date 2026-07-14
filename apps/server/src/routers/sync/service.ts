@@ -257,28 +257,24 @@ class SyncService {
 
     const existingCandidates = await this.getCsvSyncCandidates(itemExternalIds, userId);
 
-    const existingItems = existingCandidates.map(({ id, externalId, title }) => ({
-      id,
-      externalId,
-      title,
-    }));
+    const existingItemByExternalId = new Map(
+      existingCandidates.map((existingCandidate) => [
+        existingCandidate.externalId,
+        existingCandidate,
+      ]),
+    );
 
-    const idsInCollectionSet = new Set(
+    const externalIdsNeedingCollectionInsert = new Set(
       existingCandidates
-        .filter((existingCandidate) => existingCandidate.isInCollection)
+        .filter((existingCandidate) => !existingCandidate.isInCollection)
+        .map((existingCandidate) => existingCandidate.externalId),
+    );
+
+    const itemIdsNeedingInsertSet = new Set(
+      existingCandidates
+        .filter((existingCandidate) => !existingCandidate.isInCollection)
         .map((existingCandidate) => existingCandidate.id),
     );
-
-    const externalIdToInternalId = new Map(
-      existingItems.map((existingItem) => [existingItem.externalId, existingItem.id]),
-    );
-
-    const itemsNeedingInsert = existingItems.filter(
-      (existingItem) => !idsInCollectionSet.has(existingItem.id),
-    );
-
-    const itemIdsNeedingInsert = itemsNeedingInsert.map((existingItem) => existingItem.id);
-    const itemIdsNeedingInsertSet = new Set(itemIdsNeedingInsert);
     const existingItemsReleases = new Map<string, string>();
     const existingItemsReleaseDates = new Map<string, string>();
     for (const existingCandidate of existingCandidates) {
@@ -294,31 +290,26 @@ class SyncService {
     }
 
     const csvItemsToInsert = items.filter((item) =>
-      itemsNeedingInsert.some((existingItem) => existingItem.externalId === item.itemExternalId),
+      externalIdsNeedingCollectionInsert.has(item.itemExternalId),
     );
 
     const idsToScrape = new Set(
-      itemExternalIds.filter(
-        (externalId) =>
-          !existingItems.some((existingItem) => existingItem.externalId === externalId),
-      ),
+      itemExternalIds.filter((externalId) => !existingItemByExternalId.has(externalId)),
     );
     const csvItemsToScrape = items.filter((item) => idsToScrape.has(item.itemExternalId));
 
     const orderItems: UpdatedSyncOrder[] = [];
     csvItemsToInsert.forEach((item) => {
       if (item.status === "Ordered") {
-        const itemTitle = existingItems.find(
-          (existingItem) => existingItem.externalId === item.itemExternalId,
-        )?.title;
-        const itemId = externalIdToInternalId.get(item.itemExternalId);
+        const existingItem = existingItemByExternalId.get(item.itemExternalId);
+        const itemId = existingItem?.id;
 
         if (itemId && item.orderId) {
           orderItems.push({
             id: item.orderId,
             userId,
             status: "Ordered",
-            title: itemTitle || `Order ${item.orderId}`,
+            title: existingItem.title || `Order ${item.orderId}`,
             shop: item.shop,
             orderDate: item.orderDate,
             releaseDate: existingItemsReleaseDates.get(itemId) ?? null,
@@ -339,7 +330,7 @@ class SyncService {
 
     const collectionItems = csvItemsToInsert
       .map((i): QueuedCollectionItem | null => {
-        const internalItemId = externalIdToInternalId.get(i.itemExternalId);
+        const internalItemId = existingItemByExternalId.get(i.itemExternalId)?.id;
         if (!internalItemId) {
           return null;
         }
