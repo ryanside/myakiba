@@ -421,7 +421,7 @@ class OrdersService {
       .returning();
 
     if (updated.length === 0 && deleted.length === 0) {
-      throw new Error("ORDER_ITEMS_NOT_FOUND");
+      throw new Error("ORDER_ITEM_NOT_FOUND");
     }
 
     return {};
