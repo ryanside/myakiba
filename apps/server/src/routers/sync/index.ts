@@ -21,7 +21,7 @@ import type { SyncJobStatus, SyncOrderItemInput } from "./model";
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import SyncService from "./service";
 import { tryCatch } from "@myakiba/utils/result";
-import { SYNC_SESSION_STATUSES, SYNC_TYPES } from "@myakiba/contracts/shared/constants";
+import { MAX_LIMIT, SYNC_SESSION_STATUSES, SYNC_TYPES } from "@myakiba/contracts/shared/constants";
 import { createId } from "@paralleldrive/cuid2";
 import { jobStatusSubscriptionRegistry } from "./job-status-subscription-registry";
 import type { JobStatusSubscription } from "./job-status-subscription-registry";
@@ -1177,7 +1177,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         log.set({ outcome: "bad_request" });
         return status(400, "Invalid page parameter");
       }
-      if (Number.isNaN(limit) || limit < 1 || limit > 100) {
+      if (Number.isNaN(limit) || limit < 1 || limit > MAX_LIMIT) {
         log.set({ outcome: "bad_request" });
         return status(400, "Invalid limit parameter");
       }
@@ -1245,7 +1245,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         log.set({ outcome: "bad_request" });
         return status(400, "Invalid page parameter");
       }
-      if (limit !== undefined && (Number.isNaN(limit) || limit < 1 || limit > 100)) {
+      if (limit !== undefined && (Number.isNaN(limit) || limit < 1 || limit > MAX_LIMIT)) {
         log.set({ outcome: "bad_request" });
         return status(400, "Invalid limit parameter");
       }

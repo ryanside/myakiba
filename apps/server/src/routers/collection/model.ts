@@ -9,6 +9,10 @@ import {
 import { collectionSearchSortSchema, sortDirectionSchema } from "@myakiba/contracts/search/schema";
 import { collectionSearchSchema } from "@myakiba/contracts/collection/schema";
 import {
+  paginationLimitSchema,
+  paginationOffsetSchema,
+} from "@myakiba/contracts/shared/pagination";
+import {
   commaSeparatedStringArraySchema,
   createCommaSeparatedEnumArraySchema,
 } from "@myakiba/contracts/search/query-params";
@@ -18,8 +22,8 @@ const commaSeparatedConditionArray = createCommaSeparatedEnumArraySchema(CONDITI
 const commaSeparatedCategoryArray = createCommaSeparatedEnumArraySchema(CATEGORIES);
 
 export const collectionQuerySchema = collectionSearchSchema.extend({
-  limit: z.coerce.number().optional().default(DEFAULT_LIMIT),
-  offset: z.coerce.number().optional().default(0),
+  limit: paginationLimitSchema.optional().default(DEFAULT_LIMIT),
+  offset: paginationOffsetSchema.optional().default(0),
   sort: collectionSearchSortSchema.optional().default("createdAt"),
   order: sortDirectionSchema.optional().default("desc"),
   shop: commaSeparatedStringArraySchema,

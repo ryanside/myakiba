@@ -12,13 +12,17 @@ import {
 } from "@myakiba/contracts/search/query-params";
 import { searchSchema } from "@myakiba/contracts/orders/schema";
 import { orderSearchSortSchema, sortDirectionSchema } from "@myakiba/contracts/search/schema";
+import {
+  paginationLimitSchema,
+  paginationOffsetSchema,
+} from "@myakiba/contracts/shared/pagination";
 
 const commaSeparatedShipMethodArray = createCommaSeparatedEnumArraySchema(SHIPPING_METHODS);
 const commaSeparatedStatusArray = createCommaSeparatedEnumArraySchema(ORDER_STATUSES);
 
 export const ordersQuerySchema = searchSchema.extend({
-  limit: z.coerce.number().optional().default(DEFAULT_LIMIT),
-  offset: z.coerce.number().optional().default(0),
+  limit: paginationLimitSchema.optional().default(DEFAULT_LIMIT),
+  offset: paginationOffsetSchema.optional().default(0),
   sort: orderSearchSortSchema.optional().default("createdAt"),
   order: sortDirectionSchema.optional().default("desc"),
   shop: commaSeparatedStringArraySchema,
@@ -43,8 +47,8 @@ export const orderUpdateSchema = createUpdateSchema(order)
 export const orderIdParamSchema = z.object({ orderId: z.string() });
 
 export const orderItemsQuerySchema = z.object({
-  limit: z.coerce.number().optional().default(6),
-  offset: z.coerce.number().optional().default(0),
+  limit: paginationLimitSchema.optional().default(6),
+  offset: paginationOffsetSchema.optional().default(0),
 });
 
 export type OrderInsertType = z.infer<typeof orderInsertSchema>;

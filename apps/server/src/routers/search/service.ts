@@ -2,6 +2,7 @@ import { db } from "@myakiba/db/client";
 import { collection, entry, item, item_release, order } from "@myakiba/db/schema/figure";
 import { and, asc, desc, eq, ilike, sql } from "drizzle-orm";
 import type { ItemReleasesResponse } from "@myakiba/contracts/item/schema";
+import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 import { SEARCH_COLLECTION_RESULT_LIMIT, SEARCH_ORDER_RESULT_LIMIT } from "./model";
 import type {
   SearchCollectionResult,
@@ -112,8 +113,8 @@ class SearchService {
 
   async getEntries(
     search: string,
-    limit?: number,
-    offset?: number,
+    limit = DEFAULT_LIMIT,
+    offset = 0,
   ): Promise<readonly SearchEntryResult[]> {
     const query = db
       .select({
@@ -125,15 +126,14 @@ class SearchService {
       .where(ilike(entry.name, `%${search}%`))
       .orderBy(asc(entry.name), asc(entry.id));
 
-    const paginatedQuery = typeof limit === "number" ? query.limit(limit) : query;
-    return typeof offset === "number" ? paginatedQuery.offset(offset) : paginatedQuery;
+    return query.limit(limit).offset(offset);
   }
 
   async getOrderIdsAndTitles(
     userId: string,
-    title?: string,
-    limit?: number,
-    offset?: number,
+    title: string | undefined,
+    limit = DEFAULT_LIMIT,
+    offset = 0,
   ): Promise<readonly SearchOrderIdAndTitle[]> {
     const query = db
       .select({ id: order.id, title: order.title })
@@ -141,8 +141,7 @@ class SearchService {
       .where(and(eq(order.userId, userId), title ? ilike(order.title, `%${title}%`) : undefined))
       .orderBy(desc(order.createdAt), desc(order.id));
 
-    const paginatedQuery = typeof limit === "number" ? query.limit(limit) : query;
-    return typeof offset === "number" ? paginatedQuery.offset(offset) : paginatedQuery;
+    return query.limit(limit).offset(offset);
   }
 }
 

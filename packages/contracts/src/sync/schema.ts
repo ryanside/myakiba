@@ -7,6 +7,7 @@ import {
   SYNC_TYPES,
 } from "../shared/constants";
 import type { SyncSessionStatus } from "../shared/types";
+import { paginationLimitSchema, paginationPageSchema } from "../shared/pagination";
 import { SYNC_CSV_ITEM_STATUSES } from "./constants";
 
 /**
@@ -24,8 +25,8 @@ const csvDateSchema = z
   .pipe(z.iso.date().nullable());
 
 export const syncSearchSchema = z.object({
-  page: z.coerce.number().int().positive().optional(),
-  limit: z.coerce.number().int().positive().optional(),
+  page: paginationPageSchema.optional(),
+  limit: paginationLimitSchema.optional(),
   status: z.array(z.enum(SYNC_SESSION_STATUSES)).optional(),
   syncType: z.array(z.enum(SYNC_TYPES)).optional(),
 });

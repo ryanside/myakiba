@@ -1,12 +1,13 @@
 import * as z from "zod";
 import { ORDER_STATUSES, SHIPPING_METHODS } from "../shared/constants";
+import { paginationLimitSchema, paginationOffsetSchema } from "../shared/pagination";
 import { ORDER_CASCADE_OPTIONS } from "./constants";
 import { syncOrderSchema } from "../sync/schema";
 import { orderSearchSortSchema, sortDirectionSchema } from "../search/schema";
 
 export const orderFiltersSchema = z.object({
-  limit: z.coerce.number().int().positive().optional(),
-  offset: z.coerce.number().int().min(0).optional(),
+  limit: paginationLimitSchema.optional(),
+  offset: paginationOffsetSchema.optional(),
   sort: orderSearchSortSchema.optional(),
   order: sortDirectionSchema.optional(),
   search: z.string().optional(),

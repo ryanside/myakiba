@@ -1,5 +1,6 @@
 import * as z from "zod";
 import { SHIPPING_METHODS } from "../shared/constants";
+import { paginationLimitSchema, paginationOffsetSchema } from "../shared/pagination";
 
 export const EXPENSE_BUCKETS = ["month", "year"] as const;
 
@@ -24,8 +25,8 @@ export const expenseFiltersSchema = z.object({
 
 export const expenseShopFiltersSchema = expenseFiltersSchema.extend({
   search: z.string().optional(),
-  limit: z.coerce.number().int().positive().optional(),
-  offset: z.coerce.number().int().min(0).optional(),
+  limit: paginationLimitSchema.optional(),
+  offset: paginationOffsetSchema.optional(),
 });
 
 export const expenseFilterOptionsSchema = z.object({
