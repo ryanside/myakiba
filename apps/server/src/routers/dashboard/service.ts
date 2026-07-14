@@ -11,7 +11,7 @@ class DashboardService {
   private categoriesOwnedPrepared;
   private ordersPrepared;
   private ordersSummaryPrepared;
-  private unpaidOrdersPrepared;
+  private unpaidSummaryPrepared;
   private monthlyOrdersPrepared;
   private releaseCalendarPrepared;
   private monthlySummaryPrepared;
@@ -196,25 +196,27 @@ class DashboardService {
       .where(eq(order.userId, sql.placeholder("userId")))
       .prepare("orders_summary");
 
-    this.unpaidOrdersPrepared = db
+    const unpaidOrderTotalsBase = db
       .select({
         orderId: order.id,
-        title: order.title,
-        shop: order.shop,
-        releaseDate: order.releaseDate,
-        itemImages: sql<
-          string[]
-        >`array_agg(DISTINCT ${item.image}) FILTER (WHERE ${item.image} IS NOT NULL)`,
-        itemIds: sql<string[]>`array_agg(DISTINCT ${item.id})`,
-        total: sql<number>`COALESCE(${sum(collection.price)}, 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`,
+        perOrderTotal:
+          sql<number>`COALESCE(${sum(collection.price)}, 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`.as(
+            "perOrderTotal",
+          ),
       })
       .from(order)
       .leftJoin(collection, and(eq(order.id, collection.orderId)))
-      .leftJoin(item, eq(collection.itemId, item.id))
       .where(and(eq(order.userId, sql.placeholder("userId")), eq(order.status, "Ordered")))
-      .orderBy(asc(order.releaseDate))
-      .groupBy(order.id, order.title, order.shop, order.releaseDate)
-      .prepare("unpaid_orders");
+      .groupBy(order.id)
+      .as("unpaid_orders_base");
+
+    this.unpaidSummaryPrepared = db
+      .select({
+        unpaidOrderCount: count(unpaidOrderTotalsBase.orderId),
+        unpaidCosts: sql<number>`COALESCE(${sum(unpaidOrderTotalsBase.perOrderTotal)}, 0)`,
+      })
+      .from(unpaidOrderTotalsBase)
+      .prepare("unpaid_summary");
 
     // Monthly Orders - Order counts grouped by release month for current year
     this.monthlyOrdersPrepared = db
@@ -372,7 +374,7 @@ class DashboardService {
       categoriesOwned,
       orders,
       ordersSummaryRows,
-      unpaidOrders,
+      unpaidSummaryRows,
       monthlyOrders,
     ] = await Promise.all([
       this.collectionStatsPrepared.execute({ userId }),
@@ -389,7 +391,7 @@ class DashboardService {
         userId,
       }),
 
-      this.unpaidOrdersPrepared.execute({ userId }),
+      this.unpaidSummaryPrepared.execute({ userId }),
 
       this.monthlyOrdersPrepared.execute({
         userId,
@@ -410,13 +412,20 @@ class DashboardService {
       totalTariffsAllTime: 0,
       totalMiscFeesAllTime: 0,
     };
+    const unpaidSummary = unpaidSummaryRows[0] ?? {
+      unpaidOrderCount: 0,
+      unpaidCosts: 0,
+    };
+    const unpaidOrderCount = Number(unpaidSummary.unpaidOrderCount ?? 0);
+    const unpaidCosts = Number(unpaidSummary.unpaidCosts ?? 0);
 
     return {
       collectionStats,
       categoriesOwned,
       orders,
       ordersSummary,
-      unpaidOrders,
+      unpaidOrderCount,
+      unpaidCosts,
       monthlyOrders,
     };
   }
