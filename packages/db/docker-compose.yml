@@ -2,7 +2,7 @@ name: myakiba-postgres
 
 services:
   postgres:
-    image: postgres
+    image: postgres:18.4
     container_name: myakiba-postgres
     environment:
       POSTGRES_DB: myakiba

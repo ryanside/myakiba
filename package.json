@@ -57,7 +57,7 @@
     "oxfmt": "latest",
     "oxlint": "latest",
     "react-doctor": "^0.2.16",
-    "turbo": "^2.8.17",
+    "turbo": "2.10.4",
     "typescript": "^5.9.3",
     "ultracite": "7.6.1"
   },
