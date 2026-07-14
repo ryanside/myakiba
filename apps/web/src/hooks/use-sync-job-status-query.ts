@@ -8,6 +8,7 @@ import { app } from "@/lib/treaty-client";
 import { parseSSEJobStatusStream } from "@/lib/sync-job-status-stream";
 import type { JobStatusEvent, SSEJobStatusChunk } from "@/lib/sync-job-status-stream";
 import { resolveSyncMessage } from "@/lib/sync";
+import { invalidateSyncResultQueries } from "@/lib/mutation-query-invalidation";
 import { showSyncToast } from "@/components/sync/sync-toast";
 
 export function useSyncJobStatusQuery(jobId: string | null, sessionId: string | null = null) {
@@ -46,10 +47,7 @@ export function useSyncJobStatusQuery(jobId: string | null, sessionId: string | 
             const { terminalState } = chunk.data;
             if (terminalState === null) continue;
 
-            // do not invalidate the sync job status query or infinite loop will occur
-            void queryClient.invalidateQueries({
-              predicate: (query) => query.queryKey[0] !== "syncJobStatus",
-            });
+            void invalidateSyncResultQueries(queryClient);
 
             const message = resolveSyncMessage(
               { statusMessage: chunk.data.statusMessage },

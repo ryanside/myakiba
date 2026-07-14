@@ -11,6 +11,7 @@ import { useFilters } from "@/hooks/use-filters";
 import { getCollection, deleteCollectionItems, updateCollectionItem } from "@/queries/collection";
 import { moveItem, splitOrders } from "@/queries/orders";
 import { hasActiveFiltersOrSorting } from "@/lib/filters";
+import { invalidateCollectionAndOrderQueries } from "@/lib/mutation-query-invalidation";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
@@ -116,7 +117,7 @@ export function useCollectionOrderMutations() {
       toast.error("Failed to assign items to an order. Please try again.");
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries();
+      await invalidateCollectionAndOrderQueries(queryClient);
     },
   });
 
@@ -141,7 +142,7 @@ export function useCollectionOrderMutations() {
       toast.error("Failed to assign items to a new order. Please try again.");
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries();
+      await invalidateCollectionAndOrderQueries(queryClient);
     },
   });
   // Keep the latest mutation objects in refs so these action callbacks can stay stable.
@@ -285,7 +286,7 @@ export function useCollectionMutations(options?: { readonly filters?: Collection
       toast.success("Collection updated");
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries();
+      await invalidateCollectionAndOrderQueries(queryClient);
     },
   });
 
@@ -355,7 +356,7 @@ export function useCollectionMutations(options?: { readonly filters?: Collection
       toast.success("Collection item(s) deleted");
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries();
+      await invalidateCollectionAndOrderQueries(queryClient);
     },
   });
   const updateMutationRef = useRef(updateMutation);

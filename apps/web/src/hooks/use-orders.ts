@@ -22,6 +22,7 @@ import {
 } from "@/queries/orders";
 import { updateCollectionItem } from "@/queries/collection";
 import { hasActiveFiltersOrSorting } from "@/lib/filters";
+import { invalidateCollectionAndOrderQueries } from "@/lib/mutation-query-invalidation";
 import type {
   EditedOrder,
   NewOrder,
@@ -197,7 +198,7 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       toast.error("Failed to update order. Please try again.");
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries();
+      await invalidateCollectionAndOrderQueries(queryClient);
     },
   });
 
@@ -232,7 +233,7 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       toast.error("Failed to delete order(s). Please try again.");
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries();
+      await invalidateCollectionAndOrderQueries(queryClient);
     },
   });
 
@@ -269,7 +270,7 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       toast.success(`Successfully merged ${orderIds.size} orders into one!`);
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries();
+      await invalidateCollectionAndOrderQueries(queryClient);
     },
   });
 
@@ -290,7 +291,7 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       toast.error("Failed to move items to a new order. Please try again.");
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries();
+      await invalidateCollectionAndOrderQueries(queryClient);
     },
   });
 
@@ -368,7 +369,7 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       toast.error("Failed to update item. Please try again.");
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries();
+      await invalidateCollectionAndOrderQueries(queryClient);
     },
   });
 
@@ -446,7 +447,7 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       toast.error("Failed to delete item. Please try again.");
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries();
+      await invalidateCollectionAndOrderQueries(queryClient);
     },
   });
 
@@ -463,7 +464,7 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       toast.error("Failed to delete items. Please try again.");
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries();
+      await invalidateCollectionAndOrderQueries(queryClient);
     },
   });
 
@@ -486,7 +487,7 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       toast.error("Failed to move items. Please try again.");
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries();
+      await invalidateCollectionAndOrderQueries(queryClient);
     },
   });
   const editOrderMutationRef = useRef(editOrderMutation);

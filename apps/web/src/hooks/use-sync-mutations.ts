@@ -9,6 +9,7 @@ import type {
   UserItem,
 } from "@myakiba/contracts/sync/types";
 import { transformCSVData } from "@/lib/sync";
+import { invalidateSyncResultQueries } from "@/lib/mutation-query-invalidation";
 import { sendCollection, sendItems, sendOrder, sendOrderItems } from "@/queries/sync";
 import { showSyncToast } from "@/components/sync/sync-toast";
 
@@ -43,7 +44,7 @@ export function useSyncMutations(
       });
 
       if (data.isFinished) {
-        void queryClient.invalidateQueries();
+        void invalidateSyncResultQueries(queryClient);
       } else {
         void queryClient.invalidateQueries({ queryKey: ["syncSessions"] });
       }

@@ -29,6 +29,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { cn } from "@/lib/utils";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { getCurrencyLocale } from "@/lib/locale";
+import { invalidateCollectionAndOrderQueries } from "@/lib/mutation-query-invalidation";
 import { Skeleton } from "../ui/skeleton";
 import Loader from "../loader";
 
@@ -337,7 +338,7 @@ function OrderKanbanBoard({
       if (variables.status === "Owned") {
         toast.success("Order marked as collected");
       }
-      await queryClient.invalidateQueries();
+      await invalidateCollectionAndOrderQueries(queryClient);
     },
     onError: (error: Error, variables) => {
       toast.error(`Failed to update order ${variables.orderId} to status ${variables.status}:`, {
@@ -358,7 +359,7 @@ function OrderKanbanBoard({
       date: string | null;
     }) => updateOrderDate(orderId, field, date),
     onSuccess: async () => {
-      await queryClient.invalidateQueries();
+      await invalidateCollectionAndOrderQueries(queryClient);
     },
     onError: (error: Error) => {
       toast.error("Failed to update date", {
