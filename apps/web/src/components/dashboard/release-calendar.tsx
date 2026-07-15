@@ -18,6 +18,7 @@ import { app } from "@/lib/treaty-client";
 import { Link } from "@tanstack/react-router";
 import { getCategoryColor } from "@/lib/category-colors";
 import { formatReleaseDate } from "@/lib/locale";
+import { parseISO } from "date-fns";
 import Loader from "../loader";
 
 interface ReleaseItem {
@@ -78,7 +79,10 @@ function ReleaseCalendar({
   year: controlledYear,
   hideControls = false,
 }: ReleaseCalendarProps): React.ReactNode {
-  const [internalMonth, setInternalMonth] = useState(new Date());
+  const [internalMonth, setInternalMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
   const queryClient = useQueryClient();
 
   const isControlled = controlledMonth != null && controlledYear != null;
@@ -110,19 +114,11 @@ function ReleaseCalendar({
   const grouped = useMemo(() => groupReleasesByReleaseDate(releases), [releases]);
 
   const goToPreviousMonth = useCallback((): void => {
-    setInternalMonth((prev) => {
-      const next = new Date(prev);
-      next.setMonth(next.getMonth() - 1);
-      return next;
-    });
+    setInternalMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
   }, []);
 
   const goToNextMonth = useCallback((): void => {
-    setInternalMonth((prev) => {
-      const next = new Date(prev);
-      next.setMonth(next.getMonth() + 1);
-      return next;
-    });
+    setInternalMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
   }, []);
 
   const refetch = useCallback((): void => {
@@ -210,7 +206,7 @@ function DateGroup({
     <div>
       <div className="sticky top-0 z-10 flex items-center gap-2 bg-(--frame-panel-bg) px-(--frame-panel-p) pb-1">
         <span className="shrink-0 text-xs font-medium text-muted-foreground">
-          {RELEASE_DATE_GROUP_LABEL_FORMATTER.format(new Date(dateKey))}
+          {RELEASE_DATE_GROUP_LABEL_FORMATTER.format(parseISO(dateKey))}
         </span>
         <div className="h-px flex-1 bg-border" />
       </div>

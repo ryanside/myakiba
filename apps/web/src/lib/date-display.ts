@@ -47,7 +47,7 @@ export function formatDateOnlyForDisplay(
 ): string {
   if (!value) return "n/a";
 
-  const date = parseDateOnly(value);
+  const date = value instanceof Date ? value : parseDateOnly(value);
   if (!date) return "Invalid date";
 
   return formatDateFns(date, DATE_PATTERN_BY_FORMAT[format]);

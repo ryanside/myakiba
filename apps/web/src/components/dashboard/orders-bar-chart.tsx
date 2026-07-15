@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Bar, BarChart, Cell, XAxis, ReferenceLine } from "recharts";
 import { AnimatePresence, useMotionValueEvent, useSpring } from "motion/react";
 import { useNavigate } from "@tanstack/react-router";
-import { toDateOnlyString } from "@myakiba/utils/date-only";
+import { getDateOnlyMonthBounds } from "@myakiba/utils/date-only";
 import { ChartContainer } from "@/components/ui/chart";
 import type { ChartConfig } from "@/components/ui/chart";
 import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame";
@@ -43,10 +43,6 @@ interface OrdersBarChartProps {
   readonly isLoading?: boolean;
 }
 
-function formatDateOnlyForSearch(date: Date): string {
-  return toDateOnlyString(date) ?? "";
-}
-
 export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.ReactNode {
   const navigate = useNavigate();
 
@@ -64,12 +60,11 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
 
   const getReleaseMonthDateRange = useCallback((monthIndex: number) => {
     const currentYear = new Date().getFullYear();
-    const startDate = new Date(currentYear, monthIndex, 1);
-    const endDate = new Date(currentYear, monthIndex + 1, 0);
+    const bounds = getDateOnlyMonthBounds(currentYear, monthIndex + 1);
 
     return {
-      releaseDateStart: formatDateOnlyForSearch(startDate),
-      releaseDateEnd: formatDateOnlyForSearch(endDate),
+      releaseDateStart: bounds.start,
+      releaseDateEnd: bounds.end,
     };
   }, []);
 

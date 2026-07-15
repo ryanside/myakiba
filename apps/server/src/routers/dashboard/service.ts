@@ -1,8 +1,8 @@
 import { db } from "@myakiba/db/client";
 import { item, collection, item_release, order } from "@myakiba/db/schema/figure";
 import type { Category } from "@myakiba/contracts/shared/types";
-import { eq, count, and, sum, asc, sql, desc, ne, gte, lte, exists, or } from "drizzle-orm";
-import { toDateOnlyString } from "@myakiba/utils/date-only";
+import { eq, count, and, sum, asc, sql, desc, ne, gte, lt, lte, exists, or } from "drizzle-orm";
+import { getDateOnlyMonthBounds, toDateOnlyString } from "@myakiba/utils/date-only";
 
 const DASHBOARD_KANBAN_ORDER_LIMIT = 75;
 
@@ -229,7 +229,7 @@ class DashboardService {
         and(
           eq(order.userId, sql.placeholder("userId")),
           gte(order.releaseDate, sql.placeholder("startOfYear")),
-          lte(order.releaseDate, sql.placeholder("endOfYear")),
+          lt(order.releaseDate, sql.placeholder("startOfNextYear")),
         ),
       )
       .groupBy(sql`EXTRACT(MONTH FROM ${order.releaseDate})`)
@@ -364,10 +364,16 @@ class DashboardService {
 
   async getDashboard(userId: string) {
     const now = new Date();
-    const overviewStartDate = toDateOnlyString(new Date(now.getFullYear(), now.getMonth() - 2, 1));
-    const overviewEndDate = toDateOnlyString(new Date(now.getFullYear(), now.getMonth() + 3, 0));
-    const startOfYear = toDateOnlyString(new Date(now.getFullYear(), 0, 1));
-    const endOfYear = toDateOnlyString(new Date(now.getFullYear() + 1, 0, 1));
+    const currentYear = now.getUTCFullYear();
+    const currentMonthIndex = now.getUTCMonth();
+    const overviewStartDate = toDateOnlyString(
+      new Date(Date.UTC(currentYear, currentMonthIndex - 2, 1)),
+    );
+    const overviewEndDate = toDateOnlyString(
+      new Date(Date.UTC(currentYear, currentMonthIndex + 3, 0)),
+    );
+    const startOfYear = `${currentYear}-01-01`;
+    const startOfNextYear = `${currentYear + 1}-01-01`;
 
     const [
       collectionStatsRows,
@@ -396,7 +402,7 @@ class DashboardService {
       this.monthlyOrdersPrepared.execute({
         userId,
         startOfYear,
-        endOfYear,
+        startOfNextYear,
       }),
     ]);
 
@@ -431,8 +437,7 @@ class DashboardService {
   }
 
   async getReleaseCalendar(userId: string, month: number, year: number) {
-    const startDate = toDateOnlyString(new Date(year, month - 1, 1));
-    const endDate = toDateOnlyString(new Date(year, month, 0));
+    const { start: startDate, end: endDate } = getDateOnlyMonthBounds(year, month);
 
     const releases = await this.releaseCalendarPrepared.execute({
       userId,
@@ -444,8 +449,7 @@ class DashboardService {
   }
 
   async getMonthlyDashboard(userId: string, month: number, year: number) {
-    const startDate = toDateOnlyString(new Date(year, month - 1, 1));
-    const endDate = toDateOnlyString(new Date(year, month, 0));
+    const { start: startDate, end: endDate } = getDateOnlyMonthBounds(year, month);
     const params = { userId, startDate, endDate };
 
     // The monthly response now comes from three queries instead of multiple overlapping scans.

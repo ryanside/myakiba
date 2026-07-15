@@ -1,20 +1,11 @@
 import { db } from "@myakiba/db/client";
 import { collection, item, item_release, order } from "@myakiba/db/schema/figure";
 import { and, asc, eq, gte, lte, sql } from "drizzle-orm";
-import { toDateOnlyString } from "@myakiba/utils/date-only";
-
-function monthBounds(month: number, year: number): { start: string; end: string } {
-  const start = toDateOnlyString(new Date(year, month - 1, 1));
-  const end = toDateOnlyString(new Date(year, month, 0));
-  if (!start || !end) {
-    throw new Error("INVALID_MONTH_OR_YEAR");
-  }
-  return { start, end };
-}
+import { getDateOnlyMonthBounds } from "@myakiba/utils/date-only";
 
 class CalendarService {
   async getItems(userId: string, month: number, year: number) {
-    const { start, end } = monthBounds(month, year);
+    const { start, end } = getDateOnlyMonthBounds(year, month);
 
     const rows = await db
       .select({
@@ -44,7 +35,7 @@ class CalendarService {
   }
 
   async getOrders(userId: string, month: number, year: number) {
-    const { start, end } = monthBounds(month, year);
+    const { start, end } = getDateOnlyMonthBounds(year, month);
 
     const rows = await db
       .select({

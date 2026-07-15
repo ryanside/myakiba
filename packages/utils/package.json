@@ -9,7 +9,7 @@
     }
   },
   "dependencies": {
-    "date-fns": "catalog:"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@myakiba/config": "workspace:*",

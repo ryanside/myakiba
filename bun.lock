@@ -231,7 +231,7 @@
       "name": "@myakiba/utils",
       "version": "0.0.0",
       "dependencies": {
-        "date-fns": "catalog:",
+        "zod": "catalog:",
       },
       "devDependencies": {
         "@myakiba/config": "workspace:*",
