@@ -10,8 +10,6 @@ const settingsRouter = new Elysia({ prefix: "/settings" })
   .get(
     "/account-type",
     async ({ user, log }) => {
-      if (!user) return status(401, "Unauthorized");
-
       log.set({ action: "settings.getAccountType", user: { id: user.id } });
 
       const { data: hasCredential, error } = await tryCatch(

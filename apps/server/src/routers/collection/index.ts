@@ -16,11 +16,6 @@ const collectionRouter = new Elysia({ prefix: "/collection" })
   .get(
     "/",
     async ({ query, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       log.set({ action: "collection.list", user: { id: user.id } });
 
       const { data: collection, error } = await tryCatch(
@@ -73,11 +68,6 @@ const collectionRouter = new Elysia({ prefix: "/collection" })
   .get(
     "/:id",
     async ({ params, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       log.set({ action: "collection.get", user: { id: user.id }, collection: { id: params.id } });
 
       const { data: collectionItem, error } = await tryCatch(
@@ -108,11 +98,6 @@ const collectionRouter = new Elysia({ prefix: "/collection" })
   .put(
     "/:id",
     async ({ params, body, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       log.set({
         action: "collection.update",
         user: { id: user.id },
@@ -141,11 +126,6 @@ const collectionRouter = new Elysia({ prefix: "/collection" })
   .delete(
     "/:id",
     async ({ params, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       log.set({
         action: "collection.delete",
         user: { id: user.id },
@@ -174,11 +154,6 @@ const collectionRouter = new Elysia({ prefix: "/collection" })
   .delete(
     "/",
     async ({ body, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       log.set({
         action: "collection.bulkDelete",
         user: { id: user.id },

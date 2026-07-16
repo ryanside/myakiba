@@ -12,8 +12,6 @@ const itemRouter = new Elysia({ prefix: "/item" })
   .post(
     "/custom",
     async ({ body, user, log }) => {
-      if (!user) return status(401, "Unauthorized");
-
       log.set({ action: "item.createCustom", user: { id: user.id } });
 
       const { data: customItem, error } = await tryCatch(ItemService.createCustomItem(body));
@@ -65,8 +63,6 @@ const itemRouter = new Elysia({ prefix: "/item" })
   .get(
     "/:externalId/orders",
     async ({ params, user, log }) => {
-      if (!user) return status(401, "Unauthorized");
-
       log.set({
         action: "item.getRelatedOrders",
         user: { id: user.id },
@@ -90,8 +86,6 @@ const itemRouter = new Elysia({ prefix: "/item" })
   .get(
     "/:externalId/collection",
     async ({ params, user, log }) => {
-      if (!user) return status(401, "Unauthorized");
-
       log.set({
         action: "item.getRelatedCollection",
         user: { id: user.id },
@@ -115,8 +109,6 @@ const itemRouter = new Elysia({ prefix: "/item" })
   .get(
     "/:externalId/resync-status",
     async ({ params, user, log }) => {
-      if (!user) return status(401, "Unauthorized");
-
       log.set({
         action: "item.resyncStatus",
         user: { id: user.id },
@@ -153,8 +145,6 @@ const itemRouter = new Elysia({ prefix: "/item" })
   .post(
     "/:externalId/resync",
     async ({ params, user, log }) => {
-      if (!user) return status(401, "Unauthorized");
-
       log.set({
         action: "item.requestResync",
         user: { id: user.id },

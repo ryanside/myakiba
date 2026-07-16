@@ -11,8 +11,6 @@ const expensesRouter = new Elysia({ prefix: "/expenses" })
   .get(
     "/filter-options",
     async ({ user, log }) => {
-      if (!user) return status(401, "Unauthorized");
-
       log.set({ action: "get_expense_filter_options", user: { id: user.id } });
 
       const { data, error } = await tryCatch(ExpensesService.getExpenseFilterOptions(user.id));
@@ -31,8 +29,6 @@ const expensesRouter = new Elysia({ prefix: "/expenses" })
   .get(
     "/overview",
     async ({ query, user, log }) => {
-      if (!user) return status(401, "Unauthorized");
-
       log.set({ action: "get_expenses_overview", user: { id: user.id }, query });
 
       const { data, error } = await tryCatch(ExpensesService.getExpensesOverview(user.id, query));
@@ -51,8 +47,6 @@ const expensesRouter = new Elysia({ prefix: "/expenses" })
   .get(
     "/shops",
     async ({ query, user, log }) => {
-      if (!user) return status(401, "Unauthorized");
-
       log.set({ action: "get_expenses_shops", user: { id: user.id }, query });
 
       const { data, error } = await tryCatch(ExpensesService.getExpensesShops(user.id, query));
@@ -71,8 +65,6 @@ const expensesRouter = new Elysia({ prefix: "/expenses" })
   .get(
     "/trends",
     async ({ query, user, log }) => {
-      if (!user) return status(401, "Unauthorized");
-
       log.set({ action: "get_expenses_trends", user: { id: user.id }, query });
 
       const { data, error } = await tryCatch(ExpensesService.getExpensesTrends(user.id, query));
@@ -91,8 +83,6 @@ const expensesRouter = new Elysia({ prefix: "/expenses" })
   .get(
     "/shipping",
     async ({ query, user, log }) => {
-      if (!user) return status(401, "Unauthorized");
-
       log.set({ action: "get_expenses_shipping", user: { id: user.id }, query });
 
       const { data, error } = await tryCatch(ExpensesService.getExpensesShipping(user.id, query));
@@ -111,8 +101,6 @@ const expensesRouter = new Elysia({ prefix: "/expenses" })
   .get(
     "/shops/:shop/expansion",
     async ({ params, query, user, log }) => {
-      if (!user) return status(401, "Unauthorized");
-
       log.set({
         action: "get_expenses_shop_expansion",
         user: { id: user.id },

@@ -11,11 +11,6 @@ const calendarRouter = new Elysia({ prefix: "/calendar" })
   .get(
     "/",
     async ({ query, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       log.set({
         action: "calendar.get",
         user: { id: user.id },

@@ -130,11 +130,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
   .post(
     "/csv",
     async ({ body, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       if (!user.emailVerified) {
         log.set({
           action: "sync.csv",
@@ -325,11 +320,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
   .post(
     "/order",
     async ({ body, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       if (!user.emailVerified) {
         log.set({
           action: "sync.order",
@@ -625,11 +615,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
   .post(
     "/order-item",
     async ({ body, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       if (!user.emailVerified) {
         log.set({
           action: "sync.orderItem",
@@ -919,11 +904,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
   .post(
     "/collection",
     async ({ body, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       if (!user.emailVerified) {
         log.set({
           action: "sync.collection",
@@ -1155,11 +1135,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
   .get(
     "/sessions",
     async ({ query, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       const page = query.page ? Number.parseInt(query.page, 10) : 1;
       const limit = query.limit ? Number.parseInt(query.limit, 10) : 20;
 
@@ -1220,11 +1195,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
   .get(
     "/sessions/:id",
     async ({ params, query, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       log.set({
         action: "sync.sessionDetail",
         user: { id: user.id },
@@ -1293,11 +1263,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
   .get(
     "/job-status",
     async function* ({ query, user, log, request }) {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       log.set({
         action: "sync.jobStatus",
         user: { id: user.id },

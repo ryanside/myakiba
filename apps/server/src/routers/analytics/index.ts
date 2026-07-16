@@ -16,8 +16,6 @@ const analyticsRouter = new Elysia({ prefix: "/analytics" })
   .get(
     "/",
     async ({ user, log }) => {
-      if (!user) return status(401, "Unauthorized");
-
       log.set({ user: { id: user.id } });
 
       const { data: analytics, error } = await tryCatch(AnalyticsService.getAnalytics(user.id));
@@ -35,8 +33,6 @@ const analyticsRouter = new Elysia({ prefix: "/analytics" })
   .get(
     "/:sectionName",
     async ({ params, query, user, log }) => {
-      if (!user) return status(401, "Unauthorized");
-
       log.set({
         action: "analytics.section",
         user: { id: user.id },
@@ -79,8 +75,6 @@ const analyticsRouter = new Elysia({ prefix: "/analytics" })
   .get(
     "/:sectionName/items",
     async ({ params, query, user, log }) => {
-      if (!user) return status(401, "Unauthorized");
-
       log.set({
         action: "analytics.section_items",
         user: { id: user.id },
@@ -122,7 +116,6 @@ const analyticsRouter = new Elysia({ prefix: "/analytics" })
   .get(
     "/:sectionName/relationships",
     async ({ params, query, user, log }) => {
-      if (!user) return status(401, "Unauthorized");
       if (params.sectionName === query.relatedSection) {
         return status(400, "Related section must differ from source section");
       }
