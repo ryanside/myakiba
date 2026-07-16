@@ -60,7 +60,7 @@ const itemRouter = new Elysia({ prefix: "/item" })
       log.set({ outcome: "success" });
       return { item };
     },
-    { params: itemParamSchema },
+    { params: itemParamSchema, auth: true },
   )
   .get(
     "/:externalId/orders",

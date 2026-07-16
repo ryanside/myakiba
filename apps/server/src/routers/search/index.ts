@@ -60,7 +60,7 @@ const searchRouter = new Elysia({ prefix: "/search" })
       log.set({ result: { count: result.releases.length }, outcome: "success" });
       return result;
     },
-    { query: searchReleasesQuerySchema },
+    { query: searchReleasesQuerySchema, auth: true },
   )
   .get(
     "/entries",
@@ -82,7 +82,7 @@ const searchRouter = new Elysia({ prefix: "/search" })
       log.set({ result: { count: entries.length }, outcome: "success" });
       return { entries };
     },
-    { query: searchEntriesQuerySchema },
+    { query: searchEntriesQuerySchema, auth: true },
   )
   .get(
     "/orders",
