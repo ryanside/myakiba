@@ -10,6 +10,34 @@ import type { SyncSessionStatus } from "../shared/types";
 import { paginationLimitSchema, paginationPageSchema } from "../shared/pagination";
 import { SYNC_CSV_ITEM_STATUSES } from "./constants";
 
+const MFC_ITEM_URL_PATTERN =
+  /^(?:https?:\/\/)?(?:www\.)?myfigurecollection\.net\/item\/(\d+)(?:[/?#].*)?$/i;
+
+export const mfcItemIdSchema = z
+  .string()
+  .trim()
+  .transform((value, context) => {
+    if (value === "") {
+      context.addIssue({
+        code: "custom",
+        message: "MyFigureCollection Item URL or ID is required",
+      });
+      return z.NEVER;
+    }
+
+    const itemId = /^\d+$/.test(value) ? value : value.match(MFC_ITEM_URL_PATTERN)?.[1];
+    if (!itemId) {
+      context.addIssue({
+        code: "custom",
+        message: "Please enter a valid MyFigureCollection Item ID or URL",
+      });
+      return z.NEVER;
+    }
+
+    return Number(itemId);
+  })
+  .pipe(z.number().int().positive());
+
 /**
  * Schema for CSV date fields that handles MFC export quirks.
  * - Returns null for placeholder dates (0000-00-00)
@@ -154,8 +182,22 @@ export const syncCollectionItemSchema = z.object({
   notes: z.string(),
 });
 
+const csvItemIdSchema = z
+  .string()
+  .trim()
+  .regex(/^\d+$/)
+  .transform(Number)
+  .pipe(z.number().int().positive());
+const csvItemCountSchema = z
+  .string()
+  .trim()
+  .transform((value) => value || "1")
+  .refine((value) => /^\d+$/.test(value), "Count must be a positive integer")
+  .transform(Number)
+  .pipe(z.number().int().positive());
+
 export const csvItemSchema = z.object({
-  id: z.string(),
+  id: csvItemIdSchema,
   title: z.string(),
   root: z.string(),
   category: z.string(),
@@ -167,11 +209,8 @@ export const csvItemSchema = z.object({
     .string()
     .transform((value) => (value === "" ? undefined : value))
     .pipe(z.enum(["Owned", "Ordered", "Wished"]).default("Owned")),
-  count: z
-    .string()
-    .transform((value) => (value === "" ? undefined : value))
-    .pipe(z.string().default("1")),
-  score: z.string(),
+  count: csvItemCountSchema,
+  score: z.string().transform((value) => value.split("/", 1).join("")),
   payment_date: csvDateSchema,
   shipping_date: csvDateSchema,
   collecting_date: csvDateSchema,

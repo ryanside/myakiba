@@ -26,5 +26,5 @@ export function getCategoryColor(category: Category | null | undefined): string 
     return "var(--muted-foreground)";
   }
 
-  return CATEGORY_COLOR_MAP[category] ?? "var(--muted-foreground)";
+  return CATEGORY_COLOR_MAP[category];
 }

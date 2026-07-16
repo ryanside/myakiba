@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useCallback } from "react";
-import { createFileRoute, notFound } from "@tanstack/react-router";
+import { createFileRoute, notFound, stripSearchParams } from "@tanstack/react-router";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 import {
@@ -29,6 +29,9 @@ const KPI_LABELS = ["Unique", "Total Items", "Total Spent", "Avg. Spent"] as con
 
 export const Route = createFileRoute("/(app)/analytics_/$sectionName")({
   validateSearch: analyticsSectionSearchSchema,
+  search: {
+    middlewares: [stripSearchParams({ limit: DEFAULT_LIMIT, offset: 0 })],
+  },
   beforeLoad: ({ params }) => {
     const sectionNameResult = analyticsSectionSchema.safeParse(params.sectionName);
 
@@ -53,9 +56,7 @@ export const Route = createFileRoute("/(app)/analytics_/$sectionName")({
 function RouteComponent(): ReactNode {
   const sectionName = analyticsSectionSchema.parse(Route.useParams().sectionName);
   const { currency, locale } = useUserPreferences();
-  const { filters, setFilters } = useFilters("/(app)/analytics_/$sectionName", {
-    paginationDefaults: { limit: DEFAULT_LIMIT },
-  });
+  const { filters, setFilters } = useFilters("/(app)/analytics_/$sectionName");
 
   const limit = filters.limit ?? DEFAULT_LIMIT;
   const offset = filters.offset ?? 0;
