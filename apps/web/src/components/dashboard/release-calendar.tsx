@@ -12,25 +12,15 @@ import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/fr
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/reui/badge";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
-import type { Category, Currency } from "@myakiba/contracts/shared/types";
+import type { Currency } from "@myakiba/contracts/shared/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { app } from "@/lib/treaty-client";
 import { Link } from "@tanstack/react-router";
 import { getCategoryColor } from "@/lib/category-colors";
 import { formatReleaseDate } from "@/lib/locale";
+import { getReleaseCalendar } from "@/queries/dashboard";
+import type { ReleaseItem } from "@/queries/dashboard";
 import { parseISO } from "date-fns";
 import Loader from "../loader";
-
-interface ReleaseItem {
-  readonly itemId: string;
-  readonly itemExternalId: number | null;
-  readonly title: string;
-  readonly image: string | null;
-  readonly category: string | null;
-  readonly releaseDate: string;
-  readonly price: number | null;
-  readonly priceCurrency: string | null;
-}
 
 interface ReleaseCalendarProps {
   readonly className?: string;
@@ -90,22 +80,9 @@ function ReleaseCalendar({
   const apiYear = isControlled ? controlledYear : internalMonth.getFullYear();
   const displayDate = isControlled ? new Date(controlledYear, controlledMonth - 1) : internalMonth;
 
-  async function fetchReleaseCalendar() {
-    const { data, error } = await app.api.dashboard["release-calendar"].get({
-      query: { month: apiMonth, year: apiYear },
-    });
-    if (error) {
-      if (error.status === 422) {
-        throw new Error(error.value?.message || "Invalid month or year");
-      }
-      throw new Error(error.value || "Failed to get release calendar");
-    }
-    return data;
-  }
-
   const { isPending, isError, data, error } = useQuery({
     queryKey: ["releaseCalendar", apiMonth, apiYear],
-    queryFn: fetchReleaseCalendar,
+    queryFn: () => getReleaseCalendar(apiMonth, apiYear),
     staleTime: 1000 * 60 * 5,
     retry: false,
   });
@@ -252,7 +229,7 @@ function ReleaseCard({
   readonly item: ReleaseItem;
   readonly currency: Currency;
 }): React.ReactNode {
-  const categoryColor = getCategoryColor((item.category as Category) ?? null);
+  const categoryColor = getCategoryColor(item.category);
 
   return (
     <Link
@@ -293,4 +270,4 @@ function ReleaseCard({
   );
 }
 
-export { ReleaseCalendar, type ReleaseItem };
+export { ReleaseCalendar };

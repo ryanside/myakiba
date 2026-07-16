@@ -1,4 +1,4 @@
-const NON_FILTER_KEYS = new Set(["limit", "offset", "sort", "order"]);
+const NON_FILTER_KEYS = new Set(["limit", "offset", "sort", "order", "search"]);
 
 interface SortState {
   readonly sort?: string;

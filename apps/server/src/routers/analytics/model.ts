@@ -1,40 +1,4 @@
-import * as z from "zod";
-import { ANALYTICS_SECTIONS, DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
-import {
-  paginationLimitSchema,
-  paginationOffsetSchema,
-} from "@myakiba/contracts/shared/pagination";
 import type { AnalyticsSection, EntryCategory } from "@myakiba/contracts/shared/types";
-
-export const analyticsSectionParamSchema = z.object({
-  sectionName: z.enum(ANALYTICS_SECTIONS),
-});
-
-export const analyticsSectionQuerySchema = z.object({
-  search: z.string().trim().optional(),
-  limit: paginationLimitSchema.optional().default(DEFAULT_LIMIT),
-  offset: paginationOffsetSchema.optional().default(0),
-  sort: z.enum(["name", "itemCount", "totalSpent"]).optional(),
-  order: z.enum(["asc", "desc"]).optional(),
-});
-
-export type AnalyticsSectionSort = NonNullable<z.infer<typeof analyticsSectionQuerySchema>["sort"]>;
-export type AnalyticsSectionSortOrder = NonNullable<
-  z.infer<typeof analyticsSectionQuerySchema>["order"]
->;
-
-export const analyticsSectionItemsQuerySchema = z.object({
-  match: z.string().min(1),
-  limit: paginationLimitSchema.optional().default(6),
-  offset: paginationOffsetSchema.optional().default(0),
-});
-
-export const analyticsSectionRelationshipsQuerySchema = z.object({
-  match: z.string().min(1),
-  relatedSection: z.enum(ANALYTICS_SECTIONS),
-  limit: paginationLimitSchema.max(25).optional().default(5),
-  offset: paginationOffsetSchema.optional().default(0),
-});
 
 export type EntryLeaderboardRow = {
   readonly entryId: string;

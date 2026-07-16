@@ -60,6 +60,7 @@
         "@hugeicons/core-free-icons": "^4.0.0",
         "@hugeicons/react": "^1.1.6",
         "@marsidev/react-turnstile": "^1.4.2",
+        "@myakiba/auth": "workspace:*",
         "@myakiba/contracts": "workspace:*",
         "@myakiba/env": "workspace:*",
         "@myakiba/utils": "workspace:*",

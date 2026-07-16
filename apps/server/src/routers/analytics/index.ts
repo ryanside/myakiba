@@ -8,7 +8,7 @@ import {
   analyticsSectionParamSchema,
   analyticsSectionQuerySchema,
   analyticsSectionRelationshipsQuerySchema,
-} from "./model";
+} from "@myakiba/contracts/analytics/schema";
 
 const analyticsRouter = new Elysia({ prefix: "/analytics" })
   .use(betterAuth)

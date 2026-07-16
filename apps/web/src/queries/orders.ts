@@ -61,10 +61,10 @@ export async function getOrders(filters: OrderFilters): Promise<OrderListItem[]>
   return data;
 }
 
-export interface OrderItemRelease {
-  readonly releaseDate: string;
-  readonly itemImage: string | null;
-}
+type OrdersClient = ReturnType<typeof app.api.orders>;
+export type OrderItemRelease = NonNullable<
+  Awaited<ReturnType<OrdersClient["item-releases"]["get"]>>["data"]
+>[number];
 
 export async function getOrderItemReleases(orderId: string): Promise<readonly OrderItemRelease[]> {
   const { data, error } = await app.api.orders({ orderId })["item-releases"].get();

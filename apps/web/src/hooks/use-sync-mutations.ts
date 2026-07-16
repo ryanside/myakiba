@@ -11,14 +11,8 @@ import type {
 import { transformCSVData } from "@/lib/sync";
 import { invalidateSyncResultQueries } from "@/lib/mutation-query-invalidation";
 import { sendCollection, sendItems, sendOrder, sendOrderItems } from "@/queries/sync";
+import type { SyncResponse } from "@/queries/sync";
 import { showSyncToast } from "@/components/sync/sync-toast";
-
-type SyncResponse = {
-  readonly syncSessionId: string;
-  readonly isFinished: boolean;
-  readonly existingItemsToInsert: number;
-  readonly newItems: number;
-};
 
 export type UseSyncMutationsReturn = {
   readonly handleSyncCsvSubmit: (value: File | undefined) => Promise<void>;

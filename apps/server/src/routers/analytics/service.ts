@@ -18,6 +18,10 @@ import type { SQL, SQLWrapper } from "drizzle-orm";
 import { ENTRY_CATEGORIES } from "@myakiba/contracts/shared/constants";
 import type { AnalyticsSection, EntryCategory } from "@myakiba/contracts/shared/types";
 import type {
+  AnalyticsSectionSort,
+  AnalyticsSectionSortOrder,
+} from "@myakiba/contracts/analytics/schema";
+import type {
   AnalyticsResult,
   AnalyticsSectionItemsResult,
   AnalyticsSectionKpis,
@@ -26,8 +30,6 @@ import type {
   AnalyticsSectionRelationshipValue,
   AnalyticsSectionRelationshipsResult,
   AnalyticsSectionResult,
-  AnalyticsSectionSort,
-  AnalyticsSectionSortOrder,
   EntrySection,
 } from "./model";
 

@@ -8,10 +8,7 @@ const sseJobStatusChunkSchema = z.object({
 
 export type JobTerminalState = SyncTerminalState;
 export type JobStatusEvent = Readonly<SyncJobStatus>;
-
-export type SSEJobStatusChunk = Readonly<{
-  data: JobStatusEvent;
-}>;
+export type SSEJobStatusChunk = z.infer<typeof sseJobStatusChunkSchema>;
 
 type StreamValue = string | number | boolean | bigint | symbol | null | undefined | object;
 
