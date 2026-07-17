@@ -46,11 +46,13 @@ export function ExpenseOrderRow({
         />
         <div className="min-w-0">
           <p className="truncate text-sm font-medium">{order.title}</p>
-          <p className="text-xs text-muted-foreground">
-            {order.shop} ·{" "}
-            {order.expenseDate
-              ? formatDateOnlyForDisplay(order.expenseDate, dateFormat)
-              : "Undated"}
+          <p className="flex items-center gap-2.5 text-xs text-muted-foreground">
+            <span className="truncate">{order.shop}</span>
+            <span className="shrink-0">
+              {order.expenseDate
+                ? formatDateOnlyForDisplay(order.expenseDate, dateFormat)
+                : "Undated"}
+            </span>
           </p>
         </div>
       </div>

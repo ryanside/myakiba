@@ -138,13 +138,12 @@ function RouteComponent(): ReactNode {
         isCollectionItemPending={isCollectionItemPending}
       />
 
-      <div className="flex items-center gap-2 text-xs text-muted-foreground/60 pb-2">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground/60 pb-2">
         {isPending ? (
           <>
             <span className="flex items-center gap-1">
               Created <Skeleton className="h-3 w-24" />
             </span>
-            <span aria-hidden="true">&middot;</span>
             <span className="flex items-center gap-1">
               Updated <Skeleton className="h-3 w-24" />
             </span>
@@ -158,7 +157,6 @@ function RouteComponent(): ReactNode {
                 {formatTimestampForDisplay(order.createdAt, dateFormat)}
               </span>
             </span>
-            <span aria-hidden="true">&middot;</span>
             <span>
               Updated{" "}
               <span className="animate-data-in inline-block">

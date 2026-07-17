@@ -45,9 +45,13 @@ export function ShopBreakdown({
         tooltip: (
           <div className="flex flex-col gap-0.5">
             <p className="text-xs font-medium">{s.shopName}</p>
-            <p className="text-xs">
-              {s.orderCount} {s.orderCount === 1 ? "order" : "orders"} ·{" "}
-              {totalOrderCount > 0 ? ((s.orderCount / totalOrderCount) * 100).toFixed(1) : "0.0"}%
+            <p className="flex items-baseline gap-3 text-xs">
+              <span className="tabular-nums">
+                {s.orderCount} {s.orderCount === 1 ? "order" : "orders"}
+              </span>
+              <span className="text-muted-foreground tabular-nums">
+                {totalOrderCount > 0 ? ((s.orderCount / totalOrderCount) * 100).toFixed(1) : "0.0"}%
+              </span>
             </p>
           </div>
         ),

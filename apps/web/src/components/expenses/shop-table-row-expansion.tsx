@@ -89,7 +89,7 @@ export function ShopTableRowExpansion({
 }
 
 function SectionLabel({ children }: { readonly children: ReactNode }): ReactNode {
-  return <p className="text-xs text-muted-foreground text-pretty">{children}</p>;
+  return <p className="flex items-center gap-1.5 text-xs text-muted-foreground">{children}</p>;
 }
 
 function FeeBreakdownPanel({
@@ -120,8 +120,8 @@ function FeeBreakdownPanel({
   return (
     <div className="animate-data-in space-y-3">
       <SectionLabel>
-        fee breakdown ·{" "}
-        <span className="tabular-nums">
+        <span>fee breakdown</span>
+        <span className="ml-auto tabular-nums">
           {formatCurrencyFromMinorUnits(total, currency, locale)}
         </span>
       </SectionLabel>
@@ -145,9 +145,13 @@ function FeeBreakdownPanel({
                 <TooltipContent side="top">
                   <div className="flex flex-col gap-0.5">
                     <p className="text-xs font-medium">{entry.label}</p>
-                    <p className="text-xs">
-                      {formatCurrencyFromMinorUnits(entry.amount, currency, locale)} ·{" "}
-                      {percentage.toFixed(1)}%
+                    <p className="flex items-baseline gap-3 text-xs">
+                      <span className="tabular-nums">
+                        {formatCurrencyFromMinorUnits(entry.amount, currency, locale)}
+                      </span>
+                      <span className="text-muted-foreground tabular-nums">
+                        {percentage.toFixed(1)}%
+                      </span>
                     </p>
                   </div>
                 </TooltipContent>

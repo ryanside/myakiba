@@ -30,9 +30,8 @@ export function CalendarOrderRow({ order, currency, locale }: CalendarOrderRowPr
       />
       <div className="min-w-0">
         <p className="truncate text-sm font-medium leading-tight">{order.title}</p>
-        <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+        <div className="mt-0.5 flex items-center gap-2.5 text-xs text-muted-foreground">
           <span className="truncate">{order.shop || "-"}</span>
-          <span aria-hidden>·</span>
           <span className="shrink-0 tabular-nums">
             {order.itemCount} {order.itemCount === 1 ? "item" : "items"}
           </span>

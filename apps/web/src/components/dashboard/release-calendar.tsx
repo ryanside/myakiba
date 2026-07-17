@@ -257,12 +257,9 @@ function ReleaseCard({
             </span>
           )}
           {item.price != null && item.price > 0 && item.priceCurrency?.trim() && (
-            <>
-              {item.category != null && <span aria-hidden>·</span>}
-              <span className="shrink-0">
-                {formatReleaseDate(item.price, item.priceCurrency, currency)}
-              </span>
-            </>
+            <span className="shrink-0">
+              {formatReleaseDate(item.price, item.priceCurrency, currency)}
+            </span>
           )}
         </div>
       </div>

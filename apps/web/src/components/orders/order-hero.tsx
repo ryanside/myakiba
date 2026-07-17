@@ -39,16 +39,12 @@ export function OrderHero({
                 <Skeleton className="h-8 w-52 max-w-[45vw]" />
                 <Skeleton className="h-7 w-18 rounded-full" />
               </div>
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
                 <Skeleton className="h-4 w-24" />
-                <span className="text-border select-none" aria-hidden="true">
-                  &middot;
-                </span>
                 <Skeleton className="h-4 w-20" />
               </div>
             </div>
           </div>
-
           <div className="hidden items-center gap-2 sm:flex">
             <Button variant="outline" size="sm" disabled>
               <HugeiconsIcon icon={Edit03Icon} className="size-4" />
@@ -87,31 +83,18 @@ export function OrderHero({
                 {order.status}
               </ThemedBadge>
             </div>
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
               {order.shop ? (
-                <>
-                  <span className="animate-data-in inline-block">{order.shop}</span>
-                  <span className="text-border select-none" aria-hidden="true">
-                    &middot;
-                  </span>
-                </>
+                <span className="animate-data-in inline-block">{order.shop}</span>
               ) : null}
               <span className="animate-data-in inline-block">{order.shippingMethod}</span>
-              <span className="text-border select-none" aria-hidden="true">
-                &middot;
-              </span>
               <span className="animate-data-in inline-block">
                 {order.itemCount} {order.itemCount === 1 ? "item" : "items"}
               </span>
               {order.releaseDate ? (
-                <>
-                  <span className="text-border select-none" aria-hidden="true">
-                    &middot;
-                  </span>
-                  <span className="animate-data-in inline-block">
-                    Release {formatDateOnlyForDisplay(order.releaseDate, dateFormat)}
-                  </span>
-                </>
+                <span className="animate-data-in inline-block">
+                  Release {formatDateOnlyForDisplay(order.releaseDate, dateFormat)}
+                </span>
               ) : null}
             </div>
           </div>

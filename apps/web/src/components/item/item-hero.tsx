@@ -36,7 +36,7 @@ export function ItemHero({
         <div className="flex flex-col items-start justify-center gap-3">
           <div className="space-y-1.5">
             <Skeleton className="h-7 w-72 max-w-[70vw]" />
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
               <a
                 href={`https://myfigurecollection.net/item/${externalId}`}
                 target="_blank"
@@ -45,7 +45,6 @@ export function ItemHero({
               >
                 myfigurecollection.net/item/{externalId}
               </a>
-              <span className="hidden text-xs text-muted-foreground/40 sm:inline">·</span>
               <span className="hidden items-center gap-1 text-xs text-muted-foreground/60 sm:flex">
                 Updated <Skeleton className="inline-block h-3 w-16" />
               </span>
@@ -86,7 +85,7 @@ export function ItemHero({
           <h1 className="animate-data-in text-2xl font-medium tracking-tight leading-tight">
             {item.title}
           </h1>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <a
               href={`https://myfigurecollection.net/item/${externalId}`}
               target="_blank"
@@ -96,15 +95,12 @@ export function ItemHero({
               myfigurecollection.net/item/{externalId}
             </a>
             {item.updatedAt ? (
-              <>
-                <span className="hidden sm:inline text-xs text-muted-foreground/40">·</span>
-                <span className="text-xs text-muted-foreground/60">
-                  Updated{" "}
-                  <span className="animate-data-in inline-block">
-                    {formatRelativeTimeToNow(new Date(item.updatedAt))}
-                  </span>
+              <span className="text-xs text-muted-foreground/60">
+                Updated{" "}
+                <span className="animate-data-in inline-block">
+                  {formatRelativeTimeToNow(new Date(item.updatedAt))}
                 </span>
-              </>
+              </span>
             ) : null}
           </div>
         </div>

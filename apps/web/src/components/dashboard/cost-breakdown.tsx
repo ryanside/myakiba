@@ -75,9 +75,13 @@ export function CostBreakdown({
         tooltip: (
           <div className="flex flex-col gap-0.5">
             <p className="text-xs font-medium">{e.label}</p>
-            <p className="text-xs">
-              {formatCurrencyFromMinorUnits(e.amount, currency, locale)} ·{" "}
-              {totalAmount > 0 ? ((e.amount / totalAmount) * 100).toFixed(1) : "0.0"}%
+            <p className="flex items-baseline gap-3 text-xs">
+              <span className="tabular-nums">
+                {formatCurrencyFromMinorUnits(e.amount, currency, locale)}
+              </span>
+              <span className="text-muted-foreground tabular-nums">
+                {totalAmount > 0 ? ((e.amount / totalAmount) * 100).toFixed(1) : "0.0"}%
+              </span>
             </p>
           </div>
         ),

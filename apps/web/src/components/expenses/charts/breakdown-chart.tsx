@@ -34,9 +34,13 @@ export default function ExpenseBreakdownChart({
       tooltip: (
         <div className="flex flex-col gap-0.5">
           <p className="text-xs font-medium">{entry.label}</p>
-          <p className="text-xs">
-            {formatCurrencyFromMinorUnits(entry.value, currency, locale)} ·{" "}
-            {entry.percentage.toFixed(1)}%
+          <p className="flex items-baseline gap-3 text-xs">
+            <span className="tabular-nums">
+              {formatCurrencyFromMinorUnits(entry.value, currency, locale)}
+            </span>
+            <span className="text-muted-foreground tabular-nums">
+              {entry.percentage.toFixed(1)}%
+            </span>
           </p>
         </div>
       ),
