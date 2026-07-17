@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Loading03Icon, Package01Icon } from "@hugeicons/core-free-icons";
+import { Package01Icon } from "@hugeicons/core-free-icons";
 import { ItemSyncActions } from "@/components/item/item-sync-actions";
 import {
   Empty,
@@ -11,7 +11,10 @@ import {
   EmptyMedia,
 } from "@/components/ui/empty";
 import { cn } from "@/lib/utils";
-import { CollectionItemCard } from "@/components/item/collection-item-card";
+import {
+  CollectionItemCard,
+  CollectionItemCardSkeleton,
+} from "@/components/item/collection-item-card";
 import type { ItemCollectionEntry, ItemDetail, ItemRelatedOrder } from "@/components/item/types";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
@@ -33,7 +36,7 @@ export function ItemCollection({
   onMoveToNewOrder,
   isCollectionOrderPending,
 }: {
-  readonly item: ItemDetail;
+  readonly item: ItemDetail | undefined;
   readonly externalId: number;
   readonly collectionItems: readonly ItemCollectionEntry[];
   readonly ordersList: readonly ItemRelatedOrder[];
@@ -59,18 +62,11 @@ export function ItemCollection({
   const { currency, locale, dateFormat } = useUserPreferences();
 
   return (
-    <div className="lg:col-span-2 lg:pl-8 pt-8 pb-8 animate-appear">
+    <div className="lg:col-span-2 lg:pl-8 pt-8 pb-8">
       <h2 className="text-xs font-medium text-muted-foreground">Your Collection</h2>
 
       <div className="mt-4">
-        {isPending && (
-          <div className="flex items-center justify-center py-12">
-            <HugeiconsIcon
-              icon={Loading03Icon}
-              className="size-5 animate-spin text-muted-foreground"
-            />
-          </div>
-        )}
+        {isPending && <CollectionItemCardSkeleton />}
 
         {isError && (
           <Empty>
@@ -99,7 +95,7 @@ export function ItemCollection({
           </Empty>
         )}
 
-        {!isPending && !isError && collectionItems.length > 0 && (
+        {!isPending && !isError && item && collectionItems.length > 0 ? (
           <div className="flex flex-col gap-8">
             {collectionItems.map((collectionItem, idx) => (
               <CollectionItemCard
@@ -124,7 +120,7 @@ export function ItemCollection({
               />
             ))}
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { BackLink } from "@/components/ui/back-link";
 import { SyncActionSheet } from "@/components/sync/sync-launcher";
 import type { LaunchableSyncType } from "@/components/sync/sync-launcher-options";
-import Loader from "@/components/loader";
 import { ItemCollection } from "@/components/item/item-collection";
 import { ItemDetails } from "@/components/item/item-details";
 import { ItemHero } from "@/components/item/item-hero";
@@ -111,15 +110,13 @@ function RouteComponent(): ReactNode {
     enabled: data != null,
   });
 
-  if (isPending) {
-    return <Loader />;
-  }
-
   if (isError) {
     return (
       <div className="flex flex-col items-center justify-center gap-y-4">
         <BackLink to="/collection" text="Back" font="sans" className="self-start" />
-        <div className="text-lg font-medium text-destructive">Error: {itemError.message}</div>
+        <div className="animate-data-in text-lg font-medium text-destructive">
+          Error: {itemError.message}
+        </div>
       </div>
     );
   }
@@ -130,17 +127,19 @@ function RouteComponent(): ReactNode {
     );
   }
 
-  const { item } = data;
+  const item = data?.item;
   const collectionItems = itemRelatedCollection?.collection ?? [];
   const ordersList = itemRelatedOrders?.orders ?? [];
-  const scale = normalizeScale(typeof item.scale === "string" ? item.scale : null);
+  const scale = normalizeScale(typeof item?.scale === "string" ? item.scale : null);
 
   return (
-    <div className="flex flex-col gap-6 mx-auto max-w-352">
+    <div className="flex flex-col gap-6 mx-auto max-w-352" aria-busy={isPending} aria-live="polite">
+      {isPending ? <span className="sr-only">Loading item details</span> : null}
       <BackLink to="/collection" text="Back" font="sans" className="self-start" />
 
       <ItemHero
         item={item}
+        isLoading={isPending}
         externalId={externalId}
         scale={scale}
         resyncStatus={resyncStatusData?.status ?? "idle"}
@@ -150,13 +149,13 @@ function RouteComponent(): ReactNode {
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-5">
-        <ItemDetails item={item} scale={scale} />
+        <ItemDetails item={item} scale={scale} isLoading={isPending} />
         <ItemCollection
           item={item}
           externalId={externalId}
           collectionItems={collectionItems}
           ordersList={ordersList}
-          isPending={isPendingItemRelatedCollection}
+          isPending={isPending || isPendingItemRelatedCollection}
           isError={isErrorItemRelatedCollection}
           errorMessage={errorItemRelatedCollection?.message}
           onSyncCollection={() => setSyncType("collection")}

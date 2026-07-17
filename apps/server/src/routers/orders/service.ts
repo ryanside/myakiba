@@ -213,12 +213,19 @@ class OrdersService {
         tariffs: order.tariffs,
         miscFees: order.miscFees,
         notes: order.notes,
+        images: sql<string[]>`
+          COALESCE(
+            ARRAY_AGG(DISTINCT ${item.image}) FILTER (WHERE ${item.image} IS NOT NULL),
+            ARRAY[]::text[]
+          )
+        `,
         createdAt: order.createdAt,
         updatedAt: order.updatedAt,
         itemCount: sql<number>`COUNT(${collection.id})`,
       })
       .from(order)
       .leftJoin(collection, eq(order.id, collection.orderId))
+      .leftJoin(item, eq(collection.itemId, item.id))
       .where(and(eq(order.userId, userId), eq(order.id, orderId)))
       .groupBy(order.id);
 
@@ -226,7 +233,10 @@ class OrdersService {
       throw new Error("ORDER_NOT_FOUND");
     }
 
-    return orderInfoRows[0];
+    return {
+      ...orderInfoRows[0],
+      images: orderInfoRows[0].images.slice(0, 4),
+    };
   }
 
   async mergeOrders(

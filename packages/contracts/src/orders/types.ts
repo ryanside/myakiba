@@ -25,6 +25,7 @@ export type Order = {
   miscFees: number;
   notes: string;
   itemCount: number;
+  readonly images: readonly string[];
   createdAt: string;
   updatedAt: string;
 };
@@ -34,7 +35,6 @@ export type OrderListItem = Order & {
   readonly totalSpent: number;
   readonly activeOrders: number;
   readonly unpaidCosts: number;
-  readonly images: readonly string[];
 };
 
 export type OrderItem = Omit<

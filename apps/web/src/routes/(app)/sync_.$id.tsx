@@ -7,11 +7,11 @@ import {
   ACTIVE_SYNC_SESSION_STATUS_SET,
   SYNC_SESSION_DETAIL_PAGE_SIZE,
 } from "@myakiba/contracts/sync/constants";
-import Loader from "@/components/loader";
 import { SyncSessionHero } from "@/components/sync/sync-session-hero";
 import { SyncSessionItemsTable } from "@/components/sync/sync-session-items-table";
 import { SyncSessionStatusPanel } from "@/components/sync/sync-session-status-panel";
 import { BackLink } from "@/components/ui/back-link";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatSyncDuration } from "@/lib/date-display";
 import { fetchSyncSessionDetail } from "@/queries/sync";
 import { cn } from "@/lib/utils";
@@ -54,67 +54,79 @@ function RouteComponent(): ReactNode {
   const totalItems = responseData?.totalItems ?? 0;
 
   return (
-    <div className="flex flex-col gap-4 mx-auto max-w-352">
+    <div className="flex flex-col gap-4 mx-auto max-w-352" aria-busy={isPending} aria-live="polite">
+      {isPending ? <span className="sr-only">Loading sync session details</span> : null}
       <BackLink to="/sync" text="Back" font="sans" className="self-start" />
 
-      {isPending && <Loader />}
-
-      {isError && (
+      {isError ? (
         <div className="flex flex-col gap-1.5">
           <h1 className="text-2xl font-medium tracking-tight">Sync Session</h1>
-          <p className="text-sm font-normal text-destructive">Error: {error.message}</p>
+          <p className="animate-data-in text-sm font-normal text-destructive">
+            Error: {error.message}
+          </p>
         </div>
-      )}
+      ) : null}
 
-      {!isPending && !isError && !session && (
+      {!isPending && !isError && !session ? (
         <div className="flex flex-col gap-1.5">
           <h1 className="text-2xl font-medium tracking-tight">Sync Session</h1>
           <p className="text-muted-foreground text-sm font-normal">Session not found</p>
         </div>
-      )}
+      ) : null}
 
-      {session && (
+      {!isError && (isPending || session) ? (
         <>
-          <SyncSessionHero session={session} />
+          <SyncSessionHero session={session} isLoading={isPending} />
 
           <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
             {[
-              { label: "Total Items", value: session.totalItems },
-              { label: "Succeeded", value: session.successCount },
-              { label: "Failed", value: session.failCount, isError: session.failCount > 0 },
+              { label: "Total Items", value: session?.totalItems },
+              { label: "Succeeded", value: session?.successCount },
+              {
+                label: "Failed",
+                value: session?.failCount,
+                isError: (session?.failCount ?? 0) > 0,
+              },
               {
                 label: "Duration",
-                value: formatSyncDuration(session.createdAt, session.completedAt),
+                value: session
+                  ? formatSyncDuration(session.createdAt, session.completedAt)
+                  : undefined,
               },
             ].map(({ label, value, isError: isStatError }) => (
               <div key={label} className="flex flex-col gap-1">
                 <span className="text-sm text-muted-foreground font-normal">{label}</span>
-                <span
-                  className={cn(
-                    "text-2xl font-normal tabular-nums tracking-tight",
-                    isStatError && "text-destructive",
-                  )}
-                >
-                  {value}
-                </span>
+                {isPending ? (
+                  <Skeleton className="h-8 w-16" />
+                ) : (
+                  <span
+                    className={cn(
+                      "animate-data-in text-2xl font-normal tabular-nums tracking-tight",
+                      isStatError && "text-destructive",
+                    )}
+                  >
+                    {value}
+                  </span>
+                )}
               </div>
             ))}
           </div>
 
           <SyncSessionStatusPanel
             session={session}
-            isActive={ACTIVE_SYNC_SESSION_STATUS_SET.has(session.status)}
+            isLoading={isPending}
+            isActive={session ? ACTIVE_SYNC_SESSION_STATUS_SET.has(session.status) : false}
           />
 
           <SyncSessionItemsTable
             items={items}
             totalItems={totalItems}
-            isLoading={isFetching && !isPending}
+            isLoading={isFetching}
             pagination={pagination}
             onPaginationChange={setPagination}
           />
         </>
-      )}
+      ) : null}
     </div>
   );
 }

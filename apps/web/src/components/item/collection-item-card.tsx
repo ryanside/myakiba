@@ -7,6 +7,7 @@ import UnifiedItemMoveForm from "@/components/orders/unified-item-move-form";
 import { Badge, ThemedBadge } from "@/components/reui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Timeline,
   TimelineItem,
@@ -28,14 +29,62 @@ import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 function DetailRow({
   label,
   children,
+  animateValue = false,
+  animateRow = false,
 }: {
   readonly label: string;
   readonly children: React.ReactNode;
+  readonly animateValue?: boolean;
+  readonly animateRow?: boolean;
 }): ReactNode {
   return (
-    <div className="flex items-center justify-between text-sm">
+    <div
+      className={cn("flex items-center justify-between text-sm", animateRow && "animate-data-in")}
+    >
       <span className="text-muted-foreground">{label}</span>
-      <span className="tabular-nums">{children}</span>
+      <span className={cn("tabular-nums", animateValue && !animateRow && "animate-data-in")}>
+        {children}
+      </span>
+    </div>
+  );
+}
+
+export function CollectionItemCardSkeleton(): ReactNode {
+  return (
+    <div className="flex flex-col gap-5" aria-busy="true">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-5 w-16 rounded-full" />
+          <Skeleton className="h-3 w-20" />
+        </div>
+        <div className="flex items-center -mr-2">
+          <Button variant="ghost" size="icon-sm" className="text-muted-foreground" disabled>
+            <HugeiconsIcon icon={Edit03Icon} className="size-3.5" />
+            <span className="sr-only">Edit collection item</span>
+          </Button>
+          <Button variant="ghost" size="icon-sm" className="text-muted-foreground" disabled>
+            <HugeiconsIcon icon={MoveIcon} className="size-3.5" />
+            <span className="sr-only">Assign order</span>
+          </Button>
+          <Button variant="ghost" size="icon-sm" className="text-muted-foreground" disabled>
+            <HugeiconsIcon icon={Delete01Icon} className="size-3.5" />
+            <span className="sr-only">Delete collection item</span>
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2.5">
+        {[
+          { label: "Count", width: "w-6" },
+          { label: "Price", width: "w-16" },
+          { label: "Condition", width: "w-14" },
+          { label: "Shipping", width: "w-20" },
+        ].map(({ label, width }) => (
+          <DetailRow key={label} label={label}>
+            <Skeleton className={`h-4 ${width}`} />
+          </DetailRow>
+        ))}
+      </div>
     </div>
   );
 }
@@ -89,14 +138,17 @@ export function CollectionItemCard({
   const hasExtras = hasScore || collectionItem.tags.length > 0 || Boolean(collectionItem.notes);
 
   return (
-    <div className={cn("flex flex-col gap-5 animate-appear", className)}>
+    <div className={cn("flex flex-col gap-5", className)}>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <ThemedBadge variant={getStatusVariant(collectionItem.status)}>
+          <ThemedBadge
+            variant={getStatusVariant(collectionItem.status)}
+            className="animate-data-in"
+          >
             {collectionItem.status}
           </ThemedBadge>
           {release && (
-            <span className="text-xs text-muted-foreground/60 tabular-nums">
+            <span className="animate-data-in text-xs text-muted-foreground/60 tabular-nums">
               {formatDateOnlyForDisplay(release.date, dateFormat)}
             </span>
           )}
@@ -165,17 +217,27 @@ export function CollectionItemCard({
       </div>
 
       <div className="flex flex-col gap-2.5">
-        <DetailRow label="Count">{collectionItem.count}</DetailRow>
-        <DetailRow label="Price">
+        <DetailRow label="Count" animateValue>
+          {collectionItem.count}
+        </DetailRow>
+        <DetailRow label="Price" animateValue>
           {formatCurrencyFromMinorUnits(collectionItem.price, currency, locale)}
         </DetailRow>
-        <DetailRow label="Condition">{collectionItem.condition}</DetailRow>
-        {collectionItem.shop && <DetailRow label="Shop">{collectionItem.shop}</DetailRow>}
-        <DetailRow label="Shipping">{collectionItem.shippingMethod}</DetailRow>
+        <DetailRow label="Condition" animateValue>
+          {collectionItem.condition}
+        </DetailRow>
+        {collectionItem.shop && (
+          <DetailRow label="Shop" animateRow>
+            {collectionItem.shop}
+          </DetailRow>
+        )}
+        <DetailRow label="Shipping" animateValue>
+          {collectionItem.shippingMethod}
+        </DetailRow>
       </div>
 
       {activeStep > 0 && (
-        <Timeline orientation="horizontal" value={activeStep}>
+        <Timeline orientation="horizontal" value={activeStep} className="animate-data-in">
           {timelineSteps.map(({ step, title, date }) => (
             <TimelineItem key={step} step={step}>
               <TimelineIndicator />
@@ -191,9 +253,13 @@ export function CollectionItemCard({
 
       {hasExtras && (
         <div className="flex flex-col gap-3">
-          {hasScore && <DetailRow label="Score">{collectionItem.score}</DetailRow>}
+          {hasScore && (
+            <DetailRow label="Score" animateRow>
+              {collectionItem.score}
+            </DetailRow>
+          )}
           {collectionItem.tags.length > 0 && (
-            <div className="flex items-start justify-between gap-4 text-sm">
+            <div className="animate-data-in flex items-start justify-between gap-4 text-sm">
               <span className="text-muted-foreground shrink-0">Tags</span>
               <div className="flex flex-wrap justify-end gap-1.5">
                 {collectionItem.tags.map((tag) => (
@@ -205,7 +271,7 @@ export function CollectionItemCard({
             </div>
           )}
           {collectionItem.notes && (
-            <div className="flex flex-col gap-1.5">
+            <div className="animate-data-in flex flex-col gap-1.5">
               <span className="text-sm text-muted-foreground">Notes</span>
               <p className="text-sm leading-relaxed text-foreground/75 whitespace-pre-wrap">
                 {collectionItem.notes}
@@ -219,7 +285,7 @@ export function CollectionItemCard({
         <Link
           to="/orders/$id"
           params={{ id: relatedOrder.id }}
-          className="text-sm text-primary transition-colors duration-150 ease-out hover:text-primary/80 underline-offset-4 hover:underline"
+          className="animate-data-in text-sm text-primary transition-colors duration-150 ease-out hover:text-primary/80 underline-offset-4 hover:underline"
         >
           View order: {relatedOrder.title}
         </Link>
