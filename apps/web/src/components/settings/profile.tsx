@@ -7,11 +7,13 @@ import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useRouter } from "@tanstack/react-router";
 import * as z from "zod";
 import type { User } from "@/lib/auth-client";
 import { SettingsSection } from "./settings-section";
 
 export function Profile({ user }: { user: User }) {
+  const router = useRouter();
   const form = useForm({
     defaultValues: {
       username: user.username || "",
@@ -26,6 +28,7 @@ export function Profile({ user }: { user: User }) {
         return;
       }
 
+      await router.invalidate();
       toast.success("Profile updated successfully");
     },
     validators: {

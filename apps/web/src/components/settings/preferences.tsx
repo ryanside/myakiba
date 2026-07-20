@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { FieldError } from "@/components/ui/field";
 import { CurrencySelect } from "@/components/currency-select";
+import { useRouter } from "@tanstack/react-router";
 import * as z from "zod";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { CURRENCIES, DATE_FORMATS } from "@myakiba/contracts/shared/constants";
@@ -16,6 +17,7 @@ import type { User } from "@/lib/auth-client";
 import { SettingsSection } from "./settings-section";
 
 export function Preferences({ user }: { user: User }) {
+  const router = useRouter();
   const form = useForm({
     defaultValues: {
       currency: user.currency,
@@ -32,6 +34,7 @@ export function Preferences({ user }: { user: User }) {
         return;
       }
 
+      await router.invalidate();
       toast.success("Preferences updated successfully");
     },
     validators: {
