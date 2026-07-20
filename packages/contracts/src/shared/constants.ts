@@ -65,6 +65,7 @@ export const CATEGORIES = [
 export const CURRENCIES = [
   "USD",
   "JPY",
+  "KRW",
   "CNY",
   "EUR",
   "GBP",

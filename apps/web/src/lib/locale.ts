@@ -4,6 +4,7 @@ import type { Currency } from "@myakiba/contracts/shared/types";
 const CURRENCY_LOCALE_MAP: Readonly<Record<Currency, string>> = {
   BRL: "pt-BR",
   JPY: "ja-JP",
+  KRW: "ko-KR",
   EUR: "de-DE",
   CNY: "zh-CN",
   GBP: "en-GB",
@@ -26,6 +27,7 @@ export const CURRENCY_LABELS: Readonly<Record<Currency, string>> = {
   GBP: "Pound Sterling",
   HKD: "Hong Kong Dollar",
   JPY: "Japanese Yen",
+  KRW: "South Korean Won",
   NZD: "New Zealand Dollar",
   PHP: "Philippine Peso",
   RUB: "Russian Ruble",
