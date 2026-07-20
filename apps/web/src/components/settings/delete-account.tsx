@@ -4,7 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { useForm } from "@tanstack/react-form";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAccountType } from "@/queries/settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import * as z from "zod";
-import { app } from "@/lib/treaty-client";
 import { SettingsSection } from "./settings-section";
 
 export function DeleteAccount() {
@@ -35,43 +34,20 @@ export function DeleteAccount() {
   const queryClient = useQueryClient();
   const isTriggerDisabled = isPending || isError;
 
-  const signOutAndRedirect = () => {
-    void authClient.signOut({
-      fetchOptions: {
-        onSuccess: () => {
-          queryClient.clear();
-          navigate({ to: "/login" });
-        },
-      },
-    });
-  };
-
   const completeAccountDeletion = () => {
     toast.success("Account deleted successfully");
-    void queryClient.invalidateQueries({ queryKey: ["account-type"] });
-    signOutAndRedirect();
+    queryClient.clear();
+    navigate({ to: "/login" });
   };
 
-  const deleteAccountMutation = useMutation({
-    mutationFn: async (confirmationPhrase: string) => {
-      const { data: deleteResult, error: deleteError } = await app.api.settings.account.delete({
-        confirmationPhrase,
-      });
-      if (deleteError) {
-        if (deleteError.status === 422) {
-          throw new Error(deleteError.value.message || "Failed to delete account");
-        }
-        throw new Error(deleteError.value || "Failed to delete account");
-      }
-      return deleteResult;
-    },
+  const deleteUserCallbacks = {
     onSuccess: () => {
       completeAccountDeletion();
     },
-    onError: (mutationError) => {
-      toast.error(mutationError.message || "Failed to delete account");
+    onError: (authError) => {
+      toast.error(authError.error.message || "Failed to delete account");
     },
-  });
+  } satisfies NonNullable<Parameters<typeof authClient.deleteUser>[1]>;
 
   const form = useForm({
     defaultValues: {
@@ -80,19 +56,9 @@ export function DeleteAccount() {
     },
     onSubmit: async ({ value }) => {
       if (hasCredentialAccount) {
-        await authClient.deleteUser(
-          { password: value.password },
-          {
-            onSuccess: () => {
-              completeAccountDeletion();
-            },
-            onError: (authError) => {
-              toast.error(authError.error.message || "Failed to delete account");
-            },
-          },
-        );
+        await authClient.deleteUser({ password: value.password }, deleteUserCallbacks);
       } else {
-        deleteAccountMutation.mutate(value.confirmationPhrase);
+        await authClient.deleteUser({}, deleteUserCallbacks);
       }
     },
   });
@@ -192,11 +158,9 @@ export function DeleteAccount() {
                   <Button
                     type="submit"
                     variant="destructive"
-                    disabled={
-                      !state.canSubmit || state.isSubmitting || deleteAccountMutation.isPending
-                    }
+                    disabled={!state.canSubmit || state.isSubmitting}
                   >
-                    {state.isSubmitting || deleteAccountMutation.isPending ? (
+                    {state.isSubmitting ? (
                       <>
                         <HugeiconsIcon icon={Loading03Icon} className="mr-2 size-4 animate-spin" />
                         Deleting...

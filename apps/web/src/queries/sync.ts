@@ -42,6 +42,8 @@ export async function sendCollection(collection: SyncCollectionItem[]) {
   return data;
 }
 
+export type SyncResponse = Awaited<ReturnType<typeof sendItems>>;
+
 export async function fetchSyncSessions(params: {
   readonly page?: number;
   readonly limit?: number;

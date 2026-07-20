@@ -96,9 +96,9 @@ export default function SignUpForm() {
           .string()
           .min(3, "Username must be at least 3 characters")
           .max(30, "Username must be less than 30 characters"),
-        email: z.email("Invalid email address"),
+        email: z.email({ error: "Invalid email address" }),
         password: z.string().min(8, "Password must be at least 8 characters"),
-        turnstileToken: z.string("Captcha is required"),
+        turnstileToken: z.string({ error: "Captcha is required" }),
       }),
     },
   });
@@ -189,7 +189,7 @@ export default function SignUpForm() {
         <form.Field
           name="email"
           validators={{
-            onBlur: z.email("Invalid email address"),
+            onBlur: z.email({ error: "Invalid email address" }),
           }}
         >
           {(field) => (

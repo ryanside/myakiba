@@ -24,7 +24,8 @@ import { Rating } from "../ui/rating";
 import { Textarea } from "../ui/textarea";
 import { FormSection } from "@/components/ui/form-section";
 import { majorStringToMinorUnits } from "@myakiba/utils/currency";
-import { createDefaultSyncFormCollectionItem, extractMfcItemId } from "@/lib/sync";
+import { createDefaultSyncFormCollectionItem } from "@/lib/sync";
+import { mfcItemIdSchema } from "@myakiba/contracts/sync/schema";
 import { CONDITIONS, SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import { getCurrencyLocale } from "@/lib/locale";
@@ -48,15 +49,11 @@ export default function SyncCollectionForm({
     onSubmit: async ({ value }) => {
       const toMinorUnits = (amount: string): number => majorStringToMinorUnits(amount);
       const payload = value.items.map((item) => {
-        const extractedId = extractMfcItemId(item.itemExternalId);
-        if (!extractedId) {
-          throw new Error(`Invalid item ID: ${item.itemExternalId}`);
-        }
         const { formRowId, ...rest } = item;
         void formRowId;
         return {
           ...rest,
-          itemExternalId: Number.parseInt(extractedId, 10),
+          itemExternalId: mfcItemIdSchema.parse(item.itemExternalId),
           price: toMinorUnits(item.price),
           orderDate: item.orderDate || null,
           paymentDate: item.paymentDate || null,
@@ -123,15 +120,7 @@ export default function SyncCollectionForm({
                   key={item.formRowId}
                   name={`items[${i}].itemExternalId`}
                   validators={{
-                    onChange: ({ value }: { value: string }) => {
-                      if (!value || typeof value !== "string" || value.trim() === "") {
-                        return "MyFigureCollection Item URL or ID is required";
-                      }
-                      const extractedId = extractMfcItemId(value);
-                      if (!extractedId) {
-                        return "Please enter a valid MyFigureCollection Item ID or URL";
-                      }
-                    },
+                    onChange: mfcItemIdSchema,
                   }}
                 >
                   {(subField) => (
@@ -534,7 +523,7 @@ export default function SyncCollectionForm({
                       </div>
                       {!subField.state.meta.isValid && (
                         <p role="alert" className="text-xs text-destructive mt-1">
-                          {subField.state.meta.errors[0]}
+                          {subField.state.meta.errors[0]?.message}
                         </p>
                       )}
                     </div>

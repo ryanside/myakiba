@@ -18,7 +18,7 @@ export default defineConfig({
       }),
     },
     tailwindcss(),
-    tanstackRouter({}),
+    tanstackRouter({ autoCodeSplitting: true }),
     react({ include: /\.(js|jsx|mdx|ts|tsx)$/ }),
   ],
   resolve: {

@@ -14,6 +14,7 @@ import { dash } from "@better-auth/infra";
 const resend = new Resend(env.RESEND_API_KEY);
 
 export const auth = betterAuth({
+  appName: "myakiba",
   secondaryStorage: {
     get: async (key) => {
       return await redis.get(key);
@@ -122,6 +123,7 @@ export const auth = betterAuth({
     cookieCache: {
       enabled: true,
       maxAge: 5 * 60, // Cache duration in seconds
+      strategy: "jwe",
     },
   },
   user: {

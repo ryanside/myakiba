@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { Category, Currency } from "@myakiba/contracts/shared/types";
 import { getCategoryColor } from "@/lib/category-colors";
 import Loader from "../loader";
-import { BreakdownChart } from "./breakdown-chart";
+import * as BreakdownChart from "./breakdown-chart";
 
 interface CollectionBreakdownProps {
   readonly data: readonly { name: Category; count: number; totalValue: number | null }[];
@@ -39,9 +39,13 @@ export function CollectionBreakdown({
         tooltip: (
           <div className="flex flex-col gap-0.5">
             <p className="text-xs font-medium">{item.name}</p>
-            <p className="text-xs">
-              {item.count} {item.count === 1 ? "item" : "items"} ·{" "}
-              {total > 0 ? ((item.count / total) * 100).toFixed(1) : "0.0"}%
+            <p className="flex items-baseline gap-3 text-xs">
+              <span className="tabular-nums">
+                {item.count} {item.count === 1 ? "item" : "items"}
+              </span>
+              <span className="text-muted-foreground tabular-nums">
+                {total > 0 ? ((item.count / total) * 100).toFixed(1) : "0.0"}%
+              </span>
             </p>
           </div>
         ),

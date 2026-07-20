@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   keepPreviousData,
   useMutation,
@@ -11,6 +11,7 @@ import { useFilters } from "@/hooks/use-filters";
 import { getCollection, deleteCollectionItems, updateCollectionItem } from "@/queries/collection";
 import { moveItem, splitOrders } from "@/queries/orders";
 import { hasActiveFiltersOrSorting } from "@/lib/filters";
+import { invalidateCollectionAndOrderQueries } from "@/lib/mutation-query-invalidation";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
@@ -38,7 +39,7 @@ type ItemRelatedCollectionRow = Pick<
 >;
 type ItemRelatedCollectionData = { readonly collection: readonly ItemRelatedCollectionRow[] };
 
-export function collectionQueryOptions(filters: CollectionFilters) {
+function collectionQueryOptions(filters: CollectionFilters) {
   return queryOptions({
     queryKey: ["collection", filters] as const,
     queryFn: () => getCollection(filters),
@@ -116,7 +117,7 @@ export function useCollectionOrderMutations() {
       toast.error("Failed to assign items to an order. Please try again.");
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries();
+      await invalidateCollectionAndOrderQueries(queryClient);
     },
   });
 
@@ -141,15 +142,17 @@ export function useCollectionOrderMutations() {
       toast.error("Failed to assign items to a new order. Please try again.");
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries();
+      await invalidateCollectionAndOrderQueries(queryClient);
     },
   });
   // Keep the latest mutation objects in refs so these action callbacks can stay stable.
   // Recreating them churns CollectionDataGrid columns and causes editable cells to remount.
   const moveItemsMutationRef = useRef(moveItemsMutation);
-  moveItemsMutationRef.current = moveItemsMutation;
   const splitItemsMutationRef = useRef(splitItemsMutation);
-  splitItemsMutationRef.current = splitItemsMutation;
+  useLayoutEffect(() => {
+    moveItemsMutationRef.current = moveItemsMutation;
+    splitItemsMutationRef.current = splitItemsMutation;
+  }, [moveItemsMutation, splitItemsMutation]);
 
   const handleAddCollectionItemsToOrder = useCallback(
     async (
@@ -220,9 +223,11 @@ export function useCollectionMutations(options?: { readonly filters?: Collection
     [pendingCollectionIdList],
   );
   const filtersActiveRef = useRef(filtersActive);
-  filtersActiveRef.current = filtersActive;
   const pendingCollectionIdsRef = useRef<ReadonlySet<string>>(pendingCollectionIds);
   pendingCollectionIdsRef.current = pendingCollectionIds;
+  useLayoutEffect(() => {
+    filtersActiveRef.current = filtersActive;
+  }, [filtersActive]);
 
   const updateMutation = useMutation({
     mutationFn: (values: CollectionItemFormValues) => updateCollectionItem(values),
@@ -281,7 +286,7 @@ export function useCollectionMutations(options?: { readonly filters?: Collection
       toast.success("Collection updated");
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries();
+      await invalidateCollectionAndOrderQueries(queryClient);
     },
   });
 
@@ -316,18 +321,22 @@ export function useCollectionMutations(options?: { readonly filters?: Collection
 
       queryClient.setQueryData<CollectionItem[]>(queryOpts.queryKey, (old) => {
         if (!old) return old;
-        const deletedValue = old
-          .filter((item) => idSet.has(item.id))
-          .reduce((sum, item) => sum + item.price, 0);
+        let deletedValue = 0;
+        const retainedItems: CollectionItem[] = [];
+        for (const item of old) {
+          if (idSet.has(item.id)) {
+            deletedValue += item.price;
+          } else {
+            retainedItems.push(item);
+          }
+        }
         const deletedCount = ids.length;
 
-        return old
-          .filter((item) => !idSet.has(item.id))
-          .map((item) => ({
-            ...item,
-            totalCount: item.totalCount - deletedCount,
-            totalValue: item.totalValue - deletedValue,
-          }));
+        return retainedItems.map((item) => ({
+          ...item,
+          totalCount: item.totalCount - deletedCount,
+          totalValue: item.totalValue - deletedValue,
+        }));
       });
 
       return { previousList, previousItemRelated };
@@ -347,13 +356,15 @@ export function useCollectionMutations(options?: { readonly filters?: Collection
       toast.success("Collection item(s) deleted");
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries();
+      await invalidateCollectionAndOrderQueries(queryClient);
     },
   });
   const updateMutationRef = useRef(updateMutation);
-  updateMutationRef.current = updateMutation;
   const deleteMutationRef = useRef(deleteMutation);
-  deleteMutationRef.current = deleteMutation;
+  useLayoutEffect(() => {
+    updateMutationRef.current = updateMutation;
+    deleteMutationRef.current = deleteMutation;
+  }, [deleteMutation, updateMutation]);
 
   const isCollectionPending = useCallback(
     (collectionId: string): boolean => pendingCollectionIdsRef.current.has(collectionId),

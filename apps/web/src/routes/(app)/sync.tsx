@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { FileUploadIcon, LibraryIcon, PackageIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +31,9 @@ type LaunchableSyncType = Extract<SyncType, "collection" | "csv" | "order">;
 export const Route = createFileRoute("/(app)/sync")({
   component: RouteComponent,
   validateSearch: syncSearchSchema,
+  search: {
+    middlewares: [stripSearchParams({ page: 1, limit: SYNC_WIDGET_RECENT_LIMIT })],
+  },
   head: () => ({
     meta: [
       {
@@ -47,9 +50,7 @@ export const Route = createFileRoute("/(app)/sync")({
 function RouteComponent() {
   const { currency: userCurrency } = useUserPreferences();
   const queryClient = useQueryClient();
-  const { filters, setFilters } = useFilters(Route.id, {
-    paginationDefaults: { limit: SYNC_WIDGET_RECENT_LIMIT },
-  });
+  const { filters, setFilters } = useFilters(Route.id);
 
   const page = filters.page ?? 1;
   const limit = filters.limit ?? SYNC_WIDGET_RECENT_LIMIT;

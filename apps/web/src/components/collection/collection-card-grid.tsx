@@ -332,18 +332,13 @@ export function CollectionCardGrid({
                   {item.itemTitle}
                 </Link>
               </CardTitle>
-              <CardDescription className="flex items-center gap-1.5 text-xs">
+              <CardDescription className="flex items-center gap-2.5 text-xs">
                 {item.itemCategory ? (
                   <span style={{ color: getCategoryColor(item.itemCategory) }}>
                     {item.itemCategory}
                   </span>
                 ) : null}
-                {item.itemScale ? (
-                  <>
-                    <span className="text-border">·</span>
-                    <span>{item.itemScale}</span>
-                  </>
-                ) : null}
+                {item.itemScale ? <span>{item.itemScale}</span> : null}
               </CardDescription>
             </CardHeader>
 

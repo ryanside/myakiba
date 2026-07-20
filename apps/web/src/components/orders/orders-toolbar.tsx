@@ -141,7 +141,7 @@ export function OrdersToolbar({
       <div className="flex items-center justify-start gap-2">
         <DebouncedInput
           value={filters.search ?? ""}
-          onChange={(value) => setFilters({ search: value.toString() })}
+          onChange={(value) => setFilters({ search: value.toString() || undefined })}
           placeholder="Search"
           className="max-w-xs"
         />

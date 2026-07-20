@@ -16,11 +16,6 @@ const searchRouter = new Elysia({ prefix: "/search" })
   .get(
     "/",
     async ({ query, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       log.set({ action: "search", user: { id: user.id }, search: { query: query.search } });
 
       const { data: searchData, error } = await tryCatch(
@@ -60,7 +55,7 @@ const searchRouter = new Elysia({ prefix: "/search" })
       log.set({ result: { count: result.releases.length }, outcome: "success" });
       return result;
     },
-    { query: searchReleasesQuerySchema },
+    { query: searchReleasesQuerySchema, auth: true },
   )
   .get(
     "/entries",
@@ -82,13 +77,11 @@ const searchRouter = new Elysia({ prefix: "/search" })
       log.set({ result: { count: entries.length }, outcome: "success" });
       return { entries };
     },
-    { query: searchEntriesQuerySchema },
+    { query: searchEntriesQuerySchema, auth: true },
   )
   .get(
     "/orders",
     async ({ query, user, log }) => {
-      if (!user) return status(401, "Unauthorized");
-
       log.set({
         action: "search.orders",
         user: { id: user.id },

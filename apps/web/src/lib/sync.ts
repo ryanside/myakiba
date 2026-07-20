@@ -14,7 +14,7 @@ import type {
   SyncSessionStatus,
   SyncSessionItemStatus,
 } from "@myakiba/contracts/shared/types";
-import type { SyncJobPhase, SyncJobStatus } from "@myakiba/contracts/sync/schema";
+import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
 
 export const SESSION_STATUS_CONFIG: Record<
   SyncSessionStatus,
@@ -41,14 +41,6 @@ export const SYNC_TYPE_CONFIG: Record<
   order: { label: "Order", variant: "info" },
   "order-item": { label: "Order Item", variant: "secondary" },
   collection: { label: "Collection", variant: "secondary" },
-};
-
-export const PHASE_CONFIG: Record<SyncJobPhase, { readonly bannerClass: string }> = {
-  queued: { bannerClass: "border-border bg-muted/40 text-muted-foreground" },
-  scraping: { bannerClass: "border-info/30 bg-info/5 text-info" },
-  persisting: { bannerClass: "border-info/30 bg-info/5 text-info" },
-  completed: { bannerClass: "border-success/30 bg-success/5 text-success" },
-  failed: { bannerClass: "border-destructive/30 bg-destructive/5 text-destructive" },
 };
 
 /**
@@ -152,40 +144,7 @@ export const SYNC_OPTION_META: Record<
 } as const;
 
 const SYNC_CSV_STATUS_SET: ReadonlySet<string> = new Set(SYNC_CSV_ITEM_STATUSES);
-
-/**
- * Extracts the MyFigureCollection item ID from a URL or returns the ID if it's already a number.
- * Handles URLs like: https://myfigurecollection.net/item/998271
- * Also handles trailing slashes, query parameters, and fragments.
- *
- * @param input - Either a MyFigureCollection URL or a numeric ID string
- * @returns The extracted item ID as a string, or null if invalid
- */
-export function extractMfcItemId(input: string): string | null {
-  if (!input || typeof input !== "string") {
-    return null;
-  }
-
-  const trimmed = input.trim();
-
-  // If it's already just a number, return it
-  if (/^\d+$/.test(trimmed)) {
-    return trimmed;
-  }
-
-  // Try to extract ID from URL
-  // Pattern: https://myfigurecollection.net/item/{id}
-  // Also handles: http://, trailing slashes, query params, fragments
-  const urlPattern = /myfigurecollection\.net\/item\/(\d+)/i;
-  const match = trimmed.match(urlPattern);
-
-  if (match && match[1]) {
-    return match[1];
-  }
-
-  // If no match found, return null
-  return null;
-}
+const csvTransformationCache = new WeakMap<File, Promise<UserItem[]>>();
 
 export function createDefaultSyncFormOrderItem(itemExternalId = ""): SyncFormOrderItem {
   return {
@@ -243,51 +202,62 @@ export function createDefaultSyncFormCollectionItem(itemExternalId = ""): SyncFo
   };
 }
 
-export async function transformCSVData(value: { file: File | undefined }) {
+export function transformCSVData(value: { file: File | undefined }): Promise<UserItem[]> {
   if (!value.file) {
-    throw new Error("No file selected");
+    return Promise.reject(new Error("No file selected"));
   }
-  const text = await value.file.text();
-  const parsedCSV = Papa.parse(text, {
-    header: true,
-    skipEmptyLines: true,
-    transformHeader: (header: string) => header.trim().toLowerCase().replaceAll(" ", "_"),
-  });
 
-  const validatedCSV = csvSchema.safeParse(parsedCSV.data);
-  if (!validatedCSV.success) {
-    if (import.meta.env.DEV) {
-      console.log("Invalid CSV file", validatedCSV.error);
+  const cachedTransformation = csvTransformationCache.get(value.file);
+  if (cachedTransformation) {
+    return cachedTransformation;
+  }
+
+  // oxlint-disable-next-line promise/prefer-await-to-then -- Preserve one cached promise per File.
+  const transformation = value.file.text().then((text) => {
+    const parsedCSV = Papa.parse(text, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: (header: string) => header.trim().toLowerCase().replaceAll(" ", "_"),
+    });
+
+    const validatedCSV = csvSchema.safeParse(parsedCSV.data);
+    if (!validatedCSV.success) {
+      if (import.meta.env.DEV) {
+        console.log("Invalid CSV file", validatedCSV.error);
+      }
+      throw new Error("Please select a valid MyFigureCollection CSV file");
     }
-    throw new Error("Please select a valid MyFigureCollection CSV file");
-  }
 
-  const filteredData = validatedCSV.data.filter((item) => {
-    return SYNC_CSV_STATUS_SET.has(item.status) && !item.title.startsWith("[NSFW");
+    const filteredData = validatedCSV.data.filter((item) => {
+      return SYNC_CSV_STATUS_SET.has(item.status) && !item.title.startsWith("[NSFW");
+    });
+    if (filteredData.length === 0) {
+      throw new Error("No Owned or Ordered items to sync");
+    }
+    if (import.meta.env.DEV) {
+      console.log("Filtered data:", filteredData);
+    }
+    const userItems: UserItem[] = filteredData.map((item) => {
+      const normalizedStatus = item.status === "Ordered" ? "Ordered" : "Owned";
+      return {
+        itemExternalId: item.id,
+        status: normalizedStatus,
+        count: item.count,
+        score: item.score,
+        payment_date: item.payment_date,
+        shipping_date: item.shipping_date,
+        collecting_date: item.collecting_date,
+        price: item.price_1,
+        shop: item.shop,
+        shipping_method: item.shipping_method,
+        note: item.note,
+        orderId: null,
+        orderDate: item.payment_date,
+      };
+    });
+    return userItems;
   });
-  if (filteredData.length === 0) {
-    throw new Error("No Owned or Ordered items to sync");
-  }
-  if (import.meta.env.DEV) {
-    console.log("Filtered data:", filteredData);
-  }
-  const userItems: UserItem[] = filteredData.map((item) => {
-    const normalizedStatus = item.status === "Ordered" ? "Ordered" : "Owned";
-    return {
-      itemExternalId: Number(item.id),
-      status: normalizedStatus,
-      count: Number(item.count),
-      score: item.score.split("/")[0],
-      payment_date: item.payment_date,
-      shipping_date: item.shipping_date,
-      collecting_date: item.collecting_date,
-      price: item.price_1,
-      shop: item.shop,
-      shipping_method: item.shipping_method,
-      note: item.note,
-      orderId: null,
-      orderDate: item.payment_date,
-    };
-  });
-  return userItems;
+
+  csvTransformationCache.set(value.file, transformation);
+  return transformation;
 }

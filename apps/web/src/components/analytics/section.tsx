@@ -1,36 +1,9 @@
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { ENTRY_CATEGORIES } from "@myakiba/contracts/shared/constants";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-
-// Matches the overview page, which colors sections by display position.
-export const SECTION_DISPLAY_ORDER: readonly string[] = [
-  ...ENTRY_CATEGORIES.map((c) => c.toLowerCase()),
-  "shops",
-  "scales",
-];
-
-export function sectionLabel(sectionName: string): string {
-  return sectionName.charAt(0).toUpperCase() + sectionName.slice(1);
-}
-
-export function sectionGradientColor(sectionName: string): string {
-  return SECTION_GRADIENT_COLORS[
-    SECTION_DISPLAY_ORDER.indexOf(sectionName) % SECTION_GRADIENT_COLORS.length
-  ];
-}
-
-export const SECTION_GRADIENT_COLORS = [
-  "var(--color-blue-600)",
-  "var(--color-violet-600)",
-  "var(--color-emerald-600)",
-  "var(--color-amber-500)",
-  "var(--color-rose-500)",
-  "var(--color-sky-500)",
-] as const;
 
 export function SectionShell({
   gradientColor,

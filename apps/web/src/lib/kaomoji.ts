@@ -1,4 +1,4 @@
-export const KAOMOJI_POOL = [
+const KAOMOJI_POOL = [
   "(˶˃ ᵕ ˂˶) .ᐟ.ᐟ",
   "⋆˚꩜｡",
   "ദ്ദി◝ ⩊ ◜.ᐟ",

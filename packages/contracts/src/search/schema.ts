@@ -1,5 +1,6 @@
 import * as z from "zod";
 import { itemReleaseSchema } from "../item/schema";
+import { paginationLimitSchema, paginationOffsetSchema } from "../shared/pagination";
 
 export const sortDirectionSchema = z.enum(["asc", "desc"]);
 
@@ -77,8 +78,8 @@ export const searchReleasesResponseSchema = z.object({
 
 export const searchEntriesQuerySchema = z.object({
   search: z.string().trim().min(1),
-  limit: z.coerce.number().int().positive().optional(),
-  offset: z.coerce.number().int().min(0).optional(),
+  limit: paginationLimitSchema.optional(),
+  offset: paginationOffsetSchema.optional(),
 });
 
 export const searchEntryResultSchema = z.object({
@@ -93,8 +94,8 @@ export const searchEntriesResponseSchema = z.object({
 
 export const searchOrdersQuerySchema = z.object({
   title: z.string().optional(),
-  limit: z.coerce.number().int().positive().optional(),
-  offset: z.coerce.number().int().min(0).optional(),
+  limit: paginationLimitSchema.optional(),
+  offset: paginationOffsetSchema.optional(),
 });
 
 export const searchOrderIdAndTitleSchema = z.object({
@@ -114,5 +115,9 @@ export type SearchCollectionResult = z.infer<typeof searchCollectionResultSchema
 export type SearchOrderResult = z.infer<typeof searchOrderResultSchema>;
 export type SearchData = z.infer<typeof searchDataSchema>;
 export type SearchResponse = z.infer<typeof searchResponseSchema>;
+export type SearchEntriesQuery = z.infer<typeof searchEntriesQuerySchema>;
 export type SearchEntryResult = z.infer<typeof searchEntryResultSchema>;
+export type SearchEntriesResponse = z.infer<typeof searchEntriesResponseSchema>;
+export type SearchOrdersQuery = z.infer<typeof searchOrdersQuerySchema>;
 export type SearchOrderIdAndTitle = z.infer<typeof searchOrderIdAndTitleSchema>;
+export type SearchOrdersResponse = z.infer<typeof searchOrdersResponseSchema>;

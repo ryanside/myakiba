@@ -26,6 +26,7 @@ dist/
 .cursor/
 .agents/
 /plans/
+/docs/
 skills-lock.json
 .vscode/
 
@@ -59,4 +60,3 @@ lerna-debug.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-

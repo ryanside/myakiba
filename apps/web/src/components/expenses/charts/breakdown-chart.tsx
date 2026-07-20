@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import type { ExpenseBreakdownEntry } from "@myakiba/contracts/expenses/schema";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import { BreakdownChart } from "@/components/dashboard/breakdown-chart";
+import * as BreakdownChart from "@/components/dashboard/breakdown-chart";
 import type { BreakdownChartEntry } from "@/components/dashboard/breakdown-chart";
 import { Section } from "@/components/expenses/section";
 import { EXPENSE_CHART_COLORS } from "@/components/expenses/chart-utils";
@@ -20,9 +20,12 @@ export default function ExpenseBreakdownChart({
   currency,
   locale,
 }: ExpenseBreakdownChartProps): ReactNode {
-  const entries: readonly (BreakdownChartEntry & { readonly amount: number })[] = breakdown
-    .filter((entry) => entry.value > 0)
-    .map((entry, index) => ({
+  const entries: readonly (BreakdownChartEntry & { readonly amount: number })[] = breakdown.reduce<
+    (BreakdownChartEntry & { readonly amount: number })[]
+  >((visibleEntries, entry) => {
+    if (entry.value <= 0) return visibleEntries;
+    const index = visibleEntries.length;
+    visibleEntries.push({
       id: entry.key,
       label: entry.label,
       amount: entry.value,
@@ -31,13 +34,19 @@ export default function ExpenseBreakdownChart({
       tooltip: (
         <div className="flex flex-col gap-0.5">
           <p className="text-xs font-medium">{entry.label}</p>
-          <p className="text-xs">
-            {formatCurrencyFromMinorUnits(entry.value, currency, locale)} ·{" "}
-            {entry.percentage.toFixed(1)}%
+          <p className="flex items-baseline gap-3 text-xs">
+            <span className="tabular-nums">
+              {formatCurrencyFromMinorUnits(entry.value, currency, locale)}
+            </span>
+            <span className="text-muted-foreground tabular-nums">
+              {entry.percentage.toFixed(1)}%
+            </span>
           </p>
         </div>
       ),
-    }));
+    });
+    return visibleEntries;
+  }, []);
 
   return (
     <Section title="expense breakdown" isLoading={isLoading} chartSkeleton>

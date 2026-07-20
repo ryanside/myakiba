@@ -37,21 +37,29 @@ export function OverviewTab({
       </Card>
     );
   }
-  const { collectionStats, categoriesOwned, orders, ordersSummary, unpaidOrders, monthlyOrders } =
-    data ?? {
-      collectionStats: { totalItems: 0, totalSpent: 0 },
-      categoriesOwned: [],
-      orders: [],
-      ordersSummary: {
-        totalShippingAllTime: 0,
-        totalTaxesAllTime: 0,
-        totalDutiesAllTime: 0,
-        totalTariffsAllTime: 0,
-        totalMiscFeesAllTime: 0,
-      },
-      unpaidOrders: [],
-      monthlyOrders: [],
-    };
+  const {
+    collectionStats,
+    categoriesOwned,
+    orders,
+    ordersSummary,
+    unpaidOrderCount,
+    unpaidCosts,
+    monthlyOrders,
+  } = data ?? {
+    collectionStats: { totalItems: 0, totalSpent: 0 },
+    categoriesOwned: [],
+    orders: [],
+    ordersSummary: {
+      totalShippingAllTime: 0,
+      totalTaxesAllTime: 0,
+      totalDutiesAllTime: 0,
+      totalTariffsAllTime: 0,
+      totalMiscFeesAllTime: 0,
+    },
+    unpaidOrderCount: 0,
+    unpaidCosts: 0,
+    monthlyOrders: [],
+  };
 
   const totalSpent =
     Number(collectionStats.totalSpent) +
@@ -60,8 +68,6 @@ export function OverviewTab({
     Number(ordersSummary.totalDutiesAllTime) +
     Number(ordersSummary.totalTariffsAllTime) +
     Number(ordersSummary.totalMiscFeesAllTime);
-
-  const unpaidCosts = unpaidOrders.reduce((total, order) => total + Number(order.total), 0);
 
   return (
     <>
@@ -83,7 +89,7 @@ export function OverviewTab({
           subtitle="orders not yet collected"
           value={ordersSummary.totalActiveOrderCount}
           subvalueTitle="unpaid"
-          subvalue={unpaidOrders.length}
+          subvalue={unpaidOrderCount}
           isLoading={isLoading}
         />
         <KPICard

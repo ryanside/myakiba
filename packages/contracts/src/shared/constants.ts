@@ -93,3 +93,4 @@ export const ANALYTICS_SECTIONS = [
 export const DEFAULT_PAGE_INDEX = 0;
 export const DEFAULT_PAGE_SIZE = 24;
 export const DEFAULT_LIMIT = 24;
+export const MAX_LIMIT = 100;

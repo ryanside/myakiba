@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   keepPreviousData,
   useMutation,
@@ -22,6 +22,7 @@ import {
 } from "@/queries/orders";
 import { updateCollectionItem } from "@/queries/collection";
 import { hasActiveFiltersOrSorting } from "@/lib/filters";
+import { invalidateCollectionAndOrderQueries } from "@/lib/mutation-query-invalidation";
 import type {
   EditedOrder,
   NewOrder,
@@ -36,7 +37,7 @@ import type {
 } from "@myakiba/contracts/orders/types";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 
-export function ordersQueryOptions(filters: OrderFilters) {
+function ordersQueryOptions(filters: OrderFilters) {
   return queryOptions({
     queryKey: ["orders", filters] as const,
     queryFn: () => getOrders(filters),
@@ -121,7 +122,6 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
     [pendingCollectionItemIdList],
   );
   const filtersActiveRef = useRef(filtersActive);
-  filtersActiveRef.current = filtersActive;
   const pendingOrderIdsRef = useRef<ReadonlySet<string>>(pendingOrderIds);
   pendingOrderIdsRef.current = pendingOrderIds;
   const pendingCollectionItemIdsRef = useRef<ReadonlySet<string>>(pendingCollectionItemIds);
@@ -198,7 +198,7 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       toast.error("Failed to update order. Please try again.");
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries();
+      await invalidateCollectionAndOrderQueries(queryClient);
     },
   });
 
@@ -212,12 +212,11 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
 
       queryClient.setQueryData<OrderListItem[]>(ordersOpts.queryKey, (old) => {
         if (!old) return old;
-        return old
-          .filter((order) => !orderIds.has(order.orderId))
-          .map((order) => ({
-            ...order,
-            totalCount: order.totalCount - orderIds.size,
-          }));
+        return old.flatMap((order) =>
+          orderIds.has(order.orderId)
+            ? []
+            : [{ ...order, totalCount: order.totalCount - orderIds.size }],
+        );
       });
 
       return { previous };
@@ -234,7 +233,7 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       toast.error("Failed to delete order(s). Please try again.");
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries();
+      await invalidateCollectionAndOrderQueries(queryClient);
     },
   });
 
@@ -271,7 +270,7 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       toast.success(`Successfully merged ${orderIds.size} orders into one!`);
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries();
+      await invalidateCollectionAndOrderQueries(queryClient);
     },
   });
 
@@ -292,7 +291,7 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       toast.error("Failed to move items to a new order. Please try again.");
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries();
+      await invalidateCollectionAndOrderQueries(queryClient);
     },
   });
 
@@ -370,7 +369,7 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       toast.error("Failed to update item. Please try again.");
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries();
+      await invalidateCollectionAndOrderQueries(queryClient);
     },
   });
 
@@ -448,7 +447,7 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       toast.error("Failed to delete item. Please try again.");
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries();
+      await invalidateCollectionAndOrderQueries(queryClient);
     },
   });
 
@@ -465,7 +464,7 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       toast.error("Failed to delete items. Please try again.");
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries();
+      await invalidateCollectionAndOrderQueries(queryClient);
     },
   });
 
@@ -488,17 +487,28 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       toast.error("Failed to move items. Please try again.");
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries();
+      await invalidateCollectionAndOrderQueries(queryClient);
     },
   });
   const editOrderMutationRef = useRef(editOrderMutation);
-  editOrderMutationRef.current = editOrderMutation;
   const deleteOrdersMutationRef = useRef(deleteOrdersMutation);
-  deleteOrdersMutationRef.current = deleteOrdersMutation;
   const editItemMutationRef = useRef(editItemMutation);
-  editItemMutationRef.current = editItemMutation;
   const deleteItemMutationRef = useRef(deleteItemMutation);
-  deleteItemMutationRef.current = deleteItemMutation;
+
+  useLayoutEffect(() => {
+    filtersActiveRef.current = filtersActive;
+    editOrderMutationRef.current = editOrderMutation;
+    deleteOrdersMutationRef.current = deleteOrdersMutation;
+    editItemMutationRef.current = editItemMutation;
+    deleteItemMutationRef.current = deleteItemMutation;
+  }, [
+    filtersActive,
+    editOrderMutation,
+    deleteOrdersMutation,
+    editItemMutation,
+    deleteItemMutation,
+  ]);
+
   const isOrderPending = useCallback(
     (orderId: string): boolean => pendingOrderIdsRef.current.has(orderId),
     [],

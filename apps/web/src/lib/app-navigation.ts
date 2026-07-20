@@ -27,7 +27,7 @@ export type AppNavigationItem = {
   readonly keywords: readonly string[];
 };
 
-export const APP_PRIMARY_NAVIGATION_ITEMS = [
+const APP_PRIMARY_NAVIGATION_ITEMS = [
   { title: "Dashboard", to: "/dashboard", icon: Home01Icon, keywords: ["home", "overview"] },
   {
     title: "Analytics",

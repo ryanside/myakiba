@@ -20,11 +20,6 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
   .get(
     "/",
     async ({ query, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       log.set({ action: "orders.list", user: { id: user.id } });
 
       const { data: result, error } = await tryCatch(
@@ -85,11 +80,6 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
   .get(
     "/:orderId",
     async ({ params, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       log.set({ action: "orders.get", user: { id: user.id }, order: { id: params.orderId } });
 
       const { data: order, error } = await tryCatch(
@@ -121,11 +111,6 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
   .get(
     "/:orderId/items",
     async ({ params, query, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       log.set({
         action: "orders.items",
         user: { id: user.id },
@@ -154,11 +139,6 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
   .get(
     "/:orderId/item-releases",
     async ({ params, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       log.set({
         action: "orders.item_releases",
         user: { id: user.id },
@@ -186,11 +166,6 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
   .post(
     "/merge",
     async ({ body, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       log.set({
         action: "orders.merge",
         user: { id: user.id },
@@ -241,11 +216,6 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
   .post(
     "/split",
     async ({ body, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       log.set({
         action: "orders.split",
         user: { id: user.id },
@@ -291,11 +261,6 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
   .put(
     "/move-items",
     async ({ body, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       log.set({
         action: "orders.move_items",
         user: { id: user.id },
@@ -310,6 +275,11 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
       );
 
       if (error) {
+        if (error.message === "ORDER_NOT_FOUND") {
+          log.set({ outcome: "not_found" });
+          return status(404, "Order not found");
+        }
+
         log.error(error, { step: "move_items" });
         log.set({ outcome: "error" });
         return status(500, "Failed to move items");
@@ -330,11 +300,6 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
   .put(
     "/:orderId",
     async ({ params, body, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       log.set({
         action: "orders.update",
         user: { id: user.id },
@@ -371,11 +336,6 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
   .delete(
     "/",
     async ({ body, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       log.set({
         action: "orders.delete_many",
         user: { id: user.id },
@@ -411,11 +371,6 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
   .delete(
     "/items",
     async ({ body, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       log.set({
         action: "orders.delete_items",
         user: { id: user.id },
@@ -446,11 +401,6 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
   .delete(
     "/:orderId/items/:collectionId",
     async ({ params, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       log.set({
         action: "orders.delete_item",
         user: { id: user.id },

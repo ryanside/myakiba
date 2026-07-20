@@ -1,13 +1,21 @@
 import type { ReactNode } from "react";
 import { useCallback } from "react";
-import { createFileRoute, notFound } from "@tanstack/react-router";
+import { createFileRoute, notFound, stripSearchParams } from "@tanstack/react-router";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { ANALYTICS_SECTIONS, DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
+import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
+import {
+  analyticsSectionSchema,
+  analyticsSectionSearchSchema,
+} from "@myakiba/contracts/analytics/schema";
+import type {
+  AnalyticsSectionSort,
+  AnalyticsSectionSortOrder,
+} from "@myakiba/contracts/analytics/schema";
 import { Search01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { z } from "zod";
 import { SectionTable } from "@/components/analytics/section-table";
-import { SectionShell, sectionGradientColor, sectionLabel } from "@/components/analytics/section";
+import { SectionShell } from "@/components/analytics/section";
+import { sectionGradientColor, sectionLabel } from "@/components/analytics/section-utils";
 import { DebouncedInput } from "@/components/debounced-input";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { BackLink } from "@/components/ui/back-link";
@@ -15,23 +23,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useFilters } from "@/hooks/use-filters";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { getAnalyticsSection } from "@/queries/analytics";
-import type { AnalyticsSectionSort, AnalyticsSectionSortOrder } from "@/queries/analytics";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-
-const analyticsSectionSchema = z.enum(ANALYTICS_SECTIONS);
-
-const sectionSearchSchema = z.object({
-  search: z.string().optional(),
-  limit: z.coerce.number().int().positive().optional(),
-  offset: z.coerce.number().int().min(0).optional(),
-  sort: z.enum(["name", "itemCount", "totalSpent"]).optional(),
-  order: z.enum(["asc", "desc"]).optional(),
-});
 
 const KPI_LABELS = ["Unique", "Total Items", "Total Spent", "Avg. Spent"] as const;
 
 export const Route = createFileRoute("/(app)/analytics_/$sectionName")({
-  validateSearch: sectionSearchSchema,
+  validateSearch: analyticsSectionSearchSchema,
+  search: {
+    middlewares: [stripSearchParams({ limit: DEFAULT_LIMIT, offset: 0 })],
+  },
   beforeLoad: ({ params }) => {
     const sectionNameResult = analyticsSectionSchema.safeParse(params.sectionName);
 
@@ -56,9 +56,7 @@ export const Route = createFileRoute("/(app)/analytics_/$sectionName")({
 function RouteComponent(): ReactNode {
   const sectionName = analyticsSectionSchema.parse(Route.useParams().sectionName);
   const { currency, locale } = useUserPreferences();
-  const { filters, setFilters } = useFilters("/(app)/analytics_/$sectionName", {
-    paginationDefaults: { limit: DEFAULT_LIMIT },
-  });
+  const { filters, setFilters } = useFilters("/(app)/analytics_/$sectionName");
 
   const limit = filters.limit ?? DEFAULT_LIMIT;
   const offset = filters.offset ?? 0;

@@ -19,15 +19,15 @@ import type {
   SortingState,
 } from "@tanstack/react-table";
 import type { AnalyticsSection } from "@myakiba/contracts/shared/types";
-import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import { DataTable } from "@/components/data-table/data-table";
-import { Button } from "@/components/ui/button";
-import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type {
-  AnalyticsSectionRow,
   AnalyticsSectionSort,
   AnalyticsSectionSortOrder,
-} from "@/queries/analytics";
+} from "@myakiba/contracts/analytics/schema";
+import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
+import * as DataTable from "@/components/data-table/data-table";
+import { Button } from "@/components/ui/button";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
+import type { AnalyticsSectionRow } from "@/queries/analytics";
 import { cn } from "@/lib/utils";
 import { ExpandedRowContent } from "@/components/analytics/section-expanded-row";
 

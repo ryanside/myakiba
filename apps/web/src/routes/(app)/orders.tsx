@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import OrdersDataGrid from "@/components/orders/orders-data-grid";
 import { OrdersQuickFilters } from "@/components/orders/orders-quick-filters";
 import { searchSchema } from "@myakiba/contracts/orders/schema";
@@ -6,10 +6,16 @@ import { KPICard } from "@/components/ui/kpi-card";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { useOrdersQuery } from "@/hooks/use-orders";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
+import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 
 export const Route = createFileRoute("/(app)/orders")({
   component: RouteComponent,
   validateSearch: searchSchema,
+  search: {
+    middlewares: [
+      stripSearchParams({ limit: DEFAULT_LIMIT, offset: 0, sort: "createdAt", order: "desc" }),
+    ],
+  },
   head: () => ({
     meta: [
       {

@@ -69,7 +69,7 @@ function getSegmentWidth(percentage: number): number {
   return percentage;
 }
 
-function BreakdownChartRoot({ entries, children }: BreakdownChartRootProps): ReactNode {
+export function Root({ entries, children }: BreakdownChartRootProps): ReactNode {
   const [hoveredEntryId, setHoveredEntryId] = useState<string | null>(null);
 
   const contextValue = useMemo(
@@ -84,7 +84,7 @@ function BreakdownChartRoot({ entries, children }: BreakdownChartRootProps): Rea
   return <BreakdownChartContext value={contextValue}>{children}</BreakdownChartContext>;
 }
 
-function BreakdownChartBar(): ReactNode {
+export function Bar(): ReactNode {
   const { entries, hoveredEntryId, setHoveredEntryId } = useBreakdownChartContext();
 
   return (
@@ -117,7 +117,7 @@ function BreakdownChartBar(): ReactNode {
   );
 }
 
-function BreakdownChartLegend({ children, className }: BreakdownChartLegendProps): ReactNode {
+export function Legend({ children, className }: BreakdownChartLegendProps): ReactNode {
   return (
     <div className={className ?? "animate-data-in flex flex-col gap-0.5 [--data-in-delay:100ms]"}>
       {children}
@@ -125,7 +125,7 @@ function BreakdownChartLegend({ children, className }: BreakdownChartLegendProps
   );
 }
 
-function BreakdownChartLegendItem({
+export function LegendItem({
   entryId,
   className,
   children,
@@ -160,10 +160,3 @@ function BreakdownChartLegendItem({
     },
   });
 }
-
-export const BreakdownChart = {
-  Root: BreakdownChartRoot,
-  Bar: BreakdownChartBar,
-  Legend: BreakdownChartLegend,
-  LegendItem: BreakdownChartLegendItem,
-} as const;

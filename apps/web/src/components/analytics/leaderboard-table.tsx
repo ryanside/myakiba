@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type { ColumnDef } from "@tanstack/react-table";
-import { DataTable } from "@/components/data-table/data-table";
+import * as DataTable from "@/components/data-table/data-table";
 
 export interface RowNavigation {
   to: string;

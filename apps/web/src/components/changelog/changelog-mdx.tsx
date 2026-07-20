@@ -1,9 +1,8 @@
 import { useState } from "react";
 import type { ComponentProps } from "react";
-import type { MDXComponents } from "mdx/types";
 import { cn } from "@/lib/utils";
 
-function ChangelogLink({ children, href, ...props }: ComponentProps<"a">) {
+export function ChangelogLink({ children, href, ...props }: ComponentProps<"a">) {
   const isExternal = href?.startsWith("http://") || href?.startsWith("https://");
 
   return (
@@ -58,16 +57,10 @@ export function ChangelogCoverImage({
   );
 }
 
-function ChangelogTable(props: ComponentProps<"table">) {
+export function ChangelogTable(props: ComponentProps<"table">) {
   return (
     <div className="typeset-scroll">
       <table {...props} />
     </div>
   );
 }
-
-export const changelogMdxComponents = {
-  a: ChangelogLink,
-  img: ChangelogImage,
-  table: ChangelogTable,
-} satisfies MDXComponents;

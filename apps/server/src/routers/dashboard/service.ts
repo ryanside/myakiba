@@ -1,8 +1,8 @@
 import { db } from "@myakiba/db/client";
 import { item, collection, item_release, order } from "@myakiba/db/schema/figure";
 import type { Category } from "@myakiba/contracts/shared/types";
-import { eq, count, and, sum, asc, sql, desc, ne, gte, lte, exists, or } from "drizzle-orm";
-import { toDateOnlyString } from "@myakiba/utils/date-only";
+import { eq, count, and, sum, asc, sql, desc, ne, gte, lt, lte, exists, or } from "drizzle-orm";
+import { getDateOnlyMonthBounds, toDateOnlyString } from "@myakiba/utils/date-only";
 
 const DASHBOARD_KANBAN_ORDER_LIMIT = 75;
 
@@ -11,7 +11,7 @@ class DashboardService {
   private categoriesOwnedPrepared;
   private ordersPrepared;
   private ordersSummaryPrepared;
-  private unpaidOrdersPrepared;
+  private unpaidSummaryPrepared;
   private monthlyOrdersPrepared;
   private releaseCalendarPrepared;
   private monthlySummaryPrepared;
@@ -196,25 +196,27 @@ class DashboardService {
       .where(eq(order.userId, sql.placeholder("userId")))
       .prepare("orders_summary");
 
-    this.unpaidOrdersPrepared = db
+    const unpaidOrderTotalsBase = db
       .select({
         orderId: order.id,
-        title: order.title,
-        shop: order.shop,
-        releaseDate: order.releaseDate,
-        itemImages: sql<
-          string[]
-        >`array_agg(DISTINCT ${item.image}) FILTER (WHERE ${item.image} IS NOT NULL)`,
-        itemIds: sql<string[]>`array_agg(DISTINCT ${item.id})`,
-        total: sql<number>`COALESCE(${sum(collection.price)}, 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`,
+        perOrderTotal:
+          sql<number>`COALESCE(${sum(collection.price)}, 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`.as(
+            "perOrderTotal",
+          ),
       })
       .from(order)
       .leftJoin(collection, and(eq(order.id, collection.orderId)))
-      .leftJoin(item, eq(collection.itemId, item.id))
       .where(and(eq(order.userId, sql.placeholder("userId")), eq(order.status, "Ordered")))
-      .orderBy(asc(order.releaseDate))
-      .groupBy(order.id, order.title, order.shop, order.releaseDate)
-      .prepare("unpaid_orders");
+      .groupBy(order.id)
+      .as("unpaid_orders_base");
+
+    this.unpaidSummaryPrepared = db
+      .select({
+        unpaidOrderCount: count(unpaidOrderTotalsBase.orderId),
+        unpaidCosts: sql<number>`COALESCE(${sum(unpaidOrderTotalsBase.perOrderTotal)}, 0)`,
+      })
+      .from(unpaidOrderTotalsBase)
+      .prepare("unpaid_summary");
 
     // Monthly Orders - Order counts grouped by release month for current year
     this.monthlyOrdersPrepared = db
@@ -227,7 +229,7 @@ class DashboardService {
         and(
           eq(order.userId, sql.placeholder("userId")),
           gte(order.releaseDate, sql.placeholder("startOfYear")),
-          lte(order.releaseDate, sql.placeholder("endOfYear")),
+          lt(order.releaseDate, sql.placeholder("startOfNextYear")),
         ),
       )
       .groupBy(sql`EXTRACT(MONTH FROM ${order.releaseDate})`)
@@ -362,17 +364,23 @@ class DashboardService {
 
   async getDashboard(userId: string) {
     const now = new Date();
-    const overviewStartDate = toDateOnlyString(new Date(now.getFullYear(), now.getMonth() - 2, 1));
-    const overviewEndDate = toDateOnlyString(new Date(now.getFullYear(), now.getMonth() + 3, 0));
-    const startOfYear = toDateOnlyString(new Date(now.getFullYear(), 0, 1));
-    const endOfYear = toDateOnlyString(new Date(now.getFullYear() + 1, 0, 1));
+    const currentYear = now.getUTCFullYear();
+    const currentMonthIndex = now.getUTCMonth();
+    const overviewStartDate = toDateOnlyString(
+      new Date(Date.UTC(currentYear, currentMonthIndex - 2, 1)),
+    );
+    const overviewEndDate = toDateOnlyString(
+      new Date(Date.UTC(currentYear, currentMonthIndex + 3, 0)),
+    );
+    const startOfYear = `${currentYear}-01-01`;
+    const startOfNextYear = `${currentYear + 1}-01-01`;
 
     const [
       collectionStatsRows,
       categoriesOwned,
       orders,
       ordersSummaryRows,
-      unpaidOrders,
+      unpaidSummaryRows,
       monthlyOrders,
     ] = await Promise.all([
       this.collectionStatsPrepared.execute({ userId }),
@@ -389,12 +397,12 @@ class DashboardService {
         userId,
       }),
 
-      this.unpaidOrdersPrepared.execute({ userId }),
+      this.unpaidSummaryPrepared.execute({ userId }),
 
       this.monthlyOrdersPrepared.execute({
         userId,
         startOfYear,
-        endOfYear,
+        startOfNextYear,
       }),
     ]);
 
@@ -410,20 +418,26 @@ class DashboardService {
       totalTariffsAllTime: 0,
       totalMiscFeesAllTime: 0,
     };
+    const unpaidSummary = unpaidSummaryRows[0] ?? {
+      unpaidOrderCount: 0,
+      unpaidCosts: 0,
+    };
+    const unpaidOrderCount = Number(unpaidSummary.unpaidOrderCount ?? 0);
+    const unpaidCosts = Number(unpaidSummary.unpaidCosts ?? 0);
 
     return {
       collectionStats,
       categoriesOwned,
       orders,
       ordersSummary,
-      unpaidOrders,
+      unpaidOrderCount,
+      unpaidCosts,
       monthlyOrders,
     };
   }
 
   async getReleaseCalendar(userId: string, month: number, year: number) {
-    const startDate = toDateOnlyString(new Date(year, month - 1, 1));
-    const endDate = toDateOnlyString(new Date(year, month, 0));
+    const { start: startDate, end: endDate } = getDateOnlyMonthBounds(year, month);
 
     const releases = await this.releaseCalendarPrepared.execute({
       userId,
@@ -435,8 +449,7 @@ class DashboardService {
   }
 
   async getMonthlyDashboard(userId: string, month: number, year: number) {
-    const startDate = toDateOnlyString(new Date(year, month - 1, 1));
-    const endDate = toDateOnlyString(new Date(year, month, 0));
+    const { start: startDate, end: endDate } = getDateOnlyMonthBounds(year, month);
     const params = { userId, startDate, endDate };
 
     // The monthly response now comes from three queries instead of multiple overlapping scans.

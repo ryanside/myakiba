@@ -463,7 +463,7 @@ function UnifiedItemMoveFormContent({
                                 {field.state.value && (
                                   <span className="flex items-center gap-2">
                                     <span
-                                      className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[field.state.value] ?? "bg-muted"}`}
+                                      className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[field.state.value]}`}
                                     />
                                     {field.state.value}
                                   </span>
@@ -475,7 +475,7 @@ function UnifiedItemMoveFormContent({
                                 <SelectItem key={status} value={status}>
                                   <span className="flex items-center gap-2">
                                     <span
-                                      className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[status] ?? "bg-muted"}`}
+                                      className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[status]}`}
                                     />
                                     {status}
                                   </span>

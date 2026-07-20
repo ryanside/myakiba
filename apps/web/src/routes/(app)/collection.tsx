@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import { CollectionDataGrid } from "@/components/collection/collection-data-grid";
 import { CollectionQuickFilters } from "@/components/collection/collection-quick-filters";
 import { collectionSearchSchema } from "@myakiba/contracts/collection/schema";
@@ -6,10 +6,16 @@ import { KPICard } from "@/components/ui/kpi-card";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { useCollectionQuery } from "@/hooks/use-collection";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
+import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 
 export const Route = createFileRoute("/(app)/collection")({
   component: RouteComponent,
   validateSearch: collectionSearchSchema,
+  search: {
+    middlewares: [
+      stripSearchParams({ limit: DEFAULT_LIMIT, offset: 0, sort: "createdAt", order: "desc" }),
+    ],
+  },
   head: () => ({
     meta: [
       {

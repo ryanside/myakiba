@@ -213,12 +213,19 @@ class OrdersService {
         tariffs: order.tariffs,
         miscFees: order.miscFees,
         notes: order.notes,
+        images: sql<string[]>`
+          COALESCE(
+            ARRAY_AGG(DISTINCT ${item.image}) FILTER (WHERE ${item.image} IS NOT NULL),
+            ARRAY[]::text[]
+          )
+        `,
         createdAt: order.createdAt,
         updatedAt: order.updatedAt,
         itemCount: sql<number>`COUNT(${collection.id})`,
       })
       .from(order)
       .leftJoin(collection, eq(order.id, collection.orderId))
+      .leftJoin(item, eq(collection.itemId, item.id))
       .where(and(eq(order.userId, userId), eq(order.id, orderId)))
       .groupBy(order.id);
 
@@ -226,7 +233,10 @@ class OrdersService {
       throw new Error("ORDER_NOT_FOUND");
     }
 
-    return orderInfoRows[0];
+    return {
+      ...orderInfoRows[0],
+      images: orderInfoRows[0].images.slice(0, 4),
+    };
   }
 
   async mergeOrders(
@@ -334,7 +344,10 @@ class OrdersService {
     const updated = await db.transaction(async (tx) => {
       const orderUpdated = await tx
         .update(order)
-        .set(updatedOrder)
+        .set({
+          ...updatedOrder,
+          updatedAt: new Date(),
+        })
         .where(and(eq(order.userId, userId), eq(order.id, orderId)))
         .returning();
       if (orderUpdated.length === 0) {
@@ -390,7 +403,7 @@ class OrdersService {
     return deleted;
   }
 
-  async deleteOrderItem(userId: string, _orderId: string, collectionId: string) {
+  async deleteOrderItem(userId: string, orderId: string, collectionId: string) {
     // TODO: Refactor data sent to the server to reduce this to a single query
     const updated = await db
       .update(collection)
@@ -399,6 +412,7 @@ class OrdersService {
         and(
           eq(collection.userId, userId),
           eq(collection.id, collectionId),
+          eq(collection.orderId, orderId),
           eq(collection.status, "Owned"),
         ),
       )
@@ -410,13 +424,14 @@ class OrdersService {
         and(
           eq(collection.userId, userId),
           eq(collection.id, collectionId),
+          eq(collection.orderId, orderId),
           ne(collection.status, "Owned"),
         ),
       )
       .returning();
 
     if (updated.length === 0 && deleted.length === 0) {
-      throw new Error("ORDER_ITEMS_NOT_FOUND");
+      throw new Error("ORDER_ITEM_NOT_FOUND");
     }
 
     return {};
@@ -475,23 +490,37 @@ class OrdersService {
         ? or(inArray(collection.orderId, orderIds), isNull(collection.orderId))
         : undefined;
 
-    const moved = await db
-      .update(collection)
-      .set({ orderId: targetOrderId })
-      .where(
-        and(
-          eq(collection.userId, userId),
-          inArray(collection.id, collectionIds),
-          sourceOrderFilter,
-        ),
-      )
-      .returning();
+    const moved = await db.transaction(async (tx) => {
+      const targetOrder = await tx
+        .select({ id: order.id })
+        .from(order)
+        .where(and(eq(order.id, targetOrderId), eq(order.userId, userId)))
+        .limit(1);
 
-    if (moved.length === 0) {
-      throw new Error("FAILED_TO_MOVE_ITEMS");
-    }
+      if (targetOrder.length === 0) {
+        throw new Error("ORDER_NOT_FOUND");
+      }
 
-    return {};
+      const movedItems = await tx
+        .update(collection)
+        .set({ orderId: targetOrderId })
+        .where(
+          and(
+            eq(collection.userId, userId),
+            inArray(collection.id, collectionIds),
+            sourceOrderFilter,
+          ),
+        )
+        .returning();
+
+      if (movedItems.length === 0) {
+        throw new Error("FAILED_TO_MOVE_ITEMS");
+      }
+
+      return {};
+    });
+
+    return moved;
   }
 
   async getOrderItemReleases(userId: string, orderId: string) {

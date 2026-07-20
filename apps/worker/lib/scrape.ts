@@ -3,6 +3,7 @@ import path from "node:path";
 import { URL } from "node:url";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { createError } from "evlog";
+import * as z from "zod";
 import {
   extractArrayData,
   extractArrayDataWithIds,
@@ -29,6 +30,100 @@ const s3Client = new S3Client({
   region: env.AWS_BUCKET_REGION,
 });
 
+const MFC_BASE_URL = "https://myfigurecollection.net";
+const MFC_HOSTNAME = "myfigurecollection.net";
+const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_IMAGE_REDIRECTS = 3;
+const ALLOWED_IMAGE_CONTENT_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/avif",
+] as const;
+
+const allowedImageUrlSchema = z
+  .instanceof(URL)
+  .refine((url) => url.protocol === "https:")
+  .refine((url) => url.username === "" && url.password === "")
+  .refine((url) => url.port === "")
+  .refine((url) => {
+    const hostname = url.hostname.toLowerCase();
+    return hostname === MFC_HOSTNAME || hostname.endsWith(`.${MFC_HOSTNAME}`);
+  });
+
+const imageResponseMetadataSchema = z.object({
+  contentType: z
+    .string()
+    .transform((value) => value.split(";", 1)[0]?.trim().toLowerCase() ?? "")
+    .pipe(z.enum(ALLOWED_IMAGE_CONTENT_TYPES)),
+  contentLength: z
+    .string()
+    .regex(/^\d+$/)
+    .transform(Number)
+    .pipe(z.number().safe().int().nonnegative().max(MAX_IMAGE_SIZE_BYTES))
+    .nullable(),
+});
+
+const parseAllowedImageUrl = (rawUrl: string, baseUrl: string | URL = MFC_BASE_URL): URL => {
+  let url: URL;
+  try {
+    url = new URL(rawUrl, baseUrl);
+  } catch {
+    throw createError({
+      message: "Image URL is malformed",
+      why: "Image URL could not be resolved against the MyFigureCollection origin",
+      fix: "Use a valid MyFigureCollection image URL",
+    });
+  }
+
+  const result = z.safeParse(allowedImageUrlSchema, url);
+  if (!result.success) {
+    throw createError({
+      message: "Image URL is not an allowed MyFigureCollection HTTPS URL",
+      why: `Rejected image URL destination ${url.origin}`,
+      fix: "Use an HTTPS image URL on myfigurecollection.net or an approved subdomain",
+    });
+  }
+
+  return result.data;
+};
+
+const cancelResponseBody = async (response: Response): Promise<void> => {
+  await response.body?.cancel().catch(() => null);
+};
+
+const readImageBody = async (response: Response): Promise<Buffer> => {
+  if (!response.body) {
+    throw createError({
+      message: "Image response has no body",
+      why: "The upstream server returned a successful response without a readable body",
+    });
+  }
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    totalBytes += value.byteLength;
+    if (totalBytes > MAX_IMAGE_SIZE_BYTES) {
+      const sizeError = createError({
+        message: "Image response exceeds the allowed size",
+        why: `Streamed image size exceeded ${MAX_IMAGE_SIZE_BYTES} bytes`,
+      });
+      await reader.cancel("Image response exceeded the allowed size").catch(() => null);
+      throw sizeError;
+    }
+    chunks.push(value);
+  }
+
+  return Buffer.concat(chunks, totalBytes);
+};
+
 export const scrapeImage = async ({
   imageUrl,
   log,
@@ -37,34 +132,72 @@ export const scrapeImage = async ({
 }: ScrapeImageParams) => {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const response = await fetch(imageUrl, createFetchOptions(true));
+      let finalUrl = parseAllowedImageUrl(imageUrl);
+      let response: Response;
+      let redirectCount = 0;
+
+      while (true) {
+        response = await fetch(finalUrl, {
+          ...createFetchOptions(true),
+          redirect: "manual",
+        });
+
+        if (response.status < 300 || response.status >= 400) break;
+
+        const location = response.headers.get("location");
+        if (!location) {
+          await cancelResponseBody(response);
+          throw createError({
+            message: `Image redirect from ${finalUrl.href} is missing Location`,
+            status: response.status,
+            why: "Upstream returned a redirect without a destination",
+          });
+        }
+        if (redirectCount >= MAX_IMAGE_REDIRECTS) {
+          await cancelResponseBody(response);
+          throw createError({
+            message: `Image redirect limit exceeded for ${imageUrl}`,
+            status: response.status,
+            why: `Upstream required more than ${MAX_IMAGE_REDIRECTS} redirects`,
+          });
+        }
+
+        await cancelResponseBody(response);
+        finalUrl = parseAllowedImageUrl(location, finalUrl);
+        redirectCount += 1;
+      }
 
       if (!response.ok) {
-        throw createError({
-          message: `HTTP ${response.status} for ${imageUrl}`,
+        const responseError = createError({
+          message: `HTTP ${response.status} for ${finalUrl.href}`,
           status: response.status,
           why: "Image URL returned non-OK status",
         });
+        await cancelResponseBody(response);
+        throw responseError;
       }
 
-      const imageBuffer = Buffer.from(await response.arrayBuffer());
-      const url = new URL(imageUrl);
-      const filename = path.basename(url.pathname);
-      const contentType = response.headers.get("content-type");
-
-      if (!contentType || !contentType.startsWith("image/")) {
-        throw createError({
-          message: "URL does not point to a valid image content type",
-          why: `Response content-type was "${contentType ?? "null"}"`,
-          fix: "Verify the image URL points to a valid image",
+      const metadataResult = z.safeParse(imageResponseMetadataSchema, {
+        contentType: response.headers.get("content-type"),
+        contentLength: response.headers.get("content-length"),
+      });
+      if (!metadataResult.success) {
+        const metadataError = createError({
+          message: "Image response metadata failed validation",
+          why: `Response must be an allowed raster image no larger than ${MAX_IMAGE_SIZE_BYTES} bytes`,
+          fix: "Verify the image URL returns JPEG, PNG, WebP, GIF, or AVIF data",
         });
+        await cancelResponseBody(response);
+        throw metadataError;
       }
+      const imageBuffer = await readImageBody(response);
+      const filename = path.basename(finalUrl.pathname);
 
       const command = new PutObjectCommand({
         Bucket: env.AWS_BUCKET_NAME,
         Key: filename,
         Body: imageBuffer,
-        ContentType: contentType,
+        ContentType: metadataResult.data.contentType,
       });
       const uploadResult = await s3Client.send(command);
 

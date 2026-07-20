@@ -7,7 +7,36 @@ import {
   SYNC_TYPES,
 } from "../shared/constants";
 import type { SyncSessionStatus } from "../shared/types";
+import { paginationLimitSchema, paginationPageSchema } from "../shared/pagination";
 import { SYNC_CSV_ITEM_STATUSES } from "./constants";
+
+const MFC_ITEM_URL_PATTERN =
+  /^(?:https?:\/\/)?(?:www\.)?myfigurecollection\.net\/item\/(\d+)(?:[/?#].*)?$/i;
+
+export const mfcItemIdSchema = z
+  .string()
+  .trim()
+  .transform((value, context) => {
+    if (value === "") {
+      context.addIssue({
+        code: "custom",
+        message: "MyFigureCollection Item URL or ID is required",
+      });
+      return z.NEVER;
+    }
+
+    const itemId = /^\d+$/.test(value) ? value : value.match(MFC_ITEM_URL_PATTERN)?.[1];
+    if (!itemId) {
+      context.addIssue({
+        code: "custom",
+        message: "Please enter a valid MyFigureCollection Item ID or URL",
+      });
+      return z.NEVER;
+    }
+
+    return Number(itemId);
+  })
+  .pipe(z.number().int().positive());
 
 /**
  * Schema for CSV date fields that handles MFC export quirks.
@@ -24,8 +53,8 @@ const csvDateSchema = z
   .pipe(z.iso.date().nullable());
 
 export const syncSearchSchema = z.object({
-  page: z.coerce.number().int().positive().optional(),
-  limit: z.coerce.number().int().positive().optional(),
+  page: paginationPageSchema.optional(),
+  limit: paginationLimitSchema.optional(),
   status: z.array(z.enum(SYNC_SESSION_STATUSES)).optional(),
   syncType: z.array(z.enum(SYNC_TYPES)).optional(),
 });
@@ -103,6 +132,7 @@ export const syncOrderSchema = z.object({
 });
 
 export const syncOrderItemSchema = z.object({
+  collectionId: z.string(),
   userId: z.string(),
   orderId: z.string(),
   releaseId: z.string().nullable(),
@@ -120,6 +150,7 @@ export const syncOrderItemSchema = z.object({
 });
 
 export const syncOrderItemInputSchema = syncOrderItemSchema.omit({
+  collectionId: true,
   userId: true,
   orderId: true,
   releaseId: true,
@@ -132,6 +163,7 @@ export const syncOrderItemsSchema = z.object({
 });
 
 export const syncCollectionItemSchema = z.object({
+  collectionId: z.string(),
   userId: z.string(),
   releaseId: z.string().nullable(),
   itemId: z.string().nullable(),
@@ -150,8 +182,22 @@ export const syncCollectionItemSchema = z.object({
   notes: z.string(),
 });
 
+const csvItemIdSchema = z
+  .string()
+  .trim()
+  .regex(/^\d+$/)
+  .transform(Number)
+  .pipe(z.number().int().positive());
+const csvItemCountSchema = z
+  .string()
+  .trim()
+  .transform((value) => value || "1")
+  .refine((value) => /^\d+$/.test(value), "Count must be a positive integer")
+  .transform(Number)
+  .pipe(z.number().int().positive());
+
 export const csvItemSchema = z.object({
-  id: z.string(),
+  id: csvItemIdSchema,
   title: z.string(),
   root: z.string(),
   category: z.string(),
@@ -163,11 +209,8 @@ export const csvItemSchema = z.object({
     .string()
     .transform((value) => (value === "" ? undefined : value))
     .pipe(z.enum(["Owned", "Ordered", "Wished"]).default("Owned")),
-  count: z
-    .string()
-    .transform((value) => (value === "" ? undefined : value))
-    .pipe(z.string().default("1")),
-  score: z.string(),
+  count: csvItemCountSchema,
+  score: z.string().transform((value) => value.split("/", 1).join("")),
   payment_date: csvDateSchema,
   shipping_date: csvDateSchema,
   collecting_date: csvDateSchema,
@@ -185,6 +228,7 @@ export const csvItemSchema = z.object({
 export const csvSchema = z.array(csvItemSchema);
 
 export const internalCsvItemSchema = z.object({
+  collectionId: z.string(),
   itemExternalId: z.number(),
   status: z.enum(SYNC_CSV_ITEM_STATUSES),
   count: z.number(),
@@ -201,6 +245,7 @@ export const internalCsvItemSchema = z.object({
 });
 
 export const csvItemMetadataSchema = internalCsvItemSchema.omit({
+  collectionId: true,
   itemExternalId: true,
 });
 
@@ -217,50 +262,74 @@ export const orderItemMetadataSchema = syncOrderItemSchema.pick({
 });
 
 export const collectionItemMetadataSchema = syncCollectionItemSchema.omit({
+  collectionId: true,
   userId: true,
   releaseId: true,
   itemId: true,
   itemExternalId: true,
 });
 
+export const queuedCollectionItemSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  itemId: z.string(),
+  orderId: z.string().nullable(),
+  status: z.enum(ORDER_STATUSES),
+  count: z.number(),
+  releaseId: z.string().nullable(),
+  score: z.string(),
+  price: z.number().int(),
+  shop: z.string().trim(),
+  orderDate: z.iso.date().nullable(),
+  paymentDate: z.iso.date().nullable(),
+  shippingDate: z.iso.date().nullable(),
+  collectionDate: z.iso.date().nullable(),
+  shippingMethod: z.enum(SHIPPING_METHODS),
+  tags: z.array(z.string()),
+  condition: z.enum(CONDITIONS),
+  notes: z.string(),
+});
+
 export const jobDataSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("csv"),
+    payloadVersion: z.literal(2),
     userId: z.string(),
     syncSessionId: z.string(),
-    existingCount: z.number().int().nonnegative(),
     items: z.array(internalCsvItemSchema),
+    itemsToInsert: z.array(queuedCollectionItemSchema),
+    ordersToInsert: z.array(syncOrderSchema),
   }),
   z.object({
     type: z.literal("order"),
+    payloadVersion: z.literal(2),
     userId: z.string(),
     syncSessionId: z.string(),
     order: z.object({
       details: syncOrderSchema,
       itemsToScrape: z.array(syncOrderItemSchema),
-      itemsToInsert: z.array(syncOrderItemSchema),
-      existingCount: z.number().int().nonnegative(),
+      itemsToInsert: z.array(queuedCollectionItemSchema),
     }),
   }),
   z.object({
     type: z.literal("order-item"),
+    payloadVersion: z.literal(2),
     userId: z.string(),
     syncSessionId: z.string(),
     order: z.object({
       details: syncOrderSchema,
       itemsToScrape: z.array(syncOrderItemSchema),
-      itemsToInsert: z.array(syncOrderItemSchema),
-      existingCount: z.number().int().nonnegative(),
+      itemsToInsert: z.array(queuedCollectionItemSchema),
     }),
   }),
   z.object({
     type: z.literal("collection"),
+    payloadVersion: z.literal(2),
     userId: z.string(),
     syncSessionId: z.string(),
     collection: z.object({
       itemsToScrape: z.array(syncCollectionItemSchema),
-      itemsToInsert: z.array(syncCollectionItemSchema),
-      existingCount: z.number().int().nonnegative(),
+      itemsToInsert: z.array(queuedCollectionItemSchema),
     }),
   }),
 ]);
@@ -348,7 +417,11 @@ export const sessionStatusToTerminalState = (
   }
 };
 export type CsvItem = z.infer<typeof csvItemSchema>;
-export type InternalCsvItem = z.infer<typeof internalCsvItemSchema>;
+export type NormalizedInternalCsvItem = z.infer<typeof internalCsvItemSchema>;
+export type InternalCsvItem = Omit<NormalizedInternalCsvItem, "collectionId"> & {
+  readonly collectionId?: string;
+};
+export type QueuedCollectionItem = z.infer<typeof queuedCollectionItemSchema>;
 export type CsvItemMetadata = z.infer<typeof csvItemMetadataSchema>;
 export type OrderItemMetadata = z.infer<typeof orderItemMetadataSchema>;
 export type CollectionItemMetadata = z.infer<typeof collectionItemMetadataSchema>;

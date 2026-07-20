@@ -37,7 +37,8 @@ import type { SyncOrderItems } from "@myakiba/contracts/sync/types";
 import { CONDITIONS, ORDER_STATUSES, SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import { majorStringToMinorUnits } from "@myakiba/utils/currency";
-import { createDefaultSyncFormOrderItem, extractMfcItemId } from "@/lib/sync";
+import { createDefaultSyncFormOrderItem } from "@/lib/sync";
+import { mfcItemIdSchema } from "@myakiba/contracts/sync/schema";
 import { getCurrencyLocale } from "@/lib/locale";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { SyncNotice } from "@/components/sync/sync-notice";
@@ -61,16 +62,12 @@ export default function SyncOrderItemForm({
     },
     onSubmit: async ({ value }) => {
       const updatedItems = value.items.map((item) => {
-        const extractedId = extractMfcItemId(item.itemExternalId);
-        if (!extractedId) {
-          throw new Error(`Invalid item ID: ${item.itemExternalId}`);
-        }
         const { formRowId, ...rest } = item;
         void formRowId;
 
         return {
           ...rest,
-          itemExternalId: Number.parseInt(extractedId, 10),
+          itemExternalId: mfcItemIdSchema.parse(item.itemExternalId),
           price: majorStringToMinorUnits(item.price),
           orderDate: item.orderDate || null,
           paymentDate: item.paymentDate || null,
@@ -149,15 +146,7 @@ export default function SyncOrderItemForm({
                 key={item.formRowId}
                 name={`items[${index}].itemExternalId`}
                 validators={{
-                  onChange: ({ value }: { value: string }) => {
-                    if (!value || value.trim() === "") {
-                      return "MyFigureCollection Item URL or ID is required";
-                    }
-                    const extractedId = extractMfcItemId(value);
-                    if (!extractedId) {
-                      return "Please enter a valid MyFigureCollection Item ID or URL";
-                    }
-                  },
+                  onChange: mfcItemIdSchema,
                 }}
               >
                 {(subField) => (
@@ -305,7 +294,7 @@ export default function SyncOrderItemForm({
                                             {statusField.state.value && (
                                               <span className="flex items-center gap-2">
                                                 <span
-                                                  className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[statusField.state.value] ?? "bg-muted"}`}
+                                                  className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[statusField.state.value]}`}
                                                 />
                                                 {statusField.state.value}
                                               </span>
@@ -317,7 +306,7 @@ export default function SyncOrderItemForm({
                                             <SelectItem key={status} value={status}>
                                               <span className="flex items-center gap-2">
                                                 <span
-                                                  className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[status] ?? "bg-muted"}`}
+                                                  className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[status]}`}
                                                 />
                                                 {status}
                                               </span>
@@ -478,7 +467,7 @@ export default function SyncOrderItemForm({
                     </div>
                     {!subField.state.meta.isValid && (
                       <p role="alert" className="text-xs text-destructive mt-1">
-                        {subField.state.meta.errors[0]}
+                        {subField.state.meta.errors[0]?.message}
                       </p>
                     )}
                   </div>

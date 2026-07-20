@@ -1,11 +1,7 @@
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import type { RegisteredRouter, RouteIds } from "@tanstack/react-router";
-import { cleanEmptyParams } from "../lib/utils";
 
 interface UseFiltersOptions {
-  readonly paginationDefaults?: {
-    readonly limit?: number;
-  };
   readonly resetOffsetOnFilterChange?: boolean;
 }
 
@@ -27,15 +23,11 @@ export function useFilters<T extends RouteIds<RegisteredRouter["routeTree"]>>(
 
     return navigate({
       to: ".",
-      search: (prev) => {
-        const nextSearch = {
-          ...prev,
-          ...(shouldResetOffset ? { offset: 0 } : {}),
-          ...partialFilters,
-        };
-
-        return cleanEmptyParams(nextSearch, options?.paginationDefaults);
-      },
+      search: (prev) => ({
+        ...prev,
+        ...(shouldResetOffset ? { offset: 0 } : {}),
+        ...partialFilters,
+      }),
     });
   };
   const resetFilters = () => navigate({ to: ".", search: {} });

@@ -1,49 +1,18 @@
 import { app, getErrorMessage } from "@/lib/treaty-client";
 
-export interface CostBreakdownData {
-  readonly items: number;
-  readonly shipping: number;
-  readonly taxes: number;
-  readonly duties: number;
-  readonly tariffs: number;
-  readonly miscFees: number;
-}
+type DashboardClient = typeof app.api.dashboard;
 
-export interface ShopBreakdownEntry {
-  readonly shopName: string;
-  readonly orderCount: number;
-  readonly totalAmount: number;
-}
-
-export interface DashboardKanbanOrder {
-  readonly orderId: string;
-  readonly title: string;
-  readonly shop: string;
-  readonly status: "Ordered" | "Paid" | "Shipped" | "Owned";
-  readonly releaseDate: string | null;
-  readonly orderDate?: string | null;
-  readonly paymentDate?: string | null;
-  readonly shippingDate?: string | null;
-  readonly collectionDate?: string | null;
-  readonly itemImages: readonly string[];
-  readonly itemIds: readonly string[];
-  readonly total: number;
-}
-
-export interface MonthlyData {
-  readonly itemCount: number;
-  readonly orderCount: number;
-  readonly unpaidOrderCount: number;
-  readonly paidAmount: number;
-  readonly unpaidAmount: number;
-  readonly shopBreakdown: readonly ShopBreakdownEntry[];
-  readonly costBreakdown: CostBreakdownData;
-  readonly orders: readonly DashboardKanbanOrder[];
-}
-
-export type DashboardResponse = NonNullable<
-  Awaited<ReturnType<typeof app.api.dashboard.get>>["data"]
+export type DashboardResponse = NonNullable<Awaited<ReturnType<DashboardClient["get"]>>["data"]>;
+export type MonthlyData = NonNullable<
+  Awaited<ReturnType<DashboardClient["monthly"]["get"]>>["data"]
 >;
+export type CostBreakdownData = MonthlyData["costBreakdown"];
+export type ShopBreakdownEntry = MonthlyData["shopBreakdown"][number];
+export type DashboardKanbanOrder = MonthlyData["orders"][number];
+export type ReleaseCalendarData = NonNullable<
+  Awaited<ReturnType<DashboardClient["release-calendar"]["get"]>>["data"]
+>;
+export type ReleaseItem = ReleaseCalendarData["releaseCalendar"]["releases"][number];
 
 export async function getDashboard(): Promise<DashboardResponse> {
   const { data, error } = await app.api.dashboard.get();
@@ -60,6 +29,23 @@ export async function getMonthlyDashboard(month: number, year: number): Promise<
   });
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to get monthly dashboard"));
+  }
+
+  return data;
+}
+
+export async function getReleaseCalendar(
+  month: number,
+  year: number,
+): Promise<ReleaseCalendarData> {
+  const { data, error } = await app.api.dashboard["release-calendar"].get({
+    query: { month, year },
+  });
+  if (error) {
+    if (error.status === 422) {
+      throw new Error(getErrorMessage(error, "Invalid month or year"));
+    }
+    throw new Error(getErrorMessage(error, "Failed to get release calendar"));
   }
 
   return data;

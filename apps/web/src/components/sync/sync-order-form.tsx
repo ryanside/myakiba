@@ -42,11 +42,8 @@ import type { SyncFormOrderItem, SyncOrder } from "@myakiba/contracts/sync/types
 import { Textarea } from "../ui/textarea";
 import { majorStringToMinorUnits } from "@myakiba/utils/currency";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import {
-  createDefaultSyncFormOrder,
-  createDefaultSyncFormOrderItem,
-  extractMfcItemId,
-} from "@/lib/sync";
+import { createDefaultSyncFormOrder, createDefaultSyncFormOrderItem } from "@/lib/sync";
+import { mfcItemIdSchema } from "@myakiba/contracts/sync/schema";
 import { SHIPPING_METHODS, ORDER_STATUSES, CONDITIONS } from "@myakiba/contracts/shared/constants";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import { getCurrencyLocale } from "@/lib/locale";
@@ -96,16 +93,12 @@ export default function SyncOrderForm({
           }
         });
 
-        const extractedId = extractMfcItemId(updatedItem.itemExternalId);
-        if (!extractedId) {
-          throw new Error(`Invalid item ID: ${updatedItem.itemExternalId}`);
-        }
         const { formRowId, ...rest } = updatedItem;
         void formRowId;
 
         return {
           ...rest,
-          itemExternalId: Number.parseInt(extractedId, 10),
+          itemExternalId: mfcItemIdSchema.parse(updatedItem.itemExternalId),
           price: toMinorUnits(updatedItem.price),
           orderDate: updatedItem.orderDate || null,
           paymentDate: updatedItem.paymentDate || null,
@@ -220,7 +213,7 @@ export default function SyncOrderForm({
                         {field.state.value && (
                           <span className="flex items-center gap-2">
                             <span
-                              className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[field.state.value] ?? "bg-muted"}`}
+                              className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[field.state.value]}`}
                             />
                             {field.state.value}
                           </span>
@@ -232,7 +225,7 @@ export default function SyncOrderForm({
                         <SelectItem key={status} value={status}>
                           <span className="flex items-center gap-2">
                             <span
-                              className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[status] ?? "bg-muted"}`}
+                              className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[status]}`}
                             />
                             {status}
                           </span>
@@ -568,15 +561,7 @@ export default function SyncOrderForm({
                   key={item.formRowId}
                   name={`items[${i}].itemExternalId`}
                   validators={{
-                    onChange: ({ value }: { value: string }) => {
-                      if (!value || typeof value !== "string" || value.trim() === "") {
-                        return "MyFigureCollection Item URL or ID is required";
-                      }
-                      const extractedId = extractMfcItemId(value);
-                      if (!extractedId) {
-                        return "Please enter a valid MyFigureCollection Item ID or URL";
-                      }
-                    },
+                    onChange: mfcItemIdSchema,
                   }}
                 >
                   {(subField) => (
@@ -722,7 +707,7 @@ export default function SyncOrderForm({
                                               {statusField.state.value && (
                                                 <span className="flex items-center gap-2">
                                                   <span
-                                                    className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[statusField.state.value] ?? "bg-muted"}`}
+                                                    className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[statusField.state.value]}`}
                                                   />
                                                   {statusField.state.value}
                                                 </span>
@@ -734,7 +719,7 @@ export default function SyncOrderForm({
                                               <SelectItem key={status} value={status}>
                                                 <span className="flex items-center gap-2">
                                                   <span
-                                                    className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[status] ?? "bg-muted"}`}
+                                                    className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[status]}`}
                                                   />
                                                   {status}
                                                 </span>
@@ -901,7 +886,7 @@ export default function SyncOrderForm({
                       </div>
                       {!subField.state.meta.isValid && (
                         <p role="alert" className="text-xs text-destructive mt-1">
-                          {subField.state.meta.errors[0]}
+                          {subField.state.meta.errors[0]?.message}
                         </p>
                       )}
                     </div>

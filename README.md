@@ -138,19 +138,13 @@ bun install
   - `apps/web/.env` (Vite client env, `VITE_*`)
   - `apps/worker/.env` (scraping/jobs/s3/redis/db)
 
-4. Apply the database schema:
-
-```bash
-bun db:push
-```
-
-5. Start the dev processes:
+4. Start the dev processes:
 
 ```bash
 bun dev
 ```
 
-6. Open [http://localhost:3001](http://localhost:3001) in your browser to see the web application.
+5. Open [http://localhost:3001](http://localhost:3001) in your browser to see the web application.
 
 The API is running at [http://localhost:3000](http://localhost:3000).
 

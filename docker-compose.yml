@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres
+    image: postgres:18.4
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
@@ -17,7 +17,7 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:latest
+    image: redis:8.8.0
     command: redis-server --appendonly yes --appendfsync everysec --maxmemory-policy noeviction
     ports:
       - "6379:6379"
@@ -80,6 +80,8 @@ services:
 
   worker1:
     depends_on:
+      db-push:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:

@@ -24,7 +24,7 @@ interface CalendarReleaseListProps<TItem> {
   readonly selectedDays?: ReadonlySet<number>;
 }
 
-export function CalendarReleaseList<TItem>({
+function CalendarReleaseList<TItem>({
   items,
   getDate,
   getKey,

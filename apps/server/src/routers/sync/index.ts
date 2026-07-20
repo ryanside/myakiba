@@ -15,17 +15,13 @@ import type {
   UpdatedSyncCollection,
   UpdatedSyncOrder,
   UpdatedSyncOrderItem,
+  QueuedCollectionItem,
 } from "@myakiba/contracts/sync/schema";
-import type {
-  SyncJobStatus,
-  SyncOrderItemInput,
-  CollectionSyncType,
-  CollectionInsertType,
-} from "./model";
+import type { SyncJobStatus, SyncOrderItemInput } from "./model";
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import SyncService from "./service";
 import { tryCatch } from "@myakiba/utils/result";
-import { SYNC_SESSION_STATUSES, SYNC_TYPES } from "@myakiba/contracts/shared/constants";
+import { MAX_LIMIT, SYNC_SESSION_STATUSES, SYNC_TYPES } from "@myakiba/contracts/shared/constants";
 import { createId } from "@paralleldrive/cuid2";
 import { jobStatusSubscriptionRegistry } from "./job-status-subscription-registry";
 import type { JobStatusSubscription } from "./job-status-subscription-registry";
@@ -134,11 +130,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
   .post(
     "/csv",
     async ({ body, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       if (!user.emailVerified) {
         log.set({
           action: "sync.csv",
@@ -202,7 +193,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         },
       });
 
-      if (collectionItems.length > 0) {
+      if (itemsToScrape.length === 0 && collectionItems.length > 0) {
         const { error: insertToCollectionAndOrdersError } = await tryCatch(
           SyncService.insertToCollectionAndOrders(collectionItems, orderItems),
         );
@@ -236,9 +227,10 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         const { data: jobIdData, error: queueCSVSyncJobError } = await tryCatch(
           SyncService.queueCSVSyncJob(
             itemsToScrape,
+            collectionItems,
+            orderItems,
             user.id,
             syncSessionId,
-            existingItemExternalIds.length,
           ),
         );
 
@@ -253,17 +245,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
               },
             });
             return status(500, "Failed to queue CSV sync job");
-          }
-          if (queueCSVSyncJobError.message === "FAILED_TO_SET_JOB_STATUS_IN_REDIS") {
-            log.error(queueCSVSyncJobError, {
-              step: "queueCSVSyncJob",
-              outcome: "error",
-              sync: {
-                type: "csv",
-                sessionId: syncSessionId,
-              },
-            });
-            return status(500, "Failed to set job status");
           }
           log.error(queueCSVSyncJobError, {
             step: "queueCSVSyncJob",
@@ -331,7 +312,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       };
     },
     {
-      body: z.array(internalCsvItemSchema),
+      body: z.array(internalCsvItemSchema.omit({ collectionId: true })),
       auth: true,
       rateLimit: "csv",
     },
@@ -339,11 +320,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
   .post(
     "/order",
     async ({ body, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       if (!user.emailVerified) {
         log.set({
           action: "sync.order",
@@ -363,7 +339,11 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       const orderId = createId();
 
-      const itemExternalIds = body.items.map((item: SyncOrderItemInput) => item.itemExternalId);
+      const normalizedItems = body.items.map((item: SyncOrderItemInput) => ({
+        ...item,
+        collectionId: createId(),
+      }));
+      const itemExternalIds = normalizedItems.map((item) => item.itemExternalId);
 
       const { data: existingItems, error: existingItemsError } = await tryCatch(
         SyncService.getExistingItemsWithLatestReleaseByExternalIds(itemExternalIds),
@@ -381,7 +361,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       const { externalIdToInternalId, releaseIdsByItemId, releaseDatesByItemId } =
         buildExistingItemLookups(existingItems);
 
-      const releaseDates = body.items.flatMap((item: SyncOrderItemInput) => {
+      const releaseDates = normalizedItems.flatMap((item) => {
         const internalId = externalIdToInternalId.get(item.itemExternalId);
         if (!internalId) return [];
         const date = releaseDatesByItemId.get(internalId);
@@ -402,9 +382,9 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         releaseDate: latestReleaseDate,
       };
 
-      const itemsToScrape: UpdatedSyncOrderItem[] = body.items
-        .filter((item: SyncOrderItemInput) => !externalIdToInternalId.has(item.itemExternalId))
-        .map((item: SyncOrderItemInput) => ({
+      const itemsToScrape: UpdatedSyncOrderItem[] = normalizedItems
+        .filter((item) => !externalIdToInternalId.has(item.itemExternalId))
+        .map((item) => ({
           ...item,
           itemId: null,
           orderId,
@@ -412,29 +392,28 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           userId: user.id,
         }));
 
-      const itemsToInsert: UpdatedSyncOrderItem[] = body.items.flatMap(
-        (item: SyncOrderItemInput) => {
-          const internalItemId = externalIdToInternalId.get(item.itemExternalId);
-          if (!internalItemId) {
-            return [];
-          }
-          return [
-            {
-              ...item,
-              itemId: internalItemId,
-              orderId,
-              releaseId: releaseIdsByItemId.get(internalItemId) ?? null,
-              userId: user.id,
-            },
-          ];
-        },
-      );
+      const itemsToInsert: UpdatedSyncOrderItem[] = normalizedItems.flatMap((item) => {
+        const internalItemId = externalIdToInternalId.get(item.itemExternalId);
+        if (!internalItemId) {
+          return [];
+        }
+        return [
+          {
+            ...item,
+            itemId: internalItemId,
+            orderId,
+            releaseId: releaseIdsByItemId.get(internalItemId) ?? null,
+            userId: user.id,
+          },
+        ];
+      });
 
       const orderItemExternalIdsToTrack = itemsToScrape.map((i) => i.itemExternalId);
       const existingOrderItemExternalIds = itemsToInsert.map((i) => i.itemExternalId);
-      const collectionItemsToInsert: CollectionInsertType[] = itemsToInsert
+      const collectionItemsToInsert: QueuedCollectionItem[] = itemsToInsert
         .filter((item): item is UpdatedSyncOrderItem & { itemId: string } => item.itemId !== null)
         .map((item) => ({
+          id: item.collectionId,
           userId: item.userId,
           itemId: item.itemId,
           orderId: item.orderId,
@@ -482,7 +461,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         order: { id: orderId },
       });
 
-      if (orderWasPersistedImmediately) {
+      if (itemsToScrape.length === 0 && orderWasPersistedImmediately) {
         const { error: insertToCollectionAndOrdersError } = await tryCatch(
           SyncService.insertToCollectionAndOrders(collectionItemsToInsert, [order]),
         );
@@ -538,9 +517,8 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             user.id,
             order,
             itemsToScrape,
-            itemsToInsert,
+            collectionItemsToInsert,
             syncSessionId,
-            existingOrderItemExternalIds.length,
           ),
         );
 
@@ -557,19 +535,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
               order: { id: orderId },
             });
             return status(500, "Failed to queue order sync job");
-          }
-          if (queueOrderSyncJobError.message === "FAILED_TO_SET_JOB_STATUS_IN_REDIS") {
-            log.error(queueOrderSyncJobError, {
-              step: "queueOrderSyncJob",
-              outcome: "error",
-              sync: {
-                type: "order",
-                sessionId: syncSessionId,
-                orderId,
-              },
-              order: { id: orderId },
-            });
-            return status(500, "Failed to set job status");
           }
           log.error(queueOrderSyncJobError, {
             step: "queueOrderSyncJob",
@@ -650,11 +615,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
   .post(
     "/order-item",
     async ({ body, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       if (!user.emailVerified) {
         log.set({
           action: "sync.orderItem",
@@ -710,7 +670,11 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         notes: existingOrder.notes,
       };
 
-      const itemExternalIds = body.items.map((item: SyncOrderItemInput) => item.itemExternalId);
+      const normalizedItems = body.items.map((item: SyncOrderItemInput) => ({
+        ...item,
+        collectionId: createId(),
+      }));
+      const itemExternalIds = normalizedItems.map((item) => item.itemExternalId);
 
       const { data: existingItems, error: existingItemsError } = await tryCatch(
         SyncService.getExistingItemsWithLatestReleaseByExternalIds(itemExternalIds),
@@ -728,9 +692,9 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       const { externalIdToInternalId, releaseIdsByItemId } =
         buildExistingItemLookups(existingItems);
 
-      const itemsToScrape: UpdatedSyncOrderItem[] = body.items
-        .filter((item: SyncOrderItemInput) => !externalIdToInternalId.has(item.itemExternalId))
-        .map((item: SyncOrderItemInput) => ({
+      const itemsToScrape: UpdatedSyncOrderItem[] = normalizedItems
+        .filter((item) => !externalIdToInternalId.has(item.itemExternalId))
+        .map((item) => ({
           ...item,
           itemId: null,
           orderId: existingOrder.id,
@@ -738,29 +702,28 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           userId: user.id,
         }));
 
-      const itemsToInsert: UpdatedSyncOrderItem[] = body.items.flatMap(
-        (item: SyncOrderItemInput) => {
-          const internalItemId = externalIdToInternalId.get(item.itemExternalId);
-          if (!internalItemId) {
-            return [];
-          }
-          return [
-            {
-              ...item,
-              itemId: internalItemId,
-              orderId: existingOrder.id,
-              releaseId: releaseIdsByItemId.get(internalItemId) ?? null,
-              userId: user.id,
-            },
-          ];
-        },
-      );
+      const itemsToInsert: UpdatedSyncOrderItem[] = normalizedItems.flatMap((item) => {
+        const internalItemId = externalIdToInternalId.get(item.itemExternalId);
+        if (!internalItemId) {
+          return [];
+        }
+        return [
+          {
+            ...item,
+            itemId: internalItemId,
+            orderId: existingOrder.id,
+            releaseId: releaseIdsByItemId.get(internalItemId) ?? null,
+            userId: user.id,
+          },
+        ];
+      });
 
       const orderItemExternalIdsToTrack = itemsToScrape.map((item) => item.itemExternalId);
       const existingOrderItemExternalIds = itemsToInsert.map((item) => item.itemExternalId);
-      const collectionItemsToInsert: CollectionInsertType[] = itemsToInsert
+      const collectionItemsToInsert: QueuedCollectionItem[] = itemsToInsert
         .filter((item): item is UpdatedSyncOrderItem & { itemId: string } => item.itemId !== null)
         .map((item) => ({
+          id: item.collectionId,
           userId: item.userId,
           itemId: item.itemId,
           orderId: item.orderId,
@@ -808,7 +771,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         order: { id: existingOrder.id },
       });
 
-      if (collectionItemsToInsert.length > 0) {
+      if (itemsToScrape.length === 0 && collectionItemsToInsert.length > 0) {
         const { error: insertOrderItemsError } = await tryCatch(
           SyncService.insertToCollectionAndOrders(collectionItemsToInsert),
         );
@@ -844,9 +807,8 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             user.id,
             orderDetails,
             itemsToScrape,
-            itemsToInsert,
+            collectionItemsToInsert,
             syncSessionId,
-            existingOrderItemExternalIds.length,
           ),
         );
 
@@ -863,19 +825,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
               order: { id: existingOrder.id },
             });
             return status(500, "Failed to queue order item sync job");
-          }
-          if (queueOrderItemSyncJobError.message === "FAILED_TO_SET_JOB_STATUS_IN_REDIS") {
-            log.error(queueOrderItemSyncJobError, {
-              step: "queueOrderItemSyncJob",
-              outcome: "error",
-              sync: {
-                type: "order-item",
-                sessionId: syncSessionId,
-                orderId: existingOrder.id,
-              },
-              order: { id: existingOrder.id },
-            });
-            return status(500, "Failed to set job status");
           }
           log.error(queueOrderItemSyncJobError, {
             step: "queueOrderItemSyncJob",
@@ -955,11 +904,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
   .post(
     "/collection",
     async ({ body, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       if (!user.emailVerified) {
         log.set({
           action: "sync.collection",
@@ -977,7 +921,11 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         items: { requested: body.length },
       });
 
-      const itemExternalIds = body.map((item: CollectionSyncType) => item.itemExternalId);
+      const normalizedItems = body.map((item) => ({
+        ...item,
+        collectionId: createId(),
+      }));
+      const itemExternalIds = normalizedItems.map((item) => item.itemExternalId);
 
       const { data: existingItems, error: existingItemsError } = await tryCatch(
         SyncService.getExistingItemsWithLatestReleaseByExternalIds(itemExternalIds),
@@ -995,16 +943,16 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       const { externalIdToInternalId, releaseIdsByItemId } =
         buildExistingItemLookups(existingItems);
 
-      const itemsToScrape: UpdatedSyncCollection[] = body
-        .filter((item: CollectionSyncType) => !externalIdToInternalId.has(item.itemExternalId))
-        .map((item: CollectionSyncType) => ({
+      const itemsToScrape: UpdatedSyncCollection[] = normalizedItems
+        .filter((item) => !externalIdToInternalId.has(item.itemExternalId))
+        .map((item) => ({
           ...item,
           itemId: null,
           releaseId: null,
           userId: user.id,
         }));
 
-      const itemsToInsert: UpdatedSyncCollection[] = body.flatMap((item: CollectionSyncType) => {
+      const itemsToInsert: UpdatedSyncCollection[] = normalizedItems.flatMap((item) => {
         const internalItemId = externalIdToInternalId.get(item.itemExternalId);
         if (!internalItemId) {
           return [];
@@ -1021,12 +969,15 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       const collectionItemExternalIdsToTrack = itemsToScrape.map((i) => i.itemExternalId);
       const existingCollectionItemExternalIds = itemsToInsert.map((i) => i.itemExternalId);
-      const collectionItemsToInsert: CollectionInsertType[] = itemsToInsert
+      const collectionItemsToInsert: QueuedCollectionItem[] = itemsToInsert
         .filter((item): item is UpdatedSyncCollection & { itemId: string } => item.itemId !== null)
         .map((item) => ({
+          id: item.collectionId,
           userId: item.userId,
           itemId: item.itemId,
           releaseId: item.releaseId,
+          orderId: null,
+          status: "Owned",
           price: item.price,
           count: item.count,
           score: item.score,
@@ -1063,7 +1014,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         },
       });
 
-      if (collectionItemsToInsert.length > 0) {
+      if (itemsToScrape.length === 0 && collectionItemsToInsert.length > 0) {
         const { error: insertToCollectionAndOrdersError } = await tryCatch(
           SyncService.insertToCollectionAndOrders(collectionItemsToInsert),
         );
@@ -1096,9 +1047,8 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           SyncService.queueCollectionSyncJob(
             user.id,
             itemsToScrape,
-            itemsToInsert,
+            collectionItemsToInsert,
             syncSessionId,
-            existingCollectionItemExternalIds.length,
           ),
         );
 
@@ -1113,17 +1063,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
               },
             });
             return status(500, "Failed to queue collection sync job");
-          }
-          if (queueCollectionSyncJobError.message === "FAILED_TO_SET_JOB_STATUS_IN_REDIS") {
-            log.error(queueCollectionSyncJobError, {
-              step: "queueCollectionSyncJob",
-              outcome: "error",
-              sync: {
-                type: "collection",
-                sessionId: syncSessionId,
-              },
-            });
-            return status(500, "Failed to set job status");
           }
           log.error(queueCollectionSyncJobError, {
             step: "queueCollectionSyncJob",
@@ -1188,7 +1127,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       };
     },
     {
-      body: z.array(collectionSyncSchema),
+      body: z.array(collectionSyncSchema.omit({ collectionId: true })),
       auth: true,
       rateLimit: "collection",
     },
@@ -1196,11 +1135,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
   .get(
     "/sessions",
     async ({ query, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       const page = query.page ? Number.parseInt(query.page, 10) : 1;
       const limit = query.limit ? Number.parseInt(query.limit, 10) : 20;
 
@@ -1218,7 +1152,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         log.set({ outcome: "bad_request" });
         return status(400, "Invalid page parameter");
       }
-      if (Number.isNaN(limit) || limit < 1 || limit > 100) {
+      if (Number.isNaN(limit) || limit < 1 || limit > MAX_LIMIT) {
         log.set({ outcome: "bad_request" });
         return status(400, "Invalid limit parameter");
       }
@@ -1261,11 +1195,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
   .get(
     "/sessions/:id",
     async ({ params, query, user, log }) => {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       log.set({
         action: "sync.sessionDetail",
         user: { id: user.id },
@@ -1286,7 +1215,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         log.set({ outcome: "bad_request" });
         return status(400, "Invalid page parameter");
       }
-      if (limit !== undefined && (Number.isNaN(limit) || limit < 1 || limit > 100)) {
+      if (limit !== undefined && (Number.isNaN(limit) || limit < 1 || limit > MAX_LIMIT)) {
         log.set({ outcome: "bad_request" });
         return status(400, "Invalid limit parameter");
       }
@@ -1334,11 +1263,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
   .get(
     "/job-status",
     async function* ({ query, user, log, request }) {
-      if (!user) {
-        log.set({ outcome: "unauthorized" });
-        return status(401, "Unauthorized");
-      }
-
       log.set({
         action: "sync.jobStatus",
         user: { id: user.id },

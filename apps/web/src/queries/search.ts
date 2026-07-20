@@ -4,9 +4,15 @@ import {
   searchEntriesResponseSchema,
   searchOrdersResponseSchema,
 } from "@myakiba/contracts/search/schema";
+import type {
+  SearchCollectionResult,
+  SearchEntriesQuery,
+  SearchEntriesResponse,
+  SearchOrdersQuery,
+  SearchOrdersResponse,
+} from "@myakiba/contracts/search/schema";
 import type { ItemReleasesResponse } from "@myakiba/contracts/item/schema";
 import { app, getErrorMessage } from "@/lib/treaty-client";
-import type { z } from "zod";
 
 export type OrderCommandMatch = {
   readonly id: string;
@@ -14,33 +20,10 @@ export type OrderCommandMatch = {
   readonly itemImages: readonly string[];
 };
 
-export type ItemCommandMatch = {
-  readonly itemId: string;
-  readonly itemTitle: string;
-  readonly itemImage: string | null;
-  readonly itemCategory: string | null;
-  readonly itemExternalId: number | null;
-};
-
 export type CommandSearchResults = {
   readonly orderMatches: readonly OrderCommandMatch[];
-  readonly itemMatches: readonly ItemCommandMatch[];
+  readonly itemMatches: readonly SearchCollectionResult[];
 };
-
-export type SearchEntriesParams = {
-  readonly search: string;
-  readonly limit?: number;
-  readonly offset?: number;
-};
-
-export type SearchOrdersParams = {
-  readonly title?: string;
-  readonly limit?: number;
-  readonly offset?: number;
-};
-
-type SearchEntriesResponse = z.infer<typeof searchEntriesResponseSchema>;
-type SearchOrdersResponse = z.infer<typeof searchOrdersResponseSchema>;
 
 export async function searchCommandResults(search: string): Promise<CommandSearchResults> {
   const { data, error } = await app.api.search.get({
@@ -62,13 +45,7 @@ export async function searchCommandResults(search: string): Promise<CommandSearc
       title: order.orderTitle,
       itemImages: order.itemImages,
     })),
-    itemMatches: parsed.data.searchData.collectionResults.map((item) => ({
-      itemId: item.itemId,
-      itemTitle: item.itemTitle,
-      itemImage: item.itemImage,
-      itemCategory: item.itemCategory,
-      itemExternalId: item.itemExternalId,
-    })),
+    itemMatches: parsed.data.searchData.collectionResults,
   };
 }
 
@@ -89,7 +66,7 @@ export async function searchReleases(itemId: string): Promise<ItemReleasesRespon
   return parsed.data;
 }
 
-export async function searchEntries(params: SearchEntriesParams): Promise<SearchEntriesResponse> {
+export async function searchEntries(params: SearchEntriesQuery): Promise<SearchEntriesResponse> {
   const { data, error } = await app.api.search.entries.get({
     query: params,
   });
@@ -106,7 +83,7 @@ export async function searchEntries(params: SearchEntriesParams): Promise<Search
   return parsed.data;
 }
 
-export async function searchOrders(params: SearchOrdersParams): Promise<SearchOrdersResponse> {
+export async function searchOrders(params: SearchOrdersQuery): Promise<SearchOrdersResponse> {
   const { data, error } = await app.api.search.orders.get({
     query: params,
   });

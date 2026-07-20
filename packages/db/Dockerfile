@@ -1,8 +1,8 @@
-FROM oven/bun:1.3-debian AS base
+FROM oven/bun:1.3.9-debian AS base
 
 # Prune stage - generate a minimal workspace for @myakiba/db
 FROM base AS prune
-RUN bun add -g turbo
+RUN bun add -g turbo@2.10.4
 WORKDIR /app
 COPY . .
 RUN turbo prune @myakiba/db --docker
@@ -21,4 +21,4 @@ COPY --from=install /app/node_modules ./node_modules
 COPY --from=prune /app/out/full/ .
 
 WORKDIR /app/packages/db
-CMD ["bun", "run", "db:push:force"]
+CMD ["bun", "run", "db:push"]

@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:18
+    image: postgres:18.4
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
@@ -19,7 +19,7 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:latest
+    image: redis:8.8.0
     command: redis-server --appendonly yes --appendfsync everysec --maxmemory-policy noeviction
     ports:
       - "6379:6379"
@@ -34,11 +34,23 @@ services:
       start_interval: 1s
     restart: unless-stopped
 
+  db-push:
+    image: ghcr.io/ryanside/myakiba-db-push:${MYAKIBA_IMAGE_TAG:-main}
+    pull_policy: always
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+
   server:
     image: ghcr.io/ryanside/myakiba-server:${MYAKIBA_IMAGE_TAG:-main}
     pull_policy: always
     restart: unless-stopped
     depends_on:
+      db-push:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -71,6 +83,8 @@ services:
     pull_policy: always
     restart: unless-stopped
     depends_on:
+      db-push:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:

@@ -64,7 +64,7 @@ function buildSyncToastDescription(data: SyncToastData): string | undefined {
       if (existingItems > 0) {
         parts.push(`${existingItems} already synced`);
       }
-      return parts.join(" · ");
+      return parts.join(", ");
     }
 
     if (nothingToDo) {

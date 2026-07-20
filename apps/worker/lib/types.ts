@@ -3,7 +3,7 @@ import type Redis from "ioredis";
 import type { createLogger } from "evlog";
 import type {
   JobData,
-  InternalCsvItem,
+  NormalizedInternalCsvItem,
   UpdatedSyncOrder,
   UpdatedSyncOrderItem,
   UpdatedSyncCollection,
@@ -12,6 +12,7 @@ import type {
   SyncJobRecentItem,
   SyncJobError,
   SyncTerminalState,
+  QueuedCollectionItem,
 } from "@myakiba/contracts/sync/schema";
 import type { SyncSessionStatus, Category } from "@myakiba/contracts/shared/types";
 
@@ -96,6 +97,11 @@ export type PublishJobStatusParams = {
   readonly error: SyncJobError | null;
   readonly syncSessionId?: string;
   readonly sessionStatus?: SyncSessionStatus;
+  readonly successCount?: number;
+  readonly failCount?: number;
+  readonly orderId?: string;
+  readonly skipDurableUpdate?: boolean;
+  readonly forceDurableUpdate?: boolean;
 };
 
 export type BatchUpdateSyncSessionItemStatusesParams = {
@@ -153,6 +159,7 @@ export type FinalizeCollectionSyncParams = {
   readonly redis: Redis;
   readonly state: SyncJobStatusState;
   readonly itemsToScrape: UpdatedSyncCollection[];
+  readonly itemsToInsert: QueuedCollectionItem[];
   readonly existingCount: number;
   readonly syncSessionId: string;
 };
@@ -164,6 +171,7 @@ export type FinalizeOrderSyncParams = {
   readonly state: SyncJobStatusState;
   readonly details: UpdatedSyncOrder;
   readonly itemsToScrape: UpdatedSyncOrderItem[];
+  readonly itemsToInsert: QueuedCollectionItem[];
   readonly existingCount: number;
   readonly syncSessionId: string;
   readonly syncMode: "create" | "append";
@@ -175,7 +183,9 @@ export type FinalizeCsvSyncParams = {
   readonly userId: string;
   readonly redis: Redis;
   readonly state: SyncJobStatusState;
-  readonly csvItems: InternalCsvItem[];
+  readonly csvItems: NormalizedInternalCsvItem[];
+  readonly itemsToInsert: QueuedCollectionItem[];
+  readonly ordersToInsert: UpdatedSyncOrder[];
   readonly existingCount: number;
   readonly syncSessionId: string;
 };

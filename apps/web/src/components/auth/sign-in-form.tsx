@@ -87,9 +87,9 @@ export default function SignInForm({ redirectTo }: { redirectTo: string }) {
     },
     validators: {
       onSubmit: z.object({
-        email: z.email("Invalid email address"),
+        email: z.email({ error: "Invalid email address" }),
         password: z.string().min(8, "Password must be at least 8 characters"),
-        turnstileToken: z.string("Captcha is required"),
+        turnstileToken: z.string({ error: "Captcha is required" }),
       }),
     },
   });

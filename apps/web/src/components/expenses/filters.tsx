@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { format, subMonths } from "date-fns";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, Refresh01Icon } from "@hugeicons/core-free-icons";
 import type { ExpenseFilters } from "@myakiba/contracts/expenses/schema";
@@ -46,18 +47,12 @@ function toggleValue<T extends string>(
   return checked ? [...current, item] : current.filter((value) => value !== item);
 }
 
-function dateOnly(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
 function presetRange(months: number): Pick<ExpenseFilters, "dateStart" | "dateEnd"> {
   const end = new Date();
-  const start = new Date(end);
-  start.setMonth(start.getMonth() - months);
 
   return {
-    dateStart: dateOnly(start),
-    dateEnd: dateOnly(end),
+    dateStart: format(subMonths(end, months), "yyyy-MM-dd"),
+    dateEnd: format(end, "yyyy-MM-dd"),
   };
 }
 

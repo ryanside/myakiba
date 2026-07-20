@@ -1,5 +1,5 @@
 import { db } from "@myakiba/db/client";
-import { account, user } from "@myakiba/db/schema/auth";
+import { account } from "@myakiba/db/schema/auth";
 import { eq, and } from "drizzle-orm";
 
 class SettingsService {
@@ -11,10 +11,6 @@ class SettingsService {
       .limit(1);
 
     return !!credentialAccount;
-  }
-
-  async deleteUser(userId: string): Promise<void> {
-    await db.delete(user).where(eq(user.id, userId));
   }
 }
 
