@@ -7,15 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { FieldError } from "@/components/ui/field";
+import { CurrencySelect } from "@/components/currency-select";
+import { useRouter } from "@tanstack/react-router";
 import * as z from "zod";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
-import { CURRENCY_LABELS } from "@/lib/locale";
 import { CURRENCIES, DATE_FORMATS } from "@myakiba/contracts/shared/constants";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import type { User } from "@/lib/auth-client";
 import { SettingsSection } from "./settings-section";
 
 export function Preferences({ user }: { user: User }) {
+  const router = useRouter();
   const form = useForm({
     defaultValues: {
       currency: user.currency,
@@ -32,6 +34,7 @@ export function Preferences({ user }: { user: User }) {
         return;
       }
 
+      await router.invalidate();
       toast.success("Preferences updated successfully");
     },
     validators: {
@@ -55,34 +58,14 @@ export function Preferences({ user }: { user: User }) {
         <form.Field name="currency">
           {(field) => (
             <div className="flex flex-col gap-2">
-              <div className="flex flex-col gap-1">
-                <Label htmlFor={field.name}>Display Currency</Label>
-                <span className="text-xs text-muted-foreground">
-                  {CURRENCY_LABELS[field.state.value as Currency]}
-                </span>
-              </div>
-              <ToggleGroup
+              <Label htmlFor={field.name}>Display Currency</Label>
+              <CurrencySelect
                 id={field.name}
-                variant="outline"
-                spacing={1}
-                value={[field.state.value]}
-                onValueChange={(newValue) => {
-                  if (newValue.length > 0) {
-                    field.handleChange(newValue[0] ?? "");
-                  }
-                }}
-                className="flex-wrap"
-              >
-                {CURRENCIES.map((currency) => (
-                  <ToggleGroupItem
-                    key={currency}
-                    value={currency}
-                    aria-label={CURRENCY_LABELS[currency]}
-                  >
-                    {currency}
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
+                value={field.state.value as Currency}
+                onValueChange={field.handleChange}
+                onBlur={field.handleBlur}
+                invalid={!field.state.meta.isValid}
+              />
               <FieldError errors={field.state.meta.errors} />
             </div>
           )}

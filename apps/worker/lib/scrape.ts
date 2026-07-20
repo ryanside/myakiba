@@ -242,6 +242,8 @@ export const scrapeSingleItem = async ({
   const attemptErrors: string[] = [];
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    let retryItem = true;
+
     try {
       const url = `https://myfigurecollection.net/item/${id}`;
 
@@ -358,14 +360,19 @@ export const scrapeSingleItem = async ({
       const imageUrl = imageElement.attr("src");
 
       if (imageUrl) {
-        const imageResponse = await scrapeImage({ imageUrl, log, maxRetries, baseDelayMs });
-        if (!imageResponse || imageResponse === null) {
-          throw createError({
-            message: `Failed to scrape image for item ${id}`,
-            why: "Image scrape returned null after all retries",
-          });
+        try {
+          const imageResponse = await scrapeImage({ imageUrl, log, maxRetries, baseDelayMs });
+          if (!imageResponse) {
+            throw createError({
+              message: `Failed to scrape image for item ${id}`,
+              why: "Image scrape returned null after all retries",
+            });
+          }
+          image = imageResponse;
+        } catch (error) {
+          retryItem = false;
+          throw error;
         }
-        image = imageResponse;
       }
 
       const scrapedItem: ScrapedItem = {
@@ -402,8 +409,12 @@ export const scrapeSingleItem = async ({
       const message = error instanceof Error ? error.message : String(error);
       attemptErrors.push(message);
 
-      if (attempt === maxRetries) {
-        log.warn(`Item ${id} failed after ${maxRetries} attempts`);
+      if (!retryItem || attempt === maxRetries) {
+        log.warn(
+          retryItem
+            ? `Item ${id} failed after ${maxRetries} attempts`
+            : `Item ${id} failed after image scrape exhausted retries`,
+        );
         if (redis && state && state.progress) {
           recordItemOutcome(state, {
             outcome: "failed",
