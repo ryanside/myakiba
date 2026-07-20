@@ -24,34 +24,23 @@ export const analyticsSectionQuerySchema = analyticsSectionSearchSchema.extend({
   offset: paginationOffsetSchema.optional().default(0),
 });
 
-export const analyticsSectionItemsInputSchema = z.object({
+export const analyticsSectionItemsQuerySchema = z.object({
   match: z.string().min(1),
-  limit: paginationLimitSchema.optional(),
-  offset: paginationOffsetSchema.optional(),
-});
-
-export const analyticsSectionItemsQuerySchema = analyticsSectionItemsInputSchema.extend({
   limit: paginationLimitSchema.optional().default(6),
   offset: paginationOffsetSchema.optional().default(0),
 });
 
-export const analyticsSectionRelationshipsInputSchema = z.object({
+export const analyticsSectionRelationshipsQuerySchema = z.object({
   match: z.string().min(1),
   relatedSection: analyticsSectionSchema,
-  limit: analyticsRelationshipsLimitSchema.optional(),
-  offset: paginationOffsetSchema.optional(),
+  limit: analyticsRelationshipsLimitSchema.optional().default(5),
+  offset: paginationOffsetSchema.optional().default(0),
 });
 
-export const analyticsSectionRelationshipsQuerySchema =
-  analyticsSectionRelationshipsInputSchema.extend({
-    limit: analyticsRelationshipsLimitSchema.optional().default(5),
-    offset: paginationOffsetSchema.optional().default(0),
-  });
-
 export type AnalyticsSectionFilters = z.infer<typeof analyticsSectionSearchSchema>;
-export type AnalyticsSectionItemsFilters = z.infer<typeof analyticsSectionItemsInputSchema>;
-export type AnalyticsSectionRelationshipsFilters = z.infer<
-  typeof analyticsSectionRelationshipsInputSchema
+export type AnalyticsSectionItemsFilters = z.input<typeof analyticsSectionItemsQuerySchema>;
+export type AnalyticsSectionRelationshipsFilters = z.input<
+  typeof analyticsSectionRelationshipsQuerySchema
 >;
 export type AnalyticsSectionSort = NonNullable<AnalyticsSectionFilters["sort"]>;
 export type AnalyticsSectionSortOrder = NonNullable<AnalyticsSectionFilters["order"]>;

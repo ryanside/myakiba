@@ -2,14 +2,14 @@ import { db } from "@myakiba/db/client";
 import { collection, entry, item, item_release, order } from "@myakiba/db/schema/figure";
 import { and, asc, desc, eq, ilike, sql } from "drizzle-orm";
 import type { ItemReleasesResponse } from "@myakiba/contracts/item/schema";
-import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
-import { SEARCH_COLLECTION_RESULT_LIMIT, SEARCH_ORDER_RESULT_LIMIT } from "./model";
 import type {
   SearchCollectionResult,
   SearchData,
   SearchEntryResult,
   SearchOrderIdAndTitle,
-} from "./model";
+} from "@myakiba/contracts/search/schema";
+import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
+import { SEARCH_COLLECTION_RESULT_LIMIT, SEARCH_ORDER_RESULT_LIMIT } from "./model";
 
 const latestOwnedAt = sql<Date>`max(${collection.createdAt})`;
 
@@ -64,7 +64,7 @@ const orderResultsPrepared = db
 
 function toSearchCollectionResults(
   rows: readonly (SearchCollectionResult & { readonly latestOwnedAt: Date })[],
-): readonly SearchCollectionResult[] {
+): SearchCollectionResult[] {
   return rows.map((row) => ({
     itemId: row.itemId,
     itemExternalId: row.itemExternalId,

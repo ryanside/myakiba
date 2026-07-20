@@ -8,7 +8,7 @@ import {
   searchReleasesQuerySchema,
   searchEntriesQuerySchema,
   searchOrdersQuerySchema,
-} from "./model";
+} from "@myakiba/contracts/search/schema";
 
 const searchRouter = new Elysia({ prefix: "/search" })
   .use(betterAuth)
