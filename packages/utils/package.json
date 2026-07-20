@@ -8,6 +8,9 @@
       "default": "./src/*.ts"
     }
   },
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
   "dependencies": {
     "zod": "catalog:"
   },

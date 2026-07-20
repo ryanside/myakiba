@@ -1,5 +1,5 @@
-import "@fontsource-variable/instrument-sans";
-import "@fontsource-variable/orbitron";
+import "@fontsource-variable/instrument-sans/index.css";
+import "@fontsource-variable/orbitron/index.css";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { RouterProvider, createRouter } from "@tanstack/react-router";

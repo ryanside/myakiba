@@ -9,6 +9,7 @@
     }
   },
   "scripts": {
+    "check-types": "tsc --noEmit",
     "redis:start": "docker compose up -d",
     "redis:stop": "docker compose stop",
     "redis:down": "docker compose down"

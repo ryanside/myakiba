@@ -1,3 +1,5 @@
+import process from "node:process";
+
 const SUCCESS_MESSAGES = ["Changes applied", "No changes detected"] as const;
 
 const child = Bun.spawn(["bunx", "drizzle-kit", "push", "--verbose"], {
