@@ -36,10 +36,10 @@ import {
   StepperTrigger,
 } from "@/components/reui/stepper";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { CurrencySelect } from "@/components/currency-select";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { authClient } from "@/lib/auth-client";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
-import { CURRENCY_LABELS } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 import { SyncActionSheet } from "@/components/sync/sync-launcher";
 import type { LaunchableSyncType } from "@/components/sync/sync-launcher-options";
@@ -338,33 +338,14 @@ function OnboardingDialog() {
                       <form.Field name="currency">
                         {(field) => (
                           <div className="flex flex-col gap-2">
-                            <div className="flex flex-col gap-1">
-                              <Label htmlFor={field.name}>Currency</Label>
-                              <span className="text-xs text-muted-foreground">
-                                {CURRENCY_LABELS[field.state.value]}
-                              </span>
-                            </div>
-                            <ToggleGroup
+                            <Label htmlFor={field.name}>Currency</Label>
+                            <CurrencySelect
                               id={field.name}
-                              variant="outline"
-                              spacing={1}
-                              value={[field.state.value]}
-                              onValueChange={(next) => {
-                                const [value] = next;
-                                if (value) field.handleChange(value as Currency);
-                              }}
-                              className="flex-wrap"
-                            >
-                              {CURRENCIES.map((code) => (
-                                <ToggleGroupItem
-                                  key={code}
-                                  value={code}
-                                  aria-label={CURRENCY_LABELS[code]}
-                                >
-                                  {code}
-                                </ToggleGroupItem>
-                              ))}
-                            </ToggleGroup>
+                              value={field.state.value}
+                              onValueChange={field.handleChange}
+                              onBlur={field.handleBlur}
+                              invalid={!field.state.meta.isValid}
+                            />
                             <FieldErrors errors={field.state.meta.errors} />
                           </div>
                         )}
