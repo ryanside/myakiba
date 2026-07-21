@@ -26,7 +26,7 @@ export const Route = createFileRoute("/(app)/item_/custom/$id")({
 function RouteComponent() {
   return (
     <div className="flex flex-col gap-6 mx-auto max-w-[88rem]">
-      <BackLink to="/collection" text="Back" font="sans" className="self-start" />
+      <BackLink text="Back" font="sans" className="self-start" />
       <Empty className="py-16">
         <EmptyHeader>
           <EmptyMedia variant="icon">

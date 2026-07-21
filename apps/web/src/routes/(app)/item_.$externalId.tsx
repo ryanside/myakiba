@@ -113,7 +113,7 @@ function RouteComponent(): ReactNode {
   if (isError) {
     return (
       <div className="flex flex-col items-center justify-center gap-y-4">
-        <BackLink to="/collection" text="Back" font="sans" className="self-start" />
+        <BackLink text="Back" font="sans" className="self-start" />
         <div className="animate-data-in text-lg font-medium text-destructive">
           Error: {itemError.message}
         </div>
@@ -135,7 +135,7 @@ function RouteComponent(): ReactNode {
   return (
     <div className="flex flex-col gap-6 mx-auto max-w-352" aria-busy={isPending} aria-live="polite">
       {isPending ? <span className="sr-only">Loading item details</span> : null}
-      <BackLink to="/collection" text="Back" font="sans" className="self-start" />
+      <BackLink text="Back" font="sans" className="self-start" />
 
       <ItemHero
         item={item}

@@ -111,7 +111,7 @@ function RouteComponent(): ReactNode {
   return (
     <div className="flex flex-col gap-6 mx-auto max-w-4xl">
       <div className="flex flex-col gap-4">
-        <BackLink to="/analytics" text="Back" font="orbitron" />
+        <BackLink text="Back" font="orbitron" />
         <h1 className="text-2xl font-orbitron font-medium lowercase">
           {label}
           <span className="hidden sm:inline"> ⭑.ᐟ</span>

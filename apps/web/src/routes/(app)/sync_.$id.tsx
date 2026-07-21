@@ -56,7 +56,7 @@ function RouteComponent(): ReactNode {
   return (
     <div className="flex flex-col gap-4 mx-auto max-w-352" aria-busy={isPending} aria-live="polite">
       {isPending ? <span className="sr-only">Loading sync session details</span> : null}
-      <BackLink to="/sync" text="Back" font="sans" className="self-start" />
+      <BackLink text="Back" font="sans" className="self-start" />
 
       {isError ? (
         <div className="flex flex-col gap-1.5">
