@@ -102,7 +102,7 @@ const app = new Elysia()
   )
   .use(
     cors({
-      origin: env.CORS_ORIGIN,
+      origin: env.CORS_ORIGIN.split(",").map((origin) => origin.trim()),
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization", "x-captcha-response"],
       credentials: true,

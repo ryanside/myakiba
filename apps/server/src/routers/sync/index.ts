@@ -24,9 +24,11 @@ import { tryCatch } from "@myakiba/utils/result";
 import { MAX_LIMIT, SYNC_SESSION_STATUSES, SYNC_TYPES } from "@myakiba/contracts/shared/constants";
 import { createId } from "@paralleldrive/cuid2";
 import { jobStatusSubscriptionRegistry } from "./job-status-subscription-registry";
-import type { JobStatusSubscription } from "./job-status-subscription-registry";
+import { waitForNextJobStatusEvent } from "./job-status-stream";
 
 const MAX_JOB_STATUS_STREAM_DURATION_MS = 10 * 60 * 1000;
+// Keep upstream idle timeouts from closing a healthy but quiet SSE response.
+const JOB_STATUS_HEARTBEAT_INTERVAL_MS = 5 * 1000;
 
 const createTerminalJobStatus = ({
   jobId,
@@ -76,51 +78,6 @@ const buildExistingItemLookups = (existingItems: ExistingItemsWithLatestRelease)
     releaseIdsByItemId,
     releaseDatesByItemId,
   };
-};
-
-type NextJobStatusEvent =
-  | Readonly<{
-      kind: "subscription";
-      event: Awaited<ReturnType<JobStatusSubscription["next"]>>;
-    }>
-  | Readonly<{
-      kind: "aborted";
-    }>
-  | Readonly<{
-      kind: "timeout";
-    }>;
-
-const waitForNextJobStatusEvent = async (
-  subscription: JobStatusSubscription,
-  abortPromise: Promise<"aborted">,
-  remainingMs: number,
-): Promise<NextJobStatusEvent> => {
-  let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
-  try {
-    return await Promise.race([
-      subscription.next().then(
-        (event): NextJobStatusEvent => ({
-          kind: "subscription",
-          event,
-        }),
-      ),
-      abortPromise.then(
-        (): NextJobStatusEvent => ({
-          kind: "aborted",
-        }),
-      ),
-      new Promise<NextJobStatusEvent>((resolve) => {
-        timeoutId = setTimeout(() => {
-          resolve({ kind: "timeout" });
-        }, remainingMs);
-      }),
-    ]);
-  } finally {
-    if (timeoutId !== null) {
-      clearTimeout(timeoutId);
-    }
-  }
 };
 
 const syncRouter = new Elysia({ prefix: "/sync" })
@@ -1384,6 +1341,9 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           return;
         }
 
+        let latestJobStatus = replayJobStatus;
+        let subscriptionEventPromise = subscription.next();
+
         while (true) {
           const remainingMs = MAX_JOB_STATUS_STREAM_DURATION_MS - (Date.now() - streamStartedAt);
 
@@ -1403,11 +1363,12 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             return;
           }
 
-          const nextEvent = await waitForNextJobStatusEvent(
-            subscription,
+          const nextEvent = await waitForNextJobStatusEvent({
+            subscriptionEventPromise,
             abortPromise,
             remainingMs,
-          );
+            heartbeatIntervalMs: JOB_STATUS_HEARTBEAT_INTERVAL_MS,
+          });
 
           if (nextEvent.kind === "aborted") {
             return;
@@ -1427,6 +1388,13 @@ const syncRouter = new Elysia({ prefix: "/sync" })
               }),
             });
             return;
+          }
+
+          if (nextEvent.kind === "heartbeat") {
+            yield sse({
+              data: latestJobStatus,
+            });
+            continue;
           }
 
           if (nextEvent.event.kind === "error") {
@@ -1450,14 +1418,17 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             return;
           }
 
+          latestJobStatus = nextEvent.event.status;
           yield sse({
-            data: nextEvent.event.status,
+            data: latestJobStatus,
           });
 
-          if (nextEvent.event.status.terminalState !== null) {
-            logTerminalOutcome(nextEvent.event.status.terminalState);
+          if (latestJobStatus.terminalState !== null) {
+            logTerminalOutcome(latestJobStatus.terminalState);
             return;
           }
+
+          subscriptionEventPromise = subscription.next();
         }
       } finally {
         await subscription.unsubscribe();

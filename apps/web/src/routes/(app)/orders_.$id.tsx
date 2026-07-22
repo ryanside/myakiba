@@ -73,7 +73,7 @@ function RouteComponent(): ReactNode {
   if (isError) {
     return (
       <div className="flex flex-col gap-3">
-        <BackLink to="/orders" text="Back" font="sans" className="self-start" />
+        <BackLink fallbackTo="/orders" text="Back" font="sans" className="self-start" />
         <div className="animate-data-in text-lg font-medium text-destructive">
           Error: {orderError.message}
         </div>
@@ -97,7 +97,7 @@ function RouteComponent(): ReactNode {
       aria-live="polite"
     >
       {isPending ? <span className="sr-only">Loading order details</span> : null}
-      <BackLink to="/orders" text="Back" font="sans" className="self-start" />
+      <BackLink fallbackTo="/orders" text="Back" font="sans" className="self-start" />
 
       <OrderHero
         order={order}
