@@ -25,7 +25,7 @@ export function ItemNotFound({
 }): ReactNode {
   return (
     <div className="flex flex-col gap-6 mx-auto max-w-352">
-      <BackLink text="Back" font="sans" className="self-start" />
+      <BackLink fallbackTo="/collection" text="Back" font="sans" className="self-start" />
       <Empty className="py-16">
         <EmptyHeader>
           <EmptyMedia variant="icon">

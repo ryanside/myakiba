@@ -11,8 +11,12 @@ type BackLinkProps = {
   readonly font: "orbitron" | "sans";
   readonly className?: string;
 } & (
-  | { readonly to?: never }
+  | {
+      readonly fallbackTo: NonNullable<LinkProps["to"]>;
+      readonly to?: never;
+    }
   | (Omit<LinkProps, "children" | "className" | "to"> & {
+      readonly fallbackTo?: never;
       readonly to: NonNullable<LinkProps["to"]>;
     })
 );
@@ -44,8 +48,17 @@ export function BackLink({ text, font, className, ...navigationProps }: BackLink
     );
   }
 
+  const handleBack = (): void => {
+    if (router.history.canGoBack()) {
+      router.history.back();
+      return;
+    }
+
+    void router.navigate({ to: navigationProps.fallbackTo });
+  };
+
   return (
-    <button type="button" className={styles} onClick={() => router.history.back()}>
+    <button type="button" className={styles} onClick={handleBack}>
       {content}
     </button>
   );
