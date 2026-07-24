@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { useRouter } from "@tanstack/react-router";
 import * as z from "zod";
 import type { User } from "@/lib/auth-client";
-import { SettingsSection } from "./settings-section";
+import { SettingsFormStack } from "./settings-row";
 
 export function Profile({ user }: { user: User }) {
   const router = useRouter();
@@ -42,15 +42,15 @@ export function Profile({ user }: { user: User }) {
   });
 
   return (
-    <SettingsSection title="Profile Information">
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          form.handleSubmit();
-        }}
-        className="space-y-4"
-      >
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        form.handleSubmit();
+      }}
+      className="space-y-4"
+    >
+      <SettingsFormStack title="Username" description="Your public display name across the app.">
         <form.Field
           name="username"
           asyncDebounceMs={1000}
@@ -90,22 +90,22 @@ export function Profile({ user }: { user: User }) {
             </div>
           )}
         </form.Field>
+      </SettingsFormStack>
 
-        <form.Subscribe>
-          {(state) => (
-            <Button type="submit" disabled={!state.canSubmit || state.isSubmitting}>
-              {state.isSubmitting ? (
-                <>
-                  <HugeiconsIcon icon={Loading03Icon} className="mr-2 size-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save Changes"
-              )}
-            </Button>
-          )}
-        </form.Subscribe>
-      </form>
-    </SettingsSection>
+      <form.Subscribe>
+        {(state) => (
+          <Button type="submit" disabled={!state.canSubmit || state.isSubmitting}>
+            {state.isSubmitting ? (
+              <>
+                <HugeiconsIcon icon={Loading03Icon} className="mr-2 size-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save Changes"
+            )}
+          </Button>
+        )}
+      </form.Subscribe>
+    </form>
   );
 }

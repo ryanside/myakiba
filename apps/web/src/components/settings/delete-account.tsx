@@ -20,7 +20,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import * as z from "zod";
-import { SettingsSection } from "./settings-section";
+import { SettingsFormStack } from "./settings-row";
 
 export function DeleteAccount() {
   const { data, isPending, isError, error } = useQuery({
@@ -64,12 +64,17 @@ export function DeleteAccount() {
   });
 
   return (
-    <SettingsSection title="Delete Account">
-      {isError && (
-        <p className="text-sm text-destructive text-pretty mb-4">
+    <SettingsFormStack
+      title="Delete account"
+      description="Permanently delete your account and remove all your data from our servers."
+      className="border-destructive/30"
+    >
+      {isError ? (
+        <p className="text-sm text-destructive text-pretty">
           Failed to load account settings: {error?.message}
         </p>
-      )}
+      ) : null}
+
       <Dialog>
         <DialogTrigger
           disabled={isTriggerDisabled}
@@ -175,6 +180,6 @@ export function DeleteAccount() {
           </form>
         </DialogContent>
       </Dialog>
-    </SettingsSection>
+    </SettingsFormStack>
   );
 }

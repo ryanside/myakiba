@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FieldError } from "@/components/ui/field";
 import * as z from "zod";
-import { SettingsSection } from "./settings-section";
+import { SettingsFormStack } from "./settings-row";
 
 const PASSWORD_FIELDS = [
   { name: "currentPassword", label: "Current Password", placeholder: "Enter current password" },
@@ -72,17 +72,20 @@ export function Account() {
   });
 
   return (
-    <SettingsSection title="Change Password">
-      {showOAuthNote && (
-        <p className="text-sm text-muted-foreground mb-4">
-          Password is managed by your sign-in provider.
-        </p>
-      )}
-      {isError && (
-        <p className="text-sm text-destructive text-pretty mb-4">
+    <SettingsFormStack
+      title="Change password"
+      description={
+        showOAuthNote
+          ? "Password is managed by your sign-in provider."
+          : "Update the password used to sign in with email."
+      }
+    >
+      {isError ? (
+        <p className="text-sm text-destructive text-pretty">
           Failed to load account settings: {error?.message}
         </p>
-      )}
+      ) : null}
+
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -130,6 +133,6 @@ export function Account() {
           )}
         </form.Subscribe>
       </form>
-    </SettingsSection>
+    </SettingsFormStack>
   );
 }
