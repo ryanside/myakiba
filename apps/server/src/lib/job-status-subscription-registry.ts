@@ -59,8 +59,8 @@ const closeConsumerState = (consumerState: SubscriptionConsumerState): void => {
   });
 };
 
-const toError = (error: Error | string): Error =>
-  error instanceof Error ? error : new Error(error);
+const toError = (error: unknown): Error =>
+  error instanceof Error ? error : new Error(String(error));
 
 class JobStatusSubscriptionRegistry {
   private subscriber: Redis | null = null;
@@ -162,7 +162,7 @@ class JobStatusSubscriptionRegistry {
         await subscriber.subscribe(channel);
         channelState.subscribed = true;
       } catch (error) {
-        throw toError(error as Error | string);
+        throw toError(error);
       } finally {
         channelState.subscribePromise = null;
       }
@@ -211,7 +211,7 @@ class JobStatusSubscriptionRegistry {
     } catch (error) {
       channelState.consumers.delete(consumerId);
       await this.releaseChannel(channel, channelState);
-      throw toError(error instanceof Error ? error : String(error));
+      throw toError(error);
     }
 
     return {
