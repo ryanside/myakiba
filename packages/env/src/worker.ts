@@ -10,6 +10,7 @@ export const env = createEnv({
     WORKER_PROXY_URL: z.url().optional(),
     AWS_BUCKET_REGION: z.string().min(1),
     AWS_BUCKET_NAME: z.string().min(1),
+    AWS_BUCKET_URL: z.url().optional(),
     POSTHOG_API_KEY: z.string().min(1).optional(),
   },
   runtimeEnv: process.env,

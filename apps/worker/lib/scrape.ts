@@ -209,7 +209,10 @@ export const scrapeImage = async ({
         });
       }
 
-      const imageS3Url = `https://static.myakiba.app/${filename}`;
+      const bucketUrl =
+        env.AWS_BUCKET_URL ??
+        `https://${env.AWS_BUCKET_NAME}.s3.${env.AWS_BUCKET_REGION}.amazonaws.com`;
+      const imageS3Url = `${bucketUrl.replace(/\/+$/, "")}/${filename}`;
 
       return imageS3Url;
     } catch (error) {
