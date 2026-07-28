@@ -34,6 +34,7 @@ export function Preferences({ user }: { user: User }) {
         return;
       }
 
+      form.reset(value);
       await router.invalidate();
       toast.success("Preferences updated successfully");
     },
@@ -105,7 +106,10 @@ export function Preferences({ user }: { user: User }) {
         <SettingsGroupFooter>
           <form.Subscribe>
             {(state) => (
-              <Button type="submit" disabled={!state.canSubmit || state.isSubmitting}>
+              <Button
+                type="submit"
+                disabled={!state.isDirty || !state.canSubmit || state.isSubmitting}
+              >
                 {state.isSubmitting ? (
                   <>
                     <HugeiconsIcon

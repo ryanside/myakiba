@@ -128,10 +128,22 @@ export function Account() {
           <SettingsGroupFooter>
             <form.Subscribe>
               {(state) => {
+                const passwordsAreValid =
+                  state.values.currentPassword.length >= 8 &&
+                  state.values.newPassword.length >= 8 &&
+                  state.values.confirmPassword.length >= 8 &&
+                  state.values.newPassword === state.values.confirmPassword;
+
                 return (
                   <Button
                     type="submit"
-                    disabled={isFormDisabled || !state.canSubmit || state.isSubmitting}
+                    disabled={
+                      isFormDisabled ||
+                      !state.isDirty ||
+                      !passwordsAreValid ||
+                      !state.canSubmit ||
+                      state.isSubmitting
+                    }
                   >
                     {state.isSubmitting ? (
                       <>
