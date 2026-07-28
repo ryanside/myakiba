@@ -43,11 +43,13 @@ export function useSyncJobStatusQuery(jobId: string | null, sessionId: string | 
 
         async function* withFinishedCheck(): AsyncGenerator<SSEJobStatusChunk> {
           for await (const chunk of stream) {
-            yield chunk;
             const { terminalState } = chunk.data;
-            if (terminalState === null) continue;
+            if (terminalState === null) {
+              yield chunk;
+              continue;
+            }
 
-            void invalidateSyncResultQueries(queryClient);
+            await invalidateSyncResultQueries(queryClient);
 
             const message = resolveSyncMessage(
               { statusMessage: chunk.data.statusMessage },
@@ -66,6 +68,8 @@ export function useSyncJobStatusQuery(jobId: string | null, sessionId: string | 
               message,
               description,
             });
+
+            yield chunk;
           }
         }
 
