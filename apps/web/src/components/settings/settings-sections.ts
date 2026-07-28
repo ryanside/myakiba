@@ -1,11 +1,12 @@
 import {
+  ArrowDataTransferHorizontalIcon,
   PreferenceHorizontalIcon,
   SquareLockPasswordIcon,
   UserIcon,
 } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
 
-export const SETTINGS_IDS = ["preferences", "profile", "account"] as const;
+export const SETTINGS_IDS = ["preferences", "profile", "account", "data-transfer"] as const;
 
 export type SettingsId = (typeof SETTINGS_IDS)[number];
 
@@ -26,5 +27,9 @@ export const SETTINGS_SECTIONS = {
   account: {
     label: "Account",
     icon: SquareLockPasswordIcon,
+  },
+  "data-transfer": {
+    label: "Data Transfer",
+    icon: ArrowDataTransferHorizontalIcon,
   },
 } as const satisfies Record<SettingsId, SettingsSection>;

@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import * as z from "zod";
 import { Account } from "@/components/settings/account";
+import { DataTransfer } from "@/components/settings/data-transfer";
 import { Preferences } from "@/components/settings/preferences";
 import { Profile } from "@/components/settings/profile";
 import { SettingsContent } from "@/components/settings/settings-content";
@@ -38,6 +39,8 @@ function renderSection(section: SettingsId, user: User): ReactNode {
       return <Profile user={user} />;
     case "account":
       return <Account />;
+    case "data-transfer":
+      return <DataTransfer />;
     default: {
       const _exhaustive: never = section;
       return _exhaustive;
