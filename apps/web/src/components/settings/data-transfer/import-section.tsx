@@ -25,7 +25,12 @@ export type PreparedFileViewState =
 
 type CurrentImportLoadState =
   | { readonly kind: "loading" }
-  | { readonly kind: "error"; readonly message: string }
+  | {
+      readonly kind: "error";
+      readonly message: string;
+      readonly current: CurrentImportViewState | null;
+      readonly retrying: boolean;
+    }
   | { readonly kind: "ready"; readonly current: CurrentImportViewState };
 
 export type ImportViewState = {
@@ -56,7 +61,7 @@ export function ImportSection({
   readonly confirmationOpen?: boolean;
   readonly onConfirmationOpenChange?: (open: boolean) => void;
 }) {
-  const currentImport = state.current.kind === "ready" ? state.current.current : null;
+  const currentImport = state.current.kind === "loading" ? null : state.current.current;
   const activeImport = currentImport?.kind === "active";
   const retryPending =
     currentImport?.kind === "retryable" && currentImport.retry.kind === "pending";
@@ -101,10 +106,17 @@ export function ImportSection({
               type="button"
               size="sm"
               variant="outline"
+              disabled={state.current.retrying}
               onClick={actions.onRetryCurrentImportLoad}
             >
-              <HugeiconsIcon icon={Refresh01Icon} aria-hidden="true" />
-              Retry
+              <HugeiconsIcon
+                icon={state.current.retrying ? Loading03Icon : Refresh01Icon}
+                className={
+                  state.current.retrying ? "animate-spin motion-reduce:animate-none" : undefined
+                }
+                aria-hidden="true"
+              />
+              {state.current.retrying ? "Retrying…" : "Retry"}
             </Button>
           </div>
         ) : null}

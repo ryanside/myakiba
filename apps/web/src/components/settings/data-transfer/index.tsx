@@ -56,7 +56,7 @@ export function DataTransfer() {
     queryFn: getCurrentDataTransferImport,
     retry: false,
   });
-  const currentImport = currentImportQuery.isSuccess ? currentImportQuery.data : null;
+  const currentImport = currentImportQuery.data ?? null;
   const liveStatusQuery = useDataTransferImportStatusQuery(currentImport);
 
   const prepared: PreparedFileViewState =
@@ -189,7 +189,12 @@ export function DataTransfer() {
   let currentState: ImportViewState["current"];
   if (currentImportQuery.isPending) currentState = { kind: "loading" };
   else if (currentImportQuery.isError) {
-    currentState = { kind: "error", message: currentImportQuery.error.message };
+    currentState = {
+      kind: "error",
+      message: currentImportQuery.error.message,
+      current: currentImport === null ? null : currentView,
+      retrying: currentImportQuery.isFetching,
+    };
   } else {
     currentState = { kind: "ready", current: currentView };
   }
