@@ -13,6 +13,9 @@ import { DeleteAccount } from "./delete-account";
 import { SettingsGroup, SettingsGroupFooter } from "./settings-group";
 import { SettingsRow } from "./settings-row";
 
+const MIN_PASSWORD_LENGTH = 8;
+const MIN_PASSWORD_MESSAGE = `Password must be at least ${MIN_PASSWORD_LENGTH} characters`;
+
 const PASSWORD_FIELDS = [
   {
     name: "currentPassword",
@@ -23,7 +26,7 @@ const PASSWORD_FIELDS = [
   {
     name: "newPassword",
     title: "New password",
-    description: "Use at least 8 characters.",
+    description: `Use at least ${MIN_PASSWORD_LENGTH} characters.`,
     placeholder: "Enter new password",
   },
   {
@@ -76,9 +79,9 @@ export function Account() {
     },
     validators: {
       onSubmit: z.object({
-        currentPassword: z.string().min(8, "Password must be at least 8 characters"),
-        newPassword: z.string().min(8, "Password must be at least 8 characters"),
-        confirmPassword: z.string().min(8, "Password must be at least 8 characters"),
+        currentPassword: z.string().min(MIN_PASSWORD_LENGTH, MIN_PASSWORD_MESSAGE),
+        newPassword: z.string().min(MIN_PASSWORD_LENGTH, MIN_PASSWORD_MESSAGE),
+        confirmPassword: z.string().min(MIN_PASSWORD_LENGTH, MIN_PASSWORD_MESSAGE),
       }),
     },
   });
@@ -129,9 +132,9 @@ export function Account() {
             <form.Subscribe>
               {(state) => {
                 const passwordsAreValid =
-                  state.values.currentPassword.length >= 8 &&
-                  state.values.newPassword.length >= 8 &&
-                  state.values.confirmPassword.length >= 8 &&
+                  state.values.currentPassword.length >= MIN_PASSWORD_LENGTH &&
+                  state.values.newPassword.length >= MIN_PASSWORD_LENGTH &&
+                  state.values.confirmPassword.length >= MIN_PASSWORD_LENGTH &&
                   state.values.newPassword === state.values.confirmPassword;
 
                 return (
