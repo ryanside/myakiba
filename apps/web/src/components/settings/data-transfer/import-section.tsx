@@ -1,4 +1,4 @@
-import { FileImportIcon, Loading03Icon } from "@hugeicons/core-free-icons";
+import { FileImportIcon, Loading03Icon, Refresh01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { DATA_TRANSFER_MAX_BYTES } from "@myakiba/contracts/data-transfer/schema";
 import { Dropzone } from "@/components/kibo-ui/dropzone";
@@ -23,8 +23,13 @@ export type PreparedFileViewState =
     }
   | { readonly kind: "invalid"; readonly file: File | null; readonly message: string };
 
+type CurrentImportLoadState =
+  | { readonly kind: "loading" }
+  | { readonly kind: "error"; readonly message: string }
+  | { readonly kind: "ready"; readonly current: CurrentImportViewState };
+
 export type ImportViewState = {
-  readonly current: CurrentImportViewState;
+  readonly current: CurrentImportLoadState;
   readonly delete: ActionState;
   readonly prepared: PreparedFileViewState;
   readonly start: ActionState;
@@ -32,6 +37,7 @@ export type ImportViewState = {
 
 export type ImportViewActions = {
   readonly onReconnectImportStatus: () => void;
+  readonly onRetryCurrentImportLoad: () => void;
   readonly onFile: (file: File) => void;
   readonly onFileError: (error: Error) => void;
   readonly onConfirmImport: () => Promise<void>;
@@ -50,8 +56,10 @@ export function ImportSection({
   readonly confirmationOpen?: boolean;
   readonly onConfirmationOpenChange?: (open: boolean) => void;
 }) {
-  const activeImport = state.current.kind === "active";
-  const retryPending = state.current.kind === "retryable" && state.current.retry.kind === "pending";
+  const currentImport = state.current.kind === "ready" ? state.current.current : null;
+  const activeImport = currentImport?.kind === "active";
+  const retryPending =
+    currentImport?.kind === "retryable" && currentImport.retry.kind === "pending";
   const deletePending = state.delete.kind === "pending";
   const selectedFiles =
     state.prepared.kind === "idle" || state.prepared.file === null
@@ -60,6 +68,7 @@ export function ImportSection({
   const importControlsDisabled = state.start.kind === "pending" || retryPending || deletePending;
 
   const showPreparedDetails =
+    state.current.kind === "ready" &&
     !activeImport &&
     (state.prepared.kind === "reading" ||
       state.prepared.kind === "invalid" ||
@@ -72,7 +81,35 @@ export function ImportSection({
         title="Import"
         description="Import a myakiba JSON export. The export data will be added to your account."
       >
-        {!activeImport ? (
+        {state.current.kind === "loading" ? (
+          <p className="flex items-center gap-1 text-sm text-muted-foreground" aria-live="polite">
+            <HugeiconsIcon
+              icon={Loading03Icon}
+              className="size-4 animate-spin motion-reduce:animate-none"
+              aria-hidden="true"
+            />
+            Checking current import…
+          </p>
+        ) : null}
+
+        {state.current.kind === "error" ? (
+          <div className="flex flex-col items-start gap-2 sm:items-end">
+            <p className="text-pretty text-sm text-destructive" role="alert">
+              {state.current.message}
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={actions.onRetryCurrentImportLoad}
+            >
+              <HugeiconsIcon icon={Refresh01Icon} aria-hidden="true" />
+              Retry
+            </Button>
+          </div>
+        ) : null}
+
+        {state.current.kind === "ready" && !activeImport ? (
           <Dropzone
             accept={{ "application/json": [".json"] }}
             maxFiles={1}
@@ -143,11 +180,11 @@ export function ImportSection({
                       and {numberFormatter.format(state.prepared.preview.collectionItems)} items.
                       Existing records are not changed.
                     </span>
-                    {state.current.kind !== "none" ? (
+                    {currentImport && currentImport.kind !== "none" ? (
                       <span className="block">
                         Starting this import replaces the saved import session for{" "}
                         <span className="font-medium text-foreground">
-                          {state.current.currentImport.fileName}
+                          {currentImport.currentImport.fileName}
                         </span>
                         . Records added by that import stay in your account.
                       </span>
@@ -184,10 +221,10 @@ export function ImportSection({
         </div>
       ) : null}
 
-      {state.current.kind !== "none" ? (
+      {currentImport && currentImport.kind !== "none" ? (
         <div className="px-4 pb-4">
           <CurrentImportCard
-            current={state.current}
+            current={currentImport}
             deleteState={state.delete}
             deleteDisabled={state.start.kind === "pending" || retryPending}
             onReconnect={actions.onReconnectImportStatus}

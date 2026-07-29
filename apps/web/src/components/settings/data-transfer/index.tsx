@@ -56,7 +56,7 @@ export function DataTransfer() {
     queryFn: getCurrentDataTransferImport,
     retry: false,
   });
-  const currentImport = currentImportQuery.data ?? null;
+  const currentImport = currentImportQuery.isSuccess ? currentImportQuery.data : null;
   const liveStatusQuery = useDataTransferImportStatusQuery(currentImport);
 
   const prepared: PreparedFileViewState =
@@ -169,7 +169,7 @@ export function DataTransfer() {
     deleteState = { kind: "error", message: deleteMutation.error.message };
   }
 
-  let current: CurrentImportViewState = { kind: "none" };
+  let currentView: CurrentImportViewState = { kind: "none" };
   if (currentImport?.status === "queued" || currentImport?.status === "running") {
     let live: CurrentImportLiveState;
     if (liveStatusQuery.isError) {
@@ -179,17 +179,25 @@ export function DataTransfer() {
     } else {
       live = { kind: "connecting" };
     }
-    current = { kind: "active", currentImport, live };
+    currentView = { kind: "active", currentImport, live };
   } else if (currentImport?.status === "completed") {
-    current = { kind: "completed", currentImport };
+    currentView = { kind: "completed", currentImport };
   } else if (currentImport) {
-    current = { kind: "retryable", currentImport, retry: retryState };
+    currentView = { kind: "retryable", currentImport, retry: retryState };
+  }
+
+  let currentState: ImportViewState["current"];
+  if (currentImportQuery.isPending) currentState = { kind: "loading" };
+  else if (currentImportQuery.isError) {
+    currentState = { kind: "error", message: currentImportQuery.error.message };
+  } else {
+    currentState = { kind: "ready", current: currentView };
   }
 
   const state: DataTransferViewState = {
     export: exportState,
     import: {
-      current,
+      current: currentState,
       delete: deleteState,
       prepared,
       start: startState,
@@ -202,6 +210,7 @@ export function DataTransfer() {
       actions={{
         onExport: () => exportMutation.mutate(),
         onReconnectImportStatus: () => void liveStatusQuery.refetch(),
+        onRetryCurrentImportLoad: () => void currentImportQuery.refetch(),
         onFile: (file) => void handleFile(file),
         onFileError: (error) => {
           readVersion.current += 1;
