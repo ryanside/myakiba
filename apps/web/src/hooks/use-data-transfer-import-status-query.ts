@@ -80,7 +80,8 @@ export function useDataTransferImportStatusQuery(currentImport: DataTransferImpo
       reducer: (_previous, chunk) => chunk.data,
       initialValue: null,
     }),
-    retry: (_failureCount, error) => error instanceof ImportStatusStreamDisconnectedError,
+    retry: (failureCount, error) =>
+      failureCount < 3 && error instanceof ImportStatusStreamDisconnectedError,
     refetchOnWindowFocus: false,
   });
 }
