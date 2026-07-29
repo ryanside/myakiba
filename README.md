@@ -1,27 +1,10 @@
-<div align="center">
-
-  <h1>myakiba.app</h1>
-
-</div>
-
-<div align="center">
-
-  <a href="https://discord.gg/VKHVvhcC2z" target="_blank">
-    <img alt="Discord" src="https://img.shields.io/discord/1234567890?style=for-the-badge&logo=discord&logoColor=%23ffffff">
-  </a>
-  <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/ryanside/myakiba?style=for-the-badge&logo=github">
-
-</div>
-
-<br />
+# [myakiba.app](https://myakiba.app)
 
 **[myakiba](https://myakiba.app)** is a collection management tool for Japanese pop-culture goods. Track your collection, orders, and analytics with a modern interface.
 
 Early in development.
 
 ![myakiba](apps/web/public/og-image.png)
-
-The community-powered catalog from **MyFigureCollection** and the flexibility of spreadsheets, coupled with new and convenient features for collectors, unified into one collection management tool.
 
 ## Motivation
 
@@ -33,90 +16,100 @@ myakiba is being created in hopes to be a useful alternative, as well as a fun/l
 
 ## Features
 
-### Core Features
+### Core features
 
-- **Collection Management** - Organize and track your entire figure collection with detailed item information from MyFigureCollection
-- **Order Management** - Manage pre-orders, track shipments, and monitor order status
-- **Analytics** - Visualize spending patterns, collection statistics, and trends
-- **Expense Tracking** - See exactly where your money goes: item prices, shipping, taxes, and fees.
-- **Personalized Profile** - Share your stats, analytics, collection, and orders with your friends through your customizable profile page.
+- **Sync from MyFigureCollection without starting over.** Import an MFC CSV or paste item links to add MFC items to your collection and orders. myakiba pulls in the item information for you.
+- **Manage your collection.** Get the flexibility of a spreadsheet with the item information from MFC already attached. Track what you own, what you paid, where you bought it, its condition, dates, tags, notes, and more.
+- **Multi-item orders.** Group multiple items into an order, follow each order from Ordered to Owned, and keep track of shipping, taxes, duties, tariffs, and other fees.
+- **See what is coming up.** Use the dashboard and personal calendar to check upcoming releases,
+  active orders, unpaid costs, and what is happening each month.
+- **See where your money goes.** Break down paid spend and unpaid costs by date, shop, item prices,
+  order fees, and shipping method.
+- **See what shapes your collection.** Find your most-collected and highest-spend artists,
+  characters, origins, companies, shops, scales, and more.
 
-### Technical Stack
+### Tech
 
 - **TypeScript**
-- **React (Vite)** - Frontend
-- **TanStack Router, Query, Table, Form** - Major frontend tools
-- **TailwindCSS & shadcn/ui** - Styling
-- **Elysia** - Backend
-- **Bun** - Runtime + package manager
-- **Drizzle** - ORM
-- **PostgreSQL** - Database
-- **Redis** - Store for queues, caching, rate limiting, data
-- **BullMQ** - Job queue for background processing and workers
-- **Betterauth** - Authentication
-- **AWS S3** - Object storage
-- **Turborepo** - Monorepo
+- **React and Vite**
+- **TanStack Router, Query, Table, and Form**
+- **Tailwind CSS and shadcn/ui**
+- **Elysia and Bun**
+- **Better Auth**
+- **PostgreSQL and Drizzle ORM**
+- **Redis and BullMQ**
+- **AWS S3**
+- **Turborepo**
 
-## Page Showcase
+## Page showcase
 
 ### Dashboard
 
-Get a comprehensive overview of your collection at a glance. Monitor your spending and expenses, view upcoming releases, quickly manage orders, and more all in one central hub.
-
-<div align="center">
+The overview puts your total items, total spend, active orders, and unpaid costs up front. It also
+shows a collection breakdown, your order activity for the year, and a release calendar. Switch to
+the monthly view to focus on one month at a time with order totals, fees, shop breakdowns, and an
+order board.
 
 ![Dashboard](apps/web/public/dashboard-light.webp)
 
-</div>
-
 ### Collection
 
-Manage your entire collection with a powerful data table. Filter, sort, and organize items easily. Track collection dates, prices, shops, and more. Inline editing makes updating your collection quick and efficient.
-
-<div align="center">
+View your collection as a table, a card grid, or an image gallery. Filter
+and sort it, choose which columns to show, then move, resize, or pin those columns to fit how you
+collect. Prices, scores, counts, releases, shops, and dates can all be edited directly in
+the table.
 
 ![Collection](apps/web/public/collection-light.webp)
 
-</div>
-
 ### Orders
 
-Keep track of all your orders and purchases in one place. Track payments (including shipping fees, taxes, tariffs, etc.), statuses, dates, shops. Manage multiple items per order. Customizable columns and filters.
-
-<div align="center">
+Keep preorders organized by status, shop, release date, payment date, shipping date,
+and collection date. Each order can hold multiple items, with separate item prices plus shipping,
+taxes, duties, tariffs, and other fees. Orders also have table, card, and gallery views, along with
+the same filtering and column controls as your collection.
 
 ![Orders](apps/web/public/orders-light.webp)
 
-</div>
-
 ### Analytics
 
-Dive deep into your collection data with comprehensive analytics. Visualize spending trends, analyze purchase patterns, track collection growth, and gain insights into your collecting habits.
-
-<div align="center">
+See the artists, characters, origins, companies, classifications, events, materials, shops, and
+scales that make up your collection. Each section shows the top results by item count and by spend.
+Open one for a searchable table, totals that update with your filters, and the exact collection
+items behind each result.
 
 ![Analytics](apps/web/public/analytics-light.webp)
 
-</div>
-
 ## Roadmap
 
-myakiba is actively being developed with more features on the horizon:
+myakiba is still in active development. Current priorities:
 
-- [ ] **Refining existing features**
-- [ ] **Profile page**
-- [ ] **Expense tracking**
+- [ ] Refine existing features
+- [ ] Profiles
 
-## Run Locally
+## Run locally
 
 ### Prerequisites
 
-- **Bun** (runtime + package manager)
-- **Docker**
-- **AWS S3** (required for the worker’s image/object uploads)
-- **HTTP proxy** (optional, used by the worker for scraping)
+- [Bun 1.3.9](https://bun.sh/) (the version pinned in `package.json`)
+- Docker with Docker Compose
+- An AWS S3 bucket and credentials
+- An HTTP proxy is optional but recommended
 
-### Run w/ dev
+### Auth services
+
+- Google OAuth is optional, but its environment variables must be non-empty. Use placeholders if
+  you do not need Google sign-in.
+- Resend is required for email verification and password resets. Without Resend, use non-empty placeholders and manually set `email_verified` to `true` in Postgres.
+
+For Turnstile, use Cloudflare's
+[official test keys](https://developers.cloudflare.com/turnstile/troubleshooting/testing/):
+
+```dotenv
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+VITE_TURNSTILE_SITE_KEY=1x00000000000000000000AA
+```
+
+### Run with `bun dev`
 
 1. Clone the repository:
 
@@ -125,80 +118,129 @@ git clone https://github.com/ryanside/myakiba.git
 cd myakiba
 ```
 
-2. Install dependencies:
+1. Install dependencies:
 
 ```bash
 bun install
 ```
 
-3. Set up your environment variables:
+1. Create the app environment files:
 
-- Create a `.env` file in each app directory based on its `.env.example`:
-  - `apps/server/.env` (API/auth/email/redis/db)
-  - `apps/web/.env` (Vite client env, `VITE_*`)
-  - `apps/worker/.env` (scraping/jobs/s3/redis/db)
+```bash
+cp apps/server/.env.example apps/server/.env
+cp apps/web/.env.example apps/web/.env
+cp apps/worker/.env.example apps/worker/.env
+```
 
-4. Start the dev processes:
+Use these values for the services that run locally:
+
+```dotenv
+# apps/server/.env and apps/worker/.env
+DATABASE_URL=postgresql://postgres:password@localhost:5432/myakiba
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+# apps/server/.env
+CORS_ORIGIN=http://localhost:3001
+BETTER_AUTH_URL=http://localhost:3000
+
+# apps/web/.env
+VITE_SERVER_URL=http://localhost:3000
+```
+
+Fill in the remaining auth, email, Turnstile, and S3 values in the example files. The worker
+can read AWS credentials from `apps/worker/.env` or the standard AWS credential chain.
+`WORKER_PROXY_URL`, `AWS_BUCKET_URL`, `POSTHOG_API_KEY`, and `BETTER_AUTH_API_KEY` are optional.
+When `AWS_BUCKET_URL` is omitted, object URLs use the bucket's regional S3 URL.
+
+1. Start the app:
 
 ```bash
 bun dev
 ```
 
-5. Open [http://localhost:3001](http://localhost:3001) in your browser to see the web application.
+This command also starts the Postgres and Redis containers and pushes the database schema.
+Open [http://localhost:3001](http://localhost:3001). The API runs at
+[http://localhost:3000](http://localhost:3000).
 
-The API is running at [http://localhost:3000](http://localhost:3000).
+Run `bun stop` when you want to stop the Postgres and Redis containers.
 
-### Run w/ docker compose
+### Run the full stack with Docker Compose
 
-The root `docker-compose.yml` can run Postgres + Redis + API + workers.
+The root `docker-compose.yml` runs Postgres, Redis, the schema push, the server and bundled web
+app, and the worker.
 
-1. Create a root `.env` file (used by Docker Compose) based on `.env.example`.
+1. Create the Compose environment file:
 
-2. Build and start the stack:
+```bash
+cp .env.example .env
+```
+
+Use the Compose service names for database and Redis connections:
+
+```dotenv
+POSTGRES_DB=myakiba
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=password
+DATABASE_URL=postgresql://postgres:password@postgres:5432/myakiba
+
+REDIS_HOST=redis
+REDIS_PORT=6379
+
+CORS_ORIGIN=http://localhost:3000
+BETTER_AUTH_URL=http://localhost:3000
+VITE_SERVER_URL=http://localhost:3000
+```
+
+Fill in the remaining required values in `.env`. The same optional variables listed in the
+`bun dev` setup may stay empty.
+
+1. Build and start the stack:
 
 ```bash
 docker compose up -d --build
 ```
 
-## Project Structure
+Open [http://localhost:3000](http://localhost:3000). To follow startup logs or stop the stack:
+
+```bash
+docker compose logs -f
+docker compose down
+```
+
+## Project structure
 
 ```
 myakiba/
 ├── apps/
 │   ├── web/            # Frontend (Vite + React + TanStack Router)
-│   ├── server/         # Backend API (Elysia + Bun)
-│   └── worker/         # Background jobs/scraping (BullMQ)
+│   ├── server/         # API and production web server (Elysia + Bun)
+│   └── worker/         # Scraping and background jobs (BullMQ)
 ├── packages/
-│   ├── auth/           # Better Auth config + adapters/plugins
-│   ├── config/         # Shared TS config
-│   ├── contracts/      # Shared zod schemas + types (collection/orders/item/search/sync)
-│   ├── db/             # Drizzle schema + migrations + db scripts
-│   ├── env/            # Typed env schemas (server/web/worker)
-│   ├── redis/          # Redis client + docker compose
+│   ├── auth/           # Better Auth configuration
+│   ├── config/         # Shared TypeScript configuration
+│   ├── contracts/      # Shared Zod schemas, constants, and types
+│   ├── db/             # Drizzle schema and database scripts
+│   ├── env/            # Typed environment schemas
+│   ├── redis/          # Redis clients, job status, and local Compose setup
 │   └── utils/          # Shared utilities
-├── docker-compose.yml  # Docker Compose (API + workers + Postgres + Redis)
+├── CONTEXT.md          # Expense domain glossary
+├── docker-compose.yml  # Local full-stack build
+├── docker-compose.production.yml
+│                       # Production stack using published images
 └── turbo.json          # Turborepo task pipeline
 ```
 
 ## Contributors
 
-<a href="https://github.com/ryanside/myakiba/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=ryanside/myakiba" />
-</a>
+[![Contributors](https://contrib.rocks/image?repo=ryanside/myakiba)](https://github.com/ryanside/myakiba/graphs/contributors)
 
 Made with [contrib.rocks](https://contrib.rocks).
 
-### Interested in Contributing?
+### Interested in contributing?
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome. Open an issue or submit a pull request.
 
-# Star History
+# Star history
 
-<p align="center">
-  <a target="_blank" href="https://star-history.com/#yourusername/myakiba&Date">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=ryanside/myakiba&type=Date&theme=dark">
-      <img alt="GitHub Star History for yourusername/myakiba" src="https://api.star-history.com/svg?repos=ryanside/myakiba&type=Date">
-    </picture>
-  </a>
-</p>
+[![Star History Rank](https://api.star-history.com/badge?repo=ryanside/myakiba)](https://www.star-history.com/ryanside/myakiba)
