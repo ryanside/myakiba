@@ -46,6 +46,8 @@ const dataTransferImportQueue = new Queue<DataTransferImportJobPayload>(
   },
 );
 
+const IMPORT_STATUS_CACHE_READ_TIMEOUT_MS = 1000;
+
 dataTransferImportQueue.on("error", (error: Error) => {
   const queueLog = createLogger({
     action: "dataTransfer.queue",
@@ -55,6 +57,49 @@ dataTransferImportQueue.on("error", (error: Error) => {
   queueLog.error(error);
   queueLog.emit();
 });
+
+const readImportStatusCache = async (jobId: string): Promise<string | null> => {
+  if (redis.status !== "ready") {
+    createLogger({
+      action: "dataTransfer.getImportJobStatus",
+      outcome: "warn",
+      jobId,
+      message: "Redis is unavailable; falling back to the database",
+    }).emit();
+    return null;
+  }
+
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  const cacheRead = await tryCatch(
+    Promise.race([
+      redis.get(getJobStatusSnapshotKey(jobId)),
+      new Promise<null>((resolve) => {
+        timeoutId = setTimeout(() => {
+          createLogger({
+            action: "dataTransfer.getImportJobStatus",
+            outcome: "warn",
+            jobId,
+            message: "Redis job status read timed out; falling back to the database",
+          }).emit();
+          resolve(null);
+        }, IMPORT_STATUS_CACHE_READ_TIMEOUT_MS);
+      }),
+    ]),
+  );
+
+  if (timeoutId !== null) clearTimeout(timeoutId);
+  if (!cacheRead.error) return cacheRead.data;
+
+  const cacheLog = createLogger({
+    action: "dataTransfer.getImportJobStatus",
+    outcome: "warn",
+    jobId,
+    message: "Failed to read Redis job status cache; falling back to the database",
+  });
+  cacheLog.error(cacheRead.error);
+  cacheLog.emit();
+  return null;
+};
 
 const markEnqueueFailure = async ({
   payload,
@@ -442,7 +487,7 @@ const DataTransferService = {
     if (!currentImport) return null;
 
     const isActive = currentImport.status === "queued" || currentImport.status === "running";
-    const cached = isActive ? await redis.get(getJobStatusSnapshotKey(currentImport.jobId)) : null;
+    const cached = isActive ? await readImportStatusCache(currentImport.jobId) : null;
 
     if (cached) {
       const parsed = parseJobStatusPayload(cached);
