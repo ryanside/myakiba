@@ -19,7 +19,7 @@ export function selectRelease({
   for (const release of releases) {
     if (
       release.date === requested.date &&
-      (matchingDate === null || release.id.localeCompare(matchingDate.id) < 0)
+      (matchingDate === null || release.id < matchingDate.id)
     ) {
       matchingDate = release;
     }
@@ -30,10 +30,7 @@ export function selectRelease({
       release.price === requested.price &&
       release.priceCurrency === requested.priceCurrency &&
       release.barcode === requested.barcode;
-    if (
-      fingerprintMatches &&
-      (exactFingerprint === null || release.id.localeCompare(exactFingerprint.id) < 0)
-    ) {
+    if (fingerprintMatches && (exactFingerprint === null || release.id < exactFingerprint.id)) {
       exactFingerprint = release;
     }
 
