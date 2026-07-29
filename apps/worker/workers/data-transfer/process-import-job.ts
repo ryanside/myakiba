@@ -304,19 +304,26 @@ async function writeImport({
   else if (orderRows.length + collectionRows.length > 0) status = "partial";
   else status = "failed";
 
-  await db.transaction(async (transaction) => {
+  const { importedOrders, importedCollectionItems } = await db.transaction(async (transaction) => {
+    let insertedOrderCount = 0;
+    let insertedCollectionItemCount = 0;
+
     for (const orderBatch of chunk(orderRows, INSERT_BATCH_SIZE)) {
-      await transaction
+      const insertedOrders = await transaction
         .insert(orderTable)
         .values(orderBatch)
-        .onConflictDoNothing({ target: orderTable.id });
+        .onConflictDoNothing({ target: orderTable.id })
+        .returning({ id: orderTable.id });
+      insertedOrderCount += insertedOrders.length;
     }
 
     for (const collectionBatch of chunk(collectionRows, INSERT_BATCH_SIZE)) {
-      await transaction
+      const insertedCollectionItems = await transaction
         .insert(collectionTable)
         .values(collectionBatch)
-        .onConflictDoNothing({ target: collectionTable.id });
+        .onConflictDoNothing({ target: collectionTable.id })
+        .returning({ id: collectionTable.id });
+      insertedCollectionItemCount += insertedCollectionItems.length;
     }
 
     const [saved] = await transaction
@@ -326,8 +333,8 @@ async function writeImport({
         phase: status === "failed" ? "failed" : "completed",
         archive: status === "completed" ? null : archive,
         report: plan.report,
-        importedOrders: orderRows.length,
-        importedCollectionItems: collectionRows.length,
+        importedOrders: insertedOrderCount,
+        importedCollectionItems: insertedCollectionItemCount,
         failedCollectionItems,
         error: status === "failed" ? EMPTY_IMPORT_ERROR : null,
         updatedAt: new Date(),
@@ -342,12 +349,16 @@ async function writeImport({
       .returning({ jobId: dataTransferImport.jobId });
 
     if (!saved) throw new Error("DATA_TRANSFER_IMPORT_NO_LONGER_CURRENT");
+    return {
+      importedOrders: insertedOrderCount,
+      importedCollectionItems: insertedCollectionItemCount,
+    };
   });
 
   return {
     status,
-    importedOrders: orderRows.length,
-    importedCollectionItems: collectionRows.length,
+    importedOrders,
+    importedCollectionItems,
     failedCollectionItems,
     report: plan.report,
     error: status === "failed" ? EMPTY_IMPORT_ERROR : null,
