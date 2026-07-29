@@ -96,10 +96,7 @@ export function CurrentImportCard({
   const deleteError = deleteState.kind === "error" ? deleteState.message : null;
 
   return (
-    <div
-      className="space-y-4 rounded-lg bg-muted/45 p-3 ring-1 ring-foreground/8"
-      aria-live="polite"
-    >
+    <div className="space-y-4 rounded-lg bg-muted/45 p-3 ring-1 ring-foreground/8">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="min-w-0 flex-1 break-words font-medium">{currentImport.fileName}</p>
         <ThemedBadge variant={appearance.variant}>{appearance.label}</ThemedBadge>
@@ -116,7 +113,7 @@ export function CurrentImportCard({
               </span>
             </Progress>
           ) : null}
-          <p className="shimmer text-pretty text-sm text-muted-foreground">
+          <p className="shimmer text-pretty text-sm text-muted-foreground" aria-live="polite">
             {liveStatus?.statusMessage ?? "Waiting for live import status…"}
           </p>
         </div>
