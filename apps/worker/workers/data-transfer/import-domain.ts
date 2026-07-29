@@ -10,8 +10,8 @@ export function selectRelease({
   readonly releases: readonly CatalogRelease[];
   readonly requested: DataTransferReleaseFingerprint;
 }):
-  | { readonly requestedDateFound: true; readonly release: CatalogRelease }
-  | { readonly requestedDateFound: false; readonly release: CatalogRelease | null } {
+  | { readonly kind: "requested"; readonly release: CatalogRelease }
+  | { readonly kind: "substitute"; readonly release: CatalogRelease | null } {
   let exactFingerprint: CatalogRelease | null = null;
   let matchingDate: CatalogRelease | null = null;
   let latest: CatalogRelease | null = null;
@@ -46,10 +46,8 @@ export function selectRelease({
     }
   }
 
-  const requestedDateRelease = exactFingerprint ?? matchingDate;
-  return requestedDateRelease
-    ? { requestedDateFound: true, release: requestedDateRelease }
-    : { requestedDateFound: false, release: latest };
+  if (exactFingerprint) return { kind: "requested", release: exactFingerprint };
+  return { kind: "substitute", release: matchingDate ?? latest };
 }
 
 export function createImportId({

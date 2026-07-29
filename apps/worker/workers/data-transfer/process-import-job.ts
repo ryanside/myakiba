@@ -123,7 +123,7 @@ function findRowsToScrape({
         selectRelease({
           releases: catalogItem.releases,
           requested: selectedRelease,
-        }).requestedDateFound)
+        }).kind === "requested")
     ) {
       continue;
     }
@@ -186,7 +186,7 @@ function buildImportPlan({
       releases: catalogItem.releases,
       requested: requestedRelease,
     });
-    if (releaseSelection.requestedDateFound) {
+    if (releaseSelection.kind === "requested") {
       collectionRows.push({
         row,
         itemId: catalogItem.itemId,
