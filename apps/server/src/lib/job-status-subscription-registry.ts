@@ -49,6 +49,14 @@ const pushToConsumerState = (
     return;
   }
 
+  const pendingEvent = consumerState.pendingEvent;
+  if (
+    pendingEvent?.kind === "error" ||
+    (pendingEvent?.kind === "message" && pendingEvent.status.terminalState !== null)
+  ) {
+    return;
+  }
+
   consumerState.pendingEvent = event;
 };
 
