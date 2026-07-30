@@ -1,10 +1,23 @@
-# [myakiba.app](https://myakiba.app)
+<div align="center">
+
+  <h1>myakiba.app</h1>
+
+  <a href="https://discord.gg/VKHVvhcC2z">
+    <img alt="Discord" src="https://img.shields.io/badge/chat-Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white">
+  </a>
+  <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/ryanside/myakiba?style=for-the-badge&logo=github">
+
+</div>
+
+<br />
 
 **[myakiba](https://myakiba.app)** is a collection management tool for Japanese pop-culture goods. Track your collection, orders, and analytics with a modern interface.
 
 Early in development.
 
 ![myakiba](apps/web/public/og-image.png)
+
+The community-powered catalog from **MyFigureCollection** and the flexibility of spreadsheets, coupled with new and convenient features for collectors, unified into one collection management tool.
 
 ## Motivation
 
