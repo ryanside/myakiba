@@ -188,8 +188,8 @@ export function ImportSection({
                 description={
                   <span className="flex flex-col gap-2">
                     <span className="block">
-                      This appends {numberFormatter.format(state.prepared.preview.orders)} orders
-                      and {numberFormatter.format(state.prepared.preview.collectionItems)} items.
+                      This adds {numberFormatter.format(state.prepared.preview.orders)} orders and{" "}
+                      {numberFormatter.format(state.prepared.preview.collectionItems)} items.
                       Existing records are not changed.
                     </span>
                     {currentImport && currentImport.kind !== "none" ? (

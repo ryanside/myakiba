@@ -1,5 +1,5 @@
 import type { Job } from "bullmq";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { createLogger } from "evlog";
 import { dataTransferArchiveV1Schema } from "@myakiba/contracts/data-transfer/schema";
 import type {
@@ -248,10 +248,12 @@ function buildImportPlan({
 
 async function writeImport({
   archive,
+  importId,
   payload,
   plan,
 }: {
   readonly archive: DataTransferArchiveV1;
+  readonly importId: string;
   readonly payload: DataTransferImportJobPayload;
   readonly plan: ImportPlan;
 }): Promise<DataTransferImportResult> {
@@ -260,7 +262,7 @@ async function writeImport({
     ({ orderKey, createdAt, updatedAt, ...values }) => ({
       id: createImportId({
         userId,
-        exportId: archive.exportId,
+        importId,
         kind: "order",
         localKey: orderKey,
       }),
@@ -276,7 +278,7 @@ async function writeImport({
       return {
         id: createImportId({
           userId,
-          exportId: archive.exportId,
+          importId,
           kind: "collection",
           localKey: collectionKey,
         }),
@@ -287,7 +289,7 @@ async function writeImport({
             ? null
             : createImportId({
                 userId,
-                exportId: archive.exportId,
+                importId,
                 kind: "order",
                 localKey: orderKey,
               }),
@@ -333,8 +335,8 @@ async function writeImport({
         phase: status === "failed" ? "failed" : "completed",
         archive: status === "completed" ? null : archive,
         report: plan.report,
-        importedOrders: insertedOrderCount,
-        importedCollectionItems: insertedCollectionItemCount,
+        importedOrders: sql`${dataTransferImport.importedOrders} + ${insertedOrderCount}`,
+        importedCollectionItems: sql`${dataTransferImport.importedCollectionItems} + ${insertedCollectionItemCount}`,
         failedCollectionItems,
         error: status === "failed" ? EMPTY_IMPORT_ERROR : null,
         updatedAt: new Date(),
@@ -457,6 +459,7 @@ export async function processDataTransferImportJob(
       )
       .returning({
         archive: dataTransferImport.archive,
+        importId: dataTransferImport.importId,
       });
     if (claimed === undefined) {
       jobLog.set({
@@ -569,6 +572,7 @@ export async function processDataTransferImportJob(
 
     const result = await writeImport({
       archive,
+      importId: claimed.importId ?? archive.exportId,
       payload,
       plan,
     });
@@ -605,7 +609,6 @@ export async function processDataTransferImportJob(
         .set({
           status: "failed",
           phase: "failed",
-          report: null,
           error: UNEXPECTED_IMPORT_ERROR,
           updatedAt: new Date(),
         })

@@ -332,6 +332,7 @@ const DataTransferService = {
     if (Buffer.byteLength(JSON.stringify(archive), "utf-8") > DATA_TRANSFER_MAX_BYTES) {
       throw new Error("DATA_TRANSFER_ARCHIVE_TOO_LARGE");
     }
+    const importId = createId();
     const jobId = `data-transfer-import-${createId()}`;
     const now = new Date();
 
@@ -355,6 +356,7 @@ const DataTransferService = {
           .insert(dataTransferImport)
           .values({
             userId,
+            importId,
             jobId,
             fileName,
             status: "queued",
@@ -366,6 +368,7 @@ const DataTransferService = {
           .onConflictDoUpdate({
             target: dataTransferImport.userId,
             set: {
+              importId,
               jobId,
               fileName,
               archive,
@@ -616,10 +619,6 @@ const DataTransferService = {
             jobId,
             status: "queued",
             phase: "queued",
-            importedOrders: 0,
-            importedCollectionItems: 0,
-            failedCollectionItems: 0,
-            report: null,
             error: null,
             startedAt: now,
             updatedAt: now,

@@ -234,6 +234,7 @@ export const dataTransferImport = pgTable("data_transfer_import", {
   userId: text("user_id")
     .primaryKey()
     .references(() => user.id, { onDelete: "cascade" }),
+  importId: text("import_id"),
   jobId: text("job_id").notNull(),
   fileName: text("file_name").notNull(),
   archive: jsonb("archive").$type<DataTransferArchiveV1>(),

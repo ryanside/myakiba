@@ -86,6 +86,10 @@ export function CurrentImportCard({
   const releaseWarnings =
     (currentImport.report?.releaseSubstitutions.length ?? 0) +
     (currentImport.report?.missingReleases.length ?? 0);
+  const failureReasonCounts = new Map<string, number>();
+  for (const row of currentImport.report?.failedRows ?? []) {
+    failureReasonCounts.set(row.reason, (failureReasonCounts.get(row.reason) ?? 0) + 1);
+  }
   const retryError =
     current.kind === "retryable" && current.retry.kind === "error"
       ? current.retry.message
@@ -120,26 +124,49 @@ export function CurrentImportCard({
       ) : null}
 
       {current.kind !== "active" ? (
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
+        <dl
+          className={`grid gap-x-4 gap-y-3 ${
+            currentImport.failedCollectionItems > 0 ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2"
+          }`}
+        >
           <div>
-            <dt className="text-xs text-muted-foreground">Orders</dt>
+            <dt className="text-xs text-muted-foreground">Orders imported</dt>
             <dd className="font-medium tabular-nums">
               {numberFormatter.format(currentImport.importedOrders)}
             </dd>
           </div>
           <div>
-            <dt className="text-xs text-muted-foreground">Imported items</dt>
+            <dt className="text-xs text-muted-foreground">Items imported</dt>
             <dd className="font-medium tabular-nums">
               {numberFormatter.format(currentImport.importedCollectionItems)}
             </dd>
           </div>
-          <div>
-            <dt className="text-xs text-muted-foreground">Failed items</dt>
-            <dd className="font-medium tabular-nums">
-              {numberFormatter.format(currentImport.failedCollectionItems)}
-            </dd>
-          </div>
+          {currentImport.failedCollectionItems > 0 ? (
+            <div>
+              <dt className="text-xs text-muted-foreground">Items failed</dt>
+              <dd className="font-medium tabular-nums">
+                {numberFormatter.format(currentImport.failedCollectionItems)}
+              </dd>
+            </div>
+          ) : null}
         </dl>
+      ) : null}
+
+      {current.kind !== "active" && failureReasonCounts.size > 0 ? (
+        <div className="space-y-1">
+          <p className="text-sm font-medium">Why items failed</p>
+          <ul className="space-y-1 text-pretty text-sm text-muted-foreground">
+            {[...failureReasonCounts].map(([reason, count]) => (
+              <li key={reason}>
+                {reason}{" "}
+                <span className="tabular-nums">
+                  {numberFormatter.format(count)} {count === 1 ? "item was" : "items were"}{" "}
+                  affected.
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : null}
 
       {releaseWarnings > 0 ? (

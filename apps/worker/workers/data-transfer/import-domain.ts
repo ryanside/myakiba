@@ -49,17 +49,17 @@ export function selectRelease({
 
 export function createImportId({
   userId,
-  exportId,
+  importId,
   kind,
   localKey,
 }: {
   readonly userId: string;
-  readonly exportId: string;
+  readonly importId: string;
   readonly kind: "order" | "collection";
   readonly localKey: string;
 }): string {
   return uuidv5(
-    JSON.stringify([userId, exportId, kind, localKey]),
+    JSON.stringify([userId, importId, kind, localKey]),
     "85f8f00e-44c6-4e07-8d8d-e99d5e351daa",
   );
 }
