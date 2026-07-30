@@ -37,8 +37,6 @@ const EMPTY_IMPORT_ERROR = "No orders or collection items could be imported.";
 const UNEXPECTED_IMPORT_ERROR = "The import stopped unexpectedly. Try again to continue.";
 const FETCHING_ITEM_DATA_MESSAGE = "Fetching item data from MyFigureCollection…";
 
-type FailedReportRow = DataTransferImportReport["failedRows"][number];
-
 type CatalogItem = {
   itemId: string;
   releases: CatalogRelease[];
@@ -52,6 +50,10 @@ type ImportableCollectionRow = {
 
 type ImportPlan = {
   collectionRows: ImportableCollectionRow[];
+  failedRows: readonly {
+    externalId: number;
+    reason: string;
+  }[];
   report: DataTransferImportReport;
 };
 
@@ -133,20 +135,29 @@ function buildImportPlan({
   readonly scrapedIds: ReadonlySet<number>;
 }): ImportPlan {
   const collectionRows: ImportableCollectionRow[] = [];
-  const failedRows: FailedReportRow[] = [];
-  const releaseSubstitutions: DataTransferImportReport["releaseSubstitutions"] = [];
-  const missingReleases: DataTransferImportReport["missingReleases"] = [];
+  const failedRows: ImportPlan["failedRows"][number][] = [];
+  const failureReasonCounts = new Map<string, number>();
+  let releaseSubstitutions = 0;
+  let missingReleases = 0;
   const scrapeKeys = new Set(rowsToScrape.map((row) => row.collectionKey));
+  const addFailedRow = ({
+    externalId,
+    reason,
+  }: {
+    readonly externalId: number;
+    readonly reason: string;
+  }): void => {
+    failedRows.push({ externalId, reason });
+    failureReasonCounts.set(reason, (failureReasonCounts.get(reason) ?? 0) + 1);
+  };
 
   for (const row of archive.collectionItems) {
     const externalId = row.item.externalId;
     const requiredScrape = scrapeKeys.has(row.collectionKey);
 
     if (requiredScrape && !scrapedIds.has(externalId)) {
-      failedRows.push({
-        collectionKey: row.collectionKey,
-        externalId: row.item.externalId,
-        title: row.item.sourceTitle,
+      addFailedRow({
+        externalId,
         reason: "The item could not be fetched from MyFigureCollection after three attempts.",
       });
       continue;
@@ -154,10 +165,8 @@ function buildImportPlan({
 
     const catalogItem = finalCatalog.get(externalId);
     if (!catalogItem) {
-      failedRows.push({
-        collectionKey: row.collectionKey,
-        externalId: row.item.externalId,
-        title: row.item.sourceTitle,
+      addFailedRow({
+        externalId,
         reason: "The item was unavailable after fetching its data.",
       });
       continue;
@@ -188,35 +197,19 @@ function buildImportPlan({
         itemId: catalogItem.itemId,
         releaseId: releaseSelection.release.id,
       });
-      releaseSubstitutions.push({
-        collectionKey: row.collectionKey,
-        externalId,
-        title: row.item.sourceTitle,
-        requested: requestedRelease,
-        imported: {
-          date: releaseSelection.release.date,
-          type: releaseSelection.release.type,
-          price: releaseSelection.release.price,
-          priceCurrency: releaseSelection.release.priceCurrency,
-          barcode: releaseSelection.release.barcode,
-        },
-      });
+      releaseSubstitutions += 1;
       continue;
     }
 
     collectionRows.push({ row, itemId: catalogItem.itemId, releaseId: null });
-    missingReleases.push({
-      collectionKey: row.collectionKey,
-      externalId,
-      title: row.item.sourceTitle,
-      requested: requestedRelease,
-    });
+    missingReleases += 1;
   }
 
   return {
     collectionRows,
+    failedRows,
     report: {
-      failedRows,
+      failureReasons: [...failureReasonCounts].map(([reason, count]) => ({ reason, count })),
       releaseSubstitutions,
       missingReleases,
     },
@@ -277,7 +270,7 @@ async function writeImport({
       };
     },
   );
-  const failedCollectionItems = plan.report.failedRows.length;
+  const failedCollectionItems = plan.failedRows.length;
   let status: DataTransferImportResult["status"];
   if (failedCollectionItems === 0) status = "completed";
   else if (orderRows.length + collectionRows.length > 0) status = "partial";
@@ -566,10 +559,10 @@ export async function processDataTransferImportJob(
         existing: archive.collectionItems.length - rowsToScrape.length,
         deduped: externalIds.length,
         scraped: successfulItems.length,
-        failed: plan.report.failedRows.length,
+        failed: plan.failedRows.length,
         successCount: plan.collectionRows.length,
-        failCount: plan.report.failedRows.length,
-        failedIds: [...new Set(plan.report.failedRows.map((row) => row.externalId))],
+        failCount: plan.failedRows.length,
+        failedIds: [...new Set(plan.failedRows.map((row) => row.externalId))],
       },
       processedAt: new Date().toISOString(),
     });

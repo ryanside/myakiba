@@ -84,12 +84,9 @@ export function CurrentImportCard({
     ? Math.round((liveProgress.processed / Math.max(liveProgress.total, 1)) * 100)
     : 0;
   const releaseWarnings =
-    (currentImport.report?.releaseSubstitutions.length ?? 0) +
-    (currentImport.report?.missingReleases.length ?? 0);
-  const failureReasonCounts = new Map<string, number>();
-  for (const row of currentImport.report?.failedRows ?? []) {
-    failureReasonCounts.set(row.reason, (failureReasonCounts.get(row.reason) ?? 0) + 1);
-  }
+    (currentImport.report?.releaseSubstitutions ?? 0) +
+    (currentImport.report?.missingReleases ?? 0);
+  const failureReasons = currentImport.report?.failureReasons ?? [];
   const retryError =
     current.kind === "retryable" && current.retry.kind === "error"
       ? current.retry.message
@@ -152,11 +149,11 @@ export function CurrentImportCard({
         </dl>
       ) : null}
 
-      {current.kind !== "active" && failureReasonCounts.size > 0 ? (
+      {current.kind !== "active" && failureReasons.length > 0 ? (
         <div className="space-y-1">
           <p className="text-sm font-medium">Why items failed</p>
           <ul className="space-y-1 text-pretty text-sm text-muted-foreground">
-            {[...failureReasonCounts].map(([reason, count]) => (
+            {failureReasons.map(({ reason, count }) => (
               <li key={reason}>
                 {reason}{" "}
                 <span className="tabular-nums">

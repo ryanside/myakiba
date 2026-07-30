@@ -164,34 +164,15 @@ export const dataTransferImportRequestSchema = z.strictObject({
   archive: dataTransferArchiveV1Schema,
 });
 
-const dataTransferFailedReportRowSchema = z.strictObject({
-  collectionKey: portableKeySchema,
-  externalId: positiveIntegerSchema,
-  title: z.string(),
+const dataTransferFailureReasonSchema = z.strictObject({
   reason: z.string(),
-});
-
-const dataTransferReleaseSubstitutionSchema = z.strictObject({
-  collectionKey: portableKeySchema,
-  externalId: positiveIntegerSchema,
-  title: z.string(),
-  requested: dataTransferReleaseFingerprintSchema,
-  imported: dataTransferReleaseFingerprintSchema,
-});
-
-const dataTransferMissingReleaseSchema = z.strictObject({
-  collectionKey: portableKeySchema,
-  externalId: positiveIntegerSchema,
-  title: z.string(),
-  requested: dataTransferReleaseFingerprintSchema,
+  count: positiveIntegerSchema.max(DATA_TRANSFER_MAX_RECORDS),
 });
 
 const dataTransferImportReportSchema = z.strictObject({
-  failedRows: z.array(dataTransferFailedReportRowSchema).max(DATA_TRANSFER_MAX_RECORDS),
-  releaseSubstitutions: z
-    .array(dataTransferReleaseSubstitutionSchema)
-    .max(DATA_TRANSFER_MAX_RECORDS),
-  missingReleases: z.array(dataTransferMissingReleaseSchema).max(DATA_TRANSFER_MAX_RECORDS),
+  failureReasons: z.array(dataTransferFailureReasonSchema).max(DATA_TRANSFER_MAX_RECORDS),
+  releaseSubstitutions: nonnegativeIntegerSchema.max(DATA_TRANSFER_MAX_RECORDS),
+  missingReleases: nonnegativeIntegerSchema.max(DATA_TRANSFER_MAX_RECORDS),
 });
 
 const dataTransferImportResultShape = {
