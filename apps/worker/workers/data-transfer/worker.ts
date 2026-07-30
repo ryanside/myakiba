@@ -1,6 +1,6 @@
 import { Worker } from "bullmq";
 import type { Job } from "bullmq";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { createLogger, log } from "evlog";
 import type {
   DataTransferImportResult,
@@ -16,6 +16,7 @@ import {
 import type { DataTransferImportJobPayload } from "@myakiba/redis/data-transfer";
 import { redis } from "@myakiba/redis/client";
 import { writeJobStatusSnapshotAndPublish } from "@myakiba/redis/job-status";
+import { tryCatch } from "@myakiba/utils/result";
 import { processDataTransferImportJob } from "./process-import-job";
 
 type ImportJob = Job<DataTransferImportJobPayload, DataTransferImportResult>;
@@ -150,7 +151,7 @@ dataTransferImportWorker.on("completed", (job, result) => {
   }
 });
 
-dataTransferImportWorker.on("failed", (job, error) => {
+dataTransferImportWorker.on("failed", async (job, error) => {
   const failedLog = createLogger({
     action: "data-transfer.import-failed",
     outcome: "error",
@@ -160,10 +161,45 @@ dataTransferImportWorker.on("failed", (job, error) => {
   failedLog.error(error);
   failedLog.emit();
 
-  if (!job) return;
+  if (!job?.id) return;
+
+  const payload = dataTransferImportJobSchema.safeParse(job.data);
+  if (!payload.success || payload.data.jobId !== job.id) return;
 
   const statusMessage = "The import stopped unexpectedly. Try again to continue.";
-  void publishTerminalStatus(
+  const { data: failedRows, error: persistenceError } = await tryCatch(
+    db
+      .update(dataTransferImport)
+      .set({
+        status: "failed",
+        phase: "failed",
+        error: statusMessage,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(dataTransferImport.userId, payload.data.userId),
+          eq(dataTransferImport.jobId, job.id),
+          inArray(dataTransferImport.status, ["queued", "running"]),
+        ),
+      )
+      .returning({ jobId: dataTransferImport.jobId }),
+  );
+  if (persistenceError) {
+    const persistenceLog = createLogger({
+      action: "data-transfer.import-failed",
+      outcome: "error",
+      queue: { name: DATA_TRANSFER_IMPORT_QUEUE_NAME },
+      job: { id: job.id, name: job.name },
+      step: "persist-terminal-state",
+    });
+    persistenceLog.error(persistenceError);
+    persistenceLog.emit();
+  } else if (failedRows.length === 0) {
+    return;
+  }
+
+  await publishTerminalStatus(
     job,
     {
       phase: "failed",
