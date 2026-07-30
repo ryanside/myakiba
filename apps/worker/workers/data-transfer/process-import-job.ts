@@ -115,20 +115,7 @@ function findRowsToScrape({
   const rowsToScrape: DataTransferCollectionItemV1[] = [];
 
   for (const row of rows) {
-    const catalogItem = catalog.get(row.item.externalId);
-    const selectedRelease = row.item.selectedRelease;
-    if (
-      catalogItem &&
-      (selectedRelease === null ||
-        selectRelease({
-          releases: catalogItem.releases,
-          requested: selectedRelease,
-        }).kind === "requested")
-    ) {
-      continue;
-    }
-
-    rowsToScrape.push(row);
+    if (!catalog.has(row.item.externalId)) rowsToScrape.push(row);
   }
 
   return rowsToScrape;
@@ -191,16 +178,6 @@ function buildImportPlan({
         row,
         itemId: catalogItem.itemId,
         releaseId: releaseSelection.release.id,
-      });
-      continue;
-    }
-
-    if (!requiredScrape) {
-      failedRows.push({
-        collectionKey: row.collectionKey,
-        externalId: row.item.externalId,
-        title: row.item.sourceTitle,
-        reason: "The selected MFC release changed while the import was running.",
       });
       continue;
     }
