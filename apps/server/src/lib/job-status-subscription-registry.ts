@@ -16,7 +16,7 @@ type JobStatusSubscriptionEvent =
 type PendingResolver = (event: JobStatusSubscriptionEvent) => void;
 
 type SubscriptionConsumerState = {
-  readonly queue: JobStatusSubscriptionEvent[];
+  pendingEvent: JobStatusSubscriptionEvent | null;
   resolvePending: PendingResolver | null;
 };
 
@@ -34,7 +34,7 @@ export type JobStatusSubscription = Readonly<{
 const CONNECTION_CLOSED_ERROR = new Error("Job status subscriber connection closed");
 
 const createSubscriptionConsumerState = (): SubscriptionConsumerState => ({
-  queue: [],
+  pendingEvent: null,
   resolvePending: null,
 });
 
@@ -49,7 +49,7 @@ const pushToConsumerState = (
     return;
   }
 
-  consumerState.queue.push(event);
+  consumerState.pendingEvent = event;
 };
 
 const closeConsumerState = (consumerState: SubscriptionConsumerState): void => {
@@ -216,9 +216,10 @@ class JobStatusSubscriptionRegistry {
 
     return {
       next: async (): Promise<JobStatusSubscriptionEvent> => {
-        const queuedEvent = consumerState.queue.shift();
-        if (queuedEvent) {
-          return queuedEvent;
+        if (consumerState.pendingEvent) {
+          const pendingEvent = consumerState.pendingEvent;
+          consumerState.pendingEvent = null;
+          return pendingEvent;
         }
 
         if (consumerState.resolvePending !== null) {
