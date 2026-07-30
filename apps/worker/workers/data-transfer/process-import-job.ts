@@ -542,7 +542,7 @@ export async function processDataTransferImportJob(
 
     const result = await writeImport({
       archive,
-      importId: claimed.importId ?? archive.exportId,
+      importId: claimed.importId,
       payload,
       plan,
     });
