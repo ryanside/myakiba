@@ -209,7 +209,10 @@ export const scrapeImage = async ({
         });
       }
 
-      const imageS3Url = `https://static.myakiba.app/${filename}`;
+      const bucketUrl =
+        env.AWS_BUCKET_URL ??
+        `https://${env.AWS_BUCKET_NAME}.s3.${env.AWS_BUCKET_REGION}.amazonaws.com`;
+      const imageS3Url = `${bucketUrl.replace(/\/+$/, "")}/${filename}`;
 
       return imageS3Url;
     } catch (error) {
@@ -236,6 +239,7 @@ export const scrapeSingleItem = async ({
   log,
   maxRetries = 3,
   baseDelayMs = 1000,
+  progressStatusMessage,
   redis,
   state,
 }: ScrapeSingleItemParams): Promise<ScrapedItem | null> => {
@@ -397,10 +401,9 @@ export const scrapeSingleItem = async ({
 
       if (redis && state && state.progress) {
         recordItemOutcome(state, { outcome: "succeeded", externalId: id, title });
-        state.statusMessage = SYNC_STATUS_MESSAGES.scraping(
-          state.progress.processed,
-          state.progress.total,
-        );
+        state.statusMessage =
+          progressStatusMessage ??
+          SYNC_STATUS_MESSAGES.scraping(state.progress.processed, state.progress.total);
         await publishJobStatus({ redis, state, terminalState: null, error: null });
       }
 
@@ -421,10 +424,9 @@ export const scrapeSingleItem = async ({
             externalId: id,
             failureReason: message,
           });
-          state.statusMessage = SYNC_STATUS_MESSAGES.scraping(
-            state.progress.processed,
-            state.progress.total,
-          );
+          state.statusMessage =
+            progressStatusMessage ??
+            SYNC_STATUS_MESSAGES.scraping(state.progress.processed, state.progress.total);
           await publishJobStatus({ redis, state, terminalState: null, error: null });
         }
         const finalError = error instanceof Error ? error : new Error(String(error));
@@ -449,6 +451,7 @@ export const scrapeItems = async ({
   log,
   maxRetries = 3,
   baseDelayMs = 1000,
+  progressStatusMessage,
   redis,
   state,
 }: ScrapeItemsParams): Promise<ScrapeResult> => {
@@ -458,6 +461,7 @@ export const scrapeItems = async ({
       log,
       maxRetries,
       baseDelayMs,
+      progressStatusMessage,
       redis,
       state,
     }),
@@ -492,6 +496,7 @@ export const scrapedItemsWithRateLimit = async ({
   log,
   maxRetries = 3,
   baseDelayMs = 1000,
+  progressStatusMessage,
   redis,
   state,
 }: ScrapeItemsParams): Promise<ScrapeResult> => {
@@ -515,6 +520,7 @@ export const scrapedItemsWithRateLimit = async ({
       log,
       maxRetries,
       baseDelayMs,
+      progressStatusMessage,
       redis,
       state,
     });

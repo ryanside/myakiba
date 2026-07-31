@@ -6,11 +6,11 @@ import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useRouter } from "@tanstack/react-router";
 import * as z from "zod";
 import type { User } from "@/lib/auth-client";
-import { SettingsSection } from "./settings-section";
+import { SettingsGroup, SettingsGroupFooter } from "./settings-group";
+import { SettingsRow } from "./settings-row";
 
 export function Profile({ user }: { user: User }) {
   const router = useRouter();
@@ -28,6 +28,7 @@ export function Profile({ user }: { user: User }) {
         return;
       }
 
+      form.reset(value);
       await router.invalidate();
       toast.success("Profile updated successfully");
     },
@@ -40,17 +41,15 @@ export function Profile({ user }: { user: User }) {
       }),
     },
   });
-
   return (
-    <SettingsSection title="Profile Information">
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          form.handleSubmit();
-        }}
-        className="space-y-4"
-      >
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        form.handleSubmit();
+      }}
+    >
+      <SettingsGroup>
         <form.Field
           name="username"
           asyncDebounceMs={1000}
@@ -71,8 +70,11 @@ export function Profile({ user }: { user: User }) {
           }}
         >
           {(field) => (
-            <div className="space-y-2">
-              <Label htmlFor={field.name}>Username</Label>
+            <SettingsRow
+              title="Username"
+              description="Your display name across myakiba."
+              htmlFor={field.name}
+            >
               <Input
                 id={field.name}
                 name={field.name}
@@ -81,31 +83,40 @@ export function Profile({ user }: { user: User }) {
                 onBlur={field.handleBlur}
                 onChange={(e) => field.handleChange(e.target.value)}
                 placeholder="Enter your username"
+                className="sm:w-64"
               />
               <FieldError
                 errors={field.state.meta.errors.map((error) =>
                   typeof error === "string" ? { message: error } : { message: error?.message },
                 )}
               />
-            </div>
+            </SettingsRow>
           )}
         </form.Field>
 
-        <form.Subscribe>
-          {(state) => (
-            <Button type="submit" disabled={!state.canSubmit || state.isSubmitting}>
-              {state.isSubmitting ? (
-                <>
-                  <HugeiconsIcon icon={Loading03Icon} className="mr-2 size-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save Changes"
-              )}
-            </Button>
-          )}
-        </form.Subscribe>
-      </form>
-    </SettingsSection>
+        <SettingsGroupFooter>
+          <form.Subscribe>
+            {(state) => (
+              <Button
+                type="submit"
+                disabled={!state.isDirty || !state.canSubmit || state.isSubmitting}
+              >
+                {state.isSubmitting ? (
+                  <>
+                    <HugeiconsIcon
+                      icon={Loading03Icon}
+                      className="mr-2 size-4 animate-spin motion-reduce:animate-none"
+                    />
+                    Saving…
+                  </>
+                ) : (
+                  "Save changes"
+                )}
+              </Button>
+            )}
+          </form.Subscribe>
+        </SettingsGroupFooter>
+      </SettingsGroup>
+    </form>
   );
 }

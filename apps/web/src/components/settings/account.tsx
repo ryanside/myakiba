@@ -7,17 +7,32 @@ import { toast } from "sonner";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { FieldError } from "@/components/ui/field";
 import * as z from "zod";
-import { SettingsSection } from "./settings-section";
+import { DeleteAccount } from "./delete-account";
+import { SettingsGroup, SettingsGroupFooter } from "./settings-group";
+import { SettingsRow } from "./settings-row";
+
+const MIN_PASSWORD_LENGTH = 8;
+const MIN_PASSWORD_MESSAGE = `Password must be at least ${MIN_PASSWORD_LENGTH} characters`;
 
 const PASSWORD_FIELDS = [
-  { name: "currentPassword", label: "Current Password", placeholder: "Enter current password" },
-  { name: "newPassword", label: "New Password", placeholder: "Enter new password" },
+  {
+    name: "currentPassword",
+    title: "Current password",
+    description: "Confirm it's you before changing your password.",
+    placeholder: "Enter current password",
+  },
+  {
+    name: "newPassword",
+    title: "New password",
+    description: `Use at least ${MIN_PASSWORD_LENGTH} characters.`,
+    placeholder: "Enter new password",
+  },
   {
     name: "confirmPassword",
-    label: "Confirm New Password",
+    title: "Confirm new password",
+    description: "Re-enter the new password to confirm.",
     placeholder: "Confirm new password",
   },
 ] as const;
@@ -64,72 +79,95 @@ export function Account() {
     },
     validators: {
       onSubmit: z.object({
-        currentPassword: z.string().min(8, "Password must be at least 8 characters"),
-        newPassword: z.string().min(8, "Password must be at least 8 characters"),
-        confirmPassword: z.string().min(8, "Password must be at least 8 characters"),
+        currentPassword: z.string().min(MIN_PASSWORD_LENGTH, MIN_PASSWORD_MESSAGE),
+        newPassword: z.string().min(MIN_PASSWORD_LENGTH, MIN_PASSWORD_MESSAGE),
+        confirmPassword: z.string().min(MIN_PASSWORD_LENGTH, MIN_PASSWORD_MESSAGE),
       }),
     },
   });
-
   return (
-    <SettingsSection title="Change Password">
-      {showOAuthNote && (
-        <p className="text-sm text-muted-foreground mb-4">
+    <div className="flex flex-col gap-4">
+      {showOAuthNote ? (
+        <p className="text-sm text-muted-foreground">
           Password is managed by your sign-in provider.
         </p>
-      )}
-      {isError && (
-        <p className="text-sm text-destructive text-pretty mb-4">
+      ) : null}
+      {isError ? (
+        <p className="text-pretty text-sm text-destructive">
           Failed to load account settings: {error?.message}
         </p>
-      )}
+      ) : null}
+
       <form
         onSubmit={(e) => {
           e.preventDefault();
           e.stopPropagation();
           form.handleSubmit();
         }}
-        className="space-y-4"
+        className="flex flex-col gap-4"
       >
-        {PASSWORD_FIELDS.map(({ name, label, placeholder }) => (
-          <form.Field key={name} name={name}>
-            {(field) => (
-              <div className="space-y-2">
-                <Label htmlFor={field.name}>{label}</Label>
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  type="password"
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  placeholder={placeholder}
-                  disabled={isFormDisabled}
-                />
-                <FieldError errors={field.state.meta.errors} />
-              </div>
-            )}
-          </form.Field>
-        ))}
-
-        <form.Subscribe>
-          {(state) => (
-            <Button
-              type="submit"
-              disabled={isFormDisabled || !state.canSubmit || state.isSubmitting}
-            >
-              {state.isSubmitting ? (
-                <>
-                  <HugeiconsIcon icon={Loading03Icon} className="mr-2 size-4 animate-spin" />
-                  Changing...
-                </>
-              ) : (
-                "Change Password"
+        <SettingsGroup title="Change password">
+          {PASSWORD_FIELDS.map(({ name, title, description, placeholder }) => (
+            <form.Field key={name} name={name}>
+              {(field) => (
+                <SettingsRow title={title} description={description} htmlFor={field.name}>
+                  <Input
+                    id={field.name}
+                    name={field.name}
+                    type="password"
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder={placeholder}
+                    disabled={isFormDisabled}
+                    className="sm:w-64"
+                  />
+                  <FieldError errors={field.state.meta.errors} />
+                </SettingsRow>
               )}
-            </Button>
-          )}
-        </form.Subscribe>
+            </form.Field>
+          ))}
+
+          <SettingsGroupFooter>
+            <form.Subscribe>
+              {(state) => {
+                const passwordsAreValid =
+                  state.values.currentPassword.length >= MIN_PASSWORD_LENGTH &&
+                  state.values.newPassword.length >= MIN_PASSWORD_LENGTH &&
+                  state.values.confirmPassword.length >= MIN_PASSWORD_LENGTH &&
+                  state.values.newPassword === state.values.confirmPassword;
+
+                return (
+                  <Button
+                    type="submit"
+                    disabled={
+                      isFormDisabled ||
+                      !state.isDirty ||
+                      !passwordsAreValid ||
+                      !state.canSubmit ||
+                      state.isSubmitting
+                    }
+                  >
+                    {state.isSubmitting ? (
+                      <>
+                        <HugeiconsIcon
+                          icon={Loading03Icon}
+                          className="mr-2 size-4 animate-spin motion-reduce:animate-none"
+                        />
+                        Updating…
+                      </>
+                    ) : (
+                      "Update password"
+                    )}
+                  </Button>
+                );
+              }}
+            </form.Subscribe>
+          </SettingsGroupFooter>
+        </SettingsGroup>
       </form>
-    </SettingsSection>
+
+      <DeleteAccount />
+    </div>
   );
 }

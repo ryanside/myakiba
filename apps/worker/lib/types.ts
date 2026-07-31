@@ -134,6 +134,7 @@ export type ScrapeSingleItemParams = {
   readonly log: WorkerJobLogger;
   readonly maxRetries?: number;
   readonly baseDelayMs?: number;
+  readonly progressStatusMessage?: string;
   /**
    * Optional live-status publish target. When both `redis` and `state` are
    * provided, `scrapeSingleItem` publishes a fresh `SyncJobStatus` snapshot
@@ -151,6 +152,7 @@ export type ScrapeItemsParams = {
   readonly log: WorkerJobLogger;
   readonly maxRetries?: number;
   readonly baseDelayMs?: number;
+  readonly progressStatusMessage?: string;
 };
 
 export type FinalizeCollectionSyncParams = {

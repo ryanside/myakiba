@@ -7,6 +7,7 @@ import {
   uuid,
   decimal,
   bigint,
+  jsonb,
   index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
@@ -24,6 +25,14 @@ import {
   SYNC_SESSION_ITEM_STATUSES,
 } from "@myakiba/contracts/shared/constants";
 import { NO_SCALE } from "@myakiba/contracts/shared/scale";
+import {
+  DATA_TRANSFER_IMPORT_PHASES,
+  DATA_TRANSFER_IMPORT_STATUSES,
+} from "@myakiba/contracts/data-transfer/constants";
+import type {
+  DataTransferArchiveV1,
+  DataTransferImportReport,
+} from "@myakiba/contracts/data-transfer/schema";
 
 export const item = pgTable(
   "item",
@@ -220,6 +229,25 @@ export const order = pgTable(
     index("order_user_id_created_at_idx").on(t.userId, t.createdAt.desc()),
   ],
 );
+
+export const dataTransferImport = pgTable("data_transfer_import", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  importId: text("import_id").notNull(),
+  jobId: text("job_id").notNull(),
+  fileName: text("file_name").notNull(),
+  archive: jsonb("archive").$type<DataTransferArchiveV1>(),
+  status: text("status", { enum: DATA_TRANSFER_IMPORT_STATUSES }).notNull().default("queued"),
+  phase: text("phase", { enum: DATA_TRANSFER_IMPORT_PHASES }).notNull().default("queued"),
+  report: jsonb("report").$type<DataTransferImportReport>(),
+  importedOrders: integer("imported_orders").notNull().default(0),
+  importedCollectionItems: integer("imported_collection_items").notNull().default(0),
+  failedCollectionItems: integer("failed_collection_items").notNull().default(0),
+  error: text("error"),
+  startedAt: timestamp("started_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
 
 export const syncSession = pgTable(
   "sync_session",

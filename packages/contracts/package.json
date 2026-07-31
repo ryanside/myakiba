@@ -12,7 +12,8 @@
     "./expenses/*": "./src/expenses/*.ts",
     "./search/*": "./src/search/*.ts",
     "./calendar/*": "./src/calendar/*.ts",
-    "./analytics/*": "./src/analytics/*.ts"
+    "./analytics/*": "./src/analytics/*.ts",
+    "./data-transfer/*": "./src/data-transfer/*.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit"

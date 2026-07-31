@@ -16,7 +16,7 @@ type JobStatusSubscriptionEvent =
 type PendingResolver = (event: JobStatusSubscriptionEvent) => void;
 
 type SubscriptionConsumerState = {
-  readonly queue: JobStatusSubscriptionEvent[];
+  pendingEvent: JobStatusSubscriptionEvent | null;
   resolvePending: PendingResolver | null;
 };
 
@@ -34,7 +34,7 @@ export type JobStatusSubscription = Readonly<{
 const CONNECTION_CLOSED_ERROR = new Error("Job status subscriber connection closed");
 
 const createSubscriptionConsumerState = (): SubscriptionConsumerState => ({
-  queue: [],
+  pendingEvent: null,
   resolvePending: null,
 });
 
@@ -49,7 +49,15 @@ const pushToConsumerState = (
     return;
   }
 
-  consumerState.queue.push(event);
+  const pendingEvent = consumerState.pendingEvent;
+  if (
+    pendingEvent?.kind === "error" ||
+    (pendingEvent?.kind === "message" && pendingEvent.status.terminalState !== null)
+  ) {
+    return;
+  }
+
+  consumerState.pendingEvent = event;
 };
 
 const closeConsumerState = (consumerState: SubscriptionConsumerState): void => {
@@ -59,8 +67,8 @@ const closeConsumerState = (consumerState: SubscriptionConsumerState): void => {
   });
 };
 
-const toError = (error: Error | string): Error =>
-  error instanceof Error ? error : new Error(error);
+const toError = (error: unknown): Error =>
+  error instanceof Error ? error : new Error(String(error));
 
 class JobStatusSubscriptionRegistry {
   private subscriber: Redis | null = null;
@@ -162,7 +170,7 @@ class JobStatusSubscriptionRegistry {
         await subscriber.subscribe(channel);
         channelState.subscribed = true;
       } catch (error) {
-        throw toError(error as Error | string);
+        throw toError(error);
       } finally {
         channelState.subscribePromise = null;
       }
@@ -211,14 +219,15 @@ class JobStatusSubscriptionRegistry {
     } catch (error) {
       channelState.consumers.delete(consumerId);
       await this.releaseChannel(channel, channelState);
-      throw toError(error instanceof Error ? error : String(error));
+      throw toError(error);
     }
 
     return {
       next: async (): Promise<JobStatusSubscriptionEvent> => {
-        const queuedEvent = consumerState.queue.shift();
-        if (queuedEvent) {
-          return queuedEvent;
+        if (consumerState.pendingEvent) {
+          const pendingEvent = consumerState.pendingEvent;
+          consumerState.pendingEvent = null;
+          return pendingEvent;
         }
 
         if (consumerState.resolvePending !== null) {

@@ -1,28 +1,33 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { cva } from "class-variance-authority";
 import type { VariantProps } from "class-variance-authority";
-
 import { cn } from "@/lib/utils";
 
-const filledVariant =
-  "border border-foreground/25 bg-gradient-to-t shadow-sm shadow-foreground/10 ring-1 ring-inset ring-white/20 hover:brightness-[0.92] active:brightness-[0.85] dark:border-white/20 dark:ring-transparent";
+const raisedSurface = "inset-shadow-2xs shadow-xs ring-0 dark:shadow-black/25";
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup=menu]:not-aria-[haspopup=listbox]:not-aria-[haspopup=tree]:not-aria-[haspopup=grid]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup=menu]:not-aria-[haspopup=listbox]:not-aria-[haspopup=tree]:not-aria-[haspopup=grid]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        default: cn(filledVariant, "from-primary to-primary/85 text-primary-foreground"),
-        outline:
-          "inset-shadow-2xs inset-shadow-white dark:inset-shadow-transparent border-border bg-background shadow-xs shadow-foreground/5 ring-0 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+        default: cn(
+          raisedSurface,
+          "inset-shadow-white/20 border-black/25 bg-primary text-primary-foreground shadow-foreground/15 hover:bg-[color-mix(in_srgb,var(--color-background)_14%,var(--color-primary))] active:bg-[color-mix(in_srgb,var(--color-background)_22%,var(--color-primary))] dark:border-black/20",
+        ),
+        outline: cn(
+          raisedSurface,
+          "inset-shadow-white dark:inset-shadow-white/15 border-border bg-background bg-clip-padding shadow-foreground/5 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+        ),
         secondary: cn(
-          filledVariant,
-          "from-secondary to-secondary/85 text-secondary-foreground aria-expanded:from-secondary aria-expanded:to-secondary/85 aria-expanded:text-secondary-foreground",
+          raisedSurface,
+          "inset-shadow-white dark:inset-shadow-white/15 border-black/12 bg-secondary text-secondary-foreground shadow-foreground/5 hover:bg-[color-mix(in_srgb,var(--color-foreground)_8%,var(--color-secondary))] active:bg-[color-mix(in_srgb,var(--color-foreground)_14%,var(--color-secondary))] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground dark:border-black/30",
         ),
         ghost:
           "border-transparent bg-transparent text-foreground shadow-none ring-0 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
-        destructive:
-          "inset-shadow-2xs dark:inset-shadow-transparent border border-destructive/20 bg-destructive/10 text-destructive shadow-xs shadow-destructive/5 ring-0 hover:bg-destructive/20 active:bg-destructive/30 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:border-destructive/30 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:active:bg-destructive/40 dark:focus-visible:ring-destructive/40",
+        destructive: cn(
+          raisedSurface,
+          "inset-shadow-white dark:inset-shadow-white/15 border-destructive/20 bg-destructive/10 bg-clip-padding text-destructive shadow-destructive/5 hover:bg-destructive/20 active:bg-destructive/30 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:border-destructive/30 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:active:bg-destructive/40 dark:focus-visible:ring-destructive/40",
+        ),
         link: "border-transparent bg-transparent text-primary underline-offset-4 shadow-none ring-0 hover:underline",
       },
       size: {

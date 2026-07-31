@@ -23,12 +23,11 @@ import SyncService from "./service";
 import { tryCatch } from "@myakiba/utils/result";
 import { MAX_LIMIT, SYNC_SESSION_STATUSES, SYNC_TYPES } from "@myakiba/contracts/shared/constants";
 import { createId } from "@paralleldrive/cuid2";
-import { jobStatusSubscriptionRegistry } from "./job-status-subscription-registry";
-import { waitForNextJobStatusEvent } from "./job-status-stream";
-
-const MAX_JOB_STATUS_STREAM_DURATION_MS = 10 * 60 * 1000;
-// Keep upstream idle timeouts from closing a healthy but quiet SSE response.
-const JOB_STATUS_HEARTBEAT_INTERVAL_MS = 5 * 1000;
+import { jobStatusSubscriptionRegistry } from "@/lib/job-status-subscription-registry";
+import {
+  MAX_JOB_STATUS_STREAM_DURATION_MS,
+  waitForNextJobStatusEvent,
+} from "@/lib/job-status-stream";
 
 const createTerminalJobStatus = ({
   jobId,
@@ -1367,7 +1366,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             subscriptionEventPromise,
             abortPromise,
             remainingMs,
-            heartbeatIntervalMs: JOB_STATUS_HEARTBEAT_INTERVAL_MS,
           });
 
           if (nextEvent.kind === "aborted") {
