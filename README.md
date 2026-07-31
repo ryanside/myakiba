@@ -13,11 +13,9 @@
 
 **[myakiba](https://myakiba.app)** is a collection management tool for Japanese pop-culture goods. Track your collection, orders, and analytics with a modern interface.
 
-Early in development.
+Early in development!
 
 ![myakiba](apps/web/public/og-image.png)
-
-The community-powered catalog from **MyFigureCollection** and the flexibility of spreadsheets, coupled with new and convenient features for collectors, unified into one collection management tool.
 
 ## Motivation
 
@@ -76,7 +74,7 @@ the table.
 
 ### Orders
 
-Keep preorders organized by status, shop, release date, payment date, shipping date,
+Keep orders organized by status, shop, release date, payment date, shipping date,
 and collection date. Each order can hold multiple items, with separate item prices plus shipping,
 taxes, duties, tariffs, and other fees. Orders also have table, card, and gallery views, along with
 the same filtering and column controls as your collection.
@@ -101,18 +99,25 @@ myakiba is still in active development. Current priorities:
 
 ## Run locally
 
+myakiba does not run entirely locally as cloned. Postgres and Redis run locally, but the app
+still uses external services such as AWS S3 and Cloudflare Turnstile. Google OAuth and Resend can be
+skipped by using the workarounds below.
+
 ### Prerequisites
 
-- [Bun 1.3.9](https://bun.sh/) (the version pinned in `package.json`)
+- [Bun](https://bun.sh/)
 - Docker with Docker Compose
 - An AWS S3 bucket and credentials
 - An HTTP proxy is optional but recommended
 
-### Auth services
+### Services
 
-- Google OAuth is optional, but its environment variables must be non-empty. Use placeholders if
+- Google OAuth is optional, but its environment variables must be non-empty. Use placeholder values if
   you do not need Google sign-in.
-- Resend is required for email verification and password resets. Without Resend, use non-empty placeholders and manually set `email_verified` to `true` in Postgres.
+- Resend is used for email verification and password resets. Its environment variables must also
+  be non-empty. If you do not use Resend, enter placeholder values. After creating an account, set
+  `email_verified` to `true` in the `user` table in Postgres. You can use Drizzle Kit Studio for
+  this. See the instructions for your setup below.
 
 For Turnstile, use Cloudflare's
 [official test keys](https://developers.cloudflare.com/turnstile/troubleshooting/testing/):
@@ -161,10 +166,12 @@ BETTER_AUTH_URL=http://localhost:3000
 VITE_SERVER_URL=http://localhost:3000
 ```
 
-Fill in the remaining auth, email, Turnstile, and S3 values in the example files. The worker
-can read AWS credentials from `apps/worker/.env` or the standard AWS credential chain.
+Fill in the remaining auth, email, Turnstile, and S3 values in the example files.
 `WORKER_PROXY_URL`, `AWS_BUCKET_URL`, `POSTHOG_API_KEY`, and `BETTER_AUTH_API_KEY` are optional.
-When `AWS_BUCKET_URL` is omitted, object URLs use the bucket's regional S3 URL.
+Set `AWS_BUCKET_URL` if uploaded files should use a custom domain or CDN, such as
+`https://cdn.example.com`. If it is empty, the worker builds each file's URL from
+`AWS_BUCKET_NAME` and `AWS_BUCKET_REGION`:
+`https://<AWS_BUCKET_NAME>.s3.<AWS_BUCKET_REGION>.amazonaws.com/<filename>`.
 
 1. Start the app:
 
@@ -172,9 +179,12 @@ When `AWS_BUCKET_URL` is omitted, object URLs use the bucket's regional S3 URL.
 bun dev
 ```
 
-This command also starts the Postgres and Redis containers and pushes the database schema.
+`bun dev` also starts the Postgres and Redis containers, starts Drizzle Kit Studio, and pushes the
+database schema.
 Open [http://localhost:3001](http://localhost:3001). The API runs at
 [http://localhost:3000](http://localhost:3000).
+
+Open [https://local.drizzle.studio](https://local.drizzle.studio) to use Drizzle Kit Studio.
 
 Run `bun stop` when you want to stop the Postgres and Redis containers.
 
@@ -221,6 +231,16 @@ docker compose logs -f
 docker compose down
 ```
 
+Docker Compose does not start Drizzle Kit Studio. If you want to use it, open another terminal and run:
+
+```bash
+DATABASE_URL=postgresql://postgres:password@localhost:5432/myakiba \
+  bun run --cwd packages/db db:studio
+```
+
+Use the Postgres username, password, and database name from your `.env` file. Then open
+[https://local.drizzle.studio](https://local.drizzle.studio).
+
 ## Project structure
 
 ```
@@ -252,8 +272,4 @@ Made with [contrib.rocks](https://contrib.rocks).
 
 ### Interested in contributing?
 
-Contributions are welcome. Open an issue or submit a pull request.
-
-# Star history
-
-[![Star History Rank](https://api.star-history.com/badge?repo=ryanside/myakiba)](https://www.star-history.com/ryanside/myakiba)
+Contributions are welcome. Open an issue, discussion, or pull request.
