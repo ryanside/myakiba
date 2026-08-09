@@ -3,6 +3,7 @@ import {
   CONDITIONS,
   ORDER_STATUSES,
   SHIPPING_METHODS,
+  SYNC_SESSION_ITEM_STATUSES,
   SYNC_SESSION_STATUSES,
   SYNC_TYPES,
 } from "../shared/constants";
@@ -57,6 +58,10 @@ export const syncSearchSchema = z.object({
   limit: paginationLimitSchema.optional(),
   status: z.array(z.enum(SYNC_SESSION_STATUSES)).optional(),
   syncType: z.array(z.enum(SYNC_TYPES)).optional(),
+});
+
+export const syncSessionDetailSearchSchema = z.object({
+  status: z.array(z.enum(SYNC_SESSION_ITEM_STATUSES)).optional(),
 });
 
 export const syncTerminalStateSchema = z.enum(["success", "partial", "error", "timeout"]);

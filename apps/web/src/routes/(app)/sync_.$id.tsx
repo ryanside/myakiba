@@ -3,10 +3,13 @@ import { useState } from "react";
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { PaginationState } from "@tanstack/react-table";
+import { SYNC_SESSION_ITEM_STATUSES } from "@myakiba/contracts/shared/constants";
+import type { SyncSessionItemStatus } from "@myakiba/contracts/shared/types";
 import {
   ACTIVE_SYNC_SESSION_STATUS_SET,
   SYNC_SESSION_DETAIL_PAGE_SIZE,
 } from "@myakiba/contracts/sync/constants";
+import { syncSessionDetailSearchSchema } from "@myakiba/contracts/sync/schema";
 import { SyncSessionHero } from "@/components/sync/sync-session-hero";
 import { SyncSessionItemsTable } from "@/components/sync/sync-session-items-table";
 import { SyncSessionStatusPanel } from "@/components/sync/sync-session-status-panel";
@@ -14,10 +17,16 @@ import { BackLink } from "@/components/ui/back-link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatSyncDuration } from "@/lib/date-display";
 import { fetchSyncSessionDetail } from "@/queries/sync";
+import { ITEM_STATUS_CONFIG } from "@/lib/sync";
 import { cn } from "@/lib/utils";
+import { useFilters } from "@/hooks/use-filters";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+
+const VALID_ITEM_STATUSES: ReadonlySet<string> = new Set(SYNC_SESSION_ITEM_STATUSES);
 
 export const Route = createFileRoute("/(app)/sync_/$id")({
   component: RouteComponent,
+  validateSearch: syncSessionDetailSearchSchema,
   head: ({ params }) => ({
     meta: [
       { name: "description", content: `Sync session ${params.id}` },
@@ -28,12 +37,23 @@ export const Route = createFileRoute("/(app)/sync_/$id")({
 
 function RouteComponent(): ReactNode {
   const { id } = useParams({ from: "/(app)/sync_/$id" });
+  const { filters, setFilters } = useFilters(Route.id);
 
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: SYNC_SESSION_DETAIL_PAGE_SIZE,
   });
   const page = pagination.pageIndex + 1;
+  const selectedStatuses = filters.status ?? [];
+
+  const handleStatusChange = (values: string[]): void => {
+    const statuses = values.filter((value): value is SyncSessionItemStatus =>
+      VALID_ITEM_STATUSES.has(value),
+    );
+
+    setPagination((current) => ({ ...current, pageIndex: 0 }));
+    setFilters({ status: statuses.length > 0 ? statuses : undefined });
+  };
 
   const {
     data: responseData,
@@ -42,8 +62,19 @@ function RouteComponent(): ReactNode {
     isError,
     error,
   } = useQuery({
-    queryKey: ["syncSessionDetail", id, page, SYNC_SESSION_DETAIL_PAGE_SIZE] as const,
-    queryFn: () => fetchSyncSessionDetail(id, { page, limit: SYNC_SESSION_DETAIL_PAGE_SIZE }),
+    queryKey: [
+      "syncSessionDetail",
+      id,
+      page,
+      SYNC_SESSION_DETAIL_PAGE_SIZE,
+      selectedStatuses,
+    ] as const,
+    queryFn: () =>
+      fetchSyncSessionDetail(id, {
+        page,
+        limit: SYNC_SESSION_DETAIL_PAGE_SIZE,
+        status: filters.status,
+      }),
     placeholderData: keepPreviousData,
     staleTime: 15_000,
     refetchOnWindowFocus: true,
@@ -118,10 +149,28 @@ function RouteComponent(): ReactNode {
             isActive={session ? ACTIVE_SYNC_SESSION_STATUS_SET.has(session.status) : false}
           />
 
+          <div className="flex flex-wrap items-center gap-2">
+            <ToggleGroup
+              value={selectedStatuses}
+              onValueChange={handleStatusChange}
+              multiple
+              size="sm"
+              variant="outline"
+              aria-label="Item status"
+            >
+              {SYNC_SESSION_ITEM_STATUSES.map((status) => (
+                <ToggleGroupItem key={status} value={status}>
+                  {ITEM_STATUS_CONFIG[status].label}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </div>
+
           <SyncSessionItemsTable
             items={items}
             totalItems={totalItems}
             isLoading={isFetching}
+            isFiltered={selectedStatuses.length > 0}
             pagination={pagination}
             onPaginationChange={setPagination}
           />
