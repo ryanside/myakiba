@@ -9,9 +9,9 @@ import type { CalendarView } from "@myakiba/contracts/calendar/schema";
 import { CalendarMonthGrid } from "@/components/calendar/calendar-month-grid";
 import { CalendarReleasePanel } from "@/components/calendar/calendar-release-list";
 import { CalendarToolbar } from "@/components/calendar/calendar-toolbar";
+import { Button } from "@/components/ui/button";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { getCalendar } from "@/queries/calendar";
-import { ThemedBadge } from "@/components/reui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const CALENDAR_MIN_YEAR = 2000;
@@ -129,16 +129,17 @@ function RouteComponent(): ReactNode {
             <h1 className="text-2xl tracking-tight font-heading font-medium text-balance">
               Calendar
             </h1>
-            <ThemedBadge variant="default" className="mt-1">
-              New
-            </ThemedBadge>
             <Tooltip>
               <TooltipTrigger
                 render={
-                  <HugeiconsIcon
-                    icon={InformationCircleIcon}
-                    className="size-4 mt-1 text-muted-foreground"
-                  />
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label="About the calendar"
+                    className="mt-0.75"
+                  >
+                    <HugeiconsIcon icon={InformationCircleIcon} className="size-4" />
+                  </Button>
                 }
               />
               <TooltipContent side="right" sideOffset={12}>
