@@ -3,7 +3,7 @@ import { cva } from "class-variance-authority";
 import type { VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
-const raisedSurface = "inset-shadow-2xs shadow-xs ring-0 dark:shadow-black/25";
+const raisedSurface = "inset-shadow-xs shadow-xs ring-0 dark:shadow-black/25";
 
 const buttonVariants = cva(
   "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup=menu]:not-aria-[haspopup=listbox]:not-aria-[haspopup=tree]:not-aria-[haspopup=grid]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
@@ -16,7 +16,7 @@ const buttonVariants = cva(
         ),
         outline: cn(
           raisedSurface,
-          "inset-shadow-white dark:inset-shadow-white/15 border-border bg-background bg-clip-padding shadow-foreground/5 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+          "inset-shadow-white dark:inset-shadow-white/5 border-border bg-background bg-clip-padding shadow-foreground/5 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         ),
         secondary: cn(
           raisedSurface,

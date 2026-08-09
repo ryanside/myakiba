@@ -255,7 +255,7 @@ function RelationshipPreviews({
             : ({ to: "/item/custom/$id", params: { id: item.id } } as const))}
           title={item.title}
           aria-label={`View ${item.title}`}
-          className="relative size-10 overflow-hidden rounded-md bg-muted ring-1 ring-black/10 transition-transform duration-150 ease-out hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.96] dark:ring-white/10"
+          className="relative size-10 overflow-hidden rounded-md"
         >
           <img
             src={item.image}
