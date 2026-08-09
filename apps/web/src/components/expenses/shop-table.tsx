@@ -7,59 +7,64 @@ import { getCoreRowModel, getExpandedRowModel, useReactTable } from "@tanstack/r
 import type { ColumnDef, ExpandedState, Row } from "@tanstack/react-table";
 import type {
   ExpenseFilters,
+  ExpenseScope,
   ExpenseShopFilters,
-  ShopSpendRow,
+  ExpenseShopRow,
 } from "@myakiba/contracts/expenses/schema";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
-import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
+import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import * as DataTable from "@/components/data-table/data-table";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { DebouncedInput } from "@/components/debounced-input";
-import { Section } from "@/components/expenses/section";
+import { ExpensePanel } from "@/components/expenses/dashboard-shell";
 import { ShopTableRowExpansion } from "@/components/expenses/shop-table-row-expansion";
-import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getExpensesShops } from "@/queries/expenses";
 import { cn } from "@/lib/utils";
 
-interface ShopTableProps {
+const PAGE_SIZE = 10;
+const ROW_NUMBER_COLUMN_ID = "__rowNumber";
+const EXPAND_COLUMN_ID = "__expand";
+const TABULAR_COLUMN_IDS = new Set([
+  "spend",
+  "share",
+  "itemCount",
+  "averageItemCost",
+  "orderCount",
+  "averageOrder",
+  "orderItemCount",
+  "fees",
+  "averageShipping",
+]);
+
+export function ShopTable({
+  scope,
+  filters,
+  currency,
+  locale,
+  dateFormat,
+}: {
+  readonly scope: ExpenseScope;
   readonly filters: ExpenseFilters;
   readonly currency: Currency;
   readonly locale: string;
   readonly dateFormat: DateFormat;
-}
-
-const ROW_NUMBER_COLUMN_ID = "__rowNumber";
-const EXPAND_COLUMN_ID = "__expand";
-const TABULAR_COLUMN_IDS = new Set([
-  "collectionItemSpend",
-  "orderItemSpend",
-  "feeSpend",
-  "totalSpend",
-  "averageOrderSpend",
-  "averageCollectionItemSpend",
-  "averageOrderItemSpend",
-  "averageFeeSpend",
-  "orderCount",
-  "ownedItemCount",
-  "orderItemCount",
-]);
-
-export function ShopTable({ filters, currency, locale, dateFormat }: ShopTableProps): ReactNode {
+}): ReactNode {
   const [search, setSearch] = useState("");
   const [offset, setOffset] = useState(0);
   const [expanded, setExpanded] = useState<ExpandedState>({});
-  const limit = DEFAULT_LIMIT;
   const queryFilters = useMemo(
     (): ExpenseShopFilters => ({
+      scope,
       dateStart: filters.dateStart,
       dateEnd: filters.dateEnd,
       shop: filters.shop,
       search: search || undefined,
-      limit,
+      limit: PAGE_SIZE,
       offset,
     }),
-    [filters.dateStart, filters.dateEnd, filters.shop, limit, offset, search],
+    [filters.dateStart, filters.dateEnd, filters.shop, offset, scope, search],
   );
   const query = useQuery({
     queryKey: ["expenses", "shops", queryFilters],
@@ -67,11 +72,8 @@ export function ShopTable({ filters, currency, locale, dateFormat }: ShopTablePr
     staleTime: 1000 * 60 * 5,
     retry: false,
   });
-  const data = query.data;
-  const pending = query.isPending;
-  const fetching = query.isFetching;
-  const isLoading = pending || fetching;
-  const totalCount = data?.totalCount ?? 0;
+  const rows = query.data?.rows ?? [];
+  const totalCount = query.data?.totalCount ?? 0;
   const shopSearchInput = (
     <div className="relative w-full sm:w-64">
       <HugeiconsIcon
@@ -90,18 +92,28 @@ export function ShopTable({ filters, currency, locale, dateFormat }: ShopTablePr
       />
     </div>
   );
+  let resultCount: ReactNode = null;
+  if (query.isPending) {
+    resultCount = <Skeleton className="h-3 w-28" />;
+  } else if (totalCount > 0) {
+    resultCount = (
+      <p className="animate-data-in shrink-0 whitespace-nowrap text-xs text-muted-foreground">
+        Showing {offset + 1}-{Math.min(offset + PAGE_SIZE, totalCount)} of {totalCount}
+      </p>
+    );
+  }
 
   return (
-    <Section title="shops" isLoading={pending} chartSkeleton headerAction={shopSearchInput}>
+    <ExpensePanel title="Shops" headerAction={shopSearchInput} className="min-w-0">
       {query.isError ? (
         <div className="flex h-64 items-center justify-center">
           <p className="text-sm text-destructive">Error: {query.error.message}</p>
         </div>
-      ) : null}
-      {!query.isError && data !== undefined ? (
-        <div className="animate-data-in flex flex-col gap-4 [--data-in-delay:60ms]">
+      ) : (
+        <div className="flex flex-col gap-4" aria-busy={query.isPending}>
           <ShopsTable
-            rows={data.rows}
+            scope={scope}
+            rows={rows}
             expanded={expanded}
             onExpandedChange={setExpanded}
             filters={filters}
@@ -109,40 +121,30 @@ export function ShopTable({ filters, currency, locale, dateFormat }: ShopTablePr
             locale={locale}
             dateFormat={dateFormat}
             offset={offset}
-            isLoading={isLoading}
+            isPending={query.isPending}
+            isFetching={query.isFetching}
           />
-          <div className="animate-data-in flex items-center justify-between gap-3 pt-1 [--data-in-delay:120ms]">
-            {totalCount > 0 ? (
-              <p className="shrink-0 whitespace-nowrap text-xs text-muted-foreground">
-                Showing {offset + 1}-{Math.min(offset + limit, totalCount)} of {totalCount}
-              </p>
-            ) : null}
-            <DataTablePagination
-              totalCount={totalCount}
-              limit={limit}
-              offset={offset}
-              onOffsetChange={setOffset}
-            />
+          <div className="flex items-center justify-between gap-3 pt-1">
+            {resultCount}
+            {query.isPending ? null : (
+              <div className="animate-data-in">
+                <DataTablePagination
+                  totalCount={totalCount}
+                  limit={PAGE_SIZE}
+                  offset={offset}
+                  onOffsetChange={setOffset}
+                />
+              </div>
+            )}
           </div>
         </div>
-      ) : null}
-    </Section>
+      )}
+    </ExpensePanel>
   );
 }
 
-interface ShopsTableProps {
-  readonly rows: readonly ShopSpendRow[];
-  readonly expanded: ExpandedState;
-  readonly onExpandedChange: React.Dispatch<React.SetStateAction<ExpandedState>>;
-  readonly filters: ExpenseFilters;
-  readonly currency: Currency;
-  readonly locale: string;
-  readonly dateFormat: DateFormat;
-  readonly offset: number;
-  readonly isLoading: boolean;
-}
-
 function ShopsTable({
+  scope,
   rows,
   expanded,
   onExpandedChange,
@@ -151,115 +153,30 @@ function ShopsTable({
   locale,
   dateFormat,
   offset,
-  isLoading,
-}: ShopsTableProps): ReactNode {
+  isPending,
+  isFetching,
+}: {
+  readonly scope: ExpenseScope;
+  readonly rows: readonly ExpenseShopRow[];
+  readonly expanded: ExpandedState;
+  readonly onExpandedChange: React.Dispatch<React.SetStateAction<ExpandedState>>;
+  readonly filters: ExpenseFilters;
+  readonly currency: Currency;
+  readonly locale: string;
+  readonly dateFormat: DateFormat;
+  readonly offset: number;
+  readonly isPending: boolean;
+  readonly isFetching: boolean;
+}): ReactNode {
   const data = useMemo(() => [...rows], [rows]);
   const formatCurrency = useCallback(
     (value: number) => formatCurrencyFromMinorUnits(value, currency, locale),
     [currency, locale],
   );
-
-  const columns = useMemo<ColumnDef<ShopSpendRow>[]>(
-    () => [
-      {
-        id: EXPAND_COLUMN_ID,
-        header: "",
-        cell: ({ row }) => <ExpandButton row={row} />,
-        size: 32,
-      },
-      {
-        id: ROW_NUMBER_COLUMN_ID,
-        header: "#",
-        cell: ({ row }) => offset + row.index + 1,
-        size: 40,
-      },
-      {
-        id: "shop",
-        accessorFn: (row) => row.shop,
-        header: "shop",
-        cell: ({ getValue }) => getValue() ?? "-",
-      },
-      {
-        id: "totalSpend",
-        accessorFn: (row) => row.totalSpend,
-        header: "total",
-        cell: ({ getValue }) => formatCurrency(Number(getValue())),
-        size: 88,
-      },
-      {
-        id: "orderCount",
-        accessorFn: (row) => row.orderCount,
-        header: "orders",
-        cell: ({ getValue }) => getValue() ?? 0,
-        size: 64,
-      },
-      {
-        id: "averageOrderSpend",
-        accessorFn: (row) => row.averageOrderSpend,
-        header: "order avg",
-        cell: ({ getValue }) => formatCurrency(Number(getValue())),
-        size: 88,
-      },
-      {
-        id: "orderItemCount",
-        accessorFn: (row) => row.orderItemCount,
-        header: "order items",
-        cell: ({ getValue }) => getValue() ?? 0,
-        size: 80,
-      },
-      {
-        id: "orderItemSpend",
-        accessorFn: (row) => row.orderItemSpend,
-        header: "order item spend",
-        cell: ({ getValue }) => formatCurrency(Number(getValue())),
-        size: 112,
-      },
-      {
-        id: "averageOrderItemSpend",
-        accessorFn: (row) => row.averageOrderItemSpend,
-        header: "order item avg",
-        cell: ({ getValue }) => formatCurrency(Number(getValue())),
-        size: 104,
-      },
-      {
-        id: "feeSpend",
-        accessorFn: (row) => row.feeSpend,
-        header: "fees",
-        cell: ({ getValue }) => formatCurrency(Number(getValue())),
-        size: 88,
-      },
-      {
-        id: "averageFeeSpend",
-        accessorFn: (row) => row.averageFeeSpend,
-        header: "fee avg",
-        cell: ({ getValue }) => formatCurrency(Number(getValue())),
-        size: 80,
-      },
-      {
-        id: "ownedItemCount",
-        accessorFn: (row) => row.ownedItemCount,
-        header: "collection items",
-        cell: ({ getValue }) => getValue() ?? 0,
-        size: 88,
-      },
-      {
-        id: "collectionItemSpend",
-        accessorFn: (row) => row.collectionItemSpend,
-        header: "collection item spend",
-        cell: ({ getValue }) => formatCurrency(Number(getValue())),
-        size: 120,
-      },
-      {
-        id: "averageCollectionItemSpend",
-        accessorFn: (row) => row.averageCollectionItemSpend,
-        header: "collection item avg",
-        cell: ({ getValue }) => formatCurrency(Number(getValue())),
-        size: 120,
-      },
-    ],
-    [formatCurrency, offset],
+  const columns = useMemo<ColumnDef<ExpenseShopRow>[]>(
+    () => getColumns({ scope, offset, formatCurrency }),
+    [formatCurrency, offset, scope],
   );
-
   const table = useReactTable({
     data,
     columns,
@@ -267,14 +184,15 @@ function ShopsTable({
     onExpandedChange,
     getCoreRowModel: getCoreRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
-    getRowId: (row) => row.shop,
+    getRowId: (row) => row.id,
     getRowCanExpand: () => true,
   });
 
   return (
     <DataTable.Root
       table={table}
-      isLoading={isLoading}
+      isLoading={isPending}
+      skeletonRowCount={PAGE_SIZE}
       empty={
         <DataTable.Empty
           title="No shops found"
@@ -282,14 +200,19 @@ function ShopsTable({
         />
       }
     >
-      <DataTable.LoadingSurface className="overflow-x-auto">
-        <DataTable.Table className="min-w-280">
+      <DataTable.LoadingSurface
+        className={cn(
+          "overflow-x-auto transition-opacity duration-200",
+          isFetching && !isPending && "opacity-60",
+        )}
+      >
+        <DataTable.Table className={scope === "orders" ? "min-w-210" : "min-w-150"}>
           <DataTable.Header useColumnSizing />
           <DataTable.Body
             onRowClick={(row) => row.toggleExpanded()}
-            renderExpandedRow={(row: Row<ShopSpendRow>) => (
+            renderExpandedRow={(row: Row<ExpenseShopRow>) => (
               <ShopTableRowExpansion
-                shop={row.original.shop}
+                row={row.original}
                 filters={filters}
                 currency={currency}
                 locale={locale}
@@ -310,9 +233,103 @@ function ShopsTable({
   );
 }
 
-function ExpandButton({ row }: { readonly row: Row<ShopSpendRow> }): ReactNode {
-  const isExpanded = row.getIsExpanded();
+function getColumns({
+  scope,
+  offset,
+  formatCurrency,
+}: {
+  scope: ExpenseScope;
+  offset: number;
+  formatCurrency: (value: number) => string;
+}): ColumnDef<ExpenseShopRow>[] {
+  const columns: ColumnDef<ExpenseShopRow>[] = [
+    { id: EXPAND_COLUMN_ID, header: "", cell: ({ row }) => <ExpandButton row={row} />, size: 32 },
+    { id: ROW_NUMBER_COLUMN_ID, header: "#", cell: ({ row }) => offset + row.index + 1, size: 40 },
+    { id: "shop", accessorFn: (row) => row.shop || "Unassigned", header: "Shop" },
+    {
+      id: "spend",
+      accessorFn: (row) => row.spend,
+      header: "Spend",
+      cell: ({ getValue }) => formatCurrency(Number(getValue())),
+      size: 96,
+    },
+    {
+      id: "share",
+      accessorFn: (row) => row.share,
+      header: "Share",
+      cell: ({ getValue }) => `${Number(getValue()).toFixed(1)}%`,
+      size: 72,
+    },
+  ];
 
+  if (scope === "collection") {
+    columns.push(
+      {
+        id: "itemCount",
+        accessorFn: (row) => (row.scope === "collection" ? row.itemCount : 0),
+        header: "Items",
+        size: 64,
+      },
+      {
+        id: "averageItemCost",
+        accessorFn: (row) => (row.scope === "collection" ? row.averageItemCost : 0),
+        header: "Average Item Cost",
+        cell: ({ getValue }) => formatCurrency(Number(getValue())),
+        size: 120,
+      },
+    );
+  } else if (scope === "orders") {
+    columns.push(
+      {
+        id: "orderCount",
+        accessorFn: (row) => (row.scope === "orders" ? row.orderCount : 0),
+        header: "Orders",
+        size: 64,
+      },
+      {
+        id: "averageOrder",
+        accessorFn: (row) => (row.scope === "orders" ? row.averageOrder : 0),
+        header: "Average Order",
+        cell: ({ getValue }) => formatCurrency(Number(getValue())),
+        size: 104,
+      },
+      {
+        id: "orderItemCount",
+        accessorFn: (row) => (row.scope === "orders" ? row.orderItemCount : 0),
+        header: "Order Items",
+        size: 88,
+      },
+      {
+        id: "fees",
+        accessorFn: (row) => (row.scope === "orders" ? row.fees : 0),
+        header: "Fees",
+        cell: ({ getValue }) => formatCurrency(Number(getValue())),
+        size: 88,
+      },
+    );
+  } else {
+    columns.push(
+      {
+        id: "orderCount",
+        accessorFn: (row) => (row.scope === "shipping" ? row.orderCount : 0),
+        header: "Orders",
+        size: 64,
+      },
+      {
+        id: "averageShipping",
+        accessorFn: (row) => (row.scope === "shipping" ? row.averageShipping : 0),
+        header: "Average Shipping",
+        cell: ({ getValue }) => formatCurrency(Number(getValue())),
+        size: 120,
+      },
+    );
+  }
+
+  return columns;
+}
+
+function ExpandButton({ row }: { readonly row: Row<ExpenseShopRow> }): ReactNode {
+  const isExpanded = row.getIsExpanded();
   return (
     <Button
       variant="ghost"

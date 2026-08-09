@@ -1,9 +1,8 @@
 import {
   getPayloadConfigFromPayload,
   getColorsCount,
-  toChartColorVarKey,
   useChart,
-} from "@/components/evilcharts/ui/chart";
+} from "@/components/evilcharts/ui/recharts-chart";
 import * as RechartsPrimitive from "recharts";
 import { cn } from "@/lib/utils";
 import * as React from "react";
@@ -45,10 +44,10 @@ function ChartLegendContent({
   return (
     <div
       className={cn(
-        "flex w-full flex-wrap items-center gap-x-3 gap-y-1.5 select-none sm:gap-x-4",
+        "flex items-center gap-4 select-none",
         align === "left" && "justify-start",
         align === "center" && "justify-center",
-        align === "right" && "justify-start sm:justify-end",
+        align === "right" && "justify-end",
         verticalAlign === "top" ? "pb-4" : "pt-4",
         className,
       )}
@@ -70,41 +69,27 @@ function ChartLegendContent({
           // Get colors count for this item to determine gradient vs solid
           const colorsCount = itemConfig ? getColorsCount(itemConfig) : 1;
 
-          const legendClassName = cn(
-            "[&>svg]:text-muted-foreground flex shrink-0 items-center gap-1.5 whitespace-nowrap transition-opacity [&>svg]:h-3 [&>svg]:w-3",
-            !isSelected && "opacity-30",
-            isClickable && "cursor-pointer",
-          );
-          const legendContent = (
-            <>
+          return (
+            <button
+              type="button"
+              key={key}
+              className={cn(
+                "flex items-center gap-1.5 border-0 bg-transparent p-0 text-inherit transition-opacity [&>svg]:h-3 [&>svg]:w-3 [&>svg]:text-muted-foreground",
+                !isSelected && "opacity-30",
+                isClickable ? "cursor-pointer" : "cursor-default",
+              )}
+              disabled={!isClickable}
+              onClick={() => {
+                onSelectChange?.(selected === key ? null : key);
+              }}
+            >
               {itemConfig?.icon && !hideIcon ? (
                 <itemConfig.icon />
               ) : (
                 <LegendIndicator variant={variant} dataKey={key} colorsCount={colorsCount} />
               )}
               {itemConfig?.label}
-            </>
-          );
-
-          if (isClickable) {
-            return (
-              <button
-                type="button"
-                key={key}
-                className={legendClassName}
-                onClick={() => {
-                  onSelectChange?.(selected === key ? null : key);
-                }}
-              >
-                {legendContent}
-              </button>
-            );
-          }
-
-          return (
-            <div key={key} className={legendClassName}>
-              {legendContent}
-            </div>
+            </button>
           );
         })}
     </div>
@@ -130,13 +115,13 @@ function LegendIndicator({
 
   switch (variant) {
     case "square":
-      return <div className="size-2 shrink-0" style={fillStyle} />;
+      return <div className="h-2 w-2 shrink-0" style={fillStyle} />;
 
     case "circle":
-      return <div className="size-2 shrink-0 rounded-full" style={fillStyle} />;
+      return <div className="h-2 w-2 shrink-0 rounded-full" style={fillStyle} />;
 
     case "circle-outline":
-      return <div className="size-2.5 shrink-0 rounded-full p-[1.5px]" style={outlineStyle} />;
+      return <div className="h-2.5 w-2.5 shrink-0 rounded-full p-[1.5px]" style={outlineStyle} />;
 
     case "vertical-bar":
       return <div className="h-3 w-1 shrink-0 rounded-[2px]" style={fillStyle} />;
@@ -145,10 +130,10 @@ function LegendIndicator({
       return <div className="h-1 w-3 shrink-0 rounded-[2px]" style={fillStyle} />;
 
     case "rounded-square-outline":
-      return <div className="size-2.5 shrink-0 rounded-[3px] p-[1.5px]" style={outlineStyle} />;
+      return <div className="h-2.5 w-2.5 shrink-0 rounded-[3px] p-[1.5px]" style={outlineStyle} />;
 
     default:
-      return <div className="size-2 shrink-0 rounded-[2px]" style={fillStyle} />;
+      return <div className="h-2 w-2 shrink-0 rounded-[2px]" style={fillStyle} />;
   }
 }
 
@@ -158,15 +143,13 @@ function LegendIndicator({
 
 /** Solid fill / gradient background for filled variants. */
 function getLegendFillStyle(dataKey: string, colorsCount: number): React.CSSProperties {
-  const colorKey = toChartColorVarKey(dataKey);
-
   if (colorsCount <= 1) {
-    return { backgroundColor: `var(--color-${colorKey}-0)` };
+    return { backgroundColor: `var(--color-${dataKey}-0)` };
   }
 
   const stops = Array.from({ length: colorsCount }, (_, i) => {
     const offset = (i / (colorsCount - 1)) * 100;
-    return `var(--color-${colorKey}-${i}) ${offset}%`;
+    return `var(--color-${dataKey}-${i}) ${offset}%`;
   }).join(", ");
 
   return { background: `linear-gradient(to right, ${stops})` };
@@ -179,7 +162,6 @@ function getLegendFillStyle(dataKey: string, colorsCount: number): React.CSSProp
  * border-radius — unlike plain `border-color`.
  */
 function getLegendOutlineStyle(dataKey: string, colorsCount: number): React.CSSProperties {
-  const colorKey = toChartColorVarKey(dataKey);
   const maskStyle: React.CSSProperties = {
     WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
     WebkitMaskComposite: "xor",
@@ -189,14 +171,14 @@ function getLegendOutlineStyle(dataKey: string, colorsCount: number): React.CSSP
 
   if (colorsCount <= 1) {
     return {
-      backgroundColor: `var(--color-${colorKey}-0)`,
+      backgroundColor: `var(--color-${dataKey}-0)`,
       ...maskStyle,
     };
   }
 
   const stops = Array.from({ length: colorsCount }, (_, i) => {
     const offset = (i / (colorsCount - 1)) * 100;
-    return `var(--color-${colorKey}-${i}) ${offset}%`;
+    return `var(--color-${dataKey}-${i}) ${offset}%`;
   }).join(", ");
 
   return {

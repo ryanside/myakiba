@@ -6,7 +6,7 @@ import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
-import type { ExpenseOrder } from "@/queries/expenses";
+import type { ExpenseOrder } from "@myakiba/contracts/expenses/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 

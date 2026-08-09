@@ -1,31 +1,28 @@
 import * as z from "zod";
 
-export {
-  expenseFilterOptionsSchema,
-  expenseFiltersSchema,
-  expenseShopFiltersSchema,
-  expenseShopsResponseSchema,
-  expensesOverviewResponseSchema,
-  expensesShippingResponseSchema,
-  expensesTrendsResponseSchema,
-  shopExpansionResponseSchema,
-} from "@myakiba/contracts/expenses/schema";
+export const EXPENSE_NAMED_SHOP_ID_PREFIX = "shop:";
+export const EXPENSE_UNASSIGNED_SHOP_ID = "unassigned";
+
+export { expenseFiltersSchema, expenseShopFiltersSchema } from "@myakiba/contracts/expenses/schema";
 
 export type {
   ExpenseFilterOptions,
   ExpenseBucket,
   ExpenseFilters,
-  ExpenseOrder,
   ExpenseShopFilters,
   ExpenseShopsResponse,
+  ExpensesCollectionResponse,
+  ExpensesOrdersResponse,
   ExpensesShippingResponse,
-  ExpensesTrendsResponse,
-  ExpensesOverviewResponse,
   ShopExpansionResponse,
-  ShopFeeBreakdown,
-  ShopSpendRow,
 } from "@myakiba/contracts/expenses/schema";
 
 export const shopParamSchema = z.object({
-  shop: z.string().min(1),
+  shop: z.union([
+    z.literal(EXPENSE_UNASSIGNED_SHOP_ID),
+    z
+      .string()
+      .min(EXPENSE_NAMED_SHOP_ID_PREFIX.length + 1)
+      .startsWith(EXPENSE_NAMED_SHOP_ID_PREFIX),
+  ]),
 });

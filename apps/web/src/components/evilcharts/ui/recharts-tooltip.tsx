@@ -1,9 +1,8 @@
 import {
   getPayloadConfigFromPayload,
   getColorsCount,
-  toChartColorVarKey,
   useChart,
-} from "@/components/evilcharts/ui/chart";
+} from "@/components/evilcharts/ui/recharts-chart";
 import type { NameType, ValueType } from "recharts/types/component/DefaultTooltipContent";
 import * as RechartsPrimitive from "recharts";
 import { cn } from "@/lib/utils";
@@ -174,16 +173,14 @@ function ChartTooltipContent({
 }
 
 function getIndicatorColorStyle(dataKey: string, colorsCount: number): React.CSSProperties {
-  const colorKey = toChartColorVarKey(dataKey);
-
   if (colorsCount <= 1) {
-    return { background: `var(--color-${colorKey}-0)` };
+    return { background: `var(--color-${dataKey}-0)` };
   }
 
   // Multiple colors: create linear gradient with evenly distributed stops
   const stops = Array.from({ length: colorsCount }, (_, index) => {
     const offset = (index / (colorsCount - 1)) * 100;
-    return `var(--color-${colorKey}-${index}) ${offset}%`;
+    return `var(--color-${dataKey}-${index}) ${offset}%`;
   }).join(", ");
 
   return { background: `linear-gradient(to right, ${stops})` };

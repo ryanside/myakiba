@@ -1,11 +1,11 @@
 import * as z from "zod";
-import { SHIPPING_METHODS } from "../shared/constants";
+import { CATEGORIES, SHIPPING_METHODS } from "../shared/constants";
 import { paginationLimitSchema, paginationOffsetSchema } from "../shared/pagination";
 
-export const EXPENSE_BUCKETS = ["month", "year"] as const;
-
-export const EXPENSE_BREAKDOWN_KEYS = [
-  "items",
+const EXPENSE_BUCKETS = ["month", "year"] as const;
+export const EXPENSE_SCOPES = ["collection", "orders", "shipping"] as const;
+const EXPENSE_BREAKDOWN_KEYS = [
+  "orderItems",
   "shipping",
   "taxes",
   "duties",
@@ -24,6 +24,7 @@ export const expenseFiltersSchema = z.object({
 });
 
 export const expenseShopFiltersSchema = expenseFiltersSchema.extend({
+  scope: z.enum(EXPENSE_SCOPES),
   search: z.string().optional(),
   limit: paginationLimitSchema.optional(),
   offset: paginationOffsetSchema.optional(),
@@ -33,86 +34,154 @@ export const expenseFilterOptionsSchema = z.object({
   shopOptions: z.array(z.string()),
 });
 
-const expenseTotalsSchema = z.object({
-  totalSpend: z.number(),
-  feeSpend: z.number(),
-  collectionItemSpend: z.number(),
-  orderItemSpend: z.number(),
-  orderSpend: z.number(),
-  shippingSpend: z.number(),
-  taxesSpend: z.number(),
-  dutiesSpend: z.number(),
-  tariffsSpend: z.number(),
-  miscSpend: z.number(),
-  averageOrderSpend: z.number(),
-  averageCollectionItemSpend: z.number(),
-  averageOrderItemSpend: z.number(),
-  averageFeeSpend: z.number(),
-  averageShippingSpend: z.number(),
-  averageTaxesSpend: z.number(),
-  averageDutiesSpend: z.number(),
-  averageTariffsSpend: z.number(),
-  averageMiscSpend: z.number(),
-  paidOrderCount: z.number(),
-  paidItemCount: z.number(),
-  ownedItemCount: z.number(),
+const contributionSchema = z.object({
+  spend: z.number(),
+  percentage: z.number(),
+  count: z.number(),
 });
 
-const expenseSeriesPointSchema = z.object({
+const collectionPeriodPointSchema = z.object({
   bucket: z.string(),
-  totalSpend: z.number(),
-  collectionItemSpend: z.number(),
-  orderItemSpend: z.number(),
-  orderSpend: z.number(),
-  feeSpend: z.number(),
+  collectionItems: z.number(),
 });
 
-const expenseAveragePointSchema = z.object({
+const orderSpendPointSchema = z.object({
   bucket: z.string(),
-  averageOrderSpend: z.number(),
-  averageCollectionItemSpend: z.number(),
-  averageOrderItemSpend: z.number(),
-  averageFeeSpend: z.number(),
+  total: z.number(),
+  orderItems: z.number(),
+  fees: z.number(),
 });
 
-const expenseBreakdownEntrySchema = z.object({
+const orderAveragePointSchema = z.object({
+  bucket: z.string(),
+  orderTotal: z.number(),
+  orderItem: z.number(),
+  feesPerOrder: z.number(),
+});
+
+const shippingMethodPointSchema = z.object({
+  bucket: z.string(),
+  values: z.record(z.enum(SHIPPING_METHODS), z.number()),
+});
+
+const shippingItemCountPointSchema = z.object({
+  itemCount: z.number(),
+  values: z.record(z.enum(SHIPPING_METHODS), z.number()),
+});
+
+const categoryBreakdownEntrySchema = z.object({
+  category: z.enum(CATEGORIES),
+  count: z.number(),
+  spend: z.number(),
+  percentage: z.number(),
+});
+
+const costBreakdownEntrySchema = z.object({
   key: z.enum(EXPENSE_BREAKDOWN_KEYS),
   label: z.string(),
   value: z.number(),
   percentage: z.number(),
 });
 
-const expenseShippingMethodPointSchema = z.object({
-  bucket: z.string(),
-  values: z.record(z.enum(SHIPPING_METHODS), z.number()),
-});
-
-const expenseBundleEfficiencyPointSchema = z.object({
-  itemCount: z.number(),
-  values: z.record(z.enum(SHIPPING_METHODS), z.number()),
-});
-
-const shopSpendRowSchema = z.object({
-  shop: z.string(),
+const shippingMethodBreakdownEntrySchema = z.object({
+  method: z.enum(SHIPPING_METHODS),
+  spend: z.number(),
+  percentage: z.number(),
   orderCount: z.number(),
-  ownedItemCount: z.number(),
-  orderItemCount: z.number(),
-  collectionItemSpend: z.number(),
-  orderItemSpend: z.number(),
-  feeSpend: z.number(),
-  totalSpend: z.number(),
-  averageOrderSpend: z.number(),
-  averageCollectionItemSpend: z.number(),
-  averageOrderItemSpend: z.number(),
-  averageFeeSpend: z.number(),
 });
 
-const expenseShopsResponseSchema = z.object({
-  rows: z.array(shopSpendRowSchema),
+export const expensesCollectionResponseSchema = z.object({
+  summary: z.object({
+    spend: z.number(),
+    orderLinked: contributionSchema,
+    standalone: contributionSchema,
+  }),
+  kpis: z.object({
+    itemCount: z.number(),
+    averageItemCost: z.number(),
+    shopCount: z.number(),
+  }),
+  breakdown: z.array(categoryBreakdownEntrySchema),
+  spendingByPeriod: z.array(collectionPeriodPointSchema),
+  cumulativeSpending: z.array(collectionPeriodPointSchema),
+  averageCostByPeriod: z.array(collectionPeriodPointSchema),
+  averageCostToDate: z.array(collectionPeriodPointSchema),
+});
+
+export const expensesOrdersResponseSchema = z.object({
+  summary: z.object({
+    spend: z.number(),
+    orderItems: contributionSchema.omit({ count: true }),
+    fees: contributionSchema.omit({ count: true }),
+  }),
+  kpis: z.object({
+    paidOrderCount: z.number(),
+    orderItemCount: z.number(),
+    unpaidOrderCount: z.number(),
+    unpaidCommitments: z.number(),
+  }),
+  breakdown: z.array(costBreakdownEntrySchema),
+  spendingByPeriod: z.array(orderSpendPointSchema),
+  cumulativeSpending: z.array(orderSpendPointSchema),
+  averageCostsByPeriod: z.array(orderAveragePointSchema),
+  averageCostsToDate: z.array(orderAveragePointSchema),
+});
+
+export const expensesShippingResponseSchema = z.object({
+  summary: z.object({
+    spend: z.number(),
+  }),
+  kpis: z.object({
+    methodCount: z.number(),
+    chargedOrderCount: z.number(),
+    freeOrderCount: z.number(),
+    averageShipping: z.number(),
+  }),
+  breakdown: z.array(shippingMethodBreakdownEntrySchema),
+  spendByMethodAndPeriod: z.array(shippingMethodPointSchema),
+  cumulativeSpendByMethod: z.array(shippingMethodPointSchema),
+  averageCostByMethodAndPeriod: z.array(shippingMethodPointSchema),
+  averageCostByMethodToDate: z.array(shippingMethodPointSchema),
+  averageCostByItemCount: z.array(shippingItemCountPointSchema),
+});
+
+const baseShopRowSchema = z.object({
+  id: z.string(),
+  shop: z.string(),
+  spend: z.number(),
+  share: z.number(),
+});
+
+const collectionShopRowSchema = baseShopRowSchema.extend({
+  scope: z.literal("collection"),
+  itemCount: z.number(),
+  averageItemCost: z.number(),
+});
+
+const ordersShopRowSchema = baseShopRowSchema.extend({
+  scope: z.literal("orders"),
+  orderCount: z.number(),
+  averageOrder: z.number(),
+  orderItemCount: z.number(),
+  fees: z.number(),
+});
+
+const shippingShopRowSchema = baseShopRowSchema.extend({
+  scope: z.literal("shipping"),
+  orderCount: z.number(),
+  averageShipping: z.number(),
+});
+
+export const expenseShopRowSchema = z.discriminatedUnion("scope", [
+  collectionShopRowSchema,
+  ordersShopRowSchema,
+  shippingShopRowSchema,
+]);
+
+export const expenseShopsResponseSchema = z.object({
+  rows: z.array(expenseShopRowSchema),
   totalCount: z.number(),
 });
-
-export { expenseShopsResponseSchema };
 
 const expenseOrderSchema = z.object({
   orderId: z.string(),
@@ -120,12 +189,6 @@ const expenseOrderSchema = z.object({
   shop: z.string(),
   expenseDate: z.string().nullable(),
   images: z.array(z.string()),
-  itemSpend: z.number(),
-  shipping: z.number(),
-  taxes: z.number(),
-  duties: z.number(),
-  tariffs: z.number(),
-  miscFees: z.number(),
   feeSpend: z.number(),
   totalSpend: z.number(),
 });
@@ -146,66 +209,43 @@ const shopExpansionItemSchema = z.object({
   image: z.string().nullable(),
 });
 
-const expenseUnpaidBreakdownSchema = z.object({
-  items: z.number(),
-  shipping: z.number(),
-  taxes: z.number(),
-  duties: z.number(),
-  tariffs: z.number(),
-  miscFees: z.number(),
-});
-
-export const expensesOverviewResponseSchema = z.object({
-  totals: expenseTotalsSchema,
-  breakdown: z.array(expenseBreakdownEntrySchema),
-  unpaidBreakdown: expenseUnpaidBreakdownSchema,
-  unpaidOrders: z.array(expenseOrderSchema),
-  unpaidOrderCount: z.number(),
-});
-
-export const expensesTrendsResponseSchema = z.object({
-  bucket: z.enum(EXPENSE_BUCKETS),
-  totals: expenseTotalsSchema,
-  spendOverTime: z.array(expenseSeriesPointSchema),
-  cumulativeSpendOverTime: z.array(expenseSeriesPointSchema),
-  averagesOverTime: z.array(expenseAveragePointSchema),
-  cumulativeAveragesOverTime: z.array(expenseAveragePointSchema),
-});
-
-export const expensesShippingResponseSchema = z.object({
-  bucket: z.enum(EXPENSE_BUCKETS),
-  totals: expenseTotalsSchema,
-  usedShippingMethods: z.array(z.enum(SHIPPING_METHODS)),
-  shippingFeeByMethod: z.array(expenseShippingMethodPointSchema),
-  averageShippingFeeByMethod: z.array(expenseShippingMethodPointSchema),
-  cumulativeShippingFeeByMethod: z.array(expenseShippingMethodPointSchema),
-  cumulativeAverageShippingFeeByMethod: z.array(expenseShippingMethodPointSchema),
-  bundleEfficiency: z.array(expenseBundleEfficiencyPointSchema),
-});
-
-export const shopExpansionResponseSchema = z.object({
-  feeBreakdown: shopFeeBreakdownSchema,
-  topOrders: z.array(expenseOrderSchema),
+const collectionShopExpansionSchema = z.object({
+  scope: z.literal("collection"),
   items: z.array(shopExpansionItemSchema),
 });
 
+const ordersShopExpansionSchema = z.object({
+  scope: z.literal("orders"),
+  feeBreakdown: shopFeeBreakdownSchema,
+  topOrders: z.array(expenseOrderSchema),
+});
+
+const shippingShopExpansionSchema = z.object({
+  scope: z.literal("shipping"),
+  methods: z.array(shippingMethodBreakdownEntrySchema.omit({ percentage: true })),
+  topOrders: z.array(expenseOrderSchema),
+});
+
+export const shopExpansionResponseSchema = z.discriminatedUnion("scope", [
+  collectionShopExpansionSchema,
+  ordersShopExpansionSchema,
+  shippingShopExpansionSchema,
+]);
+
+export type ExpenseScope = (typeof EXPENSE_SCOPES)[number];
 export type ExpenseFilters = z.infer<typeof expenseFiltersSchema>;
 export type ExpenseShopFilters = z.infer<typeof expenseShopFiltersSchema>;
 export type ExpenseFilterOptions = z.infer<typeof expenseFilterOptionsSchema>;
 export type ExpenseBucket = (typeof EXPENSE_BUCKETS)[number];
-export type ExpenseTotals = z.infer<typeof expenseTotalsSchema>;
-export type ExpenseSeriesPoint = z.infer<typeof expenseSeriesPointSchema>;
-export type ExpenseAveragePoint = z.infer<typeof expenseAveragePointSchema>;
-export type ExpenseBreakdownEntry = z.infer<typeof expenseBreakdownEntrySchema>;
-export type ExpenseShippingMethodPoint = z.infer<typeof expenseShippingMethodPointSchema>;
-export type ExpenseBundleEfficiencyPoint = z.infer<typeof expenseBundleEfficiencyPointSchema>;
-export type ShopSpendRow = z.infer<typeof shopSpendRowSchema>;
+export type CollectionPeriodPoint = z.infer<typeof collectionPeriodPointSchema>;
+export type OrderSpendPoint = z.infer<typeof orderSpendPointSchema>;
+export type OrderAveragePoint = z.infer<typeof orderAveragePointSchema>;
+export type ShippingMethodPoint = z.infer<typeof shippingMethodPointSchema>;
+export type ShippingItemCountPoint = z.infer<typeof shippingItemCountPointSchema>;
+export type ExpenseShopRow = z.infer<typeof expenseShopRowSchema>;
 export type ExpenseShopsResponse = z.infer<typeof expenseShopsResponseSchema>;
 export type ExpenseOrder = z.infer<typeof expenseOrderSchema>;
-export type ShopFeeBreakdown = z.infer<typeof shopFeeBreakdownSchema>;
-export type ShopExpansionItem = z.infer<typeof shopExpansionItemSchema>;
-export type ExpenseUnpaidBreakdown = z.infer<typeof expenseUnpaidBreakdownSchema>;
-export type ExpensesOverviewResponse = z.infer<typeof expensesOverviewResponseSchema>;
-export type ExpensesTrendsResponse = z.infer<typeof expensesTrendsResponseSchema>;
+export type ExpensesCollectionResponse = z.infer<typeof expensesCollectionResponseSchema>;
+export type ExpensesOrdersResponse = z.infer<typeof expensesOrdersResponseSchema>;
 export type ExpensesShippingResponse = z.infer<typeof expensesShippingResponseSchema>;
 export type ShopExpansionResponse = z.infer<typeof shopExpansionResponseSchema>;

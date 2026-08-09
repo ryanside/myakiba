@@ -19,11 +19,6 @@ type AtLeastOneThemeColor = {
 
 const VALID_THEME_KEYS = Object.keys(THEMES) as ThemeKey[];
 
-/** Maps series keys to valid CSS custom property name segments (e.g. "n/a" → "n-a"). */
-export function toChartColorVarKey(dataKey: string): string {
-  return dataKey.replaceAll("/", "-");
-}
-
 // Validation for chart config colors at runtime
 function validateChartConfigColors(config: ChartConfig): void {
   for (const [key, value] of Object.entries(config)) {
@@ -97,8 +92,6 @@ function ChartContainer({
   className,
   children,
   footer,
-  debounce: resizeDebounce = 200,
-  onResize,
   ...props
 }: Readonly<ChartContainerProps>) {
   const uniqueId = React.useId();
@@ -114,7 +107,7 @@ function ChartContainer({
         data-chart={chartId}
         className={cn(
           "min-h-0 w-full flex-1",
-          "[&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-legend-wrapper]:!w-full [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border relative flex flex-col justify-center text-xs [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-hidden [&_.recharts-sector]:outline-hidden [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-surface]:outline-hidden",
+          "[&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border relative flex flex-col justify-center text-xs [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-hidden [&_.recharts-sector]:outline-hidden [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-surface]:outline-hidden",
           !footer && "aspect-video",
           className,
         )}
@@ -124,8 +117,6 @@ function ChartContainer({
         <RechartsPrimitive.ResponsiveContainer
           className="min-h-0 w-full flex-1"
           initialDimension={initialDimension}
-          debounce={resizeDebounce}
-          onResize={onResize}
         >
           {children}
         </RechartsPrimitive.ResponsiveContainer>
@@ -143,7 +134,7 @@ function LoadingIndicator({ isLoading }: { isLoading: boolean }) {
   return (
     <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
       <div className="text-primary bg-background flex items-center justify-center gap-2 rounded-md border px-2 py-0.5 text-sm">
-        <div className="border-border border-t-primary size-3 animate-spin rounded-full border" />
+        <div className="border-border border-t-primary h-3 w-3 animate-spin rounded-full border" />
         <span>Loading</span>
       </div>
     </div>
@@ -177,7 +168,7 @@ function distributeColors(colorsArray: string[], maxCount: number): string[] {
 }
 
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
-  const colorConfig = Object.entries(config).filter(([, entryConfig]) => entryConfig.colors);
+  const colorConfig = Object.entries(config).filter(([, itemConfig]) => itemConfig.colors);
 
   if (!colorConfig.length) {
     return null;
@@ -197,9 +188,7 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
         // Distribute colors evenly across all required slots
         const distributedColors = distributeColors(colorsArray, maxCount);
 
-        return distributedColors.map(
-          (color, index) => `  --color-${toChartColorVarKey(key)}-${index}: ${color};`,
-        );
+        return distributedColors.map((color, index) => `  --color-${key}-${index}: ${color};`);
       })
       .filter(Boolean)
       .join("\n");

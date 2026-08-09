@@ -27,16 +27,16 @@ const expensesRouter = new Elysia({ prefix: "/expenses" })
     { auth: true },
   )
   .get(
-    "/overview",
+    "/collection",
     async ({ query, user, log }) => {
-      log.set({ action: "get_expenses_overview", user: { id: user.id }, query });
+      log.set({ action: "get_expenses_collection", user: { id: user.id }, query });
 
-      const { data, error } = await tryCatch(ExpensesService.getExpensesOverview(user.id, query));
+      const { data, error } = await tryCatch(ExpensesService.getExpensesCollection(user.id, query));
 
       if (error) {
-        log.error(error, { step: "getExpensesOverview" });
+        log.error(error, { step: "getExpensesCollection" });
         log.set({ outcome: "error" });
-        return status(500, "Failed to get expenses overview");
+        return status(500, "Failed to get collection expenses");
       }
 
       log.set({ outcome: "success" });
@@ -63,16 +63,16 @@ const expensesRouter = new Elysia({ prefix: "/expenses" })
     { query: expenseShopFiltersSchema, auth: true },
   )
   .get(
-    "/trends",
+    "/orders",
     async ({ query, user, log }) => {
-      log.set({ action: "get_expenses_trends", user: { id: user.id }, query });
+      log.set({ action: "get_expenses_orders", user: { id: user.id }, query });
 
-      const { data, error } = await tryCatch(ExpensesService.getExpensesTrends(user.id, query));
+      const { data, error } = await tryCatch(ExpensesService.getExpensesOrders(user.id, query));
 
       if (error) {
-        log.error(error, { step: "getExpensesTrends" });
+        log.error(error, { step: "getExpensesOrders" });
         log.set({ outcome: "error" });
-        return status(500, "Failed to get expenses trends");
+        return status(500, "Failed to get order expenses");
       }
 
       log.set({ outcome: "success" });
@@ -121,7 +121,7 @@ const expensesRouter = new Elysia({ prefix: "/expenses" })
       log.set({ outcome: "success" });
       return data;
     },
-    { params: shopParamSchema, query: expenseFiltersSchema, auth: true },
+    { params: shopParamSchema, query: expenseShopFiltersSchema, auth: true },
   );
 
 export default expensesRouter;

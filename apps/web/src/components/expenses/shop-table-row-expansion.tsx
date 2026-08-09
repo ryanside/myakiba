@@ -1,95 +1,232 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import type {
   ExpenseFilters,
+  ExpenseShopFilters,
+  ExpenseShopRow,
   ShopExpansionResponse,
-  ShopFeeBreakdown,
 } from "@myakiba/contracts/expenses/schema";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import { ExpenseOrderRow } from "@/components/expenses/order-row";
-import { EXPENSE_CHART_COLORS } from "@/components/expenses/chart-utils";
-import { Spinner } from "@/components/ui/spinner";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ExpenseOrderRow, ExpenseOrderRowSkeleton } from "@/components/expenses/order-row";
+import { EXPENSE_CHART_COLORS, shippingMethodColor } from "@/components/expenses/chart-utils";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getShopExpansion } from "@/queries/expenses";
-import { cn } from "@/lib/utils";
 
-interface ShopTableRowExpansionProps {
-  readonly shop: string;
-  readonly filters: ExpenseFilters;
-  readonly currency: Currency;
-  readonly locale: string;
-  readonly dateFormat: DateFormat;
-}
+type OrdersExpansion = Extract<ShopExpansionResponse, { scope: "orders" }>;
+type ShippingExpansion = Extract<ShopExpansionResponse, { scope: "shipping" }>;
+type CollectionExpansion = Extract<ShopExpansionResponse, { scope: "collection" }>;
 
-const FEE_CATEGORIES: readonly {
-  readonly key: keyof ShopFeeBreakdown;
-  readonly label: string;
-}[] = [
-  { key: "shipping", label: "shipping" },
-  { key: "taxes", label: "taxes" },
-  { key: "duties", label: "duties" },
-  { key: "tariffs", label: "tariffs" },
-  { key: "miscFees", label: "misc" },
-];
-
-const TOP_ORDERS_BASE_DELAY_MS = 80;
-const ITEMS_BASE_DELAY_MS = 160;
-const CHILD_STAGGER_MS = 30;
+const FEE_CATEGORIES = [
+  { key: "shipping", label: "Shipping", color: EXPENSE_CHART_COLORS[1] },
+  { key: "taxes", label: "Taxes", color: EXPENSE_CHART_COLORS[2] },
+  { key: "duties", label: "Duties", color: EXPENSE_CHART_COLORS[3] },
+  { key: "tariffs", label: "Tariffs", color: EXPENSE_CHART_COLORS[4] },
+  { key: "miscFees", label: "Misc", color: EXPENSE_CHART_COLORS[5] },
+] as const;
 
 export function ShopTableRowExpansion({
-  shop,
+  row,
   filters,
   currency,
   locale,
   dateFormat,
-}: ShopTableRowExpansionProps): ReactNode {
+}: {
+  readonly row: ExpenseShopRow;
+  readonly filters: ExpenseFilters;
+  readonly currency: Currency;
+  readonly locale: string;
+  readonly dateFormat: DateFormat;
+}): ReactNode {
+  const queryFilters: ExpenseShopFilters = {
+    scope: row.scope,
+    dateStart: filters.dateStart,
+    dateEnd: filters.dateEnd,
+  };
   const { data, isPending, isError, error } = useQuery({
-    queryKey: ["expenses", "shop-expansion", shop, filters],
-    queryFn: () => getShopExpansion(shop, filters),
+    queryKey: ["expenses", "shop-expansion", row.id, queryFilters],
+    queryFn: () => getShopExpansion(row.id, queryFilters),
     staleTime: 1000 * 60 * 5,
     retry: false,
   });
 
   if (isPending) {
     return (
-      <div className="flex w-full flex-col border-t border-border/30 bg-muted/30 p-4">
-        <div className="flex min-h-28 w-full items-center justify-center py-6">
-          <Spinner className="size-5 text-muted-foreground" />
+      <div className="w-full border-t border-border/30 bg-muted/30 p-4" aria-busy="true">
+        <ShopExpansionSkeleton scope={row.scope} />
+      </div>
+    );
+  }
+  if (isError) {
+    return (
+      <div className="w-full border-t border-border/30 bg-muted/30 p-4">
+        <p className="animate-data-in text-sm text-destructive">Failed to load: {error.message}</p>
+      </div>
+    );
+  }
+
+  let content: ReactNode;
+  switch (data.scope) {
+    case "collection":
+      content = <CollectionExpansionPanel data={data} row={row} filters={filters} />;
+      break;
+    case "orders":
+      content = (
+        <div className="flex flex-col gap-6">
+          <FeeBreakdownPanel data={data} currency={currency} locale={locale} />
+          <TopOrdersPanel
+            data={data}
+            row={row}
+            filters={filters}
+            currency={currency}
+            locale={locale}
+            dateFormat={dateFormat}
+            label="Top paid orders"
+          />
+        </div>
+      );
+      break;
+    default:
+      content = (
+        <div className="flex flex-col gap-6">
+          <ShippingMethodsPanel data={data} currency={currency} locale={locale} />
+          <TopOrdersPanel
+            data={data}
+            row={row}
+            filters={filters}
+            currency={currency}
+            locale={locale}
+            dateFormat={dateFormat}
+            label="Top orders by shipping"
+          />
+        </div>
+      );
+  }
+
+  return <div className="w-full border-t border-border/30 bg-muted/30 p-4">{content}</div>;
+}
+
+function SectionLabel({ children }: { readonly children: ReactNode }): ReactNode {
+  return <p className="text-xs text-muted-foreground">{children}</p>;
+}
+
+function ShopExpansionSkeleton({ scope }: { readonly scope: ExpenseShopRow["scope"] }): ReactNode {
+  if (scope === "collection") {
+    return (
+      <div className="flex flex-col gap-3">
+        <ExpansionHeader label="Recent Owned items" />
+        <div className="flex flex-wrap gap-2">
+          <Skeleton className="size-14 rounded-md" />
+          <Skeleton className="size-14 rounded-md" />
+          <Skeleton className="size-14 rounded-md" />
         </div>
       </div>
     );
   }
 
-  if (isError) {
-    return (
-      <div className="flex w-full flex-col border-t border-border/30 bg-muted/30 p-4">
-        <p className="text-sm text-destructive text-pretty">Failed to load: {error.message}</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex w-full flex-col gap-6 border-t border-border/30 bg-muted/30 p-4">
-      <FeeBreakdownPanel data={data} currency={currency} locale={locale} />
-      <TopOrdersPanel
-        data={data}
-        shop={shop}
-        filters={filters}
-        currency={currency}
-        locale={locale}
-        dateFormat={dateFormat}
-      />
-      <ItemsPanel data={data} shop={shop} filters={filters} />
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-3">
+        <SectionLabel>{scope === "orders" ? "Fee breakdown" : "Shipping methods"}</SectionLabel>
+        <div className="flex flex-wrap gap-x-4 gap-y-2">
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-32" />
+        </div>
+      </div>
+      <div className="flex flex-col gap-3">
+        <ExpansionHeader
+          label={scope === "orders" ? "Top paid orders" : "Top orders by shipping"}
+        />
+        <div className="divide-y divide-border/30">
+          <ExpenseOrderRowSkeleton />
+          <ExpenseOrderRowSkeleton />
+          <ExpenseOrderRowSkeleton />
+        </div>
+      </div>
     </div>
   );
 }
 
-function SectionLabel({ children }: { readonly children: ReactNode }): ReactNode {
-  return <p className="flex items-center gap-1.5 text-xs text-muted-foreground">{children}</p>;
+function ExpansionHeader({ label }: { readonly label: string }): ReactNode {
+  return (
+    <div className="flex items-baseline justify-between gap-4">
+      <SectionLabel>{label}</SectionLabel>
+      <Button variant="ghost" size="xs" className="-my-1 -mr-2 text-muted-foreground" disabled>
+        View all
+      </Button>
+    </div>
+  );
+}
+
+function CollectionExpansionPanel({
+  data,
+  row,
+  filters,
+}: {
+  readonly data: CollectionExpansion;
+  readonly row: ExpenseShopRow;
+  readonly filters: ExpenseFilters;
+}): ReactNode {
+  const shop = [row.shop];
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-baseline justify-between gap-4">
+        <SectionLabel>Recent Owned items</SectionLabel>
+        <Button
+          variant="ghost"
+          size="xs"
+          className="-my-1 -mr-2 text-muted-foreground"
+          render={
+            <Link
+              to="/collection"
+              search={{ shop, payDateStart: filters.dateStart, payDateEnd: filters.dateEnd }}
+            />
+          }
+          nativeButton={false}
+        >
+          View all
+        </Button>
+      </div>
+      {data.items.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No collection items.</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {data.items.map((item, index) => {
+            const linkProps =
+              item.externalId !== null
+                ? { to: "/item/$externalId" as const, params: { externalId: item.externalId } }
+                : { to: "/item/custom/$id" as const, params: { id: item.itemId } };
+            return (
+              <Link
+                key={item.collectionId}
+                {...linkProps}
+                title={item.title}
+                aria-label={item.title}
+                className="animate-data-in size-14 overflow-hidden rounded-md bg-background ring-1 ring-border/40"
+                style={{ animationDelay: `${index * 30}ms` }}
+              >
+                {item.image ? (
+                  <img
+                    src={item.image}
+                    alt={item.title}
+                    className="size-full object-cover object-top"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="flex size-full items-center justify-center text-[10px] text-muted-foreground">
+                    No image
+                  </div>
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function FeeBreakdownPanel({
@@ -97,145 +234,36 @@ function FeeBreakdownPanel({
   currency,
   locale,
 }: {
-  readonly data: ShopExpansionResponse;
+  readonly data: OrdersExpansion;
   readonly currency: Currency;
   readonly locale: string;
 }): ReactNode {
-  const total = FEE_CATEGORIES.reduce((sum, { key }) => sum + data.feeBreakdown[key], 0);
-  const entries = FEE_CATEGORIES.map((category, idx) => ({
+  const entries = FEE_CATEGORIES.map((category) => ({
     ...category,
     amount: data.feeBreakdown[category.key],
-    color: EXPENSE_CHART_COLORS[(idx + 1) % EXPENSE_CHART_COLORS.length],
   })).filter((entry) => entry.amount > 0);
-
-  if (total === 0) {
-    return (
-      <div className="animate-data-in space-y-3">
-        <SectionLabel>fee breakdown</SectionLabel>
-        <p className="text-sm text-muted-foreground text-pretty">No fees for this shop</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="animate-data-in space-y-3">
-      <SectionLabel>
-        <span>fee breakdown</span>
-        <span className="ml-auto tabular-nums">
-          {formatCurrencyFromMinorUnits(total, currency, locale)}
-        </span>
-      </SectionLabel>
-      <TooltipProvider>
-        <div className="flex h-2.5 w-full overflow-hidden rounded-sm">
-          {entries.map((entry) => {
-            const percentage = (entry.amount / total) * 100;
-            return (
-              <Tooltip key={entry.key}>
-                <TooltipTrigger
-                  render={
-                    <div
-                      className="cursor-default first:rounded-l-sm last:rounded-r-sm"
-                      style={{
-                        width: `${Math.max(percentage, 2)}%`,
-                        backgroundColor: entry.color,
-                      }}
-                    />
-                  }
-                />
-                <TooltipContent side="top">
-                  <div className="flex flex-col gap-0.5">
-                    <p className="text-xs font-medium">{entry.label}</p>
-                    <p className="flex items-baseline gap-3 text-xs">
-                      <span className="tabular-nums">
-                        {formatCurrencyFromMinorUnits(entry.amount, currency, locale)}
-                      </span>
-                      <span className="text-muted-foreground tabular-nums">
-                        {percentage.toFixed(1)}%
-                      </span>
-                    </p>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            );
-          })}
-        </div>
-      </TooltipProvider>
-      <ul className="flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
-        {entries.map((entry) => (
-          <li key={entry.key} className="flex items-center gap-1.5">
-            <span
-              aria-hidden
-              className="size-1.5 rounded-full"
-              style={{ backgroundColor: entry.color }}
-            />
-            <span>{entry.label}</span>
-            <span className="tabular-nums">
-              {formatCurrencyFromMinorUnits(entry.amount, currency, locale)}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function TopOrdersPanel({
-  data,
-  shop,
-  filters,
-  currency,
-  locale,
-  dateFormat,
-}: {
-  readonly data: ShopExpansionResponse;
-  readonly shop: string;
-  readonly filters: ExpenseFilters;
-  readonly currency: Currency;
-  readonly locale: string;
-  readonly dateFormat: DateFormat;
-}): ReactNode {
-  return (
-    <div
-      className="animate-data-in space-y-3"
-      style={{ "--data-in-delay": `${TOP_ORDERS_BASE_DELAY_MS}ms` } as CSSProperties}
-    >
-      <div className="flex min-w-0 items-baseline justify-between gap-4">
-        <SectionLabel>top orders</SectionLabel>
-        <Link
-          to="/orders"
-          search={{
-            shop: [shop],
-            payDateStart: filters.dateStart,
-            payDateEnd: filters.dateEnd,
-          }}
-          className="group/link flex shrink-0 items-center gap-1 text-xs text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground active:scale-[0.98]"
-        >
-          View all
-          <HugeiconsIcon
-            icon={ArrowRight01Icon}
-            className="size-3 shrink-0 transition-transform duration-150 ease-out group-hover/link:translate-x-0.5"
-            aria-hidden
-          />
-        </Link>
-      </div>
-      {data.topOrders.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-pretty">No orders</p>
+    <div className="flex flex-col gap-3">
+      <SectionLabel>Fee breakdown</SectionLabel>
+      {entries.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No fees for this shop.</p>
       ) : (
-        <ul className="divide-y divide-border/30">
-          {data.topOrders.map((order, idx) => (
-            <li key={order.orderId}>
-              <ExpenseOrderRow
-                order={order}
-                currency={currency}
-                locale={locale}
-                dateFormat={dateFormat}
-                className="animate-data-in"
-                style={
-                  {
-                    "--data-in-delay": `${TOP_ORDERS_BASE_DELAY_MS + idx * CHILD_STAGGER_MS}ms`,
-                  } as CSSProperties
-                }
+        <ul className="flex flex-wrap gap-x-4 gap-y-2 text-xs">
+          {entries.map((entry, index) => (
+            <li
+              key={entry.key}
+              className="animate-data-in flex items-center gap-1.5"
+              style={{ animationDelay: `${index * 30}ms` }}
+            >
+              <span
+                aria-hidden
+                className="size-1.5 rounded-full"
+                style={{ backgroundColor: entry.color }}
               />
+              <span>{entry.label}</span>
+              <span className="tabular-nums text-muted-foreground">
+                {formatCurrencyFromMinorUnits(entry.amount, currency, locale)}
+              </span>
             </li>
           ))}
         </ul>
@@ -244,83 +272,104 @@ function TopOrdersPanel({
   );
 }
 
-function ItemsPanel({
+function ShippingMethodsPanel({
   data,
-  shop,
-  filters,
+  currency,
+  locale,
 }: {
-  readonly data: ShopExpansionResponse;
-  readonly shop: string;
-  readonly filters: ExpenseFilters;
+  readonly data: ShippingExpansion;
+  readonly currency: Currency;
+  readonly locale: string;
 }): ReactNode {
   return (
-    <div
-      className="animate-data-in space-y-3"
-      style={{ "--data-in-delay": `${ITEMS_BASE_DELAY_MS}ms` } as CSSProperties}
-    >
-      <div className="flex min-w-0 items-baseline justify-between gap-4">
-        <SectionLabel>collection items</SectionLabel>
-        <Link
-          to="/collection"
-          search={{
-            shop: [shop],
-            payDateStart: filters.dateStart,
-            payDateEnd: filters.dateEnd,
-          }}
-          className="group/link flex shrink-0 items-center gap-1 text-xs text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground active:scale-[0.98]"
+    <div className="flex flex-col gap-3">
+      <SectionLabel>Shipping methods</SectionLabel>
+      {data.methods.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No shipping charges for this shop.</p>
+      ) : (
+        <ul className="flex flex-wrap gap-x-4 gap-y-2 text-xs">
+          {data.methods.map((entry, index) => (
+            <li
+              key={entry.method}
+              className="animate-data-in flex items-center gap-1.5"
+              style={{ animationDelay: `${index * 30}ms` }}
+            >
+              <span
+                aria-hidden
+                className="size-1.5 rounded-full"
+                style={{ backgroundColor: shippingMethodColor(entry.method) }}
+              />
+              <span>{entry.method}</span>
+              <span className="tabular-nums text-muted-foreground">
+                {formatCurrencyFromMinorUnits(entry.spend, currency, locale)}, {entry.orderCount}{" "}
+                {entry.orderCount === 1 ? "order" : "orders"}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function TopOrdersPanel({
+  data,
+  row,
+  filters,
+  currency,
+  locale,
+  dateFormat,
+  label,
+}: {
+  readonly data: OrdersExpansion | ShippingExpansion;
+  readonly row: ExpenseShopRow;
+  readonly filters: ExpenseFilters;
+  readonly currency: Currency;
+  readonly locale: string;
+  readonly dateFormat: DateFormat;
+  readonly label: string;
+}): ReactNode {
+  const shop = [row.shop];
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-baseline justify-between gap-4">
+        <SectionLabel>{label}</SectionLabel>
+        <Button
+          variant="ghost"
+          size="xs"
+          className="-my-1 -mr-2 text-muted-foreground"
+          render={
+            <Link
+              to="/orders"
+              search={{
+                shop,
+                expenseDateStart: filters.dateStart,
+                expenseDateEnd: filters.dateEnd,
+              }}
+            />
+          }
+          nativeButton={false}
         >
           View all
-          <HugeiconsIcon
-            icon={ArrowRight01Icon}
-            className="size-3 shrink-0 transition-transform duration-150 ease-out group-hover/link:translate-x-0.5"
-            aria-hidden
-          />
-        </Link>
+        </Button>
       </div>
-      {data.items.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-pretty">No collection items</p>
+      {data.topOrders.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No orders.</p>
       ) : (
-        <div className="flex flex-wrap gap-2">
-          {data.items.map((item, idx) => {
-            const linkProps =
-              item.externalId !== null
-                ? ({
-                    to: "/item/$externalId",
-                    params: { externalId: item.externalId },
-                  } as const)
-                : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const);
-
-            return (
-              <Link
-                key={item.collectionId}
-                {...linkProps}
-                title={item.title}
-                aria-label={item.title}
-                className={cn(
-                  "animate-data-in size-14 shrink-0 overflow-hidden rounded-md bg-background ring-1 ring-border/40",
-                )}
-                style={
-                  {
-                    "--data-in-delay": `${ITEMS_BASE_DELAY_MS + idx * CHILD_STAGGER_MS}ms`,
-                  } as CSSProperties
-                }
-              >
-                {item.image ? (
-                  <img
-                    src={item.image}
-                    alt={item.title}
-                    className="h-full w-full object-cover object-top"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground">
-                    No image
-                  </div>
-                )}
-              </Link>
-            );
-          })}
-        </div>
+        <ul className="divide-y divide-border/30">
+          {data.topOrders.map((order, index) => (
+            <li key={order.orderId}>
+              <ExpenseOrderRow
+                order={order}
+                currency={currency}
+                locale={locale}
+                dateFormat={dateFormat}
+                className="animate-data-in"
+                style={{ animationDelay: `${index * 30}ms` }}
+              />
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

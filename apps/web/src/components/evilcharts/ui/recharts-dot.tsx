@@ -1,4 +1,3 @@
-import { toChartColorVarKey } from "@/components/evilcharts/ui/chart";
 import { cn } from "@/lib/utils";
 import * as React from "react";
 
@@ -27,8 +26,7 @@ const ChartDot = React.memo(function ChartDot({
   maskId,
 }: ChartDotProps) {
   const dotId = React.useId().replaceAll(":", "");
-  const colorKey = toChartColorVarKey(String(dataKey));
-  const gradientUrl = `url(#${chartId}-colors-${colorKey})`;
+  const gradientUrl = `url(#${chartId}-colors-${String(dataKey)})`;
 
   if (cx === undefined || cy === undefined) return null;
 
