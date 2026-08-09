@@ -81,6 +81,24 @@ function columnsReducer(columns: OrderColumns, update: OrderColumnsUpdate): Orde
   return typeof update === "function" ? update(columns) : update;
 }
 
+function reconcileOrderColumns(current: OrderColumns, incoming: OrderColumns): OrderColumns {
+  const next: OrderColumns = {};
+
+  for (const [columnId, incomingOrders] of Object.entries(incoming)) {
+    const currentOrders = current[columnId] ?? [];
+    const incomingById = new Map(incomingOrders.map((order) => [order.orderId, order]));
+    const refreshedOrders = currentOrders.flatMap((order) => {
+      const incomingOrder = incomingById.get(order.orderId);
+      return incomingOrder ? [incomingOrder] : [];
+    });
+
+    next[columnId] =
+      refreshedOrders.length === incomingOrders.length ? refreshedOrders : incomingOrders;
+  }
+
+  return next;
+}
+
 interface OrderCardProps extends Omit<
   React.ComponentProps<typeof KanbanItem>,
   "value" | "children"
@@ -323,7 +341,7 @@ function OrderKanbanBoard({
   const [columns, setColumns] = React.useReducer(columnsReducer, initialColumns);
 
   React.useEffect((): void => {
-    setColumns(initialColumns);
+    setColumns((current) => reconcileOrderColumns(current, initialColumns));
   }, [initialColumns]);
 
   const statusMutation = useMutation({

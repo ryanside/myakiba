@@ -109,6 +109,56 @@ const dropAnimationConfig: DropAnimation = {
   }),
 };
 
+function getCrossColumnInsertionIndex({
+  overIndex,
+  overItemCount,
+  isOverColumn,
+  activeTop,
+  activeHeight,
+  overTop,
+  overHeight,
+}: {
+  activeTop: number | null;
+  activeHeight: number;
+  overTop: number;
+  overHeight: number;
+  overIndex: number;
+  overItemCount: number;
+  isOverColumn: boolean;
+}): number {
+  if (isOverColumn || overIndex < 0) return overItemCount;
+  if (activeTop === null) return overIndex;
+
+  const activeCenter = activeTop + activeHeight / 2;
+  const overCenter = overTop + overHeight / 2;
+  return activeCenter > overCenter ? overIndex + 1 : overIndex;
+}
+
+function getCrossColumnReorderIndex({
+  activeIndex,
+  overIndex,
+  itemCount,
+  ...placement
+}: {
+  activeIndex: number;
+  overIndex: number;
+  itemCount: number;
+  activeTop: number | null;
+  activeHeight: number;
+  overTop: number;
+  overHeight: number;
+  isOverColumn: boolean;
+}): number {
+  const overIndexWithoutActive =
+    overIndex >= 0 && activeIndex < overIndex ? overIndex - 1 : overIndex;
+
+  return getCrossColumnInsertionIndex({
+    ...placement,
+    overIndex: overIndexWithoutActive,
+    overItemCount: itemCount - 1,
+  });
+}
+
 export interface KanbanMoveEvent {
   event: DragEndEvent;
   activeContainer: string;
@@ -197,12 +247,15 @@ function Kanban<T>({
         const overItems = columns[overContainer];
 
         const activeIndex = activeItems.findIndex((item: T) => getItemValue(item) === active.id);
-        let overIndex = overItems.findIndex((item: T) => getItemValue(item) === over.id);
-
-        // If dropping on the column itself, not an item
-        if (isColumn(over.id)) {
-          overIndex = overItems.length;
-        }
+        const overIndex = getCrossColumnInsertionIndex({
+          activeTop: active.rect.current.translated?.top ?? null,
+          activeHeight: active.rect.current.initial?.height ?? 0,
+          overTop: over.rect.top,
+          overHeight: over.rect.height,
+          overIndex: overItems.findIndex((item: T) => getItemValue(item) === over.id),
+          overItemCount: overItems.length,
+          isOverColumn: isColumn(over.id),
+        });
 
         const newActiveItems = [...activeItems];
         const newOverItems = [...overItems];
@@ -222,9 +275,25 @@ function Kanban<T>({
         const overIndex = columns[container].findIndex((item: T) => getItemValue(item) === over.id);
 
         if (activeIndex !== overIndex) {
+          const targetIndex =
+            originalContainerRef.current !== container
+              ? getCrossColumnReorderIndex({
+                  activeIndex,
+                  overIndex,
+                  itemCount: columns[container].length,
+                  activeTop: active.rect.current.translated?.top ?? null,
+                  activeHeight: active.rect.current.initial?.height ?? 0,
+                  overTop: over.rect.top,
+                  overHeight: over.rect.height,
+                  isOverColumn: isColumn(over.id),
+                })
+              : overIndex;
+
+          if (activeIndex === targetIndex) return;
+
           setColumns({
             ...columns,
-            [container]: arrayMove(columns[container], activeIndex, overIndex),
+            [container]: arrayMove(columns[container], activeIndex, targetIndex),
           });
         }
       }
