@@ -61,7 +61,7 @@ function RouteComponent(): ReactNode {
 
   if (isError) {
     return (
-      <div className="flex flex-col gap-4 mx-auto max-w-4xl">
+      <div className="flex flex-col gap-4 mx-auto max-w-5xl">
         <div className="flex flex-col gap-2 mb-2">
           <div className="flex flex-row items-start gap-4">
             <h1 className="text-2xl font-orbitron font-medium">
@@ -82,7 +82,7 @@ function RouteComponent(): ReactNode {
   const scales = analytics?.scales ?? { uniqueOwned: 0, topByCount: [], topBySpend: [] };
 
   return (
-    <div className="flex flex-col gap-4 mx-auto max-w-4xl">
+    <div className="flex flex-col gap-4 mx-auto max-w-5xl">
       <div className="flex flex-col gap-2 mb-2">
         <div className="flex flex-row items-start gap-4">
           <h1 className="text-2xl font-orbitron font-medium">
