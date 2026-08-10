@@ -5,7 +5,6 @@ import {
   BarChart as RechartsBarChart,
   CartesianGrid,
   Rectangle,
-  ReferenceLine,
   XAxis as RechartsXAxis,
   YAxis as RechartsYAxis,
 } from "recharts";
@@ -290,7 +289,6 @@ export function EvilBarChart<
           {...chartProps}
         >
           {backgroundVariant && <ChartBackground variant={backgroundVariant} />}
-          <ReferenceLine color="white" />
           {brush.chartChildren}
           {isLoading && <LoadingBar chartId={chartId} onShimmerExit={onShimmerExit} />}
         </RechartsBarChart>
@@ -660,9 +658,9 @@ const CustomBar = (props: CustomBarProps) => {
       <Rectangle
         x={x}
         y={y}
-        width={width}
+        width={Math.max(0, width - (isHorizontal ? 3 : 0))}
         opacity={fillOpacity}
-        height={Math.max(0, height - 3)}
+        height={Math.max(0, height - (isHorizontal ? 0 : 3))}
         radius={radius}
         fill={fill}
         filter={filter}
@@ -684,7 +682,7 @@ const CustomBar = (props: CustomBarProps) => {
 
   return (
     <g style={cursorStyle} onClick={onClick}>
-      {/* Full-height invisible rect keeps the whole column hoverable/clickable */}
+      {/* Transparent bar geometry keeps the painted area interactive during animation */}
       <Rectangle {...props} fill="transparent" />
       {/* The painted bar grows in from its baseline; the hit rect above stays put */}
       {grow ? (

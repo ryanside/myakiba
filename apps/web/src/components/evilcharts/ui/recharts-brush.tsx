@@ -683,17 +683,6 @@ function useEvilBrush<TData extends Record<string, unknown>>({
   // deferred value. React can skip intermediate slices during fast drags.
   const deferredRangeState = React.useDeferredValue(rangeState);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setRangeState({
-      dataLength: data.length,
-      range: {
-        startIndex: 0,
-        endIndex: Math.max(0, data.length - 1),
-      },
-    });
-  }, [data.length]);
-
   const setRange = React.useCallback(
     (next: EvilBrushRange) => setRangeState({ dataLength: data.length, range: next }),
     [data.length],

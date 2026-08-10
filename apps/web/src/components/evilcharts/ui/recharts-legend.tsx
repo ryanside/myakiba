@@ -44,7 +44,7 @@ function ChartLegendContent({
   return (
     <div
       className={cn(
-        "flex items-center gap-4 select-none",
+        "flex flex-wrap items-center gap-4 select-none",
         align === "left" && "justify-start",
         align === "center" && "justify-center",
         align === "right" && "justify-end",
@@ -68,27 +68,40 @@ function ChartLegendContent({
 
           // Get colors count for this item to determine gradient vs solid
           const colorsCount = itemConfig ? getColorsCount(itemConfig) : 1;
-
-          return (
-            <button
-              type="button"
-              key={key}
-              className={cn(
-                "flex items-center gap-1.5 border-0 bg-transparent p-0 text-inherit transition-opacity [&>svg]:h-3 [&>svg]:w-3 [&>svg]:text-muted-foreground",
-                !isSelected && "opacity-30",
-                isClickable ? "cursor-pointer" : "cursor-default",
-              )}
-              disabled={!isClickable}
-              onClick={() => {
-                onSelectChange?.(selected === key ? null : key);
-              }}
-            >
+          const content = (
+            <>
               {itemConfig?.icon && !hideIcon ? (
                 <itemConfig.icon />
               ) : (
                 <LegendIndicator variant={variant} dataKey={key} colorsCount={colorsCount} />
               )}
               {itemConfig?.label}
+            </>
+          );
+          const itemClassName = cn(
+            "flex items-center gap-1.5 border-0 bg-transparent p-0 text-inherit transition-opacity [&>svg]:h-3 [&>svg]:w-3 [&>svg]:text-muted-foreground",
+            !isSelected && "opacity-30",
+            isClickable ? "cursor-pointer" : "cursor-default",
+          );
+
+          if (!isClickable) {
+            return (
+              <span key={key} className={itemClassName}>
+                {content}
+              </span>
+            );
+          }
+
+          return (
+            <button
+              type="button"
+              key={key}
+              className={itemClassName}
+              onClick={() => {
+                onSelectChange?.(selected === key ? null : key);
+              }}
+            >
+              {content}
             </button>
           );
         })}
