@@ -9,6 +9,7 @@ import {
   Settings01Icon,
   GitCompareIcon,
   Clock02Icon,
+  CheckListIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { DiscordLogo, GitHubLogo } from "@/components/ui/brand-icons";
@@ -28,6 +29,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "@tanstack/react-router";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
+import { OnboardingDialog } from "@/components/onboarding/onboarding-dialog";
 import SyncWidget from "../sync/sync-widget";
 import { Button } from "../ui/button";
 
@@ -151,7 +153,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMain items={data.navMain} location={location} />
       </SidebarContent>
       <SidebarFooter className="px-0">
-        <NavSecondary items={data.navSecondary} className="mt-auto text-muted-foreground" />
+        <NavSecondary items={data.navSecondary} className="mt-auto text-muted-foreground">
+          <SidebarMenuItem>
+            <OnboardingDialog
+              renderTrigger={
+                <SidebarMenuButton size="sm">
+                  <HugeiconsIcon icon={CheckListIcon} />
+                  <span>Getting Started</span>
+                </SidebarMenuButton>
+              }
+            />
+          </SidebarMenuItem>
+        </NavSecondary>
       </SidebarFooter>
     </Sidebar>
   );

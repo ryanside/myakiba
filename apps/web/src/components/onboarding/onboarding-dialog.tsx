@@ -7,7 +7,6 @@ import {
   ArrowLeft01Icon,
   ArrowRight01Icon,
   ArrowRight02Icon,
-  CheckListIcon,
   FileUploadIcon,
   LibraryIcon,
   Loading03Icon,
@@ -93,7 +92,11 @@ const ENTER_TRANSITION = `transition-[opacity,transform,filter] duration-200 ${E
 
 const appRouteApi = getRouteApi("/(app)");
 
-function OnboardingDialog() {
+type OnboardingDialogProps = {
+  readonly renderTrigger: React.ReactElement;
+};
+
+function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
   const {
     step: savedStep,
     hasSeen,
@@ -242,14 +245,7 @@ function OnboardingDialog() {
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogTrigger
-          render={
-            <Button variant="ghost" size="sm">
-              <HugeiconsIcon icon={CheckListIcon} strokeWidth={2} />
-              <span className="hidden sm:inline">Getting started</span>
-            </Button>
-          }
-        />
+        <DialogTrigger render={renderTrigger} />
 
         <DialogContent
           className="sm:max-w-xl gap-0 overflow-hidden p-0 bg-background/80 backdrop-blur-sm"
