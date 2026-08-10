@@ -117,14 +117,10 @@ function RouteComponent(): ReactNode {
   );
 
   return (
-    <div
-      className="mx-auto flex max-w-[88rem] flex-col gap-4"
-      aria-busy={activeQuery.isPending}
-      aria-live="polite"
-    >
-      {activeQuery.isPending ? (
-        <span className="sr-only">Loading {TAB_LABELS[tab]} expenses</span>
-      ) : null}
+    <div className="mx-auto flex max-w-[88rem] flex-col gap-4" aria-busy={activeQuery.isPending}>
+      <output className="sr-only" aria-live="polite">
+        {activeQuery.isPending ? `Loading ${TAB_LABELS[tab]} expenses` : ""}
+      </output>
       <div className="mb-2 flex items-center gap-2">
         <h1 className="font-heading text-2xl font-medium tracking-tight">Expenses</h1>
         <Tooltip>

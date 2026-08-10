@@ -70,9 +70,9 @@ export async function getShopExpansion(
   shopId: string,
   filters: ExpenseShopFilters,
 ): Promise<ShopExpansionResponse> {
-  const { data, error } = await app.api.expenses.shops({ shop: shopId }).expansion.get({
-    query: filters,
-  });
+  const { data, error } = await app.api.expenses
+    .shops({ shop: encodeURIComponent(shopId) })
+    .expansion.get({ query: filters });
 
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to get shop expansion"));

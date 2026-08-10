@@ -128,6 +128,7 @@ export function projectCollectionDashboard({
   let cumulativeCount = 0;
   const cumulativeSpending: ExpensesCollectionResponse["cumulativeSpending"] = [];
   const averageCostToDate: ExpensesCollectionResponse["averageCostToDate"] = [];
+  const categorizedItemCount = categories.reduce((total, category) => total + category.count, 0);
   for (const point of spendingByPeriod) {
     cumulativeSpend += point.collectionItems;
     cumulativeCount += byBucket.get(point.bucket)?.itemCount ?? 0;
@@ -159,7 +160,7 @@ export function projectCollectionDashboard({
     },
     breakdown: categories.map((category) => ({
       ...category,
-      percentage: percentage(category.count, summary.itemCount),
+      percentage: percentage(category.count, categorizedItemCount),
     })),
     spendingByPeriod,
     cumulativeSpending,

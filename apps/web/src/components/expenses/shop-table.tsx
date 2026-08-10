@@ -52,8 +52,16 @@ export function ShopTable({
   readonly dateFormat: DateFormat;
 }): ReactNode {
   const [search, setSearch] = useState("");
-  const [offset, setOffset] = useState(0);
   const [expanded, setExpanded] = useState<ExpandedState>({});
+  const paginationKey = JSON.stringify([
+    scope,
+    filters.dateStart,
+    filters.dateEnd,
+    filters.shop,
+    search,
+  ]);
+  const [pagination, setPagination] = useState(() => ({ key: paginationKey, offset: 0 }));
+  const offset = pagination.key === paginationKey ? pagination.offset : 0;
   const queryFilters = useMemo(
     (): ExpenseShopFilters => ({
       scope,
@@ -84,7 +92,6 @@ export function ShopTable({
         value={search}
         onChange={(value) => {
           setSearch(String(value));
-          setOffset(0);
         }}
         placeholder="Search shops..."
         className="pl-8 text-sm"
@@ -132,7 +139,9 @@ export function ShopTable({
                   totalCount={totalCount}
                   limit={PAGE_SIZE}
                   offset={offset}
-                  onOffsetChange={setOffset}
+                  onOffsetChange={(nextOffset) =>
+                    setPagination({ key: paginationKey, offset: nextOffset })
+                  }
                 />
               </div>
             )}

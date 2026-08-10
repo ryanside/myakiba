@@ -170,7 +170,7 @@ function CollectionExpansionPanel({
   readonly row: ExpenseShopRow;
   readonly filters: ExpenseFilters;
 }): ReactNode {
-  const shop = [row.shop];
+  const shop = row.shop ? [row.shop] : undefined;
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-baseline justify-between gap-4">
@@ -329,7 +329,7 @@ function TopOrdersPanel({
   readonly dateFormat: DateFormat;
   readonly label: string;
 }): ReactNode {
-  const shop = [row.shop];
+  const shop = row.shop ? [row.shop] : undefined;
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-baseline justify-between gap-4">
