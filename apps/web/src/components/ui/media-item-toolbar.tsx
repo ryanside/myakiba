@@ -7,6 +7,12 @@ import { cn } from "@/lib/utils";
 const controlClassName =
   "size-8 rounded-[10px] border-transparent bg-transparent text-white shadow-none transition-[scale,background-color,box-shadow,color] duration-150 ease-out hover:bg-white/15 hover:shadow-[inset_0_0_0_1px_oklch(1_0_0/0.1)] focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-white/60 active:translate-y-0 active:scale-[0.96] active:bg-white/20 aria-expanded:bg-white/15 data-popup-open:bg-white/15";
 
+const MEDIA_ITEM_COMPACT_WIDTH = 180;
+const MEDIA_ITEM_CARD_CLASS_NAME =
+  "group/media relative gap-0 rounded-2xl bg-white p-1.5! ring-0 ring-offset-2 ring-offset-background shadow-[0_0_0_1px_oklch(0_0_0/0.06),0_1px_2px_-1px_oklch(0_0_0/0.06),0_2px_4px_oklch(0_0_0/0.04)] transition-[box-shadow] duration-200 ease-out hover:shadow-[0_0_0_1px_oklch(0_0_0/0.08),0_2px_4px_-1px_oklch(0_0_0/0.08),0_10px_24px_-8px_oklch(0_0_0/0.14)] motion-reduce:transition-none dark:bg-card dark:shadow-[0_0_0_1px_oklch(1_0_0/0.08)] dark:hover:shadow-[0_0_0_1px_oklch(1_0_0/0.13)]";
+const MEDIA_ITEM_CARD_LOADING_CLASS_NAME =
+  "gap-0 rounded-2xl bg-white p-1.5! ring-0 shadow-[0_0_0_1px_oklch(0_0_0/0.06),0_1px_2px_-1px_oklch(0_0_0/0.06),0_2px_4px_oklch(0_0_0/0.04)] dark:bg-card dark:shadow-[0_0_0_1px_oklch(1_0_0/0.08)]";
+
 type MediaItemToolbarProps = {
   readonly checked: boolean;
   readonly itemLabel: string;
@@ -27,7 +33,7 @@ function MediaItemToolbar({
   let size: "xs" | "sm" | "md" | "lg" = "lg";
   if (itemSize < 150) {
     size = "xs";
-  } else if (itemSize < 180) {
+  } else if (itemSize < MEDIA_ITEM_COMPACT_WIDTH) {
     size = "sm";
   } else if (itemSize < 240) {
     size = "md";
@@ -92,4 +98,10 @@ function MediaItemAction({ className, ...props }: ComponentProps<typeof Button>)
   );
 }
 
-export { MediaItemAction, MediaItemToolbar };
+export {
+  MEDIA_ITEM_CARD_CLASS_NAME,
+  MEDIA_ITEM_CARD_LOADING_CLASS_NAME,
+  MEDIA_ITEM_COMPACT_WIDTH,
+  MediaItemAction,
+  MediaItemToolbar,
+};

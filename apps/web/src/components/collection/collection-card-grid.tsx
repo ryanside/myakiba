@@ -1,30 +1,14 @@
-import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  Copy01Icon,
-  Delete02Icon,
-  Edit03Icon,
-  Loading03Icon,
-  MoreHorizontalIcon,
-  MoveIcon,
-  PackageIcon,
-  ViewIcon,
-} from "@hugeicons/core-free-icons";
+import { PackageIcon } from "@hugeicons/core-free-icons";
 import { Link } from "@tanstack/react-router";
-import { toast } from "sonner";
-import { MediaItemAction, MediaItemToolbar } from "@/components/ui/media-item-toolbar";
+import { CollectionItemActions } from "@/components/collection/collection-item-actions";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+  MEDIA_ITEM_CARD_CLASS_NAME,
+  MEDIA_ITEM_CARD_LOADING_CLASS_NAME,
+  MEDIA_ITEM_COMPACT_WIDTH,
+} from "@/components/ui/media-item-toolbar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
-import CollectionItemForm from "./collection-item-form";
-import UnifiedItemMoveForm from "@/components/orders/unified-item-move-form";
 import { getCategoryColor } from "@/lib/category-colors";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { cn } from "@/lib/utils";
@@ -64,139 +48,6 @@ interface CollectionCardGridProps {
   readonly isLoading: boolean;
 }
 
-function CollectionCardActions({
-  item,
-  itemSize,
-  isPending,
-  isSelected,
-  onEditCollectionItem,
-  onDeleteCollectionItems,
-  onAddCollectionItemsToOrder,
-  onAddCollectionItemsToNewOrder,
-  onToggleSelection,
-  currency,
-  dateFormat,
-}: {
-  readonly item: CollectionItem;
-  readonly itemSize: number;
-  readonly isPending: boolean;
-  readonly isSelected: boolean;
-  readonly onEditCollectionItem: CollectionCardGridProps["onEditCollectionItem"];
-  readonly onDeleteCollectionItems: CollectionCardGridProps["onDeleteCollectionItems"];
-  readonly onAddCollectionItemsToOrder: CollectionCardGridProps["onAddCollectionItemsToOrder"];
-  readonly onAddCollectionItemsToNewOrder: CollectionCardGridProps["onAddCollectionItemsToNewOrder"];
-  readonly onToggleSelection: () => void;
-  readonly currency: Currency;
-  readonly dateFormat: DateFormat;
-}): React.JSX.Element {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const selectedItems = {
-    collectionIds: new Set([item.id]),
-    orderIds: item.orderId ? new Set([item.orderId]) : new Set<string>(),
-  };
-
-  return (
-    <>
-      <MediaItemToolbar
-        checked={isSelected}
-        itemLabel={item.itemTitle}
-        itemSize={itemSize}
-        onCheckedChange={onToggleSelection}
-        active={menuOpen}
-      >
-        <CollectionItemForm
-          renderTrigger={
-            <MediaItemAction disabled={isPending} title="Edit item">
-              <HugeiconsIcon icon={Edit03Icon} className="size-4" />
-              <span className="sr-only">Edit item</span>
-            </MediaItemAction>
-          }
-          itemData={item}
-          callbackFn={onEditCollectionItem}
-          currency={currency}
-          dateFormat={dateFormat}
-        />
-        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-          <DropdownMenuTrigger
-            render={
-              <MediaItemAction disabled={isPending} title="More actions">
-                <HugeiconsIcon
-                  icon={isPending ? Loading03Icon : MoreHorizontalIcon}
-                  className={cn("size-4", isPending && "animate-spin")}
-                />
-                <span className="sr-only">Open menu</span>
-              </MediaItemAction>
-            }
-          />
-          {menuOpen ? (
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem>
-                <Link
-                  {...(item.itemExternalId !== null
-                    ? ({
-                        to: "/item/$externalId",
-                        params: { externalId: item.itemExternalId },
-                      } as const)
-                    : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
-                  className="flex items-center gap-1.5"
-                >
-                  <HugeiconsIcon icon={ViewIcon} />
-                  View details
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  if (item.itemExternalId) {
-                    navigator.clipboard.writeText(item.itemExternalId.toString());
-                    toast.success("Copied MFC item ID to clipboard");
-                  } else {
-                    toast.error("No MFC item ID for custom items");
-                  }
-                }}
-              >
-                <HugeiconsIcon icon={Copy01Icon} />
-                Copy MFC ID
-              </DropdownMenuItem>
-              <UnifiedItemMoveForm
-                renderTrigger={
-                  <DropdownMenuItem closeOnClick={false}>
-                    <HugeiconsIcon icon={MoveIcon} />
-                    Assign order
-                  </DropdownMenuItem>
-                }
-                selectedItems={selectedItems}
-                onMoveToExisting={onAddCollectionItemsToOrder}
-                onMoveToNew={onAddCollectionItemsToNewOrder}
-                currency={currency}
-                intent="add"
-              />
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => {
-                  setMenuOpen(false);
-                  setDeleteOpen(true);
-                }}
-              >
-                <HugeiconsIcon icon={Delete02Icon} />
-                Delete item
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          ) : null}
-        </DropdownMenu>
-      </MediaItemToolbar>
-      <ConfirmDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        title="Delete item?"
-        description="This will permanently remove this item from your collection."
-        onConfirm={() => onDeleteCollectionItems(new Set([item.id]))}
-      />
-    </>
-  );
-}
-
 export function CollectionCardGrid({
   items,
   cardWidth,
@@ -213,7 +64,7 @@ export function CollectionCardGrid({
   isCollectionOrderPending,
   isLoading,
 }: CollectionCardGridProps): React.JSX.Element {
-  const isCompact = cardWidth < 180;
+  const isCompact = cardWidth < MEDIA_ITEM_COMPACT_WIDTH;
 
   const toggleSelection = (id: string): void => {
     onRowSelectionChange((prev: RowSelectionState) => {
@@ -233,11 +84,7 @@ export function CollectionCardGrid({
     return (
       <div className="grid gap-3" style={gridStyle}>
         {Array.from({ length: 12 }).map((_, i) => (
-          <Card
-            key={i}
-            size="sm"
-            className="gap-0 rounded-2xl bg-white p-1.5! ring-0 shadow-[0_0_0_1px_oklch(0_0_0/0.06),0_1px_2px_-1px_oklch(0_0_0/0.06),0_2px_4px_oklch(0_0_0/0.04)] dark:bg-card dark:shadow-[0_0_0_1px_oklch(1_0_0/0.08)]"
-          >
+          <Card key={i} size="sm" className={MEDIA_ITEM_CARD_LOADING_CLASS_NAME}>
             <Skeleton className="aspect-4/5 w-full rounded-[10px]" />
             <div
               className={cn(
@@ -283,13 +130,13 @@ export function CollectionCardGrid({
             key={item.id}
             size="sm"
             className={cn(
-              "group/media relative gap-0 rounded-2xl bg-white p-1.5! ring-0 ring-offset-2 ring-offset-background shadow-[0_0_0_1px_oklch(0_0_0/0.06),0_1px_2px_-1px_oklch(0_0_0/0.06),0_2px_4px_oklch(0_0_0/0.04)] transition-[box-shadow] duration-200 ease-out hover:shadow-[0_0_0_1px_oklch(0_0_0/0.08),0_2px_4px_-1px_oklch(0_0_0/0.08),0_10px_24px_-8px_oklch(0_0_0/0.14)] motion-reduce:transition-none dark:bg-card dark:shadow-[0_0_0_1px_oklch(1_0_0/0.08)] dark:hover:shadow-[0_0_0_1px_oklch(1_0_0/0.13)]",
+              MEDIA_ITEM_CARD_CLASS_NAME,
               isSelected
                 ? "ring-2 ring-primary"
                 : "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
             )}
           >
-            <CollectionCardActions
+            <CollectionItemActions
               item={item}
               itemSize={cardWidth}
               isPending={isPending}

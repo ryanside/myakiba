@@ -1,29 +1,8 @@
-import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  Copy01Icon,
-  Delete02Icon,
-  Edit03Icon,
-  Loading03Icon,
-  MoreHorizontalIcon,
-  MoveIcon,
-  PackageIcon,
-  ViewIcon,
-} from "@hugeicons/core-free-icons";
+import { PackageIcon } from "@hugeicons/core-free-icons";
 import { Link } from "@tanstack/react-router";
-import { toast } from "sonner";
-import { MediaItemAction, MediaItemToolbar } from "@/components/ui/media-item-toolbar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { CollectionItemActions } from "@/components/collection/collection-item-actions";
 import { Skeleton } from "@/components/ui/skeleton";
-import CollectionItemForm from "./collection-item-form";
-import UnifiedItemMoveForm from "@/components/orders/unified-item-move-form";
 import { cn } from "@/lib/utils";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
@@ -60,139 +39,6 @@ interface CollectionGalleryGridProps {
   readonly isCollectionPending: (collectionId: string) => boolean;
   readonly isCollectionOrderPending: (collectionId: string) => boolean;
   readonly isLoading: boolean;
-}
-
-function CollectionTileActions({
-  item,
-  itemSize,
-  isPending,
-  isSelected,
-  onEditCollectionItem,
-  onDeleteCollectionItems,
-  onAddCollectionItemsToOrder,
-  onAddCollectionItemsToNewOrder,
-  onToggleSelection,
-  currency,
-  dateFormat,
-}: {
-  readonly item: CollectionItem;
-  readonly itemSize: number;
-  readonly isPending: boolean;
-  readonly isSelected: boolean;
-  readonly onEditCollectionItem: CollectionGalleryGridProps["onEditCollectionItem"];
-  readonly onDeleteCollectionItems: CollectionGalleryGridProps["onDeleteCollectionItems"];
-  readonly onAddCollectionItemsToOrder: CollectionGalleryGridProps["onAddCollectionItemsToOrder"];
-  readonly onAddCollectionItemsToNewOrder: CollectionGalleryGridProps["onAddCollectionItemsToNewOrder"];
-  readonly onToggleSelection: () => void;
-  readonly currency: Currency;
-  readonly dateFormat: DateFormat;
-}): React.JSX.Element {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const selectedItems = {
-    collectionIds: new Set([item.id]),
-    orderIds: item.orderId ? new Set([item.orderId]) : new Set<string>(),
-  };
-
-  return (
-    <>
-      <MediaItemToolbar
-        checked={isSelected}
-        itemLabel={item.itemTitle}
-        itemSize={itemSize}
-        onCheckedChange={onToggleSelection}
-        active={menuOpen}
-      >
-        <CollectionItemForm
-          renderTrigger={
-            <MediaItemAction disabled={isPending} title="Edit item">
-              <HugeiconsIcon icon={Edit03Icon} className="size-4" />
-              <span className="sr-only">Edit item</span>
-            </MediaItemAction>
-          }
-          itemData={item}
-          callbackFn={onEditCollectionItem}
-          currency={currency}
-          dateFormat={dateFormat}
-        />
-        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-          <DropdownMenuTrigger
-            render={
-              <MediaItemAction disabled={isPending} title="More actions">
-                <HugeiconsIcon
-                  icon={isPending ? Loading03Icon : MoreHorizontalIcon}
-                  className={cn("size-4", isPending && "animate-spin")}
-                />
-                <span className="sr-only">Open menu</span>
-              </MediaItemAction>
-            }
-          />
-          {menuOpen ? (
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem>
-                <Link
-                  {...(item.itemExternalId !== null
-                    ? ({
-                        to: "/item/$externalId",
-                        params: { externalId: item.itemExternalId },
-                      } as const)
-                    : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
-                  className="flex items-center gap-1.5"
-                >
-                  <HugeiconsIcon icon={ViewIcon} />
-                  View details
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  if (item.itemExternalId) {
-                    navigator.clipboard.writeText(item.itemExternalId.toString());
-                    toast.success("Copied MFC item ID to clipboard");
-                  } else {
-                    toast.error("No MFC item ID for custom items");
-                  }
-                }}
-              >
-                <HugeiconsIcon icon={Copy01Icon} />
-                Copy MFC ID
-              </DropdownMenuItem>
-              <UnifiedItemMoveForm
-                renderTrigger={
-                  <DropdownMenuItem closeOnClick={false}>
-                    <HugeiconsIcon icon={MoveIcon} />
-                    Assign order
-                  </DropdownMenuItem>
-                }
-                selectedItems={selectedItems}
-                onMoveToExisting={onAddCollectionItemsToOrder}
-                onMoveToNew={onAddCollectionItemsToNewOrder}
-                currency={currency}
-                intent="add"
-              />
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => {
-                  setMenuOpen(false);
-                  setDeleteOpen(true);
-                }}
-              >
-                <HugeiconsIcon icon={Delete02Icon} />
-                Delete item
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          ) : null}
-        </DropdownMenu>
-      </MediaItemToolbar>
-      <ConfirmDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        title="Delete item?"
-        description="This will permanently remove this item from your collection."
-        onConfirm={() => onDeleteCollectionItems(new Set([item.id]))}
-      />
-    </>
-  );
 }
 
 export function CollectionGalleryGrid({
@@ -272,7 +118,7 @@ export function CollectionGalleryGrid({
         )}
         style={{ "--data-in-delay": `${staggerDelay}ms` } as CSSProperties}
       >
-        <CollectionTileActions
+        <CollectionItemActions
           item={item}
           itemSize={tileSize}
           isPending={isPending}
