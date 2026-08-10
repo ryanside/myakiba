@@ -191,6 +191,7 @@ function Kanban<T>({
   const setColumns = onValueChange;
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const originalContainerRef = useRef<string | null>(null);
+  const originalIndexRef = useRef<number | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -222,10 +223,17 @@ function Kanban<T>({
     (event: DragStartEvent) => {
       setActiveId(event.active.id);
       if (!isColumn(event.active.id)) {
-        originalContainerRef.current = findContainer(event.active.id) ?? null;
+        const container = findContainer(event.active.id) ?? null;
+        originalContainerRef.current = container;
+        originalIndexRef.current = container
+          ? columns[container].findIndex((item) => getItemValue(item) === event.active.id)
+          : null;
+      } else {
+        originalContainerRef.current = null;
+        originalIndexRef.current = null;
       }
     },
-    [isColumn, findContainer],
+    [columns, findContainer, getItemValue, isColumn],
   );
 
   const handleDragOver = useCallback(
@@ -304,14 +312,17 @@ function Kanban<T>({
   const handleDragCancel = useCallback(() => {
     setActiveId(null);
     originalContainerRef.current = null;
+    originalIndexRef.current = null;
   }, []);
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event;
       const startContainer = originalContainerRef.current;
+      const startIndex = originalIndexRef.current;
       setActiveId(null);
       originalContainerRef.current = null;
+      originalIndexRef.current = null;
 
       if (!over) return;
 
@@ -326,7 +337,7 @@ function Kanban<T>({
           onMove({
             event,
             activeContainer: startContainer,
-            activeIndex: currentIndex,
+            activeIndex: startIndex ?? currentIndex,
             overContainer: currentContainer,
             overIndex: currentIndex,
           });
@@ -345,26 +356,6 @@ function Kanban<T>({
             newColumns[key] = columns[key];
           });
           setColumns(newColumns);
-        }
-        return;
-      }
-
-      const activeContainer = findContainer(active.id);
-      const overContainer = findContainer(over.id);
-
-      // Handle item reordering within the same column
-      if (activeContainer && overContainer && activeContainer === overContainer) {
-        const container = activeContainer;
-        const activeIndex = columns[container].findIndex(
-          (item: T) => getItemValue(item) === active.id,
-        );
-        const overIndex = columns[container].findIndex((item: T) => getItemValue(item) === over.id);
-
-        if (activeIndex !== overIndex) {
-          setColumns({
-            ...columns,
-            [container]: arrayMove(columns[container], activeIndex, overIndex),
-          });
         }
       }
     },
