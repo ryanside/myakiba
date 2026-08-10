@@ -9,9 +9,8 @@ import {
   ViewIcon,
 } from "@hugeicons/core-free-icons";
 import { Link } from "@tanstack/react-router";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MediaItemAction, MediaItemToolbar } from "@/components/ui/media-item-toolbar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -110,17 +109,21 @@ function OrderImageMosaic({
 
 function OrderTileActions({
   order,
+  itemSize,
   isPending,
   isSelected,
   onEditOrder,
   onDeleteOrders,
+  onToggleSelection,
   currency,
 }: {
   readonly order: OrderListItem;
+  readonly itemSize: number;
   readonly isPending: boolean;
   readonly isSelected: boolean;
   readonly onEditOrder: OrdersGalleryGridProps["onEditOrder"];
   readonly onDeleteOrders: OrdersGalleryGridProps["onDeleteOrders"];
+  readonly onToggleSelection: () => void;
   readonly currency: Currency;
 }): React.JSX.Element {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -128,64 +131,64 @@ function OrderTileActions({
 
   return (
     <>
-      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              className={cn(
-                "bg-black/30 text-white backdrop-blur-sm hover:bg-black/50 hover:text-white",
-                !isSelected &&
-                  "opacity-0 group-hover/tile:opacity-100 data-popup-open:opacity-100 transition-opacity",
-              )}
-              disabled={isPending}
-            >
-              <HugeiconsIcon
-                icon={isPending ? Loading03Icon : MoreHorizontalIcon}
-                className={cn("size-3.5", isPending && "animate-spin")}
-              />
-            </Button>
+      <MediaItemToolbar
+        checked={isSelected}
+        itemLabel={order.title}
+        itemSize={itemSize}
+        onCheckedChange={onToggleSelection}
+        active={menuOpen}
+      >
+        <OrderForm
+          renderTrigger={
+            <MediaItemAction disabled={isPending} title="Edit order">
+              <HugeiconsIcon icon={Edit03Icon} className="size-4" />
+              <span className="sr-only">Edit order</span>
+            </MediaItemAction>
           }
+          type="edit-order"
+          orderData={order}
+          callbackFn={onEditOrder}
+          currency={currency}
         />
-        {menuOpen ? (
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem>
-              <Link
-                to="/orders/$id"
-                params={{ id: order.orderId }}
-                className="flex items-center gap-1.5"
+        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+          <DropdownMenuTrigger
+            render={
+              <MediaItemAction disabled={isPending} title="More actions">
+                <HugeiconsIcon
+                  icon={isPending ? Loading03Icon : MoreHorizontalIcon}
+                  className={cn("size-4", isPending && "animate-spin")}
+                />
+                <span className="sr-only">Open menu</span>
+              </MediaItemAction>
+            }
+          />
+          {menuOpen ? (
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>
+                <Link
+                  to="/orders/$id"
+                  params={{ id: order.orderId }}
+                  className="flex items-center gap-1.5"
+                >
+                  <HugeiconsIcon icon={ViewIcon} />
+                  View details
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setDeleteOpen(true);
+                }}
               >
-                <HugeiconsIcon icon={ViewIcon} />
-                View details
-              </Link>
-            </DropdownMenuItem>
-            <OrderForm
-              renderTrigger={
-                <DropdownMenuItem closeOnClick={false}>
-                  <HugeiconsIcon icon={Edit03Icon} />
-                  Edit order
-                </DropdownMenuItem>
-              }
-              type="edit-order"
-              orderData={order}
-              callbackFn={onEditOrder}
-              currency={currency}
-            />
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={() => {
-                setMenuOpen(false);
-                setDeleteOpen(true);
-              }}
-            >
-              <HugeiconsIcon icon={Delete02Icon} />
-              Delete order
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        ) : null}
-      </DropdownMenu>
+                <HugeiconsIcon icon={Delete02Icon} />
+                Delete order
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          ) : null}
+        </DropdownMenu>
+      </MediaItemToolbar>
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
@@ -265,38 +268,22 @@ export function OrdersGalleryGrid({
       <div
         key={order.orderId}
         className={cn(
-          "animate-data-in group/tile relative overflow-hidden rounded-lg",
+          "animate-data-in group/media group/tile relative overflow-hidden rounded-lg",
           galleryLayout === "masonry" && "mb-2 break-inside-avoid",
           isSelected && "ring-2 ring-primary ring-offset-1 ring-offset-background",
         )}
         style={{ "--data-in-delay": `${staggerDelay}ms` } as CSSProperties}
       >
-        <div
-          className={cn(
-            "pointer-events-none absolute inset-0 z-10 transition-colors group-hover/tile:bg-black/20",
-            isSelected && "bg-black/10",
-          )}
+        <OrderTileActions
+          order={order}
+          itemSize={tileSize}
+          isPending={isPending}
+          isSelected={isSelected}
+          onEditOrder={onEditOrder}
+          onDeleteOrders={onDeleteOrders}
+          onToggleSelection={() => toggleSelection(order.orderId)}
+          currency={currency}
         />
-
-        <div className="absolute inset-x-0 top-0 z-20 flex items-start justify-between p-1.5">
-          <Checkbox
-            checked={isSelected}
-            onCheckedChange={() => toggleSelection(order.orderId)}
-            aria-label={`Select ${order.title}`}
-            className={cn(
-              "border-white/60 bg-black/30 backdrop-blur-sm data-checked:border-primary data-checked:bg-primary",
-              !isSelected && "opacity-0 group-hover/tile:opacity-100 transition-opacity",
-            )}
-          />
-          <OrderTileActions
-            order={order}
-            isPending={isPending}
-            isSelected={isSelected}
-            onEditOrder={onEditOrder}
-            onDeleteOrders={onDeleteOrders}
-            currency={currency}
-          />
-        </div>
 
         {imageCount > 4 ? (
           <div className="absolute bottom-1.5 right-1.5 z-20 rounded-sm bg-black/50 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">

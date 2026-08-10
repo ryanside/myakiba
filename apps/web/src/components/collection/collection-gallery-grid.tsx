@@ -12,8 +12,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
+import { MediaItemAction, MediaItemToolbar } from "@/components/ui/media-item-toolbar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -65,22 +64,26 @@ interface CollectionGalleryGridProps {
 
 function CollectionTileActions({
   item,
+  itemSize,
   isPending,
   isSelected,
   onEditCollectionItem,
   onDeleteCollectionItems,
   onAddCollectionItemsToOrder,
   onAddCollectionItemsToNewOrder,
+  onToggleSelection,
   currency,
   dateFormat,
 }: {
   readonly item: CollectionItem;
+  readonly itemSize: number;
   readonly isPending: boolean;
   readonly isSelected: boolean;
   readonly onEditCollectionItem: CollectionGalleryGridProps["onEditCollectionItem"];
   readonly onDeleteCollectionItems: CollectionGalleryGridProps["onDeleteCollectionItems"];
   readonly onAddCollectionItemsToOrder: CollectionGalleryGridProps["onAddCollectionItemsToOrder"];
   readonly onAddCollectionItemsToNewOrder: CollectionGalleryGridProps["onAddCollectionItemsToNewOrder"];
+  readonly onToggleSelection: () => void;
   readonly currency: Currency;
   readonly dateFormat: DateFormat;
 }): React.JSX.Element {
@@ -93,94 +96,94 @@ function CollectionTileActions({
 
   return (
     <>
-      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              className={cn(
-                "bg-black/30 text-white backdrop-blur-sm hover:bg-black/50 hover:text-white",
-                !isSelected &&
-                  "opacity-0 group-hover/tile:opacity-100 data-popup-open:opacity-100 transition-opacity",
-              )}
-              disabled={isPending}
-            >
-              <HugeiconsIcon
-                icon={isPending ? Loading03Icon : MoreHorizontalIcon}
-                className={cn("size-3.5", isPending && "animate-spin")}
-              />
-            </Button>
+      <MediaItemToolbar
+        checked={isSelected}
+        itemLabel={item.itemTitle}
+        itemSize={itemSize}
+        onCheckedChange={onToggleSelection}
+        active={menuOpen}
+      >
+        <CollectionItemForm
+          renderTrigger={
+            <MediaItemAction disabled={isPending} title="Edit item">
+              <HugeiconsIcon icon={Edit03Icon} className="size-4" />
+              <span className="sr-only">Edit item</span>
+            </MediaItemAction>
           }
+          itemData={item}
+          callbackFn={onEditCollectionItem}
+          currency={currency}
+          dateFormat={dateFormat}
         />
-        {menuOpen ? (
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem>
-              <Link
-                {...(item.itemExternalId !== null
-                  ? ({
-                      to: "/item/$externalId",
-                      params: { externalId: item.itemExternalId },
-                    } as const)
-                  : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
-                className="flex items-center gap-1.5"
+        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+          <DropdownMenuTrigger
+            render={
+              <MediaItemAction disabled={isPending} title="More actions">
+                <HugeiconsIcon
+                  icon={isPending ? Loading03Icon : MoreHorizontalIcon}
+                  className={cn("size-4", isPending && "animate-spin")}
+                />
+                <span className="sr-only">Open menu</span>
+              </MediaItemAction>
+            }
+          />
+          {menuOpen ? (
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>
+                <Link
+                  {...(item.itemExternalId !== null
+                    ? ({
+                        to: "/item/$externalId",
+                        params: { externalId: item.itemExternalId },
+                      } as const)
+                    : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
+                  className="flex items-center gap-1.5"
+                >
+                  <HugeiconsIcon icon={ViewIcon} />
+                  View details
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  if (item.itemExternalId) {
+                    navigator.clipboard.writeText(item.itemExternalId.toString());
+                    toast.success("Copied MFC item ID to clipboard");
+                  } else {
+                    toast.error("No MFC item ID for custom items");
+                  }
+                }}
               >
-                <HugeiconsIcon icon={ViewIcon} />
-                View details
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                if (item.itemExternalId) {
-                  navigator.clipboard.writeText(item.itemExternalId.toString());
-                  toast.success("Copied MFC item ID to clipboard");
-                } else {
-                  toast.error("No MFC item ID for custom items");
+                <HugeiconsIcon icon={Copy01Icon} />
+                Copy MFC ID
+              </DropdownMenuItem>
+              <UnifiedItemMoveForm
+                renderTrigger={
+                  <DropdownMenuItem closeOnClick={false}>
+                    <HugeiconsIcon icon={MoveIcon} />
+                    Assign order
+                  </DropdownMenuItem>
                 }
-              }}
-            >
-              <HugeiconsIcon icon={Copy01Icon} />
-              Copy MFC ID
-            </DropdownMenuItem>
-            <CollectionItemForm
-              renderTrigger={
-                <DropdownMenuItem closeOnClick={false}>
-                  <HugeiconsIcon icon={Edit03Icon} />
-                  Edit item
-                </DropdownMenuItem>
-              }
-              itemData={item}
-              callbackFn={onEditCollectionItem}
-              currency={currency}
-              dateFormat={dateFormat}
-            />
-            <UnifiedItemMoveForm
-              renderTrigger={
-                <DropdownMenuItem closeOnClick={false}>
-                  <HugeiconsIcon icon={MoveIcon} />
-                  Assign order
-                </DropdownMenuItem>
-              }
-              selectedItems={selectedItems}
-              onMoveToExisting={onAddCollectionItemsToOrder}
-              onMoveToNew={onAddCollectionItemsToNewOrder}
-              currency={currency}
-              intent="add"
-            />
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={() => {
-                setMenuOpen(false);
-                setDeleteOpen(true);
-              }}
-            >
-              <HugeiconsIcon icon={Delete02Icon} />
-              Delete item
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        ) : null}
-      </DropdownMenu>
+                selectedItems={selectedItems}
+                onMoveToExisting={onAddCollectionItemsToOrder}
+                onMoveToNew={onAddCollectionItemsToNewOrder}
+                currency={currency}
+                intent="add"
+              />
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setDeleteOpen(true);
+                }}
+              >
+                <HugeiconsIcon icon={Delete02Icon} />
+                Delete item
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          ) : null}
+        </DropdownMenu>
+      </MediaItemToolbar>
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
@@ -263,41 +266,25 @@ export function CollectionGalleryGrid({
       <div
         key={item.id}
         className={cn(
-          "animate-data-in group/tile relative overflow-hidden rounded-lg",
+          "animate-data-in group/media group/tile relative overflow-hidden rounded-lg",
           galleryLayout === "masonry" && "mb-2 break-inside-avoid",
           isSelected && "ring-2 ring-primary ring-offset-1 ring-offset-background",
         )}
         style={{ "--data-in-delay": `${staggerDelay}ms` } as CSSProperties}
       >
-        <div
-          className={cn(
-            "pointer-events-none absolute inset-0 z-10 transition-colors group-hover/tile:bg-black/20",
-            isSelected && "bg-black/10",
-          )}
+        <CollectionTileActions
+          item={item}
+          itemSize={tileSize}
+          isPending={isPending}
+          isSelected={isSelected}
+          onEditCollectionItem={onEditCollectionItem}
+          onDeleteCollectionItems={onDeleteCollectionItems}
+          onAddCollectionItemsToOrder={onAddCollectionItemsToOrder}
+          onAddCollectionItemsToNewOrder={onAddCollectionItemsToNewOrder}
+          onToggleSelection={() => toggleSelection(item.id)}
+          currency={currency}
+          dateFormat={dateFormat}
         />
-
-        <div className="absolute inset-x-0 top-0 z-20 flex items-start justify-between p-1.5">
-          <Checkbox
-            checked={isSelected}
-            onCheckedChange={() => toggleSelection(item.id)}
-            aria-label={`Select ${item.itemTitle}`}
-            className={cn(
-              "border-white/60 bg-black/30 backdrop-blur-sm data-checked:border-primary data-checked:bg-primary",
-              !isSelected && "opacity-0 group-hover/tile:opacity-100 transition-opacity",
-            )}
-          />
-          <CollectionTileActions
-            item={item}
-            isPending={isPending}
-            isSelected={isSelected}
-            onEditCollectionItem={onEditCollectionItem}
-            onDeleteCollectionItems={onDeleteCollectionItems}
-            onAddCollectionItemsToOrder={onAddCollectionItemsToOrder}
-            onAddCollectionItemsToNewOrder={onAddCollectionItemsToNewOrder}
-            currency={currency}
-            dateFormat={dateFormat}
-          />
-        </div>
 
         <Link
           {...(item.itemExternalId !== null
