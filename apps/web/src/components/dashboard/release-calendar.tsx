@@ -215,7 +215,7 @@ function ReleaseCalendarError({
 
 function ReleaseCalendarEmpty(): React.ReactNode {
   return (
-    <div className="flex flex-col items-center justify-center gap-1.5 py-10 text-center">
+    <div className="animate-data-in flex flex-col items-center justify-center gap-1.5 py-10 text-center [--data-in-delay:60ms]">
       <HugeiconsIcon icon={CryingIcon} className="size-5 text-muted-foreground/50" />
       <p className="text-xs text-muted-foreground">Nothing releasing this month</p>
     </div>
