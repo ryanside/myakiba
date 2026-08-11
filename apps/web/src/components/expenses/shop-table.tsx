@@ -95,7 +95,6 @@ export function ShopTable({
         }}
         placeholder="Search shops..."
         className="pl-8 text-sm"
-        debounce={300}
       />
     </div>
   );
