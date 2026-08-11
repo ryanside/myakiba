@@ -201,12 +201,7 @@ function ShopsTable({
       table={table}
       isLoading={isPending}
       skeletonRowCount={PAGE_SIZE}
-      empty={
-        <DataTable.Empty
-          title="No shops found"
-          description="Try adjusting your search or filters"
-        />
-      }
+      empty={<DataTable.Empty title="No shops found" />}
     >
       <DataTable.LoadingSurface
         className={cn(

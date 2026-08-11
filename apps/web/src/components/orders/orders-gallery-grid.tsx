@@ -140,11 +140,9 @@ export function OrdersGalleryGrid({
 
   if (orders.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-        <HugeiconsIcon icon={PackageIcon} className="mb-3 size-10 opacity-40" />
-        <p className="text-sm font-medium">No orders found</p>
-        <p className="text-xs">Try adjusting your filters</p>
-      </div>
+      <p className="flex h-64 items-center justify-center text-lg text-muted-foreground">
+        No orders found.
+      </p>
     );
   }
 
