@@ -1,32 +1,13 @@
-import { HugeiconsIcon } from "@hugeicons/react";
-import { FileUploadIcon, LibraryIcon, PackageIcon } from "@hugeicons/core-free-icons";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
-import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
-import type { SyncType } from "@myakiba/contracts/shared/types";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { SyncSessionRow } from "@myakiba/contracts/sync/types";
 import { fetchSyncSessions } from "@/queries/sync";
-import { SYNC_OPTION_META } from "@/lib/sync";
-import SyncCsvForm from "@/components/sync/sync-csv-form";
-import SyncOrderForm from "@/components/sync/sync-order-form";
-import SyncCollectionForm from "@/components/sync/sync-collection-form";
 import { SyncSessionsDataGrid } from "@/components/sync/sync-sessions-data-grid";
 import { SyncQuickFilters } from "@/components/sync/sync-quick-filters";
 import { syncSearchSchema } from "@myakiba/contracts/sync/schema";
 import { useFilters } from "@/hooks/use-filters";
-import { useSyncMutations } from "@/hooks/use-sync-mutations";
 import { SYNC_WIDGET_RECENT_LIMIT } from "@myakiba/contracts/sync/constants";
-import { useUserPreferences } from "@/hooks/use-user-preferences";
-
-type LaunchableSyncType = Extract<SyncType, "collection" | "csv" | "order">;
 
 export const Route = createFileRoute("/(app)/sync")({
   component: RouteComponent,
@@ -48,13 +29,10 @@ export const Route = createFileRoute("/(app)/sync")({
 });
 
 function RouteComponent() {
-  const { currency: userCurrency } = useUserPreferences();
-  const queryClient = useQueryClient();
   const { filters, setFilters } = useFilters(Route.id);
 
   const page = filters.page ?? 1;
   const limit = filters.limit ?? SYNC_WIDGET_RECENT_LIMIT;
-  const [activeSyncType, setActiveSyncType] = useState<LaunchableSyncType | null>(null);
 
   const {
     data: sessionsData,
@@ -78,11 +56,6 @@ function RouteComponent() {
   const sessions: SyncSessionRow[] = sessionsData?.sessions ?? [];
   const totalCount: number = sessionsData?.total ?? 0;
 
-  const { handleSyncCsvSubmit, handleSyncOrderSubmit, handleSyncCollectionSubmit, isSyncing } =
-    useSyncMutations(queryClient, () => {
-      setActiveSyncType(null);
-    });
-
   const handlePaginationChange = useCallback(
     (newPage: number, newLimit: number) => {
       setFilters({ page: newPage, limit: newLimit });
@@ -105,41 +78,7 @@ function RouteComponent() {
 
   return (
     <div className="flex flex-col gap-4 mx-auto max-w-[88rem]">
-      <div className="flex flex-col gap-2 mb-2 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-medium tracking-tight">Sync History</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground mx-1">Add:</span>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setActiveSyncType("collection")}
-            disabled={isSyncing}
-          >
-            <HugeiconsIcon icon={LibraryIcon} className="size-3.5" />
-            Collection
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setActiveSyncType("order")}
-            disabled={isSyncing}
-          >
-            <HugeiconsIcon icon={PackageIcon} className="size-3.5" />
-            Order
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setActiveSyncType("csv")}
-            disabled={isSyncing}
-          >
-            <HugeiconsIcon icon={FileUploadIcon} className="size-3.5" />
-            CSV
-          </Button>
-        </div>
-      </div>
+      <h1 className="mb-2 text-2xl font-medium tracking-tight">Sync History</h1>
 
       <div className="flex flex-col sm:flex-row flex-wrap items-start gap-x-4 gap-y-2">
         <SyncQuickFilters />
@@ -152,41 +91,6 @@ function RouteComponent() {
         onPaginationChange={handlePaginationChange}
         isLoading={isPending}
       />
-
-      <Sheet
-        open={activeSyncType !== null}
-        onOpenChange={(open) => {
-          if (!open) setActiveSyncType(null);
-        }}
-      >
-        <SheetContent side="right" className="sm:max-w-lg! overflow-y-auto">
-          {activeSyncType && (
-            <>
-              <SheetHeader>
-                <SheetTitle>{SYNC_OPTION_META[activeSyncType].title}</SheetTitle>
-                <SheetDescription>{SYNC_OPTION_META[activeSyncType].description}</SheetDescription>
-              </SheetHeader>
-              <div className="px-4 pb-4">
-                {activeSyncType === "csv" && (
-                  <SyncCsvForm handleSyncCsvSubmit={handleSyncCsvSubmit} />
-                )}
-                {activeSyncType === "order" && (
-                  <SyncOrderForm
-                    handleSyncOrderSubmit={handleSyncOrderSubmit}
-                    currency={userCurrency}
-                  />
-                )}
-                {activeSyncType === "collection" && (
-                  <SyncCollectionForm
-                    handleSyncCollectionSubmit={handleSyncCollectionSubmit}
-                    currency={userCurrency}
-                  />
-                )}
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
     </div>
   );
 }

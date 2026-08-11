@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Field } from "@/components/ui/field";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 const DATE_PRESETS = [
@@ -27,14 +28,15 @@ type DatePresetValue = (typeof DATE_PRESETS)[number]["value"];
 
 interface ExpensesFiltersProps {
   readonly filters: ExpenseFilters;
+  readonly isLoading: boolean;
   readonly shopOptions: readonly string[];
   readonly onChange: (filters: ExpenseFilters) => void;
   readonly onClear: () => void;
 }
 
 function multiSelectDisplay(items: readonly string[] | undefined, label: string): string {
-  if (!items || items.length === 0) return `Select ${label}`;
-  if (items.length === 1) return items[0] ?? `Select ${label}`;
+  if (!items || items.length === 0) return label;
+  if (items.length === 1) return items[0] ?? label;
   return `${items.length} selected`;
 }
 
@@ -76,11 +78,14 @@ function activeDatePreset(filters: ExpenseFilters): DatePresetValue | null {
 
 export function ExpensesFilters({
   filters,
+  isLoading,
   shopOptions,
   onChange,
   onClear,
 }: ExpensesFiltersProps): ReactNode {
   const selectedPreset = activeDatePreset(filters);
+  const selectedShops = new Set(filters.shop);
+  const hasActiveFilters = Boolean(filters.dateStart || filters.dateEnd || filters.shop?.length);
 
   const handlePresetChange = (values: string[]): void => {
     if (values.length === 0) {
@@ -100,6 +105,39 @@ export function ExpensesFilters({
 
     onChange({ ...filters, ...presetRange(preset.months) });
   };
+
+  let shopOptionsContent: ReactNode;
+  if (isLoading) {
+    shopOptionsContent = (
+      <div className="flex flex-col gap-2 px-2 py-1.5" aria-hidden>
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-4 w-20" />
+      </div>
+    );
+  } else if (shopOptions.length === 0) {
+    shopOptionsContent = (
+      <div className="px-2 py-1.5 text-sm text-muted-foreground">No shops yet</div>
+    );
+  } else {
+    shopOptionsContent = shopOptions.map((shop) => (
+      <DropdownMenuCheckboxItem
+        key={shop}
+        className="animate-data-in"
+        checked={selectedShops.has(shop)}
+        onCheckedChange={(checked) => {
+          const nextShop = toggleValue(filters.shop, shop, checked);
+          onChange({
+            ...filters,
+            shop: nextShop.length > 0 ? nextShop : undefined,
+          });
+        }}
+        onSelect={(event) => event.preventDefault()}
+      >
+        {shop}
+      </DropdownMenuCheckboxItem>
+    ));
+  }
 
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
@@ -140,40 +178,29 @@ export function ExpensesFilters({
           <DropdownMenuTrigger
             render={
               <Button variant="outline" className="w-full justify-between" type="button">
-                {multiSelectDisplay(filters.shop, "shops")}
+                {multiSelectDisplay(filters.shop, "Shops")}
                 <HugeiconsIcon icon={ArrowDown01Icon} className="size-4" />
               </Button>
             }
           />
           <DropdownMenuContent className="w-(--anchor-width)">
-            <ScrollArea className="max-h-56">
-              {shopOptions.length === 0 ? (
-                <div className="px-2 py-1.5 text-sm text-muted-foreground">No shops yet</div>
-              ) : (
-                shopOptions.map((shop) => (
-                  <DropdownMenuCheckboxItem
-                    key={shop}
-                    checked={(filters.shop ?? []).includes(shop)}
-                    onCheckedChange={(checked) => {
-                      const nextShop = toggleValue(filters.shop, shop, checked);
-                      onChange({
-                        ...filters,
-                        shop: nextShop.length > 0 ? nextShop : undefined,
-                      });
-                    }}
-                    onSelect={(event) => event.preventDefault()}
-                  >
-                    {shop}
-                  </DropdownMenuCheckboxItem>
-                ))
-              )}
+            <ScrollArea className="max-h-56" aria-busy={isLoading}>
+              {shopOptionsContent}
             </ScrollArea>
           </DropdownMenuContent>
         </DropdownMenu>
       </Field>
-      <Button type="button" variant="ghost" size="icon-sm" onClick={onClear}>
-        <HugeiconsIcon icon={Refresh01Icon} className="size-4" />
-      </Button>
+      {hasActiveFilters ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          onClick={onClear}
+          aria-label="Reset filters"
+        >
+          <HugeiconsIcon icon={Refresh01Icon} className="size-4" />
+        </Button>
+      ) : null}
     </div>
   );
 }

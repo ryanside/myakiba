@@ -5,7 +5,11 @@ import type {
   SyncOrderItems,
   SyncCollectionItem,
 } from "@myakiba/contracts/sync/types";
-import type { SyncSessionStatus, SyncType } from "@myakiba/contracts/shared/types";
+import type {
+  SyncSessionItemStatus,
+  SyncSessionStatus,
+  SyncType,
+} from "@myakiba/contracts/shared/types";
 
 export async function sendItems(userItems: UserItem[]) {
   const { data, error } = await app.api.sync.csv.post(userItems);
@@ -66,12 +70,17 @@ export async function fetchSyncSessions(params: {
 
 export async function fetchSyncSessionDetail(
   sessionId: string,
-  params?: { readonly page?: number; readonly limit?: number },
+  params?: {
+    readonly page?: number;
+    readonly limit?: number;
+    readonly status?: SyncSessionItemStatus[];
+  },
 ) {
   const { data, error } = await app.api.sync.sessions({ id: sessionId }).get({
     query: {
       page: params?.page?.toString(),
       limit: params?.limit?.toString(),
+      status: params?.status,
     },
   });
   if (error) {

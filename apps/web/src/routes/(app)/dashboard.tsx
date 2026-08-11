@@ -98,7 +98,7 @@ function RouteComponent(): ReactElement {
   });
 
   return (
-    <div className="flex flex-col gap-4 mx-auto max-w-[88rem]">
+    <div className="mx-auto flex min-h-[calc(100dvh-6rem)] max-w-[88rem] flex-col gap-4 md:min-h-[calc(100dvh-7rem)]">
       <div className="flex flex-col gap-2 mb-2">
         <div className="flex flex-row items-start gap-4">
           {activeTab === "overview" ? (

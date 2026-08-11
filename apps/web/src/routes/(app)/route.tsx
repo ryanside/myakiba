@@ -1,12 +1,15 @@
 import { useEffect, useRef } from "react";
+import { Add01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import UserMenu from "@/components/sidebar/user-menu";
+import SyncWidget from "@/components/sync/sync-widget";
 import SyncStatusWidget from "@/components/sync/sync-status-widget";
 import { AppCommand } from "@/components/command/app-command";
-import { OnboardingDialog } from "@/components/onboarding/onboarding-dialog";
+import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
 import { getVersion } from "@/queries/version";
 import { toast } from "sonner";
@@ -70,7 +73,15 @@ function RouteComponent() {
                 <SyncStatusWidget />
               </div>
               <div className="flex items-center gap-2">
-                <OnboardingDialog />
+                <SyncWidget
+                  side="right"
+                  TriggerWrapper={
+                    <Button variant="default" size="sm">
+                      <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
+                      <span>Sync Items</span>
+                    </Button>
+                  }
+                />
                 <UserMenu session={session} />
               </div>
             </header>

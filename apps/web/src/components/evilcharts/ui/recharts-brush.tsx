@@ -2,10 +2,10 @@
 
 import { motion, useMotionValue, useMotionValueEvent, useSpring, useTransform } from "motion/react";
 import { ResponsiveContainer, AreaChart, Area, LineChart, Line, BarChart, Bar } from "recharts";
-import { ChartStyle, getColorsCount, toChartColorVarKey } from "@/components/evilcharts/ui/chart";
-import type { ChartConfig } from "@/components/evilcharts/ui/chart";
+import { ChartStyle, getColorsCount } from "@/components/evilcharts/ui/recharts-chart";
+import type { ChartConfig } from "@/components/evilcharts/ui/recharts-chart";
 import { useCallback, useEffect } from "react";
-import type { ComponentProps } from "react";
+import type { ComponentProps, FC } from "react";
 import type { MotionValue } from "motion/react";
 import { cn } from "@/lib/utils";
 import * as React from "react";
@@ -20,9 +20,24 @@ interface EvilBrushRange {
   endIndex: number;
 }
 
+// ─── Brush marker — the declarative `<Chart.Brush/>` child ─────────────────────
+// Renders nothing; its PRESENCE turns the brush footer on (replacing the old
+// showBrush prop) and its props carry the brush's height, handle-label
+// formatter, and range callback. Shared so every cartesian chart attaches the
+// SAME component to its root.
+
+export interface BrushProps {
+  height?: number; // brush preview strip height in px
+  formatLabel?: (value: unknown, index: number) => string; // formats the range-handle labels
+  onChange?: (range: EvilBrushRange) => void; // fires as the range moves
+}
+
+/** Declares the zoom brush below the chart. Presence renders it; renders nothing itself. */
+export const Brush: FC<BrushProps> = () => null;
+
 interface EvilBrushProps {
   /** Full dataset – always rendered in the miniature chart */
-  data: Record<string, unknown>[];
+  data: readonly Record<string, unknown>[];
   /** Chart config with colour definitions */
   chartConfig: ChartConfig;
   /** Data keys to plot (default: all keys from chartConfig) */
@@ -475,7 +490,7 @@ function MiniChart({
   connectNulls = false,
   barRadius,
 }: {
-  data: Record<string, unknown>[];
+  data: readonly Record<string, unknown>[];
   keys: string[];
   chartConfig: ChartConfig;
   variant: EvilBrushVariant;
@@ -510,19 +525,18 @@ function MiniChart({
         </linearGradient>
       )}
       {gradients.map(({ dataKey, colorsCount }) => {
-        const colorKey = toChartColorVarKey(dataKey);
         const colorStops =
           colorsCount === 1 ? (
             <>
-              <stop offset="0%" stopColor={`var(--color-${colorKey}-0)`} />
-              <stop offset="100%" stopColor={`var(--color-${colorKey}-0)`} />
+              <stop offset="0%" stopColor={`var(--color-${dataKey}-0)`} />
+              <stop offset="100%" stopColor={`var(--color-${dataKey}-0)`} />
             </>
           ) : (
             Array.from({ length: colorsCount }, (_, i) => (
               <stop
                 key={i}
                 offset={`${(i / (colorsCount - 1)) * 100}%`}
-                stopColor={`var(--color-${colorKey}-${i}, var(--color-${colorKey}-0))`}
+                stopColor={`var(--color-${dataKey}-${i}, var(--color-${dataKey}-0))`}
               />
             ))
           );
@@ -530,18 +544,18 @@ function MiniChart({
         return (
           <React.Fragment key={dataKey}>
             {/* Vertical color gradient (stroke + bar fill) */}
-            <linearGradient id={`${chartId}-zm-${colorKey}`} x1="0" y1="0" x2="0" y2="1">
+            <linearGradient id={`${chartId}-zm-${dataKey}`} x1="0" y1="0" x2="0" y2="1">
               {colorStops}
             </linearGradient>
 
             {/* Area fill: color gradient masked with vertical fade */}
             {variant === "area" && (
               <>
-                <mask id={`${chartId}-zm-fill-mask-${colorKey}`}>
+                <mask id={`${chartId}-zm-fill-mask-${dataKey}`}>
                   <rect width="100%" height="100%" fill={`url(#${chartId}-zm-vertical-fade)`} />
                 </mask>
                 <pattern
-                  id={`${chartId}-zm-fill-${colorKey}`}
+                  id={`${chartId}-zm-fill-${dataKey}`}
                   patternUnits="userSpaceOnUse"
                   width="100%"
                   height="100%"
@@ -549,8 +563,8 @@ function MiniChart({
                   <rect
                     width="100%"
                     height="100%"
-                    fill={`url(#${chartId}-zm-${colorKey})`}
-                    mask={`url(#${chartId}-zm-fill-mask-${colorKey})`}
+                    fill={`url(#${chartId}-zm-${dataKey})`}
+                    mask={`url(#${chartId}-zm-fill-mask-${dataKey})`}
                   />
                 </pattern>
               </>
@@ -571,7 +585,7 @@ function MiniChart({
               key={dk}
               type={curveType}
               dataKey={dk}
-              stroke={`url(#${chartId}-zm-${toChartColorVarKey(dk)})`}
+              stroke={`url(#${chartId}-zm-${dk})`}
               strokeWidth={1}
               strokeOpacity={0.5}
               strokeDasharray={dashArray}
@@ -601,7 +615,7 @@ function MiniChart({
             <Bar
               key={dk}
               dataKey={dk}
-              fill={`url(#${chartId}-zm-${toChartColorVarKey(dk)})`}
+              fill={`url(#${chartId}-zm-${dk})`}
               fillOpacity={0.35}
               stackId={stacked ? "zm-stack" : undefined}
               isAnimationActive={false}
@@ -623,8 +637,8 @@ function MiniChart({
             key={dk}
             type={curveType}
             dataKey={dk}
-            stroke={`url(#${chartId}-zm-${toChartColorVarKey(dk)})`}
-            fill={`url(#${chartId}-zm-fill-${toChartColorVarKey(dk)})`}
+            stroke={`url(#${chartId}-zm-${dk})`}
+            fill={`url(#${chartId}-zm-fill-${dk})`}
             strokeWidth={1}
             strokeOpacity={0.5}
             strokeDasharray={dashArray}
@@ -648,32 +662,40 @@ function useEvilBrush<TData extends Record<string, unknown>>({
   defaultStartIndex = 0,
   defaultEndIndex,
 }: {
-  data: TData[];
+  data: readonly TData[];
   defaultStartIndex?: number;
   defaultEndIndex?: number;
 }) {
-  const [range, setRange] = React.useState<EvilBrushRange>({
-    startIndex: defaultStartIndex,
-    endIndex: defaultEndIndex ?? Math.max(0, data.length - 1),
-  });
+  const [rangeState, setRangeState] = React.useState(() => ({
+    dataLength: data.length,
+    range: {
+      startIndex: defaultStartIndex,
+      endIndex: defaultEndIndex ?? Math.max(0, data.length - 1),
+    },
+  }));
+  const hasDataLengthChanged = rangeState.dataLength !== data.length;
+  const range = hasDataLengthChanged
+    ? { startIndex: 0, endIndex: Math.max(0, data.length - 1) }
+    : rangeState.range;
 
   // Defer the range used for data slicing — the brush handles move at the
-
   // immediate `range` cadence while the expensive chart re-render uses the
-  // deferred value.  React can skip intermediate slices during fast drags.
-  const deferredRange = React.useDeferredValue(range);
+  // deferred value. React can skip intermediate slices during fast drags.
+  const deferredRangeState = React.useDeferredValue(rangeState);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setRange({
-      startIndex: 0,
-      endIndex: Math.max(0, data.length - 1),
-    });
-  }, [data.length]);
+  const setRange = React.useCallback(
+    (next: EvilBrushRange) => setRangeState({ dataLength: data.length, range: next }),
+    [data.length],
+  );
+
+  const visibleRange =
+    hasDataLengthChanged || deferredRangeState.dataLength !== data.length
+      ? range
+      : deferredRangeState.range;
 
   const visibleData = React.useMemo(
-    () => data.slice(deferredRange.startIndex, deferredRange.endIndex + 1),
-    [data, deferredRange.startIndex, deferredRange.endIndex],
+    () => data.slice(visibleRange.startIndex, visibleRange.endIndex + 1),
+    [data, visibleRange.startIndex, visibleRange.endIndex],
   );
 
   return {

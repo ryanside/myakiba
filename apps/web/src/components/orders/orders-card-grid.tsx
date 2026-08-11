@@ -1,34 +1,14 @@
-import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  Delete02Icon,
-  Edit03Icon,
-  Loading03Icon,
-  MoreHorizontalIcon,
-  PackageIcon,
-  ViewIcon,
-} from "@hugeicons/core-free-icons";
+import { PackageIcon } from "@hugeicons/core-free-icons";
 import { Link } from "@tanstack/react-router";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { OrderItemActions } from "@/components/orders/order-item-actions";
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { OrderForm } from "./order-form";
+  MEDIA_ITEM_CARD_CLASS_NAME,
+  MEDIA_ITEM_CARD_LOADING_CLASS_NAME,
+  MEDIA_ITEM_COMPACT_WIDTH,
+} from "@/components/ui/media-item-toolbar";
+import { Card } from "@/components/ui/card";
 import { getStatusVariant } from "@/lib/orders";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { cn } from "@/lib/utils";
@@ -57,95 +37,6 @@ interface OrdersCardGridProps {
   readonly isLoading: boolean;
 }
 
-function OrderCardActions({
-  order,
-  isPending,
-  isSelected,
-  onEditOrder,
-  onDeleteOrders,
-  currency,
-}: {
-  readonly order: OrderListItem;
-  readonly isPending: boolean;
-  readonly isSelected: boolean;
-  readonly onEditOrder: OrdersCardGridProps["onEditOrder"];
-  readonly onDeleteOrders: OrdersCardGridProps["onDeleteOrders"];
-  readonly currency: Currency;
-}): React.JSX.Element {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-
-  return (
-    <>
-      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              className={cn(
-                "bg-black/20 text-white backdrop-blur-sm hover:bg-black/40 hover:text-white",
-                !isSelected &&
-                  "opacity-0 group-hover/card:opacity-100 data-popup-open:opacity-100 transition-opacity",
-              )}
-              disabled={isPending}
-            >
-              <HugeiconsIcon
-                icon={isPending ? Loading03Icon : MoreHorizontalIcon}
-                className={cn("size-3.5", isPending && "animate-spin")}
-              />
-            </Button>
-          }
-        />
-        {menuOpen ? (
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem>
-              <Link
-                to="/orders/$id"
-                params={{ id: order.orderId }}
-                className="flex items-center gap-1.5"
-              >
-                <HugeiconsIcon icon={ViewIcon} />
-                View details
-              </Link>
-            </DropdownMenuItem>
-            <OrderForm
-              renderTrigger={
-                <DropdownMenuItem closeOnClick={false}>
-                  <HugeiconsIcon icon={Edit03Icon} />
-                  Edit order
-                </DropdownMenuItem>
-              }
-              type="edit-order"
-              orderData={order}
-              callbackFn={onEditOrder}
-              currency={currency}
-            />
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={() => {
-                setMenuOpen(false);
-                setDeleteOpen(true);
-              }}
-            >
-              <HugeiconsIcon icon={Delete02Icon} />
-              Delete order
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        ) : null}
-      </DropdownMenu>
-      <ConfirmDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        title="Delete order?"
-        description='This will permanently delete this order and all its items. Items with "Owned" status will not be deleted. You can delete owned items in the collection tab.'
-        onConfirm={() => onDeleteOrders(new Set([order.orderId]))}
-      />
-    </>
-  );
-}
-
 export function OrdersCardGrid({
   orders,
   cardWidth,
@@ -158,6 +49,8 @@ export function OrdersCardGrid({
   isOrderPending,
   isLoading,
 }: OrdersCardGridProps): React.JSX.Element {
+  const isCompact = cardWidth < MEDIA_ITEM_COMPACT_WIDTH;
+
   const toggleSelection = (id: string): void => {
     onRowSelectionChange((prev: RowSelectionState) => {
       if (prev[id]) {
@@ -176,16 +69,28 @@ export function OrdersCardGrid({
     return (
       <div className="grid gap-3" style={gridStyle}>
         {Array.from({ length: 8 }).map((_, i) => (
-          <Card key={i} size="sm" className="p-0!">
-            <Skeleton className="aspect-video w-full" />
-            <CardHeader>
-              <Skeleton className="h-4 w-3/4" />
+          <Card key={i} size="sm" className={MEDIA_ITEM_CARD_LOADING_CLASS_NAME}>
+            <Skeleton className="aspect-8/5 w-full rounded-[10px]" />
+            <div
+              className={cn(
+                "flex flex-col gap-2 px-3 pt-3 pb-2.5",
+                isCompact && "px-2 pt-2.5 pb-2",
+              )}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <Skeleton className="h-4 w-12" />
+                <Skeleton className="h-3 w-10" />
+              </div>
+              <div className="space-y-1.5">
+                <Skeleton className="h-3.5 w-full" />
+                <Skeleton className="h-3.5 w-2/3" />
+              </div>
               <Skeleton className="h-3 w-1/2" />
-            </CardHeader>
-            <CardFooter className="justify-between">
-              <Skeleton className="h-5 w-16" />
-              <Skeleton className="h-5 w-12" />
-            </CardFooter>
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-3 w-12" />
+              </div>
+            </div>
           </Card>
         ))}
       </div>
@@ -214,33 +119,33 @@ export function OrdersCardGrid({
           <Card
             key={order.orderId}
             size="sm"
-            className={cn("animate-data-in relative p-0!", isSelected && "ring-primary")}
-            style={{ "--data-in-delay": `${staggerDelay}ms` } as CSSProperties}
+            className={cn(
+              MEDIA_ITEM_CARD_CLASS_NAME,
+              isSelected
+                ? "ring-2 ring-primary"
+                : "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
+            )}
           >
-            {/* Selection + Actions overlay */}
-            <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-between p-2">
-              <Checkbox
-                checked={isSelected}
-                onCheckedChange={() => toggleSelection(order.orderId)}
-                aria-label={`Select ${order.title}`}
-                className={cn(
-                  "border-white/60 bg-black/20 backdrop-blur-sm data-checked:border-primary data-checked:bg-primary",
-                  !isSelected && "opacity-0 group-hover/card:opacity-100 transition-opacity",
-                )}
-              />
-              <OrderCardActions
-                order={order}
-                isPending={isPending}
-                isSelected={isSelected}
-                onEditOrder={onEditOrder}
-                onDeleteOrders={onDeleteOrders}
-                currency={currency}
-              />
-            </div>
+            <OrderItemActions
+              order={order}
+              itemSize={cardWidth}
+              isPending={isPending}
+              isSelected={isSelected}
+              onEditOrder={onEditOrder}
+              onDeleteOrders={onDeleteOrders}
+              onToggleSelection={() => toggleSelection(order.orderId)}
+              currency={currency}
+            />
 
             {/* Image mosaic */}
-            <Link to="/orders/$id" params={{ id: order.orderId }} className="block">
-              <div className="relative aspect-video w-full overflow-hidden bg-muted">
+            <Link
+              to="/orders/$id"
+              params={{ id: order.orderId }}
+              className="block overflow-hidden rounded-[10px] bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              title={order.title}
+              style={{ "--data-in-delay": `${staggerDelay}ms` } as CSSProperties}
+            >
+              <div className="animate-data-in relative aspect-8/5 w-full overflow-hidden bg-muted">
                 {(() => {
                   if (displayImages.length === 0) {
                     return (
@@ -286,38 +191,67 @@ export function OrdersCardGrid({
               </div>
             </Link>
 
-            <CardHeader>
-              <CardTitle className="truncate">
-                <Link
-                  to="/orders/$id"
-                  params={{ id: order.orderId }}
-                  className="line-clamp-1 hover:underline underline-offset-2"
+            <div
+              className={cn(
+                "animate-data-in flex min-h-0 flex-1 flex-col px-3 pt-3 pb-2.5",
+                isCompact && "px-2 pt-2.5 pb-2",
+              )}
+              style={
+                {
+                  "--data-in-delay": `${staggerDelay + STAGGER_DELAY_MS * 2}ms`,
+                } as CSSProperties
+              }
+            >
+              <div className="flex items-center justify-between gap-2">
+                <ThemedBadge
+                  variant={getStatusVariant(order.status)}
+                  size={isCompact ? "xs" : "sm"}
                 >
-                  {order.title}
-                </Link>
-              </CardTitle>
-              <CardDescription className="truncate text-xs">{order.shop || "-"}</CardDescription>
-            </CardHeader>
-
-            <CardContent>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <ThemedBadge variant={getStatusVariant(order.status)} size="sm">
                   {order.status}
                 </ThemedBadge>
-                <span className="text-xs text-muted-foreground">
+                <span className="shrink-0 text-[11px] leading-none text-muted-foreground tabular-nums">
                   {order.itemCount} {order.itemCount === 1 ? "item" : "items"}
                 </span>
               </div>
-            </CardContent>
 
-            <CardFooter className="justify-between py-2.5!">
-              <span className="text-sm font-medium tabular-nums">
-                {formatCurrencyFromMinorUnits(order.total, currency, locale)}
-              </span>
-              {order.shippingMethod !== "n/a" ? (
-                <span className="text-[10px] text-muted-foreground">{order.shippingMethod}</span>
-              ) : null}
-            </CardFooter>
+              <h3
+                className={cn(
+                  "mt-2.5 text-sm leading-snug font-medium text-balance",
+                  isCompact && "mt-2 text-xs",
+                )}
+              >
+                <Link
+                  to="/orders/$id"
+                  params={{ id: order.orderId }}
+                  className="line-clamp-2 decoration-foreground/30 underline-offset-3 transition-colors duration-150 hover:text-foreground/70 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  title={order.title}
+                >
+                  {order.title}
+                </Link>
+              </h3>
+              <p
+                className="mt-1 truncate text-xs leading-normal text-muted-foreground"
+                title={order.shop || undefined}
+              >
+                {order.shop || "—"}
+              </p>
+
+              <div className="mt-auto flex min-w-0 items-end justify-between gap-2 pt-4">
+                <span
+                  className={cn(
+                    "shrink-0 text-base leading-none font-medium tracking-tight tabular-nums",
+                    isCompact && "text-sm",
+                  )}
+                >
+                  {formatCurrencyFromMinorUnits(order.total, currency, locale)}
+                </span>
+                {order.shippingMethod !== "n/a" && !isCompact ? (
+                  <span className="min-w-0 truncate text-[11px] leading-none text-muted-foreground">
+                    {order.shippingMethod}
+                  </span>
+                ) : null}
+              </div>
+            </div>
           </Card>
         );
       })}

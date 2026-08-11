@@ -14,12 +14,14 @@ export function SyncSessionItemsTable({
   items,
   totalItems,
   isLoading,
+  isFiltered,
   pagination,
   onPaginationChange,
 }: {
   readonly items: readonly EnrichedSyncSessionItemRow[];
   readonly totalItems: number;
   readonly isLoading: boolean;
+  readonly isFiltered: boolean;
   readonly pagination: PaginationState;
   readonly onPaginationChange: OnChangeFn<PaginationState>;
 }): ReactNode {
@@ -44,6 +46,9 @@ export function SyncSessionItemsTable({
       recordCount={totalItems}
       isLoading={isLoading}
       loadingMode="skeleton"
+      emptyMessage={
+        isFiltered ? "No items match the selected statuses." : "No items in this sync session."
+      }
       tableLayout={{
         rowBorder: true,
         headerBackground: true,
@@ -58,9 +63,11 @@ export function SyncSessionItemsTable({
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
         </DataGridContainer>
-        <div className="flex items-center justify-end">
-          <DataGridPagination />
-        </div>
+        {totalItems > 0 ? (
+          <div className="flex items-center justify-end">
+            <DataGridPagination />
+          </div>
+        ) : null}
       </div>
     </DataGrid>
   );

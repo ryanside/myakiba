@@ -18,7 +18,8 @@ import { PopoverDatePickerCell } from "@/components/cells/popover-date-picker-ce
 import { PopoverReleaseDateCell } from "@/components/cells/popover-release-date-cell";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
-import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
+import { ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
+import type { Currency, DateFormat, OrderStatus } from "@myakiba/contracts/shared/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateOrderStatus, updateOrderDate } from "@/queries/orders";
 import type { OrderDateField } from "@/queries/orders";
@@ -42,6 +43,32 @@ interface OrdersKanbanProps {
 
 type OrderColumns = Record<string, DashboardKanbanOrder[]>;
 type OrderColumnsUpdate = React.SetStateAction<OrderColumns>;
+interface StatusMutationVariables {
+  readonly orderId: string;
+  readonly status: OrderStatus;
+  readonly previousStatus: OrderStatus;
+  readonly previousIndex: number;
+  readonly targetIndex: number;
+}
+
+interface DateMutationVariables {
+  readonly orderId: string;
+  readonly field: OrderDateField;
+  readonly date: string | null;
+  readonly previousDate: string | null;
+}
+
+interface PendingStatusMutations {
+  readonly mutations: StatusMutationVariables[];
+  persistedStatus: OrderStatus;
+  persistedIndex: number;
+  lastMutationSucceeded: boolean;
+}
+
+interface PendingDateMutations {
+  readonly mutations: DateMutationVariables[];
+  readonly persistedDates: Map<OrderDateField, string | null>;
+}
 
 const COLUMNS: Record<string, { readonly title: string; readonly color: string }> = {
   Ordered: { title: "Ordered", color: ORDER_STATUS_COLORS.Ordered },
@@ -79,6 +106,98 @@ function withDateUpdate(
 
 function columnsReducer(columns: OrderColumns, update: OrderColumnsUpdate): OrderColumns {
   return typeof update === "function" ? update(columns) : update;
+}
+
+function reconcileOrderColumns(current: OrderColumns, incoming: OrderColumns): OrderColumns {
+  const next: OrderColumns = {};
+
+  for (const [columnId, incomingOrders] of Object.entries(incoming)) {
+    const currentOrders = current[columnId] ?? [];
+    const incomingById = new Map(incomingOrders.map((order) => [order.orderId, order]));
+    const refreshedOrders = currentOrders.flatMap((order) => {
+      const incomingOrder = incomingById.get(order.orderId);
+      return incomingOrder ? [incomingOrder] : [];
+    });
+
+    next[columnId] =
+      refreshedOrders.length === incomingOrders.length ? refreshedOrders : incomingOrders;
+  }
+
+  return next;
+}
+
+function moveOrderToStatus(
+  columns: OrderColumns,
+  orderId: string,
+  status: OrderStatus,
+  targetIndex: number,
+  restorePosition: boolean,
+): OrderColumns {
+  let currentStatus: string | null = null;
+  let currentIndex = -1;
+
+  for (const [columnId, orders] of Object.entries(columns)) {
+    const index = orders.findIndex((order) => order.orderId === orderId);
+    if (index === -1) continue;
+
+    currentStatus = columnId;
+    currentIndex = index;
+    break;
+  }
+
+  if (currentStatus === null) return columns;
+  if (currentStatus === status && !restorePosition) return columns;
+
+  const nextCurrentOrders = [...columns[currentStatus]];
+  const [order] = nextCurrentOrders.splice(currentIndex, 1);
+  const targetOrders = currentStatus === status ? nextCurrentOrders : [...columns[status]];
+  const insertionIndex = Math.max(0, Math.min(targetIndex, targetOrders.length));
+  targetOrders.splice(insertionIndex, 0, order);
+
+  return {
+    ...columns,
+    [currentStatus]: currentStatus === status ? targetOrders : nextCurrentOrders,
+    [status]: targetOrders,
+  };
+}
+
+function updateOrderDateInColumns(
+  columns: OrderColumns,
+  orderId: string,
+  field: OrderDateField,
+  date: string | null,
+): OrderColumns {
+  for (const [columnId, orders] of Object.entries(columns)) {
+    const index = orders.findIndex((order) => order.orderId === orderId);
+    if (index === -1) continue;
+
+    const nextOrders = [...orders];
+    nextOrders[index] = withDateUpdate(orders[index], field, date);
+    return { ...columns, [columnId]: nextOrders };
+  }
+
+  return columns;
+}
+
+async function drainMutationQueue<T>(
+  mutations: T[],
+  mutate: (variables: T) => Promise<unknown>,
+  recordResult: (variables: T, succeeded: boolean) => void,
+  finalize: () => Promise<void>,
+): Promise<void> {
+  let variables = mutations.shift();
+  while (variables) {
+    try {
+      await mutate(variables);
+      recordResult(variables, true);
+    } catch {
+      recordResult(variables, false);
+    }
+
+    variables = mutations.shift();
+  }
+
+  await finalize();
 }
 
 interface OrderCardProps extends Omit<
@@ -321,117 +440,202 @@ function OrderKanbanBoard({
   const queryClient = useQueryClient();
 
   const [columns, setColumns] = React.useReducer(columnsReducer, initialColumns);
+  const pendingStatusMutationsRef = React.useRef(new Map<string, PendingStatusMutations>());
+  const pendingDateMutationsRef = React.useRef(new Map<string, PendingDateMutations>());
 
   React.useEffect((): void => {
-    setColumns(initialColumns);
+    setColumns((current) => reconcileOrderColumns(current, initialColumns));
   }, [initialColumns]);
 
   const statusMutation = useMutation({
-    mutationFn: ({
-      orderId,
-      status,
-    }: {
-      orderId: string;
-      status: "Ordered" | "Paid" | "Shipped" | "Owned";
-    }) => updateOrderStatus(orderId, status),
-    onSuccess: async (_data, variables) => {
+    mutationFn: ({ orderId, status }: StatusMutationVariables) =>
+      updateOrderStatus(orderId, status),
+    onSuccess: (_data, variables) => {
       if (variables.status === "Owned") {
         toast.success("Order marked as collected");
       }
-      await invalidateCollectionAndOrderQueries(queryClient);
     },
     onError: (error: Error, variables) => {
       toast.error(`Failed to update order ${variables.orderId} to status ${variables.status}:`, {
         description: `Error: ${error.message}`,
       });
-      setColumns(initialColumns);
     },
   });
 
   const dateMutation = useMutation({
-    mutationFn: ({
-      orderId,
-      field,
-      date,
-    }: {
-      orderId: string;
-      field: OrderDateField;
-      date: string | null;
-    }) => updateOrderDate(orderId, field, date),
-    onSuccess: async () => {
-      await invalidateCollectionAndOrderQueries(queryClient);
-    },
+    mutationFn: ({ orderId, field, date }: DateMutationVariables) =>
+      updateOrderDate(orderId, field, date),
     onError: (error: Error) => {
       toast.error("Failed to update date", {
         description: error.message,
       });
-      setColumns(initialColumns);
     },
   });
 
+  const enqueueStatusMutation = React.useCallback(
+    (variables: StatusMutationVariables) => {
+      const existingQueue = pendingStatusMutationsRef.current.get(variables.orderId);
+      if (existingQueue) {
+        existingQueue.mutations.push(variables);
+        return;
+      }
+
+      const queue: PendingStatusMutations = {
+        mutations: [variables],
+        persistedStatus: variables.previousStatus,
+        persistedIndex: variables.previousIndex,
+        lastMutationSucceeded: false,
+      };
+      pendingStatusMutationsRef.current.set(variables.orderId, queue);
+
+      void drainMutationQueue(
+        queue.mutations,
+        (pendingVariables) => {
+          if (queue.persistedStatus === pendingVariables.previousStatus) {
+            queue.persistedIndex = pendingVariables.previousIndex;
+          }
+
+          return statusMutation.mutateAsync(pendingVariables);
+        },
+        (persistedVariables, succeeded) => {
+          queue.lastMutationSucceeded = succeeded;
+          if (!succeeded) return;
+
+          queue.persistedStatus = persistedVariables.status;
+          queue.persistedIndex = persistedVariables.targetIndex;
+        },
+        async () => {
+          setColumns((current) =>
+            moveOrderToStatus(
+              current,
+              variables.orderId,
+              queue.persistedStatus,
+              queue.persistedIndex,
+              !queue.lastMutationSucceeded,
+            ),
+          );
+          pendingStatusMutationsRef.current.delete(variables.orderId);
+          await invalidateCollectionAndOrderQueries(queryClient);
+        },
+      );
+    },
+    [queryClient, statusMutation],
+  );
+
+  const enqueueDateMutation = React.useCallback(
+    (variables: DateMutationVariables) => {
+      const existingQueue = pendingDateMutationsRef.current.get(variables.orderId);
+      if (existingQueue) {
+        if (!existingQueue.persistedDates.has(variables.field)) {
+          existingQueue.persistedDates.set(variables.field, variables.previousDate);
+        }
+        existingQueue.mutations.push(variables);
+        return;
+      }
+
+      const queue: PendingDateMutations = {
+        mutations: [variables],
+        persistedDates: new Map([[variables.field, variables.previousDate]]),
+      };
+      pendingDateMutationsRef.current.set(variables.orderId, queue);
+
+      void drainMutationQueue(
+        queue.mutations,
+        (pendingVariables) => dateMutation.mutateAsync(pendingVariables),
+        (persistedVariables, succeeded) => {
+          if (!succeeded) return;
+
+          queue.persistedDates.set(persistedVariables.field, persistedVariables.date);
+        },
+        async () => {
+          setColumns((current) => {
+            let next = current;
+            for (const [field, date] of queue.persistedDates) {
+              next = updateOrderDateInColumns(next, variables.orderId, field, date);
+            }
+            return next;
+          });
+          pendingDateMutationsRef.current.delete(variables.orderId);
+          await invalidateCollectionAndOrderQueries(queryClient);
+        },
+      );
+    },
+    [dateMutation, queryClient],
+  );
+
   const handleDateChange = React.useCallback(
     (orderId: string, field: OrderDateField, date: string | null) => {
-      setColumns((prev) => {
-        const next = { ...prev };
-        for (const colId of Object.keys(next)) {
-          const colOrders = next[colId];
-          const idx = colOrders.findIndex((o) => o.orderId === orderId);
-          if (idx !== -1) {
-            const updated = [...colOrders];
-            updated[idx] = withDateUpdate(colOrders[idx], field, date);
-            next[colId] = updated;
-            break;
-          }
-        }
-        return next;
-      });
+      const order = Object.values(columns)
+        .flat()
+        .find((candidate) => candidate.orderId === orderId);
+      if (!order) return;
 
-      dateMutation.mutate({ orderId, field, date });
+      setColumns((current) => updateOrderDateInColumns(current, orderId, field, date));
+
+      enqueueDateMutation({
+        orderId,
+        field,
+        date,
+        previousDate: order[field] ?? null,
+      });
     },
-    [dateMutation],
+    [columns, enqueueDateMutation],
   );
 
   const handleMarkOwned = React.useCallback(
     (orderId: string) => {
-      let foundColumn: string | null = null;
+      let previousStatus: OrderStatus | null = null;
       let foundIndex = -1;
       let foundOrder: DashboardKanbanOrder | null = null;
 
-      for (const [columnValue, columnOrders] of Object.entries(columns)) {
+      for (const status of ORDER_STATUSES) {
+        const columnOrders = columns[status];
         const index = columnOrders.findIndex((o) => o.orderId === orderId);
         if (index !== -1) {
-          foundColumn = columnValue;
+          previousStatus = status;
           foundIndex = index;
           foundOrder = columnOrders[index];
           break;
         }
       }
 
-      if (foundColumn === null || foundOrder === null) return;
+      if (previousStatus === null || foundOrder === null) return;
 
-      const updatedSource = [...columns[foundColumn]];
+      const updatedSource = [...columns[previousStatus]];
       updatedSource.splice(foundIndex, 1);
 
       setColumns({
         ...columns,
-        [foundColumn]: updatedSource,
+        [previousStatus]: updatedSource,
         Owned: [...columns.Owned, foundOrder],
       });
 
-      statusMutation.mutate({ orderId, status: "Owned" });
+      enqueueStatusMutation({
+        orderId,
+        status: "Owned",
+        previousStatus,
+        previousIndex: foundIndex,
+        targetIndex: columns.Owned.length,
+      });
     },
-    [columns, statusMutation],
+    [columns, enqueueStatusMutation],
   );
 
   const handleMove = React.useCallback(
-    ({ activeContainer, overContainer, event }: KanbanMoveEvent) => {
-      if (activeContainer !== overContainer) {
-        const orderId = String(event.active.id);
-        const newStatus = overContainer as "Ordered" | "Paid" | "Shipped" | "Owned";
-        statusMutation.mutate({ orderId, status: newStatus });
-      }
+    ({ activeContainer, activeIndex, overContainer, overIndex, event }: KanbanMoveEvent) => {
+      const previousStatus = ORDER_STATUSES.find((status) => status === activeContainer);
+      const status = ORDER_STATUSES.find((candidate) => candidate === overContainer);
+      if (!previousStatus || !status || previousStatus === status) return;
+
+      enqueueStatusMutation({
+        orderId: String(event.active.id),
+        status,
+        previousStatus,
+        previousIndex: activeIndex,
+        targetIndex: overIndex,
+      });
     },
-    [statusMutation],
+    [enqueueStatusMutation],
   );
 
   return (
@@ -440,9 +644,9 @@ function OrderKanbanBoard({
       onValueChange={setColumns}
       onMove={handleMove}
       getItemValue={(item) => item.orderId}
-      className="h-full overflow-x-auto"
+      className="flex min-h-0 flex-1 flex-col overflow-x-auto"
     >
-      <KanbanBoard className="h-full min-w-[1300px] sm:grid-cols-4 gap-2.5">
+      <KanbanBoard className="min-h-0 min-w-[1300px] flex-1 gap-2.5 sm:grid-cols-4">
         {Object.entries(columns).map(([columnId, columnOrders]) => (
           <OrderColumn
             key={columnId}
@@ -468,7 +672,7 @@ export default function OrderKanban({
   dateFormat,
 }: OrdersKanbanProps) {
   const initialColumns = React.useMemo(() => {
-    const grouped: OrderColumns = {
+    const grouped: Record<OrderStatus, DashboardKanbanOrder[]> = {
       Ordered: [],
       Paid: [],
       Shipped: [],
@@ -476,7 +680,7 @@ export default function OrderKanban({
     };
 
     for (const order of orders) {
-      grouped[order.status]?.push(order);
+      grouped[order.status].push(order);
     }
 
     return grouped;

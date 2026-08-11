@@ -21,7 +21,12 @@ import type { SyncJobStatus, SyncOrderItemInput } from "./model";
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import SyncService from "./service";
 import { tryCatch } from "@myakiba/utils/result";
-import { MAX_LIMIT, SYNC_SESSION_STATUSES, SYNC_TYPES } from "@myakiba/contracts/shared/constants";
+import {
+  MAX_LIMIT,
+  SYNC_SESSION_ITEM_STATUSES,
+  SYNC_SESSION_STATUSES,
+  SYNC_TYPES,
+} from "@myakiba/contracts/shared/constants";
 import { createId } from "@paralleldrive/cuid2";
 import { jobStatusSubscriptionRegistry } from "@/lib/job-status-subscription-registry";
 import {
@@ -1155,6 +1160,9 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         action: "sync.sessionDetail",
         user: { id: user.id },
         sync: { sessionId: params.id },
+        filters: {
+          status: query.status ?? [],
+        },
       });
 
       const page = query.page ? Number.parseInt(query.page, 10) : undefined;
@@ -1177,7 +1185,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       }
 
       const { data: result, error } = await tryCatch(
-        SyncService.getSyncSessionDetail(params.id, user.id, page, limit),
+        SyncService.getSyncSessionDetail(params.id, user.id, page, limit, query.status),
       );
 
       if (error) {
@@ -1212,6 +1220,10 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       query: z.object({
         page: z.string().optional(),
         limit: z.string().optional(),
+        status: z
+          .union([z.enum(SYNC_SESSION_ITEM_STATUSES), z.array(z.enum(SYNC_SESSION_ITEM_STATUSES))])
+          .transform((value) => (Array.isArray(value) ? value : [value]))
+          .optional(),
       }),
       auth: true,
     },

@@ -1,31 +1,14 @@
-import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  Copy01Icon,
-  Delete02Icon,
-  Edit03Icon,
-  Loading03Icon,
-  MoreHorizontalIcon,
-  MoveIcon,
-  PackageIcon,
-  ViewIcon,
-} from "@hugeicons/core-free-icons";
+import { PackageIcon } from "@hugeicons/core-free-icons";
 import { Link } from "@tanstack/react-router";
-import { toast } from "sonner";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
+import { CollectionItemActions } from "@/components/collection/collection-item-actions";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+  MEDIA_ITEM_CARD_CLASS_NAME,
+  MEDIA_ITEM_CARD_LOADING_CLASS_NAME,
+  MEDIA_ITEM_COMPACT_WIDTH,
+} from "@/components/ui/media-item-toolbar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import CollectionItemForm from "./collection-item-form";
-import UnifiedItemMoveForm from "@/components/orders/unified-item-move-form";
+import { Card } from "@/components/ui/card";
 import { getCategoryColor } from "@/lib/category-colors";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { cn } from "@/lib/utils";
@@ -34,7 +17,6 @@ import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema"
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import type { CSSProperties } from "react";
 import type { RowSelectionState } from "@tanstack/react-table";
-import { ThemedBadge } from "../reui/badge";
 
 const MAX_STAGGER_INDEX = 20;
 const STAGGER_DELAY_MS = 30;
@@ -66,135 +48,6 @@ interface CollectionCardGridProps {
   readonly isLoading: boolean;
 }
 
-function CollectionCardActions({
-  item,
-  isPending,
-  isSelected,
-  onEditCollectionItem,
-  onDeleteCollectionItems,
-  onAddCollectionItemsToOrder,
-  onAddCollectionItemsToNewOrder,
-  currency,
-  dateFormat,
-}: {
-  readonly item: CollectionItem;
-  readonly isPending: boolean;
-  readonly isSelected: boolean;
-  readonly onEditCollectionItem: CollectionCardGridProps["onEditCollectionItem"];
-  readonly onDeleteCollectionItems: CollectionCardGridProps["onDeleteCollectionItems"];
-  readonly onAddCollectionItemsToOrder: CollectionCardGridProps["onAddCollectionItemsToOrder"];
-  readonly onAddCollectionItemsToNewOrder: CollectionCardGridProps["onAddCollectionItemsToNewOrder"];
-  readonly currency: Currency;
-  readonly dateFormat: DateFormat;
-}): React.JSX.Element {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const selectedItems = {
-    collectionIds: new Set([item.id]),
-    orderIds: item.orderId ? new Set([item.orderId]) : new Set<string>(),
-  };
-
-  return (
-    <>
-      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              className={cn(
-                "bg-black/20 text-white backdrop-blur-sm hover:bg-black/40 hover:text-white",
-                !isSelected &&
-                  "opacity-0 group-hover/card:opacity-100 data-popup-open:opacity-100 transition-opacity",
-              )}
-              disabled={isPending}
-            >
-              <HugeiconsIcon
-                icon={isPending ? Loading03Icon : MoreHorizontalIcon}
-                className={cn("size-3.5", isPending && "animate-spin")}
-              />
-            </Button>
-          }
-        />
-        {menuOpen ? (
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem>
-              <Link
-                {...(item.itemExternalId !== null
-                  ? ({
-                      to: "/item/$externalId",
-                      params: { externalId: item.itemExternalId },
-                    } as const)
-                  : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
-                className="flex items-center gap-1.5"
-              >
-                <HugeiconsIcon icon={ViewIcon} />
-                View details
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                if (item.itemExternalId) {
-                  navigator.clipboard.writeText(item.itemExternalId.toString());
-                  toast.success("Copied MFC item ID to clipboard");
-                } else {
-                  toast.error("No MFC item ID for custom items");
-                }
-              }}
-            >
-              <HugeiconsIcon icon={Copy01Icon} />
-              Copy MFC ID
-            </DropdownMenuItem>
-            <CollectionItemForm
-              renderTrigger={
-                <DropdownMenuItem closeOnClick={false}>
-                  <HugeiconsIcon icon={Edit03Icon} />
-                  Edit item
-                </DropdownMenuItem>
-              }
-              itemData={item}
-              callbackFn={onEditCollectionItem}
-              currency={currency}
-              dateFormat={dateFormat}
-            />
-            <UnifiedItemMoveForm
-              renderTrigger={
-                <DropdownMenuItem closeOnClick={false}>
-                  <HugeiconsIcon icon={MoveIcon} />
-                  Assign order
-                </DropdownMenuItem>
-              }
-              selectedItems={selectedItems}
-              onMoveToExisting={onAddCollectionItemsToOrder}
-              onMoveToNew={onAddCollectionItemsToNewOrder}
-              currency={currency}
-              intent="add"
-            />
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={() => {
-                setMenuOpen(false);
-                setDeleteOpen(true);
-              }}
-            >
-              <HugeiconsIcon icon={Delete02Icon} />
-              Delete item
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        ) : null}
-      </DropdownMenu>
-      <ConfirmDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        title="Delete item?"
-        description="This will permanently remove this item from your collection."
-        onConfirm={() => onDeleteCollectionItems(new Set([item.id]))}
-      />
-    </>
-  );
-}
-
 export function CollectionCardGrid({
   items,
   cardWidth,
@@ -211,6 +64,8 @@ export function CollectionCardGrid({
   isCollectionOrderPending,
   isLoading,
 }: CollectionCardGridProps): React.JSX.Element {
+  const isCompact = cardWidth < MEDIA_ITEM_COMPACT_WIDTH;
+
   const toggleSelection = (id: string): void => {
     onRowSelectionChange((prev: RowSelectionState) => {
       if (prev[id]) {
@@ -229,15 +84,24 @@ export function CollectionCardGrid({
     return (
       <div className="grid gap-3" style={gridStyle}>
         {Array.from({ length: 12 }).map((_, i) => (
-          <Card key={i} size="sm" className="p-0!">
-            <Skeleton className="aspect-3/4 w-full" />
-            <CardHeader>
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-3 w-1/2" />
-            </CardHeader>
-            <CardFooter>
-              <Skeleton className="h-3 w-1/3" />
-            </CardFooter>
+          <Card key={i} size="sm" className={MEDIA_ITEM_CARD_LOADING_CLASS_NAME}>
+            <Skeleton className="aspect-4/5 w-full rounded-[10px]" />
+            <div
+              className={cn(
+                "flex flex-col gap-2 px-3 pt-3 pb-2.5",
+                isCompact && "px-2 pt-2.5 pb-2",
+              )}
+            >
+              <Skeleton className="h-2.5 w-1/2" />
+              <div className="space-y-1.5">
+                <Skeleton className="h-3.5 w-full" />
+                <Skeleton className="h-3.5 w-3/4" />
+              </div>
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-3 w-12" />
+              </div>
+            </div>
           </Card>
         ))}
       </div>
@@ -265,32 +129,26 @@ export function CollectionCardGrid({
           <Card
             key={item.id}
             size="sm"
-            className={cn("animate-data-in relative p-0!", isSelected && "ring-primary")}
-            style={{ "--data-in-delay": `${staggerDelay}ms` } as CSSProperties}
+            className={cn(
+              MEDIA_ITEM_CARD_CLASS_NAME,
+              isSelected
+                ? "ring-2 ring-primary"
+                : "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
+            )}
           >
-            {/* Selection + Actions overlay */}
-            <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-between p-2">
-              <Checkbox
-                checked={isSelected}
-                onCheckedChange={() => toggleSelection(item.id)}
-                aria-label={`Select ${item.itemTitle}`}
-                className={cn(
-                  "border-white/60 bg-black/20 backdrop-blur-sm data-checked:border-primary data-checked:bg-primary",
-                  !isSelected && "opacity-0 group-hover/card:opacity-100 transition-opacity",
-                )}
-              />
-              <CollectionCardActions
-                item={item}
-                isPending={isPending}
-                isSelected={isSelected}
-                onEditCollectionItem={onEditCollectionItem}
-                onDeleteCollectionItems={onDeleteCollectionItems}
-                onAddCollectionItemsToOrder={onAddCollectionItemsToOrder}
-                onAddCollectionItemsToNewOrder={onAddCollectionItemsToNewOrder}
-                currency={currency}
-                dateFormat={dateFormat}
-              />
-            </div>
+            <CollectionItemActions
+              item={item}
+              itemSize={cardWidth}
+              isPending={isPending}
+              isSelected={isSelected}
+              onEditCollectionItem={onEditCollectionItem}
+              onDeleteCollectionItems={onDeleteCollectionItems}
+              onAddCollectionItemsToOrder={onAddCollectionItemsToOrder}
+              onAddCollectionItemsToNewOrder={onAddCollectionItemsToNewOrder}
+              onToggleSelection={() => toggleSelection(item.id)}
+              currency={currency}
+              dateFormat={dateFormat}
+            />
 
             {/* Image */}
             <Link
@@ -300,9 +158,11 @@ export function CollectionCardGrid({
                     params: { externalId: item.itemExternalId },
                   } as const)
                 : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
-              className="block"
+              className="block overflow-hidden rounded-[10px] bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              title={item.itemTitle}
+              style={{ "--data-in-delay": `${staggerDelay}ms` } as CSSProperties}
             >
-              <div className="relative aspect-3/4 w-full overflow-hidden bg-muted">
+              <div className="animate-data-in relative aspect-4/5 w-full overflow-hidden bg-muted">
                 {item.itemImage ? (
                   <img
                     src={item.itemImage}
@@ -318,8 +178,36 @@ export function CollectionCardGrid({
               </div>
             </Link>
 
-            <CardHeader>
-              <CardTitle>
+            <div
+              className={cn(
+                "animate-data-in flex min-h-0 flex-1 flex-col px-3 pt-3 pb-2.5",
+                isCompact && "px-2 pt-2.5 pb-2",
+              )}
+              style={
+                {
+                  "--data-in-delay": `${staggerDelay + STAGGER_DELAY_MS * 2}ms`,
+                } as CSSProperties
+              }
+            >
+              <div className="flex min-w-0 items-center gap-2 text-[11px] leading-none">
+                {item.itemCategory ? (
+                  <span className="truncate" style={{ color: getCategoryColor(item.itemCategory) }}>
+                    {item.itemCategory}
+                  </span>
+                ) : null}
+                {item.itemScale ? (
+                  <span className="ml-auto shrink-0 text-muted-foreground tabular-nums">
+                    {item.itemScale}
+                  </span>
+                ) : null}
+              </div>
+
+              <h3
+                className={cn(
+                  "mt-2 text-sm leading-snug font-medium text-balance",
+                  isCompact && "mt-1.5 text-xs",
+                )}
+              >
                 <Link
                   {...(item.itemExternalId !== null
                     ? ({
@@ -327,31 +215,32 @@ export function CollectionCardGrid({
                         params: { externalId: item.itemExternalId },
                       } as const)
                     : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
-                  className="line-clamp-2 hover:underline underline-offset-2"
+                  className="line-clamp-2 decoration-foreground/30 underline-offset-3 transition-colors duration-150 hover:text-foreground/70 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  title={item.itemTitle}
                 >
                   {item.itemTitle}
                 </Link>
-              </CardTitle>
-              <CardDescription className="flex items-center gap-2.5 text-xs">
-                {item.itemCategory ? (
-                  <span style={{ color: getCategoryColor(item.itemCategory) }}>
-                    {item.itemCategory}
+              </h3>
+
+              <div className="mt-auto flex min-w-0 items-end justify-between gap-2 pt-4">
+                <span
+                  className={cn(
+                    "shrink-0 text-base leading-none font-medium tracking-tight tabular-nums",
+                    isCompact && "text-sm",
+                  )}
+                >
+                  {formatCurrencyFromMinorUnits(item.price, currency, locale)}
+                </span>
+                {item.shop && !isCompact ? (
+                  <span
+                    className="min-w-0 truncate text-[11px] leading-none text-muted-foreground"
+                    title={item.shop}
+                  >
+                    {item.shop}
                   </span>
                 ) : null}
-                {item.itemScale ? <span>{item.itemScale}</span> : null}
-              </CardDescription>
-            </CardHeader>
-
-            <CardFooter className="mt-auto justify-between py-2.5!">
-              <span className="text-sm font-medium tabular-nums">
-                {formatCurrencyFromMinorUnits(item.price, currency, locale)}
-              </span>
-              {item.shop ? (
-                <ThemedBadge variant="secondary" size="sm">
-                  {item.shop}
-                </ThemedBadge>
-              ) : null}
-            </CardFooter>
+              </div>
+            </div>
           </Card>
         );
       })}

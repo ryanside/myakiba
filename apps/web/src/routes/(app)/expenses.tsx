@@ -1,124 +1,108 @@
-import { lazy, Suspense, useCallback } from "react";
+import { useCallback, useState } from "react";
 import type { ReactNode } from "react";
 import { InformationCircleIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import * as z from "zod";
-import { expenseFiltersSchema } from "@myakiba/contracts/expenses/schema";
-import type { ExpenseFilters } from "@myakiba/contracts/expenses/schema";
+import { EXPENSE_SCOPES, expenseFiltersSchema } from "@myakiba/contracts/expenses/schema";
+import type { ExpenseFilters, ExpenseScope } from "@myakiba/contracts/expenses/schema";
+import type { CollectionChart } from "@/components/expenses/collection/collection-tab";
+import CollectionTab from "@/components/expenses/collection/collection-tab";
+import type { OrdersChart } from "@/components/expenses/orders/orders-tab";
+import OrdersTab from "@/components/expenses/orders/orders-tab";
+import type { ShippingChart } from "@/components/expenses/shipping/shipping-tab";
+import ShippingTab from "@/components/expenses/shipping/shipping-tab";
 import { ExpensesFilters } from "@/components/expenses/filters";
-import { OverviewTab } from "@/components/expenses/overview-tab";
-import { Section } from "@/components/expenses/section";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import {
   getExpenseFilterOptions,
-  getExpensesOverview,
+  getExpensesCollection,
+  getExpensesOrders,
   getExpensesShipping,
-  getExpensesTrends,
 } from "@/queries/expenses";
-import { ThemedBadge } from "@/components/reui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-
-const EXPENSE_TABS = ["overview", "trends", "shipping"] as const;
-
-type ExpenseTab = (typeof EXPENSE_TABS)[number];
 
 const expensesSearchSchema = expenseFiltersSchema.extend({
-  tab: z.enum(EXPENSE_TABS).optional(),
+  tab: z.enum(EXPENSE_SCOPES).optional(),
 });
-
 const TAB_LABELS = {
-  overview: "Overview",
-  trends: "Trends",
+  collection: "Collection",
+  orders: "Orders",
   shipping: "Shipping",
-} satisfies Record<ExpenseTab, string>;
-
+} satisfies Record<ExpenseScope, string>;
 const EXPENSES_QUERY_OPTIONS = {
   staleTime: 1000 * 60 * 5,
   retry: false,
 } as const;
 
-const TrendsCharts = lazy(() => import("@/components/expenses/charts/trends-charts"));
-const ShippingCharts = lazy(() => import("@/components/expenses/charts/shipping-charts"));
-
 export const Route = createFileRoute("/(app)/expenses")({
-  validateSearch: (search: Record<string, unknown>) => expensesSearchSchema.parse(search),
+  validateSearch: expensesSearchSchema,
   component: RouteComponent,
   head: () => ({
     meta: [{ name: "description", content: "your expenses" }, { title: "Expenses - myakiba" }],
   }),
 });
 
-function tabParam(tab: ExpenseTab): ExpenseTab | undefined {
-  return tab === "overview" ? undefined : tab;
+function tabParam(tab: ExpenseScope): ExpenseScope | undefined {
+  return tab === "collection" ? undefined : tab;
 }
 
 function RouteComponent(): ReactNode {
   const navigate = useNavigate({ from: Route.fullPath });
   const { currency, dateFormat, locale } = useUserPreferences();
   const search = Route.useSearch();
-  const tab: ExpenseTab = search.tab ?? "overview";
+  const tab: ExpenseScope = search.tab ?? "collection";
   const filters: ExpenseFilters = {
     dateStart: search.dateStart,
     dateEnd: search.dateEnd,
     shop: search.shop,
   };
-
+  const [collectionChart, setCollectionChart] = useState<CollectionChart>("cumulative");
+  const [ordersChart, setOrdersChart] = useState<OrdersChart>("cumulative");
+  const [shippingChart, setShippingChart] = useState<ShippingChart>("period");
   const filterOptionsQuery = useQuery({
     queryKey: ["expenses", "filter-options"],
     queryFn: getExpenseFilterOptions,
     ...EXPENSES_QUERY_OPTIONS,
   });
-
-  const overviewQuery = useQuery({
-    queryKey: ["expenses", "overview", filters],
-    queryFn: () => getExpensesOverview(filters),
-    enabled: tab === "overview",
+  const collectionQuery = useQuery({
+    queryKey: ["expenses", "collection", filters],
+    queryFn: () => getExpensesCollection(filters),
+    enabled: tab === "collection",
     ...EXPENSES_QUERY_OPTIONS,
   });
-
-  const trendsQuery = useQuery({
-    queryKey: ["expenses", "trends", filters],
-    queryFn: () => getExpensesTrends(filters),
-    enabled: tab === "trends",
+  const ordersQuery = useQuery({
+    queryKey: ["expenses", "orders", filters],
+    queryFn: () => getExpensesOrders(filters),
+    enabled: tab === "orders",
     ...EXPENSES_QUERY_OPTIONS,
   });
-
   const shippingQuery = useQuery({
     queryKey: ["expenses", "shipping", filters],
     queryFn: () => getExpensesShipping(filters),
     enabled: tab === "shipping",
     ...EXPENSES_QUERY_OPTIONS,
   });
-
-  const tabQueries = {
-    overview: overviewQuery,
-    trends: trendsQuery,
+  const activeQuery = {
+    collection: collectionQuery,
+    orders: ordersQuery,
     shipping: shippingQuery,
-  } as const;
-  const activeQuery = tabQueries[tab];
+  }[tab];
 
   const setFilters = useCallback(
     (next: ExpenseFilters): void => {
-      navigate({
-        search: { ...next, tab: tabParam(tab) },
-        resetScroll: false,
-      });
+      navigate({ search: { ...next, tab: tabParam(tab) }, resetScroll: false });
     },
     [navigate, tab],
   );
-
   const clearFilters = useCallback((): void => {
-    navigate({
-      search: { tab: tabParam(tab) },
-      resetScroll: false,
-    });
+    navigate({ search: { tab: tabParam(tab) }, resetScroll: false });
   }, [navigate, tab]);
-
   const setTab = useCallback(
-    (nextTab: ExpenseTab): void => {
+    (nextTab: ExpenseScope): void => {
       navigate({
         search: {
           dateStart: search.dateStart,
@@ -133,142 +117,109 @@ function RouteComponent(): ReactNode {
   );
 
   return (
-    <div className="mx-auto flex max-w-[88rem] flex-col gap-6">
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl tracking-tight font-heading font-medium">Expenses</h1>
-            <ThemedBadge variant="default" className="mt-1">
-              New
-            </ThemedBadge>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <HugeiconsIcon
-                    icon={InformationCircleIcon}
-                    className="size-4 mt-1 text-muted-foreground"
-                  />
-                }
-              />
-              <TooltipContent side="right" sideOffset={12}>
-                <div className="flex max-w-xs flex-col gap-2">
-                  <div className="flex flex-col gap-1">
-                    <h3 className="text-sm font-medium">dev note:</h3>
-                    <p className="text-pretty">
-                      This is an early implementation of the expense page.
-                    </p>
-                  </div>
-                  <p className="text-pretty">
-                    For the most accurate reports, fill in price, shop, dates, shipping method, and
-                    fees on your orders and collection items.
-                  </p>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        </div>
-
-        <ExpensesFilters
-          filters={filters}
-          shopOptions={filterOptionsQuery.data?.shopOptions ?? []}
-          onChange={setFilters}
-          onClear={clearFilters}
-        />
+    <div className="mx-auto flex max-w-[88rem] flex-col gap-4" aria-busy={activeQuery.isPending}>
+      <output className="sr-only" aria-live="polite">
+        {activeQuery.isPending ? `Loading ${TAB_LABELS[tab]} expenses` : ""}
+      </output>
+      <div className="mb-2 flex items-center gap-2">
+        <h1 className="font-heading text-2xl font-medium tracking-tight">Expenses</h1>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                aria-label="About expense accounting"
+                className="mt-0.75"
+              >
+                <HugeiconsIcon icon={InformationCircleIcon} className="size-4" />
+              </Button>
+            }
+          />
+          <TooltipContent side="right" sideOffset={12}>
+            <div className="flex max-w-sm flex-col gap-2 text-pretty">
+              <div className="flex flex-col gap-1">
+                <h3 className="text-sm font-medium">dev note:</h3>
+                <p className="text-pretty">This is an early implementation of the expense page.</p>
+              </div>
+              <p>Owned order items also appear in Collection because they belong to both views.</p>
+              <p>Undated expenses do not appear in charts.</p>
+            </div>
+          </TooltipContent>
+        </Tooltip>
       </div>
 
-      {activeQuery.isError && (
-        <div className="flex flex-col items-center justify-center h-64 gap-y-4">
-          <div className="text-lg font-medium text-destructive">
-            Error: {activeQuery.error?.message ?? "Failed to load expenses"}
-          </div>
-        </div>
-      )}
-
-      {!activeQuery.isError ? (
-        <Tabs
-          value={tab}
-          onValueChange={(value) => {
-            setTab(value);
-          }}
-          className="gap-6"
-        >
-          <TabsList variant="line" className="w-full px-0">
-            {EXPENSE_TABS.map((item) => (
+      <Tabs value={tab} onValueChange={setTab} className="gap-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <TabsList className="w-full lg:w-fit">
+            {EXPENSE_SCOPES.map((item) => (
               <TabsTrigger key={item} value={item}>
                 {TAB_LABELS[item]}
               </TabsTrigger>
             ))}
           </TabsList>
+          <ExpensesFilters
+            filters={filters}
+            isLoading={filterOptionsQuery.isPending}
+            shopOptions={filterOptionsQuery.data?.shopOptions ?? []}
+            onChange={setFilters}
+            onClear={clearFilters}
+          />
+        </div>
 
-          <TabsContent value="overview">
-            {tab === "overview" ? (
-              <OverviewTab
-                data={overviewQuery.data}
-                isLoading={overviewQuery.isPending}
-                filters={filters}
-                currency={currency}
-                dateFormat={dateFormat}
-                locale={locale}
-              />
-            ) : null}
-          </TabsContent>
-
-          <TabsContent value="trends">
-            {tab === "trends" ? (
-              <Suspense
-                fallback={
-                  <div className="flex flex-col gap-6">
-                    <Section title="spending (each period)" isLoading stats={[]} chartSkeleton />
-                    <Section
-                      title="average costs (each period)"
-                      isLoading
-                      stats={[]}
-                      chartSkeleton
-                    />
-                  </div>
-                }
-              >
-                <TrendsCharts
-                  data={trendsQuery.data}
-                  isLoading={trendsQuery.isPending}
+        {activeQuery.error ? (
+          <div className="flex h-64 items-center justify-center">
+            <p className="animate-data-in text-lg font-medium text-destructive">
+              Error: {activeQuery.error.message}
+            </p>
+          </div>
+        ) : (
+          <>
+            <TabsContent value="collection">
+              {tab === "collection" ? (
+                <CollectionTab
+                  data={collectionQuery.data}
+                  isLoading={collectionQuery.isPending}
+                  filters={filters}
                   currency={currency}
                   locale={locale}
+                  dateFormat={dateFormat}
+                  chart={collectionChart}
+                  onChartChange={setCollectionChart}
                 />
-              </Suspense>
-            ) : null}
-          </TabsContent>
-
-          <TabsContent value="shipping">
-            {tab === "shipping" ? (
-              <Suspense
-                fallback={
-                  <div className="flex flex-col gap-6">
-                    <Section
-                      title="shipping by method (each period)"
-                      isLoading
-                      stats={[]}
-                      chartSkeleton
-                    />
-                    <Section
-                      title="shipping by method (cumulative)"
-                      isLoading
-                      stats={[]}
-                      chartSkeleton
-                    />
-                  </div>
-                }
-              >
-                <ShippingCharts
+              ) : null}
+            </TabsContent>
+            <TabsContent value="orders">
+              {tab === "orders" ? (
+                <OrdersTab
+                  data={ordersQuery.data}
+                  isLoading={ordersQuery.isPending}
+                  filters={filters}
+                  currency={currency}
+                  locale={locale}
+                  dateFormat={dateFormat}
+                  chart={ordersChart}
+                  onChartChange={setOrdersChart}
+                />
+              ) : null}
+            </TabsContent>
+            <TabsContent value="shipping">
+              {tab === "shipping" ? (
+                <ShippingTab
                   data={shippingQuery.data}
                   isLoading={shippingQuery.isPending}
+                  filters={filters}
                   currency={currency}
                   locale={locale}
+                  dateFormat={dateFormat}
+                  chart={shippingChart}
+                  onChartChange={setShippingChart}
                 />
-              </Suspense>
-            ) : null}
-          </TabsContent>
-        </Tabs>
-      ) : null}
+              ) : null}
+            </TabsContent>
+          </>
+        )}
+      </Tabs>
     </div>
   );
 }

@@ -1,30 +1,8 @@
-import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  Copy01Icon,
-  Delete02Icon,
-  Edit03Icon,
-  Loading03Icon,
-  MoreHorizontalIcon,
-  MoveIcon,
-  PackageIcon,
-  ViewIcon,
-} from "@hugeicons/core-free-icons";
+import { PackageIcon } from "@hugeicons/core-free-icons";
 import { Link } from "@tanstack/react-router";
-import { toast } from "sonner";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { CollectionItemActions } from "@/components/collection/collection-item-actions";
 import { Skeleton } from "@/components/ui/skeleton";
-import CollectionItemForm from "./collection-item-form";
-import UnifiedItemMoveForm from "@/components/orders/unified-item-move-form";
 import { cn } from "@/lib/utils";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
@@ -61,135 +39,6 @@ interface CollectionGalleryGridProps {
   readonly isCollectionPending: (collectionId: string) => boolean;
   readonly isCollectionOrderPending: (collectionId: string) => boolean;
   readonly isLoading: boolean;
-}
-
-function CollectionTileActions({
-  item,
-  isPending,
-  isSelected,
-  onEditCollectionItem,
-  onDeleteCollectionItems,
-  onAddCollectionItemsToOrder,
-  onAddCollectionItemsToNewOrder,
-  currency,
-  dateFormat,
-}: {
-  readonly item: CollectionItem;
-  readonly isPending: boolean;
-  readonly isSelected: boolean;
-  readonly onEditCollectionItem: CollectionGalleryGridProps["onEditCollectionItem"];
-  readonly onDeleteCollectionItems: CollectionGalleryGridProps["onDeleteCollectionItems"];
-  readonly onAddCollectionItemsToOrder: CollectionGalleryGridProps["onAddCollectionItemsToOrder"];
-  readonly onAddCollectionItemsToNewOrder: CollectionGalleryGridProps["onAddCollectionItemsToNewOrder"];
-  readonly currency: Currency;
-  readonly dateFormat: DateFormat;
-}): React.JSX.Element {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const selectedItems = {
-    collectionIds: new Set([item.id]),
-    orderIds: item.orderId ? new Set([item.orderId]) : new Set<string>(),
-  };
-
-  return (
-    <>
-      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              className={cn(
-                "bg-black/30 text-white backdrop-blur-sm hover:bg-black/50 hover:text-white",
-                !isSelected &&
-                  "opacity-0 group-hover/tile:opacity-100 data-popup-open:opacity-100 transition-opacity",
-              )}
-              disabled={isPending}
-            >
-              <HugeiconsIcon
-                icon={isPending ? Loading03Icon : MoreHorizontalIcon}
-                className={cn("size-3.5", isPending && "animate-spin")}
-              />
-            </Button>
-          }
-        />
-        {menuOpen ? (
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem>
-              <Link
-                {...(item.itemExternalId !== null
-                  ? ({
-                      to: "/item/$externalId",
-                      params: { externalId: item.itemExternalId },
-                    } as const)
-                  : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
-                className="flex items-center gap-1.5"
-              >
-                <HugeiconsIcon icon={ViewIcon} />
-                View details
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                if (item.itemExternalId) {
-                  navigator.clipboard.writeText(item.itemExternalId.toString());
-                  toast.success("Copied MFC item ID to clipboard");
-                } else {
-                  toast.error("No MFC item ID for custom items");
-                }
-              }}
-            >
-              <HugeiconsIcon icon={Copy01Icon} />
-              Copy MFC ID
-            </DropdownMenuItem>
-            <CollectionItemForm
-              renderTrigger={
-                <DropdownMenuItem closeOnClick={false}>
-                  <HugeiconsIcon icon={Edit03Icon} />
-                  Edit item
-                </DropdownMenuItem>
-              }
-              itemData={item}
-              callbackFn={onEditCollectionItem}
-              currency={currency}
-              dateFormat={dateFormat}
-            />
-            <UnifiedItemMoveForm
-              renderTrigger={
-                <DropdownMenuItem closeOnClick={false}>
-                  <HugeiconsIcon icon={MoveIcon} />
-                  Assign order
-                </DropdownMenuItem>
-              }
-              selectedItems={selectedItems}
-              onMoveToExisting={onAddCollectionItemsToOrder}
-              onMoveToNew={onAddCollectionItemsToNewOrder}
-              currency={currency}
-              intent="add"
-            />
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={() => {
-                setMenuOpen(false);
-                setDeleteOpen(true);
-              }}
-            >
-              <HugeiconsIcon icon={Delete02Icon} />
-              Delete item
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        ) : null}
-      </DropdownMenu>
-      <ConfirmDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        title="Delete item?"
-        description="This will permanently remove this item from your collection."
-        onConfirm={() => onDeleteCollectionItems(new Set([item.id]))}
-      />
-    </>
-  );
 }
 
 export function CollectionGalleryGrid({
@@ -263,41 +112,25 @@ export function CollectionGalleryGrid({
       <div
         key={item.id}
         className={cn(
-          "animate-data-in group/tile relative overflow-hidden rounded-lg",
+          "animate-data-in group/media group/tile relative overflow-hidden rounded-lg",
           galleryLayout === "masonry" && "mb-2 break-inside-avoid",
           isSelected && "ring-2 ring-primary ring-offset-1 ring-offset-background",
         )}
         style={{ "--data-in-delay": `${staggerDelay}ms` } as CSSProperties}
       >
-        <div
-          className={cn(
-            "pointer-events-none absolute inset-0 z-10 transition-colors group-hover/tile:bg-black/20",
-            isSelected && "bg-black/10",
-          )}
+        <CollectionItemActions
+          item={item}
+          itemSize={tileSize}
+          isPending={isPending}
+          isSelected={isSelected}
+          onEditCollectionItem={onEditCollectionItem}
+          onDeleteCollectionItems={onDeleteCollectionItems}
+          onAddCollectionItemsToOrder={onAddCollectionItemsToOrder}
+          onAddCollectionItemsToNewOrder={onAddCollectionItemsToNewOrder}
+          onToggleSelection={() => toggleSelection(item.id)}
+          currency={currency}
+          dateFormat={dateFormat}
         />
-
-        <div className="absolute inset-x-0 top-0 z-20 flex items-start justify-between p-1.5">
-          <Checkbox
-            checked={isSelected}
-            onCheckedChange={() => toggleSelection(item.id)}
-            aria-label={`Select ${item.itemTitle}`}
-            className={cn(
-              "border-white/60 bg-black/30 backdrop-blur-sm data-checked:border-primary data-checked:bg-primary",
-              !isSelected && "opacity-0 group-hover/tile:opacity-100 transition-opacity",
-            )}
-          />
-          <CollectionTileActions
-            item={item}
-            isPending={isPending}
-            isSelected={isSelected}
-            onEditCollectionItem={onEditCollectionItem}
-            onDeleteCollectionItems={onDeleteCollectionItems}
-            onAddCollectionItemsToOrder={onAddCollectionItemsToOrder}
-            onAddCollectionItemsToNewOrder={onAddCollectionItemsToNewOrder}
-            currency={currency}
-            dateFormat={dateFormat}
-          />
-        </div>
 
         <Link
           {...(item.itemExternalId !== null

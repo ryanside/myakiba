@@ -10,9 +10,10 @@ import type { LaunchableSyncType } from "@/components/sync/sync-launcher-options
 
 type SyncWidgetProps = {
   readonly TriggerWrapper: React.ReactElement;
+  readonly side?: "left" | "right";
 };
 
-export default function SyncWidget({ TriggerWrapper }: SyncWidgetProps) {
+export default function SyncWidget({ TriggerWrapper, side = "left" }: SyncWidgetProps) {
   const [syncType, setSyncType] = useState<LaunchableSyncType | null>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);
 
@@ -25,7 +26,7 @@ export default function SyncWidget({ TriggerWrapper }: SyncWidgetProps) {
     <>
       <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
         <PopoverTrigger render={TriggerWrapper} />
-        <PopoverContent align="start" className="w-56 p-1">
+        <PopoverContent align={side === "left" ? "start" : "end"} className="w-56 p-1">
           {LAUNCHABLE_SYNC_OPTIONS.map((option) => {
             const config = SYNC_TYPE_CONFIG[option.type];
             return (
@@ -51,7 +52,7 @@ export default function SyncWidget({ TriggerWrapper }: SyncWidgetProps) {
         </PopoverContent>
       </Popover>
 
-      <SyncActionSheet syncType={syncType} onSyncTypeChange={setSyncType} side="left" />
+      <SyncActionSheet syncType={syncType} onSyncTypeChange={setSyncType} side={side} />
     </>
   );
 }

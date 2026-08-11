@@ -729,6 +729,7 @@ class SyncService {
     userId: string,
     page?: number,
     limit?: number,
+    statusFilter?: readonly SyncSessionItemStatus[],
   ): Promise<{
     session: DbSyncSessionRow;
     items: DbEnrichedSyncSessionItemRow[];
@@ -740,6 +741,12 @@ class SyncService {
       .where(and(eq(syncSession.id, sessionId), eq(syncSession.userId, userId)));
 
     if (!session) return null;
+
+    const itemConditions = [eq(syncSessionItem.syncSessionId, sessionId)];
+    if (statusFilter && statusFilter.length > 0) {
+      itemConditions.push(inArray(syncSessionItem.status, statusFilter));
+    }
+    const itemsWhereClause = and(...itemConditions);
 
     const baseQuery = db
       .select({
@@ -759,13 +766,10 @@ class SyncService {
         itemTable,
         and(eq(itemTable.externalId, syncSessionItem.itemExternalId), eq(itemTable.source, "mfc")),
       )
-      .where(eq(syncSessionItem.syncSessionId, sessionId))
+      .where(itemsWhereClause)
       .orderBy(syncSessionItem.createdAt, syncSessionItem.id);
 
-    const countQuery = db
-      .select({ total: count() })
-      .from(syncSessionItem)
-      .where(eq(syncSessionItem.syncSessionId, sessionId));
+    const countQuery = db.select({ total: count() }).from(syncSessionItem).where(itemsWhereClause);
 
     const usePagination = page !== undefined && limit !== undefined;
     const offset = usePagination ? (page - 1) * limit : 0;
