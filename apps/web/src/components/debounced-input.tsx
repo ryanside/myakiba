@@ -17,6 +17,7 @@ export function DebouncedInput({
 } & Omit<InputHTMLAttributes<HTMLInputElement>, "onChange">) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const commandInputRef = useRef<HTMLInputElement | null>(null);
+  const defaultValueRef = useRef(initialValue);
   const onChangeRef = useRef(onChange);
   const timeoutRef = useRef<number | null>(null);
 
@@ -28,7 +29,12 @@ export function DebouncedInput({
     const inputElement = isCommandInput ? commandInputRef.current : inputRef.current;
     const nextValue = String(initialValue);
 
-    if (inputElement && inputElement.value !== nextValue) {
+    // Incoming values can be stale acknowledgements while the user is still typing.
+    if (
+      inputElement &&
+      document.activeElement !== inputElement &&
+      inputElement.value !== nextValue
+    ) {
       inputElement.value = nextValue;
     }
   }, [initialValue, isCommandInput]);
@@ -63,7 +69,7 @@ export function DebouncedInput({
       <CommandInput
         {...props}
         ref={commandInputRef}
-        defaultValue={String(initialValue)}
+        defaultValue={String(defaultValueRef.current)}
         onValueChange={handleValueChange}
       />
     );
@@ -73,7 +79,7 @@ export function DebouncedInput({
     <Input
       {...props}
       ref={inputRef}
-      defaultValue={initialValue}
+      defaultValue={defaultValueRef.current}
       onChange={(e) => {
         if (e.target.value === "") {
           handleValueChange("");
