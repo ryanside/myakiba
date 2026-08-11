@@ -1,4 +1,5 @@
 import { useCollectionFilters } from "@/hooks/use-collection";
+import { ITEM_CATEGORY_GROUPS } from "@myakiba/contracts/shared/constants";
 import type { Category } from "@myakiba/contracts/shared/types";
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
 
@@ -7,36 +8,9 @@ type QuickFilterGroup = {
   readonly categories: readonly Category[];
 };
 
-const QUICK_FILTER_GROUPS: readonly QuickFilterGroup[] = [
-  {
-    label: "Figures",
-    categories: [
-      "Accessories",
-      "Action/Dolls",
-      "Prepainted",
-      "Garage Kits",
-      "Model Kits",
-      "Trading",
-    ],
-  },
-  {
-    label: "Goods",
-    categories: [
-      "Apparel",
-      "Dishes",
-      "Hanged up",
-      "Linens",
-      "Misc",
-      "Plushes",
-      "Stationeries",
-      "On Walls",
-    ],
-  },
-  {
-    label: "Media",
-    categories: ["Books", "Music", "Video", "Games"],
-  },
-];
+const QUICK_FILTER_GROUPS: readonly QuickFilterGroup[] = Object.entries(ITEM_CATEGORY_GROUPS).map(
+  ([label, categories]) => ({ label, categories }),
+);
 
 const GROUP_BY_LABEL = new Map(QUICK_FILTER_GROUPS.map((g) => [g.label, g] as const));
 

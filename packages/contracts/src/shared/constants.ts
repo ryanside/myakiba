@@ -62,6 +62,21 @@ export const CATEGORIES = [
   "Games",
 ] as const;
 
+export const ITEM_CATEGORY_GROUPS = {
+  Figures: ["Accessories", "Action/Dolls", "Prepainted", "Garage Kits", "Model Kits", "Trading"],
+  Goods: [
+    "Apparel",
+    "Dishes",
+    "Hanged up",
+    "Linens",
+    "Misc",
+    "Plushes",
+    "Stationeries",
+    "On Walls",
+  ],
+  Media: ["Books", "Music", "Video", "Games"],
+} as const satisfies Readonly<Record<string, readonly (typeof CATEGORIES)[number][]>>;
+
 export const CURRENCIES = [
   "USD",
   "JPY",

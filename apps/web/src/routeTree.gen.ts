@@ -20,6 +20,7 @@ import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-p
 import { Route as appSyncRouteImport } from './routes/(app)/sync'
 import { Route as appSettingsRouteImport } from './routes/(app)/settings'
 import { Route as appOrdersRouteImport } from './routes/(app)/orders'
+import { Route as appItemsRouteImport } from './routes/(app)/items'
 import { Route as appExpensesRouteImport } from './routes/(app)/expenses'
 import { Route as appDashboardRouteImport } from './routes/(app)/dashboard'
 import { Route as appCollectionRouteImport } from './routes/(app)/collection'
@@ -85,6 +86,11 @@ const appSettingsRoute = appSettingsRouteImport.update({
 const appOrdersRoute = appOrdersRouteImport.update({
   id: '/orders',
   path: '/orders',
+  getParentRoute: () => appRouteRoute,
+} as any)
+const appItemsRoute = appItemsRouteImport.update({
+  id: '/items',
+  path: '/items',
   getParentRoute: () => appRouteRoute,
 } as any)
 const appExpensesRoute = appExpensesRouteImport.update({
@@ -155,6 +161,7 @@ export interface FileRoutesByFullPath {
   '/collection': typeof appCollectionRoute
   '/dashboard': typeof appDashboardRoute
   '/expenses': typeof appExpensesRoute
+  '/items': typeof appItemsRoute
   '/orders': typeof appOrdersRoute
   '/settings': typeof appSettingsRoute
   '/sync': typeof appSyncRoute
@@ -179,6 +186,7 @@ export interface FileRoutesByTo {
   '/collection': typeof appCollectionRoute
   '/dashboard': typeof appDashboardRoute
   '/expenses': typeof appExpensesRoute
+  '/items': typeof appItemsRoute
   '/orders': typeof appOrdersRoute
   '/settings': typeof appSettingsRoute
   '/sync': typeof appSyncRoute
@@ -204,6 +212,7 @@ export interface FileRoutesById {
   '/(app)/collection': typeof appCollectionRoute
   '/(app)/dashboard': typeof appDashboardRoute
   '/(app)/expenses': typeof appExpensesRoute
+  '/(app)/items': typeof appItemsRoute
   '/(app)/orders': typeof appOrdersRoute
   '/(app)/settings': typeof appSettingsRoute
   '/(app)/sync': typeof appSyncRoute
@@ -230,6 +239,7 @@ export interface FileRouteTypes {
     | '/collection'
     | '/dashboard'
     | '/expenses'
+    | '/items'
     | '/orders'
     | '/settings'
     | '/sync'
@@ -254,6 +264,7 @@ export interface FileRouteTypes {
     | '/collection'
     | '/dashboard'
     | '/expenses'
+    | '/items'
     | '/orders'
     | '/settings'
     | '/sync'
@@ -278,6 +289,7 @@ export interface FileRouteTypes {
     | '/(app)/collection'
     | '/(app)/dashboard'
     | '/(app)/expenses'
+    | '/(app)/items'
     | '/(app)/orders'
     | '/(app)/settings'
     | '/(app)/sync'
@@ -386,6 +398,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appOrdersRouteImport
       parentRoute: typeof appRouteRoute
     }
+    '/(app)/items': {
+      id: '/(app)/items'
+      path: '/items'
+      fullPath: '/items'
+      preLoaderRoute: typeof appItemsRouteImport
+      parentRoute: typeof appRouteRoute
+    }
     '/(app)/expenses': {
       id: '/(app)/expenses'
       path: '/expenses'
@@ -479,6 +498,7 @@ interface appRouteRouteChildren {
   appCollectionRoute: typeof appCollectionRoute
   appDashboardRoute: typeof appDashboardRoute
   appExpensesRoute: typeof appExpensesRoute
+  appItemsRoute: typeof appItemsRoute
   appOrdersRoute: typeof appOrdersRoute
   appSettingsRoute: typeof appSettingsRoute
   appSyncRoute: typeof appSyncRoute
@@ -495,6 +515,7 @@ const appRouteRouteChildren: appRouteRouteChildren = {
   appCollectionRoute: appCollectionRoute,
   appDashboardRoute: appDashboardRoute,
   appExpensesRoute: appExpensesRoute,
+  appItemsRoute: appItemsRoute,
   appOrdersRoute: appOrdersRoute,
   appSettingsRoute: appSettingsRoute,
   appSyncRoute: appSyncRoute,

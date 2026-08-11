@@ -4,7 +4,7 @@ import ItemResyncService from "./resync-service";
 import { tryCatch } from "@myakiba/utils/result";
 import { betterAuth } from "@/middleware/better-auth";
 import { evlog } from "evlog/elysia";
-import { itemParamSchema, customItemSchema } from "./model";
+import { itemIdParamSchema, itemParamSchema, customItemSchema } from "./model";
 
 const itemRouter = new Elysia({ prefix: "/item" })
   .use(betterAuth)
@@ -40,11 +40,28 @@ const itemRouter = new Elysia({ prefix: "/item" })
     { body: customItemSchema, auth: true },
   )
   .get(
-    "/:externalId",
+    "/:id/releases",
     async ({ params, log }) => {
-      log.set({ action: "item.get", item: { externalId: params.externalId } });
+      log.set({ action: "item.getReleases", item: { id: params.id } });
 
-      const { data: item, error } = await tryCatch(ItemService.getItem(params.externalId));
+      const { data: result, error } = await tryCatch(ItemService.getItemReleases(params.id));
+
+      if (error) {
+        log.error(error, { step: "getItemReleases", outcome: "error" });
+        return status(500, "Failed to get item releases");
+      }
+
+      log.set({ result: { count: result.releases.length }, outcome: "success" });
+      return result;
+    },
+    { params: itemIdParamSchema, auth: true },
+  )
+  .get(
+    "/:id",
+    async ({ params, log }) => {
+      log.set({ action: "item.get", item: { externalId: params.id } });
+
+      const { data: item, error } = await tryCatch(ItemService.getItem(params.id));
 
       if (error) {
         if (error.message === "ITEM_NOT_FOUND") {
@@ -61,16 +78,16 @@ const itemRouter = new Elysia({ prefix: "/item" })
     { params: itemParamSchema, auth: true },
   )
   .get(
-    "/:externalId/orders",
+    "/:id/orders",
     async ({ params, user, log }) => {
       log.set({
         action: "item.getRelatedOrders",
         user: { id: user.id },
-        item: { externalId: params.externalId },
+        item: { externalId: params.id },
       });
 
       const { data: orders, error } = await tryCatch(
-        ItemService.getItemRelatedOrders(user.id, params.externalId),
+        ItemService.getItemRelatedOrders(user.id, params.id),
       );
 
       if (error) {
@@ -84,16 +101,16 @@ const itemRouter = new Elysia({ prefix: "/item" })
     { params: itemParamSchema, auth: true },
   )
   .get(
-    "/:externalId/collection",
+    "/:id/collection",
     async ({ params, user, log }) => {
       log.set({
         action: "item.getRelatedCollection",
         user: { id: user.id },
-        item: { externalId: params.externalId },
+        item: { externalId: params.id },
       });
 
       const { data: collection, error } = await tryCatch(
-        ItemService.getItemRelatedCollection(user.id, params.externalId),
+        ItemService.getItemRelatedCollection(user.id, params.id),
       );
 
       if (error) {
@@ -107,16 +124,16 @@ const itemRouter = new Elysia({ prefix: "/item" })
     { params: itemParamSchema, auth: true },
   )
   .get(
-    "/:externalId/resync-status",
+    "/:id/resync-status",
     async ({ params, user, log }) => {
       log.set({
         action: "item.resyncStatus",
         user: { id: user.id },
-        item: { externalId: params.externalId },
+        item: { externalId: params.id },
       });
 
       const { data: resyncItem, error: validateError } = await tryCatch(
-        ItemResyncService.validateItemForResync(params.externalId),
+        ItemResyncService.validateItemForResync(params.id),
       );
 
       if (validateError) {
@@ -143,16 +160,16 @@ const itemRouter = new Elysia({ prefix: "/item" })
     { params: itemParamSchema, auth: true },
   )
   .post(
-    "/:externalId/resync",
+    "/:id/resync",
     async ({ params, user, log }) => {
       log.set({
         action: "item.requestResync",
         user: { id: user.id },
-        item: { externalId: params.externalId },
+        item: { externalId: params.id },
       });
 
       const { data: resyncItem, error: validateError } = await tryCatch(
-        ItemResyncService.validateItemForResync(params.externalId),
+        ItemResyncService.validateItemForResync(params.id),
       );
 
       if (validateError) {

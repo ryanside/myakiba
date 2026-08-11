@@ -4,8 +4,8 @@ import { tryCatch } from "@myakiba/utils/result";
 import { betterAuth } from "@/middleware/better-auth";
 import { evlog } from "evlog/elysia";
 import {
-  searchQuerySchema,
-  searchReleasesQuerySchema,
+  catalogItemsSearchSchema,
+  searchCommandQuerySchema,
   searchEntriesQuerySchema,
   searchOrdersQuerySchema,
 } from "@myakiba/contracts/search/schema";
@@ -14,16 +14,20 @@ const searchRouter = new Elysia({ prefix: "/search" })
   .use(betterAuth)
   .use(evlog())
   .get(
-    "/",
+    "/command",
     async ({ query, user, log }) => {
-      log.set({ action: "search", user: { id: user.id }, search: { query: query.search } });
+      log.set({
+        action: "search.command",
+        user: { id: user.id },
+        search: { query: query.search },
+      });
 
       const { data: searchData, error } = await tryCatch(
-        SearchService.getSearchResults(query.search, user.id),
+        SearchService.getCommandResults(query.search, user.id),
       );
 
       if (error) {
-        log.error(error, { step: "getSearchResults" });
+        log.error(error, { step: "getCommandResults" });
         log.set({ outcome: "error" });
         return status(500, "Failed to search");
       }
@@ -38,24 +42,32 @@ const searchRouter = new Elysia({ prefix: "/search" })
       });
       return { searchData };
     },
-    { query: searchQuerySchema, auth: true },
+    { query: searchCommandQuerySchema, auth: true },
   )
   .get(
-    "/releases",
+    "/items",
     async ({ query, log }) => {
-      log.set({ action: "search.releases", item: { id: query.itemId } });
+      log.set({
+        action: "search.items",
+        query: { search: query.query, page: query.page, pageSize: query.pageSize },
+      });
 
-      const { data: result, error } = await tryCatch(SearchService.getReleases(query.itemId));
+      const { data: result, error } = await tryCatch(
+        SearchService.getCatalogItems(query.query, query.page, query.pageSize),
+      );
 
       if (error) {
-        log.error(error, { step: "getReleases", outcome: "error" });
-        return status(500, "Failed to get releases");
+        log.error(error, { step: "getCatalogItems", outcome: "error" });
+        return status(500, "Failed to search item database");
       }
 
-      log.set({ result: { count: result.releases.length }, outcome: "success" });
+      log.set({
+        result: { count: result.items.length, totalCount: result.totalCount },
+        outcome: "success",
+      });
       return result;
     },
-    { query: searchReleasesQuerySchema, auth: true },
+    { query: catalogItemsSearchSchema, auth: true },
   )
   .get(
     "/entries",
@@ -66,7 +78,7 @@ const searchRouter = new Elysia({ prefix: "/search" })
       });
 
       const { data: entries, error } = await tryCatch(
-        SearchService.getEntries(query.search, query.limit, query.offset),
+        SearchService.getEntries(query.search, query.category, query.limit, query.offset),
       );
 
       if (error) {

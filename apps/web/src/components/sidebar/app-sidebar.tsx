@@ -10,6 +10,7 @@ import {
   GitCompareIcon,
   Clock02Icon,
   CheckListIcon,
+  DatabaseIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { DiscordLogo, GitHubLogo } from "@/components/ui/brand-icons";
@@ -62,6 +63,11 @@ const data = {
       title: "Collection",
       url: "/collection",
       icon: LibraryIcon,
+    },
+    {
+      title: "Item Database",
+      url: "/items",
+      icon: DatabaseIcon,
     },
     {
       title: "Calendar",

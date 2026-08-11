@@ -1,17 +1,12 @@
-import {
-  searchResponseSchema,
-  searchReleasesResponseSchema,
-  searchEntriesResponseSchema,
-  searchOrdersResponseSchema,
-} from "@myakiba/contracts/search/schema";
 import type {
-  SearchCollectionResult,
+  CatalogItemsSearch,
+  CatalogItemsSearchResponse,
+  SearchCommandCollectionResult,
   SearchEntriesQuery,
   SearchEntriesResponse,
   SearchOrdersQuery,
   SearchOrdersResponse,
 } from "@myakiba/contracts/search/schema";
-import type { ItemReleasesResponse } from "@myakiba/contracts/item/schema";
 import { app, getErrorMessage } from "@/lib/treaty-client";
 
 export type OrderCommandMatch = {
@@ -22,11 +17,11 @@ export type OrderCommandMatch = {
 
 export type CommandSearchResults = {
   readonly orderMatches: readonly OrderCommandMatch[];
-  readonly itemMatches: readonly SearchCollectionResult[];
+  readonly itemMatches: readonly SearchCommandCollectionResult[];
 };
 
 export async function searchCommandResults(search: string): Promise<CommandSearchResults> {
-  const { data, error } = await app.api.search.get({
+  const { data, error } = await app.api.search.command.get({
     query: { search },
   });
 
@@ -34,36 +29,28 @@ export async function searchCommandResults(search: string): Promise<CommandSearc
     throw new Error(getErrorMessage(error, "Failed to search orders and items"));
   }
 
-  const parsed = searchResponseSchema.safeParse(data);
-  if (!parsed.success) {
-    throw new Error("Failed to parse search results");
-  }
-
   return {
-    orderMatches: parsed.data.searchData.orderResults.map((order) => ({
+    orderMatches: data.searchData.orderResults.map((order) => ({
       id: order.orderId,
       title: order.orderTitle,
       itemImages: order.itemImages,
     })),
-    itemMatches: parsed.data.searchData.collectionResults,
+    itemMatches: data.searchData.collectionResults,
   };
 }
 
-export async function searchReleases(itemId: string): Promise<ItemReleasesResponse> {
-  const { data, error } = await app.api.search.releases.get({
-    query: { itemId },
+export async function getCatalogItems(
+  params: CatalogItemsSearch,
+): Promise<CatalogItemsSearchResponse> {
+  const { data, error } = await app.api.search.items.get({
+    query: params,
   });
 
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to search releases"));
+    throw new Error(getErrorMessage(error, "Failed to search item database"));
   }
 
-  const parsed = searchReleasesResponseSchema.safeParse(data);
-  if (!parsed.success) {
-    throw new Error("Failed to parse releases response");
-  }
-
-  return parsed.data;
+  return data;
 }
 
 export async function searchEntries(params: SearchEntriesQuery): Promise<SearchEntriesResponse> {
@@ -75,12 +62,7 @@ export async function searchEntries(params: SearchEntriesQuery): Promise<SearchE
     throw new Error(getErrorMessage(error, "Failed to search entries"));
   }
 
-  const parsed = searchEntriesResponseSchema.safeParse(data);
-  if (!parsed.success) {
-    throw new Error("Failed to parse entries response");
-  }
-
-  return parsed.data;
+  return data;
 }
 
 export async function searchOrders(params: SearchOrdersQuery): Promise<SearchOrdersResponse> {
@@ -92,10 +74,5 @@ export async function searchOrders(params: SearchOrdersQuery): Promise<SearchOrd
     throw new Error(getErrorMessage(error, "Failed to search orders"));
   }
 
-  const parsed = searchOrdersResponseSchema.safeParse(data);
-  if (!parsed.success) {
-    throw new Error("Failed to parse orders response");
-  }
-
-  return parsed.data;
+  return data;
 }
