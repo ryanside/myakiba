@@ -126,13 +126,20 @@ export function CollectionItemActions({
                 )}
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => {
-                  if (item.itemExternalId) {
-                    navigator.clipboard.writeText(item.itemExternalId.toString());
-                    toast.success("Copied MFC item ID to clipboard");
-                  } else {
+                onClick={async () => {
+                  if (item.itemExternalId === null) {
                     toast.error("No MFC item ID for custom items");
+                    return;
                   }
+
+                  try {
+                    await navigator.clipboard.writeText(String(item.itemExternalId));
+                  } catch {
+                    toast.error("Could not copy MFC item ID to clipboard");
+                    return;
+                  }
+
+                  toast.success("Copied MFC item ID to clipboard");
                 }}
               >
                 <HugeiconsIcon icon={Copy01Icon} />
