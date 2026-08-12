@@ -8,6 +8,7 @@ import type { Category, Currency, DateFormat } from "@myakiba/contracts/shared/t
 import type { CSSProperties, ReactNode } from "react";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { DebouncedInput } from "@/components/debounced-input";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useLocalStorage } from "@/hooks/use-local-storage";
@@ -263,9 +264,26 @@ export function ItemDatabase(): React.JSX.Element {
       </div>
     );
   } else if (items.length === 0) {
+    const isLaterPage = search.page > 1;
+
     results = (
-      <div className="flex h-64 items-center justify-center">
-        <div className="text-lg text-muted-foreground">No items found.</div>
+      <div className="flex h-64 flex-col items-center justify-center gap-3">
+        <p className="text-lg text-muted-foreground">
+          {isLaterPage ? "No items on this page." : "No items found."}
+        </p>
+        {isLaterPage ? (
+          <Button
+            variant="outline"
+            onClick={() =>
+              navigate({
+                to: ".",
+                search: (previous) => ({ ...previous, page: 1 }),
+              })
+            }
+          >
+            Go to first page
+          </Button>
+        ) : null}
       </div>
     );
   } else if (viewMode === "grid") {
