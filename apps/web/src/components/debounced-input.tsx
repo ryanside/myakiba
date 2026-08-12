@@ -19,7 +19,7 @@ export function DebouncedInput({
   const commandInputRef = useRef<HTMLInputElement | null>(null);
   const defaultValueRef = useRef(initialValue);
   const onChangeRef = useRef(onChange);
-  const locallyEmittedValuesRef = useRef(new Set<string>());
+  const pendingLocalAcknowledgementsRef = useRef(new Set<string>());
   const pendingExternalValueRef = useRef<string | null>(null);
   const timeoutRef = useRef<number | null>(null);
 
@@ -35,14 +35,16 @@ export function DebouncedInput({
 
     // Incoming values can be stale acknowledgements while the user is still typing.
     if (document.activeElement === inputElement) {
-      pendingExternalValueRef.current = locallyEmittedValuesRef.current.has(nextValue)
-        ? null
-        : nextValue;
+      if (pendingLocalAcknowledgementsRef.current.delete(nextValue)) {
+        return;
+      }
+
+      pendingExternalValueRef.current = nextValue;
       return;
     }
 
     pendingExternalValueRef.current = null;
-    locallyEmittedValuesRef.current.clear();
+    pendingLocalAcknowledgementsRef.current.clear();
     if (inputElement.value !== nextValue) {
       inputElement.value = nextValue;
     }
@@ -63,13 +65,13 @@ export function DebouncedInput({
     }
 
     if (value === "" || value === 0) {
-      locallyEmittedValuesRef.current.add(String(value));
+      pendingLocalAcknowledgementsRef.current.add(String(value));
       onChangeRef.current(value);
       return;
     }
 
     timeoutRef.current = window.setTimeout(() => {
-      locallyEmittedValuesRef.current.add(String(value));
+      pendingLocalAcknowledgementsRef.current.add(String(value));
       onChangeRef.current(value);
       timeoutRef.current = null;
     }, debounce);
@@ -89,7 +91,7 @@ export function DebouncedInput({
     }
 
     pendingExternalValueRef.current = null;
-    locallyEmittedValuesRef.current.clear();
+    pendingLocalAcknowledgementsRef.current.clear();
     props.onBlur?.(event);
   };
 
