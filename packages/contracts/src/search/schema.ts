@@ -68,10 +68,6 @@ export const searchCommandDataSchema = z.object({
   orderResults: z.array(searchCommandOrderResultSchema),
 });
 
-export const searchCommandResponseSchema = z.object({
-  searchData: searchCommandDataSchema,
-});
-
 export const catalogItemsSearchSchema = z.object({
   query: z
     .string()
@@ -141,13 +137,9 @@ export const searchOrdersResponseSchema = z.object({
 export type SortDirection = z.infer<typeof sortDirectionSchema>;
 export type OrderSearchSort = z.infer<typeof orderSearchSortSchema>;
 export type CollectionSearchSort = z.infer<typeof collectionSearchSortSchema>;
-export type SearchCommandQuery = z.infer<typeof searchCommandQuerySchema>;
 export type SearchCommandCollectionResult = z.infer<typeof searchCommandCollectionResultSchema>;
-export type SearchCommandOrderResult = z.infer<typeof searchCommandOrderResultSchema>;
 export type SearchCommandData = z.infer<typeof searchCommandDataSchema>;
-export type SearchCommandResponse = z.infer<typeof searchCommandResponseSchema>;
 export type CatalogItemsSearch = z.infer<typeof catalogItemsSearchSchema>;
-export type CatalogItemReleaseSummary = z.infer<typeof catalogItemReleaseSummarySchema>;
 export type CatalogItemSearchResult = z.infer<typeof catalogItemSearchResultSchema>;
 export type CatalogItemsSearchResponse = z.infer<typeof catalogItemsSearchResponseSchema>;
 export type SearchEntriesQuery = z.infer<typeof searchEntriesQuerySchema>;
