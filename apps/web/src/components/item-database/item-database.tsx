@@ -258,13 +258,13 @@ export function ItemDatabase(): React.JSX.Element {
     results = <ItemDatabaseSkeleton viewMode={viewMode} />;
   } else if (isError) {
     results = (
-      <div className="flex h-64 flex-col items-center justify-center gap-y-4">
+      <div className="flex h-64 items-center justify-center">
         <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
       </div>
     );
   } else if (items.length === 0) {
     results = (
-      <div className="flex h-64 flex-col items-center justify-center gap-y-4">
+      <div className="flex h-64 items-center justify-center">
         <div className="text-lg text-muted-foreground">No items found.</div>
       </div>
     );
