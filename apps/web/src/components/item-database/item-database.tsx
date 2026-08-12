@@ -76,6 +76,30 @@ function ItemImage({ item }: { readonly item: ItemDatabaseItem }): React.JSX.Ele
   );
 }
 
+function getItemDisplayDetails(
+  item: ItemDatabaseItem,
+  index: number,
+  currency: Currency,
+  dateFormat: DateFormat,
+) {
+  const releasePrice = item.latestRelease?.price;
+  const releaseCurrency = item.latestRelease?.priceCurrency?.trim();
+
+  return {
+    category: item.category ?? "—",
+    categoryGroup: item.category ? CATEGORY_GROUP_BY_CATEGORY[item.category] : "—",
+    categoryColor: getCategoryColor(item.category),
+    releaseDate: item.latestRelease
+      ? formatDateOnlyForDisplay(item.latestRelease.date, dateFormat)
+      : "—",
+    releasePrice:
+      releasePrice != null && releasePrice > 0 && releaseCurrency
+        ? formatReleaseDate(releasePrice, releaseCurrency, currency)
+        : "—",
+    staggerDelay: Math.min(index, MAX_STAGGER_INDEX) * STAGGER_DELAY_MS,
+  };
+}
+
 function ItemGrid({
   items,
   currency,
@@ -91,23 +115,8 @@ function ItemGrid({
       style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${GRID_TILE_SIZE}px, 1fr))` }}
     >
       {items.map((item, index) => {
-        const category = item.category ?? "—";
-        const categoryGroup = item.category ? CATEGORY_GROUP_BY_CATEGORY[item.category] : "—";
-        const categoryColor = getCategoryColor(item.category);
-        const releaseDate = item.latestRelease
-          ? formatDateOnlyForDisplay(item.latestRelease.date, dateFormat)
-          : "—";
-        const releasePrice =
-          item.latestRelease?.price != null &&
-          item.latestRelease.price > 0 &&
-          item.latestRelease.priceCurrency?.trim()
-            ? formatReleaseDate(
-                item.latestRelease.price,
-                item.latestRelease.priceCurrency,
-                currency,
-              )
-            : "—";
-        const staggerDelay = Math.min(index, MAX_STAGGER_INDEX) * STAGGER_DELAY_MS;
+        const { category, categoryGroup, categoryColor, releaseDate, releasePrice, staggerDelay } =
+          getItemDisplayDetails(item, index, currency, dateFormat);
 
         return (
           <Link
@@ -152,23 +161,8 @@ function ItemList({
   return (
     <div className="flex flex-col">
       {items.map((item, index) => {
-        const category = item.category ?? "—";
-        const categoryGroup = item.category ? CATEGORY_GROUP_BY_CATEGORY[item.category] : "—";
-        const categoryColor = getCategoryColor(item.category);
-        const releaseDate = item.latestRelease
-          ? formatDateOnlyForDisplay(item.latestRelease.date, dateFormat)
-          : "—";
-        const releasePrice =
-          item.latestRelease?.price != null &&
-          item.latestRelease.price > 0 &&
-          item.latestRelease.priceCurrency?.trim()
-            ? formatReleaseDate(
-                item.latestRelease.price,
-                item.latestRelease.priceCurrency,
-                currency,
-              )
-            : "—";
-        const staggerDelay = Math.min(index, MAX_STAGGER_INDEX) * STAGGER_DELAY_MS;
+        const { category, categoryGroup, categoryColor, releaseDate, releasePrice, staggerDelay } =
+          getItemDisplayDetails(item, index, currency, dateFormat);
 
         return (
           <Link
