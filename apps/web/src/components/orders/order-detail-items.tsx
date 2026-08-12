@@ -62,23 +62,17 @@ export function OrderDetailItems({
         <h2 className="text-xs font-medium text-muted-foreground">
           Items (<span className="animate-data-in">{order.itemCount}</span>)
         </h2>
-        {order.itemCount > 0 ? <OrderItemSyncSheet orderId={orderId} label="Add Item" /> : null}
+        <OrderItemSyncSheet orderId={orderId} label="Add Item" />
       </div>
-      {order.itemCount > 0 ? (
-        <OrderItemSubDataGrid
-          wrapped={false}
-          orderId={orderId}
-          itemSelection={itemSelection}
-          setItemSelection={setItemSelection}
-          onEditItem={onEditItem}
-          onDeleteItem={onDeleteItem}
-          isCollectionItemPending={isCollectionItemPending}
-        />
-      ) : (
-        <div className="flex h-64 items-center justify-center">
-          <p className="text-sm text-muted-foreground">No items in this order yet</p>
-        </div>
-      )}
+      <OrderItemSubDataGrid
+        wrapped={false}
+        orderId={orderId}
+        itemSelection={itemSelection}
+        setItemSelection={setItemSelection}
+        onEditItem={onEditItem}
+        onDeleteItem={onDeleteItem}
+        isCollectionItemPending={isCollectionItemPending}
+      />
     </section>
   );
 }
