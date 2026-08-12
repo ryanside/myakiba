@@ -55,7 +55,10 @@ export const item = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
-  (t) => [uniqueIndex("item_source_external_id_idx").on(t.source, t.externalId)],
+  (t) => [
+    uniqueIndex("item_source_external_id_idx").on(t.source, t.externalId),
+    index("item_title_trgm_idx").using("gin", t.title.op("gin_trgm_ops")),
+  ],
 );
 
 export const item_release = pgTable(
@@ -98,6 +101,7 @@ export const entry = pgTable(
   },
   (t) => [
     index("entry_name_category_idx").on(t.name, t.category),
+    index("entry_name_trgm_idx").using("gin", t.name.op("gin_trgm_ops")),
     uniqueIndex("entry_source_external_id_idx").on(t.source, t.externalId),
   ],
 );

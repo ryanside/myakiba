@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { InputHTMLAttributes } from "react";
+import type { FocusEvent, InputHTMLAttributes } from "react";
 import { Input } from "./ui/input";
 import { CommandInput } from "./ui/command";
 
@@ -17,7 +17,10 @@ export function DebouncedInput({
 } & Omit<InputHTMLAttributes<HTMLInputElement>, "onChange">) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const commandInputRef = useRef<HTMLInputElement | null>(null);
+  const defaultValueRef = useRef(initialValue);
   const onChangeRef = useRef(onChange);
+  const pendingLocalAcknowledgementsRef = useRef(new Set<string>());
+  const pendingExternalValueRef = useRef<string | null>(null);
   const timeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -28,7 +31,21 @@ export function DebouncedInput({
     const inputElement = isCommandInput ? commandInputRef.current : inputRef.current;
     const nextValue = String(initialValue);
 
-    if (inputElement && inputElement.value !== nextValue) {
+    if (!inputElement) return;
+
+    // Incoming values can be stale acknowledgements while the user is still typing.
+    if (document.activeElement === inputElement) {
+      if (pendingLocalAcknowledgementsRef.current.delete(nextValue)) {
+        return;
+      }
+
+      pendingExternalValueRef.current = nextValue;
+      return;
+    }
+
+    pendingExternalValueRef.current = null;
+    pendingLocalAcknowledgementsRef.current.clear();
+    if (inputElement.value !== nextValue) {
       inputElement.value = nextValue;
     }
   }, [initialValue, isCommandInput]);
@@ -48,14 +65,34 @@ export function DebouncedInput({
     }
 
     if (value === "" || value === 0) {
+      pendingLocalAcknowledgementsRef.current.add(String(value));
       onChangeRef.current(value);
       return;
     }
 
     timeoutRef.current = window.setTimeout(() => {
+      pendingLocalAcknowledgementsRef.current.add(String(value));
       onChangeRef.current(value);
       timeoutRef.current = null;
     }, debounce);
+  };
+
+  const handleBlur = (event: FocusEvent<HTMLInputElement>): void => {
+    const pendingExternalValue = pendingExternalValueRef.current;
+
+    if (pendingExternalValue !== null) {
+      if (timeoutRef.current !== null) {
+        window.clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      if (event.currentTarget.value !== pendingExternalValue) {
+        event.currentTarget.value = pendingExternalValue;
+      }
+    }
+
+    pendingExternalValueRef.current = null;
+    pendingLocalAcknowledgementsRef.current.clear();
+    props.onBlur?.(event);
   };
 
   if (isCommandInput) {
@@ -63,7 +100,8 @@ export function DebouncedInput({
       <CommandInput
         {...props}
         ref={commandInputRef}
-        defaultValue={String(initialValue)}
+        defaultValue={String(defaultValueRef.current)}
+        onBlur={handleBlur}
         onValueChange={handleValueChange}
       />
     );
@@ -73,7 +111,8 @@ export function DebouncedInput({
     <Input
       {...props}
       ref={inputRef}
-      defaultValue={initialValue}
+      defaultValue={defaultValueRef.current}
+      onBlur={handleBlur}
       onChange={(e) => {
         if (e.target.value === "") {
           handleValueChange("");

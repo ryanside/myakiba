@@ -1,7 +1,8 @@
 import { app, getErrorMessage } from "@/lib/treaty-client";
+import type { ItemReleasesResponse } from "@myakiba/contracts/item/schema";
 
 export async function getItem(externalId: number) {
-  const { data, error } = await app.api.item({ externalId }).get();
+  const { data, error } = await app.api.item({ id: externalId }).get();
   if (error) {
     if (error.status === 404) return null;
     throw new Error(getErrorMessage(error, "Failed to get item"));
@@ -9,8 +10,18 @@ export async function getItem(externalId: number) {
   return data;
 }
 
+export async function getItemReleases(itemId: string): Promise<ItemReleasesResponse> {
+  const { data, error } = await app.api.item({ id: itemId }).releases.get();
+
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to get item releases"));
+  }
+
+  return data;
+}
+
 export async function getItemRelatedOrders(externalId: number) {
-  const { data, error } = await app.api.item({ externalId }).orders.get();
+  const { data, error } = await app.api.item({ id: externalId }).orders.get();
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to get item related orders"));
   }
@@ -18,7 +29,7 @@ export async function getItemRelatedOrders(externalId: number) {
 }
 
 export async function getItemRelatedCollection(externalId: number) {
-  const { data, error } = await app.api.item({ externalId }).collection.get();
+  const { data, error } = await app.api.item({ id: externalId }).collection.get();
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to get item related collection"));
   }
@@ -26,7 +37,7 @@ export async function getItemRelatedCollection(externalId: number) {
 }
 
 export async function getResyncStatus(externalId: number) {
-  const { data, error } = await app.api.item({ externalId })["resync-status"].get();
+  const { data, error } = await app.api.item({ id: externalId })["resync-status"].get();
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to get resync status"));
   }
@@ -34,7 +45,7 @@ export async function getResyncStatus(externalId: number) {
 }
 
 export async function requestResync(externalId: number) {
-  const { data, error } = await app.api.item({ externalId }).resync.post();
+  const { data, error } = await app.api.item({ id: externalId }).resync.post();
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to request resync"));
   }

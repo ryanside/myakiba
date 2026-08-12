@@ -1,6 +1,24 @@
 import process from "node:process";
+import { SQL } from "bun";
+import dotenv from "dotenv";
+
+dotenv.config({
+  path: "../../apps/server/.env",
+});
 
 const SUCCESS_MESSAGES = ["Changes applied", "No changes detected"] as const;
+
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL is required to push the database schema");
+}
+
+const database = new SQL({ url: databaseUrl });
+try {
+  await database`CREATE EXTENSION IF NOT EXISTS pg_trgm`;
+} finally {
+  await database.close();
+}
 
 const child = Bun.spawn(["bunx", "drizzle-kit", "push", "--verbose"], {
   cwd: process.cwd(),

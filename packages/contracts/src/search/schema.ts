@@ -1,6 +1,10 @@
 import * as z from "zod";
-import { itemReleaseSchema } from "../item/schema";
-import { paginationLimitSchema, paginationOffsetSchema } from "../shared/pagination";
+import { CATEGORIES, DEFAULT_PAGE_SIZE } from "../shared/constants";
+import {
+  paginationLimitSchema,
+  paginationOffsetSchema,
+  paginationPageSchema,
+} from "../shared/pagination";
 
 export const sortDirectionSchema = z.enum(["asc", "desc"]);
 
@@ -41,11 +45,11 @@ export const collectionSearchSortSchema = z.enum([
   "createdAt",
 ]);
 
-export const searchQuerySchema = z.object({
+export const searchCommandQuerySchema = z.object({
   search: z.string().trim().min(1),
 });
 
-export const searchCollectionResultSchema = z.object({
+export const searchCommandCollectionResultSchema = z.object({
   itemId: z.string(),
   itemExternalId: z.number().nullable(),
   itemTitle: z.string(),
@@ -53,27 +57,46 @@ export const searchCollectionResultSchema = z.object({
   itemCategory: z.string().nullable(),
 });
 
-export const searchOrderResultSchema = z.object({
+export const searchCommandOrderResultSchema = z.object({
   orderId: z.string(),
   orderTitle: z.string(),
   itemImages: z.array(z.string()),
 });
 
-export const searchDataSchema = z.object({
-  collectionResults: z.array(searchCollectionResultSchema),
-  orderResults: z.array(searchOrderResultSchema),
+export const searchCommandDataSchema = z.object({
+  collectionResults: z.array(searchCommandCollectionResultSchema),
+  orderResults: z.array(searchCommandOrderResultSchema),
 });
 
-export const searchResponseSchema = z.object({
-  searchData: searchDataSchema,
+export const itemDatabaseSearchSchema = z.object({
+  query: z
+    .string()
+    .trim()
+    .max(200)
+    .optional()
+    .transform((value) => value || undefined),
+  page: paginationPageSchema.default(1),
+  pageSize: paginationLimitSchema.default(DEFAULT_PAGE_SIZE),
 });
 
-export const searchReleasesQuerySchema = z.object({
-  itemId: z.string().trim().min(1),
+export const itemDatabaseReleaseSummarySchema = z.object({
+  date: z.iso.date(),
+  price: z.number().int().nullable(),
+  priceCurrency: z.string().nullable(),
 });
 
-export const searchReleasesResponseSchema = z.object({
-  releases: z.array(itemReleaseSchema),
+export const itemDatabaseItemSchema = z.object({
+  itemId: z.string(),
+  externalId: z.number().int().positive(),
+  title: z.string(),
+  image: z.string().nullable(),
+  category: z.enum(CATEGORIES).nullable(),
+  latestRelease: itemDatabaseReleaseSummarySchema.nullable(),
+});
+
+export const itemDatabaseSearchResponseSchema = z.object({
+  items: z.array(itemDatabaseItemSchema),
+  totalCount: z.number().int().nonnegative(),
 });
 
 export const searchEntriesQuerySchema = z.object({
@@ -110,11 +133,11 @@ export const searchOrdersResponseSchema = z.object({
 export type SortDirection = z.infer<typeof sortDirectionSchema>;
 export type OrderSearchSort = z.infer<typeof orderSearchSortSchema>;
 export type CollectionSearchSort = z.infer<typeof collectionSearchSortSchema>;
-export type SearchQuery = z.infer<typeof searchQuerySchema>;
-export type SearchCollectionResult = z.infer<typeof searchCollectionResultSchema>;
-export type SearchOrderResult = z.infer<typeof searchOrderResultSchema>;
-export type SearchData = z.infer<typeof searchDataSchema>;
-export type SearchResponse = z.infer<typeof searchResponseSchema>;
+export type SearchCommandCollectionResult = z.infer<typeof searchCommandCollectionResultSchema>;
+export type SearchCommandData = z.infer<typeof searchCommandDataSchema>;
+export type ItemDatabaseSearch = z.infer<typeof itemDatabaseSearchSchema>;
+export type ItemDatabaseItem = z.infer<typeof itemDatabaseItemSchema>;
+export type ItemDatabaseSearchResponse = z.infer<typeof itemDatabaseSearchResponseSchema>;
 export type SearchEntriesQuery = z.infer<typeof searchEntriesQuerySchema>;
 export type SearchEntryResult = z.infer<typeof searchEntryResultSchema>;
 export type SearchEntriesResponse = z.infer<typeof searchEntriesResponseSchema>;

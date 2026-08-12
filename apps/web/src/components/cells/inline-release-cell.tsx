@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/select";
 import { Field } from "@/components/ui/field";
 import { useQuery } from "@tanstack/react-query";
-import { searchReleases } from "@/queries/search";
+import { getItemReleases } from "@/queries/item";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { formatReleaseDate } from "@/lib/locale";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
@@ -47,7 +47,7 @@ export function InlineReleaseCell({
     refetch: refetchReleases,
   } = useQuery({
     queryKey: ["itemReleases", itemId],
-    queryFn: () => searchReleases(itemId),
+    queryFn: () => getItemReleases(itemId),
     staleTime: 1000 * 60 * 5,
     retry: false,
     enabled: false,

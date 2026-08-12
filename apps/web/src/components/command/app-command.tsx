@@ -36,7 +36,7 @@ import type {
 } from "@/components/sync/sync-launcher-options";
 import { SYNC_TYPE_CONFIG } from "@/lib/sync";
 const TOKEN_SEPARATOR = /[^a-z0-9]+/i;
-const SEARCH_DEBOUNCE_MS = 250;
+const SEARCH_DEBOUNCE_MS = 200;
 const EMPTY_RESULTS: CommandSearchResults = {
   orderMatches: [],
   itemMatches: [],

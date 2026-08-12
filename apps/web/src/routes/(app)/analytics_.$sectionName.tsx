@@ -150,7 +150,6 @@ function RouteComponent(): ReactNode {
                   onChange={handleSearchChange}
                   placeholder={`Search ${sectionName}...`}
                   className="pl-8 h-8 text-sm"
-                  debounce={300}
                 />
               </div>
             </div>

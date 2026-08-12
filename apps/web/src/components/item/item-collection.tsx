@@ -69,14 +69,10 @@ export function ItemCollection({
         {isPending && <CollectionItemCardSkeleton />}
 
         {isError && (
-          <Empty>
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <HugeiconsIcon icon={Package01Icon} />
-              </EmptyMedia>
-              <EmptyTitle>Error Loading Collection</EmptyTitle>
-              <EmptyDescription>{errorMessage}</EmptyDescription>
-            </EmptyHeader>
+          <Empty className="py-12">
+            <p className="text-lg font-medium text-destructive">
+              Error: {errorMessage ?? "Failed to load collection"}
+            </p>
           </Empty>
         )}
 

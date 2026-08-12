@@ -149,12 +149,7 @@ export function SectionTable({
       <DataTable.Root
         table={table}
         isLoading={isLoading}
-        empty={
-          <DataTable.Empty
-            title={`No ${sectionName} found`}
-            description="Try adjusting your search"
-          />
-        }
+        empty={<DataTable.Empty title={`No ${sectionName} found`} />}
       >
         <DataTable.LoadingSurface>
           <DataTable.Table>

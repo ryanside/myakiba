@@ -3,6 +3,7 @@ import {
   Calendar01Icon,
   ChartColumnIcon,
   CreditCardIcon,
+  DatabaseIcon,
   GitCompareIcon,
   Home01Icon,
   LibraryIcon,
@@ -16,6 +17,7 @@ export type AppNavigationTarget =
   | "/expenses"
   | "/orders"
   | "/collection"
+  | "/items"
   | "/calendar"
   | "/sync"
   | "/settings";
@@ -47,6 +49,12 @@ const APP_PRIMARY_NAVIGATION_ITEMS = [
     to: "/collection",
     icon: LibraryIcon,
     keywords: ["items", "figures", "owned"],
+  },
+  {
+    title: "Item Database",
+    to: "/items",
+    icon: DatabaseIcon,
+    keywords: ["database", "mfc", "figures", "goods", "media"],
   },
   {
     title: "Calendar",
