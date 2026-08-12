@@ -9,7 +9,7 @@ import {
 } from "@myakiba/db/schema/figure";
 import { and, asc, desc, eq, exists, ilike, isNotNull, or, sql } from "drizzle-orm";
 import type {
-  CatalogItemsSearchResponse,
+  ItemDatabaseSearchResponse,
   SearchCommandData,
   SearchEntryResult,
   SearchOrderIdAndTitle,
@@ -86,11 +86,11 @@ class SearchService {
     };
   }
 
-  async getCatalogItems(
+  async getItemDatabaseItems(
     search: string | undefined,
     page: number,
     pageSize: number,
-  ): Promise<CatalogItemsSearchResponse> {
+  ): Promise<ItemDatabaseSearchResponse> {
     const normalizedSearch = search?.trim();
     const offset = (page - 1) * pageSize;
 
@@ -183,7 +183,6 @@ class SearchService {
           WORD_SIMILARITY(${normalizedSearch}, ${item.title})
         )`
       : sql<number>`0`;
-
     const rows = await db
       .select({
         itemId: item.id,

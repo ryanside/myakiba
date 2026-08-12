@@ -2,7 +2,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Link, getRouteApi, useNavigate } from "@tanstack/react-router";
 import { GridViewIcon, LeftToRightListDashIcon, PackageIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import type { CatalogItemSearchResult } from "@myakiba/contracts/search/schema";
+import type { ItemDatabaseItem } from "@myakiba/contracts/search/schema";
 import { ITEM_CATEGORY_GROUPS } from "@myakiba/contracts/shared/constants";
 import type { Category, Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import type { CSSProperties, ReactNode } from "react";
@@ -15,7 +15,7 @@ import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { getCategoryColor } from "@/lib/category-colors";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { formatReleaseDate } from "@/lib/locale";
-import { getCatalogItems } from "@/queries/search";
+import { getItemDatabaseItems } from "@/queries/search";
 
 const itemsRoute = getRouteApi("/(app)/items");
 const VIEW_MODE_KEY = "item-database:viewMode";
@@ -57,7 +57,7 @@ function ItemDatabaseViewToggle({
   );
 }
 
-function ItemImage({ item }: { readonly item: CatalogItemSearchResult }): React.JSX.Element {
+function ItemImage({ item }: { readonly item: ItemDatabaseItem }): React.JSX.Element {
   if (item.image) {
     return (
       <img
@@ -81,7 +81,7 @@ function ItemGrid({
   currency,
   dateFormat,
 }: {
-  readonly items: readonly CatalogItemSearchResult[];
+  readonly items: readonly ItemDatabaseItem[];
   readonly currency: Currency;
   readonly dateFormat: DateFormat;
 }): React.JSX.Element {
@@ -145,7 +145,7 @@ function ItemList({
   currency,
   dateFormat,
 }: {
-  readonly items: readonly CatalogItemSearchResult[];
+  readonly items: readonly ItemDatabaseItem[];
   readonly currency: Currency;
   readonly dateFormat: DateFormat;
 }): React.JSX.Element {
@@ -251,8 +251,8 @@ export function ItemDatabase(): React.JSX.Element {
   const { currency, dateFormat } = useUserPreferences();
   const [viewMode, setViewMode] = useLocalStorage<ItemDatabaseViewMode>(VIEW_MODE_KEY, "grid");
   const { data, isPending, isError, error } = useQuery({
-    queryKey: ["catalog-items", search] as const,
-    queryFn: () => getCatalogItems(search),
+    queryKey: ["item-database-items", search] as const,
+    queryFn: () => getItemDatabaseItems(search),
     placeholderData: keepPreviousData,
   });
 

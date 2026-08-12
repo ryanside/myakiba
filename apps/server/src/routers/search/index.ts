@@ -4,7 +4,7 @@ import { tryCatch } from "@myakiba/utils/result";
 import { betterAuth } from "@/middleware/better-auth";
 import { evlog } from "evlog/elysia";
 import {
-  catalogItemsSearchSchema,
+  itemDatabaseSearchSchema,
   searchCommandQuerySchema,
   searchEntriesQuerySchema,
   searchOrdersQuerySchema,
@@ -53,11 +53,11 @@ const searchRouter = new Elysia({ prefix: "/search" })
       });
 
       const { data: result, error } = await tryCatch(
-        SearchService.getCatalogItems(query.query, query.page, query.pageSize),
+        SearchService.getItemDatabaseItems(query.query, query.page, query.pageSize),
       );
 
       if (error) {
-        log.error(error, { step: "getCatalogItems", outcome: "error" });
+        log.error(error, { step: "getItemDatabaseItems", outcome: "error" });
         return status(500, "Failed to search item database");
       }
 
@@ -67,7 +67,7 @@ const searchRouter = new Elysia({ prefix: "/search" })
       });
       return result;
     },
-    { query: catalogItemsSearchSchema, auth: true },
+    { query: itemDatabaseSearchSchema, auth: true },
   )
   .get(
     "/entries",

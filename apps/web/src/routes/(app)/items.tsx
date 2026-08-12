@@ -1,7 +1,7 @@
 import { InformationCircleIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
-import { catalogItemsSearchSchema } from "@myakiba/contracts/search/schema";
+import { itemDatabaseSearchSchema } from "@myakiba/contracts/search/schema";
 import { DEFAULT_PAGE_SIZE } from "@myakiba/contracts/shared/constants";
 import { ItemDatabase } from "@/components/item-database/item-database";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 
 export const Route = createFileRoute("/(app)/items")({
   component: RouteComponent,
-  validateSearch: catalogItemsSearchSchema,
+  validateSearch: itemDatabaseSearchSchema,
   search: {
     middlewares: [stripSearchParams({ page: 1, pageSize: DEFAULT_PAGE_SIZE })],
   },

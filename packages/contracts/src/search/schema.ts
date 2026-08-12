@@ -68,7 +68,7 @@ export const searchCommandDataSchema = z.object({
   orderResults: z.array(searchCommandOrderResultSchema),
 });
 
-export const catalogItemsSearchSchema = z.object({
+export const itemDatabaseSearchSchema = z.object({
   query: z
     .string()
     .trim()
@@ -79,23 +79,23 @@ export const catalogItemsSearchSchema = z.object({
   pageSize: paginationLimitSchema.default(DEFAULT_PAGE_SIZE),
 });
 
-export const catalogItemReleaseSummarySchema = z.object({
+export const itemDatabaseReleaseSummarySchema = z.object({
   date: z.iso.date(),
   price: z.number().int().nullable(),
   priceCurrency: z.string().nullable(),
 });
 
-export const catalogItemSearchResultSchema = z.object({
+export const itemDatabaseItemSchema = z.object({
   itemId: z.string(),
   externalId: z.number().int().positive(),
   title: z.string(),
   image: z.string().nullable(),
   category: z.enum(CATEGORIES).nullable(),
-  latestRelease: catalogItemReleaseSummarySchema.nullable(),
+  latestRelease: itemDatabaseReleaseSummarySchema.nullable(),
 });
 
-export const catalogItemsSearchResponseSchema = z.object({
-  items: z.array(catalogItemSearchResultSchema),
+export const itemDatabaseSearchResponseSchema = z.object({
+  items: z.array(itemDatabaseItemSchema),
   totalCount: z.number().int().nonnegative(),
 });
 
@@ -135,9 +135,9 @@ export type OrderSearchSort = z.infer<typeof orderSearchSortSchema>;
 export type CollectionSearchSort = z.infer<typeof collectionSearchSortSchema>;
 export type SearchCommandCollectionResult = z.infer<typeof searchCommandCollectionResultSchema>;
 export type SearchCommandData = z.infer<typeof searchCommandDataSchema>;
-export type CatalogItemsSearch = z.infer<typeof catalogItemsSearchSchema>;
-export type CatalogItemSearchResult = z.infer<typeof catalogItemSearchResultSchema>;
-export type CatalogItemsSearchResponse = z.infer<typeof catalogItemsSearchResponseSchema>;
+export type ItemDatabaseSearch = z.infer<typeof itemDatabaseSearchSchema>;
+export type ItemDatabaseItem = z.infer<typeof itemDatabaseItemSchema>;
+export type ItemDatabaseSearchResponse = z.infer<typeof itemDatabaseSearchResponseSchema>;
 export type SearchEntriesQuery = z.infer<typeof searchEntriesQuerySchema>;
 export type SearchEntryResult = z.infer<typeof searchEntryResultSchema>;
 export type SearchEntriesResponse = z.infer<typeof searchEntriesResponseSchema>;

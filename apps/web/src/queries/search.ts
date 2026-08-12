@@ -1,6 +1,6 @@
 import type {
-  CatalogItemsSearch,
-  CatalogItemsSearchResponse,
+  ItemDatabaseSearch,
+  ItemDatabaseSearchResponse,
   SearchCommandCollectionResult,
   SearchEntriesQuery,
   SearchEntriesResponse,
@@ -39,9 +39,9 @@ export async function searchCommandResults(search: string): Promise<CommandSearc
   };
 }
 
-export async function getCatalogItems(
-  params: CatalogItemsSearch,
-): Promise<CatalogItemsSearchResponse> {
+export async function getItemDatabaseItems(
+  params: ItemDatabaseSearch,
+): Promise<ItemDatabaseSearchResponse> {
   const { data, error } = await app.api.search.items.get({
     query: params,
   });

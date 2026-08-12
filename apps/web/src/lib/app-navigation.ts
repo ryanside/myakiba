@@ -54,7 +54,7 @@ const APP_PRIMARY_NAVIGATION_ITEMS = [
     title: "Item Database",
     to: "/items",
     icon: DatabaseIcon,
-    keywords: ["catalog", "mfc", "figures", "goods", "media"],
+    keywords: ["database", "mfc", "figures", "goods", "media"],
   },
   {
     title: "Calendar",
