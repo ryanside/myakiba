@@ -12,7 +12,6 @@ import type {
   CatalogItemsSearchResponse,
   SearchCommandData,
   SearchEntryResult,
-  SearchEntriesQuery,
   SearchOrderIdAndTitle,
 } from "@myakiba/contracts/search/schema";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
@@ -234,7 +233,6 @@ class SearchService {
 
   async getEntries(
     search: string,
-    category: SearchEntriesQuery["category"],
     limit = DEFAULT_LIMIT,
     offset = 0,
   ): Promise<SearchEntryResult[]> {
@@ -245,13 +243,7 @@ class SearchService {
         category: entry.category,
       })
       .from(entry)
-      .where(
-        and(
-          eq(entry.source, "mfc"),
-          ilike(entry.name, `%${search}%`),
-          category ? eq(entry.category, category) : undefined,
-        ),
-      )
+      .where(and(eq(entry.source, "mfc"), ilike(entry.name, `%${search}%`)))
       .orderBy(asc(entry.name), asc(entry.id));
 
     return query.limit(limit).offset(offset);

@@ -1,5 +1,5 @@
 import * as z from "zod";
-import { CATEGORIES, DEFAULT_PAGE_SIZE, ENTRY_CATEGORIES } from "../shared/constants";
+import { CATEGORIES, DEFAULT_PAGE_SIZE } from "../shared/constants";
 import {
   paginationLimitSchema,
   paginationOffsetSchema,
@@ -104,7 +104,6 @@ export const catalogItemsSearchResponseSchema = z.object({
 
 export const searchEntriesQuerySchema = z.object({
   search: z.string().trim().min(1),
-  category: z.enum(ENTRY_CATEGORIES).optional(),
   limit: paginationLimitSchema.optional(),
   offset: paginationOffsetSchema.optional(),
 });

@@ -78,7 +78,7 @@ const searchRouter = new Elysia({ prefix: "/search" })
       });
 
       const { data: entries, error } = await tryCatch(
-        SearchService.getEntries(query.search, query.category, query.limit, query.offset),
+        SearchService.getEntries(query.search, query.limit, query.offset),
       );
 
       if (error) {
