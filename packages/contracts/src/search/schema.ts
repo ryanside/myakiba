@@ -81,7 +81,6 @@ export const catalogItemsSearchSchema = z.object({
 
 export const catalogItemReleaseSummarySchema = z.object({
   date: z.iso.date(),
-  type: z.string().nullable(),
   price: z.number().int().nullable(),
   priceCurrency: z.string().nullable(),
 });
@@ -98,8 +97,6 @@ export const catalogItemSearchResultSchema = z.object({
 export const catalogItemsSearchResponseSchema = z.object({
   items: z.array(catalogItemSearchResultSchema),
   totalCount: z.number().int().nonnegative(),
-  page: z.number().int().positive(),
-  pageSize: z.number().int().positive(),
 });
 
 export const searchEntriesQuerySchema = z.object({

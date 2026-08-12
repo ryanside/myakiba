@@ -97,7 +97,6 @@ class SearchService {
     const latestRelease = db
       .select({
         date: item_release.date,
-        type: item_release.type,
         price: item_release.price,
         priceCurrency: item_release.priceCurrency,
       })
@@ -193,7 +192,6 @@ class SearchService {
         image: item.image,
         category: item.category,
         releaseDate: latestRelease.date,
-        releaseType: latestRelease.type,
         releasePrice: latestRelease.price,
         releasePriceCurrency: latestRelease.priceCurrency,
         totalCount: sql<number>`COUNT(*) OVER()::integer`.as("totalCount"),
@@ -219,15 +217,12 @@ class SearchService {
         latestRelease: row.releaseDate
           ? {
               date: row.releaseDate,
-              type: row.releaseType,
               price: row.releasePrice,
               priceCurrency: row.releasePriceCurrency,
             }
           : null,
       })),
       totalCount: rows[0]?.totalCount ?? 0,
-      page,
-      pageSize,
     };
   }
 
