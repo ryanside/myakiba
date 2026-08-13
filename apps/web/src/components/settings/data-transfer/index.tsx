@@ -85,8 +85,7 @@ export function DataTransfer() {
       setPreparedFile({ kind: "idle" });
       queryClient.setQueryData(dataTransferCurrentImportQueryKey, startedImport);
     },
-    onSettled: () =>
-      void queryClient.invalidateQueries({ queryKey: dataTransferCurrentImportQueryKey }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: dataTransferCurrentImportQueryKey }),
   });
   const { reset: resetStartMutation } = startMutation;
 
@@ -101,8 +100,7 @@ export function DataTransfer() {
       setPreparedFile({ kind: "idle" });
       resetStartMutation();
     },
-    onSettled: () =>
-      void queryClient.invalidateQueries({ queryKey: dataTransferCurrentImportQueryKey }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: dataTransferCurrentImportQueryKey }),
   });
   const { reset: resetRetryMutation } = retryMutation;
 
@@ -116,8 +114,7 @@ export function DataTransfer() {
       queryClient.setQueryData(dataTransferCurrentImportQueryKey, null);
       resetRetryMutation();
     },
-    onSettled: () =>
-      void queryClient.invalidateQueries({ queryKey: dataTransferCurrentImportQueryKey }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: dataTransferCurrentImportQueryKey }),
   });
 
   const handleFile = async (file: File): Promise<void> => {
@@ -214,9 +211,9 @@ export function DataTransfer() {
       state={state}
       actions={{
         onExport: () => exportMutation.mutate(),
-        onReconnectImportStatus: () => void liveStatusQuery.refetch(),
-        onRetryCurrentImportLoad: () => void currentImportQuery.refetch(),
-        onFile: (file) => void handleFile(file),
+        onReconnectImportStatus: () => liveStatusQuery.refetch(),
+        onRetryCurrentImportLoad: () => currentImportQuery.refetch(),
+        onFile: (file) => handleFile(file),
         onFileError: (error) => {
           readVersion.current += 1;
           resetStartMutation();

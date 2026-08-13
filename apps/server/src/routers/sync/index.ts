@@ -517,7 +517,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           completedAt: new Date(),
           statusMessage: SYNC_STATUS_MESSAGES.insertedWithoutScrape,
           successCount: existingOrderItemExternalIds.length,
-          ...(orderWasPersistedImmediately ? { orderId } : {}),
+          orderId: orderWasPersistedImmediately ? orderId : undefined,
         };
         const { error: updateSessionError } = await tryCatch(
           SyncService.updateSyncSession(syncSessionId, completedSessionUpdate),

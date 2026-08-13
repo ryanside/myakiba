@@ -8,6 +8,7 @@ import { z } from "zod";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
+import { FieldError } from "../ui/field";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { MyAkibaLogo } from "../myakiba-logo";
 import { env } from "@myakiba/env/web";
@@ -174,14 +175,7 @@ export default function SignUpForm() {
                 onBlur={field.handleBlur}
                 onChange={(e) => field.handleChange(e.target.value)}
               />
-              {field.state.meta.errors.map((error) => (
-                <p
-                  key={typeof error === "string" ? error : error?.message}
-                  className="text-red-500 text-sm"
-                >
-                  {typeof error === "string" ? error : error?.message}
-                </p>
-              ))}
+              <FieldError className="text-red-500 text-sm" errors={field.state.meta.errors} />
             </div>
           )}
         </form.Field>

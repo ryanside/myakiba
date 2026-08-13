@@ -1,6 +1,6 @@
 import type { Category } from "@myakiba/contracts/shared/types";
 
-const CATEGORY_COLOR_MAP: Readonly<Record<Category, string>> = {
+const CATEGORY_COLOR_MAP = {
   Accessories: "var(--category-accessories)",
   "Action/Dolls": "var(--category-action-dolls)",
   Prepainted: "var(--category-prepainted)",
@@ -19,7 +19,7 @@ const CATEGORY_COLOR_MAP: Readonly<Record<Category, string>> = {
   Music: "var(--category-music)",
   Video: "var(--category-video)",
   Games: "var(--category-games)",
-};
+} satisfies Readonly<Record<Category, string>>;
 
 export function getCategoryColor(category: Category | null | undefined): string {
   if (!category) {

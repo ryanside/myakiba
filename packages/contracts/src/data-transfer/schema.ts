@@ -60,7 +60,7 @@ const dataTransferOrderV1Schema = z.strictObject({
   updatedAt: isoTimestampSchema,
 });
 
-const dataTransferCollectionMetadataShape = {
+const dataTransferCollectionMetadataFields = {
   collectionKey: portableKeySchema,
   orderKey: portableKeySchema.nullable(),
   status: z.enum(COLLECTION_STATUSES),
@@ -92,7 +92,7 @@ const dataTransferMfcItemReferenceSchema = z.strictObject({
 });
 
 const dataTransferCollectionItemV1Schema = z.strictObject({
-  ...dataTransferCollectionMetadataShape,
+  ...dataTransferCollectionMetadataFields,
   item: dataTransferMfcItemReferenceSchema,
 });
 
@@ -175,7 +175,7 @@ const dataTransferImportReportSchema = z.strictObject({
   missingReleases: nonnegativeIntegerSchema.max(DATA_TRANSFER_MAX_RECORDS),
 });
 
-const dataTransferImportResultShape = {
+const dataTransferImportResultFields = {
   importedOrders: nonnegativeIntegerSchema,
   importedCollectionItems: nonnegativeIntegerSchema,
   failedCollectionItems: nonnegativeIntegerSchema,
@@ -185,14 +185,14 @@ const dataTransferImportResultShape = {
 
 export const dataTransferImportResultSchema = z.strictObject({
   status: z.enum(["completed", "partial", "failed"]),
-  ...dataTransferImportResultShape,
+  ...dataTransferImportResultFields,
 });
 
 export const dataTransferImportSchema = z.strictObject({
   id: portableKeySchema,
   fileName: fileNameSchema,
   status: z.enum(DATA_TRANSFER_IMPORT_STATUSES),
-  ...dataTransferImportResultShape,
+  ...dataTransferImportResultFields,
 });
 
 export type DataTransferReleaseFingerprint = z.infer<typeof dataTransferReleaseFingerprintSchema>;

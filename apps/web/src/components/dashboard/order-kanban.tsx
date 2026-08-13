@@ -21,6 +21,7 @@ import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import type { Currency, DateFormat, OrderStatus } from "@myakiba/contracts/shared/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { functionalUpdate } from "@tanstack/react-table";
 import { updateOrderStatus, updateOrderDate } from "@/queries/orders";
 import type { OrderDateField } from "@/queries/orders";
 import type { DashboardKanbanOrder } from "@/queries/dashboard";
@@ -70,7 +71,11 @@ interface PendingDateMutations {
   readonly persistedDates: Map<OrderDateField, string | null>;
 }
 
-const COLUMNS: Record<string, { readonly title: string; readonly color: string }> = {
+type KanbanColumnMetadata = Record<string, { readonly title: string; readonly color: string }>;
+
+type OrdersByStatus = OrderColumns & Record<OrderStatus, DashboardKanbanOrder[]>;
+
+const COLUMNS: KanbanColumnMetadata = {
   Ordered: { title: "Ordered", color: ORDER_STATUS_COLORS.Ordered },
   Paid: { title: "Paid", color: ORDER_STATUS_COLORS.Paid },
   Shipped: { title: "Shipped", color: ORDER_STATUS_COLORS.Shipped },
@@ -105,7 +110,7 @@ function withDateUpdate(
 }
 
 function columnsReducer(columns: OrderColumns, update: OrderColumnsUpdate): OrderColumns {
-  return typeof update === "function" ? update(columns) : update;
+  return functionalUpdate(update, columns);
 }
 
 function reconcileOrderColumns(current: OrderColumns, incoming: OrderColumns): OrderColumns {
@@ -672,7 +677,7 @@ export default function OrderKanban({
   dateFormat,
 }: OrdersKanbanProps) {
   const initialColumns = React.useMemo(() => {
-    const grouped: Record<OrderStatus, DashboardKanbanOrder[]> = {
+    const grouped: OrdersByStatus = {
       Ordered: [],
       Paid: [],
       Shipped: [],

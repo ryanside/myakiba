@@ -14,13 +14,13 @@ export type SyncToastData = {
   readonly newItems?: number;
 };
 
-const STATE_CONFIG: Record<SyncToastState, { readonly title: string }> = {
+const STATE_CONFIG = {
   queued: { title: "Sync Queued" },
   success: { title: "Sync Complete" },
   partial: { title: "Sync Partial" },
   timeout: { title: "Sync Timed Out" },
   error: { title: "Sync Failed" },
-};
+} satisfies Record<SyncToastState, { readonly title: string }>;
 
 function stateToVariant(state: SyncToastState): PixelToastVariant {
   switch (state) {

@@ -4,7 +4,7 @@ import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-gr
 import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import { functionalUpdate, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type { ExpandedState, PaginationState, Updater } from "@tanstack/react-table";
 import type { SyncSessionRow } from "@myakiba/contracts/sync/types";
 import { createSyncSessionColumns } from "./sync-sessions-columns";
@@ -51,7 +51,7 @@ export function SyncSessionsDataGrid({
 
   const handlePaginationChange = useCallback(
     (updater: Updater<PaginationState>) => {
-      const newPagination = typeof updater === "function" ? updater(tablePagination) : updater;
+      const newPagination = functionalUpdate(updater, tablePagination);
       onPaginationChange(newPagination.pageIndex + 1, newPagination.pageSize);
     },
     [tablePagination, onPaginationChange],

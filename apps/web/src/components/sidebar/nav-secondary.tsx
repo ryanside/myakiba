@@ -11,17 +11,21 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 
+type NavSecondaryItem = {
+  title: string;
+  url: string;
+  external: boolean;
+} & (
+  | { iconType: "hugeicon"; icon: IconSvgElement }
+  | { iconType: "component"; icon: React.ComponentType<React.SVGProps<SVGSVGElement>> }
+);
+
 export function NavSecondary({
   items,
   children,
   ...props
 }: {
-  items: {
-    title: string;
-    url: string;
-    icon: IconSvgElement | React.ComponentType<React.SVGProps<SVGSVGElement>>;
-    external: boolean;
-  }[];
+  items: NavSecondaryItem[];
 } & React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
   return (
     <SidebarGroup {...props}>
@@ -33,12 +37,12 @@ export function NavSecondary({
               <SidebarMenuButton size="sm">
                 {item.external ? (
                   <a href={item.url} target="_blank" rel="noopener noreferrer">
-                    <NavIcon icon={item.icon} />
+                    <NavIcon item={item} />
                     <span>{item.title}</span>
                   </a>
                 ) : (
                   <Link to={item.url}>
-                    <NavIcon icon={item.icon} />
+                    <NavIcon item={item} />
                     <span>{item.title}</span>
                   </Link>
                 )}
@@ -51,14 +55,11 @@ export function NavSecondary({
   );
 }
 
-function NavIcon({
-  icon: Icon,
-}: {
-  icon: IconSvgElement | React.ComponentType<React.SVGProps<SVGSVGElement>>;
-}) {
-  return typeof Icon === "function" ? (
-    <Icon className="size-4 [&_path]:fill-current" />
-  ) : (
-    <HugeiconsIcon icon={Icon} />
-  );
+function NavIcon({ item }: { item: NavSecondaryItem }) {
+  if (item.iconType === "component") {
+    const Icon = item.icon;
+    return <Icon className="size-4 [&_path]:fill-current" />;
+  }
+
+  return <HugeiconsIcon icon={item.icon} />;
 }

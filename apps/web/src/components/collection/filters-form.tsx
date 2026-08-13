@@ -491,7 +491,7 @@ export default function FiltersForm({
                                           variant="ghost"
                                           size="sm"
                                           className="w-full justify-center text-xs"
-                                          onClick={() => void fetchMoreEntries()}
+                                          onClick={() => fetchMoreEntries()}
                                           disabled={isFetchingMoreEntries}
                                         >
                                           {isFetchingMoreEntries ? (

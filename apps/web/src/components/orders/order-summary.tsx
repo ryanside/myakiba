@@ -14,12 +14,12 @@ import {
   TimelineDate,
 } from "@/components/reui/timeline";
 
-const STATUS_TO_STEP: Readonly<Record<string, number>> = {
-  ordered: 1,
-  paid: 2,
-  shipped: 3,
-  owned: 4,
-};
+const STATUS_TO_STEP = new Map<string, number>([
+  ["ordered", 1],
+  ["paid", 2],
+  ["shipped", 3],
+  ["owned", 4],
+]);
 
 function CostRow({
   label,
@@ -63,7 +63,7 @@ export function OrderSummary({
   readonly locale: string;
   readonly dateFormat: DateFormat;
 }): ReactNode {
-  const activeStep = order ? (STATUS_TO_STEP[order.status.toLowerCase()] ?? 0) : 0;
+  const activeStep = order ? (STATUS_TO_STEP.get(order.status.toLowerCase()) ?? 0) : 0;
 
   const shippingFee = order?.shippingFee ?? 0;
   const taxes = order?.taxes ?? 0;

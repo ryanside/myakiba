@@ -3,7 +3,7 @@ import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-gr
 import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import { functionalUpdate, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type {
   ExpandedState,
   PaginationState,
@@ -163,7 +163,7 @@ export default function OrdersDataGrid() {
 
   const handlePaginationChange = useCallback(
     (updater: Updater<PaginationState>) => {
-      const newPagination = typeof updater === "function" ? updater(pagination) : updater;
+      const newPagination = functionalUpdate(updater, pagination);
 
       const newOffset = newPagination.pageIndex * newPagination.pageSize;
       setFilters({
@@ -176,7 +176,7 @@ export default function OrdersDataGrid() {
 
   const handleSortingChange = useCallback(
     (updater: Updater<SortingState>) => {
-      const newSorting = typeof updater === "function" ? updater(sorting) : updater;
+      const newSorting = functionalUpdate(updater, sorting);
 
       if (newSorting.length > 0) {
         const sortConfig = newSorting[0];

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import * as z from "zod";
 import { cva } from "class-variance-authority";
 import type { VariantProps } from "class-variance-authority";
 
@@ -165,13 +166,27 @@ function FieldSeparator({
   );
 }
 
+type FieldErrorValue = string | { readonly message?: string } | null | undefined;
+
+const fieldIssueSchema = z.object({ message: z.string().optional() });
+
+function getFieldErrorMessage(error: FieldErrorValue): string | undefined {
+  const stringError = z.string().safeParse(error);
+  if (stringError.success) return stringError.data;
+
+  const issue = fieldIssueSchema.safeParse(error);
+  return issue.success ? issue.data.message : undefined;
+}
+
 function FieldError({
   className,
   children,
   errors,
+  fallback,
   ...props
 }: React.ComponentProps<"div"> & {
-  errors?: ({ message?: string } | undefined)[];
+  errors?: readonly FieldErrorValue[];
+  fallback?: string;
 }) {
   const content = useMemo(() => {
     if (children) {
@@ -182,18 +197,23 @@ function FieldError({
       return null;
     }
 
-    const uniqueErrors = [...new Map(errors.map((error) => [error?.message, error])).values()];
+    const uniqueErrorSet = new Set<string>();
+    for (const error of errors) {
+      const message = getFieldErrorMessage(error) ?? fallback;
+      if (message) uniqueErrorSet.add(message);
+    }
+    const uniqueErrors = [...uniqueErrorSet];
 
     if (uniqueErrors?.length === 1) {
-      return uniqueErrors[0]?.message;
+      return uniqueErrors[0];
     }
 
     return (
       <ul className="ml-4 flex list-disc flex-col gap-1">
-        {uniqueErrors.map((error, index) => error?.message && <li key={index}>{error.message}</li>)}
+        {uniqueErrors.map((error) => error && <li key={error}>{error}</li>)}
       </ul>
     );
-  }, [children, errors]);
+  }, [children, errors, fallback]);
 
   if (!content) {
     return null;

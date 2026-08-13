@@ -4,11 +4,7 @@ import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 
 const appRouteApi = getRouteApi("/(app)");
 
-export function useUserPreferences(): {
-  readonly currency: Currency;
-  readonly locale: string;
-  readonly dateFormat: DateFormat;
-} {
+export function useUserPreferences() {
   const { session } = appRouteApi.useRouteContext();
   // typecast needed since betterauth's auth-client.ts can only type it as string
   const currency = session.user.currency as Currency;

@@ -15,11 +15,11 @@ import {
 
 type AverageKey = "orderTotal" | "orderItem" | "feesPerOrder";
 const keys = ["orderTotal", "orderItem", "feesPerOrder"] as const;
-const labels: Record<AverageKey, string> = {
+const labels = {
   orderTotal: "Average Order",
   orderItem: "Average Item",
   feesPerOrder: "Average Fees per Order",
-};
+} satisfies Record<AverageKey, string>;
 const config = {
   orderTotal: { label: labels.orderTotal, colors: { light: [EXPENSE_CHART_COLORS[0]] } },
   orderItem: { label: labels.orderItem, colors: { light: [EXPENSE_CHART_COLORS[1]] } },

@@ -16,6 +16,7 @@ import {
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { FieldError } from "@/components/ui/field";
 import {
   Dialog,
   DialogContent,
@@ -326,7 +327,7 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
                               placeholder="Enter your username"
                               maxLength={MAX_USERNAME}
                             />
-                            <FieldErrors errors={field.state.meta.errors} />
+                            <FieldError className="text-xs" errors={field.state.meta.errors} />
                           </div>
                         )}
                       </form.Field>
@@ -342,7 +343,7 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
                               onBlur={field.handleBlur}
                               invalid={!field.state.meta.isValid}
                             />
-                            <FieldErrors errors={field.state.meta.errors} />
+                            <FieldError className="text-xs" errors={field.state.meta.errors} />
                           </div>
                         )}
                       </form.Field>
@@ -373,7 +374,7 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
                                 </ToggleGroupItem>
                               ))}
                             </ToggleGroup>
-                            <FieldErrors errors={field.state.meta.errors} />
+                            <FieldError className="text-xs" errors={field.state.meta.errors} />
                           </div>
                         )}
                       </form.Field>
@@ -406,35 +407,6 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
         </DialogContent>
       </Dialog>
       <SyncActionSheet syncType={syncSheetType} onSyncTypeChange={setSyncSheetType} />
-    </>
-  );
-}
-
-type FieldError =
-  | string
-  | {
-      readonly message?: string;
-    }
-  | null
-  | undefined;
-
-type FieldErrorsProps = {
-  readonly errors: readonly FieldError[];
-};
-
-function FieldErrors({ errors }: FieldErrorsProps) {
-  if (errors.length === 0) return null;
-  return (
-    <>
-      {errors.map((error) => {
-        const message = typeof error === "string" ? error : error?.message;
-        if (!message) return null;
-        return (
-          <p key={message} className="text-xs text-destructive">
-            {message}
-          </p>
-        );
-      })}
     </>
   );
 }

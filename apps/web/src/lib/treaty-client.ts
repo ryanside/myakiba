@@ -23,5 +23,6 @@ export function getErrorMessage(
     }
     return fallback;
   }
-  return typeof error.value === "string" ? error.value : fallback;
+  const message = z.string().safeParse(error.value);
+  return message.success ? message.data : fallback;
 }

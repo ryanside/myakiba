@@ -5,6 +5,11 @@ import type { CSSProperties } from "react";
 import "@/components/dotmatrix-loader.css";
 import { useDotMatrixPhases, usePrefersReducedMotion } from "@/lib/dotmatrix-hooks";
 
+type DotMatrixStyle = CSSProperties & Record<`--dmx-${string}`, string | number | undefined>;
+export type DotAnimationStyle = Omit<CSSProperties, "opacity"> &
+  Readonly<{ opacity?: number }> &
+  Record<`--dmx-${string}`, string | number | undefined>;
+
 export type MatrixPattern = "diamond" | "full" | "outline" | "rose" | "cross" | "rings";
 export type DotMatrixPhase = "idle" | "collapse" | "hoverRipple" | "loadingRipple";
 
@@ -43,7 +48,7 @@ export interface DotAnimationContext {
 
 export interface DotAnimationState {
   className?: string;
-  style?: CSSProperties;
+  style?: DotAnimationStyle;
 }
 
 export type DotAnimationResolver = (ctx: DotAnimationContext) => DotAnimationState;
@@ -90,14 +95,14 @@ export const ROSE_INDEXES = FULL_INDEXES.filter((index) => {
   return rose > 0.6 && radius >= 1;
 });
 
-const PATTERN_INDEXES: Record<MatrixPattern, number[]> = {
+const PATTERN_INDEXES = {
   diamond: DIAMOND_INDEXES,
   full: FULL_INDEXES,
   outline: OUTLINE_INDEXES,
   rose: ROSE_INDEXES,
   cross: CROSS_INDEXES,
   rings: RINGS_INDEXES,
-};
+} satisfies Record<MatrixPattern, number[]>;
 
 export function getPatternIndexes(pattern: MatrixPattern = "diamond"): number[] {
   return PATTERN_INDEXES[pattern];
@@ -107,7 +112,7 @@ export function rowMajorIndex(row: number, col: number): number {
   return row * MATRIX_SIZE + col;
 }
 
-export function indexToCoord(index: number): { row: number; col: number } {
+export function indexToCoord(index: number) {
   return {
     row: Math.floor(index / MATRIX_SIZE),
     col: index % MATRIX_SIZE,
@@ -143,22 +148,14 @@ export function harmonicPhase(row: number, col: number, a: number, b: number): n
   return Math.sin((row + 1) * a + (col + 1) * b);
 }
 
-export function lissajousOffset(
-  row: number,
-  col: number,
-  amplitude = 2.25,
-): { x: number; y: number; phase: number } {
+export function lissajousOffset(row: number, col: number, amplitude = 2.25) {
   const x = Math.sin((row + 1) * 1.15 + (col + 1) * 2.2) * amplitude;
   const y = Math.cos((row + 1) * 2.45 + (col + 1) * 0.95) * amplitude;
   const phase = Math.abs(Math.sin((row + 1) * 0.7 + (col + 1) * 1.1));
   return { x, y, phase };
 }
 
-export function spiralOffset(
-  angle: number,
-  radiusNormalizedValue: number,
-  amplitude = 2.8,
-): { x: number; y: number; phase: number } {
+export function spiralOffset(angle: number, radiusNormalizedValue: number, amplitude = 2.8) {
   const spin = angle + radiusNormalizedValue * Math.PI * 2.1;
   const radius = radiusNormalizedValue * amplitude;
   const x = Math.cos(spin) * radius;
@@ -516,11 +513,7 @@ export function remapOpacityToTriplet(
   return Math.min(1, Math.max(0, lerpDmx(targetPeak, 1, progress)));
 }
 
-function getMatrix5Layout(
-  size: number,
-  dotSize: number,
-  cellPadding?: number,
-): { gap: number; matrixSpan: number } {
+function getMatrix5Layout(size: number, dotSize: number, cellPadding?: number) {
   const n = MATRIX_SIZE;
   if (cellPadding != null) {
     const g = Math.max(0, cellPadding);
@@ -531,9 +524,7 @@ function getMatrix5Layout(
   return { gap: g, matrixSpan: size };
 }
 
-function resolveDmxBoxOuterDim(
-  options: { boxSize?: number; minSize?: number } | null | undefined,
-): { outerDim: number; useWrapper: boolean } {
+function resolveDmxBoxOuterDim(options: { boxSize?: number; minSize?: number } | null | undefined) {
   const b = options?.boxSize;
   const hasBox = b != null && b > 0 && Number.isFinite(b);
   if (!hasBox) {
@@ -598,7 +589,7 @@ export function DotMatrixBase({
   const op = clamp01Dmx(opacityPeak);
   const unit = dotSize + gap;
 
-  const dmxVarStyle = {
+  const dmxVarStyle: DotMatrixStyle = {
     width: matrixSpan,
     height: matrixSpan,
     "--dmx-speed": speedScale,
@@ -612,7 +603,7 @@ export function DotMatrixBase({
           transformOrigin: "center center" as const,
         }
       : { minWidth: minSize, minHeight: minSize }),
-  } as unknown as CSSProperties;
+  };
 
   const dots = Array.from({ length: MATRIX_SIZE * MATRIX_SIZE }).map((_, index) => {
     const { row, col } = indexToCoord(index);
@@ -641,11 +632,11 @@ export function DotMatrixBase({
 
     const resolvedAnimationStyle = animationState.style ? { ...animationState.style } : undefined;
     const rawOpacity = resolvedAnimationStyle?.opacity;
-    if (resolvedAnimationStyle != null && typeof rawOpacity === "number") {
+    if (resolvedAnimationStyle != null && rawOpacity !== undefined) {
       resolvedAnimationStyle.opacity = remapOpacityToTriplet(rawOpacity, ob, om, op);
     }
 
-    const dotStyle = {
+    const dotStyle: DotMatrixStyle = {
       width: dotSize,
       height: dotSize,
       "--dmx-distance": distance,
@@ -657,15 +648,13 @@ export function DotMatrixBase({
       "--dmx-radius": radiusNormalizedValue,
       "--dmx-manhattan": manhattan,
       ...resolvedAnimationStyle,
-      ...(!isActive
-        ? {
-            opacity: 0,
-            visibility: "hidden" as const,
-            pointerEvents: "none" as const,
-            animation: "none",
-          }
-        : {}),
-    } as CSSProperties;
+    };
+    if (!isActive) {
+      dotStyle.opacity = 0;
+      dotStyle.visibility = "hidden";
+      dotStyle.pointerEvents = "none";
+      dotStyle.animation = "none";
+    }
 
     return (
       <span
@@ -695,6 +684,7 @@ export function DotMatrixBase({
 
   if (useWrapper) {
     return (
+      // oxlint-disable-next-line no-noninteractive-element-interactions -- Hover only changes decorative animation state.
       <div
         role="status"
         aria-live="polite"
@@ -719,6 +709,7 @@ export function DotMatrixBase({
   }
 
   return (
+    // oxlint-disable-next-line no-noninteractive-element-interactions -- Hover only changes decorative animation state.
     <div
       role="status"
       aria-live="polite"
@@ -744,7 +735,7 @@ export function createPathWaveResolver(getPathNorm: NormFn): DotAnimationResolve
     }
 
     const path = getPathNorm({ row, col, index });
-    const style = { "--dmx-path": path } as CSSProperties;
+    const style: DotAnimationStyle = { "--dmx-path": path };
 
     if (reducedMotion || phase === "idle") {
       return {

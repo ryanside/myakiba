@@ -3,7 +3,11 @@
 import { motion, useMotionValue, useMotionValueEvent, useSpring, useTransform } from "motion/react";
 import { ResponsiveContainer, AreaChart, Area, LineChart, Line, BarChart, Bar } from "recharts";
 import { ChartStyle, getColorsCount } from "@/components/evilcharts/ui/recharts-chart";
-import type { ChartConfig } from "@/components/evilcharts/ui/recharts-chart";
+import type {
+  ChartConfig,
+  ChartDataRow,
+  ChartDataValue,
+} from "@/components/evilcharts/ui/recharts-chart";
 import { useCallback, useEffect } from "react";
 import type { ComponentProps, FC } from "react";
 import type { MotionValue } from "motion/react";
@@ -28,7 +32,7 @@ interface EvilBrushRange {
 
 export interface BrushProps {
   height?: number; // brush preview strip height in px
-  formatLabel?: (value: unknown, index: number) => string; // formats the range-handle labels
+  formatLabel?: (value: ChartDataValue, index: number) => string; // formats the range-handle labels
   onChange?: (range: EvilBrushRange) => void; // fires as the range moves
 }
 
@@ -37,7 +41,7 @@ export const Brush: FC<BrushProps> = () => null;
 
 interface EvilBrushProps {
   /** Full dataset – always rendered in the miniature chart */
-  data: readonly Record<string, unknown>[];
+  data: readonly ChartDataRow[];
   /** Chart config with colour definitions */
   chartConfig: ChartConfig;
   /** Data keys to plot (default: all keys from chartConfig) */
@@ -74,7 +78,7 @@ interface EvilBrushProps {
   /** Fired whenever the visible range changes */
   onChange?: (range: EvilBrushRange) => void;
   /** Format the handle label from the xDataKey value */
-  formatLabel?: (value: unknown, index: number) => string;
+  formatLabel?: (value: ChartDataValue, index: number) => string;
   /** Curve type for line / area variants */
   curveType?: CurveType;
   /** Minimum number of data points that must remain selected */
@@ -490,7 +494,7 @@ function MiniChart({
   connectNulls = false,
   barRadius,
 }: {
-  data: readonly Record<string, unknown>[];
+  data: readonly ChartDataRow[];
   keys: string[];
   chartConfig: ChartConfig;
   variant: EvilBrushVariant;
@@ -657,7 +661,7 @@ function MiniChart({
 
 // ─── useEvilBrush Hook ──────────────────────────────────────────────────────
 
-function useEvilBrush<TData extends Record<string, unknown>>({
+function useEvilBrush<TData extends ChartDataRow>({
   data,
   defaultStartIndex = 0,
   defaultEndIndex,

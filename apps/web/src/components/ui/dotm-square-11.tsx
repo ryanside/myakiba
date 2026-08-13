@@ -1,8 +1,10 @@
-import type { CSSProperties } from "react";
-
 import { DotMatrixBase } from "@/lib/dotmatrix-core";
 import { useDotMatrixPhases, usePrefersReducedMotion } from "@/lib/dotmatrix-hooks";
-import type { DotAnimationResolver, DotMatrixCommonProps } from "@/lib/dotmatrix-core";
+import type {
+  DotAnimationResolver,
+  DotAnimationStyle,
+  DotMatrixCommonProps,
+} from "@/lib/dotmatrix-core";
 
 export type DotmSquare11Props = DotMatrixCommonProps;
 
@@ -17,10 +19,10 @@ const animationResolver: DotAnimationResolver = ({
   }
 
   const ring = Math.max(0, Math.min(4, manhattanDistance));
-  const style = {
+  const style: DotAnimationStyle = {
     "--dmx-ripple-ring": ring,
     "--dmx-ripple-parity": ring % 2,
-  } as CSSProperties;
+  };
 
   if (reducedMotion || phase === "idle") {
     return {

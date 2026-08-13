@@ -1,10 +1,12 @@
 "use client";
 
-import type { CSSProperties } from "react";
-
 import { DotMatrixBase, isWithinCircularMask, rowMajorIndex } from "@/lib/dotmatrix-core";
 import { useDotMatrixPhases, usePrefersReducedMotion } from "@/lib/dotmatrix-hooks";
-import type { DotAnimationResolver, DotMatrixCommonProps } from "@/lib/dotmatrix-core";
+import type {
+  DotAnimationResolver,
+  DotAnimationStyle,
+  DotMatrixCommonProps,
+} from "@/lib/dotmatrix-core";
 
 export type DotmCircular2Props = DotMatrixCommonProps;
 
@@ -58,7 +60,7 @@ export function DotmCircular2({
 
     return {
       className: "dmx-circular2-ring",
-      style: { "--dmx-ring-order": onRing } as CSSProperties,
+      style: { "--dmx-ring-order": onRing } satisfies DotAnimationStyle,
     };
   };
 

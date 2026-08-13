@@ -49,12 +49,15 @@ log.info({
 });
 
 const includeAuthDocs: boolean = process.env.OPENAPI_AUTH_DOCS === "true";
+type OpenAPIDocumentation = NonNullable<
+  NonNullable<Parameters<typeof openapi>[0]>["documentation"]
+>;
 
 const authDocs = includeAuthDocs
-  ? {
+  ? ({
       components: await OpenAPI.components,
       paths: await OpenAPI.getPaths(),
-    }
+    } as OpenAPIDocumentation)
   : undefined;
 
 log.info({ msg: "auth docs resolved", includeAuthDocs });
@@ -114,7 +117,7 @@ const app = new Elysia()
       mapJsonSchema: {
         zod: z.toJSONSchema,
       },
-      ...(authDocs ? { documentation: authDocs } : {}),
+      documentation: authDocs,
     }),
   )
   .get("/api/auth/*", ({ request }) => auth.handler(request))

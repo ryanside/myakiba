@@ -1,27 +1,29 @@
 import {
   getPayloadConfigFromPayload,
+  getNestedPayloadKey,
   getColorsCount,
   useChart,
 } from "@/components/evilcharts/ui/recharts-chart";
 import type { NameType, ValueType } from "recharts/types/component/DefaultTooltipContent";
 import * as RechartsPrimitive from "recharts";
+import * as z from "zod";
 import { cn } from "@/lib/utils";
 import * as React from "react";
 
 type TooltipRoundness = "sm" | "md" | "lg" | "xl";
 type TooltipVariant = "default" | "frosted-glass";
 
-const roundnessMap: Record<TooltipRoundness, string> = {
+const roundnessMap = {
   sm: "rounded-sm",
   md: "rounded-md",
   lg: "rounded-lg",
   xl: "rounded-xl",
-};
+} satisfies Record<TooltipRoundness, string>;
 
-const variantMap: Record<TooltipVariant, string> = {
+const variantMap = {
   default: "bg-background",
   "frosted-glass": "bg-background/70 backdrop-blur-sm",
-};
+} satisfies Record<TooltipVariant, string>;
 
 function ChartTooltipContent({
   active,
@@ -63,8 +65,11 @@ function ChartTooltipContent({
     const [item] = payload;
     const key = `${labelKey ?? item?.dataKey ?? item?.name ?? "value"}`;
     const itemConfig = getPayloadConfigFromPayload(config, item, key);
+    const stringLabel = z.string().safeParse(label);
     const value =
-      !labelKey && typeof label === "string" ? (config[label]?.label ?? label) : itemConfig?.label;
+      !labelKey && stringLabel.success
+        ? (config[stringLabel.data]?.label ?? stringLabel.data)
+        : itemConfig?.label;
 
     if (labelFormatter) {
       return (
@@ -103,12 +108,10 @@ function ChartTooltipContent({
             // For pie charts, item.name contains the sector name (e.g., "chrome")
             // For radial charts, the name is in item.payload[nameKey]
             // For other charts, item.name or item.dataKey contains the series name
-            const payloadName =
-              nameKey && item.payload
-                ? (item.payload as Record<string, unknown>)[nameKey]
-                : undefined;
+            const payloadName = item.payload ? getNestedPayloadKey(item, nameKey) : undefined;
             const key = `${payloadName ?? item.name ?? item.dataKey ?? "value"}`;
             const itemConfig = getPayloadConfigFromPayload(config, item, key);
+            const numericValue = z.number().safeParse(item.value);
 
             // Get colors count for this item to determine gradient vs solid
             const colorsCount = itemConfig ? getColorsCount(itemConfig) : 1;
@@ -156,8 +159,8 @@ function ChartTooltipContent({
                       </div>
                       {item.value != null && (
                         <span className="text-foreground font-mono font-medium tabular-nums">
-                          {typeof item.value === "number"
-                            ? item.value.toLocaleString()
+                          {numericValue.success
+                            ? numericValue.data.toLocaleString()
                             : String(item.value)}
                         </span>
                       )}

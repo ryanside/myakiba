@@ -10,18 +10,9 @@ export type JobTerminalState = SyncTerminalState;
 export type JobStatusEvent = Readonly<SyncJobStatus>;
 export type SSEJobStatusChunk = z.infer<typeof sseJobStatusChunkSchema>;
 
-type StreamValue = string | number | boolean | bigint | symbol | null | undefined | object;
-
-const isAsyncIterable = (value: StreamValue): value is AsyncIterable<StreamValue> => {
-  if (typeof value !== "object" || value === null) return false;
-  return Symbol.asyncIterator in value;
-};
-
-export const parseSSEJobStatusStream = (value: StreamValue): AsyncIterable<SSEJobStatusChunk> => {
-  if (!isAsyncIterable(value)) {
-    throw new Error("Job status stream is not async iterable");
-  }
-
+export const parseSSEJobStatusStream = (
+  value: AsyncIterable<unknown>,
+): AsyncIterable<SSEJobStatusChunk> => {
   return (async function* parseStream(): AsyncGenerator<SSEJobStatusChunk> {
     for await (const chunk of value) {
       const parsedChunk = sseJobStatusChunkSchema.safeParse(chunk);

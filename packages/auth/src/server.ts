@@ -151,7 +151,7 @@ type OpenAPIOperation = { tags?: string[] };
 // shapes that do not assign to each other, so the consumer re-assigns via
 // structural duck-typing.
 type OpenAPIPaths = Record<string, Record<string, OpenAPIOperation>>;
-type OpenAPIComponents = Record<string, object>;
+type OpenAPIComponents = NonNullable<OpenAPISchema["components"]>;
 
 let schemaPromise: ReturnType<typeof auth.api.generateOpenAPISchema> | undefined;
 const getSchema = async (): Promise<OpenAPISchema> => {

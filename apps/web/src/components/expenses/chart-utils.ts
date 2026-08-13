@@ -113,11 +113,7 @@ export function useShippingMethodVisibility({
   }[];
   readonly rankedMethods: readonly ShippingMethod[];
   readonly initialVisibleCount: number;
-}): {
-  readonly methods: readonly ShippingMethod[];
-  readonly visibleKeys: ReadonlySet<ShippingChartKey>;
-  readonly toggle: (key: ShippingChartKey) => void;
-} {
+}) {
   const methods = useMemo(() => {
     const activeMethods = new Set<ShippingMethod>();
     for (const point of points) {

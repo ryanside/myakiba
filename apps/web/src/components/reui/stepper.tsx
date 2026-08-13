@@ -297,11 +297,7 @@ function StepperTrigger({
     );
   }
 
-  const getResolvedTabIndex = (): number => {
-    if (typeof tabIndex === "number") return tabIndex;
-    return isSelected ? 0 : -1;
-  };
-  const resolvedTabIndex = getResolvedTabIndex();
+  const resolvedTabIndex = tabIndex ?? (isSelected ? 0 : -1);
 
   return (
     <button

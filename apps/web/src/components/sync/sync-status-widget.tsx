@@ -328,10 +328,7 @@ function RecentSessionItem({ session, onNavigate }: RecentSessionProps) {
   );
 }
 
-function resolveStatusIcon(status: SyncSessionStatus): {
-  readonly icon: typeof Tick02Icon;
-  readonly className: string;
-} {
+function resolveStatusIcon(status: SyncSessionStatus) {
   switch (status) {
     case "completed":
       return { icon: Tick02Icon, className: "text-success" };

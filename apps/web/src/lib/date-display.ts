@@ -2,19 +2,19 @@ import { format as formatDateFns, parseISO } from "date-fns";
 import { parseDateOnly } from "@myakiba/utils/date-only";
 import type { DateFormat } from "@myakiba/contracts/shared/types";
 
-const DATE_PATTERN_BY_FORMAT: Readonly<Record<DateFormat, string>> = {
+const DATE_PATTERN_BY_FORMAT = {
   "MM/DD/YYYY": "MM/dd/yyyy",
   "DD/MM/YYYY": "dd/MM/yyyy",
   "YYYY/MM/DD": "yyyy/MM/dd",
   "YYYY/DD/MM": "yyyy/dd/MM",
-};
+} satisfies Readonly<Record<DateFormat, string>>;
 
-const TIMESTAMP_PATTERN_BY_FORMAT: Readonly<Record<DateFormat, string>> = {
+const TIMESTAMP_PATTERN_BY_FORMAT = {
   "MM/DD/YYYY": "MM/dd/yyyy, h:mm a",
   "DD/MM/YYYY": "dd/MM/yyyy, h:mm a",
   "YYYY/MM/DD": "yyyy/MM/dd, HH:mm",
   "YYYY/DD/MM": "yyyy/dd/MM, HH:mm",
-};
+} satisfies Readonly<Record<DateFormat, string>>;
 
 const RELATIVE_TIME_FORMATTER = new Intl.RelativeTimeFormat("en-US", {
   numeric: "auto",

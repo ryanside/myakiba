@@ -11,11 +11,11 @@ import { EXPENSE_CHART_COLORS, shouldShowExpenseBrush } from "@/components/expen
 
 type SpendKey = "total" | "orderItems" | "fees";
 const keys = ["total", "orderItems", "fees"] as const;
-const labels: Record<SpendKey, string> = {
+const labels = {
   total: "Total",
   orderItems: "Order Items",
   fees: "Fees",
-};
+} satisfies Record<SpendKey, string>;
 const config = {
   total: { label: labels.total, colors: { light: [EXPENSE_CHART_COLORS[0]] } },
   orderItems: { label: labels.orderItems, colors: { light: [EXPENSE_CHART_COLORS[1]] } },

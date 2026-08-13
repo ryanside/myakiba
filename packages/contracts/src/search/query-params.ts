@@ -12,8 +12,9 @@ export const commaSeparatedStringArraySchema = z.preprocess((value) => {
   if (Array.isArray(value)) {
     return value;
   }
-  if (typeof value === "string" && value.length > 0) {
-    return splitCommaSeparatedValue(value);
+  const stringValue = z.string().min(1).safeParse(value);
+  if (stringValue.success) {
+    return splitCommaSeparatedValue(stringValue.data);
   }
 }, z.array(z.string()).optional());
 
@@ -24,8 +25,9 @@ export function createCommaSeparatedEnumArraySchema<const TValues extends NonEmp
     if (Array.isArray(value)) {
       return value;
     }
-    if (typeof value === "string" && value.length > 0) {
-      return splitCommaSeparatedValue(value);
+    const stringValue = z.string().min(1).safeParse(value);
+    if (stringValue.success) {
+      return splitCommaSeparatedValue(stringValue.data);
     }
   }, z.array(z.enum(values)).optional());
 }

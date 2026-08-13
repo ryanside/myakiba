@@ -9,7 +9,12 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AnimatePresence, domAnimation, LazyMotion, m } from "motion/react";
-import { getCoreRowModel, getExpandedRowModel, useReactTable } from "@tanstack/react-table";
+import {
+  functionalUpdate,
+  getCoreRowModel,
+  getExpandedRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
 import type {
   Column,
   ColumnDef,
@@ -70,7 +75,7 @@ export function SectionTable({
 
   const handleSortingChange = useCallback<OnChangeFn<SortingState>>(
     (updater) => {
-      const nextSorting = typeof updater === "function" ? updater(sortingRef.current) : updater;
+      const nextSorting = functionalUpdate(updater, sortingRef.current);
       const nextSort = nextSorting[0];
       let nextOrder: AnalyticsSectionSortOrder | undefined;
 

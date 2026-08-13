@@ -192,7 +192,7 @@ type MaskPatternKey =
   | "isbn"
   | "ein";
 
-const MASK_PATTERNS: Record<MaskPatternKey, MaskPattern> = {
+const MASK_PATTERNS = {
   phone: {
     pattern: "(###) ###-####",
     transform: (value) => value.replace(REGEX_CACHE.nonDigits, ""),
@@ -469,7 +469,7 @@ const MASK_PATTERNS: Record<MaskPatternKey, MaskPattern> = {
     transform: (value) => value.replace(REGEX_CACHE.nonDigits, ""),
     validate: (value) => REGEX_CACHE.ein.test(value.replace(REGEX_CACHE.nonDigits, "")),
   },
-};
+} satisfies Record<MaskPatternKey, MaskPattern>;
 
 function applyMask(opts: {
   value: string;
@@ -791,10 +791,8 @@ function MaskInput(props: MaskInputProps) {
   const value = isControlled ? valueProp : internalValue;
 
   const maskPattern = React.useMemo(() => {
-    if (typeof mask === "string") {
-      return MASK_PATTERNS[mask];
-    }
-    return mask;
+    if (mask === undefined || mask instanceof Object) return mask;
+    return MASK_PATTERNS[mask];
   }, [mask]);
 
   const transformOpts = React.useMemo(
@@ -849,7 +847,7 @@ function MaskInput(props: MaskInputProps) {
       return "decimal";
     }
 
-    if (typeof mask === "string" && NUMERIC_MASK_PATTERNS.test(mask)) {
+    if (mask !== undefined && !(mask instanceof Object) && NUMERIC_MASK_PATTERNS.test(mask)) {
       return "numeric";
     }
   }, [maskPattern, mask, inputMode]);
@@ -878,8 +876,8 @@ function MaskInput(props: MaskInputProps) {
 
   const validationOpts = React.useMemo(
     () => ({
-      min: typeof min === "string" ? Number.parseFloat(min) : min,
-      max: typeof max === "string" ? Number.parseFloat(max) : max,
+      min: min === undefined ? undefined : Number.parseFloat(String(min)),
+      max: max === undefined ? undefined : Number.parseFloat(String(max)),
     }),
     [min, max],
   );

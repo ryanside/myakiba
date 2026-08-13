@@ -137,7 +137,7 @@ function RelationshipPage({
             size="xs"
             className="min-h-10"
             disabled={isFetching}
-            onClick={() => void onRetry()}
+            onClick={() => onRetry()}
           >
             {isFetching ? "Retrying…" : "Retry"}
           </Button>

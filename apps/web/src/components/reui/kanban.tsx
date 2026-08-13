@@ -1,4 +1,5 @@
 import * as React from "react";
+import * as z from "zod";
 import {
   createContext,
   useCallback,
@@ -707,6 +708,16 @@ export interface KanbanOverlayProps extends Omit<
     | ((params: { value: UniqueIdentifier; variant: "column" | "item" }) => ReactNode);
 }
 
+const overlayRendererSchema = z.function({
+  input: [
+    z.object({
+      value: z.custom<UniqueIdentifier>(),
+      variant: z.enum(["column", "item"]),
+    }),
+  ],
+  output: z.custom<ReactNode>(),
+});
+
 function KanbanOverlay({ children, className, ...props }: KanbanOverlayProps) {
   const { activeId, isColumn, modifiers } = useContext(KanbanContext);
   const [mounted, setMounted] = useState(false);
@@ -721,7 +732,8 @@ function KanbanOverlay({ children, className, ...props }: KanbanOverlayProps) {
 
   const getContent = () => {
     if (!(activeId && children)) return null;
-    return typeof children === "function" ? children({ value: activeId, variant }) : children;
+    const renderer = overlayRendererSchema.safeParse(children);
+    return renderer.success ? renderer.data({ value: activeId, variant }) : (children as ReactNode);
   };
   const content = getContent();
 
