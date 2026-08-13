@@ -35,21 +35,21 @@ type PixelToastOptions = {
 const DEFAULT_DURATION = 5000;
 const PIXEL_COUNT = 44;
 
-const VARIANT_ICON: Record<PixelToastVariant, IconSvgElement> = {
+const VARIANT_ICON = {
   success: CheckmarkCircle02Icon,
   error: MultiplicationSignCircleIcon,
   info: InformationCircleIcon,
   warning: Alert02Icon,
   default: Diamond01Icon,
-};
+} satisfies Record<PixelToastVariant, IconSvgElement>;
 
-const VARIANT_COLOR: Record<PixelToastVariant, string> = {
+const VARIANT_COLOR = {
   success: "var(--success)",
   error: "var(--destructive)",
   info: "var(--info)",
   warning: "var(--warning)",
   default: "var(--info)",
-};
+} satisfies Record<PixelToastVariant, string>;
 
 function PixelBar({ aliveCount, color }: { readonly aliveCount: number; readonly color: string }) {
   const jitter = useMemo(

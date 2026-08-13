@@ -65,7 +65,7 @@ export function RouteError({ error }: ErrorComponentProps) {
           </p>
         </header>
         <div className="flex flex-wrap justify-center gap-2.5">
-          <Button size="lg" onClick={() => void router.invalidate()}>
+          <Button size="lg" onClick={() => router.invalidate()}>
             Try again
           </Button>
           <Button

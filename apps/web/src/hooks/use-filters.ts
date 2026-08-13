@@ -25,7 +25,7 @@ export function useFilters<T extends RouteIds<RegisteredRouter["routeTree"]>>(
       to: ".",
       search: (prev) => ({
         ...prev,
-        ...(shouldResetOffset ? { offset: 0 } : {}),
+        offset: shouldResetOffset ? 0 : prev.offset,
         ...partialFilters,
       }),
     });

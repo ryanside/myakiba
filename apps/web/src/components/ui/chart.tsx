@@ -2,7 +2,13 @@
 
 import * as React from "react";
 import * as RechartsPrimitive from "recharts";
-import type { NameType, ValueType } from "recharts/types/component/DefaultTooltipContent";
+import * as z from "zod";
+import type {
+  NameType,
+  Payload as TooltipPayload,
+  ValueType,
+} from "recharts/types/component/DefaultTooltipContent";
+import type { LegendPayload } from "recharts/types/component/DefaultLegendContent";
 
 import { cn } from "@/lib/utils";
 
@@ -135,9 +141,10 @@ function ChartTooltipContent({
     const [item] = payload;
     const key = `${labelKey || item?.dataKey || item?.name || "value"}`;
     const itemConfig = getPayloadConfigFromPayload(config, item, key);
+    const stringLabel = z.string().safeParse(label);
     const value =
-      !labelKey && typeof label === "string"
-        ? config[label as keyof typeof config]?.label || label
+      !labelKey && stringLabel.success
+        ? config[stringLabel.data]?.label || stringLabel.data
         : itemConfig?.label;
 
     if (labelFormatter) {
@@ -296,29 +303,18 @@ function ChartLegendContent({
   );
 }
 
-function getPayloadConfigFromPayload(config: ChartConfig, payload: unknown, key: string) {
-  if (typeof payload !== "object" || payload === null) {
-    return;
+type RechartsPayload = TooltipPayload | LegendPayload;
+
+function getPayloadConfigFromPayload(config: ChartConfig, payload: RechartsPayload, key: string) {
+  const payloadKey = z.string().safeParse(Reflect.get(payload, key));
+  if (payloadKey.success) return config[payloadKey.data] ?? config[key];
+
+  if (payload.payload instanceof Object) {
+    const nestedPayloadKey = z.string().safeParse(Reflect.get(payload.payload, key));
+    if (nestedPayloadKey.success) return config[nestedPayloadKey.data] ?? config[key];
   }
 
-  const payloadPayload =
-    "payload" in payload && typeof payload.payload === "object" && payload.payload !== null
-      ? payload.payload
-      : undefined;
-
-  let configLabelKey: string = key;
-
-  if (key in payload && typeof payload[key as keyof typeof payload] === "string") {
-    configLabelKey = payload[key as keyof typeof payload] as string;
-  } else if (
-    payloadPayload &&
-    key in payloadPayload &&
-    typeof payloadPayload[key as keyof typeof payloadPayload] === "string"
-  ) {
-    configLabelKey = payloadPayload[key as keyof typeof payloadPayload] as string;
-  }
-
-  return configLabelKey in config ? config[configLabelKey] : config[key as keyof typeof config];
+  return config[key];
 }
 
 export {

@@ -6,12 +6,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 import type { ResyncStatus } from "@/components/item/types";
 
-const RESYNC_LABELS: Readonly<Record<ResyncStatus, string>> = {
+const RESYNC_LABELS = {
   idle: "Update data",
   requested: "Update requested",
   processing: "Updating now",
   cooldown: "Recently updated",
-};
+} satisfies Readonly<Record<ResyncStatus, string>>;
 
 function formatCooldownRemaining(expiresAt: string): string {
   const ms = new Date(expiresAt).getTime() - Date.now();

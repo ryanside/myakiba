@@ -67,8 +67,8 @@ const closeConsumerState = (consumerState: SubscriptionConsumerState): void => {
   });
 };
 
-const toError = (error: unknown): Error =>
-  error instanceof Error ? error : new Error(String(error));
+const toError = (cause: unknown): Error =>
+  cause instanceof Error ? cause : new Error(String(cause));
 
 class JobStatusSubscriptionRegistry {
   private subscriber: Redis | null = null;

@@ -1,5 +1,6 @@
 import * as React from "react";
 import { useComposedRefs } from "@/lib/compose-refs";
+import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import { cn } from "@/lib/utils";
 import { VisuallyHiddenInput } from "@/components/ui/visually-hidden-input";
 
@@ -40,7 +41,8 @@ interface StoreState {
 interface Store {
   subscribe: (callback: () => void) => () => void;
   getState: () => StoreState;
-  setState: <K extends keyof StoreState>(key: K, value: StoreState[K]) => void;
+  setValue: (value: string) => void;
+  setEditing: (editing: boolean) => void;
   notify: () => void;
 }
 
@@ -64,20 +66,20 @@ function createStore(
         value: "",
         editing: false,
       },
-    setState: (key, value) => {
+    setValue: (value) => {
       const state = stateRef.current;
-      if (!state || Object.is(state[key], value)) return;
+      if (!state || Object.is(state.value, value)) return;
 
-      if (key === "value" && typeof value === "string") {
-        state.value = value;
-        onValueChange?.(value);
-      } else if (key === "editing" && typeof value === "boolean") {
-        state.editing = value;
-        onEditingChange?.(value);
-      } else {
-        state[key] = value;
-      }
+      state.value = value;
+      onValueChange?.(value);
+      store.notify();
+    },
+    setEditing: (editing) => {
+      const state = stateRef.current;
+      if (!state || Object.is(state.editing, editing)) return;
 
+      state.editing = editing;
+      onEditingChange?.(editing);
       store.notify();
     },
     notify: () => {
@@ -242,13 +244,13 @@ function EditableRootImpl(props: Omit<EditableRootProps, "onValueChange" | "onEd
 
   React.useEffect(() => {
     if (valueProp !== undefined) {
-      store.setState("value", valueProp);
+      store.setValue(valueProp);
     }
   }, [valueProp, store]);
 
   React.useEffect(() => {
     if (editingProp !== undefined) {
-      store.setState("editing", editingProp);
+      store.setEditing(editingProp);
     }
   }, [editingProp, store]);
 
@@ -258,22 +260,22 @@ function EditableRootImpl(props: Omit<EditableRootProps, "onValueChange" | "onEd
 
   const onCancel = React.useCallback(() => {
     const prevValue = previousValueRef.current;
-    store.setState("value", prevValue);
-    store.setState("editing", false);
+    store.setValue(prevValue);
+    store.setEditing(false);
     onCancelProp?.();
   }, [store, onCancelProp]);
 
   const onEdit = React.useCallback(() => {
     const currentValue = store.getState().value;
     previousValueRef.current = currentValue;
-    store.setState("editing", true);
+    store.setEditing(true);
     onEditProp?.();
   }, [store, onEditProp]);
 
   const onSubmit = React.useCallback(
     (newValue: string) => {
-      store.setState("value", newValue);
-      store.setState("editing", false);
+      store.setValue(newValue);
+      store.setEditing(false);
       onSubmitProp?.(newValue);
     },
     [store, onSubmitProp],
@@ -336,7 +338,6 @@ function EditableRootImpl(props: Omit<EditableRootProps, "onValueChange" | "onEd
       {isFormControl && (
         <VisuallyHiddenInput
           type="hidden"
-          control={formTrigger}
           name={name}
           value={value}
           disabled={disabled}
@@ -486,9 +487,6 @@ function EditablePreview(props: EditablePreviewProps) {
   );
 }
 
-const useIsomorphicLayoutEffect =
-  typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
-
 type InputElement = React.ComponentRef<typeof EditableInput>;
 
 interface EditableInputProps extends React.ComponentProps<"input"> {
@@ -551,7 +549,7 @@ function EditableInput(props: EditableInputProps) {
       inputProps.onChange?.(event);
       if (event.defaultPrevented) return;
 
-      store.setState("value", event.target.value);
+      store.setValue(event.target.value);
       onAutosize(event.target);
     },
     [store, inputProps, onAutosize, isDisabled, isReadOnly],

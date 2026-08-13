@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import * as z from "zod";
 import type { ColumnDef } from "@tanstack/react-table";
 import * as DataTable from "@/components/data-table/data-table";
 
@@ -12,15 +13,16 @@ export interface RowNavigation {
 
 type CellValue = string | number | null;
 
-const COLUMN_LABELS: Record<string, string> = {
-  name: "name",
-  itemCount: "count",
-  totalSpent: "spent",
-  shop: "shop",
-  scale: "scale",
-};
+const COLUMN_LABELS = new Map<string, string>([
+  ["name", "name"],
+  ["itemCount", "count"],
+  ["totalSpent", "spent"],
+  ["shop", "shop"],
+  ["scale", "scale"],
+]);
 
 const ROW_NUMBER_COLUMN_ID = "__rowNumber";
+const rowIdPartSchema = z.string().min(1);
 
 export function LeaderboardTable<TRow extends Record<string, CellValue>>({
   rows,
@@ -48,7 +50,7 @@ export function LeaderboardTable<TRow extends Record<string, CellValue>>({
         (column): ColumnDef<TRow, CellValue> => ({
           id: column,
           accessorFn: (row) => row[column] ?? null,
-          header: COLUMN_LABELS[column] ?? column,
+          header: COLUMN_LABELS.get(column) ?? column,
           cell: ({ getValue }) => {
             const value = getValue();
 
@@ -64,20 +66,24 @@ export function LeaderboardTable<TRow extends Record<string, CellValue>>({
     columns: tableColumns,
     getCoreRowModel: getCoreRowModel(),
     getRowId: (row, index) => {
-      if (typeof row.entryId === "string" && row.entryId.length > 0) {
-        return `entry-${row.entryId}`;
+      const entryId = rowIdPartSchema.safeParse(row.entryId);
+      if (entryId.success) {
+        return `entry-${entryId.data}`;
       }
 
-      if (typeof row.shop === "string" && row.shop.length > 0) {
-        return `shop-${row.shop}`;
+      const shop = rowIdPartSchema.safeParse(row.shop);
+      if (shop.success) {
+        return `shop-${shop.data}`;
       }
 
-      if (typeof row.scale === "string" && row.scale.length > 0) {
-        return `scale-${row.scale}`;
+      const scale = rowIdPartSchema.safeParse(row.scale);
+      if (scale.success) {
+        return `scale-${scale.data}`;
       }
 
-      if (typeof row.name === "string" && row.name.length > 0) {
-        return `name-${row.name}-${index}`;
+      const name = rowIdPartSchema.safeParse(row.name);
+      if (name.success) {
+        return `name-${name.data}-${index}`;
       }
 
       return `row-${index}`;

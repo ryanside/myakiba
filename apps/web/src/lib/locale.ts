@@ -1,7 +1,7 @@
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import type { Currency } from "@myakiba/contracts/shared/types";
 
-const CURRENCY_LOCALE_MAP: Readonly<Record<Currency, string>> = {
+const CURRENCY_LOCALE_MAP = {
   BRL: "pt-BR",
   JPY: "ja-JP",
   KRW: "ko-KR",
@@ -39,9 +39,9 @@ const CURRENCY_LOCALE_MAP: Readonly<Record<Currency, string>> = {
   COP: "es-CO",
   PEN: "es-PE",
   USD: "en-US",
-};
+} satisfies Readonly<Record<Currency, string>>;
 
-export const CURRENCY_LABELS: Readonly<Record<Currency, string>> = {
+export const CURRENCY_LABELS = {
   AED: "UAE Dirham",
   AUD: "Australian Dollar",
   BRL: "Brazilian Real",
@@ -79,7 +79,7 @@ export const CURRENCY_LABELS: Readonly<Record<Currency, string>> = {
   USD: "United States Dollar",
   VND: "Vietnamese Dong",
   ZAR: "South African Rand",
-};
+} satisfies Readonly<Record<Currency, string>>;
 
 const CURRENCY_CODE_PATTERN = /^[A-Z]{3}$/;
 const DEFAULT_UNSUPPORTED_CURRENCY_LOCALE = "en-US";
@@ -105,13 +105,7 @@ export function getCurrencyLocale(currency: Currency): string {
   return CURRENCY_LOCALE_MAP[currency];
 }
 
-function resolveCurrencyFormat(
-  currency: string | null | undefined,
-  fallbackCurrency: Currency,
-): {
-  readonly currency: string;
-  readonly locale: string;
-} {
+function resolveCurrencyFormat(currency: string | null | undefined, fallbackCurrency: Currency) {
   const fallbackLocale = getCurrencyLocale(fallbackCurrency);
   if (!currency) {
     return { currency: fallbackCurrency, locale: fallbackLocale };

@@ -27,7 +27,7 @@ import {
   getLoadingData,
   LoadingIndicator,
 } from "@/components/evilcharts/ui/recharts-chart";
-import type { ChartConfig } from "@/components/evilcharts/ui/recharts-chart";
+import type { ChartConfig, ChartDataRow } from "@/components/evilcharts/ui/recharts-chart";
 import { ChartTooltip, ChartTooltipContent } from "@/components/evilcharts/ui/recharts-tooltip";
 import type { TooltipRoundness, TooltipVariant } from "@/components/evilcharts/ui/recharts-tooltip";
 import { ChartLegend, ChartLegendContent } from "@/components/evilcharts/ui/recharts-legend";
@@ -38,6 +38,7 @@ import { ChartBackground } from "@/components/evilcharts/ui/recharts-background"
 import type { BackgroundVariant } from "@/components/evilcharts/ui/recharts-background";
 import type { RectRadius } from "recharts/types/shape/Rectangle";
 import { motion, useReducedMotion } from "motion/react";
+import * as z from "zod";
 
 // Constants
 const DEFAULT_BAR_RADIUS = 2;
@@ -109,7 +110,7 @@ type ValidateConfigKeys<TData, TConfig> = {
 };
 
 type EvilBarChartBaseProps<
-  TData extends Record<string, unknown>,
+  TData extends ChartDataRow,
   TConfig extends Record<string, ChartConfig[string]>,
 > = {
   config: TConfig & ValidateConfigKeys<TData, TConfig>; // series colors + labels
@@ -132,7 +133,7 @@ type EvilBarChartBaseProps<
 };
 
 type EvilBarChartProps<
-  TData extends Record<string, unknown>,
+  TData extends ChartDataRow,
   TConfig extends Record<string, ChartConfig[string]>,
 > = EvilBarChartBaseProps<TData, TConfig>;
 
@@ -143,7 +144,7 @@ type EvilBarChartProps<
  * so a consumer renders exactly the parts they need.
  */
 export function EvilBarChart<
-  TData extends Record<string, unknown>,
+  TData extends ChartDataRow,
   TConfig extends Record<string, ChartConfig[string]>,
 >({
   config,
@@ -380,6 +381,18 @@ function Bar({
     },
   };
 
+  const renderBar: BarRenderer = (renderProps) => (
+    <CustomBar {...renderProps} {...customBarProps} animationType={revealType} />
+  );
+  const renderActiveBar: BarRenderer = (renderProps) => (
+    // The active (hovered) bar must never re-run the grow-in animation
+    <CustomBar {...renderProps} {...customBarProps} animationType="none" />
+  );
+  const barRenderers = Object.fromEntries([
+    ["shape", renderBar],
+    ["activeBar", renderActiveBar],
+  ]) as Pick<ComponentProps<typeof RechartsBar>, "shape" | "activeBar">;
+
   return (
     <>
       <RechartsBar
@@ -391,13 +404,7 @@ function Bar({
         // instead grows in from its baseline via the staggered motion.dev shape.
         isAnimationActive={false}
         style={isClickable || enableHoverHighlight ? { cursor: "pointer" } : undefined}
-        shape={(props: unknown) => (
-          <CustomBar {...(props as BarShapeProps)} {...customBarProps} animationType={revealType} />
-        )}
-        activeBar={(props: unknown) => (
-          // The active (hovered) bar must never re-run the grow-in animation
-          <CustomBar {...(props as BarShapeProps)} {...customBarProps} animationType="none" />
-        )}
+        {...barRenderers}
         {...barProps}
       />
       <defs>
@@ -567,18 +574,12 @@ function Legend({
 // Custom bar shape
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Raw geometry Recharts hands to a custom bar shape
-type BarShapeProps = {
-  x?: number;
-  y?: number;
-  width?: number;
-  height?: number;
-  fill?: string;
-  fillOpacity?: number;
-  dataKey?: string;
-  index?: number;
-  [key: string]: unknown;
-};
+// Raw geometry Recharts hands to a custom bar renderer
+type BarRenderer = Extract<
+  NonNullable<ComponentProps<typeof RechartsBar>["activeBar"]>,
+  (props: never) => ReactNode
+>;
+type BarGeometryProps = Parameters<BarRenderer>[0];
 
 // Per-series config the <Bar /> threads into every CustomBar render
 type CustomBarProps = {
@@ -598,7 +599,7 @@ type CustomBarProps = {
   isActive?: boolean;
   dataLength?: number;
   onClick?: () => void;
-} & BarShapeProps;
+} & BarGeometryProps;
 
 /**
  * Custom bar shape. Renders the visible bar painted by the owning <Bar />'s
@@ -629,7 +630,7 @@ const CustomBar = (props: CustomBarProps) => {
     onClick,
   } = props;
 
-  const index = typeof props.index === "number" ? props.index : -1;
+  const index = props.index ?? -1;
   const isLastBar = bufferBar && dataLength > 0 && index === dataLength - 1;
   const isStripped = variant === "stripped";
   const grow = getBarGrowAnimation(animationType, index, dataLength, isHorizontal, introStartedAt);
@@ -1272,7 +1273,8 @@ const LoadingBarPattern = ({
             repeatType: "loop",
           }}
           onUpdate={(latest) => {
-            const xValue = typeof latest.x === "number" ? latest.x : startX;
+            const latestX = z.number().safeParse(latest.x);
+            const xValue = latestX.success ? latestX.data : startX;
             const lastX = lastXRef.current;
 
             // Fire once per loop, when the shimmer fully exits the visible area

@@ -9,6 +9,7 @@ import { BackLink } from "@/components/ui/back-link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FieldError } from "@/components/ui/field";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
 import { AuthLayout } from "@/components/auth/auth-layout";
 
@@ -168,15 +169,11 @@ function RouteComponent() {
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
                 />
-                {field.state.meta.errors.map((err) => {
-                  const errorMessage =
-                    typeof err === "string" ? err : err?.message || "Invalid input";
-                  return (
-                    <p key={errorMessage} className="text-red-500 text-sm">
-                      {errorMessage}
-                    </p>
-                  );
-                })}
+                <FieldError
+                  className="text-red-500 text-sm"
+                  errors={field.state.meta.errors}
+                  fallback="Invalid input"
+                />
               </div>
             )}
           </form.Field>

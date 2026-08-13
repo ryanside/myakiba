@@ -15,7 +15,7 @@ function DataGridColumnVisibility<TData>({
   trigger,
 }: {
   table: Table<TData>;
-  trigger: ReactElement<Record<string, unknown>>;
+  trigger: ReactElement;
 }) {
   return (
     <DropdownMenu>

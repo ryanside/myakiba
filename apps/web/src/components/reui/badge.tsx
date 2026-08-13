@@ -72,20 +72,20 @@ function Badge({ className, variant, size, render, ...props }: BadgeProps) {
 
 type BadgeVariant = NonNullable<BadgeProps["variant"]>;
 
-const LIGHT_VARIANT_MAP: Partial<Record<BadgeVariant, BadgeVariant>> = {
-  default: "primary-light",
-  info: "info-light",
-  success: "success-light",
-  warning: "warning-light",
-  destructive: "destructive-light",
-  invert: "invert-light",
-  focus: "focus-light",
-};
+const LIGHT_VARIANT_MAP = new Map<BadgeVariant, BadgeVariant>([
+  ["default", "primary-light"],
+  ["info", "info-light"],
+  ["success", "success-light"],
+  ["warning", "warning-light"],
+  ["destructive", "destructive-light"],
+  ["invert", "invert-light"],
+  ["focus", "focus-light"],
+]);
 
 function ThemedBadge({ variant, ...props }: BadgeProps) {
   const { resolvedTheme } = useTheme();
   const resolvedVariant =
-    resolvedTheme === "dark" || !variant ? variant : (LIGHT_VARIANT_MAP[variant] ?? variant);
+    resolvedTheme === "dark" || !variant ? variant : (LIGHT_VARIANT_MAP.get(variant) ?? variant);
   return <Badge variant={resolvedVariant} {...props} />;
 }
 

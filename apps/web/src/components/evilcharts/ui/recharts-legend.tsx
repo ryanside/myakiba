@@ -1,5 +1,6 @@
 import {
   getPayloadConfigFromPayload,
+  getNestedPayloadKey,
   getColorsCount,
   useChart,
 } from "@/components/evilcharts/ui/recharts-chart";
@@ -58,10 +59,7 @@ function ChartLegendContent({
           // For pie charts, item.value contains the sector name (e.g., "chrome")
           // For radial charts, the name is in item.payload[nameKey]
           // For other charts, item.dataKey contains the series name (e.g., "desktop")
-          const payloadName =
-            nameKey && item.payload
-              ? (item.payload as Record<string, unknown>)[nameKey]
-              : undefined;
+          const payloadName = item.payload ? getNestedPayloadKey(item, nameKey) : undefined;
           const key = `${payloadName ?? item.value ?? item.dataKey ?? "value"}`;
           const itemConfig = getPayloadConfigFromPayload(config, item, key);
           const isSelected = selected === null || selected === key;

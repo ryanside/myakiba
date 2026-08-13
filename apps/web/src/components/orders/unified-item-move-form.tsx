@@ -338,7 +338,7 @@ function UnifiedItemMoveFormContent({
                                         variant="ghost"
                                         size="sm"
                                         className="w-full justify-center text-xs"
-                                        onClick={() => void fetchMoreOrders()}
+                                        onClick={() => fetchMoreOrders()}
                                         disabled={isFetchingMoreOrders}
                                       >
                                         {isFetchingMoreOrders ? (

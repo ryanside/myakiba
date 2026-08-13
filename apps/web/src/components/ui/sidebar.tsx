@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import * as z from "zod";
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import { cva } from "class-variance-authority";
@@ -29,6 +30,10 @@ const SIDEBAR_WIDTH = "15.5rem";
 const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
+const sidebarOpenUpdaterSchema = z.function({
+  input: [z.boolean()],
+  output: z.boolean(),
+});
 
 type SidebarContextProps = {
   state: "expanded" | "collapsed";
@@ -70,7 +75,7 @@ function SidebarProvider({
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
   const [_open, _setOpen] = React.useState<boolean>(() => {
-    if (typeof document === "undefined") {
+    if (globalThis.document === undefined) {
       return defaultOpen;
     }
 
@@ -98,7 +103,8 @@ function SidebarProvider({
   const open = openProp ?? _open;
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
-      const openState = typeof value === "function" ? value(open) : value;
+      const updater = sidebarOpenUpdaterSchema.safeParse(value);
+      const openState = updater.success ? updater.data(open) : z.boolean().parse(value);
       if (setOpenProp) {
         setOpenProp(openState);
       } else {
@@ -541,7 +547,10 @@ function SidebarMenuButton({
     return comp;
   }
 
-  const tooltipProps = typeof tooltip === "string" ? { children: tooltip } : tooltip;
+  const tooltipText = z.string().safeParse(tooltip);
+  const tooltipProps = tooltipText.success
+    ? { children: tooltipText.data }
+    : (tooltip as React.ComponentProps<typeof TooltipContent>);
 
   return (
     <Tooltip>

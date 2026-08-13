@@ -181,7 +181,7 @@ const BubblesPattern = ({ id }: PatternProps) => (
 // ── Pattern Registry ─────────────────────────────────────────────────────────
 // Map variant names to pattern components
 
-const PATTERN_MAP: Record<BackgroundVariant, React.FC<PatternProps>> = {
+const PATTERN_MAP = {
   dots: DotsPattern,
   grid: GridPattern,
   plus: PlusPattern,
@@ -193,7 +193,7 @@ const PATTERN_MAP: Record<BackgroundVariant, React.FC<PatternProps>> = {
   "tiny-checkers": TinyCheckersPattern,
   "overlapping-circles": OverlappingCirclesPattern,
   "wiggle-lines": WiggleLinesPattern,
-};
+} satisfies Record<BackgroundVariant, React.FC<PatternProps>>;
 
 // ── Main Component ───────────────────────────────────────────────────────────
 // Usage: Place <ChartBackground variant="dots" /> inside any Recharts chart component.

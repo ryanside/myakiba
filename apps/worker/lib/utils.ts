@@ -253,10 +253,10 @@ export const publishJobStatus = async ({
         statusMessage: state.statusMessage,
         status: sessionStatus,
         updatedAt: new Date(),
-        ...(successCount !== undefined ? { successCount } : {}),
-        ...(failCount !== undefined ? { failCount } : {}),
-        ...(orderId !== undefined ? { orderId } : {}),
-        ...(terminalState !== null ? { completedAt: new Date() } : {}),
+        successCount,
+        failCount,
+        orderId,
+        completedAt: terminalState !== null ? new Date() : undefined,
       })
       .where(eq(syncSession.id, syncSessionId));
   }

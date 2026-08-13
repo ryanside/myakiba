@@ -85,11 +85,7 @@ export function Profile({ user }: { user: User }) {
                 placeholder="Enter your username"
                 className="sm:w-64"
               />
-              <FieldError
-                errors={field.state.meta.errors.map((error) =>
-                  typeof error === "string" ? { message: error } : { message: error?.message },
-                )}
-              />
+              <FieldError errors={field.state.meta.errors} />
             </SettingsRow>
           )}
         </form.Field>

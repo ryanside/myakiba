@@ -19,7 +19,7 @@ import {
   getLoadingData,
   LoadingIndicator,
 } from "@/components/evilcharts/ui/recharts-chart";
-import type { ChartConfig } from "@/components/evilcharts/ui/recharts-chart";
+import type { ChartConfig, ChartDataRow } from "@/components/evilcharts/ui/recharts-chart";
 import {
   Area as RechartsArea,
   AreaChart as RechartsAreaChart,
@@ -36,6 +36,7 @@ import type { ChartLegendVariant } from "@/components/evilcharts/ui/recharts-leg
 import { ChartDot } from "@/components/evilcharts/ui/recharts-dot";
 import type { DotVariant } from "@/components/evilcharts/ui/recharts-dot";
 import { motion, useReducedMotion } from "motion/react";
+import * as z from "zod";
 
 // Constants
 const STROKE_WIDTH = 0.8; // default series stroke — <Area strokeWidth> overrides it
@@ -109,7 +110,7 @@ type ValidateConfigKeys<TData, TConfig> = {
 };
 
 type EvilAreaChartBaseProps<
-  TData extends Record<string, unknown>,
+  TData extends ChartDataRow,
   TConfig extends Record<string, ChartConfig[string]>,
 > = {
   config: TConfig & ValidateConfigKeys<TData, TConfig>; // series colors + labels
@@ -128,7 +129,7 @@ type EvilAreaChartBaseProps<
 };
 
 type EvilAreaChartProps<
-  TData extends Record<string, unknown>,
+  TData extends ChartDataRow,
   TConfig extends Record<string, ChartConfig[string]>,
 > = EvilAreaChartBaseProps<TData, TConfig>;
 
@@ -139,7 +140,7 @@ type EvilAreaChartProps<
  * so a consumer renders exactly the parts they need.
  */
 export function EvilAreaChart<
-  TData extends Record<string, unknown>,
+  TData extends ChartDataRow,
   TConfig extends Record<string, ChartConfig[string]>,
 >({
   config,
@@ -359,8 +360,8 @@ function Area({
         // mask drives the intro instead, wiping fill, stroke, and dots in together.
         isAnimationActive={false}
         style={{
-          ...(maskId ? { mask: `url(#${maskId})` } : {}),
-          ...(isClickable ? { cursor: "pointer" } : {}),
+          mask: maskId ? `url(#${maskId})` : undefined,
+          cursor: isClickable ? "pointer" : undefined,
         }}
         onClick={() => {
           if (!isClickable) return;
@@ -570,7 +571,7 @@ const resolveDots = (
   dataKey: string,
   dotOpacity: number,
   maskId: string | undefined,
-): { dot: AreaDotProp; activeDot: AreaActiveDotProp } => {
+) => {
   let dot: AreaDotProp = false;
   let activeDot: AreaActiveDotProp = false;
 
@@ -634,11 +635,11 @@ const AnimatedDashedStroke = () => {
 
 // motion `originX` for each single-rect reveal — the edge the wipe grows from.
 // 0 = left edge, 1 = right edge, 0.5 = centre (grows outward to both edges).
-const SINGLE_REVEAL_ORIGIN: Record<Exclude<RevealAnimationType, "edges-in">, number> = {
+const SINGLE_REVEAL_ORIGIN = {
   "left-to-right": 0,
   "right-to-left": 1,
   "center-out": 0.5,
-};
+} satisfies Record<Exclude<RevealAnimationType, "edges-in">, number>;
 
 /**
  * Wipe mask driven by motion.dev, played once when an <Area /> mounts. The same
@@ -1078,7 +1079,8 @@ const LoadingPattern = ({
             repeatType: "loop",
           }}
           onUpdate={(latest) => {
-            const xValue = typeof latest.x === "number" ? latest.x : startX;
+            const latestX = z.number().safeParse(latest.x);
+            const xValue = latestX.success ? latestX.data : startX;
             const lastX = lastXRef.current;
 
             // Fire once per loop, when the shimmer fully exits the visible area

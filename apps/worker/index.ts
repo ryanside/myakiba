@@ -82,7 +82,7 @@ process.once("SIGTERM", () => {
   void shutdown("SIGTERM", 0);
 });
 
-function handleFatalError(kind: "uncaughtException" | "unhandledRejection", err: unknown): void {
+function handleFatalError(kind: "uncaughtException" | "unhandledRejection", cause: unknown): void {
   if (isShuttingDown) return;
 
   const fatalLog = createLogger({
@@ -90,10 +90,10 @@ function handleFatalError(kind: "uncaughtException" | "unhandledRejection", err:
     outcome: "error",
   });
 
-  if (err instanceof Error) {
-    fatalLog.error(err);
+  if (cause instanceof Error) {
+    fatalLog.error(cause);
   } else {
-    fatalLog.error(new Error(String(err)));
+    fatalLog.error(new Error(String(cause)));
   }
   fatalLog.emit();
 
@@ -108,6 +108,6 @@ process.on("uncaughtException", (err: Error) => {
   handleFatalError("uncaughtException", err);
 });
 
-process.on("unhandledRejection", (reason: unknown) => {
-  handleFatalError("unhandledRejection", reason);
+process.on("unhandledRejection", (cause: unknown) => {
+  handleFatalError("unhandledRejection", cause);
 });

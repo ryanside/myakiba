@@ -130,7 +130,7 @@ function RouteComponent(): ReactNode {
   const item = data?.item;
   const collectionItems = itemRelatedCollection?.collection ?? [];
   const ordersList = itemRelatedOrders?.orders ?? [];
-  const scale = normalizeScale(typeof item?.scale === "string" ? item.scale : null);
+  const scale = normalizeScale(item?.scale);
 
   return (
     <div className="flex flex-col gap-6 mx-auto max-w-352" aria-busy={isPending} aria-live="polite">

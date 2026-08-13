@@ -32,14 +32,14 @@ interface ConfirmDialogProps {
   readonly disabled?: boolean;
 }
 
-const ACCENT_BY_VARIANT: Record<NonNullable<ButtonVariant>, AccentTone> = {
+const ACCENT_BY_VARIANT = {
   default: { bg: "bg-primary/10", fg: "text-primary" },
   destructive: { bg: "bg-destructive/10", fg: "text-destructive" },
   outline: { bg: "bg-muted", fg: "text-foreground" },
   secondary: { bg: "bg-secondary/20", fg: "text-secondary-foreground" },
   ghost: { bg: "bg-muted", fg: "text-foreground" },
   link: { bg: "bg-primary/10", fg: "text-primary" },
-};
+} satisfies Record<NonNullable<ButtonVariant>, AccentTone>;
 
 export function ConfirmDialog({
   renderTrigger,

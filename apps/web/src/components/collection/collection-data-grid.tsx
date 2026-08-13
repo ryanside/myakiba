@@ -8,7 +8,7 @@ import type {
   VisibilityState,
 } from "@tanstack/react-table";
 import { useCallback, useMemo, useState } from "react";
-import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import { functionalUpdate, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
 import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
 import { ScrollArea, ScrollBar } from "../ui/scroll-area";
@@ -165,7 +165,7 @@ export const CollectionDataGrid = () => {
 
   const handlePaginationChange = useCallback(
     (updater: Updater<PaginationState>) => {
-      const newPagination = typeof updater === "function" ? updater(pagination) : updater;
+      const newPagination = functionalUpdate(updater, pagination);
 
       const newOffset = newPagination.pageIndex * newPagination.pageSize;
       setFilters({
@@ -178,7 +178,7 @@ export const CollectionDataGrid = () => {
 
   const handleSortingChange = useCallback(
     (updater: Updater<SortingState>) => {
-      const newSorting = typeof updater === "function" ? updater(sorting) : updater;
+      const newSorting = functionalUpdate(updater, sorting);
 
       if (newSorting.length > 0) {
         const sortConfig = newSorting[0];

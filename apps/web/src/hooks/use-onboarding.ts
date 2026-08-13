@@ -1,7 +1,16 @@
 import { useCallback, useMemo } from "react";
+import * as z from "zod";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 
 const STORAGE_KEY = "myakiba:onboarding-v2";
+
+const storedOnboardingStateSchema = z.object({
+  step: z.number().finite().optional(),
+  hasSeen: z.boolean().optional(),
+  completed: z.boolean().optional(),
+});
+
+type StoredOnboardingState = z.infer<typeof storedOnboardingStateSchema>;
 
 type OnboardingState = {
   readonly step: number;
@@ -9,22 +18,20 @@ type OnboardingState = {
   readonly completed: boolean;
 };
 
-const INITIAL_STATE: OnboardingState = {
+const INITIAL_STATE: StoredOnboardingState = {
   step: 0,
   hasSeen: false,
   completed: false,
 };
 
-function normalize(raw: OnboardingState, totalSteps: number): OnboardingState {
+function normalize(raw: StoredOnboardingState, totalSteps: number): OnboardingState {
   const lastStepIndex = Math.max(totalSteps - 1, 0);
-  const rawStep =
-    typeof raw.step === "number" && Number.isFinite(raw.step) ? Math.trunc(raw.step) : 0;
+  const rawStep = Math.trunc(raw.step ?? 0);
   const step = Math.min(Math.max(rawStep, 0), lastStepIndex);
-  const hasSeen = typeof raw.hasSeen === "boolean" ? raw.hasSeen : false;
   // Migration: earlier versions encoded completion as `step > lastStepIndex`
   // (past-the-end sentinel) without a dedicated flag.
-  const completed = typeof raw.completed === "boolean" ? raw.completed : rawStep > lastStepIndex;
-  return { step, hasSeen, completed };
+  const completed = raw.completed ?? rawStep > lastStepIndex;
+  return { step, hasSeen: raw.hasSeen ?? false, completed };
 }
 
 type UseOnboardingOptions = {
@@ -41,7 +48,11 @@ type UseOnboardingReturn = {
 };
 
 function useOnboarding({ totalSteps }: UseOnboardingOptions): UseOnboardingReturn {
-  const [rawState, setState] = useLocalStorage<OnboardingState>(STORAGE_KEY, INITIAL_STATE);
+  const [rawState, setState] = useLocalStorage(
+    STORAGE_KEY,
+    INITIAL_STATE,
+    storedOnboardingStateSchema,
+  );
   const state = useMemo(() => normalize(rawState, totalSteps), [rawState, totalSteps]);
 
   const setStep = useCallback(

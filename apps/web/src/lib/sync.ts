@@ -16,32 +16,32 @@ import type {
 } from "@myakiba/contracts/shared/types";
 import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
 
-export const SESSION_STATUS_CONFIG: Record<
-  SyncSessionStatus,
-  {
-    readonly label: string;
-    readonly variant: "success" | "warning" | "destructive" | "info" | "secondary";
-  }
-> = {
+export const SESSION_STATUS_CONFIG = {
   pending: { label: "Pending", variant: "secondary" },
   processing: { label: "Processing", variant: "info" },
   completed: { label: "Completed", variant: "success" },
   failed: { label: "Failed", variant: "destructive" },
   partial: { label: "Partial", variant: "warning" },
-};
+} satisfies Record<
+  SyncSessionStatus,
+  {
+    readonly label: string;
+    readonly variant: "success" | "warning" | "destructive" | "info" | "secondary";
+  }
+>;
 
-export const SYNC_TYPE_CONFIG: Record<
+export const SYNC_TYPE_CONFIG = {
+  csv: { label: "CSV", variant: "default" },
+  order: { label: "Order", variant: "info" },
+  "order-item": { label: "Order Item", variant: "secondary" },
+  collection: { label: "Collection", variant: "secondary" },
+} satisfies Record<
   SyncType,
   {
     readonly label: string;
     readonly variant: "default" | "info" | "secondary";
   }
-> = {
-  csv: { label: "CSV", variant: "default" },
-  order: { label: "Order", variant: "info" },
-  "order-item": { label: "Order Item", variant: "secondary" },
-  collection: { label: "Collection", variant: "secondary" },
-};
+>;
 
 /**
  * Chooses the one sync status sentence the UI should show for a session.
@@ -108,22 +108,19 @@ export function resolveSyncMessage(
   return jobStatus?.statusMessage ?? session.statusMessage;
 }
 
-export const ITEM_STATUS_CONFIG: Record<
+export const ITEM_STATUS_CONFIG = {
+  pending: { label: "Pending", variant: "secondary" },
+  scraped: { label: "Scraped", variant: "success" },
+  failed: { label: "Failed", variant: "destructive" },
+} satisfies Record<
   SyncSessionItemStatus,
   {
     readonly label: string;
     readonly variant: "secondary" | "success" | "destructive";
   }
-> = {
-  pending: { label: "Pending", variant: "secondary" },
-  scraped: { label: "Scraped", variant: "success" },
-  failed: { label: "Failed", variant: "destructive" },
-};
+>;
 
-export const SYNC_OPTION_META: Record<
-  SyncType,
-  { readonly title: string; readonly description: string }
-> = {
+export const SYNC_OPTION_META = {
   collection: {
     title: "Sync Collection",
     description: "Add to your collection using MyFigureCollection Item IDs/links.",
@@ -141,7 +138,7 @@ export const SYNC_OPTION_META: Record<
     description:
       "Sync your MyFigureCollection and myakiba using MyFigureCollection CSV. You can export your CSV by going to myfigurecollection.net > User Menu > Manager > CSV Export (with all fields checked, Choose ',' (comma) for the settings option).",
   },
-} as const;
+} as const satisfies Record<SyncType, { readonly title: string; readonly description: string }>;
 
 const SYNC_CSV_STATUS_SET: ReadonlySet<string> = new Set(SYNC_CSV_ITEM_STATUSES);
 const csvTransformationCache = new WeakMap<File, Promise<UserItem[]>>();

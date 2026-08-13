@@ -1,8 +1,11 @@
 "use client";
 
 import * as RechartsPrimitive from "recharts";
+import * as z from "zod";
 import { cn } from "@/lib/utils";
 import * as React from "react";
+import type { Payload as TooltipPayload } from "recharts/types/component/DefaultTooltipContent";
+import type { LegendPayload } from "recharts/types/component/DefaultLegendContent";
 
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: "", dark: ".dark" } as const;
@@ -44,6 +47,28 @@ export type ChartConfig = Record<
     colors?: AtLeastOneThemeColor;
   }
 >;
+
+export type ChartDataValue = string | number | null | undefined;
+
+export type ChartDataRow = Record<string, ChartDataValue>;
+
+type RechartsPayload = TooltipPayload | LegendPayload;
+const payloadKeySchema = z.union([z.string(), z.number()]);
+
+function readPayloadKey(payload: RechartsPayload, key: string) {
+  const directValue = payloadKeySchema.safeParse(Reflect.get(payload, key));
+  if (directValue.success) return directValue.data;
+
+  if (!(payload.payload instanceof Object)) return;
+  const nestedValue = payloadKeySchema.safeParse(Reflect.get(payload.payload, key));
+  return nestedValue.success ? nestedValue.data : undefined;
+}
+
+export function getNestedPayloadKey(payload: RechartsPayload, key: string | undefined) {
+  if (key === undefined || !(payload.payload instanceof Object)) return;
+  const value = payloadKeySchema.safeParse(Reflect.get(payload.payload, key));
+  return value.success ? value.data : undefined;
+}
 
 interface ChartContextProps {
   config: ChartConfig;
@@ -222,29 +247,15 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
 };
 
 // Helper to extract item config from a payload.
-export function getPayloadConfigFromPayload(config: ChartConfig, payload: unknown, key: string) {
-  if (typeof payload !== "object" || payload === null) {
-    return;
-  }
-
-  const payloadPayload =
-    "payload" in payload && typeof payload.payload === "object" && payload.payload !== null
-      ? payload.payload
-      : undefined;
-
-  let configLabelKey: string = key;
-
-  if (key in payload && typeof payload[key as keyof typeof payload] === "string") {
-    configLabelKey = payload[key as keyof typeof payload] as string;
-  } else if (
-    payloadPayload &&
-    key in payloadPayload &&
-    typeof payloadPayload[key as keyof typeof payloadPayload] === "string"
-  ) {
-    configLabelKey = payloadPayload[key as keyof typeof payloadPayload] as string;
-  }
-
-  return configLabelKey in config ? config[configLabelKey] : config[key];
+export function getPayloadConfigFromPayload(
+  config: ChartConfig,
+  payload: RechartsPayload,
+  key: string,
+) {
+  const payloadKey = readPayloadKey(payload, key);
+  const configLabelKey = z.string().safeParse(payloadKey);
+  const resolvedKey = configLabelKey.success ? configLabelKey.data : key;
+  return resolvedKey in config ? config[resolvedKey] : config[key];
 }
 
 // Format values to percent for expanded charts
