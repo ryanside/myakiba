@@ -233,7 +233,7 @@ function ItemDatabaseSkeleton({ viewMode }: { readonly viewMode: ItemDatabaseVie
       className="grid gap-2"
       style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${GRID_TILE_SIZE}px, 1fr))` }}
     >
-      {Array.from({ length: 16 }).map((_, index) => (
+      {Array.from({ length: 15 }).map((_, index) => (
         <Skeleton key={index} className="aspect-square w-full rounded-lg" />
       ))}
     </div>
