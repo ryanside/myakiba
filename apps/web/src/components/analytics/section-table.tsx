@@ -29,7 +29,7 @@ import type {
   AnalyticsSectionSortOrder,
 } from "@myakiba/contracts/analytics/schema";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import * as DataTable from "@/components/data-table/data-table";
+import { DataTable, DataTableEmpty } from "@/components/data-table/data-table";
 import { Button } from "@/components/ui/button";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type { AnalyticsSectionRow } from "@/queries/analytics";
@@ -151,33 +151,26 @@ export function SectionTable({
 
   return (
     <LazyMotion features={domAnimation}>
-      <DataTable.Root
+      <DataTable
         table={table}
         isLoading={isLoading}
-        empty={<DataTable.Empty title={`No ${sectionName} found`} />}
-      >
-        <DataTable.LoadingSurface>
-          <DataTable.Table>
-            <DataTable.Header useColumnSizing showSortState />
-            <DataTable.Body<AnalyticsSectionRow>
-              onRowClick={(row) => row.toggleExpanded()}
-              renderExpandedRow={(row) => (
-                <ExpandedRowContent row={row.original} sectionName={sectionName} />
-              )}
-              getCellClassName={(_, columnId) =>
-                cn(
-                  columnId === ROW_NUMBER_COLUMN_ID && "text-muted-foreground",
-                  columnId === EXPAND_COLUMN_ID && "w-8",
-                  (columnId === ROW_NUMBER_COLUMN_ID ||
-                    columnId === "itemCount" ||
-                    columnId === "totalSpent") &&
-                    "tabular-nums",
-                )
-              }
-            />
-          </DataTable.Table>
-        </DataTable.LoadingSurface>
-      </DataTable.Root>
+        empty={<DataTableEmpty title={`No ${sectionName} found`} />}
+        variant="sized"
+        onRowClick={(row) => row.toggleExpanded()}
+        renderExpandedRow={(row) => (
+          <ExpandedRowContent row={row.original} sectionName={sectionName} />
+        )}
+        getCellClassName={(_, columnId) =>
+          cn(
+            columnId === ROW_NUMBER_COLUMN_ID && "text-muted-foreground",
+            columnId === EXPAND_COLUMN_ID && "w-8",
+            (columnId === ROW_NUMBER_COLUMN_ID ||
+              columnId === "itemCount" ||
+              columnId === "totalSpent") &&
+              "tabular-nums",
+          )
+        }
+      />
     </LazyMotion>
   );
 }

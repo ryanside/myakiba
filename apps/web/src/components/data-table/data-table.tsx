@@ -1,4 +1,4 @@
-import { createContext, Fragment, useContext } from "react";
+import { Fragment } from "react";
 import type { ReactNode } from "react";
 import { flexRender } from "@tanstack/react-table";
 import type { Column, Row, RowData, Table as TanStackTable } from "@tanstack/react-table";
@@ -7,71 +7,64 @@ import { cn } from "@/lib/utils";
 
 const DEFAULT_SKELETON_ROW_COUNT = 10;
 
-interface DataTableContextValue<TData extends RowData> {
-  readonly table: TanStackTable<TData>;
-  readonly isLoading: boolean;
-  readonly skeletonRowCount: number;
-  readonly empty: ReactNode;
-}
+type DataTableVariant = "default" | "sized";
 
-const DataTableContext = createContext<DataTableContextValue<RowData> | null>(null);
-
-function useDataTable<TData extends RowData>(): DataTableContextValue<TData> {
-  const context = useContext(DataTableContext);
-
-  if (!context) {
-    throw new Error("DataTable components must be rendered inside DataTable.Root");
-  }
-
-  return context as DataTableContextValue<TData>;
-}
-
-export function Root<TData extends RowData>({
-  table,
-  isLoading = false,
-  skeletonRowCount = DEFAULT_SKELETON_ROW_COUNT,
-  empty,
-  children,
-}: {
+interface DataTableProps<TData extends RowData> {
   readonly table: TanStackTable<TData>;
   readonly isLoading?: boolean;
   readonly skeletonRowCount?: number;
   readonly empty: ReactNode;
-  readonly children: ReactNode;
-}): ReactNode {
-  const value: DataTableContextValue<TData> = {
-    table,
-    isLoading,
-    skeletonRowCount,
-    empty,
-  };
+  readonly variant?: DataTableVariant;
+  readonly className?: string;
+  readonly tableClassName?: string;
+  readonly onRowClick?: (row: Row<TData>) => void;
+  readonly renderExpandedRow?: (row: Row<TData>) => ReactNode;
+  readonly getRowClassName?: (row: Row<TData>) => string | undefined;
+  readonly getCellClassName?: (row: Row<TData>, columnId: string) => string | undefined;
+}
 
+export function DataTable<TData extends RowData>({
+  table,
+  isLoading = false,
+  skeletonRowCount = DEFAULT_SKELETON_ROW_COUNT,
+  empty,
+  variant = "default",
+  className,
+  tableClassName,
+  onRowClick,
+  renderExpandedRow,
+  getRowClassName,
+  getCellClassName,
+}: DataTableProps<TData>): ReactNode {
   return (
-    <DataTableContext.Provider value={value as DataTableContextValue<RowData>}>
-      {children}
-    </DataTableContext.Provider>
+    <div
+      aria-busy={isLoading}
+      className={cn("transition-opacity duration-150", isLoading && "opacity-60", className)}
+    >
+      <table className={cn("w-full border-collapse text-xs", tableClassName)}>
+        <TableHeader table={table} variant={variant} />
+        <TableBody
+          table={table}
+          isLoading={isLoading}
+          skeletonRowCount={skeletonRowCount}
+          empty={empty}
+          onRowClick={onRowClick}
+          renderExpandedRow={renderExpandedRow}
+          getRowClassName={getRowClassName}
+          getCellClassName={getCellClassName}
+        />
+      </table>
+    </div>
   );
 }
 
-export function Table({
-  children,
-  className,
+function TableHeader<TData extends RowData>({
+  table,
+  variant,
 }: {
-  readonly children: ReactNode;
-  readonly className?: string;
+  readonly table: TanStackTable<TData>;
+  readonly variant: DataTableVariant;
 }): ReactNode {
-  return <table className={cn("w-full text-xs border-collapse", className)}>{children}</table>;
-}
-
-export function Header<TData extends RowData>({
-  useColumnSizing = false,
-  showSortState = false,
-}: {
-  readonly useColumnSizing?: boolean;
-  readonly showSortState?: boolean;
-}): ReactNode {
-  const { table } = useDataTable<TData>();
-
   return (
     <thead>
       {table.getHeaderGroups().map((headerGroup) => (
@@ -79,9 +72,9 @@ export function Header<TData extends RowData>({
           {headerGroup.headers.map((header) => (
             <th
               key={header.id}
-              aria-sort={showSortState ? getAriaSort(header.column) : undefined}
-              className="text-left p-1.5 border-b font-medium text-muted-foreground"
-              style={useColumnSizing ? { width: header.column.getSize() } : undefined}
+              aria-sort={getAriaSort(header.column)}
+              className="border-b p-1.5 text-left font-medium text-muted-foreground"
+              style={variant === "sized" ? { width: header.column.getSize() } : undefined}
             >
               {header.isPlaceholder
                 ? null
@@ -104,18 +97,20 @@ function getAriaSort<TData extends RowData>(
   return column.getCanSort() ? "none" : undefined;
 }
 
-export function Body<TData extends RowData>({
+function TableBody<TData extends RowData>({
+  table,
+  isLoading,
+  skeletonRowCount,
+  empty,
   onRowClick,
   renderExpandedRow,
   getRowClassName,
   getCellClassName,
-}: {
-  readonly onRowClick?: (row: Row<TData>) => void;
-  readonly renderExpandedRow?: (row: Row<TData>) => ReactNode;
-  readonly getRowClassName?: (row: Row<TData>) => string | undefined;
-  readonly getCellClassName?: (row: Row<TData>, columnId: string) => string | undefined;
-}): ReactNode {
-  const { table, empty, isLoading, skeletonRowCount } = useDataTable<TData>();
+}: Required<Pick<DataTableProps<TData>, "table" | "isLoading" | "skeletonRowCount" | "empty">> &
+  Pick<
+    DataTableProps<TData>,
+    "onRowClick" | "renderExpandedRow" | "getRowClassName" | "getCellClassName"
+  >): ReactNode {
   const rows = table.getRowModel().rows;
   const columns = table.getVisibleFlatColumns();
 
@@ -139,7 +134,7 @@ export function Body<TData extends RowData>({
     return (
       <tbody>
         <tr>
-          <td colSpan={table.getVisibleFlatColumns().length}>{empty}</td>
+          <td colSpan={columns.length}>{empty}</td>
         </tr>
       </tbody>
     );
@@ -149,7 +144,6 @@ export function Body<TData extends RowData>({
     <tbody>
       {rows.map((row) => {
         const isInteractive = Boolean(onRowClick);
-        const expandedContent = renderExpandedRow?.(row);
 
         return (
           <Fragment key={row.id}>
@@ -180,10 +174,10 @@ export function Body<TData extends RowData>({
                 </td>
               ))}
             </tr>
-            {row.getIsExpanded() && expandedContent ? (
+            {row.getIsExpanded() && renderExpandedRow ? (
               <tr className="animate-data-in">
                 <td colSpan={row.getVisibleCells().length} className="p-0">
-                  {expandedContent}
+                  {renderExpandedRow(row)}
                 </td>
               </tr>
             ) : null}
@@ -194,23 +188,7 @@ export function Body<TData extends RowData>({
   );
 }
 
-export function LoadingSurface({
-  children,
-  className,
-}: {
-  readonly children: ReactNode;
-  readonly className?: string;
-}): ReactNode {
-  const { isLoading } = useDataTable<RowData>();
-
-  return (
-    <div className={cn("transition-opacity duration-150", isLoading && "opacity-60", className)}>
-      {children}
-    </div>
-  );
-}
-
-export function Empty({
+export function DataTableEmpty({
   title,
   description,
 }: {
@@ -220,7 +198,7 @@ export function Empty({
   return (
     <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
       <p className="text-sm">{title}</p>
-      {description ? <p className="text-xs mt-1">{description}</p> : null}
+      {description ? <p className="mt-1 text-xs">{description}</p> : null}
     </div>
   );
 }

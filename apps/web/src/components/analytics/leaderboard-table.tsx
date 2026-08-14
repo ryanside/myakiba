@@ -4,7 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import * as z from "zod";
 import type { ColumnDef } from "@tanstack/react-table";
-import * as DataTable from "@/components/data-table/data-table";
+import { DataTable } from "@/components/data-table/data-table";
 
 export interface RowNavigation {
   to: string;
@@ -91,32 +91,21 @@ export function LeaderboardTable<TRow extends Record<string, CellValue>>({
   });
 
   return (
-    <DataTable.Root
+    <DataTable
       table={table}
       isLoading={isLoading}
       empty={<p className="text-muted-foreground text-xs italic">No data</p>}
-    >
-      <DataTable.LoadingSurface>
-        <DataTable.Table>
-          <DataTable.Header />
-          <DataTable.Body
-            onRowClick={(row) => {
-              const originalRow = row.original as TRow;
-              const rowNav = getRowNavigation?.(originalRow);
+      onRowClick={(row) => {
+        const rowNav = getRowNavigation?.(row.original);
 
-              if (rowNav) {
-                navigate({ to: rowNav.to, search: rowNav.search });
-              }
-            }}
-            getRowClassName={(row) =>
-              !getRowNavigation?.(row.original as TRow) ? "cursor-default" : undefined
-            }
-            getCellClassName={(_, columnId) =>
-              columnId === ROW_NUMBER_COLUMN_ID ? "text-muted-foreground" : undefined
-            }
-          />
-        </DataTable.Table>
-      </DataTable.LoadingSurface>
-    </DataTable.Root>
+        if (rowNav) {
+          navigate({ to: rowNav.to, search: rowNav.search });
+        }
+      }}
+      getRowClassName={(row) => (!getRowNavigation?.(row.original) ? "cursor-default" : undefined)}
+      getCellClassName={(_, columnId) =>
+        columnId === ROW_NUMBER_COLUMN_ID ? "text-muted-foreground" : undefined
+      }
+    />
   );
 }

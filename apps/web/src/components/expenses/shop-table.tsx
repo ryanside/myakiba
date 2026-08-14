@@ -13,7 +13,7 @@ import type {
 } from "@myakiba/contracts/expenses/schema";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import * as DataTable from "@/components/data-table/data-table";
+import { DataTable, DataTableEmpty } from "@/components/data-table/data-table";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { DebouncedInput } from "@/components/debounced-input";
 import { ExpensePanel } from "@/components/expenses/dashboard-shell";
@@ -197,42 +197,35 @@ function ShopsTable({
   });
 
   return (
-    <DataTable.Root
+    <DataTable
       table={table}
       isLoading={isPending}
       skeletonRowCount={PAGE_SIZE}
-      empty={<DataTable.Empty title="No shops found" />}
-    >
-      <DataTable.LoadingSurface
-        className={cn(
-          "overflow-x-auto transition-opacity duration-200",
-          isFetching && !isPending && "opacity-60",
-        )}
-      >
-        <DataTable.Table className={scope === "orders" ? "min-w-210" : "min-w-150"}>
-          <DataTable.Header useColumnSizing />
-          <DataTable.Body
-            onRowClick={(row) => row.toggleExpanded()}
-            renderExpandedRow={(row: Row<ExpenseShopRow>) => (
-              <ShopTableRowExpansion
-                row={row.original}
-                filters={filters}
-                currency={currency}
-                locale={locale}
-                dateFormat={dateFormat}
-              />
-            )}
-            getCellClassName={(_, columnId) =>
-              cn(
-                columnId === ROW_NUMBER_COLUMN_ID && "text-muted-foreground",
-                columnId === EXPAND_COLUMN_ID && "w-8",
-                TABULAR_COLUMN_IDS.has(columnId) && "tabular-nums",
-              )
-            }
-          />
-        </DataTable.Table>
-      </DataTable.LoadingSurface>
-    </DataTable.Root>
+      empty={<DataTableEmpty title="No shops found" />}
+      variant="sized"
+      className={cn(
+        "overflow-x-auto transition-opacity duration-200",
+        isFetching && !isPending && "opacity-60",
+      )}
+      tableClassName={scope === "orders" ? "min-w-210" : "min-w-150"}
+      onRowClick={(row) => row.toggleExpanded()}
+      renderExpandedRow={(row) => (
+        <ShopTableRowExpansion
+          row={row.original}
+          filters={filters}
+          currency={currency}
+          locale={locale}
+          dateFormat={dateFormat}
+        />
+      )}
+      getCellClassName={(_, columnId) =>
+        cn(
+          columnId === ROW_NUMBER_COLUMN_ID && "text-muted-foreground",
+          columnId === EXPAND_COLUMN_ID && "w-8",
+          TABULAR_COLUMN_IDS.has(columnId) && "tabular-nums",
+        )
+      }
+    />
   );
 }
 
