@@ -112,12 +112,10 @@ export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
   session: {
-    // Required alongside secondaryStorage: without it Better Auth drops the
-    // session model from the adapter schema, and code paths that read sessions
-    // through the DB adapter (e.g. the OAuth callback with experimental joins)
-    // throw `Model "session" not found in schema`.
+    // Dash defaults an omitted value to true during plugin initialization. Set
+    // false explicitly so Better Auth and Dash both use Redis-only sessions.
     // See https://github.com/better-auth/better-auth/issues/9370
-    storeSessionInDatabase: true,
+    storeSessionInDatabase: false,
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24, // 1 day (every 1 day the session expiration is updated)
     cookieCache: {
