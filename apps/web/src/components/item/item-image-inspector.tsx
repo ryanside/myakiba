@@ -25,7 +25,8 @@ export function ItemImageInspector({
     <Dialog modal open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger
         render={
-          <div
+          <button
+            type="button"
             className="animate-data-in w-48 aspect-11/15 shrink-0 cursor-zoom-in overflow-hidden rounded-xl bg-muted/30 ring-1 ring-foreground/6"
             aria-label={`Inspect image of ${title}`}
           />
