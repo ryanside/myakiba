@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Package01Icon } from "@hugeicons/core-free-icons";
 import { createFileRoute } from "@tanstack/react-router";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { BackLink } from "@/components/ui/back-link";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,7 +39,10 @@ function RouteComponent() {
           </EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
-          <Button variant="default" onClick={() => toast.info("Custom items coming soon")}>
+          <Button
+            variant="default"
+            onClick={() => toast.add({ type: "info", title: "Custom items coming soon" })}
+          >
             <HugeiconsIcon icon={Add01Icon} />
             Add custom item
           </Button>

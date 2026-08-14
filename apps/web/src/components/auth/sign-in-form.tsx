@@ -3,7 +3,7 @@ import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { authClient } from "@/lib/auth-client";
 import { useForm } from "@tanstack/react-form";
 import { Link } from "@tanstack/react-router";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { z } from "zod";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -48,7 +48,10 @@ export default function SignInForm({ redirectTo }: { redirectTo: string }) {
           window.location.assign(getAuthRedirectUrl(redirectTo));
         },
         onError: (error) => {
-          toast.error(error.error.message || error.error.statusText);
+          toast.add({
+            type: "error",
+            title: error.error.message || error.error.statusText,
+          });
         },
       },
     );
@@ -75,12 +78,17 @@ export default function SignInForm({ redirectTo }: { redirectTo: string }) {
           },
           onError: (error) => {
             if (error.error.status === 403) {
-              toast.error(
-                "Please verify your email address. Check your inbox for a verification email.",
-              );
+              toast.add({
+                type: "error",
+                title:
+                  "Please verify your email address. Check your inbox for a verification email.",
+              });
               return;
             }
-            toast.error(error.error.message || error.error.statusText);
+            toast.add({
+              type: "error",
+              title: error.error.message || error.error.statusText,
+            });
           },
         },
       );

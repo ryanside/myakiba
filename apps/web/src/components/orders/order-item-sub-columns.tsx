@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 import type { Currency, DateFormat, OrderStatus } from "@myakiba/contracts/shared/types";
 import type { OrderItem } from "@myakiba/contracts/orders/types";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { Link } from "@tanstack/react-router";
 import CollectionItemForm from "../collection/collection-item-form";
 import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
@@ -114,9 +114,9 @@ function OrderItemActionsCell({
                 onClick={() => {
                   if (item.itemExternalId) {
                     navigator.clipboard.writeText(item.itemExternalId.toString());
-                    toast.success("Copied MFC item ID to clipboard");
+                    toast.add({ type: "success", title: "Copied MFC item ID to clipboard" });
                   } else {
-                    toast.error("No MFC item ID for custom items");
+                    toast.add({ type: "error", title: "No MFC item ID for custom items" });
                   }
                 }}
               >

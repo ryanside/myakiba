@@ -22,7 +22,7 @@ import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import type { ColumnDef } from "@tanstack/react-table";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import CollectionItemForm from "./collection-item-form";
 import UnifiedItemMoveForm from "@/components/orders/unified-item-move-form";
 import { InlineCurrencyCell } from "../cells/inline-currency-cell";
@@ -134,9 +134,9 @@ function CollectionActionsCell({
                 onClick={() => {
                   if (item.itemExternalId) {
                     navigator.clipboard.writeText(item.itemExternalId.toString());
-                    toast.success("Copied MFC item ID to clipboard");
+                    toast.add({ type: "success", title: "Copied MFC item ID to clipboard" });
                   } else {
-                    toast.error("No MFC item ID for custom items");
+                    toast.add({ type: "error", title: "No MFC item ID for custom items" });
                   }
                 }}
               >

@@ -25,7 +25,7 @@ import { functionalUpdate } from "@tanstack/react-table";
 import { updateOrderStatus, updateOrderDate } from "@/queries/orders";
 import type { OrderDateField } from "@/queries/orders";
 import type { DashboardKanbanOrder } from "@/queries/dashboard";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { Link } from "@tanstack/react-router";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -457,11 +457,13 @@ function OrderKanbanBoard({
       updateOrderStatus(orderId, status),
     onSuccess: (_data, variables) => {
       if (variables.status === "Owned") {
-        toast.success("Order marked as collected");
+        toast.add({ type: "success", title: "Order marked as collected" });
       }
     },
     onError: (error: Error, variables) => {
-      toast.error(`Failed to update order ${variables.orderId} to status ${variables.status}:`, {
+      toast.add({
+        type: "error",
+        title: `Failed to update order ${variables.orderId} to status ${variables.status}:`,
         description: `Error: ${error.message}`,
       });
     },
@@ -471,7 +473,9 @@ function OrderKanbanBoard({
     mutationFn: ({ orderId, field, date }: DateMutationVariables) =>
       updateOrderDate(orderId, field, date),
     onError: (error: Error) => {
-      toast.error("Failed to update date", {
+      toast.add({
+        type: "error",
+        title: "Failed to update date",
         description: error.message,
       });
     },

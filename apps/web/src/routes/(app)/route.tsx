@@ -12,7 +12,7 @@ import { AppCommand } from "@/components/command/app-command";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
 import { getVersion } from "@/queries/version";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { env } from "@myakiba/env/web";
 
 export const Route = createFileRoute("/(app)")({
@@ -49,11 +49,13 @@ function RouteComponent() {
   useEffect(() => {
     if (versionData && !hasNotified.current && versionData.buildId !== env.VITE_BUILD_ID) {
       hasNotified.current = true;
-      toast.info("A new version is available", {
+      toast.add({
+        type: "info",
+        title: "A new version is available",
         description: "Refresh to get the latest updates.",
-        duration: Infinity,
-        action: {
-          label: "Refresh",
+        timeout: 0,
+        actionProps: {
+          children: "Refresh",
           onClick: () => window.location.reload(),
         },
       });

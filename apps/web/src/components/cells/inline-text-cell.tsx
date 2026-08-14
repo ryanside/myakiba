@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import * as Editable from "@/components/ui/editable";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { usePendingValue } from "@/hooks/use-pending-value";
 
 interface InlineTextCellProps {
@@ -45,7 +45,7 @@ export function InlineTextCell({
       if (validate) {
         const validationResult = validate(typed);
         if (validationResult !== true) {
-          toast.error(validationResult as string);
+          toast.add({ type: "error", title: validationResult as string });
           return;
         }
       }

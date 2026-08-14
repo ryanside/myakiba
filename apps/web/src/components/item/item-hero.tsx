@@ -8,6 +8,7 @@ import { getCategoryColor } from "@/lib/category-colors";
 import { formatRelativeTimeToNow } from "@/lib/date-display";
 import { NO_SCALE } from "@myakiba/contracts/shared/scale";
 import { ItemResyncButton } from "@/components/item/item-resync-button";
+import { ItemImageInspector } from "@/components/item/item-image-inspector";
 import type { ItemDetail, ResyncStatus } from "@/components/item/types";
 
 export function ItemHero({
@@ -70,16 +71,7 @@ export function ItemHero({
 
   return (
     <div className="flex flex-col gap-6 sm:flex-row">
-      {item.image ? (
-        <div className="animate-data-in w-48 aspect-11/15 shrink-0 overflow-hidden rounded-xl bg-muted/30 ring-1 ring-foreground/6">
-          <img
-            src={item.image}
-            alt={item.title}
-            className="h-full w-full object-cover object-top"
-            loading="lazy"
-          />
-        </div>
-      ) : null}
+      {item.image ? <ItemImageInspector image={item.image} title={item.title} /> : null}
       <div className="flex flex-col items-start justify-center gap-3">
         <div className="space-y-1.5">
           <h1 className="animate-data-in text-2xl font-medium tracking-tight leading-tight">

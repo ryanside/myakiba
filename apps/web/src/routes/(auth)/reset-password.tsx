@@ -4,7 +4,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { authClient } from "@/lib/auth-client";
 import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { BackLink } from "@/components/ui/back-link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +28,10 @@ function RouteComponent() {
     },
     onSubmit: async ({ value }) => {
       if (!token) {
-        toast.error("Invalid token. Please request a new password reset.");
+        toast.add({
+          type: "error",
+          title: "Invalid token. Please request a new password reset.",
+        });
         return;
       }
       await handleResetPassword(value.password);
@@ -51,13 +54,16 @@ function RouteComponent() {
       },
       {
         onSuccess: () => {
-          toast.success("Password reset successfully");
+          toast.add({ type: "success", title: "Password reset successfully" });
           navigate({
             to: "/login",
           });
         },
         onError: (error) => {
-          toast.error(error.error.message || "Failed to reset password");
+          toast.add({
+            type: "error",
+            title: error.error.message || "Failed to reset password",
+          });
         },
       },
     );
