@@ -3,7 +3,7 @@ import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { authClient } from "@/lib/auth-client";
 import { useForm } from "@tanstack/react-form";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { z } from "zod";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -53,7 +53,10 @@ export default function SignUpForm() {
           });
         },
         onError: (error) => {
-          toast.error(error.error.message || error.error.statusText);
+          toast.add({
+            type: "error",
+            title: error.error.message || error.error.statusText,
+          });
         },
       },
     );
@@ -86,7 +89,10 @@ export default function SignUpForm() {
             });
           },
           onError: (error) => {
-            toast.error(error.error.message || error.error.statusText);
+            toast.add({
+              type: "error",
+              title: error.error.message || error.error.statusText,
+            });
           },
         },
       );

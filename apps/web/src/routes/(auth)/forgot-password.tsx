@@ -4,7 +4,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { authClient } from "@/lib/auth-client";
 import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { BackLink } from "@/components/ui/back-link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,7 +55,10 @@ function RouteComponent() {
           setEmailSent(true);
         },
         onError: (error) => {
-          toast.error(error.error.message || "Failed to send password reset email");
+          toast.add({
+            type: "error",
+            title: error.error.message || "Failed to send password reset email",
+          });
         },
       },
     );

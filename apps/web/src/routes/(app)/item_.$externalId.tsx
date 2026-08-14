@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { createFileRoute, useParams, notFound } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { BackLink } from "@/components/ui/back-link";
 import { SyncActionSheet } from "@/components/sync/sync-launcher";
 import type { LaunchableSyncType } from "@/components/sync/sync-launcher-options";
@@ -73,10 +73,12 @@ function RouteComponent(): ReactNode {
     mutationFn: () => requestResync(externalId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["item", externalId, "resyncStatus"] });
-      toast.success("Update requested");
+      toast.add({ type: "success", title: "Update requested" });
     },
     onError: (mutationError) => {
-      toast.error("Failed to request update", {
+      toast.add({
+        type: "error",
+        title: "Failed to request update",
         description: mutationError.message,
       });
     },

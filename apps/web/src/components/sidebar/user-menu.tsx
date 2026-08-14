@@ -23,7 +23,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
 import { setThemeWithTransition } from "@/lib/theme-transition";
 import type { RouterAppContext } from "@/routes/__root";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { Button } from "../ui/button";
 
 export default function UserMenu({ session }: { session: RouterAppContext["session"] }) {
@@ -35,7 +35,7 @@ export default function UserMenu({ session }: { session: RouterAppContext["sessi
     authClient.signOut({
       fetchOptions: {
         onSuccess: () => {
-          toast.success("Signed out successfully");
+          toast.add({ type: "success", title: "Signed out successfully" });
           queryClient.clear();
           navigate({ to: "/login" });
         },

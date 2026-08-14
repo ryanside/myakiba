@@ -13,7 +13,7 @@ import {
   PackageIcon,
   Tick02Icon,
 } from "@hugeicons/core-free-icons";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
@@ -161,7 +161,10 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
         dateFormat: value.dateFormat,
       });
       if (error) {
-        toast.error(error.message ?? "Couldn't save preferences.");
+        toast.add({
+          type: "error",
+          title: error.message ?? "Couldn't save preferences.",
+        });
         return;
       }
       await router.invalidate();

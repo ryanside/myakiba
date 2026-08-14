@@ -10,7 +10,7 @@ import {
   ViewIcon,
 } from "@hugeicons/core-free-icons";
 import { Link } from "@tanstack/react-router";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
@@ -128,18 +128,21 @@ export function CollectionItemActions({
               <DropdownMenuItem
                 onClick={async () => {
                   if (item.itemExternalId === null) {
-                    toast.error("No MFC item ID for custom items");
+                    toast.add({ type: "error", title: "No MFC item ID for custom items" });
                     return;
                   }
 
                   try {
                     await navigator.clipboard.writeText(String(item.itemExternalId));
                   } catch {
-                    toast.error("Could not copy MFC item ID to clipboard");
+                    toast.add({
+                      type: "error",
+                      title: "Could not copy MFC item ID to clipboard",
+                    });
                     return;
                   }
 
-                  toast.success("Copied MFC item ID to clipboard");
+                  toast.add({ type: "success", title: "Copied MFC item ID to clipboard" });
                 }}
               >
                 <HugeiconsIcon icon={Copy01Icon} />

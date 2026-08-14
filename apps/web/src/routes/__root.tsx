@@ -1,5 +1,5 @@
 import { ThemeProvider } from "next-themes";
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toast";
 import { HeadContent, Outlet, createRootRouteWithContext } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import "../index.css";
@@ -26,7 +26,7 @@ function RootComponent() {
         <div className="grid grid-rows-[auto_1fr] min-h-dvh">
           <Outlet />
         </div>
-        <Toaster richColors position="top-center" />
+        <Toaster />
       </ThemeProvider>
       {import.meta.env.DEV && <TanStackRouterDevtools position="bottom-right" />}{" "}
     </>

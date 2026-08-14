@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { useMutation } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { tryCatch } from "@myakiba/utils/result";
 import type {
   SyncCollectionItem,
@@ -12,7 +13,7 @@ import { transformCSVData } from "@/lib/sync";
 import { invalidateSyncResultQueries } from "@/lib/mutation-query-invalidation";
 import { sendCollection, sendItems, sendOrder, sendOrderItems } from "@/queries/sync";
 import type { SyncResponse } from "@/queries/sync";
-import { showSyncToast } from "@/components/sync/sync-toast";
+import { toast } from "@/components/ui/toast";
 
 export type UseSyncMutationsReturn = {
   readonly handleSyncCsvSubmit: (value: File | undefined) => Promise<void>;
@@ -26,15 +27,42 @@ export function useSyncMutations(
   queryClient: QueryClient,
   onComplete?: () => void,
 ): UseSyncMutationsReturn {
+  const navigate = useNavigate();
+
   const handleSuccess = useCallback(
     (data: SyncResponse): void => {
       onComplete?.();
 
-      showSyncToast({
-        state: data.isFinished ? "success" : "queued",
-        sessionId: data.syncSessionId,
-        existingItems: data.existingItemsToInsert,
-        newItems: data.newItems,
+      const itemCount = data.existingItemsToInsert + data.newItems;
+      let title = "Sync Queued";
+      let description = [
+        `Processing ${data.newItems} items`,
+        data.existingItemsToInsert > 0 ? `${data.existingItemsToInsert} already synced` : null,
+      ]
+        .filter((part) => part !== null)
+        .join(", ");
+
+      if (data.isFinished) {
+        title = "Sync Complete";
+        description = `${itemCount} items synced`;
+      }
+
+      if (data.isFinished && itemCount === 0) {
+        title = "Already Synced";
+        description = "All items are already in your collection.";
+      }
+
+      const toastId = toast.add({
+        type: data.isFinished ? "success" : "info",
+        title,
+        description,
+        actionProps: {
+          children: "View Status",
+          onClick() {
+            toast.close(toastId);
+            void navigate({ to: "/sync/$id", params: { id: data.syncSessionId } });
+          },
+        },
       });
 
       if (data.isFinished) {
@@ -43,57 +71,107 @@ export function useSyncMutations(
         void queryClient.invalidateQueries({ queryKey: ["syncSessions"] });
       }
     },
-    [onComplete, queryClient],
+    [navigate, onComplete, queryClient],
   );
 
   const csvMutation = useMutation({
     mutationFn: (userItems: UserItem[]) => sendItems(userItems),
     onSuccess: handleSuccess,
-    onError: (error: Error) =>
-      showSyncToast({ state: "error", message: error.message.trim() || "Failed to submit CSV." }),
+    onError: (error: Error) => {
+      const toastId = toast.add({
+        type: "error",
+        title: "Sync Failed",
+        description: error.message.trim() || "Failed to submit CSV.",
+        actionProps: {
+          children: "View History",
+          onClick() {
+            toast.close(toastId);
+            void navigate({ to: "/sync" });
+          },
+        },
+      });
+    },
   });
 
   const orderMutation = useMutation({
     mutationFn: (order: SyncOrder) => sendOrder(order),
     onSuccess: handleSuccess,
-    onError: (error: Error) =>
-      showSyncToast({ state: "error", message: error.message.trim() || "Failed to submit order." }),
+    onError: (error: Error) => {
+      const toastId = toast.add({
+        type: "error",
+        title: "Sync Failed",
+        description: error.message.trim() || "Failed to submit order.",
+        actionProps: {
+          children: "View History",
+          onClick() {
+            toast.close(toastId);
+            void navigate({ to: "/sync" });
+          },
+        },
+      });
+    },
   });
 
   const orderItemMutation = useMutation({
     mutationFn: (orderItems: SyncOrderItems) => sendOrderItems(orderItems),
     onSuccess: handleSuccess,
-    onError: (error: Error) =>
-      showSyncToast({
-        state: "error",
-        message: error.message.trim() || "Failed to submit order items.",
-      }),
+    onError: (error: Error) => {
+      const toastId = toast.add({
+        type: "error",
+        title: "Sync Failed",
+        description: error.message.trim() || "Failed to submit order items.",
+        actionProps: {
+          children: "View History",
+          onClick() {
+            toast.close(toastId);
+            void navigate({ to: "/sync" });
+          },
+        },
+      });
+    },
   });
 
   const collectionMutation = useMutation({
     mutationFn: (items: SyncCollectionItem[]) => sendCollection(items),
     onSuccess: handleSuccess,
-    onError: (error: Error) =>
-      showSyncToast({
-        state: "error",
-        message: error.message.trim() || "Failed to submit collection.",
-      }),
+    onError: (error: Error) => {
+      const toastId = toast.add({
+        type: "error",
+        title: "Sync Failed",
+        description: error.message.trim() || "Failed to submit collection.",
+        actionProps: {
+          children: "View History",
+          onClick() {
+            toast.close(toastId);
+            void navigate({ to: "/sync" });
+          },
+        },
+      });
+    },
   });
 
   const handleSyncCsvSubmit = useCallback(
     async (value: File | undefined): Promise<void> => {
       const { data: userItems, error } = await tryCatch(transformCSVData({ file: value }));
       if (error) {
-        showSyncToast({
-          state: "error",
-          message: error instanceof Error ? error.message : "An error occurred",
+        const toastId = toast.add({
+          type: "error",
+          title: "Sync Failed",
+          description: error instanceof Error ? error.message : "An error occurred",
+          actionProps: {
+            children: "View History",
+            onClick() {
+              toast.close(toastId);
+              void navigate({ to: "/sync" });
+            },
+          },
         });
         return;
       }
 
       await csvMutation.mutateAsync(userItems);
     },
-    [csvMutation],
+    [csvMutation, navigate],
   );
 
   const handleSyncOrderSubmit = useCallback(

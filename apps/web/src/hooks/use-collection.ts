@@ -6,7 +6,7 @@ import {
   useQueryClient,
   queryOptions,
 } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { useFilters } from "@/hooks/use-filters";
 import { getCollection, deleteCollectionItems, updateCollectionItem } from "@/queries/collection";
 import { moveItem, splitOrders } from "@/queries/orders";
@@ -107,14 +107,19 @@ export function useCollectionOrderMutations() {
       orderIds?: ReadonlySet<string>;
     }) => moveItem(targetOrderId, collectionIds, orderIds),
     onSuccess: (_data, { collectionIds }) => {
-      toast.success(
-        collectionIds.size === 1
-          ? "Order assigned"
-          : `Successfully assigned ${collectionIds.size} items to an order`,
-      );
+      toast.add({
+        type: "success",
+        title:
+          collectionIds.size === 1
+            ? "Order assigned"
+            : `Successfully assigned ${collectionIds.size} items to an order`,
+      });
     },
     onError: () => {
-      toast.error("Failed to assign items to an order. Please try again.");
+      toast.add({
+        type: "error",
+        title: "Failed to assign items to an order. Please try again.",
+      });
     },
     onSettled: async () => {
       await invalidateCollectionAndOrderQueries(queryClient);
@@ -132,14 +137,19 @@ export function useCollectionOrderMutations() {
       cascadeOptions: CascadeOptions;
     }) => splitOrders(values, collectionIds, cascadeOptions),
     onSuccess: (_data, { collectionIds }) => {
-      toast.success(
-        collectionIds.size === 1
-          ? "Order assigned"
-          : `Successfully assigned ${collectionIds.size} items to a new order`,
-      );
+      toast.add({
+        type: "success",
+        title:
+          collectionIds.size === 1
+            ? "Order assigned"
+            : `Successfully assigned ${collectionIds.size} items to a new order`,
+      });
     },
     onError: () => {
-      toast.error("Failed to assign items to a new order. Please try again.");
+      toast.add({
+        type: "error",
+        title: "Failed to assign items to a new order. Please try again.",
+      });
     },
     onSettled: async () => {
       await invalidateCollectionAndOrderQueries(queryClient);
@@ -161,13 +171,17 @@ export function useCollectionOrderMutations() {
       orderIds?: ReadonlySet<string>,
     ): Promise<void> => {
       const ids = [...collectionIds];
-      const loadingToastId = toast.loading("Assigning order...");
+      const loadingToastId = toast.add({
+        type: "loading",
+        title: "Assigning order...",
+        timeout: 0,
+      });
       setPendingCollectionIdList((previous) => addPendingIds(previous, ids));
 
       try {
         await moveItemsMutationRef.current.mutateAsync({ targetOrderId, collectionIds, orderIds });
       } finally {
-        toast.dismiss(loadingToastId);
+        toast.close(loadingToastId);
         setPendingCollectionIdList((previous) => removePendingIds(previous, ids));
       }
     },
@@ -181,13 +195,17 @@ export function useCollectionOrderMutations() {
       collectionIds: ReadonlySet<string>,
     ): Promise<void> => {
       const ids = [...collectionIds];
-      const loadingToastId = toast.loading("Creating order...");
+      const loadingToastId = toast.add({
+        type: "loading",
+        title: "Creating order...",
+        timeout: 0,
+      });
       setPendingCollectionIdList((previous) => addPendingIds(previous, ids));
 
       try {
         await splitItemsMutationRef.current.mutateAsync({ values, cascadeOptions, collectionIds });
       } finally {
-        toast.dismiss(loadingToastId);
+        toast.close(loadingToastId);
         setPendingCollectionIdList((previous) => removePendingIds(previous, ids));
       }
     },
@@ -280,10 +298,13 @@ export function useCollectionMutations(options?: { readonly filters?: Collection
           queryClient.setQueryData(queryKey, data);
         }
       }
-      toast.error("Failed to update collection item. Please try again.");
+      toast.add({
+        type: "error",
+        title: "Failed to update collection item. Please try again.",
+      });
     },
     onSuccess: () => {
-      toast.success("Collection updated");
+      toast.add({ type: "success", title: "Collection updated" });
     },
     onSettled: async () => {
       await invalidateCollectionAndOrderQueries(queryClient);
@@ -350,10 +371,13 @@ export function useCollectionMutations(options?: { readonly filters?: Collection
           queryClient.setQueryData(queryKey, data);
         }
       }
-      toast.error("Failed to delete collection item(s). Please try again.");
+      toast.add({
+        type: "error",
+        title: "Failed to delete collection item(s). Please try again.",
+      });
     },
     onSuccess: () => {
-      toast.success("Collection item(s) deleted");
+      toast.add({ type: "success", title: "Collection item(s) deleted" });
     },
     onSettled: async () => {
       await invalidateCollectionAndOrderQueries(queryClient);
@@ -381,7 +405,11 @@ export function useCollectionMutations(options?: { readonly filters?: Collection
         return;
       }
 
-      const loadingToastId = toast.loading("Deleting collection items...");
+      const loadingToastId = toast.add({
+        type: "loading",
+        title: "Deleting collection items...",
+        timeout: 0,
+      });
       setPendingCollectionIdList((previous) => {
         const nextIds = new Set([...previous, ...ids]);
         return [...nextIds];
@@ -390,7 +418,7 @@ export function useCollectionMutations(options?: { readonly filters?: Collection
       try {
         await deleteMutationState.mutateAsync(ids);
       } finally {
-        toast.dismiss(loadingToastId);
+        toast.close(loadingToastId);
         setPendingCollectionIdList((previous) =>
           previous.filter((collectionId) => !collectionIds.has(collectionId)),
         );

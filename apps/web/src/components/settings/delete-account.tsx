@@ -2,7 +2,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Delete02Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { useNavigate } from "@tanstack/react-router";
 import { authClient } from "@/lib/auth-client";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { useForm } from "@tanstack/react-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAccountType } from "@/queries/settings";
@@ -36,7 +36,7 @@ export function DeleteAccount() {
   const isTriggerDisabled = isPending || isError;
 
   const completeAccountDeletion = () => {
-    toast.success("Account deleted successfully");
+    toast.add({ type: "success", title: "Account deleted successfully" });
     queryClient.clear();
     navigate({ to: "/login" });
   };
@@ -46,7 +46,10 @@ export function DeleteAccount() {
       completeAccountDeletion();
     },
     onError: (authError) => {
-      toast.error(authError.error.message || "Failed to delete account");
+      toast.add({
+        type: "error",
+        title: authError.error.message || "Failed to delete account",
+      });
     },
   } satisfies NonNullable<Parameters<typeof authClient.deleteUser>[1]>;
 

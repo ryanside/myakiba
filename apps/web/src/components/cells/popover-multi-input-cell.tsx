@@ -17,7 +17,7 @@ import {
   minorUnitsToMajorString,
 } from "@myakiba/utils/currency";
 import { tryCatch } from "@myakiba/utils/result";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 
 interface PopoverInput {
   readonly title: string;
@@ -74,7 +74,7 @@ export function PopoverMultiInputCell({
     const { error } = await tryCatch(onSubmit(newValues));
     if (error) {
       setPending(null);
-      toast.error(error.message);
+      toast.add({ type: "error", title: error.message });
     }
   };
 

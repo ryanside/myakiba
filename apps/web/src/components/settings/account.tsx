@@ -3,7 +3,7 @@ import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { useQuery } from "@tanstack/react-query";
 import { getAccountType } from "@/queries/settings";
 import { authClient } from "@/lib/auth-client";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,7 +56,7 @@ export function Account() {
     },
     onSubmit: async ({ value }) => {
       if (value.newPassword !== value.confirmPassword) {
-        toast.error("New passwords do not match");
+        toast.add({ type: "error", title: "New passwords do not match" });
         return;
       }
 
@@ -68,11 +68,14 @@ export function Account() {
         },
         {
           onSuccess: () => {
-            toast.success("Password changed successfully");
+            toast.add({ type: "success", title: "Password changed successfully" });
             form.reset();
           },
           onError: (changePasswordError) => {
-            toast.error(changePasswordError.error.message || "Failed to change password");
+            toast.add({
+              type: "error",
+              title: changePasswordError.error.message || "Failed to change password",
+            });
           },
         },
       );

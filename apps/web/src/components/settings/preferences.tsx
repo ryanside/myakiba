@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { authClient } from "@/lib/auth-client";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -30,13 +30,16 @@ export function Preferences({ user }: { user: User }) {
       });
 
       if (error) {
-        toast.error(error.message || "Failed to update preferences");
+        toast.add({
+          type: "error",
+          title: error.message || "Failed to update preferences",
+        });
         return;
       }
 
       form.reset(value);
       await router.invalidate();
-      toast.success("Preferences updated successfully");
+      toast.add({ type: "success", title: "Preferences updated successfully" });
     },
     validators: {
       onSubmit: z.object({

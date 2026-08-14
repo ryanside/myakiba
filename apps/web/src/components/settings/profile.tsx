@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { authClient } from "@/lib/auth-client";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
@@ -24,13 +24,13 @@ export function Profile({ user }: { user: User }) {
       });
 
       if (error) {
-        toast.error(error.message || "Failed to update profile");
+        toast.add({ type: "error", title: error.message || "Failed to update profile" });
         return;
       }
 
       form.reset(value);
       await router.invalidate();
-      toast.success("Profile updated successfully");
+      toast.add({ type: "success", title: "Profile updated successfully" });
     },
     validators: {
       onSubmit: z.object({
