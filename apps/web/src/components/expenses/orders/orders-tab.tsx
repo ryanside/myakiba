@@ -25,6 +25,7 @@ export type OrdersChart = (typeof options)[number]["value"];
 export default function OrdersTab({
   data,
   isLoading,
+  isError,
   filters,
   currency,
   locale,
@@ -34,6 +35,7 @@ export default function OrdersTab({
 }: {
   readonly data: ExpensesOrdersResponse | undefined;
   readonly isLoading: boolean;
+  readonly isError: boolean;
   readonly filters: ExpenseFilters;
   readonly currency: Currency;
   readonly locale: string;
@@ -180,7 +182,13 @@ export default function OrdersTab({
             dateFormat={dateFormat}
           />
         </div>
-        <Breakdown data={data} isLoading={isLoading} currency={currency} locale={locale} />
+        <Breakdown
+          data={data}
+          isLoading={isLoading}
+          isError={isError}
+          currency={currency}
+          locale={locale}
+        />
       </div>
     </div>
   );

@@ -180,6 +180,7 @@ function RouteComponent(): ReactNode {
                 <CollectionTab
                   data={collectionQuery.data}
                   isLoading={collectionQuery.isPending}
+                  isError={collectionQuery.isError}
                   filters={filters}
                   currency={currency}
                   locale={locale}
@@ -194,6 +195,7 @@ function RouteComponent(): ReactNode {
                 <OrdersTab
                   data={ordersQuery.data}
                   isLoading={ordersQuery.isPending}
+                  isError={ordersQuery.isError}
                   filters={filters}
                   currency={currency}
                   locale={locale}
@@ -208,6 +210,7 @@ function RouteComponent(): ReactNode {
                 <ShippingTab
                   data={shippingQuery.data}
                   isLoading={shippingQuery.isPending}
+                  isError={shippingQuery.isError}
                   filters={filters}
                   currency={currency}
                   locale={locale}

@@ -7,20 +7,22 @@ import type {
 } from "@myakiba/contracts/expenses/schema";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import * as BreakdownChart from "@/components/dashboard/breakdown-chart";
-import { BreakdownSkeleton, ExpensePanel } from "@/components/expenses/dashboard-shell";
+import { BreakdownChart } from "@/components/breakdown-chart";
+import { ExpensePanel } from "@/components/expenses/dashboard-shell";
 import { getCategoryColor } from "@/lib/category-colors";
 
 export function Breakdown({
   data,
   filters,
   isLoading,
+  isError,
   currency,
   locale,
 }: {
   readonly data: ExpensesCollectionResponse | undefined;
   readonly filters: ExpenseFilters;
   readonly isLoading: boolean;
+  readonly isError: boolean;
   readonly currency: Currency;
   readonly locale: string;
 }): ReactNode {
@@ -47,57 +49,37 @@ export function Breakdown({
       })),
     [data?.breakdown],
   );
-  let content: ReactNode;
-  if (isLoading) {
-    content = <BreakdownSkeleton />;
-  } else if (entries.length === 0) {
-    content = (
-      <p className="py-4 text-center text-sm text-muted-foreground">No collection items.</p>
-    );
-  } else {
-    content = (
-      <BreakdownChart.Root entries={entries}>
-        <BreakdownChart.Bar />
-        <BreakdownChart.Legend className="contents">
-          <div className="scroll-fade animate-data-in -mx-(--frame-panel-p) flex max-h-50 flex-col gap-0 overflow-y-auto [--data-in-delay:100ms]">
-            {entries.map((entry) => (
-              <BreakdownChart.LegendItem
-                key={entry.id}
-                entryId={entry.id}
-                className="flex items-center gap-2.5 px-(--frame-panel-p) py-1 transition-opacity duration-200"
-              >
-                {({ rowProps, markerProps }) => (
-                  <Link
-                    to="/collection"
-                    search={{
-                      category: [entry.category],
-                      shop: filters.shop,
-                      payDateStart: filters.dateStart,
-                      payDateEnd: filters.dateEnd,
-                    }}
-                    {...rowProps}
-                  >
-                    <div {...markerProps} />
-                    <span className="truncate text-sm">{entry.label}</span>
-                    <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                      {entry.count}
-                    </span>
-                    <span className="ml-auto shrink-0 text-sm font-medium tabular-nums">
-                      {formatCurrencyFromMinorUnits(entry.spend, currency, locale)}
-                    </span>
-                  </Link>
-                )}
-              </BreakdownChart.LegendItem>
-            ))}
-          </div>
-        </BreakdownChart.Legend>
-      </BreakdownChart.Root>
-    );
-  }
-
   return (
     <ExpensePanel title="Breakdown" className="min-h-80" panelClassName="flex flex-col gap-3">
-      {content}
+      <BreakdownChart
+        data={entries}
+        isLoading={isLoading}
+        isError={isError}
+        emptyMessage="No collection items."
+        variant="scrollable"
+      >
+        {({ item, rowProps, markerProps }) => (
+          <Link
+            to="/collection"
+            search={{
+              category: [item.category],
+              shop: filters.shop,
+              payDateStart: filters.dateStart,
+              payDateEnd: filters.dateEnd,
+            }}
+            {...rowProps}
+          >
+            <div {...markerProps} />
+            <span className="truncate text-sm">{item.label}</span>
+            <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+              {item.count}
+            </span>
+            <span className="ml-auto shrink-0 text-sm font-medium tabular-nums">
+              {formatCurrencyFromMinorUnits(item.spend, currency, locale)}
+            </span>
+          </Link>
+        )}
+      </BreakdownChart>
     </ExpensePanel>
   );
 }

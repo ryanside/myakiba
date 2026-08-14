@@ -176,30 +176,6 @@ export function ChartSeriesLegend<TKey extends string>({
   );
 }
 
-const BREAKDOWN_SKELETON_ROWS = [
-  { label: "w-24", detail: "w-9", value: "w-16" },
-  { label: "w-32", detail: "w-11", value: "w-20" },
-  { label: "w-20", detail: "w-8", value: "w-14" },
-];
-
-export function BreakdownSkeleton(): ReactNode {
-  return (
-    <div className="flex flex-col gap-3" aria-hidden>
-      <Skeleton className="h-2.5 w-full rounded-sm" />
-      <div className="flex flex-col gap-2">
-        {BREAKDOWN_SKELETON_ROWS.map((row) => (
-          <div key={row.label} className="flex items-center gap-2.5 py-1">
-            <Skeleton className="h-4 w-1.5 shrink-0 rounded-full" />
-            <Skeleton className={`h-4 ${row.label}`} />
-            <Skeleton className={`h-3 ${row.detail}`} />
-            <Skeleton className={`ml-auto h-4 ${row.value}`} />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export function ChartSection({
   title,
   selector,

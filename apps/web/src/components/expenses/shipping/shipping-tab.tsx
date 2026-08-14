@@ -28,6 +28,7 @@ export type ShippingChart = (typeof options)[number]["value"];
 export default function ShippingTab({
   data,
   isLoading,
+  isError,
   filters,
   currency,
   locale,
@@ -37,6 +38,7 @@ export default function ShippingTab({
 }: {
   readonly data: ExpensesShippingResponse | undefined;
   readonly isLoading: boolean;
+  readonly isError: boolean;
   readonly filters: ExpenseFilters;
   readonly currency: Currency;
   readonly locale: string;
@@ -192,7 +194,13 @@ export default function ShippingTab({
             dateFormat={dateFormat}
           />
         </div>
-        <Breakdown data={data} isLoading={isLoading} currency={currency} locale={locale} />
+        <Breakdown
+          data={data}
+          isLoading={isLoading}
+          isError={isError}
+          currency={currency}
+          locale={locale}
+        />
       </div>
     </div>
   );

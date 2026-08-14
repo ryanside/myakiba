@@ -99,12 +99,14 @@ export function MonthlyTab({
           currency={currency}
           locale={locale}
           isLoading={isLoading}
+          isError={isError}
         />
         <CostBreakdown
           data={costBreakdown}
           currency={currency}
           locale={locale}
           isLoading={isLoading}
+          isError={isError}
         />
         <ReleaseCalendar currency={currency} month={month} year={year} hideControls />
       </div>
