@@ -1,7 +1,5 @@
 import type { ReactNode } from "react";
 import { useMemo } from "react";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { CryingIcon } from "@hugeicons/core-free-icons";
 import type { CalendarView } from "@myakiba/contracts/calendar/schema";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import { CalendarItemRow } from "@/components/calendar/calendar-item-row";
@@ -56,10 +54,9 @@ function CalendarReleaseList<TItem>({
 
   if (groups.length === 0) {
     return (
-      <div className="animate-data-in flex flex-col items-center justify-center gap-1.5 py-10 text-center [--data-in-delay:60ms]">
-        <HugeiconsIcon icon={CryingIcon} className="size-5 text-muted-foreground/50" />
-        <p className="text-xs text-muted-foreground">{emptyLabel}</p>
-      </div>
+      <p className="animate-data-in py-4 text-center text-sm text-muted-foreground [--data-in-delay:60ms]">
+        {emptyLabel}
+      </p>
     );
   }
 

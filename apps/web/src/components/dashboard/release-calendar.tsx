@@ -1,11 +1,6 @@
 import { useMemo, useState, useCallback } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  ArrowLeft01Icon,
-  ArrowRight01Icon,
-  CryingIcon,
-  Image01Icon,
-} from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, ArrowRight01Icon, Image01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame";
@@ -168,7 +163,11 @@ function ReleaseCalendar({
               </div>
             );
           }
-          return <ReleaseCalendarEmpty />;
+          return (
+            <p className="animate-data-in py-4 text-center text-sm text-muted-foreground [--data-in-delay:60ms]">
+              Nothing releasing this month
+            </p>
+          );
         })()}
       </FramePanel>
     </Frame>
@@ -246,15 +245,6 @@ function ReleaseCalendarError({
       <Button variant="ghost" size="xs" onClick={onRetry}>
         Retry
       </Button>
-    </div>
-  );
-}
-
-function ReleaseCalendarEmpty(): React.ReactNode {
-  return (
-    <div className="animate-data-in flex flex-col items-center justify-center gap-1.5 py-10 text-center [--data-in-delay:60ms]">
-      <HugeiconsIcon icon={CryingIcon} className="size-5 text-muted-foreground/50" />
-      <p className="text-xs text-muted-foreground">Nothing releasing this month</p>
     </div>
   );
 }
