@@ -156,7 +156,7 @@ function ReleaseCalendar({
           if (isError) return <ReleaseCalendarError message={error.message} onRetry={refetch} />;
           if (grouped.length > 0) {
             return (
-              <div className="scroll-fade overflow-y-auto animate-data-in -mx-(--frame-panel-p) max-h-56 pb-6 [--data-in-delay:60ms]">
+              <div className="overflow-y-auto animate-data-in -mx-(--frame-panel-p) max-h-56 pb-6 [--data-in-delay:60ms]">
                 {grouped.map(([dateKey, items]) => (
                   <DateGroup key={dateKey} dateKey={dateKey} items={items} currency={currency} />
                 ))}
