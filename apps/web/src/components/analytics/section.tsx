@@ -15,7 +15,12 @@ export function SectionShell({
   readonly className?: string;
 }): ReactNode {
   return (
-    <div className={cn("relative overflow-hidden border rounded-lg p-4", className)}>
+    <div
+      className={cn(
+        "relative overflow-hidden ring-1 ring-foreground/10 rounded-xl p-4 inset-shadow-2xs inset-shadow-white dark:inset-shadow-white/15 shadow-xs",
+        className,
+      )}
+    >
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 opacity-10"
