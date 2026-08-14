@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Bar, BarChart, Cell, XAxis, ReferenceLine } from "recharts";
-import { AnimatePresence, useMotionValueEvent, useSpring } from "motion/react";
+import { Bar, Cell, XAxis, ReferenceLine } from "recharts";
+import { useMotionValueEvent, useSpring } from "motion/react";
 import { useNavigate } from "@tanstack/react-router";
 import { getDateOnlyMonthBounds } from "@myakiba/utils/date-only";
-import { ChartContainer } from "@/components/ui/chart";
-import type { ChartConfig } from "@/components/ui/chart";
+import { EvilBarChart } from "@/components/evilcharts/charts/recharts-bar-chart";
+import type { ChartConfig } from "@/components/evilcharts/ui/recharts-chart";
 import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame";
 import { Skeleton } from "@/components/ui/skeleton";
-import Loader from "../loader";
 
 const CHART_MARGIN = 35;
 
@@ -29,7 +28,6 @@ const MONTH_NAMES = [
 const chartConfig = {
   desktop: {
     label: "Orders",
-    color: "var(--primary-foreground)",
   },
 } satisfies ChartConfig;
 
@@ -114,89 +112,82 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
     maxValueIndexSpring.set(maxValueIndex.value);
   }, [isLoading, maxValueIndex.value, maxValueIndexSpring]);
 
-  if (isLoading) {
-    return (
-      <Frame
-        spacing="sm"
-        className="border-none ring-1 ring-foreground/10 shadow-xs! min-h-[320px]"
-      >
-        <FrameHeader>
-          <Skeleton className="h-4 my-1 w-32" />
-        </FrameHeader>
-        <FramePanel className="shadow-none! border-none m-1 mt-0">
-          <Loader className="justify-center" />
-        </FramePanel>
-      </Frame>
-    );
-  }
-
   return (
     <Frame
       spacing="sm"
-      className="border-none ring-1 ring-foreground/10 shadow-xs! lg:max-h-[320px]"
+      className={`border-none ring-1 ring-foreground/10 shadow-xs! ${isLoading ? "min-h-[320px]" : "lg:max-h-[320px]"}`}
+      aria-busy={isLoading}
     >
       <FrameHeader>
-        <FrameTitle className="animate-data-in text-base font-medium">
-          {maxValueIndex.value}{" "}
-          <span className="ml-1 text-sm text-muted-foreground">
-            {maxValueIndex.value === 1 ? "order" : "orders"} in{" "}
-            {chartData[maxValueIndex.index].month}
-          </span>
-        </FrameTitle>
+        {isLoading ? (
+          <Skeleton className="h-4 my-1 w-32" />
+        ) : (
+          <FrameTitle className="animate-data-in text-base font-medium">
+            {maxValueIndex.value}{" "}
+            <span className="ml-1 text-sm text-muted-foreground">
+              {maxValueIndex.value === 1 ? "order" : "orders"} in{" "}
+              {chartData[maxValueIndex.index].month}
+            </span>
+          </FrameTitle>
+        )}
       </FrameHeader>
       <FramePanel className="shadow-none! border-none m-1 mt-0">
-        <AnimatePresence mode="wait">
-          <ChartContainer
-            config={chartConfig}
-            className="animate-data-in w-full h-full [--data-in-delay:60ms]"
-          >
-            <BarChart
-              accessibilityLayer
-              data={chartData}
-              onMouseLeave={() => setActiveIndex(currentMonthIndex)}
-              margin={{
-                left: CHART_MARGIN,
-                top: 10,
-                bottom: 0,
-              }}
+        <EvilBarChart
+          config={chartConfig}
+          data={chartData}
+          isLoading={isLoading}
+          loadingBars={MONTH_NAMES.length}
+          className="animate-data-in w-full h-full [--data-in-delay:60ms]"
+          chartProps={{
+            onMouseLeave: () => setActiveIndex(currentMonthIndex),
+            margin: {
+              left: CHART_MARGIN,
+              top: 10,
+              bottom: 0,
+            },
+          }}
+        >
+          {!isLoading ? (
+            <XAxis
+              dataKey="month"
+              tickLine={false}
+              tickMargin={10}
+              axisLine={false}
+              tickFormatter={(value: string) => value.slice(0, 3)}
+              allowDataOverflow={true}
+            />
+          ) : null}
+          {!isLoading ? (
+            <Bar
+              dataKey="desktop"
+              fill="var(--primary)"
+              radius={6.25}
+              animationDuration={300}
+              animationEasing="ease-in-out"
             >
-              <XAxis
-                dataKey="month"
-                tickLine={false}
-                tickMargin={10}
-                axisLine={false}
-                tickFormatter={(value: string) => value.slice(0, 3)}
-                allowDataOverflow={true}
-              />
-              <Bar
-                dataKey="desktop"
-                fill="var(--primary)"
-                radius={6.25}
-                animationDuration={300}
-                animationEasing="ease-in-out"
-              >
-                {chartData.map((monthData, index) => (
-                  <Cell
-                    className="duration-200 cursor-pointer"
-                    opacity={index === maxValueIndex.index ? 1 : 0.2}
-                    key={monthData.month}
-                    onMouseEnter={() => setActiveIndex(index)}
-                    onClick={() => handleBarClick(index)}
-                  />
-                ))}
-              </Bar>
-              <ReferenceLine
-                ifOverflow="visible"
-                opacity={0.4}
-                y={springyValue}
-                stroke="var(--foreground)"
-                strokeWidth={1}
-                strokeDasharray="3 3"
-                label={<CustomReferenceLabel value={maxValueIndex.value} />}
-              />
-            </BarChart>
-          </ChartContainer>
-        </AnimatePresence>
+              {chartData.map((monthData, index) => (
+                <Cell
+                  className="cursor-pointer transition-opacity duration-200"
+                  opacity={index === maxValueIndex.index ? 1 : 0.2}
+                  key={monthData.month}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  onClick={() => handleBarClick(index)}
+                />
+              ))}
+            </Bar>
+          ) : null}
+          {!isLoading ? (
+            <ReferenceLine
+              ifOverflow="visible"
+              opacity={0.4}
+              y={springyValue}
+              stroke="var(--foreground)"
+              strokeWidth={1}
+              strokeDasharray="3 3"
+              label={<CustomReferenceLabel value={maxValueIndex.value} />}
+            />
+          ) : null}
+        </EvilBarChart>
       </FramePanel>
     </Frame>
   );

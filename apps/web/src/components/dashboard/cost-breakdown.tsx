@@ -4,14 +4,14 @@ import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/fr
 import { Skeleton } from "@/components/ui/skeleton";
 import type { CostBreakdownData } from "@/queries/dashboard";
 import type { Currency } from "@myakiba/contracts/shared/types";
-import Loader from "../loader";
-import * as BreakdownChart from "./breakdown-chart";
+import { BreakdownChart } from "@/components/breakdown-chart";
 
 interface CostBreakdownProps {
   readonly data: CostBreakdownData | undefined;
   readonly currency: Currency;
   readonly locale: string;
   readonly isLoading?: boolean;
+  readonly isError?: boolean;
 }
 
 const COST_CATEGORIES: readonly {
@@ -50,6 +50,7 @@ export function CostBreakdown({
   currency,
   locale,
   isLoading,
+  isError = false,
 }: CostBreakdownProps): React.ReactNode {
   const { total, entries } = useMemo(() => {
     if (!data) return { total: 0, entries: [] };
@@ -94,55 +95,37 @@ export function CostBreakdown({
     };
   }, [currency, data, locale]);
 
-  if (isLoading) {
-    return (
-      <Frame
-        spacing="sm"
-        className="border-none ring-1 ring-foreground/10 shadow-xs! min-h-[320px]"
-      >
-        <FrameHeader>
-          <Skeleton className="h-4 my-1 w-32" />
-        </FrameHeader>
-        <FramePanel className="space-y-3 shadow-none! border-none m-1 mt-0">
-          <Loader className="justify-center" />
-        </FramePanel>
-      </Frame>
-    );
-  }
-
   return (
     <Frame spacing="sm" className="border-none ring-1 ring-foreground/10 shadow-xs! min-h-[320px]">
       <FrameHeader>
-        <FrameTitle className="animate-data-in text-base font-medium">
-          {formatCurrencyFromMinorUnits(total, currency, locale)} total
-        </FrameTitle>
+        {isLoading ? (
+          <Skeleton className="h-4 my-1 w-32" />
+        ) : (
+          <FrameTitle className="animate-data-in text-base font-medium">
+            {formatCurrencyFromMinorUnits(total, currency, locale)} total
+          </FrameTitle>
+        )}
       </FrameHeader>
       <FramePanel className="space-y-3 shadow-none! border-none m-1 mt-0">
-        {entries.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">No costs this month</p>
-        ) : (
-          <BreakdownChart.Root entries={entries}>
-            <BreakdownChart.Bar />
-            <BreakdownChart.Legend>
-              {entries.map((entry) => (
-                <BreakdownChart.LegendItem key={entry.key} entryId={entry.id}>
-                  {({ rowProps, markerProps }) => (
-                    <div {...rowProps}>
-                      <div {...markerProps} />
-                      <span className="text-sm text-foreground">{entry.label}</span>
-                      <span className="text-xs text-muted-foreground tabular-nums">
-                        {entry.percentage.toFixed(1)}%
-                      </span>
-                      <span className="ml-auto text-sm tabular-nums font-medium shrink-0">
-                        {formatCurrencyFromMinorUnits(entry.amount, currency, locale)}
-                      </span>
-                    </div>
-                  )}
-                </BreakdownChart.LegendItem>
-              ))}
-            </BreakdownChart.Legend>
-          </BreakdownChart.Root>
-        )}
+        <BreakdownChart
+          data={entries}
+          isLoading={Boolean(isLoading)}
+          isError={isError}
+          emptyMessage="No costs this month"
+        >
+          {({ item, rowProps, markerProps }) => (
+            <div {...rowProps}>
+              <div {...markerProps} />
+              <span className="text-sm text-foreground">{item.label}</span>
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {item.percentage.toFixed(1)}%
+              </span>
+              <span className="ml-auto text-sm tabular-nums font-medium shrink-0">
+                {formatCurrencyFromMinorUnits(item.amount, currency, locale)}
+              </span>
+            </div>
+          )}
+        </BreakdownChart>
       </FramePanel>
     </Frame>
   );

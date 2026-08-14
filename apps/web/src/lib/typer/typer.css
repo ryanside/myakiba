@@ -1,7 +1,7 @@
 [data-typer] {
   --typer-fg: var(--foreground);
   --typer-bg: var(--background);
-  --typer-accent: var(--color-chart-2);
+  --typer-accent: var(--color-cyan-400);
   --typer-accent-ink: var(--background);
   --typer-radius: 5px;
 }

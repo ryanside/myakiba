@@ -28,6 +28,7 @@ export type CollectionChart = (typeof options)[number]["value"];
 export default function CollectionTab({
   data,
   isLoading,
+  isError,
   filters,
   currency,
   locale,
@@ -37,6 +38,7 @@ export default function CollectionTab({
 }: {
   readonly data: ExpensesCollectionResponse | undefined;
   readonly isLoading: boolean;
+  readonly isError: boolean;
   readonly filters: ExpenseFilters;
   readonly currency: Currency;
   readonly locale: string;
@@ -163,6 +165,7 @@ export default function CollectionTab({
           data={data}
           filters={filters}
           isLoading={isLoading}
+          isError={isError}
           currency={currency}
           locale={locale}
         />

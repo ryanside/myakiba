@@ -1,11 +1,6 @@
 import { useMemo, useState, useCallback } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  ArrowLeft01Icon,
-  ArrowRight01Icon,
-  CryingIcon,
-  Image01Icon,
-} from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, ArrowRight01Icon, Image01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame";
@@ -20,7 +15,6 @@ import { formatReleaseDate } from "@/lib/locale";
 import { getReleaseCalendar } from "@/queries/dashboard";
 import type { ReleaseItem } from "@/queries/dashboard";
 import { parseISO } from "date-fns";
-import Loader from "../loader";
 
 interface ReleaseCalendarProps {
   readonly className?: string;
@@ -42,6 +36,11 @@ const RELEASE_DATE_GROUP_LABEL_FORMATTER = new Intl.DateTimeFormat("en-US", {
   weekday: "short",
   day: "numeric",
 });
+
+const RELEASE_CALENDAR_SKELETON_ROWS = [
+  { id: "first", titleWidth: "w-36", detailWidth: "w-16" },
+  { id: "second", titleWidth: "w-28", detailWidth: "w-20" },
+] as const;
 
 function groupReleasesByReleaseDate(
   releases: readonly ReleaseItem[],
@@ -108,6 +107,7 @@ function ReleaseCalendar({
     <Frame
       spacing="sm"
       className={cn("border-none ring-1 ring-foreground/10 shadow-xs! min-h-[320px]", className)}
+      aria-busy={isPending}
     >
       <FrameHeader>
         <div className="flex items-center justify-between">
@@ -152,21 +152,57 @@ function ReleaseCalendar({
       </FrameHeader>
       <FramePanel className="shadow-none! border-none m-1 mt-0">
         {(() => {
-          if (isPending) return <Loader className="justify-center" />;
+          if (isPending) return <ReleaseCalendarSkeleton />;
           if (isError) return <ReleaseCalendarError message={error.message} onRetry={refetch} />;
           if (grouped.length > 0) {
             return (
-              <div className="scroll-fade overflow-y-auto animate-data-in -mx-(--frame-panel-p) max-h-56 pb-6 [--data-in-delay:60ms]">
+              <div className="overflow-y-auto animate-data-in -mx-(--frame-panel-p) max-h-56 pb-6 [--data-in-delay:60ms]">
                 {grouped.map(([dateKey, items]) => (
                   <DateGroup key={dateKey} dateKey={dateKey} items={items} currency={currency} />
                 ))}
               </div>
             );
           }
-          return <ReleaseCalendarEmpty />;
+          return (
+            <p className="animate-data-in py-4 text-center text-sm text-muted-foreground [--data-in-delay:60ms]">
+              Nothing releasing this month
+            </p>
+          );
         })()}
       </FramePanel>
     </Frame>
+  );
+}
+
+function ReleaseCalendarSkeleton(): React.ReactNode {
+  return (
+    <div aria-hidden="true" className="-mx-(--frame-panel-p) max-h-56 overflow-y-auto pb-6">
+      <div className="sticky top-0 z-10 flex items-center gap-2 bg-(--frame-panel-bg) px-(--frame-panel-p) pb-1">
+        <span className="flex h-4 shrink-0 items-center">
+          <Skeleton className="h-3 w-12" />
+        </span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+      <div className="px-(--frame-panel-p)">
+        {RELEASE_CALENDAR_SKELETON_ROWS.map((row) => (
+          <div
+            key={row.id}
+            className="flex min-w-0 items-center gap-2.5 overflow-hidden rounded-md p-1.5"
+          >
+            <Skeleton className="size-9 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <div className="flex h-4.5 items-center">
+                <Skeleton className={cn("h-3.5 max-w-full", row.titleWidth)} />
+              </div>
+              <div className="mt-0.5 flex h-4 items-center gap-1.5">
+                <Skeleton className={cn("h-3 max-w-full", row.detailWidth)} />
+                <Skeleton className="h-3 w-12 shrink-0" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -209,15 +245,6 @@ function ReleaseCalendarError({
       <Button variant="ghost" size="xs" onClick={onRetry}>
         Retry
       </Button>
-    </div>
-  );
-}
-
-function ReleaseCalendarEmpty(): React.ReactNode {
-  return (
-    <div className="animate-data-in flex flex-col items-center justify-center gap-1.5 py-10 text-center [--data-in-delay:60ms]">
-      <HugeiconsIcon icon={CryingIcon} className="size-5 text-muted-foreground/50" />
-      <p className="text-xs text-muted-foreground">Nothing releasing this month</p>
     </div>
   );
 }

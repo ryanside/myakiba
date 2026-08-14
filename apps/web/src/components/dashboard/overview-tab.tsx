@@ -105,6 +105,7 @@ export function OverviewTab({
           currency={currency}
           locale={locale}
           isLoading={isLoading}
+          isError={isError}
         />
         <OrdersBarChart data={monthlyOrders} isLoading={isLoading} />
         <ReleaseCalendar currency={currency} />

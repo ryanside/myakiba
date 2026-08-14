@@ -13,7 +13,7 @@ export function SettingsNav({ activeId, onSelect }: SettingsNavProps) {
   return (
     <nav className="flex w-full flex-col gap-4 md:w-52 md:shrink-0 md:gap-3" aria-label="Settings">
       <h1 className="text-2xl font-medium tracking-tight md:hidden">Settings</h1>
-      <p className="hidden px-2.5 text-[13px] font-medium text-muted-foreground md:block">
+      <p className="hidden px-2.5 text-lg font-medium text-foreground tracking-tight md:block">
         Settings
       </p>
       <ul className="flex flex-col divide-y divide-border/80 overflow-hidden rounded-xl bg-card text-card-foreground shadow-xs ring-1 ring-foreground/10 md:gap-0.5 md:divide-y-0 md:overflow-visible md:rounded-none md:bg-transparent md:shadow-none md:ring-0">
