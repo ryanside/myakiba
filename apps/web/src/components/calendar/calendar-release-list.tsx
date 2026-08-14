@@ -2,10 +2,11 @@ import type { ReactNode } from "react";
 import { useMemo } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { CryingIcon } from "@hugeicons/core-free-icons";
+import type { CalendarView } from "@myakiba/contracts/calendar/schema";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import { CalendarItemRow } from "@/components/calendar/calendar-item-row";
 import { CalendarOrderRow } from "@/components/calendar/calendar-order-row";
-import Loader from "@/components/loader";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { CalendarResponse } from "@/queries/calendar";
 
@@ -14,6 +15,11 @@ const DATE_GROUP_LABEL_FORMATTER = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
 });
+
+const CALENDAR_RELEASE_SKELETON_ROWS = [
+  { id: "first", titleWidth: "w-36", detailWidth: "w-16" },
+  { id: "second", titleWidth: "w-28", detailWidth: "w-20" },
+] as const;
 
 interface CalendarReleaseListProps<TItem> {
   readonly items: readonly TItem[];
@@ -96,6 +102,7 @@ function CalendarReleaseList<TItem>({
 interface CalendarReleasePanelProps {
   readonly data: CalendarResponse | undefined;
   readonly isPending: boolean;
+  readonly view: CalendarView;
   readonly selectedDays: ReadonlySet<number>;
   readonly currency: Currency;
   readonly locale: string;
@@ -104,15 +111,16 @@ interface CalendarReleasePanelProps {
 export function CalendarReleasePanel({
   data,
   isPending,
+  view,
   selectedDays,
   currency,
   locale,
 }: CalendarReleasePanelProps): ReactNode {
   if (isPending || !data) {
     return (
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="flex min-h-0 w-full flex-1 items-start justify-center overflow-y-auto pt-16">
-          <Loader className="h-auto w-auto" />
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" aria-busy="true">
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <CalendarReleaseListSkeleton view={view} />
         </div>
       </div>
     );
@@ -142,6 +150,74 @@ export function CalendarReleasePanel({
       emptyMonthLabel="No orders releasing this month"
       emptyFilteredLabel="No orders on the selected days"
     />
+  );
+}
+
+function CalendarReleaseListSkeleton({ view }: { readonly view: CalendarView }): ReactNode {
+  return (
+    <div aria-hidden="true" className="flex flex-col gap-1.5">
+      <div className="sticky top-0 z-10 flex items-center gap-2 bg-background pb-1">
+        <span className="flex h-4 shrink-0 items-center">
+          <Skeleton className="h-3 w-20" />
+        </span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+      <div>
+        {CALENDAR_RELEASE_SKELETON_ROWS.map((row) =>
+          view === "items" ? (
+            <CalendarItemRowSkeleton key={row.id} {...row} />
+          ) : (
+            <CalendarOrderRowSkeleton key={row.id} {...row} />
+          ),
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface CalendarRowSkeletonProps {
+  readonly titleWidth: string;
+  readonly detailWidth: string;
+}
+
+function CalendarItemRowSkeleton({ titleWidth, detailWidth }: CalendarRowSkeletonProps): ReactNode {
+  return (
+    <div className="flex min-w-0 items-center gap-2.5 overflow-hidden rounded-md p-1.5">
+      <Skeleton className="size-9 shrink-0" />
+      <div className="min-w-0 flex-1">
+        <div className="flex h-4.5 items-center">
+          <Skeleton className={cn("h-3.5 max-w-full", titleWidth)} />
+        </div>
+        <div className="mt-0.5 flex h-4 items-center gap-1.5">
+          <Skeleton className={cn("h-3 max-w-full", detailWidth)} />
+          <Skeleton className="h-3 w-12 shrink-0" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CalendarOrderRowSkeleton({
+  titleWidth,
+  detailWidth,
+}: CalendarRowSkeletonProps): ReactNode {
+  return (
+    <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2.5 overflow-hidden rounded-md p-1.5">
+      <Skeleton className="size-10 shrink-0 rounded-md" />
+      <div className="min-w-0">
+        <div className="flex h-4.5 items-center">
+          <Skeleton className={cn("h-3.5 max-w-full", titleWidth)} />
+        </div>
+        <div className="mt-0.5 flex h-4 items-center gap-2.5">
+          <Skeleton className={cn("h-3 max-w-full", detailWidth)} />
+          <Skeleton className="h-3 w-10 shrink-0" />
+        </div>
+      </div>
+      <div className="flex items-center gap-2 justify-self-end">
+        <Skeleton className="h-4.5 w-14 rounded-sm" />
+        <Skeleton className="h-4 w-16" />
+      </div>
+    </div>
   );
 }
 

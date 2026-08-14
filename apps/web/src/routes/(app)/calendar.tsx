@@ -194,6 +194,7 @@ function RouteComponent(): ReactNode {
           <CalendarReleasePanel
             data={data}
             isPending={isPending}
+            view={view}
             selectedDays={selectedDaysSet}
             currency={currency}
             locale={locale}

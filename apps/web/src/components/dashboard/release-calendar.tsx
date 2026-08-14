@@ -20,7 +20,6 @@ import { formatReleaseDate } from "@/lib/locale";
 import { getReleaseCalendar } from "@/queries/dashboard";
 import type { ReleaseItem } from "@/queries/dashboard";
 import { parseISO } from "date-fns";
-import Loader from "../loader";
 
 interface ReleaseCalendarProps {
   readonly className?: string;
@@ -42,6 +41,11 @@ const RELEASE_DATE_GROUP_LABEL_FORMATTER = new Intl.DateTimeFormat("en-US", {
   weekday: "short",
   day: "numeric",
 });
+
+const RELEASE_CALENDAR_SKELETON_ROWS = [
+  { id: "first", titleWidth: "w-36", detailWidth: "w-16" },
+  { id: "second", titleWidth: "w-28", detailWidth: "w-20" },
+] as const;
 
 function groupReleasesByReleaseDate(
   releases: readonly ReleaseItem[],
@@ -108,6 +112,7 @@ function ReleaseCalendar({
     <Frame
       spacing="sm"
       className={cn("border-none ring-1 ring-foreground/10 shadow-xs! min-h-[320px]", className)}
+      aria-busy={isPending}
     >
       <FrameHeader>
         <div className="flex items-center justify-between">
@@ -152,7 +157,7 @@ function ReleaseCalendar({
       </FrameHeader>
       <FramePanel className="shadow-none! border-none m-1 mt-0">
         {(() => {
-          if (isPending) return <Loader className="justify-center" />;
+          if (isPending) return <ReleaseCalendarSkeleton />;
           if (isError) return <ReleaseCalendarError message={error.message} onRetry={refetch} />;
           if (grouped.length > 0) {
             return (
@@ -167,6 +172,38 @@ function ReleaseCalendar({
         })()}
       </FramePanel>
     </Frame>
+  );
+}
+
+function ReleaseCalendarSkeleton(): React.ReactNode {
+  return (
+    <div aria-hidden="true" className="-mx-(--frame-panel-p) max-h-56 overflow-y-auto pb-6">
+      <div className="sticky top-0 z-10 flex items-center gap-2 bg-(--frame-panel-bg) px-(--frame-panel-p) pb-1">
+        <span className="flex h-4 shrink-0 items-center">
+          <Skeleton className="h-3 w-12" />
+        </span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+      <div className="px-(--frame-panel-p)">
+        {RELEASE_CALENDAR_SKELETON_ROWS.map((row) => (
+          <div
+            key={row.id}
+            className="flex min-w-0 items-center gap-2.5 overflow-hidden rounded-md p-1.5"
+          >
+            <Skeleton className="size-9 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <div className="flex h-4.5 items-center">
+                <Skeleton className={cn("h-3.5 max-w-full", row.titleWidth)} />
+              </div>
+              <div className="mt-0.5 flex h-4 items-center gap-1.5">
+                <Skeleton className={cn("h-3 max-w-full", row.detailWidth)} />
+                <Skeleton className="h-3 w-12 shrink-0" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
