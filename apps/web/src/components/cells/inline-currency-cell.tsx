@@ -2,8 +2,8 @@ import { useCallback, useState } from "react";
 import { MaskInput } from "@/components/ui/mask-input";
 import {
   formatCurrencyFromMinorUnits,
-  majorStringToMinorUnits,
   minorUnitsToMajorString,
+  parseMoneyToMinorUnits,
 } from "@myakiba/utils/currency";
 import { Button } from "../ui/button";
 import { usePendingValue } from "@/hooks/use-pending-value";
@@ -39,7 +39,7 @@ export function InlineCurrencyCell({
   const handleSubmit = useCallback(async () => {
     setIsEditing(false);
     if (editingValue === "") return;
-    const nextValue = majorStringToMinorUnits(editingValue);
+    const nextValue = parseMoneyToMinorUnits(editingValue);
     await submit(nextValue);
   }, [editingValue, submit]);
 

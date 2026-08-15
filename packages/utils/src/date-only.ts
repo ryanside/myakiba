@@ -19,14 +19,6 @@ const YEAR_ONLY_PATTERN = /^\d{4}$/;
 const MONTH_YEAR_PATTERN = /^(\d{1,2})\/(\d{4})$/;
 const MONTH_DAY_YEAR_PATTERN = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
 
-function padNumber(value: number): string {
-  return String(value).padStart(2, "0");
-}
-
-function partsToIsoDate({ year, month, day }: DateOnlyParts): string {
-  return `${String(year).padStart(4, "0")}-${padNumber(month)}-${padNumber(day)}`;
-}
-
 function extractDateOnlyParts(value: string | Date): DateOnlyParts | null {
   if (value instanceof Date) {
     if (Number.isNaN(value.getTime())) return null;
@@ -46,14 +38,11 @@ function extractDateOnlyParts(value: string | Date): DateOnlyParts | null {
   return result.success ? result.data : null;
 }
 
-function toLocalDate(parts: DateOnlyParts): Date {
-  return new Date(parts.year, parts.month - 1, parts.day);
-}
-
 function getValidDateOnlyParts(value: string | Date): DateOnlyParts | null {
   const parts = extractDateOnlyParts(value);
   if (!parts) return null;
-  return DATE_ONLY_SCHEMA.safeParse(partsToIsoDate(parts)).success ? parts : null;
+  const isoDate = `${String(parts.year).padStart(4, "0")}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
+  return DATE_ONLY_SCHEMA.safeParse(isoDate).success ? parts : null;
 }
 
 /**
@@ -78,7 +67,9 @@ export function toDateOnlyString(value: Date | string | null | undefined): strin
 
   if (value instanceof Date) {
     const parts = extractDateOnlyParts(value);
-    return parts ? partsToIsoDate(parts) : null;
+    return parts
+      ? `${String(parts.year).padStart(4, "0")}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`
+      : null;
   }
 
   const trimmed = value.trim();
@@ -86,17 +77,18 @@ export function toDateOnlyString(value: Date | string | null | undefined): strin
 
   const datePart = trimmed.split("T")[0] ?? trimmed;
   const result = DATE_ONLY_SCHEMA.safeParse(datePart);
-  return result.success ? partsToIsoDate(result.data) : datePart;
+  return result.success
+    ? `${String(result.data.year).padStart(4, "0")}-${String(result.data.month).padStart(2, "0")}-${String(result.data.day).padStart(2, "0")}`
+    : datePart;
 }
 
 /** Returns inclusive YYYY-MM-DD bounds for a calendar month. */
 export function getDateOnlyMonthBounds(year: number, month: number): DateOnlyRange {
-  const start: DateOnlyParts = { year, month, day: 1 };
   const end = new Date(Date.UTC(year, month, 0)).getUTCDate();
 
   return {
-    start: partsToIsoDate(start),
-    end: partsToIsoDate({ year, month, day: end }),
+    start: `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-01`,
+    end: `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(end).padStart(2, "0")}`,
   };
 }
 
@@ -129,16 +121,16 @@ export function normalizeScrapedDate(dateStr: string): string | null {
   if (!trimmed) return null;
 
   if (YEAR_ONLY_PATTERN.test(trimmed)) {
-    const parts: DateOnlyParts = { year: Number(trimmed), month: 1, day: 1 };
-    return DATE_ONLY_SCHEMA.safeParse(partsToIsoDate(parts)).success ? partsToIsoDate(parts) : null;
+    const isoDate = `${String(Number(trimmed)).padStart(4, "0")}-01-01`;
+    return DATE_ONLY_SCHEMA.safeParse(isoDate).success ? isoDate : null;
   }
 
   const monthYearMatch = trimmed.match(MONTH_YEAR_PATTERN);
   if (monthYearMatch) {
     const month = Number(monthYearMatch[1]);
     const year = Number(monthYearMatch[2]);
-    const parts: DateOnlyParts = { year, month, day: 1 };
-    return DATE_ONLY_SCHEMA.safeParse(partsToIsoDate(parts)).success ? partsToIsoDate(parts) : null;
+    const isoDate = `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-01`;
+    return DATE_ONLY_SCHEMA.safeParse(isoDate).success ? isoDate : null;
   }
 
   const monthDayYearMatch = trimmed.match(MONTH_DAY_YEAR_PATTERN);
@@ -146,13 +138,15 @@ export function normalizeScrapedDate(dateStr: string): string | null {
     const month = Number(monthDayYearMatch[1]);
     const day = Number(monthDayYearMatch[2]);
     const year = Number(monthDayYearMatch[3]);
-    const parts: DateOnlyParts = { year, month, day };
-    return DATE_ONLY_SCHEMA.safeParse(partsToIsoDate(parts)).success ? partsToIsoDate(parts) : null;
+    const isoDate = `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    return DATE_ONLY_SCHEMA.safeParse(isoDate).success ? isoDate : null;
   }
 
   const datePart = trimmed.split("T")[0] ?? trimmed;
   const result = DATE_ONLY_SCHEMA.safeParse(datePart);
-  return result.success ? partsToIsoDate(result.data) : null;
+  return result.success
+    ? `${String(result.data.year).padStart(4, "0")}-${String(result.data.month).padStart(2, "0")}-${String(result.data.day).padStart(2, "0")}`
+    : null;
 }
 
 /**
@@ -183,5 +177,5 @@ export function parseDateOnly(value: string | Date | null | undefined): Date | u
   const parts = getValidDateOnlyParts(value);
   if (!parts) return undefined;
 
-  return toLocalDate(parts);
+  return new Date(parts.year, parts.month - 1, parts.day);
 }

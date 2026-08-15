@@ -38,11 +38,10 @@ import { FormSection } from "@/components/ui/form-section";
 import * as z from "zod";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import type { CascadeOptions } from "@myakiba/contracts/orders/schema";
-import type { SyncFormOrderItem, SyncOrder } from "@myakiba/contracts/sync/types";
+import type { SyncFormOrder, SyncFormOrderItem, SyncOrder } from "@myakiba/contracts/sync/types";
 import { Textarea } from "../ui/textarea";
-import { majorStringToMinorUnits } from "@myakiba/utils/currency";
+import { parseMoneyToMinorUnits } from "@myakiba/utils/currency";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { createDefaultSyncFormOrder, createDefaultSyncFormOrderItem } from "@/lib/sync";
 import { mfcItemIdSchema } from "@myakiba/contracts/sync/schema";
 import { SHIPPING_METHODS, ORDER_STATUSES, CONDITIONS } from "@myakiba/contracts/shared/constants";
 import type { Currency } from "@myakiba/contracts/shared/types";
@@ -69,10 +68,41 @@ export default function SyncOrderForm({
     handleCascadeOptionChange,
   } = useCascadeOptions();
 
+  const defaultValues: SyncFormOrder = {
+    status: "Ordered",
+    title: "New Order",
+    shop: "",
+    orderDate: "",
+    releaseDate: "",
+    paymentDate: "",
+    shippingDate: "",
+    collectionDate: "",
+    shippingMethod: "n/a",
+    shippingFee: "0.00",
+    taxes: "0.00",
+    duties: "0.00",
+    tariffs: "0.00",
+    miscFees: "0.00",
+    notes: "",
+    items: [
+      {
+        formRowId: crypto.randomUUID(),
+        itemExternalId: initialItemExternalId ?? "",
+        price: "0.00",
+        count: 1,
+        status: "Ordered",
+        condition: "New",
+        shippingMethod: "n/a",
+        orderDate: "",
+        paymentDate: "",
+        shippingDate: "",
+        collectionDate: "",
+      },
+    ],
+  };
   const orderForm = useForm({
-    defaultValues: createDefaultSyncFormOrder(initialItemExternalId),
+    defaultValues,
     onSubmit: async ({ value }) => {
-      const toMinorUnits = (amount: string): number => majorStringToMinorUnits(amount);
       const updatedItems = value.items.map((item) => {
         const updatedItem = { ...item };
 
@@ -99,7 +129,7 @@ export default function SyncOrderForm({
         return {
           ...rest,
           itemExternalId: mfcItemIdSchema.parse(updatedItem.itemExternalId),
-          price: toMinorUnits(updatedItem.price),
+          price: parseMoneyToMinorUnits(updatedItem.price),
           orderDate: updatedItem.orderDate || null,
           paymentDate: updatedItem.paymentDate || null,
           shippingDate: updatedItem.shippingDate || null,
@@ -114,11 +144,11 @@ export default function SyncOrderForm({
         paymentDate: value.paymentDate || null,
         shippingDate: value.shippingDate || null,
         collectionDate: value.collectionDate || null,
-        shippingFee: toMinorUnits(value.shippingFee),
-        taxes: toMinorUnits(value.taxes),
-        duties: toMinorUnits(value.duties),
-        tariffs: toMinorUnits(value.tariffs),
-        miscFees: toMinorUnits(value.miscFees),
+        shippingFee: parseMoneyToMinorUnits(value.shippingFee),
+        taxes: parseMoneyToMinorUnits(value.taxes),
+        duties: parseMoneyToMinorUnits(value.duties),
+        tariffs: parseMoneyToMinorUnits(value.tariffs),
+        miscFees: parseMoneyToMinorUnits(value.miscFees),
         items: updatedItems,
       };
 
@@ -900,7 +930,19 @@ export default function SyncOrderForm({
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  field.pushValue(createDefaultSyncFormOrderItem());
+                  field.pushValue({
+                    formRowId: crypto.randomUUID(),
+                    itemExternalId: "",
+                    price: "0.00",
+                    count: 1,
+                    status: "Ordered",
+                    condition: "New",
+                    shippingMethod: "n/a",
+                    orderDate: "",
+                    paymentDate: "",
+                    shippingDate: "",
+                    collectionDate: "",
+                  });
                 }}
               >
                 <HugeiconsIcon icon={Add01Icon} /> Add More Items

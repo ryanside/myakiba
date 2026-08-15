@@ -12,11 +12,8 @@ import {
   collectionWhere,
   createOrderItemSpendByOrder,
   getShippingMethodTotals,
-  orderFeeSpendSql,
-  orderSpendSql,
-  paidOrderWhere,
+  orderWhere,
   realizedOrderDateSql,
-  toAverage,
 } from "./expense-queries";
 
 const EMPTY_FEE_BREAKDOWN = {
@@ -27,14 +24,6 @@ const EMPTY_FEE_BREAKDOWN = {
   miscFees: 0,
 } as const;
 
-function expenseFilters(filters: ExpenseShopFilters): ExpenseFilters {
-  return {
-    dateStart: filters.dateStart,
-    dateEnd: filters.dateEnd,
-    shop: filters.shop,
-  };
-}
-
 function shopId(shop: string): string {
   return shop === "" ? EXPENSE_UNASSIGNED_SHOP_ID : `${EXPENSE_NAMED_SHOP_ID_PREFIX}${shop}`;
 }
@@ -42,12 +31,6 @@ function shopId(shop: string): string {
 function rawShop(id: string): string {
   if (id === EXPENSE_UNASSIGNED_SHOP_ID) return "";
   return id.slice(EXPENSE_NAMED_SHOP_ID_PREFIX.length);
-}
-
-function searchCondition(search: string | undefined): ReturnType<typeof sql> | undefined {
-  return search
-    ? sql`COALESCE(NULLIF("scoped_shops"."shop", ''), 'Unassigned') ILIKE ${`%${search}%`}`
-    : undefined;
 }
 
 export async function getScopedShopRows(
@@ -68,7 +51,11 @@ async function getCollectionShopRows(
   userId: string,
   filters: ExpenseShopFilters,
 ): Promise<ExpenseShopsResponse> {
-  const scopedFilters = expenseFilters(filters);
+  const scopedFilters: ExpenseFilters = {
+    dateStart: filters.dateStart,
+    dateEnd: filters.dateEnd,
+    shop: filters.shop,
+  };
   const grouped = db.$with("shop_agg").as(
     db
       .select({
@@ -104,7 +91,11 @@ async function getCollectionShopRows(
       totalCount: sql<number>`COUNT(*) OVER()::integer`,
     })
     .from(scopedShops)
-    .where(searchCondition(filters.search))
+    .where(
+      filters.search
+        ? sql`COALESCE(NULLIF("scoped_shops"."shop", ''), 'Unassigned') ILIKE ${`%${filters.search}%`}`
+        : undefined,
+    )
     .orderBy(
       desc(sql`CASE WHEN ${scopedShops.spend} > 0 THEN 1 ELSE 0 END`),
       desc(scopedShops.spend),
@@ -121,7 +112,7 @@ async function getCollectionShopRows(
       spend: row.spend,
       share: row.totalScopedSpend > 0 ? (row.spend / row.totalScopedSpend) * 100 : 0,
       itemCount: row.itemCount,
-      averageItemCost: toAverage(row.spend, row.itemCount),
+      averageItemCost: row.itemCount > 0 ? Math.round(row.spend / row.itemCount) : 0,
     })),
     totalCount: rows[0]?.totalCount ?? 0,
   };
@@ -131,24 +122,30 @@ async function getOrdersShopRows(
   userId: string,
   filters: ExpenseShopFilters,
 ): Promise<ExpenseShopsResponse> {
-  const scopedFilters = expenseFilters(filters);
+  const scopedFilters: ExpenseFilters = {
+    dateStart: filters.dateStart,
+    dateEnd: filters.dateEnd,
+    shop: filters.shop,
+  };
   const orderItems = createOrderItemSpendByOrder(userId, scopedFilters);
   const grouped = db.$with("shop_agg").as(
     db
       .select({
         shop: order.shop,
-        spend: sql<number>`COALESCE(${sum(orderSpendSql(orderItems))}, 0)::double precision`.as(
-          "spend",
-        ),
+        spend: sql<number>`COALESCE(${sum(
+          sql`COALESCE(${orderItems.itemSpend}, 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`,
+        )}, 0)::double precision`.as("spend"),
         orderCount: sql<number>`${count(order.id)}::integer`.as("order_count"),
         orderItemCount: sql<number>`COALESCE(${sum(
           sql`COALESCE(${orderItems.itemCount}, 0)`,
         )}, 0)::integer`.as("order_item_count"),
-        fees: sql<number>`COALESCE(${sum(orderFeeSpendSql())}, 0)::double precision`.as("fees"),
+        fees: sql<number>`COALESCE(${sum(
+          sql`COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`,
+        )}, 0)::double precision`.as("fees"),
       })
       .from(order)
       .leftJoin(orderItems, eq(order.id, orderItems.orderId))
-      .where(paidOrderWhere(userId, scopedFilters))
+      .where(orderWhere(userId, scopedFilters, "total"))
       .groupBy(order.shop),
   );
   const scopedShops = db.$with("scoped_shops").as(
@@ -178,7 +175,11 @@ async function getOrdersShopRows(
       totalCount: sql<number>`COUNT(*) OVER()::integer`,
     })
     .from(scopedShops)
-    .where(searchCondition(filters.search))
+    .where(
+      filters.search
+        ? sql`COALESCE(NULLIF("scoped_shops"."shop", ''), 'Unassigned') ILIKE ${`%${filters.search}%`}`
+        : undefined,
+    )
     .orderBy(
       desc(sql`CASE WHEN ${scopedShops.spend} > 0 THEN 1 ELSE 0 END`),
       desc(scopedShops.spend),
@@ -195,7 +196,7 @@ async function getOrdersShopRows(
       spend: row.spend,
       share: row.totalScopedSpend > 0 ? (row.spend / row.totalScopedSpend) * 100 : 0,
       orderCount: row.orderCount,
-      averageOrder: toAverage(row.spend, row.orderCount),
+      averageOrder: row.orderCount > 0 ? Math.round(row.spend / row.orderCount) : 0,
       orderItemCount: row.orderItemCount,
       fees: row.fees,
     })),
@@ -207,7 +208,11 @@ async function getShippingShopRows(
   userId: string,
   filters: ExpenseShopFilters,
 ): Promise<ExpenseShopsResponse> {
-  const scopedFilters = expenseFilters(filters);
+  const scopedFilters: ExpenseFilters = {
+    dateStart: filters.dateStart,
+    dateEnd: filters.dateEnd,
+    shop: filters.shop,
+  };
   const grouped = db.$with("shop_agg").as(
     db
       .select({
@@ -216,7 +221,7 @@ async function getShippingShopRows(
         orderCount: sql<number>`${count(order.id)}::integer`.as("order_count"),
       })
       .from(order)
-      .where(paidOrderWhere(userId, scopedFilters))
+      .where(orderWhere(userId, scopedFilters, "total"))
       .groupBy(order.shop),
   );
   const scopedShops = db.$with("scoped_shops").as(
@@ -242,7 +247,11 @@ async function getShippingShopRows(
       totalCount: sql<number>`COUNT(*) OVER()::integer`,
     })
     .from(scopedShops)
-    .where(searchCondition(filters.search))
+    .where(
+      filters.search
+        ? sql`COALESCE(NULLIF("scoped_shops"."shop", ''), 'Unassigned') ILIKE ${`%${filters.search}%`}`
+        : undefined,
+    )
     .orderBy(
       desc(sql`CASE WHEN ${scopedShops.spend} > 0 THEN 1 ELSE 0 END`),
       desc(scopedShops.spend),
@@ -259,7 +268,7 @@ async function getShippingShopRows(
       spend: row.spend,
       share: row.totalScopedSpend > 0 ? (row.spend / row.totalScopedSpend) * 100 : 0,
       orderCount: row.orderCount,
-      averageShipping: toAverage(row.spend, row.orderCount),
+      averageShipping: row.orderCount > 0 ? Math.round(row.spend / row.orderCount) : 0,
     })),
     totalCount: rows[0]?.totalCount ?? 0,
   };
@@ -338,7 +347,7 @@ async function loadFeeBreakdown(userId: string, filters: ExpenseFilters) {
       miscFees: sql<number>`COALESCE(${sum(order.miscFees)}, 0)::double precision`,
     })
     .from(order)
-    .where(paidOrderWhere(userId, filters));
+    .where(orderWhere(userId, filters, "total"));
 
   return row ?? EMPTY_FEE_BREAKDOWN;
 }
@@ -372,7 +381,7 @@ async function loadTopOrders(
     .leftJoin(orderItems, eq(order.id, orderItems.orderId))
     .leftJoin(collection, eq(order.id, collection.orderId))
     .leftJoin(item, eq(collection.itemId, item.id))
-    .where(paidOrderWhere(userId, filters))
+    .where(orderWhere(userId, filters, "total"))
     .groupBy(
       order.id,
       order.title,
@@ -389,7 +398,13 @@ async function loadTopOrders(
       order.miscFees,
       orderItems.itemSpend,
     )
-    .orderBy(desc(scope === "shipping" ? order.shippingFee : orderSpendSql(orderItems)))
+    .orderBy(
+      desc(
+        scope === "shipping"
+          ? order.shippingFee
+          : sql`COALESCE(${orderItems.itemSpend}, 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`,
+      ),
+    )
     .limit(5);
 
   return rows.map(({ itemSpend, shipping, taxes, duties, tariffs, miscFees, ...row }) => {

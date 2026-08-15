@@ -33,11 +33,6 @@ export type JobStatusSubscription = Readonly<{
 
 const CONNECTION_CLOSED_ERROR = new Error("Job status subscriber connection closed");
 
-const createSubscriptionConsumerState = (): SubscriptionConsumerState => ({
-  pendingEvent: null,
-  resolvePending: null,
-});
-
 const pushToConsumerState = (
   consumerState: SubscriptionConsumerState,
   event: JobStatusSubscriptionEvent,
@@ -211,7 +206,10 @@ class JobStatusSubscriptionRegistry {
     this.channels.set(channel, channelState);
 
     const consumerId = this.nextConsumerId++;
-    const consumerState = createSubscriptionConsumerState();
+    const consumerState: SubscriptionConsumerState = {
+      pendingEvent: null,
+      resolvePending: null,
+    };
     channelState.consumers.set(consumerId, consumerState);
 
     try {

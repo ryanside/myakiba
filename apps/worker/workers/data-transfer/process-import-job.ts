@@ -337,17 +337,6 @@ async function writeImport({
   };
 }
 
-function failedImportResult(error: string): DataTransferImportResult {
-  return {
-    status: "failed",
-    importedOrders: 0,
-    importedCollectionItems: 0,
-    failedCollectionItems: 0,
-    report: null,
-    error,
-  };
-}
-
 export async function processDataTransferImportJob(
   job: Job<DataTransferImportJobPayload, DataTransferImportResult>,
 ): Promise<DataTransferImportResult> {
@@ -436,7 +425,14 @@ export async function processDataTransferImportJob(
         outcome: "skipped",
         sync: { sessionStatus: "failed", statusMessage: SUPERSEDED_IMPORT_ERROR },
       });
-      return failedImportResult(SUPERSEDED_IMPORT_ERROR);
+      return {
+        status: "failed",
+        importedOrders: 0,
+        importedCollectionItems: 0,
+        failedCollectionItems: 0,
+        report: null,
+        error: SUPERSEDED_IMPORT_ERROR,
+      };
     }
 
     claimedImport = true;
@@ -570,7 +566,14 @@ export async function processDataTransferImportJob(
   } catch (error) {
     if (error instanceof Error && error.message === "DATA_TRANSFER_IMPORT_NO_LONGER_CURRENT") {
       jobLog.set({ outcome: "skipped" });
-      return failedImportResult(SUPERSEDED_IMPORT_ERROR);
+      return {
+        status: "failed",
+        importedOrders: 0,
+        importedCollectionItems: 0,
+        failedCollectionItems: 0,
+        report: null,
+        error: SUPERSEDED_IMPORT_ERROR,
+      };
     }
 
     if (claimedImport) {
@@ -593,7 +596,14 @@ export async function processDataTransferImportJob(
 
       if (!failed) {
         jobLog.set({ outcome: "skipped" });
-        return failedImportResult(SUPERSEDED_IMPORT_ERROR);
+        return {
+          status: "failed",
+          importedOrders: 0,
+          importedCollectionItems: 0,
+          failedCollectionItems: 0,
+          report: null,
+          error: SUPERSEDED_IMPORT_ERROR,
+        };
       }
     }
 

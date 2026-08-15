@@ -4,12 +4,9 @@ import { and, eq, ne } from "drizzle-orm";
 import type {
   ExpenseFilterOptions,
   ExpenseFilters,
-  ExpenseShopFilters,
-  ExpenseShopsResponse,
   ExpensesCollectionResponse,
   ExpensesOrdersResponse,
   ExpensesShippingResponse,
-  ShopExpansionResponse,
 } from "./model";
 import {
   projectCollectionDashboard,
@@ -28,7 +25,6 @@ import {
   getShippingSeries,
   getUnpaidOrderAggregates,
 } from "./lib/expense-queries";
-import { getScopedShopRows, loadScopedShopExpansion } from "./lib/shop-aggregates";
 
 const ExpensesService = {
   async getExpensesCollection(
@@ -79,13 +75,6 @@ const ExpensesService = {
     return projectShippingDashboard({ filters, bucket, methodTotals, series, bundleRows });
   },
 
-  async getExpensesShops(
-    userId: string,
-    filters: ExpenseShopFilters,
-  ): Promise<ExpenseShopsResponse> {
-    return getScopedShopRows(userId, filters);
-  },
-
   async getExpenseFilterOptions(userId: string): Promise<ExpenseFilterOptions> {
     const [collectionShops, orderShops] = await Promise.all([
       db
@@ -110,14 +99,6 @@ const ExpensesService = {
     ].toSorted((left, right) => left.localeCompare(right));
 
     return { shopOptions };
-  },
-
-  async getShopExpansion(
-    userId: string,
-    shopId: string,
-    filters: ExpenseShopFilters,
-  ): Promise<ShopExpansionResponse> {
-    return loadScopedShopExpansion(userId, shopId, filters);
   },
 };
 

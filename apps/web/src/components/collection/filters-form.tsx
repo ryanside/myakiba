@@ -44,7 +44,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { majorStringToMinorUnits, minorUnitsToMajorString } from "@myakiba/utils/currency";
+import { minorUnitsToMajorString, parseMoneyToMinorUnits } from "@myakiba/utils/currency";
 import {
   SHIPPING_METHODS,
   CONDITIONS,
@@ -110,11 +110,9 @@ export default function FiltersForm({
       condition: currentFilters?.condition ?? [],
     },
     onSubmit: async ({ value }) => {
-      const toMinorUnits = (amount: string): number | undefined =>
-        amount.trim() === "" ? undefined : majorStringToMinorUnits(amount);
       const filters: CollectionFilters = {
-        paidMin: toMinorUnits(value.paidMin),
-        paidMax: toMinorUnits(value.paidMax),
+        paidMin: value.paidMin.trim() === "" ? undefined : parseMoneyToMinorUnits(value.paidMin),
+        paidMax: value.paidMax.trim() === "" ? undefined : parseMoneyToMinorUnits(value.paidMax),
         shop: value.shop && value.shop.length > 0 ? value.shop : undefined,
         payDateStart: value.payDateStart || undefined,
         payDateEnd: value.payDateEnd || undefined,
@@ -125,8 +123,10 @@ export default function FiltersForm({
         shipMethod: value.shipMethod && value.shipMethod.length > 0 ? value.shipMethod : undefined,
         relDateStart: value.relDateStart || undefined,
         relDateEnd: value.relDateEnd || undefined,
-        relPriceMin: toMinorUnits(value.relPriceMin),
-        relPriceMax: toMinorUnits(value.relPriceMax),
+        relPriceMin:
+          value.relPriceMin.trim() === "" ? undefined : parseMoneyToMinorUnits(value.relPriceMin),
+        relPriceMax:
+          value.relPriceMax.trim() === "" ? undefined : parseMoneyToMinorUnits(value.relPriceMax),
         relCurrency:
           value.relCurrency && value.relCurrency.length > 0 ? value.relCurrency : undefined,
         category: value.category && value.category.length > 0 ? value.category : undefined,

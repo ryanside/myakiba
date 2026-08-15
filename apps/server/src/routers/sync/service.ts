@@ -242,16 +242,6 @@ class SyncService {
     });
   }
 
-  assignOrderIds(
-    items: Omit<NormalizedInternalCsvItem, "collectionId">[],
-  ): NormalizedInternalCsvItem[] {
-    return items.map((item) => ({
-      ...item,
-      collectionId: createId(),
-      orderId: item.status === "Ordered" ? createId() : item.orderId,
-    }));
-  }
-
   async processItems(items: NormalizedInternalCsvItem[], userId: string) {
     const itemExternalIds = items.map((item) => item.itemExternalId);
 
@@ -420,43 +410,7 @@ class SyncService {
     }
   }
 
-  async queueOrderSyncJob(
-    userId: string,
-    order: UpdatedSyncOrder,
-    itemsToScrape: UpdatedSyncOrderItem[],
-    itemsToInsert: QueuedCollectionItem[],
-    syncSessionId: string,
-  ) {
-    return this.queueOrderLikeSyncJob({
-      type: "order",
-      userId,
-      order,
-      itemsToScrape,
-      itemsToInsert,
-      syncSessionId,
-      queueErrorCode: "FAILED_TO_QUEUE_ORDER_SYNC_JOB",
-    });
-  }
-
-  async queueOrderItemSyncJob(
-    userId: string,
-    order: UpdatedSyncOrder,
-    itemsToScrape: UpdatedSyncOrderItem[],
-    itemsToInsert: QueuedCollectionItem[],
-    syncSessionId: string,
-  ) {
-    return this.queueOrderLikeSyncJob({
-      type: "order-item",
-      userId,
-      order,
-      itemsToScrape,
-      itemsToInsert,
-      syncSessionId,
-      queueErrorCode: "FAILED_TO_QUEUE_ORDER_ITEM_SYNC_JOB",
-    });
-  }
-
-  private async queueOrderLikeSyncJob(params: {
+  async queueOrderLikeSyncJob(params: {
     readonly type: "order" | "order-item";
     readonly userId: string;
     readonly order: UpdatedSyncOrder;

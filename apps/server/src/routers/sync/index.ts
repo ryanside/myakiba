@@ -108,7 +108,11 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         items: { requested: body.length },
       });
 
-      const items = SyncService.assignOrderIds(body);
+      const items = body.map((item) => ({
+        ...item,
+        collectionId: createId(),
+        orderId: item.status === "Ordered" ? createId() : item.orderId,
+      }));
 
       const { data: result, error: processItemsError } = await tryCatch(
         SyncService.processItems(items, user.id),
@@ -474,13 +478,15 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       let jobId: string | null | undefined = null;
       if (itemsToScrape.length > 0) {
         const { data: jobIdData, error: queueOrderSyncJobError } = await tryCatch(
-          SyncService.queueOrderSyncJob(
-            user.id,
+          SyncService.queueOrderLikeSyncJob({
+            type: "order",
+            userId: user.id,
             order,
             itemsToScrape,
-            collectionItemsToInsert,
+            itemsToInsert: collectionItemsToInsert,
             syncSessionId,
-          ),
+            queueErrorCode: "FAILED_TO_QUEUE_ORDER_SYNC_JOB",
+          }),
         );
 
         if (queueOrderSyncJobError) {
@@ -764,13 +770,15 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       let jobId: string | null | undefined = null;
       if (itemsToScrape.length > 0) {
         const { data: jobIdData, error: queueOrderItemSyncJobError } = await tryCatch(
-          SyncService.queueOrderItemSyncJob(
-            user.id,
-            orderDetails,
+          SyncService.queueOrderLikeSyncJob({
+            type: "order-item",
+            userId: user.id,
+            order: orderDetails,
             itemsToScrape,
-            collectionItemsToInsert,
+            itemsToInsert: collectionItemsToInsert,
             syncSessionId,
-          ),
+            queueErrorCode: "FAILED_TO_QUEUE_ORDER_ITEM_SYNC_JOB",
+          }),
         );
 
         if (queueOrderItemSyncJobError) {

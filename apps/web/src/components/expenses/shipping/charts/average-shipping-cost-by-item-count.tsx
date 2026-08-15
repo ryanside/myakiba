@@ -1,17 +1,17 @@
 import { useMemo } from "react";
 import type { ReactNode } from "react";
 import type { ShippingItemCountPoint } from "@myakiba/contracts/expenses/schema";
+import { SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import type { Currency, ShippingMethod } from "@myakiba/contracts/shared/types";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { EvilBarChart } from "@/components/evilcharts/charts/recharts-bar-chart";
 import { ChartTooltip, ChartTooltipContent } from "@/components/evilcharts/ui/recharts-tooltip";
 import { ChartSection, ChartSeriesLegend } from "@/components/expenses/dashboard-shell";
 import {
-  shippingChartKey,
+  EXPENSE_CHART_BRUSH_MIN_POINTS,
+  EXPENSE_CHART_COLORS,
   shippingMethodChartConfig,
-  shippingMethodColor,
-  shouldShowExpenseBrush,
-  toShippingItemCountChartRows,
+  shippingMethodKeys,
   useShippingMethodVisibility,
 } from "@/components/expenses/chart-utils";
 
@@ -30,16 +30,32 @@ export function AverageShippingCostByItemCount({
   readonly selector: ReactNode;
   readonly rankedMethods: readonly ShippingMethod[];
 }): ReactNode {
-  const chartData = useMemo(() => toShippingItemCountChartRows(data), [data]);
+  const chartData = useMemo(
+    () =>
+      data.map((point) => ({
+        bucket: `${point.itemCount} ${point.itemCount === 1 ? "item" : "items"}`,
+        na: point.values["n/a"],
+        EMS: point.values.EMS,
+        SAL: point.values.SAL,
+        AIRMAIL: point.values.AIRMAIL,
+        SURFACE: point.values.SURFACE,
+        FEDEX: point.values.FEDEX,
+        DHL: point.values.DHL,
+        Colissimo: point.values.Colissimo,
+        UPS: point.values.UPS,
+        Domestic: point.values.Domestic,
+      })),
+    [data],
+  );
   const { methods, visibleKeys, toggle } = useShippingMethodVisibility({
     points: data,
     rankedMethods,
     initialVisibleCount: 3,
   });
   const legend = methods.map((method) => ({
-    key: shippingChartKey(method),
+    key: shippingMethodKeys[method],
     label: method,
-    color: shippingMethodColor(method),
+    color: EXPENSE_CHART_COLORS[SHIPPING_METHODS.indexOf(method)] ?? EXPENSE_CHART_COLORS[0],
   }));
 
   return (
@@ -75,11 +91,15 @@ export function AverageShippingCostByItemCount({
           />
         ) : null}
         {methods.map((method) =>
-          visibleKeys.has(shippingChartKey(method)) ? (
-            <EvilBarChart.Bar key={method} dataKey={shippingChartKey(method)} variant="gradient" />
+          visibleKeys.has(shippingMethodKeys[method]) ? (
+            <EvilBarChart.Bar
+              key={method}
+              dataKey={shippingMethodKeys[method]}
+              variant="gradient"
+            />
           ) : null,
         )}
-        {shouldShowExpenseBrush(chartData.length) ? <EvilBarChart.Brush /> : null}
+        {chartData.length >= EXPENSE_CHART_BRUSH_MIN_POINTS ? <EvilBarChart.Brush /> : null}
       </EvilBarChart>
     </ChartSection>
   );

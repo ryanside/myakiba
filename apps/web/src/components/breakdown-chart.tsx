@@ -60,14 +60,6 @@ const SKELETON_ROWS = [
   { label: "w-20", detail: "w-8", value: "w-14" },
 ] as const;
 
-function getSegmentWidth(percentage: number): number {
-  if (percentage > 0 && percentage < MIN_VISIBLE_SEGMENT_PERCENTAGE) {
-    return MIN_VISIBLE_SEGMENT_PERCENTAGE;
-  }
-
-  return percentage;
-}
-
 function BreakdownChartSkeleton({ variant }: { readonly variant: keyof typeof CHART_VARIANTS }) {
   return (
     <>
@@ -143,7 +135,7 @@ export function BreakdownChart<TData extends BreakdownChartData>({
                     <div
                       className="cursor-default transition-opacity duration-200 first:rounded-l-sm last:rounded-r-sm"
                       style={{
-                        width: `${getSegmentWidth(item.percentage)}%`,
+                        width: `${item.percentage > 0 && item.percentage < MIN_VISIBLE_SEGMENT_PERCENTAGE ? MIN_VISIBLE_SEGMENT_PERCENTAGE : item.percentage}%`,
                         backgroundColor: item.color,
                         opacity: isOtherHovered ? 0.3 : 1,
                       }}

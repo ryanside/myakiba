@@ -2,6 +2,7 @@ import { tryCatch } from "@myakiba/utils/result";
 import { Elysia, status } from "elysia";
 import { evlog } from "evlog/elysia";
 import { betterAuth } from "@/middleware/better-auth";
+import { getScopedShopRows, loadScopedShopExpansion } from "./lib/shop-aggregates";
 import { expenseFiltersSchema, expenseShopFiltersSchema, shopParamSchema } from "./model";
 import ExpensesService from "./service";
 
@@ -49,7 +50,7 @@ const expensesRouter = new Elysia({ prefix: "/expenses" })
     async ({ query, user, log }) => {
       log.set({ action: "get_expenses_shops", user: { id: user.id }, query });
 
-      const { data, error } = await tryCatch(ExpensesService.getExpensesShops(user.id, query));
+      const { data, error } = await tryCatch(getScopedShopRows(user.id, query));
 
       if (error) {
         log.error(error, { step: "getExpensesShops" });
@@ -108,9 +109,7 @@ const expensesRouter = new Elysia({ prefix: "/expenses" })
         query,
       });
 
-      const { data, error } = await tryCatch(
-        ExpensesService.getShopExpansion(user.id, params.shop, query),
-      );
+      const { data, error } = await tryCatch(loadScopedShopExpansion(user.id, params.shop, query));
 
       if (error) {
         log.error(error, { step: "getShopExpansion" });

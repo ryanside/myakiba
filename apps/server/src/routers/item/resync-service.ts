@@ -36,7 +36,7 @@ type ResyncableItem = {
   readonly externalId: number;
 };
 
-async function deriveResyncStatus(itemId: string): Promise<ItemResyncState> {
+export async function deriveResyncStatus(itemId: string): Promise<ItemResyncState> {
   const job = await itemResyncQueue.getJob(getResyncJobId(itemId));
 
   if (job) {
@@ -71,10 +71,6 @@ class ItemResyncService {
     }
 
     return { id: row.id, externalId };
-  }
-
-  async getResyncStatus(itemId: string): Promise<ItemResyncState> {
-    return deriveResyncStatus(itemId);
   }
 
   async requestResync(itemId: string, externalId: number): Promise<ItemResyncState> {

@@ -4,7 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChangelogCoverImage } from "@/components/changelog/changelog-mdx";
 import { Separator } from "@/components/ui/separator";
-import { formatChangelogDate, getChangelogEntries } from "@/lib/changelog";
+import { changelogEntries, formatChangelogDate } from "@/lib/changelog";
 import "@/components/changelog/changelog.css";
 
 export const Route = createFileRoute("/(changelog)/changelog/")({
@@ -26,8 +26,6 @@ export const Route = createFileRoute("/(changelog)/changelog/")({
 });
 
 function ChangelogIndex() {
-  const entries = getChangelogEntries();
-
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-12 px-6 py-14 sm:py-20">
       <header className="flex flex-col gap-3">
@@ -38,7 +36,7 @@ function ChangelogIndex() {
       </header>
 
       <ol className="flex flex-col">
-        {entries.map((entry, index) => (
+        {changelogEntries.map((entry, index) => (
           <Fragment key={entry.slug}>
             {index > 0 ? <Separator className="my-8" /> : null}
             <li>

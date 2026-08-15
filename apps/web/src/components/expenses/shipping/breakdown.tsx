@@ -1,10 +1,11 @@
 import { useMemo } from "react";
 import type { ReactNode } from "react";
 import type { ExpensesShippingResponse } from "@myakiba/contracts/expenses/schema";
+import { SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { BreakdownChart } from "@/components/breakdown-chart";
-import { shippingMethodColor } from "@/components/expenses/chart-utils";
+import { EXPENSE_CHART_COLORS } from "@/components/expenses/chart-utils";
 import { ExpensePanel } from "@/components/expenses/dashboard-shell";
 
 export function Breakdown({
@@ -26,7 +27,8 @@ export function Breakdown({
         ...entry,
         id: entry.method,
         label: entry.method,
-        color: shippingMethodColor(entry.method),
+        color:
+          EXPENSE_CHART_COLORS[SHIPPING_METHODS.indexOf(entry.method)] ?? EXPENSE_CHART_COLORS[0],
         tooltip: (
           <div className="flex flex-col gap-0.5">
             <p className="text-xs font-medium">{entry.method}</p>

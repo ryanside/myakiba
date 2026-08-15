@@ -41,7 +41,7 @@ import type { Order } from "@myakiba/contracts/orders/types";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import { CascadeOptionsDropdown } from "@/components/cascade-options-dropdown";
 import { Textarea } from "../ui/textarea";
-import { majorStringToMinorUnits, minorUnitsToMajorString } from "@myakiba/utils/currency";
+import { minorUnitsToMajorString, parseMoneyToMinorUnits } from "@myakiba/utils/currency";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { useState } from "react";
 import { getCurrencyLocale } from "@/lib/locale";
@@ -143,19 +143,15 @@ function OrderFormContent(
   const orderData =
     type === "edit-order" ? (props as DeferredEditOrderFormProps).orderData : undefined;
 
-  const formatMoneyForInput = (value: number | null | undefined): string =>
-    minorUnitsToMajorString(value ?? 0);
-  const toMinorUnits = (value: string): number => majorStringToMinorUnits(value);
-
   const form = useForm({
     defaultValues: orderData
       ? {
           ...orderData,
-          shippingFee: formatMoneyForInput(orderData.shippingFee),
-          taxes: formatMoneyForInput(orderData.taxes),
-          duties: formatMoneyForInput(orderData.duties),
-          tariffs: formatMoneyForInput(orderData.tariffs),
-          miscFees: formatMoneyForInput(orderData.miscFees),
+          shippingFee: minorUnitsToMajorString(orderData.shippingFee ?? 0),
+          taxes: minorUnitsToMajorString(orderData.taxes ?? 0),
+          duties: minorUnitsToMajorString(orderData.duties ?? 0),
+          tariffs: minorUnitsToMajorString(orderData.tariffs ?? 0),
+          miscFees: minorUnitsToMajorString(orderData.miscFees ?? 0),
         }
       : {
           status: "Ordered" as const,
@@ -189,11 +185,11 @@ function OrderFormContent(
         collectionDate: value.collectionDate || null,
         status: value.status,
         shippingMethod: value.shippingMethod || "n/a",
-        shippingFee: toMinorUnits(value.shippingFee),
-        taxes: toMinorUnits(value.taxes),
-        duties: toMinorUnits(value.duties),
-        tariffs: toMinorUnits(value.tariffs),
-        miscFees: toMinorUnits(value.miscFees),
+        shippingFee: parseMoneyToMinorUnits(value.shippingFee),
+        taxes: parseMoneyToMinorUnits(value.taxes),
+        duties: parseMoneyToMinorUnits(value.duties),
+        tariffs: parseMoneyToMinorUnits(value.tariffs),
+        miscFees: parseMoneyToMinorUnits(value.miscFees),
         notes: value.notes,
       };
 

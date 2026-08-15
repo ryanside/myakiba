@@ -1,10 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import type { ShippingMethod } from "@myakiba/contracts/shared/types";
-import type {
-  ShippingItemCountPoint,
-  ShippingMethodPoint,
-} from "@myakiba/contracts/expenses/schema";
 import type { ChartConfig } from "@/components/evilcharts/ui/recharts-chart";
 
 export const EXPENSE_CHART_COLORS = [
@@ -20,7 +16,7 @@ export const EXPENSE_CHART_COLORS = [
   "var(--chart-10)",
 ] as const;
 
-const shippingMethodKeys = {
+export const shippingMethodKeys = {
   "n/a": "na",
   EMS: "EMS",
   SAL: "SAL",
@@ -35,10 +31,8 @@ const shippingMethodKeys = {
 
 type ShippingChartKey = (typeof shippingMethodKeys)[ShippingMethod];
 
-type ShippingChartRow = { readonly bucket: string } & Readonly<Record<ShippingChartKey, number>>;
-
-const EXPENSE_CHART_BRUSH_MIN_POINTS = 8;
-const EXPENSE_CHART_DOT_MAX_POINTS = EXPENSE_CHART_BRUSH_MIN_POINTS - 1;
+export const EXPENSE_CHART_BRUSH_MIN_POINTS = 8;
+export const EXPENSE_CHART_DOT_MAX_POINTS = EXPENSE_CHART_BRUSH_MIN_POINTS - 1;
 
 export const shippingMethodChartConfig = {
   na: { label: "n/a", colors: { light: [EXPENSE_CHART_COLORS[0]] } },
@@ -52,56 +46,6 @@ export const shippingMethodChartConfig = {
   UPS: { label: "UPS", colors: { light: [EXPENSE_CHART_COLORS[8]] } },
   Domestic: { label: "Domestic", colors: { light: [EXPENSE_CHART_COLORS[9]] } },
 } satisfies ChartConfig;
-
-export function toShippingChartRows(points: readonly ShippingMethodPoint[]): ShippingChartRow[] {
-  return points.map((point) => ({
-    bucket: point.bucket,
-    na: point.values["n/a"],
-    EMS: point.values.EMS,
-    SAL: point.values.SAL,
-    AIRMAIL: point.values.AIRMAIL,
-    SURFACE: point.values.SURFACE,
-    FEDEX: point.values.FEDEX,
-    DHL: point.values.DHL,
-    Colissimo: point.values.Colissimo,
-    UPS: point.values.UPS,
-    Domestic: point.values.Domestic,
-  }));
-}
-
-export function toShippingItemCountChartRows(
-  points: readonly ShippingItemCountPoint[],
-): ShippingChartRow[] {
-  return points.map((point) => ({
-    bucket: `${point.itemCount} ${point.itemCount === 1 ? "item" : "items"}`,
-    na: point.values["n/a"],
-    EMS: point.values.EMS,
-    SAL: point.values.SAL,
-    AIRMAIL: point.values.AIRMAIL,
-    SURFACE: point.values.SURFACE,
-    FEDEX: point.values.FEDEX,
-    DHL: point.values.DHL,
-    Colissimo: point.values.Colissimo,
-    UPS: point.values.UPS,
-    Domestic: point.values.Domestic,
-  }));
-}
-
-export function shippingMethodColor(method: ShippingMethod): string {
-  return EXPENSE_CHART_COLORS[SHIPPING_METHODS.indexOf(method)] ?? EXPENSE_CHART_COLORS[0];
-}
-
-export function shippingChartKey(method: ShippingMethod): ShippingChartKey {
-  return shippingMethodKeys[method];
-}
-
-export function shouldShowExpenseBrush(pointCount: number): boolean {
-  return pointCount >= EXPENSE_CHART_BRUSH_MIN_POINTS;
-}
-
-export function shouldShowExpenseDots(pointCount: number): boolean {
-  return pointCount <= EXPENSE_CHART_DOT_MAX_POINTS;
-}
 
 export function useShippingMethodVisibility({
   points,
@@ -132,7 +76,7 @@ export function useShippingMethodVisibility({
     }
     return orderedMethods;
   }, [points, rankedMethods]);
-  const activeKeys = useMemo(() => methods.map(shippingChartKey), [methods]);
+  const activeKeys = useMemo(() => methods.map((method) => shippingMethodKeys[method]), [methods]);
   const [selectedKeys, setSelectedKeys] = useState<ReadonlySet<ShippingChartKey> | null>(null);
   const visibleKeys = useMemo(
     () => getVisibleShippingKeys(activeKeys, selectedKeys, initialVisibleCount),

@@ -92,24 +92,3 @@ export function minorUnitsToMajorString(valueMinorUnits: number): string {
   const major = `${whole}.${fraction.toString().padStart(2, "0")}`;
   return isNegative ? `-${major}` : major;
 }
-
-/**
- * Converts a major-unit string into integer minor units.
- *
- * This is an alias for `parseMoneyToMinorUnits()` and exists to make call sites
- * read more clearly when the input is already known to be a major-unit string.
- *
- * Input:
- * - `input`: a major-unit money string such as `"123.45"`
- *
- * Output:
- * - an integer amount in minor units
- *
- * Examples:
- * - `majorStringToMinorUnits("123.45")` -> `12345`
- * - `majorStringToMinorUnits("50")` -> `5000`
- * - `majorStringToMinorUnits("-9.99")` -> `-999`
- */
-export function majorStringToMinorUnits(input: string): number {
-  return parseMoneyToMinorUnits(input);
-}

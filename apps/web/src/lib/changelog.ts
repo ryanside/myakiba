@@ -13,6 +13,9 @@ const changelogModules = import.meta.glob<ChangelogMdxModule>("../content/change
 });
 const sources = buildChangelogSources(changelogModules);
 const sourceBySlug = new Map(sources.map((source) => [source.metadata.slug, source]));
+export const changelogEntries: readonly ChangelogEntryMetadata[] = sources.map(
+  (source) => source.metadata,
+);
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
@@ -24,10 +27,6 @@ export type LoadedChangelogEntry = Readonly<{
   Content: MDXContent;
   metadata: ChangelogEntryMetadata;
 }>;
-
-export function getChangelogEntries(): readonly ChangelogEntryMetadata[] {
-  return sources.map((source) => source.metadata);
-}
 
 export function formatChangelogDate(value: string): string {
   const date = parseDateOnly(value);

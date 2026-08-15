@@ -6,7 +6,10 @@ import { EvilBarChart } from "@/components/evilcharts/charts/recharts-bar-chart"
 import type { ChartConfig } from "@/components/evilcharts/ui/recharts-chart";
 import { ChartTooltip, ChartTooltipContent } from "@/components/evilcharts/ui/recharts-tooltip";
 import { ChartSection, ChartSeriesLegend } from "@/components/expenses/dashboard-shell";
-import { EXPENSE_CHART_COLORS, shouldShowExpenseBrush } from "@/components/expenses/chart-utils";
+import {
+  EXPENSE_CHART_BRUSH_MIN_POINTS,
+  EXPENSE_CHART_COLORS,
+} from "@/components/expenses/chart-utils";
 
 const config = {
   collectionItems: {
@@ -64,7 +67,7 @@ export function CollectionSpendingByPeriod({
           />
         ) : null}
         <EvilBarChart.Bar dataKey="collectionItems" variant="gradient" />
-        {shouldShowExpenseBrush(data.length) ? <EvilBarChart.Brush /> : null}
+        {data.length >= EXPENSE_CHART_BRUSH_MIN_POINTS ? <EvilBarChart.Brush /> : null}
       </EvilBarChart>
     </ChartSection>
   );

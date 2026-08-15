@@ -33,11 +33,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FormSection } from "@/components/ui/form-section";
-import type { SyncOrderItems } from "@myakiba/contracts/sync/types";
+import type { SyncFormOrderItem, SyncOrderItems } from "@myakiba/contracts/sync/types";
 import { CONDITIONS, ORDER_STATUSES, SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import type { Currency } from "@myakiba/contracts/shared/types";
-import { majorStringToMinorUnits } from "@myakiba/utils/currency";
-import { createDefaultSyncFormOrderItem } from "@/lib/sync";
+import { parseMoneyToMinorUnits } from "@myakiba/utils/currency";
 import { mfcItemIdSchema } from "@myakiba/contracts/sync/schema";
 import { getCurrencyLocale } from "@/lib/locale";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
@@ -49,6 +48,10 @@ type SyncOrderItemFormProps = {
   readonly currency: Currency;
 };
 
+type SyncOrderItemFormValues = {
+  items: SyncFormOrderItem[];
+};
+
 export default function SyncOrderItemForm({
   orderId,
   handleSyncOrderItemSubmit,
@@ -56,10 +59,25 @@ export default function SyncOrderItemForm({
 }: SyncOrderItemFormProps) {
   const userLocale = getCurrencyLocale(currency);
 
+  const defaultValues: SyncOrderItemFormValues = {
+    items: [
+      {
+        formRowId: crypto.randomUUID(),
+        itemExternalId: "",
+        price: "0.00",
+        count: 1,
+        status: "Ordered",
+        condition: "New",
+        shippingMethod: "n/a",
+        orderDate: "",
+        paymentDate: "",
+        shippingDate: "",
+        collectionDate: "",
+      },
+    ],
+  };
   const orderItemForm = useForm({
-    defaultValues: {
-      items: [createDefaultSyncFormOrderItem()],
-    },
+    defaultValues,
     onSubmit: async ({ value }) => {
       const updatedItems = value.items.map((item) => {
         const { formRowId, ...rest } = item;
@@ -68,7 +86,7 @@ export default function SyncOrderItemForm({
         return {
           ...rest,
           itemExternalId: mfcItemIdSchema.parse(item.itemExternalId),
-          price: majorStringToMinorUnits(item.price),
+          price: parseMoneyToMinorUnits(item.price),
           orderDate: item.orderDate || null,
           paymentDate: item.paymentDate || null,
           shippingDate: item.shippingDate || null,
@@ -482,7 +500,19 @@ export default function SyncOrderItemForm({
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                field.pushValue(createDefaultSyncFormOrderItem());
+                field.pushValue({
+                  formRowId: crypto.randomUUID(),
+                  itemExternalId: "",
+                  price: "0.00",
+                  count: 1,
+                  status: "Ordered",
+                  condition: "New",
+                  shippingMethod: "n/a",
+                  orderDate: "",
+                  paymentDate: "",
+                  shippingDate: "",
+                  collectionDate: "",
+                });
               }}
             >
               <HugeiconsIcon icon={Add01Icon} /> Add More Items

@@ -32,7 +32,7 @@ import { Rating } from "../ui/rating";
 import { Field, FieldContent, FieldTitle } from "@/components/ui/field";
 import { Badge } from "@/components/reui/badge";
 import { FormSection } from "@/components/ui/form-section";
-import { majorStringToMinorUnits, minorUnitsToMajorString } from "@myakiba/utils/currency";
+import { minorUnitsToMajorString, parseMoneyToMinorUnits } from "@myakiba/utils/currency";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import {
   COLLECTION_STATUSES,
@@ -85,7 +85,7 @@ function CollectionItemFormContent({
     onSubmit: async ({ value }) => {
       const transformedValue: CollectionItemFormValues = {
         ...value,
-        price: majorStringToMinorUnits(value.price),
+        price: parseMoneyToMinorUnits(value.price),
       };
       await callbackFn(transformedValue);
       close();
