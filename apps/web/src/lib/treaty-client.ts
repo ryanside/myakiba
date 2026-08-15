@@ -24,5 +24,5 @@ export function getErrorMessage(error: InternalApiError, fallback: string): stri
     return error.value.message || fallback;
   }
 
-  return error.value;
+  return error.value || fallback;
 }
