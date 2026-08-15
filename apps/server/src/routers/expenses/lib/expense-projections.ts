@@ -8,7 +8,6 @@ import type {
   ExpensesOrdersResponse,
   ExpensesShippingResponse,
 } from "../model";
-import { feeSpend, toAverage } from "./expense-queries";
 import type {
   BundleEfficiencyRow,
   CollectionCategoryRow,
@@ -23,44 +22,6 @@ import type {
 
 type ShippingValues = Record<ShippingMethod, number>;
 type ShippingTotals = Record<ShippingMethod, { total: number; count: number }>;
-
-function emptyShippingValues(): ShippingValues {
-  return {
-    "n/a": 0,
-    EMS: 0,
-    SAL: 0,
-    AIRMAIL: 0,
-    SURFACE: 0,
-    FEDEX: 0,
-    DHL: 0,
-    Colissimo: 0,
-    UPS: 0,
-    Domestic: 0,
-  };
-}
-
-function emptyShippingTotals(): ShippingTotals {
-  return {
-    "n/a": { total: 0, count: 0 },
-    EMS: { total: 0, count: 0 },
-    SAL: { total: 0, count: 0 },
-    AIRMAIL: { total: 0, count: 0 },
-    SURFACE: { total: 0, count: 0 },
-    FEDEX: { total: 0, count: 0 },
-    DHL: { total: 0, count: 0 },
-    Colissimo: { total: 0, count: 0 },
-    UPS: { total: 0, count: 0 },
-    Domestic: { total: 0, count: 0 },
-  };
-}
-
-function percentage(value: number, total: number): number {
-  return total > 0 ? (value / total) * 100 : 0;
-}
-
-function bucketDate(bucket: string, bucketType: ExpenseBucket): Date {
-  return parseISO(bucketType === "month" ? `${bucket}-01` : `${bucket}-01-01`);
-}
 
 function getPeriodBuckets({
   filters,
@@ -80,8 +41,12 @@ function getPeriodBuckets({
   } else {
     const firstBucket = sortedExisting[0];
     const lastBucket = sortedExisting.at(-1);
-    if (firstBucket) start = bucketDate(firstBucket, bucket);
-    if (lastBucket) end = bucketDate(lastBucket, bucket);
+    if (firstBucket) {
+      start = parseISO(bucket === "month" ? `${firstBucket}-01` : `${firstBucket}-01-01`);
+    }
+    if (lastBucket) {
+      end = parseISO(bucket === "month" ? `${lastBucket}-01` : `${lastBucket}-01-01`);
+    }
   }
 
   if (!start || !end || isAfter(start, end)) {
@@ -119,9 +84,11 @@ export function projectCollectionDashboard({
   }));
   const averageCostByPeriod = buckets.map((bucketName) => {
     const row = byBucket.get(bucketName);
+    const itemSpend = row?.itemSpend ?? 0;
+    const itemCount = row?.itemCount ?? 0;
     return {
       bucket: bucketName,
-      collectionItems: toAverage(row?.itemSpend ?? 0, row?.itemCount ?? 0),
+      collectionItems: itemCount > 0 ? Math.round(itemSpend / itemCount) : 0,
     };
   });
   let cumulativeSpend = 0;
@@ -135,7 +102,7 @@ export function projectCollectionDashboard({
     cumulativeSpending.push({ ...point, collectionItems: cumulativeSpend });
     averageCostToDate.push({
       bucket: point.bucket,
-      collectionItems: toAverage(cumulativeSpend, cumulativeCount),
+      collectionItems: cumulativeCount > 0 ? Math.round(cumulativeSpend / cumulativeCount) : 0,
     });
   }
 
@@ -144,23 +111,23 @@ export function projectCollectionDashboard({
       spend: summary.spend,
       orderLinked: {
         spend: summary.orderLinkedSpend,
-        percentage: percentage(summary.orderLinkedSpend, summary.spend),
+        percentage: summary.spend > 0 ? (summary.orderLinkedSpend / summary.spend) * 100 : 0,
         count: summary.orderLinkedCount,
       },
       standalone: {
         spend: summary.standaloneSpend,
-        percentage: percentage(summary.standaloneSpend, summary.spend),
+        percentage: summary.spend > 0 ? (summary.standaloneSpend / summary.spend) * 100 : 0,
         count: summary.standaloneCount,
       },
     },
     kpis: {
       itemCount: summary.itemCount,
-      averageItemCost: toAverage(summary.spend, summary.itemCount),
+      averageItemCost: summary.itemCount > 0 ? Math.round(summary.spend / summary.itemCount) : 0,
       shopCount: summary.shopCount,
     },
     breakdown: categories.map((category) => ({
       ...category,
-      percentage: percentage(category.count, categorizedItemCount),
+      percentage: categorizedItemCount > 0 ? (category.count / categorizedItemCount) * 100 : 0,
     })),
     spendingByPeriod,
     cumulativeSpending,
@@ -182,7 +149,12 @@ export function projectOrdersDashboard({
   series: readonly OrderSeriesRow[];
   unpaid: UnpaidOrderTotalRow;
 }): ExpensesOrdersResponse {
-  const totalFees = feeSpend(total);
+  const totalFees =
+    total.shippingSpend +
+    total.taxesSpend +
+    total.dutiesSpend +
+    total.tariffsSpend +
+    total.miscSpend;
   const byBucket = new Map(series.map((row) => [row.bucket, row]));
   const buckets = getPeriodBuckets({
     filters,
@@ -195,16 +167,25 @@ export function projectOrdersDashboard({
       bucket: bucketName,
       total: row?.orderSpend ?? 0,
       orderItems: row?.orderItemSpend ?? 0,
-      fees: row ? feeSpend(row) : 0,
+      fees: row
+        ? row.shippingSpend + row.taxesSpend + row.dutiesSpend + row.tariffsSpend + row.miscSpend
+        : 0,
     };
   });
   const averageCostsByPeriod = buckets.map((bucketName) => {
     const row = byBucket.get(bucketName);
+    const orderSpend = row?.orderSpend ?? 0;
+    const orderItemSpend = row?.orderItemSpend ?? 0;
+    const orderCount = row?.orderCount ?? 0;
+    const orderItemCount = row?.orderItemCount ?? 0;
+    const fees = row
+      ? row.shippingSpend + row.taxesSpend + row.dutiesSpend + row.tariffsSpend + row.miscSpend
+      : 0;
     return {
       bucket: bucketName,
-      orderTotal: toAverage(row?.orderSpend ?? 0, row?.orderCount ?? 0),
-      orderItem: toAverage(row?.orderItemSpend ?? 0, row?.orderItemCount ?? 0),
-      feesPerOrder: toAverage(row ? feeSpend(row) : 0, row?.orderCount ?? 0),
+      orderTotal: orderCount > 0 ? Math.round(orderSpend / orderCount) : 0,
+      orderItem: orderItemCount > 0 ? Math.round(orderItemSpend / orderItemCount) : 0,
+      feesPerOrder: orderCount > 0 ? Math.round(fees / orderCount) : 0,
     };
   });
   let cumulativeTotal = 0;
@@ -229,9 +210,10 @@ export function projectOrdersDashboard({
     });
     averageCostsToDate.push({
       bucket: point.bucket,
-      orderTotal: toAverage(cumulativeTotal, cumulativeOrderCount),
-      orderItem: toAverage(cumulativeItems, cumulativeItemCount),
-      feesPerOrder: toAverage(cumulativeFees, cumulativeOrderCount),
+      orderTotal: cumulativeOrderCount > 0 ? Math.round(cumulativeTotal / cumulativeOrderCount) : 0,
+      orderItem: cumulativeItemCount > 0 ? Math.round(cumulativeItems / cumulativeItemCount) : 0,
+      feesPerOrder:
+        cumulativeOrderCount > 0 ? Math.round(cumulativeFees / cumulativeOrderCount) : 0,
     });
   }
   const unpaidCommitments =
@@ -255,11 +237,11 @@ export function projectOrdersDashboard({
       spend: total.orderSpend,
       orderItems: {
         spend: total.orderItemSpend,
-        percentage: percentage(total.orderItemSpend, total.orderSpend),
+        percentage: total.orderSpend > 0 ? (total.orderItemSpend / total.orderSpend) * 100 : 0,
       },
       fees: {
         spend: totalFees,
-        percentage: percentage(totalFees, total.orderSpend),
+        percentage: total.orderSpend > 0 ? (totalFees / total.orderSpend) * 100 : 0,
       },
     },
     kpis: {
@@ -272,7 +254,7 @@ export function projectOrdersDashboard({
       .filter((entry) => entry.value > 0)
       .map((entry) => ({
         ...entry,
-        percentage: percentage(entry.value, total.orderSpend),
+        percentage: total.orderSpend > 0 ? (entry.value / total.orderSpend) * 100 : 0,
       })),
     spendingByPeriod,
     cumulativeSpending,
@@ -308,12 +290,34 @@ export function projectShippingDashboard({
   });
   const seriesTotals = new Map<string, ShippingTotals>();
   for (const row of series) {
-    const values = seriesTotals.get(row.bucket) ?? emptyShippingTotals();
+    const values: ShippingTotals = seriesTotals.get(row.bucket) ?? {
+      "n/a": { total: 0, count: 0 },
+      EMS: { total: 0, count: 0 },
+      SAL: { total: 0, count: 0 },
+      AIRMAIL: { total: 0, count: 0 },
+      SURFACE: { total: 0, count: 0 },
+      FEDEX: { total: 0, count: 0 },
+      DHL: { total: 0, count: 0 },
+      Colissimo: { total: 0, count: 0 },
+      UPS: { total: 0, count: 0 },
+      Domestic: { total: 0, count: 0 },
+    };
     values[row.shippingMethod] = { total: row.shippingSpend, count: row.orderCount };
     seriesTotals.set(row.bucket, values);
   }
   const spendByMethodAndPeriod = buckets.map((bucketName) => {
-    const values = emptyShippingValues();
+    const values: ShippingValues = {
+      "n/a": 0,
+      EMS: 0,
+      SAL: 0,
+      AIRMAIL: 0,
+      SURFACE: 0,
+      FEDEX: 0,
+      DHL: 0,
+      Colissimo: 0,
+      UPS: 0,
+      Domestic: 0,
+    };
     const totals = seriesTotals.get(bucketName);
     for (const method of SHIPPING_METHODS) {
       values[method] = totals?.[method].total ?? 0;
@@ -321,44 +325,113 @@ export function projectShippingDashboard({
     return { bucket: bucketName, values };
   });
   const averageCostByMethodAndPeriod = buckets.map((bucketName) => {
-    const values = emptyShippingValues();
+    const values: ShippingValues = {
+      "n/a": 0,
+      EMS: 0,
+      SAL: 0,
+      AIRMAIL: 0,
+      SURFACE: 0,
+      FEDEX: 0,
+      DHL: 0,
+      Colissimo: 0,
+      UPS: 0,
+      Domestic: 0,
+    };
     const totals = seriesTotals.get(bucketName);
     for (const method of SHIPPING_METHODS) {
-      values[method] = toAverage(totals?.[method].total ?? 0, totals?.[method].count ?? 0);
+      const total = totals?.[method].total ?? 0;
+      const count = totals?.[method].count ?? 0;
+      values[method] = count > 0 ? Math.round(total / count) : 0;
     }
     return { bucket: bucketName, values };
   });
-  const cumulativeTotals = emptyShippingTotals();
+  const cumulativeTotals: ShippingTotals = {
+    "n/a": { total: 0, count: 0 },
+    EMS: { total: 0, count: 0 },
+    SAL: { total: 0, count: 0 },
+    AIRMAIL: { total: 0, count: 0 },
+    SURFACE: { total: 0, count: 0 },
+    FEDEX: { total: 0, count: 0 },
+    DHL: { total: 0, count: 0 },
+    Colissimo: { total: 0, count: 0 },
+    UPS: { total: 0, count: 0 },
+    Domestic: { total: 0, count: 0 },
+  };
   const cumulativeSpendByMethod: ExpensesShippingResponse["cumulativeSpendByMethod"] = [];
   const averageCostByMethodToDate: ExpensesShippingResponse["averageCostByMethodToDate"] = [];
   for (const bucketName of buckets) {
     const bucketTotals = seriesTotals.get(bucketName);
-    const spendValues = emptyShippingValues();
-    const averageValues = emptyShippingValues();
+    const spendValues: ShippingValues = {
+      "n/a": 0,
+      EMS: 0,
+      SAL: 0,
+      AIRMAIL: 0,
+      SURFACE: 0,
+      FEDEX: 0,
+      DHL: 0,
+      Colissimo: 0,
+      UPS: 0,
+      Domestic: 0,
+    };
+    const averageValues: ShippingValues = {
+      "n/a": 0,
+      EMS: 0,
+      SAL: 0,
+      AIRMAIL: 0,
+      SURFACE: 0,
+      FEDEX: 0,
+      DHL: 0,
+      Colissimo: 0,
+      UPS: 0,
+      Domestic: 0,
+    };
     for (const method of SHIPPING_METHODS) {
       cumulativeTotals[method].total += bucketTotals?.[method].total ?? 0;
       cumulativeTotals[method].count += bucketTotals?.[method].count ?? 0;
       spendValues[method] = cumulativeTotals[method].total;
-      averageValues[method] = toAverage(
-        cumulativeTotals[method].total,
-        cumulativeTotals[method].count,
-      );
+      averageValues[method] =
+        cumulativeTotals[method].count > 0
+          ? Math.round(cumulativeTotals[method].total / cumulativeTotals[method].count)
+          : 0;
     }
     cumulativeSpendByMethod.push({ bucket: bucketName, values: spendValues });
     averageCostByMethodToDate.push({ bucket: bucketName, values: averageValues });
   }
   const bundleTotals = new Map<number, ShippingTotals>();
   for (const row of bundleRows) {
-    const values = bundleTotals.get(row.itemCount) ?? emptyShippingTotals();
+    const values: ShippingTotals = bundleTotals.get(row.itemCount) ?? {
+      "n/a": { total: 0, count: 0 },
+      EMS: { total: 0, count: 0 },
+      SAL: { total: 0, count: 0 },
+      AIRMAIL: { total: 0, count: 0 },
+      SURFACE: { total: 0, count: 0 },
+      FEDEX: { total: 0, count: 0 },
+      DHL: { total: 0, count: 0 },
+      Colissimo: { total: 0, count: 0 },
+      UPS: { total: 0, count: 0 },
+      Domestic: { total: 0, count: 0 },
+    };
     values[row.shippingMethod] = { total: row.shippingFeeTotal, count: row.orderCount };
     bundleTotals.set(row.itemCount, values);
   }
   const averageCostByItemCount = [...bundleTotals.entries()]
     .toSorted(([left], [right]) => left - right)
     .map(([itemCount, totals]) => {
-      const values = emptyShippingValues();
+      const values: ShippingValues = {
+        "n/a": 0,
+        EMS: 0,
+        SAL: 0,
+        AIRMAIL: 0,
+        SURFACE: 0,
+        FEDEX: 0,
+        DHL: 0,
+        Colissimo: 0,
+        UPS: 0,
+        Domestic: 0,
+      };
       for (const method of SHIPPING_METHODS) {
-        values[method] = toAverage(totals[method].total, totals[method].count);
+        values[method] =
+          totals[method].count > 0 ? Math.round(totals[method].total / totals[method].count) : 0;
       }
       return { itemCount, values };
     });
@@ -369,12 +442,12 @@ export function projectShippingDashboard({
       methodCount: methodTotals.filter((row) => row.shippingMethod !== "n/a").length,
       chargedOrderCount,
       freeOrderCount,
-      averageShipping: toAverage(shippingSpend, paidOrderCount),
+      averageShipping: paidOrderCount > 0 ? Math.round(shippingSpend / paidOrderCount) : 0,
     },
     breakdown: nonzeroMethods.map((row) => ({
       method: row.shippingMethod,
       spend: row.shippingSpend,
-      percentage: percentage(row.shippingSpend, shippingSpend),
+      percentage: shippingSpend > 0 ? (row.shippingSpend / shippingSpend) * 100 : 0,
       orderCount: row.orderCount,
     })),
     spendByMethodAndPeriod,

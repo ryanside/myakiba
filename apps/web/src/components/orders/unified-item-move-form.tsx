@@ -30,7 +30,7 @@ import type { NewOrder, CascadeOptions } from "@myakiba/contracts/orders/schema"
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import { CascadeOptionsDropdown } from "@/components/cascade-options-dropdown";
 import { Textarea } from "../ui/textarea";
-import { majorStringToMinorUnits } from "@myakiba/utils/currency";
+import { parseMoneyToMinorUnits } from "@myakiba/utils/currency";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { searchOrders } from "@/queries/search";
@@ -192,11 +192,11 @@ function UnifiedItemMoveFormContent({
         collectionDate: value.collectionDate || null,
         status: value.status,
         shippingMethod: value.shippingMethod,
-        shippingFee: majorStringToMinorUnits(value.shippingFee),
-        taxes: majorStringToMinorUnits(value.taxes),
-        duties: majorStringToMinorUnits(value.duties),
-        tariffs: majorStringToMinorUnits(value.tariffs),
-        miscFees: majorStringToMinorUnits(value.miscFees),
+        shippingFee: parseMoneyToMinorUnits(value.shippingFee),
+        taxes: parseMoneyToMinorUnits(value.taxes),
+        duties: parseMoneyToMinorUnits(value.duties),
+        tariffs: parseMoneyToMinorUnits(value.tariffs),
+        miscFees: parseMoneyToMinorUnits(value.miscFees),
         notes: value.notes,
       };
       await onMoveToNew(transformedValue, cascadeOptions, selectedItems.collectionIds);

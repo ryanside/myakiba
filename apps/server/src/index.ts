@@ -81,13 +81,6 @@ const resolveServerDistPath = (): string => {
 
 const serverDistPath = resolveServerDistPath();
 
-const isHtmlNavigationRequest = (request: Request): boolean => {
-  const acceptHeader: string = request.headers.get("accept") ?? "";
-  return acceptHeader.includes("text/html");
-};
-
-const isAssetPath = (pathname: string): boolean => pathname.includes(".");
-
 const serveIndexHtml = async (distDir: string): Promise<Response> => {
   const indexHtmlPath: string = resolve(distDir, "index.html");
   const indexHtml: string = await readFile(indexHtmlPath, "utf-8");
@@ -159,8 +152,10 @@ const app = new Elysia()
   .get("/*", ({ request, status }) => {
     const pathname: string = new URL(request.url).pathname;
     if (pathname.startsWith("/api")) return status(404, "Not Found");
-    if (isAssetPath(pathname)) return status(404, "Not Found");
-    if (!isHtmlNavigationRequest(request)) return status(404, "Not Found");
+    if (pathname.includes(".")) return status(404, "Not Found");
+    if (!(request.headers.get("accept") ?? "").includes("text/html")) {
+      return status(404, "Not Found");
+    }
 
     return serveIndexHtml(serverDistPath);
   })

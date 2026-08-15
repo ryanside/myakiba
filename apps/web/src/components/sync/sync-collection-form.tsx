@@ -2,7 +2,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Cancel01Icon, Edit03Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "../ui/button";
-import type { SyncCollectionItem } from "@myakiba/contracts/sync/types";
+import type { SyncCollectionItem, SyncFormCollectionItem } from "@myakiba/contracts/sync/types";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { MaskInput } from "../ui/mask-input";
@@ -23,13 +23,16 @@ import * as z from "zod";
 import { Rating } from "../ui/rating";
 import { Textarea } from "../ui/textarea";
 import { FormSection } from "@/components/ui/form-section";
-import { majorStringToMinorUnits } from "@myakiba/utils/currency";
-import { createDefaultSyncFormCollectionItem } from "@/lib/sync";
+import { parseMoneyToMinorUnits } from "@myakiba/utils/currency";
 import { mfcItemIdSchema } from "@myakiba/contracts/sync/schema";
 import { CONDITIONS, SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import { getCurrencyLocale } from "@/lib/locale";
 import { SyncNotice } from "@/components/sync/sync-notice";
+
+type SyncCollectionFormValues = {
+  items: SyncFormCollectionItem[];
+};
 
 export default function SyncCollectionForm({
   handleSyncCollectionSubmit,
@@ -42,19 +45,36 @@ export default function SyncCollectionForm({
 }) {
   const userLocale = getCurrencyLocale(currency);
 
+  const defaultValues: SyncCollectionFormValues = {
+    items: [
+      {
+        formRowId: crypto.randomUUID(),
+        itemExternalId: initialItemExternalId ?? "",
+        price: "0.00",
+        count: 1,
+        score: 0,
+        shop: "",
+        orderDate: "",
+        paymentDate: "",
+        shippingDate: "",
+        collectionDate: "",
+        shippingMethod: "n/a",
+        tags: [],
+        condition: "New",
+        notes: "",
+      },
+    ],
+  };
   const collectionForm = useForm({
-    defaultValues: {
-      items: [createDefaultSyncFormCollectionItem(initialItemExternalId)],
-    },
+    defaultValues,
     onSubmit: async ({ value }) => {
-      const toMinorUnits = (amount: string): number => majorStringToMinorUnits(amount);
       const payload = value.items.map((item) => {
         const { formRowId, ...rest } = item;
         void formRowId;
         return {
           ...rest,
           itemExternalId: mfcItemIdSchema.parse(item.itemExternalId),
-          price: toMinorUnits(item.price),
+          price: parseMoneyToMinorUnits(item.price),
           orderDate: item.orderDate || null,
           paymentDate: item.paymentDate || null,
           shippingDate: item.shippingDate || null,
@@ -143,8 +163,20 @@ export default function SyncCollectionForm({
                               const toAdd = Math.min(lines.length - 1, remainingSlots);
                               for (let j = 1; j <= toAdd; j++) {
                                 field.pushValue({
-                                  ...createDefaultSyncFormCollectionItem(),
+                                  formRowId: crypto.randomUUID(),
                                   itemExternalId: lines[j] ?? "",
+                                  price: "0.00",
+                                  count: 1,
+                                  score: 0,
+                                  shop: "",
+                                  orderDate: "",
+                                  paymentDate: "",
+                                  shippingDate: "",
+                                  collectionDate: "",
+                                  shippingMethod: "n/a",
+                                  tags: [],
+                                  condition: "New",
+                                  notes: "",
                                 });
                               }
                             }
@@ -537,7 +569,22 @@ export default function SyncCollectionForm({
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  field.pushValue(createDefaultSyncFormCollectionItem());
+                  field.pushValue({
+                    formRowId: crypto.randomUUID(),
+                    itemExternalId: "",
+                    price: "0.00",
+                    count: 1,
+                    score: 0,
+                    shop: "",
+                    orderDate: "",
+                    paymentDate: "",
+                    shippingDate: "",
+                    collectionDate: "",
+                    shippingMethod: "n/a",
+                    tags: [],
+                    condition: "New",
+                    notes: "",
+                  });
                 }}
               >
                 <HugeiconsIcon icon={Add01Icon} /> Add More Items

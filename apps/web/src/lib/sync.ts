@@ -2,13 +2,7 @@ import Papa from "papaparse";
 import { csvSchema } from "@myakiba/contracts/sync/schema";
 import { SYNC_CSV_ITEM_STATUSES } from "@myakiba/contracts/sync/constants";
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
-import type {
-  UserItem,
-  SyncFormOrder,
-  SyncFormOrderItem,
-  SyncFormCollectionItem,
-  SyncSessionRow,
-} from "@myakiba/contracts/sync/types";
+import type { UserItem, SyncSessionRow } from "@myakiba/contracts/sync/types";
 import type {
   SyncType,
   SyncSessionStatus,
@@ -142,62 +136,6 @@ export const SYNC_OPTION_META = {
 
 const SYNC_CSV_STATUS_SET: ReadonlySet<string> = new Set(SYNC_CSV_ITEM_STATUSES);
 const csvTransformationCache = new WeakMap<File, Promise<UserItem[]>>();
-
-export function createDefaultSyncFormOrderItem(itemExternalId = ""): SyncFormOrderItem {
-  return {
-    formRowId: crypto.randomUUID(),
-    itemExternalId,
-    price: "0.00",
-    count: 1,
-    status: "Ordered",
-    condition: "New",
-    shippingMethod: "n/a",
-    orderDate: "",
-    paymentDate: "",
-    shippingDate: "",
-    collectionDate: "",
-  };
-}
-
-export function createDefaultSyncFormOrder(itemExternalId = ""): SyncFormOrder {
-  return {
-    status: "Ordered",
-    title: "New Order",
-    shop: "",
-    orderDate: "",
-    releaseDate: "",
-    paymentDate: "",
-    shippingDate: "",
-    collectionDate: "",
-    shippingMethod: "n/a",
-    shippingFee: "0.00",
-    taxes: "0.00",
-    duties: "0.00",
-    tariffs: "0.00",
-    miscFees: "0.00",
-    notes: "",
-    items: [createDefaultSyncFormOrderItem(itemExternalId)],
-  };
-}
-
-export function createDefaultSyncFormCollectionItem(itemExternalId = ""): SyncFormCollectionItem {
-  return {
-    formRowId: crypto.randomUUID(),
-    itemExternalId,
-    price: "0.00",
-    count: 1,
-    score: 0,
-    shop: "",
-    orderDate: "",
-    paymentDate: "",
-    shippingDate: "",
-    collectionDate: "",
-    shippingMethod: "n/a",
-    tags: [],
-    condition: "New",
-    notes: "",
-  };
-}
 
 export function transformCSVData(value: { file: File | undefined }): Promise<UserItem[]> {
   if (!value.file) {

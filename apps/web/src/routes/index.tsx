@@ -42,10 +42,6 @@ const HERO_TABS = [
 
 type HeroTabId = (typeof HERO_TABS)[number]["id"];
 
-function getHeroImage(slug: string, isDark: boolean): string {
-  return `/${slug}-${isDark ? "dark" : "light"}.webp`;
-}
-
 export const Route = createFileRoute("/")({
   component: HomeComponent,
 });
@@ -299,7 +295,7 @@ function HomeComponent() {
                 return (
                   <img
                     key={`${tab.id}-${slug}`}
-                    src={getHeroImage(slug, isDark)}
+                    src={`/${slug}-${isDark ? "dark" : "light"}.webp`}
                     alt={`myakiba ${tab.label.toLowerCase()} — ${i + 1}`}
                     className={cn(
                       "absolute inset-0 h-full w-full object-cover transition-opacity duration-150 ease-out",

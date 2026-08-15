@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import type { ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import * as z from "zod";
 import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/data-table/data-table";
 
@@ -12,6 +11,9 @@ export interface RowNavigation {
 }
 
 type CellValue = string | number | null;
+type RowIdKey<TRow> = {
+  [Key in keyof TRow]-?: TRow[Key] extends string | number ? Key : never;
+}[keyof TRow];
 
 const COLUMN_LABELS = new Map<string, string>([
   ["name", "name"],
@@ -22,18 +24,19 @@ const COLUMN_LABELS = new Map<string, string>([
 ]);
 
 const ROW_NUMBER_COLUMN_ID = "__rowNumber";
-const rowIdPartSchema = z.string().min(1);
 
 export function LeaderboardTable<TRow extends Record<string, CellValue>>({
   rows,
   columns,
   formatCell,
+  rowIdKey,
   getRowNavigation,
   isLoading = false,
 }: {
   readonly rows: readonly TRow[];
   readonly columns: readonly string[];
   readonly formatCell?: (column: string, value: CellValue) => CellValue;
+  readonly rowIdKey: RowIdKey<TRow>;
   readonly getRowNavigation?: (row: TRow) => RowNavigation | undefined;
   readonly isLoading?: boolean;
 }): ReactNode {
@@ -65,29 +68,7 @@ export function LeaderboardTable<TRow extends Record<string, CellValue>>({
     data: tableData,
     columns: tableColumns,
     getCoreRowModel: getCoreRowModel(),
-    getRowId: (row, index) => {
-      const entryId = rowIdPartSchema.safeParse(row.entryId);
-      if (entryId.success) {
-        return `entry-${entryId.data}`;
-      }
-
-      const shop = rowIdPartSchema.safeParse(row.shop);
-      if (shop.success) {
-        return `shop-${shop.data}`;
-      }
-
-      const scale = rowIdPartSchema.safeParse(row.scale);
-      if (scale.success) {
-        return `scale-${scale.data}`;
-      }
-
-      const name = rowIdPartSchema.safeParse(row.name);
-      if (name.success) {
-        return `name-${name.data}-${index}`;
-      }
-
-      return `row-${index}`;
-    },
+    getRowId: (row) => String(row[rowIdKey]),
   });
 
   return (

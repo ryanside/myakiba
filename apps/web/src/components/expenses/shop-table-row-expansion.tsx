@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import type {
   ExpenseFilters,
@@ -10,7 +11,7 @@ import type {
 } from "@myakiba/contracts/expenses/schema";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { ExpenseOrderRow, ExpenseOrderRowSkeleton } from "@/components/expenses/order-row";
-import { EXPENSE_CHART_COLORS, shippingMethodColor } from "@/components/expenses/chart-utils";
+import { EXPENSE_CHART_COLORS } from "@/components/expenses/chart-utils";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getShopExpansion } from "@/queries/expenses";
@@ -297,7 +298,11 @@ function ShippingMethodsPanel({
               <span
                 aria-hidden
                 className="size-1.5 rounded-full"
-                style={{ backgroundColor: shippingMethodColor(entry.method) }}
+                style={{
+                  backgroundColor:
+                    EXPENSE_CHART_COLORS[SHIPPING_METHODS.indexOf(entry.method)] ??
+                    EXPENSE_CHART_COLORS[0],
+                }}
               />
               <span>{entry.method}</span>
               <span className="tabular-nums text-muted-foreground">

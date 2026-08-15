@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 
 import "@/components/dotmatrix-loader.css";
 import { useDotMatrixPhases, usePrefersReducedMotion } from "@/lib/dotmatrix-hooks";
+import { cn } from "@/lib/utils";
 
 type DotMatrixStyle = CSSProperties & Record<`--dmx-${string}`, string | number | undefined>;
 export type DotAnimationStyle = Omit<CSSProperties, "opacity"> &
@@ -52,10 +53,6 @@ export interface DotAnimationState {
 }
 
 export type DotAnimationResolver = (ctx: DotAnimationContext) => DotAnimationState;
-
-export function cx(...values: (string | undefined | null | false)[]): string {
-  return values.filter(Boolean).join(" ");
-}
 
 export const MATRIX_SIZE = 5;
 const CENTER = Math.floor(MATRIX_SIZE / 2);
@@ -660,7 +657,7 @@ export function DotMatrixBase({
       <span
         key={index}
         aria-hidden="true"
-        className={cx(
+        className={cn(
           "dmx-dot",
           !isActive && "dmx-inactive",
           dotClassName,
@@ -673,7 +670,7 @@ export function DotMatrixBase({
 
   const matrix = (
     <div
-      className={cx("dmx-root", muted && "dmx-muted", !useWrapper && className)}
+      className={cn("dmx-root", muted && "dmx-muted", !useWrapper && className)}
       style={dmxVarStyle}
     >
       <div className="dmx-grid" style={{ gap }}>
@@ -714,7 +711,7 @@ export function DotMatrixBase({
       role="status"
       aria-live="polite"
       aria-label={ariaLabel}
-      className={cx("dmx-root", muted && "dmx-muted", className)}
+      className={cn("dmx-root", muted && "dmx-muted", className)}
       style={dmxVarStyle}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}

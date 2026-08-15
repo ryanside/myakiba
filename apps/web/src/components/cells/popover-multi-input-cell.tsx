@@ -13,8 +13,8 @@ import { useForm } from "@tanstack/react-form";
 import { useMemo, useRef, useState } from "react";
 import {
   formatCurrencyFromMinorUnits,
-  majorStringToMinorUnits,
   minorUnitsToMajorString,
+  parseMoneyToMinorUnits,
 } from "@myakiba/utils/currency";
 import { tryCatch } from "@myakiba/utils/result";
 import { toast } from "@/components/ui/toast";
@@ -131,7 +131,7 @@ function PopoverMultiInputCellContent({
     onSubmit: async ({ value }) => {
       close();
       const converted = Object.fromEntries(
-        Object.entries(value).map(([key, amount]) => [key, majorStringToMinorUnits(amount)]),
+        Object.entries(value).map(([key, amount]) => [key, parseMoneyToMinorUnits(amount)]),
       );
       await onSubmit(converted);
     },

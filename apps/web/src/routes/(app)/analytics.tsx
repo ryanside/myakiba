@@ -112,6 +112,7 @@ function RouteComponent(): ReactNode {
                   rows={entry.topByCount}
                   columns={ENTRY_LEADERBOARD_COLUMNS}
                   formatCell={formatCell}
+                  rowIdKey="entryId"
                   isLoading={isLoading}
                   getRowNavigation={
                     isLoading
@@ -129,6 +130,7 @@ function RouteComponent(): ReactNode {
                   rows={entry.topBySpend}
                   columns={ENTRY_LEADERBOARD_COLUMNS}
                   formatCell={formatCell}
+                  rowIdKey="entryId"
                   isLoading={isLoading}
                   getRowNavigation={
                     isLoading
@@ -158,6 +160,7 @@ function RouteComponent(): ReactNode {
                 rows={shops.topByCount}
                 columns={SHOP_LEADERBOARD_COLUMNS}
                 formatCell={formatCell}
+                rowIdKey="shop"
                 isLoading={isLoading}
                 getRowNavigation={
                   isLoading
@@ -175,6 +178,7 @@ function RouteComponent(): ReactNode {
                 rows={shops.topBySpend}
                 columns={SHOP_LEADERBOARD_COLUMNS}
                 formatCell={formatCell}
+                rowIdKey="shop"
                 isLoading={isLoading}
                 getRowNavigation={
                   isLoading
@@ -205,6 +209,7 @@ function RouteComponent(): ReactNode {
                 rows={scales.topByCount}
                 columns={SCALE_LEADERBOARD_COLUMNS}
                 formatCell={formatCell}
+                rowIdKey="scale"
                 isLoading={isLoading}
                 getRowNavigation={
                   isLoading
@@ -225,6 +230,7 @@ function RouteComponent(): ReactNode {
                 rows={scales.topBySpend}
                 columns={SCALE_LEADERBOARD_COLUMNS}
                 formatCell={formatCell}
+                rowIdKey="scale"
                 isLoading={isLoading}
                 getRowNavigation={
                   isLoading

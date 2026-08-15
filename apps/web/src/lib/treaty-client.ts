@@ -1,9 +1,6 @@
 import { env } from "@myakiba/env/web";
 import { treaty } from "@elysiajs/eden";
 import type { App } from "@server/index";
-import * as z from "zod";
-
-const validationErrorSchema = z.object({ message: z.string().optional() });
 
 export const app = treaty<App>(env.VITE_SERVER_URL, {
   parseDate: false,
@@ -12,17 +9,20 @@ export const app = treaty<App>(env.VITE_SERVER_URL, {
   },
 });
 
-export function getErrorMessage(
-  error: { status: number; value: unknown },
-  fallback: string,
-): string {
-  if (error.status === 422) {
-    const validationError = validationErrorSchema.safeParse(error.value);
-    if (validationError.success && validationError.data.message) {
-      return validationError.data.message;
+type InternalApiError =
+  | {
+      readonly status: 422;
+      readonly value: { readonly message?: string };
     }
-    return fallback;
+  | {
+      readonly status: 400 | 401 | 403 | 404 | 409 | 413 | 429 | 500;
+      readonly value: string;
+    };
+
+export function getErrorMessage(error: InternalApiError, fallback: string): string {
+  if (error.status === 422) {
+    return error.value.message || fallback;
   }
-  const message = z.string().safeParse(error.value);
-  return message.success ? message.data : fallback;
+
+  return error.value || fallback;
 }

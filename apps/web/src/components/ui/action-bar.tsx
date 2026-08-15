@@ -36,10 +36,6 @@ function focusFirst(candidates: React.RefObject<HTMLElement | null>[], preventSc
   }
 }
 
-function wrapArray<T>(array: T[], startIndex: number) {
-  return array.map<T>((_, index) => array[(startIndex + index) % array.length] as T);
-}
-
 function getDirectionAwareKey(key: string, dir?: Direction) {
   if (dir !== "rtl") return key;
   if (key === "ArrowLeft") return "ArrowRight";
@@ -517,7 +513,12 @@ function ActionBarItem(props: ActionBarItemProps) {
             (itemRefEntry) => itemRefEntry.current === event.currentTarget,
           );
           candidateRefs = loop
-            ? wrapArray(candidateRefs, currentIndex + 1)
+            ? candidateRefs.map(
+                (_, index) =>
+                  candidateRefs[
+                    (currentIndex + 1 + index) % candidateRefs.length
+                  ] as React.RefObject<ItemElement | null>,
+              )
             : candidateRefs.slice(currentIndex + 1);
         }
 

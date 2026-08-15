@@ -1,6 +1,6 @@
 import { Elysia, status } from "elysia";
 import ItemService from "./service";
-import ItemResyncService from "./resync-service";
+import ItemResyncService, { deriveResyncStatus } from "./resync-service";
 import { tryCatch } from "@myakiba/utils/result";
 import { betterAuth } from "@/middleware/better-auth";
 import { evlog } from "evlog/elysia";
@@ -145,9 +145,7 @@ const itemRouter = new Elysia({ prefix: "/item" })
         return status(500, "Failed to check resync status");
       }
 
-      const { data: state, error } = await tryCatch(
-        ItemResyncService.getResyncStatus(resyncItem.id),
-      );
+      const { data: state, error } = await tryCatch(deriveResyncStatus(resyncItem.id));
 
       if (error) {
         log.error(error, { step: "getResyncStatus", outcome: "error" });

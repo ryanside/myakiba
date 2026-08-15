@@ -8,9 +8,9 @@ import type { ChartConfig } from "@/components/evilcharts/ui/recharts-chart";
 import { ChartTooltip, ChartTooltipContent } from "@/components/evilcharts/ui/recharts-tooltip";
 import { ChartSection, ChartSeriesLegend } from "@/components/expenses/dashboard-shell";
 import {
+  EXPENSE_CHART_BRUSH_MIN_POINTS,
   EXPENSE_CHART_COLORS,
-  shouldShowExpenseBrush,
-  shouldShowExpenseDots,
+  EXPENSE_CHART_DOT_MAX_POINTS,
 } from "@/components/expenses/chart-utils";
 
 type AverageKey = "orderTotal" | "orderItem" | "feesPerOrder";
@@ -90,12 +90,14 @@ export function AverageOrderCostsToDate({
         {keys.map((key) =>
           visibleKeys.has(key) ? (
             <EvilAreaChart.Area key={key} dataKey={key} variant="gradient">
-              {shouldShowExpenseDots(data.length) ? <EvilAreaChart.Dot variant="border" /> : null}
+              {data.length <= EXPENSE_CHART_DOT_MAX_POINTS ? (
+                <EvilAreaChart.Dot variant="border" />
+              ) : null}
               <EvilAreaChart.ActiveDot variant="colored-border" />
             </EvilAreaChart.Area>
           ) : null,
         )}
-        {shouldShowExpenseBrush(data.length) ? <EvilAreaChart.Brush /> : null}
+        {data.length >= EXPENSE_CHART_BRUSH_MIN_POINTS ? <EvilAreaChart.Brush /> : null}
       </EvilAreaChart>
     </ChartSection>
   );

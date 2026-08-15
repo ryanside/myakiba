@@ -46,10 +46,6 @@ export const Route = createFileRoute("/(app)/expenses")({
   }),
 });
 
-function tabParam(tab: ExpenseScope): ExpenseScope | undefined {
-  return tab === "collection" ? undefined : tab;
-}
-
 function RouteComponent(): ReactNode {
   const navigate = useNavigate({ from: Route.fullPath });
   const { currency, dateFormat, locale } = useUserPreferences();
@@ -94,12 +90,18 @@ function RouteComponent(): ReactNode {
 
   const setFilters = useCallback(
     (next: ExpenseFilters): void => {
-      navigate({ search: { ...next, tab: tabParam(tab) }, resetScroll: false });
+      navigate({
+        search: { ...next, tab: tab === "collection" ? undefined : tab },
+        resetScroll: false,
+      });
     },
     [navigate, tab],
   );
   const clearFilters = useCallback((): void => {
-    navigate({ search: { tab: tabParam(tab) }, resetScroll: false });
+    navigate({
+      search: { tab: tab === "collection" ? undefined : tab },
+      resetScroll: false,
+    });
   }, [navigate, tab]);
   const setTab = useCallback(
     (nextTab: ExpenseScope): void => {
@@ -108,7 +110,7 @@ function RouteComponent(): ReactNode {
           dateStart: search.dateStart,
           dateEnd: search.dateEnd,
           shop: search.shop,
-          tab: tabParam(nextTab),
+          tab: nextTab === "collection" ? undefined : nextTab,
         },
         resetScroll: false,
       });
