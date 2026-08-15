@@ -3,12 +3,18 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import type { Treaty } from "@elysiajs/eden";
 import type { DataTransferImport } from "@myakiba/contracts/data-transfer/schema";
 import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
 import { app, getErrorMessage } from "@/lib/treaty-client";
 import { invalidateSyncResultQueries } from "@/lib/mutation-query-invalidation";
-import { parseSSEJobStatusStream } from "@/lib/sync-job-status-stream";
-import type { SSEJobStatusChunk } from "@/lib/sync-job-status-stream";
+
+type ImportStatusChunk =
+  Treaty.Data<
+    (typeof app.api)["data-transfer"]["imports"]["current"]["status"]["get"]
+  > extends AsyncIterable<infer Chunk>
+    ? Chunk
+    : never;
 
 class ImportStatusStreamDisconnectedError extends Error {
   override readonly name = "ImportStatusStreamDisconnectedError";
@@ -29,7 +35,7 @@ export function useDataTransferImportStatusQuery(currentImport: DataTransferImpo
   return useQuery({
     queryKey: dataTransferImportStatusQueryKey(activeImport?.id ?? null),
     enabled: activeImport !== null,
-    queryFn: streamedQuery<SSEJobStatusChunk, SyncJobStatus | null>({
+    queryFn: streamedQuery<ImportStatusChunk, SyncJobStatus | null>({
       refetchMode: "append",
       streamFn: async ({ signal }) => {
         if (activeImport === null) throw new Error("No active import");
@@ -50,10 +56,9 @@ export function useDataTransferImportStatusQuery(currentImport: DataTransferImpo
         }
         if (!data) throw new Error("No import status stream received");
 
-        const stream = parseSSEJobStatusStream(data);
-        return (async function* (): AsyncGenerator<SSEJobStatusChunk> {
+        return (async function* (): AsyncGenerator<ImportStatusChunk> {
           try {
-            for await (const chunk of stream) {
+            for await (const chunk of data) {
               if (chunk.data.terminalState !== null) {
                 await queryClient.invalidateQueries({
                   queryKey: dataTransferCurrentImportQueryKey,

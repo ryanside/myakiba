@@ -4,19 +4,24 @@ import {
   experimental_streamedQuery as streamedQuery,
 } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import type { Treaty } from "@elysiajs/eden";
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
+import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
 import { app } from "@/lib/treaty-client";
-import { parseSSEJobStatusStream } from "@/lib/sync-job-status-stream";
-import type { JobStatusEvent, SSEJobStatusChunk } from "@/lib/sync-job-status-stream";
 import { resolveSyncMessage } from "@/lib/sync";
 import { invalidateSyncResultQueries } from "@/lib/mutation-query-invalidation";
 import { toast } from "@/components/ui/toast";
+
+type SyncJobStatusChunk =
+  Treaty.Data<(typeof app.api.sync)["job-status"]["get"]> extends AsyncIterable<infer Chunk>
+    ? Chunk
+    : never;
 
 export function useSyncJobStatusQuery(jobId: string | null, sessionId: string | null = null) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const now = new Date().toISOString();
-  const initialValue: JobStatusEvent = {
+  const initialValue: SyncJobStatus = {
     jobId: jobId ?? "",
     phase: "queued",
     statusMessage: SYNC_STATUS_MESSAGES.connecting,
@@ -40,10 +45,9 @@ export function useSyncJobStatusQuery(jobId: string | null, sessionId: string | 
         });
         if (error) throw new Error("Failed to connect to job status stream");
         if (!data) throw new Error("No data received from job status stream");
+        const stream = data;
 
-        const stream = parseSSEJobStatusStream(data);
-
-        async function* withFinishedCheck(): AsyncGenerator<SSEJobStatusChunk> {
+        async function* withFinishedCheck(): AsyncGenerator<SyncJobStatusChunk> {
           for await (const chunk of stream) {
             const { error: chunkError, statusMessage, terminalState } = chunk.data;
             if (terminalState === null) {
@@ -98,7 +102,7 @@ export function useSyncJobStatusQuery(jobId: string | null, sessionId: string | 
 
         return withFinishedCheck();
       },
-      reducer: (_prev: JobStatusEvent, chunk: SSEJobStatusChunk) => chunk.data,
+      reducer: (_prev: SyncJobStatus, chunk: SyncJobStatusChunk) => chunk.data,
       initialValue,
     }),
     refetchOnWindowFocus: false,
