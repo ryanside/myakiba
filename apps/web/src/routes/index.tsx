@@ -1,46 +1,27 @@
-import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import FAQsSection from "@/components/homepage/faqs";
+import { FeatureSplit } from "@/components/homepage/feature-split";
+import FooterSection from "@/components/homepage/footer";
+import { HeroShowcase } from "@/components/homepage/hero-showcase";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
+import { PanelGallery } from "@/components/homepage/panel-gallery";
 import { TextLoop } from "@/components/homepage/text-loop";
 import { TyperHeadline } from "@/components/homepage/typer-headline";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { useTheme } from "next-themes";
-import BounceCards from "@/components/bounce-cards";
-import MfcSyncSection from "@/components/homepage/integrations-1";
-import FAQsSection from "@/components/homepage/faqs";
-import FooterSection from "@/components/homepage/footer";
-import LogoCloud from "@/components/homepage/logo-cloud";
 import { DiscordLogo, GitHubLogo } from "@/components/ui/brand-icons";
-import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
+import BounceCards from "@/components/bounce-cards";
 
-const EXAMPLE_ITEMS = [
+const HERO_ITEM_IMAGES = [
   "/example-item1.webp",
   "/example-item2.webp",
   "/example-item3.webp",
   "/example-item4.webp",
   "/example-item5.webp",
-  "/example-item6.webp",
-  "/example-item7.webp",
 ] as const;
-
-type HeroTab = {
-  readonly id: string;
-  readonly label: string;
-  readonly views: readonly string[];
-};
-
-const HERO_TABS = [
-  { id: "dashboard", label: "Dashboard", views: ["dashboard"] },
-  { id: "orders", label: "Orders", views: ["orders", "order-detail"] },
-  { id: "collection", label: "Collection", views: ["collection", "item-detail"] },
-  { id: "analytics", label: "Analytics", views: ["analytics", "artists-analytics"] },
-] as const satisfies readonly HeroTab[];
-
-type HeroTabId = (typeof HERO_TABS)[number]["id"];
 
 export const Route = createFileRoute("/")({
   component: HomeComponent,
@@ -55,65 +36,15 @@ const NAV_LINKS: readonly {
   { name: "Changelog", href: "/changelog" },
 ];
 
-type Feature = {
-  readonly label: string;
-  readonly description: string;
-};
-
-const FEATURES: readonly Feature[] = [
-  {
-    label: "MFC sync",
-    description: "import MyFigureCollection items directly into myakiba",
-  },
-  {
-    label: "Order tracking",
-    description: "multi-item orders with detailed costs, statuses, and dates",
-  },
-  {
-    label: "Analytics",
-    description: "see which characters, series, companies, and more shape your collection",
-  },
-  {
-    label: "Collection management",
-    description: "organize, filter, and search your figures with ease",
-  },
-  {
-    label: "More than a spreadsheet",
-    description: "flexible views, inline editing, and real item data",
-  },
-  {
-    label: "Dashboard",
-    description: "at-a-glance view of your collection, orders, releases, and spending",
-  },
-  {
-    label: "Open source",
-    description: "open source and community-driven",
-  },
-  {
-    label: "Coming soon",
-    description: "profile page, expense tracking, and more",
-  },
-];
-
 function HomeComponent() {
-  const { theme } = useTheme();
-  const isDark = theme !== "light";
-  const [hero, setHero] = useState<{
-    readonly tab: HeroTabId;
-    readonly views: Readonly<Record<HeroTabId, number>>;
-  }>({
-    tab: "dashboard",
-    views: { dashboard: 0, orders: 0, collection: 0, analytics: 0 },
-  });
-
-  const currentTab = HERO_TABS.find((tab) => tab.id === hero.tab) ?? HERO_TABS[0];
-  const currentViewIndex = hero.views[hero.tab];
-  const currentImageSlug = currentTab.views[currentViewIndex] ?? currentTab.views[0];
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme !== "light";
 
   return (
     <div className="min-h-screen min-w-0 overflow-x-clip bg-background text-foreground">
+      {/* nav */}
       <header className="sticky top-0 z-30 w-full bg-background">
-        <nav className="mx-auto flex h-12 max-w-6xl items-center px-6 min-[940px]:grid min-[940px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] min-[940px]:gap-4">
+        <nav className="mx-auto flex h-12 w-full max-w-5xl items-center px-6 min-[940px]:grid min-[940px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] min-[940px]:gap-4">
           <div />
           <div className="hidden min-[940px]:flex items-center gap-6">
             {NAV_LINKS.map((item) => (
@@ -167,160 +98,147 @@ function HomeComponent() {
               render={<Link to="/login" />}
               nativeButton={false}
             >
-              Login
+              Dashboard
             </Button>
           </div>
         </nav>
       </header>
 
-      <main className="w-full max-w-2xl mx-auto px-6 pt-16 sm:pt-24 pb-8">
-        <div className="animate-appear flex items-center gap-3.5 mb-6">
-          <MyAkibaLogo size="full" className="size-32 block" />
-          <span className="hidden sm:block text-xs tracking-wide [&_span]:font-normal">
-            <TextLoop
-              preText="An alternative to"
-              texts={["MyFigureCollection's Manager", "DIY Spreadsheets"]}
-              interval={3500}
-            />
-          </span>
-        </div>
-
-        <h1
-          className="text-xl font-medium tracking-tight"
-          aria-label="A modern anime figure collection manager."
-        >
-          <TyperHeadline
-            text="A modern anime figure collection manager."
-            delayMs={200}
-            aria-hidden
-          />
-        </h1>
-
-        <p className="animate-appear mt-3 text-[15px] text-balance leading-normal text-muted-foreground [--appear-delay:400ms]">
-          Your MyFigureCollection catalog and the flexibility of spreadsheets, unified into a modern
-          collection manager. Track orders, analyze your collection, and sync with MFC.
-        </p>
-
-        <div className="animate-appear mt-5 mb-7 flex flex-wrap items-center gap-3 [--appear-delay:500ms]">
-          <Button
-            size="lg"
-            className="h-10 rounded-xl px-4"
-            render={<Link to="/signup" />}
-            nativeButton={false}
-          >
-            Get started
-            <HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" />
-          </Button>
-          <div className="px-2 text-start text-xs text-muted-foreground italic">
-            <p>*in early development</p>
-          </div>{" "}
-        </div>
-
-        <div className="animate-appear flex justify-start my-2 [--appear-delay:880ms]">
-          <BounceCards
-            images={[...EXAMPLE_ITEMS].slice(0, 5)}
-            containerWidth={240}
-            containerHeight={120}
-            cardSize={70}
-            animationDelay={0.88}
-            animationStagger={0.05}
-            transformStyles={[
-              "rotate(10deg) translate(-76px)",
-              "rotate(5deg) translate(-38px)",
-              "rotate(-3deg)",
-              "rotate(-10deg) translate(38px)",
-              "rotate(2deg) translate(76px)",
-            ]}
-          />
-        </div>
-
-        <section id="features" className="animate-appear mb-12 [--appear-delay:1200ms]">
-          <h2 className="text-xs font-medium text-muted-foreground tracking-tight mb-4">
-            Features
-          </h2>
-          <ul className="space-y-3 text-sm">
-            {FEATURES.map((feature) => (
-              <li key={feature.label} className="flex items-baseline gap-3">
-                <span className="select-none text-muted-foreground">–</span>
-                <span>
-                  <span className="font-medium text-foreground">{feature.label}</span>
-                  <span className="text-muted-foreground">: {feature.description}</span>
+      <main className="w-full">
+        {/* Hero copy */}
+        <section className="mx-auto w-full max-w-5xl px-6 pt-16 sm:pt-24">
+          <div className="min-[1400px]:grid min-[1400px]:grid-cols-[minmax(0,1fr)_348px] min-[1400px]:items-center min-[1400px]:gap-7">
+            <div className="min-w-0">
+              <div className="animate-appear mb-6 flex items-center gap-3.5">
+                <MyAkibaLogo size="full" className="block size-32" />
+                <span className="hidden text-xs tracking-wide sm:block [&_span]:font-normal">
+                  <TextLoop
+                    preText="An alternative to"
+                    texts={["MyFigureCollection's Manager", "DIY Spreadsheets"]}
+                    interval={3500}
+                  />
                 </span>
-              </li>
-            ))}
-          </ul>
+              </div>
+
+              <h1
+                className="text-xl font-medium tracking-tight"
+                aria-label="A modern anime figure collection manager"
+              >
+                <TyperHeadline
+                  text="A modern anime figure collection manager"
+                  delayMs={200}
+                  aria-hidden
+                />
+              </h1>
+
+              <p className="animate-appear mt-3 text-[15px] text-balance leading-normal text-muted-foreground [--appear-delay:400ms]">
+                Your MyFigureCollection items and the flexibility of spreadsheets, unified into a
+                modern collection manager.
+              </p>
+
+              <div className="animate-appear mt-5 flex flex-wrap items-center gap-3 [--appear-delay:460ms]">
+                <Button
+                  size="lg"
+                  className="h-10 rounded-xl px-4"
+                  render={<Link to="/signup" />}
+                  nativeButton={false}
+                >
+                  Get started
+                  <HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" />
+                </Button>
+                <div className="px-2 text-start text-xs text-muted-foreground italic">
+                  <p>*in early development</p>
+                </div>{" "}
+              </div>
+            </div>
+
+            <div className="hidden min-[1400px]:flex min-[1400px]:translate-y-6 min-[1400px]:justify-center">
+              <BounceCards
+                images={HERO_ITEM_IMAGES}
+                containerWidth={240}
+                containerHeight={120}
+                cardSize={100}
+                animationDelay={0.52}
+                animationStagger={0.05}
+                transformStyles={[
+                  "rotate(10deg) translate(-108px)",
+                  "rotate(5deg) translate(-54px)",
+                  "rotate(-3deg)",
+                  "rotate(-10deg) translate(54px)",
+                  "rotate(3deg) translate(108px)",
+                ]}
+              />
+            </div>
+          </div>
         </section>
 
-        <div className="animate-appear -mx-6 sm:-mx-24 md:-mx-36 lg:-mx-60 xl:-mx-84 [--appear-delay:1260ms]">
-          <div className="mb-3 flex items-center gap-4 px-6 sm:px-0">
-            <Tabs
-              value={hero.tab}
-              onValueChange={(value) => setHero((h) => ({ ...h, tab: value as HeroTabId }))}
-            >
-              <TabsList variant="line">
-                {HERO_TABS.map((tab) => (
-                  <TabsTrigger key={tab.id} value={tab.id}>
-                    {tab.label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
+        <HeroShowcase isDark={isDark} />
 
-            {currentTab.views.length > 1 && (
-              <Tabs
-                value={String(currentViewIndex)}
-                onValueChange={(value) =>
-                  setHero((h) => ({
-                    ...h,
-                    views: { ...h.views, [h.tab]: Number(value) },
-                  }))
-                }
-                className="ml-auto transition-opacity duration-150 ease-out starting:opacity-0"
-              >
-                <TabsList variant="line">
-                  {currentTab.views.map((viewSlug, i) => (
-                    <TabsTrigger key={viewSlug} value={String(i)} className="px-2.5 text-xs">
-                      {i + 1}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </Tabs>
-            )}
+        {/* panel gallery */}
+        <section
+          id="features"
+          aria-label="myakiba features"
+          className="mx-auto w-full max-w-5xl px-6 pt-16"
+        >
+          <PanelGallery isDark={isDark} />
+          <div className="mt-24 flex flex-col gap-24 sm:mt-32 sm:gap-32">
+            <div className="animate-appear [--appear-delay:520ms]">
+              <FeatureSplit
+                appImage="collection"
+                appImageAlt={`myakiba collection manager in ${isDark ? "dark" : "light"} mode`}
+                backgroundCrop={{ scale: 170, x: -35, y: -8 }}
+                bracketSide="left"
+                description="Browse your collection in customizable table, card, and gallery views. Quickly search, filter, and edit prices, scores, shops, releases, and dates."
+                isDark={isDark}
+                mediaSide="right"
+                title="Manage your collection"
+              />
+            </div>
+            <div className="animate-appear [--appear-delay:520ms]">
+              <FeatureSplit
+                appImage="orders"
+                appImageAlt={`myakiba order manager in ${isDark ? "dark" : "light"} mode`}
+                backgroundCrop={{ scale: 170, x: -70, y: -8 }}
+                bracketSide="left"
+                description="Group multiple items into an order, follow it from Ordered to Owned, and track dates, shipping methods, item prices, and fees."
+                isDark={isDark}
+                mediaSide="left"
+                title="Multi-item orders"
+              />
+            </div>
+            <div className="animate-appear [--appear-delay:520ms]">
+              <FeatureSplit
+                appImage="analytics"
+                appImageAlt={`myakiba collection analytics in ${isDark ? "dark" : "light"} mode`}
+                backgroundCrop={{ scale: 170, x: -35, y: -8 }}
+                bracketSide="left"
+                description="Find your most-collected and highest-spend artists, characters, origins, companies, shops, scales, and more."
+                isDark={isDark}
+                mediaSide="right"
+                title="See what shapes your collection"
+              />
+            </div>
+            <div className="animate-appear [--appear-delay:520ms]">
+              <FeatureSplit
+                appImage="expenses"
+                appImageAlt={`myakiba expense tracking in ${isDark ? "dark" : "light"} mode`}
+                backgroundCrop={{ scale: 170, x: -70, y: -8 }}
+                bracketSide="left"
+                description="Explore collection, order, and shipping spend over time, with averages and breakdowns by category, fee, shop, and shipping method."
+                isDark={isDark}
+                mediaSide="left"
+                title="See where your money goes"
+              />
+            </div>
           </div>
+        </section>
 
-          <div className="relative aspect-2992/1788 w-full overflow-hidden shadow-xs ring-1 ring-foreground/5 dark:ring-foreground/1 rounded-xl">
-            {HERO_TABS.flatMap((tab) =>
-              tab.views.map((slug, i) => {
-                const isActive = tab.id === hero.tab && slug === currentImageSlug;
-                return (
-                  <img
-                    key={`${tab.id}-${slug}`}
-                    src={`/${slug}-${isDark ? "dark" : "light"}.webp`}
-                    alt={`myakiba ${tab.label.toLowerCase()} — ${i + 1}`}
-                    className={cn(
-                      "absolute inset-0 h-full w-full object-cover transition-opacity duration-150 ease-out",
-                      isActive
-                        ? "pointer-events-auto opacity-100"
-                        : "pointer-events-none opacity-0",
-                    )}
-                    loading={i === 0 ? "eager" : "lazy"}
-                  />
-                );
-              }),
-            )}
-          </div>
-
-          <LogoCloud images={EXAMPLE_ITEMS} />
+        <div className="animate-appear [--appear-delay:520ms]">
+          <FAQsSection />
         </div>
       </main>
 
-      <div className="animate-appear [--appear-delay:1320ms]">
-        <MfcSyncSection />
-      </div>
-      <div className="animate-appear [--appear-delay:1380ms]">
-        <FAQsSection />
-      </div>
-      <div className="animate-appear [--appear-delay:1440ms]">
+      <div className="animate-appear [--appear-delay:520ms]">
         <FooterSection />
       </div>
     </div>

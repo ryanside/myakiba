@@ -1,10 +1,14 @@
 [data-typer] {
   --typer-fg: var(--foreground);
   --typer-bg: var(--background);
-  --typer-accent: var(--color-cyan-400);
+  --typer-accent: var(--color-indigo-500);
   --typer-accent-ink: var(--background);
   --typer-radius: 5px;
 }
+
+/* .dark [data-typer] {
+  --typer-accent: var(--color-indigo-400);
+} */
 
 [data-typer][data-typer-type="initial"] {
   opacity: 0;

@@ -26,7 +26,7 @@ function ChangelogLayout() {
           <div className="flex items-center gap-2">
             <ThemeToggle />
             <Button size="sm" render={<Link to="/dashboard" />} nativeButton={false}>
-              Open app
+              Dashboard
             </Button>
           </div>
         </nav>
