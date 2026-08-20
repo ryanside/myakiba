@@ -23,7 +23,7 @@ const buttonVariants = cva(
           "inset-shadow-white dark:inset-shadow-white/15 border-black/12 bg-secondary text-secondary-foreground shadow-foreground/5 hover:bg-[color-mix(in_srgb,var(--color-foreground)_8%,var(--color-secondary))] active:bg-[color-mix(in_srgb,var(--color-foreground)_14%,var(--color-secondary))] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground dark:border-black/30",
         ),
         ghost:
-          "border-transparent bg-transparent text-foreground shadow-none ring-0 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
+          "border-transparent bg-transparent text-foreground shadow-none hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
         destructive: cn(
           raisedSurface,
           "inset-shadow-white dark:inset-shadow-white/15 border-destructive/20 bg-destructive/10 bg-clip-padding text-destructive shadow-destructive/5 hover:bg-destructive/20 active:bg-destructive/30 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:border-destructive/30 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:active:bg-destructive/40 dark:focus-visible:ring-destructive/40",

@@ -85,7 +85,7 @@ export function ItemImageInspector({
               <img
                 src={image}
                 alt={title}
-                className="block h-auto w-full rounded-xl object-contain outline -outline-offset-1 outline-border"
+                className="block h-auto w-full rounded-xl object-contain"
               />
             </div>
           </div>

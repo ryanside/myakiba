@@ -12,40 +12,34 @@ const FAQ_ITEMS: readonly {
 }[] = [
   {
     id: "item-1",
-    question: "Does myakiba use MyFigureCollection's data?",
+    question: "Does myakiba use data from MFC?",
     answer:
-      "Yes, we use MyFigureCollection's item information. Since MyFigureCollection does not have a public API, myakiba scrapes and stores item information from MyFigureCollection item links that the user provides. Items are periodically rescraped to ensure the item information is accurate and up to date.",
+      "Yes. When you submit a MFC item link, myakiba scrapes and saves the item details. This process, called sync, has various limits in place like throttling and rate limiting to prevent hammering their site. We also cache item data so subsequent requests for the same item link doesn't need syncing again.",
   },
   {
     id: "item-2",
-    question: "How does myakiba compare to MyFigureCollection?",
+    question: "Is myakiba a MFC alternative?",
     answer:
-      "myakiba is built to realize the features that I thought were missing from MyFigureCollection. It currently offers a dashboard, analytics, order management, and collection management. It is still in early development.",
+      "myakiba is an alternative for MFC's manager. It does not aim to replace MFC's community, database, or marketplace features.",
   },
   {
     id: "item-3",
-    question: "Is myakiba safe to use since it scrapes data from MyFigureCollection?",
+    question: "Who is myakiba for?",
     answer:
-      "Yes. MyFigureCollection's terms of service do not prohibit scraping. We only scrape core item data from the user's provided item links. The scraper is heavily rate limited and throttled, item data is cached to avoid redundant scrapes, and users are limited to syncing a few times per hour to prevent abuse.",
+      "If MFC's manager feels limiting or your DIY spreadsheet is getting out of hand, give myakiba a try.",
   },
   {
     id: "item-4",
-    question: "Who is myakiba for?",
+    question: "Is myakiba open source?",
     answer:
-      "Collectors who want an alternative to MyFigureCollection's manager or DIY spreadsheets.",
-  },
-  {
-    id: "item-5",
-    question: "I'm a developer. Can I contribute to the project?",
-    answer:
-      "Yes! Contributions are welcome. Check out the GitHub repository and feel free to join our Discord server.",
+      "myakiba is open source! If you find a bug, want to add a feature, or have a request, the GitHub repo and Discord are the best places to start.",
   },
 ];
 
 export default function FAQsSection() {
   return (
     <section id="faqs" className="bg-background py-16">
-      <div className="mx-auto max-w-2xl px-6">
+      <div className="mx-auto max-w-5xl px-6">
         <h2 className="text-xl font-medium tracking-tight">FAQs</h2>
         <Accordion className="mt-8">
           {FAQ_ITEMS.map((item) => (
@@ -61,7 +55,7 @@ export default function FAQsSection() {
         </Accordion>
 
         <p className="text-muted-foreground mt-8 text-sm">
-          Have a different question?{" "}
+          Something else?{" "}
           <a
             href="https://discord.gg/VKHVvhcC2z"
             target="_blank"

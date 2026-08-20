@@ -5,7 +5,7 @@ import { DiscordLogo, GitHubLogo } from "@/components/ui/brand-icons";
 export default function FooterSection() {
   return (
     <footer className="py-10">
-      <div className="mx-auto flex max-w-2xl flex-col items-start gap-6 px-6 min-[900px]:flex-row min-[900px]:items-center min-[900px]:justify-between">
+      <div className="mx-auto flex max-w-5xl flex-col items-start gap-6 px-6 min-[900px]:flex-row min-[900px]:items-center min-[900px]:justify-between">
         <div className="flex flex-col items-start gap-3 min-[520px]:flex-row min-[520px]:items-center">
           <MyAkibaLogo size="full" className="hidden sm:block size-20 pt-0.5" />
           <span className="text-muted-foreground text-sm leading-5 whitespace-nowrap">
@@ -20,17 +20,6 @@ export default function FooterSection() {
             </a>
           </span>
           <span className="text-muted-foreground text-sm leading-5 whitespace-nowrap">
-            homepage inspired by{" "}
-            <a
-              href="https://cmux.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-foreground hover:underline underline-offset-2"
-            >
-              cmux
-            </a>
-          </span>
-          <span className="lg:hidden text-muted-foreground text-sm leading-5 whitespace-nowrap">
             see{" "}
             <a href="/changelog" className="text-foreground hover:underline underline-offset-2">
               changelog
