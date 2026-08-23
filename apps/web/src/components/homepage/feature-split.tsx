@@ -71,7 +71,7 @@ export function FeatureSplit({
           />
         </div>
         <div
-          className="absolute top-[7%] bottom-[7%] left-[5%] z-10 w-[90%] overflow-hidden rounded-lg bg-card shadow-[0_12px_28px_oklch(0_0_0/0.45)] ring-1 ring-foreground/10 max-[901px]:top-1/2 max-[901px]:bottom-auto max-[901px]:aspect-2992/1788 max-[901px]:h-auto max-[901px]:-translate-y-1/2 min-[901px]:data-[bracket-side=left]:right-0 min-[901px]:data-[bracket-side=left]:left-auto min-[901px]:data-[bracket-side=left]:rounded-r-none min-[901px]:data-[bracket-side=right]:left-0 min-[901px]:data-[bracket-side=right]:rounded-l-none"
+          className="absolute top-[7%] bottom-[7%] left-[5%] z-10 w-[90%] overflow-hidden rounded-sm bg-card shadow-[0_12px_28px_oklch(0_0_0/0.45)] ring-1 ring-foreground/10 max-[901px]:top-1/2 max-[901px]:bottom-auto max-[901px]:aspect-2992/1788 max-[901px]:h-auto max-[901px]:-translate-y-1/2 min-[901px]:data-[bracket-side=left]:right-0 min-[901px]:data-[bracket-side=left]:left-auto min-[901px]:data-[bracket-side=left]:rounded-r-none min-[901px]:data-[bracket-side=right]:left-0 min-[901px]:data-[bracket-side=right]:rounded-l-none"
           data-bracket-side={bracketSide}
         >
           <img

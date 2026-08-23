@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Tick02Icon } from "@hugeicons/core-free-icons";
+import { PackageIcon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { Badge } from "@/components/reui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,8 +26,8 @@ import { updateOrderStatus, updateOrderDate } from "@/queries/orders";
 import type { OrderDateField } from "@/queries/orders";
 import type { DashboardKanbanOrder } from "@/queries/dashboard";
 import { toast } from "@/components/ui/toast";
+import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { Link } from "@tanstack/react-router";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { cn } from "@/lib/utils";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { getCurrencyLocale } from "@/lib/locale";
@@ -212,9 +212,7 @@ interface OrderCardProps extends Omit<
   order: DashboardKanbanOrder;
   currency: Currency;
   dateFormat: DateFormat;
-  columnId: string;
   asHandle?: boolean;
-  onMarkOwned: (orderId: string) => void;
   onDateChange: (orderId: string, field: OrderDateField, date: string | null) => void;
 }
 
@@ -222,9 +220,7 @@ function OrderCard({
   order,
   currency,
   dateFormat,
-  columnId,
   asHandle,
-  onMarkOwned,
   onDateChange,
   ...props
 }: OrderCardProps) {
@@ -237,74 +233,31 @@ function OrderCard({
       className="bg-background animate-data-in group/card relative p-0"
     >
       <FramePanel className="p-3 border-none hover:ring-1 hover:ring-foreground/10">
-        {columnId !== "Owned" && (
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-2 right-2 opacity-0 transition-opacity group-hover/card:opacity-100"
-                  aria-label="Mark as Owned"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onMarkOwned(order.orderId);
-                  }}
-                >
-                  <HugeiconsIcon icon={Tick02Icon} className="size-4" />
-                </Button>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2.5">
+            <ImageThumbnail
+              images={order.itemImages.slice(0, 4)}
+              title={order.title}
+              fallbackIcon={
+                <HugeiconsIcon icon={PackageIcon} className="size-4 text-muted-foreground" />
               }
+              className="[&_img]:pointer-events-none [&_img]:outline [&_img]:outline-black/10 dark:[&_img]:outline-white/10"
             />
-            <TooltipContent>
-              <p>Mark as 'Owned'</p>
-            </TooltipContent>
-          </Tooltip>
-        )}
-        <div className="flex flex-col gap-2.5">
-          {order.itemImages.length > 0 && (
-            <div className="flex gap-1">
-              {order.itemImages.slice(0, 3).map((image) => (
-                <div
-                  key={`${order.orderId}:${image}`}
-                  className="relative size-12 shrink-0 overflow-hidden rounded-md bg-muted"
-                >
-                  <img src={image} alt="" className="size-full object-cover object-top" />
-                </div>
-              ))}
-              {order.itemImages.length > 3 && (
-                <div className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    +{order.itemImages.length - 3}
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="flex flex-col gap-1">
-            <Link
-              to="/orders/$id"
-              params={{ id: order.orderId }}
-              className="line-clamp-1 text-sm font-medium leading-tight hover:underline w-fit"
-              onPointerDown={(e) => e.stopPropagation()}
-            >
-              {order.title}
-            </Link>
-            <div className="flex flex-row items-center gap-1">
-              {order.shop && (
-                <Badge
-                  variant="outline"
-                  className="pointer-events-none w-fit px-1.5 py-0 text-[10px]"
-                >
-                  {order.shop}
-                </Badge>
-              )}
-              <Badge
-                variant="outline"
-                className="pointer-events-none w-fit px-1.5 py-0 text-[10px]"
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <Link
+                to="/orders/$id"
+                params={{ id: order.orderId }}
+                className="line-clamp-1 text-sm font-medium leading-tight underline-offset-2 hover:underline"
+                onPointerDown={(e) => e.stopPropagation()}
               >
-                {formatCurrencyFromMinorUnits(order.total, currency, locale)}
-              </Badge>
+                {order.title}
+              </Link>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                {order.shop ? <span className="truncate">{order.shop}</span> : null}
+                <span className="ml-auto shrink-0 font-medium tabular-nums text-foreground">
+                  {formatCurrencyFromMinorUnits(order.total, currency, locale)}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -316,7 +269,7 @@ function OrderCard({
                   type="button"
                   variant="ghost"
                   className={cn(
-                    "h-auto w-full justify-between gap-2 rounded px-1.5 py-0.5 text-left font-normal",
+                    "h-auto w-full justify-between gap-2 rounded px-1.5 py-1 text-left font-normal",
                     "transition-colors hover:bg-muted/80",
                     "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
                   )}
@@ -326,8 +279,8 @@ function OrderCard({
                   </span>
                   <span
                     className={cn(
-                      "text-[10px] tabular-nums",
-                      dateValue ? "text-foreground" : "text-muted-foreground/50",
+                      "text-xs tabular-nums",
+                      dateValue ? "text-foreground" : "text-muted-foreground/60",
                     )}
                   >
                     {dateValue ? formatDateOnlyForDisplay(dateValue, dateFormat) : "—"}
@@ -379,7 +332,6 @@ function OrderColumn({
   currency,
   dateFormat,
   isOverlay,
-  onMarkOwned,
   onDateChange,
 }: {
   columnId: string;
@@ -388,7 +340,6 @@ function OrderColumn({
   currency: Currency;
   dateFormat: DateFormat;
   isOverlay?: boolean;
-  onMarkOwned: (orderId: string) => void;
   onDateChange: (orderId: string, field: OrderDateField, date: string | null) => void;
 }) {
   const col = COLUMNS[columnId];
@@ -420,9 +371,7 @@ function OrderColumn({
                 order={order}
                 currency={currency}
                 dateFormat={dateFormat}
-                columnId={columnId}
                 asHandle={!isOverlay}
-                onMarkOwned={onMarkOwned}
                 onDateChange={onDateChange}
                 style={{ "--data-in-delay": `${index * 30}ms` } as React.CSSProperties}
               />
@@ -591,45 +540,6 @@ function OrderKanbanBoard({
     [columns, enqueueDateMutation],
   );
 
-  const handleMarkOwned = React.useCallback(
-    (orderId: string) => {
-      let previousStatus: OrderStatus | null = null;
-      let foundIndex = -1;
-      let foundOrder: DashboardKanbanOrder | null = null;
-
-      for (const status of ORDER_STATUSES) {
-        const columnOrders = columns[status];
-        const index = columnOrders.findIndex((o) => o.orderId === orderId);
-        if (index !== -1) {
-          previousStatus = status;
-          foundIndex = index;
-          foundOrder = columnOrders[index];
-          break;
-        }
-      }
-
-      if (previousStatus === null || foundOrder === null) return;
-
-      const updatedSource = [...columns[previousStatus]];
-      updatedSource.splice(foundIndex, 1);
-
-      setColumns({
-        ...columns,
-        [previousStatus]: updatedSource,
-        Owned: [...columns.Owned, foundOrder],
-      });
-
-      enqueueStatusMutation({
-        orderId,
-        status: "Owned",
-        previousStatus,
-        previousIndex: foundIndex,
-        targetIndex: columns.Owned.length,
-      });
-    },
-    [columns, enqueueStatusMutation],
-  );
-
   const handleMove = React.useCallback(
     ({ activeContainer, activeIndex, overContainer, overIndex, event }: KanbanMoveEvent) => {
       const previousStatus = ORDER_STATUSES.find((status) => status === activeContainer);
@@ -664,7 +574,6 @@ function OrderKanbanBoard({
             isLoading={isLoading}
             currency={currency}
             dateFormat={dateFormat}
-            onMarkOwned={handleMarkOwned}
             onDateChange={handleDateChange}
           />
         ))}

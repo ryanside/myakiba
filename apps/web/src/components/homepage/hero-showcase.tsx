@@ -164,7 +164,7 @@ export function HeroShowcase({ isDark }: HeroShowcaseProps) {
         <div className="relative mx-auto w-full max-w-5xl px-5">
           <div
             className={cn(
-              "relative isolate aspect-2992/1788 w-full overflow-hidden rounded-md shadow-sm",
+              "relative ring-1 ring-foreground/10 isolate aspect-2992/1788 w-full overflow-hidden rounded-md shadow-sm",
               isDark ? "bg-[#090909]" : "bg-white",
             )}
           >
