@@ -116,7 +116,7 @@ function Panel({
         />
         <div
           className={cn(
-            "absolute z-10 overflow-hidden rounded-lg shadow-[0_12px_28px_oklch(0_0_0/0.45)] ring-1 ring-foreground/10 data-[touches-bottom=true]:rounded-b-none data-[touches-left=true]:rounded-l-none data-[touches-right=true]:rounded-r-none data-[touches-top=true]:rounded-t-none",
+            "absolute z-10 overflow-hidden rounded-md shadow-[0_12px_28px_oklch(0_0_0/0.45)] ring-1 ring-foreground/10 data-[touches-bottom=true]:rounded-b-none data-[touches-left=true]:rounded-l-none data-[touches-right=true]:rounded-r-none data-[touches-top=true]:rounded-t-none",
             PANEL_FRAMES[variant],
           )}
           data-touches-bottom={variant.startsWith("top")}

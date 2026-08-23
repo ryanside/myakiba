@@ -178,7 +178,7 @@ function HomeComponent() {
         <section
           id="features"
           aria-label="myakiba features"
-          className="mx-auto w-full max-w-5xl px-6 pt-16"
+          className="mx-auto w-full max-w-5xl px-6 pt-16 pb-px"
         >
           <PanelGallery isDark={isDark} />
           <div className="mt-24 flex flex-col gap-24 sm:mt-32 sm:gap-32">
