@@ -5,33 +5,17 @@ import {
   InformationCircleIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  closestCenter,
-  DndContext,
-  DragOverlay,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import type {
-  Announcements,
-  DragEndEvent,
-  DragOverEvent,
-  DragStartEvent,
-  ScreenReaderInstructions,
-} from "@dnd-kit/core";
+import { closestCenter, DndContext, DragOverlay } from "@dnd-kit/core";
 import { snapCenterToCursor } from "@dnd-kit/modifiers";
 import {
   rectSortingStrategy,
-  sortableKeyboardCoordinates,
   SortableContext,
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import type { ListInput, ListOrderInput } from "@myakiba/contracts/lists/schema";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { startTransition, useCallback, useMemo, useOptimistic, useRef, useState } from "react";
+import { useCallback } from "react";
 import type { CSSProperties } from "react";
 import type { getLists } from "@/queries/lists";
 import { InfiniteListStatus } from "@/components/lists/infinite-list-status";
@@ -44,14 +28,13 @@ import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { ItemControl } from "@/components/ui/item-controls";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "@/components/ui/toast";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useListMutations, useListsQuery, useMoveListsQueue } from "@/hooks/use-lists";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { cn } from "@/lib/utils";
 import { useSelection } from "@/hooks/use-selection";
-import { moveSortableSelection } from "@/components/lists/list-order";
+import { useSortableSelection } from "@/components/lists/use-sortable-selection";
 
 type ListsPage = NonNullable<Awaited<ReturnType<typeof getLists>>>;
 type ListRecord = ListsPage["items"][number];
@@ -90,7 +73,7 @@ function SortableList({
   readonly onDelete: (listId: string) => Promise<void>;
   readonly onEntranceAnimationEnd?: () => void;
 }): React.JSX.Element {
-  const { attributes, isDragging, listeners, setNodeRef } = useSortable({
+  const { attributes, isDragging, listeners, setActivatorNodeRef, setNodeRef } = useSortable({
     id: list.id,
     disabled: sortingDisabled,
   });
@@ -189,6 +172,7 @@ function SortableList({
           onDelete={onDelete}
         >
           <ItemControl
+            ref={setActivatorNodeRef}
             type="button"
             className="touch-none cursor-grab active:cursor-grabbing"
             {...attributes}
@@ -236,136 +220,36 @@ function SortableLists({
   readonly onClearSelection: () => void;
   readonly onToggleSelection: (listId: string, selected: boolean) => void;
 }): React.JSX.Element {
-  const [orderedLists, setOrderedLists] = useOptimistic(lists);
-  const [entranceAnimationActive, setEntranceAnimationActive] = useState(true);
-  const [dndEpoch, setDndEpoch] = useState(0);
-  const [activeListId, setActiveListId] = useState<string>();
-  const [overListId, setOverListId] = useState<string>();
-  const keyboardDrag = useRef(false);
-  const loadingNextPage = useRef(false);
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
-  const listIds = useMemo(() => orderedLists.map((list) => list.id), [orderedLists]);
-  const draggingSelection = activeListId ? selectedIds.has(activeListId) : false;
-  let draggedListCount = 0;
-  if (activeListId) draggedListCount = draggingSelection ? selectedIds.size : 1;
-
-  const activeIndex = activeListId ? listIds.indexOf(activeListId) : -1;
-  const overIndex = overListId ? listIds.indexOf(overListId) : -1;
-  const dropIndicator =
-    activeIndex >= 0 &&
-    overIndex >= 0 &&
-    activeListId !== overListId &&
-    !(draggingSelection && overListId && selectedIds.has(overListId))
-      ? {
-          id: overListId,
-          placement: activeIndex < overIndex ? ("after" as const) : ("before" as const),
-        }
-      : null;
-
-  const announcements = useMemo<Announcements>(() => {
-    const titleById = new Map(orderedLists.map((list) => [list.id, list.title]));
-    const getTitle = (id: string | number) => {
-      const listId = String(id);
-      if (selectedIds.size > 1 && selectedIds.has(listId)) {
-        return `${selectedIds.size} selected Lists`;
-      }
-      return titleById.get(listId) ?? "List";
-    };
-    return {
-      onDragStart: ({ active }) => `Picked up ${getTitle(active.id)}.`,
-      onDragOver: ({ active, over }) =>
-        over
-          ? `${getTitle(active.id)} is over position ${orderedLists.findIndex((list) => list.id === String(over.id)) + 1} of ${totalCount}.`
-          : `${getTitle(active.id)} is no longer over a drop target.`,
-      onDragEnd: ({ active, over }) =>
-        over
-          ? `Dropped ${getTitle(active.id)} at position ${orderedLists.findIndex((list) => list.id === String(over.id)) + 1} of ${totalCount}.`
-          : `Movement cancelled for ${getTitle(active.id)}.`,
-      onDragCancel: ({ active }) => `Movement cancelled for ${getTitle(active.id)}.`,
-    };
-  }, [orderedLists, selectedIds, totalCount]);
-
-  const screenReaderInstructions: ScreenReaderInstructions = {
-    draggable:
+  const {
+    orderedItems: orderedLists,
+    itemIds: listIds,
+    entranceAnimationActive,
+    finishEntranceAnimation,
+    dndEpoch,
+    activeId: activeListId,
+    dropIndicator,
+    overlayLabel,
+    sensors,
+    announcements,
+    screenReaderInstructions,
+    handleDragStart,
+    handleDragOver,
+    handleDragEnd,
+    handleDragCancel,
+  } = useSortableSelection({
+    items: lists,
+    totalCount,
+    selectedIds,
+    selectedLabel: "selected Lists",
+    fallbackLabel: "List",
+    screenReaderInstruction:
       "To move a List, press Space. Use the arrow keys to choose a new position, then press Space to drop it. Press Escape to cancel.",
-  };
-
-  const handleDragStart = useCallback(({ active, activatorEvent }: DragStartEvent): void => {
-    setEntranceAnimationActive(false);
-    keyboardDrag.current = activatorEvent instanceof KeyboardEvent;
-    setActiveListId(String(active.id));
-  }, []);
-
-  const handleDragOver = useCallback(
-    async ({ active, over }: DragOverEvent): Promise<void> => {
-      setActiveListId(String(active.id));
-      setOverListId(over ? String(over.id) : undefined);
-      if (
-        !(keyboardDrag.current && over && hasNextPage) ||
-        isFetchingNextPage ||
-        loadingNextPage.current
-      ) {
-        return;
-      }
-      const hoveredIndex = listIds.indexOf(String(over.id));
-      if (hoveredIndex < listIds.length - 2) return;
-
-      loadingNextPage.current = true;
-      const result = await onLoadMore();
-      loadingNextPage.current = false;
-      if (!(keyboardDrag.current && result.isFetchNextPageError)) return;
-
-      setDndEpoch((epoch) => epoch + 1);
-      keyboardDrag.current = false;
-      setActiveListId(undefined);
-      setOverListId(undefined);
-      const toastId = toast.add({
-        type: "error",
-        title: "Could not load more. Your saved order has not changed.",
-        actionProps: {
-          children: "Retry",
-          onClick() {
-            toast.close(toastId);
-            void onLoadMore();
-          },
-        },
-      });
-    },
-    [hasNextPage, isFetchingNextPage, listIds, onLoadMore],
-  );
-
-  const handleDragEnd = useCallback(
-    ({ active, over }: DragEndEvent): void => {
-      keyboardDrag.current = false;
-      setActiveListId(undefined);
-      setOverListId(undefined);
-      if (!over) return;
-
-      const move = moveSortableSelection(
-        orderedLists,
-        String(active.id),
-        String(over.id),
-        selectedIds,
-      );
-      onClearSelection();
-      if (!move) return;
-
-      startTransition(async () => {
-        setOrderedLists(move.items);
-        await onMove(move.intent).catch(() => null);
-      });
-    },
-    [onClearSelection, onMove, orderedLists, selectedIds, setOrderedLists],
-  );
-
-  const handleDragCancel = useCallback((): void => {
-    keyboardDrag.current = false;
-    setActiveListId(undefined);
-    setOverListId(undefined);
-  }, []);
+    hasNextPage,
+    isFetchingNextPage,
+    onLoadMore,
+    onMove,
+    onClearSelection,
+  });
 
   return (
     <DndContext
@@ -405,9 +289,7 @@ function SortableLists({
               onUpdate={onUpdate}
               onDelete={onDelete}
               onEntranceAnimationEnd={
-                index === orderedLists.length - 1
-                  ? () => setEntranceAnimationActive(false)
-                  : undefined
+                index === orderedLists.length - 1 ? finishEntranceAnimation : undefined
               }
             />
           ))}
@@ -424,7 +306,7 @@ function SortableLists({
             aria-hidden="true"
             className="rounded-lg bg-popover px-2.5 py-1.5 text-sm font-medium text-popover-foreground shadow-md ring-1 ring-foreground/10"
           >
-            {draggedListCount} {draggedListCount === 1 ? "list" : "lists"}
+            {overlayLabel}
           </div>
         ) : null}
       </DragOverlay>

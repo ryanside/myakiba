@@ -10,6 +10,8 @@ export function moveSortableSelection<T extends { readonly id: string }>(
 
   const activeIndex = items.findIndex((item) => item.id === activeId);
   const overIndex = items.findIndex((item) => item.id === overId);
+  if (activeIndex === -1 || overIndex === -1) return null;
+
   const movedIds = selectedIds.has(activeId)
     ? items.filter((item) => selectedIds.has(item.id)).map((item) => item.id)
     : [activeId];

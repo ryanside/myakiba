@@ -8,9 +8,9 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import type { InfiniteData } from "@tanstack/react-query";
+import type { InfiniteData, QueryKey } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "@/components/ui/toast";
 import {
   ListOrderChangedError,
@@ -32,6 +32,7 @@ type ListsPage = NonNullable<Awaited<ReturnType<typeof getLists>>>;
 type ListRecord = ListsPage["items"][number];
 type ListMembersPage = NonNullable<Awaited<ReturnType<typeof getListMembers>>>;
 type ListMember = ListMembersPage["items"][number];
+const RESOLVED_MOVE_PROMISE = Promise.resolve();
 
 interface OffsetPage<T> {
   readonly items: T[];
@@ -256,17 +257,29 @@ export function useListMutations({
   } as const;
 }
 
-export function useMoveListsQueue() {
+function useMoveQueue<T extends { readonly id: string; readonly position: number }>({
+  queryKey,
+  persist,
+  additionalInvalidation,
+}: {
+  readonly queryKey: QueryKey;
+  readonly persist: (
+    intent: ListOrderInput,
+  ) => Promise<{ readonly moved: readonly { readonly id: string; readonly position: number }[] }>;
+  readonly additionalInvalidation: {
+    readonly queryKey: QueryKey;
+    readonly exact?: boolean;
+  };
+}) {
   const queryClient = useQueryClient();
-  const queue = useRef(Promise.resolve());
+  const queue = useRef(RESOLVED_MOVE_PROMISE);
   const generation = useRef(0);
   const [pendingCount, setPendingCount] = useState(0);
 
   const move = useCallback(
     async (intent: ListOrderInput) => {
-      const queryKey = ["lists", "overview"] as const;
       await queryClient.cancelQueries({ queryKey, exact: true });
-      const current = queryClient.getQueryData<OffsetInfiniteData<ListRecord>>(queryKey);
+      const current = queryClient.getQueryData<OffsetInfiniteData<T>>(queryKey);
       const previous = current;
       const optimistic = current ? moveInfiniteItems(current, intent) : null;
       if (!optimistic) {
@@ -284,14 +297,14 @@ export function useMoveListsQueue() {
         await previousRequest;
         if (moveGeneration !== generation.current) return;
         try {
-          const result = await moveLists(intent);
+          const result = await persist(intent);
           if (moveGeneration !== generation.current) return;
-          queryClient.setQueryData<OffsetInfiniteData<ListRecord>>(queryKey, (latest) =>
+          queryClient.setQueryData<OffsetInfiniteData<T>>(queryKey, (latest) =>
             latest ? applyMovedPositions(latest, result.moved) : latest,
           );
           await Promise.all([
             queryClient.invalidateQueries({ queryKey, exact: true, refetchType: "none" }),
-            queryClient.invalidateQueries({ queryKey: ["lists", "target-options"] }),
+            queryClient.invalidateQueries(additionalInvalidation),
           ]);
         } catch (error) {
           if (moveGeneration === generation.current) {
@@ -322,10 +335,24 @@ export function useMoveListsQueue() {
         setPendingCount((count) => Math.max(0, count - 1));
       }
     },
-    [queryClient],
+    [additionalInvalidation, persist, queryClient, queryKey],
   );
 
   return { move, isPending: pendingCount > 0 } as const;
+}
+
+export function useMoveListsQueue() {
+  const queryKey = useMemo(() => ["lists", "overview"] as const, []);
+  const additionalInvalidation = useMemo(
+    () => ({ queryKey: ["lists", "target-options"] as const }),
+    [],
+  );
+
+  return useMoveQueue<ListRecord>({
+    queryKey,
+    persist: moveLists,
+    additionalInvalidation,
+  });
 }
 
 export function useAddTargetsToListsMutation() {
@@ -438,73 +465,19 @@ export function useRemoveListMembersMutation(listId: string) {
 }
 
 export function useMoveListMembersQueue(listId: string) {
-  const queryClient = useQueryClient();
-  const queue = useRef(Promise.resolve());
-  const generation = useRef(0);
-  const [pendingCount, setPendingCount] = useState(0);
-
-  const move = useCallback(
-    async (intent: ListOrderInput) => {
-      const queryKey = ["lists", "detail", listId, "members"] as const;
-      await queryClient.cancelQueries({ queryKey, exact: true });
-      const current = queryClient.getQueryData<OffsetInfiniteData<ListMember>>(queryKey);
-      const previous = current;
-      const optimistic = current ? moveInfiniteItems(current, intent) : null;
-      if (!optimistic) {
-        generation.current += 1;
-        await queryClient.refetchQueries({ queryKey, exact: true });
-        toast.add({ type: "error", title: "The List changed. Try again." });
-        throw new ListOrderChangedError("The List changed");
-      }
-
-      queryClient.setQueryData(queryKey, optimistic);
-      const moveGeneration = generation.current;
-      setPendingCount((count) => count + 1);
-      const previousRequest = queue.current;
-      const request = (async () => {
-        await previousRequest;
-        if (moveGeneration !== generation.current) return;
-        try {
-          const result = await moveListMembers(listId, intent);
-          if (moveGeneration !== generation.current) return;
-          queryClient.setQueryData<OffsetInfiniteData<ListMember>>(queryKey, (latest) =>
-            latest ? applyMovedPositions(latest, result.moved) : latest,
-          );
-          await Promise.all([
-            queryClient.invalidateQueries({ queryKey, exact: true, refetchType: "none" }),
-            queryClient.invalidateQueries({ queryKey: ["lists", "overview"], exact: true }),
-          ]);
-        } catch (error) {
-          if (moveGeneration === generation.current) {
-            generation.current += 1;
-            queryClient.setQueryData(queryKey, previous);
-            await queryClient.refetchQueries({ queryKey, exact: true });
-            toast.add({
-              type: "error",
-              title:
-                error instanceof ListOrderChangedError
-                  ? "The List changed. Try again."
-                  : "Failed to save List order",
-            });
-          }
-          throw error;
-        }
-      })();
-      queue.current = (async () => {
-        try {
-          await request;
-        } catch {
-          // The request already restored and refetched the cache.
-        }
-      })();
-      try {
-        return await request;
-      } finally {
-        setPendingCount((count) => Math.max(0, count - 1));
-      }
-    },
-    [listId, queryClient],
+  const queryKey = useMemo(() => ["lists", "detail", listId, "members"] as const, [listId]);
+  const additionalInvalidation = useMemo(
+    () => ({ queryKey: ["lists", "overview"] as const, exact: true }),
+    [],
+  );
+  const persist = useCallback(
+    (intent: ListOrderInput) => moveListMembers(listId, intent),
+    [listId],
   );
 
-  return { move, isPending: pendingCount > 0 } as const;
+  return useMoveQueue<ListMember>({
+    queryKey,
+    persist,
+    additionalInvalidation,
+  });
 }

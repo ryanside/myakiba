@@ -1,25 +1,9 @@
 import { DragDropVerticalIcon, PackageIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  closestCenter,
-  DndContext,
-  DragOverlay,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import type {
-  Announcements,
-  DragEndEvent,
-  DragOverEvent,
-  DragStartEvent,
-  ScreenReaderInstructions,
-} from "@dnd-kit/core";
+import { closestCenter, DndContext, DragOverlay } from "@dnd-kit/core";
 import { snapCenterToCursor } from "@dnd-kit/modifiers";
 import {
   rectSortingStrategy,
-  sortableKeyboardCoordinates,
   SortableContext,
   useSortable,
   verticalListSortingStrategy,
@@ -30,12 +14,10 @@ import type { getListMembers } from "@/queries/lists";
 import { ListMemberControls } from "@/components/lists/list-member-controls";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { ItemControl } from "@/components/ui/item-controls";
-import { toast } from "@/components/ui/toast";
 import type { ListViewMode } from "@/components/lists/list-view-toggle";
 import { cn } from "@/lib/utils";
-import { startTransition, useCallback, useMemo, useOptimistic, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { moveSortableSelection } from "@/components/lists/list-order";
+import { useSortableSelection } from "@/components/lists/use-sortable-selection";
 
 type ListMembersPage = NonNullable<Awaited<ReturnType<typeof getListMembers>>>;
 type ListMember = ListMembersPage["items"][number];
@@ -185,7 +167,7 @@ function SortableListMember({
 }): React.JSX.Element {
   const removeDisabled = removingMemberIds !== undefined;
   const reorderDisabled = sortingDisabled || removeDisabled;
-  const { attributes, isDragging, listeners, setNodeRef } = useSortable({
+  const { attributes, isDragging, listeners, setActivatorNodeRef, setNodeRef } = useSortable({
     id: member.id,
     disabled: reorderDisabled,
   });
@@ -239,6 +221,7 @@ function SortableListMember({
           onRemove={onRemove}
         >
           <ItemControl
+            ref={setActivatorNodeRef}
             type="button"
             className="touch-none cursor-grab active:cursor-grabbing"
             {...attributes}
@@ -286,139 +269,36 @@ export function ListMemberGrid({
   readonly onClearSelection: () => void;
   readonly onToggleSelection: (memberId: string, selected: boolean) => void;
 }): React.JSX.Element {
-  const [orderedMembers, setOrderedMembers] = useOptimistic(members);
-  const [entranceAnimationActive, setEntranceAnimationActive] = useState(true);
-  const [dndEpoch, setDndEpoch] = useState(0);
-  const [activeMemberId, setActiveMemberId] = useState<string>();
-  const [overMemberId, setOverMemberId] = useState<string>();
-  const keyboardDrag = useRef(false);
-  const loadingNextPage = useRef(false);
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
-  const memberIds = useMemo(() => orderedMembers.map((member) => member.id), [orderedMembers]);
-  const draggingSelection = activeMemberId ? selectedIds.has(activeMemberId) : false;
-  let draggedMemberCount = 0;
-  if (activeMemberId) draggedMemberCount = draggingSelection ? selectedIds.size : 1;
-
-  const activeIndex = activeMemberId ? memberIds.indexOf(activeMemberId) : -1;
-  const overIndex = overMemberId ? memberIds.indexOf(overMemberId) : -1;
-  const dropIndicator = useMemo(
-    () =>
-      activeIndex >= 0 &&
-      overIndex >= 0 &&
-      activeMemberId !== overMemberId &&
-      !(draggingSelection && overMemberId && selectedIds.has(overMemberId))
-        ? {
-            id: overMemberId,
-            placement: activeIndex < overIndex ? ("after" as const) : ("before" as const),
-          }
-        : null,
-    [activeIndex, activeMemberId, draggingSelection, overIndex, overMemberId, selectedIds],
-  );
-
-  const announcements = useMemo<Announcements>(() => {
-    const titleById = new Map(orderedMembers.map((member) => [member.id, member.title]));
-    const getTitle = (id: string | number) => {
-      const memberId = String(id);
-      if (selectedIds.size > 1 && selectedIds.has(memberId)) {
-        return `${selectedIds.size} selected`;
-      }
-      return titleById.get(memberId) ?? "selection";
-    };
-    return {
-      onDragStart: ({ active }) => `Picked up ${getTitle(active.id)}.`,
-      onDragOver: ({ active, over }) =>
-        over
-          ? `${getTitle(active.id)} is over position ${orderedMembers.findIndex((member) => member.id === String(over.id)) + 1} of ${totalCount}.`
-          : `${getTitle(active.id)} is no longer over a drop target.`,
-      onDragEnd: ({ active, over }) =>
-        over
-          ? `Dropped ${getTitle(active.id)} at position ${orderedMembers.findIndex((member) => member.id === String(over.id)) + 1} of ${totalCount}.`
-          : `Movement cancelled for ${getTitle(active.id)}.`,
-      onDragCancel: ({ active }) => `Movement cancelled for ${getTitle(active.id)}.`,
-    };
-  }, [orderedMembers, selectedIds, totalCount]);
-
-  const screenReaderInstructions: ScreenReaderInstructions = {
-    draggable:
+  const {
+    orderedItems: orderedMembers,
+    itemIds: memberIds,
+    entranceAnimationActive,
+    finishEntranceAnimation,
+    dndEpoch,
+    activeId: activeMemberId,
+    dropIndicator,
+    overlayLabel,
+    sensors,
+    announcements,
+    screenReaderInstructions,
+    handleDragStart,
+    handleDragOver,
+    handleDragEnd,
+    handleDragCancel,
+  } = useSortableSelection({
+    items: members,
+    totalCount,
+    selectedIds,
+    selectedLabel: "selected",
+    fallbackLabel: "selection",
+    screenReaderInstruction:
       "To reorder, press Space. Use the arrow keys to choose a new position, then press Space to drop it. Press Escape to cancel.",
-  };
-
-  const handleDragStart = useCallback(({ active, activatorEvent }: DragStartEvent): void => {
-    setEntranceAnimationActive(false);
-    keyboardDrag.current = activatorEvent instanceof KeyboardEvent;
-    setActiveMemberId(String(active.id));
-  }, []);
-
-  const handleDragOver = useCallback(
-    async ({ active, over }: DragOverEvent): Promise<void> => {
-      setActiveMemberId(String(active.id));
-      setOverMemberId(over ? String(over.id) : undefined);
-      if (
-        !(keyboardDrag.current && over && hasNextPage) ||
-        isFetchingNextPage ||
-        loadingNextPage.current
-      ) {
-        return;
-      }
-      const hoveredIndex = memberIds.indexOf(String(over.id));
-      if (hoveredIndex < memberIds.length - 2) return;
-
-      loadingNextPage.current = true;
-      const result = await onLoadMore();
-      loadingNextPage.current = false;
-      if (!(keyboardDrag.current && result.isFetchNextPageError)) return;
-
-      setDndEpoch((epoch) => epoch + 1);
-      keyboardDrag.current = false;
-      setActiveMemberId(undefined);
-      setOverMemberId(undefined);
-      const toastId = toast.add({
-        type: "error",
-        title: "Could not load more. Your saved order has not changed.",
-        actionProps: {
-          children: "Retry",
-          onClick() {
-            toast.close(toastId);
-            void onLoadMore();
-          },
-        },
-      });
-    },
-    [hasNextPage, isFetchingNextPage, memberIds, onLoadMore],
-  );
-
-  const handleDragEnd = useCallback(
-    ({ active, over }: DragEndEvent): void => {
-      keyboardDrag.current = false;
-      setActiveMemberId(undefined);
-      setOverMemberId(undefined);
-      if (!over) return;
-
-      const move = moveSortableSelection(
-        orderedMembers,
-        String(active.id),
-        String(over.id),
-        selectedIds,
-      );
-      onClearSelection();
-      if (!move) return;
-
-      startTransition(async () => {
-        setOrderedMembers(move.items);
-        await onMove(move.intent).catch(() => null);
-      });
-    },
-    [onClearSelection, onMove, orderedMembers, selectedIds, setOrderedMembers],
-  );
-
-  const handleDragCancel = useCallback((): void => {
-    keyboardDrag.current = false;
-    setActiveMemberId(undefined);
-    setOverMemberId(undefined);
-  }, []);
+    hasNextPage,
+    isFetchingNextPage,
+    onLoadMore,
+    onMove,
+    onClearSelection,
+  });
 
   return (
     <DndContext
@@ -461,9 +341,7 @@ export function ListMemberGrid({
               onToggleSelection={() => onToggleSelection(member.id, !selectedIds.has(member.id))}
               onRemove={onRemove}
               onEntranceAnimationEnd={
-                index === orderedMembers.length - 1
-                  ? () => setEntranceAnimationActive(false)
-                  : undefined
+                index === orderedMembers.length - 1 ? finishEntranceAnimation : undefined
               }
             />
           ))}
@@ -480,7 +358,7 @@ export function ListMemberGrid({
             aria-hidden="true"
             className="rounded-lg bg-popover px-2.5 py-1.5 text-sm font-medium text-popover-foreground shadow-md ring-1 ring-foreground/10"
           >
-            {draggedMemberCount} selected
+            {overlayLabel}
           </div>
         ) : null}
       </DragOverlay>
