@@ -3,10 +3,10 @@ import { and, eq, inArray } from "drizzle-orm";
 import type { db } from "@myakiba/db/client";
 import { entry, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
 
-type CatalogTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+type ItemDataTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-export async function persistScrapedCatalog(
-  tx: CatalogTransaction,
+export async function persistScrapedItemData(
+  tx: ItemDataTransaction,
   assembledData: AssembledScrapedData,
 ): Promise<{
   externalIdToInternalId: ReadonlyMap<number, string>;

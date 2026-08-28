@@ -8,7 +8,7 @@ import { tryCatch } from "@myakiba/utils/result";
 import { eq } from "drizzle-orm";
 import { db } from "@myakiba/db/client";
 import { assembleScrapedData } from "../assemble-scraped-data";
-import { persistScrapedCatalog } from "../persist-scraped-catalog";
+import { persistScrapedItemData } from "../persist-scraped-item-data";
 import {
   markPersistFailedSyncSessionItemStatuses,
   publishJobStatus,
@@ -51,7 +51,7 @@ export async function finalizeCollectionSync({
   // assign latest release id to successfulCollectionItems
   const { error } = await tryCatch(
     db.transaction(async (tx) => {
-      const { externalIdToInternalId, latestReleaseIdByInternalId } = await persistScrapedCatalog(
+      const { externalIdToInternalId, latestReleaseIdByInternalId } = await persistScrapedItemData(
         tx,
         assembledData,
       );
