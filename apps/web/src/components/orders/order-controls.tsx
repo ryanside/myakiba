@@ -20,6 +20,7 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLinkItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -88,16 +89,12 @@ export function OrderControls({
           {menuOpen ? (
             <DropdownMenuContent align="end">
               <DropdownMenuGroup>
-                <DropdownMenuItem>
-                  <Link
-                    to="/orders/$id"
-                    params={{ id: order.orderId }}
-                    className="flex items-center gap-1.5"
-                  >
-                    <HugeiconsIcon icon={ViewIcon} />
-                    View details
-                  </Link>
-                </DropdownMenuItem>
+                <DropdownMenuLinkItem
+                  render={<Link to="/orders/$id" params={{ id: order.orderId }} />}
+                >
+                  <HugeiconsIcon icon={ViewIcon} />
+                  View details
+                </DropdownMenuLinkItem>
                 <DropdownMenuItem
                   onClick={() => {
                     setMenuOpen(false);

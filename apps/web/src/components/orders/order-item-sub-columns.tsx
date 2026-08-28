@@ -16,6 +16,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLinkItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -101,28 +102,39 @@ function OrderItemActionsCell({
           />
           {menuOpen ? (
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>
-                <Link
-                  {...(item.itemExternalId !== null
-                    ? ({
-                        to: "/item/$externalId",
-                        params: { externalId: item.itemExternalId },
-                      } as const)
-                    : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
-                  className="flex items-center gap-1.5"
-                >
-                  <HugeiconsIcon icon={ViewIcon} />
-                  View details
-                </Link>
-              </DropdownMenuItem>
+              <DropdownMenuLinkItem
+                render={
+                  <Link
+                    {...(item.itemExternalId !== null
+                      ? ({
+                          to: "/item/$externalId",
+                          params: { externalId: item.itemExternalId },
+                        } as const)
+                      : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
+                  />
+                }
+              >
+                <HugeiconsIcon icon={ViewIcon} />
+                View details
+              </DropdownMenuLinkItem>
               <DropdownMenuItem
-                onClick={() => {
-                  if (item.itemExternalId) {
-                    navigator.clipboard.writeText(item.itemExternalId.toString());
-                    toast.add({ type: "success", title: "Copied MFC item ID to clipboard" });
-                  } else {
+                onClick={async () => {
+                  if (item.itemExternalId === null) {
                     toast.add({ type: "error", title: "No MFC item ID for custom items" });
+                    return;
                   }
+
+                  try {
+                    await navigator.clipboard.writeText(String(item.itemExternalId));
+                  } catch {
+                    toast.add({
+                      type: "error",
+                      title: "Could not copy MFC item ID to clipboard",
+                    });
+                    return;
+                  }
+
+                  toast.add({ type: "success", title: "Copied MFC item ID to clipboard" });
                 }}
               >
                 <HugeiconsIcon icon={Copy01Icon} />

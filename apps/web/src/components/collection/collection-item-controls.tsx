@@ -23,6 +23,7 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLinkItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -110,20 +111,21 @@ export function CollectionItemControls({
           {menuOpen ? (
             <DropdownMenuContent align="end">
               <DropdownMenuGroup>
-                <DropdownMenuItem>
-                  <Link
-                    {...(item.itemExternalId !== null
-                      ? ({
-                          to: "/item/$externalId",
-                          params: { externalId: item.itemExternalId },
-                        } as const)
-                      : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
-                    className="flex items-center gap-1.5"
-                  >
-                    <HugeiconsIcon icon={ViewIcon} />
-                    View details
-                  </Link>
-                </DropdownMenuItem>
+                <DropdownMenuLinkItem
+                  render={
+                    <Link
+                      {...(item.itemExternalId !== null
+                        ? ({
+                            to: "/item/$externalId",
+                            params: { externalId: item.itemExternalId },
+                          } as const)
+                        : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
+                    />
+                  }
+                >
+                  <HugeiconsIcon icon={ViewIcon} />
+                  View details
+                </DropdownMenuLinkItem>
                 <DropdownMenuItem
                   onClick={async () => {
                     if (item.itemExternalId === null) {
