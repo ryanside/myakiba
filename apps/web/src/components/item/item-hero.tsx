@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Refresh01Icon } from "@hugeicons/core-free-icons";
+import { FolderAddIcon, Refresh01Icon } from "@hugeicons/core-free-icons";
 import { Badge } from "@/components/reui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,6 +10,7 @@ import { NO_SCALE } from "@myakiba/contracts/shared/scale";
 import { ItemResyncButton } from "@/components/item/item-resync-button";
 import { ItemImageInspector } from "@/components/item/item-image-inspector";
 import type { ItemDetail, ResyncStatus } from "@/components/item/types";
+import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
 
 export function ItemHero({
   item,
@@ -42,7 +43,7 @@ export function ItemHero({
                 href={`https://myfigurecollection.net/item/${externalId}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-muted-foreground transition-colors duration-150 ease-out underline-offset-4 hover:text-foreground hover:underline"
+                className="text-xs text-muted-foreground hover:underline"
               >
                 myfigurecollection.net/item/{externalId}
               </a>
@@ -82,7 +83,7 @@ export function ItemHero({
               href={`https://myfigurecollection.net/item/${externalId}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-muted-foreground transition-colors duration-150 ease-out underline-offset-4 hover:text-foreground hover:underline"
+              className="text-xs text-muted-foreground hover:underline"
             >
               myfigurecollection.net/item/{externalId}
             </a>
@@ -120,12 +121,24 @@ export function ItemHero({
           ) : null}
         </div>
 
-        <ItemResyncButton
-          status={resyncStatus}
-          isPending={isResyncPending}
-          cooldownExpiresAt={cooldownExpiresAt}
-          onRequest={onRequestResync}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <ItemResyncButton
+            status={resyncStatus}
+            isPending={isResyncPending}
+            cooldownExpiresAt={cooldownExpiresAt}
+            onRequest={onRequestResync}
+          />
+          <AddToListsDialog
+            targets={[{ type: "item", id: item.id }]}
+            targetTitle={item.title}
+            renderTrigger={
+              <Button variant="outline" size="xs">
+                <HugeiconsIcon icon={FolderAddIcon} data-icon="inline-start" />
+                Add to List
+              </Button>
+            }
+          />
+        </div>
       </div>
     </div>
   );

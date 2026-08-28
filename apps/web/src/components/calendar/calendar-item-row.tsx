@@ -30,7 +30,7 @@ export function CalendarItemRow({ item, currency }: CalendarItemRowProps): React
         images={item.image ? [item.image] : []}
         title={item.title}
         fallbackIcon={<HugeiconsIcon icon={Image01Icon} className="size-4 text-muted-foreground" />}
-        className="size-9"
+        className="size-9 shrink-0 rounded-md"
       />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium leading-tight">{item.title}</p>

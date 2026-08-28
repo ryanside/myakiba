@@ -28,6 +28,17 @@ export type AnalyticsSectionRelationshipValue = AnalyticsSectionRelationshipsDat
 export type AnalyticsSectionRelationshipPreviewItem =
   AnalyticsSectionRelationshipValue["previewItems"][number];
 
+/**
+ * Returns the API path for an analytics section.
+ *
+ * Content blockers can reject a request URL that ends in `/events`.
+ * The client uses `/section-entries` for the `events` section.
+ * The server converts this path value to `events`.
+ */
+function getAnalyticsSectionApiPath(sectionName: AnalyticsSection) {
+  return sectionName === "events" ? "section-entries" : sectionName;
+}
+
 export async function getAnalytics(): Promise<AnalyticsOverviewResponse> {
   const { data, error } = await app.api.analytics.get();
 
@@ -46,6 +57,7 @@ export async function getAnalyticsSection(
   sectionName: AnalyticsSection,
   filters: AnalyticsSectionFilters = {},
 ): Promise<AnalyticsSectionData> {
+  const apiSectionName = getAnalyticsSectionApiPath(sectionName);
   const search = filters.search?.trim();
   const query = {
     search: search && search.length > 0 ? search : undefined,
@@ -55,7 +67,7 @@ export async function getAnalyticsSection(
     order: filters.order,
   };
 
-  const { data, error } = await app.api.analytics({ sectionName }).get({ query });
+  const { data, error } = await app.api.analytics({ sectionName: apiSectionName }).get({ query });
 
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to get analytics section"));
@@ -72,13 +84,16 @@ export async function getAnalyticsSectionItems(
   sectionName: AnalyticsSection,
   filters: AnalyticsSectionItemsFilters,
 ): Promise<AnalyticsSectionItemsData> {
+  const apiSectionName = getAnalyticsSectionApiPath(sectionName);
   const query = {
     match: filters.match,
     limit: filters.limit ?? 6,
     offset: filters.offset ?? 0,
   };
 
-  const { data, error } = await app.api.analytics({ sectionName }).items.get({ query });
+  const { data, error } = await app.api.analytics({ sectionName: apiSectionName }).items.get({
+    query,
+  });
 
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to get analytics section items"));
@@ -95,13 +110,16 @@ export async function getAnalyticsSectionRelationships(
   sectionName: AnalyticsSection,
   filters: AnalyticsSectionRelationshipsFilters,
 ): Promise<AnalyticsSectionRelationshipsData> {
+  const apiSectionName = getAnalyticsSectionApiPath(sectionName);
   const query = {
     match: filters.match,
     relatedSection: filters.relatedSection,
     limit: filters.limit ?? 5,
     offset: filters.offset ?? 0,
   };
-  const { data, error } = await app.api.analytics({ sectionName }).relationships.get({ query });
+  const { data, error } = await app.api
+    .analytics({ sectionName: apiSectionName })
+    .relationships.get({ query });
 
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to get analytics section relationships"));

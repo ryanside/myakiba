@@ -6,8 +6,17 @@ const analyticsRelationshipsLimitSchema = paginationLimitSchema.max(25);
 
 export const analyticsSectionSchema = z.enum(ANALYTICS_SECTIONS);
 
+/**
+ * Validates the section name from an analytics API path.
+ *
+ * Content blockers can reject a request URL that ends in `/events`.
+ * The client sends `section-entries` for the `events` section.
+ * The transform returns `events` to the analytics service.
+ */
 export const analyticsSectionParamSchema = z.object({
-  sectionName: analyticsSectionSchema,
+  sectionName: z
+    .union([analyticsSectionSchema, z.literal("section-entries")])
+    .transform((sectionName) => (sectionName === "section-entries" ? "events" : sectionName)),
 });
 
 export const analyticsSectionSearchSchema = z.object({

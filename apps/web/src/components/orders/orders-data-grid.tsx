@@ -16,9 +16,10 @@ import type { OrderListItem } from "@myakiba/contracts/orders/types";
 import { useSelection } from "@/hooks/use-selection";
 import { DataGridColumnCombobox } from "../ui/data-grid-column-combobox";
 import { OrdersToolbar } from "./orders-toolbar";
+import { OrdersActionBar } from "./orders-action-bar";
 import { OrdersCardGrid } from "./orders-card-grid";
 import { OrdersGalleryGrid } from "./orders-gallery-grid";
-import { createOrdersColumns } from "./orders-columns";
+import { createOrdersColumns, OrderItemSelectionContext } from "./orders-columns";
 import { SyncSheetButton } from "@/components/sync/sync-sheet-button";
 import { ViewToggle } from "@/components/ui/view-toggle";
 import type { ViewMode } from "@/components/ui/view-toggle";
@@ -95,15 +96,24 @@ export default function OrdersDataGrid() {
   );
 
   const {
-    rowSelection,
-    setRowSelection,
-    itemSelection,
-    setItemSelection,
-    selectedRowIds,
-    selectedNestedItemData,
-    clearSelections,
+    selection: orderSelection,
+    setSelection: setOrderSelection,
+    selectedIds: selectedOrderIds,
   } = useSelection();
-
+  const [selectedOrderIdByCollectionId, setSelectedOrderIdByCollectionId] = useState(
+    new Map<string, string>(),
+  );
+  const selectedItems = useMemo(
+    () => ({
+      collectionIds: new Set(selectedOrderIdByCollectionId.keys()),
+      orderIds: new Set(selectedOrderIdByCollectionId.values()),
+    }),
+    [selectedOrderIdByCollectionId],
+  );
+  const itemSelectionContextValue = useMemo(
+    () => ({ selectedOrderIdByCollectionId, setSelectedOrderIdByCollectionId }),
+    [selectedOrderIdByCollectionId],
+  );
   const [expandedRows, setExpandedRows] = useState<ExpandedState>({});
   const [columnVisibility, setColumnVisibility] = useLocalStorage<VisibilityState>(
     COLUMN_VISIBILITY_KEY,
@@ -140,8 +150,6 @@ export default function OrdersDataGrid() {
         onDeleteItem: handleDeleteItem,
         currency,
         locale,
-        itemSelection,
-        setItemSelection,
         dateFormat,
         isOrderPending,
         isCollectionItemPending,
@@ -153,8 +161,6 @@ export default function OrdersDataGrid() {
       handleDeleteOrders,
       currency,
       locale,
-      itemSelection,
-      setItemSelection,
       dateFormat,
       isCollectionItemPending,
       isOrderPending,
@@ -200,7 +206,7 @@ export default function OrdersDataGrid() {
       pagination,
       sorting,
       expanded: expandedRows,
-      rowSelection,
+      rowSelection: orderSelection,
       columnOrder,
       columnVisibility,
     },
@@ -208,7 +214,7 @@ export default function OrdersDataGrid() {
     onPaginationChange: handlePaginationChange,
     onSortingChange: handleSortingChange,
     onExpandedChange: setExpandedRows,
-    onRowSelectionChange: setRowSelection,
+    onRowSelectionChange: setOrderSelection,
     onColumnOrderChange: setColumnOrder,
     onColumnVisibilityChange: setColumnVisibility,
     manualFiltering: true,
@@ -222,26 +228,31 @@ export default function OrdersDataGrid() {
     <>
       <div className="flex w-full flex-wrap items-center gap-2">
         <div className="flex flex-1 flex-wrap items-center gap-2">
-          <OrdersToolbar
-            selectedOrderIds={selectedRowIds}
-            selectedItems={selectedNestedItemData}
-            clearSelections={clearSelections}
-            onMerge={handleMerge}
-            onSplit={handleSplit}
-            onDeleteOrders={handleDeleteOrders}
-            onMoveItem={handleMoveItem}
-            onDeleteItems={handleDeleteItems}
-            isMerging={isMerging}
-            isSplitting={isSplitting}
-            isDeletingOrders={isDeletingOrders}
-            isDeletingItems={isDeletingItems}
-            isMovingItems={isMovingItems}
-          />
+          <OrdersToolbar />
           {isTableView ? <DataGridColumnCombobox table={table} /> : null}
         </div>
         <ViewToggle value={viewMode} onValueChange={setViewMode} />
         <SyncSheetButton syncType="order" label="Add" className="ml-auto" />
       </div>
+      <OrdersActionBar
+        selectedOrderIds={selectedOrderIds}
+        selectedItems={selectedItems}
+        onClearOrderSelection={() => setOrderSelection({})}
+        onClearSelection={() => {
+          setOrderSelection({});
+          setSelectedOrderIdByCollectionId(new Map());
+        }}
+        onMerge={handleMerge}
+        onSplit={handleSplit}
+        onDeleteOrders={handleDeleteOrders}
+        onMoveItem={handleMoveItem}
+        onDeleteItems={handleDeleteItems}
+        isMerging={isMerging}
+        isSplitting={isSplitting}
+        isDeletingOrders={isDeletingOrders}
+        isDeletingItems={isDeletingItems}
+        isMovingItems={isMovingItems}
+      />
       {viewMode === "grid" || viewMode === "gallery" ? (
         <div className="flex w-full items-center justify-center gap-3">
           <GridSizeSlider value={cardWidth} onValueChange={setCardWidth} min={120} max={300} />
@@ -251,70 +262,72 @@ export default function OrdersDataGrid() {
         </div>
       ) : null}
       <div className="space-y-4">
-        <DataGrid
-          table={table}
-          isLoading={isPending}
-          recordCount={totalCount}
-          tableLayout={{
-            dense: viewMode === "compact",
-            columnsPinnable: true,
-            columnsResizable: true,
-            columnsMovable: true,
-            columnsVisibility: true,
-          }}
-        >
-          <div className="w-full space-y-2.5">
-            {(() => {
-              if (isTableView) {
+        <OrderItemSelectionContext value={itemSelectionContextValue}>
+          <DataGrid
+            table={table}
+            isLoading={isPending}
+            recordCount={totalCount}
+            tableLayout={{
+              dense: viewMode === "compact",
+              columnsPinnable: true,
+              columnsResizable: true,
+              columnsMovable: true,
+              columnsVisibility: true,
+            }}
+          >
+            <div className="w-full space-y-2.5">
+              {(() => {
+                if (isTableView) {
+                  return (
+                    <DataGridContainer>
+                      <ScrollArea>
+                        <DataGridTable />
+                        <ScrollBar orientation="horizontal" />
+                      </ScrollArea>
+                    </DataGridContainer>
+                  );
+                }
+                if (viewMode === "gallery") {
+                  return (
+                    <OrdersGalleryGrid
+                      orders={orders}
+                      tileSize={cardWidth}
+                      galleryLayout={galleryLayout}
+                      rowSelection={orderSelection}
+                      onRowSelectionChange={setOrderSelection}
+                      onEditOrder={handleEditOrder}
+                      onDeleteOrders={handleDeleteOrders}
+                      currency={currency}
+                      isOrderPending={isOrderPending}
+                      isLoading={isPending}
+                    />
+                  );
+                }
                 return (
-                  <DataGridContainer>
-                    <ScrollArea>
-                      <DataGridTable />
-                      <ScrollBar orientation="horizontal" />
-                    </ScrollArea>
-                  </DataGridContainer>
-                );
-              }
-              if (viewMode === "gallery") {
-                return (
-                  <OrdersGalleryGrid
+                  <OrdersCardGrid
                     orders={orders}
-                    tileSize={cardWidth}
-                    galleryLayout={galleryLayout}
-                    rowSelection={rowSelection}
-                    onRowSelectionChange={setRowSelection}
+                    cardWidth={cardWidth}
+                    rowSelection={orderSelection}
+                    onRowSelectionChange={setOrderSelection}
                     onEditOrder={handleEditOrder}
                     onDeleteOrders={handleDeleteOrders}
                     currency={currency}
+                    locale={locale}
                     isOrderPending={isOrderPending}
                     isLoading={isPending}
                   />
                 );
-              }
-              return (
-                <OrdersCardGrid
-                  orders={orders}
-                  cardWidth={cardWidth}
-                  rowSelection={rowSelection}
-                  onRowSelectionChange={setRowSelection}
-                  onEditOrder={handleEditOrder}
-                  onDeleteOrders={handleDeleteOrders}
-                  currency={currency}
-                  locale={locale}
-                  isOrderPending={isOrderPending}
-                  isLoading={isPending}
-                />
-              );
-            })()}
-            <div className="flex items-center justify-between">
-              <div className="flex-1 text-sm text-muted-foreground">
-                {table.getFilteredSelectedRowModel().rows.length} of{" "}
-                {table.getFilteredRowModel().rows.length} row(s) selected
+              })()}
+              <div className="flex items-center justify-between">
+                <div className="flex-1 text-sm text-muted-foreground">
+                  {table.getFilteredSelectedRowModel().rows.length} of{" "}
+                  {table.getFilteredRowModel().rows.length} row(s) selected
+                </div>
+                <DataGridPagination />
               </div>
-              <DataGridPagination />
             </div>
-          </div>
-        </DataGrid>
+          </DataGrid>
+        </OrderItemSelectionContext>
       </div>
     </>
   );

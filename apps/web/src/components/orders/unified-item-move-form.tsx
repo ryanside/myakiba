@@ -48,11 +48,13 @@ import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/cons
 import type { Currency, OrderStatus, ShippingMethod } from "@myakiba/contracts/shared/types";
 import { getCurrencyLocale } from "@/lib/locale";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
-import type { SelectedCollectionItems } from "@/hooks/use-selection";
 
 type UnifiedItemMoveFormProps = {
   readonly renderTrigger: React.ReactElement;
-  readonly selectedItems: SelectedCollectionItems;
+  readonly selectedItems: {
+    readonly collectionIds: ReadonlySet<string>;
+    readonly orderIds: ReadonlySet<string>;
+  };
   onMoveToExisting: (
     targetOrderId: string,
     collectionIds: ReadonlySet<string>,

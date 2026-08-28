@@ -7,6 +7,7 @@ import {
   GitCompareIcon,
   Home01Icon,
   LibraryIcon,
+  Folder01Icon,
   PackageIcon,
   Settings01Icon,
 } from "@hugeicons/core-free-icons";
@@ -17,6 +18,7 @@ export type AppNavigationTarget =
   | "/expenses"
   | "/orders"
   | "/collection"
+  | "/lists"
   | "/items"
   | "/calendar"
   | "/sync"
@@ -49,6 +51,12 @@ const APP_PRIMARY_NAVIGATION_ITEMS = [
     to: "/collection",
     icon: LibraryIcon,
     keywords: ["items", "figures", "owned"],
+  },
+  {
+    title: "Lists",
+    to: "/lists",
+    icon: Folder01Icon,
+    keywords: ["folders", "groups", "organize"],
   },
   {
     title: "Item Database",

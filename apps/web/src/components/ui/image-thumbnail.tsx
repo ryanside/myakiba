@@ -5,7 +5,11 @@ type ImageThumbnailProps = {
   readonly images: readonly string[];
   readonly title: string;
   readonly fallbackIcon: ReactNode;
-  readonly className?: string;
+  readonly className: string;
+  readonly decorative?: boolean;
+  readonly layout?: "fixed" | "masonry";
+  readonly loading?: "eager" | "lazy";
+  readonly showRemainingCount?: boolean;
 };
 
 export function ImageThumbnail({
@@ -13,15 +17,21 @@ export function ImageThumbnail({
   title,
   fallbackIcon,
   className,
+  decorative = false,
+  layout = "fixed",
+  loading,
+  showRemainingCount = false,
 }: ImageThumbnailProps): React.JSX.Element {
   const displayImages = images.slice(0, 4);
-  const remainingCount = Math.max(images.length - 4, 0);
+  const remainingCount = Math.max(images.length - displayImages.length, 0);
+  const hasRemainingCountOverlay = showRemainingCount && remainingCount > 0;
 
   if (displayImages.length === 0) {
     return (
       <div
         className={cn(
-          "flex size-12 shrink-0 items-center justify-center rounded bg-muted",
+          "flex items-center justify-center bg-muted",
+          layout === "masonry" && "aspect-video",
           className,
         )}
       >
@@ -32,57 +42,13 @@ export function ImageThumbnail({
 
   if (displayImages.length === 1) {
     return (
-      <div className={cn("relative size-12 shrink-0 overflow-hidden rounded-md", className)}>
-        <img src={displayImages[0]} alt={title} className="h-full w-full object-cover object-top" />
-      </div>
-    );
-  }
-
-  if (displayImages.length === 2) {
-    return (
-      <div
-        className={cn(
-          "grid size-12 shrink-0 grid-cols-2 gap-px overflow-hidden rounded",
-          className,
-        )}
-      >
-        {displayImages.map((imageSrc, index) => (
-          <div key={`${imageSrc}-${index}`} className="relative h-full w-full overflow-hidden">
-            <img
-              src={imageSrc}
-              alt={`${title} ${index + 1}`}
-              className="h-full w-full object-cover object-top"
-            />
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (displayImages.length === 3) {
-    return (
-      <div
-        className={cn(
-          "grid size-12 shrink-0 grid-cols-2 gap-px overflow-hidden rounded",
-          className,
-        )}
-      >
-        <div className="relative row-span-2 h-full w-full overflow-hidden">
-          <img
-            src={displayImages[0]}
-            alt={`${title} 1`}
-            className="h-full w-full object-cover object-top"
-          />
-        </div>
-        {displayImages.slice(1).map((imageSrc, index) => (
-          <div key={`${imageSrc}-${index + 1}`} className="relative h-full w-full overflow-hidden">
-            <img
-              src={imageSrc}
-              alt={`${title} ${index + 2}`}
-              className="h-full w-full object-cover object-top"
-            />
-          </div>
-        ))}
+      <div className={cn("overflow-hidden", className)}>
+        <img
+          src={displayImages[0]}
+          alt={decorative ? "" : title}
+          className={cn("w-full object-cover object-top", layout === "fixed" && "h-full")}
+          loading={loading}
+        />
       </div>
     );
   }
@@ -90,20 +56,44 @@ export function ImageThumbnail({
   return (
     <div
       className={cn(
-        "relative grid size-12 shrink-0 grid-cols-2 gap-px overflow-hidden rounded",
+        "grid grid-cols-2 gap-px overflow-hidden",
+        displayImages.length === 4 && "grid-rows-2",
+        hasRemainingCountOverlay && "relative",
         className,
       )}
     >
-      {displayImages.map((imageSrc, index) => (
-        <div key={`${imageSrc}-${index}`} className="relative h-full w-full overflow-hidden">
-          <img
-            src={imageSrc}
-            alt={`${title} ${index + 1}`}
-            className="h-full w-full object-cover object-top"
-          />
-        </div>
-      ))}
-      {remainingCount > 0 ? (
+      <img
+        src={displayImages[0]}
+        alt={decorative ? "" : `${title} item 1`}
+        className={cn(
+          "h-full w-full object-cover object-top",
+          displayImages.length === 3 && "row-span-2",
+        )}
+        loading={loading}
+      />
+      <img
+        src={displayImages[1]}
+        alt={decorative ? "" : `${title} item 2`}
+        className="h-full w-full object-cover object-top"
+        loading={loading}
+      />
+      {displayImages[2] ? (
+        <img
+          src={displayImages[2]}
+          alt={decorative ? "" : `${title} item 3`}
+          className="h-full w-full object-cover object-top"
+          loading={loading}
+        />
+      ) : null}
+      {displayImages[3] ? (
+        <img
+          src={displayImages[3]}
+          alt={decorative ? "" : `${title} item 4`}
+          className="h-full w-full object-cover object-top"
+          loading={loading}
+        />
+      ) : null}
+      {hasRemainingCountOverlay ? (
         <div className="absolute inset-0 flex items-center justify-center bg-black/50">
           <span className="text-xs font-medium text-white">+{remainingCount}</span>
         </div>

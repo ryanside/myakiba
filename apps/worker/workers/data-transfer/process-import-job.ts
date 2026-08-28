@@ -24,12 +24,12 @@ import type { DataTransferImportJobPayload } from "@myakiba/redis/data-transfer"
 import { redis } from "@myakiba/redis/client";
 import { assembleScrapedData } from "../../lib/assemble-scraped-data";
 import { createDefaultJobContext } from "../../lib/evlog";
-import { persistScrapedCatalog } from "../../lib/persist-scraped-catalog";
+import { persistScrapedItemData } from "../../lib/persist-scraped-item-data";
 import { scrapeItems, scrapedItemsWithRateLimit } from "../../lib/scrape";
 import type { WorkerJobContext } from "../../lib/types";
 import { createJobStatusState, publishJobStatus } from "../../lib/utils";
 import { createImportId, selectRelease } from "./import-domain";
-import type { CatalogRelease } from "./import-domain";
+import type { ItemRelease } from "./import-domain";
 
 const INSERT_BATCH_SIZE = 500;
 const SUPERSEDED_IMPORT_ERROR = "This import is no longer current.";
@@ -37,9 +37,9 @@ const EMPTY_IMPORT_ERROR = "No orders or collection items could be imported.";
 const UNEXPECTED_IMPORT_ERROR = "The import stopped unexpectedly. Try again to continue.";
 const FETCHING_ITEM_DATA_MESSAGE = "Fetching item data from MyFigureCollection…";
 
-type CatalogItem = {
+type ResolvedItem = {
   itemId: string;
-  releases: CatalogRelease[];
+  releases: ItemRelease[];
 };
 
 type ImportableCollectionRow = {
@@ -65,10 +65,10 @@ function chunk<T>(values: readonly T[], size: number): T[][] {
   return chunks;
 }
 
-async function loadCatalog(
+async function loadExistingItems(
   externalIds: readonly number[],
-): Promise<ReadonlyMap<number, CatalogItem>> {
-  const catalog = new Map<number, CatalogItem>();
+): Promise<ReadonlyMap<number, ResolvedItem>> {
+  const itemsByExternalId = new Map<number, ResolvedItem>();
 
   for (const externalIdBatch of chunk(externalIds, 500)) {
     const rows = await db
@@ -91,33 +91,33 @@ async function loadCatalog(
     for (const row of rows) {
       if (row.externalId === null) continue;
 
-      let catalogItem = catalog.get(row.externalId);
-      if (!catalogItem) {
-        catalogItem = {
+      let resolvedItem = itemsByExternalId.get(row.externalId);
+      if (!resolvedItem) {
+        resolvedItem = {
           itemId: row.itemId,
           releases: [],
         };
-        catalog.set(row.externalId, catalogItem);
+        itemsByExternalId.set(row.externalId, resolvedItem);
       }
 
-      if (row.release) catalogItem.releases.push(row.release);
+      if (row.release) resolvedItem.releases.push(row.release);
     }
   }
 
-  return catalog;
+  return itemsByExternalId;
 }
 
 function findRowsToScrape({
   rows,
-  catalog,
+  itemsByExternalId,
 }: {
   readonly rows: readonly DataTransferCollectionItemV1[];
-  readonly catalog: ReadonlyMap<number, CatalogItem>;
+  readonly itemsByExternalId: ReadonlyMap<number, ResolvedItem>;
 }): DataTransferCollectionItemV1[] {
   const rowsToScrape: DataTransferCollectionItemV1[] = [];
 
   for (const row of rows) {
-    if (!catalog.has(row.item.externalId)) rowsToScrape.push(row);
+    if (!itemsByExternalId.has(row.item.externalId)) rowsToScrape.push(row);
   }
 
   return rowsToScrape;
@@ -125,12 +125,12 @@ function findRowsToScrape({
 
 function buildImportPlan({
   archive,
-  finalCatalog,
+  itemsByExternalId,
   rowsToScrape,
   scrapedIds,
 }: {
   readonly archive: DataTransferArchiveV1;
-  readonly finalCatalog: ReadonlyMap<number, CatalogItem>;
+  readonly itemsByExternalId: ReadonlyMap<number, ResolvedItem>;
   readonly rowsToScrape: readonly DataTransferCollectionItemV1[];
   readonly scrapedIds: ReadonlySet<number>;
 }): ImportPlan {
@@ -163,8 +163,8 @@ function buildImportPlan({
       continue;
     }
 
-    const catalogItem = finalCatalog.get(externalId);
-    if (!catalogItem) {
+    const resolvedItem = itemsByExternalId.get(externalId);
+    if (!resolvedItem) {
       addFailedRow({
         externalId,
         reason: "The item was unavailable after fetching its data.",
@@ -174,18 +174,18 @@ function buildImportPlan({
 
     const requestedRelease = row.item.selectedRelease;
     if (requestedRelease === null) {
-      collectionRows.push({ row, itemId: catalogItem.itemId, releaseId: null });
+      collectionRows.push({ row, itemId: resolvedItem.itemId, releaseId: null });
       continue;
     }
 
     const releaseSelection = selectRelease({
-      releases: catalogItem.releases,
+      releases: resolvedItem.releases,
       requested: requestedRelease,
     });
     if (releaseSelection.kind === "requested") {
       collectionRows.push({
         row,
-        itemId: catalogItem.itemId,
+        itemId: resolvedItem.itemId,
         releaseId: releaseSelection.release.id,
       });
       continue;
@@ -194,14 +194,14 @@ function buildImportPlan({
     if (releaseSelection.release) {
       collectionRows.push({
         row,
-        itemId: catalogItem.itemId,
+        itemId: resolvedItem.itemId,
         releaseId: releaseSelection.release.id,
       });
       releaseSubstitutions += 1;
       continue;
     }
 
-    collectionRows.push({ row, itemId: catalogItem.itemId, releaseId: null });
+    collectionRows.push({ row, itemId: resolvedItem.itemId, releaseId: null });
     missingReleases += 1;
   }
 
@@ -455,10 +455,10 @@ export async function processDataTransferImportJob(
     });
 
     const externalIds = [...new Set(archive.collectionItems.map((row) => row.item.externalId))];
-    const initialCatalog = await loadCatalog(externalIds);
+    const existingItemsByExternalId = await loadExistingItems(externalIds);
     const rowsToScrape = findRowsToScrape({
       rows: archive.collectionItems,
-      catalog: initialCatalog,
+      itemsByExternalId: existingItemsByExternalId,
     });
     const scrapeItemIds = [...new Set(rowsToScrape.map((row) => row.item.externalId))];
     const existingItemCount = externalIds.length - scrapeItemIds.length;
@@ -502,14 +502,14 @@ export async function processDataTransferImportJob(
 
     for (const batch of chunk(successfulItems, 25)) {
       await db.transaction(async (transaction) => {
-        await persistScrapedCatalog(transaction, assembleScrapedData(batch));
+        await persistScrapedItemData(transaction, assembleScrapedData(batch));
       });
     }
 
-    const finalCatalog = await loadCatalog(externalIds);
+    const itemsByExternalId = await loadExistingItems(externalIds);
     const plan = buildImportPlan({
       archive,
-      finalCatalog,
+      itemsByExternalId,
       rowsToScrape,
       scrapedIds: new Set(successfulItems.map((item) => item.id)),
     });

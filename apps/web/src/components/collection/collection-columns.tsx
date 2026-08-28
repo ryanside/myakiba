@@ -1,10 +1,15 @@
 import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
+  Copy01Icon,
+  Delete02Icon,
   Edit03Icon,
+  FolderAddIcon,
   Loading03Icon,
   MoreHorizontalIcon,
+  MoveIcon,
   PackageIcon,
+  ViewIcon,
 } from "@hugeicons/core-free-icons";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -12,7 +17,9 @@ import { InlineTextCell } from "@/components/cells/inline-text-cell";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLinkItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -35,6 +42,7 @@ import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema"
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { getCategoryColor } from "@/lib/category-colors";
 import { Skeleton } from "../ui/skeleton";
+import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
 
 interface CollectionColumnsParams {
   onEditCollectionItem: (values: CollectionItemFormValues) => Promise<void>;
@@ -78,6 +86,7 @@ function CollectionActionsCell({
   readonly isPending: boolean;
 }): React.JSX.Element {
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [addToListsOpen, setAddToListsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const selectedItems = {
     collectionIds: new Set([item.id]),
@@ -118,54 +127,91 @@ function CollectionActionsCell({
           />
           {menuOpen ? (
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>
-                <Link
-                  {...(item.itemExternalId !== null
-                    ? ({
-                        to: "/item/$externalId",
-                        params: { externalId: item.itemExternalId },
-                      } as const)
-                    : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
-                >
-                  View details
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  if (item.itemExternalId) {
-                    navigator.clipboard.writeText(item.itemExternalId.toString());
-                    toast.add({ type: "success", title: "Copied MFC item ID to clipboard" });
-                  } else {
-                    toast.add({ type: "error", title: "No MFC item ID for custom items" });
+              <DropdownMenuGroup>
+                <DropdownMenuLinkItem
+                  render={
+                    <Link
+                      {...(item.itemExternalId !== null
+                        ? ({
+                            to: "/item/$externalId",
+                            params: { externalId: item.itemExternalId },
+                          } as const)
+                        : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
+                    />
                   }
-                }}
-              >
-                Copy MFC ID
-              </DropdownMenuItem>
-              <UnifiedItemMoveForm
-                renderTrigger={
-                  <DropdownMenuItem closeOnClick={false}>Assign order</DropdownMenuItem>
-                }
-                selectedItems={selectedItems}
-                onMoveToExisting={onAddCollectionItemsToOrder}
-                onMoveToNew={onAddCollectionItemsToNewOrder}
-                currency={currency}
-                intent="add"
-              />
+                >
+                  <HugeiconsIcon icon={ViewIcon} />
+                  View details
+                </DropdownMenuLinkItem>
+                <DropdownMenuItem
+                  onClick={async () => {
+                    if (item.itemExternalId === null) {
+                      toast.add({ type: "error", title: "No MFC item ID for custom items" });
+                      return;
+                    }
+
+                    try {
+                      await navigator.clipboard.writeText(String(item.itemExternalId));
+                    } catch {
+                      toast.add({
+                        type: "error",
+                        title: "Could not copy MFC item ID to clipboard",
+                      });
+                      return;
+                    }
+
+                    toast.add({ type: "success", title: "Copied MFC item ID to clipboard" });
+                  }}
+                >
+                  <HugeiconsIcon icon={Copy01Icon} />
+                  Copy MFC ID
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setAddToListsOpen(true);
+                  }}
+                >
+                  <HugeiconsIcon icon={FolderAddIcon} />
+                  Add to List
+                </DropdownMenuItem>
+                <UnifiedItemMoveForm
+                  renderTrigger={
+                    <DropdownMenuItem closeOnClick={false}>
+                      <HugeiconsIcon icon={MoveIcon} />
+                      Assign order
+                    </DropdownMenuItem>
+                  }
+                  selectedItems={selectedItems}
+                  onMoveToExisting={onAddCollectionItemsToOrder}
+                  onMoveToNew={onAddCollectionItemsToNewOrder}
+                  currency={currency}
+                  intent="add"
+                />
+              </DropdownMenuGroup>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => {
-                  setMenuOpen(false);
-                  setDeleteOpen(true);
-                }}
-              >
-                Delete item
-              </DropdownMenuItem>
+              <DropdownMenuGroup>
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setDeleteOpen(true);
+                  }}
+                >
+                  <HugeiconsIcon icon={Delete02Icon} />
+                  Delete item
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
             </DropdownMenuContent>
           ) : null}
         </DropdownMenu>
       </div>
+      <AddToListsDialog
+        open={addToListsOpen}
+        onOpenChange={setAddToListsOpen}
+        targets={[{ type: "collectionItem", id: item.id }]}
+        targetTitle={item.itemTitle}
+      />
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
@@ -247,7 +293,7 @@ export function createCollectionColumns({
                 images={item.itemImage ? [item.itemImage] : []}
                 title={item.itemTitle}
                 fallbackIcon={<HugeiconsIcon icon={PackageIcon} className="size-4" />}
-                className="size-8 rounded-md"
+                className="size-8 shrink-0 rounded-md"
               />
             </Link>
             <div className="min-w-0 space-y-px">
@@ -268,7 +314,7 @@ export function createCollectionColumns({
                     href={`https://myfigurecollection.net/item/${item.itemExternalId}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline"
+                    className="text-xs text-muted-foreground hover:underline"
                   >
                     MFC #{item.itemExternalId}
                   </a>

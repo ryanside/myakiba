@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
+  Copy01Icon,
+  Delete02Icon,
   Edit03Icon,
   Loading03Icon,
   MoreHorizontalIcon,
   PackageIcon,
+  ViewIcon,
 } from "@hugeicons/core-free-icons";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { Button } from "@/components/ui/button";
@@ -13,6 +16,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLinkItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -98,28 +102,42 @@ function OrderItemActionsCell({
           />
           {menuOpen ? (
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>
-                <Link
-                  {...(item.itemExternalId !== null
-                    ? ({
-                        to: "/item/$externalId",
-                        params: { externalId: item.itemExternalId },
-                      } as const)
-                    : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
-                >
-                  View details
-                </Link>
-              </DropdownMenuItem>
+              <DropdownMenuLinkItem
+                render={
+                  <Link
+                    {...(item.itemExternalId !== null
+                      ? ({
+                          to: "/item/$externalId",
+                          params: { externalId: item.itemExternalId },
+                        } as const)
+                      : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
+                  />
+                }
+              >
+                <HugeiconsIcon icon={ViewIcon} />
+                View details
+              </DropdownMenuLinkItem>
               <DropdownMenuItem
-                onClick={() => {
-                  if (item.itemExternalId) {
-                    navigator.clipboard.writeText(item.itemExternalId.toString());
-                    toast.add({ type: "success", title: "Copied MFC item ID to clipboard" });
-                  } else {
+                onClick={async () => {
+                  if (item.itemExternalId === null) {
                     toast.add({ type: "error", title: "No MFC item ID for custom items" });
+                    return;
                   }
+
+                  try {
+                    await navigator.clipboard.writeText(String(item.itemExternalId));
+                  } catch {
+                    toast.add({
+                      type: "error",
+                      title: "Could not copy MFC item ID to clipboard",
+                    });
+                    return;
+                  }
+
+                  toast.add({ type: "success", title: "Copied MFC item ID to clipboard" });
                 }}
               >
+                <HugeiconsIcon icon={Copy01Icon} />
                 Copy MFC ID
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -130,6 +148,7 @@ function OrderItemActionsCell({
                   setDeleteOpen(true);
                 }}
               >
+                <HugeiconsIcon icon={Delete02Icon} />
                 Remove item
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -218,7 +237,7 @@ export function createOrderItemSubColumns({
                 images={item.itemImage ? [item.itemImage] : []}
                 title={item.itemTitle}
                 fallbackIcon={<HugeiconsIcon icon={PackageIcon} className="size-4" />}
-                className="size-8 rounded-md"
+                className="size-8 shrink-0 rounded-md"
               />
             </Link>
             <div className="min-w-0 space-y-px">
@@ -239,7 +258,7 @@ export function createOrderItemSubColumns({
                     href={`https://myfigurecollection.net/item/${item.itemExternalId}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-muted-foreground font-normal hover:text-foreground transition-colors underline-offset-4 hover:underline"
+                    className="text-xs text-muted-foreground font-normal hover:underline"
                   >
                     MFC #{item.itemExternalId}
                   </a>

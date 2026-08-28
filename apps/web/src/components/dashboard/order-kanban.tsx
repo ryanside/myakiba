@@ -241,13 +241,13 @@ function OrderCard({
               fallbackIcon={
                 <HugeiconsIcon icon={PackageIcon} className="size-4 text-muted-foreground" />
               }
-              className="[&_img]:pointer-events-none [&_img]:outline [&_img]:outline-black/10 dark:[&_img]:outline-white/10"
+              className="size-12 shrink-0 rounded-md [&_img]:pointer-events-none [&_img]:outline [&_img]:outline-black/10 dark:[&_img]:outline-white/10"
             />
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <Link
                 to="/orders/$id"
                 params={{ id: order.orderId }}
-                className="line-clamp-1 text-sm font-medium leading-tight underline-offset-2 hover:underline"
+                className="line-clamp-1 text-sm leading-tight font-medium hover:underline"
                 onPointerDown={(e) => e.stopPropagation()}
               >
                 {order.title}

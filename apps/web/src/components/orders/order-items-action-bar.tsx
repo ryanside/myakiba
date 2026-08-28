@@ -1,25 +1,20 @@
-import type { ReactNode } from "react";
-import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, Delete01Icon, MoveIcon } from "@hugeicons/core-free-icons";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import {
-  ActionBar,
-  ActionBarSelection,
-  ActionBarGroup,
-  ActionBarItem,
-  ActionBarClose,
-  ActionBarSeparator,
-} from "@/components/ui/action-bar";
-import UnifiedItemMoveForm from "@/components/orders/unified-item-move-form";
-import type { SelectedCollectionItems } from "@/hooks/use-selection";
+import { HugeiconsIcon } from "@hugeicons/react";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
 import type { Currency } from "@myakiba/contracts/shared/types";
+import UnifiedItemMoveForm from "@/components/orders/unified-item-move-form";
+import {
+  ActionBar,
+  ActionBarClose,
+  ActionBarGroup,
+  ActionBarItem,
+  ActionBarSelection,
+  ActionBarSeparator,
+} from "@/components/ui/action-bar";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-export function OrderItemActionBar({
-  open,
-  selectedItemCount,
+export function OrderItemsActionBar({
   selectedItems,
-  selectedCollectionIds,
   currency,
   isMovingItems,
   isSplitting,
@@ -30,10 +25,10 @@ export function OrderItemActionBar({
   onMoveToNew,
   onDeleteItems,
 }: {
-  readonly open: boolean;
-  readonly selectedItemCount: number;
-  readonly selectedItems: SelectedCollectionItems;
-  readonly selectedCollectionIds: ReadonlySet<string>;
+  readonly selectedItems: {
+    readonly collectionIds: ReadonlySet<string>;
+    readonly orderIds: ReadonlySet<string>;
+  };
   readonly currency: Currency;
   readonly isMovingItems: boolean;
   readonly isSplitting: boolean;
@@ -51,14 +46,14 @@ export function OrderItemActionBar({
     collectionIds: ReadonlySet<string>,
   ) => Promise<void>;
   readonly onDeleteItems: (collectionIds: ReadonlySet<string>) => Promise<void>;
-}): ReactNode {
+}): React.JSX.Element {
+  const selectedItemCount = selectedItems.collectionIds.size;
+
   return (
     <ActionBar
-      open={open}
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen) {
-          onClearSelection();
-        }
+      open={selectedItemCount > 0}
+      onOpenChange={(open) => {
+        if (!open) onClearSelection();
       }}
     >
       <ActionBarSelection className="border-none">
@@ -93,24 +88,19 @@ export function OrderItemActionBar({
               variant="destructive"
             >
               <HugeiconsIcon icon={Delete01Icon} />
-              <span>
-                <span className="hidden md:inline">
-                  {isDeletingItems ? "Deleting " : "Delete "}
-                </span>
-                Items
-              </span>
+              <span>{isDeletingItems ? "Deleting Items" : "Delete Items"}</span>
             </ActionBarItem>
           }
           title={`Delete ${selectedItemCount} ${selectedItemCount === 1 ? "item" : "items"}?`}
           description='Items with "Owned" status will not be deleted. You can delete owned items in the collection tab.'
           onConfirm={async () => {
-            await onDeleteItems(selectedCollectionIds);
+            await onDeleteItems(selectedItems.collectionIds);
             onClearSelection();
           }}
         />
       </ActionBarGroup>
       <ActionBarSeparator />
-      <ActionBarClose>
+      <ActionBarClose aria-label="Clear selection">
         <HugeiconsIcon icon={Cancel01Icon} />
       </ActionBarClose>
     </ActionBar>

@@ -19,6 +19,8 @@ type AccentTone = { readonly bg: string; readonly fg: string };
 
 interface ConfirmDialogProps {
   readonly renderTrigger?: React.ReactElement;
+  readonly triggerNativeButton?: boolean;
+  readonly triggerRole?: "menuitem";
   readonly open?: boolean;
   readonly onOpenChange?: (open: boolean) => void;
   readonly title: string;
@@ -43,6 +45,8 @@ const ACCENT_BY_VARIANT = {
 
 export function ConfirmDialog({
   renderTrigger,
+  triggerNativeButton = true,
+  triggerRole,
   open,
   onOpenChange,
   title,
@@ -78,6 +82,8 @@ export function ConfirmDialog({
     try {
       await onConfirm();
       closeDialog();
+    } catch {
+      // The calling mutation reports the failure. Keep this dialog open for another attempt.
     } finally {
       setIsSubmitting(false);
     }
@@ -85,7 +91,13 @@ export function ConfirmDialog({
 
   return (
     <Dialog open={actualOpen} onOpenChange={handleOpenChange}>
-      {renderTrigger ? <DialogTrigger render={renderTrigger} /> : null}
+      {renderTrigger ? (
+        <DialogTrigger
+          render={renderTrigger}
+          nativeButton={triggerNativeButton}
+          role={triggerRole}
+        />
+      ) : null}
       {actualOpen ? (
         <DialogContent className="sm:max-w-sm" showCloseButton={false}>
           <div className="flex items-start gap-3 py-1">

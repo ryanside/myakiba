@@ -13,9 +13,7 @@ export function SyncNotice() {
       <AlertTitle className="flex items-center gap-x-2">
         <span>MyFigureCollection NSFW items aren&apos;t supported yet</span>
         <Tooltip>
-          <TooltipTrigger className="text-sm text-muted-foreground underline hover:text-foreground">
-            Why?
-          </TooltipTrigger>
+          <TooltipTrigger className="text-sm text-muted-foreground underline">Why?</TooltipTrigger>
           <TooltipContent>
             <p>{SYNC_DESCRIPTION}</p>
           </TooltipContent>

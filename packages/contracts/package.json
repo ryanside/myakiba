@@ -13,6 +13,7 @@
     "./search/*": "./src/search/*.ts",
     "./calendar/*": "./src/calendar/*.ts",
     "./analytics/*": "./src/analytics/*.ts",
+    "./lists/*": "./src/lists/*.ts",
     "./data-transfer/*": "./src/data-transfer/*.ts"
   },
   "scripts": {

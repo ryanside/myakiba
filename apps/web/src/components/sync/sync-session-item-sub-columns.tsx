@@ -29,7 +29,7 @@ export function createSyncSessionItemSubColumns(): ColumnDef<EnrichedSyncSession
                   images={item.itemImage ? [item.itemImage] : []}
                   title={item.itemTitle ?? ""}
                   fallbackIcon={<HugeiconsIcon icon={PackageIcon} className="size-4" />}
-                  className="size-8 rounded-md"
+                  className="size-8 shrink-0 rounded-md"
                 />
               </Link>
               <div className="min-w-0 space-y-px">
@@ -44,7 +44,7 @@ export function createSyncSessionItemSubColumns(): ColumnDef<EnrichedSyncSession
                   href={`https://myfigurecollection.net/item/${item.itemExternalId}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-muted-foreground font-normal hover:text-foreground transition-colors underline-offset-4 hover:underline"
+                  className="text-xs text-muted-foreground font-normal hover:underline"
                 >
                   MFC #{item.itemExternalId}
                 </a>
@@ -62,7 +62,7 @@ export function createSyncSessionItemSubColumns(): ColumnDef<EnrichedSyncSession
               href={`https://myfigurecollection.net/item/${item.itemExternalId}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="tabular-nums text-sm hover:text-foreground transition-colors underline-offset-4 hover:underline"
+              className="text-sm tabular-nums hover:underline"
             >
               MFC #{item.itemExternalId}
             </a>

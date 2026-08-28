@@ -1,5 +1,4 @@
-import type { ReactNode } from "react";
-import type { RowSelectionState } from "@tanstack/react-table";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon } from "@hugeicons/core-free-icons";
 import type { Order } from "@myakiba/contracts/orders/types";
@@ -13,8 +12,8 @@ export function OrderDetailItems({
   orderId,
   order,
   isLoading,
-  itemSelection,
-  setItemSelection,
+  selectedOrderIdByCollectionId,
+  setSelectedOrderIdByCollectionId,
   onEditItem,
   onDeleteItem,
   isCollectionItemPending,
@@ -22,8 +21,8 @@ export function OrderDetailItems({
   readonly orderId: string;
   readonly order: Order | undefined;
   readonly isLoading: boolean;
-  readonly itemSelection: RowSelectionState;
-  readonly setItemSelection: React.Dispatch<React.SetStateAction<RowSelectionState>>;
+  readonly selectedOrderIdByCollectionId: ReadonlyMap<string, string>;
+  readonly setSelectedOrderIdByCollectionId: Dispatch<SetStateAction<Map<string, string>>>;
   readonly onEditItem: (values: CollectionItemFormValues) => Promise<void>;
   readonly onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
   readonly isCollectionItemPending: (collectionId: string) => boolean;
@@ -44,8 +43,8 @@ export function OrderDetailItems({
           isLoading
           wrapped={false}
           orderId={orderId}
-          itemSelection={itemSelection}
-          setItemSelection={setItemSelection}
+          selectedOrderIdByCollectionId={selectedOrderIdByCollectionId}
+          setSelectedOrderIdByCollectionId={setSelectedOrderIdByCollectionId}
           onEditItem={onEditItem}
           onDeleteItem={onDeleteItem}
           isCollectionItemPending={isCollectionItemPending}
@@ -67,8 +66,8 @@ export function OrderDetailItems({
       <OrderItemSubDataGrid
         wrapped={false}
         orderId={orderId}
-        itemSelection={itemSelection}
-        setItemSelection={setItemSelection}
+        selectedOrderIdByCollectionId={selectedOrderIdByCollectionId}
+        setSelectedOrderIdByCollectionId={setSelectedOrderIdByCollectionId}
         onEditItem={onEditItem}
         onDeleteItem={onDeleteItem}
         isCollectionItemPending={isCollectionItemPending}

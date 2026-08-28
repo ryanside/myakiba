@@ -1,8 +1,9 @@
-import { HugeiconsIcon } from "@hugeicons/react";
 import { PackageIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { Link } from "@tanstack/react-router";
 import { Skeleton } from "@/components/ui/skeleton";
-import { OrderItemActions } from "@/components/orders/order-item-actions";
+import { ImageThumbnail } from "@/components/ui/image-thumbnail";
+import { OrderControls } from "@/components/orders/order-controls";
 import { cn } from "@/lib/utils";
 import type { OrderListItem } from "@myakiba/contracts/orders/types";
 import type { CascadeOptions, EditedOrder } from "@myakiba/contracts/orders/schema";
@@ -27,67 +28,6 @@ interface OrdersGalleryGridProps {
   readonly currency: Currency;
   readonly isOrderPending: (orderId: string) => boolean;
   readonly isLoading: boolean;
-}
-
-function OrderImageMosaic({
-  images,
-  title,
-  layout,
-}: {
-  readonly images: readonly string[];
-  readonly title: string;
-  readonly layout: GalleryLayout;
-}): React.JSX.Element {
-  const displayImages = images.slice(0, 4);
-
-  if (displayImages.length === 0) {
-    return (
-      <div
-        className={cn(
-          "flex w-full items-center justify-center bg-muted",
-          layout === "square" ? "aspect-square" : "aspect-video",
-        )}
-      >
-        <HugeiconsIcon icon={PackageIcon} className="size-10 text-muted-foreground/40" />
-      </div>
-    );
-  }
-
-  if (displayImages.length === 1) {
-    return (
-      <img
-        src={displayImages[0]}
-        alt={title}
-        className={cn("w-full object-cover", layout === "square" && "aspect-square object-top")}
-        loading="lazy"
-      />
-    );
-  }
-
-  return (
-    <div
-      className={cn(
-        "grid w-full gap-px overflow-hidden",
-        layout === "square" && "aspect-square",
-        displayImages.length === 2 && "grid-cols-2",
-        displayImages.length === 3 && "grid-cols-2",
-        displayImages.length >= 4 && "grid-cols-2 grid-rows-2",
-      )}
-    >
-      {displayImages.map((src, idx) => (
-        <img
-          key={`${src}-${idx}`}
-          src={src}
-          alt={`${title} item ${idx + 1}`}
-          className={cn(
-            "h-full w-full object-cover object-top",
-            displayImages.length === 3 && idx === 0 && "row-span-2",
-          )}
-          loading="lazy"
-        />
-      ))}
-    </div>
-  );
 }
 
 export function OrdersGalleryGrid({
@@ -156,13 +96,13 @@ export function OrdersGalleryGrid({
       <div
         key={order.orderId}
         className={cn(
-          "animate-data-in group/media group/tile relative overflow-hidden rounded-lg",
+          "animate-data-in group/item group/tile relative overflow-hidden rounded-lg",
           galleryLayout === "masonry" && "mb-2 break-inside-avoid",
           isSelected && "ring-2 ring-primary ring-offset-1 ring-offset-background",
         )}
         style={{ "--data-in-delay": `${staggerDelay}ms` } as CSSProperties}
       >
-        <OrderItemActions
+        <OrderControls
           order={order}
           itemSize={tileSize}
           isPending={isPending}
@@ -180,7 +120,16 @@ export function OrdersGalleryGrid({
         ) : null}
 
         <Link to="/orders/$id" params={{ id: order.orderId }} className="block">
-          <OrderImageMosaic images={order.images} title={order.title} layout={galleryLayout} />
+          <ImageThumbnail
+            images={order.images}
+            title={order.title}
+            fallbackIcon={
+              <HugeiconsIcon icon={PackageIcon} className="size-10 text-muted-foreground/40" />
+            }
+            className={cn("w-full", galleryLayout === "square" && "aspect-square")}
+            layout={galleryLayout === "masonry" ? "masonry" : "fixed"}
+            loading="lazy"
+          />
         </Link>
       </div>
     );

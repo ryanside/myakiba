@@ -2,14 +2,12 @@ import type { ReactNode } from "react";
 import { useCallback, useState } from "react";
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import type { RowSelectionState } from "@tanstack/react-table";
 import { BackLink } from "@/components/ui/back-link";
 import { OrderDetailItems } from "@/components/orders/order-detail-items";
 import { OrderHero } from "@/components/orders/order-hero";
-import { OrderItemActionBar } from "@/components/orders/order-item-action-bar";
+import { OrderItemsActionBar } from "@/components/orders/order-items-action-bar";
 import { OrderSummary } from "@/components/orders/order-summary";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { SelectedCollectionItems } from "@/hooks/use-selection";
 import { useOrdersMutations } from "@/hooks/use-orders";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { formatTimestampForDisplay } from "@/lib/date-display";
@@ -29,7 +27,9 @@ function RouteComponent(): ReactNode {
   const { currency, locale, dateFormat } = useUserPreferences();
   const { id } = useParams({ from: "/(app)/orders_/$id" });
   const navigate = useNavigate();
-  const [itemSelection, setItemSelection] = useState<RowSelectionState>({});
+  const [selectedOrderIdByCollectionId, setSelectedOrderIdByCollectionId] = useState(
+    new Map<string, string>(),
+  );
 
   const {
     handleEditOrder,
@@ -66,9 +66,10 @@ function RouteComponent(): ReactNode {
     [handleDeleteOrders, navigate],
   );
 
-  const clearItemSelection = useCallback((): void => {
-    setItemSelection({});
-  }, []);
+  const selectedItems = {
+    collectionIds: new Set(selectedOrderIdByCollectionId.keys()),
+    orderIds: new Set(selectedOrderIdByCollectionId.values()),
+  };
 
   if (isError) {
     return (
@@ -80,15 +81,6 @@ function RouteComponent(): ReactNode {
       </div>
     );
   }
-
-  const selectedCollectionIds = new Set(
-    order ? Object.keys(itemSelection).map((rowKey) => rowKey.slice(order.orderId.length + 1)) : [],
-  );
-  const selectedItems: SelectedCollectionItems = {
-    collectionIds: selectedCollectionIds,
-    orderIds: new Set(order ? [order.orderId] : []),
-  };
-  const selectedItemCount = selectedCollectionIds.size;
 
   return (
     <div
@@ -131,8 +123,8 @@ function RouteComponent(): ReactNode {
         orderId={id}
         order={order}
         isLoading={isPending}
-        itemSelection={itemSelection}
-        setItemSelection={setItemSelection}
+        selectedOrderIdByCollectionId={selectedOrderIdByCollectionId}
+        setSelectedOrderIdByCollectionId={setSelectedOrderIdByCollectionId}
         onEditItem={handleEditItem}
         onDeleteItem={handleDeleteItem}
         isCollectionItemPending={isCollectionItemPending}
@@ -167,17 +159,14 @@ function RouteComponent(): ReactNode {
         ) : null}
       </div>
 
-      <OrderItemActionBar
-        open={selectedItemCount > 0}
-        selectedItemCount={selectedItemCount}
+      <OrderItemsActionBar
         selectedItems={selectedItems}
-        selectedCollectionIds={selectedCollectionIds}
         currency={currency}
         isMovingItems={isMovingItems}
         isSplitting={isSplitting}
         isDeletingItems={isDeletingItems}
         isDeletingOrders={isDeletingOrders}
-        onClearSelection={clearItemSelection}
+        onClearSelection={() => setSelectedOrderIdByCollectionId(new Map())}
         onMoveItem={handleMoveItem}
         onMoveToNew={handleSplit}
         onDeleteItems={handleDeleteItems}

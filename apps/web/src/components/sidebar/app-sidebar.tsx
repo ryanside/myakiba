@@ -11,6 +11,7 @@ import {
   Clock02Icon,
   CheckListIcon,
   DatabaseIcon,
+  Folder01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { DiscordLogo, GitHubLogo } from "@/components/ui/brand-icons";
@@ -63,6 +64,12 @@ const data = {
       title: "Collection",
       url: "/collection",
       icon: LibraryIcon,
+    },
+    {
+      title: "Lists",
+      url: "/lists",
+      icon: Folder01Icon,
+      pathnameMatch: "prefix" as const,
     },
     {
       title: "Item Database",
@@ -145,7 +152,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <SyncWidget
                 TriggerWrapper={
                   <SidebarMenuButton
-                    className="transition-all hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground data-active:bg-primary data-active:text-primary-foreground data-open:hover:bg-primary/90 data-open:hover:text-primary-foreground"
+                    className="transition-colors hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground data-active:bg-primary data-active:text-primary-foreground data-open:hover:bg-primary/90 data-open:hover:text-primary-foreground"
                     tooltip="Sync Items"
                     render={
                       <Button variant="default" className="justify-start">

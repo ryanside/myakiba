@@ -1,20 +1,20 @@
 import type { DataTransferReleaseFingerprint } from "@myakiba/contracts/data-transfer/schema";
 import { v5 as uuidv5 } from "uuid";
 
-export type CatalogRelease = DataTransferReleaseFingerprint & { id: string };
+export type ItemRelease = DataTransferReleaseFingerprint & { id: string };
 
 export function selectRelease({
   releases,
   requested,
 }: {
-  readonly releases: readonly CatalogRelease[];
+  readonly releases: readonly ItemRelease[];
   readonly requested: DataTransferReleaseFingerprint;
 }):
-  | { readonly kind: "requested"; readonly release: CatalogRelease }
-  | { readonly kind: "substitute"; readonly release: CatalogRelease | null } {
-  let exactFingerprint: CatalogRelease | null = null;
-  let matchingDate: CatalogRelease | null = null;
-  let latest: CatalogRelease | null = null;
+  | { readonly kind: "requested"; readonly release: ItemRelease }
+  | { readonly kind: "substitute"; readonly release: ItemRelease | null } {
+  let exactFingerprint: ItemRelease | null = null;
+  let matchingDate: ItemRelease | null = null;
+  let latest: ItemRelease | null = null;
 
   for (const release of releases) {
     if (

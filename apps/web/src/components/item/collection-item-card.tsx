@@ -285,7 +285,7 @@ export function CollectionItemCard({
         <Link
           to="/orders/$id"
           params={{ id: relatedOrder.id }}
-          className="animate-data-in text-sm text-primary transition-colors duration-150 ease-out hover:text-primary/80 underline-offset-4 hover:underline"
+          className="animate-data-in text-sm text-primary hover:underline"
         >
           View order: {relatedOrder.title}
         </Link>

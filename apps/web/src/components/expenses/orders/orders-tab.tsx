@@ -125,11 +125,7 @@ export default function OrdersTab({
           {
             title: "Paid Orders",
             value: (
-              <Link
-                to="/orders"
-                search={paidOrdersSearch}
-                className="underline-offset-4 hover:underline"
-              >
+              <Link to="/orders" search={paidOrdersSearch} className="hover:underline">
                 {data?.kpis.paidOrderCount ?? 0}
               </Link>
             ),
@@ -137,11 +133,7 @@ export default function OrdersTab({
           {
             title: "Order Items",
             value: (
-              <Link
-                to="/orders"
-                search={paidOrdersSearch}
-                className="underline-offset-4 hover:underline"
-              >
+              <Link to="/orders" search={paidOrdersSearch} className="hover:underline">
                 {data?.kpis.orderItemCount ?? 0}
               </Link>
             ),
@@ -149,11 +141,7 @@ export default function OrdersTab({
           {
             title: "Unpaid Orders",
             value: (
-              <Link
-                to="/orders"
-                search={unpaidOrdersSearch}
-                className="underline-offset-4 hover:underline"
-              >
+              <Link to="/orders" search={unpaidOrdersSearch} className="hover:underline">
                 {data?.kpis.unpaidOrderCount ?? 0}
               </Link>
             ),
@@ -161,11 +149,7 @@ export default function OrdersTab({
           {
             title: "Unpaid",
             value: (
-              <Link
-                to="/orders"
-                search={unpaidOrdersSearch}
-                className="underline-offset-4 hover:underline"
-              >
+              <Link to="/orders" search={unpaidOrdersSearch} className="hover:underline">
                 {unpaidValue}
               </Link>
             ),
