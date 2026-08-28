@@ -116,11 +116,7 @@ export default function CollectionTab({
           {
             title: "Collection Items",
             value: (
-              <Link
-                to="/collection"
-                search={collectionSearch}
-                className="underline-offset-4 hover:underline"
-              >
+              <Link to="/collection" search={collectionSearch} className="hover:underline">
                 {data?.kpis.itemCount ?? 0}
               </Link>
             ),
@@ -128,11 +124,7 @@ export default function CollectionTab({
           {
             title: "Average Item Cost",
             value: (
-              <Link
-                to="/collection"
-                search={collectionSearch}
-                className="underline-offset-4 hover:underline"
-              >
+              <Link to="/collection" search={collectionSearch} className="hover:underline">
                 {formatCurrencyFromMinorUnits(data?.kpis.averageItemCost ?? 0, currency, locale)}
               </Link>
             ),
@@ -140,11 +132,7 @@ export default function CollectionTab({
           {
             title: "Shops",
             value: (
-              <Link
-                to="/collection"
-                search={collectionSearch}
-                className="underline-offset-4 hover:underline"
-              >
+              <Link to="/collection" search={collectionSearch} className="hover:underline">
                 {data?.kpis.shopCount ?? 0}
               </Link>
             ),

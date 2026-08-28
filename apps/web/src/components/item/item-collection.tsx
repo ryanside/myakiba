@@ -1,6 +1,4 @@
 import type { ReactNode } from "react";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Package01Icon } from "@hugeicons/core-free-icons";
 import { ItemSyncActions } from "@/components/item/item-sync-actions";
 import {
   Empty,
@@ -8,7 +6,6 @@ import {
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
-  EmptyMedia,
 } from "@/components/ui/empty";
 import { cn } from "@/lib/utils";
 import {
@@ -79,9 +76,6 @@ export function ItemCollection({
         {!isPending && !isError && collectionItems.length === 0 && (
           <Empty className="py-12">
             <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <HugeiconsIcon icon={Package01Icon} />
-              </EmptyMedia>
               <EmptyTitle>Not in your collection</EmptyTitle>
               <EmptyDescription>Add this item to your collection or a new order.</EmptyDescription>
             </EmptyHeader>

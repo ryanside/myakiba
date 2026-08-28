@@ -119,10 +119,7 @@ export default function SignUpForm() {
         </div>
         <div className="text-center text-sm text-muted-foreground">
           Already have an account?{" "}
-          <Link
-            to="/login"
-            className="text-foreground underline underline-offset-4 hover:text-foreground/80"
-          >
+          <Link to="/login" className="text-foreground underline">
             Login
           </Link>
         </div>
@@ -235,10 +232,7 @@ export default function SignUpForm() {
                 </p>
               ))}
               <div className="flex items-center justify-end">
-                <Link
-                  to="/forgot-password"
-                  className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4"
-                >
+                <Link to="/forgot-password" className="text-sm text-muted-foreground underline">
                   Forgot password?
                 </Link>
               </div>

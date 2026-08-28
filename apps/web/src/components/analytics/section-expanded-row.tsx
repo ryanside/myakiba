@@ -38,17 +38,19 @@ export function ExpandedRowContent({
   return (
     <div className="bg-muted/30 border-t border-border/30 p-4">
       <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-baseline justify-between gap-4">
           <p className="text-xs text-muted-foreground">
             Items for <span className="font-medium text-foreground">{row.name}</span>
           </p>
-          <Link
-            to="/collection"
-            search={collectionSearch}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors duration-150 underline-offset-2 hover:underline"
+          <Button
+            variant="ghost"
+            size="xs"
+            className="-my-1 -mr-2 text-muted-foreground"
+            render={<Link to="/collection" search={collectionSearch} />}
+            nativeButton={false}
           >
-            View in collection →
-          </Link>
+            View in collection
+          </Button>
         </div>
 
         <ExpandedRowItems

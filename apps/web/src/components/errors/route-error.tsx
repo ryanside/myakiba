@@ -57,7 +57,7 @@ export function RouteError({ error }: ErrorComponentProps) {
               href="https://discord.gg/VKHVvhcC2z"
               target="_blank"
               rel="noreferrer"
-              className="text-foreground underline decoration-foreground/30 underline-offset-4 hover:decoration-foreground"
+              className="text-foreground underline"
             >
               Discord
             </a>

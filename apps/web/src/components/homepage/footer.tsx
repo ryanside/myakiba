@@ -14,14 +14,14 @@ export default function FooterSection() {
               href="https://github.com/ryanside"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-foreground hover:underline underline-offset-2"
+              className="text-foreground hover:underline"
             >
               @ryanside
             </a>
           </span>
           <span className="text-muted-foreground text-sm leading-5 whitespace-nowrap">
             see{" "}
-            <a href="/changelog" className="text-foreground hover:underline underline-offset-2">
+            <a href="/changelog" className="text-foreground hover:underline">
               changelog
             </a>
           </span>

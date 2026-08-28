@@ -111,10 +111,7 @@ export default function SignInForm({ redirectTo }: { redirectTo: string }) {
         </div>
         <div className="text-center text-sm text-muted-foreground">
           Don't have an account?{" "}
-          <Link
-            to="/signup"
-            className="text-foreground underline underline-offset-4 hover:text-foreground/80"
-          >
+          <Link to="/signup" className="text-foreground underline">
             Register
           </Link>
         </div>
@@ -176,10 +173,7 @@ export default function SignInForm({ redirectTo }: { redirectTo: string }) {
                 </p>
               ))}
               <div className="flex items-center justify-end">
-                <Link
-                  to="/forgot-password"
-                  className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4"
-                >
+                <Link to="/forgot-password" className="text-sm text-muted-foreground underline">
                   Forgot password?
                 </Link>
               </div>

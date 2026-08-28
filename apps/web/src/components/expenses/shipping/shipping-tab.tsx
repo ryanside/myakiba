@@ -137,11 +137,7 @@ export default function ShippingTab({
           {
             title: "Shipping Methods",
             value: (
-              <Link
-                to="/orders"
-                search={paidOrdersSearch}
-                className="underline-offset-4 hover:underline"
-              >
+              <Link to="/orders" search={paidOrdersSearch} className="hover:underline">
                 {data?.kpis.methodCount ?? 0}
               </Link>
             ),
@@ -152,7 +148,7 @@ export default function ShippingTab({
               <Link
                 to="/orders"
                 search={{ ...paidOrdersSearch, shippingFeeMin: 1 }}
-                className="underline-offset-4 hover:underline"
+                className="hover:underline"
               >
                 {data?.kpis.chargedOrderCount ?? 0}
               </Link>
@@ -164,7 +160,7 @@ export default function ShippingTab({
               <Link
                 to="/orders"
                 search={{ ...paidOrdersSearch, shippingFeeMax: 0 }}
-                className="underline-offset-4 hover:underline"
+                className="hover:underline"
               >
                 {data?.kpis.freeOrderCount ?? 0}
               </Link>
@@ -173,11 +169,7 @@ export default function ShippingTab({
           {
             title: "Average per Order",
             value: (
-              <Link
-                to="/orders"
-                search={paidOrdersSearch}
-                className="underline-offset-4 hover:underline"
-              >
+              <Link to="/orders" search={paidOrdersSearch} className="hover:underline">
                 {formatCurrencyFromMinorUnits(data?.kpis.averageShipping ?? 0, currency, locale)}
               </Link>
             ),

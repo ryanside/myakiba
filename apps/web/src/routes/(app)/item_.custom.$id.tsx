@@ -1,17 +1,6 @@
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, Package01Icon } from "@hugeicons/core-free-icons";
 import { createFileRoute } from "@tanstack/react-router";
-import { toast } from "@/components/ui/toast";
 import { BackLink } from "@/components/ui/back-link";
-import { Button } from "@/components/ui/button";
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 
 export const Route = createFileRoute("/(app)/item_/custom/$id")({
   component: RouteComponent,
@@ -29,24 +18,12 @@ function RouteComponent() {
       <BackLink fallbackTo="/collection" text="Back" font="sans" className="self-start" />
       <Empty className="py-16">
         <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <HugeiconsIcon icon={Package01Icon} />
-          </EmptyMedia>
           <EmptyTitle>Custom items are on the way</EmptyTitle>
           <EmptyDescription>
             Managing items outside of MyFigureCollection isn&apos;t available yet. We&apos;re
             working on it.
           </EmptyDescription>
         </EmptyHeader>
-        <EmptyContent>
-          <Button
-            variant="default"
-            onClick={() => toast.add({ type: "info", title: "Custom items coming soon" })}
-          >
-            <HugeiconsIcon icon={Add01Icon} />
-            Add custom item
-          </Button>
-        </EmptyContent>
       </Empty>
     </div>
   );

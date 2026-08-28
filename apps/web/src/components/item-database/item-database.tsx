@@ -160,7 +160,7 @@ function ItemList({
   readonly dateFormat: DateFormat;
 }): React.JSX.Element {
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col gap-2">
       {items.map((item, index) => {
         const { category, categoryGroup, categoryColor, releaseDate, releasePrice, staggerDelay } =
           getItemDisplayDetails(item, index, currency, dateFormat);
@@ -205,7 +205,7 @@ function ItemList({
 function ItemDatabaseSkeleton({ viewMode }: { readonly viewMode: ItemDatabaseViewMode }) {
   if (viewMode === "list") {
     return (
-      <div className="flex flex-col">
+      <div className="flex flex-col gap-2">
         {Array.from({ length: 8 }).map((_, index) => (
           <div key={index} className="flex items-center gap-3 p-2">
             <Skeleton className="size-16 shrink-0 rounded-md" />
