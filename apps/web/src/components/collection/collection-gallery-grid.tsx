@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { PackageIcon } from "@hugeicons/core-free-icons";
 import { Link } from "@tanstack/react-router";
-import { CollectionItemActions } from "@/components/collection/collection-item-actions";
+import { CollectionItemControls } from "@/components/collection/collection-item-controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
@@ -110,13 +110,13 @@ export function CollectionGalleryGrid({
       <div
         key={item.id}
         className={cn(
-          "animate-data-in group/media group/tile relative overflow-hidden rounded-lg",
+          "animate-data-in group/item group/tile relative overflow-hidden rounded-lg",
           galleryLayout === "masonry" && "mb-2 break-inside-avoid",
           isSelected && "ring-2 ring-primary ring-offset-1 ring-offset-background",
         )}
         style={{ "--data-in-delay": `${staggerDelay}ms` } as CSSProperties}
       >
-        <CollectionItemActions
+        <CollectionItemControls
           item={item}
           itemSize={tileSize}
           isPending={isPending}

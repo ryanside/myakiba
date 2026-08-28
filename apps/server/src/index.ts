@@ -20,6 +20,7 @@ import dataTransferRouter from "./routers/data-transfer";
 import dashboardRouter from "./routers/dashboard";
 import expensesRouter from "./routers/expenses";
 import itemRouter from "./routers/item";
+import listsRouter from "./routers/lists";
 import ordersRouter from "./routers/orders";
 import searchRouter from "./routers/search";
 import settingsRouter from "./routers/settings";
@@ -100,7 +101,7 @@ const app = new Elysia()
   .use(
     cors({
       origin: env.CORS_ORIGIN.split(",").map((origin) => origin.trim()),
-      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization", "x-captcha-response"],
       credentials: true,
     }),
@@ -135,6 +136,7 @@ const app = new Elysia()
       .use(dashboardRouter)
       .use(expensesRouter)
       .use(itemRouter)
+      .use(listsRouter)
       .use(ordersRouter)
       .use(searchRouter)
       .use(settingsRouter)

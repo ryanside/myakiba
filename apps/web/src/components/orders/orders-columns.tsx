@@ -1,19 +1,24 @@
-import { useState } from "react";
+import { createContext, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   AddSquareIcon,
   ArrowRight01Icon,
+  Delete02Icon,
   Edit03Icon,
+  FolderAddIcon,
   Loading03Icon,
   MinusSignSquareIcon,
   MoreHorizontalIcon,
   PackageIcon,
+  ViewIcon,
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -21,7 +26,7 @@ import {
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Link } from "@tanstack/react-router";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
-import type { ColumnDef, Row, RowSelectionState, OnChangeFn } from "@tanstack/react-table";
+import type { ColumnDef, Row } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
 import type { CascadeOptions, EditedOrder } from "@myakiba/contracts/orders/schema";
 import type { OrderListItem } from "@myakiba/contracts/orders/types";
@@ -44,9 +49,15 @@ import type {
 } from "@myakiba/contracts/shared/types";
 import { Skeleton } from "../ui/skeleton";
 import { ImageThumbnail } from "../ui/image-thumbnail";
+import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
 
 const SHIPPING_METHOD_OPTIONS = [...SHIPPING_METHODS];
 const ORDER_STATUS_OPTIONS = [...ORDER_STATUSES];
+
+export const OrderItemSelectionContext = createContext<{
+  selectedOrderIdByCollectionId: ReadonlyMap<string, string>;
+  setSelectedOrderIdByCollectionId: Dispatch<SetStateAction<Map<string, string>>>;
+} | null>(null);
 
 function ExpandButton({ row }: { readonly row: Row<OrderListItem> }) {
   const isExpanded = row.getIsExpanded();
@@ -79,6 +90,7 @@ function OrderActionsCell({
   readonly isPending: boolean;
 }): React.JSX.Element {
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [addToListsOpen, setAddToListsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -115,25 +127,50 @@ function OrderActionsCell({
           />
           {menuOpen ? (
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>
-                <Link to="/orders/$id" params={{ id: order.orderId }}>
-                  View details
-                </Link>
-              </DropdownMenuItem>
+              <DropdownMenuGroup>
+                <DropdownMenuItem>
+                  <Link
+                    to="/orders/$id"
+                    params={{ id: order.orderId }}
+                    className="flex items-center gap-1.5"
+                  >
+                    <HugeiconsIcon icon={ViewIcon} />
+                    View details
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setAddToListsOpen(true);
+                  }}
+                >
+                  <HugeiconsIcon icon={FolderAddIcon} />
+                  Add to List
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => {
-                  setMenuOpen(false);
-                  setDeleteOpen(true);
-                }}
-              >
-                Delete order
-              </DropdownMenuItem>
+              <DropdownMenuGroup>
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setDeleteOpen(true);
+                  }}
+                >
+                  <HugeiconsIcon icon={Delete02Icon} />
+                  Delete order
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
             </DropdownMenuContent>
           ) : null}
         </DropdownMenu>
       </div>
+      <AddToListsDialog
+        open={addToListsOpen}
+        onOpenChange={setAddToListsOpen}
+        targets={[{ type: "order", id: order.orderId }]}
+        targetTitle={order.title}
+      />
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
@@ -152,8 +189,6 @@ interface OrdersColumnsParams {
   onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
   currency: Currency;
   locale: string;
-  itemSelection: RowSelectionState;
-  setItemSelection: OnChangeFn<RowSelectionState>;
   dateFormat: DateFormat;
   isOrderPending: (orderId: string) => boolean;
   isCollectionItemPending: (collectionId: string) => boolean;
@@ -166,8 +201,6 @@ export function createOrdersColumns({
   onDeleteItem,
   currency,
   locale,
-  itemSelection,
-  setItemSelection,
   dateFormat,
   isOrderPending,
   isCollectionItemPending,
@@ -221,14 +254,26 @@ export function createOrdersColumns({
       meta: {
         skeleton: <Skeleton className="size-4 rounded-sm ml-1.5" />,
         expandedContent: (row) => (
-          <OrderItemSubDataGrid
-            orderId={row.orderId}
-            itemSelection={itemSelection}
-            setItemSelection={setItemSelection}
-            onEditItem={onEditItem}
-            onDeleteItem={onDeleteItem}
-            isCollectionItemPending={isCollectionItemPending}
-          />
+          <OrderItemSelectionContext.Consumer>
+            {(itemSelection) => {
+              if (!itemSelection) {
+                throw new Error(
+                  "Order item grids must be rendered within OrderItemSelectionContext",
+                );
+              }
+
+              return (
+                <OrderItemSubDataGrid
+                  orderId={row.orderId}
+                  selectedOrderIdByCollectionId={itemSelection.selectedOrderIdByCollectionId}
+                  setSelectedOrderIdByCollectionId={itemSelection.setSelectedOrderIdByCollectionId}
+                  onEditItem={onEditItem}
+                  onDeleteItem={onDeleteItem}
+                  isCollectionItemPending={isCollectionItemPending}
+                />
+              );
+            }}
+          </OrderItemSelectionContext.Consumer>
         ),
       },
     },
@@ -252,7 +297,8 @@ export function createOrdersColumns({
                 images={order.images}
                 title={order.title}
                 fallbackIcon={<HugeiconsIcon icon={PackageIcon} className="size-4" />}
-                className="size-8 rounded-md"
+                className="size-8 shrink-0 rounded-md"
+                showRemainingCount
               />
             </Link>
             <div className="min-w-0 flex-1">

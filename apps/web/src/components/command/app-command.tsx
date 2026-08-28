@@ -378,7 +378,8 @@ export function AppCommand(): React.JSX.Element {
                             images={order.itemImages}
                             title={order.title}
                             fallbackIcon={<HugeiconsIcon icon={PackageIcon} className="size-4" />}
-                            className="size-8 rounded-md"
+                            className="size-8 shrink-0 rounded-md"
+                            showRemainingCount
                           />
                         }
                         onSelect={() => handleOrderOpen(order.id)}
@@ -430,7 +431,7 @@ export function AppCommand(): React.JSX.Element {
                             images={item.itemImage ? [item.itemImage] : []}
                             title={item.itemTitle}
                             fallbackIcon={<HugeiconsIcon icon={LibraryIcon} className="size-4" />}
-                            className="size-8 rounded-md"
+                            className="size-8 shrink-0 rounded-md"
                           />
                         }
                         onSelect={() => handleItemOpen(item)}

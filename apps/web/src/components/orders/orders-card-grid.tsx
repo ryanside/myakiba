@@ -2,12 +2,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { PackageIcon } from "@hugeicons/core-free-icons";
 import { Link } from "@tanstack/react-router";
 import { Skeleton } from "@/components/ui/skeleton";
-import { OrderItemActions } from "@/components/orders/order-item-actions";
-import {
-  MEDIA_ITEM_CARD_CLASS_NAME,
-  MEDIA_ITEM_CARD_LOADING_CLASS_NAME,
-  MEDIA_ITEM_COMPACT_WIDTH,
-} from "@/components/ui/media-item-toolbar";
+import { OrderControls } from "@/components/orders/order-controls";
 import { Card } from "@/components/ui/card";
 import { getStatusVariant } from "@/lib/orders";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
@@ -49,7 +44,7 @@ export function OrdersCardGrid({
   isOrderPending,
   isLoading,
 }: OrdersCardGridProps): React.JSX.Element {
-  const isCompact = cardWidth < MEDIA_ITEM_COMPACT_WIDTH;
+  const isCompact = cardWidth < 180;
 
   const toggleSelection = (id: string): void => {
     onRowSelectionChange((prev: RowSelectionState) => {
@@ -69,7 +64,11 @@ export function OrdersCardGrid({
     return (
       <div className="grid gap-3" style={gridStyle}>
         {Array.from({ length: 8 }).map((_, i) => (
-          <Card key={i} size="sm" className={MEDIA_ITEM_CARD_LOADING_CLASS_NAME}>
+          <Card
+            key={i}
+            size="sm"
+            className="gap-0 rounded-2xl bg-white p-1.5! ring-0 shadow-[0_0_0_1px_oklch(0_0_0/0.06),0_1px_2px_-1px_oklch(0_0_0/0.06),0_2px_4px_oklch(0_0_0/0.04)] dark:bg-card dark:shadow-[0_0_0_1px_oklch(1_0_0/0.08)]"
+          >
             <Skeleton className="aspect-8/5 w-full rounded-[10px]" />
             <div
               className={cn(
@@ -118,13 +117,13 @@ export function OrdersCardGrid({
             key={order.orderId}
             size="sm"
             className={cn(
-              MEDIA_ITEM_CARD_CLASS_NAME,
+              "group/item relative gap-0 rounded-2xl bg-white p-1.5! ring-0 ring-offset-2 ring-offset-background shadow-[0_0_0_1px_oklch(0_0_0/0.06),0_1px_2px_-1px_oklch(0_0_0/0.06),0_2px_4px_oklch(0_0_0/0.04)] transition-[box-shadow] duration-200 ease-out hover:shadow-[0_0_0_1px_oklch(0_0_0/0.08),0_2px_4px_-1px_oklch(0_0_0/0.08),0_10px_24px_-8px_oklch(0_0_0/0.14)] motion-reduce:transition-none dark:bg-card dark:shadow-[0_0_0_1px_oklch(1_0_0/0.08)] dark:hover:shadow-[0_0_0_1px_oklch(1_0_0/0.13)]",
               isSelected
                 ? "ring-2 ring-primary"
                 : "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
             )}
           >
-            <OrderItemActions
+            <OrderControls
               order={order}
               itemSize={cardWidth}
               isPending={isPending}
@@ -221,7 +220,7 @@ export function OrdersCardGrid({
                 <Link
                   to="/orders/$id"
                   params={{ id: order.orderId }}
-                  className="line-clamp-2 decoration-foreground/30 underline-offset-3 transition-colors duration-150 hover:text-foreground/70 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="line-clamp-2 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   title={order.title}
                 >
                   {order.title}

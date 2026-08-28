@@ -26,7 +26,8 @@ export function CalendarOrderRow({ order, currency, locale }: CalendarOrderRowPr
         images={order.images}
         title={order.title}
         fallbackIcon={<HugeiconsIcon icon={PackageIcon} className="size-4 text-muted-foreground" />}
-        className="size-10 rounded-md"
+        className="size-10 shrink-0 rounded-md"
+        showRemainingCount
       />
       <div className="min-w-0">
         <p className="truncate text-sm font-medium leading-tight">{order.title}</p>

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Delete02Icon, Edit03Icon, PackageIcon } from "@hugeicons/core-free-icons";
+import { Delete02Icon, Edit03Icon, FolderAddIcon, PackageIcon } from "@hugeicons/core-free-icons";
 import type { Order } from "@myakiba/contracts/orders/types";
 import type { DateFormat, Currency } from "@myakiba/contracts/shared/types";
 import { ThemedBadge } from "@/components/reui/badge";
@@ -12,6 +12,7 @@ import { getStatusVariant } from "@/lib/orders";
 import type { EditedOrder, CascadeOptions } from "@myakiba/contracts/orders/schema";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
 
 export function OrderHero({
   order,
@@ -70,7 +71,8 @@ export function OrderHero({
             images={order.images}
             title={order.title}
             fallbackIcon={<HugeiconsIcon icon={PackageIcon} className="size-7" />}
-            className="animate-data-in size-20 rounded-xl ring-1 ring-foreground/10"
+            className="animate-data-in size-20 shrink-0 rounded-xl ring-1 ring-foreground/10"
+            showRemainingCount
           />
           <div className="flex min-w-0 flex-col gap-1.5">
             <div className="flex flex-wrap items-center gap-3">
@@ -101,6 +103,16 @@ export function OrderHero({
         </div>
 
         <div className="flex items-center gap-2 self-end sm:self-auto">
+          <AddToListsDialog
+            targets={[{ type: "order", id: order.orderId }]}
+            targetTitle={order.title}
+            renderTrigger={
+              <Button variant="outline" size="sm">
+                <HugeiconsIcon icon={FolderAddIcon} data-icon="inline-start" />
+                Add to List
+              </Button>
+            }
+          />
           <OrderForm
             renderTrigger={
               <Button variant="outline" size="sm">

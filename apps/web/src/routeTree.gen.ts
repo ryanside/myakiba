@@ -20,6 +20,7 @@ import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-p
 import { Route as appSyncRouteImport } from './routes/(app)/sync'
 import { Route as appSettingsRouteImport } from './routes/(app)/settings'
 import { Route as appOrdersRouteImport } from './routes/(app)/orders'
+import { Route as appListsRouteImport } from './routes/(app)/lists'
 import { Route as appItemsRouteImport } from './routes/(app)/items'
 import { Route as appExpensesRouteImport } from './routes/(app)/expenses'
 import { Route as appDashboardRouteImport } from './routes/(app)/dashboard'
@@ -30,6 +31,7 @@ import { Route as changelogChangelogIndexRouteImport } from './routes/(changelog
 import { Route as changelogChangelogSlugRouteImport } from './routes/(changelog)/changelog.$slug'
 import { Route as appSyncIdRouteImport } from './routes/(app)/sync_.$id'
 import { Route as appOrdersIdRouteImport } from './routes/(app)/orders_.$id'
+import { Route as appListsListIdRouteImport } from './routes/(app)/lists_.$listId'
 import { Route as appItemExternalIdRouteImport } from './routes/(app)/item_.$externalId'
 import { Route as appAnalyticsSectionNameRouteImport } from './routes/(app)/analytics_.$sectionName'
 import { Route as appItemCustomIdRouteImport } from './routes/(app)/item_.custom.$id'
@@ -88,6 +90,11 @@ const appOrdersRoute = appOrdersRouteImport.update({
   path: '/orders',
   getParentRoute: () => appRouteRoute,
 } as any)
+const appListsRoute = appListsRouteImport.update({
+  id: '/lists',
+  path: '/lists',
+  getParentRoute: () => appRouteRoute,
+} as any)
 const appItemsRoute = appItemsRouteImport.update({
   id: '/items',
   path: '/items',
@@ -138,6 +145,11 @@ const appOrdersIdRoute = appOrdersIdRouteImport.update({
   path: '/orders/$id',
   getParentRoute: () => appRouteRoute,
 } as any)
+const appListsListIdRoute = appListsListIdRouteImport.update({
+  id: '/lists_/$listId',
+  path: '/lists/$listId',
+  getParentRoute: () => appRouteRoute,
+} as any)
 const appItemExternalIdRoute = appItemExternalIdRouteImport.update({
   id: '/item_/$externalId',
   path: '/item/$externalId',
@@ -162,6 +174,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof appDashboardRoute
   '/expenses': typeof appExpensesRoute
   '/items': typeof appItemsRoute
+  '/lists': typeof appListsRoute
   '/orders': typeof appOrdersRoute
   '/settings': typeof appSettingsRoute
   '/sync': typeof appSyncRoute
@@ -173,6 +186,7 @@ export interface FileRoutesByFullPath {
   '/profile/$username': typeof ProfileUsernameRoute
   '/analytics/$sectionName': typeof appAnalyticsSectionNameRoute
   '/item/$externalId': typeof appItemExternalIdRoute
+  '/lists/$listId': typeof appListsListIdRoute
   '/orders/$id': typeof appOrdersIdRoute
   '/sync/$id': typeof appSyncIdRoute
   '/changelog/$slug': typeof changelogChangelogSlugRoute
@@ -187,6 +201,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof appDashboardRoute
   '/expenses': typeof appExpensesRoute
   '/items': typeof appItemsRoute
+  '/lists': typeof appListsRoute
   '/orders': typeof appOrdersRoute
   '/settings': typeof appSettingsRoute
   '/sync': typeof appSyncRoute
@@ -197,6 +212,7 @@ export interface FileRoutesByTo {
   '/profile/$username': typeof ProfileUsernameRoute
   '/analytics/$sectionName': typeof appAnalyticsSectionNameRoute
   '/item/$externalId': typeof appItemExternalIdRoute
+  '/lists/$listId': typeof appListsListIdRoute
   '/orders/$id': typeof appOrdersIdRoute
   '/sync/$id': typeof appSyncIdRoute
   '/changelog/$slug': typeof changelogChangelogSlugRoute
@@ -213,6 +229,7 @@ export interface FileRoutesById {
   '/(app)/dashboard': typeof appDashboardRoute
   '/(app)/expenses': typeof appExpensesRoute
   '/(app)/items': typeof appItemsRoute
+  '/(app)/lists': typeof appListsRoute
   '/(app)/orders': typeof appOrdersRoute
   '/(app)/settings': typeof appSettingsRoute
   '/(app)/sync': typeof appSyncRoute
@@ -224,6 +241,7 @@ export interface FileRoutesById {
   '/profile/$username': typeof ProfileUsernameRoute
   '/(app)/analytics_/$sectionName': typeof appAnalyticsSectionNameRoute
   '/(app)/item_/$externalId': typeof appItemExternalIdRoute
+  '/(app)/lists_/$listId': typeof appListsListIdRoute
   '/(app)/orders_/$id': typeof appOrdersIdRoute
   '/(app)/sync_/$id': typeof appSyncIdRoute
   '/(changelog)/changelog/$slug': typeof changelogChangelogSlugRoute
@@ -240,6 +258,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/expenses'
     | '/items'
+    | '/lists'
     | '/orders'
     | '/settings'
     | '/sync'
@@ -251,6 +270,7 @@ export interface FileRouteTypes {
     | '/profile/$username'
     | '/analytics/$sectionName'
     | '/item/$externalId'
+    | '/lists/$listId'
     | '/orders/$id'
     | '/sync/$id'
     | '/changelog/$slug'
@@ -265,6 +285,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/expenses'
     | '/items'
+    | '/lists'
     | '/orders'
     | '/settings'
     | '/sync'
@@ -275,6 +296,7 @@ export interface FileRouteTypes {
     | '/profile/$username'
     | '/analytics/$sectionName'
     | '/item/$externalId'
+    | '/lists/$listId'
     | '/orders/$id'
     | '/sync/$id'
     | '/changelog/$slug'
@@ -290,6 +312,7 @@ export interface FileRouteTypes {
     | '/(app)/dashboard'
     | '/(app)/expenses'
     | '/(app)/items'
+    | '/(app)/lists'
     | '/(app)/orders'
     | '/(app)/settings'
     | '/(app)/sync'
@@ -301,6 +324,7 @@ export interface FileRouteTypes {
     | '/profile/$username'
     | '/(app)/analytics_/$sectionName'
     | '/(app)/item_/$externalId'
+    | '/(app)/lists_/$listId'
     | '/(app)/orders_/$id'
     | '/(app)/sync_/$id'
     | '/(changelog)/changelog/$slug'
@@ -398,6 +422,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appOrdersRouteImport
       parentRoute: typeof appRouteRoute
     }
+    '/(app)/lists': {
+      id: '/(app)/lists'
+      path: '/lists'
+      fullPath: '/lists'
+      preLoaderRoute: typeof appListsRouteImport
+      parentRoute: typeof appRouteRoute
+    }
     '/(app)/items': {
       id: '/(app)/items'
       path: '/items'
@@ -468,6 +499,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appOrdersIdRouteImport
       parentRoute: typeof appRouteRoute
     }
+    '/(app)/lists_/$listId': {
+      id: '/(app)/lists_/$listId'
+      path: '/lists/$listId'
+      fullPath: '/lists/$listId'
+      preLoaderRoute: typeof appListsListIdRouteImport
+      parentRoute: typeof appRouteRoute
+    }
     '/(app)/item_/$externalId': {
       id: '/(app)/item_/$externalId'
       path: '/item/$externalId'
@@ -499,11 +537,13 @@ interface appRouteRouteChildren {
   appDashboardRoute: typeof appDashboardRoute
   appExpensesRoute: typeof appExpensesRoute
   appItemsRoute: typeof appItemsRoute
+  appListsRoute: typeof appListsRoute
   appOrdersRoute: typeof appOrdersRoute
   appSettingsRoute: typeof appSettingsRoute
   appSyncRoute: typeof appSyncRoute
   appAnalyticsSectionNameRoute: typeof appAnalyticsSectionNameRoute
   appItemExternalIdRoute: typeof appItemExternalIdRoute
+  appListsListIdRoute: typeof appListsListIdRoute
   appOrdersIdRoute: typeof appOrdersIdRoute
   appSyncIdRoute: typeof appSyncIdRoute
   appItemCustomIdRoute: typeof appItemCustomIdRoute
@@ -516,11 +556,13 @@ const appRouteRouteChildren: appRouteRouteChildren = {
   appDashboardRoute: appDashboardRoute,
   appExpensesRoute: appExpensesRoute,
   appItemsRoute: appItemsRoute,
+  appListsRoute: appListsRoute,
   appOrdersRoute: appOrdersRoute,
   appSettingsRoute: appSettingsRoute,
   appSyncRoute: appSyncRoute,
   appAnalyticsSectionNameRoute: appAnalyticsSectionNameRoute,
   appItemExternalIdRoute: appItemExternalIdRoute,
+  appListsListIdRoute: appListsListIdRoute,
   appOrdersIdRoute: appOrdersIdRoute,
   appSyncIdRoute: appSyncIdRoute,
   appItemCustomIdRoute: appItemCustomIdRoute,

@@ -15,6 +15,7 @@ import { ScrollArea, ScrollBar } from "../ui/scroll-area";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { DataGridColumnCombobox } from "../ui/data-grid-column-combobox";
 import { CollectionToolbar } from "./collection-toolbar";
+import { CollectionActionBar } from "./collection-action-bar";
 import { CollectionCardGrid } from "./collection-card-grid";
 import { CollectionGalleryGrid } from "./collection-gallery-grid";
 import { createCollectionColumns } from "./collection-columns";
@@ -32,7 +33,6 @@ import {
 } from "@/hooks/use-collection";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
-import type { SelectedCollectionItems } from "@/hooks/use-selection";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 
 const VIEW_MODE_KEY = "collection:viewMode";
@@ -91,30 +91,18 @@ export const CollectionDataGrid = () => {
   );
 
   const {
-    rowSelection: collectionSelection,
-    setRowSelection: setCollectionSelection,
-    selectedRowIds: selectedCollectionIds,
-    clearSelections,
+    selection: collectionSelection,
+    setSelection: setCollectionSelection,
+    selectedIds: selectedCollectionIds,
   } = useSelection();
 
-  const selectedItems = useMemo<SelectedCollectionItems>(() => {
-    const orderIds = new Set<string>();
-
-    for (const item of items) {
-      if (!selectedCollectionIds.has(item.id)) {
-        continue;
-      }
-
-      if (item.orderId) {
-        orderIds.add(item.orderId);
-      }
-    }
-
-    return {
+  const selectedItems = useMemo(
+    () => ({
       collectionIds: selectedCollectionIds,
-      orderIds,
-    };
-  }, [items, selectedCollectionIds]);
+      orderIds: new Set<string>(),
+    }),
+    [selectedCollectionIds],
+  );
 
   const [expandedRows, setExpandedRows] = useState<ExpandedState>({});
   const [columnVisibility, setColumnVisibility] = useLocalStorage<VisibilityState>(
@@ -236,21 +224,22 @@ export const CollectionDataGrid = () => {
     <>
       <div className="flex w-full flex-wrap items-center gap-2">
         <div className="flex flex-1 flex-wrap items-center gap-2">
-          <CollectionToolbar
-            selectedItems={selectedItems}
-            clearSelections={clearSelections}
-            onDeleteCollectionItems={handleDeleteCollectionItems}
-            onAddCollectionItemsToOrder={handleAddCollectionItemsToOrder}
-            onAddCollectionItemsToNewOrder={handleAddCollectionItemsToNewOrder}
-            isDeletingCollectionItems={isDeletingCollectionItems}
-            isAddingCollectionItemsToOrder={isMovingCollectionItems}
-            isCreatingCollectionOrder={isSplittingCollectionItems}
-          />
+          <CollectionToolbar />
           {isTableView ? <DataGridColumnCombobox table={table} /> : null}
         </div>
         <ViewToggle value={viewMode} onValueChange={setViewMode} />
         <SyncSheetButton syncType="collection" label="Add" className="ml-auto" />
       </div>
+      <CollectionActionBar
+        selectedItems={selectedItems}
+        onClearSelection={() => setCollectionSelection({})}
+        onDeleteCollectionItems={handleDeleteCollectionItems}
+        onAddCollectionItemsToOrder={handleAddCollectionItemsToOrder}
+        onAddCollectionItemsToNewOrder={handleAddCollectionItemsToNewOrder}
+        isDeletingCollectionItems={isDeletingCollectionItems}
+        isAddingCollectionItemsToOrder={isMovingCollectionItems}
+        isCreatingCollectionOrder={isSplittingCollectionItems}
+      />
       {viewMode === "grid" || viewMode === "gallery" ? (
         <div className="flex w-full items-center justify-center gap-3">
           <GridSizeSlider value={cardWidth} onValueChange={setCardWidth} min={120} max={300} />

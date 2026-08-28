@@ -10,6 +10,7 @@ import {
   jsonb,
   index,
   uniqueIndex,
+  check,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { user } from "./auth";
@@ -231,6 +232,58 @@ export const order = pgTable(
     index("order_user_id_release_date_idx").on(t.userId, t.releaseDate),
     index("order_user_id_status_release_date_idx").on(t.userId, t.status, t.releaseDate),
     index("order_user_id_created_at_idx").on(t.userId, t.createdAt.desc()),
+  ],
+);
+
+export const list = pgTable(
+  "list",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    description: text("description").default("").notNull(),
+    position: integer("position").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("list_user_id_position_created_at_id_idx").on(t.userId, t.position, t.createdAt, t.id),
+  ],
+);
+
+export const listMember = pgTable(
+  "list_member",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    listId: text("list_id")
+      .notNull()
+      .references(() => list.id, { onDelete: "cascade" }),
+    itemId: text("item_id").references(() => item.id, { onDelete: "cascade" }),
+    collectionId: text("collection_id").references(() => collection.id, {
+      onDelete: "cascade",
+    }),
+    orderId: text("order_id").references(() => order.id, { onDelete: "cascade" }),
+    position: integer("position").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    check(
+      "list_member_exactly_one_target_check",
+      sql`num_nonnulls(${t.itemId}, ${t.collectionId}, ${t.orderId}) = 1`,
+    ),
+    uniqueIndex("list_member_list_id_item_id_idx").on(t.listId, t.itemId),
+    uniqueIndex("list_member_list_id_collection_id_idx").on(t.listId, t.collectionId),
+    uniqueIndex("list_member_list_id_order_id_idx").on(t.listId, t.orderId),
+    index("list_member_list_id_position_id_idx").on(t.listId, t.position, t.id),
+    index("list_member_item_id_idx").on(t.itemId),
+    index("list_member_collection_id_idx").on(t.collectionId),
+    index("list_member_order_id_idx").on(t.orderId),
   ],
 );
 

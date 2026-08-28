@@ -8,6 +8,7 @@ const collectionAndOrderQueryRoots = new Set<unknown>([
   "dashboard",
   "expenses",
   "item",
+  "lists",
   "order",
   "orderItemReleases",
   "orderItems",

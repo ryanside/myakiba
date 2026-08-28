@@ -226,6 +226,7 @@ function CalendarDayThumbStack({
               THUMB_STACK_SIZE,
               index > 0 && THUMB_STACK_OVERLAP,
             )}
+            showRemainingCount
           />
         ))}
         {hasOverflow && (

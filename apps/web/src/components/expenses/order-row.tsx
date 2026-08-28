@@ -42,7 +42,8 @@ export function ExpenseOrderRow({
           images={order.images}
           title={order.title}
           fallbackIcon={<HugeiconsIcon icon={PackageIcon} className="size-4" />}
-          className="size-8 rounded-md"
+          className="size-8 shrink-0 rounded-md"
+          showRemainingCount
         />
         <div className="min-w-0">
           <p className="truncate text-sm font-medium">{order.title}</p>

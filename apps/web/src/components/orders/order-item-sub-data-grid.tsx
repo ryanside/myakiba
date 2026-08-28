@@ -1,17 +1,18 @@
 import { useMemo, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
 import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getCoreRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
-import type {
-  RowSelectionState,
-  PaginationState,
-  SortingState,
-  OnChangeFn,
+import {
+  getCoreRowModel,
+  getSortedRowModel,
+  useReactTable,
+  functionalUpdate,
 } from "@tanstack/react-table";
+import type { RowSelectionState, PaginationState, SortingState } from "@tanstack/react-table";
 import type { OrderItem } from "@myakiba/contracts/orders/types";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import { createOrderItemSubColumns } from "./order-item-sub-columns";
@@ -23,8 +24,8 @@ const ORDER_ITEM_PAGE_SIZE = 12;
 
 export function OrderItemSubDataGrid({
   orderId,
-  itemSelection,
-  setItemSelection,
+  selectedOrderIdByCollectionId,
+  setSelectedOrderIdByCollectionId,
   onEditItem,
   onDeleteItem,
   isCollectionItemPending,
@@ -32,8 +33,8 @@ export function OrderItemSubDataGrid({
   isLoading = false,
 }: {
   orderId: string;
-  itemSelection: RowSelectionState;
-  setItemSelection: OnChangeFn<RowSelectionState>;
+  selectedOrderIdByCollectionId: ReadonlyMap<string, string>;
+  setSelectedOrderIdByCollectionId: Dispatch<SetStateAction<Map<string, string>>>;
   onEditItem: (values: CollectionItemFormValues) => Promise<void>;
   onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
   isCollectionItemPending: (collectionId: string) => boolean;
@@ -73,6 +74,13 @@ export function OrderItemSubDataGrid({
   const items = itemsData?.items ?? [];
   const totalCount = itemsData?.totalCount ?? 0;
   const isGridLoading = isPending || isLoading;
+  const itemSelection = useMemo<RowSelectionState>(
+    () =>
+      Object.fromEntries(
+        Array.from(selectedOrderIdByCollectionId.keys(), (id) => [id, true] as const),
+      ),
+    [selectedOrderIdByCollectionId],
+  );
 
   const columns = useMemo(
     () =>
@@ -101,12 +109,27 @@ export function OrderItemSubDataGrid({
     columnResizeMode: "onChange",
     onSortingChange: setSorting,
     onPaginationChange: setPagination,
-    onRowSelectionChange: setItemSelection,
+    onRowSelectionChange: (updater) => {
+      setSelectedOrderIdByCollectionId((current) => {
+        const currentSelection = Object.fromEntries(
+          Array.from(current.keys(), (id) => [id, true] as const),
+        );
+        const nextSelection = functionalUpdate(updater, currentSelection);
+        const next = new Map(current);
+
+        for (const item of items) {
+          if (nextSelection[item.id]) next.set(item.id, orderId);
+          else next.delete(item.id);
+        }
+
+        return next;
+      });
+    },
     onColumnOrderChange: setColumnOrder,
     manualPagination: true,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getRowId: (row: OrderItem) => `${orderId}-${row.id}`,
+    getRowId: (row: OrderItem) => row.id,
     enableRowSelection: true,
   });
 
