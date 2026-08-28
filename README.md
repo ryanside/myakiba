@@ -257,7 +257,7 @@ myakiba/
 │   ├── env/            # Typed environment schemas
 │   ├── redis/          # Redis clients, job status, and local Compose setup
 │   └── utils/          # Shared utilities
-├── CONTEXT.md          # Expense domain glossary
+├── CONTEXT.md          # Domain glossary
 ├── docker-compose.yml  # Local full-stack build
 ├── docker-compose.production.yml
 │                       # Production stack using published images
