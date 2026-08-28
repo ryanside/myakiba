@@ -177,9 +177,13 @@ function ListOptionRow({
         aria-describedby={list.memberCount > 0 ? descriptionId : undefined}
         onCheckedChange={(checked) => onSelectedChange(checked === true)}
       />
-      <FieldContent>
-        <div className="flex w-fit items-center gap-1">
-          <FieldLabel htmlFor={`add-to-list-${list.id}`} className="font-normal">
+      <FieldContent className="min-w-0">
+        <div className="flex min-w-0 items-center gap-1">
+          <FieldLabel
+            htmlFor={`add-to-list-${list.id}`}
+            className="min-w-0 truncate font-normal"
+            title={list.title}
+          >
             {list.title}
           </FieldLabel>
           <Link
