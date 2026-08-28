@@ -66,7 +66,13 @@ class ListsService {
               list_member_row.position,
               list_member_row.id AS member_id,
               candidate.sort_key
-            FROM "list_member" list_member_row
+            FROM (
+              SELECT id, position, item_id, collection_id, order_id
+              FROM "list_member"
+              WHERE list_id = "list".id
+              ORDER BY position, id
+              LIMIT 20
+            ) list_member_row
             CROSS JOIN LATERAL (
               SELECT item_record.image, item_record.id AS sort_key
               FROM item item_record
@@ -89,7 +95,6 @@ class ListsService {
               WHERE order_collection.order_id = list_member_row.order_id
                 AND order_item.image IS NOT NULL
             ) candidate
-            WHERE list_member_row.list_id = "list".id
             ORDER BY
               candidate.image,
               list_member_row.position,
@@ -232,74 +237,76 @@ class ListsService {
   }
 
   async getListMembers(userId: string, listId: string, limit: number, offset: number) {
-    const [ownedLists, memberRows, countRows] = await Promise.all([
-      db
-        .select({ id: list.id })
-        .from(list)
-        .where(and(eq(list.id, listId), eq(list.userId, userId)))
-        .limit(1),
-      db
-        .select({
-          id: listMember.id,
-          itemId: listMember.itemId,
-          collectionId: listMember.collectionId,
-          orderId: listMember.orderId,
-          position: listMember.position,
-        })
-        .from(listMember)
-        .innerJoin(list, eq(listMember.listId, list.id))
-        .where(and(eq(listMember.listId, listId), eq(list.userId, userId)))
-        .orderBy(asc(listMember.position), asc(listMember.id))
-        .limit(limit)
-        .offset(offset),
-      db
-        .select({ totalCount: sql<number>`COUNT(*)::integer` })
-        .from(listMember)
-        .innerJoin(list, eq(listMember.listId, list.id))
-        .where(and(eq(listMember.listId, listId), eq(list.userId, userId))),
-    ]);
-
-    if (ownedLists.length === 0) throw new Error("LIST_NOT_FOUND");
-    const totalCount = countRows[0]?.totalCount ?? 0;
-
-    const itemIds = memberRows.flatMap((member) => (member.itemId ? [member.itemId] : []));
-    const collectionIds = memberRows.flatMap((member) =>
-      member.collectionId ? [member.collectionId] : [],
-    );
-    const orderIds = memberRows.flatMap((member) => (member.orderId ? [member.orderId] : []));
-
-    const [items, collectionItems, orders] = await Promise.all([
-      itemIds.length === 0
-        ? Promise.resolve([])
-        : db
+    return db.transaction(
+      async (tx) => {
+        const [ownedLists, memberRows, countRows] = await Promise.all([
+          tx
+            .select({ id: list.id })
+            .from(list)
+            .where(and(eq(list.id, listId), eq(list.userId, userId)))
+            .limit(1),
+          tx
             .select({
-              id: item.id,
-              externalId: item.externalId,
-              title: item.title,
-              image: item.image,
+              id: listMember.id,
+              itemId: listMember.itemId,
+              collectionId: listMember.collectionId,
+              orderId: listMember.orderId,
+              position: listMember.position,
             })
-            .from(item)
-            .where(inArray(item.id, itemIds)),
-      collectionIds.length === 0
-        ? Promise.resolve([])
-        : db
-            .select({
-              id: collection.id,
-              itemId: item.id,
-              itemExternalId: item.externalId,
-              title: item.title,
-              image: item.image,
-            })
-            .from(collection)
-            .innerJoin(item, eq(collection.itemId, item.id))
-            .where(and(eq(collection.userId, userId), inArray(collection.id, collectionIds))),
-      orderIds.length === 0
-        ? Promise.resolve([])
-        : db
-            .select({
-              id: order.id,
-              title: order.title,
-              images: sql<string[]>`ARRAY(
+            .from(listMember)
+            .innerJoin(list, eq(listMember.listId, list.id))
+            .where(and(eq(listMember.listId, listId), eq(list.userId, userId)))
+            .orderBy(asc(listMember.position), asc(listMember.id))
+            .limit(limit)
+            .offset(offset),
+          tx
+            .select({ totalCount: sql<number>`COUNT(*)::integer` })
+            .from(listMember)
+            .innerJoin(list, eq(listMember.listId, list.id))
+            .where(and(eq(listMember.listId, listId), eq(list.userId, userId))),
+        ]);
+
+        if (ownedLists.length === 0) throw new Error("LIST_NOT_FOUND");
+        const totalCount = countRows[0]?.totalCount ?? 0;
+
+        const itemIds = memberRows.flatMap((member) => (member.itemId ? [member.itemId] : []));
+        const collectionIds = memberRows.flatMap((member) =>
+          member.collectionId ? [member.collectionId] : [],
+        );
+        const orderIds = memberRows.flatMap((member) => (member.orderId ? [member.orderId] : []));
+
+        const [items, collectionItems, orders] = await Promise.all([
+          itemIds.length === 0
+            ? Promise.resolve([])
+            : tx
+                .select({
+                  id: item.id,
+                  externalId: item.externalId,
+                  title: item.title,
+                  image: item.image,
+                })
+                .from(item)
+                .where(inArray(item.id, itemIds)),
+          collectionIds.length === 0
+            ? Promise.resolve([])
+            : tx
+                .select({
+                  id: collection.id,
+                  itemId: item.id,
+                  itemExternalId: item.externalId,
+                  title: item.title,
+                  image: item.image,
+                })
+                .from(collection)
+                .innerJoin(item, eq(collection.itemId, item.id))
+                .where(and(eq(collection.userId, userId), inArray(collection.id, collectionIds))),
+          orderIds.length === 0
+            ? Promise.resolve([])
+            : tx
+                .select({
+                  id: order.id,
+                  title: order.title,
+                  images: sql<string[]>`ARRAY(
                 SELECT DISTINCT order_item.image
                 FROM "collection" order_collection
                 INNER JOIN item order_item ON order_item.id = order_collection.item_id
@@ -308,61 +315,64 @@ class ListsService {
                 ORDER BY order_item.image
                 LIMIT 4
               )`,
-            })
-            .from(order)
-            .where(and(eq(order.userId, userId), inArray(order.id, orderIds))),
-    ]);
+                })
+                .from(order)
+                .where(and(eq(order.userId, userId), inArray(order.id, orderIds))),
+        ]);
 
-    const itemById = new Map(items.map((currentItem) => [currentItem.id, currentItem]));
-    const collectionItemById = new Map(
-      collectionItems.map((collectionItem) => [collectionItem.id, collectionItem]),
+        const itemById = new Map(items.map((currentItem) => [currentItem.id, currentItem]));
+        const collectionItemById = new Map(
+          collectionItems.map((collectionItem) => [collectionItem.id, collectionItem]),
+        );
+        const orderById = new Map(orders.map((currentOrder) => [currentOrder.id, currentOrder]));
+
+        const members = memberRows.map((member) => {
+          if (member.itemId) {
+            const target = itemById.get(member.itemId);
+            if (!target) throw new Error("LIST_MEMBER_TARGET_NOT_FOUND");
+            return {
+              id: member.id,
+              position: member.position,
+              type: "item" as const,
+              targetId: target.id,
+              title: target.title,
+              image: target.image,
+              itemExternalId: target.externalId,
+            };
+          }
+
+          if (member.collectionId) {
+            const target = collectionItemById.get(member.collectionId);
+            if (!target) throw new Error("LIST_MEMBER_TARGET_NOT_FOUND");
+            return {
+              id: member.id,
+              position: member.position,
+              type: "collectionItem" as const,
+              targetId: target.id,
+              title: target.title,
+              image: target.image,
+              itemId: target.itemId,
+              itemExternalId: target.itemExternalId,
+            };
+          }
+
+          if (!member.orderId) throw new Error("LIST_MEMBER_TARGET_NOT_FOUND");
+          const target = orderById.get(member.orderId);
+          if (!target) throw new Error("LIST_MEMBER_TARGET_NOT_FOUND");
+          return {
+            id: member.id,
+            position: member.position,
+            type: "order" as const,
+            targetId: target.id,
+            title: target.title,
+            images: target.images,
+          };
+        });
+
+        return { items: members, totalCount, limit, offset };
+      },
+      { isolationLevel: "repeatable read", accessMode: "read only" },
     );
-    const orderById = new Map(orders.map((currentOrder) => [currentOrder.id, currentOrder]));
-
-    const members = memberRows.map((member) => {
-      if (member.itemId) {
-        const target = itemById.get(member.itemId);
-        if (!target) throw new Error("LIST_MEMBER_TARGET_NOT_FOUND");
-        return {
-          id: member.id,
-          position: member.position,
-          type: "item" as const,
-          targetId: target.id,
-          title: target.title,
-          image: target.image,
-          itemExternalId: target.externalId,
-        };
-      }
-
-      if (member.collectionId) {
-        const target = collectionItemById.get(member.collectionId);
-        if (!target) throw new Error("LIST_MEMBER_TARGET_NOT_FOUND");
-        return {
-          id: member.id,
-          position: member.position,
-          type: "collectionItem" as const,
-          targetId: target.id,
-          title: target.title,
-          image: target.image,
-          itemId: target.itemId,
-          itemExternalId: target.itemExternalId,
-        };
-      }
-
-      if (!member.orderId) throw new Error("LIST_MEMBER_TARGET_NOT_FOUND");
-      const target = orderById.get(member.orderId);
-      if (!target) throw new Error("LIST_MEMBER_TARGET_NOT_FOUND");
-      return {
-        id: member.id,
-        position: member.position,
-        type: "order" as const,
-        targetId: target.id,
-        title: target.title,
-        images: target.images,
-      };
-    });
-
-    return { items: members, totalCount, limit, offset };
   }
 
   async getListOptionsForTargets(userId: string, targets: readonly ListTarget[]) {
