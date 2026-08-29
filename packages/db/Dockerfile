@@ -1,4 +1,4 @@
-FROM oven/bun:1.3.9-debian AS base
+FROM oven/bun:1.4.0-debian AS base
 
 # Prune stage - generate a minimal workspace for @myakiba/db
 FROM base AS prune
