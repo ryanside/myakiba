@@ -58,7 +58,6 @@
     "lint-staged": "^16.4.0",
     "oxfmt": "latest",
     "oxlint": "1.78.0",
-    "react-doctor": "^0.2.16",
     "turbo": "2.10.4",
     "typescript": "catalog:",
     "ultracite": "7.6.1"
