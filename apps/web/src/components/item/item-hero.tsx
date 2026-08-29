@@ -134,7 +134,7 @@ export function ItemHero({
             renderTrigger={
               <Button variant="outline" size="xs">
                 <HugeiconsIcon icon={FolderAddIcon} data-icon="inline-start" />
-                Add to List
+                Add Item to List
               </Button>
             }
           />

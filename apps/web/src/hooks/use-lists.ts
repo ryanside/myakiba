@@ -383,7 +383,7 @@ export function useAddTargetsToListsMutation() {
       const listLabel = `${listCount} ${listCount === 1 ? "List" : "Lists"}`;
       const possibleAdditionCount = targetCount * listCount;
       const alreadyAddedCount = possibleAdditionCount - data.addedCount;
-      let title = `${targetLabel} added to the end of ${listLabel}`;
+      let title = `${targetLabel} added to ${listLabel}`;
       if (data.addedCount === 0) {
         title = `${targetLabel} ${targetCount === 1 ? "is" : "are"} already in ${listCount === 1 ? "that List" : "those Lists"}`;
       } else if (alreadyAddedCount > 0) {

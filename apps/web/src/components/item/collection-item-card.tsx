@@ -1,8 +1,15 @@
 import type { ReactNode } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Delete01Icon, Edit03Icon, Loading03Icon, MoveIcon } from "@hugeicons/core-free-icons";
+import {
+  Delete01Icon,
+  Edit03Icon,
+  FolderAddIcon,
+  Loading03Icon,
+  MoveIcon,
+} from "@hugeicons/core-free-icons";
 import { Link } from "@tanstack/react-router";
 import CollectionItemForm from "@/components/collection/collection-item-form";
+import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
 import UnifiedItemMoveForm from "@/components/orders/unified-item-move-form";
 import { Badge, ThemedBadge } from "@/components/reui/badge";
 import { Button } from "@/components/ui/button";
@@ -61,6 +68,10 @@ export function CollectionItemCardSkeleton(): ReactNode {
           <Button variant="ghost" size="icon-sm" className="text-muted-foreground" disabled>
             <HugeiconsIcon icon={Edit03Icon} className="size-3.5" />
             <span className="sr-only">Edit collection item</span>
+          </Button>
+          <Button variant="ghost" size="icon-sm" className="text-muted-foreground" disabled>
+            <HugeiconsIcon icon={FolderAddIcon} className="size-3.5" />
+            <span className="sr-only">Add collection item to List</span>
           </Button>
           <Button variant="ghost" size="icon-sm" className="text-muted-foreground" disabled>
             <HugeiconsIcon icon={MoveIcon} className="size-3.5" />
@@ -175,6 +186,26 @@ export function CollectionItemCard({
             callbackFn={onEdit}
             currency={currency}
             dateFormat={dateFormat}
+          />
+          <AddToListsDialog
+            targets={[{ type: "collectionItem", id: collectionItem.id }]}
+            targetTitle={item.title}
+            renderTrigger={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="text-muted-foreground"
+                disabled={collectionItem.status !== "Owned"}
+                title={
+                  collectionItem.status === "Owned"
+                    ? "Add collection item to List"
+                    : "Only owned collection items can be added to Lists"
+                }
+              >
+                <HugeiconsIcon icon={FolderAddIcon} className="size-3.5" />
+                <span className="sr-only">Add collection item to List</span>
+              </Button>
+            }
           />
           <UnifiedItemMoveForm
             renderTrigger={
