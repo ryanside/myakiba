@@ -22,7 +22,7 @@ import { OrdersGalleryGrid } from "./orders-gallery-grid";
 import { createOrdersColumns, OrderItemSelectionContext } from "./orders-columns";
 import { SyncSheetButton } from "@/components/sync/sync-sheet-button";
 import { ViewToggle } from "@/components/ui/view-toggle";
-import type { ViewMode } from "@/components/ui/view-toggle";
+import type { DataViewMode } from "@/components/ui/view-toggle";
 import { GridSizeSlider } from "@/components/ui/grid-size-slider";
 import { GalleryLayoutToggle } from "@/components/ui/gallery-layout-toggle";
 import type { GalleryLayout } from "@/components/ui/gallery-layout-toggle";
@@ -46,7 +46,7 @@ const DEFAULT_VISIBILITY: VisibilityState = {
 };
 
 export default function OrdersDataGrid() {
-  const [viewMode, setViewMode] = useLocalStorage<ViewMode>(VIEW_MODE_KEY, "compact");
+  const [viewMode, setViewMode] = useLocalStorage<DataViewMode>(VIEW_MODE_KEY, "compact");
   const [cardWidth, setCardWidth] = useLocalStorage<number>("orders:cardWidth", 280);
   const [galleryLayout, setGalleryLayout] = useLocalStorage<GalleryLayout>(
     "orders:galleryLayout",
@@ -231,7 +231,11 @@ export default function OrdersDataGrid() {
           <OrdersToolbar />
           {isTableView ? <DataGridColumnCombobox table={table} /> : null}
         </div>
-        <ViewToggle value={viewMode} onValueChange={setViewMode} />
+        <ViewToggle
+          modes={["compact", "table", "grid", "gallery"]}
+          value={viewMode}
+          onValueChange={setViewMode}
+        />
         <SyncSheetButton syncType="order" label="Add" className="ml-auto" />
       </div>
       <OrdersActionBar

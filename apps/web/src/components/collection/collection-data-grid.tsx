@@ -21,7 +21,7 @@ import { CollectionGalleryGrid } from "./collection-gallery-grid";
 import { createCollectionColumns } from "./collection-columns";
 import { SyncSheetButton } from "@/components/sync/sync-sheet-button";
 import { ViewToggle } from "@/components/ui/view-toggle";
-import type { ViewMode } from "@/components/ui/view-toggle";
+import type { DataViewMode } from "@/components/ui/view-toggle";
 import { GridSizeSlider } from "@/components/ui/grid-size-slider";
 import { GalleryLayoutToggle } from "@/components/ui/gallery-layout-toggle";
 import type { GalleryLayout } from "@/components/ui/gallery-layout-toggle";
@@ -45,7 +45,7 @@ const DEFAULT_VISIBILITY: VisibilityState = {
 };
 
 export const CollectionDataGrid = () => {
-  const [viewMode, setViewMode] = useLocalStorage<ViewMode>(VIEW_MODE_KEY, "compact");
+  const [viewMode, setViewMode] = useLocalStorage<DataViewMode>(VIEW_MODE_KEY, "compact");
   const [cardWidth, setCardWidth] = useLocalStorage<number>("collection:cardWidth", 180);
   const [galleryLayout, setGalleryLayout] = useLocalStorage<GalleryLayout>(
     "collection:galleryLayout",
@@ -227,7 +227,11 @@ export const CollectionDataGrid = () => {
           <CollectionToolbar />
           {isTableView ? <DataGridColumnCombobox table={table} /> : null}
         </div>
-        <ViewToggle value={viewMode} onValueChange={setViewMode} />
+        <ViewToggle
+          modes={["compact", "table", "grid", "gallery"]}
+          value={viewMode}
+          onValueChange={setViewMode}
+        />
         <SyncSheetButton syncType="collection" label="Add" className="ml-auto" />
       </div>
       <CollectionActionBar

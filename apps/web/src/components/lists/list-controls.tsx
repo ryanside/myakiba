@@ -5,8 +5,8 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import type { getLists } from "@/queries/lists";
 import { ListFormDialog } from "@/components/lists/list-form-dialog";
-import type { ListViewMode } from "@/components/lists/list-view-toggle";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import type { GridListViewMode } from "@/components/ui/view-toggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,7 +32,7 @@ export function ListControls({
   children,
 }: {
   readonly list: ListRecord;
-  readonly viewMode: ListViewMode;
+  readonly viewMode: GridListViewMode;
   readonly selected: boolean;
   readonly active: boolean;
   readonly onToggleSelection: () => void;

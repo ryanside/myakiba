@@ -6,8 +6,6 @@ import { InfiniteListStatus } from "@/components/lists/infinite-list-status";
 import { ListFormDialog } from "@/components/lists/list-form-dialog";
 import { ListMemberGrid } from "@/components/lists/list-member-grid";
 import { ListMembersActionBar } from "@/components/lists/list-members-action-bar";
-import { ListViewToggle } from "@/components/lists/list-view-toggle";
-import type { ListViewMode } from "@/components/lists/list-view-toggle";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
@@ -18,11 +16,13 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ViewToggle } from "@/components/ui/view-toggle";
+import type { GridListViewMode } from "@/components/ui/view-toggle";
 import {
   useListMembersQuery,
   useListMutations,
   useListQuery,
-  useMoveListMembersQueue,
+  useMoveListMembersMutation,
   useRemoveListMembersMutation,
 } from "@/hooks/use-lists";
 import { useLocalStorage } from "@/hooks/use-local-storage";
@@ -56,10 +56,10 @@ function RouteComponent(): React.JSX.Element {
     (listQuery.isError && !listQuery.data) || (membersQuery.isError && !membersQuery.data);
   const { updateList, deleteList } = useListMutations();
   const removeMembersMutation = useRemoveListMembersMutation(listId);
-  const moveQueue = useMoveListMembersQueue(listId);
+  const moveMutation = useMoveListMembersMutation(listId);
   const handleLoadMore = membersQuery.fetchNextPage;
-  const handleMove = moveQueue.move;
-  const [viewMode, setViewMode] = useLocalStorage<ListViewMode>(VIEW_MODE_KEY, "grid");
+  const handleMove = moveMutation.move;
+  const [viewMode, setViewMode] = useLocalStorage<GridListViewMode>(VIEW_MODE_KEY, "grid");
   const { selectedIds, setSelection } = useSelection();
   const removeMembers = removeMembersMutation.mutateAsync;
   const selectedMemberIds = useMemo(() => [...selectedIds], [selectedIds]);
@@ -102,7 +102,7 @@ function RouteComponent(): React.JSX.Element {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
-          <ListViewToggle value={viewMode} onValueChange={setViewMode} />
+          <ViewToggle modes={["grid", "list"]} value={viewMode} onValueChange={setViewMode} />
           {isPending ? (
             <>
               <Button variant="outline" disabled>
@@ -220,7 +220,7 @@ function RouteComponent(): React.JSX.Element {
           members={members}
           viewMode={viewMode}
           totalCount={totalCount}
-          isSaving={moveQueue.isPending}
+          isSaving={moveMutation.isPending}
           sortingDisabled={removeMembersMutation.isPending}
           removingMemberIds={
             removeMembersMutation.isPending ? removeMembersMutation.variables : undefined

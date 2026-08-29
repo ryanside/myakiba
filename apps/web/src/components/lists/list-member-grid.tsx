@@ -14,7 +14,7 @@ import type { getListMembers } from "@/queries/lists";
 import { ListMemberControls } from "@/components/lists/list-member-controls";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { ItemControl } from "@/components/ui/item-controls";
-import type { ListViewMode } from "@/components/lists/list-view-toggle";
+import type { GridListViewMode } from "@/components/ui/view-toggle";
 import { cn } from "@/lib/utils";
 import type { CSSProperties } from "react";
 import { useSortableSelection } from "@/components/lists/use-sortable-selection";
@@ -22,7 +22,6 @@ import { useSortableSelection } from "@/components/lists/use-sortable-selection"
 type ListMembersPage = NonNullable<Awaited<ReturnType<typeof getListMembers>>>;
 type ListMember = ListMembersPage["items"][number];
 
-const GRID_TILE_SIZE = 180;
 const MAX_STAGGER_INDEX = 20;
 const STAGGER_DELAY_MS = 30;
 
@@ -32,47 +31,20 @@ const MEMBER_TYPE_LABELS = {
   order: "Order",
 } as const;
 
-function ListMemberImage({ member }: { readonly member: ListMember }): React.JSX.Element {
-  if (member.type === "order") {
-    return (
-      <ImageThumbnail
-        images={member.images}
-        title={member.title}
-        fallbackIcon={
-          <HugeiconsIcon icon={PackageIcon} className="size-10 text-muted-foreground/40" />
-        }
-        className="aspect-square w-full"
-        decorative
-        loading="lazy"
-      />
-    );
-  }
-
-  if (member.image) {
-    return (
-      <img
-        src={member.image}
-        alt=""
-        className="aspect-square w-full object-cover object-top"
-        loading="lazy"
-      />
-    );
-  }
-
-  return (
-    <div className="flex aspect-square w-full items-center justify-center bg-muted">
-      <HugeiconsIcon icon={PackageIcon} className="size-8 text-muted-foreground/40" />
-    </div>
-  );
-}
-
 function ListMemberLink({
   member,
   viewMode,
 }: {
   readonly member: ListMember;
-  readonly viewMode: ListViewMode;
+  readonly viewMode: GridListViewMode;
 }): React.JSX.Element {
+  let images: readonly string[];
+  if (member.type === "order") {
+    images = member.images;
+  } else {
+    images = member.image ? [member.image] : [];
+  }
+
   const content = (
     <>
       <div
@@ -81,7 +53,22 @@ function ListMemberLink({
           viewMode === "grid" ? "aspect-square w-full" : "size-16 overflow-hidden rounded-md",
         )}
       >
-        <ListMemberImage member={member} />
+        <ImageThumbnail
+          images={images}
+          title={member.title}
+          fallbackIcon={
+            <HugeiconsIcon
+              icon={PackageIcon}
+              className={cn(
+                "text-muted-foreground/40",
+                member.type === "order" ? "size-10" : "size-8",
+              )}
+            />
+          }
+          className="aspect-square w-full"
+          decorative
+          loading="lazy"
+        />
       </div>
       {viewMode === "grid" ? (
         <div
@@ -155,7 +142,7 @@ function SortableListMember({
 }: {
   readonly member: ListMember;
   readonly index: number;
-  readonly viewMode: ListViewMode;
+  readonly viewMode: GridListViewMode;
   readonly entranceAnimationActive: boolean;
   readonly sortingDisabled: boolean;
   readonly removingMemberIds: readonly string[] | undefined;
@@ -255,7 +242,7 @@ export function ListMemberGrid({
   onToggleSelection,
 }: {
   readonly members: readonly ListMember[];
-  readonly viewMode: ListViewMode;
+  readonly viewMode: GridListViewMode;
   readonly totalCount: number;
   readonly isSaving: boolean;
   readonly sortingDisabled: boolean;
@@ -270,7 +257,6 @@ export function ListMemberGrid({
   readonly onToggleSelection: (memberId: string, selected: boolean) => void;
 }): React.JSX.Element {
   const {
-    orderedItems: orderedMembers,
     itemIds: memberIds,
     entranceAnimationActive,
     finishEntranceAnimation,
@@ -317,31 +303,28 @@ export function ListMemberGrid({
       >
         <div
           className={cn(
-            viewMode === "grid" ? "grid gap-2" : "flex flex-col gap-2",
+            viewMode === "grid"
+              ? "grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-2"
+              : "flex flex-col gap-2",
             activeMemberId && "pointer-events-none",
           )}
-          style={
-            viewMode === "grid"
-              ? { gridTemplateColumns: `repeat(auto-fill, minmax(${GRID_TILE_SIZE}px, 1fr))` }
-              : undefined
-          }
           aria-busy={isSaving}
         >
-          {orderedMembers.map((member, index) => (
+          {members.map((member, index) => (
             <SortableListMember
               key={member.id}
               member={member}
               index={index}
               viewMode={viewMode}
               entranceAnimationActive={entranceAnimationActive}
-              sortingDisabled={sortingDisabled || orderedMembers.length < 2}
+              sortingDisabled={sortingDisabled || isSaving || members.length < 2}
               removingMemberIds={removingMemberIds}
               selected={selectedIds.has(member.id)}
               dropIndicator={member.id === dropIndicator?.id ? dropIndicator.placement : undefined}
               onToggleSelection={() => onToggleSelection(member.id, !selectedIds.has(member.id))}
               onRemove={onRemove}
               onEntranceAnimationEnd={
-                index === orderedMembers.length - 1 ? finishEntranceAnimation : undefined
+                index === members.length - 1 ? finishEntranceAnimation : undefined
               }
             />
           ))}

@@ -10,7 +10,6 @@ import {
 } from "@tanstack/react-query";
 import type { InfiniteData, QueryKey } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "@/components/ui/toast";
 import {
   ListOrderChangedError,
@@ -32,7 +31,6 @@ type ListsPage = NonNullable<Awaited<ReturnType<typeof getLists>>>;
 type ListRecord = ListsPage["items"][number];
 type ListMembersPage = NonNullable<Awaited<ReturnType<typeof getListMembers>>>;
 type ListMember = ListMembersPage["items"][number];
-const RESOLVED_MOVE_PROMISE = Promise.resolve();
 
 interface OffsetPage<T> {
   readonly items: T[];
@@ -215,49 +213,42 @@ export function useListMutations({
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (listId: string) => deleteLists([listId]),
-    onSuccess: async (_data, listId) => {
-      queryClient.removeQueries({ queryKey: ["lists", "detail", listId] });
-      toast.add({ type: "success", title: "List deleted" });
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["lists", "overview"], exact: true }),
-        queryClient.invalidateQueries({ queryKey: ["lists", "target-options"] }),
-      ]);
-    },
-    onError: () => toast.add({ type: "error", title: "Failed to delete list" }),
-  });
-
-  const deleteListsMutation = useMutation({
-    mutationFn: (listIds: ReadonlySet<string>) => deleteLists([...listIds]),
+    mutationFn: deleteLists,
     onSuccess: async (_data, listIds) => {
       for (const listId of listIds) {
         queryClient.removeQueries({ queryKey: ["lists", "detail", listId] });
       }
       toast.add({
         type: "success",
-        title: `${listIds.size} ${listIds.size === 1 ? "List" : "Lists"} deleted`,
+        title:
+          listIds.length === 1
+            ? "List deleted"
+            : `${listIds.length.toLocaleString()} Lists deleted`,
       });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["lists", "overview"], exact: true }),
         queryClient.invalidateQueries({ queryKey: ["lists", "target-options"] }),
       ]);
     },
-    onError: () => toast.add({ type: "error", title: "Failed to delete Lists" }),
+    onError: (_error, listIds) =>
+      toast.add({
+        type: "error",
+        title: `Failed to delete ${listIds.length === 1 ? "List" : "Lists"}`,
+      }),
   });
 
   return {
     createList: createMutation.mutateAsync,
     updateList: updateMutation.mutateAsync,
-    deleteList: deleteMutation.mutateAsync,
-    deleteLists: deleteListsMutation.mutateAsync,
+    deleteList: (listId: string) => deleteMutation.mutateAsync([listId]),
+    deleteLists: (listIds: ReadonlySet<string>) => deleteMutation.mutateAsync([...listIds]),
     isCreating: createMutation.isPending,
     updatingListId: updateMutation.variables?.listId,
-    deletingListId: deleteMutation.variables,
-    isDeleting: deleteMutation.isPending || deleteListsMutation.isPending,
+    isDeleting: deleteMutation.isPending,
   } as const;
 }
 
-function useMoveQueue<T extends { readonly id: string; readonly position: number }>({
+function useMoveMutation<T extends { readonly id: string; readonly position: number }>({
   queryKey,
   persist,
   additionalInvalidation,
@@ -272,86 +263,49 @@ function useMoveQueue<T extends { readonly id: string; readonly position: number
   };
 }) {
   const queryClient = useQueryClient();
-  const queue = useRef(RESOLVED_MOVE_PROMISE);
-  const generation = useRef(0);
-  const [pendingCount, setPendingCount] = useState(0);
-
-  const move = useCallback(
-    async (intent: ListOrderInput) => {
+  const mutation = useMutation({
+    mutationFn: persist,
+    onMutate: async (intent) => {
       await queryClient.cancelQueries({ queryKey, exact: true });
       const current = queryClient.getQueryData<OffsetInfiniteData<T>>(queryKey);
-      const previous = current;
       const optimistic = current ? moveInfiniteItems(current, intent) : null;
       if (!optimistic) {
-        generation.current += 1;
-        await queryClient.refetchQueries({ queryKey, exact: true });
-        toast.add({ type: "error", title: "The List changed. Try again." });
         throw new ListOrderChangedError("The List changed");
       }
 
       queryClient.setQueryData(queryKey, optimistic);
-      const moveGeneration = generation.current;
-      setPendingCount((count) => count + 1);
-      const previousRequest = queue.current;
-      const request = (async () => {
-        await previousRequest;
-        if (moveGeneration !== generation.current) return;
-        try {
-          const result = await persist(intent);
-          if (moveGeneration !== generation.current) return;
-          queryClient.setQueryData<OffsetInfiniteData<T>>(queryKey, (latest) =>
-            latest ? applyMovedPositions(latest, result.moved) : latest,
-          );
-          await Promise.all([
-            queryClient.invalidateQueries({ queryKey, exact: true, refetchType: "none" }),
-            queryClient.invalidateQueries(additionalInvalidation),
-          ]);
-        } catch (error) {
-          if (moveGeneration === generation.current) {
-            generation.current += 1;
-            queryClient.setQueryData(queryKey, previous);
-            await queryClient.refetchQueries({ queryKey, exact: true });
-            toast.add({
-              type: "error",
-              title:
-                error instanceof ListOrderChangedError
-                  ? "The List changed. Try again."
-                  : "Failed to save List order",
-            });
-          }
-          throw error;
-        }
-      })();
-      queue.current = (async () => {
-        try {
-          await request;
-        } catch {
-          // The request already restored and refetched the cache.
-        }
-      })();
-      try {
-        return await request;
-      } finally {
-        setPendingCount((count) => Math.max(0, count - 1));
-      }
+      return { previous: current };
     },
-    [additionalInvalidation, persist, queryClient, queryKey],
-  );
+    onSuccess: async (result) => {
+      queryClient.setQueryData<OffsetInfiniteData<T>>(queryKey, (latest) =>
+        latest ? applyMovedPositions(latest, result.moved) : latest,
+      );
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey, exact: true, refetchType: "none" }),
+        queryClient.invalidateQueries(additionalInvalidation),
+      ]);
+    },
+    onError: async (error, _intent, context) => {
+      if (context) queryClient.setQueryData(queryKey, context.previous);
+      await queryClient.refetchQueries({ queryKey, exact: true });
+      toast.add({
+        type: "error",
+        title:
+          error instanceof ListOrderChangedError
+            ? "The List changed. Try again."
+            : "Failed to save List order",
+      });
+    },
+  });
 
-  return { move, isPending: pendingCount > 0 } as const;
+  return { move: mutation.mutateAsync, isPending: mutation.isPending } as const;
 }
 
-export function useMoveListsQueue() {
-  const queryKey = useMemo(() => ["lists", "overview"] as const, []);
-  const additionalInvalidation = useMemo(
-    () => ({ queryKey: ["lists", "target-options"] as const }),
-    [],
-  );
-
-  return useMoveQueue<ListRecord>({
-    queryKey,
+export function useMoveListsMutation() {
+  return useMoveMutation<ListRecord>({
+    queryKey: ["lists", "overview"],
     persist: moveLists,
-    additionalInvalidation,
+    additionalInvalidation: { queryKey: ["lists", "target-options"] },
   });
 }
 
@@ -383,7 +337,7 @@ export function useAddTargetsToListsMutation() {
       const listLabel = `${listCount} ${listCount === 1 ? "List" : "Lists"}`;
       const possibleAdditionCount = targetCount * listCount;
       const alreadyAddedCount = possibleAdditionCount - data.addedCount;
-      let title = `${targetLabel} added to the end of ${listLabel}`;
+      let title = `${targetLabel} added to ${listLabel}`;
       if (data.addedCount === 0) {
         title = `${targetLabel} ${targetCount === 1 ? "is" : "are"} already in ${listCount === 1 ? "that List" : "those Lists"}`;
       } else if (alreadyAddedCount > 0) {
@@ -464,20 +418,10 @@ export function useRemoveListMembersMutation(listId: string) {
   });
 }
 
-export function useMoveListMembersQueue(listId: string) {
-  const queryKey = useMemo(() => ["lists", "detail", listId, "members"] as const, [listId]);
-  const additionalInvalidation = useMemo(
-    () => ({ queryKey: ["lists", "overview"] as const, exact: true }),
-    [],
-  );
-  const persist = useCallback(
-    (intent: ListOrderInput) => moveListMembers(listId, intent),
-    [listId],
-  );
-
-  return useMoveQueue<ListMember>({
-    queryKey,
-    persist,
-    additionalInvalidation,
+export function useMoveListMembersMutation(listId: string) {
+  return useMoveMutation<ListMember>({
+    queryKey: ["lists", "detail", listId, "members"],
+    persist: (intent) => moveListMembers(listId, intent),
+    additionalInvalidation: { queryKey: ["lists", "overview"], exact: true },
   });
 }

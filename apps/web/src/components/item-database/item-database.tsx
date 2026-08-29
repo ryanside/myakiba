@@ -1,6 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Link, getRouteApi, useNavigate } from "@tanstack/react-router";
-import { GridViewIcon, LeftToRightListDashIcon, PackageIcon } from "@hugeicons/core-free-icons";
+import { PackageIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { ItemDatabaseItem } from "@myakiba/contracts/search/schema";
 import { ITEM_CATEGORY_GROUPS } from "@myakiba/contracts/shared/constants";
@@ -10,7 +10,8 @@ import { DataTablePagination } from "@/components/data-table/data-table-paginati
 import { DebouncedInput } from "@/components/debounced-input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { ViewToggle } from "@/components/ui/view-toggle";
+import type { GridListViewMode } from "@/components/ui/view-toggle";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { getCategoryColor } from "@/lib/category-colors";
@@ -20,7 +21,6 @@ import { getItemDatabaseItems } from "@/queries/search";
 
 const itemsRoute = getRouteApi("/(app)/items");
 const VIEW_MODE_KEY = "item-database:viewMode";
-const GRID_TILE_SIZE = 180;
 const MAX_STAGGER_INDEX = 20;
 const STAGGER_DELAY_MS = 30;
 const CATEGORY_GROUP_BY_CATEGORY = Object.fromEntries(
@@ -28,35 +28,6 @@ const CATEGORY_GROUP_BY_CATEGORY = Object.fromEntries(
     categories.map((category) => [category, group]),
   ),
 ) as Readonly<Record<Category, keyof typeof ITEM_CATEGORY_GROUPS>>;
-
-type ItemDatabaseViewMode = "grid" | "list";
-
-function ItemDatabaseViewToggle({
-  value,
-  onValueChange,
-}: {
-  readonly value: ItemDatabaseViewMode;
-  readonly onValueChange: (value: ItemDatabaseViewMode) => void;
-}): React.JSX.Element {
-  return (
-    <ToggleGroup
-      value={[value]}
-      onValueChange={(newValue) => {
-        if (newValue.length > 0) {
-          onValueChange(newValue[0] as ItemDatabaseViewMode);
-        }
-      }}
-      variant="outline"
-    >
-      <ToggleGroupItem value="grid" aria-label="Grid view">
-        <HugeiconsIcon icon={GridViewIcon} strokeWidth={2} />
-      </ToggleGroupItem>
-      <ToggleGroupItem value="list" aria-label="List view">
-        <HugeiconsIcon icon={LeftToRightListDashIcon} strokeWidth={2} />
-      </ToggleGroupItem>
-    </ToggleGroup>
-  );
-}
 
 function ItemImage({ item }: { readonly item: ItemDatabaseItem }): React.JSX.Element {
   if (item.image) {
@@ -111,10 +82,7 @@ function ItemGrid({
   readonly dateFormat: DateFormat;
 }): React.JSX.Element {
   return (
-    <div
-      className="grid gap-2"
-      style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${GRID_TILE_SIZE}px, 1fr))` }}
-    >
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-2">
       {items.map((item, index) => {
         const { category, categoryGroup, categoryColor, releaseDate, releasePrice, staggerDelay } =
           getItemDisplayDetails(item, index, currency, dateFormat);
@@ -202,7 +170,7 @@ function ItemList({
   );
 }
 
-function ItemDatabaseSkeleton({ viewMode }: { readonly viewMode: ItemDatabaseViewMode }) {
+function ItemDatabaseSkeleton({ viewMode }: { readonly viewMode: GridListViewMode }) {
   if (viewMode === "list") {
     return (
       <div className="flex flex-col gap-2">
@@ -229,10 +197,7 @@ function ItemDatabaseSkeleton({ viewMode }: { readonly viewMode: ItemDatabaseVie
   }
 
   return (
-    <div
-      className="grid gap-2"
-      style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${GRID_TILE_SIZE}px, 1fr))` }}
-    >
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-2">
       {Array.from({ length: 15 }).map((_, index) => (
         <Skeleton key={index} className="aspect-square w-full rounded-lg" />
       ))}
@@ -244,7 +209,7 @@ export function ItemDatabase(): React.JSX.Element {
   const search = itemsRoute.useSearch();
   const navigate = useNavigate();
   const { currency, dateFormat } = useUserPreferences();
-  const [viewMode, setViewMode] = useLocalStorage<ItemDatabaseViewMode>(VIEW_MODE_KEY, "grid");
+  const [viewMode, setViewMode] = useLocalStorage<GridListViewMode>(VIEW_MODE_KEY, "grid");
   const { data, isPending, isError, error } = useQuery({
     queryKey: ["item-database-items", search] as const,
     queryFn: () => getItemDatabaseItems(search),
@@ -311,7 +276,7 @@ export function ItemDatabase(): React.JSX.Element {
           className="max-w-xs"
         />
         <div className="ml-auto">
-          <ItemDatabaseViewToggle value={viewMode} onValueChange={setViewMode} />
+          <ViewToggle modes={["grid", "list"]} value={viewMode} onValueChange={setViewMode} />
         </div>
       </div>
 
