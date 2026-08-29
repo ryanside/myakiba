@@ -32,7 +32,7 @@
   },
   "devDependencies": {
     "@types/bun": "catalog:",
-    "tsdown": "^0.20.3",
+    "tsdown": "^0.22.14",
     "typescript": "catalog:"
   }
 }

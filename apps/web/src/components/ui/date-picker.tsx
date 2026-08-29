@@ -70,7 +70,7 @@ export function DatePicker({
           selected={dateValue}
           onSelect={handleSelect}
           captionLayout="dropdown"
-          initialFocus
+          autoFocus
         />
       </PopoverContent>
     </Popover>
