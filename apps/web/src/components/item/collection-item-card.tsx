@@ -219,7 +219,9 @@ export function CollectionItemCard({
                   icon={isOrderActionPending ? Loading03Icon : MoveIcon}
                   className={cn("size-3.5", isOrderActionPending && "animate-spin")}
                 />
-                <span className="sr-only">Assign order</span>
+                <span className="sr-only">
+                  {collectionItem.orderId ? "Move item" : "Assign order"}
+                </span>
               </Button>
             }
             selectedItems={{
@@ -231,7 +233,7 @@ export function CollectionItemCard({
             onMoveToExisting={onMoveToExisting}
             onMoveToNew={onMoveToNew}
             currency={currency}
-            intent="add"
+            intent={collectionItem.orderId ? "move" : "add"}
           />
           <ConfirmDialog
             renderTrigger={
