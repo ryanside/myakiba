@@ -23,7 +23,6 @@ import { finalizeCollectionSync } from "../../lib/collection/utils";
 import { finalizeOrderSync } from "../../lib/order/utils";
 import { finalizeCsvSync } from "../../lib/csv/utils";
 import { processSyncJob } from "../../lib/process-sync-job";
-import { MOCK_SCRAPE } from "../../lib/mock-scrape";
 import { env } from "@myakiba/env/worker";
 import { redis } from "@myakiba/redis/client";
 import { createDefaultJobContext } from "../../lib/evlog";
@@ -77,7 +76,7 @@ async function executeSyncJob({
     order: { id: orderId, shop: null, status: null },
   });
 
-  if (!MOCK_SCRAPE) deferTerminalSessionUpdates(jobId, syncSessionId);
+  deferTerminalSessionUpdates(jobId, syncSessionId);
 
   try {
     const { data: result, error } = await tryCatch(
@@ -105,7 +104,7 @@ async function executeSyncJob({
     }
 
     let completedResult = result;
-    if (result.persistence === null && !MOCK_SCRAPE) {
+    if (result.persistence === null) {
       const state = createJobStatusState({
         jobId,
         totalItems: scrapeRowCount,

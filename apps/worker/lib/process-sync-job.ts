@@ -5,16 +5,11 @@ import {
   publishJobStatus,
   updateSyncSessionCounts,
 } from "./utils";
-import { MOCK_SCRAPE, runMockSyncJob } from "./mock-scrape";
 import type { ProcessSyncJobParams, ProcessSyncJobResult } from "./types";
 import { sessionStatusToPhase, sessionStatusToTerminalState } from "@myakiba/contracts/sync/schema";
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 
 export async function processSyncJob(params: ProcessSyncJobParams): Promise<ProcessSyncJobResult> {
-  if (MOCK_SCRAPE) {
-    return runMockSyncJob(params);
-  }
-
   const { itemIds, scrapeRowCount, existingCount, context, finalize } = params;
   const { redis, jobId, syncSessionId, log } = context;
 
