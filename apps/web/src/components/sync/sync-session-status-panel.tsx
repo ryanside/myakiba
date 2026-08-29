@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import type { SyncSessionRow } from "@myakiba/contracts/sync/types";
-import { DotmRandom } from "@/components/ui/dotm-random";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSyncJobStatusQuery } from "@/hooks/use-sync-job-status-query";
@@ -69,7 +68,10 @@ export function SyncSessionStatusPanel({
     <output className="block space-y-2" aria-live={isLive ? "polite" : "off"}>
       <div className="flex items-center gap-2">
         {isLive ? (
-          <DotmRandom size={12} dotSize={2} ariaLabel="Sync in progress" className="shrink-0" />
+          <span
+            aria-hidden
+            className="size-2 shrink-0 rounded-full bg-primary motion-safe:animate-pulse"
+          />
         ) : (
           <span aria-hidden className="size-2 shrink-0 rounded-full bg-muted-foreground/50" />
         )}

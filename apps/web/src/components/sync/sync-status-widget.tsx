@@ -19,7 +19,6 @@ import { resolveSyncMessage, SESSION_STATUS_CONFIG, SYNC_TYPE_CONFIG } from "@/l
 import { formatRelativeTimeToNow } from "@/lib/date-display";
 import { ACTIVE_SYNC_SESSION_STATUS_SET } from "@myakiba/contracts/sync/constants";
 import { useSyncJobStatusQuery } from "@/hooks/use-sync-job-status-query";
-import { DotmRandom } from "@/components/ui/dotm-random";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SparkleTrail } from "@/components/ui/sparkle-trail";
 
@@ -87,11 +86,9 @@ export default function SyncStatusWidget() {
                 >
                   {hasActive && (
                     <>
-                      <DotmRandom
-                        size={12}
-                        dotSize={2}
-                        ariaLabel="Sync in progress"
-                        className="shrink-0"
+                      <span
+                        aria-hidden
+                        className="size-2 shrink-0 rounded-full bg-primary motion-safe:animate-pulse"
                       />
                       <span className="shimmer text-muted-foreground text-xs font-medium">
                         Syncing...
