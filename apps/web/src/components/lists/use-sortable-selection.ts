@@ -8,7 +8,7 @@ import type {
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import type { ListOrderInput } from "@myakiba/contracts/lists/schema";
-import { startTransition, useCallback, useMemo, useOptimistic, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { moveSortableSelection } from "@/components/lists/list-order";
 import { toast } from "@/components/ui/toast";
 
@@ -42,7 +42,6 @@ export function useSortableSelection<T extends SortableRecord>({
   readonly onMove: (intent: ListOrderInput) => Promise<unknown>;
   readonly onClearSelection: () => void;
 }) {
-  const [orderedItems, setOrderedItems] = useOptimistic(items);
   const [entranceAnimationActive, setEntranceAnimationActive] = useState(true);
   const [dndEpoch, setDndEpoch] = useState(0);
   const [activeId, setActiveId] = useState<string>();
@@ -53,11 +52,8 @@ export function useSortableSelection<T extends SortableRecord>({
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
-  const itemIds = useMemo(() => orderedItems.map((item) => item.id), [orderedItems]);
-  const titleById = useMemo(
-    () => new Map(orderedItems.map((item) => [item.id, item.title])),
-    [orderedItems],
-  );
+  const itemIds = useMemo(() => items.map((item) => item.id), [items]);
+  const titleById = useMemo(() => new Map(items.map((item) => [item.id, item.title])), [items]);
   const draggingSelection = activeId ? selectedIds.has(activeId) : false;
   const getDragLabel = useCallback(
     (id: string | number) => {
@@ -91,15 +87,15 @@ export function useSortableSelection<T extends SortableRecord>({
       onDragStart: ({ active }) => `Picked up ${getDragLabel(active.id)}.`,
       onDragOver: ({ active, over }) =>
         over
-          ? `${getDragLabel(active.id)} is over position ${orderedItems.findIndex((item) => item.id === String(over.id)) + 1} of ${totalCount}.`
+          ? `${getDragLabel(active.id)} is over position ${items.findIndex((item) => item.id === String(over.id)) + 1} of ${totalCount}.`
           : `${getDragLabel(active.id)} is no longer over a drop target.`,
       onDragEnd: ({ active, over }) =>
         over
-          ? `Dropped ${getDragLabel(active.id)} at position ${orderedItems.findIndex((item) => item.id === String(over.id)) + 1} of ${totalCount}.`
+          ? `Dropped ${getDragLabel(active.id)} at position ${items.findIndex((item) => item.id === String(over.id)) + 1} of ${totalCount}.`
           : `Movement cancelled for ${getDragLabel(active.id)}.`,
       onDragCancel: ({ active }) => `Movement cancelled for ${getDragLabel(active.id)}.`,
     }),
-    [getDragLabel, orderedItems, totalCount],
+    [getDragLabel, items, totalCount],
   );
   const screenReaderInstructions = useMemo<ScreenReaderInstructions>(
     () => ({ draggable: screenReaderInstruction }),
@@ -151,27 +147,22 @@ export function useSortableSelection<T extends SortableRecord>({
   );
 
   const handleDragEnd = useCallback(
-    ({ active, over }: DragEndEvent): void => {
+    async ({ active, over }: DragEndEvent): Promise<void> => {
       keyboardDrag.current = false;
       setActiveId(undefined);
       setOverId(undefined);
       if (!over) return;
 
-      const move = moveSortableSelection(
-        orderedItems,
-        String(active.id),
-        String(over.id),
-        selectedIds,
-      );
+      const move = moveSortableSelection(items, String(active.id), String(over.id), selectedIds);
       if (!move) return;
       onClearSelection();
-
-      startTransition(async () => {
-        setOrderedItems(move.items);
-        await onMove(move.intent).catch(() => null);
-      });
+      try {
+        await onMove(move.intent);
+      } catch {
+        // The mutation restores the saved order and reports the error.
+      }
     },
-    [onClearSelection, onMove, orderedItems, selectedIds, setOrderedItems],
+    [items, onClearSelection, onMove, selectedIds],
   );
 
   const handleDragCancel = useCallback((): void => {
@@ -182,7 +173,6 @@ export function useSortableSelection<T extends SortableRecord>({
   const finishEntranceAnimation = useCallback(() => setEntranceAnimationActive(false), []);
 
   return {
-    orderedItems,
     itemIds,
     entranceAnimationActive,
     finishEntranceAnimation,

@@ -2,7 +2,7 @@ import { Delete02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { ReactNode } from "react";
 import type { getListMembers } from "@/queries/lists";
-import type { ListViewMode } from "@/components/lists/list-view-toggle";
+import type { GridListViewMode } from "@/components/ui/view-toggle";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ItemControl, ItemControls, ItemControlsSelection } from "@/components/ui/item-controls";
 import { Spinner } from "@/components/ui/spinner";
@@ -23,7 +23,7 @@ export function ListMemberControls({
   children,
 }: {
   readonly member: ListMember;
-  readonly viewMode: ListViewMode;
+  readonly viewMode: GridListViewMode;
   readonly selected: boolean;
   readonly active: boolean;
   readonly removeDisabled: boolean;

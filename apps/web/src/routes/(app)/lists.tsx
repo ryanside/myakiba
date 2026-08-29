@@ -1,9 +1,4 @@
-import {
-  Add01Icon,
-  DragDropVerticalIcon,
-  Folder01Icon,
-  InformationCircleIcon,
-} from "@hugeicons/core-free-icons";
+import { Add01Icon, DragDropVerticalIcon, Folder01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { closestCenter, DndContext, DragOverlay } from "@dnd-kit/core";
 import { snapCenterToCursor } from "@dnd-kit/modifiers";
@@ -22,15 +17,14 @@ import { InfiniteListStatus } from "@/components/lists/infinite-list-status";
 import { ListControls } from "@/components/lists/list-controls";
 import { ListFormDialog } from "@/components/lists/list-form-dialog";
 import { ListsActionBar } from "@/components/lists/lists-action-bar";
-import { ListViewToggle } from "@/components/lists/list-view-toggle";
-import type { ListViewMode } from "@/components/lists/list-view-toggle";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { ItemControl } from "@/components/ui/item-controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useListMutations, useListsQuery, useMoveListsQueue } from "@/hooks/use-lists";
+import { ViewToggle } from "@/components/ui/view-toggle";
+import type { GridListViewMode } from "@/components/ui/view-toggle";
+import { useListMutations, useListsQuery, useMoveListsMutation } from "@/hooks/use-lists";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { cn } from "@/lib/utils";
 import { useSelection } from "@/hooks/use-selection";
@@ -63,7 +57,7 @@ function SortableList({
 }: {
   readonly list: ListRecord;
   readonly index: number;
-  readonly viewMode: ListViewMode;
+  readonly viewMode: GridListViewMode;
   readonly entranceAnimationActive: boolean;
   readonly sortingDisabled: boolean;
   readonly selected: boolean;
@@ -206,7 +200,7 @@ function SortableLists({
   onToggleSelection,
 }: {
   readonly lists: ListRecord[];
-  readonly viewMode: ListViewMode;
+  readonly viewMode: GridListViewMode;
   readonly totalCount: number;
   readonly isSaving: boolean;
   readonly sortingDisabled: boolean;
@@ -221,7 +215,6 @@ function SortableLists({
   readonly onToggleSelection: (listId: string, selected: boolean) => void;
 }): React.JSX.Element {
   const {
-    orderedItems: orderedLists,
     itemIds: listIds,
     entranceAnimationActive,
     finishEntranceAnimation,
@@ -275,21 +268,21 @@ function SortableLists({
           )}
           aria-busy={isSaving}
         >
-          {orderedLists.map((list, index) => (
+          {lists.map((list, index) => (
             <SortableList
               key={list.id}
               list={list}
               index={index}
               viewMode={viewMode}
               entranceAnimationActive={entranceAnimationActive}
-              sortingDisabled={sortingDisabled || orderedLists.length < 2}
+              sortingDisabled={sortingDisabled || isSaving || lists.length < 2}
               selected={selectedIds.has(list.id)}
               dropIndicator={list.id === dropIndicator?.id ? dropIndicator.placement : undefined}
               onToggleSelection={() => onToggleSelection(list.id, !selectedIds.has(list.id))}
               onUpdate={onUpdate}
               onDelete={onDelete}
               onEntranceAnimationEnd={
-                index === orderedLists.length - 1 ? finishEntranceAnimation : undefined
+                index === lists.length - 1 ? finishEntranceAnimation : undefined
               }
             />
           ))}
@@ -328,9 +321,9 @@ function RouteComponent(): React.JSX.Element {
   const lists = data?.pages.flatMap((page) => page.items) ?? [];
   const totalCount = data?.pages[0]?.totalCount ?? 0;
   const { createList, updateList, deleteList, deleteLists, isDeleting } = useListMutations();
-  const moveQueue = useMoveListsQueue();
-  const handleMove = moveQueue.move;
-  const [viewMode, setViewMode] = useLocalStorage<ListViewMode>(VIEW_MODE_KEY, "grid");
+  const moveMutation = useMoveListsMutation();
+  const handleMove = moveMutation.move;
+  const [viewMode, setViewMode] = useLocalStorage<GridListViewMode>(VIEW_MODE_KEY, "grid");
   const { selectedIds, setSelection } = useSelection();
   const handleDeleteList = useCallback(
     async (listId: string): Promise<void> => {
@@ -346,26 +339,9 @@ function RouteComponent(): React.JSX.Element {
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <div className="flex items-center justify-between gap-4">
+        <h1 className="font-heading text-2xl font-medium tracking-tight">Lists</h1>
         <div className="flex items-center gap-2">
-          <h1 className="font-heading text-2xl font-medium tracking-tight">Lists</h1>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button variant="ghost" size="icon-xs" aria-label="About Lists" className="mt-0.75">
-                  <HugeiconsIcon icon={InformationCircleIcon} className="size-4" />
-                </Button>
-              }
-            />
-            <TooltipContent side="right" sideOffset={12}>
-              <div className="flex max-w-xs flex-col gap-1">
-                <h3 className="text-sm font-medium">dev note:</h3>
-                <p className="text-pretty">This is an early implementation of the Lists page.</p>
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        </div>
-        <div className="flex items-center gap-2">
-          <ListViewToggle value={viewMode} onValueChange={setViewMode} />
+          <ViewToggle modes={["grid", "list"]} value={viewMode} onValueChange={setViewMode} />
           <ListFormDialog
             renderTrigger={
               <Button variant="default">
@@ -435,7 +411,7 @@ function RouteComponent(): React.JSX.Element {
           lists={lists}
           viewMode={viewMode}
           totalCount={totalCount}
-          isSaving={moveQueue.isPending}
+          isSaving={moveMutation.isPending}
           sortingDisabled={isDeleting}
           hasNextPage={hasNextPage}
           isFetchingNextPage={isFetchingNextPage}
