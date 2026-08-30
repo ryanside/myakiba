@@ -2,7 +2,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Upload01Icon } from "@hugeicons/core-free-icons";
 import type { ReactNode } from "react";
-import { createContext, useContext } from "react";
+import { createContext, useContext, useMemo } from "react";
 import type { DropEvent, DropzoneOptions, FileRejection } from "react-dropzone";
 import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
@@ -69,12 +69,13 @@ export const Dropzone = ({
     },
     ...props,
   });
+  const contextValue = useMemo(
+    () => ({ src, accept, maxSize, minSize, maxFiles }),
+    [accept, maxFiles, maxSize, minSize, src],
+  );
 
   return (
-    <DropzoneContext.Provider
-      key={JSON.stringify(src)}
-      value={{ src, accept, maxSize, minSize, maxFiles }}
-    >
+    <DropzoneContext.Provider key={JSON.stringify(src)} value={contextValue}>
       <Button
         className={cn(
           "relative h-auto w-full flex-col overflow-hidden p-8",

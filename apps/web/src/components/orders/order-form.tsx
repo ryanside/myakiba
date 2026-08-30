@@ -197,19 +197,17 @@ function OrderFormContent(
         const { callbackFn, orderData: editOrderData } = props as DeferredEditOrderFormProps;
         const transformedValue: EditedOrder = { orderId: editOrderData.orderId, ...base };
         await callbackFn(transformedValue, cascadeOptions);
-        close();
       } else if (type === "split") {
         const { callbackFn, collectionIds, orderIds, clearSelections } =
           props as DeferredSplitOrderFormProps;
         await callbackFn(base as NewOrder, cascadeOptions, collectionIds, orderIds);
         clearSelections?.();
-        close();
       } else {
         const { callbackFn, orderIds, clearSelections } = props as DeferredMergeOrderFormProps;
         await callbackFn(base as NewOrder, cascadeOptions, orderIds);
         clearSelections?.();
-        close();
       }
+      close();
     },
   });
 

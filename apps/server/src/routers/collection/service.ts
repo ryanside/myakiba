@@ -37,8 +37,8 @@ class CollectionService {
       eq(collection.userId, userId),
       eq(collection.status, "Owned"),
       shop ? inArray(collection.shop, shop) : undefined,
-      paidMin !== undefined ? gte(collection.price, paidMin) : undefined,
-      paidMax !== undefined ? lte(collection.price, paidMax) : undefined,
+      paidMin === undefined ? undefined : gte(collection.price, paidMin),
+      paidMax === undefined ? undefined : lte(collection.price, paidMax),
       paymentDateStart ? gte(collection.paymentDate, paymentDateStart) : undefined,
       paymentDateEnd ? lte(collection.paymentDate, paymentDateEnd) : undefined,
       shippingDateStart ? gte(collection.shippingDate, shippingDateStart) : undefined,
@@ -52,8 +52,8 @@ class CollectionService {
       condition ? inArray(collection.condition, condition) : undefined,
       releaseDateStart ? gte(item_release.date, releaseDateStart) : undefined,
       releaseDateEnd ? lte(item_release.date, releaseDateEnd) : undefined,
-      releasePriceMin !== undefined ? gte(item_release.price, releasePriceMin) : undefined,
-      releasePriceMax !== undefined ? lte(item_release.price, releasePriceMax) : undefined,
+      releasePriceMin === undefined ? undefined : gte(item_release.price, releasePriceMin),
+      releasePriceMax === undefined ? undefined : lte(item_release.price, releasePriceMax),
       releaseCurrency && releaseCurrency.length > 0
         ? inArray(item_release.priceCurrency, releaseCurrency)
         : undefined,

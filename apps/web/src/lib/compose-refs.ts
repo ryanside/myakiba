@@ -38,10 +38,10 @@ function composeRefs<T>(...refs: PossibleRef<T>[]): React.RefCallback<T> {
       return () => {
         for (let i = 0; i < cleanups.length; i++) {
           const cleanup = cleanups[i];
-          if (cleanup !== undefined) {
-            cleanup();
-          } else {
+          if (cleanup === undefined) {
             setRef(refs[i], null);
+          } else {
+            cleanup();
           }
         }
       };
@@ -53,9 +53,11 @@ function composeRefs<T>(...refs: PossibleRef<T>[]): React.RefCallback<T> {
  * A custom hook that composes multiple refs
  * Accepts callback refs and RefObject(s)
  */
-function useComposedRefs<T>(...refs: PossibleRef<T>[]): React.RefCallback<T> {
-  // oxlint-disable-next-line exhaustive-deps
-  return React.useCallback(composeRefs(...refs), refs);
+function useComposedRefs<T>(
+  firstRef: PossibleRef<T>,
+  secondRef: PossibleRef<T>,
+): React.RefCallback<T> {
+  return React.useCallback((node) => composeRefs(firstRef, secondRef)(node), [firstRef, secondRef]);
 }
 
 export { composeRefs, useComposedRefs };

@@ -231,19 +231,21 @@ function EvilBrush({
   // Track the last committed range to avoid duplicate updates when small
   // mouse movements don't produce index changes (e.g., at boundaries)
   const lastCommittedRef = React.useRef<EvilBrushRange>(internalRange);
+  const [previousTotalPoints, setPreviousTotalPoints] = React.useState(totalPoints);
 
-  useEffect(() => {
+  if (previousTotalPoints !== totalPoints) {
+    setPreviousTotalPoints(totalPoints);
     if (!isControlled) {
-      setInternalRange((prev) => {
-        const adjusted = {
-          startIndex: Math.min(prev.startIndex, Math.max(0, totalPoints - 1)),
-          endIndex: Math.min(prev.endIndex, Math.max(0, totalPoints - 1)),
-        };
-        lastCommittedRef.current = adjusted;
-        return adjusted;
+      setInternalRange({
+        startIndex: Math.min(internalRange.startIndex, Math.max(0, totalPoints - 1)),
+        endIndex: Math.min(internalRange.endIndex, Math.max(0, totalPoints - 1)),
       });
     }
-  }, [totalPoints, isControlled]);
+  }
+
+  useEffect(() => {
+    lastCommittedRef.current = internalRange;
+  }, [internalRange]);
 
   // ── Clamping & committing ───────────────────────────────────────────────
 
@@ -331,8 +333,10 @@ function EvilBrush({
   // Drive all moving brush UI from the same springed edge values.
   const leftTarget = useMotionValue(leftPct);
   const rightTarget = useMotionValue(rightPct);
-  if (leftTarget.get() !== leftPct) leftTarget.set(leftPct);
-  if (rightTarget.get() !== rightPct) rightTarget.set(rightPct);
+  useEffect(() => {
+    leftTarget.set(leftPct);
+    rightTarget.set(rightPct);
+  }, [leftPct, leftTarget, rightPct, rightTarget]);
 
   const leftSpring = useSpring(leftTarget, SPRING_CONFIG);
   const rightSpring = useSpring(rightTarget, SPRING_CONFIG);

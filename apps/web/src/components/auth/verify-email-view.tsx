@@ -26,18 +26,20 @@ export function VerifyEmailView({ email }: VerifyEmailViewProps) {
         </div>
         {email ? (
           <p className="text-muted-foreground">
-            We've sent a verification link to <br />
+            We&apos;ve sent a verification link to <br />
             <span className="font-medium text-foreground">{email}</span>
           </p>
         ) : (
-          <p className="text-muted-foreground">We've sent a verification link to your email.</p>
+          <p className="text-muted-foreground">
+            We&apos;ve sent a verification link to your email.
+          </p>
         )}
         <p className="text-sm text-muted-foreground">
-          Click the link in the email to verify your account and start using myakiba. If you don't
-          see it, check your spam folder.
+          Click the link in the email to verify your account and start using myakiba. If you
+          don&apos;t see it, check your spam folder.
         </p>
         <p className="text-sm text-muted-foreground">
-          Didn't receive it? Sign in again to send a new link.
+          Didn&apos;t receive it? Sign in again to send a new link.
         </p>
       </div>
 

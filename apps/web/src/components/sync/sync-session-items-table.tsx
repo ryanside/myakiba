@@ -7,7 +7,7 @@ import { SYNC_SESSION_DETAIL_PAGE_SIZE } from "@myakiba/contracts/sync/constants
 import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
 import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { createSyncSessionItemSubColumns } from "@/components/sync/sync-session-item-sub-columns";
 
 export function SyncSessionItemsTable({
@@ -58,9 +58,8 @@ export function SyncSessionItemsTable({
     >
       <div className="w-full space-y-2.5">
         <DataGridContainer>
-          <ScrollArea>
+          <ScrollArea horizontal>
             <DataGridTable />
-            <ScrollBar orientation="horizontal" />
           </ScrollArea>
         </DataGridContainer>
         {totalItems > 0 ? (

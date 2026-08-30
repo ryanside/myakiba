@@ -39,6 +39,57 @@ import { ExpandedRowContent } from "@/components/analytics/section-expanded-row"
 const ROW_NUMBER_COLUMN_ID = "__rowNumber";
 const EXPAND_COLUMN_ID = "__expand";
 
+function createSectionColumns({
+  currency,
+  locale,
+  offset,
+}: {
+  readonly currency: ReturnType<typeof useUserPreferences>["currency"];
+  readonly locale: string;
+  readonly offset: number;
+}): ColumnDef<AnalyticsSectionRow>[] {
+  return [
+    {
+      id: EXPAND_COLUMN_ID,
+      header: "",
+      cell: ({ row }) => <ExpandButton row={row} />,
+      size: 32,
+    },
+    {
+      id: ROW_NUMBER_COLUMN_ID,
+      header: "#",
+      cell: ({ row }) => offset + row.index + 1,
+      size: 40,
+    },
+    {
+      id: "name",
+      accessorFn: (row) => row.name,
+      header: ({ column }) => <SortableHeader column={column} title="name" />,
+      cell: ({ getValue }) => getValue() ?? "—",
+      sortDescFirst: false,
+    },
+    {
+      id: "itemCount",
+      accessorFn: (row) => row.itemCount,
+      header: ({ column }) => <SortableHeader column={column} title="count" />,
+      cell: ({ getValue }) => getValue() ?? "—",
+      size: 80,
+      sortDescFirst: false,
+    },
+    {
+      id: "totalSpent",
+      accessorFn: (row) => row.totalSpent,
+      header: ({ column }) => <SortableHeader column={column} title="spent" />,
+      cell: ({ getValue }) => {
+        const value = getValue() as number | null;
+        return value === null ? "—" : formatCurrencyFromMinorUnits(value, currency, locale);
+      },
+      size: 100,
+      sortDescFirst: false,
+    },
+  ];
+}
+
 export function SectionTable({
   rows,
   sectionName,
@@ -91,46 +142,7 @@ export function SectionTable({
   );
 
   const columns = useMemo<ColumnDef<AnalyticsSectionRow>[]>(
-    () => [
-      {
-        id: EXPAND_COLUMN_ID,
-        header: "",
-        cell: ({ row }) => <ExpandButton row={row} />,
-        size: 32,
-      },
-      {
-        id: ROW_NUMBER_COLUMN_ID,
-        header: "#",
-        cell: ({ row }) => offset + row.index + 1,
-        size: 40,
-      },
-      {
-        id: "name",
-        accessorFn: (row) => row.name,
-        header: ({ column }) => <SortableHeader column={column} title="name" />,
-        cell: ({ getValue }) => getValue() ?? "—",
-        sortDescFirst: false,
-      },
-      {
-        id: "itemCount",
-        accessorFn: (row) => row.itemCount,
-        header: ({ column }) => <SortableHeader column={column} title="count" />,
-        cell: ({ getValue }) => getValue() ?? "—",
-        size: 80,
-        sortDescFirst: false,
-      },
-      {
-        id: "totalSpent",
-        accessorFn: (row) => row.totalSpent,
-        header: ({ column }) => <SortableHeader column={column} title="spent" />,
-        cell: ({ getValue }) => {
-          const value = getValue() as number | null;
-          return value === null ? "—" : formatCurrencyFromMinorUnits(value, currency, locale);
-        },
-        size: 100,
-        sortDescFirst: false,
-      },
-    ],
+    () => createSectionColumns({ currency, locale, offset }),
     [currency, locale, offset],
   );
 

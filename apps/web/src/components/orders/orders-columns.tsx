@@ -222,7 +222,7 @@ export function createOrdersColumns({
               "hidden absolute top-0 bottom-0 start-0 w-[2px] bg-primary",
               row.getIsSelected() && "block",
             )}
-          ></div>
+          />
           <Checkbox
             checked={row.getIsSelected()}
             onCheckedChange={(value) => row.toggleSelected(!!value)}

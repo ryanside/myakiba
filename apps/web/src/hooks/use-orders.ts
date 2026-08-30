@@ -122,10 +122,6 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
     [pendingCollectionItemIdList],
   );
   const filtersActiveRef = useRef(filtersActive);
-  const pendingOrderIdsRef = useRef<ReadonlySet<string>>(pendingOrderIds);
-  pendingOrderIdsRef.current = pendingOrderIds;
-  const pendingCollectionItemIdsRef = useRef<ReadonlySet<string>>(pendingCollectionItemIds);
-  pendingCollectionItemIdsRef.current = pendingCollectionItemIds;
 
   const editOrderMutation = useMutation({
     mutationFn: ({
@@ -527,12 +523,12 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
   ]);
 
   const isOrderPending = useCallback(
-    (orderId: string): boolean => pendingOrderIdsRef.current.has(orderId),
-    [],
+    (orderId: string): boolean => pendingOrderIds.has(orderId),
+    [pendingOrderIds],
   );
   const isCollectionItemPending = useCallback(
-    (collectionId: string): boolean => pendingCollectionItemIdsRef.current.has(collectionId),
-    [],
+    (collectionId: string): boolean => pendingCollectionItemIds.has(collectionId),
+    [pendingCollectionItemIds],
   );
 
   const handleMerge = useCallback(

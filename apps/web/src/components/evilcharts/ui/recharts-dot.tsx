@@ -15,60 +15,64 @@ type ChartDotProps = {
   maskId?: string;
 };
 
-const ChartDot = React.memo(function ChartDot({
-  cx,
-  cy,
-  dataKey,
-  chartId,
-  className,
-  fillOpacity = 1,
-  type = "default",
-  maskId,
-}: ChartDotProps) {
-  const dotId = React.useId().replaceAll(":", "");
-  const gradientUrl = `url(#${chartId}-colors-${String(dataKey)})`;
+const ChartDot = React.memo(
+  ({
+    cx,
+    cy,
+    dataKey,
+    chartId,
+    className,
+    fillOpacity = 1,
+    type = "default",
+    maskId,
+  }: ChartDotProps) => {
+    const dotId = React.useId().replaceAll(":", "");
+    const gradientUrl = `url(#${chartId}-colors-${String(dataKey)})`;
 
-  if (cx === undefined || cy === undefined) return null;
+    if (cx === undefined || cy === undefined) return null;
 
-  switch (type) {
-    case "border":
-      return (
-        <PrimaryBorderDot
-          cx={cx}
-          cy={cy}
-          dotId={dotId}
-          fillOpacity={fillOpacity}
-          gradientUrl={gradientUrl}
-          className={className}
-          maskId={maskId}
-        />
-      );
-    case "colored-border":
-      return (
-        <ColoredBorderDot
-          cx={cx}
-          cy={cy}
-          dotId={dotId}
-          fillOpacity={fillOpacity}
-          gradientUrl={gradientUrl}
-          className={className}
-          maskId={maskId}
-        />
-      );
-    default:
-      return (
-        <DefaultDot
-          cx={cx}
-          cy={cy}
-          dotId={dotId}
-          fillOpacity={fillOpacity}
-          gradientUrl={gradientUrl}
-          className={className}
-          maskId={maskId}
-        />
-      );
-  }
-});
+    switch (type) {
+      case "border":
+        return (
+          <PrimaryBorderDot
+            cx={cx}
+            cy={cy}
+            dotId={dotId}
+            fillOpacity={fillOpacity}
+            gradientUrl={gradientUrl}
+            className={className}
+            maskId={maskId}
+          />
+        );
+      case "colored-border":
+        return (
+          <ColoredBorderDot
+            cx={cx}
+            cy={cy}
+            dotId={dotId}
+            fillOpacity={fillOpacity}
+            gradientUrl={gradientUrl}
+            className={className}
+            maskId={maskId}
+          />
+        );
+      default:
+        return (
+          <DefaultDot
+            cx={cx}
+            cy={cy}
+            dotId={dotId}
+            fillOpacity={fillOpacity}
+            gradientUrl={gradientUrl}
+            className={className}
+            maskId={maskId}
+          />
+        );
+    }
+  },
+);
+
+ChartDot.displayName = "ChartDot";
 
 type DotVariantProps = {
   cx: number;

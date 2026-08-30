@@ -11,7 +11,7 @@
  *
  * Examples:
  * - `formatCurrencyFromMinorUnits(12345, "USD", "en-US")` -> `"$123.45"`
- * - `formatCurrencyFromMinorUnits(12345, "EUR", "de-DE")` -> `"123,45 €"`
+ * - `formatCurrencyFromMinorUnits(12345, "EUR", "de-DE")` -> `"123,45\u00A0€"`
  * - `formatCurrencyFromMinorUnits(5000, "JPY", "ja-JP")` -> `"￥50"`
  */
 export function formatCurrencyFromMinorUnits(

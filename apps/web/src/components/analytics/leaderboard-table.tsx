@@ -49,18 +49,16 @@ export function LeaderboardTable<TRow extends Record<string, CellValue>>({
         header: "#",
         cell: ({ row }) => row.index + 1,
       },
-      ...columns.map(
-        (column): ColumnDef<TRow, CellValue> => ({
-          id: column,
-          accessorFn: (row) => row[column] ?? null,
-          header: COLUMN_LABELS.get(column) ?? column,
-          cell: ({ getValue }) => {
-            const value = getValue();
+      ...columns.map((column): ColumnDef<TRow, CellValue> => ({
+        id: column,
+        accessorFn: (row) => row[column] ?? null,
+        header: COLUMN_LABELS.get(column) ?? column,
+        cell: ({ getValue }) => {
+          const value = getValue();
 
-            return (formatCell ? formatCell(column, value) : value) ?? "—";
-          },
-        }),
-      ),
+          return (formatCell ? formatCell(column, value) : value) ?? "—";
+        },
+      })),
     ],
     [columns, formatCell],
   );
@@ -83,7 +81,7 @@ export function LeaderboardTable<TRow extends Record<string, CellValue>>({
           navigate({ to: rowNav.to, search: rowNav.search });
         }
       }}
-      getRowClassName={(row) => (!getRowNavigation?.(row.original) ? "cursor-default" : undefined)}
+      getRowClassName={(row) => (getRowNavigation?.(row.original) ? undefined : "cursor-default")}
       getCellClassName={(_, columnId) =>
         columnId === ROW_NUMBER_COLUMN_ID ? "text-muted-foreground" : undefined
       }

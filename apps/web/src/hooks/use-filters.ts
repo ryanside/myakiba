@@ -1,4 +1,4 @@
-import { getRouteApi, useNavigate } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import type { RegisteredRouter, RouteIds } from "@tanstack/react-router";
 
 interface UseFiltersOptions {
@@ -11,9 +11,8 @@ export function useFilters<T extends RouteIds<RegisteredRouter["routeTree"]>>(
   routeId: T,
   options?: UseFiltersOptions,
 ) {
-  const routeApi = getRouteApi<T>(routeId);
   const navigate = useNavigate();
-  const filters = routeApi.useSearch();
+  const filters = useSearch({ from: routeId });
 
   const setFilters = (partialFilters: Partial<typeof filters>) => {
     const shouldResetOffset =

@@ -165,8 +165,7 @@ export function EvilAreaChart<
   // Brush is a <Brush /> child now (not props): pull it out of the children so
   // it never reaches the Recharts tree, and drive the footer from its props.
   const brush = useMemo(() => {
-    // Pull the <Brush> element out of the children (config-only, never rendered
-    // into the Recharts tree); toArray also assigns stable keys to the rest.
+    // eslint-disable-next-line react/no-react-children
     const parts = Children.toArray(children);
     const brushEl = parts.find((child) => isValidElement(child) && child.type === Brush);
     const bp = (isValidElement(brushEl) ? brushEl.props : {}) as BrushProps;
@@ -575,8 +574,10 @@ const resolveDots = (
   let dot: AreaDotProp = false;
   let activeDot: AreaActiveDotProp = false;
 
-  Children.forEach(children, (child) => {
-    if (!isValidElement(child)) return;
+  // eslint-disable-next-line react/no-react-children
+  const dotChildren = Children.toArray(children);
+  for (const child of dotChildren) {
+    if (!isValidElement(child)) continue;
 
     if (child.type === Dot) {
       const { variant } = (child as ReactElement<DotProps>).props;
@@ -597,7 +598,7 @@ const resolveDots = (
         <ChartDot type={variant} dataKey={dataKey} chartId={id} fillOpacity={dotOpacity} />
       );
     }
-  });
+  }
 
   return { dot, activeDot };
 };

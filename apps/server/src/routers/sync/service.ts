@@ -235,10 +235,8 @@ class SyncService {
     await db.transaction(async (tx) => {
       if (orderItems && orderItems.length > 0) {
         await tx.insert(orderTable).values(orderItems);
-        await tx.insert(collectionTable).values(collectionItems);
-      } else {
-        await tx.insert(collectionTable).values(collectionItems);
       }
+      await tx.insert(collectionTable).values(collectionItems);
     });
   }
 

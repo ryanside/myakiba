@@ -120,7 +120,7 @@ export function CurrentImportCard({
         </div>
       ) : null}
 
-      {current.kind !== "active" ? (
+      {current.kind === "active" ? null : (
         <dl
           className={`grid gap-x-4 gap-y-3 ${
             currentImport.failedCollectionItems > 0 ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2"
@@ -147,7 +147,7 @@ export function CurrentImportCard({
             </div>
           ) : null}
         </dl>
-      ) : null}
+      )}
 
       {current.kind !== "active" && failureReasons.length > 0 ? (
         <div className="space-y-1">

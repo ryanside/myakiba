@@ -52,7 +52,7 @@ export function AverageCollectionItemCostToDate({
         <EvilAreaChart.YAxis
           tickFormatter={(value) => formatCurrencyFromMinorUnits(Number(value), currency, locale)}
         />
-        {!isLoading ? (
+        {isLoading ? null : (
           <ChartTooltip
             content={
               <ChartTooltipContent
@@ -62,7 +62,7 @@ export function AverageCollectionItemCostToDate({
               />
             }
           />
-        ) : null}
+        )}
         <EvilAreaChart.Area dataKey="collectionItems" variant="gradient">
           {data.length <= EXPENSE_CHART_DOT_MAX_POINTS ? (
             <EvilAreaChart.Dot variant="border" />

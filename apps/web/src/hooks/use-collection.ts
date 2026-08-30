@@ -93,8 +93,6 @@ export function useCollectionOrderMutations() {
     () => new Set(pendingCollectionIdList),
     [pendingCollectionIdList],
   );
-  const pendingCollectionIdsRef = useRef<ReadonlySet<string>>(pendingCollectionIds);
-  pendingCollectionIdsRef.current = pendingCollectionIds;
 
   const moveItemsMutation = useMutation({
     mutationFn: ({
@@ -213,8 +211,8 @@ export function useCollectionOrderMutations() {
   );
 
   const isCollectionOrderPending = useCallback(
-    (collectionId: string): boolean => pendingCollectionIdsRef.current.has(collectionId),
-    [],
+    (collectionId: string): boolean => pendingCollectionIds.has(collectionId),
+    [pendingCollectionIds],
   );
 
   return {
@@ -241,8 +239,6 @@ export function useCollectionMutations(options?: { readonly filters?: Collection
     [pendingCollectionIdList],
   );
   const filtersActiveRef = useRef(filtersActive);
-  const pendingCollectionIdsRef = useRef<ReadonlySet<string>>(pendingCollectionIds);
-  pendingCollectionIdsRef.current = pendingCollectionIds;
   useLayoutEffect(() => {
     filtersActiveRef.current = filtersActive;
   }, [filtersActive]);
@@ -391,8 +387,8 @@ export function useCollectionMutations(options?: { readonly filters?: Collection
   }, [deleteMutation, updateMutation]);
 
   const isCollectionPending = useCallback(
-    (collectionId: string): boolean => pendingCollectionIdsRef.current.has(collectionId),
-    [],
+    (collectionId: string): boolean => pendingCollectionIds.has(collectionId),
+    [pendingCollectionIds],
   );
 
   const handleDeleteCollectionItems = useCallback(

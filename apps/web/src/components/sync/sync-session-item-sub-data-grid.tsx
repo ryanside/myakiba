@@ -3,7 +3,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
 import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type { PaginationState } from "@tanstack/react-table";
 import type { EnrichedSyncSessionItemRow } from "@myakiba/contracts/sync/types";
@@ -85,9 +85,8 @@ export function SyncSessionItemSubDataGrid({ sessionId }: SyncSessionItemSubData
         <div className="w-full space-y-2.5 overflow-x-auto">
           <div className="bg-card rounded-lg">
             <DataGridContainer>
-              <ScrollArea>
+              <ScrollArea horizontal>
                 <DataGridTable />
-                <ScrollBar orientation="horizontal" />
               </ScrollArea>
             </DataGridContainer>
           </div>

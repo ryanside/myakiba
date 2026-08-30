@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "motion/react";
 
 const DEFAULT_IMAGES: readonly string[] = [];
@@ -87,7 +87,7 @@ export default function BounceCards({
   cardSize = 200,
 }: BounceCardsProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const entryDone = useRef(false);
+  const [entryDone, setEntryDone] = useState(false);
 
   const baseTransforms = useMemo(
     () => transformStyles.map((t) => decomposeTransform(t ?? "none")),
@@ -115,8 +115,8 @@ export default function BounceCards({
           target = base;
         }
 
-        const isEntry = !entryDone.current;
-        const distance = hoveredIndex !== null ? Math.abs(hoveredIndex - idx) : 0;
+        const isEntry = !entryDone;
+        const distance = hoveredIndex === null ? 0 : Math.abs(hoveredIndex - idx);
 
         const transition = isEntry
           ? {
@@ -127,7 +127,7 @@ export default function BounceCards({
           : {
               duration: 0.4,
               ease: backOut,
-              delay: hoveredIndex !== null ? distance * 0.05 : 0,
+              delay: hoveredIndex === null ? 0 : distance * 0.05,
             };
 
         return (
@@ -146,11 +146,7 @@ export default function BounceCards({
             animate={{ scale: 1, rotate: target.rotate, x: target.x, y: target.y }}
             transition={transition}
             onAnimationComplete={
-              idx === images.length - 1 && !entryDone.current
-                ? () => {
-                    entryDone.current = true;
-                  }
-                : undefined
+              idx === images.length - 1 && !entryDone ? () => setEntryDone(true) : undefined
             }
             onMouseEnter={enableHover ? () => setHoveredIndex(idx) : undefined}
             onMouseLeave={enableHover ? () => setHoveredIndex(null) : undefined}

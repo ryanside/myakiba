@@ -91,9 +91,10 @@ function DataGridTableDndRow<TData>({ row }: { row: Row<TData> }) {
     zIndex: isDragging ? 1 : 0,
     position: "relative",
   };
+  const contextValue = useMemo(() => ({ attributes, listeners }), [attributes, listeners]);
 
   return (
-    <SortableRowContext.Provider value={{ attributes, listeners }}>
+    <SortableRowContext.Provider value={contextValue}>
       <DataGridTableBodyRow row={row} dndRef={setNodeRef} dndStyle={style} key={row.id}>
         {row.getVisibleCells().map((cell: Cell<TData, unknown>, colIndex) => {
           return (

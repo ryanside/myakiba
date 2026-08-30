@@ -51,7 +51,7 @@ export function AverageCollectionItemCostByPeriod({
         <EvilBarChart.YAxis
           tickFormatter={(value) => formatCurrencyFromMinorUnits(Number(value), currency, locale)}
         />
-        {!isLoading ? (
+        {isLoading ? null : (
           <ChartTooltip
             cursor={false}
             content={
@@ -62,7 +62,7 @@ export function AverageCollectionItemCostByPeriod({
               />
             }
           />
-        ) : null}
+        )}
         <EvilBarChart.Bar dataKey="collectionItems" variant="gradient" />
         {data.length >= EXPENSE_CHART_BRUSH_MIN_POINTS ? <EvilBarChart.Brush /> : null}
       </EvilBarChart>

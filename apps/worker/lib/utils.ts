@@ -256,7 +256,7 @@ export const publishJobStatus = async ({
         successCount,
         failCount,
         orderId,
-        completedAt: terminalState !== null ? new Date() : undefined,
+        completedAt: terminalState === null ? undefined : new Date(),
       })
       .where(eq(syncSession.id, syncSessionId));
   }

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FocusEvent, InputHTMLAttributes } from "react";
 import { Input } from "./ui/input";
 import { CommandInput } from "./ui/command";
@@ -17,7 +17,8 @@ export function DebouncedInput({
 } & Omit<InputHTMLAttributes<HTMLInputElement>, "onChange">) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const commandInputRef = useRef<HTMLInputElement | null>(null);
-  const defaultValueRef = useRef(initialValue);
+  // eslint-disable-next-line react/hook-use-state -- Capture the initial value for uncontrolled input defaults.
+  const [defaultValue] = useState(initialValue);
   const onChangeRef = useRef(onChange);
   const pendingLocalAcknowledgementsRef = useRef(new Set<string>());
   const pendingExternalValueRef = useRef<string | null>(null);
@@ -100,7 +101,7 @@ export function DebouncedInput({
       <CommandInput
         {...props}
         ref={commandInputRef}
-        defaultValue={String(defaultValueRef.current)}
+        defaultValue={String(defaultValue)}
         onBlur={handleBlur}
         onValueChange={handleValueChange}
       />
@@ -111,7 +112,7 @@ export function DebouncedInput({
     <Input
       {...props}
       ref={inputRef}
-      defaultValue={defaultValueRef.current}
+      defaultValue={defaultValue}
       onBlur={handleBlur}
       onChange={(e) => {
         if (e.target.value === "") {

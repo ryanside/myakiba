@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 
@@ -39,19 +39,23 @@ function Timeline({
   children,
   ...props
 }: TimelineProps) {
-  const [activeStep, setInternalStep] = useState(defaultValue);
+  const [internalActiveStep, setInternalActiveStep] = useState(defaultValue);
 
   const setActiveStep = useCallback(
     (step: number) => {
       if (value === undefined) {
-        setInternalStep(step);
+        setInternalActiveStep(step);
       }
       onValueChange?.(step);
     },
     [value, onValueChange],
   );
 
-  const currentStep = value ?? activeStep;
+  const currentStep = value ?? internalActiveStep;
+  const contextValue = useMemo(
+    () => ({ activeStep: currentStep, setActiveStep }),
+    [currentStep, setActiveStep],
+  );
 
   const defaultProps = {
     className: cn(
@@ -64,7 +68,7 @@ function Timeline({
   };
 
   return (
-    <TimelineContext.Provider value={{ activeStep: currentStep, setActiveStep }}>
+    <TimelineContext.Provider value={contextValue}>
       {useRender({
         defaultTagName: "div",
         render,

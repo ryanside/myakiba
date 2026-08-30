@@ -251,7 +251,7 @@ export function ListMemberGrid({
   readonly isFetchingNextPage: boolean;
   readonly onLoadMore: () => Promise<{ readonly isFetchNextPageError: boolean }>;
   readonly onRemove: (memberId: string) => Promise<void>;
-  readonly onMove: (intent: ListOrderInput) => Promise<unknown>;
+  readonly onMove: (intent: ListOrderInput) => Promise<void>;
   readonly selectedIds: ReadonlySet<string>;
   readonly onClearSelection: () => void;
   readonly onToggleSelection: (memberId: string, selected: boolean) => void;

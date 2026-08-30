@@ -42,7 +42,12 @@ interface OrdersKanbanProps {
   dateFormat: DateFormat;
 }
 
-type OrderColumns = Record<string, DashboardKanbanOrder[]>;
+interface OrderColumns {
+  Ordered: DashboardKanbanOrder[];
+  Paid: DashboardKanbanOrder[];
+  Shipped: DashboardKanbanOrder[];
+  Owned: DashboardKanbanOrder[];
+}
 type OrderColumnsUpdate = React.SetStateAction<OrderColumns>;
 interface StatusMutationVariables {
   readonly orderId: string;
@@ -71,16 +76,14 @@ interface PendingDateMutations {
   readonly persistedDates: Map<OrderDateField, string | null>;
 }
 
-type KanbanColumnMetadata = Record<string, { readonly title: string; readonly color: string }>;
+type KanbanColumnMetadata = Record<OrderStatus, { readonly title: string; readonly color: string }>;
 
-type OrdersByStatus = OrderColumns & Record<OrderStatus, DashboardKanbanOrder[]>;
-
-const COLUMNS: KanbanColumnMetadata = {
+const COLUMNS = {
   Ordered: { title: "Ordered", color: ORDER_STATUS_COLORS.Ordered },
   Paid: { title: "Paid", color: ORDER_STATUS_COLORS.Paid },
   Shipped: { title: "Shipped", color: ORDER_STATUS_COLORS.Shipped },
   Owned: { title: "Owned", color: ORDER_STATUS_COLORS.Owned },
-};
+} satisfies KanbanColumnMetadata;
 
 const DATE_FIELDS: readonly { readonly field: OrderDateField; readonly label: string }[] = [
   { field: "releaseDate", label: "Release" },
@@ -114,10 +117,11 @@ function columnsReducer(columns: OrderColumns, update: OrderColumnsUpdate): Orde
 }
 
 function reconcileOrderColumns(current: OrderColumns, incoming: OrderColumns): OrderColumns {
-  const next: OrderColumns = {};
+  const next = { ...incoming };
 
-  for (const [columnId, incomingOrders] of Object.entries(incoming)) {
-    const currentOrders = current[columnId] ?? [];
+  for (const columnId of ORDER_STATUSES) {
+    const incomingOrders = incoming[columnId];
+    const currentOrders = current[columnId];
     const incomingById = new Map(incomingOrders.map((order) => [order.orderId, order]));
     const refreshedOrders = currentOrders.flatMap((order) => {
       const incomingOrder = incomingById.get(order.orderId);
@@ -138,10 +142,11 @@ function moveOrderToStatus(
   targetIndex: number,
   restorePosition: boolean,
 ): OrderColumns {
-  let currentStatus: string | null = null;
+  let currentStatus: OrderStatus | null = null;
   let currentIndex = -1;
 
-  for (const [columnId, orders] of Object.entries(columns)) {
+  for (const columnId of ORDER_STATUSES) {
+    const orders = columns[columnId];
     const index = orders.findIndex((order) => order.orderId === orderId);
     if (index === -1) continue;
 
@@ -172,7 +177,8 @@ function updateOrderDateInColumns(
   field: OrderDateField,
   date: string | null,
 ): OrderColumns {
-  for (const [columnId, orders] of Object.entries(columns)) {
+  for (const columnId of ORDER_STATUSES) {
+    const orders = columns[columnId];
     const index = orders.findIndex((order) => order.orderId === orderId);
     if (index === -1) continue;
 
@@ -186,7 +192,7 @@ function updateOrderDateInColumns(
 
 async function drainMutationQueue<T>(
   mutations: T[],
-  mutate: (variables: T) => Promise<unknown>,
+  mutate: (variables: T) => Promise<void>,
   recordResult: (variables: T, succeeded: boolean) => void,
   finalize: () => Promise<void>,
 ): Promise<void> {
@@ -334,7 +340,7 @@ function OrderColumn({
   isOverlay,
   onDateChange,
 }: {
-  columnId: string;
+  columnId: OrderStatus;
   orders: readonly DashboardKanbanOrder[];
   isLoading: boolean;
   currency: Currency;
@@ -448,12 +454,12 @@ function OrderKanbanBoard({
 
       void drainMutationQueue(
         queue.mutations,
-        (pendingVariables) => {
+        async (pendingVariables) => {
           if (queue.persistedStatus === pendingVariables.previousStatus) {
             queue.persistedIndex = pendingVariables.previousIndex;
           }
 
-          return statusMutation.mutateAsync(pendingVariables);
+          await statusMutation.mutateAsync(pendingVariables);
         },
         (persistedVariables, succeeded) => {
           queue.lastMutationSucceeded = succeeded;
@@ -499,7 +505,9 @@ function OrderKanbanBoard({
 
       void drainMutationQueue(
         queue.mutations,
-        (pendingVariables) => dateMutation.mutateAsync(pendingVariables),
+        async (pendingVariables) => {
+          await dateMutation.mutateAsync(pendingVariables);
+        },
         (persistedVariables, succeeded) => {
           if (!succeeded) return;
 
@@ -541,15 +549,19 @@ function OrderKanbanBoard({
   );
 
   const handleMove = React.useCallback(
-    ({ activeContainer, activeIndex, overContainer, overIndex, event }: KanbanMoveEvent) => {
-      const previousStatus = ORDER_STATUSES.find((status) => status === activeContainer);
-      const status = ORDER_STATUSES.find((candidate) => candidate === overContainer);
-      if (!previousStatus || !status || previousStatus === status) return;
+    ({
+      activeContainer,
+      activeIndex,
+      overContainer,
+      overIndex,
+      event,
+    }: KanbanMoveEvent<OrderStatus>) => {
+      if (activeContainer === overContainer) return;
 
       enqueueStatusMutation({
         orderId: String(event.active.id),
-        status,
-        previousStatus,
+        status: overContainer,
+        previousStatus: activeContainer,
         previousIndex: activeIndex,
         targetIndex: overIndex,
       });
@@ -566,11 +578,11 @@ function OrderKanbanBoard({
       className="flex min-h-0 flex-1 flex-col overflow-x-auto"
     >
       <KanbanBoard className="min-h-0 min-w-[1300px] flex-1 gap-2.5 sm:grid-cols-4">
-        {Object.entries(columns).map(([columnId, columnOrders]) => (
+        {ORDER_STATUSES.map((columnId) => (
           <OrderColumn
             key={columnId}
             columnId={columnId}
-            orders={columnOrders}
+            orders={columns[columnId]}
             isLoading={isLoading}
             currency={currency}
             dateFormat={dateFormat}
@@ -590,7 +602,7 @@ export default function OrderKanban({
   dateFormat,
 }: OrdersKanbanProps) {
   const initialColumns = React.useMemo(() => {
-    const grouped: OrdersByStatus = {
+    const grouped: OrderColumns = {
       Ordered: [],
       Paid: [],
       Shipped: [],

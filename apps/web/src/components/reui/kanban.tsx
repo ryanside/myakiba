@@ -5,7 +5,6 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -57,7 +56,6 @@ import { cn } from "@/lib/utils";
 
 interface KanbanContextProps<T> {
   columns: Record<string, T[]>;
-  setColumns: (columns: Record<string, T[]>) => void;
   getItemId: (item: T) => string;
   columnIds: string[];
   activeId: UniqueIdentifier | null;
@@ -70,7 +68,6 @@ interface KanbanContextProps<T> {
 // oxlint-disable-next-line typescript/no-explicit-any
 const KanbanContext = createContext<KanbanContextProps<any>>({
   columns: {},
-  setColumns: () => {},
   getItemId: () => "",
   columnIds: [],
   activeId: null,
@@ -129,24 +126,27 @@ function getDragY(event: DragMoveEvent): number | null {
   });
 }
 
-export interface KanbanMoveEvent {
+export interface KanbanMoveEvent<TColumnId extends string = string> {
   event: DragEndEvent;
-  activeContainer: string;
+  activeContainer: TColumnId;
   activeIndex: number;
-  overContainer: string;
+  overContainer: TColumnId;
   overIndex: number;
 }
 
-export interface KanbanRootProps<T> extends Omit<useRender.ComponentProps<"div">, "children"> {
-  value: Record<string, T[]>;
-  onValueChange: (value: Record<string, T[]>) => void;
+export interface KanbanRootProps<T, TColumnId extends string = string> extends Omit<
+  useRender.ComponentProps<"div">,
+  "children"
+> {
+  value: Record<TColumnId, T[]>;
+  onValueChange: (value: Record<TColumnId, T[]>) => void;
   getItemValue: (item: T) => string;
   children: ReactNode;
-  onMove?: (event: KanbanMoveEvent) => void;
+  onMove?: (event: KanbanMoveEvent<TColumnId>) => void;
   modifiers?: Modifiers;
 }
 
-function Kanban<T>({
+function Kanban<T, TColumnId extends string = string>({
   value,
   onValueChange,
   getItemValue,
@@ -156,14 +156,15 @@ function Kanban<T>({
   onMove,
   modifiers,
   ...props
-}: KanbanRootProps<T>) {
+}: KanbanRootProps<T, TColumnId>) {
   const columns = value;
   const setColumns = onValueChange;
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
-  const originalContainerRef = useRef<string | null>(null);
+  const originalContainerRef = useRef<TColumnId | null>(null);
   const originalIndexRef = useRef<number | null>(null);
   const lastOverIdRef = useRef<UniqueIdentifier | null>(null);
   const recentlyMovedToNewContainerRef = useRef(false);
+  const previousColumnsRef = useRef(columns);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -176,16 +177,16 @@ function Kanban<T>({
     }),
   );
 
-  const columnIds = useMemo(() => Object.keys(columns), [columns]);
+  const columnIds = useMemo(() => Object.keys(columns) as TColumnId[], [columns]);
 
   const isColumn = useCallback(
-    (id: UniqueIdentifier) => columnIds.includes(id as string),
+    (id: UniqueIdentifier): id is TColumnId => columnIds.some((columnId) => columnId === id),
     [columnIds],
   );
 
   const findContainer = useCallback(
     (id: UniqueIdentifier) => {
-      if (isColumn(id)) return id as string;
+      if (isColumn(id)) return id;
       return columnIds.find((key) => columns[key].some((item) => getItemValue(item) === id));
     },
     [columns, columnIds, getItemValue, isColumn],
@@ -232,12 +233,15 @@ function Kanban<T>({
         lastOverIdRef.current = activeId;
       }
 
-      return lastOverIdRef.current !== null ? [{ id: lastOverIdRef.current }] : [];
+      return lastOverIdRef.current === null ? [] : [{ id: lastOverIdRef.current }];
     },
     [activeId, columns, getItemValue, isColumn],
   );
 
   useEffect(() => {
+    if (previousColumnsRef.current === columns) return;
+    previousColumnsRef.current = columns;
+
     const frame = requestAnimationFrame(() => {
       recentlyMovedToNewContainerRef.current = false;
     });
@@ -250,15 +254,15 @@ function Kanban<T>({
       setActiveId(event.active.id);
       lastOverIdRef.current = null;
       recentlyMovedToNewContainerRef.current = false;
-      if (!isColumn(event.active.id)) {
+      if (isColumn(event.active.id)) {
+        originalContainerRef.current = null;
+        originalIndexRef.current = null;
+      } else {
         const container = findContainer(event.active.id) ?? null;
         originalContainerRef.current = container;
         originalIndexRef.current = container
           ? columns[container].findIndex((item) => getItemValue(item) === event.active.id)
           : null;
-      } else {
-        originalContainerRef.current = null;
-        originalIndexRef.current = null;
       }
     },
     [columns, findContainer, getItemValue, isColumn],
@@ -367,14 +371,13 @@ function Kanban<T>({
 
       // Handle column reordering
       if (isColumn(active.id) && isColumn(over.id)) {
-        const activeIndex = columnIds.indexOf(active.id as string);
-        const overIndex = columnIds.indexOf(over.id as string);
+        const activeIndex = columnIds.indexOf(active.id);
+        const overIndex = columnIds.indexOf(over.id);
         if (activeIndex !== overIndex) {
-          const newOrder = arrayMove(Object.keys(columns), activeIndex, overIndex);
-          const newColumns: Record<string, T[]> = {};
-          newOrder.forEach((key) => {
-            newColumns[key] = columns[key];
-          });
+          const newOrder = arrayMove(columnIds, activeIndex, overIndex);
+          const newColumns = Object.fromEntries(
+            newOrder.map((key) => [key, columns[key]]),
+          ) as Record<TColumnId, T[]>;
           setColumns(newColumns);
         }
       }
@@ -385,7 +388,6 @@ function Kanban<T>({
   const contextValue = useMemo(
     () => ({
       columns,
-      setColumns,
       getItemId: getItemValue,
       columnIds,
       activeId,
@@ -394,7 +396,7 @@ function Kanban<T>({
       isColumn,
       modifiers,
     }),
-    [columns, setColumns, getItemValue, columnIds, activeId, findContainer, isColumn, modifiers],
+    [columns, getItemValue, columnIds, activeId, findContainer, isColumn, modifiers],
   );
 
   const defaultProps = {
@@ -464,6 +466,15 @@ function KanbanColumn(props: KanbanColumnProps) {
 }
 
 function KanbanOverlayColumn({ value, className, render, ...props }: KanbanColumnProps) {
+  const contextValue = useMemo(
+    () => ({
+      attributes: {} as DraggableAttributes,
+      listeners: undefined,
+      isDragging: true,
+      disabled: false,
+    }),
+    [],
+  );
   const defaultProps = {
     "data-slot": "kanban-column",
     "data-value": value,
@@ -473,14 +484,7 @@ function KanbanOverlayColumn({ value, className, render, ...props }: KanbanColum
   };
 
   return (
-    <ColumnContext.Provider
-      value={{
-        attributes: {} as DraggableAttributes,
-        listeners: undefined,
-        isDragging: true,
-        disabled: false,
-      }}
-    >
+    <ColumnContext.Provider value={contextValue}>
       {useRender({
         defaultTagName: "div",
         render,
@@ -506,6 +510,10 @@ function KanbanSortableColumn({ value, className, render, disabled, ...props }: 
 
   const { activeId, isColumn } = useContext(KanbanContext);
   const isColumnDragging = activeId ? isColumn(activeId) : false;
+  const contextValue = useMemo(
+    () => ({ attributes, listeners, isDragging: isColumnDragging, disabled }),
+    [attributes, disabled, isColumnDragging, listeners],
+  );
 
   const style = {
     transition,
@@ -529,9 +537,7 @@ function KanbanSortableColumn({ value, className, render, disabled, ...props }: 
   };
 
   return (
-    <ColumnContext.Provider
-      value={{ attributes, listeners, isDragging: isColumnDragging, disabled }}
-    >
+    <ColumnContext.Provider value={contextValue}>
       {useRender({
         defaultTagName: "div",
         render,
@@ -586,6 +592,10 @@ function KanbanItem(props: KanbanItemProps) {
 }
 
 function KanbanOverlayItem({ value, className, render, ...props }: KanbanItemProps) {
+  const contextValue = useMemo(
+    () => ({ listeners: undefined, isDragging: true, disabled: false }),
+    [],
+  );
   const defaultProps = {
     "data-slot": "kanban-item",
     "data-value": value,
@@ -595,7 +605,7 @@ function KanbanOverlayItem({ value, className, render, ...props }: KanbanItemPro
   };
 
   return (
-    <ItemContext.Provider value={{ listeners: undefined, isDragging: true, disabled: false }}>
+    <ItemContext.Provider value={contextValue}>
       {useRender({
         defaultTagName: "div",
         render,
@@ -621,6 +631,10 @@ function KanbanSortableItem({ value, className, render, disabled, ...props }: Ka
 
   const { activeId, isColumn } = useContext(KanbanContext);
   const isItemDragging = activeId ? !isColumn(activeId) : false;
+  const contextValue = useMemo(
+    () => ({ listeners, isDragging: isItemDragging, disabled }),
+    [disabled, isItemDragging, listeners],
+  );
 
   const style = {
     transition,
@@ -640,7 +654,7 @@ function KanbanSortableItem({ value, className, render, disabled, ...props }: Ka
   };
 
   return (
-    <ItemContext.Provider value={{ listeners, isDragging: isItemDragging, disabled }}>
+    <ItemContext.Provider value={contextValue}>
       {useRender({
         defaultTagName: "div",
         render,
@@ -720,9 +734,7 @@ const overlayRendererSchema = z.function({
 
 function KanbanOverlay({ children, className, ...props }: KanbanOverlayProps) {
   const { activeId, isColumn, modifiers } = useContext(KanbanContext);
-  const [mounted, setMounted] = useState(false);
-
-  useLayoutEffect(() => setMounted(true), []);
+  const portalTarget = globalThis.document?.body;
 
   const getVariant = (): "column" | "item" => {
     if (!activeId) return "item";
@@ -737,7 +749,7 @@ function KanbanOverlay({ children, className, ...props }: KanbanOverlayProps) {
   };
   const content = getContent();
 
-  if (!mounted) return null;
+  if (!portalTarget) return null;
 
   return createPortal(
     <DragOverlay
@@ -748,7 +760,7 @@ function KanbanOverlay({ children, className, ...props }: KanbanOverlayProps) {
     >
       <IsOverlayContext.Provider value={true}>{content}</IsOverlayContext.Provider>
     </DragOverlay>,
-    document.body,
+    portalTarget,
   );
 }
 

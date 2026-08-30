@@ -109,11 +109,11 @@ export function ItemHero({
           >
             {item.category}
           </Badge>
-          {scale !== NO_SCALE ? (
+          {scale === NO_SCALE ? null : (
             <Badge variant="outline" className="animate-data-in">
               {scale}
             </Badge>
-          ) : null}
+          )}
           {item.version && item.version.length > 0 ? (
             <Badge variant="outline" className="animate-data-in">
               {item.version}

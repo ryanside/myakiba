@@ -212,7 +212,7 @@ function UnifiedItemMoveFormContent({
       <DialogHeader className="px-4">
         <DialogTitle>{dialogTitle}</DialogTitle>
         <DialogDescription>
-          {actionLabel} the selected {selectedCount} item{selectedCount !== 1 ? "s" : ""} to an
+          {actionLabel} the selected {selectedCount} item{selectedCount === 1 ? "" : "s"} to an
           existing order or create a new order.
         </DialogDescription>
       </DialogHeader>

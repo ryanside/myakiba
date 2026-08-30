@@ -1,13 +1,48 @@
 "use client";
 
 import * as React from "react";
-import { DayPicker, getDefaultClassNames } from "react-day-picker";
-import type { DayButton, Locale } from "react-day-picker";
+import { DayPicker, getDefaultClassNames, useDayPicker } from "react-day-picker";
+import type { CustomComponents, DayButton } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeftIcon, ArrowRightIcon, ArrowDownIcon } from "@hugeicons/core-free-icons";
+
+function CalendarRoot({
+  className,
+  rootRef,
+  ...props
+}: React.ComponentProps<CustomComponents["Root"]>) {
+  return <div data-slot="calendar" ref={rootRef} className={cn(className)} {...props} />;
+}
+
+function CalendarChevron({
+  className,
+  orientation,
+  ...props
+}: React.ComponentProps<CustomComponents["Chevron"]>) {
+  let icon = ArrowDownIcon;
+  if (orientation === "left") icon = ArrowLeftIcon;
+  else if (orientation === "right") icon = ArrowRightIcon;
+
+  return (
+    <HugeiconsIcon icon={icon} strokeWidth={2} className={cn("size-4", className)} {...props} />
+  );
+}
+
+function CalendarWeekNumber({
+  children,
+  ...props
+}: React.ComponentProps<CustomComponents["WeekNumber"]>) {
+  return (
+    <td {...props}>
+      <div className="flex size-(--cell-size) items-center justify-center text-center">
+        {children}
+      </div>
+    </td>
+  );
+}
 
 function Calendar({
   className,
@@ -115,53 +150,10 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        Root: ({ className: rootClassName, rootRef, ...rootProps }) => {
-          return (
-            <div data-slot="calendar" ref={rootRef} className={cn(rootClassName)} {...rootProps} />
-          );
-        },
-        Chevron: ({ className: chevronClassName, orientation, ...chevronProps }) => {
-          if (orientation === "left") {
-            return (
-              <HugeiconsIcon
-                icon={ArrowLeftIcon}
-                strokeWidth={2}
-                className={cn("size-4", chevronClassName)}
-                {...chevronProps}
-              />
-            );
-          }
-
-          if (orientation === "right") {
-            return (
-              <HugeiconsIcon
-                icon={ArrowRightIcon}
-                strokeWidth={2}
-                className={cn("size-4", chevronClassName)}
-                {...chevronProps}
-              />
-            );
-          }
-
-          return (
-            <HugeiconsIcon
-              icon={ArrowDownIcon}
-              strokeWidth={2}
-              className={cn("size-4", chevronClassName)}
-              {...chevronProps}
-            />
-          );
-        },
-        DayButton: (dayButtonProps) => <CalendarDayButton locale={locale} {...dayButtonProps} />,
-        WeekNumber: ({ children, ...weekNumberProps }) => {
-          return (
-            <td {...weekNumberProps}>
-              <div className="flex size-(--cell-size) items-center justify-center text-center">
-                {children}
-              </div>
-            </td>
-          );
-        },
+        Root: CalendarRoot,
+        Chevron: CalendarChevron,
+        DayButton: CalendarDayButton,
+        WeekNumber: CalendarWeekNumber,
         ...components,
       }}
       {...props}
@@ -173,10 +165,10 @@ function CalendarDayButton({
   className,
   day,
   modifiers,
-  locale,
   ...props
-}: React.ComponentProps<typeof DayButton> & { locale?: Partial<Locale> }) {
+}: React.ComponentProps<typeof DayButton>) {
   const defaultClassNames = getDefaultClassNames();
+  const { dayPickerProps } = useDayPicker();
 
   const ref = React.useRef<HTMLButtonElement>(null);
   React.useEffect(() => {
@@ -187,7 +179,7 @@ function CalendarDayButton({
     <Button
       variant="ghost"
       size="icon"
-      data-day={day.date.toLocaleDateString(locale?.code)}
+      data-day={day.date.toLocaleDateString(dayPickerProps.locale?.code)}
       data-selected-single={
         modifiers.selected &&
         !modifiers.range_start &&

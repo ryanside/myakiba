@@ -74,7 +74,7 @@ function SidebarProvider({
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
-  const [_open, _setOpen] = React.useState<boolean>(() => {
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState<boolean>(() => {
     if (globalThis.document === undefined) {
       return defaultOpen;
     }
@@ -100,7 +100,7 @@ function SidebarProvider({
 
     return defaultOpen;
   });
-  const open = openProp ?? _open;
+  const open = openProp ?? uncontrolledOpen;
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
       const updater = sidebarOpenUpdaterSchema.safeParse(value);
@@ -108,7 +108,7 @@ function SidebarProvider({
       if (setOpenProp) {
         setOpenProp(openState);
       } else {
-        _setOpen(openState);
+        setUncontrolledOpen(openState);
       }
 
       // oxlint-disable-next-line no-document-cookie
@@ -304,6 +304,7 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
 
   return (
     <button
+      type="button"
       data-sidebar="rail"
       data-slot="sidebar-rail"
       aria-label="Toggle Sidebar"
@@ -534,7 +535,7 @@ function SidebarMenuButton({
       },
       props,
     ),
-    render: !tooltip ? render : <TooltipTrigger render={render} />,
+    render: tooltip ? <TooltipTrigger render={render} /> : render,
     state: {
       slot: "sidebar-menu-button",
       sidebar: "menu-button",
@@ -628,6 +629,7 @@ function SidebarMenuSkeleton({
   showIcon?: boolean;
 }) {
   // Random width between 50 to 90%.
+  // eslint-disable-next-line react/hook-use-state -- Keep the random width stable for this component instance.
   const [width] = React.useState(() => {
     return `${Math.floor(Math.random() * 40) + 50}%`;
   });

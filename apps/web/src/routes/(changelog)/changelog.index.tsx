@@ -31,7 +31,7 @@ function ChangelogIndex() {
       <header className="flex flex-col gap-3">
         <h1 className="text-balance text-3xl font-medium tracking-tight sm:text-4xl">Changelog</h1>
         <p className="text-pretty text-base leading-relaxed text-muted-foreground">
-          See what's new in myakiba.
+          See what&apos;s new in myakiba.
         </p>
       </header>
 

@@ -78,7 +78,7 @@ export function AverageShippingCostByMethodAndPeriod({
         <EvilBarChart.YAxis
           tickFormatter={(value) => formatCurrencyFromMinorUnits(Number(value), currency, locale)}
         />
-        {!isLoading ? (
+        {isLoading ? null : (
           <ChartTooltip
             cursor={false}
             content={
@@ -89,7 +89,7 @@ export function AverageShippingCostByMethodAndPeriod({
               />
             }
           />
-        ) : null}
+        )}
         {methods.map((method) =>
           visibleKeys.has(shippingMethodKeys[method]) ? (
             <EvilBarChart.Bar

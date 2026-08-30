@@ -260,12 +260,12 @@ function ReleaseCard({
 
   return (
     <Link
-      {...(item.itemExternalId !== null
-        ? ({
+      {...(item.itemExternalId === null
+        ? ({ to: "/item/custom/$id", params: { id: item.itemId } } as const)
+        : ({
             to: "/item/$externalId",
             params: { externalId: item.itemExternalId },
-          } as const)
-        : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
+          } as const))}
       className="flex min-w-0 items-center gap-2.5 overflow-hidden rounded-md p-1.5 transition-colors hover:bg-accent duration-50"
     >
       <ImageThumbnail

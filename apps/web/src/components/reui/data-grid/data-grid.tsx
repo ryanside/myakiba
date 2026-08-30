@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext } from "react";
+import { createContext, useContext, useMemo } from "react";
 import type { ReactNode } from "react";
 import type { ColumnFiltersState, RowData, SortingState, Table } from "@tanstack/react-table";
 
@@ -106,18 +106,17 @@ function DataGridProvider<TData extends object>({
   table,
   ...props
 }: DataGridProps<TData> & { table: Table<TData> }) {
-  return (
-    <DataGridContext.Provider
-      value={{
-        props,
-        table,
-        recordCount: props.recordCount,
-        isLoading: props.isLoading || false,
-      }}
-    >
-      {children}
-    </DataGridContext.Provider>
+  const contextValue = useMemo(
+    () => ({
+      props,
+      table,
+      recordCount: props.recordCount,
+      isLoading: props.isLoading || false,
+    }),
+    [props, table],
   );
+
+  return <DataGridContext.Provider value={contextValue}>{children}</DataGridContext.Provider>;
 }
 
 function DataGrid<TData extends object>({ children, table, ...props }: DataGridProps<TData>) {

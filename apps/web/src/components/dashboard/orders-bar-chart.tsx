@@ -147,7 +147,7 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
             },
           }}
         >
-          {!isLoading ? (
+          {isLoading ? null : (
             <XAxis
               dataKey="month"
               tickLine={false}
@@ -156,8 +156,8 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
               tickFormatter={(value: string) => value.slice(0, 3)}
               allowDataOverflow={true}
             />
-          ) : null}
-          {!isLoading ? (
+          )}
+          {isLoading ? null : (
             <Bar
               dataKey="desktop"
               fill="var(--primary)"
@@ -175,8 +175,8 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
                 />
               ))}
             </Bar>
-          ) : null}
-          {!isLoading ? (
+          )}
+          {isLoading ? null : (
             <ReferenceLine
               ifOverflow="visible"
               opacity={0.4}
@@ -186,7 +186,7 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
               strokeDasharray="3 3"
               label={<CustomReferenceLabel value={maxValueIndex.value} />}
             />
-          ) : null}
+          )}
         </EvilBarChart>
       </FramePanel>
     </Frame>

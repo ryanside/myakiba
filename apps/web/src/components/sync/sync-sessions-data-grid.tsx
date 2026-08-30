@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
 import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { functionalUpdate, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type { ExpandedState, PaginationState, Updater } from "@tanstack/react-table";
 import type { SyncSessionRow } from "@myakiba/contracts/sync/types";
@@ -19,6 +19,10 @@ interface SyncSessionsDataGridProps {
   };
   readonly onPaginationChange: (page: number, limit: number) => void;
   readonly isLoading?: boolean;
+}
+
+function renderExpandedContent(session: SyncSessionRow): React.JSX.Element {
+  return <SyncSessionItemSubDataGrid sessionId={session.id} />;
 }
 
 export function SyncSessionsDataGrid({
@@ -42,9 +46,7 @@ export function SyncSessionsDataGrid({
   const columns = useMemo(
     () =>
       createSyncSessionColumns({
-        expandedContent: (session: SyncSessionRow) => (
-          <SyncSessionItemSubDataGrid sessionId={session.id} />
-        ),
+        expandedContent: renderExpandedContent,
       }),
     [],
   );
@@ -96,9 +98,8 @@ export function SyncSessionsDataGrid({
       >
         <div className="w-full space-y-2.5">
           <DataGridContainer>
-            <ScrollArea>
+            <ScrollArea horizontal>
               <DataGridTable />
-              <ScrollBar orientation="horizontal" />
             </ScrollArea>
           </DataGridContainer>
           <div className="flex items-center justify-end">
