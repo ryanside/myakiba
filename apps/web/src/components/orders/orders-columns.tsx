@@ -300,6 +300,7 @@ export function createOrdersColumns({
             </Link>
             <div className="min-w-0 flex-1">
               <InlineTextCell
+                label="Order title"
                 value={order.title}
                 disabled={isOrderPending(order.orderId)}
                 onSubmit={async (newValue) => {
@@ -351,6 +352,7 @@ export function createOrdersColumns({
       ),
       cell: ({ row }) => (
         <InlineTextCell
+          label="Shop"
           value={row.original.shop}
           disabled={isOrderPending(row.original.orderId)}
           onSubmit={async (newValue) => {

@@ -423,6 +423,7 @@ export function createCollectionColumns({
         const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
         return (
           <InlineTextCell
+            label="Shop"
             value={item.shop}
             disabled={isPending}
             onSubmit={async (newValue) => {

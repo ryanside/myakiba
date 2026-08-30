@@ -9,110 +9,45 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as appRouteRouteImport } from './routes/(app)/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ProfileUsernameRouteImport } from './routes/profile.$username'
-import { Route as changelogChangelogRouteImport } from './routes/(changelog)/changelog'
-import { Route as authSignupRouteImport } from './routes/(auth)/signup'
-import { Route as authResetPasswordRouteImport } from './routes/(auth)/reset-password'
-import { Route as authLoginRouteImport } from './routes/(auth)/login'
-import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-password'
-import { Route as appSyncRouteImport } from './routes/(app)/sync'
-import { Route as appSettingsRouteImport } from './routes/(app)/settings'
-import { Route as appOrdersRouteImport } from './routes/(app)/orders'
-import { Route as appListsRouteImport } from './routes/(app)/lists'
-import { Route as appItemsRouteImport } from './routes/(app)/items'
-import { Route as appExpensesRouteImport } from './routes/(app)/expenses'
-import { Route as appDashboardRouteImport } from './routes/(app)/dashboard'
-import { Route as appCollectionRouteImport } from './routes/(app)/collection'
-import { Route as appCalendarRouteImport } from './routes/(app)/calendar'
+import { Route as appRouteRouteImport } from './routes/(app)/route'
 import { Route as appAnalyticsRouteImport } from './routes/(app)/analytics'
+import { Route as appCalendarRouteImport } from './routes/(app)/calendar'
+import { Route as appCollectionRouteImport } from './routes/(app)/collection'
+import { Route as appDashboardRouteImport } from './routes/(app)/dashboard'
+import { Route as appExpensesRouteImport } from './routes/(app)/expenses'
+import { Route as appItemsRouteImport } from './routes/(app)/items'
+import { Route as appListsRouteImport } from './routes/(app)/lists'
+import { Route as appOrdersRouteImport } from './routes/(app)/orders'
+import { Route as appSettingsRouteImport } from './routes/(app)/settings'
+import { Route as appSyncRouteImport } from './routes/(app)/sync'
+import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-password'
+import { Route as authLoginRouteImport } from './routes/(auth)/login'
+import { Route as authResetPasswordRouteImport } from './routes/(auth)/reset-password'
+import { Route as authSignupRouteImport } from './routes/(auth)/signup'
+import { Route as changelogChangelogRouteImport } from './routes/(changelog)/changelog'
+import { Route as ProfileUsernameRouteImport } from './routes/profile.$username'
+import { Route as appAnalyticsSectionNameRouteImport } from './routes/(app)/analytics_.$sectionName'
+import { Route as appItemExternalIdRouteImport } from './routes/(app)/item_.$externalId'
+import { Route as appListsListIdRouteImport } from './routes/(app)/lists_.$listId'
+import { Route as appOrdersIdRouteImport } from './routes/(app)/orders_.$id'
+import { Route as appSyncIdRouteImport } from './routes/(app)/sync_.$id'
 import { Route as changelogChangelogIndexRouteImport } from './routes/(changelog)/changelog.index'
 import { Route as changelogChangelogSlugRouteImport } from './routes/(changelog)/changelog.$slug'
-import { Route as appSyncIdRouteImport } from './routes/(app)/sync_.$id'
-import { Route as appOrdersIdRouteImport } from './routes/(app)/orders_.$id'
-import { Route as appListsListIdRouteImport } from './routes/(app)/lists_.$listId'
-import { Route as appItemExternalIdRouteImport } from './routes/(app)/item_.$externalId'
-import { Route as appAnalyticsSectionNameRouteImport } from './routes/(app)/analytics_.$sectionName'
 import { Route as appItemCustomIdRouteImport } from './routes/(app)/item_.custom.$id'
 
-const appRouteRoute = appRouteRouteImport.update({
-  id: '/(app)',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProfileUsernameRoute = ProfileUsernameRouteImport.update({
-  id: '/profile/$username',
-  path: '/profile/$username',
+const appRouteRoute = appRouteRouteImport.update({
+  id: '/(app)',
   getParentRoute: () => rootRouteImport,
 } as any)
-const changelogChangelogRoute = changelogChangelogRouteImport.update({
-  id: '/(changelog)/changelog',
-  path: '/changelog',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const authSignupRoute = authSignupRouteImport.update({
-  id: '/(auth)/signup',
-  path: '/signup',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const authResetPasswordRoute = authResetPasswordRouteImport.update({
-  id: '/(auth)/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const authLoginRoute = authLoginRouteImport.update({
-  id: '/(auth)/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const authForgotPasswordRoute = authForgotPasswordRouteImport.update({
-  id: '/(auth)/forgot-password',
-  path: '/forgot-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const appSyncRoute = appSyncRouteImport.update({
-  id: '/sync',
-  path: '/sync',
-  getParentRoute: () => appRouteRoute,
-} as any)
-const appSettingsRoute = appSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => appRouteRoute,
-} as any)
-const appOrdersRoute = appOrdersRouteImport.update({
-  id: '/orders',
-  path: '/orders',
-  getParentRoute: () => appRouteRoute,
-} as any)
-const appListsRoute = appListsRouteImport.update({
-  id: '/lists',
-  path: '/lists',
-  getParentRoute: () => appRouteRoute,
-} as any)
-const appItemsRoute = appItemsRouteImport.update({
-  id: '/items',
-  path: '/items',
-  getParentRoute: () => appRouteRoute,
-} as any)
-const appExpensesRoute = appExpensesRouteImport.update({
-  id: '/expenses',
-  path: '/expenses',
-  getParentRoute: () => appRouteRoute,
-} as any)
-const appDashboardRoute = appDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => appRouteRoute,
-} as any)
-const appCollectionRoute = appCollectionRouteImport.update({
-  id: '/collection',
-  path: '/collection',
+const appAnalyticsRoute = appAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
   getParentRoute: () => appRouteRoute,
 } as any)
 const appCalendarRoute = appCalendarRouteImport.update({
@@ -120,9 +55,99 @@ const appCalendarRoute = appCalendarRouteImport.update({
   path: '/calendar',
   getParentRoute: () => appRouteRoute,
 } as any)
-const appAnalyticsRoute = appAnalyticsRouteImport.update({
-  id: '/analytics',
-  path: '/analytics',
+const appCollectionRoute = appCollectionRouteImport.update({
+  id: '/collection',
+  path: '/collection',
+  getParentRoute: () => appRouteRoute,
+} as any)
+const appDashboardRoute = appDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => appRouteRoute,
+} as any)
+const appExpensesRoute = appExpensesRouteImport.update({
+  id: '/expenses',
+  path: '/expenses',
+  getParentRoute: () => appRouteRoute,
+} as any)
+const appItemsRoute = appItemsRouteImport.update({
+  id: '/items',
+  path: '/items',
+  getParentRoute: () => appRouteRoute,
+} as any)
+const appListsRoute = appListsRouteImport.update({
+  id: '/lists',
+  path: '/lists',
+  getParentRoute: () => appRouteRoute,
+} as any)
+const appOrdersRoute = appOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => appRouteRoute,
+} as any)
+const appSettingsRoute = appSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => appRouteRoute,
+} as any)
+const appSyncRoute = appSyncRouteImport.update({
+  id: '/sync',
+  path: '/sync',
+  getParentRoute: () => appRouteRoute,
+} as any)
+const authForgotPasswordRoute = authForgotPasswordRouteImport.update({
+  id: '/(auth)/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const authLoginRoute = authLoginRouteImport.update({
+  id: '/(auth)/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const authResetPasswordRoute = authResetPasswordRouteImport.update({
+  id: '/(auth)/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const authSignupRoute = authSignupRouteImport.update({
+  id: '/(auth)/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const changelogChangelogRoute = changelogChangelogRouteImport.update({
+  id: '/(changelog)/changelog',
+  path: '/changelog',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileUsernameRoute = ProfileUsernameRouteImport.update({
+  id: '/profile/$username',
+  path: '/profile/$username',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const appAnalyticsSectionNameRoute = appAnalyticsSectionNameRouteImport.update({
+  id: '/analytics_/$sectionName',
+  path: '/analytics/$sectionName',
+  getParentRoute: () => appRouteRoute,
+} as any)
+const appItemExternalIdRoute = appItemExternalIdRouteImport.update({
+  id: '/item_/$externalId',
+  path: '/item/$externalId',
+  getParentRoute: () => appRouteRoute,
+} as any)
+const appListsListIdRoute = appListsListIdRouteImport.update({
+  id: '/lists_/$listId',
+  path: '/lists/$listId',
+  getParentRoute: () => appRouteRoute,
+} as any)
+const appOrdersIdRoute = appOrdersIdRouteImport.update({
+  id: '/orders_/$id',
+  path: '/orders/$id',
+  getParentRoute: () => appRouteRoute,
+} as any)
+const appSyncIdRoute = appSyncIdRouteImport.update({
+  id: '/sync_/$id',
+  path: '/sync/$id',
   getParentRoute: () => appRouteRoute,
 } as any)
 const changelogChangelogIndexRoute = changelogChangelogIndexRouteImport.update({
@@ -134,31 +159,6 @@ const changelogChangelogSlugRoute = changelogChangelogSlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
   getParentRoute: () => changelogChangelogRoute,
-} as any)
-const appSyncIdRoute = appSyncIdRouteImport.update({
-  id: '/sync_/$id',
-  path: '/sync/$id',
-  getParentRoute: () => appRouteRoute,
-} as any)
-const appOrdersIdRoute = appOrdersIdRouteImport.update({
-  id: '/orders_/$id',
-  path: '/orders/$id',
-  getParentRoute: () => appRouteRoute,
-} as any)
-const appListsListIdRoute = appListsListIdRouteImport.update({
-  id: '/lists_/$listId',
-  path: '/lists/$listId',
-  getParentRoute: () => appRouteRoute,
-} as any)
-const appItemExternalIdRoute = appItemExternalIdRouteImport.update({
-  id: '/item_/$externalId',
-  path: '/item/$externalId',
-  getParentRoute: () => appRouteRoute,
-} as any)
-const appAnalyticsSectionNameRoute = appAnalyticsSectionNameRouteImport.update({
-  id: '/analytics_/$sectionName',
-  path: '/analytics/$sectionName',
-  getParentRoute: () => appRouteRoute,
 } as any)
 const appItemCustomIdRoute = appItemCustomIdRouteImport.update({
   id: '/item_/custom/$id',
@@ -345,13 +345,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/(app)': {
-      id: '/(app)'
-      path: ''
-      fullPath: ''
-      preLoaderRoute: typeof appRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -359,102 +352,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/profile/$username': {
-      id: '/profile/$username'
-      path: '/profile/$username'
-      fullPath: '/profile/$username'
-      preLoaderRoute: typeof ProfileUsernameRouteImport
+    '/(app)': {
+      id: '/(app)'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof appRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/(changelog)/changelog': {
-      id: '/(changelog)/changelog'
-      path: '/changelog'
-      fullPath: '/changelog'
-      preLoaderRoute: typeof changelogChangelogRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/(auth)/signup': {
-      id: '/(auth)/signup'
-      path: '/signup'
-      fullPath: '/signup'
-      preLoaderRoute: typeof authSignupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/(auth)/reset-password': {
-      id: '/(auth)/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof authResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/(auth)/login': {
-      id: '/(auth)/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof authLoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/(auth)/forgot-password': {
-      id: '/(auth)/forgot-password'
-      path: '/forgot-password'
-      fullPath: '/forgot-password'
-      preLoaderRoute: typeof authForgotPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/(app)/sync': {
-      id: '/(app)/sync'
-      path: '/sync'
-      fullPath: '/sync'
-      preLoaderRoute: typeof appSyncRouteImport
-      parentRoute: typeof appRouteRoute
-    }
-    '/(app)/settings': {
-      id: '/(app)/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof appSettingsRouteImport
-      parentRoute: typeof appRouteRoute
-    }
-    '/(app)/orders': {
-      id: '/(app)/orders'
-      path: '/orders'
-      fullPath: '/orders'
-      preLoaderRoute: typeof appOrdersRouteImport
-      parentRoute: typeof appRouteRoute
-    }
-    '/(app)/lists': {
-      id: '/(app)/lists'
-      path: '/lists'
-      fullPath: '/lists'
-      preLoaderRoute: typeof appListsRouteImport
-      parentRoute: typeof appRouteRoute
-    }
-    '/(app)/items': {
-      id: '/(app)/items'
-      path: '/items'
-      fullPath: '/items'
-      preLoaderRoute: typeof appItemsRouteImport
-      parentRoute: typeof appRouteRoute
-    }
-    '/(app)/expenses': {
-      id: '/(app)/expenses'
-      path: '/expenses'
-      fullPath: '/expenses'
-      preLoaderRoute: typeof appExpensesRouteImport
-      parentRoute: typeof appRouteRoute
-    }
-    '/(app)/dashboard': {
-      id: '/(app)/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof appDashboardRouteImport
-      parentRoute: typeof appRouteRoute
-    }
-    '/(app)/collection': {
-      id: '/(app)/collection'
-      path: '/collection'
-      fullPath: '/collection'
-      preLoaderRoute: typeof appCollectionRouteImport
+    '/(app)/analytics': {
+      id: '/(app)/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof appAnalyticsRouteImport
       parentRoute: typeof appRouteRoute
     }
     '/(app)/calendar': {
@@ -464,11 +373,137 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appCalendarRouteImport
       parentRoute: typeof appRouteRoute
     }
-    '/(app)/analytics': {
-      id: '/(app)/analytics'
-      path: '/analytics'
-      fullPath: '/analytics'
-      preLoaderRoute: typeof appAnalyticsRouteImport
+    '/(app)/collection': {
+      id: '/(app)/collection'
+      path: '/collection'
+      fullPath: '/collection'
+      preLoaderRoute: typeof appCollectionRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/dashboard': {
+      id: '/(app)/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof appDashboardRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/expenses': {
+      id: '/(app)/expenses'
+      path: '/expenses'
+      fullPath: '/expenses'
+      preLoaderRoute: typeof appExpensesRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/items': {
+      id: '/(app)/items'
+      path: '/items'
+      fullPath: '/items'
+      preLoaderRoute: typeof appItemsRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/lists': {
+      id: '/(app)/lists'
+      path: '/lists'
+      fullPath: '/lists'
+      preLoaderRoute: typeof appListsRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/orders': {
+      id: '/(app)/orders'
+      path: '/orders'
+      fullPath: '/orders'
+      preLoaderRoute: typeof appOrdersRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/settings': {
+      id: '/(app)/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof appSettingsRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/sync': {
+      id: '/(app)/sync'
+      path: '/sync'
+      fullPath: '/sync'
+      preLoaderRoute: typeof appSyncRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(auth)/forgot-password': {
+      id: '/(auth)/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof authForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(auth)/login': {
+      id: '/(auth)/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof authLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(auth)/reset-password': {
+      id: '/(auth)/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof authResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(auth)/signup': {
+      id: '/(auth)/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof authSignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(changelog)/changelog': {
+      id: '/(changelog)/changelog'
+      path: '/changelog'
+      fullPath: '/changelog'
+      preLoaderRoute: typeof changelogChangelogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile/$username': {
+      id: '/profile/$username'
+      path: '/profile/$username'
+      fullPath: '/profile/$username'
+      preLoaderRoute: typeof ProfileUsernameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(app)/analytics_/$sectionName': {
+      id: '/(app)/analytics_/$sectionName'
+      path: '/analytics/$sectionName'
+      fullPath: '/analytics/$sectionName'
+      preLoaderRoute: typeof appAnalyticsSectionNameRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/item_/$externalId': {
+      id: '/(app)/item_/$externalId'
+      path: '/item/$externalId'
+      fullPath: '/item/$externalId'
+      preLoaderRoute: typeof appItemExternalIdRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/lists_/$listId': {
+      id: '/(app)/lists_/$listId'
+      path: '/lists/$listId'
+      fullPath: '/lists/$listId'
+      preLoaderRoute: typeof appListsListIdRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/orders_/$id': {
+      id: '/(app)/orders_/$id'
+      path: '/orders/$id'
+      fullPath: '/orders/$id'
+      preLoaderRoute: typeof appOrdersIdRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/sync_/$id': {
+      id: '/(app)/sync_/$id'
+      path: '/sync/$id'
+      fullPath: '/sync/$id'
+      preLoaderRoute: typeof appSyncIdRouteImport
       parentRoute: typeof appRouteRoute
     }
     '/(changelog)/changelog/': {
@@ -484,41 +519,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/changelog/$slug'
       preLoaderRoute: typeof changelogChangelogSlugRouteImport
       parentRoute: typeof changelogChangelogRoute
-    }
-    '/(app)/sync_/$id': {
-      id: '/(app)/sync_/$id'
-      path: '/sync/$id'
-      fullPath: '/sync/$id'
-      preLoaderRoute: typeof appSyncIdRouteImport
-      parentRoute: typeof appRouteRoute
-    }
-    '/(app)/orders_/$id': {
-      id: '/(app)/orders_/$id'
-      path: '/orders/$id'
-      fullPath: '/orders/$id'
-      preLoaderRoute: typeof appOrdersIdRouteImport
-      parentRoute: typeof appRouteRoute
-    }
-    '/(app)/lists_/$listId': {
-      id: '/(app)/lists_/$listId'
-      path: '/lists/$listId'
-      fullPath: '/lists/$listId'
-      preLoaderRoute: typeof appListsListIdRouteImport
-      parentRoute: typeof appRouteRoute
-    }
-    '/(app)/item_/$externalId': {
-      id: '/(app)/item_/$externalId'
-      path: '/item/$externalId'
-      fullPath: '/item/$externalId'
-      preLoaderRoute: typeof appItemExternalIdRouteImport
-      parentRoute: typeof appRouteRoute
-    }
-    '/(app)/analytics_/$sectionName': {
-      id: '/(app)/analytics_/$sectionName'
-      path: '/analytics/$sectionName'
-      fullPath: '/analytics/$sectionName'
-      preLoaderRoute: typeof appAnalyticsSectionNameRouteImport
-      parentRoute: typeof appRouteRoute
     }
     '/(app)/item_/custom/$id': {
       id: '/(app)/item_/custom/$id'
