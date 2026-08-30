@@ -184,7 +184,7 @@ function DataGridTableHeadRowCellResize<TData>({ header }: { header: Header<TDat
 }
 
 function DataGridTableRowSpacer() {
-  return <tbody aria-hidden="true" className="h-2"></tbody>;
+  return <tbody aria-hidden="true" className="h-2" />;
 }
 
 function DataGridTableBody({ children }: { children: ReactNode }) {
@@ -414,12 +414,12 @@ function DataGridTableLoader() {
             r="10"
             stroke="currentColor"
             strokeWidth="3"
-          ></circle>
+          />
           <path
             className="opacity-75"
             fill="currentColor"
             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-          ></path>
+          />
         </svg>
         {props.loadingMessage || "Loading..."}
       </div>
@@ -435,7 +435,7 @@ function DataGridTableRowSelect<TData>({ row }: { row: Row<TData> }) {
           "bg-primary absolute start-0 top-0 bottom-0 hidden w-[2px]",
           row.getIsSelected() && "block",
         )}
-      ></div>
+      />
       <Checkbox
         checked={row.getIsSelected()}
         onCheckedChange={(value) => row.toggleSelected(!!value)}
@@ -529,12 +529,12 @@ function DataGridTable<TData>() {
                         r="10"
                         stroke="currentColor"
                         strokeWidth="4"
-                      ></circle>
+                      />
                       <path
                         className="opacity-75"
                         fill="currentColor"
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
+                      />
                     </svg>
                     {props.loadingMessage || "Loading..."}
                   </div>

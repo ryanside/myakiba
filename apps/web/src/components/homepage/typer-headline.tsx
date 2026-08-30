@@ -28,6 +28,7 @@ export function TyperHeadline({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    el.textContent = text;
 
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 

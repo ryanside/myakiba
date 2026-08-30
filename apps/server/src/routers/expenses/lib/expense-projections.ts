@@ -290,7 +290,7 @@ export function projectShippingDashboard({
   });
   const seriesTotals = new Map<string, ShippingTotals>();
   for (const row of series) {
-    const values: ShippingTotals = seriesTotals.get(row.bucket) ?? {
+    const values = (seriesTotals.get(row.bucket) ?? {
       "n/a": { total: 0, count: 0 },
       EMS: { total: 0, count: 0 },
       SAL: { total: 0, count: 0 },
@@ -301,12 +301,12 @@ export function projectShippingDashboard({
       Colissimo: { total: 0, count: 0 },
       UPS: { total: 0, count: 0 },
       Domestic: { total: 0, count: 0 },
-    };
+    }) satisfies ShippingTotals;
     values[row.shippingMethod] = { total: row.shippingSpend, count: row.orderCount };
     seriesTotals.set(row.bucket, values);
   }
   const spendByMethodAndPeriod = buckets.map((bucketName) => {
-    const values: ShippingValues = {
+    const values = {
       "n/a": 0,
       EMS: 0,
       SAL: 0,
@@ -317,7 +317,7 @@ export function projectShippingDashboard({
       Colissimo: 0,
       UPS: 0,
       Domestic: 0,
-    };
+    } satisfies ShippingValues;
     const totals = seriesTotals.get(bucketName);
     for (const method of SHIPPING_METHODS) {
       values[method] = totals?.[method].total ?? 0;
@@ -325,7 +325,7 @@ export function projectShippingDashboard({
     return { bucket: bucketName, values };
   });
   const averageCostByMethodAndPeriod = buckets.map((bucketName) => {
-    const values: ShippingValues = {
+    const values = {
       "n/a": 0,
       EMS: 0,
       SAL: 0,
@@ -336,7 +336,7 @@ export function projectShippingDashboard({
       Colissimo: 0,
       UPS: 0,
       Domestic: 0,
-    };
+    } satisfies ShippingValues;
     const totals = seriesTotals.get(bucketName);
     for (const method of SHIPPING_METHODS) {
       const total = totals?.[method].total ?? 0;
@@ -345,7 +345,7 @@ export function projectShippingDashboard({
     }
     return { bucket: bucketName, values };
   });
-  const cumulativeTotals: ShippingTotals = {
+  const cumulativeTotals = {
     "n/a": { total: 0, count: 0 },
     EMS: { total: 0, count: 0 },
     SAL: { total: 0, count: 0 },
@@ -356,12 +356,12 @@ export function projectShippingDashboard({
     Colissimo: { total: 0, count: 0 },
     UPS: { total: 0, count: 0 },
     Domestic: { total: 0, count: 0 },
-  };
+  } satisfies ShippingTotals;
   const cumulativeSpendByMethod: ExpensesShippingResponse["cumulativeSpendByMethod"] = [];
   const averageCostByMethodToDate: ExpensesShippingResponse["averageCostByMethodToDate"] = [];
   for (const bucketName of buckets) {
     const bucketTotals = seriesTotals.get(bucketName);
-    const spendValues: ShippingValues = {
+    const spendValues = {
       "n/a": 0,
       EMS: 0,
       SAL: 0,
@@ -372,8 +372,8 @@ export function projectShippingDashboard({
       Colissimo: 0,
       UPS: 0,
       Domestic: 0,
-    };
-    const averageValues: ShippingValues = {
+    } satisfies ShippingValues;
+    const averageValues = {
       "n/a": 0,
       EMS: 0,
       SAL: 0,
@@ -384,7 +384,7 @@ export function projectShippingDashboard({
       Colissimo: 0,
       UPS: 0,
       Domestic: 0,
-    };
+    } satisfies ShippingValues;
     for (const method of SHIPPING_METHODS) {
       cumulativeTotals[method].total += bucketTotals?.[method].total ?? 0;
       cumulativeTotals[method].count += bucketTotals?.[method].count ?? 0;
@@ -399,7 +399,7 @@ export function projectShippingDashboard({
   }
   const bundleTotals = new Map<number, ShippingTotals>();
   for (const row of bundleRows) {
-    const values: ShippingTotals = bundleTotals.get(row.itemCount) ?? {
+    const values = (bundleTotals.get(row.itemCount) ?? {
       "n/a": { total: 0, count: 0 },
       EMS: { total: 0, count: 0 },
       SAL: { total: 0, count: 0 },
@@ -410,14 +410,14 @@ export function projectShippingDashboard({
       Colissimo: { total: 0, count: 0 },
       UPS: { total: 0, count: 0 },
       Domestic: { total: 0, count: 0 },
-    };
+    }) satisfies ShippingTotals;
     values[row.shippingMethod] = { total: row.shippingFeeTotal, count: row.orderCount };
     bundleTotals.set(row.itemCount, values);
   }
   const averageCostByItemCount = [...bundleTotals.entries()]
     .toSorted(([left], [right]) => left - right)
     .map(([itemCount, totals]) => {
-      const values: ShippingValues = {
+      const values = {
         "n/a": 0,
         EMS: 0,
         SAL: 0,
@@ -428,7 +428,7 @@ export function projectShippingDashboard({
         Colissimo: 0,
         UPS: 0,
         Domestic: 0,
-      };
+      } satisfies ShippingValues;
       for (const method of SHIPPING_METHODS) {
         values[method] =
           totals[method].count > 0 ? Math.round(totals[method].total / totals[method].count) : 0;

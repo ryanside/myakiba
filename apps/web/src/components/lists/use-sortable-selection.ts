@@ -39,7 +39,7 @@ export function useSortableSelection<T extends SortableRecord>({
   readonly hasNextPage: boolean;
   readonly isFetchingNextPage: boolean;
   readonly onLoadMore: () => Promise<{ readonly isFetchNextPageError: boolean }>;
-  readonly onMove: (intent: ListOrderInput) => Promise<unknown>;
+  readonly onMove: (intent: ListOrderInput) => Promise<void>;
   readonly onClearSelection: () => void;
 }) {
   const [entranceAnimationActive, setEntranceAnimationActive] = useState(true);

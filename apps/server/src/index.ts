@@ -9,7 +9,7 @@ import { auth, OpenAPI } from "@myakiba/auth/server";
 import { env } from "@myakiba/env/server";
 import { openapi } from "@elysiajs/openapi";
 import { staticPlugin } from "@elysiajs/static";
-import { resolve } from "node:path";
+import path from "node:path";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import * as z from "zod";
@@ -68,22 +68,22 @@ const resolveServerDistPath = (): string => {
 
   const candidates: readonly string[] = [
     ...(fromEnv ? [fromEnv] : []),
-    resolve(process.cwd(), "dist"),
-    resolve(process.cwd(), "apps/server/dist"),
+    path.resolve(process.cwd(), "dist"),
+    path.resolve(process.cwd(), "apps/server/dist"),
   ];
 
   for (const candidate of candidates) {
-    if (existsSync(resolve(candidate, "index.html"))) return candidate;
+    if (existsSync(path.resolve(candidate, "index.html"))) return candidate;
   }
 
   // Fall back to the most common runtime layout.
-  return resolve(process.cwd(), "dist");
+  return path.resolve(process.cwd(), "dist");
 };
 
 const serverDistPath = resolveServerDistPath();
 
 const serveIndexHtml = async (distDir: string): Promise<Response> => {
-  const indexHtmlPath: string = resolve(distDir, "index.html");
+  const indexHtmlPath: string = path.resolve(distDir, "index.html");
   const indexHtml: string = await readFile(indexHtmlPath, "utf-8");
   return new Response(indexHtml, {
     headers: { "content-type": "text/html; charset=utf-8" },

@@ -54,14 +54,13 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "@oxlint/plugins": "1.78.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.3.0",
     "oxfmt": "latest",
-    "oxlint": "1.78.0",
+    "oxlint": "1.80.0",
     "turbo": "2.10.11",
     "typescript": "catalog:",
-    "ultracite": "7.6.1"
+    "ultracite": "7.10.7"
   },
   "overrides": {
     "@better-auth/core": "1.6.23"

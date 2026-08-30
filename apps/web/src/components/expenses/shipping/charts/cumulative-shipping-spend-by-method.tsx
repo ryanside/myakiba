@@ -79,7 +79,7 @@ export function CumulativeShippingSpendByMethod({
         <EvilAreaChart.YAxis
           tickFormatter={(value) => formatCurrencyFromMinorUnits(Number(value), currency, locale)}
         />
-        {!isLoading ? (
+        {isLoading ? null : (
           <ChartTooltip
             content={
               <ChartTooltipContent
@@ -89,7 +89,7 @@ export function CumulativeShippingSpendByMethod({
               />
             }
           />
-        ) : null}
+        )}
         {methods.map((method) =>
           visibleKeys.has(shippingMethodKeys[method]) ? (
             <EvilAreaChart.Area

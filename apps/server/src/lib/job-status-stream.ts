@@ -34,17 +34,13 @@ export const waitForNextJobStatusEvent = async ({
 
   try {
     return await Promise.race([
-      subscriptionEventPromise.then(
-        (event): NextJobStatusEvent => ({
-          kind: "subscription",
-          event,
-        }),
-      ),
-      abortPromise.then(
-        (): NextJobStatusEvent => ({
-          kind: "aborted",
-        }),
-      ),
+      subscriptionEventPromise.then((event): NextJobStatusEvent => ({
+        kind: "subscription",
+        event,
+      })),
+      abortPromise.then((): NextJobStatusEvent => ({
+        kind: "aborted",
+      })),
       new Promise<NextJobStatusEvent>((resolve) => {
         timeoutId = setTimeout(() => {
           resolve({ kind: timerKind });

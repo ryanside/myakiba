@@ -184,8 +184,7 @@ export function EvilBarChart<
   // Brush is a <Brush /> child now (not props): pull it out of the children so
   // it never reaches the Recharts tree, and drive the footer from its props.
   const brush = useMemo(() => {
-    // Pull the <Brush> element out of the children (config-only, never rendered
-    // into the Recharts tree); toArray also assigns stable keys to the rest.
+    // eslint-disable-next-line react/no-react-children
     const parts = Children.toArray(children);
     const brushEl = parts.find((child) => isValidElement(child) && child.type === Brush);
     const bp = (isValidElement(brushEl) ? brushEl.props : {}) as BrushProps;

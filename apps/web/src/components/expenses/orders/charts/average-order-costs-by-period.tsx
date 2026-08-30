@@ -73,7 +73,7 @@ export function AverageOrderCostsByPeriod({
         <EvilBarChart.YAxis
           tickFormatter={(value) => formatCurrencyFromMinorUnits(Number(value), currency, locale)}
         />
-        {!isLoading ? (
+        {isLoading ? null : (
           <ChartTooltip
             cursor={false}
             content={
@@ -84,7 +84,7 @@ export function AverageOrderCostsByPeriod({
               />
             }
           />
-        ) : null}
+        )}
         {keys.map((key) =>
           visibleKeys.has(key) ? (
             <EvilBarChart.Bar key={key} dataKey={key} variant="gradient" />

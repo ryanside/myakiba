@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
 import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   getCoreRowModel,
@@ -163,9 +163,8 @@ export function OrderItemSubDataGrid({
             </div>
           ) : null}
           <DataGridContainer className={wrapped ? "bg-card" : undefined}>
-            <ScrollArea>
+            <ScrollArea horizontal>
               <DataGridTable />
-              <ScrollBar orientation="horizontal" />
             </ScrollArea>
           </DataGridContainer>
           <div className="flex items-center justify-between">

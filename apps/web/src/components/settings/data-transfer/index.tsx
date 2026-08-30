@@ -43,7 +43,7 @@ export type DataTransferViewState = {
 };
 
 export type DataTransferViewActions = ImportViewActions & {
-  readonly onExport: () => void;
+  readonly handleExport: () => void;
 };
 
 export function DataTransfer() {
@@ -210,17 +210,17 @@ export function DataTransfer() {
     <DataTransferView
       state={state}
       actions={{
-        onExport: () => exportMutation.mutate(),
-        onReconnectImportStatus: () => liveStatusQuery.refetch(),
-        onRetryCurrentImportLoad: () => currentImportQuery.refetch(),
+        handleExport: () => exportMutation.mutate(),
+        handleReconnectImportStatus: () => liveStatusQuery.refetch(),
+        handleRetryCurrentImportLoad: () => currentImportQuery.refetch(),
         onFile: (file) => handleFile(file),
-        onFileError: (error) => {
+        handleFileError: (error) => {
           readVersion.current += 1;
           resetStartMutation();
           resetRetryMutation();
           setPreparedFile({ kind: "invalid", file: null, message: error.message });
         },
-        onConfirmImport: async () => {
+        handleConfirmImport: async () => {
           if (preparedFile.kind !== "ready") return;
 
           try {
@@ -232,8 +232,8 @@ export function DataTransfer() {
             // The mutation keeps the actionable error beside the import controls.
           }
         },
-        onRetryCurrentImport: () => retryMutation.mutate(),
-        onDeleteCurrentImport: async () => {
+        handleRetryCurrentImport: () => retryMutation.mutate(),
+        handleDeleteCurrentImport: async () => {
           try {
             await deleteMutation.mutateAsync();
           } catch {
@@ -267,7 +267,7 @@ export function DataTransferView({
           size="sm"
           variant="outline"
           disabled={state.export.kind === "pending"}
-          onClick={actions.onExport}
+          onClick={actions.handleExport}
         >
           <HugeiconsIcon
             icon={state.export.kind === "pending" ? Loading03Icon : Download01Icon}

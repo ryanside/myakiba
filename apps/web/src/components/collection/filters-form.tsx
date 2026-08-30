@@ -77,13 +77,13 @@ export default function FiltersForm({
   const form = useForm({
     defaultValues: {
       paidMin:
-        currentFilters?.paidMin !== undefined
-          ? minorUnitsToMajorString(currentFilters.paidMin)
-          : "",
+        currentFilters?.paidMin === undefined
+          ? ""
+          : minorUnitsToMajorString(currentFilters.paidMin),
       paidMax:
-        currentFilters?.paidMax !== undefined
-          ? minorUnitsToMajorString(currentFilters.paidMax)
-          : "",
+        currentFilters?.paidMax === undefined
+          ? ""
+          : minorUnitsToMajorString(currentFilters.paidMax),
       shop: currentFilters?.shop ?? [],
       payDateStart: currentFilters?.payDateStart ?? "",
       payDateEnd: currentFilters?.payDateEnd ?? "",
@@ -95,13 +95,13 @@ export default function FiltersForm({
       relDateStart: currentFilters?.relDateStart ?? "",
       relDateEnd: currentFilters?.relDateEnd ?? "",
       relPriceMin:
-        currentFilters?.relPriceMin !== undefined
-          ? minorUnitsToMajorString(currentFilters.relPriceMin)
-          : "",
+        currentFilters?.relPriceMin === undefined
+          ? ""
+          : minorUnitsToMajorString(currentFilters.relPriceMin),
       relPriceMax:
-        currentFilters?.relPriceMax !== undefined
-          ? minorUnitsToMajorString(currentFilters.relPriceMax)
-          : "",
+        currentFilters?.relPriceMax === undefined
+          ? ""
+          : minorUnitsToMajorString(currentFilters.relPriceMax),
       relCurrency: currentFilters?.relCurrency ?? [],
       category: currentFilters?.category ?? [],
       entries: currentFilters?.entries ?? [],

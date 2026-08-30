@@ -36,7 +36,7 @@ export function ListControls({
   readonly selected: boolean;
   readonly active: boolean;
   readonly onToggleSelection: () => void;
-  readonly onUpdate: (listId: string, input: ListInput) => Promise<unknown>;
+  readonly onUpdate: (listId: string, input: ListInput) => Promise<void>;
   readonly onDelete: (listId: string) => Promise<void>;
   readonly children: ReactNode;
 }): React.JSX.Element {

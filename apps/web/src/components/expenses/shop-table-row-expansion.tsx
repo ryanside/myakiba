@@ -197,9 +197,9 @@ function CollectionExpansionPanel({
         <div className="flex flex-wrap gap-2">
           {data.items.map((item, index) => {
             const linkProps =
-              item.externalId !== null
-                ? { to: "/item/$externalId" as const, params: { externalId: item.externalId } }
-                : { to: "/item/custom/$id" as const, params: { id: item.itemId } };
+              item.externalId === null
+                ? { to: "/item/custom/$id" as const, params: { id: item.itemId } }
+                : { to: "/item/$externalId" as const, params: { externalId: item.externalId } };
             return (
               <Link
                 key={item.collectionId}

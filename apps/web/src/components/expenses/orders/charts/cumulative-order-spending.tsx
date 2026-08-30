@@ -76,7 +76,7 @@ export function CumulativeOrderSpending({
         <EvilAreaChart.YAxis
           tickFormatter={(value) => formatCurrencyFromMinorUnits(Number(value), currency, locale)}
         />
-        {!isLoading ? (
+        {isLoading ? null : (
           <ChartTooltip
             content={
               <ChartTooltipContent
@@ -86,7 +86,7 @@ export function CumulativeOrderSpending({
               />
             }
           />
-        ) : null}
+        )}
         {keys.map((key) =>
           visibleKeys.has(key) ? (
             <EvilAreaChart.Area key={key} dataKey={key} variant="gradient">

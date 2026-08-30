@@ -19,7 +19,7 @@ export function ListMembersActionBar({
   readonly selectedMemberIds: readonly string[];
   readonly isRemoving: boolean;
   readonly onClearSelection: () => void;
-  readonly onRemoveMembers: (memberIds: readonly string[]) => Promise<unknown>;
+  readonly onRemoveMembers: (memberIds: readonly string[]) => Promise<void>;
 }): React.JSX.Element {
   const selectedCount = selectedMemberIds.length;
 

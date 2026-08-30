@@ -149,12 +149,12 @@ export function CollectionCardGrid({
 
             {/* Image */}
             <Link
-              {...(item.itemExternalId !== null
-                ? ({
+              {...(item.itemExternalId === null
+                ? ({ to: "/item/custom/$id", params: { id: item.itemId } } as const)
+                : ({
                     to: "/item/$externalId",
                     params: { externalId: item.itemExternalId },
-                  } as const)
-                : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
+                  } as const))}
               className="block overflow-hidden rounded-[10px] bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               title={item.itemTitle}
               style={{ "--data-in-delay": `${staggerDelay}ms` } as CSSProperties}
@@ -206,12 +206,12 @@ export function CollectionCardGrid({
                 )}
               >
                 <Link
-                  {...(item.itemExternalId !== null
-                    ? ({
+                  {...(item.itemExternalId === null
+                    ? ({ to: "/item/custom/$id", params: { id: item.itemId } } as const)
+                    : ({
                         to: "/item/$externalId",
                         params: { externalId: item.itemExternalId },
-                      } as const)
-                    : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
+                      } as const))}
                   className="line-clamp-2 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   title={item.itemTitle}
                 >

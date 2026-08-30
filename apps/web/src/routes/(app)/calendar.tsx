@@ -59,10 +59,10 @@ function RouteComponent(): ReactNode {
       let nextDays: readonly number[];
       if (monthOrYearChanged) {
         nextDays = [];
-      } else if (patch.days != null) {
-        nextDays = patch.days;
-      } else {
+      } else if (patch.days == null) {
         nextDays = days;
+      } else {
+        nextDays = patch.days;
       }
 
       navigate({

@@ -75,7 +75,7 @@ export function OrderSpendingByPeriod({
         <EvilBarChart.YAxis
           tickFormatter={(value) => formatCurrencyFromMinorUnits(Number(value), currency, locale)}
         />
-        {!isLoading ? (
+        {isLoading ? null : (
           <ChartTooltip
             cursor={false}
             content={
@@ -86,7 +86,7 @@ export function OrderSpendingByPeriod({
               />
             }
           />
-        ) : null}
+        )}
         {keys.map((key) =>
           visibleKeys.has(key) ? (
             <EvilBarChart.Bar key={key} dataKey={key} variant="gradient" />

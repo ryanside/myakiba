@@ -3,19 +3,12 @@ import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area";
 
 import { cn } from "@/lib/utils";
 
-function ScrollArea({ className, children, ...props }: ScrollAreaPrimitive.Root.Props) {
-  const viewportChildren: React.ReactNode[] = [];
-  const scrollbarChildren: React.ReactElement[] = [];
-
-  React.Children.forEach(children, (child) => {
-    if (React.isValidElement(child) && child.type === ScrollBar) {
-      scrollbarChildren.push(child);
-      return;
-    }
-
-    viewportChildren.push(child);
-  });
-
+function ScrollArea({
+  className,
+  children,
+  horizontal = false,
+  ...props
+}: ScrollAreaPrimitive.Root.Props & { horizontal?: boolean }) {
   return (
     <ScrollAreaPrimitive.Root
       data-slot="scroll-area"
@@ -26,10 +19,10 @@ function ScrollArea({ className, children, ...props }: ScrollAreaPrimitive.Root.
         data-slot="scroll-area-viewport"
         className="size-full min-w-0 rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1"
       >
-        {viewportChildren}
+        {children}
       </ScrollAreaPrimitive.Viewport>
       <ScrollBar />
-      {scrollbarChildren}
+      {horizontal ? <ScrollBar orientation="horizontal" /> : null}
       <ScrollAreaPrimitive.Corner />
     </ScrollAreaPrimitive.Root>
   );

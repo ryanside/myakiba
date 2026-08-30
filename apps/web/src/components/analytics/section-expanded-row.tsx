@@ -137,12 +137,12 @@ function ExpandedRowItems({
         {data.items.map((item, idx) => (
           <Link
             key={`${item.id}-${offset + idx}`}
-            {...(item.externalId !== null
-              ? ({
+            {...(item.externalId === null
+              ? ({ to: "/item/custom/$id", params: { id: item.id } } as const)
+              : ({
                   to: "/item/$externalId",
                   params: { externalId: item.externalId },
-                } as const)
-              : ({ to: "/item/custom/$id", params: { id: item.id } } as const))}
+                } as const))}
             title={item.title}
             aria-label={item.title}
             className="animate-data-in aspect-square rounded-md overflow-hidden bg-background"

@@ -35,6 +35,7 @@ import type {
   SyncLauncherOption,
 } from "@/components/sync/sync-launcher-options";
 import { SYNC_TYPE_CONFIG } from "@/lib/sync";
+
 const TOKEN_SEPARATOR = /[^a-z0-9]+/i;
 const SEARCH_DEBOUNCE_MS = 200;
 const EMPTY_RESULTS: CommandSearchResults = {
@@ -66,14 +67,12 @@ function useDebouncedValue(value: string, delayMs: number): string {
   const [debouncedValue, setDebouncedValue] = useState(value);
 
   useEffect(() => {
-    if (value.length === 0) {
-      setDebouncedValue(value);
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setDebouncedValue(value);
-    }, delayMs);
+    const timeoutId = window.setTimeout(
+      () => {
+        setDebouncedValue(value);
+      },
+      value.length === 0 ? 0 : delayMs,
+    );
 
     return () => {
       window.clearTimeout(timeoutId);
@@ -315,7 +314,7 @@ export function AppCommand(): React.JSX.Element {
             placeholder="Search pages, actions, orders, or items..."
           />
           <CommandList className="max-h-104 mx-2">
-            {!hasVisibleResults ? <CommandEmpty>No results found.</CommandEmpty> : null}
+            {hasVisibleResults ? null : <CommandEmpty>No results found.</CommandEmpty>}
 
             {showNavigationGroup ? (
               <CommandGroup heading="Navigate">
@@ -366,8 +365,9 @@ export function AppCommand(): React.JSX.Element {
                 orderMatches.length === 0 ? (
                   <StatusCommandItem title={`No orders matched "${query}"`} />
                 ) : null}
-                {!isSearchPending
-                  ? orderMatches.map((order) => (
+                {isSearchPending
+                  ? null
+                  : orderMatches.map((order) => (
                       <ActionCommandItem
                         key={order.id}
                         value={`order-${order.id}`}
@@ -384,8 +384,7 @@ export function AppCommand(): React.JSX.Element {
                         }
                         onSelect={() => handleOrderOpen(order.id)}
                       />
-                    ))
-                  : null}
+                    ))}
                 <ActionCommandItem
                   value={`orders-all-${query}`}
                   title={`View all orders for "${query}"`}
@@ -415,8 +414,9 @@ export function AppCommand(): React.JSX.Element {
                 itemMatches.length === 0 ? (
                   <StatusCommandItem title={`No items matched "${query}"`} />
                 ) : null}
-                {!isSearchPending
-                  ? itemMatches.map((item) => (
+                {isSearchPending
+                  ? null
+                  : itemMatches.map((item) => (
                       <ActionCommandItem
                         key={item.itemId}
                         value={`item-${item.itemId}`}
@@ -436,8 +436,7 @@ export function AppCommand(): React.JSX.Element {
                         }
                         onSelect={() => handleItemOpen(item)}
                       />
-                    ))
-                  : null}
+                    ))}
                 <ActionCommandItem
                   value={`items-all-${query}`}
                   title={`View all items for "${query}"`}

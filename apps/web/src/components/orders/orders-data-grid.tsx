@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
 import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { functionalUpdate, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type {
   ExpandedState,
@@ -284,9 +284,8 @@ export default function OrdersDataGrid() {
                 if (isTableView) {
                   return (
                     <DataGridContainer>
-                      <ScrollArea>
+                      <ScrollArea horizontal>
                         <DataGridTable />
-                        <ScrollBar orientation="horizontal" />
                       </ScrollArea>
                     </DataGridContainer>
                   );

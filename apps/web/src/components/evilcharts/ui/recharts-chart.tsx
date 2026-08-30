@@ -9,6 +9,7 @@ import type { LegendPayload } from "recharts/types/component/DefaultLegendConten
 
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: "", dark: ".dark" } as const;
+const DEFAULT_INITIAL_DIMENSION = { width: 320, height: 200 } as const;
 
 type ThemeKey = keyof typeof THEMES;
 
@@ -54,20 +55,27 @@ export type ChartDataRow = Record<string, ChartDataValue>;
 
 type RechartsPayload = TooltipPayload | LegendPayload;
 const payloadKeySchema = z.union([z.string(), z.number()]);
+const payloadRecordSchema = z.looseObject({});
 
 function readPayloadKey(payload: RechartsPayload, key: string) {
-  const directValue = payloadKeySchema.safeParse(Reflect.get(payload, key));
-  if (directValue.success) return directValue.data;
+  const directRecord = payloadRecordSchema.safeParse(payload);
+  if (directRecord.success) {
+    const directValue = payloadKeySchema.safeParse(directRecord.data[key]);
+    if (directValue.success) return directValue.data;
+  }
 
-  if (!(payload.payload instanceof Object)) return;
-  const nestedValue = payloadKeySchema.safeParse(Reflect.get(payload.payload, key));
+  const nestedRecord = payloadRecordSchema.safeParse(payload.payload);
+  if (!nestedRecord.success) return;
+  const nestedValue = payloadKeySchema.safeParse(nestedRecord.data[key]);
   return nestedValue.success ? nestedValue.data : undefined;
 }
 
 export function getNestedPayloadKey(payload: RechartsPayload, key: string | undefined) {
-  if (key === undefined || !(payload.payload instanceof Object)) return;
-  const value = payloadKeySchema.safeParse(Reflect.get(payload.payload, key));
-  return value.success ? value.data : undefined;
+  if (key === undefined) return;
+  const nestedRecord = payloadRecordSchema.safeParse(payload.payload);
+  if (!nestedRecord.success) return;
+  const nestedValue = payloadKeySchema.safeParse(nestedRecord.data[key]);
+  return nestedValue.success ? nestedValue.data : undefined;
 }
 
 interface ChartContextProps {
@@ -113,7 +121,7 @@ interface ChartContainerProps
 function ChartContainer({
   id,
   config,
-  initialDimension = { width: 320, height: 200 },
+  initialDimension = DEFAULT_INITIAL_DIMENSION,
   className,
   children,
   footer,
@@ -130,12 +138,13 @@ function ChartContainer({
 }: Readonly<ChartContainerProps>) {
   const uniqueId = React.useId();
   const chartId = `chart-${id ?? uniqueId.replaceAll(":", "")}`;
+  const contextValue = React.useMemo(() => ({ config }), [config]);
 
   // Validate chart config at runtime
   validateChartConfigColors(config);
 
   return (
-    <ChartContext.Provider value={{ config }}>
+    <ChartContext.Provider value={contextValue}>
       <div
         data-slot="chart"
         data-chart={chartId}
@@ -243,7 +252,7 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     )
     .join("\n");
 
-  return <style dangerouslySetInnerHTML={{ __html: css }} />;
+  return <style>{css}</style>;
 };
 
 // Helper to extract item config from a payload.

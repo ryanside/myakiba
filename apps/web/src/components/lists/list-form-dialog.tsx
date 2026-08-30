@@ -40,7 +40,7 @@ export function ListFormDialog({
   readonly initialDescription?: string;
   readonly submitLabel: string;
   readonly pendingLabel: string;
-  readonly onSubmit: (input: ListInput) => Promise<unknown>;
+  readonly onSubmit: (input: ListInput) => Promise<void>;
 }): React.JSX.Element {
   const titleInputId = useId();
   const descriptionInputId = useId();

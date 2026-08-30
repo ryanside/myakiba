@@ -62,53 +62,53 @@ export default function OrdersFiltersForm({
       colDateEnd: currentFilters?.colDateEnd ?? "",
       status: currentFilters?.status ?? [],
       totalMin:
-        currentFilters?.totalMin !== undefined
-          ? minorUnitsToMajorString(currentFilters.totalMin)
-          : "",
+        currentFilters?.totalMin === undefined
+          ? ""
+          : minorUnitsToMajorString(currentFilters.totalMin),
       totalMax:
-        currentFilters?.totalMax !== undefined
-          ? minorUnitsToMajorString(currentFilters.totalMax)
-          : "",
+        currentFilters?.totalMax === undefined
+          ? ""
+          : minorUnitsToMajorString(currentFilters.totalMax),
       shippingFeeMin:
-        currentFilters?.shippingFeeMin !== undefined
-          ? minorUnitsToMajorString(currentFilters.shippingFeeMin)
-          : "",
+        currentFilters?.shippingFeeMin === undefined
+          ? ""
+          : minorUnitsToMajorString(currentFilters.shippingFeeMin),
       shippingFeeMax:
-        currentFilters?.shippingFeeMax !== undefined
-          ? minorUnitsToMajorString(currentFilters.shippingFeeMax)
-          : "",
+        currentFilters?.shippingFeeMax === undefined
+          ? ""
+          : minorUnitsToMajorString(currentFilters.shippingFeeMax),
       taxesMin:
-        currentFilters?.taxesMin !== undefined
-          ? minorUnitsToMajorString(currentFilters.taxesMin)
-          : "",
+        currentFilters?.taxesMin === undefined
+          ? ""
+          : minorUnitsToMajorString(currentFilters.taxesMin),
       taxesMax:
-        currentFilters?.taxesMax !== undefined
-          ? minorUnitsToMajorString(currentFilters.taxesMax)
-          : "",
+        currentFilters?.taxesMax === undefined
+          ? ""
+          : minorUnitsToMajorString(currentFilters.taxesMax),
       dutiesMin:
-        currentFilters?.dutiesMin !== undefined
-          ? minorUnitsToMajorString(currentFilters.dutiesMin)
-          : "",
+        currentFilters?.dutiesMin === undefined
+          ? ""
+          : minorUnitsToMajorString(currentFilters.dutiesMin),
       dutiesMax:
-        currentFilters?.dutiesMax !== undefined
-          ? minorUnitsToMajorString(currentFilters.dutiesMax)
-          : "",
+        currentFilters?.dutiesMax === undefined
+          ? ""
+          : minorUnitsToMajorString(currentFilters.dutiesMax),
       tariffsMin:
-        currentFilters?.tariffsMin !== undefined
-          ? minorUnitsToMajorString(currentFilters.tariffsMin)
-          : "",
+        currentFilters?.tariffsMin === undefined
+          ? ""
+          : minorUnitsToMajorString(currentFilters.tariffsMin),
       tariffsMax:
-        currentFilters?.tariffsMax !== undefined
-          ? minorUnitsToMajorString(currentFilters.tariffsMax)
-          : "",
+        currentFilters?.tariffsMax === undefined
+          ? ""
+          : minorUnitsToMajorString(currentFilters.tariffsMax),
       miscFeesMin:
-        currentFilters?.miscFeesMin !== undefined
-          ? minorUnitsToMajorString(currentFilters.miscFeesMin)
-          : "",
+        currentFilters?.miscFeesMin === undefined
+          ? ""
+          : minorUnitsToMajorString(currentFilters.miscFeesMin),
       miscFeesMax:
-        currentFilters?.miscFeesMax !== undefined
-          ? minorUnitsToMajorString(currentFilters.miscFeesMax)
-          : "",
+        currentFilters?.miscFeesMax === undefined
+          ? ""
+          : minorUnitsToMajorString(currentFilters.miscFeesMax),
     },
     onSubmit: async ({ value }) => {
       const filters: OrderFilters = {

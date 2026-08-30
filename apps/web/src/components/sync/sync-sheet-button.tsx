@@ -17,6 +17,7 @@ import SyncOrderForm from "@/components/sync/sync-order-form";
 import SyncCollectionForm from "@/components/sync/sync-collection-form";
 import { useSyncMutations } from "@/hooks/use-sync-mutations";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
+
 type SyncSheetButtonProps = {
   readonly syncType: Extract<SyncType, "collection" | "order">;
   readonly label: string;

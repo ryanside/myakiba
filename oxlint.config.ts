@@ -1,22 +1,12 @@
 import { defineConfig } from "oxlint";
+import antiSlop from "ultracite/oxlint/anti-slop";
 import core from "ultracite/oxlint/core";
 import react from "ultracite/oxlint/react";
 
 export default defineConfig({
-  extends: [core, react],
+  extends: [core, react, antiSlop],
   ignorePatterns: ["**/*.gen.ts", "**/*.gen.tsx"],
-  jsPlugins: [{ name: "anti-slop", specifier: "./tools/oxlint/anti-slop/index.ts" }],
   rules: {
-    "anti-slop/no-chained-type-assertions": "error",
-    "anti-slop/no-conditional-empty-object-spread": "error",
-    "anti-slop/no-known-value-widening": "error",
-    "anti-slop/no-object-parameters": "error",
-    "anti-slop/no-runtime-typeof": "error",
-    "anti-slop/no-shape-in-symbol-names": "error",
-    "anti-slop/no-unknown-parameters": "error",
-    "anti-slop/no-unknown-type-aliases": "error",
-    "anti-slop/no-unsafe-dictionary-type": "error",
-    "anti-slop/no-widen-then-assert": "error",
     "sort-keys": "off",
     curly: "off",
     "unicorn/switch-case-braces": "off",
@@ -41,6 +31,15 @@ export default defineConfig({
     "promise/avoid-new": "off",
     "no-warning-comments": "off",
     "react/no-children-prop": "off",
+    "react/function-component-definition": "off",
+    "anti-slop/require-safety-comment-for-type-assertion": "off",
+    "require-unicode-regexp": "off",
+    "unicorn/prefer-number-coercion": "off",
+    "prefer-named-capture-group": "off",
+    "no-await-in-loop": "off",
+    "react/todo": "off",
+    "react/incompatible-library": "off",
+    "react/rule-suppression": "off",
     "jsx-a11y/prefer-tag-over-role": "off",
     "func-style": "off",
     "no-inline-comments": "off",

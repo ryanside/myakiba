@@ -61,16 +61,16 @@ class OrdersService {
       collectionDateStart ? gte(order.collectionDate, collectionDateStart) : undefined,
       collectionDateEnd ? lte(order.collectionDate, collectionDateEnd) : undefined,
       status ? inArray(order.status, status) : undefined,
-      shippingFeeMin !== undefined ? gte(order.shippingFee, shippingFeeMin) : undefined,
-      shippingFeeMax !== undefined ? lte(order.shippingFee, shippingFeeMax) : undefined,
-      taxesMin !== undefined ? gte(order.taxes, taxesMin) : undefined,
-      taxesMax !== undefined ? lte(order.taxes, taxesMax) : undefined,
-      dutiesMin !== undefined ? gte(order.duties, dutiesMin) : undefined,
-      dutiesMax !== undefined ? lte(order.duties, dutiesMax) : undefined,
-      tariffsMin !== undefined ? gte(order.tariffs, tariffsMin) : undefined,
-      tariffsMax !== undefined ? lte(order.tariffs, tariffsMax) : undefined,
-      miscFeesMin !== undefined ? gte(order.miscFees, miscFeesMin) : undefined,
-      miscFeesMax !== undefined ? lte(order.miscFees, miscFeesMax) : undefined,
+      shippingFeeMin === undefined ? undefined : gte(order.shippingFee, shippingFeeMin),
+      shippingFeeMax === undefined ? undefined : lte(order.shippingFee, shippingFeeMax),
+      taxesMin === undefined ? undefined : gte(order.taxes, taxesMin),
+      taxesMax === undefined ? undefined : lte(order.taxes, taxesMax),
+      dutiesMin === undefined ? undefined : gte(order.duties, dutiesMin),
+      dutiesMax === undefined ? undefined : lte(order.duties, dutiesMax),
+      tariffsMin === undefined ? undefined : gte(order.tariffs, tariffsMin),
+      tariffsMax === undefined ? undefined : lte(order.tariffs, tariffsMax),
+      miscFeesMin === undefined ? undefined : gte(order.miscFees, miscFeesMin),
+      miscFeesMax === undefined ? undefined : lte(order.miscFees, miscFeesMax),
     );
 
     const perRowTotal = sql<number>`COALESCE(SUM(${collection.price}), 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`;
@@ -175,8 +175,8 @@ class OrdersService {
       )
       .having(
         and(
-          totalMin !== undefined ? sql`${perRowTotal} >= ${totalMin}` : undefined,
-          totalMax !== undefined ? sql`${perRowTotal} <= ${totalMax}` : undefined,
+          totalMin === undefined ? undefined : sql`${perRowTotal} >= ${totalMin}`,
+          totalMax === undefined ? undefined : sql`${perRowTotal} <= ${totalMax}`,
         ),
       )
       .orderBy(

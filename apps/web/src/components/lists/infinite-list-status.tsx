@@ -13,7 +13,7 @@ export function InfiniteListStatus({
   readonly isFetchingNextPage: boolean;
   readonly isFetchNextPageError: boolean;
   readonly disabled?: boolean;
-  readonly onLoadMore: () => Promise<unknown>;
+  readonly onLoadMore: () => Promise<void>;
 }): React.JSX.Element | null {
   const statusRef = useRef<HTMLDivElement>(null);
 

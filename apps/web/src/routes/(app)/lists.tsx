@@ -63,7 +63,7 @@ function SortableList({
   readonly selected: boolean;
   readonly dropIndicator?: "before" | "after";
   readonly onToggleSelection: () => void;
-  readonly onUpdate: (listId: string, input: ListInput) => Promise<unknown>;
+  readonly onUpdate: (listId: string, input: ListInput) => Promise<void>;
   readonly onDelete: (listId: string) => Promise<void>;
   readonly onEntranceAnimationEnd?: () => void;
 }): React.JSX.Element {
@@ -207,9 +207,9 @@ function SortableLists({
   readonly hasNextPage: boolean;
   readonly isFetchingNextPage: boolean;
   readonly onLoadMore: () => Promise<{ readonly isFetchNextPageError: boolean }>;
-  readonly onUpdate: (listId: string, input: ListInput) => Promise<unknown>;
+  readonly onUpdate: (listId: string, input: ListInput) => Promise<void>;
   readonly onDelete: (listId: string) => Promise<void>;
-  readonly onMove: (intent: ListOrderInput) => Promise<unknown>;
+  readonly onMove: (intent: ListOrderInput) => Promise<void>;
   readonly selectedIds: ReadonlySet<string>;
   readonly onClearSelection: () => void;
   readonly onToggleSelection: (listId: string, selected: boolean) => void;
@@ -353,7 +353,9 @@ function RouteComponent(): React.JSX.Element {
             description="Give your new List a title and an optional description."
             submitLabel="Create"
             pendingLabel="Creating..."
-            onSubmit={createList}
+            onSubmit={async (input) => {
+              await createList(input);
+            }}
           />
         </div>
       </div>
@@ -416,9 +418,13 @@ function RouteComponent(): React.JSX.Element {
           hasNextPage={hasNextPage}
           isFetchingNextPage={isFetchingNextPage}
           onLoadMore={handleLoadMore}
-          onUpdate={(listId, input) => updateList({ listId, ...input })}
+          onUpdate={async (listId, input) => {
+            await updateList({ listId, ...input });
+          }}
           onDelete={handleDeleteList}
-          onMove={handleMove}
+          onMove={async (intent) => {
+            await handleMove(intent);
+          }}
           selectedIds={selectedIds}
           onClearSelection={() => setSelection({})}
           onToggleSelection={(listId, selected) => {
@@ -437,7 +443,9 @@ function RouteComponent(): React.JSX.Element {
           isFetchingNextPage={isFetchingNextPage}
           isFetchNextPageError={isFetchNextPageError}
           disabled={isDeleting}
-          onLoadMore={handleLoadMore}
+          onLoadMore={async () => {
+            await handleLoadMore();
+          }}
         />
       ) : null}
     </div>

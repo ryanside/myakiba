@@ -54,7 +54,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
   const { isLoading, table, props, recordCount } = useDataGrid();
 
   const columnOrder = table.getState().columnOrder;
-  const columnVisibilityKey = JSON.stringify(table.getState().columnVisibility);
+  const columnVisibility = table.getState().columnVisibility;
   const isSorted = column.getIsSorted();
   const isPinned = column.getIsPinned();
   const canSort = column.getCanSort();
@@ -285,7 +285,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
               .map((col) => (
                 <DropdownMenuCheckboxItem
                   key={col.id}
-                  checked={col.getIsVisible()}
+                  checked={columnVisibility[col.id] ?? col.getIsVisible()}
                   onSelect={(event) => event.preventDefault()}
                   onCheckedChange={(value) => col.toggleVisibility(!!value)}
                   className="capitalize"
@@ -316,7 +316,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
     table,
     columnIndex,
     columnOrder,
-    columnVisibilityKey,
+    columnVisibility,
   ]);
 
   if (hasControls) {

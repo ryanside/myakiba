@@ -84,12 +84,12 @@ function RouteComponent() {
               />
             </div>
             <p className="text-muted-foreground">
-              We've sent a password reset link to <br />
+              We&apos;ve sent a password reset link to <br />
               <span className="font-medium text-foreground">{sentEmail}</span>
             </p>
             <p className="text-sm text-muted-foreground">
-              Click the link in the email to reset your password. If you don't see the email, check
-              your spam folder.
+              Click the link in the email to reset your password. If you don&apos;t see the email,
+              check your spam folder.
             </p>
           </div>
           <div className="flex justify-center">
@@ -110,7 +110,7 @@ function RouteComponent() {
           <div className="text-center">
             <h1 className="text-2xl font-medium">Forgot your password?</h1>
             <p className="text-sm text-muted-foreground mt-2">
-              Enter your email address and we'll send you a link to reset your password.
+              Enter your email address and we&apos;ll send you a link to reset your password.
             </p>
           </div>
         </div>

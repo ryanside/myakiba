@@ -20,32 +20,18 @@ function VisuallyHiddenInput(props: VisuallyHiddenInputProps) {
   );
   const inputRef = React.useRef<HTMLInputElement>(null);
 
-  const prevValueRef = React.useRef<{
-    value: InputValue | boolean | undefined;
-    previous: InputValue | boolean | undefined;
-  }>({
-    value: isCheckInput ? checked : value,
-    previous: isCheckInput ? checked : value,
-  });
-
-  const prevValue = React.useMemo(() => {
-    const currentValue = isCheckInput ? checked : value;
-    if (prevValueRef.current.value !== currentValue) {
-      prevValueRef.current.previous = prevValueRef.current.value;
-      prevValueRef.current.value = currentValue;
-    }
-    return prevValueRef.current.previous;
-  }, [isCheckInput, value, checked]);
+  const currentValue = isCheckInput ? checked : value;
+  const previousValueRef = React.useRef<InputValue | boolean | undefined>(currentValue);
 
   React.useEffect(() => {
+    const previousValue = previousValueRef.current;
+    previousValueRef.current = currentValue;
     const input = inputRef.current;
     if (!input) return;
 
     const inputProto = window.HTMLInputElement.prototype;
     const propertyKey = isCheckInput ? "checked" : "value";
     const eventType = isCheckInput ? "click" : "input";
-    const currentValue = isCheckInput ? checked : value;
-
     const getSerializedCurrentValue = () => {
       if (isCheckInput) return checked;
       if (Array.isArray(value)) return JSON.stringify(value);
@@ -57,12 +43,12 @@ function VisuallyHiddenInput(props: VisuallyHiddenInputProps) {
 
     const setter = descriptor?.set;
 
-    if (prevValue !== currentValue && setter) {
+    if (previousValue !== currentValue && setter) {
       const event = new Event(eventType, { bubbles });
       setter.call(input, serializedCurrentValue);
       input.dispatchEvent(event);
     }
-  }, [prevValue, value, checked, bubbles, isCheckInput]);
+  }, [currentValue, value, checked, bubbles, isCheckInput]);
 
   const composedStyle = React.useMemo<React.CSSProperties>(() => {
     return {

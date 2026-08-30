@@ -131,12 +131,12 @@ function CollectionActionsCell({
                 <DropdownMenuLinkItem
                   render={
                     <Link
-                      {...(item.itemExternalId !== null
-                        ? ({
+                      {...(item.itemExternalId === null
+                        ? ({ to: "/item/custom/$id", params: { id: item.itemId } } as const)
+                        : ({
                             to: "/item/$externalId",
                             params: { externalId: item.itemExternalId },
-                          } as const)
-                        : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
+                          } as const))}
                     />
                   }
                 >
@@ -253,7 +253,7 @@ export function createCollectionColumns({
               "hidden absolute top-0 bottom-0 start-0 w-[2px] bg-primary",
               row.getIsSelected() && "block",
             )}
-          ></div>
+          />
           <Checkbox
             checked={row.getIsSelected()}
             onCheckedChange={(value) => row.toggleSelected(!!value)}
@@ -281,12 +281,12 @@ export function createCollectionColumns({
         return (
           <div className="flex items-center gap-3">
             <Link
-              {...(item.itemExternalId !== null
-                ? ({
+              {...(item.itemExternalId === null
+                ? ({ to: "/item/custom/$id", params: { id: item.itemId } } as const)
+                : ({
                     to: "/item/$externalId",
                     params: { externalId: item.itemExternalId },
-                  } as const)
-                : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
+                  } as const))}
               aria-label={`View ${item.itemTitle}`}
             >
               <ImageThumbnail
@@ -298,12 +298,12 @@ export function createCollectionColumns({
             </Link>
             <div className="min-w-0 space-y-px">
               <Link
-                {...(item.itemExternalId !== null
-                  ? ({
+                {...(item.itemExternalId === null
+                  ? ({ to: "/item/custom/$id", params: { id: item.itemId } } as const)
+                  : ({
                       to: "/item/$externalId",
                       params: { externalId: item.itemExternalId },
-                    } as const)
-                  : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
+                    } as const))}
                 className="font-medium text-foreground truncate"
               >
                 {item.itemTitle}

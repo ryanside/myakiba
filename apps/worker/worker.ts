@@ -1,3 +1,1 @@
-import { closeAllWorkers } from "./workers";
-
-export { closeAllWorkers as closeWorker };
+export { closeAllWorkers as closeWorker } from "./workers";

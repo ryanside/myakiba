@@ -41,13 +41,13 @@ export type ImportViewState = {
 };
 
 export type ImportViewActions = {
-  readonly onReconnectImportStatus: () => void;
-  readonly onRetryCurrentImportLoad: () => void;
+  readonly handleReconnectImportStatus: () => void;
+  readonly handleRetryCurrentImportLoad: () => void;
   readonly onFile: (file: File) => void;
-  readonly onFileError: (error: Error) => void;
-  readonly onConfirmImport: () => Promise<void>;
-  readonly onRetryCurrentImport: () => void;
-  readonly onDeleteCurrentImport: () => Promise<void>;
+  readonly handleFileError: (error: Error) => void;
+  readonly handleConfirmImport: () => Promise<void>;
+  readonly handleRetryCurrentImport: () => void;
+  readonly handleDeleteCurrentImport: () => Promise<void>;
 };
 
 export function ImportSection({
@@ -107,7 +107,7 @@ export function ImportSection({
               size="sm"
               variant="outline"
               disabled={state.current.retrying}
-              onClick={actions.onRetryCurrentImportLoad}
+              onClick={actions.handleRetryCurrentImportLoad}
             >
               <HugeiconsIcon
                 icon={state.current.retrying ? Loading03Icon : Refresh01Icon}
@@ -133,7 +133,7 @@ export function ImportSection({
               const file = files[0];
               if (file) actions.onFile(file);
             }}
-            onError={actions.onFileError}
+            onError={actions.handleFileError}
           >
             <HugeiconsIcon icon={FileImportIcon} aria-hidden="true" />
             Choose export
@@ -220,7 +220,7 @@ export function ImportSection({
                     {state.start.kind === "pending" ? "Starting import…" : "Import data"}
                   </Button>
                 }
-                onConfirm={actions.onConfirmImport}
+                onConfirm={actions.handleConfirmImport}
               />
             </div>
           ) : null}
@@ -239,9 +239,9 @@ export function ImportSection({
             current={currentImport}
             deleteState={state.delete}
             deleteDisabled={state.start.kind === "pending" || retryPending}
-            onReconnect={actions.onReconnectImportStatus}
-            onRetry={actions.onRetryCurrentImport}
-            onDelete={actions.onDeleteCurrentImport}
+            onReconnect={actions.handleReconnectImportStatus}
+            onRetry={actions.handleRetryCurrentImport}
+            onDelete={actions.handleDeleteCurrentImport}
           />
         </div>
       ) : null}

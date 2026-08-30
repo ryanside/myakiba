@@ -96,7 +96,9 @@ export function SectionRelationships({
             isPending={isPending}
             offset={offset}
             onOffsetChange={setOffset}
-            onRetry={refetch}
+            onRetry={async () => {
+              await refetch();
+            }}
           />
         </TabsContent>
       </Tabs>
@@ -121,7 +123,7 @@ function RelationshipPage({
   readonly isPending: boolean;
   readonly offset: number;
   readonly onOffsetChange: (offset: number) => void;
-  readonly onRetry: () => Promise<unknown>;
+  readonly onRetry: () => Promise<void>;
 }): ReactNode {
   if (isPending) return <RelationshipsSkeleton />;
 
@@ -247,12 +249,12 @@ function RelationshipPreviews({
       {items.map((item) => (
         <Link
           key={item.id}
-          {...(item.externalId !== null
-            ? ({
+          {...(item.externalId === null
+            ? ({ to: "/item/custom/$id", params: { id: item.id } } as const)
+            : ({
                 to: "/item/$externalId",
                 params: { externalId: item.externalId },
-              } as const)
-            : ({ to: "/item/custom/$id", params: { id: item.id } } as const))}
+              } as const))}
           title={item.title}
           aria-label={`View ${item.title}`}
           className="relative size-10 overflow-hidden rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"

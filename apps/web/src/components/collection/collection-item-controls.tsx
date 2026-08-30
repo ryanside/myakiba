@@ -114,12 +114,12 @@ export function CollectionItemControls({
                 <DropdownMenuLinkItem
                   render={
                     <Link
-                      {...(item.itemExternalId !== null
-                        ? ({
+                      {...(item.itemExternalId === null
+                        ? ({ to: "/item/custom/$id", params: { id: item.itemId } } as const)
+                        : ({
                             to: "/item/$externalId",
                             params: { externalId: item.itemExternalId },
-                          } as const)
-                        : ({ to: "/item/custom/$id", params: { id: item.itemId } } as const))}
+                          } as const))}
                     />
                   }
                 >

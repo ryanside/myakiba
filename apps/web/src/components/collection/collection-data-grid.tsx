@@ -11,7 +11,7 @@ import { useCallback, useMemo, useState } from "react";
 import { functionalUpdate, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
 import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
-import { ScrollArea, ScrollBar } from "../ui/scroll-area";
+import { ScrollArea } from "../ui/scroll-area";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { DataGridColumnCombobox } from "../ui/data-grid-column-combobox";
 import { CollectionToolbar } from "./collection-toolbar";
@@ -270,9 +270,8 @@ export const CollectionDataGrid = () => {
               if (isTableView) {
                 return (
                   <DataGridContainer>
-                    <ScrollArea>
+                    <ScrollArea horizontal>
                       <DataGridTable />
-                      <ScrollBar orientation="horizontal" />
                     </ScrollArea>
                   </DataGridContainer>
                 );

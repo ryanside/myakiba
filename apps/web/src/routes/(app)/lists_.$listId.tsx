@@ -130,7 +130,9 @@ function RouteComponent(): React.JSX.Element {
                 initialDescription={data.description}
                 submitLabel="Save"
                 pendingLabel="Saving..."
-                onSubmit={(input) => updateList({ listId, ...input })}
+                onSubmit={async (input) => {
+                  await updateList({ listId, ...input });
+                }}
               />
               <ConfirmDialog
                 renderTrigger={
@@ -155,7 +157,9 @@ function RouteComponent(): React.JSX.Element {
         selectedMemberIds={selectedMemberIds}
         isRemoving={removeMembersMutation.isPending}
         onClearSelection={() => setSelection({})}
-        onRemoveMembers={removeMembersMutation.mutateAsync}
+        onRemoveMembers={async (memberIds) => {
+          await removeMembersMutation.mutateAsync(memberIds);
+        }}
       />
 
       {isPending && viewMode === "grid" ? (
@@ -229,7 +233,9 @@ function RouteComponent(): React.JSX.Element {
           isFetchingNextPage={membersQuery.isFetchingNextPage}
           onLoadMore={handleLoadMore}
           onRemove={handleRemove}
-          onMove={handleMove}
+          onMove={async (intent) => {
+            await handleMove(intent);
+          }}
           selectedIds={selectedIds}
           onClearSelection={() => setSelection({})}
           onToggleSelection={(memberId, selected) => {
@@ -249,7 +255,9 @@ function RouteComponent(): React.JSX.Element {
             isFetchingNextPage={membersQuery.isFetchingNextPage}
             isFetchNextPageError={membersQuery.isFetchNextPageError}
             disabled={removeMembersMutation.isPending}
-            onLoadMore={handleLoadMore}
+            onLoadMore={async () => {
+              await handleLoadMore();
+            }}
           />
           <p className="text-sm text-muted-foreground">{totalCount.toLocaleString()} total</p>
         </>

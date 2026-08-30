@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
 /**
  * Optimistically display the value being submitted while a mutation is in
@@ -16,18 +16,15 @@ function usePendingValue<T>(
 
   const displayValue = pending !== null && !Object.is(pending.value, value) ? pending.value : value;
 
-  const submit = useCallback(
-    async (newValue: T): Promise<void> => {
-      if (Object.is(newValue, value)) return;
-      setPending({ value: newValue });
-      try {
-        await onSubmit(newValue);
-      } finally {
-        setPending(null);
-      }
-    },
-    [onSubmit, value],
-  );
+  const submit = async (newValue: T): Promise<void> => {
+    if (Object.is(newValue, value)) return;
+    setPending({ value: newValue });
+    try {
+      await onSubmit(newValue);
+    } finally {
+      setPending(null);
+    }
+  };
 
   return [displayValue, submit] as const;
 }

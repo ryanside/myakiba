@@ -23,8 +23,8 @@ function bezierEase(x: number, x1: number, y1: number, x2: number, y2: number, e
     if (Math.abs(d) < 1e-6) break;
     t -= dx / d;
   }
-  let hi = 1,
-    lo = 0;
+  let hi = 1;
+  let lo = 0;
   t = x;
   while (lo < hi) {
     const cx = bx(t);

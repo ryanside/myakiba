@@ -54,9 +54,10 @@ function ChartContainer({
 }) {
   const uniqueId = React.useId();
   const chartId = `chart-${id || uniqueId.replaceAll(":", "")}`;
+  const contextValue = React.useMemo(() => ({ config }), [config]);
 
   return (
-    <ChartContext.Provider value={{ config }}>
+    <ChartContext.Provider value={contextValue}>
       <div
         data-slot="chart"
         data-chart={chartId}
@@ -82,12 +83,9 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     return null;
   }
 
-  return (
-    <style
-      dangerouslySetInnerHTML={{
-        __html: Object.entries(THEMES)
-          .map(
-            ([theme, prefix]) => `
+  const css = Object.entries(THEMES)
+    .map(
+      ([theme, prefix]) => `
 ${prefix} [data-chart=${id}] {
 ${colorConfig
   .map(([key, itemConfig]) => {
@@ -97,11 +95,10 @@ ${colorConfig
   .join("\n")}
 }
 `,
-          )
-          .join("\n"),
-      }}
-    />
-  );
+    )
+    .join("\n");
+
+  return <style>{css}</style>;
 };
 
 const ChartTooltip = RechartsPrimitive.Tooltip;
@@ -173,7 +170,7 @@ function ChartTooltipContent({
         className,
       )}
     >
-      {!nestLabel ? tooltipLabel : null}
+      {nestLabel ? null : tooltipLabel}
       <div className="grid gap-1.5">
         {payload
           .filter((item) => item.type !== "none")
@@ -304,13 +301,18 @@ function ChartLegendContent({
 }
 
 type RechartsPayload = TooltipPayload | LegendPayload;
+const payloadRecordSchema = z.looseObject({});
 
 function getPayloadConfigFromPayload(config: ChartConfig, payload: RechartsPayload, key: string) {
-  const payloadKey = z.string().safeParse(Reflect.get(payload, key));
-  if (payloadKey.success) return config[payloadKey.data] ?? config[key];
+  const directRecord = payloadRecordSchema.safeParse(payload);
+  if (directRecord.success) {
+    const payloadKey = z.string().safeParse(directRecord.data[key]);
+    if (payloadKey.success) return config[payloadKey.data] ?? config[key];
+  }
 
-  if (payload.payload instanceof Object) {
-    const nestedPayloadKey = z.string().safeParse(Reflect.get(payload.payload, key));
+  const nestedRecord = payloadRecordSchema.safeParse(payload.payload);
+  if (nestedRecord.success) {
+    const nestedPayloadKey = z.string().safeParse(nestedRecord.data[key]);
     if (nestedPayloadKey.success) return config[nestedPayloadKey.data] ?? config[key];
   }
 
