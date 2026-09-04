@@ -63,7 +63,8 @@
     "ultracite": "7.10.7"
   },
   "overrides": {
-    "@better-auth/core": "1.6.23"
+    "@better-auth/core": "1.6.23",
+    "toml": "4.2.0"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
