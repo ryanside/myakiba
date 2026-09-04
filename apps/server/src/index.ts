@@ -115,7 +115,9 @@ const app = new Elysia()
     }),
   )
   .get("/api/auth/*", ({ request }) => auth.handler(request))
-  .post("/api/auth/*", ({ request }) => auth.handler(request))
+  .post("/api/auth/*", ({ request }) => auth.handler(request), {
+    parse: "none",
+  })
   .get("/health", () => ({ status: "ok" }))
   .group("/api", (api) =>
     api
