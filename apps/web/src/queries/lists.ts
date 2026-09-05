@@ -14,13 +14,12 @@ export async function createList(input: ListInput) {
   return data;
 }
 
-export async function moveLists(intent: PositionOrderInput) {
-  const { data, error } = await app.api.lists.order.patch({
+export async function moveLists(intent: PositionOrderInput): Promise<void> {
+  const { error } = await app.api.lists.order.patch({
     ...intent,
     movedIds: [...intent.movedIds],
   });
   if (error) throw new Error(getErrorMessage(error, "Failed to move lists"));
-  return data;
 }
 
 export async function updateList(listId: string, input: ListInput) {
@@ -87,11 +86,10 @@ export async function removeListMembers(
   if (error) throw new Error(getErrorMessage(error, "Failed to remove from List"));
 }
 
-export async function moveListMembers(listId: string, intent: PositionOrderInput) {
-  const { data, error } = await app.api.lists({ listId }).members.order.patch({
+export async function moveListMembers(listId: string, intent: PositionOrderInput): Promise<void> {
+  const { error } = await app.api.lists({ listId }).members.order.patch({
     ...intent,
     movedIds: [...intent.movedIds],
   });
   if (error) throw new Error(getErrorMessage(error, "Failed to save List order"));
-  return data;
 }

@@ -19,11 +19,10 @@ export async function removeItemFromWishlist(itemId: string) {
   return data;
 }
 
-export async function moveWishlistItems(intent: PositionOrderInput) {
-  const { data, error } = await app.api.wishlist.order.patch({
+export async function moveWishlistItems(intent: PositionOrderInput): Promise<void> {
+  const { error } = await app.api.wishlist.order.patch({
     ...intent,
     movedIds: [...intent.movedIds],
   });
   if (error) throw new Error(getErrorMessage(error, "Failed to save Wishlist order"));
-  return data;
 }

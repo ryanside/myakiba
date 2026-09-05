@@ -15,7 +15,7 @@ export function planPositionOrderMove(
   if (movedRows.length !== movedIds.length) return { kind: "not_found" } as const;
 
   if (anchorId !== null && movedIdSet.has(anchorId)) {
-    return { kind: "moved", updates: [], moved: movedRows } as const;
+    return { kind: "moved", updates: [] } as const;
   }
 
   const remainingRows = currentRows.filter((row) => !movedIdSet.has(row.id));
@@ -41,6 +41,5 @@ export function planPositionOrderMove(
   return {
     kind: "moved",
     updates: positionedRows.filter((row, index) => row.id !== currentRows[index].id),
-    moved: positionedRows.filter((row) => movedIdSet.has(row.id)),
   } as const;
 }

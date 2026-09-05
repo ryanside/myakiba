@@ -57,7 +57,7 @@ const wishlistRouter = new Elysia({ prefix: "/wishlist" })
       }
 
       log.set({ outcome: "success" });
-      return { moved: result.moved };
+      return "Wishlist order saved";
     },
     { body: positionOrderInputSchema, auth: true },
   )

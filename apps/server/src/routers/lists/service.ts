@@ -171,8 +171,6 @@ class ListsService {
             ),
           );
       }
-
-      return { moved: plan.moved };
     });
   }
 
@@ -573,8 +571,6 @@ class ListsService {
             ),
           );
       }
-
-      return { moved: plan.moved };
     });
   }
 }

@@ -148,7 +148,7 @@ class WishlistService {
           );
       }
 
-      return { kind: "moved", moved: plan.moved } as const;
+      return { kind: "moved" } as const;
     });
   }
 }
