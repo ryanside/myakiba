@@ -1,6 +1,6 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { WishlistEntryGrid } from "@/components/wishlist/wishlist-entry-grid";
+import { WishlistItemGrid } from "@/components/wishlist/wishlist-item-grid";
 import { InfiniteListStatus } from "@/components/lists/infinite-list-status";
 import {
   Empty,
@@ -14,8 +14,8 @@ import { ViewToggle } from "@/components/ui/view-toggle";
 import type { GridListViewMode } from "@/components/ui/view-toggle";
 import { buttonVariants } from "@/components/ui/button";
 import {
-  useMoveWishlistEntriesMutation,
-  useWishlistEntriesQuery,
+  useMoveWishlistItemsMutation,
+  useWishlistItemsQuery,
   useWishlistItemMutation,
 } from "@/hooks/use-wishlist";
 import { useLocalStorage } from "@/hooks/use-local-storage";
@@ -34,19 +34,19 @@ export const Route = createFileRoute("/(app)/wishlist")({
 });
 
 function RouteComponent(): React.JSX.Element {
-  const entriesQuery = useWishlistEntriesQuery();
-  const entries = useMemo(
-    () => entriesQuery.data?.pages.flatMap((page) => page.items) ?? [],
-    [entriesQuery.data?.pages],
+  const itemsQuery = useWishlistItemsQuery();
+  const items = useMemo(
+    () => itemsQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    [itemsQuery.data?.pages],
   );
-  const totalCount = entriesQuery.data?.pages[0]?.totalCount ?? 0;
+  const totalCount = itemsQuery.data?.pages[0]?.totalCount ?? 0;
   const [viewMode, setViewMode] = useLocalStorage<GridListViewMode>(VIEW_MODE_KEY, "grid");
   const { currency, dateFormat } = useUserPreferences();
   const itemMutation = useWishlistItemMutation();
-  const moveMutation = useMoveWishlistEntriesMutation();
-  const handleLoadMore = entriesQuery.fetchNextPage;
-  const isPending = entriesQuery.isPending;
-  const hasInitialError = entriesQuery.isError && !entriesQuery.data;
+  const moveMutation = useMoveWishlistItemsMutation();
+  const handleLoadMore = itemsQuery.fetchNextPage;
+  const isPending = itemsQuery.isPending;
+  const hasInitialError = itemsQuery.isError && !itemsQuery.data;
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6" aria-busy={isPending}>
@@ -92,7 +92,7 @@ function RouteComponent(): React.JSX.Element {
 
       {hasInitialError ? (
         <div className="flex h-64 items-center justify-center text-lg font-medium text-destructive">
-          Error: {entriesQuery.error?.message ?? "Failed to load Wishlist"}
+          Error: {itemsQuery.error?.message ?? "Failed to load Wishlist"}
         </div>
       ) : null}
 
@@ -110,9 +110,9 @@ function RouteComponent(): React.JSX.Element {
         </Empty>
       ) : null}
 
-      {!isPending && !hasInitialError && entries.length > 0 ? (
-        <WishlistEntryGrid
-          entries={entries}
+      {!isPending && !hasInitialError && items.length > 0 ? (
+        <WishlistItemGrid
+          items={items}
           viewMode={viewMode}
           currency={currency}
           dateFormat={dateFormat}
@@ -120,8 +120,8 @@ function RouteComponent(): React.JSX.Element {
           isSaving={moveMutation.isPending}
           sortingDisabled={itemMutation.isPending}
           removingItemId={itemMutation.isPending ? itemMutation.variables?.itemId : undefined}
-          hasNextPage={entriesQuery.hasNextPage}
-          isFetchingNextPage={entriesQuery.isFetchingNextPage}
+          hasNextPage={itemsQuery.hasNextPage}
+          isFetchingNextPage={itemsQuery.isFetchingNextPage}
           onLoadMore={handleLoadMore}
           onRemove={async (itemId, itemExternalId) => {
             await itemMutation.mutateAsync({ itemId, itemExternalId, wishlisted: false });
@@ -134,9 +134,9 @@ function RouteComponent(): React.JSX.Element {
 
       {!isPending && !hasInitialError && totalCount > 0 ? (
         <InfiniteListStatus
-          hasNextPage={entriesQuery.hasNextPage}
-          isFetchingNextPage={entriesQuery.isFetchingNextPage}
-          isFetchNextPageError={entriesQuery.isFetchNextPageError}
+          hasNextPage={itemsQuery.hasNextPage}
+          isFetchingNextPage={itemsQuery.isFetchingNextPage}
+          isFetchNextPageError={itemsQuery.isFetchNextPageError}
           disabled={itemMutation.isPending}
           onLoadMore={async () => {
             await handleLoadMore();

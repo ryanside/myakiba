@@ -3,8 +3,8 @@ import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-q
 import type { getItem } from "@/queries/item";
 import {
   addItemToWishlist,
-  getWishlistEntries,
-  moveWishlistEntries,
+  getWishlistItems,
+  moveWishlistItems,
   removeItemFromWishlist,
 } from "@/queries/wishlist";
 import { toast } from "@/components/ui/toast";
@@ -12,10 +12,10 @@ import { usePositionOrderMutation } from "@/hooks/use-position-order-mutation";
 
 type ItemQueryData = Awaited<ReturnType<typeof getItem>>;
 
-export function useWishlistEntriesQuery() {
+export function useWishlistItemsQuery() {
   return useInfiniteQuery({
-    queryKey: ["wishlist", "entries"] as const,
-    queryFn: ({ pageParam }) => getWishlistEntries(WISHLIST_PAGE_SIZE, pageParam),
+    queryKey: ["wishlist", "items"] as const,
+    queryFn: ({ pageParam }) => getWishlistItems(WISHLIST_PAGE_SIZE, pageParam),
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) => {
       const loadedCount = allPages.reduce((count, page) => count + page.items.length, 0);
@@ -51,7 +51,7 @@ export function useWishlistItemMutation() {
       }
 
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["wishlist", "entries"], exact: true }),
+        queryClient.invalidateQueries({ queryKey: ["wishlist", "items"], exact: true }),
         ...(itemExternalId === null
           ? []
           : [
@@ -72,10 +72,10 @@ export function useWishlistItemMutation() {
   });
 }
 
-export function useMoveWishlistEntriesMutation() {
+export function useMoveWishlistItemsMutation() {
   return usePositionOrderMutation({
-    queryKey: ["wishlist", "entries"],
-    persist: moveWishlistEntries,
+    queryKey: ["wishlist", "items"],
+    persist: moveWishlistItems,
     failureTitle: "Failed to save Wishlist order",
   });
 }

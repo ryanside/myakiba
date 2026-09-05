@@ -1,11 +1,11 @@
 import { db } from "@myakiba/db/client";
-import { item, item_release, wishlistEntry } from "@myakiba/db/schema/figure";
+import { item, item_release, wishlistItem } from "@myakiba/db/schema/figure";
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { planPositionOrderMove, POSITION_UPDATE_CHUNK_SIZE } from "@/lib/position-order";
 
 class WishlistService {
-  async getEntries(userId: string, limit: number, offset: number) {
+  async getItems(userId: string, limit: number, offset: number) {
     const latestRelease = db
       .select({
         date: item_release.date,
@@ -21,29 +21,29 @@ class WishlistService {
     const [rows, countRows] = await Promise.all([
       db
         .select({
-          id: wishlistEntry.id,
+          id: wishlistItem.id,
           itemId: item.id,
           itemExternalId: item.externalId,
           title: item.title,
           image: item.image,
           category: item.category,
-          position: wishlistEntry.position,
-          createdAt: wishlistEntry.createdAt,
+          position: wishlistItem.position,
+          createdAt: wishlistItem.createdAt,
           releaseDate: latestRelease.date,
           releasePrice: latestRelease.price,
           releasePriceCurrency: latestRelease.priceCurrency,
         })
-        .from(wishlistEntry)
-        .innerJoin(item, eq(wishlistEntry.itemId, item.id))
+        .from(wishlistItem)
+        .innerJoin(item, eq(wishlistItem.itemId, item.id))
         .leftJoinLateral(latestRelease, sql`TRUE`)
-        .where(eq(wishlistEntry.userId, userId))
-        .orderBy(asc(wishlistEntry.position), asc(wishlistEntry.createdAt), asc(wishlistEntry.id))
+        .where(eq(wishlistItem.userId, userId))
+        .orderBy(asc(wishlistItem.position), asc(wishlistItem.createdAt), asc(wishlistItem.id))
         .limit(limit)
         .offset(offset),
       db
         .select({ totalCount: sql<number>`COUNT(*)::integer` })
-        .from(wishlistEntry)
-        .where(eq(wishlistEntry.userId, userId)),
+        .from(wishlistItem)
+        .where(eq(wishlistItem.userId, userId)),
     ]);
 
     return {
@@ -70,7 +70,7 @@ class WishlistService {
     };
   }
 
-  async addEntry(userId: string, itemId: string) {
+  async addItem(userId: string, itemId: string) {
     return db.transaction(async (tx) => {
       await tx.execute(
         sql`select pg_advisory_xact_lock(hashtextextended(${`wishlist:${userId}`}, 0))`,
@@ -79,50 +79,50 @@ class WishlistService {
       const [itemRows, positionRows] = await Promise.all([
         tx.select({ id: item.id }).from(item).where(eq(item.id, itemId)).limit(1),
         tx
-          .select({ position: sql<number>`COALESCE(MAX(${wishlistEntry.position}), -1)::integer` })
-          .from(wishlistEntry)
-          .where(eq(wishlistEntry.userId, userId)),
+          .select({ position: sql<number>`COALESCE(MAX(${wishlistItem.position}), -1)::integer` })
+          .from(wishlistItem)
+          .where(eq(wishlistItem.userId, userId)),
       ]);
 
       if (itemRows.length === 0) return { kind: "not_found" } as const;
 
       const added = await tx
-        .insert(wishlistEntry)
+        .insert(wishlistItem)
         .values({
           userId,
           itemId,
           position: (positionRows[0]?.position ?? -1) + 1,
         })
-        .onConflictDoNothing({ target: [wishlistEntry.userId, wishlistEntry.itemId] })
-        .returning({ id: wishlistEntry.id });
+        .onConflictDoNothing({ target: [wishlistItem.userId, wishlistItem.itemId] })
+        .returning({ id: wishlistItem.id });
 
       return { kind: "added", addedCount: added.length } as const;
     });
   }
 
-  async removeEntry(userId: string, itemId: string) {
+  async removeItem(userId: string, itemId: string) {
     const removed = await db
-      .delete(wishlistEntry)
-      .where(and(eq(wishlistEntry.userId, userId), eq(wishlistEntry.itemId, itemId)))
-      .returning({ id: wishlistEntry.id });
+      .delete(wishlistItem)
+      .where(and(eq(wishlistItem.userId, userId), eq(wishlistItem.itemId, itemId)))
+      .returning({ id: wishlistItem.id });
 
     return { removedCount: removed.length };
   }
 
-  async moveEntries(userId: string, { movedIds, anchorId, placement }: PositionOrderInput) {
+  async moveItems(userId: string, { movedIds, anchorId, placement }: PositionOrderInput) {
     return db.transaction(async (tx) => {
       await tx.execute(
         sql`select pg_advisory_xact_lock(hashtextextended(${`wishlist:${userId}`}, 0))`,
       );
 
-      const currentEntries = await tx
-        .select({ id: wishlistEntry.id, position: wishlistEntry.position })
-        .from(wishlistEntry)
-        .where(eq(wishlistEntry.userId, userId))
-        .orderBy(asc(wishlistEntry.position), asc(wishlistEntry.createdAt), asc(wishlistEntry.id))
+      const currentItems = await tx
+        .select({ id: wishlistItem.id, position: wishlistItem.position })
+        .from(wishlistItem)
+        .where(eq(wishlistItem.userId, userId))
+        .orderBy(asc(wishlistItem.position), asc(wishlistItem.createdAt), asc(wishlistItem.id))
         .for("update");
 
-      const plan = planPositionOrderMove(currentEntries, movedIds, anchorId, placement);
+      const plan = planPositionOrderMove(currentItems, movedIds, anchorId, placement);
       if (plan.kind === "not_found") return { kind: "not_found" } as const;
 
       for (let index = 0; index < plan.updates.length; index += POSITION_UPDATE_CHUNK_SIZE) {
@@ -132,16 +132,16 @@ class WishlistService {
         );
         // oxlint-disable-next-line no-await-in-loop -- Keep chunked updates sequential within one transaction.
         await tx
-          .update(wishlistEntry)
+          .update(wishlistItem)
           .set({
-            position: sql<number>`CASE ${wishlistEntry.id} ${sql.join(positionCases, sql.raw(" "))} ELSE ${wishlistEntry.position} END`,
+            position: sql<number>`CASE ${wishlistItem.id} ${sql.join(positionCases, sql.raw(" "))} ELSE ${wishlistItem.position} END`,
             updatedAt: new Date(),
           })
           .where(
             and(
-              eq(wishlistEntry.userId, userId),
+              eq(wishlistItem.userId, userId),
               inArray(
-                wishlistEntry.id,
+                wishlistItem.id,
                 updates.map((row) => row.id),
               ),
             ),

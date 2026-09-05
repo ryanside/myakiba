@@ -287,8 +287,8 @@ export const listMember = pgTable(
   ],
 );
 
-export const wishlistEntry = pgTable(
-  "wishlist_entry",
+export const wishlistItem = pgTable(
+  "wishlist_item",
   {
     id: text("id")
       .primaryKey()
@@ -304,14 +304,14 @@ export const wishlistEntry = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex("wishlist_entry_user_id_item_id_idx").on(t.userId, t.itemId),
-    index("wishlist_entry_user_id_position_created_at_id_idx").on(
+    uniqueIndex("wishlist_item_user_id_item_id_idx").on(t.userId, t.itemId),
+    index("wishlist_item_user_id_position_created_at_id_idx").on(
       t.userId,
       t.position,
       t.createdAt,
       t.id,
     ),
-    index("wishlist_entry_item_id_idx").on(t.itemId),
+    index("wishlist_item_item_id_idx").on(t.itemId),
   ],
 );
 

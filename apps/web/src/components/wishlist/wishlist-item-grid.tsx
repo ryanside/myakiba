@@ -22,10 +22,10 @@ import { getCategoryColor } from "@/lib/category-colors";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { formatReleaseDate } from "@/lib/locale";
 import { cn } from "@/lib/utils";
-import type { getWishlistEntries } from "@/queries/wishlist";
+import type { getWishlistItems } from "@/queries/wishlist";
 
-type WishlistPage = NonNullable<Awaited<ReturnType<typeof getWishlistEntries>>>;
-type WishlistEntry = WishlistPage["items"][number];
+type WishlistPage = NonNullable<Awaited<ReturnType<typeof getWishlistItems>>>;
+type WishlistItem = WishlistPage["items"][number];
 
 const MAX_STAGGER_INDEX = 20;
 const STAGGER_DELAY_MS = 30;
@@ -37,28 +37,33 @@ const CATEGORY_GROUP_BY_CATEGORY = Object.fromEntries(
   ),
 ) as Readonly<Record<Category, keyof typeof ITEM_CATEGORY_GROUPS>>;
 
-function WishlistEntryLink({
-  entry,
+function WishlistItemLink({
+  wishlistItem,
   rank,
   viewMode,
   currency,
   dateFormat,
 }: {
-  readonly entry: WishlistEntry;
+  readonly wishlistItem: WishlistItem;
   readonly rank: number;
   readonly viewMode: GridListViewMode;
   readonly currency: Currency;
   readonly dateFormat: DateFormat;
 }): React.JSX.Element {
-  const category = entry.category ?? "Uncategorized";
-  const categoryGroup = entry.category ? CATEGORY_GROUP_BY_CATEGORY[entry.category] : "—";
-  const categoryColor = getCategoryColor(entry.category);
-  const releaseDate = entry.latestRelease
-    ? formatDateOnlyForDisplay(entry.latestRelease.date, dateFormat)
+  const category = wishlistItem.category ?? "Uncategorized";
+  const categoryGroup = wishlistItem.category
+    ? CATEGORY_GROUP_BY_CATEGORY[wishlistItem.category]
+    : "—";
+  const categoryColor = getCategoryColor(wishlistItem.category);
+  const releaseDate = wishlistItem.latestRelease
+    ? formatDateOnlyForDisplay(wishlistItem.latestRelease.date, dateFormat)
     : "No release";
   const releasePrice =
-    formatReleaseDate(entry.latestRelease?.price, entry.latestRelease?.priceCurrency, currency) ??
-    "No price";
+    formatReleaseDate(
+      wishlistItem.latestRelease?.price,
+      wishlistItem.latestRelease?.priceCurrency,
+      currency,
+    ) ?? "No price";
   const content = (
     <>
       <span
@@ -79,8 +84,8 @@ function WishlistEntryLink({
         )}
       >
         <ImageThumbnail
-          images={entry.image ? [entry.image] : []}
-          title={entry.title}
+          images={wishlistItem.image ? [wishlistItem.image] : []}
+          title={wishlistItem.title}
           fallbackIcon={
             <HugeiconsIcon icon={PackageIcon} className="size-8 text-muted-foreground/40" />
           }
@@ -94,7 +99,7 @@ function WishlistEntryLink({
           key="grid-metadata"
           className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-1 bg-black/50 p-2.5 text-white opacity-0 backdrop-blur-sm transition-[translate,opacity] duration-150 ease-out group-hover/media:translate-y-0 group-hover/media:opacity-100 group-focus-visible/media:translate-y-0 group-focus-visible/media:opacity-100 any-pointer-coarse:translate-y-0 any-pointer-coarse:opacity-100"
         >
-          <p className="line-clamp-2 text-sm font-medium leading-tight">{entry.title}</p>
+          <p className="line-clamp-2 text-sm font-medium leading-tight">{wishlistItem.title}</p>
           <div className="mt-2 flex min-w-0 items-end justify-between gap-3">
             <div className="min-w-0">
               <p className="truncate text-[11px] leading-4 text-white/60">{categoryGroup}</p>
@@ -114,8 +119,8 @@ function WishlistEntryLink({
           className="flex min-w-0 flex-1 items-center justify-between gap-4 self-stretch py-0.5"
         >
           <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
-            <p className="truncate text-sm font-medium leading-tight" title={entry.title}>
-              {entry.title}
+            <p className="truncate text-sm font-medium leading-tight" title={wishlistItem.title}>
+              {wishlistItem.title}
             </p>
             <div className="min-w-0">
               <p className="truncate text-[11px] leading-4 text-muted-foreground">
@@ -139,11 +144,11 @@ function WishlistEntryLink({
     viewMode === "grid" ? "block" : "flex min-w-0 flex-1 items-center gap-3 p-2",
   );
 
-  if (entry.itemExternalId !== null) {
+  if (wishlistItem.itemExternalId !== null) {
     return (
       <Link
         to="/item/$externalId"
-        params={{ externalId: entry.itemExternalId }}
+        params={{ externalId: wishlistItem.itemExternalId }}
         className={className}
       >
         {content}
@@ -152,14 +157,14 @@ function WishlistEntryLink({
   }
 
   return (
-    <Link to="/item/custom/$id" params={{ id: entry.itemId }} className={className}>
+    <Link to="/item/custom/$id" params={{ id: wishlistItem.itemId }} className={className}>
       {content}
     </Link>
   );
 }
 
-function SortableWishlistEntry({
-  entry,
+function SortableWishlistItem({
+  wishlistItem,
   index,
   viewMode,
   currency,
@@ -172,7 +177,7 @@ function SortableWishlistEntry({
   onRemove,
   onEntranceAnimationEnd,
 }: {
-  readonly entry: WishlistEntry;
+  readonly wishlistItem: WishlistItem;
   readonly index: number;
   readonly viewMode: GridListViewMode;
   readonly currency: Currency;
@@ -185,10 +190,10 @@ function SortableWishlistEntry({
   readonly onRemove: (itemId: string, itemExternalId: number | null) => Promise<void>;
   readonly onEntranceAnimationEnd?: () => void;
 }): React.JSX.Element {
-  const removing = removingItemId === entry.itemId;
+  const removing = removingItemId === wishlistItem.itemId;
   const mutationPending = isSaving || removingItemId !== undefined;
   const { attributes, isDragging, listeners, setActivatorNodeRef, setNodeRef } = useSortable({
-    id: entry.id,
+    id: wishlistItem.id,
     disabled: sortingDisabled || mutationPending,
   });
   const entranceStyle = entranceAnimationActive
@@ -227,8 +232,8 @@ function SortableWishlistEntry({
           }
         }}
       >
-        <WishlistEntryLink
-          entry={entry}
+        <WishlistItemLink
+          wishlistItem={wishlistItem}
           rank={index + 1}
           viewMode={viewMode}
           currency={currency}
@@ -246,7 +251,7 @@ function SortableWishlistEntry({
             className="touch-none cursor-grab active:cursor-grabbing"
             {...attributes}
             {...listeners}
-            aria-label={`Reorder ${entry.title}`}
+            aria-label={`Reorder ${wishlistItem.title}`}
             title="Drag to reorder"
             disabled={sortingDisabled || mutationPending}
           >
@@ -254,10 +259,10 @@ function SortableWishlistEntry({
           </ItemControl>
           <ItemControl
             type="button"
-            aria-label={`Remove ${entry.title} from Wishlist`}
+            aria-label={`Remove ${wishlistItem.title} from Wishlist`}
             title="Remove from Wishlist"
             disabled={mutationPending}
-            onClick={() => onRemove(entry.itemId, entry.itemExternalId)}
+            onClick={() => onRemove(wishlistItem.itemId, wishlistItem.itemExternalId)}
           >
             {removing ? (
               <Spinner />
@@ -276,8 +281,8 @@ function SortableWishlistEntry({
   );
 }
 
-export function WishlistEntryGrid({
-  entries,
+export function WishlistItemGrid({
+  items,
   viewMode,
   currency,
   dateFormat,
@@ -291,7 +296,7 @@ export function WishlistEntryGrid({
   onRemove,
   onMove,
 }: {
-  readonly entries: readonly WishlistEntry[];
+  readonly items: readonly WishlistItem[];
   readonly viewMode: GridListViewMode;
   readonly currency: Currency;
   readonly dateFormat: DateFormat;
@@ -306,11 +311,11 @@ export function WishlistEntryGrid({
   readonly onMove: (intent: PositionOrderInput) => Promise<void>;
 }): React.JSX.Element {
   const {
-    itemIds: entryIds,
+    itemIds,
     entranceAnimationActive,
     finishEntranceAnimation,
     dndEpoch,
-    activeId: activeEntryId,
+    activeId: activeItemId,
     dropIndicator,
     overlayLabel,
     sensors,
@@ -321,13 +326,13 @@ export function WishlistEntryGrid({
     handleDragEnd,
     handleDragCancel,
   } = useSortableItems({
-    items: entries,
+    items,
     totalCount,
     selectedIds: EMPTY_SELECTED_IDS,
-    selectedLabel: "Wishlist Entries",
-    fallbackLabel: "Wishlist Entry",
+    selectedLabel: "Wishlist Items",
+    fallbackLabel: "Wishlist Item",
     screenReaderInstruction:
-      "To reorder a Wishlist Entry, press Space. Use the arrow keys to choose a new position, then press Space to drop it. Press Escape to cancel.",
+      "To reorder a Wishlist Item, press Space. Use the arrow keys to choose a new position, then press Space to drop it. Press Escape to cancel.",
     hasNextPage,
     isFetchingNextPage,
     onLoadMore,
@@ -347,7 +352,7 @@ export function WishlistEntryGrid({
       onDragCancel={handleDragCancel}
     >
       <SortableContext
-        items={entryIds}
+        items={itemIds}
         strategy={viewMode === "grid" ? rectSortingStrategy : verticalListSortingStrategy}
       >
         <div
@@ -355,26 +360,28 @@ export function WishlistEntryGrid({
             viewMode === "grid"
               ? "grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-2"
               : "flex flex-col gap-2",
-            activeEntryId && "pointer-events-none",
+            activeItemId && "pointer-events-none",
           )}
           aria-busy={isSaving}
         >
-          {entries.map((entry, index) => (
-            <SortableWishlistEntry
-              key={entry.id}
-              entry={entry}
+          {items.map((wishlistItem, index) => (
+            <SortableWishlistItem
+              key={wishlistItem.id}
+              wishlistItem={wishlistItem}
               index={index}
               viewMode={viewMode}
               currency={currency}
               dateFormat={dateFormat}
               entranceAnimationActive={entranceAnimationActive}
               isSaving={isSaving}
-              sortingDisabled={sortingDisabled || entries.length < 2}
+              sortingDisabled={sortingDisabled || items.length < 2}
               removingItemId={removingItemId}
-              dropIndicator={entry.id === dropIndicator?.id ? dropIndicator.placement : undefined}
+              dropIndicator={
+                wishlistItem.id === dropIndicator?.id ? dropIndicator.placement : undefined
+              }
               onRemove={onRemove}
               onEntranceAnimationEnd={
-                index === entries.length - 1 ? finishEntranceAnimation : undefined
+                index === items.length - 1 ? finishEntranceAnimation : undefined
               }
             />
           ))}
@@ -386,7 +393,7 @@ export function WishlistEntryGrid({
         modifiers={[snapCenterToCursor]}
         zIndex={50}
       >
-        {activeEntryId ? (
+        {activeItemId ? (
           <div
             aria-hidden="true"
             className="rounded-lg bg-popover px-2.5 py-1.5 text-sm font-medium text-popover-foreground shadow-md ring-1 ring-foreground/10"

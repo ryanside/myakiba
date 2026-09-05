@@ -14,11 +14,11 @@ const wishlistRouter = new Elysia({ prefix: "/wishlist" })
     async ({ query, user, log }) => {
       log.set({ action: "wishlist.list", user: { id: user.id } });
       const { data: result, error } = await tryCatch(
-        WishlistService.getEntries(user.id, query.limit, query.offset),
+        WishlistService.getItems(user.id, query.limit, query.offset),
       );
 
       if (error) {
-        log.error(error, { step: "getEntries", outcome: "error" });
+        log.error(error, { step: "getItems", outcome: "error" });
         return status(500, "Failed to load Wishlist");
       }
 
@@ -28,9 +28,9 @@ const wishlistRouter = new Elysia({ prefix: "/wishlist" })
       });
       return {
         ...result,
-        items: result.items.map((entry) => ({
-          ...entry,
-          createdAt: entry.createdAt.toISOString(),
+        items: result.items.map((wishlistItem) => ({
+          ...wishlistItem,
+          createdAt: wishlistItem.createdAt.toISOString(),
         })),
       };
     },
@@ -42,18 +42,18 @@ const wishlistRouter = new Elysia({ prefix: "/wishlist" })
       log.set({
         action: "wishlist.order.move",
         user: { id: user.id },
-        entryCount: body.movedIds.length,
+        itemCount: body.movedIds.length,
       });
-      const { data: result, error } = await tryCatch(WishlistService.moveEntries(user.id, body));
+      const { data: result, error } = await tryCatch(WishlistService.moveItems(user.id, body));
 
       if (error) {
-        log.error(error, { step: "moveEntries", outcome: "error" });
+        log.error(error, { step: "moveItems", outcome: "error" });
         return status(500, "Failed to save Wishlist order");
       }
 
       if (result.kind === "not_found") {
         log.set({ outcome: "not_found" });
-        return status(404, "Wishlist Entry not found");
+        return status(404, "Wishlist Item not found");
       }
 
       log.set({ outcome: "success" });
@@ -65,16 +65,16 @@ const wishlistRouter = new Elysia({ prefix: "/wishlist" })
     "/:itemId",
     async ({ params, user, log }) => {
       log.set({
-        action: "wishlist.entries.add",
+        action: "wishlist.items.add",
         user: { id: user.id },
         item: { id: params.itemId },
       });
       const { data: result, error } = await tryCatch(
-        WishlistService.addEntry(user.id, params.itemId),
+        WishlistService.addItem(user.id, params.itemId),
       );
 
       if (error) {
-        log.error(error, { step: "addEntry", outcome: "error" });
+        log.error(error, { step: "addItem", outcome: "error" });
         return status(500, "Failed to add to Wishlist");
       }
 
@@ -92,16 +92,16 @@ const wishlistRouter = new Elysia({ prefix: "/wishlist" })
     "/:itemId",
     async ({ params, user, log }) => {
       log.set({
-        action: "wishlist.entries.remove",
+        action: "wishlist.items.remove",
         user: { id: user.id },
         item: { id: params.itemId },
       });
       const { data: result, error } = await tryCatch(
-        WishlistService.removeEntry(user.id, params.itemId),
+        WishlistService.removeItem(user.id, params.itemId),
       );
 
       if (error) {
-        log.error(error, { step: "removeEntry", outcome: "error" });
+        log.error(error, { step: "removeItem", outcome: "error" });
         return status(500, "Failed to remove from Wishlist");
       }
 

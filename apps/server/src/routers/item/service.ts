@@ -6,7 +6,7 @@ import {
   item,
   item_release,
   order,
-  wishlistEntry,
+  wishlistItem,
 } from "@myakiba/db/schema/figure";
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import type { ItemRelease, ItemReleasesResponse } from "@myakiba/contracts/item/schema";
@@ -279,7 +279,7 @@ class ItemService {
         image: item.image,
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
-        isWishlisted: sql<boolean>`${wishlistEntry.id} IS NOT NULL`,
+        isWishlisted: sql<boolean>`${wishlistItem.id} IS NOT NULL`,
         releases: sql<ItemRelease[]>`
           COALESCE(
             (
@@ -322,8 +322,8 @@ class ItemService {
       })
       .from(item)
       .leftJoin(
-        wishlistEntry,
-        and(eq(wishlistEntry.userId, userId), eq(wishlistEntry.itemId, item.id)),
+        wishlistItem,
+        and(eq(wishlistItem.userId, userId), eq(wishlistItem.itemId, item.id)),
       )
       .where(and(eq(item.source, "mfc"), eq(item.externalId, externalId)));
 
