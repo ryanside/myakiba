@@ -121,11 +121,14 @@ class SyncService {
     syncSessionId: string,
     statusMessage: string,
   ): Promise<void> {
-    await this.updateSyncSession(syncSessionId, {
-      status: "failed",
-      statusMessage,
-      completedAt: new Date(),
-    });
+    const [failedSession] = await db
+      .update(syncSession)
+      .set({ status: "failed", statusMessage, completedAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(syncSession.id, syncSessionId), eq(syncSession.status, "pending")))
+      .returning({ id: syncSession.id });
+    if (failedSession) {
+      await redis.del(getJobStatusSnapshotKey(syncSessionId)).catch(() => {});
+    }
   }
 
   private async writeQueuedJobStatus(jobId: string, statusMessage: string): Promise<void> {
@@ -361,8 +364,13 @@ class SyncService {
     userId: string,
     syncSessionId: string,
   ) {
-    let queuedJobId: string | null = null;
     try {
+      const updated = await this.updateSyncSession(syncSessionId, {
+        jobId: syncSessionId,
+      });
+      if (!updated) throw new Error("SYNC_SESSION_NOT_FOUND");
+      await this.writeQueuedJobStatusBestEffort(syncSessionId, syncSessionId);
+
       const job = await syncQueue.add(
         "sync-job",
         {
@@ -385,25 +393,10 @@ class SyncService {
         throw new Error("FAILED_TO_QUEUE_CSV_SYNC_JOB");
       }
 
-      queuedJobId = job.id;
-      const updated = await this.updateSyncSession(syncSessionId, {
-        jobId: job.id,
-      });
-      if (!updated) {
-        await job.remove().catch(() => {});
-        throw new Error("SYNC_SESSION_NOT_FOUND");
-      }
-
-      await this.writeQueuedJobStatusBestEffort(job.id, syncSessionId);
-
       return job.id;
     } catch (error) {
       await this.markSyncSessionAsFailed(syncSessionId, SYNC_STATUS_MESSAGES.failedBeforeStart);
 
-      if (queuedJobId) {
-        const queuedJob = await syncQueue.getJob(queuedJobId);
-        await queuedJob?.remove().catch(() => {});
-      }
       throw error;
     }
   }
@@ -421,8 +414,13 @@ class SyncService {
   }) {
     // `order` and `order-item` jobs share the same worker payload shape. The worker decides
     // whether to create or append based on `type`, so this helper keeps the queue contract in sync.
-    let queuedJobId: string | null = null;
     try {
+      const updated = await this.updateSyncSession(params.syncSessionId, {
+        jobId: params.syncSessionId,
+      });
+      if (!updated) throw new Error("SYNC_SESSION_NOT_FOUND");
+      await this.writeQueuedJobStatusBestEffort(params.syncSessionId, params.syncSessionId);
+
       const job = await syncQueue.add(
         "sync-job",
         {
@@ -447,17 +445,6 @@ class SyncService {
         throw new Error(params.queueErrorCode);
       }
 
-      queuedJobId = job.id;
-      const updated = await this.updateSyncSession(params.syncSessionId, {
-        jobId: job.id,
-      });
-      if (!updated) {
-        await job.remove().catch(() => {});
-        throw new Error("SYNC_SESSION_NOT_FOUND");
-      }
-
-      await this.writeQueuedJobStatusBestEffort(job.id, params.syncSessionId);
-
       return job.id;
     } catch (error) {
       await this.markSyncSessionAsFailed(
@@ -465,10 +452,6 @@ class SyncService {
         SYNC_STATUS_MESSAGES.failedBeforeStart,
       );
 
-      if (queuedJobId) {
-        const queuedJob = await syncQueue.getJob(queuedJobId);
-        await queuedJob?.remove().catch(() => {});
-      }
       throw error;
     }
   }
@@ -479,8 +462,13 @@ class SyncService {
     itemsToInsert: QueuedCollectionItem[],
     syncSessionId: string,
   ) {
-    let queuedJobId: string | null = null;
     try {
+      const updated = await this.updateSyncSession(syncSessionId, {
+        jobId: syncSessionId,
+      });
+      if (!updated) throw new Error("SYNC_SESSION_NOT_FOUND");
+      await this.writeQueuedJobStatusBestEffort(syncSessionId, syncSessionId);
+
       const job = await syncQueue.add(
         "sync-job",
         {
@@ -504,25 +492,10 @@ class SyncService {
         throw new Error("FAILED_TO_QUEUE_COLLECTION_SYNC_JOB");
       }
 
-      queuedJobId = job.id;
-      const updated = await this.updateSyncSession(syncSessionId, {
-        jobId: job.id,
-      });
-      if (!updated) {
-        await job.remove().catch(() => {});
-        throw new Error("SYNC_SESSION_NOT_FOUND");
-      }
-
-      await this.writeQueuedJobStatusBestEffort(job.id, syncSessionId);
-
       return job.id;
     } catch (error) {
       await this.markSyncSessionAsFailed(syncSessionId, SYNC_STATUS_MESSAGES.failedBeforeStart);
 
-      if (queuedJobId) {
-        const queuedJob = await syncQueue.getJob(queuedJobId);
-        await queuedJob?.remove().catch(() => {});
-      }
       throw error;
     }
   }
