@@ -174,14 +174,13 @@ export default function SyncOrderItemForm({
                 }}
               >
                 {(subField) => (
-                  <div className="max-w-md">
+                  <div className="w-full">
                     <div className="flex flex-row gap-2">
                       <Input
                         value={subField.state.value}
                         onChange={(e) => subField.handleChange(e.target.value)}
                         type="text"
                         placeholder="MyFigureCollection item link or ID"
-                        className="max-w-sm"
                       />
                       <Dialog>
                         <DialogTrigger
@@ -501,7 +500,7 @@ export default function SyncOrderItemForm({
 
             <Button
               variant="outline"
-              className="max-w-md"
+              className="w-full"
               disabled={field.state.value.length === 30}
               onClick={(e) => {
                 e.preventDefault();
