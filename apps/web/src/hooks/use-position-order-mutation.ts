@@ -10,9 +10,7 @@ export function usePositionOrderMutation({
   failureTitle,
 }: {
   readonly queryKey: QueryKey;
-  readonly persist: (
-    intent: PositionOrderInput,
-  ) => Promise<{ readonly moved: readonly { readonly id: string; readonly position: number }[] }>;
+  readonly persist: (intent: PositionOrderInput) => Promise<void>;
   readonly additionalInvalidations?: readonly {
     readonly queryKey: QueryKey;
     readonly exact?: boolean;

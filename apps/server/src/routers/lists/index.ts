@@ -71,7 +71,7 @@ const listsRouter = new Elysia({ prefix: "/lists" })
         user: { id: user.id },
         listCount: body.movedIds.length,
       });
-      const { data: result, error } = await tryCatch(ListsService.moveLists(user.id, body));
+      const { error } = await tryCatch(ListsService.moveLists(user.id, body));
 
       if (error) {
         if (error.message === "LIST_NOT_FOUND") {
@@ -84,7 +84,7 @@ const listsRouter = new Elysia({ prefix: "/lists" })
       }
 
       log.set({ outcome: "success" });
-      return result;
+      return "List order saved";
     },
     { body: positionOrderInputSchema, auth: true },
   )
@@ -312,9 +312,7 @@ const listsRouter = new Elysia({ prefix: "/lists" })
         list: { id: params.listId },
         memberCount: body.movedIds.length,
       });
-      const { data: result, error } = await tryCatch(
-        ListsService.moveMembers(user.id, params.listId, body),
-      );
+      const { error } = await tryCatch(ListsService.moveMembers(user.id, params.listId, body));
 
       if (error) {
         if (error.message === "LIST_NOT_FOUND" || error.message === "LIST_MEMBER_NOT_FOUND") {
@@ -327,7 +325,7 @@ const listsRouter = new Elysia({ prefix: "/lists" })
       }
 
       log.set({ outcome: "success" });
-      return result;
+      return "List order saved";
     },
     { params: listIdParamSchema, body: positionOrderInputSchema, auth: true },
   );

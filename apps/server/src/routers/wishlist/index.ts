@@ -13,9 +13,7 @@ const wishlistRouter = new Elysia({ prefix: "/wishlist" })
     "/",
     async ({ query, user, log }) => {
       log.set({ action: "wishlist.list", user: { id: user.id } });
-      const { data: result, error } = await tryCatch(
-        WishlistService.getItems(user.id, query.limit, query.offset),
-      );
+      const { data: result, error } = await tryCatch(WishlistService.getItems(user.id, query));
 
       if (error) {
         log.error(error, { step: "getItems", outcome: "error" });
@@ -57,7 +55,7 @@ const wishlistRouter = new Elysia({ prefix: "/wishlist" })
       }
 
       log.set({ outcome: "success" });
-      return { moved: result.moved };
+      return "Wishlist order saved";
     },
     { body: positionOrderInputSchema, auth: true },
   )
