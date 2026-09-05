@@ -232,7 +232,8 @@ function CalendarDayThumbStack({
         {hasOverflow && (
           <span
             className={cn(
-              "relative inline-flex h-9 shrink-0 items-center rounded-md bg-muted px-1.5 text-[0.625rem] font-medium tabular-nums text-muted-foreground ring-2 ring-background",
+              "relative inline-flex shrink-0 items-center justify-center rounded-md border border-border bg-muted text-[0.625rem] font-medium tabular-nums text-muted-foreground shadow-sm",
+              THUMB_STACK_SIZE,
               visible.length > 0 && THUMB_STACK_OVERLAP,
             )}
           >
