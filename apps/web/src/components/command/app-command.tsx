@@ -34,7 +34,7 @@ import type {
   LaunchableSyncType,
   SyncLauncherOption,
 } from "@/components/sync/sync-launcher-options";
-import { SYNC_TYPE_CONFIG } from "@/lib/sync";
+import { SYNC_OPTION_META } from "@/lib/sync";
 
 const TOKEN_SEPARATOR = /[^a-z0-9]+/i;
 const SEARCH_DEBOUNCE_MS = 200;
@@ -123,7 +123,7 @@ function ActionCommandItem({
     <CommandItem value={value} onSelect={onSelect} className="gap-3 py-2">
       {leading}
       <div className="min-w-0 flex-1">
-        <div className="truncate font-medium">{title}</div>
+        <div className="whitespace-normal break-words font-medium">{title}</div>
         {subtitle ? <div className="truncate text-xs text-muted-foreground">{subtitle}</div> : null}
       </div>
     </CommandItem>
@@ -176,7 +176,11 @@ export function AppCommand(): React.JSX.Element {
 
   const visibleSyncItems = useMemo<readonly SyncLauncherOption[]>(() => {
     return LAUNCHABLE_SYNC_OPTIONS.filter((item) =>
-      matchesQuery(`${item.type} ${item.description}`, [...item.keywords, item.type], query),
+      matchesQuery(
+        `${SYNC_OPTION_META[item.type].title} ${item.description}`,
+        [...item.keywords, item.type],
+        query,
+      ),
     );
   }, [query]);
 
@@ -304,7 +308,7 @@ export function AppCommand(): React.JSX.Element {
         open={open}
         onOpenChange={handleDialogChange}
         title="Global Command Palette"
-        description="Navigate pages, launch sync actions, and search orders or items."
+        description="Navigate pages, add items, and search orders or items."
         className="sm:max-w-2xl"
       >
         <Command shouldFilter={false} className="**:data-[selected=true]:bg-muted">
@@ -337,7 +341,7 @@ export function AppCommand(): React.JSX.Element {
                   <ActionCommandItem
                     key={item.type}
                     value={`sync-${item.type}`}
-                    title={`Sync ${SYNC_TYPE_CONFIG[item.type].label}`}
+                    title={SYNC_OPTION_META[item.type].title}
                     subtitle={item.description}
                     leading={<CommandLeadIcon icon={item.icon} />}
                     onSelect={() => handleSyncAction(item.type)}

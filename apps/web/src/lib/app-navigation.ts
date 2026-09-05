@@ -4,7 +4,7 @@ import {
   ChartColumnIcon,
   CreditCardIcon,
   DatabaseIcon,
-  GitCompareIcon,
+  Clock02Icon,
   Home01Icon,
   LibraryIcon,
   Folder01Icon,
@@ -83,9 +83,9 @@ const APP_PRIMARY_NAVIGATION_ITEMS = [
 export const APP_COMMAND_NAVIGATION_ITEMS = [
   ...APP_PRIMARY_NAVIGATION_ITEMS,
   {
-    title: "Sync History",
+    title: "Import history",
     to: "/sync",
-    icon: GitCompareIcon,
+    icon: Clock02Icon,
     keywords: ["history", "sessions", "import", "csv", "mfc"],
   },
   {

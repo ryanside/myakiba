@@ -48,7 +48,7 @@ export function SyncActionSheet({
         {syncType ? (
           <>
             <SheetHeader>
-              <SheetTitle>{SYNC_OPTION_META[syncType].title}</SheetTitle>
+              <SheetTitle className="pr-8">{SYNC_OPTION_META[syncType].title}</SheetTitle>
               <SheetDescription>{SYNC_OPTION_META[syncType].description}</SheetDescription>
             </SheetHeader>
             <div className="px-4 pb-4">

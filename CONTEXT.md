@@ -170,19 +170,37 @@ _Avoid_: Unique Owned
 
 ### Imports and data transfer
 
-**Sync**:
-Sync brings data from MyFigureCollection into myakiba by finding existing or adding missing shared Items. It can add Collection Items, create Orders, or add Order Items, but it never sends changes back to MyFigureCollection.
-_Avoid_: Two-way sync
+In the Add menu, use Collection, Order, and MyFigureCollection CSV. Within a collection or order, use Add for the local add button. Keep full action names for standalone commands and sheet titles.
 
-**Sync Session**:
-A saved history of one Sync request and the results it tracks for MyFigureCollection Items. The same MyFigureCollection ID can appear more than once when separate Collection Items were requested.
+**Add to collection**:
+An action that creates Collection Items for the user, using existing shared Item details or scraping missing details from MyFigureCollection.
+_Avoid_: Sync Collection
+
+**Create order**:
+An action that creates an Order and its Order Items using MyFigureCollection item links or IDs.
+_Avoid_: Sync Order, Add to order when creating a new Order
+
+**Add to order**:
+An action that adds Order Items to an existing Order.
+_Avoid_: Sync Order Items
+
+**Import MyFigureCollection CSV**:
+An action that reads a MyFigureCollection CSV export and adds its supported Owned and Ordered items to the user's Collection and Orders.
+_Avoid_: Sync CSV, Import from MyFigureCollection when a CSV file is required
+
+**MyFigureCollection Import**:
+A MyFigureCollection Import brings data from MyFigureCollection into myakiba by finding existing or adding missing shared Items. It can add Collection Items, create Orders, or add Order Items, but it never sends changes back to MyFigureCollection.
+_Avoid_: Sync, two-way sync
+
+**Import History**:
+A saved record of each MyFigureCollection Import request and its item results. The same MyFigureCollection ID can appear more than once when separate Collection Items were requested.
 
 **Item Refresh**:
-An update of a MyFigureCollection Item using current MyFigureCollection data. The shared update is visible to every user and may change or clear Selected Item Releases on Collection Items linked to that Item.
+An update of a MyFigureCollection Item using current MyFigureCollection data. The action is called Refresh item details; its shared update is visible to every user and may change or clear Selected Item Releases on Collection Items linked to that Item.
 _Avoid_: Catalog Item Refresh, Item Resync, refresh my item
 
 **Data Transfer Archive**:
-A myakiba export of all a user's Orders and Collection Items, available only when every Collection Item uses a MyFigureCollection Item. It stores Item references instead of a copy of the Item Database and leaves out Lists, Wishlist, preferences, and Sync Sessions.
+A myakiba export of all a user's Orders and Collection Items, available only when every Collection Item uses a MyFigureCollection Item. It stores Item references instead of a copy of the Item Database and leaves out Lists, Wishlist, preferences, and Import History.
 _Avoid_: Backup, all your data
 
 **Data Transfer Import**:

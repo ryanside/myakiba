@@ -5,6 +5,7 @@ import {
   Loading03Icon,
   Tick02Icon,
   AlertCircleIcon,
+  Clock02Icon,
 } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -20,7 +21,6 @@ import { formatRelativeTimeToNow } from "@/lib/date-display";
 import { ACTIVE_SYNC_SESSION_STATUS_SET } from "@myakiba/contracts/sync/constants";
 import { useSyncJobStatusQuery } from "@/hooks/use-sync-job-status-query";
 import { Spinner } from "@/components/ui/spinner";
-import { Skeleton } from "@/components/ui/skeleton";
 import { SparkleTrail } from "@/components/ui/sparkle-trail";
 
 export default function SyncStatusWidget() {
@@ -55,14 +55,6 @@ export default function SyncStatusWidget() {
 
   const [open, setOpen] = useState(false);
 
-  if (isRecentPending) {
-    return (
-      <Button size="sm" variant="outline" className="mx-2 w-41.5 justify-start!">
-        <Skeleton className="w-41.5 h-4" />
-      </Button>
-    );
-  }
-
   const closePopover = () => setOpen(false);
 
   return (
@@ -73,6 +65,7 @@ export default function SyncStatusWidget() {
             key={activeSession.id}
             jobId={activeSession.jobId}
             sessionId={activeSession.id}
+            syncType={activeSession.syncType}
           />
         ) : null,
       )}
@@ -80,34 +73,26 @@ export default function SyncStatusWidget() {
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
           render={
-            <Button size="sm" variant="outline" className="mx-2 w-41.5 justify-start!">
-              <span className="grid w-full *:col-start-1 *:row-start-1">
-                <span
-                  className={`flex w-full items-center gap-2 transition-opacity duration-300 ${hasActive ? "opacity-100" : "opacity-0"}`}
-                >
-                  {hasActive && (
-                    <>
-                      <Spinner className="size-3 shrink-0" />
-                      <span className="shimmer text-muted-foreground text-xs font-medium">
-                        Syncing...
-                      </span>
-                      <SparkleTrail />
-                    </>
-                  )}
-                </span>
-                <span
-                  className={`flex items-center gap-1.5 transition-opacity duration-300 ${hasActive ? "opacity-0" : "opacity-100"}`}
-                >
-                  <span className="relative flex size-2">
-                    <span className="relative inline-flex size-2 rounded-full bg-border" />
-                  </span>
-                  <span className="text-xs text-muted-foreground">No active sync sessions</span>
-                </span>
+            <Button
+              size="sm"
+              variant="outline"
+              className="relative mx-2 gap-1.5 text-xs text-muted-foreground"
+              disabled={isRecentPending}
+              aria-busy={isRecentPending}
+            >
+              {hasActive ? (
+                <Spinner className="size-3 shrink-0" />
+              ) : (
+                <HugeiconsIcon icon={Clock02Icon} className="size-3.5" />
+              )}
+              <span className={hasActive ? "shimmer" : undefined}>
+                {hasActive ? "Importing..." : "Imports"}
               </span>
+              {hasActive && <SparkleTrail />}
             </Button>
           }
         />
-        <PopoverContent align="center" className="w-80 p-0">
+        <PopoverContent align="center" className="w-80 max-w-[calc(100vw-2rem)] p-0">
           <div className="max-h-[420px] overflow-y-auto">
             {isRecentError ? (
               <div className="flex items-center gap-2 px-4 py-3 text-xs text-destructive">
@@ -146,7 +131,7 @@ export default function SyncStatusWidget() {
 
                 {!hasActive && finishedSessions.length === 0 && (
                   <div className="px-4 py-6 text-center">
-                    <p className="text-sm text-muted-foreground">No recent syncs</p>
+                    <p className="text-sm text-muted-foreground">No recent imports</p>
                   </div>
                 )}
               </>
@@ -159,7 +144,7 @@ export default function SyncStatusWidget() {
                   size="sm"
                   className="w-full justify-between text-muted-foreground"
                 >
-                  View sync history
+                  View import history
                   <HugeiconsIcon icon={ArrowRight01Icon} className="size-3" />
                 </Button>
               </Link>
@@ -174,11 +159,13 @@ export default function SyncStatusWidget() {
 function SyncSessionObserver({
   jobId,
   sessionId,
+  syncType,
 }: {
   readonly jobId: string;
   readonly sessionId: string;
+  readonly syncType: SyncType;
 }) {
-  useSyncJobStatusQuery(jobId, sessionId);
+  useSyncJobStatusQuery(jobId, sessionId, syncType);
   return null;
 }
 
@@ -197,7 +184,11 @@ type ActiveSessionProps = {
 };
 
 function ActiveSessionItem({ session, onNavigate }: ActiveSessionProps) {
-  const { data: jobStatus, isError: isJobError } = useSyncJobStatusQuery(session.jobId, session.id);
+  const { data: jobStatus, isError: isJobError } = useSyncJobStatusQuery(
+    session.jobId,
+    session.id,
+    session.syncType,
+  );
 
   const typeConfig = SYNC_TYPE_CONFIG[session.syncType];
   const liveProgress = jobStatus?.progress ?? null;
@@ -217,7 +208,7 @@ function ActiveSessionItem({ session, onNavigate }: ActiveSessionProps) {
       params={{ id: session.id }}
       onClick={onNavigate}
       className="group block rounded-md p-2 hover:bg-accent"
-      aria-label={`View ${typeConfig.label} sync session`}
+      aria-label={`View ${typeConfig.label} import`}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
@@ -292,7 +283,7 @@ function RecentSessionItem({ session, onNavigate }: RecentSessionProps) {
       params={{ id: session.id }}
       onClick={onNavigate}
       className="group flex items-start gap-2.5 rounded-md p-2 hover:bg-accent"
-      aria-label={`View ${typeConfig.label} sync session from ${formatRelativeTimeToNow(session.createdAt)}`}
+      aria-label={`View ${typeConfig.label} import from ${formatRelativeTimeToNow(session.createdAt)}`}
     >
       <div className="mt-0.5 flex size-5 shrink-0 items-center justify-center">
         <HugeiconsIcon icon={statusIcon.icon} className={`size-3.5 ${statusIcon.className}`} />
@@ -311,7 +302,7 @@ function RecentSessionItem({ session, onNavigate }: RecentSessionProps) {
         {hasItems && (
           <div className="mt-1 flex items-center gap-2 text-[0.6875rem] text-muted-foreground">
             <span>
-              {displayedSuccessCount}/{session.totalItems} synced
+              {displayedSuccessCount}/{session.totalItems} added
             </span>
             {session.failCount > 0 && (
               <span className="text-destructive">{session.failCount} failed</span>

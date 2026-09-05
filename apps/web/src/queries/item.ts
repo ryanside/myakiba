@@ -39,7 +39,7 @@ export async function getItemRelatedCollection(externalId: number) {
 export async function getResyncStatus(externalId: number) {
   const { data, error } = await app.api.item({ id: externalId })["resync-status"].get();
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to get resync status"));
+    throw new Error(getErrorMessage(error, "Failed to check item refresh status"));
   }
   return data;
 }
@@ -47,7 +47,7 @@ export async function getResyncStatus(externalId: number) {
 export async function requestResync(externalId: number) {
   const { data, error } = await app.api.item({ id: externalId }).resync.post();
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to request resync"));
+    throw new Error(getErrorMessage(error, "Failed to request item refresh"));
   }
   return data;
 }

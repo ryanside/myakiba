@@ -418,7 +418,10 @@ syncWorker.on("failed", async (job, err) => {
   const failCount = scrapeRowCount + existingCount;
   const sessionStatus = "failed" as const;
 
-  const failedStatusMessage = SYNC_STATUS_MESSAGES.failedBeforeStartWithReason(err.message);
+  const failedStatusMessage =
+    durableSession.status === "pending"
+      ? SYNC_STATUS_MESSAGES.failedBeforeStartWithReason(err.message)
+      : SYNC_STATUS_MESSAGES.failedDuringProcessingWithReason(err.message);
   const { error: statusError } = await tryCatch(
     publishJobStatus({
       redis,

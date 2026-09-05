@@ -35,7 +35,7 @@ const INSERT_BATCH_SIZE = 500;
 const SUPERSEDED_IMPORT_ERROR = "This import is no longer current.";
 const EMPTY_IMPORT_ERROR = "No orders or collection items could be imported.";
 const UNEXPECTED_IMPORT_ERROR = "The import stopped unexpectedly. Try again to continue.";
-const FETCHING_ITEM_DATA_MESSAGE = "Fetching item data from MyFigureCollection…";
+const SCRAPING_ITEM_DATA_MESSAGE = "Scraping item data from MyFigureCollection…";
 
 type ResolvedItem = {
   itemId: string;
@@ -123,16 +123,16 @@ function findRowsToScrape({
   return rowsToScrape;
 }
 
-function buildImportPlan({
+export function buildImportPlan({
   archive,
   itemsByExternalId,
   rowsToScrape,
-  scrapedIds,
+  scrapeFailureReasons,
 }: {
   readonly archive: DataTransferArchiveV1;
   readonly itemsByExternalId: ReadonlyMap<number, ResolvedItem>;
   readonly rowsToScrape: readonly DataTransferCollectionItemV1[];
-  readonly scrapedIds: ReadonlySet<number>;
+  readonly scrapeFailureReasons: ReadonlyMap<number, string>;
 }): ImportPlan {
   const collectionRows: ImportableCollectionRow[] = [];
   const failedRows: ImportPlan["failedRows"][number][] = [];
@@ -154,11 +154,12 @@ function buildImportPlan({
   for (const row of archive.collectionItems) {
     const externalId = row.item.externalId;
     const requiredScrape = scrapeKeys.has(row.collectionKey);
+    const scrapeFailureReason = scrapeFailureReasons.get(externalId);
 
-    if (requiredScrape && !scrapedIds.has(externalId)) {
+    if (requiredScrape && scrapeFailureReason !== undefined) {
       addFailedRow({
         externalId,
-        reason: "The item could not be fetched from MyFigureCollection after three attempts.",
+        reason: scrapeFailureReason,
       });
       continue;
     }
@@ -167,7 +168,7 @@ function buildImportPlan({
     if (!resolvedItem) {
       addFailedRow({
         externalId,
-        reason: "The item was unavailable after fetching its data.",
+        reason: "The item was unavailable after scraping its data.",
       });
       continue;
     }
@@ -472,14 +473,14 @@ export async function processDataTransferImportJob(
           }
         : null;
     if (externalIds.length === 0) {
-      jobStatus.statusMessage = "No item data needs to be fetched.";
+      jobStatus.statusMessage = "No item data needs to be scraped.";
     } else if (scrapeItemIds.length === 0) {
       jobStatus.statusMessage =
         externalIds.length === 1
           ? "The item is already in myakiba."
           : `All ${externalIds.length} items are already in myakiba.`;
     } else {
-      jobStatus.statusMessage = FETCHING_ITEM_DATA_MESSAGE;
+      jobStatus.statusMessage = SCRAPING_ITEM_DATA_MESSAGE;
     }
     await publishJobStatus({
       redis,
@@ -488,7 +489,7 @@ export async function processDataTransferImportJob(
       error: null,
     });
 
-    const { successful: successfulItems } = await (
+    const { successful: successfulItems, failures } = await (
       scrapeItemIds.length <= 5 ? scrapeItems : scrapedItemsWithRateLimit
     )({
       itemIds: scrapeItemIds,
@@ -497,7 +498,7 @@ export async function processDataTransferImportJob(
       log: jobLog,
       maxRetries: 3,
       baseDelayMs: 1000,
-      progressStatusMessage: FETCHING_ITEM_DATA_MESSAGE,
+      progressStatusMessage: SCRAPING_ITEM_DATA_MESSAGE,
     });
 
     for (const batch of chunk(successfulItems, 25)) {
@@ -511,7 +512,9 @@ export async function processDataTransferImportJob(
       archive,
       itemsByExternalId,
       rowsToScrape,
-      scrapedIds: new Set(successfulItems.map((item) => item.id)),
+      scrapeFailureReasons: new Map(
+        failures.map(({ id, reason }) => [id, `Scraping failed after max retries: ${reason}`]),
+      ),
     });
 
     const [transitioned] = await db

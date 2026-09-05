@@ -142,14 +142,14 @@ const itemRouter = new Elysia({ prefix: "/item" })
           return status(404, "Item not found");
         }
         log.error(validateError, { step: "validateItemForResync", outcome: "error" });
-        return status(500, "Failed to check resync status");
+        return status(500, "Failed to check item refresh status");
       }
 
       const { data: state, error } = await tryCatch(deriveResyncStatus(resyncItem.id));
 
       if (error) {
         log.error(error, { step: "getResyncStatus", outcome: "error" });
-        return status(500, "Failed to check resync status");
+        return status(500, "Failed to check item refresh status");
       }
 
       log.set({ outcome: "success", resyncStatus: state.status });
@@ -176,7 +176,7 @@ const itemRouter = new Elysia({ prefix: "/item" })
           return status(404, "Item not found");
         }
         log.error(validateError, { step: "validateItemForResync", outcome: "error" });
-        return status(500, "Failed to request resync");
+        return status(500, "Failed to request item refresh");
       }
 
       const { data: state, error } = await tryCatch(
@@ -186,18 +186,18 @@ const itemRouter = new Elysia({ prefix: "/item" })
       if (error) {
         if (error.message === "RESYNC_BLOCKED_REQUESTED") {
           log.set({ outcome: "blocked", reason: "already_requested" });
-          return status(409, "Resync already requested");
+          return status(409, "Item refresh already requested");
         }
         if (error.message === "RESYNC_BLOCKED_PROCESSING") {
           log.set({ outcome: "blocked", reason: "processing" });
-          return status(409, "Resync already in progress");
+          return status(409, "Item details are already being refreshed");
         }
         if (error.message === "RESYNC_BLOCKED_COOLDOWN") {
           log.set({ outcome: "blocked", reason: "cooldown" });
-          return status(429, "Item was recently updated");
+          return status(429, "Item details were recently refreshed");
         }
         log.error(error, { step: "requestResync", outcome: "error" });
-        return status(500, "Failed to request resync");
+        return status(500, "Failed to request item refresh");
       }
 
       log.set({ outcome: "success" });

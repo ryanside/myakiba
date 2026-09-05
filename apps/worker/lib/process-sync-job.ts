@@ -64,7 +64,7 @@ export async function processSyncJob(params: ProcessSyncJobParams): Promise<Proc
   await batchUpdateSyncSessionItemStatuses({
     syncSessionId,
     scrapedItemIds,
-    failedItemIds,
+    failures,
   });
 
   if (successfulResults.length === 0) {

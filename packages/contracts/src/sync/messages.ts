@@ -13,33 +13,37 @@ import type { SyncJobRecentItem } from "./schema";
  *
  * @example
  * SYNC_STATUS_MESSAGES.queued
- * // "Sync queued"
+ * // "Import queued"
  *
  * @example
  * SYNC_STATUS_MESSAGES.partial(8, 10, 2)
- * // "Synced 8/10 items - 2 failed"
+ * // "Added 8/10 items. 2 failed."
  */
 export const SYNC_STATUS_MESSAGES = {
-  queued: "Sync queued",
-  starting: (count: number) => `Starting sync of ${count} item${count === 1 ? "" : "s"}`,
-  scraping: (processed: number, total: number) => `Scraping ${processed}/${total} items`,
-  persisting: (count: number) => `Persisting ${count} scraped item${count === 1 ? "" : "s"}`,
+  queued: "Import queued",
+  starting: (count: number) => `Starting to scrape ${count} item${count === 1 ? "" : "s"}`,
+  scraping: (processed: number, total: number) =>
+    `Scraping item details from MyFigureCollection: ${processed}/${total} processed`,
+  persisting: (count: number) => `Saving ${count} scraped item${count === 1 ? "" : "s"}`,
   itemOutcome: (item: Pick<SyncJobRecentItem, "outcome" | "title" | "externalId">) =>
-    `${item.outcome === "succeeded" ? "Synced" : "Failed"} ${item.title ?? `MFC #${item.externalId}`}`,
+    `${item.outcome === "succeeded" ? "Scraped details for" : "Failed to scrape details for"} ${item.title ?? `MFC #${item.externalId}`}`,
   completed: (successCount: number, totalCount: number) =>
-    `Synced ${successCount}/${totalCount} items`,
+    `Added ${successCount}/${totalCount} items`,
   partial: (successCount: number, totalCount: number, failCount: number) =>
-    `Synced ${successCount}/${totalCount} items - ${failCount} failed`,
-  failedScrape: "Sync failed - couldn't fetch from MyFigureCollection",
-  failedPersist: "Sync failed - couldn't save scraped items",
-  failedBeforeStart: "Sync failed before processing started",
+    `Added ${successCount}/${totalCount} items. ${failCount} failed.`,
+  failedScrape: "Failed to scrape item details from MyFigureCollection",
+  failedPersist: "Failed to save items",
+  failedBeforeStart: "Import failed before processing started",
   failedBeforeStartWithReason: (reason: string) =>
-    `Sync failed before processing started - ${reason}`,
-  alreadyOwned: "All items already synced. To add duplicates, use Collection or Order Sync.",
-  insertedWithoutScrape: "Sync completed - items were already in myakiba",
-  streamError: "Lost connection - refresh to see latest status",
-  streamTimeout: "Stream timed out - refresh to see latest status",
+    `Import failed before processing started. ${reason}`,
+  failedDuringProcessingWithReason: (reason: string) =>
+    `Import failed during processing. ${reason}`,
+  alreadyOwned:
+    "These items are already in your collection or orders. To add another copy, open Add and choose Collection or Order.",
+  insertedWithoutScrape: "Items added using details already in myakiba",
+  streamError: "Lost connection. Reload the page to see the latest status.",
+  streamTimeout: "Status updates timed out. Reload the page to see the latest status.",
   connecting: "Connecting...",
   requireEmailVerification:
-    "Please verify your email before syncing. A verification email was already sent when you signed up.",
+    "Verify your email before adding items or importing a CSV. Check your inbox for the verification email sent when you signed up.",
 } as const;

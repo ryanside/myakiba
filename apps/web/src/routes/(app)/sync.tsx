@@ -19,10 +19,10 @@ export const Route = createFileRoute("/(app)/sync")({
     meta: [
       {
         name: "description",
-        content: "Manage sync sessions",
+        content: "View your imports",
       },
       {
-        title: "Sync - myakiba",
+        title: "Import history - myakiba",
       },
     ],
   }),
@@ -67,7 +67,7 @@ function RouteComponent() {
     return (
       <div className="flex flex-col gap-4 mx-auto max-w-[88rem]">
         <div className="flex flex-col gap-2">
-          <h1 className="text-2xl tracking-tight">Sync History</h1>
+          <h1 className="text-2xl tracking-tight">Import history</h1>
         </div>
         <div className="flex flex-col items-center justify-center h-64 gap-y-4">
           <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
@@ -78,7 +78,7 @@ function RouteComponent() {
 
   return (
     <div className="flex flex-col gap-4 mx-auto max-w-[88rem]">
-      <h1 className="mb-2 text-2xl font-medium tracking-tight">Sync History</h1>
+      <h1 className="mb-2 text-2xl font-medium tracking-tight">Import history</h1>
 
       <div className="flex flex-col sm:flex-row flex-wrap items-start gap-x-4 gap-y-2">
         <SyncQuickFilters />

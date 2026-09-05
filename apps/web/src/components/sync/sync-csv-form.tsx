@@ -48,15 +48,14 @@ export default function SyncCsvForm({
           children={(field) => {
             return (
               <div className="space-y-4">
-                <div className="flex flex-row gap-2">
-                  <Label className="text-lg text-black dark:text-white">
-                    Select MyFigureCollection CSV File
-                  </Label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Label>CSV file</Label>
                   <csvForm.Subscribe
                     selector={(state) => [state.canSubmit, state.isSubmitting]}
                     children={([canSubmit, isSubmitting]) => (
                       <Button
                         type="submit"
+                        aria-label="Import CSV"
                         disabled={!canSubmit}
                         variant="default"
                         className="ml-auto"
@@ -64,7 +63,7 @@ export default function SyncCsvForm({
                         {isSubmitting ? (
                           <HugeiconsIcon icon={Loading03Icon} className="size-4 animate-spin" />
                         ) : (
-                          "Submit CSV"
+                          "Import CSV"
                         )}
                       </Button>
                     )}

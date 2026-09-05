@@ -73,12 +73,12 @@ function RouteComponent(): ReactNode {
     mutationFn: () => requestResync(externalId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["item", externalId, "resyncStatus"] });
-      toast.add({ type: "success", title: "Update requested" });
+      toast.add({ type: "success", title: "Item refresh requested" });
     },
     onError: (mutationError) => {
       toast.add({
         type: "error",
-        title: "Failed to request update",
+        title: "Failed to request item refresh",
         description: mutationError.message,
       });
     },

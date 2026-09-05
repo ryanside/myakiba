@@ -173,11 +173,17 @@ export default function SyncOrderForm({
           <orderForm.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
             children={([canSubmit, isSubmitting]) => (
-              <Button type="submit" disabled={!canSubmit} variant="default" className="ml-auto">
+              <Button
+                type="submit"
+                aria-label="Create order"
+                disabled={!canSubmit}
+                variant="default"
+                className="ml-auto"
+              >
                 {isSubmitting ? (
                   <HugeiconsIcon icon={Loading03Icon} className="size-4 animate-spin" />
                 ) : (
-                  "Submit Order"
+                  "Create"
                 )}
               </Button>
             )}
@@ -601,7 +607,7 @@ export default function SyncOrderForm({
                           value={subField.state.value}
                           onChange={(e) => subField.handleChange(e.target.value)}
                           type="text"
-                          placeholder="MyFigureCollection Item URL or ID"
+                          placeholder="MyFigureCollection item link or ID"
                           className="max-w-sm"
                         />
                         <Dialog>
@@ -945,7 +951,7 @@ export default function SyncOrderForm({
                   });
                 }}
               >
-                <HugeiconsIcon icon={Add01Icon} /> Add More Items
+                <HugeiconsIcon icon={Add01Icon} /> Add another item
               </Button>
             </div>
           )}

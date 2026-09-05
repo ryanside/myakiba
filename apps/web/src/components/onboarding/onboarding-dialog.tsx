@@ -41,6 +41,7 @@ import { useOnboarding } from "@/hooks/use-onboarding";
 import { authClient } from "@/lib/auth-client";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { cn } from "@/lib/utils";
+import { SYNC_OPTION_META } from "@/lib/sync";
 import { SyncActionSheet } from "@/components/sync/sync-launcher";
 import type { LaunchableSyncType } from "@/components/sync/sync-launcher-options";
 import { CURRENCIES, DATE_FORMATS } from "@myakiba/contracts/shared/constants";
@@ -76,7 +77,7 @@ const STEPS: readonly StepMeta[] = [
   {
     id: "sync",
     step: 3,
-    eyebrow: "Sync",
+    eyebrow: "Add items",
     title: "Bring in your items.",
     description: "You can always add more later through the + button in the sidebar.",
   },
@@ -447,19 +448,19 @@ const SYNC_OPTIONS: readonly SyncOption[] = [
   {
     id: "collection",
     icon: LibraryIcon,
-    title: "Sync collection",
-    description: "Add to your collection using MyFigureCollection Item IDs/links.",
+    title: SYNC_OPTION_META.collection.title,
+    description: SYNC_OPTION_META.collection.description,
   },
   {
     id: "order",
     icon: PackageIcon,
-    title: "Sync order",
-    description: "Create an order using MyFigureCollection Item IDs/links.",
+    title: SYNC_OPTION_META.order.title,
+    description: SYNC_OPTION_META.order.description,
   },
   {
     id: "csv",
     icon: FileUploadIcon,
-    title: "Sync CSV",
+    title: SYNC_OPTION_META.csv.title,
     description: "Use your MyFigureCollection CSV export to import your items.",
   },
 ];
@@ -505,7 +506,7 @@ function SyncOptionCard({ option, delayMs, onSelect }: SyncOptionCardProps) {
         <HugeiconsIcon icon={option.icon} strokeWidth={2} className="size-4" />
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="text-sm font-medium leading-none">{option.title}</span>
+        <span className="text-sm font-medium leading-snug">{option.title}</span>
         <span className="text-xs text-muted-foreground">{option.description}</span>
       </span>
       <HugeiconsIcon

@@ -7,8 +7,9 @@ import { useNavigate } from "@tanstack/react-router";
 import type { Treaty } from "@elysiajs/eden";
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
+import type { SyncType } from "@myakiba/contracts/shared/types";
 import { app } from "@/lib/treaty-client";
-import { resolveSyncMessage } from "@/lib/sync";
+import { resolveSyncMessage, SYNC_OPTION_META } from "@/lib/sync";
 import { invalidateSyncResultQueries } from "@/lib/mutation-query-invalidation";
 import { toast } from "@/components/ui/toast";
 
@@ -17,7 +18,11 @@ type SyncJobStatusChunk =
     ? Chunk
     : never;
 
-export function useSyncJobStatusQuery(jobId: string | null, sessionId: string | null = null) {
+export function useSyncJobStatusQuery(
+  jobId: string | null,
+  sessionId: string | null,
+  syncType: SyncType | null,
+) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const now = new Date().toISOString();
@@ -64,26 +69,27 @@ export function useSyncJobStatusQuery(jobId: string | null, sessionId: string | 
                 ? chunkError.message
                 : undefined;
 
+            const meta = syncType === null ? null : SYNC_OPTION_META[syncType];
             let toastType = "error";
-            let toastTitle = "Sync Failed";
+            let toastTitle: string = meta?.failureTitle ?? "Import failed";
 
             if (terminalState === "success") {
               toastType = "success";
-              toastTitle = "Sync Complete";
+              toastTitle = meta?.completedTitle ?? "Import complete";
             } else if (terminalState === "partial") {
               toastType = "warning";
-              toastTitle = "Sync Partial";
+              toastTitle = "Failed to add some items";
             } else if (terminalState === "timeout") {
               toastType = "info";
-              toastTitle = "Sync Timed Out";
+              toastTitle = "Status updates timed out";
             }
 
             const toastId = toast.add({
               type: toastType,
               title: toastTitle,
-              description: description === undefined ? message : `${message} — ${description}`,
+              description: description === undefined ? message : `${message}. ${description}`,
               actionProps: {
-                children: sessionId === null ? "View History" : "View Status",
+                children: sessionId === null ? "View import history" : "View details",
                 onClick() {
                   toast.close(toastId);
                   if (sessionId === null) {

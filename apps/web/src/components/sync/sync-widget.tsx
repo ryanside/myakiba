@@ -3,7 +3,6 @@ import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { SYNC_TYPE_CONFIG } from "@/lib/sync";
 import { SyncActionSheet } from "@/components/sync/sync-launcher";
 import { LAUNCHABLE_SYNC_OPTIONS } from "@/components/sync/sync-launcher-options";
 import type { LaunchableSyncType } from "@/components/sync/sync-launcher-options";
@@ -26,29 +25,29 @@ export default function SyncWidget({ TriggerWrapper, side = "left" }: SyncWidget
     <>
       <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
         <PopoverTrigger render={TriggerWrapper} />
-        <PopoverContent align={side === "left" ? "start" : "end"} className="w-56 p-1">
-          {LAUNCHABLE_SYNC_OPTIONS.map((option) => {
-            const config = SYNC_TYPE_CONFIG[option.type];
-            return (
-              <Button
-                key={option.type}
-                type="button"
-                variant="ghost"
-                onClick={() => handleOptionSelect(option.type)}
-                className="group/item h-auto w-full justify-start gap-2.5 rounded-md px-2 py-1.5 text-left font-normal transition-colors duration-150 hover:bg-accent"
-              >
-                <HugeiconsIcon
-                  icon={option.icon}
-                  className="size-4 shrink-0 text-muted-foreground transition-colors duration-150 group-hover/item:text-foreground"
-                />
-                <span className="min-w-0 flex-1 text-sm">{config.label}</span>
-                <HugeiconsIcon
-                  icon={ArrowRight01Icon}
-                  className="size-3 shrink-0 text-muted-foreground/50 -translate-x-0.5 opacity-0 transition-[transform,opacity] duration-150 group-hover/item:translate-x-0 group-hover/item:opacity-100"
-                />
-              </Button>
-            );
-          })}
+        <PopoverContent
+          align={side === "left" ? "start" : "end"}
+          className="w-64 max-w-[calc(100vw-2rem)] p-1"
+        >
+          {LAUNCHABLE_SYNC_OPTIONS.map((option) => (
+            <Button
+              key={option.type}
+              type="button"
+              variant="ghost"
+              onClick={() => handleOptionSelect(option.type)}
+              className="group/item h-auto w-full justify-start gap-2.5 rounded-md px-2 py-1.5 text-left font-normal transition-colors duration-150 hover:bg-accent"
+            >
+              <HugeiconsIcon
+                icon={option.icon}
+                className="size-4 shrink-0 text-muted-foreground transition-colors duration-150 group-hover/item:text-foreground"
+              />
+              <span className="min-w-0 flex-1 whitespace-normal text-sm">{option.label}</span>
+              <HugeiconsIcon
+                icon={ArrowRight01Icon}
+                className="size-3 shrink-0 text-muted-foreground/50 -translate-x-0.5 opacity-0 transition-[transform,opacity] duration-150 group-hover/item:translate-x-0 group-hover/item:opacity-100"
+              />
+            </Button>
+          ))}
         </PopoverContent>
       </Popover>
 
