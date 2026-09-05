@@ -116,23 +116,44 @@ export const ITEM_STATUS_CONFIG = {
 
 export const SYNC_OPTION_META = {
   collection: {
-    title: "Sync Collection",
-    description: "Add to your collection using MyFigureCollection Item IDs/links.",
+    title: "Add to collection",
+    description: "Paste MyFigureCollection item links or IDs to add items to your collection.",
+    pendingTitle: SYNC_STATUS_MESSAGES.queued,
+    completedTitle: "Added to collection",
+    failureTitle: "Failed to add to collection",
   },
   order: {
-    title: "Sync Order",
-    description: "Create and add an order using MyFigureCollection Item IDs/links.",
+    title: "Create order",
+    description: "Paste MyFigureCollection item links or IDs to create an order.",
+    pendingTitle: SYNC_STATUS_MESSAGES.queued,
+    completedTitle: "Order created",
+    failureTitle: "Failed to create order",
   },
   "order-item": {
-    title: "Add Order Items",
-    description: "Add items to an existing order using MyFigureCollection Item IDs/links.",
+    title: "Add to order",
+    description: "Paste MyFigureCollection item links or IDs to add items to this order.",
+    pendingTitle: SYNC_STATUS_MESSAGES.queued,
+    completedTitle: "Added to order",
+    failureTitle: "Failed to add to order",
   },
   csv: {
-    title: "Sync CSV",
+    title: "Import MyFigureCollection CSV",
     description:
-      "Sync your MyFigureCollection and myakiba using MyFigureCollection CSV. You can export your CSV by going to myfigurecollection.net > User Menu > Manager > CSV Export (with all fields checked, Choose ',' (comma) for the settings option).",
+      "Upload your MyFigureCollection CSV to add owned items to your collection and ordered items to your orders. Export it from MyFigureCollection: User Menu > Manager > CSV Export. Select all fields and use a comma as the separator.",
+    pendingTitle: SYNC_STATUS_MESSAGES.queued,
+    completedTitle: "MyFigureCollection CSV imported",
+    failureTitle: "Failed to import MyFigureCollection CSV",
   },
-} as const satisfies Record<SyncType, { readonly title: string; readonly description: string }>;
+} as const satisfies Record<
+  SyncType,
+  {
+    readonly title: string;
+    readonly description: string;
+    readonly pendingTitle: string;
+    readonly completedTitle: string;
+    readonly failureTitle: string;
+  }
+>;
 
 const SYNC_CSV_STATUS_SET: ReadonlySet<string> = new Set(SYNC_CSV_ITEM_STATUSES);
 const csvTransformationCache = new WeakMap<File, Promise<UserItem[]>>();
@@ -167,7 +188,7 @@ export function transformCSVData(value: { file: File | undefined }): Promise<Use
       return SYNC_CSV_STATUS_SET.has(item.status) && !item.title.startsWith("[NSFW");
     });
     if (filteredData.length === 0) {
-      throw new Error("No Owned or Ordered items to sync");
+      throw new Error("This CSV has no supported Owned or Ordered items to import");
     }
     if (import.meta.env.DEV) {
       console.log("Filtered data:", filteredData);

@@ -27,7 +27,7 @@ type OrderItemSyncSheetProps = {
 
 export function OrderItemSyncSheet({
   orderId,
-  label = "Add Item",
+  label = "Add",
   className,
   variant = "default",
   size = "sm",

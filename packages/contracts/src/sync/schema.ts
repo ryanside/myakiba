@@ -21,7 +21,7 @@ export const mfcItemIdSchema = z
     if (value === "") {
       context.addIssue({
         code: "custom",
-        message: "MyFigureCollection Item URL or ID is required",
+        message: "MyFigureCollection item link or ID is required",
       });
       return z.NEVER;
     }
@@ -30,7 +30,7 @@ export const mfcItemIdSchema = z
     if (!itemId) {
       context.addIssue({
         code: "custom",
-        message: "Please enter a valid MyFigureCollection Item ID or URL",
+        message: "Please enter a valid MyFigureCollection item link or ID",
       });
       return z.NEVER;
     }

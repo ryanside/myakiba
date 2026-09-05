@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { SyncSessionRow } from "@myakiba/contracts/sync/types";
 import { ThemedBadge } from "@/components/reui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SESSION_STATUS_CONFIG, SYNC_TYPE_CONFIG } from "@/lib/sync";
+import { SESSION_STATUS_CONFIG, SYNC_OPTION_META } from "@/lib/sync";
 import { formatShortDateTime } from "@/lib/date-display";
 
 export function SyncSessionHero({
@@ -34,14 +34,14 @@ export function SyncSessionHero({
   if (!session) return null;
 
   const statusConfig = SESSION_STATUS_CONFIG[session.status];
-  const typeConfig = SYNC_TYPE_CONFIG[session.syncType];
+  const typeConfig = SYNC_OPTION_META[session.syncType];
 
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-      <div className="flex flex-col gap-1.5">
-        <div className="flex items-center gap-2.5">
-          <h1 className="animate-data-in text-2xl font-medium tracking-tight">
-            {typeConfig.label} Sync
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+          <h1 className="animate-data-in min-w-0 break-words text-2xl font-medium tracking-tight">
+            {typeConfig.title}
           </h1>
           <ThemedBadge variant={statusConfig.variant} size="sm" className="animate-data-in">
             {statusConfig.label}

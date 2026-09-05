@@ -27,7 +27,7 @@ export function ItemNotFound({
         <EmptyHeader>
           <EmptyTitle>Item not in the Item Database yet</EmptyTitle>
           <EmptyDescription>
-            MFC item #{externalId} hasn&apos;t been synced to myakiba. Sync it now to add it to your
+            MyFigureCollection item #{externalId} isn&apos;t in myakiba yet. Add it to your
             collection or a new order.
           </EmptyDescription>
         </EmptyHeader>
@@ -35,7 +35,6 @@ export function ItemNotFound({
           <ItemSyncActions
             onSyncCollection={() => onSyncTypeChange("collection")}
             onSyncOrder={() => onSyncTypeChange("order")}
-            labels={{ collection: "Sync as Collection", order: "Sync as Order" }}
           />
           <a
             href={`https://myfigurecollection.net/item/${externalId}`}

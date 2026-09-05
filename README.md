@@ -29,7 +29,7 @@ myakiba is being created in hopes to be a useful alternative, as well as a fun/l
 
 ### Core features
 
-- **Sync from MyFigureCollection without starting over.** Import an MFC CSV or paste item links to add MFC items to your collection and orders. myakiba pulls in the item information for you.
+- **Import from MyFigureCollection without starting over.** Import a MyFigureCollection CSV or paste item links to add MFC items to your collection and orders. myakiba pulls in the item information for you.
 - **Manage your collection.** Get the flexibility of a spreadsheet with the item information from MFC already attached. Track what you own, what you paid, where you bought it, its condition, dates, tags, notes, and more.
 - **Multi-item orders.** Group multiple items into an order, follow each order from Ordered to Owned, and keep track of shipping, taxes, duties, tariffs, and other fees.
 - **See what is coming up.** Use the dashboard and personal calendar to check upcoming releases,

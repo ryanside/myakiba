@@ -14,7 +14,7 @@ const FAQ_ITEMS: readonly {
     id: "item-1",
     question: "Does myakiba use data from MFC?",
     answer:
-      "Yes. When you submit a MFC item link, myakiba scrapes and saves the item details. This process, called sync, has various limits in place like throttling and rate limiting to prevent hammering their site. We also cache item data so subsequent requests for the same item link doesn't need syncing again.",
+      "Yes. When you submit an MFC item link, myakiba scrapes and saves the item details. This process has various limits in place like throttling and rate limiting to prevent hammering their site. We also cache item data so subsequent requests for the same item link don't need scraping again.",
   },
   {
     id: "item-2",

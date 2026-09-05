@@ -14,7 +14,7 @@ import type {
 export async function sendItems(userItems: UserItem[]) {
   const { data, error } = await app.api.sync.csv.post(userItems);
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to send items"));
+    throw new Error(getErrorMessage(error, "Failed to submit MyFigureCollection CSV"));
   }
   return data;
 }
@@ -22,7 +22,7 @@ export async function sendItems(userItems: UserItem[]) {
 export async function sendOrder(order: SyncOrder) {
   const { data, error } = await app.api.sync.order.post(order);
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to send order"));
+    throw new Error(getErrorMessage(error, "Failed to submit order"));
   }
   return data;
 }
@@ -33,7 +33,7 @@ export async function sendOrderItems(orderItems: SyncOrderItems) {
     items: [...orderItems.items],
   });
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to send order items"));
+    throw new Error(getErrorMessage(error, "Failed to submit order items"));
   }
   return data;
 }
@@ -41,7 +41,7 @@ export async function sendOrderItems(orderItems: SyncOrderItems) {
 export async function sendCollection(collection: SyncCollectionItem[]) {
   const { data, error } = await app.api.sync.collection.post(collection);
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to send collection"));
+    throw new Error(getErrorMessage(error, "Failed to submit collection items"));
   }
   return data;
 }
@@ -63,7 +63,7 @@ export async function fetchSyncSessions(params: {
     },
   });
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to fetch sync sessions"));
+    throw new Error(getErrorMessage(error, "Failed to load import history"));
   }
   return data;
 }
@@ -84,7 +84,7 @@ export async function fetchSyncSessionDetail(
     },
   });
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to fetch sync session detail"));
+    throw new Error(getErrorMessage(error, "Failed to load import details"));
   }
   return data;
 }

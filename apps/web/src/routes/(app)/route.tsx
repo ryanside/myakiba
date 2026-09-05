@@ -80,7 +80,7 @@ function RouteComponent() {
                   TriggerWrapper={
                     <Button variant="default" size="sm">
                       <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
-                      <span>Sync Items</span>
+                      <span>Add</span>
                     </Button>
                   }
                 />

@@ -121,6 +121,7 @@ export default function SyncCollectionForm({
                   children={([canSubmit, isSubmitting]) => (
                     <Button
                       type="submit"
+                      aria-label="Add to collection"
                       disabled={!canSubmit}
                       variant="default"
                       className="ml-auto"
@@ -128,7 +129,7 @@ export default function SyncCollectionForm({
                       {isSubmitting ? (
                         <HugeiconsIcon icon={Loading03Icon} className="size-4 animate-spin" />
                       ) : (
-                        "Submit Items"
+                        "Add"
                       )}
                     </Button>
                   )}
@@ -182,7 +183,7 @@ export default function SyncCollectionForm({
                             }
                           }}
                           type="text"
-                          placeholder="MyFigureCollection Item URL or ID"
+                          placeholder="MyFigureCollection item link or ID"
                           className="max-w-sm"
                         />
 
@@ -587,7 +588,7 @@ export default function SyncCollectionForm({
                   });
                 }}
               >
-                <HugeiconsIcon icon={Add01Icon} /> Add More Items
+                <HugeiconsIcon icon={Add01Icon} /> Add another item
               </Button>
             </div>
           )}

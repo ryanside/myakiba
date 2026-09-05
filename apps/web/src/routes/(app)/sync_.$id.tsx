@@ -29,8 +29,8 @@ export const Route = createFileRoute("/(app)/sync_/$id")({
   validateSearch: syncSessionDetailSearchSchema,
   head: ({ params }) => ({
     meta: [
-      { name: "description", content: `Sync session ${params.id}` },
-      { title: "Sync Session - myakiba" },
+      { name: "description", content: `Import ${params.id}` },
+      { title: "Import details - myakiba" },
     ],
   }),
 });
@@ -86,12 +86,12 @@ function RouteComponent(): ReactNode {
 
   return (
     <div className="flex flex-col gap-4 mx-auto max-w-352" aria-busy={isPending} aria-live="polite">
-      {isPending ? <span className="sr-only">Loading sync session details</span> : null}
+      {isPending ? <span className="sr-only">Loading import details</span> : null}
       <BackLink fallbackTo="/sync" text="Back" font="sans" className="self-start" />
 
       {isError ? (
         <div className="flex flex-col gap-1.5">
-          <h1 className="text-2xl font-medium tracking-tight">Sync Session</h1>
+          <h1 className="text-2xl font-medium tracking-tight">Import details</h1>
           <p className="animate-data-in text-sm font-normal text-destructive">
             Error: {error.message}
           </p>
@@ -100,8 +100,8 @@ function RouteComponent(): ReactNode {
 
       {!isPending && !isError && !session ? (
         <div className="flex flex-col gap-1.5">
-          <h1 className="text-2xl font-medium tracking-tight">Sync Session</h1>
-          <p className="text-muted-foreground text-sm font-normal">Session not found</p>
+          <h1 className="text-2xl font-medium tracking-tight">Import details</h1>
+          <p className="text-muted-foreground text-sm font-normal">Import not found</p>
         </div>
       ) : null}
 

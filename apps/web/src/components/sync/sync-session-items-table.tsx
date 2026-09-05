@@ -47,7 +47,7 @@ export function SyncSessionItemsTable({
       isLoading={isLoading}
       loadingMode="skeleton"
       emptyMessage={
-        isFiltered ? "No items match the selected statuses." : "No items in this sync session."
+        isFiltered ? "No items match the selected statuses." : "No items in this import."
       }
       tableLayout={{
         rowBorder: true,

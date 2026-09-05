@@ -35,7 +35,7 @@ const INSERT_BATCH_SIZE = 500;
 const SUPERSEDED_IMPORT_ERROR = "This import is no longer current.";
 const EMPTY_IMPORT_ERROR = "No orders or collection items could be imported.";
 const UNEXPECTED_IMPORT_ERROR = "The import stopped unexpectedly. Try again to continue.";
-const FETCHING_ITEM_DATA_MESSAGE = "Fetching item data from MyFigureCollection…";
+const SCRAPING_ITEM_DATA_MESSAGE = "Scraping item data from MyFigureCollection…";
 
 type ResolvedItem = {
   itemId: string;
@@ -167,7 +167,7 @@ function buildImportPlan({
     if (!resolvedItem) {
       addFailedRow({
         externalId,
-        reason: "The item was unavailable after fetching its data.",
+        reason: "The item was unavailable after scraping its data.",
       });
       continue;
     }
@@ -472,14 +472,14 @@ export async function processDataTransferImportJob(
           }
         : null;
     if (externalIds.length === 0) {
-      jobStatus.statusMessage = "No item data needs to be fetched.";
+      jobStatus.statusMessage = "No item data needs to be scraped.";
     } else if (scrapeItemIds.length === 0) {
       jobStatus.statusMessage =
         externalIds.length === 1
           ? "The item is already in myakiba."
           : `All ${externalIds.length} items are already in myakiba.`;
     } else {
-      jobStatus.statusMessage = FETCHING_ITEM_DATA_MESSAGE;
+      jobStatus.statusMessage = SCRAPING_ITEM_DATA_MESSAGE;
     }
     await publishJobStatus({
       redis,
@@ -497,7 +497,7 @@ export async function processDataTransferImportJob(
       log: jobLog,
       maxRetries: 3,
       baseDelayMs: 1000,
-      progressStatusMessage: FETCHING_ITEM_DATA_MESSAGE,
+      progressStatusMessage: SCRAPING_ITEM_DATA_MESSAGE,
     });
 
     for (const batch of chunk(successfulItems, 25)) {

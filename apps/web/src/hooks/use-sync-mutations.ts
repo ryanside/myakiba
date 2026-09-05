@@ -9,10 +9,11 @@ import type {
   SyncOrderItems,
   UserItem,
 } from "@myakiba/contracts/sync/types";
-import { transformCSVData } from "@/lib/sync";
+import { SYNC_OPTION_META, transformCSVData } from "@/lib/sync";
 import { invalidateSyncResultQueries } from "@/lib/mutation-query-invalidation";
 import { sendCollection, sendItems, sendOrder, sendOrderItems } from "@/queries/sync";
 import type { SyncResponse } from "@/queries/sync";
+import type { SyncType } from "@myakiba/contracts/shared/types";
 import { toast } from "@/components/ui/toast";
 
 export type UseSyncMutationsReturn = {
@@ -30,26 +31,29 @@ export function useSyncMutations(
   const navigate = useNavigate();
 
   const handleSuccess = useCallback(
-    (data: SyncResponse): void => {
+    (data: SyncResponse, syncType: SyncType): void => {
       onComplete?.();
 
       const itemCount = data.existingItemsToInsert + data.newItems;
-      let title = "Sync Queued";
+      const meta = SYNC_OPTION_META[syncType];
+      let title: string = meta.pendingTitle;
       let description = [
-        `Processing ${data.newItems} items`,
-        data.existingItemsToInsert > 0 ? `${data.existingItemsToInsert} already synced` : null,
+        `${data.newItems} item${data.newItems === 1 ? "" : "s"} queued for scraping`,
+        data.existingItemsToInsert > 0
+          ? `${data.existingItemsToInsert} already in the item database`
+          : null,
       ]
         .filter((part) => part !== null)
         .join(", ");
 
       if (data.isFinished) {
-        title = "Sync Complete";
-        description = `${itemCount} items synced`;
+        title = meta.completedTitle;
+        description = `Added ${itemCount} item${itemCount === 1 ? "" : "s"}`;
       }
 
-      if (data.isFinished && itemCount === 0) {
-        title = "Already Synced";
-        description = "All items are already in your collection.";
+      if (syncType === "csv" && data.isFinished && itemCount === 0) {
+        title = "No new items to import";
+        description = "These items are already in your collection or orders.";
       }
 
       const toastId = toast.add({
@@ -57,7 +61,7 @@ export function useSyncMutations(
         title,
         description,
         actionProps: {
-          children: "View Status",
+          children: data.isFinished ? "View details" : "View progress",
           onClick() {
             toast.close(toastId);
             void navigate({ to: "/sync/$id", params: { id: data.syncSessionId } });
@@ -76,14 +80,14 @@ export function useSyncMutations(
 
   const csvMutation = useMutation({
     mutationFn: (userItems: UserItem[]) => sendItems(userItems),
-    onSuccess: handleSuccess,
+    onSuccess: (data) => handleSuccess(data, "csv"),
     onError: (error: Error) => {
       const toastId = toast.add({
         type: "error",
-        title: "Sync Failed",
-        description: error.message.trim() || "Failed to submit CSV.",
+        title: SYNC_OPTION_META["csv"].failureTitle,
+        description: error.message.trim() || "Failed to submit MyFigureCollection CSV.",
         actionProps: {
-          children: "View History",
+          children: "View import history",
           onClick() {
             toast.close(toastId);
             void navigate({ to: "/sync" });
@@ -95,14 +99,14 @@ export function useSyncMutations(
 
   const orderMutation = useMutation({
     mutationFn: (order: SyncOrder) => sendOrder(order),
-    onSuccess: handleSuccess,
+    onSuccess: (data) => handleSuccess(data, "order"),
     onError: (error: Error) => {
       const toastId = toast.add({
         type: "error",
-        title: "Sync Failed",
+        title: SYNC_OPTION_META["order"].failureTitle,
         description: error.message.trim() || "Failed to submit order.",
         actionProps: {
-          children: "View History",
+          children: "View import history",
           onClick() {
             toast.close(toastId);
             void navigate({ to: "/sync" });
@@ -114,14 +118,14 @@ export function useSyncMutations(
 
   const orderItemMutation = useMutation({
     mutationFn: (orderItems: SyncOrderItems) => sendOrderItems(orderItems),
-    onSuccess: handleSuccess,
+    onSuccess: (data) => handleSuccess(data, "order-item"),
     onError: (error: Error) => {
       const toastId = toast.add({
         type: "error",
-        title: "Sync Failed",
+        title: SYNC_OPTION_META["order-item"].failureTitle,
         description: error.message.trim() || "Failed to submit order items.",
         actionProps: {
-          children: "View History",
+          children: "View import history",
           onClick() {
             toast.close(toastId);
             void navigate({ to: "/sync" });
@@ -133,14 +137,14 @@ export function useSyncMutations(
 
   const collectionMutation = useMutation({
     mutationFn: (items: SyncCollectionItem[]) => sendCollection(items),
-    onSuccess: handleSuccess,
+    onSuccess: (data) => handleSuccess(data, "collection"),
     onError: (error: Error) => {
       const toastId = toast.add({
         type: "error",
-        title: "Sync Failed",
-        description: error.message.trim() || "Failed to submit collection.",
+        title: SYNC_OPTION_META["collection"].failureTitle,
+        description: error.message.trim() || "Failed to submit collection items.",
         actionProps: {
-          children: "View History",
+          children: "View import history",
           onClick() {
             toast.close(toastId);
             void navigate({ to: "/sync" });
@@ -156,10 +160,10 @@ export function useSyncMutations(
       if (error) {
         const toastId = toast.add({
           type: "error",
-          title: "Sync Failed",
+          title: SYNC_OPTION_META.csv.failureTitle,
           description: error instanceof Error ? error.message : "An error occurred",
           actionProps: {
-            children: "View History",
+            children: "View import history",
             onClick() {
               toast.close(toastId);
               void navigate({ to: "/sync" });

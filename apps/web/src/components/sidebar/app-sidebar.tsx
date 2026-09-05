@@ -7,7 +7,6 @@ import {
   LibraryIcon,
   PackageIcon,
   Settings01Icon,
-  GitCompareIcon,
   Clock02Icon,
   CheckListIcon,
   DatabaseIcon,
@@ -88,9 +87,9 @@ const data = {
       icon: Calendar01Icon,
     },
     {
-      title: "Sync History",
+      title: "Import history",
       url: "/sync",
-      icon: GitCompareIcon,
+      icon: Clock02Icon,
       pathnameMatch: "prefix" as const,
     },
     {
@@ -159,11 +158,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 TriggerWrapper={
                   <SidebarMenuButton
                     className="transition-colors hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground data-active:bg-primary data-active:text-primary-foreground data-open:hover:bg-primary/90 data-open:hover:text-primary-foreground"
-                    tooltip="Sync Items"
+                    tooltip="Add"
                     render={
                       <Button variant="default" className="justify-start">
                         <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
-                        <span>Sync Items</span>
+                        <span>Add</span>
                       </Button>
                     }
                   />

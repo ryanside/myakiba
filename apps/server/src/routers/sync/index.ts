@@ -124,7 +124,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           outcome: "error",
           sync: { type: "csv" },
         });
-        return status(500, "Failed to process sync request");
+        return status(500, "Failed to process MyFigureCollection CSV import request");
       }
 
       const {
@@ -148,7 +148,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           outcome: "error",
           sync: { type: "csv" },
         });
-        return status(500, "Failed to create sync session");
+        return status(500, "Failed to create import record");
       }
 
       log.set({
@@ -181,7 +181,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
               sessionId: syncSessionId,
             },
           });
-          return status(500, "Failed to insert to collection and orders");
+          return status(500, "Failed to save collection items and orders");
         }
       }
 
@@ -209,7 +209,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
                 sessionId: syncSessionId,
               },
             });
-            return status(500, "Failed to queue CSV sync job");
+            return status(500, "Failed to queue MyFigureCollection CSV import");
           }
           log.error(queueCSVSyncJobError, {
             step: "queueCSVSyncJob",
@@ -219,7 +219,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
               sessionId: syncSessionId,
             },
           });
-          return status(500, "Failed to queue CSV sync job");
+          return status(500, "Failed to queue MyFigureCollection CSV import");
         }
 
         jobId = jobIdData;
@@ -248,7 +248,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
               sessionId: syncSessionId,
             },
           });
-          return status(500, "Failed to update sync session");
+          return status(500, "Failed to update import record");
         }
       }
 
@@ -414,7 +414,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             orderId,
           },
         });
-        return status(500, "Failed to create sync session");
+        return status(500, "Failed to create import record");
       }
 
       log.set({
@@ -451,7 +451,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             },
             order: { id: orderId },
           });
-          return status(500, "Failed to insert to collection and orders");
+          return status(500, "Failed to save the order and its items");
         }
 
         const { error: updateOrderSyncSessionError } = await tryCatch(
@@ -471,7 +471,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             },
             order: { id: orderId },
           });
-          return status(500, "Failed to update sync session");
+          return status(500, "Failed to update import record");
         }
       }
 
@@ -501,7 +501,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
               },
               order: { id: orderId },
             });
-            return status(500, "Failed to queue order sync job");
+            return status(500, "Failed to queue order creation");
           }
           log.error(queueOrderSyncJobError, {
             step: "queueOrderSyncJob",
@@ -513,7 +513,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             },
             order: { id: orderId },
           });
-          return status(500, "Failed to queue order sync job");
+          return status(500, "Failed to queue order creation");
         }
 
         jobId = jobIdData;
@@ -539,7 +539,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             },
             order: { id: orderId },
           });
-          return status(500, "Failed to update sync session");
+          return status(500, "Failed to update import record");
         }
       }
 
@@ -726,7 +726,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             orderId: existingOrder.id,
           },
         });
-        return status(500, "Failed to create sync session");
+        return status(500, "Failed to create import record");
       }
 
       log.set({
@@ -763,7 +763,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             },
             order: { id: existingOrder.id },
           });
-          return status(500, "Failed to insert order items");
+          return status(500, "Failed to save order items");
         }
       }
 
@@ -793,7 +793,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
               },
               order: { id: existingOrder.id },
             });
-            return status(500, "Failed to queue order item sync job");
+            return status(500, "Failed to queue order items");
           }
           log.error(queueOrderItemSyncJobError, {
             step: "queueOrderItemSyncJob",
@@ -805,7 +805,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             },
             order: { id: existingOrder.id },
           });
-          return status(500, "Failed to queue order item sync job");
+          return status(500, "Failed to queue order items");
         }
 
         jobId = jobIdData;
@@ -830,7 +830,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             },
             order: { id: existingOrder.id },
           });
-          return status(500, "Failed to update sync session");
+          return status(500, "Failed to update import record");
         }
       }
 
@@ -973,7 +973,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           outcome: "error",
           sync: { type: "collection" },
         });
-        return status(500, "Failed to create sync session");
+        return status(500, "Failed to create import record");
       }
 
       log.set({
@@ -1006,7 +1006,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
               sessionId: syncSessionId,
             },
           });
-          return status(500, "Failed to insert to collection and orders");
+          return status(500, "Failed to save collection items");
         }
       }
 
@@ -1031,7 +1031,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
                 sessionId: syncSessionId,
               },
             });
-            return status(500, "Failed to queue collection sync job");
+            return status(500, "Failed to queue collection items");
           }
           log.error(queueCollectionSyncJobError, {
             step: "queueCollectionSyncJob",
@@ -1041,7 +1041,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
               sessionId: syncSessionId,
             },
           });
-          return status(500, "Failed to queue collection sync job");
+          return status(500, "Failed to queue collection items");
         }
 
         jobId = jobIdData;
@@ -1063,7 +1063,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
               sessionId: syncSessionId,
             },
           });
-          return status(500, "Failed to update sync session");
+          return status(500, "Failed to update import record");
         }
       }
 
@@ -1132,7 +1132,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       if (error) {
         log.error(error, { step: "getSyncSessions", outcome: "error" });
-        return status(500, "Failed to fetch sync sessions");
+        return status(500, "Failed to load import history");
       }
 
       log.set({
@@ -1202,12 +1202,12 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           outcome: "error",
           sync: { sessionId: params.id },
         });
-        return status(500, "Failed to fetch sync session detail");
+        return status(500, "Failed to load import details");
       }
 
       if (!result) {
         log.set({ outcome: "not_found" });
-        return status(404, "Sync session not found");
+        return status(404, "Import not found");
       }
 
       log.set({

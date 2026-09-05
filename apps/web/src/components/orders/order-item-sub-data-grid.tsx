@@ -244,10 +244,10 @@ export function OrderItemSubDataGrid({
           {isLoading ? (
             <Button size="sm" disabled>
               <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
-              Add Item
+              Add
             </Button>
           ) : (
-            <OrderItemSyncSheet orderId={orderId} label="Add Item" />
+            <OrderItemSyncSheet orderId={orderId} />
           )}
         </div>
       </div>

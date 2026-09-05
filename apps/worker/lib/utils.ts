@@ -115,7 +115,7 @@ export const createJobStatusState = ({
  *
  * @example
  * resolveTerminalState({ successCount: 10, failCount: 0, totalRowCount: 10 })
- * // { sessionStatus: "completed", statusMessage: "Synced 10/10 items" }
+ * // { sessionStatus: "completed", statusMessage: "Added 10/10 items" }
  *
  * @example
  * resolveTerminalState({
@@ -127,7 +127,7 @@ export const createJobStatusState = ({
  * // {
  * //   sessionStatus: "partial",
  * //   statusMessage:
- * //     "Sync failed - couldn't save scraped items - duplicate key value violates unique constraint"
+ * //     "Failed to save items - duplicate key value violates unique constraint"
  * // }
  */
 export const resolveTerminalState = ({

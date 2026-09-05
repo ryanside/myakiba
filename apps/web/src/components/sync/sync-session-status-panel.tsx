@@ -15,7 +15,7 @@ export function SyncSessionStatusPanel({
   readonly session:
     | Pick<
         SyncSessionRow,
-        "id" | "jobId" | "statusMessage" | "totalItems" | "successCount" | "failCount"
+        "id" | "jobId" | "syncType" | "statusMessage" | "totalItems" | "successCount" | "failCount"
       >
     | undefined;
   readonly isActive: boolean;
@@ -24,6 +24,7 @@ export function SyncSessionStatusPanel({
   const { data: jobStatus, isError: isJobError } = useSyncJobStatusQuery(
     isActive && session ? session.jobId : null,
     session?.id ?? null,
+    session?.syncType ?? null,
   );
 
   if (isLoading) {
@@ -67,14 +68,17 @@ export function SyncSessionStatusPanel({
 
   return (
     <output className="block space-y-2" aria-live={isLive ? "polite" : "off"}>
-      <div className="flex items-center gap-2">
+      <div className="flex items-start gap-2">
         {isLive ? (
-          <Spinner className="size-3 shrink-0" />
+          <Spinner className="mt-1 size-3 shrink-0" />
         ) : (
-          <span aria-hidden className="size-2 shrink-0 rounded-full bg-muted-foreground/50" />
+          <span
+            aria-hidden
+            className="mt-1.5 size-2 shrink-0 rounded-full bg-muted-foreground/50"
+          />
         )}
-        <p className={cn("text-sm", isStreamError && "text-destructive")}>
-          Status: <span className="animate-data-in inline-block">{message}</span>
+        <p className={cn("min-w-0 text-sm", isStreamError && "text-destructive")}>
+          Status: <span className="animate-data-in">{message}</span>
         </p>
       </div>
 

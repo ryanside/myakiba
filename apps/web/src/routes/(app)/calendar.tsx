@@ -151,7 +151,7 @@ function RouteComponent(): ReactNode {
                     </p>
                   </div>
                   <p className="text-pretty">
-                    For the fullest calendar, pick or add release dates to your orders and synced
+                    For the fullest calendar, pick or add release dates to your orders and
                     collection items.
                   </p>
                 </div>

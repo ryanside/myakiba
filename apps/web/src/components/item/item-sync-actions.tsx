@@ -4,8 +4,8 @@ import { LibraryIcon, PackageIcon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 
 const DEFAULT_LABELS = {
-  collection: "Add to Collection",
-  order: "Add to Order",
+  collection: "Add to collection",
+  order: "Create order",
 } as const;
 
 export function ItemSyncActions({
