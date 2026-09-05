@@ -262,7 +262,13 @@ function SortableWishlistItem({
             aria-label={`Remove ${wishlistItem.title} from Wishlist`}
             title="Remove from Wishlist"
             disabled={mutationPending}
-            onClick={() => onRemove(wishlistItem.itemId, wishlistItem.itemExternalId)}
+            onClick={async () => {
+              try {
+                await onRemove(wishlistItem.itemId, wishlistItem.itemExternalId);
+              } catch {
+                // The mutation reports the failure through its error toast.
+              }
+            }}
           >
             {removing ? (
               <Spinner />
