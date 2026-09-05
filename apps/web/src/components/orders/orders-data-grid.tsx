@@ -5,6 +5,8 @@ import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { functionalUpdate, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type {
+  ColumnPinningState,
+  ColumnSizingState,
   ExpandedState,
   PaginationState,
   SortingState,
@@ -44,6 +46,27 @@ const DEFAULT_VISIBILITY: VisibilityState = {
   tariffs: false,
   miscFees: false,
 };
+const DEFAULT_COLUMN_ORDER = [
+  "select",
+  "expand",
+  "title",
+  "shop",
+  "shippingMethod",
+  "releaseDate",
+  "orderDate",
+  "paymentDate",
+  "shippingDate",
+  "collectionDate",
+  "itemCount",
+  "total",
+  "shippingFee",
+  "taxes",
+  "duties",
+  "tariffs",
+  "miscFees",
+  "status",
+  "actions",
+];
 
 export default function OrdersDataGrid() {
   const [viewMode, setViewMode] = useLocalStorage<DataViewMode>(VIEW_MODE_KEY, "compact");
@@ -119,27 +142,18 @@ export default function OrdersDataGrid() {
     COLUMN_VISIBILITY_KEY,
     DEFAULT_VISIBILITY,
   );
-  const [columnOrder, setColumnOrder] = useState<string[]>([
-    "select",
-    "expand",
-    "title",
-    "shop",
-    "shippingMethod",
-    "releaseDate",
-    "orderDate",
-    "paymentDate",
-    "shippingDate",
-    "collectionDate",
-    "itemCount",
-    "total",
-    "shippingFee",
-    "taxes",
-    "duties",
-    "tariffs",
-    "miscFees",
-    "status",
-    "actions",
-  ]);
+  const [columnOrder, setColumnOrder] = useLocalStorage<string[]>(
+    "orders:columnOrder:v1",
+    DEFAULT_COLUMN_ORDER,
+  );
+  const [columnSizing, setColumnSizing] = useLocalStorage<ColumnSizingState>(
+    "orders:columnSizing:v1",
+    {},
+  );
+  const [columnPinning, setColumnPinning] = useLocalStorage<ColumnPinningState>(
+    "orders:columnPinning:v1",
+    {},
+  );
 
   const columns = useMemo(
     () =>
@@ -208,6 +222,8 @@ export default function OrdersDataGrid() {
       expanded: expandedRows,
       rowSelection: orderSelection,
       columnOrder,
+      columnSizing,
+      columnPinning,
       columnVisibility,
     },
     columnResizeMode: "onChange",
@@ -216,6 +232,8 @@ export default function OrdersDataGrid() {
     onExpandedChange: setExpandedRows,
     onRowSelectionChange: setOrderSelection,
     onColumnOrderChange: setColumnOrder,
+    onColumnSizingChange: setColumnSizing,
+    onColumnPinningChange: setColumnPinning,
     onColumnVisibilityChange: setColumnVisibility,
     manualFiltering: true,
     manualSorting: true,

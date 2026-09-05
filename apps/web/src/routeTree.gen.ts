@@ -21,6 +21,7 @@ import { Route as appListsRouteImport } from './routes/(app)/lists'
 import { Route as appOrdersRouteImport } from './routes/(app)/orders'
 import { Route as appSettingsRouteImport } from './routes/(app)/settings'
 import { Route as appSyncRouteImport } from './routes/(app)/sync'
+import { Route as appWishlistRouteImport } from './routes/(app)/wishlist'
 import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-password'
 import { Route as authLoginRouteImport } from './routes/(auth)/login'
 import { Route as authResetPasswordRouteImport } from './routes/(auth)/reset-password'
@@ -93,6 +94,11 @@ const appSettingsRoute = appSettingsRouteImport.update({
 const appSyncRoute = appSyncRouteImport.update({
   id: '/sync',
   path: '/sync',
+  getParentRoute: () => appRouteRoute,
+} as any)
+const appWishlistRoute = appWishlistRouteImport.update({
+  id: '/wishlist',
+  path: '/wishlist',
   getParentRoute: () => appRouteRoute,
 } as any)
 const authForgotPasswordRoute = authForgotPasswordRouteImport.update({
@@ -178,6 +184,7 @@ export interface FileRoutesByFullPath {
   '/orders': typeof appOrdersRoute
   '/settings': typeof appSettingsRoute
   '/sync': typeof appSyncRoute
+  '/wishlist': typeof appWishlistRoute
   '/forgot-password': typeof authForgotPasswordRoute
   '/login': typeof authLoginRoute
   '/reset-password': typeof authResetPasswordRoute
@@ -205,6 +212,7 @@ export interface FileRoutesByTo {
   '/orders': typeof appOrdersRoute
   '/settings': typeof appSettingsRoute
   '/sync': typeof appSyncRoute
+  '/wishlist': typeof appWishlistRoute
   '/forgot-password': typeof authForgotPasswordRoute
   '/login': typeof authLoginRoute
   '/reset-password': typeof authResetPasswordRoute
@@ -233,6 +241,7 @@ export interface FileRoutesById {
   '/(app)/orders': typeof appOrdersRoute
   '/(app)/settings': typeof appSettingsRoute
   '/(app)/sync': typeof appSyncRoute
+  '/(app)/wishlist': typeof appWishlistRoute
   '/(auth)/forgot-password': typeof authForgotPasswordRoute
   '/(auth)/login': typeof authLoginRoute
   '/(auth)/reset-password': typeof authResetPasswordRoute
@@ -262,6 +271,7 @@ export interface FileRouteTypes {
     | '/orders'
     | '/settings'
     | '/sync'
+    | '/wishlist'
     | '/forgot-password'
     | '/login'
     | '/reset-password'
@@ -289,6 +299,7 @@ export interface FileRouteTypes {
     | '/orders'
     | '/settings'
     | '/sync'
+    | '/wishlist'
     | '/forgot-password'
     | '/login'
     | '/reset-password'
@@ -316,6 +327,7 @@ export interface FileRouteTypes {
     | '/(app)/orders'
     | '/(app)/settings'
     | '/(app)/sync'
+    | '/(app)/wishlist'
     | '/(auth)/forgot-password'
     | '/(auth)/login'
     | '/(auth)/reset-password'
@@ -427,6 +439,13 @@ declare module '@tanstack/react-router' {
       path: '/sync'
       fullPath: '/sync'
       preLoaderRoute: typeof appSyncRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/wishlist': {
+      id: '/(app)/wishlist'
+      path: '/wishlist'
+      fullPath: '/wishlist'
+      preLoaderRoute: typeof appWishlistRouteImport
       parentRoute: typeof appRouteRoute
     }
     '/(auth)/forgot-password': {
@@ -541,6 +560,7 @@ interface appRouteRouteChildren {
   appOrdersRoute: typeof appOrdersRoute
   appSettingsRoute: typeof appSettingsRoute
   appSyncRoute: typeof appSyncRoute
+  appWishlistRoute: typeof appWishlistRoute
   appAnalyticsSectionNameRoute: typeof appAnalyticsSectionNameRoute
   appItemExternalIdRoute: typeof appItemExternalIdRoute
   appListsListIdRoute: typeof appListsListIdRoute
@@ -560,6 +580,7 @@ const appRouteRouteChildren: appRouteRouteChildren = {
   appOrdersRoute: appOrdersRoute,
   appSettingsRoute: appSettingsRoute,
   appSyncRoute: appSyncRoute,
+  appWishlistRoute: appWishlistRoute,
   appAnalyticsSectionNameRoute: appAnalyticsSectionNameRoute,
   appItemExternalIdRoute: appItemExternalIdRoute,
   appListsListIdRoute: appListsListIdRoute,

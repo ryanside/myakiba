@@ -1,9 +1,6 @@
-import type { ListInput, ListOrderInput, ListTarget } from "@myakiba/contracts/lists/schema";
+import type { ListInput, ListTarget } from "@myakiba/contracts/lists/schema";
+import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { app, getErrorMessage } from "@/lib/treaty-client";
-
-export class ListOrderChangedError extends Error {
-  override readonly name = "ListOrderChangedError";
-}
 
 export async function getLists(limit: number, offset: number) {
   const { data, error } = await app.api.lists.get({ query: { limit, offset } });
@@ -17,14 +14,11 @@ export async function createList(input: ListInput) {
   return data;
 }
 
-export async function moveLists(intent: ListOrderInput) {
+export async function moveLists(intent: PositionOrderInput) {
   const { data, error } = await app.api.lists.order.patch({
     ...intent,
     movedIds: [...intent.movedIds],
   });
-  if (error?.status === 404) {
-    throw new ListOrderChangedError(getErrorMessage(error, "The List order changed"));
-  }
   if (error) throw new Error(getErrorMessage(error, "Failed to move lists"));
   return data;
 }
@@ -93,14 +87,11 @@ export async function removeListMembers(
   if (error) throw new Error(getErrorMessage(error, "Failed to remove from List"));
 }
 
-export async function moveListMembers(listId: string, intent: ListOrderInput) {
+export async function moveListMembers(listId: string, intent: PositionOrderInput) {
   const { data, error } = await app.api.lists({ listId }).members.order.patch({
     ...intent,
     movedIds: [...intent.movedIds],
   });
-  if (error?.status === 404) {
-    throw new ListOrderChangedError(getErrorMessage(error, "The List changed"));
-  }
   if (error) throw new Error(getErrorMessage(error, "Failed to save List order"));
   return data;
 }

@@ -25,6 +25,7 @@ import ordersRouter from "./routers/orders";
 import searchRouter from "./routers/search";
 import settingsRouter from "./routers/settings";
 import syncRouter from "./routers/sync";
+import wishlistRouter from "./routers/wishlist";
 
 const pipeline = createDrainPipeline<DrainContext>({
   batch: { size: 50, intervalMs: 5000 },
@@ -142,7 +143,8 @@ const app = new Elysia()
       .use(ordersRouter)
       .use(searchRouter)
       .use(settingsRouter)
-      .use(syncRouter),
+      .use(syncRouter)
+      .use(wishlistRouter),
   )
   .get("/", () => serveIndexHtml(serverDistPath))
   .use(

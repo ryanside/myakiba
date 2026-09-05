@@ -8,7 +8,8 @@ import {
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import type { ListInput, ListOrderInput } from "@myakiba/contracts/lists/schema";
+import type { ListInput } from "@myakiba/contracts/lists/schema";
+import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback } from "react";
 import type { CSSProperties } from "react";
@@ -28,7 +29,7 @@ import { useListMutations, useListsQuery, useMoveListsMutation } from "@/hooks/u
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { cn } from "@/lib/utils";
 import { useSelection } from "@/hooks/use-selection";
-import { useSortableSelection } from "@/components/lists/use-sortable-selection";
+import { useSortableItems } from "@/hooks/use-sortable-items";
 
 type ListsPage = NonNullable<Awaited<ReturnType<typeof getLists>>>;
 type ListRecord = ListsPage["items"][number];
@@ -209,7 +210,7 @@ function SortableLists({
   readonly onLoadMore: () => Promise<{ readonly isFetchNextPageError: boolean }>;
   readonly onUpdate: (listId: string, input: ListInput) => Promise<void>;
   readonly onDelete: (listId: string) => Promise<void>;
-  readonly onMove: (intent: ListOrderInput) => Promise<void>;
+  readonly onMove: (intent: PositionOrderInput) => Promise<void>;
   readonly selectedIds: ReadonlySet<string>;
   readonly onClearSelection: () => void;
   readonly onToggleSelection: (listId: string, selected: boolean) => void;
@@ -229,7 +230,7 @@ function SortableLists({
     handleDragOver,
     handleDragEnd,
     handleDragCancel,
-  } = useSortableSelection({
+  } = useSortableItems({
     items: lists,
     totalCount,
     selectedIds,

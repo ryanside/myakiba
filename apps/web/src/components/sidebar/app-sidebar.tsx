@@ -12,6 +12,7 @@ import {
   CheckListIcon,
   DatabaseIcon,
   Folder01Icon,
+  StarIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { DiscordLogo, GitHubLogo } from "@/components/ui/brand-icons";
@@ -64,6 +65,11 @@ const data = {
       title: "Collection",
       url: "/collection",
       icon: LibraryIcon,
+    },
+    {
+      title: "Wishlist",
+      url: "/wishlist",
+      icon: StarIcon,
     },
     {
       title: "Lists",

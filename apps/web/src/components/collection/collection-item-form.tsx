@@ -42,7 +42,7 @@ import {
 import { useState } from "react";
 import type { ReactElement } from "react";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
-import { formatReleaseDate, getCurrencyLocale } from "@/lib/locale";
+import { formatReleasePrice, getCurrencyLocale } from "@/lib/locale";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 type CollectionItemFormProps = {
@@ -348,7 +348,7 @@ function CollectionItemFormContent({
                                     displayData.price > 0 &&
                                     displayData.priceCurrency?.trim() && (
                                       <span className="text-muted-foreground">
-                                        {formatReleaseDate(
+                                        {formatReleasePrice(
                                           displayData.price,
                                           displayData.priceCurrency,
                                           currency,
@@ -392,7 +392,7 @@ function CollectionItemFormContent({
                                   release.price > 0 &&
                                   release.priceCurrency?.trim() && (
                                     <span>
-                                      {formatReleaseDate(
+                                      {formatReleasePrice(
                                         release.price,
                                         release.priceCurrency,
                                         currency,

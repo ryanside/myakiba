@@ -8,7 +8,7 @@ import {
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import type { ListOrderInput } from "@myakiba/contracts/lists/schema";
+import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { Link } from "@tanstack/react-router";
 import type { getListMembers } from "@/queries/lists";
 import { ListMemberControls } from "@/components/lists/list-member-controls";
@@ -17,7 +17,7 @@ import { ItemControl } from "@/components/ui/item-controls";
 import type { GridListViewMode } from "@/components/ui/view-toggle";
 import { cn } from "@/lib/utils";
 import type { CSSProperties } from "react";
-import { useSortableSelection } from "@/components/lists/use-sortable-selection";
+import { useSortableItems } from "@/hooks/use-sortable-items";
 
 type ListMembersPage = NonNullable<Awaited<ReturnType<typeof getListMembers>>>;
 type ListMember = ListMembersPage["items"][number];
@@ -79,14 +79,16 @@ function ListMemberLink({
           <p className="mt-1 text-xs leading-4 text-white/70">{MEMBER_TYPE_LABELS[member.type]}</p>
         </div>
       ) : (
-        <div key="list-metadata" className="flex min-w-0 flex-1 flex-col self-stretch py-0.5">
+        <div
+          key="list-metadata"
+          className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 self-stretch py-0.5"
+        >
           <p className="truncate text-sm font-medium leading-tight" title={member.title}>
             {member.title}
           </p>
-          <div className="mt-auto pt-1.5">
-            <p className="text-[11px] leading-4 text-muted-foreground">Type</p>
-            <p className="text-xs leading-4">{MEMBER_TYPE_LABELS[member.type]}</p>
-          </div>
+          <p className="truncate text-xs leading-4 text-muted-foreground">
+            {MEMBER_TYPE_LABELS[member.type]}
+          </p>
         </div>
       )}
     </>
@@ -251,7 +253,7 @@ export function ListMemberGrid({
   readonly isFetchingNextPage: boolean;
   readonly onLoadMore: () => Promise<{ readonly isFetchNextPageError: boolean }>;
   readonly onRemove: (memberId: string) => Promise<void>;
-  readonly onMove: (intent: ListOrderInput) => Promise<void>;
+  readonly onMove: (intent: PositionOrderInput) => Promise<void>;
   readonly selectedIds: ReadonlySet<string>;
   readonly onClearSelection: () => void;
   readonly onToggleSelection: (memberId: string, selected: boolean) => void;
@@ -271,7 +273,7 @@ export function ListMemberGrid({
     handleDragOver,
     handleDragEnd,
     handleDragCancel,
-  } = useSortableSelection({
+  } = useSortableItems({
     items: members,
     totalCount,
     selectedIds,

@@ -32,13 +32,15 @@ export function ItemResyncButton({
   isPending,
   cooldownExpiresAt,
   onRequest,
+  disabled = false,
 }: {
   readonly status: ResyncStatus;
   readonly isPending: boolean;
   readonly cooldownExpiresAt: string | null;
   readonly onRequest: () => void;
+  readonly disabled?: boolean;
 }): ReactNode {
-  const isDisabled = status !== "idle" || isPending;
+  const isDisabled = disabled || status !== "idle" || isPending;
   const buttonLabel = isPending ? "Requesting..." : RESYNC_LABELS[status];
   const showCooldownTooltip = status === "cooldown" && cooldownExpiresAt !== null;
   const cooldownRemaining = cooldownExpiresAt ? formatCooldownRemaining(cooldownExpiresAt) : "";

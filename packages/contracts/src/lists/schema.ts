@@ -1,7 +1,6 @@
 import * as z from "zod";
 
 export const LIST_PAGE_SIZE = 25;
-export const MAX_LIST_MOVE_SIZE = 500;
 export const MAX_LIST_BATCH_SIZE = 500;
 
 export const LIST_TARGET_TYPES = ["item", "collectionItem", "order"] as const;
@@ -37,18 +36,5 @@ export const listIdsSchema = z
     error: "List IDs must be unique",
   });
 
-export const listOrderInputSchema = z.object({
-  movedIds: z
-    .array(z.string().trim().min(1))
-    .min(1)
-    .max(MAX_LIST_MOVE_SIZE)
-    .refine((movedIds) => new Set(movedIds).size === movedIds.length, {
-      error: "Moved IDs must be unique",
-    }),
-  anchorId: z.string().trim().min(1).nullable(),
-  placement: z.enum(["before", "after"]),
-});
-
 export type ListTarget = z.infer<typeof listTargetSchema>;
 export type ListInput = z.infer<typeof listInputSchema>;
-export type ListOrderInput = z.infer<typeof listOrderInputSchema>;

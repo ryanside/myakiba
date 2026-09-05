@@ -9,7 +9,7 @@ import { Field } from "@/components/ui/field";
 import { useQuery } from "@tanstack/react-query";
 import { getItemReleases } from "@/queries/item";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
-import { formatReleaseDate } from "@/lib/locale";
+import { formatReleasePrice } from "@/lib/locale";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { usePendingValue } from "@/hooks/use-pending-value";
 
@@ -117,7 +117,7 @@ export function InlineReleaseCell({
                       release.price > 0 &&
                       release.priceCurrency?.trim() && (
                         <span>
-                          {formatReleaseDate(release.price, release.priceCurrency, currency)}
+                          {formatReleasePrice(release.price, release.priceCurrency, currency)}
                         </span>
                       )}
                     {release.barcode && <span className="tabular-nums">#{release.barcode}</span>}

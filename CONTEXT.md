@@ -104,8 +104,12 @@ An Item, Collection Item, or Order placed at a chosen spot in a List. Each can a
 _Avoid_: Item when the type is unclear; Member or Membership in user-facing text
 
 **Wishlist**:
-The separate domain concept for Items a user plans to get. A Wishlist is separate from a List, even when someone names a List "Wishlist."
+One user's private, manually arranged set of Items they plan to get. Each user has one Wishlist, and it remains separate from a List even when someone names a List "Wishlist."
 _Avoid_: Saved list, reading list, release watchlist
+
+**Wishlist Item**:
+One Item included in a Wishlist. An Item can appear only once and stays until the user removes it, even if the user adds a Collection Item or Order Item for that Item.
+_Avoid_: Wishlist Entry, List Member, wished Item
 
 ### Expenses
 

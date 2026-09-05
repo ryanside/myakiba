@@ -16,7 +16,7 @@ import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { getCategoryColor } from "@/lib/category-colors";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
-import { formatReleaseDate } from "@/lib/locale";
+import { formatReleasePrice } from "@/lib/locale";
 import { getItemDatabaseItems } from "@/queries/search";
 
 const itemsRoute = getRouteApi("/(app)/items");
@@ -54,9 +54,6 @@ function getItemDisplayDetails(
   currency: Currency,
   dateFormat: DateFormat,
 ) {
-  const releasePrice = item.latestRelease?.price;
-  const releaseCurrency = item.latestRelease?.priceCurrency?.trim();
-
   return {
     category: item.category ?? "—",
     categoryGroup: item.category ? CATEGORY_GROUP_BY_CATEGORY[item.category] : "—",
@@ -65,9 +62,8 @@ function getItemDisplayDetails(
       ? formatDateOnlyForDisplay(item.latestRelease.date, dateFormat)
       : "—",
     releasePrice:
-      releasePrice != null && releasePrice > 0 && releaseCurrency
-        ? formatReleaseDate(releasePrice, releaseCurrency, currency)
-        : "—",
+      formatReleasePrice(item.latestRelease?.price, item.latestRelease?.priceCurrency, currency) ??
+      "—",
     staggerDelay: Math.min(index, MAX_STAGGER_INDEX) * STAGGER_DELAY_MS,
   };
 }
@@ -144,11 +140,11 @@ function ItemList({
             <div className="size-16 shrink-0 overflow-hidden rounded-md">
               <ItemImage item={item} />
             </div>
-            <div className="flex min-w-0 flex-1 flex-col self-stretch py-0.5">
-              <p className="truncate text-sm font-medium leading-tight" title={item.title}>
-                {item.title}
-              </p>
-              <div className="mt-auto flex min-w-0 items-end justify-between gap-4 pt-1.5">
+            <div className="flex min-w-0 flex-1 items-center justify-between gap-4 self-stretch py-0.5">
+              <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
+                <p className="truncate text-sm font-medium leading-tight" title={item.title}>
+                  {item.title}
+                </p>
                 <div className="min-w-0">
                   <p className="truncate text-[11px] leading-4 text-muted-foreground">
                     {categoryGroup}
@@ -157,10 +153,10 @@ function ItemList({
                     {category}
                   </p>
                 </div>
-                <div className="shrink-0 text-right tabular-nums">
-                  <p className="text-[11px] leading-4 text-muted-foreground">{releaseDate}</p>
-                  <p className="text-xs leading-4 font-medium text-foreground">{releasePrice}</p>
-                </div>
+              </div>
+              <div className="shrink-0 text-right tabular-nums">
+                <p className="text-[11px] leading-4 text-muted-foreground">{releaseDate}</p>
+                <p className="text-xs leading-4 font-medium text-foreground">{releasePrice}</p>
               </div>
             </div>
           </Link>
@@ -177,17 +173,17 @@ function ItemDatabaseSkeleton({ viewMode }: { readonly viewMode: GridListViewMod
         {Array.from({ length: 8 }).map((_, index) => (
           <div key={index} className="flex items-center gap-3 p-2">
             <Skeleton className="size-16 shrink-0 rounded-md" />
-            <div className="flex h-16 flex-1 flex-col py-0.5">
-              <Skeleton className="h-4 w-3/4" />
-              <div className="mt-auto flex items-end justify-between gap-4 pt-1.5">
+            <div className="flex h-16 min-w-0 flex-1 items-center justify-between gap-4 py-0.5">
+              <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5">
+                <Skeleton className="h-4 w-3/4" />
                 <div className="space-y-1">
                   <Skeleton className="h-2.5 w-16" />
                   <Skeleton className="h-3 w-20" />
                 </div>
-                <div className="space-y-1">
-                  <Skeleton className="ml-auto h-2.5 w-16" />
-                  <Skeleton className="ml-auto h-3 w-14" />
-                </div>
+              </div>
+              <div className="shrink-0 space-y-1">
+                <Skeleton className="ml-auto h-2.5 w-16" />
+                <Skeleton className="ml-auto h-3 w-14" />
               </div>
             </div>
           </div>

@@ -2,16 +2,16 @@ import { Elysia, status } from "elysia";
 import { evlog } from "evlog/elysia";
 import { betterAuth } from "@/middleware/better-auth";
 import { tryCatch } from "@myakiba/utils/result";
+import { listInputSchema } from "@myakiba/contracts/lists/schema";
+import { positionOrderInputSchema } from "@myakiba/contracts/shared/position-order";
 import ListsService from "./service";
 import {
   listPageQuerySchema,
   listIdParamSchema,
   listOptionsForTargetsSchema,
-  listInputSchema,
   addTargetsToListsSchema,
   removeTargetsFromListSchema,
   removeListMembersSchema,
-  listOrderInputSchema,
   deleteListsSchema,
 } from "./model";
 
@@ -86,7 +86,7 @@ const listsRouter = new Elysia({ prefix: "/lists" })
       log.set({ outcome: "success" });
       return result;
     },
-    { body: listOrderInputSchema, auth: true },
+    { body: positionOrderInputSchema, auth: true },
   )
   .post(
     "/targets/options",
@@ -329,7 +329,7 @@ const listsRouter = new Elysia({ prefix: "/lists" })
       log.set({ outcome: "success" });
       return result;
     },
-    { params: listIdParamSchema, body: listOrderInputSchema, auth: true },
+    { params: listIdParamSchema, body: positionOrderInputSchema, auth: true },
   );
 
 export default listsRouter;

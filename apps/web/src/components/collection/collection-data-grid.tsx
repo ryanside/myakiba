@@ -1,6 +1,8 @@
 import { useSelection } from "@/hooks/use-selection";
 import type { CollectionItem } from "@myakiba/contracts/collection/types";
 import type {
+  ColumnPinningState,
+  ColumnSizingState,
   Updater,
   ExpandedState,
   PaginationState,
@@ -43,6 +45,21 @@ const DEFAULT_VISIBILITY: VisibilityState = {
   shippingDate: false,
   releaseDate: false,
 };
+const DEFAULT_COLUMN_ORDER = [
+  "select",
+  "itemTitle",
+  "itemScale",
+  "count",
+  "score",
+  "price",
+  "releaseDate",
+  "shop",
+  "orderDate",
+  "paymentDate",
+  "shippingDate",
+  "collectionDate",
+  "actions",
+];
 
 export const CollectionDataGrid = () => {
   const [viewMode, setViewMode] = useLocalStorage<DataViewMode>(VIEW_MODE_KEY, "compact");
@@ -109,21 +126,18 @@ export const CollectionDataGrid = () => {
     COLUMN_VISIBILITY_KEY,
     DEFAULT_VISIBILITY,
   );
-  const [columnOrder, setColumnOrder] = useState<string[]>([
-    "select",
-    "itemTitle",
-    "itemScale",
-    "count",
-    "score",
-    "price",
-    "releaseDate",
-    "shop",
-    "orderDate",
-    "paymentDate",
-    "shippingDate",
-    "collectionDate",
-    "actions",
-  ]);
+  const [columnOrder, setColumnOrder] = useLocalStorage<string[]>(
+    "collection:columnOrder:v1",
+    DEFAULT_COLUMN_ORDER,
+  );
+  const [columnSizing, setColumnSizing] = useLocalStorage<ColumnSizingState>(
+    "collection:columnSizing:v1",
+    {},
+  );
+  const [columnPinning, setColumnPinning] = useLocalStorage<ColumnPinningState>(
+    "collection:columnPinning:v1",
+    {},
+  );
 
   const columns = useMemo(
     () =>
@@ -204,6 +218,8 @@ export const CollectionDataGrid = () => {
       expanded: expandedRows,
       rowSelection: collectionSelection,
       columnOrder,
+      columnSizing,
+      columnPinning,
       columnVisibility,
     },
     columnResizeMode: "onChange",
@@ -212,6 +228,8 @@ export const CollectionDataGrid = () => {
     onExpandedChange: setExpandedRows,
     onRowSelectionChange: setCollectionSelection,
     onColumnOrderChange: setColumnOrder,
+    onColumnSizingChange: setColumnSizing,
+    onColumnPinningChange: setColumnPinning,
     onColumnVisibilityChange: setColumnVisibility,
     manualFiltering: true,
     manualSorting: true,
