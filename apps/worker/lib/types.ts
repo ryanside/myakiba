@@ -18,6 +18,7 @@ import type { SyncSessionStatus, Category } from "@myakiba/contracts/shared/type
 
 export type ScrapeFailure = {
   readonly id: number;
+  readonly reason: string;
   readonly attemptErrors: readonly string[];
 };
 
@@ -107,7 +108,7 @@ export type PublishJobStatusParams = {
 export type BatchUpdateSyncSessionItemStatusesParams = {
   readonly syncSessionId: string;
   readonly scrapedItemIds: readonly number[];
-  readonly failedItemIds: readonly number[];
+  readonly failures: readonly ScrapeFailure[];
 };
 
 export type MarkPersistFailedSyncSessionItemStatusesParams = {

@@ -131,6 +131,7 @@ export const scrapeImage = async ({
   baseDelayMs = 1000,
 }: ScrapeImageParams) => {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    let failureMessage = "Failed to download item image";
     try {
       let finalUrl = parseAllowedImageUrl(imageUrl);
       let response: Response;
@@ -193,6 +194,7 @@ export const scrapeImage = async ({
       const imageBuffer = await readImageBody(response);
       const filename = path.basename(finalUrl.pathname);
 
+      failureMessage = "Failed to save item image";
       const command = new PutObjectCommand({
         Bucket: env.AWS_BUCKET_NAME,
         Key: filename,
@@ -216,13 +218,17 @@ export const scrapeImage = async ({
 
       return imageS3Url;
     } catch (error) {
+      const originalError = error instanceof Error ? error : new Error(String(error));
+      const imageError = createError({
+        message: `${failureMessage}: ${originalError.message}`,
+        cause: originalError,
+      });
       if (attempt === maxRetries) {
         log.warn(`Image scrape exhausted retries for ${imageUrl}`);
-        throw error;
+        throw imageError;
       }
 
-      const message = error instanceof Error ? error.message : String(error);
-      log.warn(`Image scrape attempt ${attempt}/${maxRetries} failed: ${message}`);
+      log.warn(`Image scrape attempt ${attempt}/${maxRetries} failed: ${imageError.message}`);
 
       const delayMs = baseDelayMs * 2 ** (attempt - 1);
       await new Promise((resolve) => {
@@ -247,6 +253,7 @@ export const scrapeSingleItem = async ({
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     let retryItem = true;
+    let failureMessage: string | null = "Failed to fetch item page";
 
     try {
       const url = `https://myfigurecollection.net/item/${id}`;
@@ -262,6 +269,7 @@ export const scrapeSingleItem = async ({
       }
 
       const html = await response.text();
+      failureMessage = "Failed to extract item details";
       const $ = cheerio.load(html);
 
       const title = $("h1.title").text().trim();
@@ -363,12 +371,13 @@ export const scrapeSingleItem = async ({
       const imageElement = $(".item-picture img").first();
       const imageUrl = imageElement.attr("src");
 
+      failureMessage = null;
       if (imageUrl) {
         try {
           const imageResponse = await scrapeImage({ imageUrl, log, maxRetries, baseDelayMs });
           if (!imageResponse) {
             throw createError({
-              message: `Failed to scrape image for item ${id}`,
+              message: `Failed to download item image: No image returned for item ${id}`,
               why: "Image scrape returned null after all retries",
             });
           }
@@ -409,7 +418,14 @@ export const scrapeSingleItem = async ({
 
       return scrapedItem;
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const originalError = error instanceof Error ? error : new Error(String(error));
+      const finalError = failureMessage
+        ? createError({
+            message: `${failureMessage}: ${originalError.message}`,
+            cause: originalError,
+          })
+        : originalError;
+      const message = finalError.message;
       attemptErrors.push(message);
 
       if (!retryItem || attempt === maxRetries) {
@@ -429,7 +445,6 @@ export const scrapeSingleItem = async ({
             SYNC_STATUS_MESSAGES.scraping(state.progress.processed, state.progress.total);
           await publishJobStatus({ redis, state, terminalState: null, error: null });
         }
-        const finalError = error instanceof Error ? error : new Error(String(error));
         (finalError as Error & { attemptErrors: string[] }).attemptErrors = attemptErrors;
         throw finalError;
       }
@@ -479,6 +494,7 @@ export const scrapeItems = async ({
       const reason = result.reason as Error & { attemptErrors?: string[] };
       failures.push({
         id: itemIds[i],
+        reason: reason.message ?? String(reason),
         attemptErrors: reason.attemptErrors ?? [reason.message ?? String(reason)],
       });
     }

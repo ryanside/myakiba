@@ -1,6 +1,6 @@
 import { db } from "@myakiba/db/client";
 import { syncSession, syncSessionItem } from "@myakiba/db/schema/figure";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type {
   BatchUpdateSyncSessionItemStatusesParams,
   MarkPersistFailedSyncSessionItemStatusesParams,
@@ -284,7 +284,7 @@ export const publishJobStatus = async ({
 export const batchUpdateSyncSessionItemStatuses = async ({
   syncSessionId,
   scrapedItemIds,
-  failedItemIds,
+  failures,
 }: BatchUpdateSyncSessionItemStatusesParams): Promise<void> => {
   await db.transaction(async (tx) => {
     if (scrapedItemIds.length > 0) {
@@ -302,18 +302,24 @@ export const batchUpdateSyncSessionItemStatuses = async ({
         );
     }
 
-    if (failedItemIds.length > 0) {
+    if (failures.length > 0) {
+      const failureCases = failures.map(
+        ({ id, reason }) => sql`WHEN ${id} THEN ${`Scraping failed after max retries: ${reason}`}`,
+      );
       await tx
         .update(syncSessionItem)
         .set({
           status: "failed",
-          errorReason: "Scraping failed after max retries",
+          errorReason: sql`CASE ${syncSessionItem.itemExternalId} ${sql.join(failureCases, sql.raw(" "))} END`,
           updatedAt: new Date(),
         })
         .where(
           and(
             eq(syncSessionItem.syncSessionId, syncSessionId),
-            inArray(syncSessionItem.itemExternalId, [...failedItemIds]),
+            inArray(
+              syncSessionItem.itemExternalId,
+              failures.map(({ id }) => id),
+            ),
           ),
         );
     }

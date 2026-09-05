@@ -123,16 +123,16 @@ function findRowsToScrape({
   return rowsToScrape;
 }
 
-function buildImportPlan({
+export function buildImportPlan({
   archive,
   itemsByExternalId,
   rowsToScrape,
-  scrapedIds,
+  scrapeFailureReasons,
 }: {
   readonly archive: DataTransferArchiveV1;
   readonly itemsByExternalId: ReadonlyMap<number, ResolvedItem>;
   readonly rowsToScrape: readonly DataTransferCollectionItemV1[];
-  readonly scrapedIds: ReadonlySet<number>;
+  readonly scrapeFailureReasons: ReadonlyMap<number, string>;
 }): ImportPlan {
   const collectionRows: ImportableCollectionRow[] = [];
   const failedRows: ImportPlan["failedRows"][number][] = [];
@@ -154,11 +154,12 @@ function buildImportPlan({
   for (const row of archive.collectionItems) {
     const externalId = row.item.externalId;
     const requiredScrape = scrapeKeys.has(row.collectionKey);
+    const scrapeFailureReason = scrapeFailureReasons.get(externalId);
 
-    if (requiredScrape && !scrapedIds.has(externalId)) {
+    if (requiredScrape && scrapeFailureReason !== undefined) {
       addFailedRow({
         externalId,
-        reason: "The item could not be fetched from MyFigureCollection after three attempts.",
+        reason: scrapeFailureReason,
       });
       continue;
     }
@@ -488,7 +489,7 @@ export async function processDataTransferImportJob(
       error: null,
     });
 
-    const { successful: successfulItems } = await (
+    const { successful: successfulItems, failures } = await (
       scrapeItemIds.length <= 5 ? scrapeItems : scrapedItemsWithRateLimit
     )({
       itemIds: scrapeItemIds,
@@ -511,7 +512,9 @@ export async function processDataTransferImportJob(
       archive,
       itemsByExternalId,
       rowsToScrape,
-      scrapedIds: new Set(successfulItems.map((item) => item.id)),
+      scrapeFailureReasons: new Map(
+        failures.map(({ id, reason }) => [id, `Scraping failed after max retries: ${reason}`]),
+      ),
     });
 
     const [transitioned] = await db
