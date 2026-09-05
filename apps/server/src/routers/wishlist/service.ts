@@ -1,11 +1,12 @@
 import { db } from "@myakiba/db/client";
 import { item, item_release, wishlistItem } from "@myakiba/db/schema/figure";
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
-import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, lte, sql } from "drizzle-orm";
 import { planPositionOrderMove, POSITION_UPDATE_CHUNK_SIZE } from "@/lib/position-order";
+import type { WishlistPageQuery } from "./model";
 
 class WishlistService {
-  async getItems(userId: string, limit: number, offset: number) {
+  async getItems(userId: string, { limit, offset, releaseStatus, today }: WishlistPageQuery) {
     const latestRelease = db
       .select({
         date: item_release.date,
@@ -18,11 +19,18 @@ class WishlistService {
       .limit(1)
       .as("wishlist_latest_release");
 
+    const releaseFilter = {
+      all: undefined,
+      upcoming: gt(latestRelease.date, today),
+      available: lte(latestRelease.date, today),
+    }[releaseStatus];
+    const conditions = and(eq(wishlistItem.userId, userId), releaseFilter);
+
     const [rows, countRows] = await Promise.all([
       db
         .select({
           id: wishlistItem.id,
-          itemId: item.id,
+          itemId: wishlistItem.itemId,
           itemExternalId: item.externalId,
           title: item.title,
           image: item.image,
@@ -36,14 +44,16 @@ class WishlistService {
         .from(wishlistItem)
         .innerJoin(item, eq(wishlistItem.itemId, item.id))
         .leftJoinLateral(latestRelease, sql`TRUE`)
-        .where(eq(wishlistItem.userId, userId))
+        .where(conditions)
         .orderBy(asc(wishlistItem.position), asc(wishlistItem.createdAt), asc(wishlistItem.id))
         .limit(limit)
         .offset(offset),
       db
         .select({ totalCount: sql<number>`COUNT(*)::integer` })
         .from(wishlistItem)
-        .where(eq(wishlistItem.userId, userId)),
+        .innerJoin(item, eq(wishlistItem.itemId, item.id))
+        .leftJoinLateral(latestRelease, sql`TRUE`)
+        .where(conditions),
     ]);
 
     return {

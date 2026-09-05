@@ -1,5 +1,9 @@
 import * as z from "zod";
-import { WISHLIST_PAGE_SIZE, wishlistItemIdSchema } from "@myakiba/contracts/wishlist/schema";
+import {
+  WISHLIST_PAGE_SIZE,
+  wishlistItemIdSchema,
+  wishlistSearchSchema,
+} from "@myakiba/contracts/wishlist/schema";
 import {
   paginationLimitSchema,
   paginationOffsetSchema,
@@ -7,7 +11,10 @@ import {
 
 export const wishlistItemIdParamSchema = z.object({ itemId: wishlistItemIdSchema });
 
-export const wishlistPageQuerySchema = z.object({
+export const wishlistPageQuerySchema = wishlistSearchSchema.extend({
   limit: paginationLimitSchema.optional().default(WISHLIST_PAGE_SIZE),
   offset: paginationOffsetSchema.optional().default(0),
+  today: z.iso.date(),
 });
+
+export type WishlistPageQuery = z.infer<typeof wishlistPageQuerySchema>;

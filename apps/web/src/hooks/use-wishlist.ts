@@ -1,4 +1,5 @@
 import { WISHLIST_PAGE_SIZE } from "@myakiba/contracts/wishlist/schema";
+import type { WishlistReleaseStatus } from "@myakiba/contracts/wishlist/schema";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { getItem } from "@/queries/item";
 import {
@@ -12,10 +13,10 @@ import { usePositionOrderMutation } from "@/hooks/use-position-order-mutation";
 
 type ItemQueryData = Awaited<ReturnType<typeof getItem>>;
 
-export function useWishlistItemsQuery() {
+export function useWishlistItemsQuery(releaseStatus: WishlistReleaseStatus) {
   return useInfiniteQuery({
-    queryKey: ["wishlist", "items"] as const,
-    queryFn: ({ pageParam }) => getWishlistItems(WISHLIST_PAGE_SIZE, pageParam),
+    queryKey: ["wishlist", "items", releaseStatus] as const,
+    queryFn: ({ pageParam }) => getWishlistItems(WISHLIST_PAGE_SIZE, pageParam, releaseStatus),
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) => {
       const loadedCount = allPages.reduce((count, page) => count + page.items.length, 0);
@@ -51,7 +52,7 @@ export function useWishlistItemMutation() {
       }
 
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["wishlist", "items"], exact: true }),
+        queryClient.invalidateQueries({ queryKey: ["wishlist", "items"] }),
         ...(itemExternalId === null
           ? []
           : [
@@ -74,7 +75,11 @@ export function useWishlistItemMutation() {
 
 export function useMoveWishlistItemsMutation() {
   return usePositionOrderMutation({
-    queryKey: ["wishlist", "items"],
+    queryKey: ["wishlist", "items", "all"],
+    additionalInvalidations: [
+      { queryKey: ["wishlist", "items", "upcoming"] },
+      { queryKey: ["wishlist", "items", "available"] },
+    ],
     persist: moveWishlistItems,
     failureTitle: "Failed to save Wishlist order",
   });

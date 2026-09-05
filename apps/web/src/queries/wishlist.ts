@@ -1,8 +1,16 @@
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
+import type { WishlistReleaseStatus } from "@myakiba/contracts/wishlist/schema";
+import { format } from "date-fns";
 import { app, getErrorMessage } from "@/lib/treaty-client";
 
-export async function getWishlistItems(limit: number, offset: number) {
-  const { data, error } = await app.api.wishlist.get({ query: { limit, offset } });
+export async function getWishlistItems(
+  limit: number,
+  offset: number,
+  releaseStatus: WishlistReleaseStatus,
+) {
+  const { data, error } = await app.api.wishlist.get({
+    query: { limit, offset, releaseStatus, today: format(new Date(), "yyyy-MM-dd") },
+  });
   if (error) throw new Error(getErrorMessage(error, "Failed to load Wishlist"));
   return data;
 }

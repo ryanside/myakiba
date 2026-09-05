@@ -11,10 +11,12 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ITEM_CATEGORY_GROUPS } from "@myakiba/contracts/shared/constants";
 import type { Category, Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
+import type { WishlistReleaseStatus } from "@myakiba/contracts/wishlist/schema";
 import { Link } from "@tanstack/react-router";
 import type { CSSProperties } from "react";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { ItemControl, ItemControls } from "@/components/ui/item-controls";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import type { GridListViewMode } from "@/components/ui/view-toggle";
 import { useSortableItems } from "@/hooks/use-sortable-items";
@@ -44,57 +46,63 @@ function WishlistItemLink({
   currency,
   dateFormat,
 }: {
-  readonly wishlistItem: WishlistItem;
-  readonly rank: number;
+  readonly wishlistItem: WishlistItem | null;
+  readonly rank: number | null;
   readonly viewMode: GridListViewMode;
   readonly currency: Currency;
   readonly dateFormat: DateFormat;
 }): React.JSX.Element {
-  const category = wishlistItem.category ?? "Uncategorized";
-  const categoryGroup = wishlistItem.category
+  const category = wishlistItem?.category ?? "Uncategorized";
+  const categoryGroup = wishlistItem?.category
     ? CATEGORY_GROUP_BY_CATEGORY[wishlistItem.category]
     : "—";
-  const categoryColor = getCategoryColor(wishlistItem.category);
-  const releaseDate = wishlistItem.latestRelease
+  const categoryColor = getCategoryColor(wishlistItem?.category);
+  const releaseDate = wishlistItem?.latestRelease
     ? formatDateOnlyForDisplay(wishlistItem.latestRelease.date, dateFormat)
     : "No release";
   const releasePrice =
     formatReleasePrice(
-      wishlistItem.latestRelease?.price,
-      wishlistItem.latestRelease?.priceCurrency,
+      wishlistItem?.latestRelease?.price,
+      wishlistItem?.latestRelease?.priceCurrency,
       currency,
     ) ?? "No price";
   const content = (
     <>
-      <span
-        aria-label={`Ranking #${rank}`}
-        className={cn(
-          "shrink-0 text-center font-normal tabular-nums",
-          viewMode === "grid"
-            ? "absolute top-2 left-2 z-10 min-w-7 rounded-md bg-black/55 px-2 py-1 text-xs text-white shadow-sm backdrop-blur-sm"
-            : "w-9 text-sm text-muted-foreground",
-        )}
-      >
-        #{rank}
-      </span>
+      {rank === null ? null : (
+        <div
+          aria-label={wishlistItem ? `Ranking #${rank}` : undefined}
+          className={cn(
+            "shrink-0 text-center font-normal tabular-nums",
+            viewMode === "grid"
+              ? "absolute top-2 left-2 z-10 min-w-7 rounded-md bg-black/55 px-2 py-1 text-xs text-white shadow-sm backdrop-blur-sm"
+              : "w-9 text-sm text-muted-foreground",
+          )}
+        >
+          {wishlistItem ? `#${rank}` : <Skeleton className="mx-auto h-4 w-6" />}
+        </div>
+      )}
       <div
         className={cn(
           "shrink-0",
           viewMode === "grid" ? "aspect-square w-full" : "size-16 overflow-hidden rounded-md",
         )}
       >
-        <ImageThumbnail
-          images={wishlistItem.image ? [wishlistItem.image] : []}
-          title={wishlistItem.title}
-          fallbackIcon={
-            <HugeiconsIcon icon={PackageIcon} className="size-8 text-muted-foreground/40" />
-          }
-          className="aspect-square w-full [&_img]:-outline-offset-1 [&_img]:outline [&_img]:outline-black/10 dark:[&_img]:outline-white/10"
-          decorative
-          loading="lazy"
-        />
+        {wishlistItem ? (
+          <ImageThumbnail
+            images={wishlistItem.image ? [wishlistItem.image] : []}
+            title={wishlistItem.title}
+            fallbackIcon={
+              <HugeiconsIcon icon={PackageIcon} className="size-8 text-muted-foreground/40" />
+            }
+            className="aspect-square w-full [&_img]:-outline-offset-1 [&_img]:outline [&_img]:outline-black/10 dark:[&_img]:outline-white/10"
+            decorative
+            loading="lazy"
+          />
+        ) : (
+          <Skeleton className="size-full" />
+        )}
       </div>
-      {viewMode === "grid" ? (
+      {viewMode === "grid" && wishlistItem ? (
         <div
           key="grid-metadata"
           className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-1 bg-black/50 p-2.5 text-white opacity-0 backdrop-blur-sm transition-[translate,opacity] duration-150 ease-out group-hover/media:translate-y-0 group-hover/media:opacity-100 group-focus-visible/media:translate-y-0 group-focus-visible/media:opacity-100 any-pointer-coarse:translate-y-0 any-pointer-coarse:opacity-100"
@@ -113,36 +121,61 @@ function WishlistItemLink({
             </div>
           </div>
         </div>
-      ) : (
+      ) : null}
+      {viewMode === "list" ? (
         <div
           key="list-metadata"
           className="flex min-w-0 flex-1 items-center justify-between gap-4 self-stretch py-0.5"
         >
           <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
-            <p className="truncate text-sm font-medium leading-tight" title={wishlistItem.title}>
-              {wishlistItem.title}
-            </p>
+            {wishlistItem ? (
+              <p className="truncate text-sm font-medium leading-tight" title={wishlistItem.title}>
+                {wishlistItem.title}
+              </p>
+            ) : (
+              <Skeleton className="my-0.5 h-3.5 w-3/4" />
+            )}
             <div className="min-w-0">
-              <p className="truncate text-[11px] leading-4 text-muted-foreground">
-                {categoryGroup}
-              </p>
-              <p className="truncate text-xs leading-4" style={{ color: categoryColor }}>
-                {category}
-              </p>
+              {wishlistItem ? (
+                <p className="truncate text-[11px] leading-4 text-muted-foreground">
+                  {categoryGroup}
+                </p>
+              ) : (
+                <Skeleton className="my-0.5 h-3 w-16" />
+              )}
+              {wishlistItem ? (
+                <p className="truncate text-xs leading-4" style={{ color: categoryColor }}>
+                  {category}
+                </p>
+              ) : (
+                <Skeleton className="my-0.5 h-3 w-20" />
+              )}
             </div>
           </div>
           <div className="shrink-0 text-right tabular-nums">
-            <p className="text-[11px] leading-4 text-muted-foreground">{releaseDate}</p>
-            <p className="text-xs leading-4 font-medium text-foreground">{releasePrice}</p>
+            {wishlistItem ? (
+              <p className="text-[11px] leading-4 text-muted-foreground">{releaseDate}</p>
+            ) : (
+              <Skeleton className="my-0.5 ml-auto h-3 w-16" />
+            )}
+            {wishlistItem ? (
+              <p className="text-xs leading-4 font-medium text-foreground">{releasePrice}</p>
+            ) : (
+              <Skeleton className="my-0.5 ml-auto h-3 w-14" />
+            )}
           </div>
         </div>
-      )}
+      ) : null}
     </>
   );
   const className = cn(
     "group/media focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
     viewMode === "grid" ? "block" : "flex min-w-0 flex-1 items-center gap-3 p-2",
   );
+
+  if (!wishlistItem) {
+    return <div className={className}>{content}</div>;
+  }
 
   if (wishlistItem.itemExternalId !== null) {
     return (
@@ -166,6 +199,7 @@ function WishlistItemLink({
 function SortableWishlistItem({
   wishlistItem,
   index,
+  releaseStatus,
   viewMode,
   currency,
   dateFormat,
@@ -177,8 +211,9 @@ function SortableWishlistItem({
   onRemove,
   onEntranceAnimationEnd,
 }: {
-  readonly wishlistItem: WishlistItem;
+  readonly wishlistItem: WishlistItem | null;
   readonly index: number;
+  readonly releaseStatus: WishlistReleaseStatus;
   readonly viewMode: GridListViewMode;
   readonly currency: Currency;
   readonly dateFormat: DateFormat;
@@ -190,10 +225,10 @@ function SortableWishlistItem({
   readonly onRemove: (itemId: string, itemExternalId: number | null) => Promise<void>;
   readonly onEntranceAnimationEnd?: () => void;
 }): React.JSX.Element {
-  const removing = removingItemId === wishlistItem.itemId;
-  const mutationPending = isSaving || removingItemId !== undefined;
+  const removing = wishlistItem !== null && removingItemId === wishlistItem.itemId;
+  const mutationPending = !wishlistItem || isSaving || removingItemId !== undefined;
   const { attributes, isDragging, listeners, setActivatorNodeRef, setNodeRef } = useSortable({
-    id: wishlistItem.id,
+    id: wishlistItem?.id ?? `loading-${index}`,
     disabled: sortingDisabled || mutationPending,
   });
   const entranceStyle = entranceAnimationActive
@@ -234,7 +269,7 @@ function SortableWishlistItem({
       >
         <WishlistItemLink
           wishlistItem={wishlistItem}
-          rank={index + 1}
+          rank={releaseStatus === "all" ? index + 1 : null}
           viewMode={viewMode}
           currency={currency}
           dateFormat={dateFormat}
@@ -242,7 +277,7 @@ function SortableWishlistItem({
         <ItemControls
           key={viewMode}
           variant={viewMode === "grid" ? "media" : "surface"}
-          active={viewMode === "list" || isDragging || removing}
+          active={releaseStatus !== "all" || viewMode === "list" || isDragging || removing}
           className={viewMode === "list" ? "mr-1" : undefined}
         >
           <ItemControl
@@ -251,7 +286,7 @@ function SortableWishlistItem({
             className="touch-none cursor-grab active:cursor-grabbing"
             {...attributes}
             {...listeners}
-            aria-label={`Reorder ${wishlistItem.title}`}
+            aria-label={wishlistItem ? `Reorder ${wishlistItem.title}` : "Reorder item"}
             title="Drag to reorder"
             disabled={sortingDisabled || mutationPending}
           >
@@ -259,10 +294,13 @@ function SortableWishlistItem({
           </ItemControl>
           <ItemControl
             type="button"
-            aria-label={`Remove ${wishlistItem.title} from Wishlist`}
+            aria-label={
+              wishlistItem ? `Remove ${wishlistItem.title} from Wishlist` : "Remove from Wishlist"
+            }
             title="Remove from Wishlist"
             disabled={mutationPending}
             onClick={async () => {
+              if (!wishlistItem) return;
               try {
                 await onRemove(wishlistItem.itemId, wishlistItem.itemExternalId);
               } catch {
@@ -289,10 +327,12 @@ function SortableWishlistItem({
 
 export function WishlistItemGrid({
   items,
+  releaseStatus,
   viewMode,
   currency,
   dateFormat,
   totalCount,
+  isPending,
   isSaving,
   sortingDisabled,
   removingItemId,
@@ -303,10 +343,12 @@ export function WishlistItemGrid({
   onMove,
 }: {
   readonly items: readonly WishlistItem[];
+  readonly releaseStatus: WishlistReleaseStatus;
   readonly viewMode: GridListViewMode;
   readonly currency: Currency;
   readonly dateFormat: DateFormat;
   readonly totalCount: number;
+  readonly isPending: boolean;
   readonly isSaving: boolean;
   readonly sortingDisabled: boolean;
   readonly removingItemId: string | undefined;
@@ -368,22 +410,28 @@ export function WishlistItemGrid({
               : "flex flex-col gap-2",
             activeItemId && "pointer-events-none",
           )}
-          aria-busy={isSaving}
+          aria-busy={isPending || isSaving}
         >
-          {items.map((wishlistItem, index) => (
+          {(isPending
+            ? Array.from({ length: viewMode === "grid" ? 10 : 6 }, () => null)
+            : items
+          ).map((wishlistItem, index) => (
             <SortableWishlistItem
-              key={wishlistItem.id}
+              key={wishlistItem?.id ?? `loading-${index}`}
               wishlistItem={wishlistItem}
               index={index}
+              releaseStatus={releaseStatus}
               viewMode={viewMode}
               currency={currency}
               dateFormat={dateFormat}
-              entranceAnimationActive={entranceAnimationActive}
+              entranceAnimationActive={!isPending && entranceAnimationActive}
               isSaving={isSaving}
-              sortingDisabled={sortingDisabled || items.length < 2}
+              sortingDisabled={releaseStatus !== "all" || sortingDisabled || items.length < 2}
               removingItemId={removingItemId}
               dropIndicator={
-                wishlistItem.id === dropIndicator?.id ? dropIndicator.placement : undefined
+                wishlistItem && wishlistItem.id === dropIndicator?.id
+                  ? dropIndicator.placement
+                  : undefined
               }
               onRemove={onRemove}
               onEntranceAnimationEnd={
