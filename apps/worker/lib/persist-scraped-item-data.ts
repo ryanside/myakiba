@@ -1,5 +1,5 @@
 import type { AssembledScrapedData, LatestReleaseInfo } from "./types";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import type { db } from "@myakiba/db/client";
 import { entry, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
 
@@ -11,14 +11,20 @@ export async function persistScrapedItemData(
 ): Promise<{
   externalIdToInternalId: ReadonlyMap<number, string>;
   latestReleaseIdByInternalId: ReadonlyMap<string, LatestReleaseInfo>;
+  insertedItemExternalIds: ReadonlySet<number>;
 }> {
-  const { items, entries, entryToItems, itemReleases, latestReleaseIdByExternalId } = assembledData;
+  const { items, entries, entryToItems, itemReleases } = assembledData;
 
+  const insertedItemExternalIds = new Set<number>();
   if (items.length > 0) {
-    await tx
+    const insertedItems = await tx
       .insert(item)
       .values(items)
-      .onConflictDoNothing({ target: [item.source, item.externalId] });
+      .onConflictDoNothing({ target: [item.source, item.externalId] })
+      .returning({ externalId: item.externalId });
+    for (const insertedItem of insertedItems) {
+      if (insertedItem.externalId !== null) insertedItemExternalIds.add(insertedItem.externalId);
+    }
   }
 
   const itemExternalIds = items
@@ -37,14 +43,21 @@ export async function persistScrapedItemData(
     ),
   );
 
-  if (entries.length > 0) {
+  // Only the transaction that creates an Item supplies its details. A concurrent
+  // sync reuses the existing Item, including its releases and entry links.
+  const newEntryToItems = entryToItems.filter((link) =>
+    insertedItemExternalIds.has(link.itemExternalId),
+  );
+  const newEntryExternalIds = new Set(newEntryToItems.map((link) => link.entryExternalId));
+  const newEntries = entries.filter((dbEntry) => newEntryExternalIds.has(dbEntry.externalId));
+  if (newEntries.length > 0) {
     await tx
       .insert(entry)
-      .values(entries)
+      .values(newEntries)
       .onConflictDoNothing({ target: [entry.source, entry.externalId] });
   }
 
-  const entryExternalIds = entries
+  const entryExternalIds = newEntries
     .map((dbEntry) => dbEntry.externalId)
     .filter((externalId): externalId is number => externalId !== null);
   const dbEntries =
@@ -61,6 +74,7 @@ export async function persistScrapedItemData(
   );
 
   const itemReleasesToInsert = itemReleases
+    .filter((release) => insertedItemExternalIds.has(release.itemExternalId))
     .map((release) => {
       const internalItemId = externalIdToInternalId.get(release.itemExternalId);
       if (!internalItemId) {
@@ -97,7 +111,7 @@ export async function persistScrapedItemData(
       .onConflictDoNothing({ target: [item_release.id] });
   }
 
-  const entryToItemsToInsert = entryToItems
+  const entryToItemsToInsert = newEntryToItems
     .map((link) => {
       const entryId = externalIdToEntryId.get(link.entryExternalId);
       const itemId = externalIdToInternalId.get(link.itemExternalId);
@@ -130,12 +144,29 @@ export async function persistScrapedItemData(
   }
 
   const latestReleaseIdByInternalId = new Map<string, LatestReleaseInfo>();
-  for (const [externalId, releaseInfo] of latestReleaseIdByExternalId) {
-    const internalItemId = externalIdToInternalId.get(externalId);
-    if (internalItemId) {
-      latestReleaseIdByInternalId.set(internalItemId, releaseInfo);
+  const internalItemIds = [...externalIdToInternalId.values()];
+  if (internalItemIds.length > 0) {
+    const releases = await tx
+      .selectDistinctOn([item_release.itemId], {
+        itemId: item_release.itemId,
+        releaseId: item_release.id,
+        date: item_release.date,
+      })
+      .from(item_release)
+      .where(inArray(item_release.itemId, internalItemIds))
+      .orderBy(
+        item_release.itemId,
+        desc(item_release.date),
+        desc(item_release.createdAt),
+        desc(item_release.id),
+      );
+    for (const release of releases) {
+      latestReleaseIdByInternalId.set(release.itemId, {
+        releaseId: release.releaseId,
+        date: release.date,
+      });
     }
   }
 
-  return { externalIdToInternalId, latestReleaseIdByInternalId };
+  return { externalIdToInternalId, latestReleaseIdByInternalId, insertedItemExternalIds };
 }

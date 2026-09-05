@@ -6,7 +6,6 @@ import type {
   MarkPersistFailedSyncSessionItemStatusesParams,
   PublishJobStatusParams,
   SyncJobStatusState,
-  UpdateSyncSessionCountsParams,
 } from "./types";
 import { env } from "@myakiba/env/worker";
 import { writeJobStatusSnapshotAndPublish } from "@myakiba/redis/job-status";
@@ -16,22 +15,6 @@ import type { SyncSessionStatus } from "@myakiba/contracts/shared/types";
 import { createLogger } from "evlog";
 
 const RECENT_ITEMS_LIMIT = 5;
-// The shared process helper can publish all-scrapes-failed terminal state before
-// v2 known rows reach their finalizer. Defer its status, count, and cache writes
-// so the finalizer commits domain rows and terminal truth before publication.
-const terminalSessionUpdatesDeferredForJobs = new Set<string>();
-const terminalCountUpdatesDeferredForSessions = new Set<string>();
-
-export const deferTerminalSessionUpdates = (jobId: string, syncSessionId: string): void => {
-  terminalSessionUpdatesDeferredForJobs.add(jobId);
-  terminalCountUpdatesDeferredForSessions.add(syncSessionId);
-};
-
-export const allowTerminalSessionUpdates = (jobId: string, syncSessionId: string): void => {
-  terminalSessionUpdatesDeferredForJobs.delete(jobId);
-  terminalCountUpdatesDeferredForSessions.delete(syncSessionId);
-};
-
 type ResolveTerminalStateParams = {
   readonly successCount: number;
   readonly failCount: number;
@@ -209,9 +192,8 @@ export const recordItemOutcome = (state: SyncJobStatusState, item: RecordItemPar
 
 /**
  * Persists supplied session state first, then publishes the Redis snapshot as
- * a best-effort cache update. A job finalizer may defer terminal persistence so
- * it can commit that state with domain rows. Redis failures never fail durable
- * worker work.
+ * a best-effort cache update. Finalizers that commit session state with domain
+ * rows skip the durable update. Redis failures never fail durable worker work.
  */
 export const publishJobStatus = async ({
   redis,
@@ -223,7 +205,6 @@ export const publishJobStatus = async ({
   failCount,
   orderId,
   skipDurableUpdate = false,
-  forceDurableUpdate = false,
   error,
 }: PublishJobStatusParams): Promise<void> => {
   const payload: SyncJobStatus = {
@@ -237,14 +218,6 @@ export const publishJobStatus = async ({
     updatedAt: new Date().toISOString(),
     terminalState,
   };
-
-  const terminalUpdateIsDeferred =
-    terminalState !== null &&
-    terminalSessionUpdatesDeferredForJobs.has(state.jobId) &&
-    !forceDurableUpdate &&
-    !skipDurableUpdate;
-
-  if (terminalUpdateIsDeferred) return;
 
   if (syncSessionId && sessionStatus && !skipDurableUpdate) {
     await db
@@ -353,25 +326,4 @@ export const markPersistFailedSyncSessionItemStatuses = async ({
         inArray(syncSessionItem.itemExternalId, [...scrapedItemIds]),
       ),
     );
-};
-
-/**
- * Updates the final success/fail counts on a sync_session.
- * Called after finalization or when all items fail scraping.
- */
-export const updateSyncSessionCounts = async ({
-  syncSessionId,
-  successCount,
-  failCount,
-}: UpdateSyncSessionCountsParams): Promise<void> => {
-  if (terminalCountUpdatesDeferredForSessions.has(syncSessionId)) return;
-
-  await db
-    .update(syncSession)
-    .set({
-      successCount,
-      failCount,
-      updatedAt: new Date(),
-    })
-    .where(eq(syncSession.id, syncSessionId));
 };

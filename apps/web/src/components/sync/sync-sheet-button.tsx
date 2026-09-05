@@ -15,11 +15,12 @@ import {
 import { SYNC_OPTION_META } from "@/lib/sync";
 import SyncOrderForm from "@/components/sync/sync-order-form";
 import SyncCollectionForm from "@/components/sync/sync-collection-form";
+import { SyncItemsForm } from "@/components/sync/sync-items-form";
 import { useSyncMutations } from "@/hooks/use-sync-mutations";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 type SyncSheetButtonProps = {
-  readonly syncType: Extract<SyncType, "collection" | "order">;
+  readonly syncType: Extract<SyncType, "collection" | "order" | "item">;
   readonly label: string;
   readonly className?: string;
 };
@@ -29,12 +30,10 @@ export function SyncSheetButton({ syncType, label, className }: SyncSheetButtonP
   const { currency } = useUserPreferences();
   const [open, setOpen] = useState(false);
 
-  const { handleSyncOrderSubmit, handleSyncCollectionSubmit, isSyncing } = useSyncMutations(
-    queryClient,
-    () => {
+  const { handleSyncOrderSubmit, handleSyncCollectionSubmit, handleSyncItemsSubmit, isSyncing } =
+    useSyncMutations(queryClient, () => {
       setOpen(false);
-    },
-  );
+    });
 
   const meta = SYNC_OPTION_META[syncType];
 
@@ -58,6 +57,9 @@ export function SyncSheetButton({ syncType, label, className }: SyncSheetButtonP
           <SheetDescription>{meta.description}</SheetDescription>
         </SheetHeader>
         <div className="px-4 pb-4">
+          {syncType === "item" ? (
+            <SyncItemsForm handleSyncItemsSubmit={handleSyncItemsSubmit} />
+          ) : null}
           {syncType === "order" && (
             <SyncOrderForm handleSyncOrderSubmit={handleSyncOrderSubmit} currency={currency} />
           )}

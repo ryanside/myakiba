@@ -9,7 +9,7 @@ import {
 } from "../shared/constants";
 import type { SyncSessionStatus } from "../shared/types";
 import { paginationLimitSchema, paginationPageSchema } from "../shared/pagination";
-import { SYNC_CSV_ITEM_STATUSES } from "./constants";
+import { MAX_ITEM_SYNC_ITEMS, SYNC_CSV_ITEM_STATUSES } from "./constants";
 
 const MFC_ITEM_URL_PATTERN =
   /^(?:https?:\/\/)?(?:www\.)?myfigurecollection\.net\/item\/(\d+)(?:[/?#].*)?$/i;
@@ -38,6 +38,25 @@ export const mfcItemIdSchema = z
     return Number(itemId);
   })
   .pipe(z.number().int().positive());
+
+export const itemSyncSchema = z.object({
+  items: z
+    .array(
+      z
+        .union([mfcItemIdSchema, z.number().int().positive()], {
+          error: "Please enter a valid MyFigureCollection item link or ID",
+        })
+        .pipe(z.number().max(2_147_483_647)),
+    )
+    .min(1, "Enter at least one MyFigureCollection item link or ID")
+    .transform((ids) => [...new Set(ids)])
+    .refine(
+      (ids) => ids.length <= MAX_ITEM_SYNC_ITEMS,
+      `Enter at most ${MAX_ITEM_SYNC_ITEMS} unique items`,
+    ),
+});
+
+export type ItemSyncInput = z.infer<typeof itemSyncSchema>;
 
 /**
  * Schema for CSV date fields that handles MFC export quirks.
@@ -296,6 +315,14 @@ export const queuedCollectionItemSchema = z.object({
 });
 
 export const jobDataSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("item"),
+    payloadVersion: z.literal(2),
+    userId: z.string(),
+    syncSessionId: z.string(),
+    itemExternalIds: z.array(z.number().int().positive()).min(1).max(MAX_ITEM_SYNC_ITEMS),
+    existingCount: z.number().int().nonnegative(),
+  }),
   z.object({
     type: z.literal("csv"),
     payloadVersion: z.literal(2),

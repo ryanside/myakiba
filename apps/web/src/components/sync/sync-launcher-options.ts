@@ -1,8 +1,8 @@
-import { FileUploadIcon, LibraryIcon, PackageIcon } from "@hugeicons/core-free-icons";
+import { DatabaseIcon, FileUploadIcon, LibraryIcon, PackageIcon } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
 import type { SyncType } from "@myakiba/contracts/shared/types";
 
-export type LaunchableSyncType = Extract<SyncType, "collection" | "csv" | "order">;
+export type LaunchableSyncType = Extract<SyncType, "collection" | "csv" | "order" | "item">;
 
 export type SyncLauncherOption = {
   readonly type: LaunchableSyncType;
@@ -33,5 +33,12 @@ export const LAUNCHABLE_SYNC_OPTIONS = [
     icon: FileUploadIcon,
     description: "Upload your MyFigureCollection CSV export",
     keywords: ["csv", "import", "upload", "mfc", "myfigurecollection", "sync"],
+  },
+  {
+    type: "item",
+    label: "Item Database",
+    icon: DatabaseIcon,
+    description: "Paste MyFigureCollection item links or IDs to add items to the item database",
+    keywords: ["add", "item", "database", "mfc", "myfigurecollection", "sync"],
   },
 ] as const satisfies readonly SyncLauncherOption[];

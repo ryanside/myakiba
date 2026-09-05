@@ -84,7 +84,7 @@ export function createSyncSessionColumns({
           </Badge>
         );
       },
-      size: 110,
+      size: 140,
       enableSorting: false,
       enableHiding: false,
       enableResizing: false,

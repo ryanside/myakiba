@@ -215,7 +215,6 @@ export async function finalizeOrderSync({
       successCount,
       failCount,
       orderId: details.id,
-      forceDurableUpdate: true,
       terminalState: sessionStatusToTerminalState(sessionStatus),
       error: {
         code: "persistence_failed",

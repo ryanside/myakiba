@@ -151,7 +151,6 @@ export async function finalizeCollectionSync({
       sessionStatus,
       successCount,
       failCount,
-      forceDurableUpdate: true,
       terminalState: sessionStatusToTerminalState(sessionStatus),
       error: {
         code: "persistence_failed",

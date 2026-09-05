@@ -25,6 +25,7 @@ export const SESSION_STATUS_CONFIG = {
 >;
 
 export const SYNC_TYPE_CONFIG = {
+  item: { label: "Item Database", variant: "default" },
   csv: { label: "CSV", variant: "default" },
   order: { label: "Order", variant: "info" },
   "order-item": { label: "Order Item", variant: "secondary" },
@@ -113,6 +114,13 @@ export const ITEM_STATUS_CONFIG = {
 >;
 
 export const SYNC_OPTION_META = {
+  item: {
+    title: "Add to item database",
+    description: "Paste MyFigureCollection item links or IDs to add items to the item database.",
+    pendingTitle: SYNC_STATUS_MESSAGES.queued,
+    completedTitle: "Added to item database",
+    failureTitle: "Failed to add to item database",
+  },
   collection: {
     title: "Add to collection",
     description: "Paste MyFigureCollection item links or IDs to add items to your collection.",

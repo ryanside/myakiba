@@ -3,14 +3,12 @@ import {
   batchUpdateSyncSessionItemStatuses,
   createJobStatusState,
   publishJobStatus,
-  updateSyncSessionCounts,
 } from "./utils";
 import type { ProcessSyncJobParams, ProcessSyncJobResult } from "./types";
-import { sessionStatusToPhase, sessionStatusToTerminalState } from "@myakiba/contracts/sync/schema";
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 
 export async function processSyncJob(params: ProcessSyncJobParams): Promise<ProcessSyncJobResult> {
-  const { itemIds, scrapeRowCount, existingCount, context, finalize } = params;
+  const { itemIds, existingCount, context, finalize } = params;
   const { redis, jobId, syncSessionId, log } = context;
 
   const scrapeStrategy = itemIds.length <= 5 ? "standard" : "rate_limited";
@@ -30,6 +28,15 @@ export async function processSyncJob(params: ProcessSyncJobParams): Promise<Proc
     phase: "scraping",
     statusMessage: SYNC_STATUS_MESSAGES.starting(itemIds.length),
   });
+
+  if (params.type === "item") {
+    state.progress = {
+      processed: existingCount,
+      total: existingCount + itemIds.length,
+      succeeded: existingCount,
+      failed: 0,
+    };
+  }
 
   await publishJobStatus({
     redis,
@@ -66,50 +73,6 @@ export async function processSyncJob(params: ProcessSyncJobParams): Promise<Proc
     scrapedItemIds,
     failures,
   });
-
-  if (successfulResults.length === 0) {
-    const successCount = existingCount;
-    const failCount = scrapeRowCount;
-    const totalRowCount = existingCount + scrapeRowCount;
-    const sessionStatus = successCount > 0 ? ("partial" as const) : ("failed" as const);
-    const statusMessage =
-      sessionStatus === "partial"
-        ? SYNC_STATUS_MESSAGES.partial(successCount, totalRowCount, failCount)
-        : SYNC_STATUS_MESSAGES.failedScrape;
-
-    state.phase = sessionStatusToPhase(sessionStatus);
-    state.statusMessage = statusMessage;
-
-    await publishJobStatus({
-      redis,
-      state,
-      syncSessionId,
-      sessionStatus,
-      terminalState: sessionStatusToTerminalState(sessionStatus),
-      error: sessionStatus === "failed" ? { code: "scrape_failed", message: statusMessage } : null,
-    });
-    await updateSyncSessionCounts({
-      syncSessionId,
-      successCount,
-      failCount,
-    });
-
-    const processedAt = new Date().toISOString();
-
-    return {
-      processedAt,
-      scrapeStrategy,
-      scrapedItemIds,
-      failedItemIds,
-      scrapedCount: successfulResults.length,
-      failedCount: failedItemIds.length,
-      successCount,
-      failCount,
-      sessionStatus,
-      statusMessage,
-      persistence: null,
-    };
-  }
 
   state.phase = "persisting";
   state.statusMessage = SYNC_STATUS_MESSAGES.persisting(successfulResults.length);

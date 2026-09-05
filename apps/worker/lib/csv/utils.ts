@@ -237,7 +237,6 @@ export async function finalizeCsvSync({
       sessionStatus,
       successCount,
       failCount,
-      forceDurableUpdate: true,
       terminalState: sessionStatusToTerminalState(sessionStatus),
       error: {
         code: "persistence_failed",

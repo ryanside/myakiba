@@ -4,6 +4,7 @@ import { betterAuth } from "@/middleware/better-auth";
 import { evlog } from "evlog/elysia";
 import { rateLimit } from "@/middleware/rate-limit";
 import {
+  itemSyncSchema,
   collectionSyncSchema,
   internalCsvItemSchema,
   orderSyncSchema,
@@ -88,6 +89,76 @@ const syncRouter = new Elysia({ prefix: "/sync" })
   .use(betterAuth)
   .use(evlog())
   .use(rateLimit)
+  .post(
+    "/item",
+    async ({ body, user, log }) => {
+      log.set({ action: "sync.item", user: { id: user.id }, sync: { type: "item" } });
+      if (!user.emailVerified) {
+        log.set({ outcome: "forbidden", sync: { reason: "email_not_verified" } });
+        return status(403, SYNC_STATUS_MESSAGES.requireEmailVerification);
+      }
+
+      const { data: existingItems, error: lookupError } = await tryCatch(
+        SyncService.getExistingItemsWithLatestReleaseByExternalIds(body.items),
+      );
+      if (lookupError) {
+        log.error(lookupError, { step: "getExistingItems", outcome: "error" });
+        return status(500, "Failed to check for existing items");
+      }
+      const existingIds = new Set(existingItems.map((item) => item.externalId));
+      const missingIds = body.items.filter((id) => !existingIds.has(id));
+      const { data: syncSessionId, error: sessionError } = await tryCatch(
+        SyncService.createSyncSession(user.id, "item", body.items, {
+          existingItemExternalIds: body.items.filter((id) => existingIds.has(id)),
+        }),
+      );
+      if (sessionError) {
+        log.error(sessionError, { step: "createSyncSession", outcome: "error" });
+        return status(500, "Failed to create import record");
+      }
+
+      log.set({
+        sync: { sessionId: syncSessionId },
+        items: {
+          requested: body.items.length,
+          existing: existingIds.size,
+          queuedForScrape: missingIds.length,
+        },
+      });
+      const statusMessage =
+        missingIds.length > 0
+          ? SYNC_STATUS_MESSAGES.queued
+          : "These items are already in the item database.";
+      const { error: startError } = await tryCatch<string | boolean>(
+        missingIds.length > 0
+          ? SyncService.queueItemSyncJob(user.id, missingIds, existingIds.size, syncSessionId)
+          : SyncService.updateSyncSession(syncSessionId, {
+              status: "completed",
+              statusMessage,
+              completedAt: new Date(),
+            }),
+      );
+      if (startError) {
+        log.error(startError, { step: "startItemSync", outcome: "error" });
+        return status(
+          500,
+          missingIds.length > 0
+            ? "Failed to queue item database items"
+            : "Failed to update import record",
+        );
+      }
+      log.set({ outcome: "success" });
+      return {
+        status: statusMessage,
+        isFinished: missingIds.length === 0,
+        existingItemsToInsert: existingIds.size,
+        newItems: missingIds.length,
+        jobId: missingIds.length > 0 ? syncSessionId : null,
+        syncSessionId,
+      };
+    },
+    { body: itemSyncSchema, auth: true, rateLimit: "item" },
+  )
   .post(
     "/csv",
     async ({ body, user, log }) => {

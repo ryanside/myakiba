@@ -1,4 +1,5 @@
 import { app, getErrorMessage } from "@/lib/treaty-client";
+import type { ItemSyncInput } from "@myakiba/contracts/sync/schema";
 import type {
   UserItem,
   SyncOrder,
@@ -16,6 +17,12 @@ export async function sendItems(userItems: UserItem[]) {
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to submit MyFigureCollection CSV"));
   }
+  return data;
+}
+
+export async function sendItemSync(input: ItemSyncInput) {
+  const { data, error } = await app.api.sync.item.post(input);
+  if (error) throw new Error(getErrorMessage(error, "Failed to submit item database items"));
   return data;
 }
 

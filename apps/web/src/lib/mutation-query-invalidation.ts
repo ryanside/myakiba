@@ -18,6 +18,7 @@ const collectionAndOrderQueryRoots = new Set<unknown>([
 ]);
 
 const syncResultQueryRoots = new Set<unknown>([
+  "item-database-items",
   ...collectionAndOrderQueryRoots,
   "entries",
   "itemReleases",

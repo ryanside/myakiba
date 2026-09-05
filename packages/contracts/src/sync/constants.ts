@@ -20,3 +20,4 @@ export const JOB_STATUS_CHANNEL_PREFIX = "job:status:";
 export const SYNC_CSV_ITEM_STATUSES = ["Owned", "Ordered"] as const;
 
 export type SyncCsvItemStatus = (typeof SYNC_CSV_ITEM_STATUSES)[number];
+export const MAX_ITEM_SYNC_ITEMS = 10;
