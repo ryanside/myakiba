@@ -33,5 +33,3 @@ export const removeListMembersSchema = z.object({
 });
 
 export const deleteListsSchema = z.object({ listIds: listIdsSchema });
-
-export { listInputSchema, listOrderInputSchema } from "@myakiba/contracts/lists/schema";

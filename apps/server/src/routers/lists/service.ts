@@ -1,53 +1,11 @@
 import { db } from "@myakiba/db/client";
 import { collection, item, list, listMember, order } from "@myakiba/db/schema/figure";
-import type { ListInput, ListOrderInput, ListTarget } from "@myakiba/contracts/lists/schema";
+import type { ListInput, ListTarget } from "@myakiba/contracts/lists/schema";
+import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
+import { planPositionOrderMove, POSITION_UPDATE_CHUNK_SIZE } from "@/lib/position-order";
 
-type OrderedRow = { readonly id: string; readonly position: number };
-
-const POSITION_UPDATE_CHUNK_SIZE = 2000;
 const LIST_MEMBER_INSERT_CHUNK_SIZE = 5000;
-
-function planOrderMove(
-  currentRows: readonly OrderedRow[],
-  movedIds: readonly string[],
-  anchorId: string | null,
-  placement: ListOrderInput["placement"],
-) {
-  const movedIdSet = new Set(movedIds);
-  const movedRows = currentRows.filter((row) => movedIdSet.has(row.id));
-  if (movedRows.length !== movedIds.length) return { kind: "not_found" } as const;
-
-  if (anchorId !== null && movedIdSet.has(anchorId)) {
-    return { kind: "moved", updates: [], moved: movedRows } as const;
-  }
-
-  const remainingRows = currentRows.filter((row) => !movedIdSet.has(row.id));
-  let insertionIndex: number;
-  if (anchorId === null) {
-    insertionIndex = placement === "before" ? 0 : remainingRows.length;
-  } else {
-    const anchorIndex = remainingRows.findIndex((row) => row.id === anchorId);
-    if (anchorIndex === -1) return { kind: "not_found" } as const;
-    insertionIndex = anchorIndex + (placement === "after" ? 1 : 0);
-  }
-
-  const reorderedRows = [
-    ...remainingRows.slice(0, insertionIndex),
-    ...movedRows,
-    ...remainingRows.slice(insertionIndex),
-  ];
-  const positionedRows = reorderedRows.map((row, index) => ({
-    id: row.id,
-    position: currentRows[index].position,
-  }));
-
-  return {
-    kind: "moved",
-    updates: positionedRows.filter((row, index) => row.id !== currentRows[index].id),
-    moved: positionedRows.filter((row) => movedIdSet.has(row.id)),
-  } as const;
-}
 
 class ListsService {
   async getLists(userId: string, limit: number, offset: number) {
@@ -179,7 +137,7 @@ class ListsService {
     });
   }
 
-  async moveLists(userId: string, { movedIds, anchorId, placement }: ListOrderInput) {
+  async moveLists(userId: string, { movedIds, anchorId, placement }: PositionOrderInput) {
     return db.transaction(async (tx) => {
       await tx.execute(
         sql`select pg_advisory_xact_lock(hashtextextended(${`lists:${userId}`}, 0))`,
@@ -191,7 +149,7 @@ class ListsService {
         .orderBy(asc(list.position), asc(list.createdAt), asc(list.id))
         .for("update");
 
-      const plan = planOrderMove(currentLists, movedIds, anchorId, placement);
+      const plan = planPositionOrderMove(currentLists, movedIds, anchorId, placement);
       if (plan.kind === "not_found") throw new Error("LIST_NOT_FOUND");
 
       if (plan.updates.length > 0) {
@@ -572,7 +530,7 @@ class ListsService {
   async moveMembers(
     userId: string,
     listId: string,
-    { movedIds, anchorId, placement }: ListOrderInput,
+    { movedIds, anchorId, placement }: PositionOrderInput,
   ) {
     return db.transaction(async (tx) => {
       const ownedLists = await tx
@@ -591,7 +549,7 @@ class ListsService {
         .orderBy(asc(listMember.position), asc(listMember.id))
         .for("update");
 
-      const plan = planOrderMove(currentMembers, movedIds, anchorId, placement);
+      const plan = planPositionOrderMove(currentMembers, movedIds, anchorId, placement);
       if (plan.kind === "not_found") throw new Error("LIST_MEMBER_NOT_FOUND");
 
       for (let index = 0; index < plan.updates.length; index += POSITION_UPDATE_CHUNK_SIZE) {

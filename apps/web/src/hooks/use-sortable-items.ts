@@ -7,9 +7,8 @@ import type {
   ScreenReaderInstructions,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import type { ListOrderInput } from "@myakiba/contracts/lists/schema";
+import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { moveSortableSelection } from "@/components/lists/list-order";
 import { toast } from "@/components/ui/toast";
 
 interface SortableRecord {
@@ -17,7 +16,7 @@ interface SortableRecord {
   readonly title: string;
 }
 
-export function useSortableSelection<T extends SortableRecord>({
+export function useSortableItems<T extends SortableRecord>({
   items,
   totalCount,
   selectedIds,
@@ -39,7 +38,7 @@ export function useSortableSelection<T extends SortableRecord>({
   readonly hasNextPage: boolean;
   readonly isFetchingNextPage: boolean;
   readonly onLoadMore: () => Promise<{ readonly isFetchNextPageError: boolean }>;
-  readonly onMove: (intent: ListOrderInput) => Promise<void>;
+  readonly onMove: (intent: PositionOrderInput) => Promise<void>;
   readonly onClearSelection: () => void;
 }) {
   const [entranceAnimationActive, setEntranceAnimationActive] = useState(true);
@@ -153,11 +152,26 @@ export function useSortableSelection<T extends SortableRecord>({
       setOverId(undefined);
       if (!over) return;
 
-      const move = moveSortableSelection(items, String(active.id), String(over.id), selectedIds);
-      if (!move) return;
+      const draggedId = String(active.id);
+      const targetId = String(over.id);
+      if (draggedId === targetId) return;
+
+      const draggedIndex = items.findIndex((item) => item.id === draggedId);
+      const targetIndex = items.findIndex((item) => item.id === targetId);
+      if (draggedIndex === -1 || targetIndex === -1) return;
+
+      const movedIds = selectedIds.has(draggedId)
+        ? items.filter((item) => selectedIds.has(item.id)).map((item) => item.id)
+        : [draggedId];
+      if (movedIds.includes(targetId)) return;
+
       onClearSelection();
       try {
-        await onMove(move.intent);
+        await onMove({
+          movedIds,
+          anchorId: targetId,
+          placement: draggedIndex < targetIndex ? "after" : "before",
+        });
       } catch {
         // The mutation restores the saved order and reports the error.
       }
