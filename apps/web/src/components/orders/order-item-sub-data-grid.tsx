@@ -10,12 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { DataGridColumnCombobox } from "@/components/ui/data-grid-column-combobox";
-import {
-  getCoreRowModel,
-  getSortedRowModel,
-  useReactTable,
-  functionalUpdate,
-} from "@tanstack/react-table";
+import { getCoreRowModel, useReactTable, functionalUpdate } from "@tanstack/react-table";
 import type {
   ColumnPinningState,
   ColumnSizingState,
@@ -25,6 +20,7 @@ import type {
   VisibilityState,
 } from "@tanstack/react-table";
 import type { OrderItem } from "@myakiba/contracts/orders/types";
+import type { OrderItemsQuery } from "@myakiba/contracts/orders/schema";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import { createOrderItemSubColumns } from "./order-item-sub-columns";
 import { OrderItemSyncSheet } from "./order-item-sync-sheet";
@@ -90,6 +86,7 @@ export function OrderItemSubDataGrid({
   );
 
   const offset = pagination.pageIndex * pagination.pageSize;
+  const sortConfig = sorting[0];
 
   const {
     data: itemsData,
@@ -97,7 +94,12 @@ export function OrderItemSubDataGrid({
     isError,
     error,
   } = useQuery({
-    ...orderItemsQueryOptions(orderId, pagination.pageSize, offset),
+    ...orderItemsQueryOptions(orderId, {
+      limit: pagination.pageSize,
+      offset,
+      sort: (sortConfig?.id as OrderItemsQuery["sort"] | undefined) ?? "title",
+      order: sortConfig?.desc === false ? "asc" : "desc",
+    }),
     enabled: !isLoading,
   });
 
@@ -140,7 +142,10 @@ export function OrderItemSubDataGrid({
       columnVisibility,
     },
     columnResizeMode: "onChange",
-    onSortingChange: setSorting,
+    onSortingChange: (updater) => {
+      setSorting(updater);
+      setPagination((current) => ({ ...current, pageIndex: 0 }));
+    },
     onPaginationChange: setPagination,
     onRowSelectionChange: (updater) => {
       setSelectedOrderIdByCollectionId((current) => {
@@ -163,8 +168,9 @@ export function OrderItemSubDataGrid({
     onColumnPinningChange: setColumnPinning,
     onColumnVisibilityChange: setColumnVisibility,
     manualPagination: true,
+    manualSorting: true,
+    enableMultiSort: false,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
     getRowId: (row: OrderItem) => row.id,
     enableRowSelection: true,
   });

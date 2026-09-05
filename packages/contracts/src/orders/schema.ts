@@ -42,6 +42,13 @@ export const orderFiltersSchema = z.object({
 
 export const searchSchema = orderFiltersSchema;
 
+export const orderItemsQuerySchema = z.object({
+  limit: paginationLimitSchema.default(6),
+  offset: paginationOffsetSchema.default(0),
+  sort: z.enum(["title", "orderDate", "releaseDate", "count", "price", "status"]).default("title"),
+  order: sortDirectionSchema.default("desc"),
+});
+
 export const newOrderSchema = syncOrderSchema.omit({
   id: true,
   userId: true,
@@ -55,6 +62,7 @@ export const cascadeOptionSchema = z.enum(ORDER_CASCADE_OPTIONS);
 export const cascadeOptionsSchema = z.array(cascadeOptionSchema);
 
 export type OrderFilters = z.infer<typeof orderFiltersSchema>;
+export type OrderItemsQuery = z.infer<typeof orderItemsQuerySchema>;
 export type NewOrder = z.infer<typeof newOrderSchema>;
 export type EditedOrder = z.infer<typeof editedOrderSchema>;
 export type CascadeOption = z.infer<typeof cascadeOptionSchema>;

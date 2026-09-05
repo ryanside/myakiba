@@ -28,6 +28,7 @@ import type {
   NewOrder,
   CascadeOptions,
   OrderFilters,
+  OrderItemsQuery,
 } from "@myakiba/contracts/orders/schema";
 import type {
   Order,
@@ -45,10 +46,10 @@ function ordersQueryOptions(filters: OrderFilters) {
   });
 }
 
-export function orderItemsQueryOptions(orderId: string, limit: number, offset: number) {
+export function orderItemsQueryOptions(orderId: string, query: OrderItemsQuery) {
   return queryOptions({
-    queryKey: ["orderItems", orderId, limit, offset] as const,
-    queryFn: () => getOrderItems(orderId, limit, offset),
+    queryKey: ["orderItems", orderId, query] as const,
+    queryFn: () => getOrderItems(orderId, query),
     placeholderData: keepPreviousData,
     staleTime: 30_000,
   });

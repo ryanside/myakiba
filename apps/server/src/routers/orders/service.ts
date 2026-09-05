@@ -1,4 +1,5 @@
 import type { OrderCascadeOption } from "@myakiba/contracts/orders/constants";
+import type { OrderItemsQuery } from "@myakiba/contracts/orders/schema";
 import { db } from "@myakiba/db/client";
 import { order, collection, item, item_release } from "@myakiba/db/schema/figure";
 import { eq, and, inArray, sql, desc, asc, ilike, ne, gte, lte, or, isNull } from "drizzle-orm";
@@ -536,7 +537,20 @@ class OrdersService {
       .orderBy(asc(item_release.date));
   }
 
-  async getOrderItems(userId: string, orderId: string, limit: number, offset: number) {
+  async getOrderItems(
+    userId: string,
+    orderId: string,
+    { limit, offset, sort, order: sortOrder }: OrderItemsQuery,
+  ) {
+    const sortColumn = {
+      title: item.title,
+      orderDate: collection.orderDate,
+      releaseDate: item_release.date,
+      count: collection.count,
+      price: collection.price,
+      status: collection.status,
+    }[sort];
+
     const items = await db
       .select({
         id: collection.id,
@@ -571,7 +585,7 @@ class OrdersService {
       .innerJoin(item, eq(collection.itemId, item.id))
       .leftJoin(item_release, eq(collection.releaseId, item_release.id))
       .where(and(eq(collection.userId, userId), eq(collection.orderId, orderId)))
-      .orderBy(asc(item.title), asc(collection.id))
+      .orderBy(sortOrder === "asc" ? asc(sortColumn) : desc(sortColumn), asc(collection.id))
       .limit(limit)
       .offset(offset);
 

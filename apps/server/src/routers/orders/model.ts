@@ -46,10 +46,5 @@ export const orderUpdateSchema = createUpdateSchema(order)
 
 export const orderIdParamSchema = z.object({ orderId: z.string() });
 
-export const orderItemsQuerySchema = z.object({
-  limit: paginationLimitSchema.optional().default(6),
-  offset: paginationOffsetSchema.optional().default(0),
-});
-
 export type OrderInsertType = z.infer<typeof orderInsertSchema>;
 export type OrderUpdateType = z.infer<typeof orderUpdateSchema>;

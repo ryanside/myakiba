@@ -217,6 +217,7 @@ export function createOrderItemSubColumns({
     },
     {
       accessorKey: "title",
+      accessorFn: (row) => row.itemTitle,
       header: ({ column }) => (
         <DataGridColumnHeader title="Item" visibility={true} column={column} />
       ),

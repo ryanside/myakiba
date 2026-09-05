@@ -6,9 +6,8 @@ import {
   orderUpdateSchema,
   ordersQuerySchema,
   orderIdParamSchema,
-  orderItemsQuerySchema,
 } from "./model";
-import { cascadeOptionsSchema } from "@myakiba/contracts/orders/schema";
+import { cascadeOptionsSchema, orderItemsQuerySchema } from "@myakiba/contracts/orders/schema";
 import { tryCatch } from "@myakiba/utils/result";
 import { betterAuth } from "@/middleware/better-auth";
 import { evlog } from "evlog/elysia";
@@ -118,7 +117,7 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
       });
 
       const { data: items, error } = await tryCatch(
-        OrdersService.getOrderItems(user.id, params.orderId, query.limit, query.offset),
+        OrdersService.getOrderItems(user.id, params.orderId, query),
       );
 
       if (error) {

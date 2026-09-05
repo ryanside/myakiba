@@ -4,6 +4,7 @@ import type {
   EditedOrder,
   NewOrder,
   OrderFilters,
+  OrderItemsQuery,
 } from "@myakiba/contracts/orders/schema";
 import type {
   Order,
@@ -80,10 +81,9 @@ export async function getOrderItemReleases(orderId: string): Promise<readonly Or
 
 export async function getOrderItems(
   orderId: string,
-  limit: number,
-  offset: number,
+  query: OrderItemsQuery,
 ): Promise<PaginatedResult<OrderItem>> {
-  const { data, error } = await app.api.orders({ orderId }).items.get({ query: { limit, offset } });
+  const { data, error } = await app.api.orders({ orderId }).items.get({ query });
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to get order items"));
   }
