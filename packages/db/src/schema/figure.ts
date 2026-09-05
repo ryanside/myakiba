@@ -287,6 +287,34 @@ export const listMember = pgTable(
   ],
 );
 
+export const wishlistEntry = pgTable(
+  "wishlist_entry",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    itemId: text("item_id")
+      .notNull()
+      .references(() => item.id, { onDelete: "cascade" }),
+    position: integer("position").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("wishlist_entry_user_id_item_id_idx").on(t.userId, t.itemId),
+    index("wishlist_entry_user_id_position_created_at_id_idx").on(
+      t.userId,
+      t.position,
+      t.createdAt,
+      t.id,
+    ),
+    index("wishlist_entry_item_id_idx").on(t.itemId),
+  ],
+);
+
 export const dataTransferImport = pgTable("data_transfer_import", {
   userId: text("user_id")
     .primaryKey()

@@ -10,6 +10,7 @@ import {
   Folder01Icon,
   PackageIcon,
   Settings01Icon,
+  StarIcon,
 } from "@hugeicons/core-free-icons";
 
 export type AppNavigationTarget =
@@ -18,6 +19,7 @@ export type AppNavigationTarget =
   | "/expenses"
   | "/orders"
   | "/collection"
+  | "/wishlist"
   | "/lists"
   | "/items"
   | "/calendar"
@@ -51,6 +53,12 @@ const APP_PRIMARY_NAVIGATION_ITEMS = [
     to: "/collection",
     icon: LibraryIcon,
     keywords: ["items", "figures", "owned"],
+  },
+  {
+    title: "Wishlist",
+    to: "/wishlist",
+    icon: StarIcon,
+    keywords: ["starred", "wanted", "planned"],
   },
   {
     title: "Lists",

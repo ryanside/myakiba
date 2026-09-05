@@ -148,6 +148,7 @@ function RouteComponent(): ReactNode {
         cooldownExpiresAt={resyncStatusData?.cooldownExpiresAt ?? null}
         isResyncPending={requestResyncMutation.isPending}
         onRequestResync={() => requestResyncMutation.mutate()}
+        isWishlisted={data?.isWishlisted ?? false}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-5">

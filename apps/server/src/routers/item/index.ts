@@ -58,10 +58,10 @@ const itemRouter = new Elysia({ prefix: "/item" })
   )
   .get(
     "/:id",
-    async ({ params, log }) => {
-      log.set({ action: "item.get", item: { externalId: params.id } });
+    async ({ params, user, log }) => {
+      log.set({ action: "item.get", user: { id: user.id }, item: { externalId: params.id } });
 
-      const { data: item, error } = await tryCatch(ItemService.getItem(params.id));
+      const { data: result, error } = await tryCatch(ItemService.getItem(user.id, params.id));
 
       if (error) {
         if (error.message === "ITEM_NOT_FOUND") {
@@ -73,7 +73,7 @@ const itemRouter = new Elysia({ prefix: "/item" })
       }
 
       log.set({ outcome: "success" });
-      return { item };
+      return result;
     },
     { params: itemParamSchema, auth: true },
   )

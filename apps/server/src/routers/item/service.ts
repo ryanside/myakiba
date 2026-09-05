@@ -6,6 +6,7 @@ import {
   item,
   item_release,
   order,
+  wishlistEntry,
 } from "@myakiba/db/schema/figure";
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import type { ItemRelease, ItemReleasesResponse } from "@myakiba/contracts/item/schema";
@@ -262,7 +263,7 @@ class ItemService {
     };
   }
 
-  async getItem(externalId: number) {
+  async getItem(userId: string, externalId: number) {
     const itemData = await db
       .select({
         id: item.id,
@@ -278,6 +279,7 @@ class ItemService {
         image: item.image,
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
+        isWishlisted: sql<boolean>`${wishlistEntry.id} IS NOT NULL`,
         releases: sql<ItemRelease[]>`
           COALESCE(
             (
@@ -319,15 +321,23 @@ class ItemService {
         `,
       })
       .from(item)
+      .leftJoin(
+        wishlistEntry,
+        and(eq(wishlistEntry.userId, userId), eq(wishlistEntry.itemId, item.id)),
+      )
       .where(and(eq(item.source, "mfc"), eq(item.externalId, externalId)));
 
     if (itemData.length === 0) {
       throw new Error("ITEM_NOT_FOUND");
     }
 
+    const { isWishlisted, ...itemRecord } = itemData[0];
     return {
-      ...itemData[0],
-      scale: normalizeScale(itemData[0].scale),
+      item: {
+        ...itemRecord,
+        scale: normalizeScale(itemRecord.scale),
+      },
+      isWishlisted,
     };
   }
   async getItemRelatedOrders(userId: string, externalId: number) {
