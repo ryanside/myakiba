@@ -175,12 +175,9 @@ function RouteComponent(): React.JSX.Element {
           {Array.from({ length: 4 }).map((_, index) => (
             <div key={index} className="flex items-center gap-3 p-2">
               <Skeleton className="size-16 shrink-0 rounded-md" />
-              <div className="flex h-16 flex-1 flex-col py-0.5">
+              <div className="flex h-16 flex-1 flex-col justify-center gap-1.5 py-0.5">
                 <Skeleton className="h-4 w-3/4" />
-                <div className="mt-auto space-y-1 pt-1.5">
-                  <Skeleton className="h-2.5 w-12" />
-                  <Skeleton className="h-3 w-20" />
-                </div>
+                <Skeleton className="h-3 w-20" />
               </div>
               <div className="mr-1 flex shrink-0 gap-1 p-0.5">
                 <Skeleton className="size-8 rounded-md" />

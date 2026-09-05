@@ -79,14 +79,16 @@ function ListMemberLink({
           <p className="mt-1 text-xs leading-4 text-white/70">{MEMBER_TYPE_LABELS[member.type]}</p>
         </div>
       ) : (
-        <div key="list-metadata" className="flex min-w-0 flex-1 flex-col self-stretch py-0.5">
+        <div
+          key="list-metadata"
+          className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 self-stretch py-0.5"
+        >
           <p className="truncate text-sm font-medium leading-tight" title={member.title}>
             {member.title}
           </p>
-          <div className="mt-auto pt-1.5">
-            <p className="text-[11px] leading-4 text-muted-foreground">Type</p>
-            <p className="text-xs leading-4">{MEMBER_TYPE_LABELS[member.type]}</p>
-          </div>
+          <p className="truncate text-xs leading-4 text-muted-foreground">
+            {MEMBER_TYPE_LABELS[member.type]}
+          </p>
         </div>
       )}
     </>

@@ -126,10 +126,12 @@ function resolveCurrencyFormat(currency: string | null | undefined, fallbackCurr
 }
 
 export function formatReleaseDate(
-  valueMinorUnits: number,
+  valueMinorUnits: number | null | undefined,
   currency: string | null | undefined,
   fallbackCurrency: Currency,
-): string {
+): string | null {
+  if (valueMinorUnits == null || valueMinorUnits <= 0 || !currency?.trim()) return null;
+
   const resolvedCurrencyFormat = resolveCurrencyFormat(currency, fallbackCurrency);
   return formatCurrencyFromMinorUnits(
     valueMinorUnits,
