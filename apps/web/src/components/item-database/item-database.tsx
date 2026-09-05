@@ -16,7 +16,7 @@ import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { getCategoryColor } from "@/lib/category-colors";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
-import { formatReleaseDate } from "@/lib/locale";
+import { formatReleasePrice } from "@/lib/locale";
 import { getItemDatabaseItems } from "@/queries/search";
 
 const itemsRoute = getRouteApi("/(app)/items");
@@ -62,7 +62,7 @@ function getItemDisplayDetails(
       ? formatDateOnlyForDisplay(item.latestRelease.date, dateFormat)
       : "—",
     releasePrice:
-      formatReleaseDate(item.latestRelease?.price, item.latestRelease?.priceCurrency, currency) ??
+      formatReleasePrice(item.latestRelease?.price, item.latestRelease?.priceCurrency, currency) ??
       "—",
     staggerDelay: Math.min(index, MAX_STAGGER_INDEX) * STAGGER_DELAY_MS,
   };

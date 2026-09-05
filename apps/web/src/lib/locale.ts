@@ -125,7 +125,7 @@ function resolveCurrencyFormat(currency: string | null | undefined, fallbackCurr
   };
 }
 
-export function formatReleaseDate(
+export function formatReleasePrice(
   valueMinorUnits: number | null | undefined,
   currency: string | null | undefined,
   fallbackCurrency: Currency,

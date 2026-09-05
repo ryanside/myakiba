@@ -5,7 +5,7 @@ import { Link } from "@tanstack/react-router";
 import type { Category, Currency } from "@myakiba/contracts/shared/types";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { getCategoryColor } from "@/lib/category-colors";
-import { formatReleaseDate } from "@/lib/locale";
+import { formatReleasePrice } from "@/lib/locale";
 import type { CalendarItem } from "@/queries/calendar";
 
 interface CalendarItemRowProps {
@@ -42,7 +42,7 @@ export function CalendarItemRow({ item, currency }: CalendarItemRowProps): React
           )}
           {item.price != null && item.price > 0 && item.priceCurrency?.trim() && (
             <span className="shrink-0">
-              {formatReleaseDate(item.price, item.priceCurrency, currency)}
+              {formatReleasePrice(item.price, item.priceCurrency, currency)}
             </span>
           )}
         </div>

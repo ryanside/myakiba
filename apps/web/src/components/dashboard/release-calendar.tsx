@@ -11,7 +11,7 @@ import type { Currency } from "@myakiba/contracts/shared/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { getCategoryColor } from "@/lib/category-colors";
-import { formatReleaseDate } from "@/lib/locale";
+import { formatReleasePrice } from "@/lib/locale";
 import { getReleaseCalendar } from "@/queries/dashboard";
 import type { ReleaseItem } from "@/queries/dashboard";
 import { parseISO } from "date-fns";
@@ -285,7 +285,7 @@ function ReleaseCard({
           )}
           {item.price != null && item.price > 0 && item.priceCurrency?.trim() && (
             <span className="shrink-0">
-              {formatReleaseDate(item.price, item.priceCurrency, currency)}
+              {formatReleasePrice(item.price, item.priceCurrency, currency)}
             </span>
           )}
         </div>

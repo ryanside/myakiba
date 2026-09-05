@@ -4,7 +4,7 @@ import { Calendar01Icon } from "@hugeicons/core-free-icons";
 import { Badge } from "@/components/reui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
-import { formatReleaseDate } from "@/lib/locale";
+import { formatReleasePrice } from "@/lib/locale";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type { ItemDetail } from "@/components/item/types";
 
@@ -117,7 +117,7 @@ export function ItemDetails({
                 ) : null}
                 {release.price != null && release.price > 0 && release.priceCurrency?.trim() ? (
                   <span className="animate-data-in ml-auto font-medium tabular-nums">
-                    {formatReleaseDate(release.price, release.priceCurrency, userCurrency)}
+                    {formatReleasePrice(release.price, release.priceCurrency, userCurrency)}
                   </span>
                 ) : null}
               </div>

@@ -20,7 +20,7 @@ import type { GridListViewMode } from "@/components/ui/view-toggle";
 import { useSortableItems } from "@/hooks/use-sortable-items";
 import { getCategoryColor } from "@/lib/category-colors";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
-import { formatReleaseDate } from "@/lib/locale";
+import { formatReleasePrice } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 import type { getWishlistItems } from "@/queries/wishlist";
 
@@ -59,7 +59,7 @@ function WishlistItemLink({
     ? formatDateOnlyForDisplay(wishlistItem.latestRelease.date, dateFormat)
     : "No release";
   const releasePrice =
-    formatReleaseDate(
+    formatReleasePrice(
       wishlistItem.latestRelease?.price,
       wishlistItem.latestRelease?.priceCurrency,
       currency,
