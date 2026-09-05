@@ -1,26 +1,48 @@
 import { useMemo, useState } from "react";
-import type { Dispatch, SetStateAction } from "react";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, DragDropVerticalIcon } from "@hugeicons/core-free-icons";
 import { useQuery } from "@tanstack/react-query";
 import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
 import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { DataGridColumnCombobox } from "@/components/ui/data-grid-column-combobox";
 import {
   getCoreRowModel,
   getSortedRowModel,
   useReactTable,
   functionalUpdate,
 } from "@tanstack/react-table";
-import type { RowSelectionState, PaginationState, SortingState } from "@tanstack/react-table";
+import type {
+  ColumnPinningState,
+  ColumnSizingState,
+  PaginationState,
+  RowSelectionState,
+  SortingState,
+  VisibilityState,
+} from "@tanstack/react-table";
 import type { OrderItem } from "@myakiba/contracts/orders/types";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import { createOrderItemSubColumns } from "./order-item-sub-columns";
 import { OrderItemSyncSheet } from "./order-item-sync-sheet";
 import { orderItemsQueryOptions } from "@/hooks/use-orders";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 const ORDER_ITEM_PAGE_SIZE = 12;
+const DEFAULT_COLUMN_ORDER = [
+  "select",
+  "title",
+  "orderDate",
+  "releaseDate",
+  "count",
+  "price",
+  "status",
+  "actions",
+];
 
 export function OrderItemSubDataGrid({
   orderId,
@@ -29,6 +51,7 @@ export function OrderItemSubDataGrid({
   onEditItem,
   onDeleteItem,
   isCollectionItemPending,
+  heading,
   wrapped = true,
   isLoading = false,
 }: {
@@ -38,6 +61,7 @@ export function OrderItemSubDataGrid({
   onEditItem: (values: CollectionItemFormValues) => Promise<void>;
   onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
   isCollectionItemPending: (collectionId: string) => boolean;
+  heading?: ReactNode;
   wrapped?: boolean;
   isLoading?: boolean;
 }) {
@@ -48,16 +72,22 @@ export function OrderItemSubDataGrid({
     pageIndex: 0,
     pageSize: ORDER_ITEM_PAGE_SIZE,
   });
-  const [columnOrder, setColumnOrder] = useState<string[]>([
-    "select",
-    "title",
-    "orderDate",
-    "releaseDate",
-    "count",
-    "price",
-    "status",
-    "actions",
-  ]);
+  const [columnOrder, setColumnOrder] = useLocalStorage<string[]>(
+    "orderItems:columnOrder:v1",
+    DEFAULT_COLUMN_ORDER,
+  );
+  const [columnSizing, setColumnSizing] = useLocalStorage<ColumnSizingState>(
+    "orderItems:columnSizing:v1",
+    {},
+  );
+  const [columnPinning, setColumnPinning] = useLocalStorage<ColumnPinningState>(
+    "orderItems:columnPinning:v1",
+    {},
+  );
+  const [columnVisibility, setColumnVisibility] = useLocalStorage<VisibilityState>(
+    "orderItems:columnVisibility:v1",
+    {},
+  );
 
   const offset = pagination.pageIndex * pagination.pageSize;
 
@@ -105,6 +135,9 @@ export function OrderItemSubDataGrid({
       pagination,
       rowSelection: itemSelection,
       columnOrder,
+      columnSizing,
+      columnPinning,
+      columnVisibility,
     },
     columnResizeMode: "onChange",
     onSortingChange: setSorting,
@@ -126,6 +159,9 @@ export function OrderItemSubDataGrid({
       });
     },
     onColumnOrderChange: setColumnOrder,
+    onColumnSizingChange: setColumnSizing,
+    onColumnPinningChange: setColumnPinning,
+    onColumnVisibilityChange: setColumnVisibility,
     manualPagination: true,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -133,7 +169,7 @@ export function OrderItemSubDataGrid({
     enableRowSelection: true,
   });
 
-  const content =
+  const grid =
     isError && !isLoading ? (
       <p className="animate-data-in py-3 text-center text-sm text-destructive">
         Failed to load order items: {error.message}
@@ -157,11 +193,6 @@ export function OrderItemSubDataGrid({
         }}
       >
         <div className="w-full space-y-2.5 overflow-x-auto">
-          {wrapped ? (
-            <div className="flex items-center justify-end">
-              <OrderItemSyncSheet orderId={orderId} label="Add Item" />
-            </div>
-          ) : null}
           <DataGridContainer className={wrapped ? "bg-card" : undefined}>
             <ScrollArea horizontal>
               <DataGridTable />
@@ -190,11 +221,39 @@ export function OrderItemSubDataGrid({
       </DataGrid>
     );
 
+  const content = (
+    <>
+      <div className="flex items-center justify-between gap-2">
+        {heading}
+        <div className="ml-auto flex items-center gap-2">
+          <DataGridColumnCombobox
+            table={subTable}
+            trigger={
+              <Button variant="outline" size="sm">
+                <HugeiconsIcon icon={DragDropVerticalIcon} strokeWidth={2} />
+                Columns
+              </Button>
+            }
+          />
+          {isLoading ? (
+            <Button size="sm" disabled>
+              <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
+              Add Item
+            </Button>
+          ) : (
+            <OrderItemSyncSheet orderId={orderId} label="Add Item" />
+          )}
+        </div>
+      </div>
+      {grid}
+    </>
+  );
+
   if (!wrapped) return content;
 
   return (
     <div
-      className="bg-muted/30 p-4"
+      className="space-y-2.5 bg-muted/30 p-4"
       role="presentation"
       onClick={(e) => e.stopPropagation()}
       onKeyDown={(e) => e.stopPropagation()}

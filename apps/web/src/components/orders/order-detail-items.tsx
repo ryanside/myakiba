@@ -1,11 +1,7 @@
 import type { Dispatch, ReactNode, SetStateAction } from "react";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon } from "@hugeicons/core-free-icons";
 import type { Order } from "@myakiba/contracts/orders/types";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import { OrderItemSubDataGrid } from "@/components/orders/order-item-sub-data-grid";
-import { OrderItemSyncSheet } from "@/components/orders/order-item-sync-sheet";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function OrderDetailItems({
@@ -30,18 +26,14 @@ export function OrderDetailItems({
   if (isLoading) {
     return (
       <section className="flex flex-1 flex-col gap-3" aria-busy="true">
-        <div className="flex items-center justify-between">
-          <h2 className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
-            Items (<Skeleton className="size-2 rounded-[2px]" />)
-          </h2>
-          <Button size="sm" disabled>
-            <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
-            Add Item
-          </Button>
-        </div>
         <OrderItemSubDataGrid
           isLoading
           wrapped={false}
+          heading={
+            <h2 className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+              Items (<Skeleton className="size-2 rounded-[2px]" />)
+            </h2>
+          }
           orderId={orderId}
           selectedOrderIdByCollectionId={selectedOrderIdByCollectionId}
           setSelectedOrderIdByCollectionId={setSelectedOrderIdByCollectionId}
@@ -57,14 +49,13 @@ export function OrderDetailItems({
 
   return (
     <section className="flex flex-col gap-3 flex-1">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xs font-medium text-muted-foreground">
-          Items (<span className="animate-data-in">{order.itemCount}</span>)
-        </h2>
-        <OrderItemSyncSheet orderId={orderId} label="Add Item" />
-      </div>
       <OrderItemSubDataGrid
         wrapped={false}
+        heading={
+          <h2 className="text-xs font-medium text-muted-foreground">
+            Items (<span className="animate-data-in">{order.itemCount}</span>)
+          </h2>
+        }
         orderId={orderId}
         selectedOrderIdByCollectionId={selectedOrderIdByCollectionId}
         setSelectedOrderIdByCollectionId={setSelectedOrderIdByCollectionId}
