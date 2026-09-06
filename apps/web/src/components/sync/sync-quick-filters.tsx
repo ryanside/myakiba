@@ -12,6 +12,7 @@ const SYNC_TYPE_OPTIONS: readonly FilterOption<SyncType>[] = [
   { value: "order", label: "Order" },
   { value: "order-item", label: "Order Item" },
   { value: "collection", label: "Collection" },
+  { value: "item", label: "Item Database" },
 ];
 
 const STATUS_OPTIONS: readonly FilterOption<SyncSessionStatus>[] = [

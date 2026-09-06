@@ -145,7 +145,7 @@ export default function SyncCollectionForm({
                   }}
                 >
                   {(subField) => (
-                    <div className="max-w-md">
+                    <div className="w-full">
                       <div className="flex flex-row gap-2">
                         <Input
                           value={subField.state.value}
@@ -184,7 +184,6 @@ export default function SyncCollectionForm({
                           }}
                           type="text"
                           placeholder="MyFigureCollection item link or ID"
-                          className="max-w-sm"
                         />
 
                         <Dialog>
@@ -565,7 +564,7 @@ export default function SyncCollectionForm({
               ))}
               <Button
                 variant="outline"
-                className="max-w-md"
+                className="w-full"
                 disabled={field.state.value.length === 10}
                 onClick={(e) => {
                   e.preventDefault();

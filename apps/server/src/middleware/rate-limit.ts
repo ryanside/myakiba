@@ -32,6 +32,12 @@ interface RateLimitResult {
 }
 
 const rateLimitConfigs = {
+  item: {
+    maxRequests: 30,
+    windowSeconds: 3600,
+    keyPrefix: "rl:item",
+    strategy: "userId",
+  },
   csv: {
     maxRequests: 7,
     windowSeconds: 3600,

@@ -27,14 +27,15 @@ export function ItemNotFound({
         <EmptyHeader>
           <EmptyTitle>Item not in the Item Database yet</EmptyTitle>
           <EmptyDescription>
-            MyFigureCollection item #{externalId} isn&apos;t in myakiba yet. Add it to your
-            collection or a new order.
+            MyFigureCollection item #{externalId} isn&apos;t in myakiba yet. Add it to the item
+            database.
           </EmptyDescription>
         </EmptyHeader>
-        <EmptyContent>
+        <EmptyContent className="sm:max-w-2xl">
           <ItemSyncActions
             onSyncCollection={() => onSyncTypeChange("collection")}
             onSyncOrder={() => onSyncTypeChange("order")}
+            onSyncItems={() => onSyncTypeChange("item")}
           />
           <a
             href={`https://myfigurecollection.net/item/${externalId}`}

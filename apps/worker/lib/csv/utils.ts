@@ -196,6 +196,7 @@ export async function finalizeCsvSync({
         successCount,
         failCount,
         totalRowCount,
+        scrapedCount: successfulResults.length,
       });
       await tx
         .update(syncSession)
@@ -220,6 +221,7 @@ export async function finalizeCsvSync({
       successCount,
       failCount,
       totalRowCount,
+      scrapedCount: successfulResults.length,
       error: persistenceError,
     });
 
@@ -237,7 +239,6 @@ export async function finalizeCsvSync({
       sessionStatus,
       successCount,
       failCount,
-      forceDurableUpdate: true,
       terminalState: sessionStatusToTerminalState(sessionStatus),
       error: {
         code: "persistence_failed",
@@ -270,6 +271,7 @@ export async function finalizeCsvSync({
     successCount,
     failCount,
     totalRowCount,
+    scrapedCount: successfulResults.length,
   });
   state.phase = sessionStatusToPhase(sessionStatus);
   state.statusMessage = statusMessage;
@@ -280,7 +282,10 @@ export async function finalizeCsvSync({
     sessionStatus,
     skipDurableUpdate: true,
     terminalState: sessionStatusToTerminalState(sessionStatus),
-    error: null,
+    error:
+      sessionStatus === "failed" && successfulResults.length === 0
+        ? { code: "scrape_failed", message: statusMessage }
+        : null,
   });
 
   return {

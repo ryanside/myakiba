@@ -9,6 +9,7 @@ import {
 import SyncCsvForm from "@/components/sync/sync-csv-form";
 import SyncOrderForm from "@/components/sync/sync-order-form";
 import SyncCollectionForm from "@/components/sync/sync-collection-form";
+import { SyncItemsForm } from "@/components/sync/sync-items-form";
 import { useSyncMutations } from "@/hooks/use-sync-mutations";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { SYNC_OPTION_META } from "@/lib/sync";
@@ -30,10 +31,14 @@ export function SyncActionSheet({
   const queryClient = useQueryClient();
   const { currency: userCurrency } = useUserPreferences();
 
-  const { handleSyncCsvSubmit, handleSyncOrderSubmit, handleSyncCollectionSubmit } =
-    useSyncMutations(queryClient, () => {
-      onSyncTypeChange(null);
-    });
+  const {
+    handleSyncCsvSubmit,
+    handleSyncOrderSubmit,
+    handleSyncCollectionSubmit,
+    handleSyncItemsSubmit,
+  } = useSyncMutations(queryClient, () => {
+    onSyncTypeChange(null);
+  });
 
   return (
     <Sheet
@@ -52,6 +57,12 @@ export function SyncActionSheet({
               <SheetDescription>{SYNC_OPTION_META[syncType].description}</SheetDescription>
             </SheetHeader>
             <div className="px-4 pb-4">
+              {syncType === "item" ? (
+                <SyncItemsForm
+                  handleSyncItemsSubmit={handleSyncItemsSubmit}
+                  initialItemExternalId={initialItemExternalId}
+                />
+              ) : null}
               {syncType === "csv" ? (
                 <SyncCsvForm handleSyncCsvSubmit={handleSyncCsvSubmit} />
               ) : null}

@@ -8,6 +8,7 @@ import type { Category, Currency, DateFormat } from "@myakiba/contracts/shared/t
 import type { CSSProperties, ReactNode } from "react";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { DebouncedInput } from "@/components/debounced-input";
+import { SyncSheetButton } from "@/components/sync/sync-sheet-button";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ViewToggle } from "@/components/ui/view-toggle";
@@ -256,24 +257,25 @@ export function ItemDatabase(): React.JSX.Element {
   return (
     <>
       <div className="flex w-full flex-wrap items-center gap-2">
-        <DebouncedInput
-          value={search.query ?? ""}
-          onChange={(value) =>
-            navigate({
-              to: ".",
-              search: (previous) => ({
-                ...previous,
-                query: value.toString() || undefined,
-                page: 1,
-              }),
-            })
-          }
-          placeholder="Search by title, MFC ID, or entry"
-          className="max-w-xs"
-        />
-        <div className="ml-auto">
-          <ViewToggle modes={["grid", "list"]} value={viewMode} onValueChange={setViewMode} />
+        <div className="flex flex-1 flex-wrap items-center gap-2">
+          <DebouncedInput
+            value={search.query ?? ""}
+            onChange={(value) =>
+              navigate({
+                to: ".",
+                search: (previous) => ({
+                  ...previous,
+                  query: value.toString() || undefined,
+                  page: 1,
+                }),
+              })
+            }
+            placeholder="Search by title, MFC ID, or entry"
+            className="max-w-xs"
+          />
         </div>
+        <ViewToggle modes={["grid", "list"]} value={viewMode} onValueChange={setViewMode} />
+        <SyncSheetButton syncType="item" label="Add" className="ml-auto" />
       </div>
 
       {results}

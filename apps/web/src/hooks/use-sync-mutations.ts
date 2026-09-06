@@ -11,12 +11,14 @@ import type {
 } from "@myakiba/contracts/sync/types";
 import { SYNC_OPTION_META, transformCSVData } from "@/lib/sync";
 import { invalidateSyncResultQueries } from "@/lib/mutation-query-invalidation";
-import { sendCollection, sendItems, sendOrder, sendOrderItems } from "@/queries/sync";
+import { sendCollection, sendItemSync, sendItems, sendOrder, sendOrderItems } from "@/queries/sync";
 import type { SyncResponse } from "@/queries/sync";
 import type { SyncType } from "@myakiba/contracts/shared/types";
 import { toast } from "@/components/ui/toast";
+import type { ItemSyncInput } from "@myakiba/contracts/sync/schema";
 
 export type UseSyncMutationsReturn = {
+  readonly handleSyncItemsSubmit: (values: ItemSyncInput) => Promise<SyncResponse>;
   readonly handleSyncCsvSubmit: (value: File | undefined) => Promise<void>;
   readonly handleSyncOrderSubmit: (values: SyncOrder) => Promise<void>;
   readonly handleSyncOrderItemSubmit: (values: SyncOrderItems) => Promise<void>;
@@ -56,6 +58,11 @@ export function useSyncMutations(
         description = "These items are already in your collection or orders.";
       }
 
+      if (syncType === "item" && data.isFinished) {
+        title = "No new items to add";
+        description = data.status;
+      }
+
       const toastId = toast.add({
         type: data.isFinished ? "success" : "info",
         title,
@@ -77,6 +84,25 @@ export function useSyncMutations(
     },
     [navigate, onComplete, queryClient],
   );
+
+  const itemMutation = useMutation({
+    mutationFn: sendItemSync,
+    onSuccess: (data) => handleSuccess(data, "item"),
+    onError: (error: Error) => {
+      const toastId = toast.add({
+        type: "error",
+        title: SYNC_OPTION_META["item"].failureTitle,
+        description: error.message.trim() || "Failed to submit item database items.",
+        actionProps: {
+          children: "View import history",
+          onClick() {
+            toast.close(toastId);
+            void navigate({ to: "/sync" });
+          },
+        },
+      });
+    },
+  });
 
   const csvMutation = useMutation({
     mutationFn: (userItems: UserItem[]) => sendItems(userItems),
@@ -200,12 +226,14 @@ export function useSyncMutations(
   );
 
   const isSyncing =
+    itemMutation.isPending ||
     csvMutation.isPending ||
     orderMutation.isPending ||
     orderItemMutation.isPending ||
     collectionMutation.isPending;
 
   return {
+    handleSyncItemsSubmit: itemMutation.mutateAsync,
     handleSyncCsvSubmit,
     handleSyncOrderSubmit,
     handleSyncOrderItemSubmit,

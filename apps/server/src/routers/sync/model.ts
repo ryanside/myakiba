@@ -8,6 +8,7 @@ import {
 } from "@myakiba/contracts/sync/schema";
 
 export {
+  itemSyncSchema,
   internalCsvItemSchema,
   syncTerminalStateSchema,
   syncJobStatusSchema,

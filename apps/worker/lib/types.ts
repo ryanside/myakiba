@@ -14,7 +14,7 @@ import type {
   SyncTerminalState,
   QueuedCollectionItem,
 } from "@myakiba/contracts/sync/schema";
-import type { SyncSessionStatus, Category } from "@myakiba/contracts/shared/types";
+import type { SyncSessionStatus, SyncType, Category } from "@myakiba/contracts/shared/types";
 
 export type ScrapeFailure = {
   readonly id: number;
@@ -102,7 +102,6 @@ export type PublishJobStatusParams = {
   readonly failCount?: number;
   readonly orderId?: string;
   readonly skipDurableUpdate?: boolean;
-  readonly forceDurableUpdate?: boolean;
 };
 
 export type BatchUpdateSyncSessionItemStatusesParams = {
@@ -115,12 +114,6 @@ export type MarkPersistFailedSyncSessionItemStatusesParams = {
   readonly syncSessionId: string;
   readonly scrapedItemIds: readonly number[];
   readonly errorReason: string;
-};
-
-export type UpdateSyncSessionCountsParams = {
-  readonly syncSessionId: string;
-  readonly successCount: number;
-  readonly failCount: number;
 };
 
 export type ScrapeImageParams = {
@@ -221,8 +214,8 @@ export type ProcessSyncJobContext = {
 };
 
 export type ProcessSyncJobParams = {
+  readonly type: SyncType;
   readonly itemIds: readonly number[];
-  readonly scrapeRowCount: number;
   readonly existingCount: number;
   readonly context: ProcessSyncJobContext;
   readonly finalize: (
@@ -242,13 +235,13 @@ export type ProcessSyncJobResult = {
   readonly failCount: number;
   readonly sessionStatus: SyncSessionStatus;
   readonly statusMessage: string;
-  readonly persistence: FinalizePersistenceSummary | null;
+  readonly persistence: FinalizePersistenceSummary;
 };
 
 export type ExecuteSyncJobParams = {
   readonly job: FullJobData;
   readonly queueName: string;
-  readonly type: string;
+  readonly type: SyncType;
   readonly syncSessionId: string;
   readonly userId: string;
   readonly itemIds: readonly number[];

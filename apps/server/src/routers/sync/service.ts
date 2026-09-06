@@ -121,11 +121,14 @@ class SyncService {
     syncSessionId: string,
     statusMessage: string,
   ): Promise<void> {
-    await this.updateSyncSession(syncSessionId, {
-      status: "failed",
-      statusMessage,
-      completedAt: new Date(),
-    });
+    const [failedSession] = await db
+      .update(syncSession)
+      .set({ status: "failed", statusMessage, completedAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(syncSession.id, syncSessionId), eq(syncSession.status, "pending")))
+      .returning({ id: syncSession.id });
+    if (failedSession) {
+      await redis.del(getJobStatusSnapshotKey(syncSessionId)).catch(() => {});
+    }
   }
 
   private async writeQueuedJobStatus(jobId: string, statusMessage: string): Promise<void> {
@@ -361,8 +364,13 @@ class SyncService {
     userId: string,
     syncSessionId: string,
   ) {
-    let queuedJobId: string | null = null;
     try {
+      const updated = await this.updateSyncSession(syncSessionId, {
+        jobId: syncSessionId,
+      });
+      if (!updated) throw new Error("SYNC_SESSION_NOT_FOUND");
+      await this.writeQueuedJobStatusBestEffort(syncSessionId, syncSessionId);
+
       const job = await syncQueue.add(
         "sync-job",
         {
@@ -385,25 +393,10 @@ class SyncService {
         throw new Error("FAILED_TO_QUEUE_CSV_SYNC_JOB");
       }
 
-      queuedJobId = job.id;
-      const updated = await this.updateSyncSession(syncSessionId, {
-        jobId: job.id,
-      });
-      if (!updated) {
-        await job.remove().catch(() => {});
-        throw new Error("SYNC_SESSION_NOT_FOUND");
-      }
-
-      await this.writeQueuedJobStatusBestEffort(job.id, syncSessionId);
-
       return job.id;
     } catch (error) {
       await this.markSyncSessionAsFailed(syncSessionId, SYNC_STATUS_MESSAGES.failedBeforeStart);
 
-      if (queuedJobId) {
-        const queuedJob = await syncQueue.getJob(queuedJobId);
-        await queuedJob?.remove().catch(() => {});
-      }
       throw error;
     }
   }
@@ -421,8 +414,13 @@ class SyncService {
   }) {
     // `order` and `order-item` jobs share the same worker payload shape. The worker decides
     // whether to create or append based on `type`, so this helper keeps the queue contract in sync.
-    let queuedJobId: string | null = null;
     try {
+      const updated = await this.updateSyncSession(params.syncSessionId, {
+        jobId: params.syncSessionId,
+      });
+      if (!updated) throw new Error("SYNC_SESSION_NOT_FOUND");
+      await this.writeQueuedJobStatusBestEffort(params.syncSessionId, params.syncSessionId);
+
       const job = await syncQueue.add(
         "sync-job",
         {
@@ -447,17 +445,6 @@ class SyncService {
         throw new Error(params.queueErrorCode);
       }
 
-      queuedJobId = job.id;
-      const updated = await this.updateSyncSession(params.syncSessionId, {
-        jobId: job.id,
-      });
-      if (!updated) {
-        await job.remove().catch(() => {});
-        throw new Error("SYNC_SESSION_NOT_FOUND");
-      }
-
-      await this.writeQueuedJobStatusBestEffort(job.id, params.syncSessionId);
-
       return job.id;
     } catch (error) {
       await this.markSyncSessionAsFailed(
@@ -465,10 +452,6 @@ class SyncService {
         SYNC_STATUS_MESSAGES.failedBeforeStart,
       );
 
-      if (queuedJobId) {
-        const queuedJob = await syncQueue.getJob(queuedJobId);
-        await queuedJob?.remove().catch(() => {});
-      }
       throw error;
     }
   }
@@ -479,8 +462,13 @@ class SyncService {
     itemsToInsert: QueuedCollectionItem[],
     syncSessionId: string,
   ) {
-    let queuedJobId: string | null = null;
     try {
+      const updated = await this.updateSyncSession(syncSessionId, {
+        jobId: syncSessionId,
+      });
+      if (!updated) throw new Error("SYNC_SESSION_NOT_FOUND");
+      await this.writeQueuedJobStatusBestEffort(syncSessionId, syncSessionId);
+
       const job = await syncQueue.add(
         "sync-job",
         {
@@ -504,24 +492,77 @@ class SyncService {
         throw new Error("FAILED_TO_QUEUE_COLLECTION_SYNC_JOB");
       }
 
-      queuedJobId = job.id;
-      const updated = await this.updateSyncSession(syncSessionId, {
-        jobId: job.id,
-      });
-      if (!updated) {
-        await job.remove().catch(() => {});
-        throw new Error("SYNC_SESSION_NOT_FOUND");
-      }
-
-      await this.writeQueuedJobStatusBestEffort(job.id, syncSessionId);
-
       return job.id;
     } catch (error) {
       await this.markSyncSessionAsFailed(syncSessionId, SYNC_STATUS_MESSAGES.failedBeforeStart);
 
-      if (queuedJobId) {
-        const queuedJob = await syncQueue.getJob(queuedJobId);
-        await queuedJob?.remove().catch(() => {});
+      throw error;
+    }
+  }
+
+  async queueItemSyncJob(
+    userId: string,
+    itemExternalIds: number[],
+    existingCount: number,
+    syncSessionId: string,
+  ) {
+    try {
+      // Finish startup bookkeeping before the worker can start.
+      const updated = await this.updateSyncSession(syncSessionId, { jobId: syncSessionId });
+      if (!updated) throw new Error("SYNC_SESSION_NOT_FOUND");
+      await this.writeQueuedJobStatusBestEffort(syncSessionId, syncSessionId);
+      await syncQueue.add(
+        "sync-job",
+        {
+          type: "item",
+          payloadVersion: 2,
+          userId,
+          syncSessionId,
+          itemExternalIds,
+          existingCount,
+        },
+        {
+          removeOnComplete: true,
+          removeOnFail: true,
+          jobId: syncSessionId,
+        },
+      );
+      return syncSessionId;
+    } catch (error) {
+      const failCount = itemExternalIds.length;
+      const markedFailed = await db.transaction(async (tx) => {
+        const [failedSession] = await tx
+          .update(syncSession)
+          .set({
+            status: existingCount > 0 ? "partial" : "failed",
+            statusMessage: SYNC_STATUS_MESSAGES.failedBeforeStart,
+            failCount,
+            completedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(and(eq(syncSession.id, syncSessionId), eq(syncSession.status, "pending")))
+          .returning({ id: syncSession.id });
+        if (!failedSession) return false;
+
+        await tx
+          .update(syncSessionItem)
+          .set({
+            status: "failed",
+            errorReason: SYNC_STATUS_MESSAGES.failedBeforeStart,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(syncSessionItem.syncSessionId, syncSessionId),
+              eq(syncSessionItem.status, "pending"),
+            ),
+          );
+        return true;
+      });
+      if (markedFailed) {
+        const job = await syncQueue.getJob(syncSessionId);
+        await job?.remove().catch(() => {});
+        await redis.del(getJobStatusSnapshotKey(syncSessionId)).catch(() => {});
       }
       throw error;
     }
@@ -611,6 +652,27 @@ class SyncService {
   ): Promise<string> {
     const sessionId = createId();
     const existingIds = options?.existingItemExternalIds ?? [];
+    const existingIdSet = new Set(existingIds);
+    // Ordered row IDs preserve submitted Item order in history's createdAt/id sort.
+    const rows =
+      syncType === "item"
+        ? itemExternalIds.map((externalId, index) => ({
+            id: `${sessionId}-${String(index).padStart(2, "0")}`,
+            syncSessionId: sessionId,
+            itemExternalId: externalId,
+            status: existingIdSet.has(externalId) ? ("scraped" as const) : ("pending" as const),
+          }))
+        : [
+            ...itemExternalIds.map((externalId) => ({
+              syncSessionId: sessionId,
+              itemExternalId: externalId,
+            })),
+            ...existingIds.map((externalId) => ({
+              syncSessionId: sessionId,
+              itemExternalId: externalId,
+              status: "scraped" as const,
+            })),
+          ];
 
     await db.transaction(async (tx) => {
       await tx.insert(syncSession).values({
@@ -618,24 +680,12 @@ class SyncService {
         userId,
         syncType,
         orderId: options?.orderId ?? null,
-        totalItems: itemExternalIds.length + existingIds.length,
+        totalItems: rows.length,
         successCount: existingIds.length,
       });
 
-      const pendingRows = itemExternalIds.map((externalId) => ({
-        syncSessionId: sessionId,
-        itemExternalId: externalId,
-      }));
-
-      const scrapedRows = existingIds.map((externalId) => ({
-        syncSessionId: sessionId,
-        itemExternalId: externalId,
-        status: "scraped" as const,
-      }));
-
-      const allRows = [...pendingRows, ...scrapedRows];
-      if (allRows.length > 0) {
-        await tx.insert(syncSessionItem).values(allRows);
+      if (rows.length > 0) {
+        await tx.insert(syncSessionItem).values(rows);
       }
     });
 
