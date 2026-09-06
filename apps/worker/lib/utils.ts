@@ -19,6 +19,7 @@ type ResolveTerminalStateParams = {
   readonly successCount: number;
   readonly failCount: number;
   readonly totalRowCount: number;
+  readonly scrapedCount: number;
   readonly error?: Error | null;
 };
 
@@ -97,7 +98,7 @@ export const createJobStatusState = ({
  * should set `state.phase` and `state.statusMessage` directly.
  *
  * @example
- * resolveTerminalState({ successCount: 10, failCount: 0, totalRowCount: 10 })
+ * resolveTerminalState({ successCount: 10, failCount: 0, totalRowCount: 10, scrapedCount: 10 })
  * // { sessionStatus: "completed", statusMessage: "Added 10/10 items" }
  *
  * @example
@@ -105,6 +106,7 @@ export const createJobStatusState = ({
  *   successCount: 3,
  *   failCount: 2,
  *   totalRowCount: 5,
+ *   scrapedCount: 2,
  *   error: new Error("duplicate key value violates unique constraint"),
  * })
  * // {
@@ -117,6 +119,7 @@ export const resolveTerminalState = ({
   successCount,
   failCount,
   totalRowCount,
+  scrapedCount,
   error = null,
 }: ResolveTerminalStateParams): ResolvedTerminalState => {
   const getSessionStatus = (): "completed" | "partial" | "failed" => {
@@ -147,7 +150,10 @@ export const resolveTerminalState = ({
     case "failed":
       return {
         sessionStatus,
-        statusMessage: SYNC_STATUS_MESSAGES.failedPersist,
+        statusMessage:
+          scrapedCount === 0
+            ? SYNC_STATUS_MESSAGES.failedScrape
+            : SYNC_STATUS_MESSAGES.failedPersist,
       };
   }
 };

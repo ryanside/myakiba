@@ -116,6 +116,7 @@ export async function finalizeItemSync({
       successCount,
       failCount,
       totalRowCount: existingCount + itemExternalIds.length,
+      scrapedCount: successfulResults.length,
     });
     let statusMessage = terminal.statusMessage;
     if (terminal.sessionStatus === "failed" && persistenceFailedIds.size === 0) {
@@ -163,6 +164,8 @@ export async function finalizeItemSync({
       error = { code: "unknown", message: result.statusMessage };
     } else if (persistenceFailedIds.size > 0) {
       error = { code: "persistence_failed", message: SYNC_STATUS_MESSAGES.failedPersist };
+    } else if (result.sessionStatus === "failed") {
+      error = { code: "scrape_failed", message: result.statusMessage };
     }
   }
   await publishJobStatus({
