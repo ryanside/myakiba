@@ -57,6 +57,18 @@ type ImportPlan = {
   report: DataTransferImportReport;
 };
 
+type DataTransferJobContext = WorkerJobContext & {
+  readonly dataTransfer: {
+    readonly importId: string | null;
+    readonly exportId: string | null;
+    readonly orders: number | null;
+    readonly collectionItems: number | null;
+    readonly importedOrders: number | null;
+    readonly importedCollectionItems: number | null;
+    readonly report: DataTransferImportReport | null;
+  };
+};
+
 function chunk<T>(values: readonly T[], size: number): T[][] {
   const chunks: T[][] = [];
   for (let index = 0; index < values.length; index += size) {
@@ -374,24 +386,34 @@ export async function processDataTransferImportJob(
 
   const { userId, jobId } = payload;
 
-  const jobLog = createLogger<WorkerJobContext>({
+  const jobLog = createLogger<DataTransferJobContext>({
     ...createDefaultJobContext(),
     action: "data-transfer.import",
     queue: { name: DATA_TRANSFER_IMPORT_QUEUE_NAME, jobName: job.name },
     job: {
       id: jobId,
       attemptsMade: job.attemptsMade,
+      // BullMQ attempts for this job; manual retries receive a new job ID.
       attemptNumber: job.attemptsMade + 1,
     },
     sync: {
       type: "data-transfer",
-      sessionId: jobId,
+      sessionId: null,
       jobId,
       orderId: null,
       sessionStatus: "queued",
       statusMessage: null,
     },
     user: { id: userId },
+    dataTransfer: {
+      importId: null,
+      exportId: null,
+      orders: null,
+      collectionItems: null,
+      importedOrders: null,
+      importedCollectionItems: null,
+      report: null,
+    },
   });
   const jobStatus = createJobStatusState({
     jobId,
@@ -437,6 +459,10 @@ export async function processDataTransferImportJob(
     }
 
     claimedImport = true;
+    jobLog.set({
+      sync: { sessionId: claimed.importId, sessionStatus: "running" },
+      dataTransfer: { importId: claimed.importId },
+    });
     const parsedArchive = dataTransferArchiveV1Schema.safeParse(claimed.archive);
     if (!parsedArchive.success) {
       throw new Error("DATA_TRANSFER_RETAINED_ARCHIVE_INVALID", {
@@ -444,8 +470,19 @@ export async function processDataTransferImportJob(
       });
     }
     const archive = parsedArchive.data;
+    const externalIds = [...new Set(archive.collectionItems.map((row) => row.item.externalId))];
 
-    jobLog.set({ sync: { sessionStatus: "running" } });
+    jobLog.set({
+      dataTransfer: {
+        exportId: archive.exportId,
+        orders: archive.orders.length,
+        collectionItems: archive.collectionItems.length,
+      },
+      items: {
+        requested: archive.collectionItems.length,
+        deduped: externalIds.length,
+      },
+    });
     jobStatus.phase = "scraping";
     jobStatus.statusMessage = "Checking items already in myakiba…";
     await publishJobStatus({
@@ -455,7 +492,6 @@ export async function processDataTransferImportJob(
       error: null,
     });
 
-    const externalIds = [...new Set(archive.collectionItems.map((row) => row.item.externalId))];
     const existingItemsByExternalId = await loadExistingItems(externalIds);
     const rowsToScrape = findRowsToScrape({
       rows: archive.collectionItems,
@@ -463,6 +499,11 @@ export async function processDataTransferImportJob(
     });
     const scrapeItemIds = [...new Set(rowsToScrape.map((row) => row.item.externalId))];
     const existingItemCount = externalIds.length - scrapeItemIds.length;
+    const scrapeStrategy = scrapeItemIds.length <= 5 ? "standard" : "rate_limited";
+    jobLog.set({
+      items: { existing: archive.collectionItems.length - rowsToScrape.length },
+      scrape: { strategy: scrapeStrategy, maxRetries: 3, baseDelayMs: 1000 },
+    });
     jobStatus.progress =
       externalIds.length > 0
         ? {
@@ -490,7 +531,7 @@ export async function processDataTransferImportJob(
     });
 
     const { successful: successfulItems, failures } = await (
-      scrapeItemIds.length <= 5 ? scrapeItems : scrapedItemsWithRateLimit
+      scrapeStrategy === "standard" ? scrapeItems : scrapedItemsWithRateLimit
     )({
       itemIds: scrapeItemIds,
       redis,
@@ -499,6 +540,19 @@ export async function processDataTransferImportJob(
       maxRetries: 3,
       baseDelayMs: 1000,
       progressStatusMessage: SCRAPING_ITEM_DATA_MESSAGE,
+    });
+    const failedExternalIds = new Set(failures.map(({ id }) => id));
+    const failedCollectionItems = rowsToScrape.filter((row) =>
+      failedExternalIds.has(row.item.externalId),
+    ).length;
+    jobLog.set({
+      items: {
+        scraped: successfulItems.length,
+        failed: failedCollectionItems,
+        failCount: failedCollectionItems,
+        failedIds: [...failedExternalIds],
+      },
+      scrapeErrors: failures,
     });
 
     for (const batch of chunk(successfulItems, 25)) {
@@ -515,6 +569,14 @@ export async function processDataTransferImportJob(
       scrapeFailureReasons: new Map(
         failures.map(({ id, reason }) => [id, `Scraping failed after max retries: ${reason}`]),
       ),
+    });
+    jobLog.set({
+      dataTransfer: { report: plan.report },
+      items: {
+        failed: plan.failedRows.length,
+        failCount: plan.failedRows.length,
+        failedIds: [...new Set(plan.failedRows.map((row) => row.externalId))],
+      },
     });
 
     const [transitioned] = await db
@@ -553,22 +615,19 @@ export async function processDataTransferImportJob(
     jobLog.set({
       outcome,
       sync: { sessionStatus: result.status, statusMessage: result.error },
-      items: {
-        requested: archive.collectionItems.length,
-        existing: archive.collectionItems.length - rowsToScrape.length,
-        deduped: externalIds.length,
-        scraped: successfulItems.length,
-        failed: plan.failedRows.length,
-        successCount: plan.collectionRows.length,
-        failCount: plan.failedRows.length,
-        failedIds: [...new Set(plan.failedRows.map((row) => row.externalId))],
+      dataTransfer: {
+        importedOrders: result.importedOrders,
+        importedCollectionItems: result.importedCollectionItems,
       },
-      processedAt: new Date().toISOString(),
+      items: { successCount: plan.collectionRows.length },
     });
     return result;
   } catch (error) {
     if (error instanceof Error && error.message === "DATA_TRANSFER_IMPORT_NO_LONGER_CURRENT") {
-      jobLog.set({ outcome: "skipped" });
+      jobLog.set({
+        outcome: "skipped",
+        sync: { sessionStatus: "failed", statusMessage: SUPERSEDED_IMPORT_ERROR },
+      });
       return {
         status: "failed",
         importedOrders: 0,
@@ -578,6 +637,12 @@ export async function processDataTransferImportJob(
         error: SUPERSEDED_IMPORT_ERROR,
       };
     }
+
+    jobLog.set({
+      outcome: "error",
+      sync: { sessionStatus: "failed", statusMessage: UNEXPECTED_IMPORT_ERROR },
+    });
+    jobLog.error(error instanceof Error ? error : new Error(String(error)));
 
     if (claimedImport) {
       const [failed] = await db
@@ -598,7 +663,10 @@ export async function processDataTransferImportJob(
         .returning({ jobId: dataTransferImport.jobId });
 
       if (!failed) {
-        jobLog.set({ outcome: "skipped" });
+        jobLog.set({
+          outcome: "skipped",
+          sync: { sessionStatus: "failed", statusMessage: SUPERSEDED_IMPORT_ERROR },
+        });
         return {
           status: "failed",
           importedOrders: 0,
@@ -610,10 +678,9 @@ export async function processDataTransferImportJob(
       }
     }
 
-    jobLog.set({ outcome: "error", sync: { sessionStatus: "failed" } });
-    jobLog.error(error instanceof Error ? error : new Error(String(error)));
     throw error;
   } finally {
+    jobLog.set({ processedAt: new Date().toISOString() });
     jobLog.emit();
   }
 }
