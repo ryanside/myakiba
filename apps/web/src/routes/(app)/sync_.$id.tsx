@@ -109,6 +109,10 @@ function RouteComponent(): ReactNode {
         <>
           <SyncSessionHero session={session} isLoading={isPending} />
 
+          <p className="text-sm text-muted-foreground">
+            Import history is automatically deleted after 30 days.
+          </p>
+
           <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
             {[
               { label: "Total Items", value: session?.totalItems },
