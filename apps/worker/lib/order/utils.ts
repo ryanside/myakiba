@@ -3,22 +3,15 @@ import type {
   FinalizePersistenceSummary,
   FinalizeSyncResult,
 } from "../types";
-import type { UpdatedSyncOrderItem } from "@myakiba/contracts/sync/schema";
-import { tryCatch } from "@myakiba/utils/result";
 import { eq } from "drizzle-orm";
-import { db } from "@myakiba/db/client";
 import { assembleScrapedData } from "../assemble-scraped-data";
 import { persistScrapedItemData } from "../persist-scraped-item-data";
-import {
-  markPersistFailedSyncSessionItemStatuses,
-  publishJobStatus,
-  resolveTerminalState,
-} from "../utils";
-import { sessionStatusToPhase, sessionStatusToTerminalState } from "@myakiba/contracts/sync/schema";
-import { order, collection, syncSession } from "@myakiba/db/schema/figure";
+import { finalizeSync } from "../utils";
+import { order, collection } from "@myakiba/db/schema/figure";
 
 export async function finalizeOrderSync({
   successfulResults,
+  failures,
   log,
   redis,
   state,
@@ -37,7 +30,6 @@ export async function finalizeOrderSync({
   );
   const scrapeRowCount = itemsToScrape.length;
   const totalRowCount = existingCount + scrapeRowCount;
-  let scrapedPersistedRowCount = 0;
 
   let latestReleaseDate: string | null = null;
   for (const releaseInfo of latestReleaseIdByExternalId.values()) {
@@ -47,17 +39,13 @@ export async function finalizeOrderSync({
   }
 
   const shouldUpdateReleaseDate =
-    latestReleaseDate !== undefined &&
-    latestReleaseDate !== null &&
-    (!details.releaseDate || latestReleaseDate > details.releaseDate);
+    latestReleaseDate !== null && (!details.releaseDate || latestReleaseDate > details.releaseDate);
 
   if (shouldUpdateReleaseDate) {
     details.releaseDate = latestReleaseDate;
   }
 
-  // `create` mirrors the original order sync behavior and persists the order header. `append`
-  // only adds collection rows to an existing order, so we avoid rewriting the full order record
-  // unless scraped items reveal a newer release date worth preserving.
+  // Adding items can move the release date later. Keep the other saved order details.
   const shouldPersistOrderRecord = syncMode === "create";
   const shouldUpdateExistingOrder = syncMode === "append" && shouldUpdateReleaseDate;
 
@@ -79,35 +67,33 @@ export async function finalizeOrderSync({
     persistence,
   });
 
-  const { error } = await tryCatch(
-    db.transaction(async (tx) => {
+  return finalizeSync({
+    syncSessionId,
+    failures,
+    totalRowCount,
+    scrapedCount: successfulResults.length,
+    persistence,
+    log,
+    redis,
+    state,
+    persist: async (tx) => {
       const { externalIdToInternalId, latestReleaseIdByInternalId } = await persistScrapedItemData(
         tx,
         assembledData,
       );
 
-      successfulOrderItems.forEach((orderItem) => {
-        const internalItemId = externalIdToInternalId.get(orderItem.itemExternalId);
-        if (!internalItemId) {
-          return;
-        }
-        orderItem.itemId = internalItemId;
-        orderItem.releaseId = latestReleaseIdByInternalId.get(internalItemId)?.releaseId ?? "";
-      });
+      const scrapedOrderItems = successfulOrderItems.map((orderItem) => {
+        const itemId = externalIdToInternalId.get(orderItem.itemExternalId);
+        if (!itemId) throw new Error(`Missing persisted Item ${orderItem.itemExternalId}`);
 
-      const scrapedOrderItems = successfulOrderItems
-        .filter(
-          (orderItem): orderItem is UpdatedSyncOrderItem & { itemId: string } =>
-            orderItem.itemId !== null,
-        )
-        .map((orderItem) => ({
+        return {
           id: orderItem.collectionId,
           userId: orderItem.userId,
-          itemId: orderItem.itemId,
+          itemId,
           orderId: orderItem.orderId,
           status: orderItem.status,
           count: orderItem.count,
-          releaseId: orderItem.releaseId && orderItem.releaseId !== "" ? orderItem.releaseId : null,
+          releaseId: latestReleaseIdByInternalId.get(itemId)?.releaseId ?? null,
           score: "0.0",
           price: orderItem.price,
           shop: details.shop,
@@ -119,35 +105,11 @@ export async function finalizeOrderSync({
           tags: [],
           condition: orderItem.condition,
           notes: "",
-        }));
-
-      scrapedPersistedRowCount = scrapedOrderItems.length;
+        };
+      });
 
       if (shouldPersistOrderRecord) {
-        await tx
-          .insert(order)
-          .values(details)
-          .onConflictDoUpdate({
-            target: [order.id],
-            set: {
-              title: details.title,
-              shop: details.shop,
-              orderDate: details.orderDate,
-              releaseDate: details.releaseDate,
-              paymentDate: details.paymentDate,
-              shippingDate: details.shippingDate,
-              collectionDate: details.collectionDate,
-              shippingMethod: details.shippingMethod,
-              status: details.status,
-              shippingFee: details.shippingFee,
-              taxes: details.taxes,
-              duties: details.duties,
-              tariffs: details.tariffs,
-              miscFees: details.miscFees,
-              notes: details.notes,
-              updatedAt: new Date(),
-            },
-          });
+        await tx.insert(order).values(details);
       } else if (shouldUpdateExistingOrder) {
         await tx
           .update(order)
@@ -160,119 +122,14 @@ export async function finalizeOrderSync({
 
       const collectionRows = [...itemsToInsert, ...scrapedOrderItems];
       if (collectionRows.length > 0) {
-        await tx
-          .insert(collection)
-          .values(collectionRows)
-          .onConflictDoNothing({ target: collection.id });
+        await tx.insert(collection).values(collectionRows);
       }
 
-      const successCount = existingCount + scrapedPersistedRowCount;
-      const failCount = scrapeRowCount - scrapedPersistedRowCount;
-      const { sessionStatus, statusMessage } = resolveTerminalState({
-        successCount,
-        failCount,
-        totalRowCount,
-        scrapedCount: successfulResults.length,
-      });
-      await tx
-        .update(syncSession)
-        .set({
-          orderId: details.id,
-          status: sessionStatus,
-          statusMessage,
-          successCount,
-          failCount,
-          completedAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(eq(syncSession.id, syncSessionId));
-    }),
-  );
-
-  if (error) {
-    const scrapedItemIds = successfulResults.map((result) => result.id);
-    const successCount = itemsToInsert.length > 0 ? 0 : existingCount;
-    const failCount = itemsToInsert.length > 0 ? totalRowCount : scrapeRowCount;
-    const persistenceError = error instanceof Error ? error : null;
-    const { sessionStatus, statusMessage } = resolveTerminalState({
-      successCount,
-      failCount,
-      totalRowCount,
-      scrapedCount: successfulResults.length,
-      error: persistenceError,
-    });
-
-    await markPersistFailedSyncSessionItemStatuses({
-      syncSessionId,
-      scrapedItemIds,
-      errorReason: "Persistence failed while saving scraped items",
-    });
-    state.phase = sessionStatusToPhase(sessionStatus);
-    state.statusMessage = statusMessage;
-    await publishJobStatus({
-      redis,
-      state,
-      syncSessionId,
-      sessionStatus,
-      successCount,
-      failCount,
-      orderId: details.id,
-      terminalState: sessionStatusToTerminalState(sessionStatus),
-      error: {
-        code: "persistence_failed",
-        message: persistenceError?.message ?? statusMessage,
-      },
-    });
-
-    if (error instanceof Error) {
-      log.set({
-        outcome: "error",
-        sync: { sessionStatus, statusMessage },
-      });
-      log.error(error);
-    }
-
-    return {
-      processedAt: new Date().toISOString(),
-      successCount,
-      failCount,
-      scrapedPersistedRowCount: 0,
-      sessionStatus,
-      statusMessage,
-      persistence,
-    };
-  }
-
-  const successCount = existingCount + scrapedPersistedRowCount;
-  const failCount = scrapeRowCount - scrapedPersistedRowCount;
-  const { sessionStatus, statusMessage } = resolveTerminalState({
-    successCount,
-    failCount,
-    totalRowCount,
-    scrapedCount: successfulResults.length,
+      return {
+        successCount: existingCount + scrapedOrderItems.length,
+        failCount: scrapeRowCount - scrapedOrderItems.length,
+        orderId: details.id,
+      };
+    },
   });
-  state.phase = sessionStatusToPhase(sessionStatus);
-  state.statusMessage = statusMessage;
-  await publishJobStatus({
-    redis,
-    state,
-    syncSessionId,
-    sessionStatus,
-    skipDurableUpdate: true,
-    terminalState: sessionStatusToTerminalState(sessionStatus),
-    error:
-      sessionStatus === "failed" && successfulResults.length === 0
-        ? { code: "scrape_failed", message: statusMessage }
-        : null,
-  });
-
-  return {
-    processedAt: new Date().toISOString(),
-    successCount,
-    failCount,
-    scrapedPersistedRowCount,
-    sessionStatus,
-    statusMessage,
-    persistence,
-  };
 }

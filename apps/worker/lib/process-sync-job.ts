@@ -1,9 +1,5 @@
 import { scrapeItems, scrapedItemsWithRateLimit } from "./scrape";
-import {
-  batchUpdateSyncSessionItemStatuses,
-  createJobStatusState,
-  publishJobStatus,
-} from "./utils";
+import { createJobStatusState, publishJobStatus } from "./utils";
 import type { ProcessSyncJobParams, ProcessSyncJobResult } from "./types";
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 
@@ -48,7 +44,7 @@ export async function processSyncJob(params: ProcessSyncJobParams): Promise<Proc
   });
 
   const { successful: successfulResults, failures } = await scrapeMethod({
-    itemIds: [...itemIds],
+    itemIds,
     maxRetries: 3,
     baseDelayMs: 1000,
     redis,
@@ -68,12 +64,6 @@ export async function processSyncJob(params: ProcessSyncJobParams): Promise<Proc
     scrapeErrors: failures,
   });
 
-  await batchUpdateSyncSessionItemStatuses({
-    syncSessionId,
-    scrapedItemIds,
-    failures,
-  });
-
   state.phase = "persisting";
   state.statusMessage = SYNC_STATUS_MESSAGES.persisting(successfulResults.length);
   await publishJobStatus({
@@ -85,19 +75,21 @@ export async function processSyncJob(params: ProcessSyncJobParams): Promise<Proc
     error: null,
   });
 
-  const finalizeResult = await finalize(successfulResults, state);
+  const finalizeResult = await finalize(
+    successfulResults,
+    failures.map(({ id, reason }) => ({
+      id,
+      errorReason: `Scraping failed after max retries: ${reason}`,
+    })),
+    state,
+  );
 
   return {
-    processedAt: finalizeResult.processedAt,
+    ...finalizeResult,
     scrapeStrategy,
     scrapedItemIds,
     failedItemIds,
     scrapedCount: successfulResults.length,
     failedCount: failedItemIds.length,
-    successCount: finalizeResult.successCount,
-    failCount: finalizeResult.failCount,
-    sessionStatus: finalizeResult.sessionStatus,
-    statusMessage: finalizeResult.statusMessage,
-    persistence: finalizeResult.persistence,
   };
 }

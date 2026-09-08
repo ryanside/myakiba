@@ -22,6 +22,11 @@ export type ScrapeFailure = {
   readonly attemptErrors: readonly string[];
 };
 
+export type SyncSessionItemFailure = {
+  readonly id: number;
+  readonly errorReason: string;
+};
+
 export type ScrapeResult = {
   readonly successful: readonly ScrapedItem[];
   readonly failures: readonly ScrapeFailure[];
@@ -97,23 +102,7 @@ export type PublishJobStatusParams = {
   readonly terminalState: SyncTerminalState | null;
   readonly error: SyncJobError | null;
   readonly syncSessionId?: string;
-  readonly sessionStatus?: SyncSessionStatus;
-  readonly successCount?: number;
-  readonly failCount?: number;
-  readonly orderId?: string;
-  readonly skipDurableUpdate?: boolean;
-};
-
-export type BatchUpdateSyncSessionItemStatusesParams = {
-  readonly syncSessionId: string;
-  readonly scrapedItemIds: readonly number[];
-  readonly failures: readonly ScrapeFailure[];
-};
-
-export type MarkPersistFailedSyncSessionItemStatusesParams = {
-  readonly syncSessionId: string;
-  readonly scrapedItemIds: readonly number[];
-  readonly errorReason: string;
+  readonly sessionStatus?: "processing";
 };
 
 export type ScrapeImageParams = {
@@ -130,10 +119,9 @@ export type ScrapeSingleItemParams = {
   readonly baseDelayMs?: number;
   readonly progressStatusMessage?: string;
   /**
-   * Optional live-status publish target. When both `redis` and `state` are
-   * provided, `scrapeSingleItem` publishes a fresh `SyncJobStatus` snapshot
-   * after each item resolves (success or failure). Single-item resync jobs
-   * that have no SSE subscriber omit both and run silently.
+   * Pass both `redis` and `state` so `scrapeSingleItem` sends a `SyncJobStatus`
+   * update after each item succeeds or fails. Single-item resync jobs omit both
+   * when no one is listening for live updates.
    */
   readonly redis?: Redis;
   readonly state?: SyncJobStatusState;
@@ -150,7 +138,8 @@ export type ScrapeItemsParams = {
 };
 
 export type FinalizeCollectionSyncParams = {
-  readonly successfulResults: ScrapedItem[];
+  readonly successfulResults: readonly ScrapedItem[];
+  readonly failures: readonly SyncSessionItemFailure[];
   readonly log: WorkerJobLogger;
   readonly redis: Redis;
   readonly state: SyncJobStatusState;
@@ -161,7 +150,8 @@ export type FinalizeCollectionSyncParams = {
 };
 
 export type FinalizeOrderSyncParams = {
-  readonly successfulResults: ScrapedItem[];
+  readonly successfulResults: readonly ScrapedItem[];
+  readonly failures: readonly SyncSessionItemFailure[];
   readonly log: WorkerJobLogger;
   readonly redis: Redis;
   readonly state: SyncJobStatusState;
@@ -174,7 +164,8 @@ export type FinalizeOrderSyncParams = {
 };
 
 export type FinalizeCsvSyncParams = {
-  readonly successfulResults: ScrapedItem[];
+  readonly successfulResults: readonly ScrapedItem[];
+  readonly failures: readonly SyncSessionItemFailure[];
   readonly log: WorkerJobLogger;
   readonly userId: string;
   readonly redis: Redis;
@@ -199,7 +190,6 @@ export type FinalizeSyncResult = {
   readonly processedAt: string;
   readonly successCount: number;
   readonly failCount: number;
-  readonly scrapedPersistedRowCount: number;
   readonly sessionStatus: SyncSessionStatus;
   readonly statusMessage: string;
   readonly persistence: FinalizePersistenceSummary;
@@ -220,6 +210,7 @@ export type ProcessSyncJobParams = {
   readonly context: ProcessSyncJobContext;
   readonly finalize: (
     successfulResults: readonly ScrapedItem[],
+    failures: readonly SyncSessionItemFailure[],
     state: SyncJobStatusState,
   ) => Promise<FinalizeSyncResult>;
 };
@@ -240,7 +231,6 @@ export type ProcessSyncJobResult = {
 
 export type ExecuteSyncJobParams = {
   readonly job: FullJobData;
-  readonly queueName: string;
   readonly type: SyncType;
   readonly syncSessionId: string;
   readonly userId: string;
@@ -250,6 +240,7 @@ export type ExecuteSyncJobParams = {
   readonly orderId: string | null;
   readonly finalize: (
     successfulResults: readonly ScrapedItem[],
+    failures: readonly SyncSessionItemFailure[],
     state: SyncJobStatusState,
     log: WorkerJobLogger,
   ) => Promise<FinalizeSyncResult>;

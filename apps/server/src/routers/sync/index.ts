@@ -231,19 +231,14 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       if (itemsToScrape.length === 0 && collectionItems.length > 0) {
         const { error: insertToCollectionAndOrdersError } = await tryCatch(
-          SyncService.insertToCollectionAndOrders(collectionItems, orderItems),
+          SyncService.completeSyncSessionWithoutWorker({
+            collectionItems,
+            orderItems,
+            syncSessionId,
+          }),
         );
 
         if (insertToCollectionAndOrdersError) {
-          if (syncSessionId) {
-            await tryCatch(
-              SyncService.updateSyncSession(syncSessionId, {
-                status: "failed",
-                statusMessage: SYNC_STATUS_MESSAGES.failedPersist,
-                completedAt: new Date(),
-              }),
-            );
-          }
           log.error(insertToCollectionAndOrdersError, {
             step: "insertToCollectionAndOrders",
             outcome: "error",
@@ -271,17 +266,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         );
 
         if (queueCSVSyncJobError) {
-          if (queueCSVSyncJobError.message === "FAILED_TO_QUEUE_CSV_SYNC_JOB") {
-            log.error(queueCSVSyncJobError, {
-              step: "queueCSVSyncJob",
-              outcome: "error",
-              sync: {
-                type: "csv",
-                sessionId: syncSessionId,
-              },
-            });
-            return status(500, "Failed to queue MyFigureCollection CSV import");
-          }
           log.error(queueCSVSyncJobError, {
             step: "queueCSVSyncJob",
             outcome: "error",
@@ -301,7 +285,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         statusMessage = SYNC_STATUS_MESSAGES.insertedWithoutScrape;
       }
 
-      if (!jobId && syncSessionId) {
+      if (!jobId && collectionItems.length === 0) {
         const { error: updateSessionError } = await tryCatch(
           SyncService.updateSyncSession(syncSessionId, {
             status: "completed",
@@ -499,19 +483,15 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       if (itemsToScrape.length === 0 && orderWasPersistedImmediately) {
         const { error: insertToCollectionAndOrdersError } = await tryCatch(
-          SyncService.insertToCollectionAndOrders(collectionItemsToInsert, [order]),
+          SyncService.completeSyncSessionWithoutWorker({
+            collectionItems: collectionItemsToInsert,
+            orderItems: [order],
+            syncSessionId,
+            orderId,
+          }),
         );
 
         if (insertToCollectionAndOrdersError) {
-          if (syncSessionId) {
-            await tryCatch(
-              SyncService.updateSyncSession(syncSessionId, {
-                status: "failed",
-                statusMessage: SYNC_STATUS_MESSAGES.failedPersist,
-                completedAt: new Date(),
-              }),
-            );
-          }
           log.error(insertToCollectionAndOrdersError, {
             step: "insertToCollectionAndOrders",
             outcome: "error",
@@ -523,26 +503,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             order: { id: orderId },
           });
           return status(500, "Failed to save the order and its items");
-        }
-
-        const { error: updateOrderSyncSessionError } = await tryCatch(
-          SyncService.updateSyncSession(syncSessionId, {
-            orderId,
-          }),
-        );
-
-        if (updateOrderSyncSessionError) {
-          log.error(updateOrderSyncSessionError, {
-            step: "updateSyncSessionOrderId",
-            outcome: "error",
-            sync: {
-              type: "order",
-              sessionId: syncSessionId,
-              orderId,
-            },
-            order: { id: orderId },
-          });
-          return status(500, "Failed to update import record");
         }
       }
 
@@ -556,24 +516,10 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             itemsToScrape,
             itemsToInsert: collectionItemsToInsert,
             syncSessionId,
-            queueErrorCode: "FAILED_TO_QUEUE_ORDER_SYNC_JOB",
           }),
         );
 
         if (queueOrderSyncJobError) {
-          if (queueOrderSyncJobError.message === "FAILED_TO_QUEUE_ORDER_SYNC_JOB") {
-            log.error(queueOrderSyncJobError, {
-              step: "queueOrderSyncJob",
-              outcome: "error",
-              sync: {
-                type: "order",
-                sessionId: syncSessionId,
-                orderId,
-              },
-              order: { id: orderId },
-            });
-            return status(500, "Failed to queue order creation");
-          }
           log.error(queueOrderSyncJobError, {
             step: "queueOrderSyncJob",
             outcome: "error",
@@ -588,16 +534,14 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         }
 
         jobId = jobIdData;
-      } else if (syncSessionId) {
-        const completedSessionUpdate = {
-          status: "completed" as const,
-          completedAt: new Date(),
-          statusMessage: SYNC_STATUS_MESSAGES.insertedWithoutScrape,
-          successCount: existingOrderItemExternalIds.length,
-          orderId: orderWasPersistedImmediately ? orderId : undefined,
-        };
+      } else if (!orderWasPersistedImmediately) {
         const { error: updateSessionError } = await tryCatch(
-          SyncService.updateSyncSession(syncSessionId, completedSessionUpdate),
+          SyncService.updateSyncSession(syncSessionId, {
+            status: "completed",
+            completedAt: new Date(),
+            statusMessage: SYNC_STATUS_MESSAGES.insertedWithoutScrape,
+            successCount: existingOrderItemExternalIds.length,
+          }),
         );
         if (updateSessionError) {
           log.error(updateSessionError, {
@@ -811,19 +755,14 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       if (itemsToScrape.length === 0 && collectionItemsToInsert.length > 0) {
         const { error: insertOrderItemsError } = await tryCatch(
-          SyncService.insertToCollectionAndOrders(collectionItemsToInsert),
+          SyncService.completeSyncSessionWithoutWorker({
+            collectionItems: collectionItemsToInsert,
+            syncSessionId,
+            orderId: existingOrder.id,
+          }),
         );
 
         if (insertOrderItemsError) {
-          if (syncSessionId) {
-            await tryCatch(
-              SyncService.updateSyncSession(syncSessionId, {
-                status: "failed",
-                statusMessage: SYNC_STATUS_MESSAGES.failedPersist,
-                completedAt: new Date(),
-              }),
-            );
-          }
           log.error(insertOrderItemsError, {
             step: "insertOrderItems",
             outcome: "error",
@@ -848,24 +787,10 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             itemsToScrape,
             itemsToInsert: collectionItemsToInsert,
             syncSessionId,
-            queueErrorCode: "FAILED_TO_QUEUE_ORDER_ITEM_SYNC_JOB",
           }),
         );
 
         if (queueOrderItemSyncJobError) {
-          if (queueOrderItemSyncJobError.message === "FAILED_TO_QUEUE_ORDER_ITEM_SYNC_JOB") {
-            log.error(queueOrderItemSyncJobError, {
-              step: "queueOrderItemSyncJob",
-              outcome: "error",
-              sync: {
-                type: "order-item",
-                sessionId: syncSessionId,
-                orderId: existingOrder.id,
-              },
-              order: { id: existingOrder.id },
-            });
-            return status(500, "Failed to queue order items");
-          }
           log.error(queueOrderItemSyncJobError, {
             step: "queueOrderItemSyncJob",
             outcome: "error",
@@ -880,7 +805,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         }
 
         jobId = jobIdData;
-      } else if (syncSessionId) {
+      } else if (collectionItemsToInsert.length === 0) {
         const { error: updateSessionError } = await tryCatch(
           SyncService.updateSyncSession(syncSessionId, {
             status: "completed",
@@ -1056,19 +981,13 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       if (itemsToScrape.length === 0 && collectionItemsToInsert.length > 0) {
         const { error: insertToCollectionAndOrdersError } = await tryCatch(
-          SyncService.insertToCollectionAndOrders(collectionItemsToInsert),
+          SyncService.completeSyncSessionWithoutWorker({
+            collectionItems: collectionItemsToInsert,
+            syncSessionId,
+          }),
         );
 
         if (insertToCollectionAndOrdersError) {
-          if (syncSessionId) {
-            await tryCatch(
-              SyncService.updateSyncSession(syncSessionId, {
-                status: "failed",
-                statusMessage: SYNC_STATUS_MESSAGES.failedPersist,
-                completedAt: new Date(),
-              }),
-            );
-          }
           log.error(insertToCollectionAndOrdersError, {
             step: "insertToCollectionAndOrders",
             outcome: "error",
@@ -1093,17 +1012,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         );
 
         if (queueCollectionSyncJobError) {
-          if (queueCollectionSyncJobError.message === "FAILED_TO_QUEUE_COLLECTION_SYNC_JOB") {
-            log.error(queueCollectionSyncJobError, {
-              step: "queueCollectionSyncJob",
-              outcome: "error",
-              sync: {
-                type: "collection",
-                sessionId: syncSessionId,
-              },
-            });
-            return status(500, "Failed to queue collection items");
-          }
           log.error(queueCollectionSyncJobError, {
             step: "queueCollectionSyncJob",
             outcome: "error",
@@ -1116,7 +1024,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         }
 
         jobId = jobIdData;
-      } else if (syncSessionId) {
+      } else if (collectionItemsToInsert.length === 0) {
         const { error: updateSessionError } = await tryCatch(
           SyncService.updateSyncSession(syncSessionId, {
             status: "completed",

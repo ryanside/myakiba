@@ -12,6 +12,7 @@ export const SYNC_WIDGET_RECENT_LIMIT = 12;
 export const SYNC_SESSION_SUBGRID_PAGE_SIZE = 12;
 export const SYNC_SESSION_DETAIL_PAGE_SIZE = 24;
 
+export const SYNC_QUEUE_NAME = "sync-queue";
 export const JOB_STATUS_TTL_SECONDS = 600;
 export const JOB_STATUS_KEY_PREFIX = "job";
 export const JOB_STATUS_KEY_SUFFIX = "status:v2";

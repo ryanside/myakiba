@@ -34,10 +34,7 @@ export const SYNC_STATUS_MESSAGES = {
   failedScrape: "Failed to scrape item details from MyFigureCollection",
   failedPersist: "Failed to save items",
   failedBeforeStart: "Import failed before processing started",
-  failedBeforeStartWithReason: (reason: string) =>
-    `Import failed before processing started. ${reason}`,
-  failedDuringProcessingWithReason: (reason: string) =>
-    `Import failed during processing. ${reason}`,
+  failedDuringProcessing: "Import failed during processing",
   alreadyOwned:
     "These items are already in your collection or orders. To add another copy, open Add and choose Collection or Order.",
   insertedWithoutScrape: "Items added using details already in myakiba",
