@@ -97,38 +97,6 @@ export function formatShortDateTime(date: Date, locale?: Intl.LocalesArgument): 
 }
 
 /**
- * Formats an elapsed sync duration into a compact human-readable label.
- *
- * @example
- * formatSyncDuration(new Date(2024, 2, 15, 10, 0, 0), new Date(2024, 2, 15, 10, 1, 5))
- * // "1m 5s"
- *
- * @example
- * formatSyncDuration(new Date(2024, 2, 15, 10, 0, 0), null)
- * // "-"
- */
-export function formatSyncDuration(start: Date, end: Date | null): string {
-  if (!end) return "-";
-
-  const startDate = new Date(start);
-  const endDate = new Date(end);
-  const ms = endDate.getTime() - startDate.getTime();
-  if (Number.isNaN(ms)) return "-";
-  if (ms < 1000) return "<1s";
-
-  const totalSeconds = Math.floor(ms / 1000);
-  const seconds = totalSeconds % 60;
-  const minutes = Math.floor(totalSeconds / 60);
-
-  if (minutes < 1) return `${seconds}s`;
-  if (minutes < 60) return `${minutes}m ${seconds}s`;
-
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  return `${hours}h ${remainingMinutes}m`;
-}
-
-/**
  * Formats a date relative to the current time for recent activity UI.
  *
  * @example

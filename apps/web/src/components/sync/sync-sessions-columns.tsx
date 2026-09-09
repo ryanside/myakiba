@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { SyncSessionRow } from "@myakiba/contracts/sync/types";
 import { resolveSyncMessage, SESSION_STATUS_CONFIG, SYNC_TYPE_CONFIG } from "@/lib/sync";
-import { formatShortDateTime, formatSyncDuration } from "@/lib/date-display";
+import { formatShortDateTime } from "@/lib/date-display";
 import { fetchSyncSessionDetail } from "@/queries/sync";
 import {
   ACTIVE_SYNC_SESSION_STATUS_SET,
@@ -182,22 +182,6 @@ export function createSyncSessionColumns({
       enableResizing: false,
       meta: {
         skeleton: <Skeleton className="h-7 w-28" />,
-      },
-    },
-    {
-      id: "duration",
-      header: () => <span className="text-foreground font-normal text-[0.8125rem]">Duration</span>,
-      cell: ({ row }) => (
-        <span className="text-muted-foreground">
-          {formatSyncDuration(row.original.createdAt, row.original.completedAt)}
-        </span>
-      ),
-      size: 100,
-      enableSorting: false,
-      enableHiding: false,
-      enableResizing: false,
-      meta: {
-        skeleton: <Skeleton className="h-7 w-16" />,
       },
     },
   ];

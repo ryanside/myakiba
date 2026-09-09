@@ -18,7 +18,6 @@ import { SyncSessionStatusPanel } from "@/components/sync/sync-session-status-pa
 import { BackLink } from "@/components/ui/back-link";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatSyncDuration } from "@/lib/date-display";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { fetchSyncSessionDetail, retrySyncSession } from "@/queries/sync";
 import { ITEM_STATUS_CONFIG } from "@/lib/sync";
@@ -121,7 +120,7 @@ function RouteComponent(): ReactNode {
             item results can be retried for {SYNC_SESSION_RETRY_WINDOW_DAYS} days.
           </p>
 
-          <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-6 sm:grid-cols-3">
             {[
               { label: "Total Items", value: session?.totalItems },
               { label: "Succeeded", value: session?.successCount },
@@ -129,12 +128,6 @@ function RouteComponent(): ReactNode {
                 label: "Failed",
                 value: session?.failCount,
                 isError: (session?.failCount ?? 0) > 0,
-              },
-              {
-                label: "Duration",
-                value: session
-                  ? formatSyncDuration(session.createdAt, session.completedAt)
-                  : undefined,
               },
             ].map(({ label, value, isError: isStatError }) => (
               <div key={label} className="flex flex-col gap-1">
