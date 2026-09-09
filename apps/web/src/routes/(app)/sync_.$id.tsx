@@ -1,26 +1,33 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { createFileRoute, useParams } from "@tanstack/react-router";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { PaginationState } from "@tanstack/react-table";
 import { SYNC_SESSION_ITEM_STATUSES } from "@myakiba/contracts/shared/constants";
 import type { SyncSessionItemStatus } from "@myakiba/contracts/shared/types";
 import {
   ACTIVE_SYNC_SESSION_STATUS_SET,
   SYNC_SESSION_DETAIL_PAGE_SIZE,
+  SYNC_SESSION_RETRY_WINDOW_DAYS,
+  SYNC_SESSION_RETENTION_DAYS,
 } from "@myakiba/contracts/sync/constants";
 import { syncSessionDetailSearchSchema } from "@myakiba/contracts/sync/schema";
 import { SyncSessionHero } from "@/components/sync/sync-session-hero";
 import { SyncSessionItemsTable } from "@/components/sync/sync-session-items-table";
 import { SyncSessionStatusPanel } from "@/components/sync/sync-session-status-panel";
 import { BackLink } from "@/components/ui/back-link";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatSyncDuration } from "@/lib/date-display";
-import { fetchSyncSessionDetail } from "@/queries/sync";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { fetchSyncSessionDetail, retrySyncSession } from "@/queries/sync";
 import { ITEM_STATUS_CONFIG } from "@/lib/sync";
 import { cn } from "@/lib/utils";
 import { useFilters } from "@/hooks/use-filters";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { toast } from "@/components/ui/toast";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { RedoIcon } from "@hugeicons/core-free-icons";
 
 const VALID_ITEM_STATUSES: ReadonlySet<string> = new Set(SYNC_SESSION_ITEM_STATUSES);
 
@@ -110,7 +117,8 @@ function RouteComponent(): ReactNode {
           <SyncSessionHero session={session} isLoading={isPending} />
 
           <p className="text-sm text-muted-foreground">
-            Import history is automatically deleted after 30 days.
+            Import history is automatically deleted after {SYNC_SESSION_RETENTION_DAYS} days. Failed
+            item results can be retried for {SYNC_SESSION_RETRY_WINDOW_DAYS} days.
           </p>
 
           <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
@@ -153,7 +161,7 @@ function RouteComponent(): ReactNode {
             isActive={session ? ACTIVE_SYNC_SESSION_STATUS_SET.has(session.status) : false}
           />
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <ToggleGroup
               value={selectedStatuses}
               onValueChange={handleStatusChange}
@@ -168,6 +176,15 @@ function RouteComponent(): ReactNode {
                 </ToggleGroupItem>
               ))}
             </ToggleGroup>
+            {session ? (
+              <RetrySyncSessionButton
+                sessionId={id}
+                retrySupported={session.retrySupported}
+                canRetry={session.canRetry}
+                isRetrying={session.isRetrying}
+                failCount={session.failCount}
+              />
+            ) : null}
           </div>
 
           <SyncSessionItemsTable
@@ -181,5 +198,72 @@ function RouteComponent(): ReactNode {
         </>
       ) : null}
     </div>
+  );
+}
+
+function RetrySyncSessionButton({
+  sessionId,
+  retrySupported,
+  canRetry,
+  isRetrying,
+  failCount,
+}: {
+  readonly sessionId: string;
+  readonly retrySupported: boolean;
+  readonly canRetry: boolean;
+  readonly isRetrying: boolean;
+  readonly failCount: number;
+}): ReactNode {
+  const queryClient = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: () => retrySyncSession(sessionId),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["syncSessionDetail", sessionId] }),
+        queryClient.invalidateQueries({ queryKey: ["syncSessions"] }),
+      ]);
+    },
+    onError: (retryError) => {
+      toast.add({
+        type: "error",
+        title: "Failed to retry failed item results",
+        description: retryError.message,
+      });
+    },
+  });
+  const retryIsPending = mutation.isPending || isRetrying;
+  let unavailableReason: string | null = null;
+  if (!retrySupported) {
+    unavailableReason = "This import was created before failed item retries were supported.";
+  } else if (failCount === 0) {
+    unavailableReason = "This import has no failed item results to retry.";
+  }
+
+  const button = (
+    <Button
+      type="button"
+      size="sm"
+      className="gap-1"
+      disabled={!canRetry || retryIsPending}
+      onClick={() => mutation.mutate()}
+    >
+      <HugeiconsIcon
+        icon={RedoIcon}
+        data-icon="inline-start"
+        className={retryIsPending ? "animate-spin" : ""}
+      />
+      <span>
+        {retryIsPending ? "Retrying failed item results..." : "Retry failed item results"}
+      </span>
+    </Button>
+  );
+
+  if (!unavailableReason || retryIsPending) return button;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger render={<span className="inline-flex cursor-default">{button}</span>} />
+      <TooltipContent>{unavailableReason}</TooltipContent>
+    </Tooltip>
   );
 }

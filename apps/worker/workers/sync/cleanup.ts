@@ -5,6 +5,7 @@ import { db } from "@myakiba/db/client";
 import { syncSession } from "@myakiba/db/schema/figure";
 import { env } from "@myakiba/env/worker";
 import { tryCatch } from "@myakiba/utils/result";
+import { SYNC_SESSION_RETENTION_MS } from "@myakiba/contracts/sync/constants";
 
 const QUEUE_NAME = "sync-session-cleanup-queue";
 const connection = {
@@ -19,7 +20,7 @@ const cleanupQueue = new Queue(QUEUE_NAME, { connection });
 const cleanupWorker = new Worker(
   QUEUE_NAME,
   async (job) => {
-    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const cutoff = new Date(Date.now() - SYNC_SESSION_RETENTION_MS);
     const jobLog = createLogger({
       action: "sync.cleanup",
       job: { id: job.id ?? null },

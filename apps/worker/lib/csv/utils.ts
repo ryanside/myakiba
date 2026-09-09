@@ -19,7 +19,7 @@ export async function finalizeCsvSync({
   csvItems,
   itemsToInsert,
   ordersToInsert,
-  existingCount,
+  initialSuccessCount,
   syncSessionId,
 }: FinalizeCsvSyncParams): Promise<FinalizeSyncResult> {
   const assembledData = assembleScrapedData(successfulResults);
@@ -31,25 +31,7 @@ export async function finalizeCsvSync({
     successfulResultsById.has(csvItem.itemExternalId),
   );
   const scrapeRowCount = csvItems.length;
-  const totalRowCount = existingCount + scrapeRowCount;
-
-  const collectionItems = successfulCollectionItems.map((ci) => ({
-    id: ci.collectionId,
-    userId,
-    itemExternalId: ci.itemExternalId,
-    status: ci.status,
-    count: ci.count,
-    score: ci.score.trim() === "" ? "0.0" : ci.score,
-    paymentDate: ci.payment_date,
-    shippingDate: ci.shipping_date,
-    collectionDate: ci.collecting_date,
-    price: ci.price.trim() === "" ? 0 : parseMoneyToMinorUnits(ci.price),
-    shop: ci.shop,
-    shippingMethod: ci.shipping_method,
-    notes: ci.note,
-    orderId: ci.orderId,
-    orderDate: ci.orderDate,
-  }));
+  const totalRowCount = initialSuccessCount + scrapeRowCount;
 
   const orders = successfulCollectionItems.flatMap((ci) => {
     if (ci.orderId === null) return [];
@@ -81,7 +63,7 @@ export async function finalizeCsvSync({
     itemReleases: itemReleases.length,
     entries: entries.length,
     entryToItems: entryToItems.length,
-    collectionItems: itemsToInsert.length + collectionItems.length,
+    collectionItems: itemsToInsert.length + successfulCollectionItems.length,
     orders: new Set([...ordersToInsert, ...orders].map((orderRow) => orderRow.id)).size,
   };
 
@@ -102,32 +84,31 @@ export async function finalizeCsvSync({
         assembledData,
       );
 
-      const collectionItemsToInsert: (typeof collection.$inferInsert)[] = collectionItems.map(
-        (collectionItem) => {
+      const collectionItemsToInsert: (typeof collection.$inferInsert)[] =
+        successfulCollectionItems.map((collectionItem) => {
           const internalItemId = externalIdToInternalId.get(collectionItem.itemExternalId);
           if (!internalItemId) {
             throw new Error(`Missing persisted Item ${collectionItem.itemExternalId}`);
           }
           return {
-            id: collectionItem.id,
-            userId: collectionItem.userId,
+            id: collectionItem.collectionId,
+            userId,
             itemId: internalItemId,
             orderId: collectionItem.orderId,
             status: collectionItem.status,
             count: collectionItem.count,
-            score: collectionItem.score,
-            paymentDate: collectionItem.paymentDate,
-            shippingDate: collectionItem.shippingDate,
-            collectionDate: collectionItem.collectionDate,
-            price: collectionItem.price,
+            score: collectionItem.score.trim() === "" ? "0.0" : collectionItem.score,
+            paymentDate: collectionItem.payment_date,
+            shippingDate: collectionItem.shipping_date,
+            collectionDate: collectionItem.collecting_date,
+            price: parseMoneyToMinorUnits(collectionItem.price),
             shop: collectionItem.shop,
-            shippingMethod: collectionItem.shippingMethod,
-            notes: collectionItem.notes,
+            shippingMethod: collectionItem.shipping_method,
+            notes: collectionItem.note,
             releaseId: latestReleaseIdByInternalId.get(internalItemId)?.releaseId ?? null,
             orderDate: collectionItem.orderDate,
           };
-        },
-      );
+        });
 
       const dedupedOrders = [
         ...new Map(
@@ -143,7 +124,7 @@ export async function finalizeCsvSync({
       }
 
       return {
-        successCount: existingCount + collectionItemsToInsert.length,
+        successCount: initialSuccessCount + collectionItemsToInsert.length,
         failCount: scrapeRowCount - collectionItemsToInsert.length,
       };
     },

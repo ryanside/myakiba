@@ -34,6 +34,7 @@ import type {
   DataTransferArchiveV1,
   DataTransferImportReport,
 } from "@myakiba/contracts/data-transfer/schema";
+import type { JobData } from "@myakiba/contracts/sync/schema";
 
 export const item = pgTable(
   "item",
@@ -353,6 +354,7 @@ export const syncSession = pgTable(
     totalItems: integer("total_items").notNull().default(0),
     successCount: integer("success_count").notNull().default(0),
     failCount: integer("fail_count").notNull().default(0),
+    requestPayload: jsonb("request_payload").$type<JobData>(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
     completedAt: timestamp("completed_at"),

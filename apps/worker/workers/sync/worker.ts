@@ -26,7 +26,7 @@ import { db } from "@myakiba/db/client";
 import { item as itemTable, syncSession } from "@myakiba/db/schema/figure";
 import { and, eq, inArray } from "drizzle-orm";
 
-import { SYNC_QUEUE_NAME, ACTIVE_SYNC_SESSION_STATUSES } from "@myakiba/contracts/sync/constants";
+import { SYNC_QUEUE_NAME } from "@myakiba/contracts/sync/constants";
 
 async function executeSyncJob({
   job,
@@ -34,8 +34,7 @@ async function executeSyncJob({
   syncSessionId,
   userId,
   itemIds,
-  scrapeRowCount,
-  existingCount,
+  initialSuccessCount,
   orderId,
   finalize,
 }: ExecuteSyncJobParams): Promise<ProcessSyncJobResult> {
@@ -51,16 +50,16 @@ async function executeSyncJob({
     sync: {
       type,
       sessionId: syncSessionId,
-      jobId: null,
+      jobId,
       orderId,
       sessionStatus: null,
       statusMessage: null,
     },
     user: { id: userId },
     items: {
-      requested: scrapeRowCount,
-      existing: existingCount,
-      deduped: itemIds.length,
+      requested: itemIds.length,
+      existing: initialSuccessCount,
+      deduped: new Set(itemIds).size,
       scraped: 0,
       failed: 0,
       successCount: 0,
@@ -74,9 +73,8 @@ async function executeSyncJob({
   try {
     const { data: result, error } = await tryCatch(
       processSyncJob({
-        type,
         itemIds,
-        existingCount,
+        initialSuccessCount,
         context: {
           redis,
           jobId,
@@ -149,38 +147,36 @@ async function processQueuedSyncJob(job: FullJobData) {
 
   const { userId, syncSessionId, type } = validatedData.data;
 
-  // Mark this as processing so an error adding the job to the queue won't mark it as failed.
-  // Accept processing sessions too, since BullMQ can restart an interrupted job.
-  let [durableSession] = await db
-    .update(syncSession)
-    .set({ status: "processing", updatedAt: new Date() })
-    .where(
-      and(
-        eq(syncSession.id, syncSessionId),
-        inArray(syncSession.status, ACTIVE_SYNC_SESSION_STATUSES),
-      ),
-    )
-    .returning();
-  if (!durableSession) {
-    [durableSession] = await db.select().from(syncSession).where(eq(syncSession.id, syncSessionId));
-  }
-  if (!durableSession) throw new Error("SYNC_SESSION_NOT_FOUND");
+  const [session] = await db.select().from(syncSession).where(eq(syncSession.id, syncSessionId));
+  if (!session) throw new Error("SYNC_SESSION_NOT_FOUND");
 
-  const terminalState = sessionStatusToTerminalState(durableSession.status);
+  // A retry assigns a new job ID; an older delivery no longer owns this session.
+  if (session.jobId !== job.id) {
+    log.info({
+      action: "worker.replay",
+      outcome: "skipped",
+      jobId: job.id,
+      currentJobId: session.jobId,
+      syncSessionId,
+    });
+    return;
+  }
+
+  const terminalState = sessionStatusToTerminalState(session.status);
   if (terminalState !== null) {
-    // A job can restart after saving its result but before BullMQ records it as finished.
+    // The result can be saved before BullMQ acknowledges completion.
     await publishJobStatus({
       redis,
       state: {
-        jobId: job.id ?? "",
-        startedAt: durableSession.createdAt.toISOString(),
-        phase: sessionStatusToPhase(durableSession.status),
-        statusMessage: durableSession.statusMessage,
+        jobId: job.id,
+        startedAt: session.createdAt.toISOString(),
+        phase: sessionStatusToPhase(session.status),
+        statusMessage: session.statusMessage,
         progress: {
-          processed: durableSession.successCount + durableSession.failCount,
-          total: durableSession.totalItems,
-          succeeded: durableSession.successCount,
-          failed: durableSession.failCount,
+          processed: session.successCount + session.failCount,
+          total: session.totalItems,
+          succeeded: session.successCount,
+          failed: session.failCount,
         },
         recentItems: [],
       },
@@ -188,25 +184,18 @@ async function processQueuedSyncJob(job: FullJobData) {
       terminalState,
       error: null,
     });
-    createLogger({
-      action: "worker.replay",
-      outcome: "skipped",
-      queue: { name: SYNC_QUEUE_NAME, jobName: job.name },
-      job: { id: job.id },
-      syncSessionId,
-      sessionStatus: durableSession.status,
-    }).emit();
     return {
-      processedAt: durableSession.updatedAt.toISOString(),
-      successCount: durableSession.successCount,
-      failCount: durableSession.failCount,
-      sessionStatus: durableSession.status,
-      statusMessage: durableSession.statusMessage,
+      processedAt: session.updatedAt.toISOString(),
+      successCount: session.successCount,
+      failCount: session.failCount,
+      sessionStatus: session.status,
+      statusMessage: session.statusMessage,
     };
   }
 
   if (type === "item") {
-    const { itemExternalIds, existingCount } = validatedData.data;
+    const { itemExternalIds } = validatedData.data;
+    const initialSuccessCount = session.successCount;
     const availableItems = await db
       .select({ externalId: itemTable.externalId })
       .from(itemTable)
@@ -220,15 +209,14 @@ async function processQueuedSyncJob(job: FullJobData) {
       syncSessionId,
       userId,
       itemIds: missingIds,
-      scrapeRowCount: missingIds.length,
-      existingCount: existingCount + availableIds.size,
+      initialSuccessCount: initialSuccessCount + availableIds.size,
       orderId: null,
       finalize: (successfulResults, failures, state, jobLog) =>
         finalizeItemSync({
           successfulResults,
           failures,
           itemExternalIds,
-          existingCount,
+          initialSuccessCount,
           syncSessionId,
           redis,
           state,
@@ -239,8 +227,8 @@ async function processQueuedSyncJob(job: FullJobData) {
 
   if (type === "csv") {
     const { items: csvItems, itemsToInsert, ordersToInsert } = validatedData.data;
-    const existingCount = itemsToInsert.length;
-    const itemIds = [...new Set(csvItems.map((item) => item.itemExternalId))];
+    const initialSuccessCount = session.successCount + itemsToInsert.length;
+    const itemIds = csvItems.map((item) => item.itemExternalId);
 
     return executeSyncJob({
       job,
@@ -248,8 +236,7 @@ async function processQueuedSyncJob(job: FullJobData) {
       syncSessionId,
       userId,
       itemIds,
-      scrapeRowCount: csvItems.length,
-      existingCount,
+      initialSuccessCount,
       orderId: null,
       finalize: (successfulResults, failures, state, jobLog) =>
         finalizeCsvSync({
@@ -262,7 +249,7 @@ async function processQueuedSyncJob(job: FullJobData) {
           csvItems,
           itemsToInsert,
           ordersToInsert,
-          existingCount,
+          initialSuccessCount,
           syncSessionId,
         }),
     });
@@ -270,8 +257,8 @@ async function processQueuedSyncJob(job: FullJobData) {
 
   if (type === "order" || type === "order-item") {
     const { details, itemsToScrape, itemsToInsert } = validatedData.data.order;
-    const existingCount = itemsToInsert.length;
-    const itemIds = [...new Set(itemsToScrape.map((item) => item.itemExternalId))];
+    const initialSuccessCount = session.successCount + itemsToInsert.length;
+    const itemIds = itemsToScrape.map((item) => item.itemExternalId);
 
     return executeSyncJob({
       job,
@@ -279,8 +266,7 @@ async function processQueuedSyncJob(job: FullJobData) {
       syncSessionId,
       userId,
       itemIds,
-      scrapeRowCount: itemsToScrape.length,
-      existingCount,
+      initialSuccessCount,
       orderId: details.id,
       finalize: (successfulResults, failures, state, jobLog) =>
         finalizeOrderSync({
@@ -292,16 +278,16 @@ async function processQueuedSyncJob(job: FullJobData) {
           details,
           itemsToScrape,
           itemsToInsert,
-          existingCount,
+          initialSuccessCount,
           syncSessionId,
-          syncMode: type === "order" ? "create" : "append",
+          createOrder: type === "order" && session.successCount === 0,
         }),
     });
   }
 
   const { itemsToScrape, itemsToInsert } = validatedData.data.collection;
-  const existingCount = itemsToInsert.length;
-  const itemIds = [...new Set(itemsToScrape.map((item) => item.itemExternalId))];
+  const initialSuccessCount = session.successCount + itemsToInsert.length;
+  const itemIds = itemsToScrape.map((item) => item.itemExternalId);
 
   return executeSyncJob({
     job,
@@ -309,8 +295,7 @@ async function processQueuedSyncJob(job: FullJobData) {
     syncSessionId,
     userId,
     itemIds,
-    scrapeRowCount: itemsToScrape.length,
-    existingCount,
+    initialSuccessCount,
     orderId: null,
     finalize: (successfulResults, failures, state, jobLog) =>
       finalizeCollectionSync({
@@ -321,7 +306,7 @@ async function processQueuedSyncJob(job: FullJobData) {
         state,
         itemsToScrape,
         itemsToInsert,
-        existingCount,
+        initialSuccessCount,
         syncSessionId,
       }),
   });
@@ -381,7 +366,10 @@ async function handleSyncJobFailure(job: FullJobData, cause: unknown): Promise<v
         ? SYNC_STATUS_MESSAGES.failedBeforeStart
         : SYNC_STATUS_MESSAGES.failedDuringProcessing;
     cleanupLog.set({
-      sync: { type: session.syncType, sessionId: session.id },
+      sync: {
+        type: session.syncType,
+        sessionId: session.id,
+      },
       user: { id: session.userId },
     });
     cleanupLog.error(error);
@@ -400,7 +388,7 @@ async function handleSyncJobFailure(job: FullJobData, cause: unknown): Promise<v
         successfulResults: [],
         failures: parsed.data.itemExternalIds.map((id) => ({ id, errorReason: statusMessage })),
         itemExternalIds: parsed.data.itemExternalIds,
-        existingCount: parsed.data.existingCount,
+        initialSuccessCount: session.successCount,
         syncSessionId: session.id,
         redis,
         state,
@@ -412,10 +400,12 @@ async function handleSyncJobFailure(job: FullJobData, cause: unknown): Promise<v
 
     const result = await persistSyncFailureOutcome({
       syncSessionId: session.id,
+      jobId: job.id ?? "",
       failures: [],
       pendingErrorReason: statusMessage,
       statusMessage,
     });
+    if (result.jobId !== job.id) return;
     state.phase = sessionStatusToPhase(result.status);
     state.statusMessage = result.statusMessage;
     state.progress = {

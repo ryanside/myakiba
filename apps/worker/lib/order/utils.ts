@@ -3,7 +3,7 @@ import type {
   FinalizePersistenceSummary,
   FinalizeSyncResult,
 } from "../types";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { assembleScrapedData } from "../assemble-scraped-data";
 import { persistScrapedItemData } from "../persist-scraped-item-data";
 import { finalizeSync } from "../utils";
@@ -18,9 +18,9 @@ export async function finalizeOrderSync({
   details,
   itemsToScrape,
   itemsToInsert,
-  existingCount,
+  initialSuccessCount,
   syncSessionId,
-  syncMode,
+  createOrder,
 }: FinalizeOrderSyncParams): Promise<FinalizeSyncResult> {
   const assembledData = assembleScrapedData(successfulResults);
   const { items, entries, entryToItems, itemReleases, latestReleaseIdByExternalId } = assembledData;
@@ -29,7 +29,7 @@ export async function finalizeOrderSync({
     successfulIds.has(orderItem.itemExternalId),
   );
   const scrapeRowCount = itemsToScrape.length;
-  const totalRowCount = existingCount + scrapeRowCount;
+  const totalRowCount = initialSuccessCount + scrapeRowCount;
 
   let latestReleaseDate: string | null = null;
   for (const releaseInfo of latestReleaseIdByExternalId.values()) {
@@ -46,8 +46,8 @@ export async function finalizeOrderSync({
   }
 
   // Adding items can move the release date later. Keep the other saved order details.
-  const shouldPersistOrderRecord = syncMode === "create";
-  const shouldUpdateExistingOrder = syncMode === "append" && shouldUpdateReleaseDate;
+  const shouldCreateOrder = createOrder && itemsToInsert.length + successfulOrderItems.length > 0;
+  const shouldUpdateExistingOrder = !createOrder && shouldUpdateReleaseDate;
 
   const persistence: FinalizePersistenceSummary = {
     items: items.length,
@@ -55,7 +55,7 @@ export async function finalizeOrderSync({
     entries: entries.length,
     entryToItems: entryToItems.length,
     collectionItems: itemsToInsert.length + successfulOrderItems.length,
-    orders: shouldPersistOrderRecord || shouldUpdateExistingOrder ? 1 : 0,
+    orders: shouldCreateOrder || shouldUpdateExistingOrder ? 1 : 0,
   };
 
   log.set({
@@ -77,6 +77,15 @@ export async function finalizeOrderSync({
     redis,
     state,
     persist: async (tx) => {
+      if (!createOrder) {
+        const [existingOrder] = await tx
+          .select({ id: order.id })
+          .from(order)
+          .where(and(eq(order.id, details.id), eq(order.userId, details.userId)))
+          .for("update");
+        if (!existingOrder) throw new Error("ORDER_NOT_FOUND");
+      }
+
       const { externalIdToInternalId, latestReleaseIdByInternalId } = await persistScrapedItemData(
         tx,
         assembledData,
@@ -108,7 +117,9 @@ export async function finalizeOrderSync({
         };
       });
 
-      if (shouldPersistOrderRecord) {
+      const collectionRows = [...itemsToInsert, ...scrapedOrderItems];
+
+      if (shouldCreateOrder) {
         await tx.insert(order).values(details);
       } else if (shouldUpdateExistingOrder) {
         await tx
@@ -120,16 +131,17 @@ export async function finalizeOrderSync({
           .where(eq(order.id, details.id));
       }
 
-      const collectionRows = [...itemsToInsert, ...scrapedOrderItems];
       if (collectionRows.length > 0) {
         await tx.insert(collection).values(collectionRows);
       }
 
-      return {
-        successCount: existingCount + scrapedOrderItems.length,
+      const result = {
+        successCount: initialSuccessCount + scrapedOrderItems.length,
         failCount: scrapeRowCount - scrapedOrderItems.length,
-        orderId: details.id,
       };
+      if (createOrder && !shouldCreateOrder) return result;
+
+      return { ...result, orderId: details.id };
     },
   });
 }

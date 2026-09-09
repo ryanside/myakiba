@@ -1,13 +1,19 @@
 import { scrapeItems, scrapedItemsWithRateLimit } from "./scrape";
-import { createJobStatusState, publishJobStatus } from "./utils";
-import type { ProcessSyncJobParams, ProcessSyncJobResult } from "./types";
+import { publishJobStatus } from "./utils";
+import type { ProcessSyncJobParams, ProcessSyncJobResult, SyncJobStatusState } from "./types";
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 
 export async function processSyncJob(params: ProcessSyncJobParams): Promise<ProcessSyncJobResult> {
-  const { itemIds, existingCount, context, finalize } = params;
+  const { itemIds, initialSuccessCount, context, finalize } = params;
   const { redis, jobId, syncSessionId, log } = context;
 
-  const scrapeStrategy = itemIds.length <= 5 ? "standard" : "rate_limited";
+  const rowCountByExternalId = new Map<number, number>();
+  for (const id of itemIds) {
+    rowCountByExternalId.set(id, (rowCountByExternalId.get(id) ?? 0) + 1);
+  }
+  const uniqueItemIds = [...rowCountByExternalId.keys()];
+  const totalItems = initialSuccessCount + itemIds.length;
+  const scrapeStrategy = uniqueItemIds.length <= 5 ? "standard" : "rate_limited";
   const scrapeMethod = scrapeStrategy === "standard" ? scrapeItems : scrapedItemsWithRateLimit;
 
   log.set({
@@ -18,21 +24,20 @@ export async function processSyncJob(params: ProcessSyncJobParams): Promise<Proc
     },
   });
 
-  const state = createJobStatusState({
+  const state: SyncJobStatusState = {
     jobId,
-    totalItems: itemIds.length,
+    startedAt: new Date().toISOString(),
     phase: "scraping",
     statusMessage: SYNC_STATUS_MESSAGES.starting(itemIds.length),
-  });
-
-  if (params.type === "item") {
-    state.progress = {
-      processed: existingCount,
-      total: existingCount + itemIds.length,
-      succeeded: existingCount,
+    progress: {
+      processed: initialSuccessCount,
+      total: totalItems,
+      succeeded: initialSuccessCount,
       failed: 0,
-    };
-  }
+    },
+    recentItems: [],
+    rowCountByExternalId,
+  };
 
   await publishJobStatus({
     redis,
@@ -44,7 +49,7 @@ export async function processSyncJob(params: ProcessSyncJobParams): Promise<Proc
   });
 
   const { successful: successfulResults, failures } = await scrapeMethod({
-    itemIds,
+    itemIds: uniqueItemIds,
     maxRetries: 3,
     baseDelayMs: 1000,
     redis,

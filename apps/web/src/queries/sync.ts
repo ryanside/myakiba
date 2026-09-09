@@ -95,3 +95,11 @@ export async function fetchSyncSessionDetail(
   }
   return data;
 }
+
+export async function retrySyncSession(sessionId: string) {
+  const { data, error } = await app.api.sync.sessions({ id: sessionId }).retry.post();
+  if (error) {
+    throw new Error(getErrorMessage(error, "Failed to retry failed item results"));
+  }
+  return data;
+}

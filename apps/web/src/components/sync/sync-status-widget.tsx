@@ -264,7 +264,7 @@ type RecentSessionProps = {
     readonly successCount: number;
     readonly failCount: number;
     readonly orderId: string | null;
-    readonly createdAt: Date;
+    readonly updatedAt: Date;
   };
   readonly onNavigate: () => void;
 };
@@ -283,7 +283,7 @@ function RecentSessionItem({ session, onNavigate }: RecentSessionProps) {
       params={{ id: session.id }}
       onClick={onNavigate}
       className="group flex items-start gap-2.5 rounded-md p-2 hover:bg-accent"
-      aria-label={`View ${typeConfig.label} import from ${formatRelativeTimeToNow(session.createdAt)}`}
+      aria-label={`View ${typeConfig.label} import updated ${formatRelativeTimeToNow(session.updatedAt)}`}
     >
       <div className="mt-0.5 flex size-5 shrink-0 items-center justify-center">
         <HugeiconsIcon icon={statusIcon.icon} className={`size-3.5 ${statusIcon.className}`} />
@@ -295,7 +295,7 @@ function RecentSessionItem({ session, onNavigate }: RecentSessionProps) {
             <span className="text-xs font-medium">{typeConfig.label}</span>
           </div>
           <span className="shrink-0 text-[0.6875rem] text-muted-foreground">
-            {formatRelativeTimeToNow(session.createdAt)}
+            {formatRelativeTimeToNow(session.updatedAt)}
           </span>
         </div>
 

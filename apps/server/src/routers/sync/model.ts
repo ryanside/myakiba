@@ -32,7 +32,7 @@ export const orderSyncSchema = syncOrderSchema
     userId: true,
   })
   .extend({
-    items: z.array(syncOrderItemInputSchema),
+    items: z.array(syncOrderItemInputSchema).min(1),
   });
 
 export type OrderSyncType = z.infer<typeof orderSyncSchema>;

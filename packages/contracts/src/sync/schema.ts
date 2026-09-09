@@ -183,7 +183,7 @@ export const syncOrderItemInputSchema = syncOrderItemSchema.omit({
 
 export const syncOrderItemsSchema = z.object({
   orderId: z.string(),
-  items: z.array(syncOrderItemInputSchema),
+  items: z.array(syncOrderItemInputSchema).min(1),
 });
 
 export const syncCollectionItemSchema = z.object({
@@ -317,15 +317,14 @@ export const queuedCollectionItemSchema = z.object({
 export const jobDataSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("item"),
-    payloadVersion: z.literal(2),
+    payloadVersion: z.literal(3),
     userId: z.string(),
     syncSessionId: z.string(),
     itemExternalIds: z.array(z.number().int().positive()).min(1).max(MAX_ITEM_SYNC_ITEMS),
-    existingCount: z.number().int().nonnegative(),
   }),
   z.object({
     type: z.literal("csv"),
-    payloadVersion: z.literal(2),
+    payloadVersion: z.literal(3),
     userId: z.string(),
     syncSessionId: z.string(),
     items: z.array(internalCsvItemSchema),
@@ -334,7 +333,7 @@ export const jobDataSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("order"),
-    payloadVersion: z.literal(2),
+    payloadVersion: z.literal(3),
     userId: z.string(),
     syncSessionId: z.string(),
     order: z.object({
@@ -345,7 +344,7 @@ export const jobDataSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("order-item"),
-    payloadVersion: z.literal(2),
+    payloadVersion: z.literal(3),
     userId: z.string(),
     syncSessionId: z.string(),
     order: z.object({
@@ -356,7 +355,7 @@ export const jobDataSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("collection"),
-    payloadVersion: z.literal(2),
+    payloadVersion: z.literal(3),
     userId: z.string(),
     syncSessionId: z.string(),
     collection: z.object({

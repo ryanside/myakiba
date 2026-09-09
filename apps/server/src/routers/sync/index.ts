@@ -11,6 +11,7 @@ import {
   syncOrderItemsSchema,
 } from "./model";
 import type {
+  JobData,
   SyncJobError,
   SyncTerminalState,
   UpdatedSyncCollection,
@@ -20,6 +21,7 @@ import type {
 } from "@myakiba/contracts/sync/schema";
 import type { SyncJobStatus, SyncOrderItemInput } from "./model";
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
+import { SYNC_SESSION_RETRY_WINDOW_DAYS } from "@myakiba/contracts/sync/constants";
 import SyncService from "./service";
 import { tryCatch } from "@myakiba/utils/result";
 import {
@@ -34,6 +36,7 @@ import {
   MAX_JOB_STATUS_STREAM_DURATION_MS,
   waitForNextJobStatusEvent,
 } from "@/lib/job-status-stream";
+import { prepareCsvItems } from "./csv";
 
 const createTerminalJobStatus = ({
   jobId,
@@ -131,7 +134,13 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           : "These items are already in the item database.";
       const { error: startError } = await tryCatch<string | boolean>(
         missingIds.length > 0
-          ? SyncService.queueItemSyncJob(user.id, missingIds, existingIds.size, syncSessionId)
+          ? SyncService.queueSyncJob({
+              type: "item",
+              payloadVersion: 3,
+              userId: user.id,
+              syncSessionId,
+              itemExternalIds: missingIds,
+            })
           : SyncService.updateSyncSession(syncSessionId, {
               status: "completed",
               statusMessage,
@@ -185,19 +194,21 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         orderId: item.status === "Ordered" ? createId() : item.orderId,
       }));
 
-      const { data: result, error: processItemsError } = await tryCatch(
-        SyncService.processItems(items, user.id),
+      const itemExternalIds = items.map((item) => item.itemExternalId);
+      const { data: existingItems, error: existingItemsError } = await tryCatch(
+        SyncService.getExistingItemsWithLatestReleaseByExternalIds(itemExternalIds),
       );
 
-      if (processItemsError) {
-        log.error(processItemsError, {
-          step: "processItems",
+      if (existingItemsError) {
+        log.error(existingItemsError, {
+          step: "getExistingItemsWithLatestRelease",
           outcome: "error",
           sync: { type: "csv" },
         });
-        return status(500, "Failed to process MyFigureCollection CSV import request");
+        return status(500, "Failed to check for existing items");
       }
 
+      const result = prepareCsvItems(items, existingItems, user.id);
       const {
         collectionItems,
         orderItems,
@@ -229,11 +240,24 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         },
       });
 
-      if (itemsToScrape.length === 0 && collectionItems.length > 0) {
+      const jobData = {
+        type: "csv",
+        payloadVersion: 3,
+        userId: user.id,
+        syncSessionId,
+        items: itemsToScrape,
+        itemsToInsert: collectionItems,
+        ordersToInsert: orderItems,
+      } satisfies JobData;
+
+      let jobId: string | null = null;
+
+      if (itemsToScrape.length === 0) {
         const { error: insertToCollectionAndOrdersError } = await tryCatch(
           SyncService.completeSyncSessionWithoutWorker({
             collectionItems,
             orderItems,
+            requestPayload: jobData,
             syncSessionId,
           }),
         );
@@ -249,20 +273,9 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           });
           return status(500, "Failed to save collection items and orders");
         }
-      }
-
-      let jobId: string | null | undefined = null;
-      let statusMessage: string;
-
-      if (itemsToScrape.length > 0) {
+      } else {
         const { data: jobIdData, error: queueCSVSyncJobError } = await tryCatch(
-          SyncService.queueCSVSyncJob(
-            itemsToScrape,
-            collectionItems,
-            orderItems,
-            user.id,
-            syncSessionId,
-          ),
+          SyncService.queueSyncJob(jobData),
         );
 
         if (queueCSVSyncJobError) {
@@ -278,34 +291,11 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         }
 
         jobId = jobIdData;
-        statusMessage = SYNC_STATUS_MESSAGES.queued;
-      } else if (collectionItems.length === 0 && itemsToScrape.length === 0) {
-        statusMessage = SYNC_STATUS_MESSAGES.alreadyOwned;
-      } else {
-        statusMessage = SYNC_STATUS_MESSAGES.insertedWithoutScrape;
       }
 
-      if (!jobId && collectionItems.length === 0) {
-        const { error: updateSessionError } = await tryCatch(
-          SyncService.updateSyncSession(syncSessionId, {
-            status: "completed",
-            completedAt: new Date(),
-            statusMessage,
-            successCount: existingItemExternalIds.length,
-          }),
-        );
-        if (updateSessionError) {
-          log.error(updateSessionError, {
-            step: "updateSyncSession",
-            outcome: "error",
-            sync: {
-              type: "csv",
-              sessionId: syncSessionId,
-            },
-          });
-          return status(500, "Failed to update import record");
-        }
-      }
+      const statusMessage: string = jobId
+        ? SYNC_STATUS_MESSAGES.queued
+        : SYNC_STATUS_MESSAGES.insertedWithoutScrape;
 
       log.set({
         outcome: "success",
@@ -452,7 +442,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           tags: [],
           releaseId: item.releaseId,
         }));
-      const orderWasPersistedImmediately = collectionItemsToInsert.length > 0;
 
       const { data: syncSessionId, error: syncSessionError } = await tryCatch(
         SyncService.createSyncSession(user.id, "order", orderItemExternalIdsToTrack, {
@@ -481,13 +470,25 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         order: { id: orderId },
       });
 
-      if (itemsToScrape.length === 0 && orderWasPersistedImmediately) {
+      const jobData = {
+        type: "order",
+        payloadVersion: 3,
+        userId: user.id,
+        syncSessionId,
+        order: {
+          details: order,
+          itemsToScrape,
+          itemsToInsert: collectionItemsToInsert,
+        },
+      } satisfies JobData;
+
+      if (itemsToScrape.length === 0) {
         const { error: insertToCollectionAndOrdersError } = await tryCatch(
           SyncService.completeSyncSessionWithoutWorker({
             collectionItems: collectionItemsToInsert,
             orderItems: [order],
+            requestPayload: jobData,
             syncSessionId,
-            orderId,
           }),
         );
 
@@ -506,17 +507,10 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         }
       }
 
-      let jobId: string | null | undefined = null;
+      let jobId: string | null = null;
       if (itemsToScrape.length > 0) {
         const { data: jobIdData, error: queueOrderSyncJobError } = await tryCatch(
-          SyncService.queueOrderLikeSyncJob({
-            type: "order",
-            userId: user.id,
-            order,
-            itemsToScrape,
-            itemsToInsert: collectionItemsToInsert,
-            syncSessionId,
-          }),
+          SyncService.queueSyncJob(jobData),
         );
 
         if (queueOrderSyncJobError) {
@@ -532,30 +526,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           });
           return status(500, "Failed to queue order creation");
         }
-
         jobId = jobIdData;
-      } else if (!orderWasPersistedImmediately) {
-        const { error: updateSessionError } = await tryCatch(
-          SyncService.updateSyncSession(syncSessionId, {
-            status: "completed",
-            completedAt: new Date(),
-            statusMessage: SYNC_STATUS_MESSAGES.insertedWithoutScrape,
-            successCount: existingOrderItemExternalIds.length,
-          }),
-        );
-        if (updateSessionError) {
-          log.error(updateSessionError, {
-            step: "updateSyncSession",
-            outcome: "error",
-            sync: {
-              type: "order",
-              sessionId: syncSessionId,
-              orderId,
-            },
-            order: { id: orderId },
-          });
-          return status(500, "Failed to update import record");
-        }
       }
 
       log.set({
@@ -753,12 +724,24 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         order: { id: existingOrder.id },
       });
 
-      if (itemsToScrape.length === 0 && collectionItemsToInsert.length > 0) {
+      const jobData = {
+        type: "order-item",
+        payloadVersion: 3,
+        userId: user.id,
+        syncSessionId,
+        order: {
+          details: orderDetails,
+          itemsToScrape,
+          itemsToInsert: collectionItemsToInsert,
+        },
+      } satisfies JobData;
+
+      if (itemsToScrape.length === 0) {
         const { error: insertOrderItemsError } = await tryCatch(
           SyncService.completeSyncSessionWithoutWorker({
             collectionItems: collectionItemsToInsert,
+            requestPayload: jobData,
             syncSessionId,
-            orderId: existingOrder.id,
           }),
         );
 
@@ -777,17 +760,10 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         }
       }
 
-      let jobId: string | null | undefined = null;
+      let jobId: string | null = null;
       if (itemsToScrape.length > 0) {
         const { data: jobIdData, error: queueOrderItemSyncJobError } = await tryCatch(
-          SyncService.queueOrderLikeSyncJob({
-            type: "order-item",
-            userId: user.id,
-            order: orderDetails,
-            itemsToScrape,
-            itemsToInsert: collectionItemsToInsert,
-            syncSessionId,
-          }),
+          SyncService.queueSyncJob(jobData),
         );
 
         if (queueOrderItemSyncJobError) {
@@ -803,31 +779,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           });
           return status(500, "Failed to queue order items");
         }
-
         jobId = jobIdData;
-      } else if (collectionItemsToInsert.length === 0) {
-        const { error: updateSessionError } = await tryCatch(
-          SyncService.updateSyncSession(syncSessionId, {
-            status: "completed",
-            completedAt: new Date(),
-            statusMessage: SYNC_STATUS_MESSAGES.insertedWithoutScrape,
-            orderId: existingOrder.id,
-            successCount: existingOrderItemExternalIds.length,
-          }),
-        );
-        if (updateSessionError) {
-          log.error(updateSessionError, {
-            step: "updateSyncSession",
-            outcome: "error",
-            sync: {
-              type: "order-item",
-              sessionId: syncSessionId,
-              orderId: existingOrder.id,
-            },
-            order: { id: existingOrder.id },
-          });
-          return status(500, "Failed to update import record");
-        }
       }
 
       log.set({
@@ -979,10 +931,22 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         },
       });
 
-      if (itemsToScrape.length === 0 && collectionItemsToInsert.length > 0) {
+      const jobData = {
+        type: "collection",
+        payloadVersion: 3,
+        userId: user.id,
+        syncSessionId,
+        collection: {
+          itemsToScrape,
+          itemsToInsert: collectionItemsToInsert,
+        },
+      } satisfies JobData;
+
+      if (itemsToScrape.length === 0) {
         const { error: insertToCollectionAndOrdersError } = await tryCatch(
           SyncService.completeSyncSessionWithoutWorker({
             collectionItems: collectionItemsToInsert,
+            requestPayload: jobData,
             syncSessionId,
           }),
         );
@@ -1000,15 +964,10 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         }
       }
 
-      let jobId: string | null | undefined = null;
+      let jobId: string | null = null;
       if (itemsToScrape.length > 0) {
         const { data: jobIdData, error: queueCollectionSyncJobError } = await tryCatch(
-          SyncService.queueCollectionSyncJob(
-            user.id,
-            itemsToScrape,
-            collectionItemsToInsert,
-            syncSessionId,
-          ),
+          SyncService.queueSyncJob(jobData),
         );
 
         if (queueCollectionSyncJobError) {
@@ -1022,28 +981,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           });
           return status(500, "Failed to queue collection items");
         }
-
         jobId = jobIdData;
-      } else if (collectionItemsToInsert.length === 0) {
-        const { error: updateSessionError } = await tryCatch(
-          SyncService.updateSyncSession(syncSessionId, {
-            status: "completed",
-            completedAt: new Date(),
-            statusMessage: SYNC_STATUS_MESSAGES.insertedWithoutScrape,
-            successCount: existingCollectionItemExternalIds.length,
-          }),
-        );
-        if (updateSessionError) {
-          log.error(updateSessionError, {
-            step: "updateSyncSession",
-            outcome: "error",
-            sync: {
-              type: "collection",
-              sessionId: syncSessionId,
-            },
-          });
-          return status(500, "Failed to update import record");
-        }
       }
 
       log.set({
@@ -1075,7 +1013,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       };
     },
     {
-      body: z.array(collectionSyncSchema.omit({ collectionId: true })),
+      body: z.array(collectionSyncSchema.omit({ collectionId: true })).min(1),
       auth: true,
       rateLimit: "collection",
     },
@@ -1213,6 +1151,58 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           .optional(),
       }),
       auth: true,
+    },
+  )
+  .post(
+    "/sessions/:id/retry",
+    async ({ params, user, log }) => {
+      log.set({
+        action: "sync.retry",
+        user: { id: user.id },
+        sync: { sessionId: params.id },
+      });
+
+      if (!user.emailVerified) {
+        log.set({ outcome: "forbidden", sync: { reason: "email_not_verified" } });
+        return status(403, SYNC_STATUS_MESSAGES.requireEmailVerification);
+      }
+
+      const { data: result, error } = await tryCatch(
+        SyncService.retrySyncSession(params.id, user.id),
+      );
+      if (error) {
+        log.error(error, { step: "retrySyncSession", outcome: "error" });
+        return status(500, "Failed to retry failed item results");
+      }
+
+      if (result.outcome === "not_found") {
+        log.set({ outcome: "not_found" });
+        return status(404, "Import not found");
+      }
+      if (result.outcome === "expired") {
+        log.set({ outcome: "expired" });
+        return status(
+          409,
+          `The ${SYNC_SESSION_RETRY_WINDOW_DAYS}-day window to retry failed item results has expired`,
+        );
+      }
+      if (result.outcome === "unavailable") {
+        log.set({ outcome: "conflict" });
+        return status(409, "These failed item results cannot be retried");
+      }
+
+      log.set({
+        outcome: "success",
+        sync: {
+          jobId: result.jobId,
+        },
+      });
+      return { jobId: result.jobId };
+    },
+    {
+      params: z.object({ id: z.string() }),
+      auth: true,
+      rateLimit: "retry",
     },
   )
   .get(

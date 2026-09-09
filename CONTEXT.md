@@ -206,7 +206,7 @@ A MyFigureCollection Import brings data from MyFigureCollection into myakiba by 
 _Avoid_: Sync, two-way sync
 
 **Import History**:
-A saved record of each MyFigureCollection Import request and its successful and failed item results, including requests that only add Items to the Item Database; records expire 30 days after the request was created, even if unfinished. The same MyFigureCollection ID can appear more than once when separate Collection Items were requested.
+A saved record of one MyFigureCollection Import request and its successful and failed item results; requests that only add Items to the Item Database are included, and separate Collection Items can give it repeated results for the same MyFigureCollection ID. The record expires 30 days after the original request was created, even if unfinished, and the user can retry only its failed item results for the first 20 days without starting a new record.
 
 **Item Refresh**:
 An update of a MyFigureCollection Item using current MyFigureCollection data. The action is called Refresh item details; its update is visible to every user and may change or clear Selected Item Releases on Collection Items linked to that Item.

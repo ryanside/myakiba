@@ -164,11 +164,12 @@ type RecordItemParams =
  */
 export const recordItemOutcome = (state: SyncJobStatusState, item: RecordItemParams): void => {
   if (state.progress) {
+    const rowCount = state.rowCountByExternalId?.get(item.externalId) ?? 1;
     state.progress = {
       ...state.progress,
-      processed: state.progress.processed + 1,
-      succeeded: state.progress.succeeded + (item.outcome === "succeeded" ? 1 : 0),
-      failed: state.progress.failed + (item.outcome === "failed" ? 1 : 0),
+      processed: state.progress.processed + rowCount,
+      succeeded: state.progress.succeeded + (item.outcome === "succeeded" ? rowCount : 0),
+      failed: state.progress.failed + (item.outcome === "failed" ? rowCount : 0),
     };
   }
   state.recentItems = [
@@ -219,6 +220,7 @@ export const publishJobStatus = async ({
       .where(
         and(
           eq(syncSession.id, syncSessionId),
+          eq(syncSession.jobId, state.jobId),
           inArray(syncSession.status, ACTIVE_SYNC_SESSION_STATUSES),
         ),
       )
@@ -298,24 +300,27 @@ export const persistSyncSessionItemResults = async ({
 
 export const persistSyncFailureOutcome = async ({
   syncSessionId,
+  jobId,
   failures,
   pendingErrorReason = "Persistence failed while saving scraped items",
   statusMessage,
 }: {
   readonly syncSessionId: string;
+  readonly jobId: string;
   readonly failures: readonly SyncSessionItemFailure[];
   readonly pendingErrorReason?: string;
   readonly statusMessage: string;
 }): Promise<DbSyncSessionRow> => {
   return db.transaction(async (tx) => {
-    // Lock the session so workers finishing at the same time cannot overwrite a final result.
     const [session] = await tx
       .select()
       .from(syncSession)
       .where(eq(syncSession.id, syncSessionId))
       .for("update");
     if (!session) throw new Error("SYNC_SESSION_NOT_FOUND");
-    if (sessionStatusToTerminalState(session.status) !== null) return session;
+    if (session.jobId !== jobId || sessionStatusToTerminalState(session.status) !== null) {
+      return session;
+    }
 
     await persistSyncSessionItemFailures({ tx, syncSessionId, failures });
     await tx
@@ -332,19 +337,18 @@ export const persistSyncFailureOutcome = async ({
         ),
       );
 
-    const successCount = session.syncType === "item" ? session.successCount : 0;
     const [result] = await tx
       .update(syncSession)
       .set({
-        status: successCount > 0 ? "partial" : "failed",
+        status: sql`CASE WHEN ${syncSession.successCount} > 0 THEN 'partial' ELSE 'failed' END`,
         statusMessage,
-        successCount,
-        failCount: session.totalItems - successCount,
+        failCount: sql`${syncSession.totalItems} - ${syncSession.successCount}`,
         completedAt: new Date(),
         updatedAt: new Date(),
       })
       .where(eq(syncSession.id, syncSessionId))
       .returning();
+    if (!result) throw new Error("SYNC_SESSION_NOT_FOUND");
     return result;
   });
 };
@@ -377,13 +381,16 @@ export async function finalizeSync({
 }): Promise<FinalizeSyncResult> {
   const { data, error } = await tryCatch(
     db.transaction(async (tx) => {
+      // Serialize finalizers so an overlapping delivery cannot repeat saved writes.
       const [session] = await tx
         .select()
         .from(syncSession)
         .where(eq(syncSession.id, syncSessionId))
         .for("update");
       if (!session) throw new Error("SYNC_SESSION_NOT_FOUND");
-      if (sessionStatusToTerminalState(session.status) !== null) return session;
+      if (session.jobId !== state.jobId || sessionStatusToTerminalState(session.status) !== null) {
+        return session;
+      }
 
       const counts = await persist(tx);
       await persistSyncSessionItemResults({ tx, syncSessionId, failures });
@@ -406,6 +413,7 @@ export async function finalizeSync({
   const result = error
     ? await persistSyncFailureOutcome({
         syncSessionId,
+        jobId: state.jobId,
         failures,
         statusMessage: SYNC_STATUS_MESSAGES.failedPersist,
       })
@@ -429,13 +437,15 @@ export async function finalizeSync({
     succeeded: result.successCount,
     failed: result.failCount,
   };
-  await publishJobStatus({
-    redis,
-    state,
-    syncSessionId,
-    terminalState: sessionStatusToTerminalState(result.status),
-    error: jobError,
-  });
+  if (result.jobId === state.jobId) {
+    await publishJobStatus({
+      redis,
+      state,
+      syncSessionId,
+      terminalState: sessionStatusToTerminalState(result.status),
+      error: jobError,
+    });
+  }
   return {
     processedAt: result.updatedAt.toISOString(),
     successCount: result.successCount,

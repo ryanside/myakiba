@@ -56,6 +56,12 @@ const rateLimitConfigs = {
     keyPrefix: "rl:order",
     strategy: "userId",
   },
+  retry: {
+    maxRequests: 30,
+    windowSeconds: 3600,
+    keyPrefix: "rl:sync-retry",
+    strategy: "userId",
+  },
 } as const satisfies Record<string, RateLimitConfig>;
 
 type RateLimitName = keyof typeof rateLimitConfigs;

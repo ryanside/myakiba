@@ -90,6 +90,7 @@ export interface FullJobData extends Job {
 export type SyncJobStatusState = {
   readonly jobId: string;
   readonly startedAt: string;
+  readonly rowCountByExternalId?: ReadonlyMap<number, number>;
   phase: SyncJobPhase;
   progress: SyncJobProgress | null;
   recentItems: readonly SyncJobRecentItem[];
@@ -145,7 +146,7 @@ export type FinalizeCollectionSyncParams = {
   readonly state: SyncJobStatusState;
   readonly itemsToScrape: UpdatedSyncCollection[];
   readonly itemsToInsert: QueuedCollectionItem[];
-  readonly existingCount: number;
+  readonly initialSuccessCount: number;
   readonly syncSessionId: string;
 };
 
@@ -158,9 +159,9 @@ export type FinalizeOrderSyncParams = {
   readonly details: UpdatedSyncOrder;
   readonly itemsToScrape: UpdatedSyncOrderItem[];
   readonly itemsToInsert: QueuedCollectionItem[];
-  readonly existingCount: number;
+  readonly initialSuccessCount: number;
   readonly syncSessionId: string;
-  readonly syncMode: "create" | "append";
+  readonly createOrder: boolean;
 };
 
 export type FinalizeCsvSyncParams = {
@@ -173,7 +174,7 @@ export type FinalizeCsvSyncParams = {
   readonly csvItems: NormalizedInternalCsvItem[];
   readonly itemsToInsert: QueuedCollectionItem[];
   readonly ordersToInsert: UpdatedSyncOrder[];
-  readonly existingCount: number;
+  readonly initialSuccessCount: number;
   readonly syncSessionId: string;
 };
 
@@ -204,9 +205,8 @@ export type ProcessSyncJobContext = {
 };
 
 export type ProcessSyncJobParams = {
-  readonly type: SyncType;
   readonly itemIds: readonly number[];
-  readonly existingCount: number;
+  readonly initialSuccessCount: number;
   readonly context: ProcessSyncJobContext;
   readonly finalize: (
     successfulResults: readonly ScrapedItem[],
@@ -235,8 +235,7 @@ export type ExecuteSyncJobParams = {
   readonly syncSessionId: string;
   readonly userId: string;
   readonly itemIds: readonly number[];
-  readonly scrapeRowCount: number;
-  readonly existingCount: number;
+  readonly initialSuccessCount: number;
   readonly orderId: string | null;
   readonly finalize: (
     successfulResults: readonly ScrapedItem[],

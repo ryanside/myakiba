@@ -22,7 +22,7 @@ export async function finalizeItemSync({
   successfulResults,
   failures,
   itemExternalIds,
-  existingCount,
+  initialSuccessCount,
   syncSessionId,
   redis,
   state,
@@ -32,7 +32,7 @@ export async function finalizeItemSync({
   readonly successfulResults: readonly ScrapedItem[];
   readonly failures: readonly SyncSessionItemFailure[];
   readonly itemExternalIds: readonly number[];
-  readonly existingCount: number;
+  readonly initialSuccessCount: number;
   readonly syncSessionId: string;
   readonly redis: Redis;
   readonly state: SyncJobStatusState;
@@ -40,7 +40,7 @@ export async function finalizeItemSync({
   readonly workerError?: Error;
 }): Promise<FinalizeSyncResult> {
   const assembledData = assembleScrapedData(successfulResults);
-  const totalRowCount = existingCount + itemExternalIds.length;
+  const totalRowCount = initialSuccessCount + itemExternalIds.length;
   const persistence: FinalizePersistenceSummary = {
     items: assembledData.items.length,
     itemReleases: assembledData.itemReleases.length,
@@ -58,8 +58,9 @@ export async function finalizeItemSync({
       .where(eq(syncSession.id, syncSessionId))
       .for("update");
     if (!session) throw new Error("SYNC_SESSION_NOT_FOUND");
-    if (sessionStatusToTerminalState(session.status) !== null) {
+    if (session.jobId !== state.jobId || sessionStatusToTerminalState(session.status) !== null) {
       return {
+        jobId: session.jobId,
         sessionStatus: session.status,
         statusMessage: session.statusMessage,
         successCount: session.successCount,
@@ -92,7 +93,7 @@ export async function finalizeItemSync({
       failures: remainingFailures,
     });
 
-    const successCount = existingCount + availableIds.size;
+    const successCount = initialSuccessCount + availableIds.size;
     const failCount = remainingFailures.length;
     const terminal = resolveTerminalState({
       successCount,
@@ -122,7 +123,14 @@ export async function finalizeItemSync({
       })
       .where(eq(syncSession.id, syncSessionId));
 
-    return { ...terminal, statusMessage, successCount, failCount, persistenceError };
+    return {
+      ...terminal,
+      jobId: session.jobId,
+      statusMessage,
+      successCount,
+      failCount,
+      persistenceError,
+    };
   });
 
   state.phase = sessionStatusToPhase(result.sessionStatus);
@@ -143,13 +151,15 @@ export async function finalizeItemSync({
       error = { code: "scrape_failed", message: result.statusMessage };
     }
   }
-  await publishJobStatus({
-    redis,
-    state,
-    syncSessionId,
-    terminalState: sessionStatusToTerminalState(result.sessionStatus),
-    error,
-  });
+  if (result.jobId === state.jobId) {
+    await publishJobStatus({
+      redis,
+      state,
+      syncSessionId,
+      terminalState: sessionStatusToTerminalState(result.sessionStatus),
+      error,
+    });
+  }
   if (result.persistenceError) log.error(result.persistenceError);
 
   return {

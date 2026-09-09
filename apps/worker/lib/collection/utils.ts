@@ -16,7 +16,7 @@ export async function finalizeCollectionSync({
   state,
   itemsToScrape,
   itemsToInsert,
-  existingCount,
+  initialSuccessCount,
   syncSessionId,
 }: FinalizeCollectionSyncParams): Promise<FinalizeSyncResult> {
   const assembledData = assembleScrapedData(successfulResults);
@@ -26,7 +26,7 @@ export async function finalizeCollectionSync({
     successfulIds.has(collectionItem.itemExternalId),
   );
   const scrapeRowCount = itemsToScrape.length;
-  const totalRowCount = existingCount + scrapeRowCount;
+  const totalRowCount = initialSuccessCount + scrapeRowCount;
 
   const persistence: FinalizePersistenceSummary = {
     items: items.length,
@@ -86,7 +86,7 @@ export async function finalizeCollectionSync({
       }
 
       return {
-        successCount: existingCount + scrapedCollectionItems.length,
+        successCount: initialSuccessCount + scrapedCollectionItems.length,
         failCount: scrapeRowCount - scrapedCollectionItems.length,
       };
     },
