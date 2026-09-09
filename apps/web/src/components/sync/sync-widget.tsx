@@ -27,7 +27,7 @@ export default function SyncWidget({ TriggerWrapper, side = "left" }: SyncWidget
         <PopoverTrigger render={TriggerWrapper} />
         <PopoverContent
           align={side === "left" ? "start" : "end"}
-          className="w-64 max-w-[calc(100vw-2rem)] p-1"
+          className="w-64 max-w-[calc(100vw-2rem)] p-1 gap-y-0"
         >
           {LAUNCHABLE_SYNC_OPTIONS.map((option) => (
             <Button
@@ -35,16 +35,16 @@ export default function SyncWidget({ TriggerWrapper, side = "left" }: SyncWidget
               type="button"
               variant="ghost"
               onClick={() => handleOptionSelect(option.type)}
-              className="group/item h-auto w-full justify-start gap-2.5 rounded-md px-2 py-1.5 text-left font-normal transition-colors duration-150 hover:bg-accent"
+              className="group/item h-auto w-full justify-start gap-2.5 rounded-md px-2 py-1.5 text-left font-normal hover:bg-accent duration-0"
             >
               <HugeiconsIcon
                 icon={option.icon}
-                className="size-4 shrink-0 text-muted-foreground transition-colors duration-150 group-hover/item:text-foreground"
+                className="size-4 shrink-0 text-muted-foreground group-hover/item:text-foreground duration-0"
               />
               <span className="min-w-0 flex-1 whitespace-normal text-sm">{option.label}</span>
               <HugeiconsIcon
                 icon={ArrowRight01Icon}
-                className="size-3 shrink-0 text-muted-foreground/50 -translate-x-0.5 opacity-0 transition-[transform,opacity] duration-150 group-hover/item:translate-x-0 group-hover/item:opacity-100"
+                className="size-3 shrink-0 text-muted-foreground opacity-0 group-hover/item:opacity-100 duration-0"
               />
             </Button>
           ))}
