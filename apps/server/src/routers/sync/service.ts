@@ -1,4 +1,5 @@
 import { db } from "@myakiba/db/client";
+import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
 import {
   item as itemTable,
   collection as collectionTable,
@@ -257,7 +258,18 @@ class SyncService {
         if (orderItems.length > 0) {
           await tx.insert(orderTable).values(orderItems);
         }
-        await tx.insert(collectionTable).values(collectionItems);
+
+        const insertedCollectionItems = await tx
+          .insert(collectionTable)
+          .values(collectionItems)
+          .returning({ id: collectionTable.id });
+
+        if (requestPayload.type === "order-item") {
+          await advanceOrderReleaseDatesForCollectionItems(
+            tx,
+            insertedCollectionItems.map(({ id }) => id),
+          );
+        }
 
         await tx
           .update(syncSessionItem)

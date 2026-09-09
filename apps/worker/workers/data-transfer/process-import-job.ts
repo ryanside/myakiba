@@ -9,6 +9,7 @@ import type {
   DataTransferImportResult,
 } from "@myakiba/contracts/data-transfer/schema";
 import { db } from "@myakiba/db/client";
+import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
 import {
   collection as collectionTable,
   dataTransferImport,
@@ -309,6 +310,11 @@ async function writeImport({
         .onConflictDoNothing({ target: collectionTable.id })
         .returning({ id: collectionTable.id });
       insertedCollectionItemCount += insertedCollectionItems.length;
+
+      await advanceOrderReleaseDatesForCollectionItems(
+        transaction,
+        insertedCollectionItems.map(({ id }) => id),
+      );
     }
 
     const [saved] = await transaction

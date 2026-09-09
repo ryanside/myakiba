@@ -83,7 +83,7 @@ An Order with a status of Paid, Shipped, or Owned. A Payment Date by itself does
 An Order with an Acquisition Status of Ordered. Its Order Fees and the prices of Order Items whose own Acquisition Status is also Ordered count as Unpaid Costs, not Spend.
 
 **Order Release Date**:
-The release date saved for the whole Order. It is separate from the Item Releases picked for its Order Items.
+The date the whole Order is expected to release. It remains separate from Selected Item Releases, but adding Order Items or changing an attached Order Item's Selected Item Release advances it to the latest relevant date when later. Automatic changes never move it earlier, clear it, or replace a later user-entered date.
 _Avoid_: Item Release, Selected Item Release
 
 **Cascade to Items**:

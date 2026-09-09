@@ -377,6 +377,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         const date = releaseDatesByItemId.get(internalId);
         return date ? [date] : [];
       });
+      if (body.releaseDate) releaseDates.push(body.releaseDate);
 
       const latestReleaseDate =
         releaseDates.length > 0

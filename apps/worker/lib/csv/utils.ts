@@ -7,6 +7,7 @@ import { parseMoneyToMinorUnits } from "@myakiba/utils/currency";
 import { assembleScrapedData } from "../assemble-scraped-data";
 import { persistScrapedItemData } from "../persist-scraped-item-data";
 import { finalizeSync } from "../utils";
+import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
 import { order, collection } from "@myakiba/db/schema/figure";
 
 export async function finalizeCsvSync({
@@ -120,7 +121,14 @@ export async function finalizeCsvSync({
       }
       const collectionRows = [...itemsToInsert, ...collectionItemsToInsert];
       if (collectionRows.length > 0) {
-        await tx.insert(collection).values(collectionRows);
+        const insertedCollectionItems = await tx
+          .insert(collection)
+          .values(collectionRows)
+          .returning({ id: collection.id });
+        await advanceOrderReleaseDatesForCollectionItems(
+          tx,
+          insertedCollectionItems.map(({ id }) => id),
+        );
       }
 
       return {

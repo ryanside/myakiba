@@ -7,6 +7,7 @@ import { and, eq } from "drizzle-orm";
 import { assembleScrapedData } from "../assemble-scraped-data";
 import { persistScrapedItemData } from "../persist-scraped-item-data";
 import { finalizeSync } from "../utils";
+import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
 import { order, collection } from "@myakiba/db/schema/figure";
 
 export async function finalizeOrderSync({
@@ -23,7 +24,7 @@ export async function finalizeOrderSync({
   createOrder,
 }: FinalizeOrderSyncParams): Promise<FinalizeSyncResult> {
   const assembledData = assembleScrapedData(successfulResults);
-  const { items, entries, entryToItems, itemReleases, latestReleaseIdByExternalId } = assembledData;
+  const { items, entries, entryToItems, itemReleases } = assembledData;
   const successfulIds = new Set(successfulResults.map((result) => result.id));
   const successfulOrderItems = itemsToScrape.filter((orderItem) =>
     successfulIds.has(orderItem.itemExternalId),
@@ -31,23 +32,10 @@ export async function finalizeOrderSync({
   const scrapeRowCount = itemsToScrape.length;
   const totalRowCount = initialSuccessCount + scrapeRowCount;
 
-  let latestReleaseDate: string | null = null;
-  for (const releaseInfo of latestReleaseIdByExternalId.values()) {
-    if (releaseInfo.date && (!latestReleaseDate || releaseInfo.date > latestReleaseDate)) {
-      latestReleaseDate = releaseInfo.date;
-    }
-  }
-
-  const shouldUpdateReleaseDate =
-    latestReleaseDate !== null && (!details.releaseDate || latestReleaseDate > details.releaseDate);
-
-  if (shouldUpdateReleaseDate) {
-    details.releaseDate = latestReleaseDate;
-  }
-
   // Adding items can move the release date later. Keep the other saved order details.
+  const shouldUpdateExistingOrder =
+    itemReleases.length > 0 || itemsToInsert.some((item) => item.releaseId !== null);
   const shouldCreateOrder = createOrder && itemsToInsert.length + successfulOrderItems.length > 0;
-  const shouldUpdateExistingOrder = !createOrder && shouldUpdateReleaseDate;
 
   const persistence: FinalizePersistenceSummary = {
     items: items.length,
@@ -121,18 +109,17 @@ export async function finalizeOrderSync({
 
       if (shouldCreateOrder) {
         await tx.insert(order).values(details);
-      } else if (shouldUpdateExistingOrder) {
-        await tx
-          .update(order)
-          .set({
-            releaseDate: details.releaseDate,
-            updatedAt: new Date(),
-          })
-          .where(eq(order.id, details.id));
       }
 
       if (collectionRows.length > 0) {
-        await tx.insert(collection).values(collectionRows);
+        const insertedCollectionItems = await tx
+          .insert(collection)
+          .values(collectionRows)
+          .returning({ id: collection.id });
+        await advanceOrderReleaseDatesForCollectionItems(
+          tx,
+          insertedCollectionItems.map(({ id }) => id),
+        );
       }
 
       const result = {
