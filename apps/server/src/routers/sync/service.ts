@@ -20,7 +20,7 @@ import type {
   UpdatedSyncOrderItem,
 } from "@myakiba/contracts/sync/schema";
 import { sessionStatusToPhase, sessionStatusToTerminalState } from "@myakiba/contracts/sync/schema";
-import type { SyncJobStatus, CollectionInsertType } from "./model";
+import type { SyncJobStatus, CollectionInsertType, ExistingItemWithLatestRelease } from "./model";
 import type { OrderInsertType } from "../orders/model";
 import type {
   SyncSessionItemStatus,
@@ -32,7 +32,6 @@ import { SYNC_QUEUE_NAME } from "@myakiba/contracts/sync/constants";
 import { Queue } from "bullmq";
 import { createId } from "@paralleldrive/cuid2";
 import { env } from "@myakiba/env/server";
-import { parseMoneyToMinorUnits } from "@myakiba/utils/currency";
 import { tryCatch } from "@myakiba/utils/result";
 import {
   getJobStatusSnapshotKey,
@@ -41,6 +40,7 @@ import {
 } from "@myakiba/redis/job-status";
 import { redis } from "@myakiba/redis/client";
 import { createLogger } from "evlog";
+import { prepareCsvItems } from "./csv";
 
 const syncQueue = new Queue<JobData>(SYNC_QUEUE_NAME, {
   connection: {
@@ -66,19 +66,6 @@ type SyncSessionUpdatePayload = Partial<
     "status" | "statusMessage" | "jobId" | "orderId" | "successCount" | "failCount" | "completedAt"
   >
 >;
-
-type ExistingItemWithLatestRelease = Readonly<{
-  id: string;
-  externalId: number;
-  title: string;
-  releaseId: string | null;
-  releaseDate: string | null;
-}>;
-
-type CsvSyncCandidate = ExistingItemWithLatestRelease &
-  Readonly<{
-    isInCollection: boolean;
-  }>;
 
 const resolveFallbackJobStatusMessage = ({
   status,
@@ -214,38 +201,6 @@ class SyncService {
     );
   }
 
-  async getCsvSyncCandidates(
-    externalIds: readonly number[],
-    userId: string,
-  ): Promise<readonly CsvSyncCandidate[]> {
-    if (!externalIds || externalIds.length === 0) {
-      return [];
-    }
-
-    const existingItems = await db
-      .selectDistinctOn([itemTable.id], {
-        id: itemTable.id,
-        externalId: itemTable.externalId,
-        title: itemTable.title,
-        releaseId: item_release.id,
-        releaseDate: item_release.date,
-        isInCollection: sql<boolean>`exists (
-          select 1
-          from ${collectionTable}
-          where ${collectionTable.itemId} = ${itemTable.id}
-            and ${collectionTable.userId} = ${userId}
-        )`,
-      })
-      .from(itemTable)
-      .leftJoin(item_release, eq(item_release.itemId, itemTable.id))
-      .where(and(eq(itemTable.source, "mfc"), inArray(itemTable.externalId, [...externalIds])))
-      .orderBy(itemTable.id, desc(item_release.date), desc(item_release.createdAt));
-
-    return existingItems.filter(
-      (existingItem): existingItem is CsvSyncCandidate => existingItem.externalId !== null,
-    );
-  }
-
   async getOrderByIdForUser(orderId: string, userId: string) {
     const [existingOrder] = await db
       .select()
@@ -306,116 +261,9 @@ class SyncService {
 
   async processItems(items: NormalizedInternalCsvItem[], userId: string) {
     const itemExternalIds = items.map((item) => item.itemExternalId);
-
-    const existingCandidates = await this.getCsvSyncCandidates(itemExternalIds, userId);
-
-    const existingItemByExternalId = new Map(
-      existingCandidates.map((existingCandidate) => [
-        existingCandidate.externalId,
-        existingCandidate,
-      ]),
-    );
-
-    const externalIdsNeedingCollectionInsert = new Set(
-      existingCandidates
-        .filter((existingCandidate) => !existingCandidate.isInCollection)
-        .map((existingCandidate) => existingCandidate.externalId),
-    );
-
-    const itemIdsNeedingInsertSet = new Set(
-      existingCandidates
-        .filter((existingCandidate) => !existingCandidate.isInCollection)
-        .map((existingCandidate) => existingCandidate.id),
-    );
-    const existingItemsReleases = new Map<string, string>();
-    const existingItemsReleaseDates = new Map<string, string>();
-    for (const existingCandidate of existingCandidates) {
-      if (!itemIdsNeedingInsertSet.has(existingCandidate.id)) {
-        continue;
-      }
-      if (existingCandidate.releaseId) {
-        existingItemsReleases.set(existingCandidate.id, existingCandidate.releaseId);
-      }
-      if (existingCandidate.releaseDate) {
-        existingItemsReleaseDates.set(existingCandidate.id, existingCandidate.releaseDate);
-      }
-    }
-
-    const csvItemsToInsert = items.filter((item) =>
-      externalIdsNeedingCollectionInsert.has(item.itemExternalId),
-    );
-
-    const idsToScrape = new Set(
-      itemExternalIds.filter((externalId) => !existingItemByExternalId.has(externalId)),
-    );
-    const csvItemsToScrape = items.filter((item) => idsToScrape.has(item.itemExternalId));
-
-    const orderItems: UpdatedSyncOrder[] = [];
-    csvItemsToInsert.forEach((item) => {
-      if (item.status === "Ordered") {
-        const existingItem = existingItemByExternalId.get(item.itemExternalId);
-        const itemId = existingItem?.id;
-
-        if (itemId && item.orderId) {
-          orderItems.push({
-            id: item.orderId,
-            userId,
-            status: "Ordered",
-            title: existingItem.title || `Order ${item.orderId}`,
-            shop: item.shop,
-            orderDate: item.orderDate,
-            releaseDate: existingItemsReleaseDates.get(itemId) ?? null,
-            paymentDate: item.payment_date,
-            shippingDate: item.shipping_date,
-            collectionDate: item.collecting_date,
-            shippingMethod: item.shipping_method,
-            shippingFee: 0,
-            taxes: 0,
-            duties: 0,
-            tariffs: 0,
-            miscFees: 0,
-            notes: "",
-          });
-        }
-      }
-    });
-
-    const collectionItems = csvItemsToInsert
-      .map((i): QueuedCollectionItem | null => {
-        const internalItemId = existingItemByExternalId.get(i.itemExternalId)?.id;
-        if (!internalItemId) {
-          return null;
-        }
-
-        return {
-          id: i.collectionId,
-          userId,
-          itemId: internalItemId,
-          status: i.status,
-          count: i.count,
-          score: i.score && i.score.trim() !== "" ? i.score : "0.0",
-          paymentDate: i.payment_date,
-          shippingDate: i.shipping_date,
-          collectionDate: i.collecting_date,
-          price: i.price && i.price.trim() !== "" ? parseMoneyToMinorUnits(i.price) : 0,
-          shop: i.shop,
-          shippingMethod: i.shipping_method,
-          tags: [],
-          condition: "New",
-          notes: i.note,
-          releaseId: existingItemsReleases.get(internalItemId) ?? null,
-          orderId: i.orderId,
-          orderDate: i.orderDate,
-        };
-      })
-      .filter((item): item is QueuedCollectionItem => item !== null);
-
-    return {
-      collectionItems,
-      orderItems,
-      csvItemsToScrape,
-      existingItemExternalIds: csvItemsToInsert.map((i) => i.itemExternalId),
-    };
+    const existingItems =
+      await this.getExistingItemsWithLatestReleaseByExternalIds(itemExternalIds);
+    return prepareCsvItems(items, existingItems, userId);
   }
 
   async queueCSVSyncJob(

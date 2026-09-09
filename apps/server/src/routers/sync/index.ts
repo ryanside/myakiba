@@ -332,7 +332,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       };
     },
     {
-      body: z.array(internalCsvItemSchema.omit({ collectionId: true })),
+      body: z.array(internalCsvItemSchema.omit({ collectionId: true })).min(1),
       auth: true,
       rateLimit: "csv",
     },

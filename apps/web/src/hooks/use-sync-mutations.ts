@@ -53,11 +53,6 @@ export function useSyncMutations(
         description = `Added ${itemCount} item${itemCount === 1 ? "" : "s"}`;
       }
 
-      if (syncType === "csv" && data.isFinished && itemCount === 0) {
-        title = "No new items to import";
-        description = "These items are already in your collection or orders.";
-      }
-
       if (syncType === "item" && data.isFinished) {
         title = "No new items to add";
         description = data.status;

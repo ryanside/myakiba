@@ -198,7 +198,7 @@ An action that adds Order Items to an existing Order.
 _Avoid_: Sync Order Items
 
 **Import MyFigureCollection CSV**:
-An action that reads a MyFigureCollection CSV export and adds its supported Owned and Ordered items to the user's Collection and Orders.
+An action that reads a MyFigureCollection CSV export and creates new Collection Items and Orders for its supported Owned and Ordered items, reusing or adding the needed Items. Importing the same file again creates additional Collection Items and Orders.
 _Avoid_: Sync CSV, Import from MyFigureCollection when a CSV file is required
 
 **MyFigureCollection Import**:

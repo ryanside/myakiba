@@ -44,3 +44,11 @@ export const collectionSyncSchema = syncCollectionItemSchema.omit({
 
 export type CollectionSyncType = z.infer<typeof collectionSyncSchema>;
 export type CollectionInsertType = z.infer<typeof collectionInsertSchema>;
+
+export type ExistingItemWithLatestRelease = Readonly<{
+  id: string;
+  externalId: number;
+  title: string;
+  releaseId: string | null;
+  releaseDate: string | null;
+}>;
