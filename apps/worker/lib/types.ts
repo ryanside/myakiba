@@ -314,6 +314,9 @@ export type WorkerJobContext = {
     readonly sessionStatus: string | null;
     readonly statusMessage: string | null;
   };
+  readonly deployment: {
+    readonly version: string;
+  };
   readonly user: {
     readonly id: string | null;
   };

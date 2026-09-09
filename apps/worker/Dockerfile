@@ -30,6 +30,9 @@ FROM gcr.io/distroless/base-debian12:nonroot AS runner
 
 ENV NODE_ENV=production
 
+ARG SOURCE_COMMIT
+ENV BUILD_ID=${SOURCE_COMMIT:-dev}
+
 WORKDIR /app
 
 COPY --from=build /app/worker .
