@@ -76,6 +76,17 @@ type SyncSessionUpdatePayload = Partial<
   >
 >;
 
+type SyncTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+type SyncSessionCreation = {
+  readonly id: string;
+  readonly userId: string;
+  readonly syncType: SyncType;
+  readonly itemExternalIds: readonly number[];
+  readonly orderId?: string;
+  readonly existingItemExternalIds?: readonly number[];
+};
+
 type RetrySyncSessionResult =
   | { readonly outcome: "queued"; readonly jobId: string }
   | { readonly outcome: "not_found" }
@@ -129,6 +140,46 @@ const resolveFallbackJobStatusMessage = ({
 };
 
 class SyncService {
+  private async insertSyncSession(
+    tx: SyncTransaction,
+    {
+      id,
+      userId,
+      syncType,
+      itemExternalIds,
+      orderId,
+      existingItemExternalIds = [],
+    }: SyncSessionCreation,
+  ): Promise<void> {
+    const existingIdSet = new Set(existingItemExternalIds);
+    // Number row IDs in submitted order so history keeps that order when sorted by createdAt and id.
+    const rows =
+      syncType === "item"
+        ? itemExternalIds.map((externalId, index) => ({
+            id: `${id}-${String(index).padStart(2, "0")}`,
+            syncSessionId: id,
+            itemExternalId: externalId,
+            status: existingIdSet.has(externalId) ? ("scraped" as const) : ("pending" as const),
+          }))
+        : [...itemExternalIds, ...existingItemExternalIds].map((externalId) => ({
+            syncSessionId: id,
+            itemExternalId: externalId,
+          }));
+
+    await tx.insert(syncSession).values({
+      id,
+      userId,
+      syncType,
+      orderId: orderId ?? null,
+      totalItems: rows.length,
+      successCount: syncType === "item" ? existingItemExternalIds.length : 0,
+    });
+
+    if (rows.length > 0) {
+      await tx.insert(syncSessionItem).values(rows);
+    }
+  }
+
   private async failPendingSyncSession(
     syncSessionId: string,
     statusMessage: string,
@@ -235,26 +286,26 @@ class SyncService {
   }
 
   async completeSyncSessionWithoutWorker({
+    session,
     collectionItems,
     orderItems = [],
     requestPayload,
-    syncSessionId,
   }: {
+    readonly session: SyncSessionCreation;
     readonly collectionItems: CollectionInsertType[];
     readonly orderItems?: OrderInsertType[];
     readonly requestPayload: JobData;
-    readonly syncSessionId: string;
   }): Promise<void> {
+    const syncSessionId = session.id;
     try {
-      const stored = await this.updateSyncSession(syncSessionId, { requestPayload });
-      if (!stored) throw new Error("SYNC_SESSION_NOT_FOUND");
-
       const orderId =
         requestPayload.type === "order" || requestPayload.type === "order-item"
           ? requestPayload.order.details.id
           : undefined;
 
       await db.transaction(async (tx) => {
+        await this.insertSyncSession(tx, session);
+
         if (orderItems.length > 0) {
           await tx.insert(orderTable).values(orderItems);
         }
@@ -284,6 +335,7 @@ class SyncService {
         await tx
           .update(syncSession)
           .set({
+            requestPayload,
             status: "completed",
             statusMessage: SYNC_STATUS_MESSAGES.insertedWithoutScrape,
             successCount: sql`${syncSession.totalItems}`,
@@ -296,7 +348,28 @@ class SyncService {
       });
     } catch (error) {
       await tryCatch(
-        this.failPendingSyncSession(syncSessionId, SYNC_STATUS_MESSAGES.failedPersist),
+        db.transaction(async (tx) => {
+          await this.insertSyncSession(tx, session);
+          await tx
+            .update(syncSessionItem)
+            .set({
+              status: "failed",
+              errorReason: SYNC_STATUS_MESSAGES.failedPersist,
+              updatedAt: new Date(),
+            })
+            .where(eq(syncSessionItem.syncSessionId, syncSessionId));
+          await tx
+            .update(syncSession)
+            .set({
+              requestPayload,
+              status: "failed",
+              statusMessage: SYNC_STATUS_MESSAGES.failedPersist,
+              failCount: sql`${syncSession.totalItems}`,
+              completedAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(eq(syncSession.id, syncSessionId));
+        }),
       );
       throw error;
     }
@@ -495,48 +568,10 @@ class SyncService {
 
   // Sync session methods
 
-  async createSyncSession(
-    userId: string,
-    syncType: SyncType,
-    itemExternalIds: readonly number[],
-    options?: {
-      readonly orderId?: string;
-      readonly existingItemExternalIds?: readonly number[];
-    },
-  ): Promise<string> {
-    const sessionId = createId();
-    const existingIds = options?.existingItemExternalIds ?? [];
-    const existingIdSet = new Set(existingIds);
-    // Number row IDs in submitted order so history keeps that order when sorted by createdAt and id.
-    const rows =
-      syncType === "item"
-        ? itemExternalIds.map((externalId, index) => ({
-            id: `${sessionId}-${String(index).padStart(2, "0")}`,
-            syncSessionId: sessionId,
-            itemExternalId: externalId,
-            status: existingIdSet.has(externalId) ? ("scraped" as const) : ("pending" as const),
-          }))
-        : [...itemExternalIds, ...existingIds].map((externalId) => ({
-            syncSessionId: sessionId,
-            itemExternalId: externalId,
-          }));
-
+  async createSyncSession(session: SyncSessionCreation): Promise<void> {
     await db.transaction(async (tx) => {
-      await tx.insert(syncSession).values({
-        id: sessionId,
-        userId,
-        syncType,
-        orderId: options?.orderId ?? null,
-        totalItems: rows.length,
-        successCount: syncType === "item" ? existingIds.length : 0,
-      });
-
-      if (rows.length > 0) {
-        await tx.insert(syncSessionItem).values(rows);
-      }
+      await this.insertSyncSession(tx, session);
     });
-
-    return sessionId;
   }
 
   async getSyncSessions(

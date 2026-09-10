@@ -110,8 +110,13 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       }
       const existingIds = new Set(existingItems.map((item) => item.externalId));
       const missingIds = body.items.filter((id) => !existingIds.has(id));
-      const { data: syncSessionId, error: sessionError } = await tryCatch(
-        SyncService.createSyncSession(user.id, "item", body.items, {
+      const syncSessionId = createId();
+      const { error: sessionError } = await tryCatch(
+        SyncService.createSyncSession({
+          id: syncSessionId,
+          userId: user.id,
+          syncType: "item",
+          itemExternalIds: body.items,
           existingItemExternalIds: body.items.filter((id) => existingIds.has(id)),
         }),
       );
@@ -217,29 +222,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       } = result;
 
       const itemExternalIdsToTrack = itemsToScrape.map((i) => i.itemExternalId);
-
-      const { data: syncSessionId, error: syncSessionError } = await tryCatch(
-        SyncService.createSyncSession(user.id, "csv", itemExternalIdsToTrack, {
-          existingItemExternalIds,
-        }),
-      );
-
-      if (syncSessionError) {
-        log.error(syncSessionError, {
-          step: "createSyncSession",
-          outcome: "error",
-          sync: { type: "csv" },
-        });
-        return status(500, "Failed to create import record");
-      }
-
-      log.set({
-        sync: {
-          type: "csv",
-          sessionId: syncSessionId,
-        },
-      });
-
+      const syncSessionId = createId();
       const jobData = {
         type: "csv",
         payloadVersion: 3,
@@ -249,31 +232,47 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         itemsToInsert: collectionItems,
         ordersToInsert: orderItems,
       } satisfies JobData;
+      const session = {
+        id: syncSessionId,
+        userId: user.id,
+        syncType: "csv" as const,
+        itemExternalIds: itemExternalIdsToTrack,
+        existingItemExternalIds,
+      };
+      const { error: syncSessionError } = await tryCatch(
+        itemsToScrape.length === 0
+          ? SyncService.completeSyncSessionWithoutWorker({
+              session,
+              collectionItems,
+              orderItems,
+              requestPayload: jobData,
+            })
+          : SyncService.createSyncSession(session),
+      );
+
+      if (syncSessionError) {
+        log.error(syncSessionError, {
+          step: itemsToScrape.length === 0 ? "insertToCollectionAndOrders" : "createSyncSession",
+          outcome: "error",
+          sync: { type: "csv", sessionId: syncSessionId },
+        });
+        return status(
+          500,
+          itemsToScrape.length === 0
+            ? "Failed to save collection items and orders"
+            : "Failed to create import record",
+        );
+      }
+
+      log.set({
+        sync: {
+          type: "csv",
+          sessionId: syncSessionId,
+        },
+      });
 
       let jobId: string | null = null;
-
-      if (itemsToScrape.length === 0) {
-        const { error: insertToCollectionAndOrdersError } = await tryCatch(
-          SyncService.completeSyncSessionWithoutWorker({
-            collectionItems,
-            orderItems,
-            requestPayload: jobData,
-            syncSessionId,
-          }),
-        );
-
-        if (insertToCollectionAndOrdersError) {
-          log.error(insertToCollectionAndOrdersError, {
-            step: "insertToCollectionAndOrders",
-            outcome: "error",
-            sync: {
-              type: "csv",
-              sessionId: syncSessionId,
-            },
-          });
-          return status(500, "Failed to save collection items and orders");
-        }
-      } else {
+      if (itemsToScrape.length > 0) {
         const { data: jobIdData, error: queueCSVSyncJobError } = await tryCatch(
           SyncService.queueSyncJob(jobData),
         );
@@ -444,33 +443,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           releaseId: item.releaseId,
         }));
 
-      const { data: syncSessionId, error: syncSessionError } = await tryCatch(
-        SyncService.createSyncSession(user.id, "order", orderItemExternalIdsToTrack, {
-          existingItemExternalIds: existingOrderItemExternalIds,
-        }),
-      );
-
-      if (syncSessionError) {
-        log.error(syncSessionError, {
-          step: "createSyncSession",
-          outcome: "error",
-          sync: {
-            type: "order",
-            orderId,
-          },
-        });
-        return status(500, "Failed to create import record");
-      }
-
-      log.set({
-        sync: {
-          type: "order",
-          sessionId: syncSessionId,
-          orderId,
-        },
-        order: { id: orderId },
-      });
-
+      const syncSessionId = createId();
       const jobData = {
         type: "order",
         payloadVersion: 3,
@@ -482,31 +455,51 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           itemsToInsert: collectionItemsToInsert,
         },
       } satisfies JobData;
+      const session = {
+        id: syncSessionId,
+        userId: user.id,
+        syncType: "order" as const,
+        itemExternalIds: orderItemExternalIdsToTrack,
+        existingItemExternalIds: existingOrderItemExternalIds,
+      };
+      const { error: syncSessionError } = await tryCatch(
+        itemsToScrape.length === 0
+          ? SyncService.completeSyncSessionWithoutWorker({
+              session,
+              collectionItems: collectionItemsToInsert,
+              orderItems: [order],
+              requestPayload: jobData,
+            })
+          : SyncService.createSyncSession(session),
+      );
 
-      if (itemsToScrape.length === 0) {
-        const { error: insertToCollectionAndOrdersError } = await tryCatch(
-          SyncService.completeSyncSessionWithoutWorker({
-            collectionItems: collectionItemsToInsert,
-            orderItems: [order],
-            requestPayload: jobData,
-            syncSessionId,
-          }),
+      if (syncSessionError) {
+        log.error(syncSessionError, {
+          step: itemsToScrape.length === 0 ? "insertToCollectionAndOrders" : "createSyncSession",
+          outcome: "error",
+          sync: {
+            type: "order",
+            sessionId: syncSessionId,
+            orderId,
+          },
+          order: { id: orderId },
+        });
+        return status(
+          500,
+          itemsToScrape.length === 0
+            ? "Failed to save the order and its items"
+            : "Failed to create import record",
         );
-
-        if (insertToCollectionAndOrdersError) {
-          log.error(insertToCollectionAndOrdersError, {
-            step: "insertToCollectionAndOrders",
-            outcome: "error",
-            sync: {
-              type: "order",
-              sessionId: syncSessionId,
-              orderId,
-            },
-            order: { id: orderId },
-          });
-          return status(500, "Failed to save the order and its items");
-        }
       }
+
+      log.set({
+        sync: {
+          type: "order",
+          sessionId: syncSessionId,
+          orderId,
+        },
+        order: { id: orderId },
+      });
 
       let jobId: string | null = null;
       if (itemsToScrape.length > 0) {
@@ -697,34 +690,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           releaseId: item.releaseId,
         }));
 
-      const { data: syncSessionId, error: syncSessionError } = await tryCatch(
-        SyncService.createSyncSession(user.id, "order-item", orderItemExternalIdsToTrack, {
-          orderId: existingOrder.id,
-          existingItemExternalIds: existingOrderItemExternalIds,
-        }),
-      );
-
-      if (syncSessionError) {
-        log.error(syncSessionError, {
-          step: "createSyncSession",
-          outcome: "error",
-          sync: {
-            type: "order-item",
-            orderId: existingOrder.id,
-          },
-        });
-        return status(500, "Failed to create import record");
-      }
-
-      log.set({
-        sync: {
-          type: "order-item",
-          sessionId: syncSessionId,
-          orderId: existingOrder.id,
-        },
-        order: { id: existingOrder.id },
-      });
-
+      const syncSessionId = createId();
       const jobData = {
         type: "order-item",
         payloadVersion: 3,
@@ -736,30 +702,51 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           itemsToInsert: collectionItemsToInsert,
         },
       } satisfies JobData;
+      const session = {
+        id: syncSessionId,
+        userId: user.id,
+        syncType: "order-item" as const,
+        itemExternalIds: orderItemExternalIdsToTrack,
+        orderId: existingOrder.id,
+        existingItemExternalIds: existingOrderItemExternalIds,
+      };
+      const { error: syncSessionError } = await tryCatch(
+        itemsToScrape.length === 0
+          ? SyncService.completeSyncSessionWithoutWorker({
+              session,
+              collectionItems: collectionItemsToInsert,
+              requestPayload: jobData,
+            })
+          : SyncService.createSyncSession(session),
+      );
 
-      if (itemsToScrape.length === 0) {
-        const { error: insertOrderItemsError } = await tryCatch(
-          SyncService.completeSyncSessionWithoutWorker({
-            collectionItems: collectionItemsToInsert,
-            requestPayload: jobData,
-            syncSessionId,
-          }),
+      if (syncSessionError) {
+        log.error(syncSessionError, {
+          step: itemsToScrape.length === 0 ? "insertOrderItems" : "createSyncSession",
+          outcome: "error",
+          sync: {
+            type: "order-item",
+            sessionId: syncSessionId,
+            orderId: existingOrder.id,
+          },
+          order: { id: existingOrder.id },
+        });
+        return status(
+          500,
+          itemsToScrape.length === 0
+            ? "Failed to save order items"
+            : "Failed to create import record",
         );
-
-        if (insertOrderItemsError) {
-          log.error(insertOrderItemsError, {
-            step: "insertOrderItems",
-            outcome: "error",
-            sync: {
-              type: "order-item",
-              sessionId: syncSessionId,
-              orderId: existingOrder.id,
-            },
-            order: { id: existingOrder.id },
-          });
-          return status(500, "Failed to save order items");
-        }
       }
+
+      log.set({
+        sync: {
+          type: "order-item",
+          sessionId: syncSessionId,
+          orderId: existingOrder.id,
+        },
+        order: { id: existingOrder.id },
+      });
 
       let jobId: string | null = null;
       if (itemsToScrape.length > 0) {
@@ -910,28 +897,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           notes: item.notes,
         }));
 
-      const { data: syncSessionId, error: syncSessionError } = await tryCatch(
-        SyncService.createSyncSession(user.id, "collection", collectionItemExternalIdsToTrack, {
-          existingItemExternalIds: existingCollectionItemExternalIds,
-        }),
-      );
-
-      if (syncSessionError) {
-        log.error(syncSessionError, {
-          step: "createSyncSession",
-          outcome: "error",
-          sync: { type: "collection" },
-        });
-        return status(500, "Failed to create import record");
-      }
-
-      log.set({
-        sync: {
-          type: "collection",
-          sessionId: syncSessionId,
-        },
-      });
-
+      const syncSessionId = createId();
       const jobData = {
         type: "collection",
         payloadVersion: 3,
@@ -942,28 +908,43 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           itemsToInsert: collectionItemsToInsert,
         },
       } satisfies JobData;
+      const session = {
+        id: syncSessionId,
+        userId: user.id,
+        syncType: "collection" as const,
+        itemExternalIds: collectionItemExternalIdsToTrack,
+        existingItemExternalIds: existingCollectionItemExternalIds,
+      };
+      const { error: syncSessionError } = await tryCatch(
+        itemsToScrape.length === 0
+          ? SyncService.completeSyncSessionWithoutWorker({
+              session,
+              collectionItems: collectionItemsToInsert,
+              requestPayload: jobData,
+            })
+          : SyncService.createSyncSession(session),
+      );
 
-      if (itemsToScrape.length === 0) {
-        const { error: insertToCollectionAndOrdersError } = await tryCatch(
-          SyncService.completeSyncSessionWithoutWorker({
-            collectionItems: collectionItemsToInsert,
-            requestPayload: jobData,
-            syncSessionId,
-          }),
+      if (syncSessionError) {
+        log.error(syncSessionError, {
+          step: itemsToScrape.length === 0 ? "insertToCollectionAndOrders" : "createSyncSession",
+          outcome: "error",
+          sync: { type: "collection", sessionId: syncSessionId },
+        });
+        return status(
+          500,
+          itemsToScrape.length === 0
+            ? "Failed to save collection items"
+            : "Failed to create import record",
         );
-
-        if (insertToCollectionAndOrdersError) {
-          log.error(insertToCollectionAndOrdersError, {
-            step: "insertToCollectionAndOrders",
-            outcome: "error",
-            sync: {
-              type: "collection",
-              sessionId: syncSessionId,
-            },
-          });
-          return status(500, "Failed to save collection items");
-        }
       }
+
+      log.set({
+        sync: {
+          type: "collection",
+          sessionId: syncSessionId,
+        },
+      });
 
       let jobId: string | null = null;
       if (itemsToScrape.length > 0) {
