@@ -10,8 +10,16 @@ import {
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { ThemedBadge } from "@/components/reui/badge";
 import { Progress } from "@/components/ui/progress";
 import type { SyncSessionStatus, SyncType } from "@myakiba/contracts/shared/types";
@@ -22,13 +30,13 @@ import { ACTIVE_SYNC_SESSION_STATUS_SET } from "@myakiba/contracts/sync/constant
 import { useSyncJobStatusQuery } from "@/hooks/use-sync-job-status-query";
 import { Spinner } from "@/components/ui/spinner";
 import { SparkleTrail } from "@/components/ui/sparkle-trail";
+import { cn } from "@/lib/utils";
 
 export default function SyncStatusWidget() {
   const {
     data: recentData,
     isPending: isRecentPending,
     isError: isRecentError,
-    error: recentError,
   } = useQuery({
     queryKey: ["syncSessions", 1, 5, undefined, undefined] as const,
     queryFn: () => fetchSyncSessions({ page: 1, limit: 5 }),
@@ -92,64 +100,76 @@ export default function SyncStatusWidget() {
             </Button>
           }
         />
-        <PopoverContent align="center" className="w-80 max-w-[calc(100vw-2rem)] p-0">
-          <div className="max-h-[420px] overflow-y-auto">
+        <PopoverContent
+          align="start"
+          aria-label="Imports"
+          className="h-85 max-h-[calc(100dvh-120px)] w-80 max-w-[calc(100vw-2rem)] gap-0 overflow-hidden p-0 ease-out"
+        >
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             {isRecentError ? (
-              <div className="flex items-center gap-2 px-4 py-3 text-xs text-destructive">
-                <HugeiconsIcon icon={AlertCircleIcon} className="size-3.5 shrink-0" />
-                {recentError.message}
+              <div className="p-4">
+                <Alert variant="destructive">
+                  <HugeiconsIcon icon={AlertCircleIcon} />
+                  <AlertTitle>History unavailable</AlertTitle>
+                  <AlertDescription>
+                    Refresh the page to reload your import history.
+                  </AlertDescription>
+                </Alert>
               </div>
             ) : (
               <>
                 {hasActive && (
-                  <div className="px-4 pt-3 pb-2">
-                    <p className="mb-2.5 text-[0.6875rem] font-medium text-muted-foreground">
+                  <section aria-label="Active imports" className="px-2 pt-3 pb-1.5">
+                    <h3 className="px-2 pb-1.75 text-[0.625rem] font-medium text-muted-foreground">
                       Active
-                    </p>
-                    <div className="space-y-1.5">
-                      {activeSessions.map((s) => (
-                        <ActiveSessionItem key={s.id} session={s} onNavigate={closePopover} />
-                      ))}
-                    </div>
-                  </div>
+                    </h3>
+                    {activeSessions.map((s) => (
+                      <ActiveSessionItem key={s.id} session={s} onNavigate={closePopover} />
+                    ))}
+                  </section>
                 )}
 
-                {hasActive && finishedSessions.length > 0 && <div className="border-t" />}
-
                 {finishedSessions.length > 0 && (
-                  <div className="px-4 pt-3 pb-2">
-                    <p className="mb-2.5 text-[0.6875rem] font-medium text-muted-foreground">
+                  <section
+                    aria-label="Recent imports"
+                    className={cn("px-2 pt-3 pb-1.5", hasActive && "border-t")}
+                  >
+                    <h3 className="px-2 pb-1.75 text-[0.625rem] font-medium text-muted-foreground">
                       Recent
-                    </p>
-                    <div className="space-y-1.5">
-                      {finishedSessions.map((s) => (
-                        <RecentSessionItem key={s.id} session={s} onNavigate={closePopover} />
-                      ))}
-                    </div>
-                  </div>
+                    </h3>
+                    {finishedSessions.map((s) => (
+                      <RecentSessionItem key={s.id} session={s} onNavigate={closePopover} />
+                    ))}
+                  </section>
                 )}
 
                 {!hasActive && finishedSessions.length === 0 && (
-                  <div className="px-4 py-6 text-center">
-                    <p className="text-sm text-muted-foreground">No recent imports</p>
-                  </div>
+                  <Empty className="h-full">
+                    <EmptyHeader>
+                      <EmptyMedia variant="icon">
+                        <HugeiconsIcon icon={Clock02Icon} />
+                      </EmptyMedia>
+                      <EmptyTitle>No recent imports</EmptyTitle>
+                      <EmptyDescription>Your import activity will appear here.</EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
                 )}
               </>
             )}
-
-            <div className="border-t p-1.5">
-              <Link to="/sync" onClick={closePopover}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-between text-muted-foreground"
-                >
-                  View import history
-                  <HugeiconsIcon icon={ArrowRight01Icon} className="size-3" />
-                </Button>
-              </Link>
-            </div>
           </div>
+          <footer className="shrink-0 border-t p-1.5">
+            <Link
+              to="/sync"
+              onClick={closePopover}
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "sm" }),
+                "w-full justify-between",
+              )}
+            >
+              View import history
+              <HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" />
+            </Link>
+          </footer>
         </PopoverContent>
       </Popover>
     </>
@@ -201,52 +221,60 @@ function ActiveSessionItem({ session, onNavigate }: ActiveSessionProps) {
 
   const displayStatus = resolveSyncMessage(session, jobStatus ?? null, isJobError);
   const showSpinner = jobStatus?.terminalState == null && !isJobError;
+  let statusIcon = Clock02Icon;
+  if (isJobError) statusIcon = CancelCircleIcon;
+  else if (showSpinner) statusIcon = Loading03Icon;
 
   return (
     <Link
       to="/sync/$id"
       params={{ id: session.id }}
       onClick={onNavigate}
-      className="group block rounded-md p-2 hover:bg-accent"
+      className="mb-1 block rounded-sm p-2 hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       aria-label={`View ${typeConfig.label} import`}
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <ThemedBadge variant={typeConfig.variant} size="xs">
-            {typeConfig.label}
-          </ThemedBadge>
-          <ThemedBadge variant={SESSION_STATUS_CONFIG[session.status].variant} size="xs">
-            {SESSION_STATUS_CONFIG[session.status].label}
-          </ThemedBadge>
-        </div>
-        {showSpinner && (
+      <div className="flex min-w-0 items-center gap-1.75">
+        <span
+          className={cn(
+            "inline-flex size-4.5 shrink-0 items-center justify-center text-muted-foreground",
+            session.status === "processing" && "text-info-foreground",
+            isJobError && "text-destructive",
+          )}
+        >
           <HugeiconsIcon
-            icon={Loading03Icon}
-            className="size-3 animate-spin text-muted-foreground"
+            icon={statusIcon}
+            className={cn("size-3.5", showSpinner && "motion-safe:animate-spin")}
           />
-        )}
-        {isJobError && (
-          <HugeiconsIcon icon={CancelCircleIcon} className="size-3 text-destructive" />
-        )}
+        </span>
+        <span className="min-w-0 flex-1 text-xs font-[550]">{typeConfig.label}</span>
+        <ThemedBadge variant={SESSION_STATUS_CONFIG[session.status].variant} size="xs">
+          {SESSION_STATUS_CONFIG[session.status].label}
+        </ThemedBadge>
       </div>
 
       {displayedTotal > 0 && (
-        <div className="mt-2 space-y-1">
-          <Progress value={displayedProcessed} max={displayedTotal} className="h-1" />
-          <div className="flex items-center justify-between text-[0.6875rem] text-muted-foreground">
+        <div className="mt-2.75">
+          <Progress
+            value={displayedProcessed}
+            max={displayedTotal}
+            aria-label={`${typeConfig.label} import progress`}
+            className="[&_[data-slot=progress-indicator]]:transition-none"
+          />
+          <div className="mt-1.25 flex items-center justify-between text-[0.625rem] text-muted-foreground tabular-nums">
             <span>
               {displayedProcessed} of {displayedTotal}
             </span>
-            <span className="tabular-nums">{progressPercent}%</span>
+            <span>{progressPercent}%</span>
           </div>
         </div>
       )}
 
       {displayStatus && (
         <p
-          className={`mt-1 text-[0.6875rem] leading-tight ${
-            isJobError ? "text-destructive" : "text-muted-foreground"
-          }`}
+          className={cn(
+            "mt-1.75 text-[0.6875rem] leading-normal wrap-anywhere",
+            isJobError ? "text-destructive" : "text-muted-foreground",
+          )}
         >
           {displayStatus}
         </p>
@@ -264,7 +292,7 @@ type RecentSessionProps = {
     readonly successCount: number;
     readonly failCount: number;
     readonly orderId: string | null;
-    readonly createdAt: Date;
+    readonly updatedAt: Date;
   };
   readonly onNavigate: () => void;
 };
@@ -282,33 +310,35 @@ function RecentSessionItem({ session, onNavigate }: RecentSessionProps) {
       to="/sync/$id"
       params={{ id: session.id }}
       onClick={onNavigate}
-      className="group flex items-start gap-2.5 rounded-md p-2 hover:bg-accent"
-      aria-label={`View ${typeConfig.label} import from ${formatRelativeTimeToNow(session.createdAt)}`}
+      className="flex items-start gap-1.75 rounded-sm px-2 py-2.25 hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      aria-label={`View ${typeConfig.label} import updated ${formatRelativeTimeToNow(session.updatedAt)}`}
     >
-      <div className="mt-0.5 flex size-5 shrink-0 items-center justify-center">
-        <HugeiconsIcon icon={statusIcon.icon} className={`size-3.5 ${statusIcon.className}`} />
+      <div className="inline-flex size-4.5 shrink-0 items-center justify-center">
+        <HugeiconsIcon icon={statusIcon.icon} className={cn("size-3.5", statusIcon.className)} />
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-medium">{typeConfig.label}</span>
-          </div>
-          <span className="shrink-0 text-[0.6875rem] text-muted-foreground">
-            {formatRelativeTimeToNow(session.createdAt)}
+        <div className="flex min-w-0 items-center gap-1.75">
+          <span className="min-w-0 flex-1 text-xs font-[550]">{typeConfig.label}</span>
+          <span className="shrink-0 text-[0.625rem] text-muted-foreground">
+            {formatRelativeTimeToNow(session.updatedAt)}
           </span>
         </div>
 
-        {hasItems && (
-          <div className="mt-1 flex items-center gap-2 text-[0.6875rem] text-muted-foreground">
-            <span>
-              {displayedSuccessCount}/{session.totalItems} added
-            </span>
-            {session.failCount > 0 && (
-              <span className="text-destructive">{session.failCount} failed</span>
-            )}
-          </div>
-        )}
+        <div className="mt-0.75 flex flex-wrap items-center gap-x-1.25 gap-y-0.5 text-[0.625rem] leading-normal text-muted-foreground tabular-nums">
+          <span>{SESSION_STATUS_CONFIG[session.status].label}</span>
+          {hasItems && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span>
+                {displayedSuccessCount}/{session.totalItems} added
+              </span>
+              {session.failCount > 0 && (
+                <span className="text-destructive">{session.failCount} failed</span>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </Link>
   );
@@ -317,13 +347,13 @@ function RecentSessionItem({ session, onNavigate }: RecentSessionProps) {
 function resolveStatusIcon(status: SyncSessionStatus) {
   switch (status) {
     case "completed":
-      return { icon: Tick02Icon, className: "text-success" };
+      return { icon: Tick02Icon, className: "text-success-foreground" };
     case "failed":
       return { icon: CancelCircleIcon, className: "text-destructive" };
     case "partial":
-      return { icon: AlertCircleIcon, className: "text-warning" };
+      return { icon: AlertCircleIcon, className: "text-warning-foreground" };
     case "processing":
-      return { icon: Loading03Icon, className: "text-info animate-spin" };
+      return { icon: Loading03Icon, className: "text-info-foreground motion-safe:animate-spin" };
     case "pending":
       return { icon: Loading03Icon, className: "text-muted-foreground" };
   }

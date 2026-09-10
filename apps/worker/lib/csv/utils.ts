@@ -1,25 +1,18 @@
-import type { ShippingMethod } from "@myakiba/contracts/shared/types";
 import type {
   FinalizeCsvSyncParams,
   FinalizePersistenceSummary,
   FinalizeSyncResult,
 } from "../types";
 import { parseMoneyToMinorUnits } from "@myakiba/utils/currency";
-import { tryCatch } from "@myakiba/utils/result";
-import { eq } from "drizzle-orm";
-import { db } from "@myakiba/db/client";
 import { assembleScrapedData } from "../assemble-scraped-data";
 import { persistScrapedItemData } from "../persist-scraped-item-data";
-import {
-  markPersistFailedSyncSessionItemStatuses,
-  publishJobStatus,
-  resolveTerminalState,
-} from "../utils";
-import { sessionStatusToPhase, sessionStatusToTerminalState } from "@myakiba/contracts/sync/schema";
-import { order, collection, syncSession } from "@myakiba/db/schema/figure";
+import { finalizeSync } from "../utils";
+import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
+import { order, collection } from "@myakiba/db/schema/figure";
 
 export async function finalizeCsvSync({
   successfulResults,
+  failures,
   log,
   userId,
   redis,
@@ -27,7 +20,7 @@ export async function finalizeCsvSync({
   csvItems,
   itemsToInsert,
   ordersToInsert,
-  existingCount,
+  initialSuccessCount,
   syncSessionId,
 }: FinalizeCsvSyncParams): Promise<FinalizeSyncResult> {
   const assembledData = assembleScrapedData(successfulResults);
@@ -39,68 +32,9 @@ export async function finalizeCsvSync({
     successfulResultsById.has(csvItem.itemExternalId),
   );
   const scrapeRowCount = csvItems.length;
-  const totalRowCount = existingCount + scrapeRowCount;
-  let scrapedPersistedRowCount = 0;
-  let collectionItems: {
-    id: string;
-    userId: string;
-    itemId: string | null;
-    itemExternalId: number;
-    status: "Owned" | "Ordered";
-    count: number;
-    score: string;
-    paymentDate: string | null;
-    shippingDate: string | null;
-    collectionDate: string | null;
-    price: number;
-    shop: string;
-    shippingMethod: ShippingMethod;
-    notes: string;
-    releaseId: string | null;
-    orderId: string | null;
-    orderDate: string | null;
-  }[] = [];
-  let orders: {
-    id: string;
-    userId: string;
-    title: string;
-    shop: string;
-    orderDate: string | null;
-    paymentDate: string | null;
-    shippingDate: string | null;
-    collectionDate: string | null;
-    shippingMethod: ShippingMethod;
-    releaseDate: string | null;
-    status: "Ordered";
-    shippingFee: number;
-    taxes: number;
-    duties: number;
-    tariffs: number;
-    miscFees: number;
-    notes: string;
-  }[] = [];
+  const totalRowCount = initialSuccessCount + scrapeRowCount;
 
-  collectionItems = successfulCollectionItems.map((ci) => ({
-    id: ci.collectionId,
-    userId,
-    itemId: null,
-    itemExternalId: ci.itemExternalId,
-    status: ci.status as "Owned" | "Ordered",
-    count: ci.count,
-    score: ci.score && ci.score.trim() !== "" ? ci.score.toString() : "0.0",
-    paymentDate: ci.payment_date,
-    shippingDate: ci.shipping_date,
-    collectionDate: ci.collecting_date,
-    price: ci.price && ci.price.trim() !== "" ? parseMoneyToMinorUnits(ci.price) : 0,
-    shop: ci.shop,
-    shippingMethod: ci.shipping_method,
-    notes: ci.note,
-    releaseId: null,
-    orderId: ci.orderId,
-    orderDate: ci.orderDate,
-  }));
-
-  orders = successfulCollectionItems.flatMap((ci) => {
+  const orders = successfulCollectionItems.flatMap((ci) => {
     if (ci.orderId === null) return [];
     return [
       {
@@ -130,49 +64,52 @@ export async function finalizeCsvSync({
     itemReleases: itemReleases.length,
     entries: entries.length,
     entryToItems: entryToItems.length,
-    collectionItems: itemsToInsert.length + collectionItems.length,
+    collectionItems: itemsToInsert.length + successfulCollectionItems.length,
     orders: new Set([...ordersToInsert, ...orders].map((orderRow) => orderRow.id)).size,
   };
 
   log.set({ persistence });
 
-  const { error } = await tryCatch(
-    db.transaction(async (tx) => {
+  return finalizeSync({
+    syncSessionId,
+    failures,
+    totalRowCount,
+    scrapedCount: successfulResults.length,
+    persistence,
+    log,
+    redis,
+    state,
+    persist: async (tx) => {
       const { externalIdToInternalId, latestReleaseIdByInternalId } = await persistScrapedItemData(
         tx,
         assembledData,
       );
 
-      const collectionItemsToInsert: (typeof collection.$inferInsert)[] = collectionItems.flatMap(
-        (collectionItem) => {
+      const collectionItemsToInsert: (typeof collection.$inferInsert)[] =
+        successfulCollectionItems.map((collectionItem) => {
           const internalItemId = externalIdToInternalId.get(collectionItem.itemExternalId);
           if (!internalItemId) {
-            return [];
+            throw new Error(`Missing persisted Item ${collectionItem.itemExternalId}`);
           }
-          return [
-            {
-              id: collectionItem.id,
-              userId: collectionItem.userId,
-              itemId: internalItemId,
-              orderId: collectionItem.orderId,
-              status: collectionItem.status,
-              count: collectionItem.count,
-              score: collectionItem.score,
-              paymentDate: collectionItem.paymentDate,
-              shippingDate: collectionItem.shippingDate,
-              collectionDate: collectionItem.collectionDate,
-              price: collectionItem.price,
-              shop: collectionItem.shop,
-              shippingMethod: collectionItem.shippingMethod,
-              notes: collectionItem.notes,
-              releaseId: latestReleaseIdByInternalId.get(internalItemId)?.releaseId ?? null,
-              orderDate: collectionItem.orderDate,
-            },
-          ];
-        },
-      );
-
-      scrapedPersistedRowCount = collectionItemsToInsert.length;
+          return {
+            id: collectionItem.collectionId,
+            userId,
+            itemId: internalItemId,
+            orderId: collectionItem.orderId,
+            status: collectionItem.status,
+            count: collectionItem.count,
+            score: collectionItem.score.trim() === "" ? "0.0" : collectionItem.score,
+            paymentDate: collectionItem.payment_date,
+            shippingDate: collectionItem.shipping_date,
+            collectionDate: collectionItem.collecting_date,
+            price: parseMoneyToMinorUnits(collectionItem.price),
+            shop: collectionItem.shop,
+            shippingMethod: collectionItem.shipping_method,
+            notes: collectionItem.note,
+            releaseId: latestReleaseIdByInternalId.get(internalItemId)?.releaseId ?? null,
+            orderDate: collectionItem.orderDate,
+          };
+        });
 
       const dedupedOrders = [
         ...new Map(
@@ -180,121 +117,24 @@ export async function finalizeCsvSync({
         ).values(),
       ];
       if (dedupedOrders.length > 0) {
-        await tx.insert(order).values(dedupedOrders).onConflictDoNothing({ target: order.id });
+        await tx.insert(order).values(dedupedOrders);
       }
       const collectionRows = [...itemsToInsert, ...collectionItemsToInsert];
       if (collectionRows.length > 0) {
-        await tx
+        const insertedCollectionItems = await tx
           .insert(collection)
           .values(collectionRows)
-          .onConflictDoNothing({ target: collection.id });
+          .returning({ id: collection.id });
+        await advanceOrderReleaseDatesForCollectionItems(
+          tx,
+          insertedCollectionItems.map(({ id }) => id),
+        );
       }
 
-      const successCount = existingCount + scrapedPersistedRowCount;
-      const failCount = scrapeRowCount - scrapedPersistedRowCount;
-      const { sessionStatus, statusMessage } = resolveTerminalState({
-        successCount,
-        failCount,
-        totalRowCount,
-        scrapedCount: successfulResults.length,
-      });
-      await tx
-        .update(syncSession)
-        .set({
-          status: sessionStatus,
-          statusMessage,
-          successCount,
-          failCount,
-          completedAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(eq(syncSession.id, syncSessionId));
-    }),
-  );
-
-  if (error) {
-    const scrapedItemIds = successfulResults.map((result) => result.id);
-    const successCount = itemsToInsert.length > 0 ? 0 : existingCount;
-    const failCount = itemsToInsert.length > 0 ? totalRowCount : scrapeRowCount;
-    const persistenceError = error instanceof Error ? error : null;
-    const { sessionStatus, statusMessage } = resolveTerminalState({
-      successCount,
-      failCount,
-      totalRowCount,
-      scrapedCount: successfulResults.length,
-      error: persistenceError,
-    });
-
-    await markPersistFailedSyncSessionItemStatuses({
-      syncSessionId,
-      scrapedItemIds,
-      errorReason: "Persistence failed while saving scraped items",
-    });
-    state.phase = sessionStatusToPhase(sessionStatus);
-    state.statusMessage = statusMessage;
-    await publishJobStatus({
-      redis,
-      state,
-      syncSessionId,
-      sessionStatus,
-      successCount,
-      failCount,
-      terminalState: sessionStatusToTerminalState(sessionStatus),
-      error: {
-        code: "persistence_failed",
-        message: persistenceError?.message ?? statusMessage,
-      },
-    });
-
-    if (error instanceof Error) {
-      log.set({
-        outcome: "error",
-        sync: { sessionStatus, statusMessage },
-      });
-      log.error(error);
-    }
-
-    return {
-      processedAt: new Date().toISOString(),
-      successCount,
-      failCount,
-      scrapedPersistedRowCount: 0,
-      sessionStatus,
-      statusMessage,
-      persistence,
-    };
-  }
-
-  const successCount = existingCount + scrapedPersistedRowCount;
-  const failCount = scrapeRowCount - scrapedPersistedRowCount;
-  const { sessionStatus, statusMessage } = resolveTerminalState({
-    successCount,
-    failCount,
-    totalRowCount,
-    scrapedCount: successfulResults.length,
+      return {
+        successCount: initialSuccessCount + collectionItemsToInsert.length,
+        failCount: scrapeRowCount - collectionItemsToInsert.length,
+      };
+    },
   });
-  state.phase = sessionStatusToPhase(sessionStatus);
-  state.statusMessage = statusMessage;
-  await publishJobStatus({
-    redis,
-    state,
-    syncSessionId,
-    sessionStatus,
-    skipDurableUpdate: true,
-    terminalState: sessionStatusToTerminalState(sessionStatus),
-    error:
-      sessionStatus === "failed" && successfulResults.length === 0
-        ? { code: "scrape_failed", message: statusMessage }
-        : null,
-  });
-
-  return {
-    processedAt: new Date().toISOString(),
-    successCount,
-    failCount,
-    scrapedPersistedRowCount,
-    sessionStatus,
-    statusMessage,
-    persistence,
-  };
 }

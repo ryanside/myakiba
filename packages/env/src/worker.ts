@@ -11,6 +11,7 @@ export const env = createEnv({
     AWS_BUCKET_REGION: z.string().min(1),
     AWS_BUCKET_NAME: z.string().min(1),
     AWS_BUCKET_URL: z.url().optional(),
+    BUILD_ID: z.string().optional().default("dev"),
     POSTHOG_API_KEY: z.string().min(1).optional(),
   },
   runtimeEnv: process.env,

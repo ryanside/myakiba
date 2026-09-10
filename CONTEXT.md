@@ -1,17 +1,17 @@
 # myakiba
 
-myakiba helps collectors track Japanese pop-culture collectibles, purchases, Orders, personal Lists, and spending. Item means shared collectible information in the Item Database, Collection Item means one user's purchase or ownership details, and Order Item means that Collection Item when it is linked to an Order.
+myakiba helps collectors track Japanese pop-culture collectibles, purchases, Orders, personal Lists, and spending. Item means collectible information in the Item Database, Collection Item means one user's purchase or ownership details, and Order Item means that Collection Item when it is linked to an Order.
 
 ## Language
 
 ### Item database
 
 **Item Database**:
-All the Items and information about them shared across myakiba.
+All the Items and their details in myakiba. An Item's details are the same for every user.
 _Avoid_: Catalog, library
 
 **Item**:
-The shared description of one collectible, separate from any one user's purchase or ownership details. An Item can come from MyFigureCollection or be custom.
+The description of one collectible, separate from any one user's purchase or ownership details. An Item can come from MyFigureCollection or be custom.
 _Avoid_: Catalog Item, database item, global item
 
 **Item Release**:
@@ -23,7 +23,7 @@ An optional Item Release picked for a Collection Item. It must be a release of t
 _Avoid_: Selected Release, Latest release, Order Release Date
 
 **Item Entry**:
-A named detail that can be shared by one or more Items, such as an artist, character, or company. Its link to an Item can include extra context, such as an artist's job.
+A named detail linked to one or more Items, such as an artist, character, or company. Its link to an Item can include extra context, such as an artist's job.
 _Avoid_: Catalog Entry, Item Attribute, Entry, tag
 
 **Item Entry Category**:
@@ -83,7 +83,7 @@ An Order with a status of Paid, Shipped, or Owned. A Payment Date by itself does
 An Order with an Acquisition Status of Ordered. Its Order Fees and the prices of Order Items whose own Acquisition Status is also Ordered count as Unpaid Costs, not Spend.
 
 **Order Release Date**:
-The release date saved for the whole Order. It is separate from the Item Releases picked for its Order Items.
+The date the whole Order is expected to release. It remains separate from Selected Item Releases, but adding Order Items or changing an attached Order Item's Selected Item Release advances it to the latest relevant date when later. Automatic changes never move it earlier, clear it, or replace a later user-entered date.
 _Avoid_: Item Release, Selected Item Release
 
 **Cascade to Items**:
@@ -110,6 +110,15 @@ _Avoid_: Saved list, reading list, release watchlist
 **Wishlist Item**:
 One Item included in a Wishlist. An Item can appear only once and stays until the user removes it, even if the user adds a Collection Item or Order Item for that Item.
 _Avoid_: Wishlist Entry, List Member, wished Item
+
+**Wishlist Release Filter**:
+One of three Wishlist views: All, Upcoming, or Available, based on the Item Release with the latest date and the viewer's local date. All includes every Wishlist Item, including Items with no Item Release, and is the only view with ranks and manual reordering.
+
+**Upcoming**:
+A Wishlist Release Filter for Items whose latest Item Release date is after today.
+
+**Available**:
+A Wishlist Release Filter for Items whose latest Item Release date is today or earlier. Available describes the release date, not whether a Shop has stock.
 
 ### Expenses
 
@@ -170,10 +179,14 @@ _Avoid_: Unique Owned
 
 ### Imports and data transfer
 
-In the Add menu, use Collection, Order, and MyFigureCollection CSV. Within a collection or order, use Add for the local add button. Keep full action names for standalone commands and sheet titles.
+In the Add menu, use Collection, Order, MyFigureCollection CSV, and Item Database. Within a collection, order, or the Item Database, use Add for the local add button. Keep full action names for standalone commands and sheet titles.
+
+**Add to item database**:
+An action that adds missing Items to the Item Database using MyFigureCollection item links or IDs, without creating Collection Items or Orders. Existing Items are reused with their saved details.
+_Avoid_: Sync Items, Add to collection when only Items are being added to the Item Database
 
 **Add to collection**:
-An action that creates Collection Items for the user, using existing shared Item details or scraping missing details from MyFigureCollection.
+An action that creates Collection Items for the user, using existing Item details or scraping missing details from MyFigureCollection.
 _Avoid_: Sync Collection
 
 **Create order**:
@@ -185,18 +198,18 @@ An action that adds Order Items to an existing Order.
 _Avoid_: Sync Order Items
 
 **Import MyFigureCollection CSV**:
-An action that reads a MyFigureCollection CSV export and adds its supported Owned and Ordered items to the user's Collection and Orders.
+An action that reads a MyFigureCollection CSV export and creates new Collection Items and Orders for its supported Owned and Ordered items, reusing or adding the needed Items. Importing the same file again creates additional Collection Items and Orders.
 _Avoid_: Sync CSV, Import from MyFigureCollection when a CSV file is required
 
 **MyFigureCollection Import**:
-A MyFigureCollection Import brings data from MyFigureCollection into myakiba by finding existing or adding missing shared Items. It can add Collection Items, create Orders, or add Order Items, but it never sends changes back to MyFigureCollection.
+A MyFigureCollection Import brings data from MyFigureCollection into myakiba by finding existing Items or adding missing ones, without sending changes back to MyFigureCollection. It can add Items on their own, add Collection Items, create Orders, or add Order Items.
 _Avoid_: Sync, two-way sync
 
 **Import History**:
-A saved record of each MyFigureCollection Import request and its item results. The same MyFigureCollection ID can appear more than once when separate Collection Items were requested.
+A saved record of one MyFigureCollection Import request and its successful and failed item results; requests that only add Items to the Item Database are included, and separate Collection Items can give it repeated results for the same MyFigureCollection ID. The record expires 30 days after the original request was created, even if unfinished, and the user can retry only its failed item results for the first 20 days without starting a new record.
 
 **Item Refresh**:
-An update of a MyFigureCollection Item using current MyFigureCollection data. The action is called Refresh item details; its shared update is visible to every user and may change or clear Selected Item Releases on Collection Items linked to that Item.
+An update of a MyFigureCollection Item using current MyFigureCollection data. The action is called Refresh item details; its update is visible to every user and may change or clear Selected Item Releases on Collection Items linked to that Item.
 _Avoid_: Catalog Item Refresh, Item Resync, refresh my item
 
 **Data Transfer Archive**:
@@ -204,4 +217,4 @@ A myakiba export of all a user's Orders and Collection Items, available only whe
 _Avoid_: Backup, all your data
 
 **Data Transfer Import**:
-Each new Data Transfer Import reuses or adds the needed shared Items and creates new Orders and Collection Items without changing existing ones. Importing the same archive again can create duplicates, and myakiba may replace a missing Selected Item Release with another Item Release or leave it unselected.
+Each new Data Transfer Import reuses or adds the needed Items and creates new Orders and Collection Items without changing existing ones. Importing the same archive again can create duplicates, and myakiba may replace a missing Selected Item Release with another Item Release or leave it unselected.

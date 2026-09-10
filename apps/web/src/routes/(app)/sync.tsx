@@ -78,7 +78,12 @@ function RouteComponent() {
 
   return (
     <div className="flex flex-col gap-4 mx-auto max-w-[88rem]">
-      <h1 className="mb-2 text-2xl font-medium tracking-tight">Import history</h1>
+      <div className="mb-2 flex flex-col gap-2">
+        <h1 className="text-2xl font-medium tracking-tight">Import history</h1>
+        <p className="text-sm text-muted-foreground">
+          Import history is automatically deleted after 30 days.
+        </p>
+      </div>
 
       <div className="flex flex-col sm:flex-row flex-wrap items-start gap-x-4 gap-y-2">
         <SyncQuickFilters />

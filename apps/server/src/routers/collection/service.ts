@@ -1,4 +1,5 @@
 import { db } from "@myakiba/db/client";
+import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
 import { collection, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
 import { and, eq, gte, lte, inArray, arrayContains, desc, asc, ilike, sql } from "drizzle-orm";
 import type { CollectionUpdateType } from "./model";
@@ -201,18 +202,34 @@ class CollectionService {
     collectionId: string,
     updateData: CollectionUpdateType,
   ) {
-    const updated = await db
-      .update(collection)
-      .set({
-        ...updateData,
-        updatedAt: new Date(),
-      })
-      .where(and(eq(collection.userId, userId), eq(collection.id, collectionId)))
-      .returning();
+    const updated = await db.transaction(async (tx) => {
+      const [existingItem] = await tx
+        .select({ releaseId: collection.releaseId })
+        .from(collection)
+        .where(and(eq(collection.userId, userId), eq(collection.id, collectionId)));
 
-    if (updated.length === 0) {
-      throw new Error("COLLECTION_ITEM_NOT_FOUND");
-    }
+      if (!existingItem) {
+        throw new Error("COLLECTION_ITEM_NOT_FOUND");
+      }
+
+      const updatedItems = await tx
+        .update(collection)
+        .set({
+          ...updateData,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(collection.userId, userId), eq(collection.id, collectionId)))
+        .returning();
+
+      if (updateData.releaseId !== null && updateData.releaseId !== existingItem.releaseId) {
+        await advanceOrderReleaseDatesForCollectionItems(
+          tx,
+          updatedItems.map(({ id }) => id),
+        );
+      }
+
+      return updatedItems;
+    });
 
     return updated[0];
   }

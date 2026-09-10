@@ -19,6 +19,9 @@ export type SyncSessionRow = {
   readonly totalItems: number;
   readonly successCount: number;
   readonly failCount: number;
+  readonly retrySupported: boolean;
+  readonly canRetry: boolean;
+  readonly isRetrying: boolean;
   readonly createdAt: Date;
   readonly updatedAt: Date;
   readonly completedAt: Date | null;

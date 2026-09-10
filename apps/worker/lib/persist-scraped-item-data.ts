@@ -11,7 +11,6 @@ export async function persistScrapedItemData(
 ): Promise<{
   externalIdToInternalId: ReadonlyMap<number, string>;
   latestReleaseIdByInternalId: ReadonlyMap<string, LatestReleaseInfo>;
-  insertedItemExternalIds: ReadonlySet<number>;
 }> {
   const { items, entries, entryToItems, itemReleases } = assembledData;
 
@@ -27,9 +26,7 @@ export async function persistScrapedItemData(
     }
   }
 
-  const itemExternalIds = items
-    .map((dbItem) => dbItem.externalId)
-    .filter((externalId): externalId is number => externalId !== null);
+  const itemExternalIds = items.map((dbItem) => dbItem.externalId);
   const dbItems =
     itemExternalIds.length > 0
       ? await tx
@@ -43,8 +40,8 @@ export async function persistScrapedItemData(
     ),
   );
 
-  // Only the transaction that creates an Item supplies its details. A concurrent
-  // sync reuses the existing Item, including its releases and entry links.
+  // The first sync to create an Item saves its details. Other syncs running at the
+  // same time reuse that Item, including its releases and entry links.
   const newEntryToItems = entryToItems.filter((link) =>
     insertedItemExternalIds.has(link.itemExternalId),
   );
@@ -57,9 +54,7 @@ export async function persistScrapedItemData(
       .onConflictDoNothing({ target: [entry.source, entry.externalId] });
   }
 
-  const entryExternalIds = newEntries
-    .map((dbEntry) => dbEntry.externalId)
-    .filter((externalId): externalId is number => externalId !== null);
+  const entryExternalIds = newEntries.map((dbEntry) => dbEntry.externalId);
   const dbEntries =
     entryExternalIds.length > 0
       ? await tx
@@ -78,7 +73,7 @@ export async function persistScrapedItemData(
     .map((release) => {
       const internalItemId = externalIdToInternalId.get(release.itemExternalId);
       if (!internalItemId) {
-        return null;
+        throw new Error(`Missing persisted Item ${release.itemExternalId}`);
       }
       return {
         id: release.id,
@@ -89,20 +84,7 @@ export async function persistScrapedItemData(
         priceCurrency: release.priceCurrency,
         barcode: release.barcode,
       };
-    })
-    .filter(
-      (
-        release,
-      ): release is {
-        id: string;
-        itemId: string;
-        date: string;
-        type: string;
-        price: number;
-        priceCurrency: string;
-        barcode: string;
-      } => release !== null,
-    );
+    });
 
   if (itemReleasesToInsert.length > 0) {
     await tx
@@ -111,28 +93,18 @@ export async function persistScrapedItemData(
       .onConflictDoNothing({ target: [item_release.id] });
   }
 
-  const entryToItemsToInsert = newEntryToItems
-    .map((link) => {
-      const entryId = externalIdToEntryId.get(link.entryExternalId);
-      const itemId = externalIdToInternalId.get(link.itemExternalId);
-      if (!entryId || !itemId) {
-        return null;
-      }
-      return {
-        entryId,
-        itemId,
-        role: link.role,
-      };
-    })
-    .filter(
-      (
-        link,
-      ): link is {
-        entryId: string;
-        itemId: string;
-        role: string;
-      } => link !== null,
-    );
+  const entryToItemsToInsert = newEntryToItems.map((link) => {
+    const entryId = externalIdToEntryId.get(link.entryExternalId);
+    const itemId = externalIdToInternalId.get(link.itemExternalId);
+    if (!entryId || !itemId) {
+      throw new Error(`Missing persisted Item Entry link for Item ${link.itemExternalId}`);
+    }
+    return {
+      entryId,
+      itemId,
+      role: link.role,
+    };
+  });
 
   if (entryToItemsToInsert.length > 0) {
     await tx
@@ -168,5 +140,5 @@ export async function persistScrapedItemData(
     }
   }
 
-  return { externalIdToInternalId, latestReleaseIdByInternalId, insertedItemExternalIds };
+  return { externalIdToInternalId, latestReleaseIdByInternalId };
 }

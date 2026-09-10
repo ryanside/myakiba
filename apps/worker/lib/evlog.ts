@@ -31,6 +31,7 @@ export function createDefaultJobContext(): WorkerJobContext {
       sessionStatus: null,
       statusMessage: null,
     },
+    deployment: { version: env.BUILD_ID },
     user: { id: null },
     items: {
       requested: 0,

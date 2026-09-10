@@ -1,16 +1,18 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@myakiba/db/client";
-import { item as itemTable, syncSession, syncSessionItem } from "@myakiba/db/schema/figure";
+import { item as itemTable, syncSession } from "@myakiba/db/schema/figure";
+import { tryCatch } from "@myakiba/utils/result";
 import { sessionStatusToPhase, sessionStatusToTerminalState } from "@myakiba/contracts/sync/schema";
 import type { SyncJobError } from "@myakiba/contracts/sync/schema";
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import { assembleScrapedData } from "./assemble-scraped-data";
 import { persistScrapedItemData } from "./persist-scraped-item-data";
-import { publishJobStatus, resolveTerminalState } from "./utils";
+import { persistSyncSessionItemResults, publishJobStatus, resolveTerminalState } from "./utils";
 import type {
   FinalizePersistenceSummary,
   FinalizeSyncResult,
   ScrapedItem,
+  SyncSessionItemFailure,
   SyncJobStatusState,
   WorkerJobLogger,
 } from "./types";
@@ -18,8 +20,9 @@ import type Redis from "ioredis";
 
 export async function finalizeItemSync({
   successfulResults,
+  failures,
   itemExternalIds,
-  existingCount,
+  initialSuccessCount,
   syncSessionId,
   redis,
   state,
@@ -27,109 +30,93 @@ export async function finalizeItemSync({
   workerError,
 }: {
   readonly successfulResults: readonly ScrapedItem[];
+  readonly failures: readonly SyncSessionItemFailure[];
   readonly itemExternalIds: readonly number[];
-  readonly existingCount: number;
+  readonly initialSuccessCount: number;
   readonly syncSessionId: string;
   readonly redis: Redis;
   readonly state: SyncJobStatusState;
   readonly log: WorkerJobLogger;
   readonly workerError?: Error;
 }): Promise<FinalizeSyncResult> {
-  const persistenceFailedIds = new Set<number>();
-  let persistence: FinalizePersistenceSummary = {
-    items: 0,
-    itemReleases: 0,
-    entries: 0,
-    entryToItems: 0,
+  const assembledData = assembleScrapedData(successfulResults);
+  const totalRowCount = initialSuccessCount + itemExternalIds.length;
+  const persistence: FinalizePersistenceSummary = {
+    items: assembledData.items.length,
+    itemReleases: assembledData.itemReleases.length,
+    entries: assembledData.entries.length,
+    entryToItems: assembledData.entryToItems.length,
     collectionItems: 0,
     orders: 0,
   };
-  for (const scrapedItem of successfulResults) {
-    const assembled = assembleScrapedData([scrapedItem]);
-    try {
-      const { insertedItemExternalIds } = await db.transaction((tx) =>
-        persistScrapedItemData(tx, assembled),
-      );
-      if (insertedItemExternalIds.has(scrapedItem.id)) {
-        persistence = {
-          items: persistence.items + 1,
-          itemReleases: persistence.itemReleases + assembled.itemReleases.length,
-          entries: persistence.entries + assembled.entries.length,
-          entryToItems: persistence.entryToItems + assembled.entryToItems.length,
-          collectionItems: 0,
-          orders: 0,
-        };
-      }
-    } catch (error) {
-      persistenceFailedIds.add(scrapedItem.id);
-      log.error(error instanceof Error ? error : new Error("Failed to save Item"));
-    }
-  }
+  log.set({ persistence });
 
-  // Another request may have added an Item even when this request's scrape or
-  // persistence failed. Resolve those Items from the database before finishing.
   const result = await db.transaction(async (tx) => {
+    const [session] = await tx
+      .select()
+      .from(syncSession)
+      .where(eq(syncSession.id, syncSessionId))
+      .for("update");
+    if (!session) throw new Error("SYNC_SESSION_NOT_FOUND");
+    if (session.jobId !== state.jobId || sessionStatusToTerminalState(session.status) !== null) {
+      return {
+        jobId: session.jobId,
+        sessionStatus: session.status,
+        statusMessage: session.statusMessage,
+        successCount: session.successCount,
+        failCount: session.failCount,
+        persistenceError: null,
+      };
+    }
+
+    // Keep one bad scraped item from rolling back the rest of the batch.
+    let persistenceError: Error | null = null;
+    for (const successfulResult of successfulResults) {
+      const { error } = await tryCatch(
+        tx.transaction((savepoint) =>
+          persistScrapedItemData(savepoint, assembleScrapedData([successfulResult])),
+        ),
+      );
+      if (error && !persistenceError) persistenceError = error;
+    }
+
     const availableItems = await tx
       .select({ externalId: itemTable.externalId })
       .from(itemTable)
       .where(and(eq(itemTable.source, "mfc"), inArray(itemTable.externalId, [...itemExternalIds])));
-    const availableIds = availableItems.flatMap((item) =>
-      item.externalId === null ? [] : [item.externalId],
-    );
-    const available = new Set(availableIds);
-    for (const availableId of availableIds) persistenceFailedIds.delete(availableId);
-    const failedIds = itemExternalIds.filter((id) => !available.has(id));
-    if (availableIds.length > 0) {
-      await tx
-        .update(syncSessionItem)
-        .set({ status: "scraped", errorReason: null, updatedAt: new Date() })
-        .where(
-          and(
-            eq(syncSessionItem.syncSessionId, syncSessionId),
-            inArray(syncSessionItem.itemExternalId, availableIds),
-          ),
-        );
-    }
-    for (const failedId of failedIds) {
-      const persistenceErrorReason = persistenceFailedIds.has(failedId)
-        ? "Persistence failed while saving scraped items"
-        : undefined;
-      await tx
-        .update(syncSessionItem)
-        .set({
-          status: "failed",
-          errorReason: workerError
-            ? sql`COALESCE(${syncSessionItem.errorReason}, ${workerError.message})`
-            : persistenceErrorReason,
-          updatedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(syncSessionItem.syncSessionId, syncSessionId),
-            eq(syncSessionItem.itemExternalId, failedId),
-          ),
-        );
-    }
-    const successCount = existingCount + availableIds.length;
-    const failCount = failedIds.length;
+    const availableIds = new Set(availableItems.map((item) => item.externalId));
+    const failureReasons = new Map(failures.map(({ id, errorReason }) => [id, errorReason]));
+    const remainingFailures = itemExternalIds
+      .filter((id) => !availableIds.has(id))
+      .map((id) => ({
+        id,
+        errorReason: failureReasons.get(id) ?? SYNC_STATUS_MESSAGES.failedPersist,
+      }));
+
+    await persistSyncSessionItemResults({
+      tx,
+      syncSessionId,
+      failures: remainingFailures,
+    });
+
+    const successCount = initialSuccessCount + availableIds.size;
+    const failCount = remainingFailures.length;
     const terminal = resolveTerminalState({
       successCount,
       failCount,
-      totalRowCount: existingCount + itemExternalIds.length,
+      totalRowCount,
       scrapedCount: successfulResults.length,
+      error: failCount > 0 ? persistenceError : null,
     });
     let statusMessage = terminal.statusMessage;
-    if (terminal.sessionStatus === "failed" && persistenceFailedIds.size === 0) {
-      statusMessage = SYNC_STATUS_MESSAGES.failedScrape;
-    }
     if (successCount > 0) {
-      statusMessage = `${successCount}/${existingCount + itemExternalIds.length} items in the item database`;
+      statusMessage = `${successCount}/${totalRowCount} items in the item database`;
       if (failCount > 0) statusMessage += `. ${failCount} failed.`;
     }
-    if (workerError && failCount > 0) {
-      statusMessage =
-        successCount > 0 ? `${statusMessage} ${workerError.message}` : workerError.message;
+    if (workerError && failCount > 0 && successCount === 0) {
+      statusMessage = SYNC_STATUS_MESSAGES.failedDuringProcessing;
     }
+
     await tx
       .update(syncSession)
       .set({
@@ -141,12 +128,14 @@ export async function finalizeItemSync({
         updatedAt: new Date(),
       })
       .where(eq(syncSession.id, syncSessionId));
+
     return {
       ...terminal,
+      jobId: session.jobId,
       statusMessage,
       successCount,
       failCount,
-      scrapedPersistedRowCount: availableIds.length,
+      persistenceError,
     };
   });
 
@@ -154,7 +143,7 @@ export async function finalizeItemSync({
   state.statusMessage = result.statusMessage;
   state.progress = {
     processed: result.successCount + result.failCount,
-    total: existingCount + itemExternalIds.length,
+    total: result.successCount + result.failCount,
     succeeded: result.successCount,
     failed: result.failCount,
   };
@@ -162,24 +151,29 @@ export async function finalizeItemSync({
   if (result.failCount > 0) {
     if (workerError) {
       error = { code: "unknown", message: result.statusMessage };
-    } else if (persistenceFailedIds.size > 0) {
+    } else if (result.persistenceError) {
       error = { code: "persistence_failed", message: SYNC_STATUS_MESSAGES.failedPersist };
     } else if (result.sessionStatus === "failed") {
       error = { code: "scrape_failed", message: result.statusMessage };
     }
   }
-  await publishJobStatus({
-    redis,
-    state,
-    syncSessionId,
-    sessionStatus: result.sessionStatus,
-    skipDurableUpdate: true,
-    terminalState: sessionStatusToTerminalState(result.sessionStatus),
-    error,
-  });
+  if (result.jobId === state.jobId) {
+    await publishJobStatus({
+      redis,
+      state,
+      syncSessionId,
+      terminalState: sessionStatusToTerminalState(result.sessionStatus),
+      error,
+    });
+  }
+  if (result.persistenceError) log.error(result.persistenceError);
+
   return {
-    ...result,
     processedAt: new Date().toISOString(),
+    successCount: result.successCount,
+    failCount: result.failCount,
+    sessionStatus: result.sessionStatus,
+    statusMessage: result.statusMessage,
     persistence,
   };
 }

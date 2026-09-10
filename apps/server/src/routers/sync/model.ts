@@ -32,7 +32,7 @@ export const orderSyncSchema = syncOrderSchema
     userId: true,
   })
   .extend({
-    items: z.array(syncOrderItemInputSchema),
+    items: z.array(syncOrderItemInputSchema).min(1),
   });
 
 export type OrderSyncType = z.infer<typeof orderSyncSchema>;
@@ -44,3 +44,11 @@ export const collectionSyncSchema = syncCollectionItemSchema.omit({
 
 export type CollectionSyncType = z.infer<typeof collectionSyncSchema>;
 export type CollectionInsertType = z.infer<typeof collectionInsertSchema>;
+
+export type ExistingItemWithLatestRelease = Readonly<{
+  id: string;
+  externalId: number;
+  title: string;
+  releaseId: string | null;
+  releaseDate: string | null;
+}>;

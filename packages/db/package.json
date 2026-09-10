@@ -7,6 +7,9 @@
     "./client": {
       "default": "./src/client.ts"
     },
+    "./order-release-date": {
+      "default": "./src/order-release-date.ts"
+    },
     "./schema/*": {
       "default": "./src/schema/*.ts"
     }

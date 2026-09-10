@@ -1,4 +1,5 @@
 import { db } from "@myakiba/db/client";
+import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
 import { item, item_release, entry, entry_to_item, collection } from "@myakiba/db/schema/figure";
 import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import { assembleScrapedData } from "../../lib/assemble-scraped-data";
@@ -103,8 +104,8 @@ export async function refreshItemData(scrapedItem: ScrapedItem, itemId: string):
     switch (releasePlan.kind) {
       case "none":
         break;
-      case "remap":
-        await tx
+      case "remap": {
+        const remappedCollectionItems = await tx
           .update(collection)
           .set({
             releaseId: releasePlan.toReleaseId,
@@ -112,8 +113,14 @@ export async function refreshItemData(scrapedItem: ScrapedItem, itemId: string):
           })
           .where(
             and(eq(collection.itemId, itemId), eq(collection.releaseId, releasePlan.fromReleaseId)),
-          );
+          )
+          .returning({ id: collection.id });
+        await advanceOrderReleaseDatesForCollectionItems(
+          tx,
+          remappedCollectionItems.map(({ id }) => id),
+        );
         break;
+      }
       case "clear":
         await tx
           .update(collection)

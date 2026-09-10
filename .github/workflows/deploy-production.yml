@@ -58,7 +58,8 @@ jobs:
               VITE_TURNSTILE_SITE_KEY=${{ vars.VITE_TURNSTILE_SITE_KEY }}
           - image: worker
             dockerfile: apps/worker/Dockerfile
-            build_args: ""
+            build_args: |
+              SOURCE_COMMIT=${{ github.sha }}
           - image: db-push
             dockerfile: packages/db/Dockerfile
             build_args: ""

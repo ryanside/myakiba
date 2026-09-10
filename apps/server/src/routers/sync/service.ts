@@ -1,4 +1,5 @@
 import { db } from "@myakiba/db/client";
+import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
 import {
   item as itemTable,
   collection as collectionTable,
@@ -7,19 +8,17 @@ import {
   syncSession,
   syncSessionItem,
 } from "@myakiba/db/schema/figure";
-import type { DbEnrichedSyncSessionItemRow, DbSyncSessionRow } from "@myakiba/db/schema/figure";
+import type { DbEnrichedSyncSessionItemRow } from "@myakiba/db/schema/figure";
 import { and, inArray, eq, desc, count, sql } from "drizzle-orm";
 import { syncJobStatusSchema } from "./model";
-import type {
-  SyncJobProgress,
-  QueuedCollectionItem,
-  NormalizedInternalCsvItem,
-  UpdatedSyncCollection,
-  UpdatedSyncOrder,
-  UpdatedSyncOrderItem,
+import type { JobData, SyncJobProgress } from "@myakiba/contracts/sync/schema";
+import {
+  jobDataSchema,
+  sessionStatusToPhase,
+  sessionStatusToTerminalState,
 } from "@myakiba/contracts/sync/schema";
-import { sessionStatusToPhase, sessionStatusToTerminalState } from "@myakiba/contracts/sync/schema";
-import type { SyncJobStatus, CollectionInsertType } from "./model";
+import type { SyncSessionRow } from "@myakiba/contracts/sync/types";
+import type { SyncJobStatus, CollectionInsertType, ExistingItemWithLatestRelease } from "./model";
 import type { OrderInsertType } from "../orders/model";
 import type {
   SyncSessionItemStatus,
@@ -27,10 +26,14 @@ import type {
   SyncType,
 } from "@myakiba/contracts/shared/types";
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
+import {
+  ACTIVE_SYNC_SESSION_STATUS_SET,
+  SYNC_QUEUE_NAME,
+  SYNC_SESSION_RETRY_WINDOW_MS,
+} from "@myakiba/contracts/sync/constants";
 import { Queue } from "bullmq";
 import { createId } from "@paralleldrive/cuid2";
 import { env } from "@myakiba/env/server";
-import { parseMoneyToMinorUnits } from "@myakiba/utils/currency";
 import { tryCatch } from "@myakiba/utils/result";
 import {
   getJobStatusSnapshotKey,
@@ -39,8 +42,9 @@ import {
 } from "@myakiba/redis/job-status";
 import { redis } from "@myakiba/redis/client";
 import { createLogger } from "evlog";
+import { buildRetryJobData } from "./retry";
 
-const syncQueue = new Queue("sync-queue", {
+const syncQueue = new Queue<JobData>(SYNC_QUEUE_NAME, {
   connection: {
     host: env.REDIS_HOST,
     port: env.REDIS_PORT,
@@ -52,7 +56,7 @@ syncQueue.on("error", (err: Error) => {
   const queueLog = createLogger({
     action: "sync.queue",
     outcome: "error",
-    queue: { name: "sync-queue" },
+    queue: { name: SYNC_QUEUE_NAME },
   });
   queueLog.error(err);
   queueLog.emit();
@@ -61,22 +65,41 @@ syncQueue.on("error", (err: Error) => {
 type SyncSessionUpdatePayload = Partial<
   Pick<
     typeof syncSession.$inferInsert,
-    "status" | "statusMessage" | "jobId" | "orderId" | "successCount" | "failCount" | "completedAt"
+    | "status"
+    | "statusMessage"
+    | "jobId"
+    | "orderId"
+    | "successCount"
+    | "failCount"
+    | "completedAt"
+    | "requestPayload"
   >
 >;
 
-type ExistingItemWithLatestRelease = Readonly<{
-  id: string;
-  externalId: number;
-  title: string;
-  releaseId: string | null;
-  releaseDate: string | null;
-}>;
+type SyncTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-type CsvSyncCandidate = ExistingItemWithLatestRelease &
-  Readonly<{
-    isInCollection: boolean;
-  }>;
+type SyncSessionCreation = {
+  readonly id: string;
+  readonly userId: string;
+  readonly syncType: SyncType;
+  readonly itemExternalIds: readonly number[];
+  readonly orderId?: string;
+  readonly existingItemExternalIds?: readonly number[];
+};
+
+type RetrySyncSessionResult =
+  | { readonly outcome: "queued"; readonly jobId: string }
+  | { readonly outcome: "not_found" }
+  | { readonly outcome: "expired" }
+  | { readonly outcome: "unavailable" };
+
+type RetrySyncSessionPreparation =
+  | Exclude<RetrySyncSessionResult, { readonly outcome: "queued" }>
+  | {
+      readonly outcome: "prepared";
+      readonly jobId: string;
+      readonly jobData: JobData;
+    };
 
 const resolveFallbackJobStatusMessage = ({
   status,
@@ -117,18 +140,80 @@ const resolveFallbackJobStatusMessage = ({
 };
 
 class SyncService {
-  private async markSyncSessionAsFailed(
+  private async insertSyncSession(
+    tx: SyncTransaction,
+    {
+      id,
+      userId,
+      syncType,
+      itemExternalIds,
+      orderId,
+      existingItemExternalIds = [],
+    }: SyncSessionCreation,
+  ): Promise<void> {
+    const existingIdSet = new Set(existingItemExternalIds);
+    // Number row IDs in submitted order so history keeps that order when sorted by createdAt and id.
+    const rows =
+      syncType === "item"
+        ? itemExternalIds.map((externalId, index) => ({
+            id: `${id}-${String(index).padStart(2, "0")}`,
+            syncSessionId: id,
+            itemExternalId: externalId,
+            status: existingIdSet.has(externalId) ? ("scraped" as const) : ("pending" as const),
+          }))
+        : [...itemExternalIds, ...existingItemExternalIds].map((externalId) => ({
+            syncSessionId: id,
+            itemExternalId: externalId,
+          }));
+
+    await tx.insert(syncSession).values({
+      id,
+      userId,
+      syncType,
+      orderId: orderId ?? null,
+      totalItems: rows.length,
+      successCount: syncType === "item" ? existingItemExternalIds.length : 0,
+    });
+
+    if (rows.length > 0) {
+      await tx.insert(syncSessionItem).values(rows);
+    }
+  }
+
+  private async failPendingSyncSession(
     syncSessionId: string,
     statusMessage: string,
   ): Promise<void> {
-    const [failedSession] = await db
-      .update(syncSession)
-      .set({ status: "failed", statusMessage, completedAt: new Date(), updatedAt: new Date() })
-      .where(and(eq(syncSession.id, syncSessionId), eq(syncSession.status, "pending")))
-      .returning({ id: syncSession.id });
-    if (failedSession) {
-      await redis.del(getJobStatusSnapshotKey(syncSessionId)).catch(() => {});
-    }
+    const failed = await db.transaction(async (tx) => {
+      const [session] = await tx
+        .update(syncSession)
+        .set({
+          status: sql`CASE WHEN ${syncSession.successCount} > 0 THEN 'partial' ELSE 'failed' END`,
+          statusMessage,
+          failCount: sql`${syncSession.totalItems} - ${syncSession.successCount}`,
+          completedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(and(eq(syncSession.id, syncSessionId), eq(syncSession.status, "pending")))
+        .returning({ id: syncSession.id });
+      if (!session) return false;
+
+      await tx
+        .update(syncSessionItem)
+        .set({
+          status: "failed",
+          errorReason: statusMessage,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(syncSessionItem.syncSessionId, syncSessionId),
+            eq(syncSessionItem.status, "pending"),
+          ),
+        );
+      return true;
+    });
+    if (failed) await redis.del(getJobStatusSnapshotKey(syncSessionId)).catch(() => {});
   }
 
   private async writeQueuedJobStatus(jobId: string, statusMessage: string): Promise<void> {
@@ -166,12 +251,13 @@ class SyncService {
 
   async getExistingItemsWithLatestReleaseByExternalIds(
     externalIds: readonly number[],
+    database: Pick<typeof db, "selectDistinctOn"> = db,
   ): Promise<readonly ExistingItemWithLatestRelease[]> {
-    if (!externalIds || externalIds.length === 0) {
+    if (externalIds.length === 0) {
       return [];
     }
 
-    const existingItems = await db
+    const existingItems = await database
       .selectDistinctOn([itemTable.id], {
         id: itemTable.id,
         externalId: itemTable.externalId,
@@ -190,38 +276,6 @@ class SyncService {
     );
   }
 
-  async getCsvSyncCandidates(
-    externalIds: readonly number[],
-    userId: string,
-  ): Promise<readonly CsvSyncCandidate[]> {
-    if (!externalIds || externalIds.length === 0) {
-      return [];
-    }
-
-    const existingItems = await db
-      .selectDistinctOn([itemTable.id], {
-        id: itemTable.id,
-        externalId: itemTable.externalId,
-        title: itemTable.title,
-        releaseId: item_release.id,
-        releaseDate: item_release.date,
-        isInCollection: sql<boolean>`exists (
-          select 1
-          from ${collectionTable}
-          where ${collectionTable.itemId} = ${itemTable.id}
-            and ${collectionTable.userId} = ${userId}
-        )`,
-      })
-      .from(itemTable)
-      .leftJoin(item_release, eq(item_release.itemId, itemTable.id))
-      .where(and(eq(itemTable.source, "mfc"), inArray(itemTable.externalId, [...externalIds])))
-      .orderBy(itemTable.id, desc(item_release.date), desc(item_release.createdAt));
-
-    return existingItems.filter(
-      (existingItem): existingItem is CsvSyncCandidate => existingItem.externalId !== null,
-    );
-  }
-
   async getOrderByIdForUser(orderId: string, userId: string) {
     const [existingOrder] = await db
       .select()
@@ -231,339 +285,212 @@ class SyncService {
     return existingOrder ?? null;
   }
 
-  async insertToCollectionAndOrders(
-    collectionItems: CollectionInsertType[],
-    orderItems?: OrderInsertType[],
-  ): Promise<void> {
-    await db.transaction(async (tx) => {
-      if (orderItems && orderItems.length > 0) {
-        await tx.insert(orderTable).values(orderItems);
-      }
-      await tx.insert(collectionTable).values(collectionItems);
-    });
-  }
+  async completeSyncSessionWithoutWorker({
+    session,
+    collectionItems,
+    orderItems = [],
+    requestPayload,
+  }: {
+    readonly session: SyncSessionCreation;
+    readonly collectionItems: CollectionInsertType[];
+    readonly orderItems?: OrderInsertType[];
+    readonly requestPayload: JobData;
+  }): Promise<void> {
+    const syncSessionId = session.id;
+    try {
+      const orderId =
+        requestPayload.type === "order" || requestPayload.type === "order-item"
+          ? requestPayload.order.details.id
+          : undefined;
 
-  async processItems(items: NormalizedInternalCsvItem[], userId: string) {
-    const itemExternalIds = items.map((item) => item.itemExternalId);
+      await db.transaction(async (tx) => {
+        await this.insertSyncSession(tx, session);
 
-    const existingCandidates = await this.getCsvSyncCandidates(itemExternalIds, userId);
-
-    const existingItemByExternalId = new Map(
-      existingCandidates.map((existingCandidate) => [
-        existingCandidate.externalId,
-        existingCandidate,
-      ]),
-    );
-
-    const externalIdsNeedingCollectionInsert = new Set(
-      existingCandidates
-        .filter((existingCandidate) => !existingCandidate.isInCollection)
-        .map((existingCandidate) => existingCandidate.externalId),
-    );
-
-    const itemIdsNeedingInsertSet = new Set(
-      existingCandidates
-        .filter((existingCandidate) => !existingCandidate.isInCollection)
-        .map((existingCandidate) => existingCandidate.id),
-    );
-    const existingItemsReleases = new Map<string, string>();
-    const existingItemsReleaseDates = new Map<string, string>();
-    for (const existingCandidate of existingCandidates) {
-      if (!itemIdsNeedingInsertSet.has(existingCandidate.id)) {
-        continue;
-      }
-      if (existingCandidate.releaseId) {
-        existingItemsReleases.set(existingCandidate.id, existingCandidate.releaseId);
-      }
-      if (existingCandidate.releaseDate) {
-        existingItemsReleaseDates.set(existingCandidate.id, existingCandidate.releaseDate);
-      }
-    }
-
-    const csvItemsToInsert = items.filter((item) =>
-      externalIdsNeedingCollectionInsert.has(item.itemExternalId),
-    );
-
-    const idsToScrape = new Set(
-      itemExternalIds.filter((externalId) => !existingItemByExternalId.has(externalId)),
-    );
-    const csvItemsToScrape = items.filter((item) => idsToScrape.has(item.itemExternalId));
-
-    const orderItems: UpdatedSyncOrder[] = [];
-    csvItemsToInsert.forEach((item) => {
-      if (item.status === "Ordered") {
-        const existingItem = existingItemByExternalId.get(item.itemExternalId);
-        const itemId = existingItem?.id;
-
-        if (itemId && item.orderId) {
-          orderItems.push({
-            id: item.orderId,
-            userId,
-            status: "Ordered",
-            title: existingItem.title || `Order ${item.orderId}`,
-            shop: item.shop,
-            orderDate: item.orderDate,
-            releaseDate: existingItemsReleaseDates.get(itemId) ?? null,
-            paymentDate: item.payment_date,
-            shippingDate: item.shipping_date,
-            collectionDate: item.collecting_date,
-            shippingMethod: item.shipping_method,
-            shippingFee: 0,
-            taxes: 0,
-            duties: 0,
-            tariffs: 0,
-            miscFees: 0,
-            notes: "",
-          });
-        }
-      }
-    });
-
-    const collectionItems = csvItemsToInsert
-      .map((i): QueuedCollectionItem | null => {
-        const internalItemId = existingItemByExternalId.get(i.itemExternalId)?.id;
-        if (!internalItemId) {
-          return null;
+        if (orderItems.length > 0) {
+          await tx.insert(orderTable).values(orderItems);
         }
 
-        return {
-          id: i.collectionId,
-          userId,
-          itemId: internalItemId,
-          status: i.status,
-          count: i.count,
-          score: i.score && i.score.trim() !== "" ? i.score : "0.0",
-          paymentDate: i.payment_date,
-          shippingDate: i.shipping_date,
-          collectionDate: i.collecting_date,
-          price: i.price && i.price.trim() !== "" ? parseMoneyToMinorUnits(i.price) : 0,
-          shop: i.shop,
-          shippingMethod: i.shipping_method,
-          tags: [],
-          condition: "New",
-          notes: i.note,
-          releaseId: existingItemsReleases.get(internalItemId) ?? null,
-          orderId: i.orderId,
-          orderDate: i.orderDate,
-        };
-      })
-      .filter((item): item is QueuedCollectionItem => item !== null);
+        const insertedCollectionItems = await tx
+          .insert(collectionTable)
+          .values(collectionItems)
+          .returning({ id: collectionTable.id });
 
-    return {
-      collectionItems,
-      orderItems,
-      csvItemsToScrape,
-      existingItemExternalIds: csvItemsToInsert.map((i) => i.itemExternalId),
-    };
-  }
-
-  async queueCSVSyncJob(
-    items: NormalizedInternalCsvItem[],
-    itemsToInsert: QueuedCollectionItem[],
-    ordersToInsert: UpdatedSyncOrder[],
-    userId: string,
-    syncSessionId: string,
-  ) {
-    try {
-      const updated = await this.updateSyncSession(syncSessionId, {
-        jobId: syncSessionId,
-      });
-      if (!updated) throw new Error("SYNC_SESSION_NOT_FOUND");
-      await this.writeQueuedJobStatusBestEffort(syncSessionId, syncSessionId);
-
-      const job = await syncQueue.add(
-        "sync-job",
-        {
-          type: "csv" as const,
-          payloadVersion: 2 as const,
-          userId,
-          syncSessionId,
-          items,
-          itemsToInsert,
-          ordersToInsert,
-        },
-        {
-          removeOnComplete: true,
-          removeOnFail: true,
-          jobId: syncSessionId,
-        },
-      );
-
-      if (!job?.id) {
-        throw new Error("FAILED_TO_QUEUE_CSV_SYNC_JOB");
-      }
-
-      return job.id;
-    } catch (error) {
-      await this.markSyncSessionAsFailed(syncSessionId, SYNC_STATUS_MESSAGES.failedBeforeStart);
-
-      throw error;
-    }
-  }
-
-  async queueOrderLikeSyncJob(params: {
-    readonly type: "order" | "order-item";
-    readonly userId: string;
-    readonly order: UpdatedSyncOrder;
-    readonly itemsToScrape: UpdatedSyncOrderItem[];
-    readonly itemsToInsert: QueuedCollectionItem[];
-    readonly syncSessionId: string;
-    readonly queueErrorCode:
-      | "FAILED_TO_QUEUE_ORDER_SYNC_JOB"
-      | "FAILED_TO_QUEUE_ORDER_ITEM_SYNC_JOB";
-  }) {
-    // `order` and `order-item` jobs share the same worker payload shape. The worker decides
-    // whether to create or append based on `type`, so this helper keeps the queue contract in sync.
-    try {
-      const updated = await this.updateSyncSession(params.syncSessionId, {
-        jobId: params.syncSessionId,
-      });
-      if (!updated) throw new Error("SYNC_SESSION_NOT_FOUND");
-      await this.writeQueuedJobStatusBestEffort(params.syncSessionId, params.syncSessionId);
-
-      const job = await syncQueue.add(
-        "sync-job",
-        {
-          type: params.type,
-          payloadVersion: 2 as const,
-          userId: params.userId,
-          syncSessionId: params.syncSessionId,
-          order: {
-            details: params.order,
-            itemsToScrape: params.itemsToScrape,
-            itemsToInsert: params.itemsToInsert,
-          },
-        },
-        {
-          removeOnComplete: true,
-          removeOnFail: true,
-          jobId: params.syncSessionId,
-        },
-      );
-
-      if (!job?.id) {
-        throw new Error(params.queueErrorCode);
-      }
-
-      return job.id;
-    } catch (error) {
-      await this.markSyncSessionAsFailed(
-        params.syncSessionId,
-        SYNC_STATUS_MESSAGES.failedBeforeStart,
-      );
-
-      throw error;
-    }
-  }
-
-  async queueCollectionSyncJob(
-    userId: string,
-    itemsToScrape: UpdatedSyncCollection[],
-    itemsToInsert: QueuedCollectionItem[],
-    syncSessionId: string,
-  ) {
-    try {
-      const updated = await this.updateSyncSession(syncSessionId, {
-        jobId: syncSessionId,
-      });
-      if (!updated) throw new Error("SYNC_SESSION_NOT_FOUND");
-      await this.writeQueuedJobStatusBestEffort(syncSessionId, syncSessionId);
-
-      const job = await syncQueue.add(
-        "sync-job",
-        {
-          type: "collection" as const,
-          payloadVersion: 2 as const,
-          userId,
-          syncSessionId,
-          collection: {
-            itemsToScrape,
-            itemsToInsert,
-          },
-        },
-        {
-          removeOnComplete: true,
-          removeOnFail: true,
-          jobId: syncSessionId,
-        },
-      );
-
-      if (!job?.id) {
-        throw new Error("FAILED_TO_QUEUE_COLLECTION_SYNC_JOB");
-      }
-
-      return job.id;
-    } catch (error) {
-      await this.markSyncSessionAsFailed(syncSessionId, SYNC_STATUS_MESSAGES.failedBeforeStart);
-
-      throw error;
-    }
-  }
-
-  async queueItemSyncJob(
-    userId: string,
-    itemExternalIds: number[],
-    existingCount: number,
-    syncSessionId: string,
-  ) {
-    try {
-      // Finish startup bookkeeping before the worker can start.
-      const updated = await this.updateSyncSession(syncSessionId, { jobId: syncSessionId });
-      if (!updated) throw new Error("SYNC_SESSION_NOT_FOUND");
-      await this.writeQueuedJobStatusBestEffort(syncSessionId, syncSessionId);
-      await syncQueue.add(
-        "sync-job",
-        {
-          type: "item",
-          payloadVersion: 2,
-          userId,
-          syncSessionId,
-          itemExternalIds,
-          existingCount,
-        },
-        {
-          removeOnComplete: true,
-          removeOnFail: true,
-          jobId: syncSessionId,
-        },
-      );
-      return syncSessionId;
-    } catch (error) {
-      const failCount = itemExternalIds.length;
-      const markedFailed = await db.transaction(async (tx) => {
-        const [failedSession] = await tx
-          .update(syncSession)
-          .set({
-            status: existingCount > 0 ? "partial" : "failed",
-            statusMessage: SYNC_STATUS_MESSAGES.failedBeforeStart,
-            failCount,
-            completedAt: new Date(),
-            updatedAt: new Date(),
-          })
-          .where(and(eq(syncSession.id, syncSessionId), eq(syncSession.status, "pending")))
-          .returning({ id: syncSession.id });
-        if (!failedSession) return false;
+        if (requestPayload.type === "order-item") {
+          await advanceOrderReleaseDatesForCollectionItems(
+            tx,
+            insertedCollectionItems.map(({ id }) => id),
+          );
+        }
 
         await tx
           .update(syncSessionItem)
-          .set({
-            status: "failed",
-            errorReason: SYNC_STATUS_MESSAGES.failedBeforeStart,
-            updatedAt: new Date(),
-          })
+          .set({ status: "scraped", errorReason: null, updatedAt: new Date() })
           .where(
             and(
               eq(syncSessionItem.syncSessionId, syncSessionId),
               eq(syncSessionItem.status, "pending"),
             ),
           );
-        return true;
+
+        await tx
+          .update(syncSession)
+          .set({
+            requestPayload,
+            status: "completed",
+            statusMessage: SYNC_STATUS_MESSAGES.insertedWithoutScrape,
+            successCount: sql`${syncSession.totalItems}`,
+            failCount: 0,
+            orderId,
+            completedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(syncSession.id, syncSessionId));
       });
-      if (markedFailed) {
-        const job = await syncQueue.getJob(syncSessionId);
-        await job?.remove().catch(() => {});
-        await redis.del(getJobStatusSnapshotKey(syncSessionId)).catch(() => {});
+    } catch (error) {
+      await tryCatch(
+        db.transaction(async (tx) => {
+          await this.insertSyncSession(tx, session);
+          await tx
+            .update(syncSessionItem)
+            .set({
+              status: "failed",
+              errorReason: SYNC_STATUS_MESSAGES.failedPersist,
+              updatedAt: new Date(),
+            })
+            .where(eq(syncSessionItem.syncSessionId, syncSessionId));
+          await tx
+            .update(syncSession)
+            .set({
+              requestPayload,
+              status: "failed",
+              statusMessage: SYNC_STATUS_MESSAGES.failedPersist,
+              failCount: sql`${syncSession.totalItems}`,
+              completedAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(eq(syncSession.id, syncSessionId));
+        }),
+      );
+      throw error;
+    }
+  }
+
+  async queueSyncJob(jobData: JobData): Promise<string> {
+    const jobId = jobData.syncSessionId;
+
+    try {
+      // Save the job ID before queueing the job so the worker can find the session.
+      const updated = await this.updateSyncSession(jobData.syncSessionId, {
+        jobId,
+        requestPayload: jobData,
+      });
+      if (!updated) throw new Error("SYNC_SESSION_NOT_FOUND");
+      await this.writeQueuedJobStatusBestEffort(jobId, jobData.syncSessionId);
+      await syncQueue.add("sync-job", jobData, {
+        removeOnComplete: true,
+        removeOnFail: true,
+        jobId,
+      });
+
+      return jobId;
+    } catch (error) {
+      await this.failPendingSyncSession(
+        jobData.syncSessionId,
+        SYNC_STATUS_MESSAGES.failedBeforeStart,
+      );
+      throw error;
+    }
+  }
+
+  async retrySyncSession(sessionId: string, userId: string): Promise<RetrySyncSessionResult> {
+    const prepared = await db.transaction(async (tx): Promise<RetrySyncSessionPreparation> => {
+      const [session] = await tx
+        .select()
+        .from(syncSession)
+        .where(and(eq(syncSession.id, sessionId), eq(syncSession.userId, userId)))
+        .for("update");
+
+      if (!session) return { outcome: "not_found" };
+      if (ACTIVE_SYNC_SESSION_STATUS_SET.has(session.status)) {
+        return { outcome: "unavailable" };
       }
+      if (session.status === "completed" || session.failCount === 0 || !session.requestPayload) {
+        return { outcome: "unavailable" };
+      }
+      if (session.createdAt.getTime() + SYNC_SESSION_RETRY_WINDOW_MS <= Date.now()) {
+        return { outcome: "expired" };
+      }
+
+      const parsedPayload = jobDataSchema.safeParse(session.requestPayload);
+      if (!parsedPayload.success) return { outcome: "unavailable" };
+
+      if (
+        parsedPayload.data.type === "order-item" ||
+        (parsedPayload.data.type === "order" && session.successCount > 0)
+      ) {
+        const [existingOrder] = await tx
+          .select({ id: orderTable.id })
+          .from(orderTable)
+          .where(
+            and(
+              eq(orderTable.id, parsedPayload.data.order.details.id),
+              eq(orderTable.userId, userId),
+            ),
+          );
+        if (!existingOrder) return { outcome: "unavailable" };
+      }
+
+      const failedItems = await tx
+        .select({ itemExternalId: syncSessionItem.itemExternalId })
+        .from(syncSessionItem)
+        .where(
+          and(eq(syncSessionItem.syncSessionId, sessionId), eq(syncSessionItem.status, "failed")),
+        );
+      const failedItemExternalIds = new Set(failedItems.map((item) => item.itemExternalId));
+      const existingItems =
+        parsedPayload.data.type === "item"
+          ? []
+          : await this.getExistingItemsWithLatestReleaseByExternalIds(
+              [...failedItemExternalIds],
+              tx,
+            );
+      const jobData = buildRetryJobData(parsedPayload.data, failedItemExternalIds, existingItems);
+
+      const jobId = createId();
+      await tx
+        .update(syncSessionItem)
+        .set({ status: "pending", errorReason: null, updatedAt: new Date() })
+        .where(
+          and(eq(syncSessionItem.syncSessionId, sessionId), eq(syncSessionItem.status, "failed")),
+        );
+      await tx
+        .update(syncSession)
+        .set({
+          jobId,
+          status: "pending",
+          statusMessage: SYNC_STATUS_MESSAGES.retryQueued,
+          failCount: 0,
+          completedAt: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(syncSession.id, sessionId));
+
+      return { outcome: "prepared", jobId, jobData };
+    });
+
+    if (prepared.outcome !== "prepared") return prepared;
+
+    try {
+      await syncQueue.add("sync-job", prepared.jobData, {
+        removeOnComplete: true,
+        removeOnFail: true,
+        jobId: prepared.jobId,
+      });
+      return { outcome: "queued", jobId: prepared.jobId };
+    } catch (error) {
+      await tryCatch(
+        this.failPendingSyncSession(sessionId, SYNC_STATUS_MESSAGES.failedBeforeStart),
+      );
       throw error;
     }
   }
@@ -639,57 +566,12 @@ class SyncService {
     };
   }
 
-  // ── Sync Session Methods ──────────────────────────────────────────────
+  // Sync session methods
 
-  async createSyncSession(
-    userId: string,
-    syncType: SyncType,
-    itemExternalIds: readonly number[],
-    options?: {
-      readonly orderId?: string;
-      readonly existingItemExternalIds?: readonly number[];
-    },
-  ): Promise<string> {
-    const sessionId = createId();
-    const existingIds = options?.existingItemExternalIds ?? [];
-    const existingIdSet = new Set(existingIds);
-    // Ordered row IDs preserve submitted Item order in history's createdAt/id sort.
-    const rows =
-      syncType === "item"
-        ? itemExternalIds.map((externalId, index) => ({
-            id: `${sessionId}-${String(index).padStart(2, "0")}`,
-            syncSessionId: sessionId,
-            itemExternalId: externalId,
-            status: existingIdSet.has(externalId) ? ("scraped" as const) : ("pending" as const),
-          }))
-        : [
-            ...itemExternalIds.map((externalId) => ({
-              syncSessionId: sessionId,
-              itemExternalId: externalId,
-            })),
-            ...existingIds.map((externalId) => ({
-              syncSessionId: sessionId,
-              itemExternalId: externalId,
-              status: "scraped" as const,
-            })),
-          ];
-
+  async createSyncSession(session: SyncSessionCreation): Promise<void> {
     await db.transaction(async (tx) => {
-      await tx.insert(syncSession).values({
-        id: sessionId,
-        userId,
-        syncType,
-        orderId: options?.orderId ?? null,
-        totalItems: rows.length,
-        successCount: existingIds.length,
-      });
-
-      if (rows.length > 0) {
-        await tx.insert(syncSessionItem).values(rows);
-      }
+      await this.insertSyncSession(tx, session);
     });
-
-    return sessionId;
   }
 
   async getSyncSessions(
@@ -698,7 +580,7 @@ class SyncService {
     limit: number,
     statusFilter?: readonly SyncSessionStatus[],
     syncTypeFilter?: readonly SyncType[],
-  ): Promise<{ sessions: DbSyncSessionRow[]; total: number }> {
+  ): Promise<{ sessions: SyncSessionRow[]; total: number }> {
     const offset = (page - 1) * limit;
 
     const conditions = [eq(syncSession.userId, userId)];
@@ -708,14 +590,29 @@ class SyncService {
       conditions.push(inArray(syncSession.syncType, syncTypeFilter));
     const whereClause = and(...conditions);
 
-    const [sessions, [{ total }]] = await Promise.all([
+    const [sessionRecords, [{ total }]] = await Promise.all([
       db
-        .select()
+        .select({
+          id: syncSession.id,
+          userId: syncSession.userId,
+          syncType: syncSession.syncType,
+          jobId: syncSession.jobId,
+          status: syncSession.status,
+          statusMessage: syncSession.statusMessage,
+          orderId: syncSession.orderId,
+          totalItems: syncSession.totalItems,
+          successCount: syncSession.successCount,
+          failCount: syncSession.failCount,
+          createdAt: syncSession.createdAt,
+          updatedAt: syncSession.updatedAt,
+          completedAt: syncSession.completedAt,
+          hasRequestPayload: sql<boolean>`${syncSession.requestPayload} is not null`,
+        })
         .from(syncSession)
         .where(whereClause)
         .orderBy(
           sql`CASE WHEN ${syncSession.status} IN ('pending', 'processing') THEN 0 ELSE 1 END`,
-          desc(syncSession.createdAt),
+          desc(syncSession.updatedAt),
           desc(syncSession.id),
         )
         .limit(limit)
@@ -723,7 +620,32 @@ class SyncService {
       db.select({ total: count() }).from(syncSession).where(whereClause),
     ]);
 
-    return { sessions, total };
+    const now = Date.now();
+    return {
+      sessions: sessionRecords.map(({ hasRequestPayload, ...session }) => {
+        const targetOrderIsAvailable =
+          !(
+            session.syncType === "order-item" ||
+            (session.syncType === "order" && session.successCount > 0)
+          ) || session.orderId !== null;
+
+        return {
+          ...session,
+          retrySupported: hasRequestPayload,
+          canRetry:
+            hasRequestPayload &&
+            targetOrderIsAvailable &&
+            session.failCount > 0 &&
+            (session.status === "failed" || session.status === "partial") &&
+            session.createdAt.getTime() + SYNC_SESSION_RETRY_WINDOW_MS > now,
+          isRetrying:
+            session.jobId !== null &&
+            session.jobId !== session.id &&
+            ACTIVE_SYNC_SESSION_STATUS_SET.has(session.status),
+        };
+      }),
+      total,
+    };
   }
 
   async getSyncSessionDetail(
@@ -733,16 +655,43 @@ class SyncService {
     limit?: number,
     statusFilter?: readonly SyncSessionItemStatus[],
   ): Promise<{
-    session: DbSyncSessionRow;
+    session: SyncSessionRow;
     items: DbEnrichedSyncSessionItemRow[];
     totalItems: number;
   } | null> {
-    const [session] = await db
-      .select()
+    const [sessionRecord] = await db
+      .select({
+        id: syncSession.id,
+        userId: syncSession.userId,
+        syncType: syncSession.syncType,
+        jobId: syncSession.jobId,
+        status: syncSession.status,
+        statusMessage: syncSession.statusMessage,
+        orderId: syncSession.orderId,
+        totalItems: syncSession.totalItems,
+        successCount: syncSession.successCount,
+        failCount: syncSession.failCount,
+        createdAt: syncSession.createdAt,
+        updatedAt: syncSession.updatedAt,
+        completedAt: syncSession.completedAt,
+        hasRequestPayload: sql<boolean>`${syncSession.requestPayload} is not null`,
+      })
       .from(syncSession)
       .where(and(eq(syncSession.id, sessionId), eq(syncSession.userId, userId)));
 
-    if (!session) return null;
+    if (!sessionRecord) return null;
+    const { hasRequestPayload, ...session } = sessionRecord;
+    const targetOrderIsAvailable =
+      !(
+        session.syncType === "order-item" ||
+        (session.syncType === "order" && session.successCount > 0)
+      ) || session.orderId !== null;
+    const canRetry =
+      hasRequestPayload &&
+      targetOrderIsAvailable &&
+      session.failCount > 0 &&
+      (session.status === "failed" || session.status === "partial") &&
+      session.createdAt.getTime() + SYNC_SESSION_RETRY_WINDOW_MS > Date.now();
 
     const itemConditions = [eq(syncSessionItem.syncSessionId, sessionId)];
     if (statusFilter && statusFilter.length > 0) {
@@ -788,7 +737,19 @@ class SyncService {
       itemImage: row.itemImage ?? null,
     }));
 
-    return { session, items, totalItems: total };
+    return {
+      session: {
+        ...session,
+        retrySupported: hasRequestPayload,
+        canRetry,
+        isRetrying:
+          session.jobId !== null &&
+          session.jobId !== session.id &&
+          ACTIVE_SYNC_SESSION_STATUS_SET.has(session.status),
+      },
+      items,
+      totalItems: total,
+    };
   }
 
   async updateSyncSession(

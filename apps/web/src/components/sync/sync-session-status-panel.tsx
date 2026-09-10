@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import type { SyncSessionRow } from "@myakiba/contracts/sync/types";
-import { Spinner } from "@/components/ui/spinner";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSyncJobStatusQuery } from "@/hooks/use-sync-job-status-query";
@@ -70,7 +69,12 @@ export function SyncSessionStatusPanel({
     <output className="block space-y-2" aria-live={isLive ? "polite" : "off"}>
       <div className="flex items-start gap-2">
         {isLive ? (
-          <Spinner className="mt-1 size-3 shrink-0" />
+          <span
+            aria-hidden="true"
+            className="relative mt-1.5 size-2 shrink-0 rounded-full bg-foreground"
+          >
+            <span className="absolute inset-0 rounded-full bg-foreground motion-safe:animate-ping" />
+          </span>
         ) : (
           <span
             aria-hidden

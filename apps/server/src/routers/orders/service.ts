@@ -1,6 +1,7 @@
 import type { OrderCascadeOption } from "@myakiba/contracts/orders/constants";
 import type { OrderItemsQuery } from "@myakiba/contracts/orders/schema";
 import { db } from "@myakiba/db/client";
+import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
 import { order, collection, item, item_release } from "@myakiba/db/schema/figure";
 import { eq, and, inArray, sql, desc, asc, ilike, ne, gte, lte, or, isNull } from "drizzle-orm";
 import type { OrderStatus, ShippingMethod } from "@myakiba/contracts/shared/types";
@@ -278,6 +279,11 @@ class OrdersService {
         throw new Error("ORDER_ITEMS_NOT_FOUND");
       }
 
+      await advanceOrderReleaseDatesForCollectionItems(
+        tx,
+        collectionUpdated.map(({ id }) => id),
+      );
+
       const deletedOrders = await tx
         .delete(order)
         .where(and(eq(order.userId, userId), inArray(order.id, orderIds)))
@@ -329,6 +335,11 @@ class OrdersService {
       if (collectionUpdated.length === 0) {
         throw new Error("ORDER_ITEMS_NOT_FOUND");
       }
+
+      await advanceOrderReleaseDatesForCollectionItems(
+        tx,
+        collectionUpdated.map(({ id }) => id),
+      );
 
       return {};
     });
@@ -517,6 +528,11 @@ class OrdersService {
       if (movedItems.length === 0) {
         throw new Error("FAILED_TO_MOVE_ITEMS");
       }
+
+      await advanceOrderReleaseDatesForCollectionItems(
+        tx,
+        movedItems.map(({ id }) => id),
+      );
 
       return {};
     });
