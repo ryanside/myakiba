@@ -421,12 +421,16 @@ export async function processDataTransferImportJob(
       report: null,
     },
   });
-  const jobStatus = createJobStatusState({
-    jobId,
-    totalItems: 0,
-    phase: "queued",
-    statusMessage: "Waiting for the import worker…",
-  });
+  const rowCountByExternalId = new Map<number, number>();
+  const jobStatus = {
+    ...createJobStatusState({
+      jobId,
+      totalItems: 0,
+      phase: "queued",
+      statusMessage: "Waiting for the import worker…",
+    }),
+    rowCountByExternalId,
+  };
   let claimedImport = false;
 
   try {
@@ -476,7 +480,11 @@ export async function processDataTransferImportJob(
       });
     }
     const archive = parsedArchive.data;
-    const externalIds = [...new Set(archive.collectionItems.map((row) => row.item.externalId))];
+    for (const row of archive.collectionItems) {
+      const externalId = row.item.externalId;
+      rowCountByExternalId.set(externalId, (rowCountByExternalId.get(externalId) ?? 0) + 1);
+    }
+    const externalIds = [...rowCountByExternalId.keys()];
 
     jobLog.set({
       dataTransfer: {
@@ -504,18 +512,18 @@ export async function processDataTransferImportJob(
       itemsByExternalId: existingItemsByExternalId,
     });
     const scrapeItemIds = [...new Set(rowsToScrape.map((row) => row.item.externalId))];
-    const existingItemCount = externalIds.length - scrapeItemIds.length;
+    const existingCollectionItemCount = archive.collectionItems.length - rowsToScrape.length;
     const scrapeStrategy = scrapeItemIds.length <= 5 ? "standard" : "rate_limited";
     jobLog.set({
       items: { existing: archive.collectionItems.length - rowsToScrape.length },
       scrape: { strategy: scrapeStrategy, maxRetries: 3, baseDelayMs: 1000 },
     });
     jobStatus.progress =
-      externalIds.length > 0
+      archive.collectionItems.length > 0
         ? {
-            processed: existingItemCount,
-            total: externalIds.length,
-            succeeded: existingItemCount,
+            processed: existingCollectionItemCount,
+            total: archive.collectionItems.length,
+            succeeded: existingCollectionItemCount,
             failed: 0,
           }
         : null;
