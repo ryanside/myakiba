@@ -69,10 +69,16 @@ export async function finalizeItemSync({
       };
     }
 
-    // If this batch fails to save, undo it so we can still check saved Items and record history.
-    const { error: persistenceError } = await tryCatch(
-      tx.transaction((savepoint) => persistScrapedItemData(savepoint, assembledData)),
-    );
+    // Keep one bad scraped item from rolling back the rest of the batch.
+    let persistenceError: Error | null = null;
+    for (const successfulResult of successfulResults) {
+      const { error } = await tryCatch(
+        tx.transaction((savepoint) =>
+          persistScrapedItemData(savepoint, assembleScrapedData([successfulResult])),
+        ),
+      );
+      if (error && !persistenceError) persistenceError = error;
+    }
 
     const availableItems = await tx
       .select({ externalId: itemTable.externalId })
