@@ -230,6 +230,8 @@ function RetrySyncSessionButton({
     unavailableReason = "This import was created before failed item retries were supported.";
   } else if (failCount === 0) {
     unavailableReason = "This import has no failed item results to retry.";
+  } else if (!canRetry) {
+    unavailableReason = "Retry is not available for this import.";
   }
 
   const button = (
