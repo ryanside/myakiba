@@ -44,7 +44,7 @@ export function CollectionBreakdown({
               <span className="tabular-nums">
                 {item.count} {item.count === 1 ? "item" : "items"}
               </span>
-              <span className="text-muted-foreground tabular-nums">
+              <span className="text-background/70 tabular-nums">
                 {total > 0 ? ((item.count / total) * 100).toFixed(1) : "0.0"}%
               </span>
             </p>

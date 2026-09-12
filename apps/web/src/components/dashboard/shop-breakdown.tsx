@@ -50,7 +50,7 @@ export function ShopBreakdown({
               <span className="tabular-nums">
                 {s.orderCount} {s.orderCount === 1 ? "order" : "orders"}
               </span>
-              <span className="text-muted-foreground tabular-nums">
+              <span className="text-background/70 tabular-nums">
                 {totalOrderCount > 0 ? ((s.orderCount / totalOrderCount) * 100).toFixed(1) : "0.0"}%
               </span>
             </p>

@@ -80,7 +80,7 @@ export function CostBreakdown({
               <span className="tabular-nums">
                 {formatCurrencyFromMinorUnits(e.amount, currency, locale)}
               </span>
-              <span className="text-muted-foreground tabular-nums">
+              <span className="text-background/70 tabular-nums">
                 {totalAmount > 0 ? ((e.amount / totalAmount) * 100).toFixed(1) : "0.0"}%
               </span>
             </p>

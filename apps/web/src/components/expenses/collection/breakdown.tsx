@@ -40,7 +40,7 @@ export function Breakdown({
               <span className="tabular-nums">
                 {entry.count} {entry.count === 1 ? "item" : "items"}
               </span>
-              <span className="tabular-nums text-muted-foreground">
+              <span className="tabular-nums text-background/70">
                 {entry.percentage.toFixed(1)}%
               </span>
             </p>
