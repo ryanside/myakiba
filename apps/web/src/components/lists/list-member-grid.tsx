@@ -69,7 +69,7 @@ function ListMemberLink({
       {viewMode === "grid" ? (
         <div
           key="grid-metadata"
-          className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-1 bg-black/50 p-2.5 text-white opacity-0 backdrop-blur-sm transition-[translate,opacity] duration-150 ease-out group-hover/media:translate-y-0 group-hover/media:opacity-100 group-focus-visible/media:translate-y-0 group-focus-visible/media:opacity-100 any-pointer-coarse:translate-y-0 any-pointer-coarse:opacity-100"
+          className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-1 rounded-b-lg bg-black/50 p-2.5 text-white opacity-0 backdrop-blur-sm transition-[translate,opacity] duration-150 ease-out group-hover/media:translate-y-0 group-hover/media:opacity-100 group-focus-visible/media:translate-y-0 group-focus-visible/media:opacity-100 any-pointer-coarse:translate-y-0 any-pointer-coarse:opacity-100"
         >
           <p className="line-clamp-2 text-sm font-medium leading-tight">{member.title}</p>
           <p className="mt-1 text-xs leading-4 text-white/70">{MEMBER_TYPE_LABELS[member.type]}</p>
