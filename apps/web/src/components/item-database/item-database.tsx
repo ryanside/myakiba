@@ -5,7 +5,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import type { ItemDatabaseItem } from "@myakiba/contracts/search/schema";
 import { ITEM_CATEGORY_GROUPS } from "@myakiba/contracts/shared/constants";
 import type { Category, Currency, DateFormat } from "@myakiba/contracts/shared/types";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { DebouncedInput } from "@/components/debounced-input";
 import { SyncSheetButton } from "@/components/sync/sync-sheet-button";
@@ -22,8 +22,6 @@ import { getItemDatabaseItems } from "@/queries/search";
 
 const itemsRoute = getRouteApi("/(app)/items");
 const VIEW_MODE_KEY = "item-database:viewMode";
-const MAX_STAGGER_INDEX = 20;
-const STAGGER_DELAY_MS = 30;
 const CATEGORY_GROUP_BY_CATEGORY = Object.fromEntries(
   Object.entries(ITEM_CATEGORY_GROUPS).flatMap(([group, categories]) =>
     categories.map((category) => [category, group]),
@@ -49,12 +47,7 @@ function ItemImage({ item }: { readonly item: ItemDatabaseItem }): React.JSX.Ele
   );
 }
 
-function getItemDisplayDetails(
-  item: ItemDatabaseItem,
-  index: number,
-  currency: Currency,
-  dateFormat: DateFormat,
-) {
+function getItemDisplayDetails(item: ItemDatabaseItem, currency: Currency, dateFormat: DateFormat) {
   return {
     category: item.category ?? "—",
     categoryGroup: item.category ? CATEGORY_GROUP_BY_CATEGORY[item.category] : "—",
@@ -65,7 +58,6 @@ function getItemDisplayDetails(
     releasePrice:
       formatReleasePrice(item.latestRelease?.price, item.latestRelease?.priceCurrency, currency) ??
       "—",
-    staggerDelay: Math.min(index, MAX_STAGGER_INDEX) * STAGGER_DELAY_MS,
   };
 }
 
@@ -80,9 +72,9 @@ function ItemGrid({
 }): React.JSX.Element {
   return (
     <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-2">
-      {items.map((item, index) => {
-        const { category, categoryGroup, categoryColor, releaseDate, releasePrice, staggerDelay } =
-          getItemDisplayDetails(item, index, currency, dateFormat);
+      {items.map((item) => {
+        const { category, categoryGroup, categoryColor, releaseDate, releasePrice } =
+          getItemDisplayDetails(item, currency, dateFormat);
 
         return (
           <Link
@@ -90,7 +82,6 @@ function ItemGrid({
             to="/item/$externalId"
             params={{ externalId: item.externalId }}
             className="animate-data-in group/media relative block overflow-hidden rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            style={{ "--data-in-delay": `${staggerDelay}ms` } as CSSProperties}
           >
             <ItemImage item={item} />
             <div className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-1 bg-black/50 p-2.5 text-white opacity-0 backdrop-blur-sm transition-[translate,opacity] duration-150 ease-out group-hover/media:translate-y-0 group-hover/media:opacity-100 group-focus-visible/media:translate-y-0 group-focus-visible/media:opacity-100">
@@ -126,9 +117,9 @@ function ItemList({
 }): React.JSX.Element {
   return (
     <div className="flex flex-col gap-2">
-      {items.map((item, index) => {
-        const { category, categoryGroup, categoryColor, releaseDate, releasePrice, staggerDelay } =
-          getItemDisplayDetails(item, index, currency, dateFormat);
+      {items.map((item) => {
+        const { category, categoryGroup, categoryColor, releaseDate, releasePrice } =
+          getItemDisplayDetails(item, currency, dateFormat);
 
         return (
           <Link
@@ -136,7 +127,6 @@ function ItemList({
             to="/item/$externalId"
             params={{ externalId: item.externalId }}
             className="animate-data-in flex min-w-0 items-center gap-3 overflow-hidden rounded-md p-2 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            style={{ "--data-in-delay": `${staggerDelay}ms` } as CSSProperties}
           >
             <div className="size-16 shrink-0 overflow-hidden rounded-md">
               <ItemImage item={item} />

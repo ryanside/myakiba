@@ -132,7 +132,7 @@ export function ChartSeriesLegend<TKey extends string>({
 }): ReactNode {
   return (
     <div className="flex flex-wrap items-center gap-1" aria-label="Chart series">
-      {items.map((item, index) => {
+      {items.map((item) => {
         const visible = visibleKeys?.has(item.key) ?? true;
         const content = (
           <>
@@ -158,16 +158,11 @@ export function ChartSeriesLegend<TKey extends string>({
             aria-pressed={visible}
             onClick={() => onToggle(item.key)}
             className={className}
-            style={{ animationDelay: `${60 + index * 30}ms` }}
           >
             {content}
           </Button>
         ) : (
-          <span
-            key={item.key}
-            className={cn("flex h-6 items-center gap-1 px-2", className)}
-            style={{ animationDelay: `${60 + index * 30}ms` }}
-          >
+          <span key={item.key} className={cn("flex h-6 items-center gap-1 px-2", className)}>
             {content}
           </span>
         );

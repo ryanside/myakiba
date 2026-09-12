@@ -16,14 +16,10 @@ import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { ItemControl } from "@/components/ui/item-controls";
 import type { GridListViewMode } from "@/components/ui/view-toggle";
 import { cn } from "@/lib/utils";
-import type { CSSProperties } from "react";
 import { useSortableItems } from "@/hooks/use-sortable-items";
 
 type ListMembersPage = NonNullable<Awaited<ReturnType<typeof getListMembers>>>;
 type ListMember = ListMembersPage["items"][number];
-
-const MAX_STAGGER_INDEX = 20;
-const STAGGER_DELAY_MS = 30;
 
 const MEMBER_TYPE_LABELS = {
   item: "Item",
@@ -131,7 +127,6 @@ function ListMemberLink({
 
 function SortableListMember({
   member,
-  index,
   viewMode,
   entranceAnimationActive,
   sortingDisabled,
@@ -143,7 +138,6 @@ function SortableListMember({
   onEntranceAnimationEnd,
 }: {
   readonly member: ListMember;
-  readonly index: number;
   readonly viewMode: GridListViewMode;
   readonly entranceAnimationActive: boolean;
   readonly sortingDisabled: boolean;
@@ -161,11 +155,6 @@ function SortableListMember({
     disabled: reorderDisabled,
   });
   const isRemoving = removingMemberIds?.includes(member.id) ?? false;
-  const entranceStyle = entranceAnimationActive
-    ? ({
-        "--data-in-delay": `${Math.min(index, MAX_STAGGER_INDEX) * STAGGER_DELAY_MS}ms`,
-      } as CSSProperties)
-    : undefined;
 
   return (
     <div ref={setNodeRef} className="relative">
@@ -191,7 +180,6 @@ function SortableListMember({
           selected && "ring-2 ring-primary",
           entranceAnimationActive && "animate-data-in",
         )}
-        style={entranceStyle}
         onAnimationEnd={(event) => {
           if (event.target === event.currentTarget && event.animationName === "data-in") {
             onEntranceAnimationEnd?.();
@@ -316,7 +304,6 @@ export function ListMemberGrid({
             <SortableListMember
               key={member.id}
               member={member}
-              index={index}
               viewMode={viewMode}
               entranceAnimationActive={entranceAnimationActive}
               sortingDisabled={sortingDisabled || isSaving || members.length < 2}

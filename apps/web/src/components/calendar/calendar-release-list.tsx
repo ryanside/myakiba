@@ -54,14 +54,12 @@ function CalendarReleaseList<TItem>({
 
   if (groups.length === 0) {
     return (
-      <p className="animate-data-in py-4 text-center text-sm text-muted-foreground [--data-in-delay:60ms]">
-        {emptyLabel}
-      </p>
+      <p className="animate-data-in py-4 text-center text-sm text-muted-foreground">{emptyLabel}</p>
     );
   }
 
   return (
-    <ol className="animate-data-in flex flex-col gap-5 [--data-in-delay:60ms]">
+    <ol className="animate-data-in flex flex-col gap-5">
       {groups.map(([date, dayItems]) => {
         const dayNumber = Number(date.slice(8, 10));
         const isSelected = isFilteringByDay && selectedDays.has(dayNumber);

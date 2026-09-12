@@ -367,7 +367,7 @@ function OrderColumn({
           {isLoading ? (
             <Loader className="justify-start pt-4" />
           ) : (
-            orders.map((order, index) => (
+            orders.map((order) => (
               <OrderCard
                 key={order.orderId}
                 order={order}
@@ -375,7 +375,6 @@ function OrderColumn({
                 dateFormat={dateFormat}
                 asHandle={!isOverlay}
                 onDateChange={onDateChange}
-                style={{ "--data-in-delay": `${index * 30}ms` } as React.CSSProperties}
               />
             ))
           )}

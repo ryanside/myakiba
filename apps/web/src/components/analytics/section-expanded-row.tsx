@@ -146,7 +146,6 @@ function ExpandedRowItems({
             title={item.title}
             aria-label={item.title}
             className="animate-data-in aspect-square rounded-md overflow-hidden bg-background"
-            style={{ "--data-in-delay": `${idx * 30}ms` } as React.CSSProperties}
           >
             {item.image ? (
               <img

@@ -8,11 +8,7 @@ import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contract
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import type { RowSelectionState } from "@tanstack/react-table";
-import type { CSSProperties } from "react";
 import type { GalleryLayout } from "@/components/ui/gallery-layout-toggle";
-
-const MAX_STAGGER_INDEX = 20;
-const STAGGER_DELAY_MS = 30;
 
 interface CollectionGalleryGridProps {
   readonly items: readonly CollectionItem[];
@@ -101,10 +97,9 @@ export function CollectionGalleryGrid({
     );
   }
 
-  const tiles = items.map((item, index) => {
+  const tiles = items.map((item) => {
     const isSelected = !!rowSelection[item.id];
     const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
-    const staggerDelay = Math.min(index, MAX_STAGGER_INDEX) * STAGGER_DELAY_MS;
 
     return (
       <div
@@ -114,7 +109,6 @@ export function CollectionGalleryGrid({
           galleryLayout === "masonry" && "mb-2 break-inside-avoid",
           isSelected && "ring-2 ring-primary ring-offset-1 ring-offset-background",
         )}
-        style={{ "--data-in-delay": `${staggerDelay}ms` } as CSSProperties}
       >
         <CollectionItemControls
           item={item}

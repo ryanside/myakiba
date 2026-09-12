@@ -11,11 +11,7 @@ import type { OrderListItem } from "@myakiba/contracts/orders/types";
 import type { CascadeOptions, EditedOrder } from "@myakiba/contracts/orders/schema";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import type { RowSelectionState } from "@tanstack/react-table";
-import type { CSSProperties } from "react";
 import { ThemedBadge } from "../reui/badge";
-
-const MAX_STAGGER_INDEX = 20;
-const STAGGER_DELAY_MS = 30;
 
 interface OrdersCardGridProps {
   readonly orders: readonly OrderListItem[];
@@ -106,11 +102,10 @@ export function OrdersCardGrid({
 
   return (
     <div className="grid gap-3" style={gridStyle}>
-      {orders.map((order, index) => {
+      {orders.map((order) => {
         const isSelected = !!rowSelection[order.orderId];
         const isPending = isOrderPending(order.orderId);
         const displayImages = order.images.slice(0, 4);
-        const staggerDelay = Math.min(index, MAX_STAGGER_INDEX) * STAGGER_DELAY_MS;
 
         return (
           <Card
@@ -140,7 +135,6 @@ export function OrdersCardGrid({
               params={{ id: order.orderId }}
               className="block overflow-hidden rounded-[10px] bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               title={order.title}
-              style={{ "--data-in-delay": `${staggerDelay}ms` } as CSSProperties}
             >
               <div className="animate-data-in relative aspect-8/5 w-full overflow-hidden bg-muted">
                 {(() => {
@@ -193,11 +187,6 @@ export function OrdersCardGrid({
                 "animate-data-in flex min-h-0 flex-1 flex-col px-3 pt-3 pb-2.5",
                 isCompact && "px-2 pt-2.5 pb-2",
               )}
-              style={
-                {
-                  "--data-in-delay": `${staggerDelay + STAGGER_DELAY_MS * 2}ms`,
-                } as CSSProperties
-              }
             >
               <div className="flex items-center justify-between gap-2">
                 <ThemedBadge

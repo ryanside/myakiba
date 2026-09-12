@@ -137,7 +137,7 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
           data={chartData}
           isLoading={isLoading}
           loadingBars={MONTH_NAMES.length}
-          className="animate-data-in w-full h-full [--data-in-delay:60ms]"
+          className="animate-data-in w-full h-full"
           chartProps={{
             onMouseLeave: () => setActiveIndex(currentMonthIndex),
             margin: {

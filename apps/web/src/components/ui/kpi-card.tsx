@@ -32,7 +32,7 @@ export function KPICard({
               {value}
             </p>
             {subvalueTitle && subvalue !== undefined && (
-              <div className="animate-data-in flex items-baseline gap-1 [--data-in-delay:60ms]">
+              <div className="animate-data-in flex items-baseline gap-1">
                 <span className="text-xs text-muted-foreground tabular-nums">{subvalue}</span>
                 <span className="text-xs text-muted-foreground">{subvalueTitle}</span>
               </div>

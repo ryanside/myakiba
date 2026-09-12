@@ -191,10 +191,7 @@ function CalendarDayCellContent({
         {dayNumber}
       </span>
       {bucket != null && bucket.thumbs.length > 0 && (
-        <CalendarDayThumbStack
-          thumbs={bucket.thumbs}
-          className="animate-data-in mt-auto [--data-in-delay:60ms]"
-        />
+        <CalendarDayThumbStack thumbs={bucket.thumbs} className="animate-data-in mt-auto" />
       )}
     </>
   );

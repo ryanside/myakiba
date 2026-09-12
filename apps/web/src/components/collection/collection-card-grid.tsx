@@ -10,11 +10,7 @@ import { cn } from "@/lib/utils";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
-import type { CSSProperties } from "react";
 import type { RowSelectionState } from "@tanstack/react-table";
-
-const MAX_STAGGER_INDEX = 20;
-const STAGGER_DELAY_MS = 30;
 
 interface CollectionCardGridProps {
   readonly items: readonly CollectionItem[];
@@ -117,10 +113,9 @@ export function CollectionCardGrid({
 
   return (
     <div className="grid gap-3" style={gridStyle}>
-      {items.map((item, index) => {
+      {items.map((item) => {
         const isSelected = !!rowSelection[item.id];
         const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
-        const staggerDelay = Math.min(index, MAX_STAGGER_INDEX) * STAGGER_DELAY_MS;
 
         return (
           <Card
@@ -157,7 +152,6 @@ export function CollectionCardGrid({
                   } as const))}
               className="block overflow-hidden rounded-[10px] bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               title={item.itemTitle}
-              style={{ "--data-in-delay": `${staggerDelay}ms` } as CSSProperties}
             >
               <div className="animate-data-in relative aspect-4/5 w-full overflow-hidden bg-muted">
                 {item.itemImage ? (
@@ -180,11 +174,6 @@ export function CollectionCardGrid({
                 "animate-data-in flex min-h-0 flex-1 flex-col px-3 pt-3 pb-2.5",
                 isCompact && "px-2 pt-2.5 pb-2",
               )}
-              style={
-                {
-                  "--data-in-delay": `${staggerDelay + STAGGER_DELAY_MS * 2}ms`,
-                } as CSSProperties
-              }
             >
               <div className="flex min-w-0 items-center gap-2 text-[11px] leading-none">
                 {item.itemCategory ? (

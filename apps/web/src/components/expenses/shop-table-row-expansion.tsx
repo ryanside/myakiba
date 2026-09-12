@@ -195,7 +195,7 @@ function CollectionExpansionPanel({
         <p className="text-sm text-muted-foreground">No collection items.</p>
       ) : (
         <div className="flex flex-wrap gap-2">
-          {data.items.map((item, index) => {
+          {data.items.map((item) => {
             const linkProps =
               item.externalId === null
                 ? { to: "/item/custom/$id" as const, params: { id: item.itemId } }
@@ -207,7 +207,6 @@ function CollectionExpansionPanel({
                 title={item.title}
                 aria-label={item.title}
                 className="animate-data-in size-14 overflow-hidden rounded-md bg-background ring-1 ring-border/40"
-                style={{ animationDelay: `${index * 30}ms` }}
               >
                 {item.image ? (
                   <img
@@ -250,12 +249,8 @@ function FeeBreakdownPanel({
         <p className="text-sm text-muted-foreground">No fees for this shop.</p>
       ) : (
         <ul className="flex flex-wrap gap-x-4 gap-y-2 text-xs">
-          {entries.map((entry, index) => (
-            <li
-              key={entry.key}
-              className="animate-data-in flex items-center gap-1.5"
-              style={{ animationDelay: `${index * 30}ms` }}
-            >
+          {entries.map((entry) => (
+            <li key={entry.key} className="animate-data-in flex items-center gap-1.5">
               <span
                 aria-hidden
                 className="size-1.5 rounded-full"
@@ -289,12 +284,8 @@ function ShippingMethodsPanel({
         <p className="text-sm text-muted-foreground">No shipping charges for this shop.</p>
       ) : (
         <ul className="flex flex-wrap gap-x-4 gap-y-2 text-xs">
-          {data.methods.map((entry, index) => (
-            <li
-              key={entry.method}
-              className="animate-data-in flex items-center gap-1.5"
-              style={{ animationDelay: `${index * 30}ms` }}
-            >
+          {data.methods.map((entry) => (
+            <li key={entry.method} className="animate-data-in flex items-center gap-1.5">
               <span
                 aria-hidden
                 className="size-1.5 rounded-full"
@@ -362,7 +353,7 @@ function TopOrdersPanel({
         <p className="text-sm text-muted-foreground">No orders.</p>
       ) : (
         <ul className="divide-y divide-border/30">
-          {data.topOrders.map((order, index) => (
+          {data.topOrders.map((order) => (
             <li key={order.orderId}>
               <ExpenseOrderRow
                 order={order}
@@ -370,7 +361,6 @@ function TopOrdersPanel({
                 locale={locale}
                 dateFormat={dateFormat}
                 className="animate-data-in"
-                style={{ animationDelay: `${index * 30}ms` }}
               />
             </li>
           ))}
