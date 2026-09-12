@@ -274,11 +274,7 @@ function OrderCard({
                 <Button
                   type="button"
                   variant="ghost"
-                  className={cn(
-                    "h-auto w-full justify-between gap-2 rounded px-1.5 py-1 text-left font-normal",
-                    "transition-colors hover:bg-muted/80",
-                    "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-                  )}
+                  className="h-auto w-full justify-between gap-2 rounded px-1.5 py-1 text-left font-normal"
                 >
                   <span className="shrink-0 text-[10px] font-medium text-muted-foreground">
                     {label}

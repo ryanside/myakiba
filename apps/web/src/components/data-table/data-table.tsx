@@ -162,7 +162,7 @@ function TableBody<TData extends RowData>({
               }
               tabIndex={isInteractive ? 0 : undefined}
               className={cn(
-                "animate-data-in border-b border-border/50 hover:bg-muted/40",
+                "animate-data-in border-b border-border/50 hover:bg-muted/50",
                 isInteractive &&
                   "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
                 getRowClassName?.(row),

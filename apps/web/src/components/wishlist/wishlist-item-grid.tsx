@@ -257,7 +257,7 @@ function SortableWishlistItem({
           "group/item relative overflow-hidden",
           viewMode === "grid"
             ? "group/tile rounded-lg"
-            : "group/row flex min-w-0 items-center rounded-md transition-colors duration-50 hover:bg-accent",
+            : "group/row flex min-w-0 items-center rounded-md transition-colors duration-50 hover:bg-muted/50",
           entranceAnimationActive && "animate-data-in",
         )}
         style={entranceStyle}

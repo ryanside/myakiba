@@ -230,7 +230,7 @@ function ActiveSessionItem({ session, onNavigate }: ActiveSessionProps) {
       to="/sync/$id"
       params={{ id: session.id }}
       onClick={onNavigate}
-      className="mb-1 block rounded-sm p-2 hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      className="mb-1 block rounded-sm p-2 hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       aria-label={`View ${typeConfig.label} import`}
     >
       <div className="flex min-w-0 items-center gap-1.75">
@@ -310,7 +310,7 @@ function RecentSessionItem({ session, onNavigate }: RecentSessionProps) {
       to="/sync/$id"
       params={{ id: session.id }}
       onClick={onNavigate}
-      className="flex items-start gap-1.75 rounded-sm px-2 py-2.25 hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      className="flex items-start gap-1.75 rounded-sm px-2 py-2.25 hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       aria-label={`View ${typeConfig.label} import updated ${formatRelativeTimeToNow(session.updatedAt)}`}
     >
       <div className="inline-flex size-4.5 shrink-0 items-center justify-center">

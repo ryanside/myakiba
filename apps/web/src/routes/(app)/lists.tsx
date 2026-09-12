@@ -118,7 +118,7 @@ function SortableList({
           "group/item relative overflow-hidden",
           viewMode === "grid"
             ? "group/card rounded-xl bg-card ring-1 ring-foreground/10 transition-[box-shadow] duration-150 hover:shadow-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
-            : "group/row flex min-w-0 items-center rounded-md hover:bg-accent",
+            : "group/row flex min-w-0 items-center rounded-md hover:bg-muted/50",
           selected && "ring-2 ring-primary",
           entranceAnimationActive && "animate-data-in",
         )}

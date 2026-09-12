@@ -35,7 +35,7 @@ export default function SyncWidget({ TriggerWrapper, side = "left" }: SyncWidget
               type="button"
               variant="ghost"
               onClick={() => handleOptionSelect(option.type)}
-              className="group/item h-auto w-full justify-start gap-2.5 rounded-md px-2 py-1.5 text-left font-normal hover:bg-accent duration-0"
+              className="group/item h-auto w-full justify-start gap-2.5 rounded-md px-2 py-1.5 text-left font-normal duration-0"
             >
               <HugeiconsIcon
                 icon={option.icon}

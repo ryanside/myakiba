@@ -32,7 +32,7 @@ export function ExpenseOrderRow({
       to="/orders/$id"
       params={{ id: order.orderId }}
       className={cn(
-        "grid gap-1 py-3 transition-colors duration-150 ease-out hover:bg-muted/40 sm:grid-cols-[1fr_auto]",
+        "grid gap-1 py-3 transition-colors duration-150 ease-out hover:bg-muted/50 sm:grid-cols-[1fr_auto]",
         className,
       )}
       style={style}
