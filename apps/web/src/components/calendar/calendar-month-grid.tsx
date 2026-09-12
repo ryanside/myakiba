@@ -41,7 +41,7 @@ export function CalendarMonthGrid({
       return buildBuckets(data.items, (item) => ({
         date: item.releaseDate,
         thumb: {
-          key: `${item.collectionId}:${item.releaseDate}`,
+          key: item.releaseId,
           images: item.image ? [item.image] : [],
           title: item.title,
         },

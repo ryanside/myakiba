@@ -1,6 +1,6 @@
 import { db } from "@myakiba/db/client";
 import { collection, item, item_release, order } from "@myakiba/db/schema/figure";
-import { and, asc, eq, gte, lte, sql } from "drizzle-orm";
+import { and, asc, eq, exists, gte, lte, sql } from "drizzle-orm";
 import { getDateOnlyMonthBounds } from "@myakiba/utils/date-only";
 
 class CalendarService {
@@ -9,7 +9,7 @@ class CalendarService {
 
     const rows = await db
       .select({
-        collectionId: collection.id,
+        releaseId: item_release.id,
         itemId: item.id,
         itemExternalId: item.externalId,
         title: item.title,
@@ -19,14 +19,24 @@ class CalendarService {
         priceCurrency: item_release.priceCurrency,
         releaseDate: item_release.date,
       })
-      .from(collection)
-      .innerJoin(item, eq(collection.itemId, item.id))
-      .innerJoin(item_release, eq(collection.releaseId, item_release.id))
+      .from(item_release)
+      .innerJoin(item, eq(item_release.itemId, item.id))
       .where(
         and(
-          eq(collection.userId, userId),
           gte(item_release.date, start),
           lte(item_release.date, end),
+          exists(
+            db
+              .select({ collectionId: collection.id })
+              .from(collection)
+              .where(
+                and(
+                  eq(collection.userId, userId),
+                  eq(collection.itemId, item.id),
+                  eq(collection.releaseId, item_release.id),
+                ),
+              ),
+          ),
         ),
       )
       .orderBy(asc(item_release.date), asc(item.title));

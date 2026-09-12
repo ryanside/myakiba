@@ -129,7 +129,7 @@ export function CalendarReleasePanel({
         rows={data.items}
         selectedDays={selectedDays}
         getDate={(item) => item.releaseDate}
-        getKey={(item) => `${item.collectionId}:${item.releaseDate}`}
+        getKey={(item) => item.releaseId}
         renderRow={(item) => <CalendarItemRow item={item} currency={currency} />}
         emptyMonthLabel="Nothing releasing this month"
         emptyFilteredLabel="No releases on the selected days"
