@@ -136,7 +136,12 @@ export function ImportSection({
             }}
             onError={actions.handleFileError}
           >
-            <HugeiconsIcon icon={FileImportIcon} data-icon="inline-start" aria-hidden="true" />
+            <HugeiconsIcon
+              icon={FileImportIcon}
+              data-icon="inline-start"
+              className="size-3.5"
+              aria-hidden="true"
+            />
             Choose export
           </Dropzone>
         ) : null}

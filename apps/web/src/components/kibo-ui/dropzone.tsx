@@ -87,7 +87,7 @@ export const Dropzone = ({
         variant="outline"
         {...getRootProps()}
       >
-        <input {...getInputProps()} disabled={disabled} />
+        <input {...getInputProps()} className="sr-only" disabled={disabled} />
         {children}
       </Button>
     </DropzoneContext.Provider>
