@@ -111,6 +111,7 @@ export function ImportSection({
             >
               <HugeiconsIcon
                 icon={state.current.retrying ? Loading03Icon : Refresh01Icon}
+                data-icon="inline-start"
                 className={
                   state.current.retrying ? "animate-spin motion-reduce:animate-none" : undefined
                 }
@@ -128,14 +129,14 @@ export function ImportSection({
             maxSize={DATA_TRANSFER_MAX_BYTES}
             src={selectedFiles}
             disabled={importControlsDisabled}
-            className="h-7 w-full flex-row gap-1 rounded-[min(var(--radius-md),12px)] p-0 px-2.5 text-[0.8rem] sm:w-fit"
+            className="h-7 w-full flex-row gap-1 rounded-[min(var(--radius-md),12px)] p-0 px-2.5 text-[0.8rem] has-data-[icon=inline-start]:pl-1.5 sm:w-fit"
             onDrop={(files) => {
               const file = files[0];
               if (file) actions.onFile(file);
             }}
             onError={actions.handleFileError}
           >
-            <HugeiconsIcon icon={FileImportIcon} aria-hidden="true" />
+            <HugeiconsIcon icon={FileImportIcon} data-icon="inline-start" aria-hidden="true" />
             Choose export
           </Dropzone>
         ) : null}
@@ -210,6 +211,7 @@ export function ImportSection({
                   <Button type="button" className="w-full" disabled={importControlsDisabled}>
                     <HugeiconsIcon
                       icon={state.start.kind === "pending" ? Loading03Icon : FileImportIcon}
+                      data-icon="inline-start"
                       className={
                         state.start.kind === "pending"
                           ? "animate-spin motion-reduce:animate-none"

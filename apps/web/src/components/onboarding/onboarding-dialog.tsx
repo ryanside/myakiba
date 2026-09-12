@@ -558,7 +558,7 @@ function StepFooter({
       <div className="flex items-center gap-2">
         {!isFirst && (
           <Button variant="outline" size="sm" onClick={onBack} disabled={isSaving}>
-            <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} />
+            <HugeiconsIcon icon={ArrowLeft01Icon} data-icon="inline-start" strokeWidth={2} />
             Back
           </Button>
         )}
@@ -566,6 +566,7 @@ function StepFooter({
           {isLast ? "Get started" : "Continue"}
           <HugeiconsIcon
             icon={continueIcon}
+            data-icon="inline-end"
             strokeWidth={2}
             className={cn(isSaving && "animate-spin")}
           />

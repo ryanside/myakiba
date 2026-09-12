@@ -36,7 +36,7 @@ export function CascadeOptionsDropdown({
             className="max-w-66 truncate justify-between hover:bg-background active:bg-background data-open:bg-background"
           >
             {cascadeDisplayText}
-            <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 z-10" />
+            <HugeiconsIcon icon={ArrowDown01Icon} data-icon="inline-end" className="z-10" />
           </Button>
         }
       />

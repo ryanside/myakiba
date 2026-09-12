@@ -180,7 +180,7 @@ export default function OrdersFiltersForm({
                 render={
                   <Button variant="outline" className="w-full justify-between" type="button">
                     {getMultiSelectDisplay(field.state.value, "status")}
-                    <HugeiconsIcon icon={ArrowDown01Icon} className="size-4" />
+                    <HugeiconsIcon icon={ArrowDown01Icon} data-icon="inline-end" />
                   </Button>
                 }
               />
@@ -218,7 +218,7 @@ export default function OrdersFiltersForm({
                 render={
                   <Button variant="outline" className="w-full justify-between" type="button">
                     {getMultiSelectDisplay(field.state.value, "shipping method")}
-                    <HugeiconsIcon icon={ArrowDown01Icon} className="size-4" />
+                    <HugeiconsIcon icon={ArrowDown01Icon} data-icon="inline-end" />
                   </Button>
                 }
               />

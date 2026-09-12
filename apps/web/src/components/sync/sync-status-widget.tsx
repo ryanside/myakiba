@@ -84,14 +84,14 @@ export default function SyncStatusWidget() {
             <Button
               size="sm"
               variant="outline"
-              className="relative mx-2 gap-1.5 text-xs text-muted-foreground"
+              className="relative mx-2 text-xs text-muted-foreground"
               disabled={isRecentPending}
               aria-busy={isRecentPending}
             >
               {hasActive ? (
-                <Spinner className="size-3 shrink-0" />
+                <Spinner data-icon="inline-start" />
               ) : (
-                <HugeiconsIcon icon={Clock02Icon} className="size-3.5" />
+                <HugeiconsIcon icon={Clock02Icon} data-icon="inline-start" />
               )}
               <span className={hasActive ? "shimmer" : undefined}>
                 {hasActive ? "Importing..." : "Imports"}

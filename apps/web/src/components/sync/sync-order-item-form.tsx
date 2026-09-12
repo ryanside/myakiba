@@ -520,7 +520,7 @@ export default function SyncOrderItemForm({
                 });
               }}
             >
-              <HugeiconsIcon icon={Add01Icon} /> Add another item
+              <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" /> Add another item
             </Button>
           </div>
         )}

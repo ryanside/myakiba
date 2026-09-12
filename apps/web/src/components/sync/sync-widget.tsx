@@ -39,11 +39,13 @@ export default function SyncWidget({ TriggerWrapper, side = "left" }: SyncWidget
             >
               <HugeiconsIcon
                 icon={option.icon}
+                data-icon="inline-start"
                 className="size-4 shrink-0 text-muted-foreground group-hover/item:text-foreground duration-0"
               />
               <span className="min-w-0 flex-1 whitespace-normal text-sm">{option.label}</span>
               <HugeiconsIcon
                 icon={ArrowRight01Icon}
+                data-icon="inline-end"
                 className="size-3 shrink-0 text-muted-foreground opacity-0 group-hover/item:opacity-100 duration-0"
               />
             </Button>

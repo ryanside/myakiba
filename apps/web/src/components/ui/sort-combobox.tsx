@@ -64,12 +64,12 @@ export function SortCombobox({
 
   const getSortButtonIcon = (): React.ReactElement => {
     if (!currentSort) {
-      return <HugeiconsIcon icon={ArrowUpDownIcon} className="size-4" />;
+      return <HugeiconsIcon icon={ArrowUpDownIcon} data-icon="inline-start" />;
     }
     return currentSort.direction === "desc" ? (
-      <HugeiconsIcon icon={ArrowDown01Icon} className="size-4" />
+      <HugeiconsIcon icon={ArrowDown01Icon} data-icon="inline-start" />
     ) : (
-      <HugeiconsIcon icon={ArrowUp01Icon} className="size-4" />
+      <HugeiconsIcon icon={ArrowUp01Icon} data-icon="inline-start" />
     );
   };
 

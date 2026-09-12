@@ -52,7 +52,8 @@ export function CurrencySelect({
             </span>
             <HugeiconsIcon
               icon={ArrowUpDownIcon}
-              className="size-4 shrink-0 text-muted-foreground"
+              data-icon="inline-end"
+              className="shrink-0 text-muted-foreground"
             />
           </Button>
         }

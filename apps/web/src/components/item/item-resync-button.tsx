@@ -46,10 +46,11 @@ export function ItemResyncButton({
   const cooldownRemaining = cooldownExpiresAt ? formatCooldownRemaining(cooldownExpiresAt) : "";
 
   const button = (
-    <Button variant="ghost" size="xs" disabled={isDisabled} onClick={onRequest} className="gap-1.5">
+    <Button variant="ghost" size="xs" disabled={isDisabled} onClick={onRequest}>
       <HugeiconsIcon
         icon={isPending ? Loading03Icon : Refresh01Icon}
-        className={cn("size-3", isPending && "animate-spin")}
+        data-icon="inline-start"
+        className={cn(isPending && "animate-spin")}
       />
       {buttonLabel}
     </Button>

@@ -271,6 +271,7 @@ export function DataTransferView({
         >
           <HugeiconsIcon
             icon={state.export.kind === "pending" ? Loading03Icon : Download01Icon}
+            data-icon="inline-start"
             className={
               state.export.kind === "pending"
                 ? "animate-spin motion-reduce:animate-none"

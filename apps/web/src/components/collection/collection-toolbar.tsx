@@ -65,7 +65,7 @@ export function CollectionToolbar(): React.JSX.Element {
       <FiltersForm
         renderTrigger={
           <Button variant="outline">
-            <HugeiconsIcon icon={FilterIcon} />
+            <HugeiconsIcon icon={FilterIcon} data-icon="inline-start" />
             <span className="hidden md:block">Filters</span>
           </Button>
         }
@@ -79,7 +79,7 @@ export function CollectionToolbar(): React.JSX.Element {
         onSortChange={handleSortChange}
       />
       <Button onClick={resetFilters} variant="outline">
-        <HugeiconsIcon icon={FilterResetIcon} />
+        <HugeiconsIcon icon={FilterResetIcon} data-icon="inline-start" />
         <span className="hidden md:block">Reset Filters</span>
       </Button>
     </div>

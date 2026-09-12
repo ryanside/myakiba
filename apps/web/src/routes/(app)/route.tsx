@@ -79,7 +79,7 @@ function RouteComponent() {
                   side="right"
                   TriggerWrapper={
                     <Button variant="default" size="sm">
-                      <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
+                      <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" strokeWidth={2} />
                       <span>Add</span>
                     </Button>
                   }

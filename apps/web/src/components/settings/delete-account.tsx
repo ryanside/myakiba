@@ -84,7 +84,7 @@ export function DeleteAccount() {
               disabled={isTriggerDisabled}
               render={
                 <Button variant="destructive" disabled={isTriggerDisabled}>
-                  <HugeiconsIcon icon={Delete02Icon} className="size-4" />
+                  <HugeiconsIcon icon={Delete02Icon} data-icon="inline-start" />
                   Delete Account
                 </Button>
               }
@@ -173,7 +173,8 @@ export function DeleteAccount() {
                           <>
                             <HugeiconsIcon
                               icon={Loading03Icon}
-                              className="mr-2 size-4 animate-spin"
+                              data-icon="inline-start"
+                              className="animate-spin"
                             />
                             Deleting...
                           </>

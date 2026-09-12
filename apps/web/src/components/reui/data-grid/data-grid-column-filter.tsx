@@ -41,7 +41,7 @@ function DataGridColumnFilter<TData, TValue>({
       <PopoverTrigger
         render={
           <Button variant="outline" size="sm">
-            <HugeiconsIcon icon={AddCircleIcon} strokeWidth={2} className="size-4" />
+            <HugeiconsIcon icon={AddCircleIcon} data-icon="inline-start" strokeWidth={2} />
             {title}
             {selectedValues?.size > 0 && (
               <>
