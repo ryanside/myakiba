@@ -43,9 +43,13 @@ export function SyncSheetButton({ syncType, label, className }: SyncSheetButtonP
         render={
           <Button variant="default" className={className} aria-label={label} disabled={isSyncing}>
             {isSyncing ? (
-              <HugeiconsIcon icon={Loading03Icon} className="size-3 animate-spin" />
+              <HugeiconsIcon
+                icon={Loading03Icon}
+                data-icon="inline-start"
+                className="animate-spin"
+              />
             ) : (
-              <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
+              <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" strokeWidth={2} />
             )}
             <span className="hidden sm:inline">{label}</span>
           </Button>

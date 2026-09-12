@@ -25,16 +25,16 @@ export function ItemSyncActions({
   return (
     <div className="flex flex-col sm:flex-row gap-2 w-full justify-center">
       <Button variant="default" onClick={onSyncCollection}>
-        <HugeiconsIcon icon={LibraryIcon} />
+        <HugeiconsIcon icon={LibraryIcon} data-icon="inline-start" />
         {labels.collection}
       </Button>
       <Button variant="outline" onClick={onSyncOrder}>
-        <HugeiconsIcon icon={PackageIcon} />
+        <HugeiconsIcon icon={PackageIcon} data-icon="inline-start" />
         {labels.order}
       </Button>
       {onSyncItems ? (
         <Button variant="outline" onClick={onSyncItems}>
-          <HugeiconsIcon icon={DatabaseIcon} />
+          <HugeiconsIcon icon={DatabaseIcon} data-icon="inline-start" />
           Add to item database
         </Button>
       ) : null}

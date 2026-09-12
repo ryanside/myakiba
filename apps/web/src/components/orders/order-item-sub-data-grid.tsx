@@ -236,14 +236,18 @@ export function OrderItemSubDataGrid({
             table={subTable}
             trigger={
               <Button variant="outline" size="sm">
-                <HugeiconsIcon icon={DragDropVerticalIcon} strokeWidth={2} />
+                <HugeiconsIcon
+                  icon={DragDropVerticalIcon}
+                  data-icon="inline-start"
+                  strokeWidth={2}
+                />
                 Columns
               </Button>
             }
           />
           {isLoading ? (
             <Button size="sm" disabled>
-              <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
+              <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" strokeWidth={2} />
               Add
             </Button>
           ) : (

@@ -13,7 +13,6 @@ import type { Category, Currency, DateFormat } from "@myakiba/contracts/shared/t
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import type { WishlistReleaseStatus } from "@myakiba/contracts/wishlist/schema";
 import { Link } from "@tanstack/react-router";
-import type { CSSProperties } from "react";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { ItemControl, ItemControls } from "@/components/ui/item-controls";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,8 +28,6 @@ import type { getWishlistItems } from "@/queries/wishlist";
 type WishlistPage = NonNullable<Awaited<ReturnType<typeof getWishlistItems>>>;
 type WishlistItem = WishlistPage["items"][number];
 
-const MAX_STAGGER_INDEX = 20;
-const STAGGER_DELAY_MS = 30;
 const EMPTY_SELECTED_IDS: ReadonlySet<string> = new Set();
 const clearEmptySelection = (): void => undefined;
 const CATEGORY_GROUP_BY_CATEGORY = Object.fromEntries(
@@ -231,11 +228,6 @@ function SortableWishlistItem({
     id: wishlistItem?.id ?? `loading-${index}`,
     disabled: sortingDisabled || mutationPending,
   });
-  const entranceStyle = entranceAnimationActive
-    ? ({
-        "--data-in-delay": `${Math.min(index, MAX_STAGGER_INDEX) * STAGGER_DELAY_MS}ms`,
-      } as CSSProperties)
-    : undefined;
 
   return (
     <div ref={setNodeRef} className="relative">
@@ -257,10 +249,9 @@ function SortableWishlistItem({
           "group/item relative overflow-hidden",
           viewMode === "grid"
             ? "group/tile rounded-lg"
-            : "group/row flex min-w-0 items-center rounded-md transition-colors duration-50 hover:bg-accent",
+            : "group/row flex min-w-0 items-center rounded-md hover:bg-muted/50",
           entranceAnimationActive && "animate-data-in",
         )}
-        style={entranceStyle}
         onAnimationEnd={(event) => {
           if (event.target === event.currentTarget && event.animationName === "data-in") {
             onEntranceAnimationEnd?.();

@@ -48,11 +48,11 @@ export function OrderHero({
           </div>
           <div className="hidden items-center gap-2 sm:flex">
             <Button variant="outline" size="sm" disabled>
-              <HugeiconsIcon icon={Edit03Icon} className="size-4" />
+              <HugeiconsIcon icon={Edit03Icon} data-icon="inline-start" />
               Edit
             </Button>
             <Button variant="destructive" size="sm" disabled>
-              <HugeiconsIcon icon={Delete02Icon} className="size-4" />
+              <HugeiconsIcon icon={Delete02Icon} data-icon="inline-start" />
               Delete
             </Button>
           </div>
@@ -116,7 +116,7 @@ export function OrderHero({
           <OrderForm
             renderTrigger={
               <Button variant="outline" size="sm">
-                <HugeiconsIcon icon={Edit03Icon} className="size-4" /> Edit
+                <HugeiconsIcon icon={Edit03Icon} data-icon="inline-start" /> Edit
               </Button>
             }
             type="edit-order"
@@ -127,7 +127,7 @@ export function OrderHero({
           <ConfirmDialog
             renderTrigger={
               <Button variant="destructive" size="sm">
-                <HugeiconsIcon icon={Delete02Icon} className="size-4" /> Delete
+                <HugeiconsIcon icon={Delete02Icon} data-icon="inline-start" /> Delete
               </Button>
             }
             title="Delete order?"

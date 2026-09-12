@@ -42,7 +42,7 @@ export function Breakdown({
               <span className="tabular-nums">
                 {formatCurrencyFromMinorUnits(entry.value, currency, locale)}
               </span>
-              <span className="tabular-nums text-muted-foreground">
+              <span className="tabular-nums text-background/70">
                 {entry.percentage.toFixed(1)}%
               </span>
             </p>

@@ -24,7 +24,7 @@ export function SyncSessionHero({
             <Skeleton className="h-5 w-18 rounded-full" />
           </div>
           <p className="text-muted-foreground text-sm font-normal">
-            Started <Skeleton className="inline-block h-4 w-32 align-middle" />
+            Created <Skeleton className="inline-block h-4 w-32 align-middle" />
           </p>
         </div>
       </div>
@@ -48,7 +48,7 @@ export function SyncSessionHero({
           </ThemedBadge>
         </div>
         <p className="text-muted-foreground text-sm font-normal">
-          Started{" "}
+          Created{" "}
           <span className="animate-data-in inline-block">
             {formatShortDateTime(session.createdAt)}
           </span>

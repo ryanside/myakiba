@@ -155,7 +155,8 @@ export function Account() {
                       <>
                         <HugeiconsIcon
                           icon={Loading03Icon}
-                          className="mr-2 size-4 animate-spin motion-reduce:animate-none"
+                          data-icon="inline-start"
+                          className="animate-spin motion-reduce:animate-none"
                         />
                         Updating…
                       </>

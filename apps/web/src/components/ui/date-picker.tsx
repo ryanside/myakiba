@@ -51,12 +51,12 @@ export function DatePicker({
             data-empty={!dateValue}
             onBlur={onBlur}
             className={cn(
-              "data-[empty=true]:text-muted-foreground w-full min-w-0 justify-start gap-2 overflow-hidden text-left font-normal",
+              "data-[empty=true]:text-muted-foreground w-full min-w-0 justify-start overflow-hidden text-left font-normal",
               className,
             )}
             title={dateValue ? format(dateValue, "PPP") : undefined}
           >
-            <HugeiconsIcon icon={Calendar01Icon} className="size-4 shrink-0" />
+            <HugeiconsIcon icon={Calendar01Icon} data-icon="inline-start" className="shrink-0" />
             <span className="min-w-0 flex-1 truncate">
               {dateValue ? format(dateValue, "PPP") : placeholder}
             </span>

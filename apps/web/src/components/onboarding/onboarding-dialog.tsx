@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from "react";
-import type { CSSProperties } from "react";
 import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -465,18 +464,11 @@ const SYNC_OPTIONS: readonly SyncOption[] = [
   },
 ];
 
-const CARD_STAGGER_MS = 50;
-
 function SyncFields({ onSelect }: SyncFieldsProps) {
   return (
     <div className="flex flex-col gap-2">
-      {SYNC_OPTIONS.map((option, index) => (
-        <SyncOptionCard
-          key={option.id}
-          option={option}
-          delayMs={index * CARD_STAGGER_MS}
-          onSelect={onSelect}
-        />
+      {SYNC_OPTIONS.map((option) => (
+        <SyncOptionCard key={option.id} option={option} onSelect={onSelect} />
       ))}
     </div>
   );
@@ -484,16 +476,14 @@ function SyncFields({ onSelect }: SyncFieldsProps) {
 
 type SyncOptionCardProps = {
   readonly option: SyncOption;
-  readonly delayMs: number;
   readonly onSelect: (type: LaunchableSyncType) => void;
 };
 
-function SyncOptionCard({ option, delayMs, onSelect }: SyncOptionCardProps) {
+function SyncOptionCard({ option, onSelect }: SyncOptionCardProps) {
   return (
     <Button
       variant="outline"
       onClick={() => onSelect(option.id)}
-      style={{ "--data-in-delay": `${delayMs}ms` } as CSSProperties}
       className={cn(
         "group relative h-auto justify-start gap-3.5 whitespace-normal px-4 py-3 text-left",
         "transition-[transform] duration-100",
@@ -558,7 +548,7 @@ function StepFooter({
       <div className="flex items-center gap-2">
         {!isFirst && (
           <Button variant="outline" size="sm" onClick={onBack} disabled={isSaving}>
-            <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} />
+            <HugeiconsIcon icon={ArrowLeft01Icon} data-icon="inline-start" strokeWidth={2} />
             Back
           </Button>
         )}
@@ -566,6 +556,7 @@ function StepFooter({
           {isLast ? "Get started" : "Continue"}
           <HugeiconsIcon
             icon={continueIcon}
+            data-icon="inline-end"
             strokeWidth={2}
             className={cn(isSaving && "animate-spin")}
           />

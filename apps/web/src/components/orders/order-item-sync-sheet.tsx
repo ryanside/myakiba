@@ -59,9 +59,13 @@ export function OrderItemSyncSheet({
             disabled={isSyncing}
           >
             {isSyncing ? (
-              <HugeiconsIcon icon={Loading03Icon} className="size-3 animate-spin" />
+              <HugeiconsIcon
+                icon={Loading03Icon}
+                data-icon="inline-start"
+                className="animate-spin"
+              />
             ) : (
-              <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
+              <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" strokeWidth={2} />
             )}
             {label}
           </Button>

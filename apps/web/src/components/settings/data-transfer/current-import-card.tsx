@@ -182,7 +182,7 @@ export function CurrentImportCard({
             </p>
           </div>
           <Button type="button" size="sm" variant="outline" onClick={onReconnect}>
-            <HugeiconsIcon icon={Refresh01Icon} aria-hidden="true" />
+            <HugeiconsIcon icon={Refresh01Icon} data-icon="inline-start" aria-hidden="true" />
             Reconnect
           </Button>
         </div>
@@ -205,6 +205,7 @@ export function CurrentImportCard({
             >
               <HugeiconsIcon
                 icon={current.retry.kind === "pending" ? Loading03Icon : Refresh01Icon}
+                data-icon="inline-start"
                 className={
                   current.retry.kind === "pending"
                     ? "animate-spin motion-reduce:animate-none"
@@ -275,6 +276,7 @@ function DeleteImportSessionDialog({
         <Button type="button" size="sm" variant="outline" disabled={disabled || pending}>
           <HugeiconsIcon
             icon={pending ? Loading03Icon : Delete02Icon}
+            data-icon="inline-start"
             className={pending ? "animate-spin motion-reduce:animate-none" : undefined}
             aria-hidden="true"
           />

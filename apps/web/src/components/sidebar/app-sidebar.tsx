@@ -161,7 +161,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     tooltip="Add"
                     render={
                       <Button variant="default" className="justify-start">
-                        <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
+                        <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" strokeWidth={2} />
                         <span>Add</span>
                       </Button>
                     }

@@ -274,7 +274,8 @@ function UnifiedItemMoveFormContent({
                                 : "Select target order"}
                               <HugeiconsIcon
                                 icon={ArrowUpDownIcon}
-                                className="ml-2 size-4 shrink-0 opacity-50"
+                                data-icon="inline-end"
+                                className="shrink-0 opacity-50"
                               />
                             </Button>
                           }
@@ -347,7 +348,8 @@ function UnifiedItemMoveFormContent({
                                           <>
                                             <HugeiconsIcon
                                               icon={Loading03Icon}
-                                              className="mr-1.5 size-3 animate-spin"
+                                              data-icon="inline-start"
+                                              className="animate-spin"
                                             />
                                             Loading...
                                           </>

@@ -159,7 +159,7 @@ export function SyncItemsForm({
                 field.pushValue({ formRowId: crypto.randomUUID(), itemExternalId: "" })
               }
             >
-              <HugeiconsIcon icon={Add01Icon} /> Add More Items
+              <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" /> Add More Items
             </Button>
             {field.state.meta.isValid ? null : (
               <p role="alert" className="text-xs text-destructive">

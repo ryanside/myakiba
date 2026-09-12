@@ -88,12 +88,33 @@ function DataGridColumnHeaderInner<TData, TValue>({
   const renderSortIcon = (): ReactNode => {
     if (!canSort) return null;
     if (isSorted === "desc") {
-      return <HugeiconsIcon icon={ArrowDown02Icon} strokeWidth={2} className="size-3.25" />;
+      return (
+        <HugeiconsIcon
+          icon={ArrowDown02Icon}
+          data-icon="inline-end"
+          strokeWidth={2}
+          className="size-3.25"
+        />
+      );
     }
     if (isSorted === "asc") {
-      return <HugeiconsIcon icon={ArrowUp02Icon} strokeWidth={2} className="size-3.25" />;
+      return (
+        <HugeiconsIcon
+          icon={ArrowUp02Icon}
+          data-icon="inline-end"
+          strokeWidth={2}
+          className="size-3.25"
+        />
+      );
     }
-    return <HugeiconsIcon icon={UnfoldMoreIcon} strokeWidth={2} className="mt-px size-3.25" />;
+    return (
+      <HugeiconsIcon
+        icon={UnfoldMoreIcon}
+        data-icon="inline-end"
+        strokeWidth={2}
+        className="mt-px size-3.25"
+      />
+    );
   };
   const sortIcon = renderSortIcon();
 

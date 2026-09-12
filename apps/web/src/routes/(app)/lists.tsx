@@ -12,7 +12,6 @@ import type { ListInput } from "@myakiba/contracts/lists/schema";
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback } from "react";
-import type { CSSProperties } from "react";
 import type { getLists } from "@/queries/lists";
 import { InfiniteListStatus } from "@/components/lists/infinite-list-status";
 import { ListControls } from "@/components/lists/list-controls";
@@ -34,8 +33,6 @@ import { useSortableItems } from "@/hooks/use-sortable-items";
 type ListsPage = NonNullable<Awaited<ReturnType<typeof getLists>>>;
 type ListRecord = ListsPage["items"][number];
 const VIEW_MODE_KEY = "lists:viewMode";
-const MAX_STAGGER_INDEX = 20;
-const STAGGER_DELAY_MS = 30;
 export const Route = createFileRoute("/(app)/lists")({
   component: RouteComponent,
   head: () => ({
@@ -45,7 +42,6 @@ export const Route = createFileRoute("/(app)/lists")({
 
 function SortableList({
   list,
-  index,
   viewMode,
   entranceAnimationActive,
   sortingDisabled,
@@ -57,7 +53,6 @@ function SortableList({
   onEntranceAnimationEnd,
 }: {
   readonly list: ListRecord;
-  readonly index: number;
   readonly viewMode: GridListViewMode;
   readonly entranceAnimationActive: boolean;
   readonly sortingDisabled: boolean;
@@ -72,11 +67,6 @@ function SortableList({
     id: list.id,
     disabled: sortingDisabled,
   });
-  const entranceStyle = entranceAnimationActive
-    ? ({
-        "--data-in-delay": `${Math.min(index, MAX_STAGGER_INDEX) * STAGGER_DELAY_MS}ms`,
-      } as CSSProperties)
-    : undefined;
   const previewClassName =
     viewMode === "grid"
       ? "size-16 shrink-0 rounded-lg"
@@ -118,11 +108,10 @@ function SortableList({
           "group/item relative overflow-hidden",
           viewMode === "grid"
             ? "group/card rounded-xl bg-card ring-1 ring-foreground/10 transition-[box-shadow] duration-150 hover:shadow-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
-            : "group/row flex min-w-0 items-center rounded-md hover:bg-accent",
+            : "group/row flex min-w-0 items-center rounded-md hover:bg-muted/50",
           selected && "ring-2 ring-primary",
           entranceAnimationActive && "animate-data-in",
         )}
-        style={entranceStyle}
         onAnimationEnd={(event) => {
           if (event.target === event.currentTarget && event.animationName === "data-in") {
             onEntranceAnimationEnd?.();
@@ -273,7 +262,6 @@ function SortableLists({
             <SortableList
               key={list.id}
               list={list}
-              index={index}
               viewMode={viewMode}
               entranceAnimationActive={entranceAnimationActive}
               sortingDisabled={sortingDisabled || isSaving || lists.length < 2}

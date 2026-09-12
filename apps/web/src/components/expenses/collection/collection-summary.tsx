@@ -51,15 +51,12 @@ export function CollectionSummary({
               {isLoading ? (
                 <Skeleton className="h-1 w-full rounded-full" />
               ) : (
-                <Progress
-                  value={row.value?.percentage ?? 0}
-                  className="animate-data-in [--data-in-delay:60ms]"
-                />
+                <Progress value={row.value?.percentage ?? 0} className="animate-data-in" />
               )}
               {isLoading ? (
                 <Skeleton className="h-3 w-24" />
               ) : (
-                <p className="animate-data-in text-xs text-muted-foreground [--data-in-delay:100ms]">
+                <p className="animate-data-in text-xs text-muted-foreground">
                   {row.value?.count ?? 0} {row.value?.count === 1 ? "item" : "items"},{" "}
                   {(row.value?.percentage ?? 0).toFixed(1)}%
                 </p>

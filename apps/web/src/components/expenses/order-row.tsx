@@ -31,10 +31,7 @@ export function ExpenseOrderRow({
     <Link
       to="/orders/$id"
       params={{ id: order.orderId }}
-      className={cn(
-        "grid gap-1 py-3 transition-colors duration-150 ease-out hover:bg-muted/40 sm:grid-cols-[1fr_auto]",
-        className,
-      )}
+      className={cn("grid gap-1 py-3 hover:bg-muted/50 sm:grid-cols-[1fr_auto]", className)}
       style={style}
     >
       <div className="flex min-w-0 items-center gap-3">

@@ -41,13 +41,13 @@ interface BreakdownChartProps<TData extends BreakdownChartData> {
 
 const CHART_VARIANTS = {
   default: {
-    legendClassName: "animate-data-in flex flex-col gap-0.5 [--data-in-delay:100ms]",
+    legendClassName: "animate-data-in flex flex-col gap-0.5",
     rowClassName: "flex cursor-default items-center gap-2.5 py-1 transition-opacity duration-200",
     skeletonLegendClassName: "flex flex-col gap-0.5",
   },
   scrollable: {
     legendClassName:
-      "animate-data-in -mx-(--frame-panel-p) flex max-h-50 flex-col gap-0 overflow-y-auto [--data-in-delay:100ms]",
+      "animate-data-in -mx-(--frame-panel-p) flex max-h-50 flex-col gap-0 overflow-y-auto",
     rowClassName:
       "flex items-center gap-2.5 px-(--frame-panel-p) py-1 transition-opacity duration-200",
     skeletonLegendClassName: "flex flex-col",
@@ -116,7 +116,7 @@ export function BreakdownChart<TData extends BreakdownChartData>({
 
   if (items.length === 0) {
     return (
-      <p className="animate-data-in py-4 text-center text-sm text-muted-foreground [--data-in-delay:60ms]">
+      <p className="animate-data-in py-4 text-center text-sm text-muted-foreground">
         {emptyMessage}
       </p>
     );
@@ -125,7 +125,7 @@ export function BreakdownChart<TData extends BreakdownChartData>({
   return (
     <div className="flex flex-col gap-3">
       <TooltipProvider>
-        <div className="animate-data-in flex h-2.5 w-full overflow-hidden rounded-sm [--data-in-delay:60ms]">
+        <div className="animate-data-in flex h-2.5 w-full overflow-hidden rounded-sm">
           {items.map((item) => {
             const isOtherHovered = hoveredItemId !== null && hoveredItemId !== item.id;
             return (

@@ -495,7 +495,11 @@ export default function SyncOrderForm({
                     className="justify-start hover:bg-background active:bg-background data-open:bg-background w-full"
                   >
                     <span className="truncate">{cascadeDisplayText}</span>
-                    <HugeiconsIcon icon={ArrowDown01Icon} className="ml-auto size-4 z-10" />
+                    <HugeiconsIcon
+                      icon={ArrowDown01Icon}
+                      data-icon="inline-end"
+                      className="ml-auto z-10"
+                    />
                   </Button>
                 }
               />
@@ -950,7 +954,7 @@ export default function SyncOrderForm({
                   });
                 }}
               >
-                <HugeiconsIcon icon={Add01Icon} /> Add another item
+                <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" /> Add another item
               </Button>
             </div>
           )}

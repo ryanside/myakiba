@@ -156,7 +156,7 @@ function ReleaseCalendar({
           if (isError) return <ReleaseCalendarError message={error.message} onRetry={refetch} />;
           if (grouped.length > 0) {
             return (
-              <div className="overflow-y-auto animate-data-in -mx-(--frame-panel-p) max-h-56 pb-6 [--data-in-delay:60ms]">
+              <div className="overflow-y-auto animate-data-in -mx-(--frame-panel-p) max-h-56 pb-6">
                 {grouped.map(([dateKey, items]) => (
                   <DateGroup key={dateKey} dateKey={dateKey} items={items} currency={currency} />
                 ))}
@@ -164,7 +164,7 @@ function ReleaseCalendar({
             );
           }
           return (
-            <p className="animate-data-in py-4 text-center text-sm text-muted-foreground [--data-in-delay:60ms]">
+            <p className="animate-data-in py-4 text-center text-sm text-muted-foreground">
               Nothing releasing this month
             </p>
           );
@@ -266,7 +266,7 @@ function ReleaseCard({
             to: "/item/$externalId",
             params: { externalId: item.itemExternalId },
           } as const))}
-      className="flex min-w-0 items-center gap-2.5 overflow-hidden rounded-md p-1.5 transition-colors hover:bg-accent duration-50"
+      className="flex min-w-0 items-center gap-2.5 overflow-hidden rounded-md p-1.5 hover:bg-muted/50"
     >
       <ImageThumbnail
         images={item.image ? [item.image] : []}

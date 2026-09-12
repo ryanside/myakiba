@@ -179,7 +179,7 @@ export function ExpensesFilters({
             render={
               <Button variant="outline" className="w-full justify-between" type="button">
                 {multiSelectDisplay(filters.shop, "Shops")}
-                <HugeiconsIcon icon={ArrowDown01Icon} className="size-4" />
+                <HugeiconsIcon icon={ArrowDown01Icon} data-icon="inline-end" />
               </Button>
             }
           />

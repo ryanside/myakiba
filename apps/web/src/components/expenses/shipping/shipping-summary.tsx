@@ -30,12 +30,8 @@ export function ShippingSummary({
       </div>
     ));
   } else if (data?.breakdown.length) {
-    methodsContent = data.breakdown.slice(0, 3).map((method, index) => (
-      <div
-        key={method.method}
-        className="animate-data-in flex flex-col gap-1.5"
-        style={{ animationDelay: `${index * 30}ms` }}
-      >
+    methodsContent = data.breakdown.slice(0, 3).map((method) => (
+      <div key={method.method} className="animate-data-in flex flex-col gap-1.5">
         <div className="flex items-baseline justify-between gap-4 text-sm">
           <span>{method.method}</span>
           <span className="font-medium tabular-nums">

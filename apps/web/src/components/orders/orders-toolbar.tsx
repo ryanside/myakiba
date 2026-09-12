@@ -57,7 +57,7 @@ export function OrdersToolbar(): React.JSX.Element {
       <OrdersFiltersForm
         renderTrigger={
           <Button variant="outline">
-            <HugeiconsIcon icon={FilterIcon} />
+            <HugeiconsIcon icon={FilterIcon} data-icon="inline-start" />
             <span className="hidden md:block">Filters</span>
           </Button>
         }
@@ -71,7 +71,7 @@ export function OrdersToolbar(): React.JSX.Element {
         onSortChange={handleSortChange}
       />
       <Button onClick={resetFilters} variant="outline">
-        <HugeiconsIcon icon={FilterResetIcon} />
+        <HugeiconsIcon icon={FilterResetIcon} data-icon="inline-start" />
         <span className="hidden md:block">Reset Filters</span>
       </Button>
     </div>
