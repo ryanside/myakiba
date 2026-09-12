@@ -135,7 +135,7 @@ function ItemList({
             key={item.itemId}
             to="/item/$externalId"
             params={{ externalId: item.externalId }}
-            className="animate-data-in flex min-w-0 items-center gap-3 overflow-hidden rounded-md p-2 transition-colors duration-50 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="animate-data-in flex min-w-0 items-center gap-3 overflow-hidden rounded-md p-2 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             style={{ "--data-in-delay": `${staggerDelay}ms` } as CSSProperties}
           >
             <div className="size-16 shrink-0 overflow-hidden rounded-md">

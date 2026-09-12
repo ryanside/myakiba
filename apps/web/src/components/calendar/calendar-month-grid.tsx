@@ -110,7 +110,7 @@ export function CalendarMonthGrid({
           const isSelected = inMonth && selectedDays?.has(dayNumber) === true;
           const isClickable = !isLoading && inMonth && onToggleDay != null;
           const cellClassName = cn(
-            "group/cell relative flex min-h-24 flex-col gap-1 border-b border-r border-border/60 p-1.5 text-left transition-[background-color,box-shadow] duration-150 ease-out sm:min-h-28",
+            "group/cell relative flex min-h-24 flex-col gap-1 border-b border-r border-border/60 p-1.5 text-left sm:min-h-28",
             "nth-[7n]:border-r-0",
             !inMonth && "bg-muted/20 text-muted-foreground/60",
             inMonth && !isSelected && "hover:bg-muted/30",

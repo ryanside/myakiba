@@ -187,7 +187,7 @@ function SortableListMember({
           "group/item relative overflow-hidden",
           viewMode === "grid"
             ? "group/tile rounded-lg"
-            : "group/row flex min-w-0 items-center rounded-md transition-colors duration-50 hover:bg-muted/50",
+            : "group/row flex min-w-0 items-center rounded-md hover:bg-muted/50",
           selected && "ring-2 ring-primary",
           entranceAnimationActive && "animate-data-in",
         )}
