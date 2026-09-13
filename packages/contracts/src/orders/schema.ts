@@ -45,7 +45,9 @@ export const searchSchema = orderFiltersSchema;
 export const orderItemsQuerySchema = z.object({
   limit: paginationLimitSchema.default(6),
   offset: paginationOffsetSchema.default(0),
-  sort: z.enum(["title", "orderDate", "releaseDate", "count", "price", "status"]).default("title"),
+  sort: z
+    .enum(["title", "orderDate", "releaseDate", "count", "price", "status", "createdAt"])
+    .default("createdAt"),
   order: sortDirectionSchema.default("desc"),
 });
 

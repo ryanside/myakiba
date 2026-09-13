@@ -268,7 +268,12 @@ class SyncService {
       .from(itemTable)
       .leftJoin(item_release, eq(item_release.itemId, itemTable.id))
       .where(and(eq(itemTable.source, "mfc"), inArray(itemTable.externalId, [...externalIds])))
-      .orderBy(itemTable.id, desc(item_release.date), desc(item_release.createdAt));
+      .orderBy(
+        itemTable.id,
+        desc(item_release.date),
+        desc(item_release.createdAt),
+        desc(item_release.id),
+      );
 
     return existingItems.filter(
       (existingItem): existingItem is ExistingItemWithLatestRelease =>

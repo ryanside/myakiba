@@ -1,6 +1,7 @@
 import { db } from "@myakiba/db/client";
 import { collection, item, order } from "@myakiba/db/schema/figure";
-import { count, desc, eq, sql, sum } from "drizzle-orm";
+import { asc, count, desc, eq, sql, sum } from "drizzle-orm";
+import { orderPreviewImagesSql } from "@/lib/order-preview";
 import type {
   ExpenseFilters,
   ExpenseShopFilters,
@@ -333,7 +334,7 @@ function loadCollectionItems(userId: string, filters: ExpenseFilters) {
     .innerJoin(item, eq(collection.itemId, item.id))
     .leftJoin(order, eq(collection.orderId, order.id))
     .where(collectionWhere(userId, filters, "total"))
-    .orderBy(desc(collection.paymentDate), desc(collection.createdAt))
+    .orderBy(desc(collection.paymentDate), desc(collection.createdAt), desc(collection.id))
     .limit(6);
 }
 
@@ -364,12 +365,7 @@ async function loadTopOrders(
       title: order.title,
       shop: order.shop,
       expenseDate: sql<string | null>`${realizedOrderDateSql()}`,
-      images: sql<string[]>`
-        COALESCE(
-          ARRAY_AGG(DISTINCT ${item.image}) FILTER (WHERE ${item.image} IS NOT NULL),
-          ARRAY[]::text[]
-        )
-      `,
+      images: orderPreviewImagesSql,
       itemSpend: sql<number>`COALESCE(${orderItems.itemSpend}, 0)::double precision`,
       shipping: order.shippingFee,
       taxes: order.taxes,
@@ -380,7 +376,6 @@ async function loadTopOrders(
     .from(order)
     .leftJoin(orderItems, eq(order.id, orderItems.orderId))
     .leftJoin(collection, eq(order.id, collection.orderId))
-    .leftJoin(item, eq(collection.itemId, item.id))
     .where(orderWhere(userId, filters, "total"))
     .groupBy(
       order.id,
@@ -404,6 +399,9 @@ async function loadTopOrders(
           ? order.shippingFee
           : sql`COALESCE(${orderItems.itemSpend}, 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`,
       ),
+      asc(sql`LOWER(${order.title})`),
+      asc(order.title),
+      asc(order.id),
     )
     .limit(5);
 

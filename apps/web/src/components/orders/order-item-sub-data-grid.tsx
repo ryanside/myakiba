@@ -97,7 +97,7 @@ export function OrderItemSubDataGrid({
     ...orderItemsQueryOptions(orderId, {
       limit: pagination.pageSize,
       offset,
-      sort: (sortConfig?.id as OrderItemsQuery["sort"] | undefined) ?? "title",
+      sort: (sortConfig?.id as OrderItemsQuery["sort"] | undefined) ?? "createdAt",
       order: sortConfig?.desc === false ? "asc" : "desc",
     }),
     enabled: !isLoading,

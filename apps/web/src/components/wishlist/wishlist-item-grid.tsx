@@ -65,7 +65,7 @@ function WishlistItemLink({
     ) ?? "No price";
   const content = (
     <>
-      {rank === null ? null : (
+      {rank === null || (!wishlistItem && viewMode === "grid") ? null : (
         <div
           aria-label={wishlistItem ? `Ranking #${rank}` : undefined}
           className={cn(
@@ -75,7 +75,7 @@ function WishlistItemLink({
               : "w-9 text-sm text-muted-foreground",
           )}
         >
-          {wishlistItem ? `#${rank}` : <Skeleton className="mx-auto h-4 w-6" />}
+          {wishlistItem ? `#${rank}` : <Skeleton className="mx-auto h-4 w-6 bg-foreground/10!" />}
         </div>
       )}
       <div
@@ -102,7 +102,7 @@ function WishlistItemLink({
       {viewMode === "grid" && wishlistItem ? (
         <div
           key="grid-metadata"
-          className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-1 bg-black/50 p-2.5 text-white opacity-0 backdrop-blur-sm transition-[translate,opacity] duration-150 ease-out group-hover/media:translate-y-0 group-hover/media:opacity-100 group-focus-visible/media:translate-y-0 group-focus-visible/media:opacity-100 any-pointer-coarse:translate-y-0 any-pointer-coarse:opacity-100"
+          className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-1 rounded-b-lg bg-black/50 p-2.5 text-white opacity-0 backdrop-blur-sm transition-[translate,opacity] duration-150 ease-out group-hover/media:translate-y-0 group-hover/media:opacity-100 group-focus-visible/media:translate-y-0 group-focus-visible/media:opacity-100 any-pointer-coarse:translate-y-0 any-pointer-coarse:opacity-100"
         >
           <p className="line-clamp-2 text-sm font-medium leading-tight">{wishlistItem.title}</p>
           <div className="mt-2 flex min-w-0 items-end justify-between gap-3">

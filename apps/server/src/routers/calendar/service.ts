@@ -2,6 +2,7 @@ import { db } from "@myakiba/db/client";
 import { collection, item, item_release, order } from "@myakiba/db/schema/figure";
 import { and, asc, eq, exists, gte, lte, sql } from "drizzle-orm";
 import { getDateOnlyMonthBounds } from "@myakiba/utils/date-only";
+import { orderPreviewImagesSql } from "@/lib/order-preview";
 
 class CalendarService {
   async getItems(userId: string, month: number, year: number) {
@@ -39,7 +40,7 @@ class CalendarService {
           ),
         ),
       )
-      .orderBy(asc(item_release.date), asc(item.title));
+      .orderBy(asc(item_release.date), asc(item.title), asc(item.id), asc(item_release.id));
 
     return rows;
   }
@@ -55,14 +56,11 @@ class CalendarService {
         status: order.status,
         releaseDate: order.releaseDate,
         itemCount: sql<number>`COUNT(${collection.id})`,
-        images: sql<
-          string[]
-        >`COALESCE(ARRAY_AGG(DISTINCT ${item.image}) FILTER (WHERE ${item.image} IS NOT NULL), ARRAY[]::text[])`,
+        images: orderPreviewImagesSql,
         total: sql<number>`COALESCE(SUM(${collection.price}), 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`,
       })
       .from(order)
       .leftJoin(collection, eq(order.id, collection.orderId))
-      .leftJoin(item, eq(collection.itemId, item.id))
       .where(
         and(eq(order.userId, userId), gte(order.releaseDate, start), lte(order.releaseDate, end)),
       )
@@ -78,7 +76,7 @@ class CalendarService {
         order.tariffs,
         order.miscFees,
       )
-      .orderBy(asc(order.releaseDate), asc(order.title));
+      .orderBy(asc(order.releaseDate), asc(order.title), asc(order.id));
 
     return rows.map((row) => ({
       ...row,

@@ -5,6 +5,7 @@ import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-re
 import { order, collection, item, item_release } from "@myakiba/db/schema/figure";
 import { eq, and, inArray, sql, desc, asc, ilike, ne, gte, lte, or, isNull } from "drizzle-orm";
 import type { OrderStatus, ShippingMethod } from "@myakiba/contracts/shared/types";
+import { orderPreviewImagesSql } from "@/lib/order-preview";
 import type { OrderInsertType, OrderUpdateType } from "./model";
 
 class OrdersService {
@@ -117,6 +118,7 @@ class OrdersService {
           return order.createdAt;
       }
     })();
+    const sortDirection = orderBy === "asc" ? asc : desc;
 
     const orders = await db
       .select({
@@ -138,12 +140,7 @@ class OrdersService {
         miscFees: order.miscFees,
         notes: order.notes,
         itemCount: sql<number>`COUNT(${collection.id})`,
-        images: sql<string[]>`
-          COALESCE(
-            ARRAY_AGG(DISTINCT ${item.image}) FILTER (WHERE ${item.image} IS NOT NULL),
-            ARRAY[]::text[]
-          )
-        `,
+        images: orderPreviewImagesSql,
         createdAt: order.createdAt,
         updatedAt: order.updatedAt,
         totalCount: sql<number>`COUNT(*) OVER ()`,
@@ -153,7 +150,6 @@ class OrdersService {
       })
       .from(order)
       .leftJoin(collection, eq(order.id, collection.orderId))
-      .leftJoin(item, eq(collection.itemId, item.id))
       .where(whereConditions)
       .groupBy(
         order.id,
@@ -182,9 +178,9 @@ class OrdersService {
         ),
       )
       .orderBy(
-        orderBy === "asc" ? asc(sortByColumn) : desc(sortByColumn),
-        orderBy === "asc" ? asc(order.createdAt) : desc(order.createdAt),
-        orderBy === "asc" ? asc(order.id) : desc(order.id),
+        sortDirection(sortByColumn),
+        ...(sortBy === "createdAt" ? [] : [sortDirection(order.createdAt)]),
+        sortDirection(order.id),
       )
       .limit(limit)
       .offset(offset);
@@ -215,19 +211,13 @@ class OrdersService {
         tariffs: order.tariffs,
         miscFees: order.miscFees,
         notes: order.notes,
-        images: sql<string[]>`
-          COALESCE(
-            ARRAY_AGG(DISTINCT ${item.image}) FILTER (WHERE ${item.image} IS NOT NULL),
-            ARRAY[]::text[]
-          )
-        `,
+        images: orderPreviewImagesSql,
         createdAt: order.createdAt,
         updatedAt: order.updatedAt,
         itemCount: sql<number>`COUNT(${collection.id})`,
       })
       .from(order)
       .leftJoin(collection, eq(order.id, collection.orderId))
-      .leftJoin(item, eq(collection.itemId, item.id))
       .where(and(eq(order.userId, userId), eq(order.id, orderId)))
       .groupBy(order.id);
 
@@ -486,7 +476,8 @@ class OrdersService {
       .select({ id: order.id, title: order.title })
       .from(order)
       .where(and(eq(order.userId, userId), title ? ilike(order.title, `%${title}%`) : undefined))
-      .groupBy(order.id, order.title);
+      .groupBy(order.id, order.title)
+      .orderBy(asc(order.title), asc(order.id));
 
     return orderIdsAndTitles;
   }
@@ -550,7 +541,7 @@ class OrdersService {
       .innerJoin(item, eq(collection.itemId, item.id))
       .innerJoin(item_release, eq(collection.releaseId, item_release.id))
       .where(and(eq(collection.userId, userId), eq(collection.orderId, orderId)))
-      .orderBy(asc(item_release.date));
+      .orderBy(asc(item_release.date), asc(item.title), asc(collection.id));
   }
 
   async getOrderItems(
@@ -565,7 +556,9 @@ class OrdersService {
       count: collection.count,
       price: collection.price,
       status: collection.status,
+      createdAt: collection.createdAt,
     }[sort];
+    const sortDirection = sortOrder === "asc" ? asc : desc;
 
     const items = await db
       .select({
@@ -601,7 +594,11 @@ class OrdersService {
       .innerJoin(item, eq(collection.itemId, item.id))
       .leftJoin(item_release, eq(collection.releaseId, item_release.id))
       .where(and(eq(collection.userId, userId), eq(collection.orderId, orderId)))
-      .orderBy(sortOrder === "asc" ? asc(sortColumn) : desc(sortColumn), asc(collection.id))
+      .orderBy(
+        sortDirection(sortColumn),
+        ...(sort === "createdAt" ? [] : [sortDirection(collection.createdAt)]),
+        sortDirection(collection.id),
+      )
       .limit(limit)
       .offset(offset);
 

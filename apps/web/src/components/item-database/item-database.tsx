@@ -84,7 +84,7 @@ function ItemGrid({
             className="animate-data-in group/media relative block overflow-hidden rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <ItemImage item={item} />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-1 bg-black/50 p-2.5 text-white opacity-0 backdrop-blur-sm transition-[translate,opacity] duration-150 ease-out group-hover/media:translate-y-0 group-hover/media:opacity-100 group-focus-visible/media:translate-y-0 group-focus-visible/media:opacity-100">
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-1 rounded-b-lg bg-black/50 p-2.5 text-white opacity-0 backdrop-blur-sm transition-[translate,opacity] duration-150 ease-out group-hover/media:translate-y-0 group-hover/media:opacity-100 group-focus-visible/media:translate-y-0 group-focus-visible/media:opacity-100">
               <p className="line-clamp-2 text-sm font-medium leading-tight">{item.title}</p>
               <div className="mt-2 flex min-w-0 items-end justify-between gap-3">
                 <div className="min-w-0">
