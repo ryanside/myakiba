@@ -8,7 +8,7 @@ import {
   order,
   wishlistItem,
 } from "@myakiba/db/schema/figure";
-import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, or, sql } from "drizzle-orm";
 import type { ItemRelease, ItemReleasesResponse } from "@myakiba/contracts/item/schema";
 import { normalizeScale } from "@myakiba/contracts/shared/scale";
 import type { EntriesWithRoles, CustomItemInput } from "./model";
@@ -256,7 +256,7 @@ class ItemService {
       })
       .from(item_release)
       .where(eq(item_release.itemId, itemId))
-      .orderBy(item_release.date);
+      .orderBy(asc(item_release.date), asc(item_release.createdAt), asc(item_release.id));
 
     return {
       releases,
@@ -293,7 +293,7 @@ class ItemService {
                   'priceCurrency', ir.price_currency,
                   'barcode', ir.barcode
                 )
-                ORDER BY ir.date DESC
+                ORDER BY ir.date DESC, ir.created_at DESC, ir.id DESC
               )
               FROM ${item_release} ir
               WHERE ir.item_id = ${item}.id
@@ -311,6 +311,7 @@ class ItemService {
                   'name', e.name,
                   'role', eti.role
                 )
+                ORDER BY e.category, LOWER(e.name), e.name, e.id
               )
               FROM ${entry_to_item} eti
               LEFT JOIN ${entry} e ON eti.entry_id = e.id
@@ -358,7 +359,7 @@ class ItemService {
       .innerJoin(item, eq(collection.itemId, item.id))
       .where(and(eq(item.source, "mfc"), eq(item.externalId, externalId), eq(order.userId, userId)))
       .groupBy(order.id)
-      .orderBy(desc(order.releaseDate));
+      .orderBy(desc(order.releaseDate), desc(order.createdAt), desc(order.id));
 
     return orders;
   }
@@ -390,7 +391,8 @@ class ItemService {
       .where(
         and(eq(item.source, "mfc"), eq(item.externalId, externalId), eq(collection.userId, userId)),
       )
-      .groupBy(collection.id);
+      .groupBy(collection.id)
+      .orderBy(desc(collection.createdAt), desc(collection.id));
 
     return collectionItems;
   }

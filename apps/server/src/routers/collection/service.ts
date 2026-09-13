@@ -104,6 +104,7 @@ class CollectionService {
           return collection.createdAt;
       }
     })();
+    const sortDirection = orderBy === "asc" ? asc : desc;
 
     const collectionItems = await db
       .select({
@@ -145,9 +146,9 @@ class CollectionService {
       .leftJoin(item_release, eq(collection.releaseId, item_release.id))
       .where(filters)
       .orderBy(
-        orderBy === "asc" ? asc(sortByColumn) : desc(sortByColumn),
-        orderBy === "asc" ? asc(collection.createdAt) : desc(collection.createdAt),
-        orderBy === "asc" ? asc(collection.id) : desc(collection.id),
+        sortDirection(sortByColumn),
+        ...(sortBy === "createdAt" ? [] : [sortDirection(collection.createdAt)]),
+        sortDirection(collection.id),
       )
       .limit(limit)
       .offset(offset);

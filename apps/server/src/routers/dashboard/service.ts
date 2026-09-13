@@ -3,6 +3,7 @@ import { item, collection, item_release, order } from "@myakiba/db/schema/figure
 import type { Category } from "@myakiba/contracts/shared/types";
 import { eq, count, and, sum, asc, sql, desc, ne, gte, lt, lte, exists, or } from "drizzle-orm";
 import { getDateOnlyMonthBounds, toDateOnlyString } from "@myakiba/utils/date-only";
+import { orderPreviewImagesSql, orderPreviewItemIdsSql } from "@/lib/order-preview";
 
 const DASHBOARD_KANBAN_ORDER_LIMIT = 75;
 
@@ -108,7 +109,7 @@ class DashboardService {
       .innerJoin(item, eq(collection.itemId, item.id))
       .where(and(eq(collection.userId, sql.placeholder("userId")), eq(collection.status, "Owned")))
       .groupBy(item.category)
-      .orderBy(desc(count()))
+      .orderBy(desc(count()), asc(item.category))
       .prepare("categories_owned");
 
     // Overview kanban should keep orders visible when any lifecycle milestone is recent.
@@ -123,15 +124,12 @@ class DashboardService {
         paymentDate: order.paymentDate,
         shippingDate: order.shippingDate,
         collectionDate: order.collectionDate,
-        itemImages: sql<
-          string[]
-        >`COALESCE(array_agg(DISTINCT ${item.image}) FILTER (WHERE ${item.image} IS NOT NULL), ARRAY[]::text[])`,
-        itemIds: sql<string[]>`COALESCE(array_agg(DISTINCT ${item.id}), ARRAY[]::text[])`,
+        itemImages: orderPreviewImagesSql,
+        itemIds: orderPreviewItemIdsSql,
         total: sql<number>`COALESCE(${sum(collection.price)}, 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`,
       })
       .from(order)
       .leftJoin(collection, and(eq(order.id, collection.orderId)))
-      .leftJoin(item, eq(collection.itemId, item.id))
       .where(
         and(
           eq(order.userId, sql.placeholder("userId")),
@@ -175,6 +173,7 @@ class DashboardService {
           sql`COALESCE(${order.collectionDate}, ${order.shippingDate}, ${order.paymentDate}, ${order.orderDate}, ${order.releaseDate})`,
         ),
         asc(order.createdAt),
+        asc(order.id),
       )
       .limit(DASHBOARD_KANBAN_ORDER_LIMIT)
       .prepare("orders_kanban");
@@ -239,6 +238,7 @@ class DashboardService {
     // Release Calendar
     this.releaseCalendarPrepared = db
       .select({
+        releaseId: item_release.id,
         itemId: item.id,
         itemExternalId: item.externalId,
         title: item.title,
@@ -269,7 +269,7 @@ class DashboardService {
           ),
         ),
       )
-      .orderBy(asc(item_release.date))
+      .orderBy(asc(item_release.date), asc(item.title), asc(item.id), asc(item_release.id))
       .prepare("release_calendar");
 
     // Single monthly KPI query: order counts, item totals, fees, and paid/unpaid splits.
@@ -302,7 +302,7 @@ class DashboardService {
       .from(monthlyOrdersBase)
       .leftJoin(monthlyOrderItemStats, eq(monthlyOrdersBase.orderId, monthlyOrderItemStats.orderId))
       .groupBy(monthlyOrdersBase.shop)
-      .orderBy(desc(monthlyShopTotalAmount))
+      .orderBy(desc(monthlyShopTotalAmount), asc(monthlyOrdersBase.shop))
       .prepare("monthly_shop_breakdown");
 
     // Monthly kanban keeps release-month orders plus owned orders collected in that month.
@@ -317,15 +317,12 @@ class DashboardService {
         paymentDate: order.paymentDate,
         shippingDate: order.shippingDate,
         collectionDate: order.collectionDate,
-        itemImages: sql<
-          string[]
-        >`COALESCE(array_agg(DISTINCT ${item.image}) FILTER (WHERE ${item.image} IS NOT NULL), ARRAY[]::text[])`,
-        itemIds: sql<string[]>`COALESCE(array_agg(DISTINCT ${item.id}), ARRAY[]::text[])`,
+        itemImages: orderPreviewImagesSql,
+        itemIds: orderPreviewItemIdsSql,
         total: sql<number>`COALESCE(${sum(collection.price)}, 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`,
       })
       .from(order)
       .leftJoin(collection, and(eq(order.id, collection.orderId)))
-      .leftJoin(item, eq(collection.itemId, item.id))
       .where(
         and(
           eq(order.userId, sql.placeholder("userId")),
@@ -357,6 +354,7 @@ class DashboardService {
       .orderBy(
         asc(sql`COALESCE(${order.collectionDate}, ${order.releaseDate})`),
         asc(order.createdAt),
+        asc(order.id),
       )
       .limit(DASHBOARD_KANBAN_ORDER_LIMIT)
       .prepare("monthly_orders_kanban");

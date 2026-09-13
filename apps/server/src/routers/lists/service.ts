@@ -3,6 +3,7 @@ import { collection, item, list, listMember, order } from "@myakiba/db/schema/fi
 import type { ListInput, ListTarget } from "@myakiba/contracts/lists/schema";
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
+import { orderPreviewImagesSql } from "@/lib/order-preview";
 import { planPositionOrderMove, POSITION_UPDATE_CHUNK_SIZE } from "@/lib/position-order";
 
 const LIST_MEMBER_INSERT_CHUNK_SIZE = 5000;
@@ -23,6 +24,7 @@ class ListsService {
               candidate.image,
               list_member_row.position,
               list_member_row.id AS member_id,
+              candidate.created_at,
               candidate.sort_key
             FROM (
               SELECT id, position, item_id, collection_id, order_id
@@ -32,14 +34,14 @@ class ListsService {
               LIMIT 20
             ) list_member_row
             CROSS JOIN LATERAL (
-              SELECT item_record.image, item_record.id AS sort_key
+              SELECT item_record.image, item_record.created_at, item_record.id AS sort_key
               FROM item item_record
               WHERE item_record.id = list_member_row.item_id
                 AND item_record.image IS NOT NULL
 
               UNION ALL
 
-              SELECT collection_item.image, collection_member.id AS sort_key
+              SELECT collection_item.image, collection_member.created_at, collection_member.id AS sort_key
               FROM "collection" collection_member
               INNER JOIN item collection_item ON collection_item.id = collection_member.item_id
               WHERE collection_member.id = list_member_row.collection_id
@@ -47,7 +49,7 @@ class ListsService {
 
               UNION ALL
 
-              SELECT order_item.image, order_collection.id AS sort_key
+              SELECT order_item.image, order_collection.created_at, order_collection.id AS sort_key
               FROM "collection" order_collection
               INNER JOIN item order_item ON order_item.id = order_collection.item_id
               WHERE order_collection.order_id = list_member_row.order_id
@@ -57,9 +59,10 @@ class ListsService {
               candidate.image,
               list_member_row.position,
               list_member_row.id,
-              candidate.sort_key
+              candidate.created_at DESC,
+              candidate.sort_key DESC
           ) preview
-          ORDER BY preview.position, preview.member_id, preview.sort_key
+          ORDER BY preview.position, preview.member_id, preview.created_at DESC, preview.sort_key DESC
           LIMIT 4
         )`,
           createdAt: list.createdAt,
@@ -262,15 +265,7 @@ class ListsService {
                 .select({
                   id: order.id,
                   title: order.title,
-                  images: sql<string[]>`ARRAY(
-                SELECT DISTINCT order_item.image
-                FROM "collection" order_collection
-                INNER JOIN item order_item ON order_item.id = order_collection.item_id
-                WHERE order_collection.order_id = "order".id
-                  AND order_item.image IS NOT NULL
-                ORDER BY order_item.image
-                LIMIT 4
-              )`,
+                  images: sql<string[]>`(${orderPreviewImagesSql})[1:4]`,
                 })
                 .from(order)
                 .where(and(eq(order.userId, userId), inArray(order.id, orderIds))),

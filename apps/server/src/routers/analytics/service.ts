@@ -127,11 +127,13 @@ const entryRankingsPrepared = db
     totalSpent: entrySummaryQuery.totalSpent,
     rankByCount: sql<number>`ROW_NUMBER() OVER (
       PARTITION BY ${entrySummaryQuery.category}
-      ORDER BY ${entrySummaryQuery.itemCount} DESC, ${entrySummaryQuery.totalSpent} DESC
+      ORDER BY ${entrySummaryQuery.itemCount} DESC, ${entrySummaryQuery.totalSpent} DESC,
+        LOWER(${entrySummaryQuery.name}), ${entrySummaryQuery.name}, ${entrySummaryQuery.entryId}
     )`,
     rankBySpend: sql<number>`ROW_NUMBER() OVER (
       PARTITION BY ${entrySummaryQuery.category}
-      ORDER BY ${entrySummaryQuery.totalSpent} DESC, ${entrySummaryQuery.itemCount} DESC
+      ORDER BY ${entrySummaryQuery.totalSpent} DESC, ${entrySummaryQuery.itemCount} DESC,
+        LOWER(${entrySummaryQuery.name}), ${entrySummaryQuery.name}, ${entrySummaryQuery.entryId}
     )`,
   })
   .from(entrySummaryQuery)
@@ -160,10 +162,12 @@ const shopRankingsPrepared = db
     itemCount: shopSummaryQuery.itemCount,
     totalSpent: shopSummaryQuery.totalSpent,
     rankByCount: sql<number>`ROW_NUMBER() OVER (
-      ORDER BY ${shopSummaryQuery.itemCount} DESC, ${shopSummaryQuery.totalSpent} DESC
+      ORDER BY ${shopSummaryQuery.itemCount} DESC, ${shopSummaryQuery.totalSpent} DESC,
+        LOWER(${shopSummaryQuery.shop}), ${shopSummaryQuery.shop}
     )`,
     rankBySpend: sql<number>`ROW_NUMBER() OVER (
-      ORDER BY ${shopSummaryQuery.totalSpent} DESC, ${shopSummaryQuery.itemCount} DESC
+      ORDER BY ${shopSummaryQuery.totalSpent} DESC, ${shopSummaryQuery.itemCount} DESC,
+        LOWER(${shopSummaryQuery.shop}), ${shopSummaryQuery.shop}
     )`,
   })
   .from(shopSummaryQuery)
@@ -193,10 +197,12 @@ const scaleRankingsPrepared = db
     itemCount: scaleSummaryQuery.itemCount,
     totalSpent: scaleSummaryQuery.totalSpent,
     rankByCount: sql<number>`ROW_NUMBER() OVER (
-      ORDER BY ${scaleSummaryQuery.itemCount} DESC, ${scaleSummaryQuery.totalSpent} DESC
+      ORDER BY ${scaleSummaryQuery.itemCount} DESC, ${scaleSummaryQuery.totalSpent} DESC,
+        LOWER(${scaleSummaryQuery.scale}), ${scaleSummaryQuery.scale}
     )`,
     rankBySpend: sql<number>`ROW_NUMBER() OVER (
-      ORDER BY ${scaleSummaryQuery.totalSpent} DESC, ${scaleSummaryQuery.itemCount} DESC
+      ORDER BY ${scaleSummaryQuery.totalSpent} DESC, ${scaleSummaryQuery.itemCount} DESC,
+        LOWER(${scaleSummaryQuery.scale}), ${scaleSummaryQuery.scale}
     )`,
   })
   .from(scaleSummaryQuery)
@@ -550,7 +556,7 @@ class AnalyticsService {
             totalCount: sql<number>`(COUNT(*) OVER ())::integer`.as("totalCount"),
           })
           .from(summary)
-          .orderBy(desc(summary.itemCount), asc(sql`LOWER(${summary.name})`))
+          .orderBy(desc(summary.itemCount), asc(sql`LOWER(${summary.name})`), asc(summary.name))
           .limit(limit)
           .offset(offset);
       }
@@ -575,7 +581,7 @@ class AnalyticsService {
             totalCount: sql<number>`(COUNT(*) OVER ())::integer`.as("totalCount"),
           })
           .from(summary)
-          .orderBy(desc(summary.itemCount), asc(sql`LOWER(${summary.name})`))
+          .orderBy(desc(summary.itemCount), asc(sql`LOWER(${summary.name})`), asc(summary.name))
           .limit(limit)
           .offset(offset);
       }
@@ -601,7 +607,12 @@ class AnalyticsService {
           totalCount: sql<number>`(COUNT(*) OVER ())::integer`.as("totalCount"),
         })
         .from(summary)
-        .orderBy(desc(summary.itemCount), asc(sql`LOWER(${summary.name})`), asc(summary.id))
+        .orderBy(
+          desc(summary.itemCount),
+          asc(sql`LOWER(${summary.name})`),
+          asc(summary.name),
+          asc(summary.id),
+        )
         .limit(limit)
         .offset(offset);
     })();

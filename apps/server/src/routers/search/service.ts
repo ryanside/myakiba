@@ -15,6 +15,7 @@ import type {
   SearchOrderIdAndTitle,
 } from "@myakiba/contracts/search/schema";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
+import { orderPreviewImagesSql } from "@/lib/order-preview";
 import { SEARCH_COLLECTION_RESULT_LIMIT, SEARCH_ORDER_RESULT_LIMIT } from "./model";
 
 const latestOwnedAt = sql<Date>`max(${collection.createdAt})`;
@@ -36,7 +37,7 @@ const collectionResultsPrepared = db
     ),
   )
   .groupBy(item.id, item.externalId, item.title, item.image, item.category)
-  .orderBy(desc(latestOwnedAt))
+  .orderBy(desc(latestOwnedAt), desc(item.id))
   .limit(SEARCH_COLLECTION_RESULT_LIMIT)
   .prepare("search_collection");
 
@@ -44,26 +45,13 @@ const orderResultsPrepared = db
   .select({
     orderId: order.id,
     orderTitle: order.title,
-    itemImages: sql<string[]>`COALESCE(
-      (
-        SELECT array_agg(image_row.image)
-        FROM (
-          SELECT DISTINCT i.image
-          FROM "collection" c
-          INNER JOIN item i ON c.item_id = i.id
-          WHERE c.order_id = "order".id
-            AND i.image IS NOT NULL
-          LIMIT 4
-        ) AS image_row
-      ),
-      ARRAY[]::text[]
-    )`,
+    itemImages: sql<string[]>`(${orderPreviewImagesSql})[1:4]`,
   })
   .from(order)
   .where(
     and(ilike(order.title, sql.placeholder("search")), eq(order.userId, sql.placeholder("userId"))),
   )
-  .orderBy(desc(order.createdAt))
+  .orderBy(desc(order.createdAt), desc(order.id))
   .limit(SEARCH_ORDER_RESULT_LIMIT)
   .prepare("search_orders");
 

@@ -225,7 +225,7 @@ function DateGroup({
       </div>
       <div className="px-(--frame-panel-p)">
         {items.map((item) => (
-          <ReleaseCard key={`${item.itemId}:${item.releaseDate}`} item={item} currency={currency} />
+          <ReleaseCard key={item.releaseId} item={item} currency={currency} />
         ))}
       </div>
     </div>
