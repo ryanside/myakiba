@@ -19,6 +19,7 @@ const CATEGORY_COLOR_MAP = {
   Music: "var(--category-music)",
   Video: "var(--category-video)",
   Games: "var(--category-games)",
+  Software: "var(--category-software)",
 } satisfies Readonly<Record<Category, string>>;
 
 export function getCategoryColor(category: Category | null | undefined): string {
