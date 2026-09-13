@@ -12,7 +12,7 @@ import { paginationLimitSchema, paginationPageSchema } from "../shared/paginatio
 import { MAX_ITEM_SYNC_ITEMS, SYNC_CSV_ITEM_STATUSES } from "./constants";
 
 const MFC_ITEM_URL_PATTERN =
-  /^(?:https?:\/\/)?(?:www\.)?myfigurecollection\.net\/item\/(\d+)(?:[/?#].*)?$/i;
+  /^(?:https?:\/\/)?(?:(?:www|de|es|fi|fr|it|ja|nl|no|pl|pt|ru|sv|zh)\.)?myfigurecollection\.net\/item\/(\d+)(?:[/?#].*)?$/i;
 
 export const mfcItemIdSchema = z
   .string()
