@@ -99,6 +99,7 @@
   --category-music: #3d9395;
   --category-video: #0297d7;
   --category-games: #ee2a84;
+  --category-software: #666666;
 
   /* reui */
   --info: var(--color-blue-500);
@@ -174,6 +175,7 @@
   --category-music: #3d9395;
   --category-video: #0297d7;
   --category-games: #ee2a84;
+  --category-software: #bbbbbb;
 
   /* reui */
   --info: var(--color-blue-500);
@@ -256,6 +258,7 @@
   --category-music: var(--category-music);
   --category-video: var(--category-video);
   --category-games: var(--category-games);
+  --category-software: var(--category-software);
 
   /* reui */
   --color-destructive-foreground: var(--destructive-foreground);

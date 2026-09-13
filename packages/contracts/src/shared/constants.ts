@@ -60,6 +60,7 @@ export const CATEGORIES = [
   "Music",
   "Video",
   "Games",
+  "Software",
 ] as const;
 
 export const ITEM_CATEGORY_GROUPS = {
@@ -74,7 +75,7 @@ export const ITEM_CATEGORY_GROUPS = {
     "Stationeries",
     "On Walls",
   ],
-  Media: ["Books", "Music", "Video", "Games"],
+  Media: ["Books", "Music", "Video", "Games", "Software"],
 } as const satisfies Readonly<Record<string, readonly (typeof CATEGORIES)[number][]>>;
 
 export const CURRENCIES = [
