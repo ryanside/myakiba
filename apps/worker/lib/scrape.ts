@@ -34,6 +34,11 @@ const MFC_BASE_URL = "https://myfigurecollection.net";
 const MFC_HOSTNAME = "myfigurecollection.net";
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 const MAX_IMAGE_REDIRECTS = 3;
+const MAX_SCRAPE_ATTEMPTS = 3;
+const BASE_RETRY_DELAY_MS = 1000;
+const MAX_RETRY_AFTER_MS = 30_000;
+const RETRYABLE_CLIENT_ERROR_STATUSES = new Set([403, 408, 425, 429]);
+const itemCategorySchema = z.enum(CATEGORIES);
 const ALLOWED_IMAGE_CONTENT_TYPES = [
   "image/jpeg",
   "image/png",
@@ -41,6 +46,63 @@ const ALLOWED_IMAGE_CONTENT_TYPES = [
   "image/gif",
   "image/avif",
 ] as const;
+
+type RetryStopReason = "retry_after_too_long" | "attempts_exhausted";
+type ImageScrapeFailureKind = "not_retryable" | RetryStopReason;
+type ScrapeErrorDetails =
+  | { readonly kind: "transient"; readonly retryAfterMs: number | null }
+  | {
+      readonly kind: "image_failure";
+      readonly reason: ImageScrapeFailureKind;
+      readonly attemptErrors: readonly string[];
+    }
+  | { readonly kind: "item_failure"; readonly attemptErrors: readonly string[] };
+
+class ScrapeError extends Error {
+  readonly details: ScrapeErrorDetails;
+
+  constructor(cause: unknown, details: ScrapeErrorDetails) {
+    const error = cause instanceof Error ? cause : new Error(String(cause));
+    super(error.message, { cause: error });
+    this.name = "ScrapeError";
+    this.details = details;
+  }
+}
+
+const parseRetryAfterMs = (value: string | null): number | null => {
+  if (value === null) return null;
+
+  const normalizedValue = value.trim();
+  if (/^\d+$/.test(normalizedValue)) {
+    return Number(normalizedValue) * 1000;
+  }
+
+  const retryAt = Date.parse(normalizedValue);
+  if (Number.isNaN(retryAt)) return null;
+
+  const delayMs = retryAt - Date.now();
+  return delayMs > 0 ? delayMs : null;
+};
+
+const applyTransientRetryPolicy = async (
+  attempt: number,
+  retryAfterMs: number | null,
+  onRetry: () => void,
+): Promise<RetryStopReason | null> => {
+  if (retryAfterMs !== null && retryAfterMs > MAX_RETRY_AFTER_MS) {
+    return "retry_after_too_long";
+  }
+  if (attempt === MAX_SCRAPE_ATTEMPTS) return "attempts_exhausted";
+
+  onRetry();
+  const jitterCeilingMs = BASE_RETRY_DELAY_MS * 2 ** (attempt - 1);
+  const jitterMs = Math.floor(Math.random() * jitterCeilingMs);
+  const delayMs = Math.max(jitterMs, retryAfterMs ?? 0);
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, delayMs);
+  });
+  return null;
+};
 
 const allowedImageUrlSchema = z
   .instanceof(URL)
@@ -93,12 +155,32 @@ const cancelResponseBody = async (response: Response): Promise<void> => {
   await response.body?.cancel().catch(() => null);
 };
 
+const throwScrapeResponseError = async (
+  response: Response,
+  responseError: Error,
+): Promise<never> => {
+  const isTransient =
+    RETRYABLE_CLIENT_ERROR_STATUSES.has(response.status) ||
+    (response.status >= 500 && response.status <= 599);
+  await cancelResponseBody(response);
+  if (isTransient) {
+    throw new ScrapeError(responseError, {
+      kind: "transient",
+      retryAfterMs: parseRetryAfterMs(response.headers.get("retry-after")),
+    });
+  }
+  throw responseError;
+};
+
 const readImageBody = async (response: Response): Promise<Buffer> => {
   if (!response.body) {
-    throw createError({
-      message: "Image response has no body",
-      why: "The upstream server returned a successful response without a readable body",
-    });
+    throw new ScrapeError(
+      createError({
+        message: "Image response has no body",
+        why: "The upstream server returned a successful response without a readable body",
+      }),
+      { kind: "transient", retryAfterMs: null },
+    );
   }
 
   const reader = response.body.getReader();
@@ -106,7 +188,14 @@ const readImageBody = async (response: Response): Promise<Buffer> => {
   let totalBytes = 0;
 
   while (true) {
-    const { done, value } = await reader.read();
+    let readResult: Awaited<ReturnType<typeof reader.read>>;
+    try {
+      readResult = await reader.read();
+    } catch (error) {
+      throw new ScrapeError(error, { kind: "transient", retryAfterMs: null });
+    }
+
+    const { done, value } = readResult;
     if (done) break;
 
     totalBytes += value.byteLength;
@@ -124,24 +213,26 @@ const readImageBody = async (response: Response): Promise<Buffer> => {
   return Buffer.concat(chunks, totalBytes);
 };
 
-export const scrapeImage = async ({
-  imageUrl,
-  log,
-  maxRetries = 3,
-  baseDelayMs = 1000,
-}: ScrapeImageParams) => {
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+export const scrapeImage = async ({ imageUrl, log }: ScrapeImageParams): Promise<string> => {
+  const attemptErrors: string[] = [];
+
+  for (let attempt = 1; ; attempt++) {
     let failureMessage = "Failed to download item image";
+
     try {
       let finalUrl = parseAllowedImageUrl(imageUrl);
       let response: Response;
       let redirectCount = 0;
 
       while (true) {
-        response = await fetch(finalUrl, {
-          ...createFetchOptions(true),
-          redirect: "manual",
-        });
+        try {
+          response = await fetch(finalUrl, {
+            ...createFetchOptions(true),
+            redirect: "manual",
+          });
+        } catch (error) {
+          throw new ScrapeError(error, { kind: "transient", retryAfterMs: null });
+        }
 
         if (response.status < 300 || response.status >= 400) break;
 
@@ -174,8 +265,7 @@ export const scrapeImage = async ({
           status: response.status,
           why: "Image URL returned non-OK status",
         });
-        await cancelResponseBody(response);
-        throw responseError;
+        await throwScrapeResponseError(response, responseError);
       }
 
       const metadataResult = z.safeParse(imageResponseMetadataSchema, {
@@ -214,67 +304,107 @@ export const scrapeImage = async ({
       const bucketUrl =
         env.AWS_BUCKET_URL ??
         `https://${env.AWS_BUCKET_NAME}.s3.${env.AWS_BUCKET_REGION}.amazonaws.com`;
-      const imageS3Url = `${bucketUrl.replace(/\/+$/, "")}/${filename}`;
-
-      return imageS3Url;
+      return `${bucketUrl.replace(/\/+$/, "")}/${filename}`;
     } catch (error) {
       const originalError = error instanceof Error ? error : new Error(String(error));
       const imageError = createError({
         message: `${failureMessage}: ${originalError.message}`,
         cause: originalError,
       });
-      if (attempt === maxRetries) {
-        log.warn(`Image scrape exhausted retries for ${imageUrl}`);
-        throw imageError;
+      attemptErrors.push(imageError.message);
+      const transientDetails =
+        error instanceof ScrapeError && error.details.kind === "transient" ? error.details : null;
+
+      if (!transientDetails) {
+        log.warn(`Image scrape failed without retry for ${imageUrl}`);
+        throw new ScrapeError(imageError, {
+          kind: "image_failure",
+          reason: "not_retryable",
+          attemptErrors,
+        });
       }
-
-      log.warn(`Image scrape attempt ${attempt}/${maxRetries} failed: ${imageError.message}`);
-
-      const delayMs = baseDelayMs * 2 ** (attempt - 1);
-      await new Promise((resolve) => {
-        setTimeout(resolve, delayMs);
-      });
+      const retryStopReason = await applyTransientRetryPolicy(
+        attempt,
+        transientDetails.retryAfterMs,
+        () => {
+          log.warn(
+            `Image scrape attempt ${attempt}/${MAX_SCRAPE_ATTEMPTS} failed: ${imageError.message}`,
+          );
+        },
+      );
+      if (retryStopReason === "retry_after_too_long") {
+        log.warn(
+          `Image scrape Retry-After exceeds ${MAX_RETRY_AFTER_MS / 1000} seconds for ${imageUrl}`,
+        );
+        throw new ScrapeError(imageError, {
+          kind: "image_failure",
+          reason: "retry_after_too_long",
+          attemptErrors,
+        });
+      }
+      if (retryStopReason === "attempts_exhausted") {
+        log.warn(`Image scrape exhausted retries for ${imageUrl}`);
+        throw new ScrapeError(imageError, {
+          kind: "image_failure",
+          reason: "attempts_exhausted",
+          attemptErrors,
+        });
+      }
     }
   }
-
-  return null;
 };
 
-export const scrapeSingleItem = async ({
-  id,
-  log,
-  maxRetries = 3,
-  baseDelayMs = 1000,
-  progressStatusMessage,
-  redis,
-  state,
-}: ScrapeSingleItemParams): Promise<ScrapedItem | null> => {
+export const scrapeSingleItem = async (params: ScrapeSingleItemParams): Promise<ScrapedItem> => {
+  const { id, log } = params;
+  log.set({
+    scrape: {
+      maxRetries: MAX_SCRAPE_ATTEMPTS - 1,
+      baseDelayMs: BASE_RETRY_DELAY_MS,
+    },
+  });
   const attemptErrors: string[] = [];
 
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    let retryItem = true;
+  for (let attempt = 1; ; attempt++) {
     let failureMessage: string | null = "Failed to fetch item page";
 
     try {
       const url = `https://myfigurecollection.net/item/${id}`;
 
-      const response = await fetch(url, createFetchOptions());
+      let response: Response;
+      try {
+        response = await fetch(url, createFetchOptions());
+      } catch (error) {
+        throw new ScrapeError(error, { kind: "transient", retryAfterMs: null });
+      }
 
       if (!response.ok) {
-        throw createError({
+        const responseError = createError({
           message: `HTTP ${response.status} for item ${id}`,
           status: response.status,
           why: "MFC item page returned non-OK status",
         });
+        await throwScrapeResponseError(response, responseError);
       }
 
-      const html = await response.text();
+      let html: string;
+      try {
+        html = await response.text();
+      } catch (error) {
+        throw new ScrapeError(error, { kind: "transient", retryAfterMs: null });
+      }
       failureMessage = "Failed to extract item details";
       const $ = cheerio.load(html);
 
       const title = $("h1.title").text().trim();
+      if (!title) {
+        throw createError({
+          message: `Invalid or missing title for item ${id}`,
+          why: "Item page does not contain a non-empty title",
+        });
+      }
 
-      let category: Category | null = null;
+      let itemCategory: Category | null = null;
+      let rawItemCategory = "";
       const classification: { id: number; name: string; role: string }[] = [];
       const version: string[] = [];
       let scale = "";
@@ -306,10 +436,9 @@ export const scrapeSingleItem = async ({
 
         switch (label) {
           case "Category": {
-            const rawCategory = $element.find("span").text().trim();
-            if (CATEGORIES.includes(rawCategory as Category)) {
-              category = rawCategory as Category;
-            }
+            rawItemCategory = $dataValue.find("span").first().text().trim();
+            const parsedItemCategory = itemCategorySchema.safeParse(rawItemCategory);
+            itemCategory = parsedItemCategory.success ? parsedItemCategory.data : null;
             break;
           }
           case "Classification":
@@ -360,10 +489,16 @@ export const scrapeSingleItem = async ({
         }
       }
 
-      if (!category) {
+      if (!itemCategory) {
+        if (rawItemCategory) {
+          throw createError({
+            message: `Unsupported Item Category "${rawItemCategory}" for item ${id}`,
+            why: `MFC Item Category "${rawItemCategory}" is not supported`,
+          });
+        }
         throw createError({
-          message: `Invalid or missing category for item ${id}`,
-          why: "Item page does not contain a recognized category",
+          message: `Invalid or missing Item Category for item ${id}`,
+          why: "Item page does not contain an Item Category",
         });
       }
 
@@ -373,25 +508,13 @@ export const scrapeSingleItem = async ({
 
       failureMessage = null;
       if (imageUrl) {
-        try {
-          const imageResponse = await scrapeImage({ imageUrl, log, maxRetries, baseDelayMs });
-          if (!imageResponse) {
-            throw createError({
-              message: `Failed to download item image: No image returned for item ${id}`,
-              why: "Image scrape returned null after all retries",
-            });
-          }
-          image = imageResponse;
-        } catch (error) {
-          retryItem = false;
-          throw error;
-        }
+        image = await scrapeImage({ imageUrl, log });
       }
 
       const scrapedItem: ScrapedItem = {
         id,
         title,
-        category,
+        category: itemCategory,
         classification,
         origin,
         character,
@@ -408,16 +531,25 @@ export const scrapeSingleItem = async ({
         image,
       };
 
-      if (redis && state && state.progress) {
-        recordItemOutcome(state, { outcome: "succeeded", externalId: id, title });
-        state.statusMessage =
-          progressStatusMessage ??
-          SYNC_STATUS_MESSAGES.scraping(state.progress.processed, state.progress.total);
-        await publishJobStatus({ redis, state, terminalState: null, error: null });
+      if (params.state) {
+        const { progressStatusMessage, redis, state } = params;
+        if (state.progress) {
+          recordItemOutcome(state, { outcome: "succeeded", externalId: id, title });
+          state.statusMessage =
+            progressStatusMessage ??
+            SYNC_STATUS_MESSAGES.scraping(state.progress.processed, state.progress.total);
+          await publishJobStatus({ redis, state, terminalState: null, error: null });
+        }
       }
 
       return scrapedItem;
     } catch (error) {
+      const imageFailureDetails =
+        error instanceof ScrapeError && error.details.kind === "image_failure"
+          ? error.details
+          : null;
+      const transientDetails =
+        error instanceof ScrapeError && error.details.kind === "transient" ? error.details : null;
       const originalError = error instanceof Error ? error : new Error(String(error));
       const finalError = failureMessage
         ? createError({
@@ -426,56 +558,65 @@ export const scrapeSingleItem = async ({
           })
         : originalError;
       const message = finalError.message;
-      attemptErrors.push(message);
-
-      if (!retryItem || attempt === maxRetries) {
-        log.warn(
-          retryItem
-            ? `Item ${id} failed after ${maxRetries} attempts`
-            : `Item ${id} failed after image scrape exhausted retries`,
-        );
-        if (redis && state && state.progress) {
-          recordItemOutcome(state, {
-            outcome: "failed",
-            externalId: id,
-            failureReason: message,
-          });
-          state.statusMessage =
-            progressStatusMessage ??
-            SYNC_STATUS_MESSAGES.scraping(state.progress.processed, state.progress.total);
-          await publishJobStatus({ redis, state, terminalState: null, error: null });
-        }
-        (finalError as Error & { attemptErrors: string[] }).attemptErrors = attemptErrors;
-        throw finalError;
+      if (imageFailureDetails) {
+        attemptErrors.push(...imageFailureDetails.attemptErrors);
+      } else {
+        attemptErrors.push(message);
       }
+      const retryStopReason = transientDetails
+        ? await applyTransientRetryPolicy(attempt, transientDetails.retryAfterMs, () => {
+            log.warn(`Item ${id} attempt ${attempt}/${MAX_SCRAPE_ATTEMPTS} failed: ${message}`);
+          })
+        : null;
 
-      log.warn(`Item ${id} attempt ${attempt}/${maxRetries} failed: ${message}`);
-
-      const delayMs = baseDelayMs * 2 ** (attempt - 1);
-      await new Promise((resolve) => {
-        setTimeout(resolve, delayMs);
-      });
+      if (imageFailureDetails || !transientDetails || retryStopReason !== null) {
+        if (imageFailureDetails?.reason === "attempts_exhausted") {
+          log.warn(
+            `Item ${id} failed after image scrape exhausted ${MAX_SCRAPE_ATTEMPTS} attempts`,
+          );
+        } else if (imageFailureDetails?.reason === "retry_after_too_long") {
+          log.warn(`Item ${id} image Retry-After exceeds ${MAX_RETRY_AFTER_MS / 1000} seconds`);
+        } else if (imageFailureDetails?.reason === "not_retryable") {
+          log.warn(`Item ${id} failed because its image could not be scraped`);
+        } else if (!transientDetails) {
+          log.warn(`Item ${id} failed without retry`);
+        } else if (retryStopReason === "retry_after_too_long") {
+          log.warn(`Item ${id} Retry-After exceeds ${MAX_RETRY_AFTER_MS / 1000} seconds`);
+        } else {
+          log.warn(`Item ${id} failed after ${MAX_SCRAPE_ATTEMPTS} attempts`);
+        }
+        if (params.state) {
+          const { progressStatusMessage, redis, state } = params;
+          if (state.progress) {
+            recordItemOutcome(state, {
+              outcome: "failed",
+              externalId: id,
+              failureReason: message,
+            });
+            state.statusMessage =
+              progressStatusMessage ??
+              SYNC_STATUS_MESSAGES.scraping(state.progress.processed, state.progress.total);
+            await publishJobStatus({ redis, state, terminalState: null, error: null });
+          }
+        }
+        throw new ScrapeError(finalError, { kind: "item_failure", attemptErrors });
+      }
     }
   }
-
-  return null;
 };
 
 export const scrapeItems = async ({
   itemIds,
   log,
-  maxRetries = 3,
-  baseDelayMs = 1000,
   progressStatusMessage,
   redis,
   state,
 }: ScrapeItemsParams): Promise<ScrapeResult> => {
+  const startTime = Date.now();
   const promises = itemIds.map((id) =>
     scrapeSingleItem({
       id,
       log,
-      maxRetries,
-      baseDelayMs,
       progressStatusMessage,
       redis,
       state,
@@ -488,14 +629,19 @@ export const scrapeItems = async ({
 
   for (let i = 0; i < results.length; i++) {
     const result = results[i];
-    if (result.status === "fulfilled" && result.value !== null) {
+    if (result.status === "fulfilled") {
       successful.push(result.value);
     } else if (result.status === "rejected") {
-      const reason = result.reason as Error & { attemptErrors?: string[] };
+      const reason =
+        result.reason instanceof Error ? result.reason : new Error(String(result.reason));
+      const attemptErrors =
+        reason instanceof ScrapeError && reason.details.kind === "item_failure"
+          ? reason.details.attemptErrors
+          : [reason.message];
       failures.push({
         id: itemIds[i],
-        reason: reason.message ?? String(reason),
-        attemptErrors: reason.attemptErrors ?? [reason.message ?? String(reason)],
+        reason: reason.message,
+        attemptErrors,
       });
     }
   }
@@ -504,14 +650,20 @@ export const scrapeItems = async ({
     log.warn(`Failed to scrape ${failures.length}/${itemIds.length} items`);
   }
 
+  const durationMs = Date.now() - startTime;
+  log.set({
+    scrape: {
+      durationMs,
+      avgPerItemMs: itemIds.length === 0 ? 0 : Math.round(durationMs / itemIds.length),
+    },
+  });
+
   return { successful, failures };
 };
 
 export const scrapedItemsWithRateLimit = async ({
   itemIds,
   log,
-  maxRetries = 3,
-  baseDelayMs = 1000,
   progressStatusMessage,
   redis,
   state,
@@ -534,8 +686,6 @@ export const scrapedItemsWithRateLimit = async ({
     const { successful, failures } = await scrapeItems({
       itemIds: batch,
       log,
-      maxRetries,
-      baseDelayMs,
       progressStatusMessage,
       redis,
       state,
@@ -554,7 +704,7 @@ export const scrapedItemsWithRateLimit = async ({
   log.set({
     scrape: {
       durationMs,
-      avgPerItemMs: Math.round(durationMs / itemIds.length),
+      avgPerItemMs: itemIds.length === 0 ? 0 : Math.round(durationMs / itemIds.length),
     },
   });
 

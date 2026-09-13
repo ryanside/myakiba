@@ -31,15 +31,7 @@ export async function processItemResyncJob(job: Job<ItemResyncJobData>): Promise
     const scrapedItem = await scrapeSingleItem({
       id: externalId,
       log: jobLog,
-      maxRetries: 3,
-      baseDelayMs: 1000,
     });
-
-    if (!scrapedItem) {
-      jobLog.set({ outcome: "error" });
-      jobLog.error(new Error("Scrape returned null for item resync"));
-      throw new Error("SCRAPE_RETURNED_NULL");
-    }
 
     const { error: refreshError } = await tryCatch(refreshItemData(scrapedItem, itemId));
 

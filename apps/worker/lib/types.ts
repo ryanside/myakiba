@@ -109,32 +109,29 @@ export type PublishJobStatusParams = {
 export type ScrapeImageParams = {
   readonly imageUrl: string;
   readonly log: WorkerJobLogger;
-  readonly maxRetries?: number;
-  readonly baseDelayMs?: number;
 };
 
 export type ScrapeSingleItemParams = {
   readonly id: number;
   readonly log: WorkerJobLogger;
-  readonly maxRetries?: number;
-  readonly baseDelayMs?: number;
-  readonly progressStatusMessage?: string;
-  /**
-   * Pass both `redis` and `state` so `scrapeSingleItem` sends a `SyncJobStatus`
-   * update after each item succeeds or fails. Single-item resync jobs omit both
-   * when no one is listening for live updates.
-   */
-  readonly redis?: Redis;
-  readonly state?: SyncJobStatusState;
-};
+} & (
+  | {
+      readonly redis: Redis;
+      readonly state: SyncJobStatusState;
+      readonly progressStatusMessage?: string;
+    }
+  | {
+      readonly redis?: never;
+      readonly state?: never;
+      readonly progressStatusMessage?: never;
+    }
+);
 
 export type ScrapeItemsParams = {
   readonly itemIds: readonly number[];
   readonly redis: Redis;
   readonly state: SyncJobStatusState;
   readonly log: WorkerJobLogger;
-  readonly maxRetries?: number;
-  readonly baseDelayMs?: number;
   readonly progressStatusMessage?: string;
 };
 
