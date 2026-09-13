@@ -65,7 +65,7 @@ function WishlistItemLink({
     ) ?? "No price";
   const content = (
     <>
-      {rank === null ? null : (
+      {rank === null || (!wishlistItem && viewMode === "grid") ? null : (
         <div
           aria-label={wishlistItem ? `Ranking #${rank}` : undefined}
           className={cn(
@@ -75,7 +75,7 @@ function WishlistItemLink({
               : "w-9 text-sm text-muted-foreground",
           )}
         >
-          {wishlistItem ? `#${rank}` : <Skeleton className="mx-auto h-4 w-6" />}
+          {wishlistItem ? `#${rank}` : <Skeleton className="mx-auto h-4 w-6 bg-foreground/10!" />}
         </div>
       )}
       <div
