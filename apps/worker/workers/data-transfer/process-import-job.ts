@@ -516,7 +516,7 @@ export async function processDataTransferImportJob(
     const scrapeStrategy = scrapeItemIds.length <= 5 ? "standard" : "rate_limited";
     jobLog.set({
       items: { existing: archive.collectionItems.length - rowsToScrape.length },
-      scrape: { strategy: scrapeStrategy, maxRetries: 3, baseDelayMs: 1000 },
+      scrape: { strategy: scrapeStrategy },
     });
     jobStatus.progress =
       archive.collectionItems.length > 0
@@ -551,8 +551,6 @@ export async function processDataTransferImportJob(
       redis,
       state: jobStatus,
       log: jobLog,
-      maxRetries: 3,
-      baseDelayMs: 1000,
       progressStatusMessage: SCRAPING_ITEM_DATA_MESSAGE,
     });
     const failedExternalIds = new Set(failures.map(({ id }) => id));
@@ -581,7 +579,7 @@ export async function processDataTransferImportJob(
       itemsByExternalId,
       rowsToScrape,
       scrapeFailureReasons: new Map(
-        failures.map(({ id, reason }) => [id, `Scraping failed after max retries: ${reason}`]),
+        failures.map(({ id, reason }) => [id, `Scraping failed: ${reason}`]),
       ),
     });
     jobLog.set({

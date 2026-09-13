@@ -19,8 +19,6 @@ export async function processSyncJob(params: ProcessSyncJobParams): Promise<Proc
   log.set({
     scrape: {
       strategy: scrapeStrategy,
-      maxRetries: 3,
-      baseDelayMs: 1000,
     },
   });
 
@@ -50,8 +48,6 @@ export async function processSyncJob(params: ProcessSyncJobParams): Promise<Proc
 
   const { successful: successfulResults, failures } = await scrapeMethod({
     itemIds: uniqueItemIds,
-    maxRetries: 3,
-    baseDelayMs: 1000,
     redis,
     state,
     log,
@@ -84,7 +80,7 @@ export async function processSyncJob(params: ProcessSyncJobParams): Promise<Proc
     successfulResults,
     failures.map(({ id, reason }) => ({
       id,
-      errorReason: `Scraping failed after max retries: ${reason}`,
+      errorReason: `Scraping failed: ${reason}`,
     })),
     state,
   );
