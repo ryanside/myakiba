@@ -45,6 +45,8 @@ export const item = pgTable(
     externalId: integer("external_id"),
     source: text("source").$type<"mfc" | "custom">().notNull().default("mfc"),
     title: text("title").notNull(),
+    mfcTitle: text("mfc_title"),
+    numbering: text("numbering"),
     category: text("category", {
       enum: CATEGORIES,
     }),
@@ -53,6 +55,7 @@ export const item = pgTable(
     height: integer("height"),
     width: integer("width"),
     depth: integer("depth"),
+    mfcMetadataVersion: integer("mfc_metadata_version").notNull().default(0),
     image: text("image"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -117,11 +120,26 @@ export const entry_to_item = pgTable(
     itemId: text("item_id")
       .notNull()
       .references(() => item.id, { onDelete: "cascade" }),
-    role: text("role"), // "manufacturer", "sculptor", "exhibition", "etc."
+    role: text("role"), // Legacy first role retained for compatibility.
+    // Existing links start empty; readers fall back to role for legacy links.
+    roles: text("roles")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    sourceLabel: text("source_label"),
+    materialPercentage: decimal("material_percentage", {
+      precision: 5,
+      scale: 2,
+      mode: "number",
+    }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
+    check(
+      "entry_to_item_material_percentage_check",
+      sql`${t.materialPercentage} IS NULL OR (${t.materialPercentage} >= 0 AND ${t.materialPercentage} <= 100)`,
+    ),
     // Drizzle Kit 0.31 repeatedly rebuilds composite primary keys during push.
     uniqueIndex("entry_to_item_entry_id_item_id_idx").on(t.entryId, t.itemId),
     index("entry_to_item_item_id_idx").on(t.itemId),

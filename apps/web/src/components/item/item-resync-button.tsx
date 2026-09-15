@@ -46,7 +46,7 @@ export function ItemResyncButton({
   const cooldownRemaining = cooldownExpiresAt ? formatCooldownRemaining(cooldownExpiresAt) : "";
 
   const button = (
-    <Button variant="ghost" size="xs" disabled={isDisabled} onClick={onRequest}>
+    <Button variant="outline" size="xs" disabled={isDisabled} onClick={onRequest}>
       <HugeiconsIcon
         icon={isPending ? Loading03Icon : Refresh01Icon}
         data-icon="inline-start"

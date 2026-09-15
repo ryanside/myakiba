@@ -3,6 +3,7 @@ import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-re
 import { item, item_release, entry, entry_to_item, collection } from "@myakiba/db/schema/figure";
 import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import { assembleScrapedData } from "../../lib/assemble-scraped-data";
+import { upsertScrapedEntries } from "../../lib/persist-scraped-item-data";
 import type { ScrapedItem } from "../../lib/types";
 import { buildReleasePlan } from "./release-plan";
 
@@ -20,12 +21,15 @@ export async function refreshItemData(scrapedItem: ScrapedItem, itemId: string):
       .update(item)
       .set({
         title: assembledItem.title,
+        mfcTitle: assembledItem.mfcTitle,
+        numbering: assembledItem.numbering,
         category: assembledItem.category,
         version: assembledItem.version,
         scale: assembledItem.scale,
         height: assembledItem.height,
         width: assembledItem.width,
         depth: assembledItem.depth,
+        mfcMetadataVersion: assembledItem.mfcMetadataVersion,
         image: assembledItem.image,
         updatedAt: new Date(),
       })
@@ -36,16 +40,9 @@ export async function refreshItemData(scrapedItem: ScrapedItem, itemId: string):
       throw new Error("ITEM_NOT_FOUND_DURING_RESYNC");
     }
 
-    if (assembled.entries.length > 0) {
-      await tx
-        .insert(entry)
-        .values(assembled.entries)
-        .onConflictDoNothing({ target: [entry.source, entry.externalId] });
-    }
+    await upsertScrapedEntries(tx, assembled.entries);
 
-    const entryExternalIds = assembled.entries
-      .map((e) => e.externalId)
-      .filter((id): id is number => id !== null);
+    const entryExternalIds = assembled.entries.map((dbEntry) => dbEntry.externalId);
     const dbEntries =
       entryExternalIds.length > 0
         ? await tx
@@ -57,19 +54,23 @@ export async function refreshItemData(scrapedItem: ScrapedItem, itemId: string):
 
     await tx.delete(entry_to_item).where(eq(entry_to_item.itemId, itemId));
 
-    const entryToItemLinks = assembled.entryToItems
-      .map((link) => {
-        const entryId = externalIdToEntryId.get(link.entryExternalId);
-        if (!entryId) return null;
-        return { entryId, itemId, role: link.role };
-      })
-      .filter((link): link is { entryId: string; itemId: string; role: string } => link !== null);
+    const entryToItemLinks = assembled.entryToItems.map((link) => {
+      const entryId = externalIdToEntryId.get(link.entryExternalId);
+      if (!entryId) {
+        throw new Error(`Missing persisted Item Entry ${link.entryExternalId}`);
+      }
+      return {
+        entryId,
+        itemId,
+        role: link.roles[0] ?? "",
+        roles: link.roles,
+        sourceLabel: link.sourceLabel,
+        materialPercentage: link.materialPercentage,
+      };
+    });
 
     if (entryToItemLinks.length > 0) {
-      await tx
-        .insert(entry_to_item)
-        .values(entryToItemLinks)
-        .onConflictDoNothing({ target: [entry_to_item.entryId, entry_to_item.itemId] });
+      await tx.insert(entry_to_item).values(entryToItemLinks);
     }
 
     const existingReleases = await tx

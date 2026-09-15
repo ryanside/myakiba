@@ -7,11 +7,11 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from "@/components/ui/empty";
-import { cn } from "@/lib/utils";
 import {
   CollectionItemCard,
   CollectionItemCardSkeleton,
 } from "@/components/item/collection-item-card";
+import { cn } from "@/lib/utils";
 import type { ItemCollectionEntry, ItemDetail, ItemRelatedOrder } from "@/components/item/types";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
@@ -87,7 +87,7 @@ export function ItemCollection({
 
         {!isPending && !isError && item && collectionItems.length > 0 ? (
           <div className="flex flex-col gap-8">
-            {collectionItems.map((collectionItem, idx) => (
+            {collectionItems.map((collectionItem, index) => (
               <CollectionItemCard
                 key={collectionItem.id}
                 collectionItem={collectionItem}
@@ -106,7 +106,7 @@ export function ItemCollection({
                 onMoveToExisting={onMoveToExistingOrder}
                 onMoveToNew={onMoveToNewOrder}
                 isOrderActionPending={isCollectionOrderPending(collectionItem.id)}
-                className={cn(idx > 0 && "border-t border-border/40 pt-8")}
+                className={cn(index > 0 && "border-t border-border/40 pt-8")}
               />
             ))}
           </div>

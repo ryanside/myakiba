@@ -14,7 +14,12 @@ import type {
   SyncTerminalState,
   QueuedCollectionItem,
 } from "@myakiba/contracts/sync/schema";
-import type { SyncSessionStatus, SyncType, Category } from "@myakiba/contracts/shared/types";
+import type {
+  SyncSessionStatus,
+  SyncType,
+  Category,
+  EntryCategory,
+} from "@myakiba/contracts/shared/types";
 
 export type ScrapeFailure = {
   readonly id: number;
@@ -75,11 +80,14 @@ export type ScrapedItem = {
   materials: {
     id: number;
     name: string;
+    percentage: number | null;
   }[];
   scale: string;
-  height: number;
-  width: number;
-  depth: number;
+  height: number | null;
+  width: number | null;
+  depth: number | null;
+  mfcTitle: string | null;
+  numbering: string | null;
   image: string;
 };
 
@@ -246,12 +254,15 @@ export type AssembledItem = {
   externalId: number;
   source: "mfc";
   title: string;
+  mfcTitle: string | null;
+  numbering: string | null;
   category: Category;
   version: string[];
   scale: string;
-  height: number;
-  width: number;
-  depth: number;
+  height: number | null;
+  width: number | null;
+  depth: number | null;
+  mfcMetadataVersion: number;
   image: string;
 };
 
@@ -268,14 +279,16 @@ export type AssembledItemRelease = {
 export type AssembledEntry = {
   externalId: number;
   source: "mfc";
-  category: string;
+  category: EntryCategory;
   name: string;
 };
 
 export type AssembledEntryToItem = {
   entryExternalId: number;
   itemExternalId: number;
-  role: string;
+  roles: string[];
+  sourceLabel: string;
+  materialPercentage: number | null;
 };
 
 export type LatestReleaseInfo = {
