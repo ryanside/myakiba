@@ -213,7 +213,7 @@ An update of a MyFigureCollection Item using current MyFigureCollection data. Th
 _Avoid_: Catalog Item Refresh, Item Resync, refresh my item
 
 **MFC Item Metadata Backfill**:
-Worker startup registers a coordinator that queues stale MyFigureCollection Items on the existing rate-limited Item Refresh queue. Successful full refreshes advance the Item's metadata version. Failed or unavailable pages stay stale and are retried by a later sweep. Once no stale Items remain, the coordinator removes its schedule; it never deletes Items or Item Entries.
+A one-time effort to bring stored MyFigureCollection Items up to the current metadata version. Items whose MyFigureCollection pages return 404 to myakiba remain stale but are excluded from automatic backfill attempts; they can still receive a manual Item Refresh.
 
 **Data Transfer Archive**:
 A myakiba export of all a user's Orders and Collection Items, available only when every Collection Item uses a MyFigureCollection Item. It stores Item references instead of a copy of the Item Database and leaves out Lists, Wishlist, preferences, and Import History.

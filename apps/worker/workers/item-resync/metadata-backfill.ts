@@ -5,10 +5,12 @@ import { MFC_ITEM_METADATA_VERSION } from "@myakiba/contracts/shared/constants";
 import { db } from "@myakiba/db/client";
 import { item } from "@myakiba/db/schema/figure";
 import { env } from "@myakiba/env/worker";
+import { redis } from "@myakiba/redis/client";
 import {
   getResyncJobId,
   ITEM_RESYNC_JOB_NAME,
   ITEM_RESYNC_QUEUE_NAME,
+  MFC_METADATA_BACKFILL_404_SKIP_SET_KEY,
 } from "@myakiba/redis/item-resync";
 import type { ItemResyncJobData } from "./process-item-resync-job";
 
@@ -57,39 +59,44 @@ export const metadataBackfillWorker = new Worker(
 
     try {
       let staleItems = await findStaleItems(null);
-
-      if (staleItems.length === 0) {
-        await metadataBackfillQueue.removeJobScheduler(COORDINATOR_NAME);
-        jobLog.set({
-          outcome: "success",
-          staleItems: 0,
-          schedulerRemoved: true,
-        });
-        return;
-      }
-
       let staleItemCount = 0;
+      let skipped404Items = 0;
       while (staleItems.length > 0) {
-        await itemResyncQueue.addBulk(
-          staleItems.map((staleItem) => ({
-            name: ITEM_RESYNC_JOB_NAME,
-            data: { itemId: staleItem.id, externalId: staleItem.externalId },
-            opts: {
-              jobId: getResyncJobId(staleItem.id),
-              // Let user-requested resyncs run first.
-              priority: 1,
-              removeOnComplete: true,
-              removeOnFail: true,
-            },
-          })),
+        const skipFlags = await redis.smismember(
+          MFC_METADATA_BACKFILL_404_SKIP_SET_KEY,
+          ...staleItems.map((staleItem) => staleItem.externalId),
         );
-        staleItemCount += staleItems.length;
+        const eligibleItems = staleItems.filter((_, index) => skipFlags[index] === 0);
+        skipped404Items += staleItems.length - eligibleItems.length;
+        if (eligibleItems.length > 0) {
+          await itemResyncQueue.addBulk(
+            eligibleItems.map((staleItem) => ({
+              name: ITEM_RESYNC_JOB_NAME,
+              data: { itemId: staleItem.id, externalId: staleItem.externalId },
+              opts: {
+                jobId: getResyncJobId(staleItem.id),
+                // Let user-requested resyncs run first.
+                priority: 1,
+                removeOnComplete: true,
+                removeOnFail: true,
+              },
+            })),
+          );
+        }
+        staleItemCount += eligibleItems.length;
         const lastStaleItem = staleItems.at(-1);
         if (!lastStaleItem) throw new Error("Stale Item page unexpectedly empty");
         staleItems = await findStaleItems(lastStaleItem.id);
       }
 
-      jobLog.set({ outcome: "success", staleItems: staleItemCount });
+      const schedulerRemoved = staleItemCount === 0;
+      if (schedulerRemoved) await metadataBackfillQueue.removeJobScheduler(COORDINATOR_NAME);
+      jobLog.set({
+        outcome: "success",
+        staleItems: staleItemCount,
+        skipped404Items,
+        schedulerRemoved,
+      });
     } catch (error) {
       jobLog.set({ outcome: "error" });
       jobLog.error(error instanceof Error ? error : new Error(String(error)));
