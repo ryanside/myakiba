@@ -76,6 +76,8 @@ const metadataBackfillWorker = new Worker(
             data: { itemId: staleItem.id, externalId: staleItem.externalId },
             opts: {
               jobId: getResyncJobId(staleItem.id),
+              // Let user-requested resyncs run first.
+              priority: 1,
               removeOnComplete: true,
               removeOnFail: true,
             },
