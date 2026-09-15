@@ -28,6 +28,10 @@ RUN bun build --compile --minify --sourcemap --packages bundle ./apps/worker/ind
 # Our application runner
 FROM gcr.io/distroless/base-debian12:nonroot AS runner
 
+# Copy busybox as wget for health checks
+# (busybox uses argv[0] to determine which applet to run)
+COPY --from=busybox:1.36-musl /bin/busybox /usr/bin/wget
+
 ENV NODE_ENV=production
 
 ARG SOURCE_COMMIT

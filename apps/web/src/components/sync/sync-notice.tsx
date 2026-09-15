@@ -4,14 +4,14 @@ import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const SYNC_DESCRIPTION =
-  "MyFigureCollection locks NSFW item details behind account authentication, so we can't scrape them yet. We'll add support in the future if we find a workaround. ";
+  "MFC now uses content levels (General, Intermediate, Explicit, and Controversial) to control item access. Intermediate, Explicit, and Controversial content level items cannot be scraped by myakiba since they are locked behind MFC user-authentication. :(";
 
 export function SyncNotice() {
   return (
     <Alert>
       <HugeiconsIcon icon={InformationCircleIcon} />
       <AlertTitle className="min-w-0">
-        <span>MyFigureCollection NSFW items aren&apos;t supported yet</span>{" "}
+        <span>MyFigureCollection content-restricted items may not import</span>{" "}
         <Tooltip>
           <TooltipTrigger className="text-sm text-muted-foreground underline">Why?</TooltipTrigger>
           <TooltipContent>

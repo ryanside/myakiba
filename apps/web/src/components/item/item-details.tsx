@@ -30,12 +30,12 @@ export function ItemDetails({
   const relatedFields = item
     ? new Map<string, ReactNode[]>()
     : new Map<string, ReactNode[]>([
-        ["Category", [<Skeleton key="category" className="h-6 w-24 rounded-full" />]],
-        ["Title", [<Skeleton key="title" className="h-6 w-40 rounded-full" />]],
-        ["Version", [<Skeleton key="version" className="h-6 w-32 rounded-full" />]],
-        ["Numbering", [<Skeleton key="numbering" className="h-6 w-20 rounded-full" />]],
-        ["Characters", [<Skeleton key="characters" className="h-6 w-28 rounded-full" />]],
-        ["Companies", [<Skeleton key="companies" className="h-6 w-36 rounded-full" />]],
+        ["Category", [<Skeleton key="category" className="h-5 w-24 rounded-sm" />]],
+        ["Title", [<Skeleton key="title" className="h-5 w-40 rounded-sm" />]],
+        ["Version", [<Skeleton key="version" className="h-5 w-32 rounded-sm" />]],
+        ["Numbering", [<Skeleton key="numbering" className="h-5 w-20 rounded-sm" />]],
+        ["Characters", [<Skeleton key="characters" className="h-5 w-28 rounded-sm" />]],
+        ["Companies", [<Skeleton key="companies" className="h-5 w-36 rounded-sm" />]],
       ]);
 
   if (item) {
@@ -128,7 +128,7 @@ export function ItemDetails({
                     {formatDateOnlyForDisplay(release.date, dateFormat)}
                   </span>
                 ) : (
-                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-5 w-24" />
                 )}
                 {release?.type ? (
                   <Badge
@@ -139,17 +139,19 @@ export function ItemDetails({
                     {release.type}
                   </Badge>
                 ) : null}
+                {release ? null : <Skeleton className="h-4.5 w-16 rounded-sm" />}
                 {release?.barcode ? (
                   <span className="animate-data-in text-xs text-muted-foreground/60 tabular-nums">
                     {release.barcode}
                   </span>
                 ) : null}
+                {release ? null : <Skeleton className="h-4 w-24" />}
                 {release?.price != null && release.price > 0 && release.priceCurrency?.trim() ? (
                   <span className="animate-data-in ml-auto font-medium tabular-nums">
                     {formatReleasePrice(release.price, release.priceCurrency, userCurrency)}
                   </span>
                 ) : null}
-                {release ? null : <Skeleton className="ml-auto h-4 w-20" />}
+                {release ? null : <Skeleton className="ml-auto h-5 w-20" />}
               </div>
             ))}
           </div>
@@ -184,7 +186,7 @@ export function ItemDetails({
                     {item ? (
                       <span className="animate-data-in">{value}</span>
                     ) : (
-                      <Skeleton className="h-4 w-16" />
+                      <Skeleton className="h-5 w-16" />
                     )}
                   </dd>
                 </div>

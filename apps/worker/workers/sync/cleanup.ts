@@ -17,7 +17,7 @@ const connection = {
 };
 
 const cleanupQueue = new Queue(QUEUE_NAME, { connection });
-const cleanupWorker = new Worker(
+export const cleanupWorker = new Worker(
   QUEUE_NAME,
   async (job) => {
     const cutoff = new Date(Date.now() - SYNC_SESSION_RETENTION_MS);

@@ -11,6 +11,7 @@ import type Redis from "ioredis";
 
 export const ITEM_RESYNC_QUEUE_NAME = "item-resync-queue";
 export const ITEM_RESYNC_JOB_NAME = "item-resync";
+export const MFC_METADATA_BACKFILL_404_SKIP_SET_KEY = "item-resync:metadata-backfill:page-404";
 
 const COOLDOWN_KEY_PREFIX = "item-resync:cooldown";
 const COOLDOWN_TTL_SECONDS = 3 * 24 * 60 * 60; // 3 days

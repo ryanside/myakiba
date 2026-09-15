@@ -56,9 +56,13 @@ type ScrapeErrorDetails =
       readonly reason: ImageScrapeFailureKind;
       readonly attemptErrors: readonly string[];
     }
-  | { readonly kind: "item_failure"; readonly attemptErrors: readonly string[] };
+  | {
+      readonly kind: "item_failure";
+      readonly attemptErrors: readonly string[];
+      readonly itemPageStatus: number | null;
+    };
 
-class ScrapeError extends Error {
+export class ScrapeError extends Error {
   readonly details: ScrapeErrorDetails;
 
   constructor(cause: unknown, details: ScrapeErrorDetails) {
@@ -366,6 +370,7 @@ export const scrapeSingleItem = async (params: ScrapeSingleItemParams): Promise<
 
   for (let attempt = 1; ; attempt++) {
     let failureMessage: string | null = "Failed to fetch item page";
+    let itemPageStatus: number | null = null;
 
     try {
       const url = `https://myfigurecollection.net/item/${id}`;
@@ -378,6 +383,7 @@ export const scrapeSingleItem = async (params: ScrapeSingleItemParams): Promise<
       }
 
       if (!response.ok) {
+        itemPageStatus = response.status;
         const responseError = createError({
           message: `HTTP ${response.status} for item ${id}`,
           status: response.status,
@@ -609,7 +615,11 @@ export const scrapeSingleItem = async (params: ScrapeSingleItemParams): Promise<
             await publishJobStatus({ redis, state, terminalState: null, error: null });
           }
         }
-        throw new ScrapeError(finalError, { kind: "item_failure", attemptErrors });
+        throw new ScrapeError(finalError, {
+          kind: "item_failure",
+          attemptErrors,
+          itemPageStatus,
+        });
       }
     }
   }

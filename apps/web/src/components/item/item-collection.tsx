@@ -7,10 +7,7 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from "@/components/ui/empty";
-import {
-  CollectionItemCard,
-  CollectionItemCardSkeleton,
-} from "@/components/item/collection-item-card";
+import { CollectionItemCard } from "@/components/item/collection-item-card";
 import { cn } from "@/lib/utils";
 import type { ItemCollectionEntry, ItemDetail, ItemRelatedOrder } from "@/components/item/types";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
@@ -58,13 +55,13 @@ export function ItemCollection({
 }): ReactNode {
   const { currency, locale, dateFormat } = useUserPreferences();
 
+  const collectionRows = isPending ? [null] : collectionItems;
+
   return (
-    <div className="lg:col-span-2 lg:pl-8 pt-8 pb-8">
+    <div className="lg:col-span-2 lg:pl-8 pt-8 pb-8" aria-busy={isPending}>
       <h2 className="text-xs font-medium text-muted-foreground">Your Collection</h2>
 
       <div className="mt-4">
-        {isPending && <CollectionItemCardSkeleton />}
-
         {isError && (
           <Empty className="py-12">
             <p className="text-lg font-medium text-destructive">
@@ -85,16 +82,16 @@ export function ItemCollection({
           </Empty>
         )}
 
-        {!isPending && !isError && item && collectionItems.length > 0 ? (
+        {!isError && (isPending || (item && collectionItems.length > 0)) ? (
           <div className="flex flex-col gap-8">
-            {collectionItems.map((collectionItem, index) => (
+            {collectionRows.map((collectionItem, index) => (
               <CollectionItemCard
-                key={collectionItem.id}
+                key={collectionItem?.id ?? "loading-collection-item"}
                 collectionItem={collectionItem}
                 item={item}
                 externalId={externalId}
                 relatedOrder={
-                  collectionItem.orderId
+                  collectionItem?.orderId
                     ? ordersList.find((order) => order.id === collectionItem.orderId)
                     : undefined
                 }
@@ -105,7 +102,9 @@ export function ItemCollection({
                 onDelete={onDeleteCollectionItems}
                 onMoveToExisting={onMoveToExistingOrder}
                 onMoveToNew={onMoveToNewOrder}
-                isOrderActionPending={isCollectionOrderPending(collectionItem.id)}
+                isOrderActionPending={
+                  collectionItem ? isCollectionOrderPending(collectionItem.id) : false
+                }
                 className={cn(index > 0 && "border-t border-border/40 pt-8")}
               />
             ))}

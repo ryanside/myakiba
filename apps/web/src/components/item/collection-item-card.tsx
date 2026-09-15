@@ -49,52 +49,8 @@ function DetailRow({
       className={cn("flex items-center justify-between text-sm", animateRow && "animate-data-in")}
     >
       <span className="text-muted-foreground">{label}</span>
-      <span className={cn("tabular-nums", animateValue && !animateRow && "animate-data-in")}>
+      <div className={cn("tabular-nums", animateValue && !animateRow && "animate-data-in")}>
         {children}
-      </span>
-    </div>
-  );
-}
-
-export function CollectionItemCardSkeleton(): ReactNode {
-  return (
-    <div className="flex flex-col gap-5" aria-busy="true">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-5 w-16 rounded-full" />
-          <Skeleton className="h-3 w-20" />
-        </div>
-        <div className="flex items-center -mr-2">
-          <Button variant="ghost" size="icon-sm" className="text-muted-foreground" disabled>
-            <HugeiconsIcon icon={Edit03Icon} className="size-3.5" />
-            <span className="sr-only">Edit collection item</span>
-          </Button>
-          <Button variant="ghost" size="icon-sm" className="text-muted-foreground" disabled>
-            <HugeiconsIcon icon={FolderAddIcon} className="size-3.5" />
-            <span className="sr-only">Add collection item to List</span>
-          </Button>
-          <Button variant="ghost" size="icon-sm" className="text-muted-foreground" disabled>
-            <HugeiconsIcon icon={MoveIcon} className="size-3.5" />
-            <span className="sr-only">Assign order</span>
-          </Button>
-          <Button variant="ghost" size="icon-sm" className="text-muted-foreground" disabled>
-            <HugeiconsIcon icon={Delete01Icon} className="size-3.5" />
-            <span className="sr-only">Delete collection item</span>
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-2.5">
-        {[
-          { label: "Count", width: "w-6" },
-          { label: "Price", width: "w-16" },
-          { label: "Condition", width: "w-14" },
-          { label: "Shipping", width: "w-20" },
-        ].map(({ label, width }) => (
-          <DetailRow key={label} label={label}>
-            <Skeleton className={`h-4 ${width}`} />
-          </DetailRow>
-        ))}
       </div>
     </div>
   );
@@ -115,8 +71,8 @@ export function CollectionItemCard({
   isOrderActionPending,
   className,
 }: {
-  readonly collectionItem: ItemCollectionEntry;
-  readonly item: ItemDetail;
+  readonly collectionItem: ItemCollectionEntry | null;
+  readonly item: ItemDetail | undefined;
   readonly externalId: number;
   readonly relatedOrder: ItemRelatedOrder | undefined;
   readonly currency: Currency;
@@ -137,139 +93,193 @@ export function CollectionItemCard({
   readonly isOrderActionPending: boolean;
   readonly className?: string;
 }): ReactNode {
-  const release = item.releases.find((r) => r.id === collectionItem.releaseId);
+  const release = item?.releases.find((r) => r.id === collectionItem?.releaseId);
   const timelineSteps = [
-    { step: 1, title: "Ordered", date: collectionItem.orderDate },
-    { step: 2, title: "Paid", date: collectionItem.paymentDate },
-    { step: 3, title: "Shipped", date: collectionItem.shippingDate },
-    { step: 4, title: "Collected", date: collectionItem.collectionDate },
+    { step: 1, title: "Ordered", date: collectionItem?.orderDate },
+    { step: 2, title: "Paid", date: collectionItem?.paymentDate },
+    { step: 3, title: "Shipped", date: collectionItem?.shippingDate },
+    { step: 4, title: "Collected", date: collectionItem?.collectionDate },
   ] as const;
   const activeStep = timelineSteps.findLast(({ date }) => date)?.step ?? 0;
-  const hasScore = Boolean(collectionItem.score) && Number.parseFloat(collectionItem.score) !== 0;
-  const hasExtras = hasScore || collectionItem.tags.length > 0 || Boolean(collectionItem.notes);
+  const hasScore =
+    collectionItem &&
+    Boolean(collectionItem.score) &&
+    Number.parseFloat(collectionItem.score) !== 0;
+  const hasExtras =
+    !collectionItem || hasScore || collectionItem.tags.length > 0 || Boolean(collectionItem.notes);
+
+  const editTrigger = (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      className="text-muted-foreground"
+      disabled={!collectionItem || !item}
+    >
+      <HugeiconsIcon icon={Edit03Icon} className="size-3.5" />
+      <span className="sr-only">Edit collection item</span>
+    </Button>
+  );
+
+  const listTrigger = (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      className="text-muted-foreground"
+      disabled={!item || collectionItem?.status !== "Owned"}
+      title={
+        collectionItem?.status === "Owned"
+          ? "Add collection item to List"
+          : "Only owned collection items can be added to Lists"
+      }
+    >
+      <HugeiconsIcon icon={FolderAddIcon} className="size-3.5" />
+      <span className="sr-only">Add collection item to List</span>
+    </Button>
+  );
+
+  const moveTrigger = (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      className="text-muted-foreground"
+      disabled={!collectionItem || !item || isOrderActionPending}
+    >
+      <HugeiconsIcon
+        icon={isOrderActionPending ? Loading03Icon : MoveIcon}
+        className={cn("size-3.5", isOrderActionPending && "animate-spin")}
+      />
+      <span className="sr-only">{collectionItem?.orderId ? "Move item" : "Assign order"}</span>
+    </Button>
+  );
+
+  const deleteTrigger = (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      className="text-muted-foreground"
+      disabled={!collectionItem || !item}
+    >
+      <HugeiconsIcon icon={Delete01Icon} className="size-3.5" />
+      <span className="sr-only">Delete collection item</span>
+    </Button>
+  );
 
   return (
-    <div className={cn("flex flex-col gap-5", className)}>
+    <div className={cn("flex flex-col gap-5", className)} aria-busy={!collectionItem}>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <ThemedBadge
-            variant={getStatusVariant(collectionItem.status)}
-            className="animate-data-in"
-          >
-            {collectionItem.status}
-          </ThemedBadge>
-          {release && (
-            <span className="animate-data-in text-xs text-muted-foreground/60 tabular-nums">
-              {formatDateOnlyForDisplay(release.date, dateFormat)}
-            </span>
+          {collectionItem ? (
+            <ThemedBadge
+              variant={getStatusVariant(collectionItem.status)}
+              className="animate-data-in"
+            >
+              {collectionItem.status}
+            </ThemedBadge>
+          ) : (
+            <Skeleton className="h-5 w-16 rounded-sm" />
           )}
+          {!collectionItem || release ? (
+            <div className="text-xs text-muted-foreground/60 tabular-nums">
+              {release ? (
+                <span className="animate-data-in">
+                  {formatDateOnlyForDisplay(release.date, dateFormat)}
+                </span>
+              ) : (
+                <Skeleton className="h-4 w-20" />
+              )}
+            </div>
+          ) : null}
         </div>
         <div className="flex items-center -mr-2">
-          <CollectionItemForm
-            renderTrigger={
-              <Button variant="ghost" size="icon-sm" className="text-muted-foreground">
-                <HugeiconsIcon icon={Edit03Icon} className="size-3.5" />
-              </Button>
-            }
-            itemData={{
-              ...collectionItem,
-              id: collectionItem.id,
-              itemExternalId: externalId,
-              itemTitle: item.title,
-              itemImage: item.image,
-              releaseDate: release?.date ?? null,
-              releasePrice: release?.price ?? null,
-              releaseCurrency: release?.priceCurrency ?? null,
-              releaseBarcode: release?.barcode ?? null,
-              releaseType: release?.type ?? null,
-            }}
-            callbackFn={onEdit}
-            currency={currency}
-            dateFormat={dateFormat}
-          />
-          <AddToListsDialog
-            targets={[{ type: "collectionItem", id: collectionItem.id }]}
-            targetTitle={item.title}
-            renderTrigger={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="text-muted-foreground"
-                disabled={collectionItem.status !== "Owned"}
-                title={
-                  collectionItem.status === "Owned"
-                    ? "Add collection item to List"
-                    : "Only owned collection items can be added to Lists"
-                }
-              >
-                <HugeiconsIcon icon={FolderAddIcon} className="size-3.5" />
-                <span className="sr-only">Add collection item to List</span>
-              </Button>
-            }
-          />
-          <UnifiedItemMoveForm
-            renderTrigger={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="text-muted-foreground"
-                disabled={isOrderActionPending}
-              >
-                <HugeiconsIcon
-                  icon={isOrderActionPending ? Loading03Icon : MoveIcon}
-                  className={cn("size-3.5", isOrderActionPending && "animate-spin")}
-                />
-                <span className="sr-only">
-                  {collectionItem.orderId ? "Move item" : "Assign order"}
-                </span>
-              </Button>
-            }
-            selectedItems={{
-              collectionIds: new Set([collectionItem.id]),
-              orderIds: collectionItem.orderId
-                ? new Set([collectionItem.orderId])
-                : new Set<string>(),
-            }}
-            onMoveToExisting={onMoveToExisting}
-            onMoveToNew={onMoveToNew}
-            currency={currency}
-            intent={collectionItem.orderId ? "move" : "add"}
-          />
-          <ConfirmDialog
-            renderTrigger={
-              <Button variant="ghost" size="icon-sm" className="text-muted-foreground">
-                <HugeiconsIcon icon={Delete01Icon} className="size-3.5" />
-                <span className="sr-only">Delete collection item</span>
-              </Button>
-            }
-            title="Delete item?"
-            description="This will permanently remove this item from your collection."
-            onConfirm={() => onDelete(new Set([collectionItem.id]))}
-          />
+          {collectionItem && item ? (
+            <CollectionItemForm
+              renderTrigger={editTrigger}
+              itemData={{
+                ...collectionItem,
+                id: collectionItem.id,
+                itemExternalId: externalId,
+                itemTitle: item.title,
+                itemImage: item.image,
+                releaseDate: release?.date ?? null,
+                releasePrice: release?.price ?? null,
+                releaseCurrency: release?.priceCurrency ?? null,
+                releaseBarcode: release?.barcode ?? null,
+                releaseType: release?.type ?? null,
+              }}
+              callbackFn={onEdit}
+              currency={currency}
+              dateFormat={dateFormat}
+            />
+          ) : (
+            editTrigger
+          )}
+
+          {collectionItem && item ? (
+            <AddToListsDialog
+              targets={[{ type: "collectionItem", id: collectionItem.id }]}
+              targetTitle={item.title}
+              renderTrigger={listTrigger}
+            />
+          ) : (
+            listTrigger
+          )}
+
+          {collectionItem && item ? (
+            <UnifiedItemMoveForm
+              renderTrigger={moveTrigger}
+              selectedItems={{
+                collectionIds: new Set([collectionItem.id]),
+                orderIds: collectionItem.orderId
+                  ? new Set([collectionItem.orderId])
+                  : new Set<string>(),
+              }}
+              onMoveToExisting={onMoveToExisting}
+              onMoveToNew={onMoveToNew}
+              currency={currency}
+              intent={collectionItem.orderId ? "move" : "add"}
+            />
+          ) : (
+            moveTrigger
+          )}
+
+          {collectionItem && item ? (
+            <ConfirmDialog
+              renderTrigger={deleteTrigger}
+              title="Delete item?"
+              description="This will permanently remove this item from your collection."
+              onConfirm={() => onDelete(new Set([collectionItem.id]))}
+            />
+          ) : (
+            deleteTrigger
+          )}
         </div>
       </div>
 
       <div className="flex flex-col gap-2.5">
         <DetailRow label="Count" animateValue>
-          {collectionItem.count}
+          {collectionItem ? collectionItem.count : <Skeleton className="h-5 w-6" />}
         </DetailRow>
         <DetailRow label="Price" animateValue>
-          {formatCurrencyFromMinorUnits(collectionItem.price, currency, locale)}
+          {collectionItem ? (
+            formatCurrencyFromMinorUnits(collectionItem.price, currency, locale)
+          ) : (
+            <Skeleton className="h-5 w-16" />
+          )}
         </DetailRow>
         <DetailRow label="Condition" animateValue>
-          {collectionItem.condition}
+          {collectionItem ? collectionItem.condition : <Skeleton className="h-5 w-14" />}
         </DetailRow>
-        {collectionItem.shop && (
+        {(!collectionItem || collectionItem.shop) && (
           <DetailRow label="Shop" animateRow>
-            {collectionItem.shop}
+            {collectionItem ? collectionItem.shop : <Skeleton className="h-5 w-24" />}
           </DetailRow>
         )}
         <DetailRow label="Shipping" animateValue>
-          {collectionItem.shippingMethod}
+          {collectionItem ? collectionItem.shippingMethod : <Skeleton className="h-5 w-20" />}
         </DetailRow>
       </div>
 
-      {activeStep > 0 && (
+      {(!collectionItem || activeStep > 0) && (
         <Timeline orientation="horizontal" value={activeStep} className="animate-data-in">
           {timelineSteps.map(({ step, title, date }) => (
             <TimelineItem key={step} step={step}>
@@ -277,7 +287,11 @@ export function CollectionItemCard({
               <TimelineSeparator />
               <TimelineHeader>
                 <TimelineTitle>{title}</TimelineTitle>
-                <TimelineDate>{formatDateOnlyForDisplay(date, dateFormat)}</TimelineDate>
+                {collectionItem ? (
+                  <TimelineDate>{formatDateOnlyForDisplay(date, dateFormat)}</TimelineDate>
+                ) : (
+                  <Skeleton className="mb-1 h-4 w-16" />
+                )}
               </TimelineHeader>
             </TimelineItem>
           ))}
@@ -286,29 +300,33 @@ export function CollectionItemCard({
 
       {hasExtras && (
         <div className="flex flex-col gap-3">
-          {hasScore && (
+          {(!collectionItem || hasScore) && (
             <DetailRow label="Score" animateRow>
-              {collectionItem.score}
+              {collectionItem ? collectionItem.score : <Skeleton className="h-5 w-8" />}
             </DetailRow>
           )}
-          {collectionItem.tags.length > 0 && (
+          {(!collectionItem || collectionItem.tags.length > 0) && (
             <div className="animate-data-in flex items-start justify-between gap-4 text-sm">
               <span className="text-muted-foreground shrink-0">Tags</span>
               <div className="flex flex-wrap justify-end gap-1.5">
-                {collectionItem.tags.map((tag) => (
-                  <Badge key={tag} variant="secondary" size="sm">
-                    {tag}
-                  </Badge>
-                ))}
+                {collectionItem ? (
+                  collectionItem.tags.map((tag) => (
+                    <Badge key={tag} variant="secondary" size="sm">
+                      {tag}
+                    </Badge>
+                  ))
+                ) : (
+                  <Skeleton className="h-4.5 w-20 rounded-sm" />
+                )}
               </div>
             </div>
           )}
-          {collectionItem.notes && (
+          {(!collectionItem || collectionItem.notes) && (
             <div className="animate-data-in flex flex-col gap-1.5">
               <span className="text-sm text-muted-foreground">Notes</span>
-              <p className="text-sm leading-relaxed text-foreground/75 whitespace-pre-wrap">
-                {collectionItem.notes}
-              </p>
+              <div className="text-sm leading-relaxed text-foreground/75 whitespace-pre-wrap">
+                {collectionItem ? collectionItem.notes : <Skeleton className="h-10 w-full" />}
+              </div>
             </div>
           )}
         </div>

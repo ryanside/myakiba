@@ -5,7 +5,6 @@ import { env } from "@myakiba/env/worker";
 
 type ShutdownSignal = "SIGINT" | "SIGTERM";
 
-let closeWorker: (() => Promise<void>) | null = null;
 let isShuttingDown = false;
 
 async function shutdown(signal: ShutdownSignal, initialExitCode: number): Promise<void> {
@@ -21,7 +20,9 @@ async function shutdown(signal: ShutdownSignal, initialExitCode: number): Promis
       signal,
     });
 
-    const { error } = await tryCatch(closeWorker ? closeWorker() : Promise.resolve());
+    healthServer.stop(true);
+
+    const { error } = await tryCatch(closeWorker());
     if (error) {
       if (error instanceof Error) {
         const shutdownLog = createLogger({
@@ -72,7 +73,25 @@ if (error) {
   if (drain) await drain.flush();
   throw startupError;
 }
-closeWorker = workerModule.closeWorker;
+const closeWorker = workerModule.closeWorker;
+const healthServer = Bun.serve({
+  hostname: "127.0.0.1",
+  port: 3002,
+  fetch(request) {
+    if (new URL(request.url).pathname !== "/health") return new Response(null, { status: 404 });
+
+    const healthy =
+      !isShuttingDown &&
+      workerModule.redis.status === "ready" &&
+      workerModule.workerConsumers.every(
+        (consumer) => consumer.isRunning() && !consumer.isPaused(),
+      );
+
+    return new Response(null, {
+      status: healthy ? 200 : 503,
+    });
+  },
+});
 
 process.once("SIGINT", () => {
   void shutdown("SIGINT", 0);
