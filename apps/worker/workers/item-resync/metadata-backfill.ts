@@ -46,7 +46,7 @@ function findStaleItems(afterItemId: string | null) {
     .limit(STALE_ITEM_QUERY_LIMIT);
 }
 
-const metadataBackfillWorker = new Worker(
+export const metadataBackfillWorker = new Worker(
   QUEUE_NAME,
   async (job) => {
     const jobLog = createLogger({
