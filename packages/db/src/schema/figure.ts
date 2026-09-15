@@ -121,7 +121,7 @@ export const entry_to_item = pgTable(
       .notNull()
       .references(() => item.id, { onDelete: "cascade" }),
     role: text("role"), // Legacy first role retained for compatibility.
-    // Existing links start empty; readers fall back to role for legacy links.
+    // Rows created before `roles` was added use `role` when this array is empty.
     roles: text("roles")
       .array()
       .notNull()
