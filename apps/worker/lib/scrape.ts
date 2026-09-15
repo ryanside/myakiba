@@ -405,12 +405,14 @@ export const scrapeSingleItem = async (params: ScrapeSingleItemParams): Promise<
 
       let itemCategory: Category | null = null;
       let rawItemCategory = "";
+      let mfcTitle: string | null = null;
+      let numbering: string | null = null;
       const classification: { id: number; name: string; role: string }[] = [];
       const version: string[] = [];
       let scale = "";
-      let height = 0;
-      let width = 0;
-      let depth = 0;
+      let height: number | null = null;
+      let width: number | null = null;
+      let depth: number | null = null;
       const origin: { id: number; name: string }[] = [];
       const character: { id: number; name: string }[] = [];
       const company: { id: number; name: string; role: string }[] = [];
@@ -423,9 +425,9 @@ export const scrapeSingleItem = async (params: ScrapeSingleItemParams): Promise<
         barcode: string;
       }[] = [];
       const event: { id: number; name: string; role: string }[] = [];
-      const materials: { id: number; name: string }[] = [];
+      const materials: ScrapedItem["materials"] = [];
 
-      const dataFields = $(".data-field");
+      const dataFields = $(".item-object").first().find(".data-field");
 
       for (const dataField of dataFields) {
         const $element = $(dataField);
@@ -433,6 +435,7 @@ export const scrapeSingleItem = async (params: ScrapeSingleItemParams): Promise<
         const label = $label.text().trim();
 
         const $dataValue = $element.find(".data-value");
+        const rawValue = $dataValue.text().replaceAll(/\s+/g, " ").trim();
 
         switch (label) {
           case "Category": {
@@ -441,6 +444,12 @@ export const scrapeSingleItem = async (params: ScrapeSingleItemParams): Promise<
             itemCategory = parsedItemCategory.success ? parsedItemCategory.data : null;
             break;
           }
+          case "Title":
+            mfcTitle = rawValue || null;
+            break;
+          case "Numbering":
+            numbering = rawValue || null;
+            break;
           case "Classification":
           case "Classifications":
             classification.push(...extractEntitiesWithRoles($element, $));
@@ -473,8 +482,7 @@ export const scrapeSingleItem = async (params: ScrapeSingleItemParams): Promise<
             event.push(...extractEntitiesWithRoles($element, $));
             break;
           case "Dimensions": {
-            const dimensionText = $dataValue.text().trim();
-            const dimensions = extractDimensions(dimensionText, $element);
+            const dimensions = extractDimensions(rawValue, $element);
             scale = dimensions.scale;
             height = dimensions.height;
             width = dimensions.width;
@@ -514,6 +522,8 @@ export const scrapeSingleItem = async (params: ScrapeSingleItemParams): Promise<
       const scrapedItem: ScrapedItem = {
         id,
         title,
+        mfcTitle,
+        numbering,
         category: itemCategory,
         classification,
         origin,

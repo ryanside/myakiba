@@ -78,6 +78,8 @@ export const ITEM_CATEGORY_GROUPS = {
   Media: ["Books", "Music", "Video", "Games", "Software"],
 } as const satisfies Readonly<Record<string, readonly (typeof CATEGORIES)[number][]>>;
 
+export const MFC_ITEM_METADATA_VERSION = 1;
+
 export const CURRENCIES = [
   "USD",
   "JPY",

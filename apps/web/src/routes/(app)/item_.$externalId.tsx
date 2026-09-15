@@ -10,7 +10,6 @@ import { ItemCollection } from "@/components/item/item-collection";
 import { ItemDetails } from "@/components/item/item-details";
 import { ItemHero } from "@/components/item/item-hero";
 import { ItemNotFound } from "@/components/item/item-not-found";
-import { normalizeScale } from "@myakiba/contracts/shared/scale";
 import { useCollectionMutations, useCollectionOrderMutations } from "@/hooks/use-collection";
 import {
   getItem,
@@ -132,7 +131,6 @@ function RouteComponent(): ReactNode {
   const item = data?.item;
   const collectionItems = itemRelatedCollection?.collection ?? [];
   const ordersList = itemRelatedOrders?.orders ?? [];
-  const scale = normalizeScale(item?.scale);
 
   return (
     <div className="flex flex-col gap-6 mx-auto max-w-352" aria-busy={isPending} aria-live="polite">
@@ -143,7 +141,6 @@ function RouteComponent(): ReactNode {
         item={item}
         isLoading={isPending}
         externalId={externalId}
-        scale={scale}
         resyncStatus={resyncStatusData?.status ?? "idle"}
         cooldownExpiresAt={resyncStatusData?.cooldownExpiresAt ?? null}
         isResyncPending={requestResyncMutation.isPending}
@@ -152,7 +149,7 @@ function RouteComponent(): ReactNode {
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-5">
-        <ItemDetails item={item} scale={scale} isLoading={isPending} />
+        <ItemDetails item={item} isLoading={isPending} />
         <ItemCollection
           item={item}
           externalId={externalId}

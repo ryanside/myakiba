@@ -1,9 +1,35 @@
-import type { AssembledScrapedData, LatestReleaseInfo } from "./types";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import type { AssembledEntry, AssembledScrapedData, LatestReleaseInfo } from "./types";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { db } from "@myakiba/db/client";
 import { entry, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
 
 type ItemDataTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+export async function upsertScrapedEntries(
+  tx: ItemDataTransaction,
+  entriesToUpsert: readonly AssembledEntry[],
+): Promise<void> {
+  if (entriesToUpsert.length === 0) return;
+
+  await tx
+    .insert(entry)
+    .values(
+      entriesToUpsert.map(({ externalId, source, category, name }) => ({
+        externalId,
+        source,
+        category,
+        name,
+      })),
+    )
+    .onConflictDoUpdate({
+      target: [entry.source, entry.externalId],
+      set: {
+        name: sql`excluded.name`,
+        category: sql`excluded.category`,
+        updatedAt: new Date(),
+      },
+    });
+}
 
 export async function persistScrapedItemData(
   tx: ItemDataTransaction,
@@ -47,12 +73,7 @@ export async function persistScrapedItemData(
   );
   const newEntryExternalIds = new Set(newEntryToItems.map((link) => link.entryExternalId));
   const newEntries = entries.filter((dbEntry) => newEntryExternalIds.has(dbEntry.externalId));
-  if (newEntries.length > 0) {
-    await tx
-      .insert(entry)
-      .values(newEntries)
-      .onConflictDoNothing({ target: [entry.source, entry.externalId] });
-  }
+  await upsertScrapedEntries(tx, newEntries);
 
   const entryExternalIds = newEntries.map((dbEntry) => dbEntry.externalId);
   const dbEntries =
@@ -102,17 +123,15 @@ export async function persistScrapedItemData(
     return {
       entryId,
       itemId,
-      role: link.role,
+      role: link.roles[0] ?? "",
+      roles: link.roles,
+      sourceLabel: link.sourceLabel,
+      materialPercentage: link.materialPercentage,
     };
   });
 
   if (entryToItemsToInsert.length > 0) {
-    await tx
-      .insert(entry_to_item)
-      .values(entryToItemsToInsert)
-      .onConflictDoNothing({
-        target: [entry_to_item.entryId, entry_to_item.itemId],
-      });
+    await tx.insert(entry_to_item).values(entryToItemsToInsert);
   }
 
   const latestReleaseIdByInternalId = new Map<string, LatestReleaseInfo>();

@@ -197,6 +197,7 @@ class ItemService {
               entryId: entryLink.entryId,
               itemId: createdItem.id,
               role: entryLink.role,
+              roles: entryLink.role ? [entryLink.role] : [],
             })),
           )
           .onConflictDoNothing({
@@ -231,6 +232,9 @@ class ItemService {
         category: entryLink.category,
         name: entryLink.name,
         role: entryLink.role,
+        roles: entryLink.role ? [entryLink.role] : [],
+        sourceLabel: null,
+        materialPercentage: null,
       }));
 
       return {
@@ -270,6 +274,8 @@ class ItemService {
         externalId: item.externalId,
         source: item.source,
         title: item.title,
+        mfcTitle: item.mfcTitle,
+        numbering: item.numbering,
         category: item.category,
         version: item.version,
         scale: item.scale,
@@ -309,9 +315,16 @@ class ItemService {
                   'id', e.id,
                   'category', e.category,
                   'name', e.name,
-                  'role', eti.role
+                  'role', eti.role,
+                  'roles', CASE
+                    WHEN CARDINALITY(eti.roles) > 0 THEN eti.roles
+                    WHEN NULLIF(eti.role, '') IS NOT NULL THEN ARRAY[eti.role]
+                    ELSE ARRAY[]::text[]
+                  END,
+                  'sourceLabel', eti.source_label,
+                  'materialPercentage', eti.material_percentage
                 )
-                ORDER BY e.category, LOWER(e.name), e.name, e.id
+                ORDER BY e.category, LOWER(COALESCE(eti.source_label, e.name)), e.name, e.id
               )
               FROM ${entry_to_item} eti
               LEFT JOIN ${entry} e ON eti.entry_id = e.id

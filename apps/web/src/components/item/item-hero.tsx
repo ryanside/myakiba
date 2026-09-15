@@ -1,12 +1,9 @@
 import type { ReactNode } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { FolderAddIcon } from "@hugeicons/core-free-icons";
-import { Badge } from "@/components/reui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getCategoryColor } from "@/lib/category-colors";
 import { formatRelativeTimeToNow } from "@/lib/date-display";
-import { NO_SCALE } from "@myakiba/contracts/shared/scale";
 import { ItemResyncButton } from "@/components/item/item-resync-button";
 import { ItemImageInspector } from "@/components/item/item-image-inspector";
 import type { ItemDetail, ResyncStatus } from "@/components/item/types";
@@ -17,7 +14,6 @@ export function ItemHero({
   item,
   isLoading,
   externalId,
-  scale,
   resyncStatus,
   cooldownExpiresAt,
   isResyncPending,
@@ -27,7 +23,6 @@ export function ItemHero({
   readonly item: ItemDetail | undefined;
   readonly isLoading: boolean;
   readonly externalId: number;
-  readonly scale: string;
   readonly resyncStatus: ResyncStatus;
   readonly cooldownExpiresAt: string | null;
   readonly isResyncPending: boolean;
@@ -71,39 +66,6 @@ export function ItemHero({
               </span>
             ) : null}
           </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {item ? (
-            <>
-              <Badge
-                variant="outline"
-                className="animate-data-in"
-                style={{
-                  borderColor: getCategoryColor(item.category),
-                  color: getCategoryColor(item.category),
-                }}
-              >
-                {item.category}
-              </Badge>
-              {scale === NO_SCALE ? null : (
-                <Badge variant="outline" className="animate-data-in">
-                  {scale}
-                </Badge>
-              )}
-              {item.version && item.version.length > 0 ? (
-                <Badge variant="outline" className="animate-data-in">
-                  {item.version}
-                </Badge>
-              ) : null}
-            </>
-          ) : (
-            <>
-              <Skeleton className="h-5 w-20 rounded-sm" />
-              <Skeleton className="h-5 w-12 rounded-sm" />
-              <Skeleton className="h-5 w-24 rounded-sm" />
-            </>
-          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">

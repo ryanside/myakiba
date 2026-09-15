@@ -1,21 +1,33 @@
 import type * as cheerio from "cheerio";
-import type { Element } from "domhandler";
+import type { AnyNode, Element } from "domhandler";
 import { CURRENCIES } from "@myakiba/contracts/shared/constants";
 import { parseMoneyToMinorUnits } from "@myakiba/utils/currency";
 
 const TYPE_END_CURRENCY_PATTERN = CURRENCIES.join("|");
 
 export const REGEX_PATTERNS = {
-  height: /H=(\d+)mm/,
-  width: /W=(\d+)mm/,
-  depth: /D=(\d+)mm/,
+  height: /H=([\d,]+)mm/,
+  width: /W=([\d,]+)mm/,
+  depth: /[DL]=([\d,]+)mm/,
   price: /(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s+(?:<small>)?([A-Z]{3})(?:<\/small>)?/,
   priceCurrency: /(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s+(?:<small>)?([A-Z]{3})(?:<\/small>)?/,
   barcode: /([A-Z0-9-]+)$/,
   typeEnd: new RegExp(`\\d{2,}|•|${TYPE_END_CURRENCY_PATTERN}`),
   trailingSpace: /\s+$/,
   entryId: /\/entry\/(\d+)/,
+  materialPercentage: /(\d+(?:\.\d+)?)\s*%/,
 } as const;
+
+function extractItemEntry($entry: cheerio.Cheerio<AnyNode>): { id: number; name: string } | null {
+  const name = $entry.find("span[switch]").text().trim();
+  const href = $entry.attr("href");
+  if (!name || !href) return null;
+
+  const entryMatch = href.match(REGEX_PATTERNS.entryId);
+  if (!entryMatch) return null;
+
+  return { id: Number.parseInt(entryMatch[1], 10), name };
+}
 
 export const extractArrayData = (
   $element: cheerio.Cheerio<Element>,
@@ -38,15 +50,8 @@ export const extractArrayDataWithIds = (
   const items: { id: number; name: string }[] = [];
   const links = $element.find(".item-entry");
   for (const link of links) {
-    const $link = $(link);
-    const name = $link.find("span[switch]").text().trim();
-    const href = $link.attr("href");
-
-    if (name && href) {
-      const entryMatch = href.match(REGEX_PATTERNS.entryId);
-      const id = entryMatch ? Number.parseInt(entryMatch[1], 10) : 0;
-      items.push({ id, name });
-    }
+    const itemEntry = extractItemEntry($(link));
+    if (itemEntry) items.push(itemEntry);
   }
   return items;
 };
@@ -68,14 +73,8 @@ export const extractEntitiesWithRoles = (
       const $node = $(node);
 
       if ($node.hasClass("item-entry")) {
-        const name = $node.find("span[switch]").text().trim();
-        const href = $node.attr("href");
-
-        if (name && href) {
-          const entryMatch = href.match(REGEX_PATTERNS.entryId);
-          const id = entryMatch ? Number.parseInt(entryMatch[1], 10) : 0;
-          tempEntities.push({ id, name, role: "" });
-        }
+        const itemEntry = extractItemEntry($node);
+        if (itemEntry) tempEntities.push({ ...itemEntry, role: "" });
       } else if ($node.is("small.light") && $node.find("em").length > 0) {
         currentRole = $node.find("em").text().trim();
 
@@ -100,9 +99,9 @@ export const extractEntitiesWithRoles = (
 
 export const extractDimensions = (dimensionText: string, $element: cheerio.Cheerio<Element>) => {
   let scale = "";
-  let height = 0;
-  let width = 0;
-  let depth = 0;
+  let height: number | null = null;
+  let width: number | null = null;
+  let depth: number | null = null;
 
   const scaleElement = $element.find("a.item-scale");
   if (scaleElement.length > 0) {
@@ -110,13 +109,13 @@ export const extractDimensions = (dimensionText: string, $element: cheerio.Cheer
   }
 
   const heightMatch = dimensionText.match(REGEX_PATTERNS.height);
-  if (heightMatch) height = Number.parseInt(heightMatch[1], 10);
+  if (heightMatch) height = Number.parseInt(heightMatch[1].replaceAll(",", ""), 10);
 
   const widthMatch = dimensionText.match(REGEX_PATTERNS.width);
-  if (widthMatch) width = Number.parseInt(widthMatch[1], 10);
+  if (widthMatch) width = Number.parseInt(widthMatch[1].replaceAll(",", ""), 10);
 
   const depthMatch = dimensionText.match(REGEX_PATTERNS.depth);
-  if (depthMatch) depth = Number.parseInt(depthMatch[1], 10);
+  if (depthMatch) depth = Number.parseInt(depthMatch[1].replaceAll(",", ""), 10);
 
   return { scale, height, width, depth };
 };
@@ -180,18 +179,20 @@ export const extractReleaseData = ($element: cheerio.Cheerio<Element>, $: cheeri
 export const extractMaterialsData = (
   $element: cheerio.Cheerio<Element>,
   $: cheerio.CheerioAPI,
-): { id: number; name: string }[] => {
-  const materials: { id: number; name: string }[] = [];
-  const entries = $element.find(".item-entry");
-  for (const entryElement of entries) {
-    const $entry = $(entryElement);
-    const name = $entry.find("span[switch]").text().trim();
-    const href = $entry.attr("href");
+): { id: number; name: string; percentage: number | null }[] => {
+  const materials: { id: number; name: string; percentage: number | null }[] = [];
 
-    if (name && href) {
-      const entryMatch = href.match(REGEX_PATTERNS.entryId);
-      const id = entryMatch ? Number.parseInt(entryMatch[1], 10) : 0;
-      materials.push({ id, name });
+  for (const groupElement of $element.find(".item-entries")) {
+    const $group = $(groupElement);
+    const percentageMatch = $group
+      .find("small.light")
+      .text()
+      .match(REGEX_PATTERNS.materialPercentage);
+    const percentage = percentageMatch ? Number.parseFloat(percentageMatch[1]) : null;
+
+    for (const entryElement of $group.find(".item-entry")) {
+      const itemEntry = extractItemEntry($(entryElement));
+      if (itemEntry) materials.push({ ...itemEntry, percentage });
     }
   }
   return materials;

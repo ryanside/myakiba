@@ -1,6 +1,8 @@
 import { log } from "evlog";
 import { normalizeScrapedDate } from "@myakiba/utils/date-only";
+import { MFC_ITEM_METADATA_VERSION } from "@myakiba/contracts/shared/constants";
 import { normalizeScale } from "@myakiba/contracts/shared/scale";
+import type { EntryCategory } from "@myakiba/contracts/shared/types";
 import { v5 as uuidv5 } from "uuid";
 import type {
   AssembledEntry,
@@ -13,6 +15,7 @@ import type {
 } from "./types";
 
 const RELEASE_UUID_NAMESPACE = "2c8ed313-3f54-4401-a280-2410ce639ef3";
+const NENDOROID_ENTRY_EXTERNAL_ID = 23_355;
 
 export function assembleScrapedData(
   successfulResults: readonly ScrapedItem[],
@@ -21,116 +24,143 @@ export function assembleScrapedData(
     externalId: scrapedItem.id,
     source: "mfc" as const,
     title: scrapedItem.title,
+    mfcTitle: scrapedItem.mfcTitle,
+    numbering: scrapedItem.numbering,
     category: scrapedItem.category,
     version: scrapedItem.version,
     scale: normalizeScale(scrapedItem.scale),
     height: scrapedItem.height,
     width: scrapedItem.width,
     depth: scrapedItem.depth,
+    mfcMetadataVersion: MFC_ITEM_METADATA_VERSION,
     image: scrapedItem.image,
   }));
 
   const itemReleases: AssembledItemRelease[] = [];
-  const entries: AssembledEntry[] = [];
-  const entryToItems: AssembledEntryToItem[] = [];
+  const entriesByExternalId = new Map<number, AssembledEntry>();
+  const entryToItemsByKey = new Map<string, AssembledEntryToItem>();
   const latestReleaseIdByExternalId = new Map<number, LatestReleaseInfo>();
+
+  const addEntryRelationship = ({
+    entryExternalId,
+    itemExternalId,
+    category,
+    sourceLabel,
+    entryName = sourceLabel,
+    role = "",
+    materialPercentage = null,
+  }: {
+    entryExternalId: number;
+    itemExternalId: number;
+    category: EntryCategory;
+    sourceLabel: string;
+    entryName?: string;
+    role?: string;
+    materialPercentage?: number | null;
+  }): void => {
+    const existingEntry = entriesByExternalId.get(entryExternalId);
+    if (!existingEntry) {
+      entriesByExternalId.set(entryExternalId, {
+        externalId: entryExternalId,
+        source: "mfc",
+        category,
+        name: entryName,
+      });
+    }
+
+    const key = `${itemExternalId}:${entryExternalId}`;
+    const existingRelationship = entryToItemsByKey.get(key);
+    if (!existingRelationship) {
+      entryToItemsByKey.set(key, {
+        entryExternalId,
+        itemExternalId,
+        roles: role ? [role] : [],
+        sourceLabel,
+        materialPercentage,
+      });
+      return;
+    }
+
+    if (role && !existingRelationship.roles.includes(role)) {
+      existingRelationship.roles.push(role);
+    }
+    if (existingRelationship.materialPercentage === null && materialPercentage !== null) {
+      existingRelationship.materialPercentage = materialPercentage;
+    }
+  };
 
   for (const scraped of successfulResults) {
     for (const classification of scraped.classification) {
-      entryToItems.push({
+      addEntryRelationship({
         entryExternalId: classification.id,
         itemExternalId: scraped.id,
         role: classification.role,
-      });
-      entries.push({
-        externalId: classification.id,
-        source: "mfc",
         category: "Classifications",
-        name: classification.name,
+        sourceLabel: classification.name,
+        // MFC links every numbered item to the same Nendoroid entry while
+        // decorating the item-page label with that item's number.
+        entryName:
+          classification.id === NENDOROID_ENTRY_EXTERNAL_ID
+            ? classification.name.replace(/\s+\(#[^)]+\)$/u, "")
+            : classification.name,
       });
     }
 
     for (const origin of scraped.origin) {
-      entryToItems.push({
+      addEntryRelationship({
         entryExternalId: origin.id,
         itemExternalId: scraped.id,
-        role: "",
-      });
-      entries.push({
-        externalId: origin.id,
-        source: "mfc",
         category: "Origins",
-        name: origin.name,
+        sourceLabel: origin.name,
       });
     }
 
     for (const character of scraped.character) {
-      entryToItems.push({
+      addEntryRelationship({
         entryExternalId: character.id,
         itemExternalId: scraped.id,
-        role: "",
-      });
-      entries.push({
-        externalId: character.id,
-        source: "mfc",
         category: "Characters",
-        name: character.name,
+        sourceLabel: character.name,
       });
     }
 
     for (const company of scraped.company) {
-      entryToItems.push({
+      addEntryRelationship({
         entryExternalId: company.id,
         itemExternalId: scraped.id,
         role: company.role,
-      });
-      entries.push({
-        externalId: company.id,
-        source: "mfc",
         category: "Companies",
-        name: company.name,
+        sourceLabel: company.name,
       });
     }
 
     for (const artist of scraped.artist) {
-      entryToItems.push({
+      addEntryRelationship({
         entryExternalId: artist.id,
         itemExternalId: scraped.id,
         role: artist.role,
-      });
-      entries.push({
-        externalId: artist.id,
-        source: "mfc",
         category: "Artists",
-        name: artist.name,
+        sourceLabel: artist.name,
       });
     }
 
     for (const event of scraped.event) {
-      entryToItems.push({
+      addEntryRelationship({
         entryExternalId: event.id,
         itemExternalId: scraped.id,
         role: event.role,
-      });
-      entries.push({
-        externalId: event.id,
-        source: "mfc",
         category: "Events",
-        name: event.name,
+        sourceLabel: event.name,
       });
     }
 
     for (const material of scraped.materials) {
-      entryToItems.push({
+      addEntryRelationship({
         entryExternalId: material.id,
         itemExternalId: scraped.id,
-        role: "",
-      });
-      entries.push({
-        externalId: material.id,
-        source: "mfc",
         category: "Materials",
-        name: material.name,
+        sourceLabel: material.name,
+        materialPercentage: material.percentage,
       });
     }
 
@@ -183,8 +213,8 @@ export function assembleScrapedData(
 
   return {
     items,
-    entries,
-    entryToItems,
+    entries: [...entriesByExternalId.values()],
+    entryToItems: [...entryToItemsByKey.values()],
     itemReleases,
     latestReleaseIdByExternalId,
   };
