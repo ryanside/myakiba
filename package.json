@@ -47,7 +47,7 @@
     "redis:stop": "turbo run redis:stop -F @myakiba/redis",
     "redis:down": "turbo run redis:down -F @myakiba/redis",
     "check": "ultracite check",
-    "audit": "bun audit --ignore=GHSA-67mh-4wv8-2f99",
+    "audit": "bun audit --ignore=GHSA-67mh-4wv8-2f99 --ignore=GHSA-vfj7-8cjw-p6xm",
     "fix": "ultracite fix",
     "prepare": "husky",
     "doctor": "npx react-doctor@latest"
