@@ -62,25 +62,13 @@ function Rating({
      * Current rating value (supports decimal values for partial stars)
      */
     rating: number;
-    /**
-     * Maximum rating value (number of stars to show)
-     */
     maxRating?: number;
-    /**
-     * Whether to show the numeric rating value
-     */
     showValue?: boolean;
     /**
      * Class name for the value span
      */
     starClassName?: string;
-    /**
-     * Whether the rating is editable (clickable)
-     */
     editable?: boolean;
-    /**
-     * Callback function called when rating changes
-     */
     onRatingChange?: (rating: number) => void;
   }) {
   const [hoveredRating, setHoveredRating] = React.useState<number | null>(null);
@@ -136,14 +124,12 @@ function Rating({
           aria-valuenow={editable ? displayRating : undefined}
           tabIndex={editable ? 0 : undefined}
         >
-          {/* Background star (empty) */}
           <HugeiconsIcon
             icon={StarIcon}
             data-slot="rating-star-empty"
             className={cn(starVariants({ size }), "text-muted-foreground/30")}
           />
 
-          {/* Filled star */}
           <div
             className="absolute inset-0 overflow-hidden"
             style={{
