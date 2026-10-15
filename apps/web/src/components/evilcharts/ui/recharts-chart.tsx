@@ -133,7 +133,7 @@ function ChartContainer({
   ...divProps
 }: Readonly<ChartContainerProps>) {
   const uniqueId = React.useId();
-  const chartId = `chart-${id ?? uniqueId.replaceAll(":", "")}`;
+  const chartId = `chart-${id ?? uniqueId}`;
   const contextValue = React.useMemo(() => ({ config }), [config]);
 
   validateChartConfigColors(config);

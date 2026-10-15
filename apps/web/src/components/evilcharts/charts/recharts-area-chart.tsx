@@ -126,7 +126,7 @@ export function EvilAreaChart<
   loadingPoints,
   xDataKey,
 }: EvilAreaChartProps<TData, TConfig>) {
-  const chartId = useId().replaceAll(":", ""); // colon-free id keeps CSS/SVG selectors valid
+  const chartId = useId();
   const [selectedDataKey, setSelectedDataKey] = useState<string | null>(defaultSelectedDataKey);
   const { loadingData, onShimmerExit } = useLoadingData(isLoading, loadingPoints);
   const { visibleData, brushProps } = useEvilBrush({ data });
@@ -270,7 +270,7 @@ function Area({
     selectedDataKey,
     selectDataKey,
   } = useAreaChart();
-  const id = useId().replaceAll(":", ""); // unique id scopes this area's style defs
+  const id = useId();
   const shouldReduceMotion = useReducedMotion();
 
   if (isLoading) return null;

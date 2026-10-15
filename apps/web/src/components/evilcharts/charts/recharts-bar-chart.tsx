@@ -134,7 +134,7 @@ export function EvilBarChart<
   loadingBars,
   xDataKey,
 }: EvilBarChartProps<TData, TConfig>) {
-  const chartId = useId().replaceAll(":", ""); // colon-free id keeps CSS/SVG selectors valid
+  const chartId = useId();
   const [introStartedAt, setIntroStartedAt] = useState(() => Date.now());
   const previousIsLoading = useRef(isLoading);
   const [selectedDataKey, setSelectedDataKey] = useState<string | null>(defaultSelectedDataKey);
@@ -300,7 +300,7 @@ function Bar({
     selectDataKey,
     isMouseInChart,
   } = useBarChart();
-  const id = useId().replaceAll(":", ""); // unique id scopes this bar's style defs
+  const id = useId();
   const shouldReduceMotion = useReducedMotion();
 
   if (isLoading) return null;

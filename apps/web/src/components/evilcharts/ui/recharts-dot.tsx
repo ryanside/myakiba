@@ -26,7 +26,7 @@ const ChartDot = React.memo(
     type = "default",
     maskId,
   }: ChartDotProps) => {
-    const dotId = React.useId().replaceAll(":", "");
+    const dotId = React.useId();
     const gradientUrl = `url(#${chartId}-colors-${String(dataKey)})`;
 
     if (cx === undefined || cy === undefined) return null;
