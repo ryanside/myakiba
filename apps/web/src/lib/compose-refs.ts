@@ -2,10 +2,6 @@ import * as React from "react";
 
 type PossibleRef<T> = React.Ref<T> | undefined;
 
-/**
- * Set a given ref to a given value
- * This utility takes care of different types of refs: callback refs and RefObject(s)
- */
 function setRef<T>(ref: PossibleRef<T>, value: T) {
   if (ref !== null && ref !== undefined && "current" in ref) {
     ref.current = value;
@@ -49,10 +45,6 @@ function composeRefs<T>(...refs: PossibleRef<T>[]): React.RefCallback<T> {
   };
 }
 
-/**
- * A custom hook that composes multiple refs
- * Accepts callback refs and RefObject(s)
- */
 function useComposedRefs<T>(
   firstRef: PossibleRef<T>,
   secondRef: PossibleRef<T>,

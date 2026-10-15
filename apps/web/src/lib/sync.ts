@@ -38,48 +38,6 @@ export const SYNC_TYPE_CONFIG = {
   }
 >;
 
-/**
- * Chooses the one sync status sentence the UI should show for a session.
- *
- * Use this in widgets, table cells, banners, and toasts when the goal is to
- * match backend-persisted status text while still preferring the most recent
- * item outcome from the live stream during scraping.
- *
- * Precedence:
- * 1. stream error copy
- * 2. terminal `jobStatus.statusMessage` (summary — wins over per-item ticker)
- * 3. latest recent-item outcome from the live stream during scraping
- * 4. live `jobStatus.statusMessage`
- * 5. persisted `session.statusMessage`
- *
- * The recent-item override is limited to scraping so it cannot hide persistence
- * progress ("Saving 3 scraped items") or the aggregate summary ("Added 10/10 items").
- *
- * This helper only decides the sentence. Badge label, spinner state, and
- * container styling should stay at the call site.
- *
- * @example
- * resolveSyncMessage(
- *   { statusMessage: "Import queued" },
- *   {
- *     jobId: "job_123",
- *     phase: "scraping",
- *     statusMessage: "Scraping item details from MyFigureCollection: 4/10 processed",
- *     progress: { processed: 4, total: 10, succeeded: 3, failed: 1 },
- *     recentItems: [],
- *     error: null,
- *     startedAt: "2026-04-19T00:00:00.000Z",
- *     updatedAt: "2026-04-19T00:00:01.000Z",
- *     terminalState: null,
- *   },
- *   false,
- * )
- * // "Scraping item details from MyFigureCollection: 4/10 processed"
- *
- * @example
- * resolveSyncMessage({ statusMessage: "Scraping item details from MyFigureCollection: 4/10 processed" }, null, true)
- * // "Lost connection. Reload the page to see the latest status."
- */
 export function resolveSyncMessage(
   session: Pick<SyncSessionRow, "statusMessage">,
   jobStatus: SyncJobStatus | null,

@@ -63,7 +63,6 @@ export function usePositionOrderMutation({
         ...movedItems,
         ...remainingItems.slice(insertionIndex),
       ];
-      // Moving loaded items changes their order, not the page boundaries or counts.
       queryClient.setQueryData(queryKey, {
         ...current,
         pages: current.pages.map((page) => ({

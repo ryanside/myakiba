@@ -84,23 +84,6 @@ export const CURRENCY_LABELS = {
 const CURRENCY_CODE_PATTERN = /^[A-Z]{3}$/;
 const DEFAULT_UNSUPPORTED_CURRENCY_LOCALE = "en-US";
 
-/**
- * Returns the app's canonical locale for a supported currency.
- *
- * This is intentionally a fixed one-to-one mapping used by the UI when formatting
- * money. It does not attempt to guess or fall back to another locale.
- *
- * Input:
- * - `currency`: a supported ISO currency code used by the app, such as `"USD"` or `"JPY"`
- *
- * Output:
- * - the locale string paired with that currency, such as `"en-US"` or `"ja-JP"`
- *
- * Examples:
- * - `getCurrencyLocale("USD")` -> `"en-US"`
- * - `getCurrencyLocale("JPY")` -> `"ja-JP"`
- * - `getCurrencyLocale("EUR")` -> `"de-DE"`
- */
 export function getCurrencyLocale(currency: Currency): string {
   return CURRENCY_LOCALE_MAP[currency];
 }

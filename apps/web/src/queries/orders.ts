@@ -92,7 +92,6 @@ export async function getOrderItems(
   }
 
   const totalCount = (data[0] as { totalCount?: number }).totalCount ?? 0;
-  // oxlint-disable-next-line no-unused-vars
   const items = data.map(({ totalCount: _tc, ...item }) => item);
 
   return { items, totalCount };
