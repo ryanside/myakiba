@@ -1,5 +1,8 @@
 import { cn } from "@/lib/utils";
 
+const APP_IMAGE_WIDTHS = [832, 1152, 1536] as const;
+const APP_IMAGE_SIZES = "(min-width: 901px) 645px, calc(90vw - 43px)";
+
 type FeatureSplitProps = {
   readonly appImage: string;
   readonly appImageAlt: string;
@@ -85,7 +88,12 @@ export function FeatureSplit({
             draggable={false}
             height={1788}
             loading="lazy"
+            sizes={APP_IMAGE_SIZES}
             src={`/${appImage}-${theme}.webp`}
+            srcSet={[
+              ...APP_IMAGE_WIDTHS.map((width) => `/${appImage}-${theme}-${width}w.webp ${width}w`),
+              `/${appImage}-${theme}.webp 2992w`,
+            ].join(", ")}
             width={2992}
           />
         </div>
