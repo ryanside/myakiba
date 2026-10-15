@@ -1155,23 +1155,17 @@ function MaskInput(props: MaskInputProps) {
         return;
       }
 
-      let newCursorPosition = newMaskedValue.length;
-      try {
-        const unmaskedCount = unmasked.length;
-        let position = 0;
-        let count = 0;
+      const unmaskedCount = unmasked.length;
+      let newCursorPosition = 0;
+      let count = 0;
 
-        for (let i = 0; i < maskPattern.pattern.length && i < newMaskedValue.length; i++) {
-          if (maskPattern.pattern[i] === "#") {
-            count++;
-            if (count <= unmaskedCount) {
-              position = i + 1;
-            }
+      for (let i = 0; i < maskPattern.pattern.length && i < newMaskedValue.length; i++) {
+        if (maskPattern.pattern[i] === "#") {
+          count++;
+          if (count <= unmaskedCount) {
+            newCursorPosition = i + 1;
           }
         }
-        newCursorPosition = position;
-      } catch {
-        // fallback to end
       }
 
       target.setSelectionRange(newCursorPosition, newCursorPosition);
