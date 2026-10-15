@@ -207,7 +207,6 @@ export function EvilAreaChart<
               height={brush.slot.height}
               formatLabel={brush.slot.formatLabel}
               stacked={isStacked}
-              skipStyle
               className="mt-1"
               {...brushProps}
               onChange={(range) => {
