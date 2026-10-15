@@ -3,7 +3,6 @@ import type { HTMLAttributes } from "react";
 
 import { cn } from "@/lib/utils";
 
-// Types
 type StepperOrientation = "horizontal" | "vertical";
 type StepState = "active" | "completed" | "inactive" | "loading";
 type StepIndicators = {
@@ -92,7 +91,6 @@ function Stepper({
 
   const currentStep = value ?? activeStep;
 
-  // Keyboard navigation logic
   const focusTrigger = useCallback(
     (idx: number) => {
       if (triggerNodes[idx]) triggerNodes[idx].focus();
@@ -114,7 +112,6 @@ function Stepper({
     [focusTrigger, triggerNodes.length],
   );
 
-  // Context value
   const contextValue = useMemo<StepperContextValue>(
     () => ({
       activeStep: currentStep,
