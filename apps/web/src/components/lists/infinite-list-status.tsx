@@ -13,7 +13,7 @@ export function InfiniteListStatus({
   readonly isFetchingNextPage: boolean;
   readonly isFetchNextPageError: boolean;
   readonly disabled?: boolean;
-  readonly onLoadMore: () => Promise<void>;
+  readonly onLoadMore: () => Promise<{ readonly isFetchNextPageError: boolean }>;
 }): React.JSX.Element | null {
   const statusRef = useRef<HTMLDivElement>(null);
 
@@ -41,17 +41,7 @@ export function InfiniteListStatus({
       {isFetchNextPageError ? (
         <div className="flex items-center gap-2">
           <span role="alert">Could not load more.</span>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={async () => {
-              try {
-                await onLoadMore();
-              } catch {
-                // The status row keeps the retry action visible.
-              }
-            }}
-          >
+          <Button variant="ghost" size="sm" onClick={() => onLoadMore()}>
             Retry
           </Button>
         </div>

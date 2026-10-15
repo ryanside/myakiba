@@ -155,9 +155,7 @@ function RouteComponent(): React.JSX.Element {
           isFetchingNextPage={itemsQuery.isFetchingNextPage}
           isFetchNextPageError={itemsQuery.isFetchNextPageError}
           disabled={itemMutation.isPending}
-          onLoadMore={async () => {
-            await handleLoadMore();
-          }}
+          onLoadMore={handleLoadMore}
         />
       ) : null}
     </div>
