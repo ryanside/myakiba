@@ -67,7 +67,6 @@ type SyncSessionUpdatePayload = Partial<
     typeof syncSession.$inferInsert,
     | "status"
     | "statusMessage"
-    | "jobId"
     | "orderId"
     | "successCount"
     | "failCount"
@@ -170,6 +169,7 @@ class SyncService {
       id,
       userId,
       syncType,
+      jobId: id,
       orderId: orderId ?? null,
       totalItems: rows.length,
       successCount: syncType === "item" ? existingItemExternalIds.length : 0,
@@ -384,9 +384,7 @@ class SyncService {
     const jobId = jobData.syncSessionId;
 
     try {
-      // Save the job ID before queueing the job so the worker can find the session.
       const updated = await this.updateSyncSession(jobData.syncSessionId, {
-        jobId,
         requestPayload: jobData,
       });
       if (!updated) throw new Error("SYNC_SESSION_NOT_FOUND");
