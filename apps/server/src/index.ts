@@ -77,7 +77,6 @@ const resolveServerDistPath = (): string => {
     if (existsSync(path.resolve(candidate, "index.html"))) return candidate;
   }
 
-  // Fall back to the most common runtime layout.
   return path.resolve(process.cwd(), "dist");
 };
 
@@ -91,7 +90,6 @@ const serveIndexHtml = async (distDir: string): Promise<Response> => {
   });
 };
 
-// oxlint-disable-next-line no-unused-vars
 const app = new Elysia()
   .use(
     evlog({

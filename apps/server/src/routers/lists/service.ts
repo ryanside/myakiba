@@ -450,7 +450,6 @@ class ListsService {
       let addedCount = 0;
       for (let index = 0; index < membersToInsert.length; index += LIST_MEMBER_INSERT_CHUNK_SIZE) {
         const members = membersToInsert.slice(index, index + LIST_MEMBER_INSERT_CHUNK_SIZE);
-        // oxlint-disable-next-line no-await-in-loop -- Keep chunked inserts atomic and sequential within one transaction.
         const addedMembers = await tx
           .insert(listMember)
           .values(members)
@@ -550,7 +549,6 @@ class ListsService {
         const positionCases = updates.map(
           (update) => sql`WHEN ${update.id} THEN ${update.position}`,
         );
-        // oxlint-disable-next-line no-await-in-loop -- Keep chunked position updates sequential within one transaction.
         await tx
           .update(listMember)
           .set({

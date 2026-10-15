@@ -20,7 +20,6 @@ class DashboardService {
   private monthlyOrdersKanbanPrepared;
 
   constructor() {
-    // Narrow the monthly dashboard to one filtered order set and build everything else from it.
     const monthlyOrdersBase = db
       .select({
         orderId: order.id,
@@ -44,8 +43,6 @@ class DashboardService {
       )
       .as("monthly_orders_base");
 
-    // Per-order item counts/totals for the selected month. This avoids rescanning collection
-    // separately for KPI totals and shop breakdowns.
     const monthlyOrderItemStats = db
       .select({
         orderId: collection.orderId,
@@ -88,7 +85,6 @@ class DashboardService {
       )
     `;
 
-    // Total Items, Total Spent
     this.collectionStatsPrepared = db
       .select({
         totalItems: count(sql`CASE WHEN ${collection.status} = 'Owned' THEN 1 END`),
@@ -98,7 +94,6 @@ class DashboardService {
       .where(eq(collection.userId, sql.placeholder("userId")))
       .prepare("collection_stats");
 
-    // Categories Owned
     this.categoriesOwnedPrepared = db
       .select({
         name: sql<Category>`${item.category}::text`,
@@ -178,7 +173,6 @@ class DashboardService {
       .limit(DASHBOARD_KANBAN_ORDER_LIMIT)
       .prepare("orders_kanban");
 
-    // Total Active Orders Count, This Month Order Count, Total Shipping, Taxes, Duties, Tariffs, Misc Fees
     this.ordersSummaryPrepared = db
       .select({
         totalActiveOrderCount: sql<number>`COALESCE(${sum(
@@ -217,7 +211,6 @@ class DashboardService {
       .from(unpaidOrderTotalsBase)
       .prepare("unpaid_summary");
 
-    // Monthly Orders - Order counts grouped by release month for current year
     this.monthlyOrdersPrepared = db
       .select({
         month: sql<number>`EXTRACT(MONTH FROM ${order.releaseDate})`,
@@ -235,7 +228,6 @@ class DashboardService {
       .orderBy(sql`EXTRACT(MONTH FROM ${order.releaseDate})`)
       .prepare("monthly_orders");
 
-    // Release Calendar
     this.releaseCalendarPrepared = db
       .select({
         releaseId: item_release.id,
@@ -254,7 +246,6 @@ class DashboardService {
         and(
           gte(item_release.date, sql.placeholder("startDate")),
           lte(item_release.date, sql.placeholder("endDate")),
-          // Use an existence check instead of joining collection and deduping release rows with GROUP BY.
           exists(
             db
               .select({ itemId: collection.itemId })
@@ -272,7 +263,6 @@ class DashboardService {
       .orderBy(asc(item_release.date), asc(item.title), asc(item.id), asc(item_release.id))
       .prepare("release_calendar");
 
-    // Single monthly KPI query: order counts, item totals, fees, and paid/unpaid splits.
     this.monthlySummaryPrepared = db
       .select({
         orderCount: count(monthlyOrdersBase.orderId),
@@ -292,7 +282,6 @@ class DashboardService {
       .leftJoin(monthlyOrderItemStats, eq(monthlyOrdersBase.orderId, monthlyOrderItemStats.orderId))
       .prepare("monthly_summary");
 
-    // Shop breakdown is now assembled entirely in SQL from the shared monthly subqueries.
     this.monthlyShopBreakdownPrepared = db
       .select({
         shopName: monthlyOrdersBase.shop,
@@ -450,7 +439,6 @@ class DashboardService {
     const { start: startDate, end: endDate } = getDateOnlyMonthBounds(year, month);
     const params = { userId, startDate, endDate };
 
-    // The monthly response now comes from three queries instead of multiple overlapping scans.
     const [monthlySummaryRows, shopBreakdownRows, orders] = await Promise.all([
       this.monthlySummaryPrepared.execute(params),
       this.monthlyShopBreakdownPrepared.execute(params),

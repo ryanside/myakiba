@@ -399,7 +399,6 @@ export async function processDataTransferImportJob(
     job: {
       id: jobId,
       attemptsMade: job.attemptsMade,
-      // BullMQ attempts for this job; manual retries receive a new job ID.
       attemptNumber: job.attemptsMade + 1,
     },
     sync: {
