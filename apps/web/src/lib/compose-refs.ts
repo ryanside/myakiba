@@ -17,31 +17,18 @@ function setRef<T>(ref: PossibleRef<T>, value: T) {
  */
 function composeRefs<T>(...refs: PossibleRef<T>[]): React.RefCallback<T> {
   return (node) => {
-    let hasCleanup = false;
-    const cleanups = refs.map((ref) => {
-      const cleanup = setRef(ref, node);
-      if (!hasCleanup && cleanup !== undefined) {
-        hasCleanup = true;
-      }
-      return cleanup;
-    });
+    const cleanups = refs.map((ref) => setRef(ref, node));
 
-    // React <19 will log an error to the console if a callback ref returns a
-    // value. We don't use ref cleanups internally so this will only happen if a
-    // user's ref callback returns a value, which we only expect if they are
-    // using the cleanup functionality added in React 19.
-    if (hasCleanup) {
-      return () => {
-        for (let i = 0; i < cleanups.length; i++) {
-          const cleanup = cleanups[i];
-          if (cleanup === undefined) {
-            setRef(refs[i], null);
-          } else {
-            cleanup();
-          }
+    return () => {
+      for (let i = 0; i < cleanups.length; i++) {
+        const cleanup = cleanups[i];
+        if (cleanup === undefined) {
+          setRef(refs[i], null);
+        } else {
+          cleanup();
         }
-      };
-    }
+      }
+    };
   };
 }
 

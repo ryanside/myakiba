@@ -1,6 +1,5 @@
 import {
   getPayloadConfigFromPayload,
-  getNestedPayloadKey,
   getColorsCount,
   useChart,
 } from "@/components/evilcharts/ui/recharts-chart";
@@ -36,7 +35,6 @@ function ChartTooltipContent({
   labelFormatter,
   labelClassName,
   formatter,
-  nameKey,
   labelKey,
   selected,
   roundness = "lg",
@@ -46,7 +44,6 @@ function ChartTooltipContent({
     hideLabel?: boolean;
     hideIndicator?: boolean;
     indicator?: "line" | "dot" | "dashed";
-    nameKey?: string;
     labelKey?: string;
     selected?: string | null;
     roundness?: TooltipRoundness;
@@ -105,11 +102,7 @@ function ChartTooltipContent({
         {payload
           .filter((item) => item.type !== "none")
           .map((item, index) => {
-            // For pie charts, item.name contains the sector name (e.g., "chrome")
-            // For radial charts, the name is in item.payload[nameKey]
-            // For other charts, item.name or item.dataKey contains the series name
-            const payloadName = item.payload ? getNestedPayloadKey(item, nameKey) : undefined;
-            const key = `${payloadName ?? item.name ?? item.dataKey ?? "value"}`;
+            const key = `${item.name ?? item.dataKey ?? "value"}`;
             const itemConfig = getPayloadConfigFromPayload(config, item, key);
             const numericValue = z.number().safeParse(item.value);
 

@@ -128,17 +128,14 @@ function DataGridTableDnd<TData>({
     useSensor(KeyboardSensor, {}),
   );
 
-  // Custom modifier to restrict dragging within table bounds with edge offset
   const restrictToTableBounds: Modifier = ({ draggingNodeRect, transform }) => {
     if (!draggingNodeRect || !containerRef.current) {
       return { ...transform, y: 0 };
     }
 
     const containerRect = containerRef.current.getBoundingClientRect();
-    const edgeOffset = 0;
-
-    const minX = containerRect.left - draggingNodeRect.left - edgeOffset;
-    const maxX = containerRect.right - draggingNodeRect.left - draggingNodeRect.width + edgeOffset;
+    const minX = containerRect.left - draggingNodeRect.left;
+    const maxX = containerRect.right - draggingNodeRect.left - draggingNodeRect.width;
 
     return {
       ...transform,

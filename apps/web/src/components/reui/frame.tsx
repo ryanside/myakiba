@@ -70,8 +70,7 @@ function Frame({
   );
 }
 
-// oxlint-disable-next-line no-unused-vars
-function FramePanel({ className, fit, ...props }: React.ComponentProps<"div"> & { fit?: boolean }) {
+function FramePanel({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       className={cn(

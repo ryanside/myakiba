@@ -252,9 +252,7 @@ function RouteComponent(): React.JSX.Element {
             isFetchingNextPage={membersQuery.isFetchingNextPage}
             isFetchNextPageError={membersQuery.isFetchNextPageError}
             disabled={removeMembersMutation.isPending}
-            onLoadMore={async () => {
-              await handleLoadMore();
-            }}
+            onLoadMore={handleLoadMore}
           />
           <p className="text-sm text-muted-foreground">{totalCount.toLocaleString()} total</p>
         </>

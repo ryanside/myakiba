@@ -2,7 +2,7 @@
 
 import { motion, useMotionValue, useMotionValueEvent, useSpring, useTransform } from "motion/react";
 import { ResponsiveContainer, AreaChart, Area, LineChart, Line, BarChart, Bar } from "recharts";
-import { ChartStyle, getColorsCount } from "@/components/evilcharts/ui/recharts-chart";
+import { getColorsCount } from "@/components/evilcharts/ui/recharts-chart";
 import type {
   ChartConfig,
   ChartDataRow,
@@ -40,26 +40,18 @@ interface EvilBrushProps {
   height?: number;
   className?: string;
   stacked?: boolean;
-  strokeVariant?: "solid" | "dashed" | "animated-dashed";
-  connectNulls?: boolean;
   barRadius?: number;
 
   startIndex?: number;
   endIndex?: number;
 
-  defaultStartIndex?: number;
-  defaultEndIndex?: number;
-
   onChange?: (range: EvilBrushRange) => void;
   formatLabel?: (value: ChartDataValue, index: number) => string;
   curveType?: CurveType;
-  minSpan?: number;
-  showLabels?: boolean;
-  /** Skip rendering own ChartStyle (when inside a ChartContainer that already provides CSS vars) */
-  skipStyle?: boolean;
 }
 
 const SPRING_CONFIG = { stiffness: 300, damping: 35, mass: 0.8 };
+const MIN_SPAN = 2;
 
 type DragType = "left" | "right" | "middle";
 
@@ -160,30 +152,23 @@ function EvilBrush({
   height = 56,
   className,
   stacked = false,
-  strokeVariant = "solid",
-  connectNulls = false,
   barRadius,
   startIndex: controlledStart,
   endIndex: controlledEnd,
-  defaultStartIndex = 0,
-  defaultEndIndex,
   onChange,
   formatLabel,
   curveType = "monotone",
-  minSpan = 2,
-  showLabels = true,
-  skipStyle = false,
 }: EvilBrushProps) {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const keys = React.useMemo(() => dataKeys ?? Object.keys(chartConfig), [dataKeys, chartConfig]);
   const totalPoints = data.length;
-  const chartId = React.useId().replaceAll(":", "");
+  const chartId = React.useId();
 
   const isControlled = controlledStart !== undefined && controlledEnd !== undefined;
 
   const [internalRange, setInternalRange] = React.useState<EvilBrushRange>(() => ({
-    startIndex: Math.max(0, Math.min(defaultStartIndex, totalPoints - 1)),
-    endIndex: Math.max(0, Math.min(defaultEndIndex ?? totalPoints - 1, totalPoints - 1)),
+    startIndex: 0,
+    endIndex: Math.max(0, totalPoints - 1),
   }));
 
   // Track the last committed range to avoid duplicate updates when small
@@ -214,26 +199,26 @@ function EvilBrush({
       endIndex = Math.max(0, Math.min(endIndex, maxIndex));
 
       if (mode === "left") {
-        const maxStart = Math.max(0, endIndex - minSpan);
+        const maxStart = Math.max(0, endIndex - MIN_SPAN);
         startIndex = Math.min(startIndex, maxStart);
         return { startIndex, endIndex };
       }
 
       if (mode === "right") {
-        const minEnd = Math.min(maxIndex, startIndex + minSpan);
+        const minEnd = Math.min(maxIndex, startIndex + MIN_SPAN);
         endIndex = Math.max(endIndex, minEnd);
         return { startIndex, endIndex };
       }
 
-      if (endIndex - startIndex < minSpan) {
-        endIndex = Math.min(startIndex + minSpan, maxIndex);
-        if (endIndex - startIndex < minSpan) {
-          startIndex = Math.max(0, endIndex - minSpan);
+      if (endIndex - startIndex < MIN_SPAN) {
+        endIndex = Math.min(startIndex + MIN_SPAN, maxIndex);
+        if (endIndex - startIndex < MIN_SPAN) {
+          startIndex = Math.max(0, endIndex - MIN_SPAN);
         }
       }
       return { startIndex, endIndex };
     },
-    [totalPoints, minSpan],
+    [totalPoints],
   );
 
   const commit = useCallback(
@@ -318,12 +303,9 @@ function EvilBrush({
   return (
     <div
       ref={containerRef}
-      data-chart={skipStyle ? undefined : chartId}
       className={cn("group relative select-none", className)}
       style={{ height }}
     >
-      {!skipStyle && <ChartStyle id={chartId} config={chartConfig} />}
-
       <div className="absolute inset-0 overflow-hidden rounded-md">
         <MiniChart
           data={data}
@@ -333,8 +315,6 @@ function EvilBrush({
           curveType={curveType}
           chartId={chartId}
           stacked={stacked}
-          strokeVariant={strokeVariant === "animated-dashed" ? "dashed" : strokeVariant}
-          connectNulls={connectNulls}
           barRadius={barRadius}
         />
       </div>
@@ -358,14 +338,14 @@ function EvilBrush({
       <BrushHandle
         side="left"
         position={leftPosition}
-        label={showLabels ? getLabel(range.startIndex) : undefined}
+        label={getLabel(range.startIndex)}
         bind={bind("left")}
       />
 
       <BrushHandle
         side="right"
         position={rightPosition}
-        label={showLabels ? getLabel(range.endIndex) : undefined}
+        label={getLabel(range.endIndex)}
         bind={bind("right")}
       />
     </div>
@@ -434,8 +414,6 @@ function MiniChart({
   curveType,
   chartId,
   stacked,
-  strokeVariant = "solid",
-  connectNulls = false,
   barRadius,
 }: {
   data: readonly ChartDataRow[];
@@ -445,8 +423,6 @@ function MiniChart({
   curveType: CurveType;
   chartId: string;
   stacked: boolean;
-  strokeVariant?: "solid" | "dashed" | "animated-dashed";
-  connectNulls?: boolean;
   barRadius?: number;
 }) {
   const gradients = React.useMemo(
@@ -459,9 +435,6 @@ function MiniChart({
         })),
     [chartConfig, keys],
   );
-
-  const dashArray =
-    strokeVariant === "dashed" || strokeVariant === "animated-dashed" ? "4 4" : undefined;
 
   const defsContent = (
     <>
@@ -533,8 +506,6 @@ function MiniChart({
               stroke={`url(#${chartId}-zm-${dk})`}
               strokeWidth={1}
               strokeOpacity={0.5}
-              strokeDasharray={dashArray}
-              connectNulls={connectNulls}
               dot={false}
               activeDot={false}
               isAnimationActive={false}
@@ -585,8 +556,6 @@ function MiniChart({
             fill={`url(#${chartId}-zm-fill-${dk})`}
             strokeWidth={1}
             strokeOpacity={0.5}
-            strokeDasharray={dashArray}
-            connectNulls={connectNulls}
             fillOpacity={1}
             stackId={stacked ? "zm-stack" : undefined}
             dot={false}
