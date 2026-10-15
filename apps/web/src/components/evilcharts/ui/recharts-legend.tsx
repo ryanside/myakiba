@@ -64,7 +64,6 @@ function ChartLegendContent({
           const itemConfig = getPayloadConfigFromPayload(config, item, key);
           const isSelected = selected === null || selected === key;
 
-          // Get colors count for this item to determine gradient vs solid
           const colorsCount = itemConfig ? getColorsCount(itemConfig) : 1;
           const content = (
             <>
@@ -107,11 +106,6 @@ function ChartLegendContent({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Legend indicator — each variant gets its own branch so future variants
-// can diverge freely in markup & style.
-// ---------------------------------------------------------------------------
-
 function LegendIndicator({
   variant,
   dataKey,
@@ -148,11 +142,6 @@ function LegendIndicator({
   }
 }
 
-// ---------------------------------------------------------------------------
-// Style helpers
-// ---------------------------------------------------------------------------
-
-/** Solid fill / gradient background for filled variants. */
 function getLegendFillStyle(dataKey: string, colorsCount: number): React.CSSProperties {
   if (colorsCount <= 1) {
     return { backgroundColor: `var(--color-${dataKey}-0)` };
@@ -167,7 +156,6 @@ function getLegendFillStyle(dataKey: string, colorsCount: number): React.CSSProp
 }
 
 /**
- * Outline style for stroke variants.
  * Uses background + mask-composite to punch out the center, leaving only the
  * "border" visible. Works with both solid colors and gradients, and respects
  * border-radius — unlike plain `border-color`.

@@ -3,12 +3,6 @@
 import { ZIndexLayer } from "recharts";
 import { useId } from "react";
 
-// ── Background Variant Types ─────────────────────────────────────────────────
-// To add a new variant:
-// 1. Add its name to the BackgroundVariant union type below
-// 2. Create a pattern component with PatternProps
-// 3. Register it in PATTERN_MAP
-
 export type BackgroundVariant =
   | "dots"
   | "grid"
@@ -21,8 +15,6 @@ export type BackgroundVariant =
   | "overlapping-circles"
   | "wiggle-lines"
   | "bubbles";
-
-// ── Pattern Components ───────────────────────────────────────────────────────
 
 type PatternProps = { id: string };
 
@@ -178,9 +170,6 @@ const BubblesPattern = ({ id }: PatternProps) => (
   </pattern>
 );
 
-// ── Pattern Registry ─────────────────────────────────────────────────────────
-// Map variant names to pattern components
-
 const PATTERN_MAP = {
   dots: DotsPattern,
   grid: GridPattern,
@@ -194,10 +183,6 @@ const PATTERN_MAP = {
   "overlapping-circles": OverlappingCirclesPattern,
   "wiggle-lines": WiggleLinesPattern,
 } satisfies Record<BackgroundVariant, React.FC<PatternProps>>;
-
-// ── Main Component ───────────────────────────────────────────────────────────
-// Usage: Place <ChartBackground variant="dots" /> inside any Recharts chart component.
-// ZIndexLayer with zIndex={-1} ensures the background renders behind all chart content.
 
 interface ChartBackgroundProps {
   variant: BackgroundVariant;
@@ -214,11 +199,9 @@ export function ChartBackground({ variant }: ChartBackgroundProps) {
     <ZIndexLayer zIndex={-1}>
       <defs>
         <PatternComponent id={patternId} />
-        {/* Gaussian blur filter for soft edge fade */}
         <filter id={filterId}>
           <feGaussianBlur stdDeviation="25" />
         </filter>
-        {/* Mask: a slightly inset white rect with blur creates smooth transparent edges */}
         <mask id={maskId} maskUnits="userSpaceOnUse">
           <rect x="8%" y="20%" width="85%" height="60%" fill="white" filter={`url(#${filterId})`} />
         </mask>

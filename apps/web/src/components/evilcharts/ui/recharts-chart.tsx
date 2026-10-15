@@ -13,17 +13,14 @@ const DEFAULT_INITIAL_DIMENSION = { width: 320, height: 200 } as const;
 
 type ThemeKey = keyof typeof THEMES;
 
-// All Keys are optional at first
 type ThemeColorsBase = Partial<Record<ThemeKey, string[]>>;
 
-// Require at least one theme key
 type AtLeastOneThemeColor = {
   [K in ThemeKey]: Required<Pick<ThemeColorsBase, K>> & Partial<Omit<ThemeColorsBase, K>>;
 }[ThemeKey];
 
 const VALID_THEME_KEYS = Object.keys(THEMES) as ThemeKey[];
 
-// Validation for chart config colors at runtime
 function validateChartConfigColors(config: ChartConfig): void {
   for (const [key, value] of Object.entries(config)) {
     if (value.colors) {
@@ -114,7 +111,6 @@ interface ChartContainerProps
   innerResponsiveContainerStyle?: React.ComponentProps<
     typeof RechartsPrimitive.ResponsiveContainer
   >["style"];
-  /** Optional content rendered below the chart (e.g. EvilBrush) */
   footer?: React.ReactNode;
 }
 
@@ -140,7 +136,6 @@ function ChartContainer({
   const chartId = `chart-${id ?? uniqueId.replaceAll(":", "")}`;
   const contextValue = React.useMemo(() => ({ config }), [config]);
 
-  // Validate chart config at runtime
   validateChartConfigColors(config);
 
   return (
@@ -234,10 +229,8 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
           return [];
         }
 
-        // Get max count across all themes for this key
         const maxCount = getColorsCount(itemConfig);
 
-        // Distribute colors evenly across all required slots
         const distributedColors = distributeColors(colorsArray, maxCount);
 
         return distributedColors.map((color, index) => `  --color-${key}-${index}: ${color};`);
@@ -255,7 +248,6 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   return <style>{css}</style>;
 };
 
-// Helper to extract item config from a payload.
 export function getPayloadConfigFromPayload(
   config: ChartConfig,
   payload: RechartsPayload,
@@ -267,20 +259,16 @@ export function getPayloadConfigFromPayload(
   return resolvedKey in config ? config[resolvedKey] : config[key];
 }
 
-// Format values to percent for expanded charts
 function axisValueToPercentFormatter(value: number) {
   return `${Math.round(value * 100).toFixed(0)}%`;
 }
 
-// Get max colors count across all themes for a config entry
 function getColorsCount(config: ChartConfig[string]): number {
   if (!config.colors) return 1;
   const counts = VALID_THEME_KEYS.map((theme) => config.colors?.[theme]?.length ?? 0);
   return Math.max(...counts, 1);
 }
 
-// Generate random loading data for skeleton/loading state
-// min/max represent percentage of the range (0-100), defaults to 20-80 for realistic look
 export const getLoadingData = (points = 10, min = 0, max = 70) => {
   const range = max - min;
   return Array.from({ length: points }, () => ({
