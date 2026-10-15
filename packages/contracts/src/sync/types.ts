@@ -53,7 +53,6 @@ export type SyncStatus = {
 export type UserItem = InternalCsvItem;
 
 export type SyncFormOrderItem = {
-  /** Stable id for list keys / dialog identity; duplicates may share the same MFC id. */
   readonly formRowId: string;
   itemExternalId: string;
   price: string;
@@ -141,7 +140,6 @@ export type SyncOrder = Omit<
 };
 
 export type SyncFormCollectionItem = {
-  /** Stable id for list keys / dialog identity; duplicates may share the same MFC id. */
   readonly formRowId: string;
   itemExternalId: string;
   price: string;

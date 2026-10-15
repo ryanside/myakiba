@@ -10,11 +10,6 @@ type Failure<E> = {
 
 export type Result<T, E = Error> = Success<T> | Failure<E>;
 
-/**
- * Wraps a promise to return a Result type instead of throwing errors.
- * @param promise - The promise to wrap
- * @returns A Result containing either the data or the error
- */
 export async function tryCatch<T, E = Error>(promise: Promise<T>): Promise<Result<T, E>> {
   try {
     const data = await promise;

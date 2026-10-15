@@ -409,29 +409,6 @@ export const sessionStatusToPhase = (status: SyncSessionStatus): SyncJobPhase =>
   }
 };
 
-/**
- * Maps a persisted session status to the terminal state shown in live UI flows.
- *
- * Use this when a caller needs to answer "is this job done, and if so how did
- * it end?" from persisted session data alone.
- *
- * Return value meaning:
- * - `null`: still in flight
- * - `"success"`: finished cleanly
- * - `"partial"`: finished with mixed success/failure
- * - `"error"`: terminal failure
- *
- * This helper belongs in contracts because both server and worker use the same
- * status-to-terminal mapping.
- *
- * @example
- * sessionStatusToTerminalState("processing")
- * // null
- *
- * @example
- * sessionStatusToTerminalState("failed")
- * // "error"
- */
 export const sessionStatusToTerminalState = (
   status: SyncSessionStatus,
 ): SyncTerminalState | null => {

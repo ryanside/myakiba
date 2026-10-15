@@ -1,4 +1,2 @@
-# ultracite
-#!/bin/sh
 bun x lint-staged
 bun run check-types

@@ -52,7 +52,6 @@ export function parseMoneyToMinorUnits(input: string): number {
   const trimmed = input.trim();
   if (trimmed.length === 0) return 0;
 
-  // Keep digits, minus sign, and dot. Strip commas/spaces/currency symbols.
   const normalized = trimmed.replaceAll(/[^\d.-]/g, "");
   const isNegative = normalized.startsWith("-");
   const withoutSign = isNegative ? normalized.slice(1) : normalized;

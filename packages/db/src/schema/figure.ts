@@ -74,7 +74,7 @@ export const item_release = pgTable(
       .notNull()
       .references(() => item.id, { onDelete: "cascade" }),
     date: date("date", { mode: "string" }).notNull(),
-    type: text("type"), // "original", "rerelease", "limited", etc.
+    type: text("type"),
     price: bigint("price", { mode: "number" }),
     priceCurrency: text("price_currency"),
     barcode: text("barcode"),
