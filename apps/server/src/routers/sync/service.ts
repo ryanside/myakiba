@@ -571,8 +571,6 @@ class SyncService {
     };
   }
 
-  // Sync session methods
-
   async createSyncSession(session: SyncSessionCreation): Promise<void> {
     await db.transaction(async (tx) => {
       await this.insertSyncSession(tx, session);
