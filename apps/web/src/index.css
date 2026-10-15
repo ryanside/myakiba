@@ -35,7 +35,6 @@
     1 100%
   );
 
-  /* shadcn */
   --background: oklch(1 0 0);
   --foreground: oklch(0.25 0 89.9);
   --card: oklch(1 0 0);
@@ -79,7 +78,6 @@
   --font-serif: serif;
   --font-mono: ui-monospace, monospace;
 
-  /* mfc */
   --category-accessories: #808080;
   --category-action-dolls: #0080ff;
   --category-prepainted: green;
@@ -87,20 +85,19 @@
   --category-model-kits: maroon;
   --category-trading: orange;
   --category-apparel: magenta;
-  --category-dishes: #e0b7a2; /* lighter maroon */
-  --category-hanged-up: #ffd280; /* lighter orange */
-  --category-linens: #b89fff; /* lighter purple */
+  --category-dishes: #e0b7a2;
+  --category-hanged-up: #ffd280;
+  --category-linens: #b89fff;
   --category-misc: #338979;
   --category-plushes: #00c8ff;
   --category-stationeries: black;
-  --category-on-walls: #90ee90; /* lighter green */
+  --category-on-walls: #90ee90;
   --category-books: #cccccc;
   --category-music: #3d9395;
   --category-video: #0297d7;
   --category-games: #ee2a84;
   --category-software: #666666;
 
-  /* reui */
   --info: var(--color-blue-500);
   --info-foreground: var(--color-blue-700);
   --success: var(--color-emerald-500);
@@ -112,7 +109,6 @@
 }
 
 .dark {
-  /* shadcn */
   --background: oklch(0.15 0 89.9);
   --foreground: oklch(0.98 0 0);
   --card: oklch(0.17 0 89.9);
@@ -155,7 +151,6 @@
   --font-serif: serif;
   --font-mono: ui-monospace, monospace;
 
-  /* mfc */
   --category-accessories: #808080;
   --category-action-dolls: #0080ff;
   --category-prepainted: green;
@@ -163,20 +158,19 @@
   --category-model-kits: maroon;
   --category-trading: orange;
   --category-apparel: magenta;
-  --category-dishes: #e0b7a2; /* lighter maroon */
-  --category-hanged-up: #ffd280; /* lighter orange */
-  --category-linens: #b89fff; /* lighter purple */
+  --category-dishes: #e0b7a2;
+  --category-hanged-up: #ffd280;
+  --category-linens: #b89fff;
   --category-misc: #338979;
   --category-plushes: #00c8ff;
   --category-stationeries: black;
-  --category-on-walls: #90ee90; /* lighter green */
+  --category-on-walls: #90ee90;
   --category-books: #cccccc;
   --category-music: #3d9395;
   --category-video: #0297d7;
   --category-games: #ee2a84;
   --category-software: #bbbbbb;
 
-  /* reui */
   --info: var(--color-blue-500);
   --info-foreground: var(--color-blue-400);
   --success: var(--color-emerald-500);
@@ -188,7 +182,6 @@
 }
 
 @theme inline {
-  /* shadcn */
   --font-sans: var(--font-sans);
   --font-orbitron: var(--font-orbitron);
   --font-serif: var(--font-serif);
@@ -238,7 +231,6 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 
-  /* mfc */
   --category-accessories: var(--category-accessories);
   --category-action-dolls: var(--category-action-dolls);
   --category-prepainted: var(--category-prepainted);
@@ -259,7 +251,6 @@
   --category-games: var(--category-games);
   --category-software: var(--category-software);
 
-  /* reui */
   --color-destructive-foreground: var(--destructive-foreground);
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);

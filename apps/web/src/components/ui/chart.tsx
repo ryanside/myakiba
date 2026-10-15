@@ -12,7 +12,6 @@ import type { LegendPayload } from "recharts/types/component/DefaultLegendConten
 
 import { cn } from "@/lib/utils";
 
-// Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: "", dark: ".dark" } as const;
 
 export type ChartConfig = Record<

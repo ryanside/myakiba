@@ -41,7 +41,6 @@ function DataGridTableDndHeader<TData>({ header }: { header: Header<TData, unkno
   const { props } = useDataGrid();
   const { column } = header;
 
-  // Check if column ordering is enabled for this column
   const canOrder =
     (column.columnDef as { enableColumnOrdering?: boolean }).enableColumnOrdering !== false;
 
@@ -144,7 +143,7 @@ function DataGridTableDnd<TData>({
     return {
       ...transform,
       x: Math.min(Math.max(transform.x, minX), maxX),
-      y: 0, // Lock vertical movement
+      y: 0,
     };
   };
 

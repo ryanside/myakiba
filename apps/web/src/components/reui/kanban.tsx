@@ -369,7 +369,6 @@ function Kanban<T, TColumnId extends string = string>({
         return;
       }
 
-      // Handle column reordering
       if (isColumn(active.id) && isColumn(over.id)) {
         const activeIndex = columnIds.indexOf(active.id);
         const overIndex = columnIds.indexOf(over.id);

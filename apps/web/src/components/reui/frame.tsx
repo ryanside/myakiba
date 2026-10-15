@@ -3,23 +3,10 @@ import type { VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 
-/**
- * CSS variable architecture for FramePanel theming:
- *
- * The Frame parent sets --frame-panel-bg and --frame-panel-border-color.
- * FramePanel consumes them directly via bg-(--frame-panel-bg) and
- * border-(--frame-panel-border-color). This means:
- *
- *   - variant="inverse" overrides those vars on Frame → all panels pick it up
- *   - <FramePanel className="bg-blue-50"> adds a direct utility on the element
- *     which wins over bg-(--frame-panel-bg) by Tailwind source order — no
- *     :not() or !important needed
- */
 const frameVariants = cva(
   [
     "relative flex flex-col bg-muted/50 inset-shadow-2xs inset-shadow-white dark:inset-shadow-white/10 gap-0.75 p-0.75 rounded-(--frame-radius)",
     "[--frame-radius:var(--radius-xl)]",
-    // Default panel token values — overridden per-variant below
     "[--frame-panel-bg:var(--color-card)] [--frame-panel-border-color:var(--color-border)] [--frame-border-color:var(--color-border)]",
   ],
   {
@@ -43,7 +30,6 @@ const frameVariants = cva(
           "*:has-[+[data-slot=frame-panel]]:before:hidden",
           "*:[[data-slot=frame-panel]+[data-slot=frame-panel]]:rounded-t-none",
           "*:[[data-slot=frame-panel]+[data-slot=frame-panel]]:border-t-0",
-          // No FrameHeader present: first panel sits flush against the outer frame border
           "[&:not(:has([data-slot=frame-panel-header]))_[data-slot=frame-panel]:is(:first-child)]:border-t-0",
         ],
         false: [
@@ -53,7 +39,6 @@ const frameVariants = cva(
         ],
       },
       dense: {
-        // Positional rules must stay as parent selectors — cannot be expressed via CSS vars
         true: "p-0 gap-0 border-[var(--frame-border-color)] [&_[data-slot=frame-panel]]:-mx-px [&_[data-slot=frame-panel]]:before:hidden [&_[data-slot=frame-panel]:last-child]:-mb-px",
         false: "",
       },
@@ -90,9 +75,6 @@ function FramePanel({ className, fit, ...props }: React.ComponentProps<"div"> & 
   return (
     <div
       className={cn(
-        // bg-(--frame-panel-bg) and border-(--frame-panel-border-color) consume the
-        // CSS vars set by the Frame parent. Any explicit bg-* or border-* class passed
-        // via className overrides these by Tailwind source order — no ! needed.
         "relative grow overflow-hidden rounded-(--frame-radius) border border-(--frame-panel-border-color) bg-(--frame-panel-bg) bg-clip-padding shadow-xs",
         "before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--frame-radius)-1px)] before:shadow-black/5",
         "dark:bg-clip-border dark:before:shadow-white/5",
