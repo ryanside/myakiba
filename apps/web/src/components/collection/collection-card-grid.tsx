@@ -142,7 +142,6 @@ export function CollectionCardGrid({
               dateFormat={dateFormat}
             />
 
-            {/* Image */}
             <Link
               {...(item.itemExternalId === null
                 ? ({ to: "/item/custom/$id", params: { id: item.itemId } } as const)

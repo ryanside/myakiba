@@ -320,7 +320,6 @@ function DataGridColumnHeaderInner<TData, TValue>({
     }
 
     return items;
-    // oxlint-disable-next-line exhaustive-deps
   }, [
     filter,
     canSort,

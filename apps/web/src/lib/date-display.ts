@@ -26,21 +26,6 @@ function parseTimestampValue(value: string | Date): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-/**
- * Formats a date-only value for UI display using the user's preferred date format.
- *
- * @example
- * formatDateOnlyForDisplay("2024-03-15", "MM/DD/YYYY")
- * // "03/15/2024"
- *
- * @example
- * formatDateOnlyForDisplay("2024-03-15", "DD/MM/YYYY")
- * // "15/03/2024"
- *
- * @example
- * formatDateOnlyForDisplay(null)
- * // "n/a"
- */
 export function formatDateOnlyForDisplay(
   value: string | Date | null | undefined,
   format: DateFormat = "MM/DD/YYYY",
@@ -53,21 +38,6 @@ export function formatDateOnlyForDisplay(
   return formatDateFns(date, DATE_PATTERN_BY_FORMAT[format]);
 }
 
-/**
- * Formats a timestamp value for UI display using the user's preferred date format.
- *
- * @example
- * formatTimestampForDisplay("2024-03-15T14:30:00", "MM/DD/YYYY")
- * // "03/15/2024, 2:30 PM"
- *
- * @example
- * formatTimestampForDisplay("2024-03-15T14:30:00", "YYYY/MM/DD")
- * // "2024/03/15, 14:30"
- *
- * @example
- * formatTimestampForDisplay(null)
- * // "n/a"
- */
 export function formatTimestampForDisplay(
   value: string | Date | null | undefined,
   format: DateFormat = "MM/DD/YYYY",
@@ -80,13 +50,6 @@ export function formatTimestampForDisplay(
   return formatDateFns(date, TIMESTAMP_PATTERN_BY_FORMAT[format]);
 }
 
-/**
- * Formats a short localized date-time label for UI metadata.
- *
- * @example
- * formatShortDateTime(new Date(2024, 2, 15, 14, 30), "en-US")
- * // "Mar 15, 2:30 PM"
- */
 export function formatShortDateTime(date: Date, locale?: Intl.LocalesArgument): string {
   return new Intl.DateTimeFormat(locale, {
     month: "short",
@@ -96,17 +59,6 @@ export function formatShortDateTime(date: Date, locale?: Intl.LocalesArgument): 
   }).format(new Date(date));
 }
 
-/**
- * Formats a date relative to the current time for recent activity UI.
- *
- * @example
- * formatRelativeTimeToNow(new Date(Date.now() - 30_000))
- * // "just now"
- *
- * @example
- * formatRelativeTimeToNow(new Date(Date.now() - 2 * 60 * 60 * 1000))
- * // "2h ago"
- */
 export function formatRelativeTimeToNow(date: Date): string {
   const timestamp = new Date(date).getTime();
   if (Number.isNaN(timestamp)) return "-";

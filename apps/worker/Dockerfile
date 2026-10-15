@@ -1,20 +1,17 @@
 FROM oven/bun:1.4.0-debian AS base
 
-# Prune stage - generate a minimal workspace for worker
 FROM base AS prune
 RUN bun add -g turbo@2.10.11
 WORKDIR /app
 COPY . .
 RUN turbo prune worker --docker
 
-# Install stage - install only the dependencies needed for worker
 FROM base AS install
 WORKDIR /app
 COPY --from=prune /app/out/json/ .
 COPY --from=prune /app/out/bun.lock ./bun.lock
 RUN bun install --frozen-lockfile --ignore-scripts --production --linker=hoisted
 
-# Build stage - compile the worker binary
 FROM base AS build
 WORKDIR /app
 # Bun inlines process.env.NODE_ENV at bundle time; without this the compiled
@@ -25,7 +22,6 @@ COPY --from=prune /app/out/full/ .
 
 RUN bun build --compile --minify --sourcemap --packages bundle ./apps/worker/index.ts --outfile worker
 
-# Our application runner
 FROM gcr.io/distroless/base-debian12:nonroot AS runner
 
 # Copy busybox as wget for health checks

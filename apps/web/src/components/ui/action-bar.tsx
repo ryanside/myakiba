@@ -276,7 +276,6 @@ function ActionBarGroup(props: DivProps) {
         const elementB = b.ref.current;
         if (!elementA || !elementB) return 0;
         const position = elementA.compareDocumentPosition(elementB);
-        // compareDocumentPosition returns a bitmask; bitwise AND is the documented API.
         // oxlint-disable-next-line no-bitwise
         if (position & Node.DOCUMENT_POSITION_FOLLOWING) {
           return -1;

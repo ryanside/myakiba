@@ -1,6 +1,5 @@
 import {
   getPayloadConfigFromPayload,
-  getNestedPayloadKey,
   getColorsCount,
   useChart,
 } from "@/components/evilcharts/ui/recharts-chart";
@@ -20,7 +19,6 @@ type ChartLegendVariant =
 function ChartLegendContent({
   className,
   hideIcon = false,
-  nameKey,
   payload,
   verticalAlign,
   align = "right",
@@ -30,7 +28,6 @@ function ChartLegendContent({
   variant = "rounded-square",
 }: React.ComponentProps<"div"> & {
   hideIcon?: boolean;
-  nameKey?: string;
   selected?: string | null;
   isClickable?: boolean;
   onSelectChange?: (selected: string | null) => void;
@@ -56,15 +53,10 @@ function ChartLegendContent({
       {payload
         .filter((item) => item.type !== "none")
         .map((item) => {
-          // For pie charts, item.value contains the sector name (e.g., "chrome")
-          // For radial charts, the name is in item.payload[nameKey]
-          // For other charts, item.dataKey contains the series name (e.g., "desktop")
-          const payloadName = item.payload ? getNestedPayloadKey(item, nameKey) : undefined;
-          const key = `${payloadName ?? item.value ?? item.dataKey ?? "value"}`;
+          const key = `${item.value ?? item.dataKey ?? "value"}`;
           const itemConfig = getPayloadConfigFromPayload(config, item, key);
           const isSelected = selected === null || selected === key;
 
-          // Get colors count for this item to determine gradient vs solid
           const colorsCount = itemConfig ? getColorsCount(itemConfig) : 1;
           const content = (
             <>
@@ -107,11 +99,6 @@ function ChartLegendContent({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Legend indicator — each variant gets its own branch so future variants
-// can diverge freely in markup & style.
-// ---------------------------------------------------------------------------
-
 function LegendIndicator({
   variant,
   dataKey,
@@ -148,11 +135,6 @@ function LegendIndicator({
   }
 }
 
-// ---------------------------------------------------------------------------
-// Style helpers
-// ---------------------------------------------------------------------------
-
-/** Solid fill / gradient background for filled variants. */
 function getLegendFillStyle(dataKey: string, colorsCount: number): React.CSSProperties {
   if (colorsCount <= 1) {
     return { backgroundColor: `var(--color-${dataKey}-0)` };
@@ -167,7 +149,6 @@ function getLegendFillStyle(dataKey: string, colorsCount: number): React.CSSProp
 }
 
 /**
- * Outline style for stroke variants.
  * Uses background + mask-composite to punch out the center, leaving only the
  * "border" visible. Works with both solid colors and gradients, and respects
  * border-radius — unlike plain `border-color`.

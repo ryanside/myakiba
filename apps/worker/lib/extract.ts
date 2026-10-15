@@ -78,7 +78,6 @@ export const extractEntitiesWithRoles = (
       } else if ($node.is("small.light") && $node.find("em").length > 0) {
         currentRole = $node.find("em").text().trim();
 
-        // Apply role to all temp entities and move them to main array
         for (const entity of tempEntities) {
           entity.role = currentRole;
           entities.push(entity);
@@ -87,7 +86,6 @@ export const extractEntitiesWithRoles = (
       }
     }
 
-    // Handle any remaining entities without explicit roles
     for (const entity of tempEntities) {
       entity.role = currentRole;
       entities.push(entity);
@@ -144,7 +142,6 @@ export const extractReleaseData = ($element: cheerio.Cheerio<Element>, $: cheeri
       const date = dateElement.text().trim();
       const valueText = $releaseField.find(".data-value").text();
 
-      // Extract type from <em> tags within <small class="light"> elements
       let type = "";
       const $smallLight = $releaseField.find("small.light");
       const emElements = $smallLight.find("em");

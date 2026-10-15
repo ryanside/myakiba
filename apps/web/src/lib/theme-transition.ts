@@ -1,10 +1,5 @@
 type SetThemeFn = (theme: string) => void;
 
-/**
- * Wraps a theme change with the View Transitions API so the gif mask
- * animation in index.css plays during the swap. Falls back to a plain
- * `setTheme` call when the API is unavailable.
- */
 export function setThemeWithTransition(newTheme: string, setTheme: SetThemeFn): void {
   if (!document.startViewTransition) {
     setTheme(newTheme);

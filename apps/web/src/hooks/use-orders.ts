@@ -108,10 +108,7 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
   const queryClient = useQueryClient();
   const filters = options?.filters;
   const ordersOpts = ordersQueryOptions(filters ?? {});
-  // The order detail route renders this hook without filters and cannot apply
-  // any. Treat that case as "no filters active" so it gets the same
-  // optimistic, fire-and-forget path as the unfiltered list view.
-  const filtersActive = filters === undefined ? false : hasActiveFiltersOrSorting(filters);
+  const filtersActive = hasActiveFiltersOrSorting(filters ?? {});
 
   const [pendingOrderIdList, setPendingOrderIdList] = useState<readonly string[]>([]);
   const [pendingCollectionItemIdList, setPendingCollectionItemIdList] = useState<readonly string[]>(

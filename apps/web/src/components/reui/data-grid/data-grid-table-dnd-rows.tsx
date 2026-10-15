@@ -36,7 +36,6 @@ import { Button } from "@/components/ui/button";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { DragDropHorizontalIcon } from "@hugeicons/core-free-icons";
 
-// Context to share sortable listeners from row to handle
 type SortableContextValue = ReturnType<typeof useSortable>;
 const SortableRowContext = createContext<Pick<
   SortableContextValue,

@@ -23,7 +23,6 @@ interface ReleaseCalendarProps {
   readonly month?: number;
   /** Full year (e.g. 2026). Paired with `month`. */
   readonly year?: number;
-  /** Hide the internal month label and navigation arrows. */
   readonly hideControls?: boolean;
 }
 

@@ -432,9 +432,7 @@ function RouteComponent(): React.JSX.Element {
           isFetchingNextPage={isFetchingNextPage}
           isFetchNextPageError={isFetchNextPageError}
           disabled={isDeleting}
-          onLoadMore={async () => {
-            await handleLoadMore();
-          }}
+          onLoadMore={handleLoadMore}
         />
       ) : null}
     </div>

@@ -1,11 +1,3 @@
-/**
- * Decides how a resync should handle collection rows that still point at
- * release IDs no longer present in the latest scrape.
- *
- * - `none`: no previously known release disappeared
- * - `remap`: exactly one stale release was replaced by exactly one new release
- * - `clear`: the change is ambiguous, so affected selections must be cleared
- */
 export type ReleasePlan =
   | {
       readonly kind: "none";

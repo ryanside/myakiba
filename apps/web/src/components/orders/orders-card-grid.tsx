@@ -129,7 +129,6 @@ export function OrdersCardGrid({
               currency={currency}
             />
 
-            {/* Image mosaic */}
             <Link
               to="/orders/$id"
               params={{ id: order.orderId }}

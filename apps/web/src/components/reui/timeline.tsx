@@ -4,13 +4,11 @@ import { useRender } from "@base-ui/react/use-render";
 
 import { cn } from "@/lib/utils";
 
-// Types
 type TimelineContextValue = {
   activeStep: number;
   setActiveStep: (step: number) => void;
 };
 
-// Context
 const TimelineContext = createContext<TimelineContextValue | undefined>(undefined);
 
 const useTimeline = () => {
@@ -21,7 +19,6 @@ const useTimeline = () => {
   return context;
 };
 
-// Components
 interface TimelineProps extends useRender.ComponentProps<"div"> {
   defaultValue?: number;
   value?: number;
@@ -78,7 +75,6 @@ function Timeline({
   );
 }
 
-// TimelineContent
 function TimelineContent({
   className,
   render,
@@ -98,7 +94,6 @@ function TimelineContent({
   });
 }
 
-// TimelineDate
 type TimelineDateProps = useRender.ComponentProps<"time">;
 
 function TimelineDate({ className, render, children, ...props }: TimelineDateProps) {
@@ -118,7 +113,6 @@ function TimelineDate({ className, render, children, ...props }: TimelineDatePro
   });
 }
 
-// TimelineHeader
 function TimelineHeader({
   className,
   render,
@@ -138,7 +132,6 @@ function TimelineHeader({
   });
 }
 
-// TimelineIndicator
 type TimelineIndicatorProps = useRender.ComponentProps<"div">;
 
 function TimelineIndicator({ className, children, render, ...props }: TimelineIndicatorProps) {
@@ -159,7 +152,6 @@ function TimelineIndicator({ className, children, render, ...props }: TimelineIn
   });
 }
 
-// TimelineItem
 interface TimelineItemProps extends useRender.ComponentProps<"div"> {
   step: number;
 }
@@ -184,7 +176,6 @@ function TimelineItem({ step, className, render, children, ...props }: TimelineI
   });
 }
 
-// TimelineSeparator
 function TimelineSeparator({
   className,
   render,
@@ -208,7 +199,6 @@ function TimelineSeparator({
   });
 }
 
-// TimelineTitle
 function TimelineTitle({ className, render, children, ...props }: useRender.ComponentProps<"h3">) {
   const defaultProps = {
     className: cn("font-medium text-sm", className),

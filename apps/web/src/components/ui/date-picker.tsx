@@ -32,7 +32,6 @@ export function DatePicker({
     if (!onChange) return;
 
     if (date) {
-      // Format date as YYYY-MM-DD to match the input[type="date"] format
       const formattedDate = format(date, "yyyy-MM-dd");
       onChange(formattedDate);
     } else {

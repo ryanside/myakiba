@@ -435,8 +435,6 @@ async function handleSyncJobFailure(job: FullJobData, cause: unknown): Promise<v
   }
 }
 
-// BullMQ can fail a job that keeps getting stuck before trying to run it again.
-// Wait for that cleanup to finish before shutting down.
 const pendingFailureCleanups = new Set<Promise<void>>();
 syncWorker.on("failed", async (job, error) => {
   if (!job) return;

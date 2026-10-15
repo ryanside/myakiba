@@ -42,7 +42,6 @@ function HomeComponent() {
 
   return (
     <div className="min-h-screen min-w-0 overflow-x-clip bg-background text-foreground">
-      {/* nav */}
       <header className="sticky top-0 z-30 w-full bg-background">
         <nav className="mx-auto flex h-12 w-full max-w-5xl items-center px-6 min-[940px]:grid min-[940px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] min-[940px]:gap-4">
           <div />
@@ -105,7 +104,6 @@ function HomeComponent() {
       </header>
 
       <main className="w-full">
-        {/* Hero copy */}
         <section className="mx-auto w-full max-w-5xl px-6 pt-16 sm:pt-24">
           <div className="min-[1400px]:grid min-[1400px]:grid-cols-[minmax(0,1fr)_348px] min-[1400px]:items-center min-[1400px]:gap-7">
             <div className="min-w-0">
@@ -174,7 +172,6 @@ function HomeComponent() {
 
         <HeroShowcase isDark={isDark} />
 
-        {/* panel gallery */}
         <section
           id="features"
           aria-label="myakiba features"

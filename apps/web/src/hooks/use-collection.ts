@@ -228,10 +228,7 @@ export function useCollectionMutations(options?: { readonly filters?: Collection
   const queryClient = useQueryClient();
   const filters = options?.filters;
   const queryOpts = collectionQueryOptions(filters ?? {});
-  // The item detail route renders this hook without filters and cannot apply
-  // any. Treat that case as "no filters active" so it benefits from the same
-  // optimistic, fire-and-forget path as the unfiltered list view.
-  const filtersActive = filters === undefined ? false : hasActiveFiltersOrSorting(filters);
+  const filtersActive = hasActiveFiltersOrSorting(filters ?? {});
 
   const [pendingCollectionIdList, setPendingCollectionIdList] = useState<readonly string[]>([]);
   const pendingCollectionIds = useMemo(

@@ -107,12 +107,10 @@ export const rateLimit = new Elysia({ name: "rate-limit" }).macro({
     async beforeHandle({ request, set }) {
       const config = rateLimitConfigs[name];
 
-      // Get identifier based on strategy
       let identifier: string | null;
 
       if (config.strategy === "userId") {
         identifier = await getUserId(request.headers);
-        // Skip rate limiting for unauthenticated requests on userId strategy
         if (!identifier) return;
       } else {
         identifier = getIpFingerprint(request.headers);
@@ -121,7 +119,6 @@ export const rateLimit = new Elysia({ name: "rate-limit" }).macro({
       const key = `${config.keyPrefix}:${identifier}`;
       const result = await checkRateLimit(key, config);
 
-      // Always set rate limit headers
       set.headers["X-RateLimit-Limit"] = String(config.maxRequests);
       set.headers["X-RateLimit-Remaining"] = String(result.remaining);
       set.headers["X-RateLimit-Reset"] = String(result.ttl);

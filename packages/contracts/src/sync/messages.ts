@@ -1,24 +1,5 @@
 import type { SyncJobRecentItem } from "./schema";
 
-/**
- * Canonical user-facing copy for sync job status updates.
- *
- * Use this anywhere we persist or render sync status text so server, worker,
- * widgets, banners, and toasts all speak the same language.
- *
- * Prefer these message builders over inline strings when:
- * - writing `statusMessage` to Redis or Postgres
- * - synthesizing fallback job status from a persisted session
- * - rendering UI copy that should match persisted status exactly
- *
- * @example
- * SYNC_STATUS_MESSAGES.queued
- * // "Import queued"
- *
- * @example
- * SYNC_STATUS_MESSAGES.partial(8, 10, 2)
- * // "Added 8/10 items. 2 failed."
- */
 export const SYNC_STATUS_MESSAGES = {
   queued: "Import queued",
   retryQueued: "Retry queued",

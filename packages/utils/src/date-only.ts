@@ -49,18 +49,6 @@ function getValidDateOnlyParts(value: string | Date): DateOnlyParts | null {
  * Converts a Date object (from Eden's auto-parsing) back to YYYY-MM-DD string.
  * Eden Treaty automatically converts ISO-compatible strings to Date objects,
  * so we normalize them back to a date-only string before storing or validating.
- *
- * @example
- * toDateOnlyString("2024-03-15T00:00:00.000Z")
- * // "2024-03-15"
- *
- * @example
- * toDateOnlyString(new Date("2024-03-15T00:00:00.000Z"))
- * // "2024-03-15"
- *
- * @example
- * toDateOnlyString(null)
- * // null
  */
 export function toDateOnlyString(value: Date | string | null | undefined): string | null {
   if (!value) return null;
@@ -94,7 +82,6 @@ export function getDateOnlyMonthBounds(year: number, month: number): DateOnlyRan
 
 /**
  * Normalizes supported scraped release-date inputs to YYYY-MM-DD.
- * Returns null for unsupported or invalid formats so callers can decide how to handle them.
  *
  * @example
  * normalizeScrapedDate("2006")
@@ -105,16 +92,8 @@ export function getDateOnlyMonthBounds(year: number, month: number): DateOnlyRan
  * // "2010-09-01"
  *
  * @example
- * normalizeScrapedDate("2024-01-15")
- * // "2024-01-15"
- *
- * @example
  * normalizeScrapedDate("09/18/2025")
  * // "2025-09-18"
- *
- * @example
- * normalizeScrapedDate("TBD")
- * // null
  */
 export function normalizeScrapedDate(dateStr: string): string | null {
   const trimmed = dateStr.trim();
@@ -151,25 +130,6 @@ export function normalizeScrapedDate(dateStr: string): string | null {
 
 /**
  * Parses a date-only value into a local-midnight Date for date-picker components.
- *
- * @example
- * const date = parseDateOnly("2024-03-15");
- * date?.getFullYear()
- * // 2024
- *
- * @example
- * const date = parseDateOnly("2024-03-15");
- * date?.getMonth()
- * // 2
- *
- * @example
- * const date = parseDateOnly("2024-03-15");
- * date?.getDate()
- * // 15
- *
- * @example
- * parseDateOnly("not-a-date")
- * // undefined
  */
 export function parseDateOnly(value: string | Date | null | undefined): Date | undefined {
   if (!value) return undefined;

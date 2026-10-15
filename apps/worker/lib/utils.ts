@@ -46,20 +46,6 @@ export const createFetchOptions = (image = false) => ({
   signal: AbortSignal.timeout(10_000),
 });
 
-/**
- * Create the worker's job status when a sync starts, before sending the first update.
- * Update it with helpers like `recordItemOutcome()` and send it with `publishJobStatus()`.
- *
- * Use this only in the worker. The UI reads the `SyncJobStatus` it receives.
- *
- * @example
- * const state = createJobStatusState({
- *   jobId: "job_123",
- *   totalItems: 10,
- *   phase: "scraping",
- *   statusMessage: SYNC_STATUS_MESSAGES.starting(10),
- * });
- */
 export const createJobStatusState = ({
   jobId,
   totalItems,
@@ -79,29 +65,6 @@ export const createJobStatusState = ({
   statusMessage,
 });
 
-/**
- * Choose the final status and shared message from the success and failure counts.
- * Call after scraping and saving finish. Pass `error` when saving failed.
- *
- * For live progress, set `state.phase` and `state.statusMessage` directly.
- *
- * @example
- * resolveTerminalState({ successCount: 10, failCount: 0, totalRowCount: 10, scrapedCount: 10 })
- * // { sessionStatus: "completed", statusMessage: "Added 10/10 items" }
- *
- * @example
- * resolveTerminalState({
- *   successCount: 3,
- *   failCount: 2,
- *   totalRowCount: 5,
- *   scrapedCount: 2,
- *   error: new Error("duplicate key value violates unique constraint"),
- * })
- * // {
- * //   sessionStatus: "partial",
- * //   statusMessage: "Failed to save items"
- * // }
- */
 export const resolveTerminalState = ({
   successCount,
   failCount,
@@ -158,10 +121,6 @@ type RecordItemParams =
       readonly failureReason: string;
     };
 
-/**
- * Update `state` with the item's result and progress counts.
- * Put it first in the recent items list and keep at most `RECENT_ITEMS_LIMIT` entries.
- */
 export const recordItemOutcome = (state: SyncJobStatusState, item: RecordItemParams): void => {
   if (state.progress) {
     const rowCount = state.rowCountByExternalId?.get(item.externalId) ?? 1;
@@ -274,7 +233,6 @@ const persistSyncSessionItemFailures = async ({
     );
 };
 
-/** Mark failures first, then mark the remaining pending items as scraped. */
 export const persistSyncSessionItemResults = async ({
   tx,
   syncSessionId,
@@ -353,7 +311,6 @@ export const persistSyncFailureOutcome = async ({
   });
 };
 
-/** Save collection, order, or CSV results and item history as one database change. */
 export async function finalizeSync({
   syncSessionId,
   failures,

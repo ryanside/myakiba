@@ -26,7 +26,7 @@ const ChartDot = React.memo(
     type = "default",
     maskId,
   }: ChartDotProps) => {
-    const dotId = React.useId().replaceAll(":", "");
+    const dotId = React.useId();
     const gradientUrl = `url(#${chartId}-colors-${String(dataKey)})`;
 
     if (cx === undefined || cy === undefined) return null;
@@ -94,7 +94,6 @@ const DefaultDot = React.memo(
             <circle cx={cx} cy={cy} r={r} />
           </clipPath>
         </defs>
-        {/* Full-width gradient rectangle clipped to dot shape */}
         <rect
           x="0"
           y={cy - r}
@@ -122,9 +121,7 @@ const PrimaryBorderDot = React.memo(
             <circle cx={cx} cy={cy} r={r} />
           </clipPath>
         </defs>
-        {/* Background stroke (border) */}
         <circle cx={cx} cy={cy} r={r} fill="currentColor" />
-        {/* Inner gradient circle clipped */}
         <rect
           x="0"
           y={cy - (r - strokeWidth / 2)}
@@ -157,7 +154,6 @@ const ColoredBorderDot = React.memo(
             <circle cx={cx} cy={cy} r={r + strokeWidth / 2} />
           </clipPath>
         </defs>
-        {/* Gradient stroke (border) via clipped rect */}
         <rect
           x="0"
           y={cy - r - strokeWidth / 2}
@@ -167,7 +163,6 @@ const ColoredBorderDot = React.memo(
           fillOpacity={fillOpacity}
           clipPath={`url(#dot-clip-${dotId})`}
         />
-        {/* Inner solid fill */}
         <circle cx={cx} cy={cy} r={r - strokeWidth / 2} fill="currentColor" />
       </g>
     );

@@ -6,10 +6,6 @@
   --typer-radius: 5px;
 }
 
-/* .dark [data-typer] {
-  --typer-accent: var(--color-indigo-400);
-} */
-
 [data-typer][data-typer-type="initial"] {
   opacity: 0;
 }

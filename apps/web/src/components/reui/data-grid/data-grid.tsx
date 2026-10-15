@@ -7,7 +7,6 @@ import type { ColumnFiltersState, RowData, SortingState, Table } from "@tanstack
 import { cn } from "@/lib/utils";
 
 declare module "@tanstack/react-table" {
-  // oxlint-disable-next-line no-unused-vars
   interface ColumnMeta<TData extends RowData, TValue> {
     headerTitle?: string;
     headerClassName?: string;

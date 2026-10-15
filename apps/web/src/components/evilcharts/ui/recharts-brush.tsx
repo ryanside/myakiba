@@ -2,7 +2,7 @@
 
 import { motion, useMotionValue, useMotionValueEvent, useSpring, useTransform } from "motion/react";
 import { ResponsiveContainer, AreaChart, Area, LineChart, Line, BarChart, Bar } from "recharts";
-import { ChartStyle, getColorsCount } from "@/components/evilcharts/ui/recharts-chart";
+import { getColorsCount } from "@/components/evilcharts/ui/recharts-chart";
 import type {
   ChartConfig,
   ChartDataRow,
@@ -14,8 +14,6 @@ import type { MotionValue } from "motion/react";
 import { cn } from "@/lib/utils";
 import * as React from "react";
 
-// ─── Types ──────────────────────────────────────────────────────────────────
-
 type EvilBrushVariant = "line" | "area" | "bar";
 type CurveType = ComponentProps<typeof Area>["type"];
 
@@ -24,79 +22,36 @@ interface EvilBrushRange {
   endIndex: number;
 }
 
-// ─── Brush marker — the declarative `<Chart.Brush/>` child ─────────────────────
-// Renders nothing; its PRESENCE turns the brush footer on (replacing the old
-// showBrush prop) and its props carry the brush's height, handle-label
-// formatter, and range callback. Shared so every cartesian chart attaches the
-// SAME component to its root.
-
 export interface BrushProps {
-  height?: number; // brush preview strip height in px
-  formatLabel?: (value: ChartDataValue, index: number) => string; // formats the range-handle labels
-  onChange?: (range: EvilBrushRange) => void; // fires as the range moves
+  height?: number;
+  formatLabel?: (value: ChartDataValue, index: number) => string;
+  onChange?: (range: EvilBrushRange) => void;
 }
 
 /** Declares the zoom brush below the chart. Presence renders it; renders nothing itself. */
 export const Brush: FC<BrushProps> = () => null;
 
 interface EvilBrushProps {
-  /** Full dataset – always rendered in the miniature chart */
   data: readonly ChartDataRow[];
-  /** Chart config with colour definitions */
   chartConfig: ChartConfig;
-  /** Data keys to plot (default: all keys from chartConfig) */
   dataKeys?: string[];
-  /** X-axis data key – used for handle labels */
   xDataKey?: string;
-  /** Visual variant of the mini chart */
   variant?: EvilBrushVariant;
-  /** Pixel height of the brush */
   height?: number;
-  /** Extra className */
   className?: string;
-  /** Whether areas/bars should be stacked in the mini chart */
   stacked?: boolean;
-  /** Stroke variant for line / area strokes in the mini chart */
-  strokeVariant?: "solid" | "dashed" | "animated-dashed";
-  /** Whether to connect null data points in line / area variants */
-  connectNulls?: boolean;
-  /** Radius for bar corners in the bar variant */
   barRadius?: number;
 
-  // ── Controlled mode ──────────────────────────────────────────────────
-  /** Controlled start index */
   startIndex?: number;
-  /** Controlled end index */
   endIndex?: number;
 
-  // ── Uncontrolled mode ────────────────────────────────────────────────
-  /** Initial start index (uncontrolled) */
-  defaultStartIndex?: number;
-  /** Initial end index (uncontrolled) */
-  defaultEndIndex?: number;
-
-  /** Fired whenever the visible range changes */
   onChange?: (range: EvilBrushRange) => void;
-  /** Format the handle label from the xDataKey value */
   formatLabel?: (value: ChartDataValue, index: number) => string;
-  /** Curve type for line / area variants */
   curveType?: CurveType;
-  /** Minimum number of data points that must remain selected */
-  minSpan?: number;
-  /** Whether to render labels on the handles */
-  showLabels?: boolean;
-  /** Skip rendering own ChartStyle (when inside a ChartContainer that already provides CSS vars) */
-  skipStyle?: boolean;
 }
 
-// ─── Spring config ──────────────────────────────────────────────────────────
-
 const SPRING_CONFIG = { stiffness: 300, damping: 35, mass: 0.8 };
-
-// ─── Pointer-capture drag hook ──────────────────────────────────────────────
-// Replaces raw addEventListener with the modern Pointer Events API.
-// setPointerCapture routes all pointer events to the originating element,
-// so we get mouse + touch + pen support with zero global listeners.
+const MIN_SPAN = 2;
 
 type DragType = "left" | "right" | "middle";
 
@@ -176,7 +131,6 @@ function useBrushDrag({
     setIsDragging(false);
   }, []);
 
-  // Helper to bind all three pointer handlers for a given drag type
   const bind = useCallback(
     (type: DragType) => ({
       onPointerDown: (e: React.PointerEvent) => onPointerDown(e, type),
@@ -189,8 +143,6 @@ function useBrushDrag({
   return { isDragging, bind };
 }
 
-// ─── EvilBrush ────────────────────────────────────────────────────────────
-
 function EvilBrush({
   data,
   chartConfig,
@@ -200,32 +152,23 @@ function EvilBrush({
   height = 56,
   className,
   stacked = false,
-  strokeVariant = "solid",
-  connectNulls = false,
   barRadius,
   startIndex: controlledStart,
   endIndex: controlledEnd,
-  defaultStartIndex = 0,
-  defaultEndIndex,
   onChange,
   formatLabel,
   curveType = "monotone",
-  minSpan = 2,
-  showLabels = true,
-  skipStyle = false,
 }: EvilBrushProps) {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const keys = React.useMemo(() => dataKeys ?? Object.keys(chartConfig), [dataKeys, chartConfig]);
   const totalPoints = data.length;
-  const chartId = React.useId().replaceAll(":", "");
-
-  // ── Controlled vs uncontrolled ──────────────────────────────────────────
+  const chartId = React.useId();
 
   const isControlled = controlledStart !== undefined && controlledEnd !== undefined;
 
   const [internalRange, setInternalRange] = React.useState<EvilBrushRange>(() => ({
-    startIndex: Math.max(0, Math.min(defaultStartIndex, totalPoints - 1)),
-    endIndex: Math.max(0, Math.min(defaultEndIndex ?? totalPoints - 1, totalPoints - 1)),
+    startIndex: 0,
+    endIndex: Math.max(0, totalPoints - 1),
   }));
 
   // Track the last committed range to avoid duplicate updates when small
@@ -247,8 +190,6 @@ function EvilBrush({
     lastCommittedRef.current = internalRange;
   }, [internalRange]);
 
-  // ── Clamping & committing ───────────────────────────────────────────────
-
   const clampRange = useCallback(
     (range: EvilBrushRange, mode?: DragType): EvilBrushRange => {
       let { startIndex, endIndex } = range;
@@ -258,26 +199,26 @@ function EvilBrush({
       endIndex = Math.max(0, Math.min(endIndex, maxIndex));
 
       if (mode === "left") {
-        const maxStart = Math.max(0, endIndex - minSpan);
+        const maxStart = Math.max(0, endIndex - MIN_SPAN);
         startIndex = Math.min(startIndex, maxStart);
         return { startIndex, endIndex };
       }
 
       if (mode === "right") {
-        const minEnd = Math.min(maxIndex, startIndex + minSpan);
+        const minEnd = Math.min(maxIndex, startIndex + MIN_SPAN);
         endIndex = Math.max(endIndex, minEnd);
         return { startIndex, endIndex };
       }
 
-      if (endIndex - startIndex < minSpan) {
-        endIndex = Math.min(startIndex + minSpan, maxIndex);
-        if (endIndex - startIndex < minSpan) {
-          startIndex = Math.max(0, endIndex - minSpan);
+      if (endIndex - startIndex < MIN_SPAN) {
+        endIndex = Math.min(startIndex + MIN_SPAN, maxIndex);
+        if (endIndex - startIndex < MIN_SPAN) {
+          startIndex = Math.max(0, endIndex - MIN_SPAN);
         }
       }
       return { startIndex, endIndex };
     },
-    [totalPoints, minSpan],
+    [totalPoints],
   );
 
   const commit = useCallback(
@@ -303,8 +244,6 @@ function EvilBrush({
     [clampRange, onChange],
   );
 
-  // ── Drag ────────────────────────────────────────────────────────────────
-
   const { isDragging, bind } = useBrushDrag({
     range: internalRange,
     totalPoints,
@@ -325,12 +264,9 @@ function EvilBrush({
     }
   }, [isControlled, controlledStart, controlledEnd, isDragging]);
 
-  // ── Computed positions (%) ──────────────────────────────────────────────
-
   const leftPct = totalPoints > 1 ? (range.startIndex / (totalPoints - 1)) * 100 : 0;
   const rightPct = totalPoints > 1 ? (range.endIndex / (totalPoints - 1)) * 100 : 100;
 
-  // Drive all moving brush UI from the same springed edge values.
   const leftTarget = useMotionValue(leftPct);
   const rightTarget = useMotionValue(rightPct);
   useEffect(() => {
@@ -362,20 +298,14 @@ function EvilBrush({
     [data, xDataKey, formatLabel],
   );
 
-  // ── Render ──────────────────────────────────────────────────────────────
-
   if (totalPoints === 0) return null;
 
   return (
     <div
       ref={containerRef}
-      data-chart={skipStyle ? undefined : chartId}
       className={cn("group relative select-none", className)}
       style={{ height }}
     >
-      {!skipStyle && <ChartStyle id={chartId} config={chartConfig} />}
-
-      {/* Mini chart – always shows all data */}
       <div className="absolute inset-0 overflow-hidden rounded-md">
         <MiniChart
           data={data}
@@ -385,18 +315,14 @@ function EvilBrush({
           curveType={curveType}
           chartId={chartId}
           stacked={stacked}
-          strokeVariant={strokeVariant === "animated-dashed" ? "dashed" : strokeVariant}
-          connectNulls={connectNulls}
           barRadius={barRadius}
         />
       </div>
 
-      {/* Dim overlay – left */}
       <motion.div
         className="bg-background/70 pointer-events-none absolute inset-y-0 left-0 rounded-l-md backdrop-blur-[2px]"
         style={{ width: leftOverlayWidth }}
       />
-      {/* Dim overlay – right */}
       <motion.div
         className="bg-background/70 pointer-events-none absolute inset-y-0 right-0 rounded-r-md backdrop-blur-[2px]"
         style={{ width: rightOverlayWidth }}
@@ -409,26 +335,22 @@ function EvilBrush({
         {...bind("middle")}
       />
 
-      {/* Left handle */}
       <BrushHandle
         side="left"
         position={leftPosition}
-        label={showLabels ? getLabel(range.startIndex) : undefined}
+        label={getLabel(range.startIndex)}
         bind={bind("left")}
       />
 
-      {/* Right handle */}
       <BrushHandle
         side="right"
         position={rightPosition}
-        label={showLabels ? getLabel(range.endIndex) : undefined}
+        label={getLabel(range.endIndex)}
         bind={bind("right")}
       />
     </div>
   );
 }
-
-// ─── Brush Handle ───────────────────────────────────────────────────────────
 
 function BrushHandle({
   side,
@@ -484,8 +406,6 @@ function BrushHandle({
   );
 }
 
-// ─── Mini Chart ─────────────────────────────────────────────────────────────
-
 function MiniChart({
   data,
   keys,
@@ -494,8 +414,6 @@ function MiniChart({
   curveType,
   chartId,
   stacked,
-  strokeVariant = "solid",
-  connectNulls = false,
   barRadius,
 }: {
   data: readonly ChartDataRow[];
@@ -505,8 +423,6 @@ function MiniChart({
   curveType: CurveType;
   chartId: string;
   stacked: boolean;
-  strokeVariant?: "solid" | "dashed" | "animated-dashed";
-  connectNulls?: boolean;
   barRadius?: number;
 }) {
   const gradients = React.useMemo(
@@ -520,12 +436,8 @@ function MiniChart({
     [chartConfig, keys],
   );
 
-  const dashArray =
-    strokeVariant === "dashed" || strokeVariant === "animated-dashed" ? "4 4" : undefined;
-
   const defsContent = (
     <>
-      {/* Vertical fade gradient for area fill mask */}
       {variant === "area" && (
         <linearGradient id={`${chartId}-zm-vertical-fade`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="white" stopOpacity={0.15} />
@@ -551,12 +463,10 @@ function MiniChart({
 
         return (
           <React.Fragment key={dataKey}>
-            {/* Vertical color gradient (stroke + bar fill) */}
             <linearGradient id={`${chartId}-zm-${dataKey}`} x1="0" y1="0" x2="0" y2="1">
               {colorStops}
             </linearGradient>
 
-            {/* Area fill: color gradient masked with vertical fade */}
             {variant === "area" && (
               <>
                 <mask id={`${chartId}-zm-fill-mask-${dataKey}`}>
@@ -596,8 +506,6 @@ function MiniChart({
               stroke={`url(#${chartId}-zm-${dk})`}
               strokeWidth={1}
               strokeOpacity={0.5}
-              strokeDasharray={dashArray}
-              connectNulls={connectNulls}
               dot={false}
               activeDot={false}
               isAnimationActive={false}
@@ -635,7 +543,6 @@ function MiniChart({
     );
   }
 
-  // Default: area
   return (
     <ResponsiveContainer width="100%" height="100%">
       <AreaChart data={data} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
@@ -649,8 +556,6 @@ function MiniChart({
             fill={`url(#${chartId}-zm-fill-${dk})`}
             strokeWidth={1}
             strokeOpacity={0.5}
-            strokeDasharray={dashArray}
-            connectNulls={connectNulls}
             fillOpacity={1}
             stackId={stacked ? "zm-stack" : undefined}
             dot={false}
@@ -662,8 +567,6 @@ function MiniChart({
     </ResponsiveContainer>
   );
 }
-
-// ─── useEvilBrush Hook ──────────────────────────────────────────────────────
 
 function useEvilBrush<TData extends ChartDataRow>({
   data,

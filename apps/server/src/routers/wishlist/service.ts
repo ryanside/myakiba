@@ -140,7 +140,6 @@ class WishlistService {
         const positionCases = updates.map(
           (update) => sql`WHEN ${update.id} THEN ${update.position}`,
         );
-        // oxlint-disable-next-line no-await-in-loop -- Keep chunked updates sequential within one transaction.
         await tx
           .update(wishlistItem)
           .set({

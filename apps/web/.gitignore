@@ -1,4 +1,3 @@
-# Dependencies
 /node_modules
 /.pnp
 .pnp.*
@@ -8,10 +7,8 @@
 !.yarn/releases
 !.yarn/versions
 
-# Testing
 /coverage
 
-# Build outputs
 /.next/
 /out/
 /build/
@@ -22,34 +19,28 @@
 .tanstack/
 .nitro/
 
-# Deployment
 .vercel
 .netlify
 .wrangler
 
-# Environment & local files
 .env*
 .DS_Store
 *.pem
 *.local
 
-# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 *.log*
 
-# TypeScript
 *.tsbuildinfo
 next-env.d.ts
 
-# IDE
 .vscode/*
 !.vscode/extensions.json
 .idea
 
-# Other
 dev-dist
 
 .wrangler

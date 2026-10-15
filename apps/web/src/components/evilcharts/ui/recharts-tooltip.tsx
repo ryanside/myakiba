@@ -1,6 +1,5 @@
 import {
   getPayloadConfigFromPayload,
-  getNestedPayloadKey,
   getColorsCount,
   useChart,
 } from "@/components/evilcharts/ui/recharts-chart";
@@ -36,7 +35,6 @@ function ChartTooltipContent({
   labelFormatter,
   labelClassName,
   formatter,
-  nameKey,
   labelKey,
   selected,
   roundness = "lg",
@@ -46,7 +44,6 @@ function ChartTooltipContent({
     hideLabel?: boolean;
     hideIndicator?: boolean;
     indicator?: "line" | "dot" | "dashed";
-    nameKey?: string;
     labelKey?: string;
     selected?: string | null;
     roundness?: TooltipRoundness;
@@ -105,15 +102,10 @@ function ChartTooltipContent({
         {payload
           .filter((item) => item.type !== "none")
           .map((item, index) => {
-            // For pie charts, item.name contains the sector name (e.g., "chrome")
-            // For radial charts, the name is in item.payload[nameKey]
-            // For other charts, item.name or item.dataKey contains the series name
-            const payloadName = item.payload ? getNestedPayloadKey(item, nameKey) : undefined;
-            const key = `${payloadName ?? item.name ?? item.dataKey ?? "value"}`;
+            const key = `${item.name ?? item.dataKey ?? "value"}`;
             const itemConfig = getPayloadConfigFromPayload(config, item, key);
             const numericValue = z.number().safeParse(item.value);
 
-            // Get colors count for this item to determine gradient vs solid
             const colorsCount = itemConfig ? getColorsCount(itemConfig) : 1;
 
             return (
@@ -180,7 +172,6 @@ function getIndicatorColorStyle(dataKey: string, colorsCount: number): React.CSS
     return { background: `var(--color-${dataKey}-0)` };
   }
 
-  // Multiple colors: create linear gradient with evenly distributed stops
   const stops = Array.from({ length: colorsCount }, (_, index) => {
     const offset = (index / (colorsCount - 1)) * 100;
     return `var(--color-${dataKey}-${index}) ${offset}%`;

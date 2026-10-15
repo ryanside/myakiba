@@ -8,6 +8,29 @@ import type { OrderStatus, ShippingMethod } from "@myakiba/contracts/shared/type
 import { orderPreviewImagesSql } from "@/lib/order-preview";
 import type { OrderInsertType, OrderUpdateType } from "./model";
 
+function removeOrderItems(userId: string, collectionIds: string[], orderId?: string) {
+  const orderItems = and(
+    eq(collection.userId, userId),
+    inArray(collection.id, collectionIds),
+    orderId === undefined ? undefined : eq(collection.orderId, orderId),
+  );
+
+  return db.transaction(async (tx) => {
+    const detached = await tx
+      .update(collection)
+      .set({ orderId: null })
+      .where(and(orderItems, eq(collection.status, "Owned")))
+      .returning({ id: collection.id });
+
+    const deleted = await tx
+      .delete(collection)
+      .where(and(orderItems, ne(collection.status, "Owned")))
+      .returning({ id: collection.id });
+
+    return detached.length + deleted.length;
+  });
+}
+
 class OrdersService {
   async getOrders(
     userId: string,
@@ -406,33 +429,9 @@ class OrdersService {
   }
 
   async deleteOrderItem(userId: string, orderId: string, collectionId: string) {
-    // TODO: Refactor data sent to the server to reduce this to a single query
-    const updated = await db
-      .update(collection)
-      .set({ orderId: null })
-      .where(
-        and(
-          eq(collection.userId, userId),
-          eq(collection.id, collectionId),
-          eq(collection.orderId, orderId),
-          eq(collection.status, "Owned"),
-        ),
-      )
-      .returning();
+    const removedCount = await removeOrderItems(userId, [collectionId], orderId);
 
-    const deleted = await db
-      .delete(collection)
-      .where(
-        and(
-          eq(collection.userId, userId),
-          eq(collection.id, collectionId),
-          eq(collection.orderId, orderId),
-          ne(collection.status, "Owned"),
-        ),
-      )
-      .returning();
-
-    if (updated.length === 0 && deleted.length === 0) {
+    if (removedCount === 0) {
       throw new Error("ORDER_ITEM_NOT_FOUND");
     }
 
@@ -440,31 +439,9 @@ class OrdersService {
   }
 
   async deleteOrderItems(userId: string, collectionIds: string[]) {
-    // TODO: Refactor data sent to the server to reduce this to a single query
-    const updated = await db
-      .update(collection)
-      .set({ orderId: null })
-      .where(
-        and(
-          eq(collection.userId, userId),
-          inArray(collection.id, collectionIds),
-          eq(collection.status, "Owned"),
-        ),
-      )
-      .returning();
+    const removedCount = await removeOrderItems(userId, collectionIds);
 
-    const deleted = await db
-      .delete(collection)
-      .where(
-        and(
-          eq(collection.userId, userId),
-          inArray(collection.id, collectionIds),
-          ne(collection.status, "Owned"),
-        ),
-      )
-      .returning();
-
-    if (updated.length === 0 && deleted.length === 0) {
+    if (removedCount === 0) {
       throw new Error("ORDER_ITEMS_NOT_FOUND");
     }
 
