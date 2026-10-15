@@ -1,6 +1,5 @@
 import {
   getPayloadConfigFromPayload,
-  getNestedPayloadKey,
   getColorsCount,
   useChart,
 } from "@/components/evilcharts/ui/recharts-chart";
@@ -20,7 +19,6 @@ type ChartLegendVariant =
 function ChartLegendContent({
   className,
   hideIcon = false,
-  nameKey,
   payload,
   verticalAlign,
   align = "right",
@@ -30,7 +28,6 @@ function ChartLegendContent({
   variant = "rounded-square",
 }: React.ComponentProps<"div"> & {
   hideIcon?: boolean;
-  nameKey?: string;
   selected?: string | null;
   isClickable?: boolean;
   onSelectChange?: (selected: string | null) => void;
@@ -56,11 +53,7 @@ function ChartLegendContent({
       {payload
         .filter((item) => item.type !== "none")
         .map((item) => {
-          // For pie charts, item.value contains the sector name (e.g., "chrome")
-          // For radial charts, the name is in item.payload[nameKey]
-          // For other charts, item.dataKey contains the series name (e.g., "desktop")
-          const payloadName = item.payload ? getNestedPayloadKey(item, nameKey) : undefined;
-          const key = `${payloadName ?? item.value ?? item.dataKey ?? "value"}`;
+          const key = `${item.value ?? item.dataKey ?? "value"}`;
           const itemConfig = getPayloadConfigFromPayload(config, item, key);
           const isSelected = selected === null || selected === key;
 

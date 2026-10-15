@@ -67,14 +67,6 @@ function readPayloadKey(payload: RechartsPayload, key: string) {
   return nestedValue.success ? nestedValue.data : undefined;
 }
 
-export function getNestedPayloadKey(payload: RechartsPayload, key: string | undefined) {
-  if (key === undefined) return;
-  const nestedRecord = payloadRecordSchema.safeParse(payload.payload);
-  if (!nestedRecord.success) return;
-  const nestedValue = payloadKeySchema.safeParse(nestedRecord.data[key]);
-  return nestedValue.success ? nestedValue.data : undefined;
-}
-
 interface ChartContextProps {
   config: ChartConfig;
 }
