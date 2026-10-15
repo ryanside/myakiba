@@ -55,6 +55,7 @@ function Rating({
   showValue = false,
   editable = false,
   onRatingChange,
+  "aria-describedby": ariaDescribedBy,
   ...props
 }: React.ComponentProps<"div"> &
   VariantProps<typeof ratingVariants> & {
@@ -73,24 +74,7 @@ function Rating({
   }) {
   const [hoveredRating, setHoveredRating] = React.useState<number | null>(null);
   const displayRating = editable && hoveredRating !== null ? hoveredRating : rating;
-
-  const handleStarClick = (starRating: number) => {
-    if (editable && onRatingChange) {
-      onRatingChange(starRating);
-    }
-  };
-
-  const handleStarMouseEnter = (starRating: number) => {
-    if (editable) {
-      setHoveredRating(starRating);
-    }
-  };
-
-  const handleStarMouseLeave = () => {
-    if (editable) {
-      setHoveredRating(null);
-    }
-  };
+  const valueId = React.useId();
 
   const renderStars = () => {
     const stars = [];
@@ -100,37 +84,15 @@ function Rating({
       const partiallyFilled = displayRating > i - 1 && displayRating < i;
       const fillPercentage = partiallyFilled ? (displayRating - (i - 1)) * 100 : 0;
 
-      stars.push(
-        // oxlint-disable-next-line no-static-element-interactions
-        <div
-          key={i}
-          className={cn("relative", editable && "cursor-pointer")}
-          onClick={editable ? () => handleStarClick(i) : undefined}
-          onKeyDown={
-            editable
-              ? (event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    handleStarClick(i);
-                  }
-                }
-              : undefined
-          }
-          onMouseEnter={editable ? () => handleStarMouseEnter(i) : undefined}
-          onMouseLeave={editable ? handleStarMouseLeave : undefined}
-          role={editable ? "slider" : undefined}
-          aria-valuemin={editable ? 0 : undefined}
-          aria-valuemax={editable ? maxRating : undefined}
-          aria-valuenow={editable ? displayRating : undefined}
-          tabIndex={editable ? 0 : undefined}
-        >
+      const star = (
+        <>
           <HugeiconsIcon
             icon={StarIcon}
             data-slot="rating-star-empty"
             className={cn(starVariants({ size }), "text-muted-foreground/30")}
           />
 
-          <div
+          <span
             className="absolute inset-0 overflow-hidden"
             style={{
               width: filled ? "100%" : `${fillPercentage}%`,
@@ -141,8 +103,30 @@ function Rating({
               data-slot="rating-star-filled"
               className={cn(starVariants({ size }), "text-yellow-400 fill-yellow-400")}
             />
+          </span>
+        </>
+      );
+
+      stars.push(
+        editable ? (
+          <button
+            key={i}
+            type="button"
+            tabIndex={0}
+            aria-label={i === 1 ? "1 star" : `${i} stars`}
+            aria-pressed={rating === i}
+            className="relative cursor-pointer"
+            onClick={() => onRatingChange?.(i)}
+            onMouseEnter={() => setHoveredRating(i)}
+            onMouseLeave={() => setHoveredRating(null)}
+          >
+            {star}
+          </button>
+        ) : (
+          <div key={i} className="relative">
+            {star}
           </div>
-        </div>,
+        ),
       );
     }
 
@@ -150,10 +134,23 @@ function Rating({
   };
 
   return (
-    <div data-slot="rating" className={cn(ratingVariants({ size }), className)} {...props}>
+    <div
+      data-slot="rating"
+      role={editable ? "group" : undefined}
+      aria-label={editable ? "Rating" : undefined}
+      aria-describedby={
+        editable ? [ariaDescribedBy, valueId].filter(Boolean).join(" ") : ariaDescribedBy
+      }
+      className={cn(ratingVariants({ size }), className)}
+      {...props}
+    >
       <div className="flex items-center">{renderStars()}</div>
-      {showValue && (
-        <span data-slot="rating-value" className={cn(valueVariants({ size }), starClassName)}>
+      {(showValue || editable) && (
+        <span
+          id={valueId}
+          data-slot="rating-value"
+          className={showValue ? cn(valueVariants({ size }), starClassName) : "sr-only"}
+        >
           {displayRating.toFixed(1)}
         </span>
       )}
