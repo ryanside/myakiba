@@ -16,8 +16,22 @@ const server = {
   orderPatches: [] as PositionOrderInput[],
   holdWishlist: false,
   heldWishlist: [] as (() => void)[],
+  holdOrderPatch: false,
+  heldOrderPatch: [] as (() => void)[],
   finishSync: () => {},
 };
+
+function applyMove({ movedIds, anchorId, placement }: PositionOrderInput) {
+  const moved = server.items.filter((item) => movedIds.includes(item.id));
+  const remaining = server.items.filter((item) => !movedIds.includes(item.id));
+  const insertionIndex =
+    remaining.findIndex((item) => item.id === anchorId) + (placement === "after" ? 1 : 0);
+  server.items = [
+    ...remaining.slice(0, insertionIndex),
+    ...moved,
+    ...remaining.slice(insertionIndex),
+  ];
+}
 
 function isInReleaseStatus(item: ServerItem, { releaseStatus, today }: WishlistQuery): boolean {
   if (releaseStatus === "upcoming") return item.releaseDate > today;
@@ -61,6 +75,12 @@ const fakeApp = {
       order: {
         patch: async (intent: PositionOrderInput) => {
           server.orderPatches.push(intent);
+          if (server.holdOrderPatch) {
+            await new Promise<void>((resolve) => {
+              server.heldOrderPatch.push(resolve);
+            });
+          }
+          applyMove(intent);
           return { data: null, error: null };
         },
       },
@@ -100,6 +120,8 @@ afterEach(() => {
   server.orderPatches.length = 0;
   server.holdWishlist = false;
   server.heldWishlist.length = 0;
+  server.holdOrderPatch = false;
+  server.heldOrderPatch.length = 0;
 });
 
 function WishlistTab({ tab }: { tab: "all" | "upcoming" | "available" }) {
@@ -226,12 +248,11 @@ describe("wishlist release filters across midnight", () => {
 });
 
 describe("wishlist reorder", () => {
-  test("moving an item in the All view shows the new order and saves it", async () => {
-    server.items = [
-      MIKU_BEFORE_SYNC,
-      { id: "w2", title: "Kagamine Rin", releaseDate: "2026-11-01" },
-      { id: "w3", title: "Kagamine Len", releaseDate: "2026-12-01" },
-    ];
+  const KAGAMINE_RIN = { id: "w2", title: "Kagamine Rin", releaseDate: "2026-11-01" };
+  const KAGAMINE_LEN = { id: "w3", title: "Kagamine Len", releaseDate: "2026-12-01" };
+  const lenFirst: PositionOrderInput = { movedIds: ["w3"], anchorId: "w1", placement: "before" };
+
+  function renderReorderableAll(extra?: React.ReactNode) {
     let move: (intent: PositionOrderInput) => Promise<void> = async () => {};
     function ReorderableAll() {
       const mutation = useMoveWishlistItemsMutation();
@@ -240,10 +261,20 @@ describe("wishlist reorder", () => {
       }, [mutation.move]);
       return <WishlistTab tab="all" />;
     }
-    renderWithClient(<ReorderableAll />);
+    renderWithClient(
+      <>
+        {extra}
+        <ReorderableAll />
+      </>,
+    );
+    return (intent: PositionOrderInput) => move(intent);
+  }
+
+  test("moving an item in the All view shows the new order and saves it", async () => {
+    server.items = [MIKU_BEFORE_SYNC, KAGAMINE_RIN, KAGAMINE_LEN];
+    const move = renderReorderableAll();
     await waitFor(() => expect(shownIn("wishlist all")).toHaveLength(3));
 
-    const lenFirst: PositionOrderInput = { movedIds: ["w3"], anchorId: "w1", placement: "before" };
     await act(() => move(lenFirst));
 
     await waitFor(() =>
@@ -254,5 +285,64 @@ describe("wishlist reorder", () => {
       ]),
     );
     expect(server.orderPatches).toEqual([lenFirst]);
+  });
+
+  test("a second move made while the first is saving stays in place when the first save finishes", async () => {
+    server.items = [MIKU_BEFORE_SYNC, KAGAMINE_RIN, KAGAMINE_LEN];
+    const move = renderReorderableAll();
+    await waitFor(() => expect(shownIn("wishlist all")).toHaveLength(3));
+
+    server.holdOrderPatch = true;
+    const mikuLast: PositionOrderInput = { movedIds: ["w1"], anchorId: "w2", placement: "after" };
+    let savingBoth: Promise<unknown> = Promise.resolve();
+    act(() => {
+      savingBoth = Promise.all([move(lenFirst), move(mikuLast)]);
+    });
+    await waitFor(() => expect(server.heldOrderPatch).toHaveLength(2));
+    await act(async () => server.heldOrderPatch[0]?.());
+    await act(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(resolve, 50);
+        }),
+    );
+    const afterFirstSave = shownIn("wishlist all");
+    await act(async () => {
+      server.heldOrderPatch[1]?.();
+      await savingBoth;
+    });
+
+    expect({ afterFirstSave, afterBothSaves: shownIn("wishlist all") }).toEqual({
+      afterFirstSave: ["Kagamine Len", "Kagamine Rin", "Miku (title before sync)"],
+      afterBothSaves: ["Kagamine Len", "Kagamine Rin", "Miku (title before sync)"],
+    });
+  });
+
+  test("a sync that finishes while a move is saving does not undo the move", async () => {
+    server.items = [MIKU_BEFORE_SYNC, KAGAMINE_RIN, KAGAMINE_LEN];
+    const move = renderReorderableAll(<SyncStatusWidget />);
+    await waitFor(() => expect(shownIn("wishlist all")).toHaveLength(3));
+
+    server.holdOrderPatch = true;
+    let saving: Promise<void> = Promise.resolve();
+    act(() => {
+      saving = move(lenFirst);
+    });
+    await waitFor(() => expect(server.heldOrderPatch).toHaveLength(1));
+    const requestsBeforeSync = server.wishlistRequests.length;
+    await act(async () => server.finishSync());
+    await waitFor(() => expect(server.wishlistRequests.length).toBeGreaterThan(requestsBeforeSync));
+    await act(async () => {
+      server.heldOrderPatch[0]?.();
+      await saving;
+    });
+
+    await waitFor(() =>
+      expect(shownIn("wishlist all")).toEqual([
+        "Kagamine Len",
+        "Miku (title before sync)",
+        "Kagamine Rin",
+      ]),
+    );
   });
 });
