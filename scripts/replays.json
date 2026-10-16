@@ -85,5 +85,68 @@
         "DebouncedInput > late echoes of two earlier texts do not replace what the user typed"
       ]
     }
+  ],
+  "lint": [
+    {
+      "fix": "2b541696",
+      "bug": "a bare suppression hid a set-state-in-effect that reset the chart brush range",
+      "rule": "myakiba/require-suppression-reason",
+      "atParent": ["apps/web/src/components/evilcharts/ui/recharts-brush.tsx:687"],
+      "atFix": []
+    },
+    {
+      "fix": "850ddf60",
+      "bug": "a bare suppression hid that each Rating star was a clickable div, not a button",
+      "rule": "myakiba/require-suppression-reason",
+      "atParent": ["apps/web/src/components/ui/rating.tsx:104"],
+      "atFix": []
+    },
+    {
+      "fix": "782088d4",
+      "bug": "CORS_ORIGIN was read raw and passed as one string, so a list of origins never matched",
+      "rule": "myakiba/no-env-outside-env-package",
+      "atParent": [
+        "apps/server/src/index.ts:27",
+        "apps/server/src/index.ts:36",
+        "apps/server/src/lib/auth.ts:17",
+        "apps/server/src/lib/auth.ts:22",
+        "apps/server/src/lib/auth.ts:40"
+      ],
+      "atFix": [
+        "apps/server/src/index.ts:27",
+        "apps/server/src/index.ts:36",
+        "apps/server/src/lib/auth.ts:17",
+        "apps/server/src/lib/auth.ts:22",
+        "apps/server/src/lib/auth.ts:38"
+      ]
+    },
+    {
+      "fix": "2f2ffe57",
+      "bug": "import.meta.env.PROD is undefined under Bun, so production mail used the test sender",
+      "rule": "myakiba/no-env-outside-env-package",
+      "atParent": ["apps/server/src/lib/auth.ts:22", "apps/server/src/lib/auth.ts:40"],
+      "atFix": ["apps/server/src/lib/auth.ts:22", "apps/server/src/lib/auth.ts:40"]
+    },
+    {
+      "fix": "a0643cdb",
+      "bug": "a malformed Redis job-status payload threw from JSON.parse",
+      "rule": "no-restricted-properties",
+      "atParent": ["packages/redis/src/job-status.ts:18"],
+      "atFix": ["packages/redis/src/job-status.ts:19"]
+    },
+    {
+      "fix": "e24d4c5c",
+      "bug": "a malformed recent-items entry in localStorage threw from JSON.parse",
+      "rule": "no-restricted-properties",
+      "atParent": ["apps/web/src/lib/recent-items.ts:33"],
+      "atFix": ["apps/web/src/lib/recent-items.ts:34"]
+    },
+    {
+      "fix": "5a242ef1",
+      "bug": "the expense date presets took the UTC day from toISOString, not the local day",
+      "rule": "myakiba/no-iso-slice",
+      "atParent": ["apps/web/src/components/expenses/filters.tsx:50"],
+      "atFix": []
+    }
   ]
 }
