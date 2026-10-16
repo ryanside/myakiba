@@ -1,7 +1,9 @@
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { InfiniteData, QueryKey } from "@tanstack/react-query";
+import { hashKey, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { InfiniteData, QueryClient, QueryKey } from "@tanstack/react-query";
 import { toast } from "@/components/ui/toast";
+
+const pendingMovesByClient = new WeakMap<QueryClient, Map<string, number>>();
 
 export function usePositionOrderMutation({
   queryKey,
@@ -18,10 +20,13 @@ export function usePositionOrderMutation({
   readonly failureTitle: string;
 }) {
   const queryClient = useQueryClient();
+  const pendingMoves = pendingMovesByClient.get(queryClient) ?? new Map<string, number>();
+  pendingMovesByClient.set(queryClient, pendingMoves);
+  const moveKey = hashKey(queryKey);
   const mutation = useMutation({
-    mutationKey: queryKey,
     mutationFn: persist,
     onMutate: async (intent) => {
+      pendingMoves.set(moveKey, (pendingMoves.get(moveKey) ?? 0) + 1);
       await queryClient.cancelQueries({ queryKey, exact: true });
       const current = queryClient.getQueryData<
         InfiniteData<
@@ -74,14 +79,8 @@ export function usePositionOrderMutation({
       return { previous: current };
     },
     onSuccess: async () => {
-      const isLastPendingMove =
-        queryClient.isMutating({ mutationKey: queryKey, exact: true }) === 1;
       await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey,
-          exact: true,
-          refetchType: isLastPendingMove ? "active" : "none",
-        }),
+        queryClient.invalidateQueries({ queryKey, exact: true, refetchType: "none" }),
         ...(additionalInvalidations ?? []).map((invalidation) =>
           queryClient.invalidateQueries(invalidation),
         ),
@@ -94,6 +93,15 @@ export function usePositionOrderMutation({
         type: "error",
         title: failureTitle,
       });
+    },
+    onSettled: (_data, error) => {
+      const remaining = (pendingMoves.get(moveKey) ?? 1) - 1;
+      if (remaining > 0) {
+        pendingMoves.set(moveKey, remaining);
+        return;
+      }
+      pendingMoves.delete(moveKey);
+      if (!error) void queryClient.refetchQueries({ queryKey, exact: true, type: "active" });
     },
   });
 
