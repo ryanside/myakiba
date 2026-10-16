@@ -40,11 +40,16 @@ wait_until() {
 
 exited() { [ "$(docker inspect -f '{{.State.Status}}' "$1")" = exited ]; }
 
+crashed() {
+  docker logs "$1" 2>&1 | grep 'Invalid environment variables' >/dev/null &&
+    fail "$1 rejected its environment. Set each new required variable in docker-compose.production.yml and on the production host before you deploy, then add a placeholder for it here." "$1"
+  fail "$1 exited with code $(docker inspect -f '{{.State.ExitCode}}' "$1")" "$1"
+}
+
 answer() {
   local container=$1 path=$2 start=$3 address=$4
   until curl -fsS -m 1 -o /dev/null "http://$address$path" >/dev/null 2>&1; do
-    [ "$(docker inspect -f '{{.State.Running}}' "$container")" = true ] ||
-      fail "$container exited with code $(docker inspect -f '{{.State.ExitCode}}' "$container")" "$container"
+    [ "$(docker inspect -f '{{.State.Running}}' "$container")" = true ] || crashed "$container"
     before "$start" "$timeout" || fail "$container: $path did not answer within ${timeout}s" "$container"
     sleep 0.25
   done
