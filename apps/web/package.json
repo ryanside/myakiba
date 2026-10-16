@@ -9,7 +9,7 @@
     "serve": "vite preview",
     "start": "vite",
     "check-types": "tsc --noEmit",
-    "test": "bun test --isolate"
+    "test": "bun test --isolate --env-file=test.env"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
