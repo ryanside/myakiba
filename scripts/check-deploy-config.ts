@@ -53,8 +53,9 @@ const composeKeys = (list: ComposeList = []): string[] =>
   Array.isArray(list) ? list.map(keyOf) : Object.keys(list);
 
 function requiredClientVars(): ClientVar[] {
+  if (!existsSync("packages/env")) return clientVarsBeforePackagesEnv();
   const source = "packages/env/src/web.ts";
-  if (!existsSync(source)) return clientVarsBeforePackagesEnv();
+  if (!existsSync(source)) return [];
   const text = read(source);
   const client = text.slice(text.indexOf("client:"), text.indexOf("runtimeEnv"));
   return [...client.matchAll(/(VITE_[A-Z0-9_]+)\s*:([\s\S]*?)(?=\bVITE_[A-Z0-9_]+\s*:|$)/g)]
@@ -115,9 +116,11 @@ function workflowBuilds(): Build[] {
               (_, key: string) => entry[key] ?? "",
             );
           const where = `${file} jobs.${jobId}${entry.image ? ` matrix entry "${entry.image}"` : ""}`;
+          const argsKey =
+            /\$\{\{\s*matrix\.(\w+)\s*\}\}/.exec(inputs["build-args"] ?? "")?.[1] ?? "build-args";
           builds.push({
             where,
-            argsAt: `${where} build-args`,
+            argsAt: `${where} ${argsKey}`,
             // build-push-action reads file from the checkout root, not from context.
             dockerfile: path.normalize(
               resolve(inputs.file) || path.join(resolve(inputs.context) || ".", "Dockerfile"),
@@ -135,7 +138,7 @@ function workflowBuilds(): Build[] {
 
 function composeBuilds(deployedByWorkflow: Set<string>): Build[] {
   const builds: Build[] = [];
-  for (const file of readdirSync(".").filter((name) => /^docker-compose.*\.ya?ml$/.test(name))) {
+  for (const file of readdirSync(".").filter((name) => /^(docker-)?compose.*\.ya?ml$/.test(name))) {
     const compose = Bun.YAML.parse(read(file)) as Compose;
     for (const [service, { build, environment }] of Object.entries(compose.services ?? {})) {
       if (!build) continue;
@@ -180,7 +183,7 @@ const dockerfiles = [
 
 if (clientVars.length === 0)
   errors.push(
-    "found no required VITE_* variable in packages/env/src/web.ts. Fix the parser in scripts/check-deploy-config.ts.",
+    "found no required VITE_* variable in packages/env/src/web.ts. If the client env moved, point requiredClientVars in scripts/check-deploy-config.ts at its file. Otherwise fix the parser there.",
   );
 
 for (const dockerfile of dockerfiles) {
