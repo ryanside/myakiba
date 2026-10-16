@@ -85,5 +85,27 @@
         "DebouncedInput > late echoes of two earlier texts do not replace what the user typed"
       ]
     }
+  ],
+  "knip": [
+    {
+      "fix": "ff33e620",
+      "bug": "apps/web imported lucide-react without declaring it",
+      "reports": [
+        "New unlisted: lucide-react at apps/web/src/components/homepage/integrations-1.tsx:1"
+      ]
+    },
+    {
+      "fix": "5fb21638",
+      "bug": "packages/db imported dotenv without declaring it",
+      "reports": ["New unlisted: dotenv at packages/db/drizzle.config.ts:2"]
+    },
+    {
+      "fix": "06b38dc4",
+      "bug": "banner.tsx and serializeJobStatusPayload had no importer",
+      "reports": [
+        "New files: apps/web/src/components/banner.tsx",
+        "New exports: serializeJobStatusPayload at packages/redis/src/job-status.ts:30"
+      ]
+    }
   ]
 }

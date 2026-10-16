@@ -10,6 +10,12 @@ type TestReplay = {
   fixed: string[];
 };
 
+type KnipReplay = {
+  fix: string;
+  bug: string;
+  reports: string[];
+};
+
 type TestRun = {
   exitCode: number;
   passed: string[];
@@ -20,24 +26,30 @@ type TestRun = {
 };
 
 const root = path.resolve(import.meta.dir, "..");
-const { test: replays = [] }: { test?: TestReplay[] } = await Bun.file(
+const {
+  test: testReplays = [],
+  knip: knipReplays = [],
+}: { test?: TestReplay[]; knip?: KnipReplay[] } = await Bun.file(
   path.join(import.meta.dir, "replays.json"),
 ).json();
-if (replays.length === 0) {
-  console.error("FAIL  scripts/replays.json lists no replay");
+const knipMode = process.argv.includes("--knip");
+const listed: { fix: string; test?: string }[] = knipMode ? knipReplays : testReplays;
+if (listed.length === 0) {
+  console.error(`FAIL  scripts/replays.json lists no ${knipMode ? "knip " : ""}replay`);
   process.exit(1);
 }
-const filters = process.argv.slice(2);
-const matches = (replay: TestReplay, filter: string) =>
-  replay.fix.startsWith(filter) || replay.test.includes(filter);
-const unmatched = filters.filter((filter) => !replays.some((replay) => matches(replay, filter)));
+const filters = process.argv.slice(2).filter((arg) => arg !== "--knip");
+const matches = (replay: { fix: string; test?: string }, filter: string) =>
+  replay.fix.startsWith(filter) || replay.test?.includes(filter);
+const unmatched = filters.filter((filter) => !listed.some((replay) => matches(replay, filter)));
 if (unmatched.length > 0) {
-  console.error(`FAIL  no replay matches ${unmatched.join(" ")}`);
+  console.error(`FAIL  no ${knipMode ? "knip " : ""}replay matches ${unmatched.join(" ")}`);
   process.exit(1);
 }
-const selected = replays.filter(
-  (replay) => filters.length === 0 || filters.some((filter) => matches(replay, filter)),
-);
+const isSelected = (replay: { fix: string; test?: string }) =>
+  filters.length === 0 || filters.some((filter) => matches(replay, filter));
+const selected = knipMode ? [] : testReplays.filter(isSelected);
+const selectedKnip = knipMode ? knipReplays.filter(isSelected) : [];
 
 // bun test prints passing tests only when AGENT, CLAUDECODE and REPL_ID are unset.
 $.env({ ...process.env, AGENT: undefined, CLAUDECODE: undefined, REPL_ID: undefined, HUSKY: "0" });
@@ -85,6 +97,14 @@ async function runTest(checkout: string, testFile: string): Promise<TestRun> {
   };
 }
 
+async function runKnip(checkout: string) {
+  const { exitCode, stdout, stderr } = await $`bun ${path.join(checkout, "scripts/knip-budget.ts")}`
+    .cwd(checkout)
+    .nothrow()
+    .quiet();
+  return { exitCode, output: `${stdout}${stderr}` };
+}
+
 const tail = (output: string) =>
   output
     .trimEnd()
@@ -107,6 +127,11 @@ for (const testFile of new Set(selected.map((replay) => replay.test))) {
     run.skipped.length === 0 &&
     run.passed.length > 0;
   report(pass, `head  ${testFile}`, pass ? [] : [tail(run.output)]);
+}
+
+if (knipMode) {
+  const run = await runKnip(root);
+  report(run.exitCode === 0, "head  knip", run.exitCode === 0 ? [] : [tail(run.output)]);
 }
 
 const isAlive = (pid: number) => {
@@ -144,8 +169,16 @@ for (const [signal, exitCode] of [
 }
 await $`git -C ${root} worktree add --detach --no-checkout ${worktree}`.quiet();
 
+async function harnessOf(testFile: string, packageDir: string) {
+  const harness =
+    await $`git ls-files --cached --others --exclude-standard ${testFile} ${`${packageDir}/bunfig.toml`} ${`${packageDir}/test.env`} ${`${packageDir}/test`}`
+      .cwd(root)
+      .text();
+  return harness.split("\n").filter(Boolean);
+}
+
 let installedLock = "";
-async function checkOut(revision: string, testFile: string) {
+async function checkOut(revision: string, packageDir: string, files: string[]) {
   await $`git checkout --quiet --detach --force ${revision} && git clean -fdq`.cwd(worktree);
   const lock = await $`git rev-parse ${`${revision}:bun.lock`}`.cwd(worktree).text();
   if (lock !== installedLock) {
@@ -153,12 +186,7 @@ async function checkOut(revision: string, testFile: string) {
     installedLock = lock;
   }
 
-  const packageDir = await packageDirOf(testFile);
-  const harness =
-    await $`git ls-files --cached --others --exclude-standard ${testFile} ${`${packageDir}/bunfig.toml`} ${`${packageDir}/test.env`} ${`${packageDir}/test`}`
-      .cwd(root)
-      .text();
-  for (const file of harness.split("\n").filter(Boolean))
+  for (const file of files)
     await Bun.write(path.join(worktree, file), Bun.file(path.join(root, file)));
 
   const head = await readPackage(path.join(root, packageDir));
@@ -175,9 +203,11 @@ async function checkOut(revision: string, testFile: string) {
 
 try {
   for (const replay of selected) {
-    await checkOut(`${replay.fix}^`, replay.test);
+    const packageDir = await packageDirOf(replay.test);
+    const harness = await harnessOf(replay.test, packageDir);
+    await checkOut(`${replay.fix}^`, packageDir, harness);
     const before = await runTest(worktree, replay.test);
-    await checkOut(replay.fix, replay.test);
+    await checkOut(replay.fix, packageDir, harness);
     const after = await runTest(worktree, replay.test);
 
     const flipped = before.failed.filter((name) => after.passed.includes(name));
@@ -194,6 +224,21 @@ try {
       ...alsoFlipped.map((name) => `      also flipped: ${name}`),
       ...(before.errorOutsideTests || before.failed.length === 0 ? [tail(before.output)] : []),
       ...(after.errorOutsideTests || didNotFlip.length > 0 ? [tail(after.output)] : []),
+    ]);
+  }
+
+  for (const replay of selectedKnip) {
+    const parent = `${replay.fix}^`;
+    await checkOut(parent, ".", ["knip.json", "knip-budget.json", "scripts/knip-budget.ts"]);
+
+    const run = await runKnip(worktree);
+    const lines = run.output.split("\n");
+    const notReported = replay.reports.filter(
+      (expected) => !lines.some((line) => line.startsWith(`${expected}.`)),
+    );
+    report(run.exitCode !== 0 && notReported.length === 0, `${parent}  knip  ${replay.bug}`, [
+      ...notReported.map((expected) => `      did not report: ${expected}`),
+      ...(notReported.length > 0 ? [tail(run.output)] : []),
     ]);
   }
 } finally {
