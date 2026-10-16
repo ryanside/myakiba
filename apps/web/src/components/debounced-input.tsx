@@ -17,7 +17,7 @@ export function DebouncedInput({
 } & Omit<InputHTMLAttributes<HTMLInputElement>, "onChange">) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const commandInputRef = useRef<HTMLInputElement | null>(null);
-  // eslint-disable-next-line react/hook-use-state -- Capture the initial value for uncontrolled input defaults.
+  // eslint-disable-next-line react/hook-use-state -- Capture the initial value for uncontrolled input defaults (until 2027-04-16, approved by ryanside)
   const [defaultValue] = useState(initialValue);
   const onChangeRef = useRef(onChange);
   const pendingLocalAcknowledgementsRef = useRef(new Set<string>());

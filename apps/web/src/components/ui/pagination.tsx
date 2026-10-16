@@ -47,7 +47,7 @@ function PaginationLink({ className, isActive, size = "icon", ...props }: Pagina
       className={cn(className)}
       nativeButton={false}
       render={
-        // oxlint-disable-next-line anchor-has-content
+        // oxlint-disable-next-line anchor-has-content -- The anchor is a render prop, and the link fills it with its children (until 2027-04-16, approved by ryanside)
         <a
           aria-current={isActive ? "page" : undefined}
           data-slot="pagination-link"

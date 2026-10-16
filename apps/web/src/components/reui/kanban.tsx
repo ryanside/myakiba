@@ -65,14 +65,14 @@ interface KanbanContextProps<T> {
   modifiers?: Modifiers;
 }
 
-// oxlint-disable-next-line typescript/no-explicit-any
+// oxlint-disable-next-line typescript/no-explicit-any -- A React context cannot carry the board's item type parameter (until 2027-04-16, approved by ryanside)
 const KanbanContext = createContext<KanbanContextProps<any>>({
   columns: {},
   getItemId: () => "",
   columnIds: [],
   activeId: null,
   setActiveId: () => {},
-  // oxlint-disable-next-line no-useless-undefined
+  // oxlint-disable-next-line no-useless-undefined -- The explicit undefined says no column holds the id, which an empty body hides (until 2027-04-16, approved by ryanside)
   findContainer: () => undefined,
   isColumn: () => false,
   modifiers: undefined,

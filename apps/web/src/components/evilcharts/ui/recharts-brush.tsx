@@ -258,7 +258,7 @@ function EvilBrush({
   useEffect(() => {
     if (isControlled && !isDragging) {
       const syncedRange = { startIndex: controlledStart, endIndex: controlledEnd };
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- A controlled brush copies its props into the drag range only while no drag is in progress (until 2027-04-16, approved by ryanside)
       setInternalRange(syncedRange);
       lastCommittedRef.current = syncedRange;
     }

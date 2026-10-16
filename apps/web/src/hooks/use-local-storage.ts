@@ -36,7 +36,7 @@ function useLocalStorage<T>(
   initialValue: T,
   schema?: z.ZodType<T>,
 ): readonly [T, (value: T | ((prev: T) => T)) => void] {
-  // oxlint-disable-next-line react/hook-use-state -- Capture the initial fallback once; storage subscriptions own subsequent changes.
+  // oxlint-disable-next-line react/hook-use-state -- Capture the initial fallback once; storage subscriptions own subsequent changes (until 2027-04-16, approved by ryanside)
   const [defaultValue] = useState(() => initialValue);
   const subscribe = useCallback(
     (onStoreChange: () => void) => {

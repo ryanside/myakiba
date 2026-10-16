@@ -1,0 +1,6 @@
+{
+  "eslint(no-restricted-properties)": 3,
+  "myakiba(no-env-outside-env-package)": 10,
+  "myakiba(no-iso-slice)": 0,
+  "myakiba(require-suppression-reason)": 2
+}

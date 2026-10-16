@@ -109,7 +109,7 @@ function SidebarProvider({
         setUncontrolledOpen(openState);
       }
 
-      // oxlint-disable-next-line no-document-cookie
+      // oxlint-disable-next-line no-document-cookie -- The sidebar reads this cookie on the next load to restore its open state (until 2027-04-16, approved by ryanside)
       document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
     },
     [setOpenProp, open],
@@ -620,7 +620,7 @@ function SidebarMenuSkeleton({
 }: React.ComponentProps<"div"> & {
   showIcon?: boolean;
 }) {
-  // eslint-disable-next-line react/hook-use-state -- Keep the random width stable for this component instance.
+  // eslint-disable-next-line react/hook-use-state -- Keep the random width stable for this component instance (until 2027-04-16, approved by ryanside)
   const [width] = React.useState(() => {
     return `${Math.floor(Math.random() * 40) + 50}%`;
   });

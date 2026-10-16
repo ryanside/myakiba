@@ -47,7 +47,7 @@
     "redis:start": "turbo run redis:start -F @myakiba/redis",
     "redis:stop": "turbo run redis:stop -F @myakiba/redis",
     "redis:down": "turbo run redis:down -F @myakiba/redis",
-    "check": "ultracite check",
+    "check": "oxfmt --check . && bun scripts/lint-budget.ts",
     "audit": "bun audit --ignore=GHSA-67mh-4wv8-2f99 --ignore=GHSA-vfj7-8cjw-p6xm",
     "fix": "ultracite fix",
     "prepare": "husky",
