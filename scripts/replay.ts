@@ -1,5 +1,5 @@
 import { $ } from "bun";
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -33,7 +33,7 @@ if (selected.length === 0) {
   process.exit(1);
 }
 
-// bun test prints passing tests only when these variables say no agent is running it.
+// bun test prints passing tests only when AGENT, CLAUDECODE and REPL_ID are unset.
 $.env({ ...process.env, AGENT: undefined, CLAUDECODE: undefined, REPL_ID: undefined, HUSKY: "0" });
 
 const readPackage = (dir: string) => Bun.file(path.join(dir, "package.json")).json();
@@ -68,10 +68,11 @@ async function runTest(checkout: string, testFile: string): Promise<TestRun> {
   const named = (result: string) => [
     ...new Set(results.filter((match) => match[1] === result).map((match) => match[2] ?? "")),
   ];
+  const failed = named("fail");
   return {
     exitCode,
-    passed: named("pass"),
-    failed: named("fail"),
+    passed: named("pass").filter((name) => !failed.includes(name)),
+    failed,
     errorOutsideTests: output.includes("# Unhandled error between tests"),
     output,
   };
@@ -97,13 +98,33 @@ for (const testFile of new Set(selected.map((replay) => replay.test))) {
   report(pass, `head  ${testFile}`, pass ? [] : [tail(run.output)]);
 }
 
-const worktree = await mkdtemp(path.join(tmpdir(), "myakiba-replay-"));
+const isAlive = (pid: number) => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code !== "ESRCH";
+  }
+};
+for (const name of await readdir(tmpdir())) {
+  const pid = Number(/^myakiba-replay-(\d+)-/.exec(name)?.[1]);
+  if (pid && !isAlive(pid)) await rm(path.join(tmpdir(), name), { recursive: true, force: true });
+}
+await $`git -C ${root} worktree prune`.quiet();
+
+const worktree = await mkdtemp(path.join(tmpdir(), `myakiba-replay-${process.pid}-`));
 const removeWorktree = () =>
   Bun.spawnSync(["git", "-C", root, "worktree", "remove", "--force", worktree]);
-process.on("SIGINT", () => {
-  removeWorktree();
-  process.exit(130);
-});
+for (const [signal, exitCode] of [
+  ["SIGHUP", 129],
+  ["SIGINT", 130],
+  ["SIGTERM", 143],
+] as const) {
+  process.on(signal, () => {
+    removeWorktree();
+    process.exit(exitCode);
+  });
+}
 await $`git -C ${root} worktree add --detach --no-checkout ${worktree}`.quiet();
 
 let installedLock = "";
@@ -155,7 +176,7 @@ try {
       ...didNotFlip.map((name) => `      did not flip: ${name}`),
       ...alsoFlipped.map((name) => `      also flipped: ${name}`),
       ...(before.errorOutsideTests || before.failed.length === 0 ? [tail(before.output)] : []),
-      ...(after.errorOutsideTests ? [tail(after.output)] : []),
+      ...(after.errorOutsideTests || didNotFlip.length > 0 ? [tail(after.output)] : []),
     ]);
   }
 } finally {
