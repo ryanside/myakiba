@@ -33,13 +33,10 @@ export function planPositionOrderMove(
     ...movedRows,
     ...remainingRows.slice(insertionIndex),
   ];
-  const positionedRows = reorderedRows.map((row, index) => ({
-    id: row.id,
-    position: currentRows[index].position,
-  }));
+  const updates = reorderedRows.flatMap((row, index) => {
+    const slot = currentRows[index];
+    return slot && slot.id !== row.id ? [{ id: row.id, position: slot.position }] : [];
+  });
 
-  return {
-    kind: "moved",
-    updates: positionedRows.filter((row, index) => row.id !== currentRows[index].id),
-  } as const;
+  return { kind: "moved", updates } as const;
 }

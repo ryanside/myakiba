@@ -157,7 +157,7 @@ class CollectionService {
   }
 
   async getCollectionItem(userId: string, collectionId: string) {
-    const collectionItem = await db
+    const [collectionItem] = await db
       .select({
         id: collection.id,
         orderId: collection.orderId,
@@ -191,11 +191,11 @@ class CollectionService {
       .leftJoin(item_release, eq(collection.releaseId, item_release.id))
       .where(and(eq(collection.userId, userId), eq(collection.id, collectionId)));
 
-    if (collectionItem.length === 0) {
+    if (!collectionItem) {
       throw new Error("COLLECTION_ITEM_NOT_FOUND");
     }
 
-    return collectionItem[0];
+    return collectionItem;
   }
 
   async updateCollectionItem(
