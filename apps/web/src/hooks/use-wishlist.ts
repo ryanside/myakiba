@@ -17,7 +17,10 @@ type ItemQueryData = Awaited<ReturnType<typeof getItem>>;
 export function useWishlistItemsQuery(releaseStatus: WishlistReleaseStatus) {
   const today = useToday();
   return useInfiniteQuery({
-    queryKey: ["wishlist", "items", releaseStatus, today] as const,
+    queryKey:
+      releaseStatus === "all"
+        ? (["wishlist", "items", "all"] as const)
+        : (["wishlist", "items", releaseStatus, today] as const),
     queryFn: ({ pageParam }) =>
       getWishlistItems(WISHLIST_PAGE_SIZE, pageParam, releaseStatus, today),
     initialPageParam: 0,
@@ -77,9 +80,8 @@ export function useWishlistItemMutation() {
 }
 
 export function useMoveWishlistItemsMutation() {
-  const today = useToday();
   return usePositionOrderMutation({
-    queryKey: ["wishlist", "items", "all", today],
+    queryKey: ["wishlist", "items", "all"],
     additionalInvalidations: [
       { queryKey: ["wishlist", "items", "upcoming"] },
       { queryKey: ["wishlist", "items", "available"] },
