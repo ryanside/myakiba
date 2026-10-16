@@ -159,6 +159,10 @@ function composeBuilds(deployedByWorkflow: Set<string>): Build[] {
 }
 
 const clientVars = requiredClientVars();
+if (process.argv.includes("--required-client-vars")) {
+  for (const { name } of clientVars) console.log(name);
+  process.exit(clientVars.length > 0 ? 0 : 1);
+}
 const workflows = workflowBuilds();
 const builds = [
   ...composeBuilds(
