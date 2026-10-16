@@ -236,16 +236,16 @@ class CollectionService {
   }
 
   async deleteCollectionItem(userId: string, collectionId: string) {
-    const deleted = await db
+    const [deleted] = await db
       .delete(collection)
       .where(and(eq(collection.userId, userId), eq(collection.id, collectionId)))
       .returning();
 
-    if (deleted.length === 0) {
+    if (!deleted) {
       throw new Error("COLLECTION_ITEM_NOT_FOUND");
     }
 
-    return deleted[0];
+    return deleted;
   }
 
   async deleteCollectionItems(userId: string, collectionIds: string[]) {
