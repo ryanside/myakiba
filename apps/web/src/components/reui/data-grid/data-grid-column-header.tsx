@@ -250,6 +250,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
             if (columnIndex > 0) {
               const newOrder = [...columnOrder];
               const [movedColumn] = newOrder.splice(columnIndex, 1);
+              if (movedColumn === undefined) return;
               newOrder.splice(columnIndex - 1, 0, movedColumn);
               table.setColumnOrder(newOrder);
             }
@@ -270,6 +271,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
             if (columnIndex < columnOrder.length - 1) {
               const newOrder = [...columnOrder];
               const [movedColumn] = newOrder.splice(columnIndex, 1);
+              if (movedColumn === undefined) return;
               newOrder.splice(columnIndex + 1, 0, movedColumn);
               table.setColumnOrder(newOrder);
             }

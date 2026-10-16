@@ -57,7 +57,7 @@ type StepMeta = {
   readonly description: string;
 };
 
-const STEPS: readonly StepMeta[] = [
+const STEPS: readonly [StepMeta, ...StepMeta[]] = [
   {
     id: "welcome",
     step: 1,

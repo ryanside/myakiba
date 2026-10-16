@@ -182,8 +182,8 @@ export const CollectionDataGrid = () => {
     (updater: Updater<SortingState>) => {
       const newSorting = functionalUpdate(updater, sorting);
 
-      if (newSorting.length > 0) {
-        const sortConfig = newSorting[0];
+      const [sortConfig] = newSorting;
+      if (sortConfig) {
         setFilters({
           sort: sortConfig.id as
             | "itemTitle"
