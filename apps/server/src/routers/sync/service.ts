@@ -591,6 +591,7 @@ class SyncService {
       conditions.push(inArray(syncSession.syncType, syncTypeFilter));
     const whereClause = and(...conditions);
 
+    // @ts-expect-error -- scraper code, replaced by the browser extension (until 2027-01-31, approved by root under the operator's no-scraper-work rule)
     const [sessionRecords, [{ total }]] = await Promise.all([
       db
         .select({
@@ -726,6 +727,7 @@ class SyncService {
     const usePagination = page !== undefined && limit !== undefined;
     const offset = usePagination ? (page - 1) * limit : 0;
 
+    // @ts-expect-error -- scraper code, replaced by the browser extension (until 2027-01-31, approved by root under the operator's no-scraper-work rule)
     const [rows, [{ total }]] = await Promise.all([
       usePagination ? baseQuery.limit(limit).offset(offset) : baseQuery,
       countQuery,
