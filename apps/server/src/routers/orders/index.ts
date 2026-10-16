@@ -2,8 +2,11 @@ import { Elysia, status } from "elysia";
 import OrdersService from "./service";
 import * as z from "zod";
 import { orderUpdateSchema, ordersQuerySchema, orderIdParamSchema } from "./model";
-import { cascadeOptionsSchema, orderItemsQuerySchema } from "@myakiba/contracts/orders/schema";
-import { newOrderWriteSchema } from "@myakiba/contracts/orders/write-schema";
+import {
+  cascadeOptionsSchema,
+  newOrderSchema,
+  orderItemsQuerySchema,
+} from "@myakiba/contracts/orders/schema";
 import { tryCatch } from "@myakiba/utils/result";
 import { betterAuth } from "@/middleware/better-auth";
 import { evlog } from "evlog/elysia";
@@ -202,7 +205,7 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
     {
       body: z.object({
         orderIds: z.array(z.string()),
-        newOrder: newOrderWriteSchema,
+        newOrder: newOrderSchema,
         cascadeOptions: cascadeOptionsSchema,
       }),
       auth: true,
@@ -247,7 +250,7 @@ const ordersRouter = new Elysia({ prefix: "/orders" })
     {
       body: z.object({
         collectionIds: z.array(z.string()),
-        newOrder: newOrderWriteSchema,
+        newOrder: newOrderSchema,
         cascadeOptions: cascadeOptionsSchema,
       }),
       auth: true,

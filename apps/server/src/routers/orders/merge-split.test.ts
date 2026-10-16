@@ -89,15 +89,15 @@ const newOrder = {
   notes: "Packed together",
 } as const;
 
-const serverOwnedFields = {
+const rejectedFields = {
   id: "client-chosen-id",
   userId,
   createdAt: "2001-01-01T00:00:00.000Z",
   updatedAt: "2001-01-01T00:00:00.000Z",
-  importedFrom: "mfc",
+  unknownField: "x",
 } as const;
 
-type NewOrderBody = typeof newOrder & Partial<Record<keyof typeof serverOwnedFields, string>>;
+type NewOrderBody = typeof newOrder & Partial<Record<keyof typeof rejectedFields, string>>;
 
 const writes = {
   merge: (body: NewOrderBody) => ({
@@ -129,7 +129,7 @@ const readOrders = () =>
 describe("merge and split accept only the fields a user edits", () => {
   test.each(
     routes.flatMap((route) =>
-      Object.entries(serverOwnedFields).map(([field, value]) => [route, field, value] as const),
+      Object.entries(rejectedFields).map(([field, value]) => [route, field, value] as const),
     ),
   )("%s with newOrder.%s answers 422 and writes nothing", async (route, field, value) => {
     const before = await readOrders();
@@ -137,6 +137,9 @@ describe("merge and split accept only the fields a user edits", () => {
     const response = await post(route, { ...newOrder, [field]: value });
 
     expect(response.status).toBe(422);
+    expect(await response.json()).toMatchObject({
+      errors: [{ code: "unrecognized_keys", keys: [field], path: ["newOrder"] }],
+    });
     expect(await readOrders()).toEqual(before);
   });
 
