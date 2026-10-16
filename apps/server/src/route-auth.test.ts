@@ -41,15 +41,11 @@ describe("every API route requires a session unless it is listed as public", () 
     expect(routes.length).toBeGreaterThan(20);
   });
 
-  test.each(
-    routes
-      .filter((route) => !PUBLIC_ROUTES.has(route.name))
-      .map((route) => [route.name, route] as const),
-  )("%s", async (name, route) => {
+  test.each(routes.filter((route) => !PUBLIC_ROUTES.has(route.name)))("$name", async (route) => {
     const response = await app.handle(anonymousRequest(route));
 
-    expect({ route: name, status: response.status, body: await response.text() }).toEqual({
-      route: name,
+    expect({ route: route.name, status: response.status, body: await response.text() }).toEqual({
+      route: route.name,
       status: 401,
       body: SENTINEL,
     });

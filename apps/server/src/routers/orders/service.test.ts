@@ -19,6 +19,9 @@ const databaseUrl = new URL(serverUrl);
 databaseUrl.pathname = `/${databaseName}`;
 process.env.DATABASE_URL = databaseUrl.toString();
 
+const disarmTrigger =
+  "CREATE OR REPLACE FUNCTION fail_when_armed() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN OLD; END $$";
+
 const { db } = await import("@myakiba/db/client");
 const { default: OrdersService } = await import("./service");
 
@@ -30,9 +33,7 @@ beforeAll(async () => {
     generateDrizzleJson({ ...authSchema, ...figureSchema }),
   );
   for (const statement of schemaStatements) await db.execute(statement);
-  await db.execute(
-    "CREATE FUNCTION fail_when_armed() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN OLD; END $$",
-  );
+  await db.execute(disarmTrigger);
   await db.execute(
     "CREATE TRIGGER fail_collection_delete BEFORE DELETE ON collection FOR EACH ROW EXECUTE FUNCTION fail_when_armed()",
   );
@@ -50,9 +51,7 @@ const ownedId = "collection-owned";
 const orderedId = "collection-ordered";
 
 beforeEach(async () => {
-  await db.execute(
-    "CREATE OR REPLACE FUNCTION fail_when_armed() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN OLD; END $$",
-  );
+  await db.execute(disarmTrigger);
   await db.execute('TRUNCATE "user", item CASCADE');
   await db
     .insert(authSchema.user)
