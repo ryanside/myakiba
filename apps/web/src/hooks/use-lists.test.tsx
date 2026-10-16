@@ -97,7 +97,7 @@ afterEach(() => {
 });
 
 describe("lists reorder", () => {
-  test("a sync that finishes while a move is saving does not undo the move", async () => {
+  test("a sync that finishes while a move is saving shows the saved order once the move saves", async () => {
     let move: (intent: PositionOrderInput) => Promise<void> = async () => {};
     function ListsOverview() {
       useSyncJobStatusQuery("job-1", "session-1", null);

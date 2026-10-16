@@ -256,7 +256,12 @@ describe("wishlist reorder", () => {
       useEffect(() => {
         move = mutation.move;
       }, [mutation.move]);
-      return <WishlistTab tab="all" />;
+      return (
+        <>
+          <p role="status">{mutation.isPending ? "saving" : "idle"}</p>
+          <WishlistTab tab="all" />
+        </>
+      );
     }
     renderWithClient(
       <>
@@ -348,7 +353,62 @@ describe("wishlist reorder", () => {
     );
   });
 
-  test("a sync that finishes while a move is saving does not undo the move", async () => {
+  test("a move stops saving when its save finishes, before the refetch returns", async () => {
+    server.items = [MIKU_BEFORE_SYNC, KAGAMINE_RIN, KAGAMINE_LEN];
+    const move = renderReorderableAll();
+    await waitFor(() => expect(shownIn("wishlist all")).toHaveLength(3));
+
+    server.holdOrderPatch = true;
+    let saving: Promise<void> = Promise.resolve();
+    act(() => {
+      saving = move(lenFirst);
+    });
+    await waitFor(() => expect(server.heldOrderPatch).toHaveLength(1));
+    server.holdWishlist = true;
+    await act(async () => server.heldOrderPatch[0]?.());
+    await waitFor(() => expect(server.heldWishlist).toHaveLength(1));
+    const whileRefetching = screen.getByRole("status").textContent;
+    await act(async () => {
+      server.heldWishlist[0]?.();
+      await saving;
+    });
+
+    expect(whileRefetching).toBe("idle");
+  });
+
+  test("two saves that finish together after a sync show the saved order", async () => {
+    server.items = [MIKU_BEFORE_SYNC, KAGAMINE_RIN, KAGAMINE_LEN];
+    const move = renderReorderableAll(<SyncStatusWidget />);
+    await waitFor(() => expect(shownIn("wishlist all")).toHaveLength(3));
+
+    server.holdOrderPatch = true;
+    const mikuLast: PositionOrderInput = { movedIds: ["w1"], anchorId: "w2", placement: "after" };
+    let savingBoth: Promise<unknown> = Promise.resolve();
+    act(() => {
+      savingBoth = Promise.all([move(lenFirst), move(mikuLast)]);
+    });
+    await waitFor(() => expect(server.heldOrderPatch).toHaveLength(2));
+    const requestsBeforeSync = server.wishlistRequests.length;
+    await act(async () => server.finishSync());
+    await waitFor(() => expect(server.wishlistRequests.length).toBeGreaterThan(requestsBeforeSync));
+    const requestsBeforeSaves = server.wishlistRequests.length;
+    await act(async () => {
+      server.heldOrderPatch[0]?.();
+      server.heldOrderPatch[1]?.();
+      await savingBoth;
+    });
+
+    await waitFor(() =>
+      expect(shownIn("wishlist all")).toEqual([
+        "Kagamine Len",
+        "Kagamine Rin",
+        "Miku (title before sync)",
+      ]),
+    );
+    expect(server.wishlistRequests.length - requestsBeforeSaves).toBe(1);
+  });
+
+  test("a sync that finishes while a move is saving shows the saved order once the move saves", async () => {
     server.items = [MIKU_BEFORE_SYNC, KAGAMINE_RIN, KAGAMINE_LEN];
     const move = renderReorderableAll(<SyncStatusWidget />);
     await waitFor(() => expect(shownIn("wishlist all")).toHaveLength(3));
