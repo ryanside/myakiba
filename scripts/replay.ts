@@ -213,8 +213,14 @@ const report = (pass: boolean, label: string, details: string[] = []) => {
   console.log([`${pass ? "PASS" : "FAIL"}  ${label}`, ...details].join("\n"));
 };
 
-const difference = (left: string[], right: string[]) =>
-  left.filter((item) => !right.includes(item));
+const difference = (left: string[], right: string[]) => {
+  const remaining = [...right];
+  return left.filter((item) => {
+    const match = remaining.indexOf(item);
+    if (match !== -1) remaining.splice(match, 1);
+    return match === -1;
+  });
+};
 
 for (const testFile of new Set(selected.map((replay) => replay.test))) {
   const run = await runTest(root, testFile);

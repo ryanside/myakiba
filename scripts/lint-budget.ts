@@ -1,11 +1,20 @@
 import { $ } from "bun";
 
 const BUDGET_PATH = "tools/oxlint/budget.json";
-const GATE_PATHS = ["oxlint.config.ts", "tools/oxlint", "scripts/lint-budget.ts"];
+const LINT_TOOLING = [
+  "**/oxlint.config.*",
+  "**/.oxlintrc*",
+  "tools/oxlint/**",
+  "scripts/lint-budget.ts",
+];
+const CONFIG_PATHS = [
+  ...LINT_TOOLING.map((pattern) => `:(glob)${pattern}`),
+  `:(exclude)${BUDGET_PATH}`,
+];
 const SOURCE_FILES = ["*.js", "*.jsx", "*.mjs", "*.cjs", "*.ts", "*.tsx", "*.mts", "*.cts"];
-const CHECKER_DISABLED = "(eslint|oxlint)-disable.*require-suppression-reason";
+const CHECKER = "require-suppression-reason";
 const TRUNK = "origin/main";
-const APPROVAL_LINE = /^Lint-Budget-Approved-By: \S/mu;
+const APPROVAL_LINE = /^Lint-Budget-Approved-By: [^\s<]/mu;
 
 type Budget = Record<string, number>;
 type Diagnostic = {
@@ -72,12 +81,13 @@ for (const code of [...new Set([...Object.keys(budget), ...hits.keys()])].toSort
   }
 }
 
-const checkerDisabled = await $`git grep -n --untracked -E ${CHECKER_DISABLED} -- ${SOURCE_FILES}`
-  .nothrow()
-  .quiet();
-if (checkerDisabled.exitCode !== 1) {
+const checkerNamed =
+  await $`git grep -n --untracked -F ${CHECKER} -- ${SOURCE_FILES} ${LINT_TOOLING.map((pattern) => `:(exclude,glob)${pattern}`)}`
+    .nothrow()
+    .quiet();
+if (checkerNamed.exitCode !== 1) {
   failures.push(
-    `These lines switch off myakiba/require-suppression-reason, which hides every suppression after them. Remove them.\n${checkerDisabled.text().trim() || checkerDisabled.stderr.toString()}`,
+    `These lines name myakiba/${CHECKER}. Only the lint config may name it, because a directive that switches it off hides every suppression after it. Remove them.\n${checkerNamed.text().trim() || checkerNamed.stderr.toString()}`,
   );
 }
 
@@ -91,20 +101,24 @@ if (base) {
   const raised = Object.keys(budget).filter(
     (code) => (budget[code] ?? 0) > (trunkBudget[code] ?? 0),
   );
-  const configDiff = await $`git diff --quiet ${base} -- ${GATE_PATHS}`.nothrow().quiet();
-  const configChanged = configDiff.exitCode !== 0;
-  const approvals = await $`git log --format=%B ${base}..HEAD -- ${GATE_PATHS}`.quiet().text();
-  if ((raised.length > 0 || configChanged) && !APPROVAL_LINE.test(approvals)) {
-    const reasons = [
-      ...(raised.length > 0 ? [`The budget for ${raised.join(", ")} is above ${TRUNK}.`] : []),
-      ...(configChanged
-        ? [
-            `${GATE_PATHS.join(", ")} differ from ${TRUNK}, and a config change can switch a rule off.`,
-          ]
-        : []),
-    ];
+  const configDiff = await $`git diff --quiet ${base} -- ${CONFIG_PATHS}`.nothrow().quiet();
+  const lastMessage = (paths: string[]) =>
+    $`git log -1 --format=%B ${base}..HEAD -- ${paths}`.quiet().text();
+  const unapproved = [
+    ...(raised.length > 0 && !APPROVAL_LINE.test(await lastMessage([BUDGET_PATH]))
+      ? [
+          `The budget for ${raised.join(", ")} is above ${TRUNK}. Add the approval line to the last commit that changes ${BUDGET_PATH}.`,
+        ]
+      : []),
+    ...(configDiff.exitCode !== 0 && !APPROVAL_LINE.test(await lastMessage(CONFIG_PATHS))
+      ? [
+          `The files matching ${LINT_TOOLING.join(", ")} differ from ${TRUNK}, and a config change can switch a rule off. Add the approval line to the last commit that changes them.`,
+        ]
+      : []),
+  ];
+  if (unapproved.length > 0) {
     failures.push(
-      `${reasons.join(" ")} This needs a human's approval. Once you have it, add "Lint-Budget-Approved-By: <name>" to the message of a commit that changes one of ${GATE_PATHS.join(", ")}.`,
+      `${unapproved.join("\n")}\nThis needs a human's approval. Once you have it, the line reads "Lint-Budget-Approved-By: <name>".`,
     );
   }
 } else {

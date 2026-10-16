@@ -92,9 +92,12 @@ const noEnvOutsideEnvPackage = {
           report(node.id, `${owner}.env`);
       },
       ImportDeclaration(node) {
-        if (!ENV_MODULES.has(node.source.value)) return;
+        if (!ENV_MODULES.has(node.source.value) || node.importKind === "type") return;
         for (const specifier of node.specifiers) {
-          const imported = specifier.type === "ImportSpecifier" && specifier.imported;
+          const imported =
+            specifier.type === "ImportSpecifier" &&
+            specifier.importKind !== "type" &&
+            specifier.imported;
           if (imported && (imported.name ?? imported.value) === "env")
             report(specifier, `import { env } from "${node.source.value}"`);
         }
@@ -104,6 +107,8 @@ const noEnvOutsideEnvPackage = {
 };
 
 const isLiteral = (node, value) => node?.type === "Literal" && node.value === value;
+const isDatePartEnd = (node) =>
+  node?.type === "Literal" && Number.isInteger(node.value) && node.value <= 10;
 
 const noIsoSlice = {
   meta: { type: "problem" },
@@ -124,12 +129,12 @@ const noIsoSlice = {
         const takesDay =
           callee.property.name === "split"
             ? isLiteral(args[0], "T")
-            : isLiteral(args[0], 0) && isLiteral(args[1], 10);
+            : isLiteral(args[0], 0) && isDatePartEnd(args[1]);
         if (!takesDay) return;
         context.report({
           node,
           message:
-            '`.toISOString().slice(0, 10)` gives the UTC day, not the local one. Use toDateOnlyString from "@myakiba/utils/date-only".',
+            '`.toISOString().slice(0, n)` gives the UTC date, not the local one. Use toDateOnlyString from "@myakiba/utils/date-only".',
         });
       },
     };
