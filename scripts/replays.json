@@ -90,62 +90,62 @@
     {
       "fix": "2b541696",
       "bug": "a bare suppression hid a set-state-in-effect that reset the chart brush range",
-      "rule": "myakiba/require-suppression-reason",
-      "atParent": ["apps/web/src/components/evilcharts/ui/recharts-brush.tsx:687"],
+      "rule": "myakiba(require-suppression-reason)",
+      "atParent": ["apps/web/src/components/evilcharts/ui/recharts-brush.tsx:687:5"],
       "atFix": []
     },
     {
       "fix": "850ddf60",
       "bug": "a bare suppression hid that each Rating star was a clickable div, not a button",
-      "rule": "myakiba/require-suppression-reason",
-      "atParent": ["apps/web/src/components/ui/rating.tsx:104"],
+      "rule": "myakiba(require-suppression-reason)",
+      "atParent": ["apps/web/src/components/ui/rating.tsx:104:9"],
       "atFix": []
     },
     {
       "fix": "782088d4",
       "bug": "CORS_ORIGIN was read raw and passed as one string, so a list of origins never matched",
-      "rule": "myakiba/no-env-outside-env-package",
+      "rule": "myakiba(no-env-outside-env-package)",
       "atParent": [
-        "apps/server/src/index.ts:27",
-        "apps/server/src/index.ts:36",
-        "apps/server/src/lib/auth.ts:17",
-        "apps/server/src/lib/auth.ts:22",
-        "apps/server/src/lib/auth.ts:40"
+        "apps/server/src/index.ts:27:13",
+        "apps/server/src/index.ts:36:13",
+        "apps/server/src/lib/auth.ts:17:20",
+        "apps/server/src/lib/auth.ts:22:15",
+        "apps/server/src/lib/auth.ts:40:15"
       ],
       "atFix": [
-        "apps/server/src/index.ts:27",
-        "apps/server/src/index.ts:36",
-        "apps/server/src/lib/auth.ts:17",
-        "apps/server/src/lib/auth.ts:22",
-        "apps/server/src/lib/auth.ts:38"
+        "apps/server/src/index.ts:27:13",
+        "apps/server/src/index.ts:36:13",
+        "apps/server/src/lib/auth.ts:17:19",
+        "apps/server/src/lib/auth.ts:22:15",
+        "apps/server/src/lib/auth.ts:38:15"
       ]
     },
     {
       "fix": "2f2ffe57",
       "bug": "import.meta.env.PROD is undefined under Bun, so production mail used the test sender",
-      "rule": "myakiba/no-env-outside-env-package",
-      "atParent": ["apps/server/src/lib/auth.ts:22", "apps/server/src/lib/auth.ts:40"],
-      "atFix": ["apps/server/src/lib/auth.ts:22", "apps/server/src/lib/auth.ts:40"]
+      "rule": "myakiba(no-env-outside-env-package)",
+      "atParent": ["apps/server/src/lib/auth.ts:22:15", "apps/server/src/lib/auth.ts:40:15"],
+      "atFix": ["apps/server/src/lib/auth.ts:22:15", "apps/server/src/lib/auth.ts:40:15"]
     },
     {
       "fix": "a0643cdb",
       "bug": "a malformed Redis job-status payload threw from JSON.parse",
-      "rule": "no-restricted-properties",
-      "atParent": ["packages/redis/src/job-status.ts:18"],
-      "atFix": ["packages/redis/src/job-status.ts:19"]
+      "rule": "eslint(no-restricted-properties)",
+      "atParent": ["packages/redis/src/job-status.ts:18:48"],
+      "atFix": ["packages/redis/src/job-status.ts:19:20"]
     },
     {
       "fix": "e24d4c5c",
       "bug": "a malformed recent-items entry in localStorage threw from JSON.parse",
-      "rule": "no-restricted-properties",
-      "atParent": ["apps/web/src/lib/recent-items.ts:33"],
-      "atFix": ["apps/web/src/lib/recent-items.ts:34"]
+      "rule": "eslint(no-restricted-properties)",
+      "atParent": ["apps/web/src/lib/recent-items.ts:33:17"],
+      "atFix": ["apps/web/src/lib/recent-items.ts:34:19"]
     },
     {
       "fix": "5a242ef1",
       "bug": "the expense date presets took the UTC day from toISOString, not the local day",
-      "rule": "myakiba/no-iso-slice",
-      "atParent": ["apps/web/src/components/expenses/filters.tsx:50"],
+      "rule": "myakiba(no-iso-slice)",
+      "atParent": ["apps/web/src/components/expenses/filters.tsx:50:10"],
       "atFix": []
     }
   ]

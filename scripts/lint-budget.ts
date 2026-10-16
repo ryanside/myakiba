@@ -1,6 +1,9 @@
 import { $ } from "bun";
 
 const BUDGET_PATH = "tools/oxlint/budget.json";
+const GATE_PATHS = ["oxlint.config.ts", "tools/oxlint", "scripts/lint-budget.ts"];
+const SOURCE_FILES = ["*.js", "*.jsx", "*.mjs", "*.cjs", "*.ts", "*.tsx", "*.mts", "*.cts"];
+const CHECKER_DISABLED = "(eslint|oxlint)-disable.*require-suppression-reason";
 const TRUNK = "origin/main";
 const APPROVAL_LINE = /^Lint-Budget-Approved-By: \S/mu;
 
@@ -21,6 +24,16 @@ const describe = ({ code, severity, message, help, filename, labels }: Diagnosti
 };
 
 const budget: Budget = await Bun.file(BUDGET_PATH).json();
+const malformed = Object.keys(budget).filter(
+  (code) => !Number.isInteger(budget[code]) || (budget[code] ?? 0) < 0,
+);
+if (malformed.length > 0) {
+  console.error(
+    `${BUDGET_PATH} must give each rule a whole number of hits. Fix ${malformed.join(", ")}.`,
+  );
+  process.exit(1);
+}
+
 const lint = await $`bun x oxlint -f json`.nothrow().quiet();
 if (!lint.text().startsWith("{")) {
   console.error(lint.text(), lint.stderr.toString());
@@ -59,18 +72,39 @@ for (const code of [...new Set([...Object.keys(budget), ...hits.keys()])].toSort
   }
 }
 
+const checkerDisabled = await $`git grep -n --untracked -E ${CHECKER_DISABLED} -- ${SOURCE_FILES}`
+  .nothrow()
+  .quiet();
+if (checkerDisabled.exitCode !== 1) {
+  failures.push(
+    `These lines switch off myakiba/require-suppression-reason, which hides every suppression after them. Remove them.\n${checkerDisabled.text().trim() || checkerDisabled.stderr.toString()}`,
+  );
+}
+
 const mergeBase = await $`git merge-base HEAD ${TRUNK}`.nothrow().quiet().text();
 const base = mergeBase.trim();
 if (base) {
-  const trunkFile = await $`git show ${base}:${BUDGET_PATH}`.nothrow().quiet();
-  const trunkBudget: Budget = trunkFile.exitCode === 0 ? trunkFile.json() : budget;
+  const atTrunk = await $`git ls-tree --name-only ${base} -- ${BUDGET_PATH}`.quiet().text();
+  const trunkBudget: Budget = atTrunk.trim()
+    ? await $`git show ${base}:${BUDGET_PATH}`.quiet().json()
+    : {};
   const raised = Object.keys(budget).filter(
     (code) => (budget[code] ?? 0) > (trunkBudget[code] ?? 0),
   );
-  const messages = await $`git log --format=%B ${base}..HEAD`.quiet().text();
-  if (raised.length > 0 && !APPROVAL_LINE.test(messages)) {
+  const configDiff = await $`git diff --quiet ${base} -- ${GATE_PATHS}`.nothrow().quiet();
+  const configChanged = configDiff.exitCode !== 0;
+  const approvals = await $`git log --format=%B ${base}..HEAD -- ${GATE_PATHS}`.quiet().text();
+  if ((raised.length > 0 || configChanged) && !APPROVAL_LINE.test(approvals)) {
+    const reasons = [
+      ...(raised.length > 0 ? [`The budget for ${raised.join(", ")} is above ${TRUNK}.`] : []),
+      ...(configChanged
+        ? [
+            `${GATE_PATHS.join(", ")} differ from ${TRUNK}, and a config change can switch a rule off.`,
+          ]
+        : []),
+    ];
     failures.push(
-      `The budget for ${raised.join(", ")} is above ${TRUNK}. A raise needs a human's approval. Once you have it, add "Lint-Budget-Approved-By: <name>" to the commit message.`,
+      `${reasons.join(" ")} This needs a human's approval. Once you have it, add "Lint-Budget-Approved-By: <name>" to the message of a commit that changes one of ${GATE_PATHS.join(", ")}.`,
     );
   }
 } else {

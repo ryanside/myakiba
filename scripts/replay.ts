@@ -110,32 +110,51 @@ async function runTest(checkout: string, testFile: string): Promise<TestRun> {
   };
 }
 
-async function changedLines(fix: string, side: "-" | "+") {
+async function changedLines(fix: string) {
   const diff = await $`git diff -U0 --no-renames ${`${fix}^`} ${fix}`.cwd(root).text();
-  const lines = new Map<string, Set<number>>();
-  let file: string | undefined;
+  const sides = { atParent: new Map<string, Set<number>>(), atFix: new Map<string, Set<number>>() };
+  const add = (
+    side: Map<string, Set<number>>,
+    file: string | undefined,
+    start: string | undefined,
+    count = "1",
+  ) => {
+    if (file === undefined) return;
+    const changed = side.get(file) ?? new Set<number>();
+    for (let offset = 0; offset < Number(count); offset++) changed.add(Number(start) + offset);
+    side.set(file, changed);
+  };
+  let parentFile: string | undefined;
+  let fixFile: string | undefined;
+  let inHeader = false;
   for (const line of diff.split("\n")) {
-    const header = /^(---|\+\+\+) (?:[ab]\/(.+)|\/dev\/null)$/.exec(line);
-    if (header) {
-      if (header[1] === side.repeat(3)) file = header[2];
+    if (line.startsWith("diff --git ")) {
+      parentFile = undefined;
+      fixFile = undefined;
+      inHeader = true;
       continue;
     }
+    const header = inHeader && /^(---|\+\+\+) (?:[ab]\/(.+)|\/dev\/null)$/.exec(line);
+    if (header && header[1] === "---") parentFile = header[2];
+    if (header && header[1] === "+++") fixFile = header[2];
+    if (header) continue;
     const hunk = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/.exec(line);
-    if (!hunk || file === undefined) continue;
-    const [start, count] = side === "-" ? [hunk[1], hunk[2]] : [hunk[3], hunk[4]];
-    const changed = lines.get(file) ?? new Set<number>();
-    for (let offset = 0; offset < Number(count ?? 1); offset++) changed.add(Number(start) + offset);
-    lines.set(file, changed);
+    if (!hunk) continue;
+    inHeader = false;
+    add(sides.atParent, parentFile, hunk[1], hunk[2]);
+    add(sides.atFix, fixFile, hunk[3], hunk[4]);
   }
-  return lines;
+  return sides;
 }
 
 async function lintHits(checkout: string, rule: string, lines: Map<string, Set<number>>) {
   const { default: head }: { default: LintConfig } = await import(
     path.join(root, "oxlint.config.ts")
   );
-  const ruleSetting = head.rules[rule];
-  if (ruleSetting === undefined) throw new Error(`${rule} is not configured in oxlint.config.ts.`);
+  const [, prefix, name] = /^(.+)\((.+)\)$/.exec(rule) ?? [];
+  const key = prefix === "eslint" ? name : `${prefix}/${name}`;
+  const ruleSetting = head.rules[key];
+  if (ruleSetting === undefined) throw new Error(`${key} is not configured in oxlint.config.ts.`);
   const config = {
     plugins: [],
     categories: { correctness: "off" },
@@ -144,10 +163,10 @@ async function lintHits(checkout: string, rule: string, lines: Map<string, Set<n
       ...plugin,
       specifier: path.resolve(root, plugin.specifier),
     })),
-    rules: { [rule]: ruleSetting },
+    rules: { [key]: ruleSetting },
     overrides: head.overrides
-      .filter((override) => rule in override.rules)
-      .map((override) => ({ files: override.files, rules: { [rule]: override.rules[rule] } })),
+      .filter((override) => key in override.rules)
+      .map((override) => ({ files: override.files, rules: { [key]: override.rules[key] } })),
   };
   await Bun.write(path.join(checkout, ".oxlint-replay.json"), JSON.stringify(config));
   const files = [...lines.keys()].filter((file) => /\.[cm]?[jt]sx?$/.test(file));
@@ -160,11 +179,23 @@ async function lintHits(checkout: string, rule: string, lines: Map<string, Set<n
   if (!lint.text().startsWith("{")) throw new Error(lint.text());
   const {
     diagnostics,
-  }: { diagnostics: { filename: string; labels: { span: { line: number } }[] }[] } = lint.json();
+  }: {
+    diagnostics: {
+      code?: string;
+      message: string;
+      filename: string;
+      labels: { span: { line: number; column: number } }[];
+    }[];
+  } = lint.json();
+  const unexpected = diagnostics.filter((diagnostic) => diagnostic.code !== rule);
+  if (unexpected.length > 0)
+    throw new Error(
+      `oxlint reported more than ${rule} in ${checkout}:\n${unexpected.map(({ filename, message }) => `${filename}: ${message}`).join("\n")}`,
+    );
   return diagnostics
-    .map(({ filename, labels }) => ({ filename, line: labels[0]?.span.line ?? 0 }))
-    .filter(({ filename, line }) => lines.get(filename)?.has(line))
-    .map(({ filename, line }) => `${filename}:${line}`)
+    .map(({ filename, labels }) => ({ filename, span: labels[0]?.span ?? { line: 0, column: 0 } }))
+    .filter(({ filename, span }) => lines.get(filename)?.has(span.line))
+    .map(({ filename, span }) => `${filename}:${span.line}:${span.column}`)
     .toSorted();
 }
 
@@ -263,9 +294,10 @@ async function checkOut(revision: string, testFile?: string) {
 try {
   for (const replay of selectedLint) {
     await checkOut(`${replay.fix}^`);
-    const atParent = await lintHits(worktree, replay.rule, await changedLines(replay.fix, "-"));
+    const changed = await changedLines(replay.fix);
+    const atParent = await lintHits(worktree, replay.rule, changed.atParent);
     await checkOut(replay.fix);
-    const atFix = await lintHits(worktree, replay.rule, await changedLines(replay.fix, "+"));
+    const atFix = await lintHits(worktree, replay.rule, changed.atFix);
     const details = [
       ...difference(replay.atParent, atParent).map(
         (hit) => `      not flagged at the parent: ${hit}`,
