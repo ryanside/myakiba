@@ -109,9 +109,13 @@ const isAlive = (pid: number) => {
 };
 for (const name of await readdir(tmpdir())) {
   const pid = Number(/^myakiba-replay-(\d+)-/.exec(name)?.[1]);
-  if (pid && !isAlive(pid)) await rm(path.join(tmpdir(), name), { recursive: true, force: true });
+  if (!pid || isAlive(pid)) continue;
+  const stale = path.join(tmpdir(), name);
+  await $`git -C ${root} worktree remove --force ${stale}`.nothrow().quiet();
+  await rm(stale, { recursive: true, force: true }).catch((error) =>
+    console.warn(`could not remove ${stale}: ${error}`),
+  );
 }
-await $`git -C ${root} worktree prune`.quiet();
 
 const worktree = await mkdtemp(path.join(tmpdir(), `myakiba-replay-${process.pid}-`));
 const removeWorktree = () =>
