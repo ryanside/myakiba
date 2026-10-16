@@ -37,6 +37,7 @@ import Loader from "../loader";
 
 interface OrdersKanbanProps {
   orders: readonly DashboardKanbanOrder[];
+  ordersUpdatedAt: number;
   isLoading: boolean;
   currency: Currency;
   dateFormat: DateFormat;
@@ -592,6 +593,7 @@ function OrderKanbanBoard({
 
 export default function OrderKanban({
   orders,
+  ordersUpdatedAt,
   isLoading,
   currency,
   dateFormat,
@@ -614,6 +616,7 @@ export default function OrderKanban({
   return (
     <OrderKanbanBoard
       initialColumns={initialColumns}
+      ordersUpdatedAt={ordersUpdatedAt}
       isLoading={isLoading}
       currency={currency}
       dateFormat={dateFormat}
