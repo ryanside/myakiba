@@ -7,11 +7,13 @@ type ClientVar = { name: string; source: string };
 type Dockerfile = {
   file: string;
   buildsWeb: boolean;
+  webStageArgs: Set<string>;
   args: Map<string, { hasDefault: boolean; requiredByUse: boolean }>;
 };
 
 type Build = {
   where: string;
+  argsAt: string;
   dockerfile: string;
   publishes: boolean;
   args: Set<string>;
@@ -55,7 +57,7 @@ function requiredClientVars(): ClientVar[] {
   if (existsSync(source)) {
     const text = read(source);
     const client = text.slice(text.indexOf("client:"), text.indexOf("runtimeEnv"));
-    return [...client.matchAll(/(VITE_[A-Z0-9_]+)\s*:\s*([^\n]+)/g)]
+    return [...client.matchAll(/(VITE_[A-Z0-9_]+)\s*:([\s\S]*?)(?=\bVITE_[A-Z0-9_]+\s*:|$)/g)]
       .filter((match) => !/\.optional\(\)|\.default\(/.test(match[2] ?? ""))
       .map((match) => ({ name: match[1] ?? "", source }));
   }
@@ -76,10 +78,19 @@ function parseDockerfile(file: string): Dockerfile {
       requiredByUse: text.includes(`\${${name}:?`),
     });
   }
+  const webBuild = /apps\/web/.test(text)
+    ? text.search(/\b(bun run build|vite build|turbo (run )?build)/)
+    : -1;
+  // An ARG is visible only after its declaration in its own stage.
+  const webStage =
+    text
+      .slice(0, Math.max(webBuild, 0))
+      .split(/^FROM\s/im)
+      .at(-1) ?? "";
   return {
     file,
-    buildsWeb:
-      /apps\/web/.test(text) && /\b(bun run build|vite build|turbo (run )?build)/.test(text),
+    buildsWeb: webBuild >= 0,
+    webStageArgs: new Set([...webStage.matchAll(/^\s*ARG\s+(\w+)/gm)].map(([, name = ""]) => name)),
     args,
   };
 }
@@ -102,10 +113,13 @@ function workflowBuilds(): Build[] {
               /\$\{\{\s*matrix\.(\w+)\s*\}\}/g,
               (_, key: string) => entry[key] ?? "",
             );
+          const where = `${file} jobs.${jobId}${entry.image ? ` matrix entry "${entry.image}"` : ""}`;
           builds.push({
-            where: `${file} jobs.${jobId}${entry.image ? ` matrix entry "${entry.image}"` : ""} build-args`,
+            where,
+            argsAt: `${where} build-args`,
+            // build-push-action reads file from the checkout root, not from context.
             dockerfile: path.normalize(
-              path.join(resolve(inputs.context) || ".", resolve(inputs.file) || "Dockerfile"),
+              resolve(inputs.file) || path.join(resolve(inputs.context) || ".", "Dockerfile"),
             ),
             publishes: Boolean(inputs.push) && inputs.push !== "false",
             args: new Set(resolve(inputs["build-args"]).split("\n").map(keyOf).filter(Boolean)),
@@ -128,7 +142,8 @@ function composeBuilds(publishedByWorkflow: Set<string>): Build[] {
         path.join(build.context ?? ".", build.dockerfile ?? "Dockerfile"),
       );
       builds.push({
-        where: `${file} services.${service}.build.args`,
+        where: `${file} services.${service}`,
+        argsAt: `${file} services.${service}.build.args`,
         dockerfile,
         // Compose was the deploy path until a workflow published the same Dockerfile.
         publishes: !publishedByWorkflow.has(dockerfile),
@@ -148,10 +163,20 @@ const builds = [
   ),
   ...workflows,
 ];
-const dockerfiles = [...new Bun.Glob("{apps,packages}/*/Dockerfile").scanSync()]
+const errors: string[] = [];
+for (const build of builds)
+  if (!existsSync(build.dockerfile))
+    errors.push(
+      `${build.where}: builds ${build.dockerfile}, which does not exist. Give the Dockerfile as a literal path or a matrix.include value.`,
+    );
+const dockerfiles = [
+  ...new Set([
+    ...new Bun.Glob("{apps,packages}/*/Dockerfile").scanSync(),
+    ...builds.map((build) => build.dockerfile).filter((file) => existsSync(file)),
+  ]),
+]
   .toSorted()
   .map(parseDockerfile);
-const errors: string[] = [];
 
 if (clientVars.length === 0)
   errors.push(
@@ -162,9 +187,9 @@ for (const dockerfile of dockerfiles) {
   const mine = builds.filter((build) => build.dockerfile === dockerfile.file);
   if (dockerfile.buildsWeb) {
     for (const { name, source } of clientVars)
-      if (!dockerfile.args.has(name))
+      if (!dockerfile.webStageArgs.has(name))
         errors.push(
-          `${dockerfile.file}: ${name} is required in ${source}, but it is not an ARG, and Vite inlines VITE_* when this image builds apps/web. Add "ARG ${name}" and "ENV ${name}=\${${name}:?${name}_required}" before the web build.`,
+          `${dockerfile.file}: ${name} is required in ${source}, but it is not an ARG in the stage that builds apps/web, and Vite inlines VITE_* at that build. Add "ARG ${name}" and "ENV ${name}=\${${name}:?${name}_required}" to that stage before the web build.`,
         );
     if (mine.length === 0)
       errors.push(
@@ -188,12 +213,12 @@ for (const dockerfile of dockerfiles) {
     }
     for (const [name, why] of needed)
       if (!build.args.has(name))
-        errors.push(`${build.where}: missing ${name} (${why}). Add ${name} to ${build.where}.`);
+        errors.push(`${build.argsAt}: missing ${name} (${why}). Add ${name} to ${build.argsAt}.`);
     if (dockerfile.buildsWeb)
       for (const name of build.runtimeEnv)
         if (name.startsWith("VITE_") && !build.args.has(name))
           errors.push(
-            `${build.where.replace(/build\.args$/, "environment")}: ${name} is set at runtime, but Vite reads it at build time. Move it to ${build.where}.`,
+            `${build.where}.environment: ${name} is set at runtime, but Vite reads it at build time. Move it to ${build.argsAt}.`,
           );
   }
 }
