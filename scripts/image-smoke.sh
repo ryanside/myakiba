@@ -9,7 +9,8 @@ network=$prefix-net
 postgres=$prefix-postgres
 redis=$prefix-redis
 database_url=postgres://smoke:smoke@$postgres:5432/smoke
-build_log=$(mktemp)
+vite_args=(VITE_SERVER_URL=http://localhost:3000 VITE_TURNSTILE_SITE_KEY=ci-public-placeholder)
+work=$(mktemp -d)
 
 now() { perl -MTime::HiRes=time -e 'printf "%.2f", time'; }
 elapsed() { perl -e 'printf "%.2f", $ARGV[1] - $ARGV[0]' "$1" "$(now)"; }
@@ -25,7 +26,6 @@ cleanup() {
   docker rm -fv "$prefix-db-push" "$prefix-server" "$postgres" "$redis" >/dev/null 2>&1 || true
   docker rmi -f "$prefix-db-push" "$prefix-server" >/dev/null 2>&1 || true
   docker network rm "$network" >/dev/null 2>&1 || true
-  rm -f "$build_log"
 }
 
 wait_until() {
@@ -66,11 +66,9 @@ dockerfile() {
 }
 
 build() {
-  docker build --load -f "$(dockerfile "$1")" -t "$prefix-$1" \
-    --build-arg SOURCE_COMMIT=image-smoke \
-    --build-arg VITE_SERVER_URL=http://localhost:3000 \
-    --build-arg VITE_TURNSTILE_SITE_KEY=ci-public-placeholder . >"$build_log" 2>&1 || {
-    tail -n 30 "$build_log"
+  docker build --load -f "$(dockerfile "$1")" -t "$prefix-$1" --build-arg SOURCE_COMMIT=image-smoke \
+    "${vite_args[@]/#/--build-arg=}" . >"$work/build.log" 2>&1 || {
+    tail -n 30 "$work/build.log"
     fail "$1 image did not build from $(dockerfile "$1")"
   }
 }
@@ -104,6 +102,12 @@ smoke_server() {
   answer "$container" /api/auth/ok "$start" "$address"
   docker logs "$container" 2>&1 | grep '"environment":"production"' >/dev/null ||
     fail "$container does not log in production mode. Set ENV NODE_ENV=production before bun build --compile." "$container"
+  docker cp "$container:/app/dist" "$work/dist" >/dev/null || fail "$container has no web bundle at /app/dist"
+  for arg in "${vite_args[@]}"; do
+    grep -rqE "${arg%%=*}:[\`\"']${arg#*=}" "$work/dist" ||
+      fail "the web bundle in $1 lacks ${arg%%=*}. Vite inlines VITE_* at the web build, so pass it as a build arg to the stage that runs that build. A prebuilt image must use the value ${arg#*=}, as .github/workflows/ci.yml does."
+  done
+  echo "server: web bundle has ${vite_args[*]%%=*}"
 }
 
 [ $# -gt 0 ] || set -- db-push server
@@ -111,7 +115,7 @@ for target in "$@"; do
   dockerfile "${target%%=*}" >/dev/null || fail "unknown image ${target%%=*}. Use db-push or server."
 done
 
-trap cleanup EXIT
+trap 'cleanup; rm -rf "$work"' EXIT
 cleanup
 docker network create "$network" >/dev/null
 docker run -d --name "$postgres" --network "$network" \
