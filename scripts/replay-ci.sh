@@ -5,10 +5,8 @@ set -uo pipefail
 
 root=$(git rev-parse --show-toplevel)
 trees=$(mktemp -d)
-logs=${TMPDIR:-/tmp}/replay-ci
+logs=$(mktemp -d "${TMPDIR:-/tmp}/replay-ci.XXXXXX")
 failures=0
-rm -rf "$logs"
-mkdir -p "$logs"
 trap 'rm -rf "$trees"' EXIT
 
 check() { bun scripts/check-deploy-config.ts; }
