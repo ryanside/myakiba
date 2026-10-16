@@ -71,6 +71,12 @@ jobs:
           platforms: linux/amd64
           push: false
           pull: true
+          load: ${{ matrix.image != 'worker' }}
+          tags: myakiba-${{ matrix.image }}:ci
           build-args: ${{ matrix.build_args }}
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+      - name: Smoke-test image
+        if: matrix.image != 'worker'
+        run: bash scripts/image-smoke.sh ${{ matrix.image }}=myakiba-${{ matrix.image }}:ci
