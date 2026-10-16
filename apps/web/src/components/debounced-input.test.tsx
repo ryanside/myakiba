@@ -21,12 +21,16 @@ const waitForDebounce = () =>
 function renderOwnedInput(initialValue: string, { echoChanges = true } = {}) {
   const emitted: (string | number)[] = [];
   let setOwnerValue: (value: string) => void = () => {};
+  let ownerValue = initialValue;
 
   function Owner() {
     const [value, setValue] = useState(initialValue);
     useEffect(() => {
       setOwnerValue = setValue;
     }, []);
+    useEffect(() => {
+      ownerValue = value;
+    }, [value]);
     return (
       <DebouncedInput
         aria-label="Search"
@@ -45,6 +49,7 @@ function renderOwnedInput(initialValue: string, { echoChanges = true } = {}) {
     user: userEvent.setup({ advanceTimers: jest.advanceTimersByTime }),
     input: screen.getByRole("textbox", { name: "Search" }) as HTMLInputElement,
     emitted,
+    ownerValue: () => ownerValue,
     setOwnerValue: (value: string) => act(() => setOwnerValue(value)),
   };
 }
@@ -152,5 +157,61 @@ describe("DebouncedInput", () => {
 
     await user.tab();
     expect(input.value).toBe("mi");
+  });
+
+  test("text typed after an outside change is reported when the user leaves the field at once", async () => {
+    const { user, input, emitted, setOwnerValue } = renderOwnedInput("");
+    await user.type(input, "mi");
+    await waitForDebounce();
+    await setOwnerValue("rin");
+    await user.type(input, "ku");
+    await user.tab();
+    expect(input.value).toBe("miku");
+    await waitForDebounce();
+
+    expect({ emitted, shown: input.value }).toEqual({ emitted: ["mi", "miku"], shown: "miku" });
+  });
+
+  test("an outside change during the debounce does not replace text the user is still typing", async () => {
+    const { user, input, emitted, ownerValue, setOwnerValue } = renderOwnedInput("");
+    await user.type(input, "mi");
+    await setOwnerValue("rin");
+    await user.tab();
+    expect(input.value).toBe("mi");
+    await waitForDebounce();
+
+    expect({ emitted, owner: ownerValue(), shown: input.value }).toEqual({
+      emitted: ["mi"],
+      owner: "mi",
+      shown: "mi",
+    });
+  });
+
+  test("an outside change after leaving the field with an edit pending leaves the owner and the field in agreement", async () => {
+    const { user, input, emitted, ownerValue, setOwnerValue } = renderOwnedInput("");
+    await user.type(input, "mi");
+    await user.tab();
+    await setOwnerValue("len");
+    await act(() => input.focus());
+    await waitForDebounce();
+    await user.tab();
+
+    expect({ emitted, owner: ownerValue(), shown: input.value }).toEqual({
+      emitted: ["mi"],
+      owner: "mi",
+      shown: "mi",
+    });
+  });
+
+  test("text reported after an outside change is what the owner and the field show after blur", async () => {
+    const { user, input, ownerValue, setOwnerValue } = renderOwnedInput("");
+    await user.type(input, "mi");
+    await waitForDebounce();
+    await setOwnerValue("rin");
+    await user.type(input, "ku");
+    await waitForDebounce();
+    await user.tab();
+
+    expect({ owner: ownerValue(), shown: input.value }).toEqual({ owner: "miku", shown: "miku" });
   });
 });
