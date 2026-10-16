@@ -123,6 +123,18 @@ describe("DebouncedInput", () => {
     expect({ emitted, shown: input.value }).toEqual({ emitted: ["mi", "miku"], shown: "miku" });
   });
 
+  test("a late echo of earlier text that lands after the edit does not show when the user leaves", async () => {
+    const { user, input, emitted, setOwnerValue } = renderOwnedInput("", { echoChanges: false });
+    await user.type(input, "mi");
+    await waitForDebounce();
+    await user.type(input, "ku");
+    await waitForDebounce();
+    await setOwnerValue("mi");
+
+    await user.tab();
+    expect({ emitted, shown: input.value }).toEqual({ emitted: ["mi", "miku"], shown: "miku" });
+  });
+
   test("text sent before the user left the field does not hide a later outside change to it", async () => {
     const { user, input, setOwnerValue } = renderOwnedInput("", { echoChanges: false });
     await user.type(input, "mi");
@@ -130,6 +142,7 @@ describe("DebouncedInput", () => {
     await user.tab();
     await user.click(input);
     await user.type(input, "ku");
+    await waitForDebounce();
     await setOwnerValue("mi");
 
     await user.tab();
@@ -210,6 +223,20 @@ describe("DebouncedInput", () => {
     await setOwnerValue("rin");
     await user.type(input, "ku");
     await waitForDebounce();
+    await user.tab();
+
+    expect({ owner: ownerValue(), shown: input.value }).toEqual({ owner: "miku", shown: "miku" });
+  });
+
+  test("late echoes after leaving and returning to the field leave the owner and the field in agreement", async () => {
+    const { user, input, emitted, ownerValue, setOwnerValue } = renderOwnedInput("", {
+      echoChanges: false,
+    });
+    await user.type(input, "mi");
+    await user.tab();
+    await user.type(input, "ku");
+    await waitForDebounce();
+    for (const value of emitted) await setOwnerValue(String(value));
     await user.tab();
 
     expect({ owner: ownerValue(), shown: input.value }).toEqual({ owner: "miku", shown: "miku" });

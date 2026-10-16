@@ -69,7 +69,8 @@
         "DebouncedInput > a late echo of earlier text does not replace what the user is typing",
         "DebouncedInput > text typed after an outside change is reported when the user leaves the field at once",
         "DebouncedInput > an outside change during the debounce does not replace text the user is still typing",
-        "DebouncedInput > text reported after an outside change is what the owner and the field show after blur"
+        "DebouncedInput > text reported after an outside change is what the owner and the field show after blur",
+        "DebouncedInput > a late echo of earlier text that lands after the edit does not show when the user leaves"
       ]
     },
     {
