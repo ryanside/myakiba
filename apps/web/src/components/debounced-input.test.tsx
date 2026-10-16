@@ -1,19 +1,22 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, jest, test } from "bun:test";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useEffect, useState } from "react";
 import { DebouncedInput } from "./debounced-input";
 
-afterEach(cleanup);
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+afterEach(() => {
+  cleanup();
+  jest.useRealTimers();
+});
 
 const DEBOUNCE_MS = 50;
 const waitForDebounce = () =>
-  act(
-    () =>
-      new Promise((resolve) => {
-        setTimeout(resolve, DEBOUNCE_MS * 3);
-      }),
-  );
+  act(() => {
+    jest.advanceTimersByTime(DEBOUNCE_MS);
+  });
 
 function renderOwnedInput(initialValue: string, { echoChanges = true } = {}) {
   const emitted: (string | number)[] = [];
@@ -39,7 +42,7 @@ function renderOwnedInput(initialValue: string, { echoChanges = true } = {}) {
 
   render(<Owner />);
   return {
-    user: userEvent.setup({ delay: null }),
+    user: userEvent.setup({ advanceTimers: jest.advanceTimersByTime }),
     input: screen.getByRole("textbox", { name: "Search" }) as HTMLInputElement,
     emitted,
     setOwnerValue: (value: string) => act(() => setOwnerValue(value)),
@@ -67,7 +70,7 @@ describe("DebouncedInput", () => {
   test("the debounced text goes to the onChange from the latest render", async () => {
     const first: (string | number)[] = [];
     const latest: (string | number)[] = [];
-    const user = userEvent.setup({ delay: null });
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
     const { rerender } = render(
       <DebouncedInput
         aria-label="Search"
