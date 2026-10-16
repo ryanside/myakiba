@@ -318,6 +318,39 @@ describe("wishlist reorder", () => {
     });
   });
 
+  test("a move that saves across local midnight keeps its order", async () => {
+    setSystemTime(new Date(2026, 9, 16, 23, 59, 59, 800));
+    server.items = [MIKU_BEFORE_SYNC, KAGAMINE_RIN, KAGAMINE_LEN];
+    const move = renderReorderableAll();
+    await waitFor(() => expect(shownIn("wishlist all")).toHaveLength(3));
+
+    server.holdOrderPatch = true;
+    let saving: Promise<void> = Promise.resolve();
+    act(() => {
+      saving = move(lenFirst);
+    });
+    await waitFor(() => expect(server.heldOrderPatch).toHaveLength(1));
+    setSystemTime(new Date(2026, 9, 17, 0, 0, 1));
+    await act(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(resolve, 300);
+        }),
+    );
+    await act(async () => {
+      server.heldOrderPatch[0]?.();
+      await saving;
+    });
+
+    await waitFor(() =>
+      expect(shownIn("wishlist all")).toEqual([
+        "Kagamine Len",
+        "Miku (title before sync)",
+        "Kagamine Rin",
+      ]),
+    );
+  });
+
   test("a sync that finishes while a move is saving does not undo the move", async () => {
     server.items = [MIKU_BEFORE_SYNC, KAGAMINE_RIN, KAGAMINE_LEN];
     const move = renderReorderableAll(<SyncStatusWidget />);
