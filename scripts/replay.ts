@@ -23,15 +23,16 @@ const { test: replays }: { test: TestReplay[] } = await Bun.file(
   path.join(import.meta.dir, "replays.json"),
 ).json();
 const filters = process.argv.slice(2);
-const selected = replays.filter(
-  (replay) =>
-    filters.length === 0 ||
-    filters.some((filter) => replay.fix.startsWith(filter) || replay.test.includes(filter)),
-);
-if (selected.length === 0) {
-  console.error(`no replay matches ${filters.join(" ")}`);
+const matches = (replay: TestReplay, filter: string) =>
+  replay.fix.startsWith(filter) || replay.test.includes(filter);
+const unmatched = filters.filter((filter) => !replays.some((replay) => matches(replay, filter)));
+if (unmatched.length > 0) {
+  console.error(`FAIL  no replay matches ${unmatched.join(" ")}`);
   process.exit(1);
 }
+const selected = replays.filter(
+  (replay) => filters.length === 0 || filters.some((filter) => matches(replay, filter)),
+);
 
 // bun test prints passing tests only when AGENT, CLAUDECODE and REPL_ID are unset.
 $.env({ ...process.env, AGENT: undefined, CLAUDECODE: undefined, REPL_ID: undefined, HUSKY: "0" });
