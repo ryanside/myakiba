@@ -35,7 +35,7 @@ export function SectionRelationships({
   const [relatedSection, setRelatedSection] = useState<AnalyticsSection>(() =>
     relationshipSections.includes(PREFERRED_RELATIONSHIP_SECTION)
       ? PREFERRED_RELATIONSHIP_SECTION
-      : relationshipSections[0],
+      : (relationshipSections[0] ?? PREFERRED_RELATIONSHIP_SECTION),
   );
   const [offset, setOffset] = useState(0);
   const { data, isPending, isError, error, isFetching, refetch } = useQuery({

@@ -28,7 +28,7 @@ const config = {
 const legend = keys.map((key, index) => ({
   key,
   label: labels[key],
-  color: EXPENSE_CHART_COLORS[index],
+  color: EXPENSE_CHART_COLORS[index] ?? EXPENSE_CHART_COLORS[0],
 }));
 
 export function AverageOrderCostsToDate({

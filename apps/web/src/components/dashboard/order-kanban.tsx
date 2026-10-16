@@ -160,6 +160,7 @@ function moveOrderToStatus(
 
   const nextCurrentOrders = [...columns[currentStatus]];
   const [order] = nextCurrentOrders.splice(currentIndex, 1);
+  if (order === undefined) return columns;
   const targetOrders = currentStatus === status ? nextCurrentOrders : [...columns[status]];
   const insertionIndex = Math.max(0, Math.min(targetIndex, targetOrders.length));
   targetOrders.splice(insertionIndex, 0, order);
@@ -180,10 +181,11 @@ function updateOrderDateInColumns(
   for (const columnId of ORDER_STATUSES) {
     const orders = columns[columnId];
     const index = orders.findIndex((order) => order.orderId === orderId);
-    if (index === -1) continue;
+    const order = orders[index];
+    if (order === undefined) continue;
 
     const nextOrders = [...orders];
-    nextOrders[index] = withDateUpdate(orders[index], field, date);
+    nextOrders[index] = withDateUpdate(order, field, date);
     return { ...columns, [columnId]: nextOrders };
   }
 

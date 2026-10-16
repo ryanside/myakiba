@@ -58,7 +58,7 @@ export function CostBreakdown({
     const allEntries = COST_CATEGORIES.map((cat, index) => ({
       ...cat,
       amount: data[cat.key],
-      color: CHART_PALETTE[index],
+      color: CHART_PALETTE[index] ?? CHART_PALETTE[0],
     }));
 
     const totalAmount = allEntries.reduce((acc, e) => acc + e.amount, 0);

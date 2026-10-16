@@ -31,8 +31,8 @@ interface DecomposedTransform {
 function decomposeTransform(transformStr: string): DecomposedTransform {
   const rotateMatch = transformStr.match(/rotate\(([-\d.]+)deg\)/);
   const translateMatch = transformStr.match(/translate\(([-\d.]+)px\)/);
-  const rotateDeg = rotateMatch ? Number.parseFloat(rotateMatch[1]) : 0;
-  const translatePx = translateMatch ? Number.parseFloat(translateMatch[1]) : 0;
+  const rotateDeg = rotateMatch?.[1] ? Number.parseFloat(rotateMatch[1]) : 0;
+  const translatePx = translateMatch?.[1] ? Number.parseFloat(translateMatch[1]) : 0;
   const rad = (rotateDeg * Math.PI) / 180;
   return {
     rotate: rotateDeg,
@@ -47,8 +47,8 @@ function decomposeWithOverrides(
 ): DecomposedTransform {
   const rotateMatch = transformStr.match(/rotate\(([-\d.]+)deg\)/);
   const translateMatch = transformStr.match(/translate\(([-\d.]+)px\)/);
-  const baseRotate = rotateMatch ? Number.parseFloat(rotateMatch[1]) : 0;
-  const baseTranslate = translateMatch ? Number.parseFloat(translateMatch[1]) : 0;
+  const baseRotate = rotateMatch?.[1] ? Number.parseFloat(rotateMatch[1]) : 0;
+  const baseTranslate = translateMatch?.[1] ? Number.parseFloat(translateMatch[1]) : 0;
   const rotateDeg = overrides.rotateDeg ?? baseRotate;
   const translatePx = baseTranslate + (overrides.translateOffset ?? 0);
   const rad = (rotateDeg * Math.PI) / 180;

@@ -198,8 +198,8 @@ export default function OrdersDataGrid() {
     (updater: Updater<SortingState>) => {
       const newSorting = functionalUpdate(updater, sorting);
 
-      if (newSorting.length > 0) {
-        const sortConfig = newSorting[0];
+      const [sortConfig] = newSorting;
+      if (sortConfig) {
         setFilters({
           sort: sortConfig.id as OrderFilters["sort"],
           order: sortConfig.desc ? "desc" : "asc",

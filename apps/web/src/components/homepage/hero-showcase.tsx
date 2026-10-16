@@ -47,9 +47,10 @@ export function HeroShowcase({ isDark }: HeroShowcaseProps) {
   const [heroViewDirection, setHeroViewDirection] = useState<HeroViewDirection>("next");
   const [animateHeroViewChange, setAnimateHeroViewChange] = useState(true);
   const heroViewIndex = HERO_VIEWS.findIndex((view) => view.id === heroView);
-  const activeHeroView = HERO_VIEWS[heroViewIndex];
-  const previousHeroView = HERO_VIEWS[(heroViewIndex - 1 + HERO_VIEWS.length) % HERO_VIEWS.length];
-  const nextHeroView = HERO_VIEWS[(heroViewIndex + 1) % HERO_VIEWS.length];
+  const activeHeroView = HERO_VIEWS[heroViewIndex] ?? HERO_VIEWS[0];
+  const previousHeroView =
+    HERO_VIEWS[(heroViewIndex - 1 + HERO_VIEWS.length) % HERO_VIEWS.length] ?? HERO_VIEWS[0];
+  const nextHeroView = HERO_VIEWS[(heroViewIndex + 1) % HERO_VIEWS.length] ?? HERO_VIEWS[0];
 
   return (
     <section
