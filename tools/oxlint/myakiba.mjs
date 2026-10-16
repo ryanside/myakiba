@@ -108,7 +108,7 @@ const noEnvOutsideEnvPackage = {
 
 const isLiteral = (node, value) => node?.type === "Literal" && node.value === value;
 const isDatePartEnd = (node) =>
-  node?.type === "Literal" && Number.isInteger(node.value) && node.value <= 10;
+  node?.type === "Literal" && Number.isInteger(node.value) && node.value >= 4 && node.value <= 10;
 
 const noIsoSlice = {
   meta: { type: "problem" },
@@ -134,7 +134,7 @@ const noIsoSlice = {
         context.report({
           node,
           message:
-            '`.toISOString().slice(0, n)` gives the UTC date, not the local one. Use toDateOnlyString from "@myakiba/utils/date-only".',
+            '`.toISOString().slice(0, n)` gives a UTC date part, not the local one. Use toDateOnlyString from "@myakiba/utils/date-only".',
         });
       },
     };

@@ -4,6 +4,8 @@ const BUDGET_PATH = "tools/oxlint/budget.json";
 const LINT_TOOLING = [
   "**/oxlint.config.*",
   "**/.oxlintrc*",
+  "**/.oxlintignore",
+  "**/.eslintignore",
   "tools/oxlint/**",
   "scripts/lint-budget.ts",
 ];
@@ -94,31 +96,40 @@ if (checkerNamed.exitCode !== 1) {
 const mergeBase = await $`git merge-base HEAD ${TRUNK}`.nothrow().quiet().text();
 const base = mergeBase.trim();
 if (base) {
-  const atTrunk = await $`git ls-tree --name-only ${base} -- ${BUDGET_PATH}`.quiet().text();
-  const trunkBudget: Budget = atTrunk.trim()
-    ? await $`git show ${base}:${BUDGET_PATH}`.quiet().json()
-    : {};
-  const raised = Object.keys(budget).filter(
-    (code) => (budget[code] ?? 0) > (trunkBudget[code] ?? 0),
-  );
-  const configDiff = await $`git diff --quiet ${base} -- ${CONFIG_PATHS}`.nothrow().quiet();
-  const lastMessage = (paths: string[]) =>
-    $`git log -1 --format=%B ${base}..HEAD -- ${paths}`.quiet().text();
-  const unapproved = [
-    ...(raised.length > 0 && !APPROVAL_LINE.test(await lastMessage([BUDGET_PATH]))
-      ? [
-          `The budget for ${raised.join(", ")} is above ${TRUNK}. Add the approval line to the last commit that changes ${BUDGET_PATH}.`,
-        ]
-      : []),
-    ...(configDiff.exitCode !== 0 && !APPROVAL_LINE.test(await lastMessage(CONFIG_PATHS))
-      ? [
-          `The files matching ${LINT_TOOLING.join(", ")} differ from ${TRUNK}, and a config change can switch a rule off. Add the approval line to the last commit that changes them.`,
-        ]
-      : []),
-  ];
+  const budgetAt = async (revision: string): Promise<Budget> => {
+    const listed = await $`git ls-tree --name-only ${revision} -- ${BUDGET_PATH}`.quiet().text();
+    return listed.trim() ? $`git show ${revision}:${BUDGET_PATH}`.quiet().json() : {};
+  };
+  const raises = (from: Budget, to: Budget) =>
+    Object.keys(to).filter((code) => (to[code] ?? 0) > (from[code] ?? 0));
+  const commitsTouching = async (paths: string[]) => {
+    const listed = await $`git rev-list --no-merges ${base}..HEAD -- ${paths}`.quiet().text();
+    return listed.split("\n").filter(Boolean);
+  };
+  const approved = async (commit: string) =>
+    APPROVAL_LINE.test(await $`git log -1 --format=%B ${commit}`.quiet().text());
+
+  const unapproved: string[] = [];
+  for (const commit of await commitsTouching(CONFIG_PATHS)) {
+    if (!(await approved(commit)))
+      unapproved.push(`${commit.slice(0, 8)} changes the lint tooling.`);
+  }
+  for (const commit of await commitsTouching([BUDGET_PATH])) {
+    const raised = raises(await budgetAt(`${commit}^`), await budgetAt(commit));
+    if (raised.length > 0 && !(await approved(commit)))
+      unapproved.push(`${commit.slice(0, 8)} raises the budget for ${raised.join(", ")}.`);
+  }
+  const pending = await $`git status --porcelain --untracked-files=all -- ${CONFIG_PATHS}`
+    .quiet()
+    .text();
+  if (pending.trim())
+    unapproved.push(`Uncommitted changes to the lint tooling:\n${pending.trimEnd()}`);
+  const pendingRaise = raises(await budgetAt("HEAD"), budget);
+  if (pendingRaise.length > 0)
+    unapproved.push(`Uncommitted ${BUDGET_PATH} raises the budget for ${pendingRaise.join(", ")}.`);
   if (unapproved.length > 0) {
     failures.push(
-      `${unapproved.join("\n")}\nThis needs a human's approval. Once you have it, the line reads "Lint-Budget-Approved-By: <name>".`,
+      `${unapproved.join("\n")}\nEach commit that changes ${LINT_TOOLING.join(", ")} or raises a budget needs a human's approval. Once you have it, add "Lint-Budget-Approved-By: <name>" to that commit's message.`,
     );
   }
 } else {
