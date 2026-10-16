@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { SQL } from "bun";
 import { generateDrizzleJson, generateMigration } from "drizzle-kit/api";
 import { eq } from "drizzle-orm";
@@ -15,30 +15,32 @@ if (!serverUrl) {
 }
 const databaseName = `test_${crypto.randomUUID().replaceAll("-", "")}`;
 const server = new SQL({ url: serverUrl });
-await server.unsafe(`CREATE DATABASE ${databaseName}`);
 const databaseUrl = new URL(serverUrl);
 databaseUrl.pathname = `/${databaseName}`;
 process.env.DATABASE_URL = databaseUrl.toString();
 
 const { db } = await import("@myakiba/db/client");
-await db.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm");
-const schemaStatements = await generateMigration(
-  generateDrizzleJson({}),
-  generateDrizzleJson({ ...authSchema, ...figureSchema }),
-);
-for (const statement of schemaStatements) await db.execute(statement);
-await db.execute(
-  "CREATE FUNCTION fail_when_armed() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN OLD; END $$",
-);
-await db.execute(
-  "CREATE TRIGGER fail_collection_delete BEFORE DELETE ON collection FOR EACH ROW EXECUTE FUNCTION fail_when_armed()",
-);
-
 const { default: OrdersService } = await import("./service");
+
+beforeAll(async () => {
+  await server.unsafe(`CREATE DATABASE ${databaseName}`);
+  await db.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm");
+  const schemaStatements = await generateMigration(
+    generateDrizzleJson({}),
+    generateDrizzleJson({ ...authSchema, ...figureSchema }),
+  );
+  for (const statement of schemaStatements) await db.execute(statement);
+  await db.execute(
+    "CREATE FUNCTION fail_when_armed() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN OLD; END $$",
+  );
+  await db.execute(
+    "CREATE TRIGGER fail_collection_delete BEFORE DELETE ON collection FOR EACH ROW EXECUTE FUNCTION fail_when_armed()",
+  );
+});
 
 afterAll(async () => {
   await db.$client.close();
-  await server.unsafe(`DROP DATABASE ${databaseName} WITH (FORCE)`);
+  await server.unsafe(`DROP DATABASE IF EXISTS ${databaseName} WITH (FORCE)`);
   await server.close();
 });
 
@@ -48,6 +50,9 @@ const ownedId = "collection-owned";
 const orderedId = "collection-ordered";
 
 beforeEach(async () => {
+  await db.execute(
+    "CREATE OR REPLACE FUNCTION fail_when_armed() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN OLD; END $$",
+  );
   await db.execute('TRUNCATE "user", item CASCADE');
   await db
     .insert(authSchema.user)
@@ -80,11 +85,11 @@ describe("removing items from an order", () => {
        BEGIN RAISE EXCEPTION 'injected collection delete failure'; END $$`,
     );
 
-    await expect(OrdersService.deleteOrderItems(userId, [ownedId, orderedId])).rejects.toThrow();
-    await db.execute(
-      `CREATE OR REPLACE FUNCTION fail_when_armed() RETURNS trigger LANGUAGE plpgsql AS $$
-       BEGIN RETURN OLD; END $$`,
-    );
+    await expect(
+      OrdersService.deleteOrderItems(userId, [ownedId, orderedId]),
+    ).rejects.toMatchObject({
+      cause: { message: "injected collection delete failure" },
+    });
 
     expect(await readCollection()).toEqual([
       { id: orderedId, orderId },
