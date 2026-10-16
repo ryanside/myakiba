@@ -73,8 +73,8 @@ jobs:
             dockerfile: apps/server/Dockerfile
             build_args: |
               SOURCE_COMMIT=${{ github.sha }}
-              VITE_SERVER_URL=http://localhost:3000
-              VITE_TURNSTILE_SITE_KEY=ci-public-placeholder
+              VITE_SERVER_URL=http://vite-server-url.image-smoke.invalid
+              VITE_TURNSTILE_SITE_KEY=vite-turnstile-site-key-image-smoke
           - image: worker
             dockerfile: apps/worker/Dockerfile
             build_args: ""
@@ -101,6 +101,12 @@ jobs:
           build-args: ${{ matrix.build_args }}
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+      - name: Set up Bun
+        if: matrix.image == 'server'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
 
       - name: Smoke-test image
         if: matrix.image != 'worker'

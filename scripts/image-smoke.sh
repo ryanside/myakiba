@@ -9,8 +9,7 @@ network=$prefix-net
 postgres=$prefix-postgres
 redis=$prefix-redis
 database_url=postgres://smoke:smoke@$postgres:5432/smoke
-vite_args=(VITE_SERVER_URL=http://localhost:3000 VITE_TURNSTILE_SITE_KEY=ci-public-placeholder)
-work=$(mktemp -d)
+vite_args=(VITE_SERVER_URL=http://vite-server-url.image-smoke.invalid VITE_TURNSTILE_SITE_KEY=vite-turnstile-site-key-image-smoke)
 
 now() { perl -MTime::HiRes=time -e 'printf "%.2f", time'; }
 elapsed() { perl -e 'printf "%.2f", $ARGV[1] - $ARGV[0]' "$1" "$(now)"; }
@@ -42,7 +41,7 @@ exited() { [ "$(docker inspect -f '{{.State.Status}}' "$1")" = exited ]; }
 
 crashed() {
   docker logs "$1" 2>&1 | grep 'Invalid environment variables' >/dev/null &&
-    fail "$1 rejected its environment. Set each new required variable in docker-compose.production.yml and on the production host before you deploy, then add a placeholder for it here." "$1"
+    fail "$1 rejected its environment: a variable below is missing or invalid. If it is new, also set it in docker-compose.production.yml and on the production host before you deploy. Then add or fix its placeholder here." "$1"
   fail "$1 exited with code $(docker inspect -f '{{.State.ExitCode}}' "$1")" "$1"
 }
 
@@ -103,11 +102,16 @@ smoke_server() {
   docker logs "$container" 2>&1 | grep '"environment":"production"' >/dev/null ||
     fail "$container does not log in production mode. Set ENV NODE_ENV=production before bun build --compile." "$container"
   docker cp "$container:/app/dist" "$work/dist" >/dev/null || fail "$container has no web bundle at /app/dist"
-  for arg in "${vite_args[@]}"; do
-    grep -rqE "${arg%%=*}:[\`\"']${arg#*=}" "$work/dist" ||
-      fail "the web bundle in $1 lacks ${arg%%=*}. Vite inlines VITE_* at the web build, so pass it as a build arg to the stage that runs that build. A prebuilt image must use the value ${arg#*=}, as .github/workflows/ci.yml does."
+  required=$(bun scripts/check-deploy-config.ts --required-client-vars) ||
+    fail "found no required VITE_* variable. Run bun scripts/check-deploy-config.ts for the reason."
+  for name in $required; do
+    value=$(printf '%s\n' "${vite_args[@]}" | sed -n "s/^$name=//p")
+    [ -n "$value" ] ||
+      fail "$name is required in packages/env but has no placeholder. Add $name=<placeholder> to vite_args in scripts/image-smoke.sh and to the server build_args in .github/workflows/ci.yml."
+    grep -rqF "$value" "$work/dist" ||
+      fail "the web bundle in $1 lacks $name=$value. Vite inlines VITE_* at the web build, so pass it as a build arg to the stage that runs that build. A prebuilt image must use the placeholder from vite_args in scripts/image-smoke.sh, as .github/workflows/ci.yml does."
   done
-  echo "server: web bundle has ${vite_args[*]%%=*}"
+  echo "server: web bundle has" $required
 }
 
 [ $# -gt 0 ] || set -- db-push server
@@ -115,6 +119,7 @@ for target in "$@"; do
   dockerfile "${target%%=*}" >/dev/null || fail "unknown image ${target%%=*}. Use db-push or server."
 done
 
+work=$(mktemp -d)
 trap 'cleanup; rm -rf "$work"' EXIT
 cleanup
 docker network create "$network" >/dev/null
