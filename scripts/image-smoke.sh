@@ -3,7 +3,7 @@
 # Runs each image in order against throwaway Postgres and Redis. Builds it from this checkout unless IMAGE is given.
 set -euo pipefail
 
-prefix=${SMOKE_PREFIX:-image-smoke}
+prefix=${SMOKE_PREFIX:-image-smoke-$$}
 timeout=${SMOKE_TIMEOUT:-10}
 network=$prefix-net
 postgres=$prefix-postgres
@@ -22,7 +22,8 @@ fail() {
 }
 
 cleanup() {
-  docker rm -f "$prefix-db-push" "$prefix-server" "$postgres" "$redis" >/dev/null 2>&1 || true
+  docker rm -fv "$prefix-db-push" "$prefix-server" "$postgres" "$redis" >/dev/null 2>&1 || true
+  docker rmi -f "$prefix-db-push" "$prefix-server" >/dev/null 2>&1 || true
   docker network rm "$network" >/dev/null 2>&1 || true
   rm -f "$build_log"
 }
@@ -47,6 +48,7 @@ answer() {
     before "$start" "$timeout" || fail "$container: $path did not answer within ${timeout}s" "$container"
     sleep 0.25
   done
+  before "$start" "$timeout" || fail "$container: $path answered after $(elapsed "$start")s, over ${timeout}s" "$container"
   echo "server: $path answered after $(elapsed "$start")s"
 }
 
@@ -95,7 +97,7 @@ smoke_server() {
   address=$(docker port "$container" 3000/tcp | head -1) || true
   answer "$container" /health "$start" "$address"
   answer "$container" /api/auth/ok "$start" "$address"
-  docker logs "$container" 2>&1 | grep -q '"environment":"production"' ||
+  docker logs "$container" 2>&1 | grep '"environment":"production"' >/dev/null ||
     fail "$container does not log in production mode. Set ENV NODE_ENV=production before bun build --compile." "$container"
 }
 

@@ -7,11 +7,10 @@ set -uo pipefail
 root=$(git rev-parse --show-toplevel)
 trees=$(mktemp -d)
 logs=${TMPDIR:-/tmp}/replay-ci
-export SMOKE_PREFIX=${SMOKE_PREFIX:-replay-ci}
 failures=0
 rm -rf "$logs"
 mkdir -p "$logs"
-trap 'rm -rf "$trees"; docker rmi -f "$SMOKE_PREFIX-db-push" "$SMOKE_PREFIX-server" >/dev/null 2>&1' EXIT
+trap 'rm -rf "$trees"' EXIT
 
 check() { bun scripts/check-deploy-config.ts; }
 smoke() { bash scripts/image-smoke.sh "$@"; }
