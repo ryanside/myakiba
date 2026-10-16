@@ -48,6 +48,7 @@
     "redis:stop": "turbo run redis:stop -F @myakiba/redis",
     "redis:down": "turbo run redis:down -F @myakiba/redis",
     "check": "oxfmt --check . && bun scripts/lint-budget.ts",
+    "knip": "bun scripts/knip-budget.ts",
     "audit": "bun audit --ignore=GHSA-67mh-4wv8-2f99 --ignore=GHSA-vfj7-8cjw-p6xm",
     "fix": "ultracite fix",
     "prepare": "husky",
@@ -56,6 +57,7 @@
   "dependencies": {},
   "devDependencies": {
     "husky": "^9.1.7",
+    "knip": "6.41.0",
     "lint-staged": "^17.3.0",
     "oxc-parser": "0.154.0",
     "oxfmt": "latest",
