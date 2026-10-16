@@ -54,14 +54,15 @@ const composeKeys = (list: ComposeList = []): string[] =>
 
 function requiredClientVars(): ClientVar[] {
   const source = "packages/env/src/web.ts";
-  if (existsSync(source)) {
-    const text = read(source);
-    const client = text.slice(text.indexOf("client:"), text.indexOf("runtimeEnv"));
-    return [...client.matchAll(/(VITE_[A-Z0-9_]+)\s*:([\s\S]*?)(?=\bVITE_[A-Z0-9_]+\s*:|$)/g)]
-      .filter((match) => !/\.optional\(\)|\.default\(/.test(match[2] ?? ""))
-      .map((match) => ({ name: match[1] ?? "", source }));
-  }
-  // Trees from before packages/env existed read VITE_* straight from import.meta.env.
+  if (!existsSync(source)) return clientVarsBeforePackagesEnv();
+  const text = read(source);
+  const client = text.slice(text.indexOf("client:"), text.indexOf("runtimeEnv"));
+  return [...client.matchAll(/(VITE_[A-Z0-9_]+)\s*:([\s\S]*?)(?=\bVITE_[A-Z0-9_]+\s*:|$)/g)]
+    .filter((match) => !/\.optional\(\)|\.default\(/.test(match[2] ?? ""))
+    .map((match) => ({ name: match[1] ?? "", source }));
+}
+
+function clientVarsBeforePackagesEnv(): ClientVar[] {
   const names = new Set<string>();
   for (const file of new Bun.Glob("apps/web/src/**/*.{ts,tsx}").scanSync())
     for (const [, name = ""] of read(file).matchAll(/import\.meta\.env\.(VITE_[A-Z0-9_]+)/g))
@@ -132,7 +133,7 @@ function workflowBuilds(): Build[] {
   return builds;
 }
 
-function composeBuilds(publishedByWorkflow: Set<string>): Build[] {
+function composeBuilds(deployedByWorkflow: Set<string>): Build[] {
   const builds: Build[] = [];
   for (const file of readdirSync(".").filter((name) => /^docker-compose.*\.ya?ml$/.test(name))) {
     const compose = Bun.YAML.parse(read(file)) as Compose;
@@ -145,8 +146,7 @@ function composeBuilds(publishedByWorkflow: Set<string>): Build[] {
         where: `${file} services.${service}`,
         argsAt: `${file} services.${service}.build.args`,
         dockerfile,
-        // Compose was the deploy path until a workflow published the same Dockerfile.
-        publishes: !publishedByWorkflow.has(dockerfile),
+        publishes: !deployedByWorkflow.has(dockerfile),
         args: new Set(composeKeys(build.args)),
         runtimeEnv: new Set(composeKeys(environment)),
       });

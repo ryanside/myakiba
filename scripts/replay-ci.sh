@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # Usage: bash scripts/replay-ci.sh
 # Copies this checkout's deploy-config checker and image smoke into past trees and runs them.
-# A caught row runs at a fix's parent and must fail with that bug's message. A cleared row runs at the fix and must not print it.
 set -uo pipefail
 
 root=$(git rev-parse --show-toplevel)
