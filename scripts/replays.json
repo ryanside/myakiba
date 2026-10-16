@@ -85,5 +85,17 @@
         "DebouncedInput > late echoes of two earlier texts do not replace what the user typed"
       ]
     }
+  ],
+  "types": [
+    {
+      "name": "nuia",
+      "fix": "9997463d",
+      "bug": "order stats returned undefined when the totals query found no row",
+      "package": "apps/server",
+      "config": ["apps/server/tsconfig.json"],
+      "errors": [
+        "src/routers/orders/service.ts(588,5): error TS2322: Type '{ totalOrders: number; totalSpent: number; activeOrders: number; unpaidCosts: number; } | undefined' is not assignable to type '{ totalOrders: number; totalSpent: number; activeOrders: number; unpaidCosts: number; }'."
+      ]
+    }
   ]
 }
