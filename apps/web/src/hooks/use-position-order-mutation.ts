@@ -5,6 +5,15 @@ import { toast } from "@/components/ui/toast";
 
 const pendingMovesByClient = new WeakMap<QueryClient, Map<string, number>>();
 
+function pendingMovesOf(queryClient: QueryClient) {
+  let pendingMoves = pendingMovesByClient.get(queryClient);
+  if (!pendingMoves) {
+    pendingMoves = new Map();
+    pendingMovesByClient.set(queryClient, pendingMoves);
+  }
+  return pendingMoves;
+}
+
 export function usePositionOrderMutation({
   queryKey,
   persist,
@@ -20,12 +29,12 @@ export function usePositionOrderMutation({
   readonly failureTitle: string;
 }) {
   const queryClient = useQueryClient();
-  const pendingMoves = pendingMovesByClient.get(queryClient) ?? new Map<string, number>();
-  pendingMovesByClient.set(queryClient, pendingMoves);
   const moveKey = hashKey(queryKey);
   const mutation = useMutation({
+    mutationKey: queryKey,
     mutationFn: persist,
     onMutate: async (intent) => {
+      const pendingMoves = pendingMovesOf(queryClient);
       pendingMoves.set(moveKey, (pendingMoves.get(moveKey) ?? 0) + 1);
       await queryClient.cancelQueries({ queryKey, exact: true });
       const current = queryClient.getQueryData<
@@ -95,6 +104,7 @@ export function usePositionOrderMutation({
       });
     },
     onSettled: (_data, error) => {
+      const pendingMoves = pendingMovesOf(queryClient);
       const remaining = (pendingMoves.get(moveKey) ?? 1) - 1;
       if (remaining > 0) {
         pendingMoves.set(moveKey, remaining);
