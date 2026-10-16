@@ -19,6 +19,7 @@ export function usePositionOrderMutation({
 }) {
   const queryClient = useQueryClient();
   const mutation = useMutation({
+    mutationKey: queryKey,
     mutationFn: persist,
     onMutate: async (intent) => {
       await queryClient.cancelQueries({ queryKey, exact: true });
@@ -73,8 +74,14 @@ export function usePositionOrderMutation({
       return { previous: current };
     },
     onSuccess: async () => {
+      const isLastPendingMove =
+        queryClient.isMutating({ mutationKey: queryKey, exact: true }) === 1;
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey, exact: true, refetchType: "none" }),
+        queryClient.invalidateQueries({
+          queryKey,
+          exact: true,
+          refetchType: isLastPendingMove ? "active" : "none",
+        }),
         ...(additionalInvalidations ?? []).map((invalidation) =>
           queryClient.invalidateQueries(invalidation),
         ),
