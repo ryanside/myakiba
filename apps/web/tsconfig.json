@@ -1,14 +1,9 @@
 {
+  "extends": "@myakiba/config/tsconfig.base.json",
   "compilerOptions": {
-    "strict": true,
-    "esModuleInterop": true,
-    "jsx": "react-jsx",
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "verbatimModuleSyntax": true,
-    "skipLibCheck": true,
+    "lib": ["ESNext", "DOM"],
     "types": ["vite/client"],
+    "jsx": "react-jsx",
     "rootDirs": ["."],
     "outDir": "../server/dist",
     "paths": {

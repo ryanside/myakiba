@@ -38,6 +38,7 @@
         "zod": "catalog:",
       },
       "devDependencies": {
+        "@myakiba/config": "workspace:*",
         "@types/bun": "catalog:",
         "drizzle-kit": "^0.31.9",
         "tsdown": "^0.22.14",
@@ -89,6 +90,7 @@
       "devDependencies": {
         "@happy-dom/global-registrator": "^21.0.3",
         "@mdx-js/rollup": "^3.1.1",
+        "@myakiba/config": "workspace:*",
         "@tanstack/react-query-devtools": "^5.101.4",
         "@tanstack/react-router-devtools": "^1.167.1",
         "@tanstack/router-plugin": "^1.168.34",
