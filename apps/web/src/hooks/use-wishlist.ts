@@ -10,13 +10,16 @@ import {
 } from "@/queries/wishlist";
 import { toast } from "@/components/ui/toast";
 import { usePositionOrderMutation } from "@/hooks/use-position-order-mutation";
+import { useToday } from "@/hooks/use-today";
 
 type ItemQueryData = Awaited<ReturnType<typeof getItem>>;
 
 export function useWishlistItemsQuery(releaseStatus: WishlistReleaseStatus) {
+  const today = useToday();
   return useInfiniteQuery({
-    queryKey: ["wishlist", "items", releaseStatus] as const,
-    queryFn: ({ pageParam }) => getWishlistItems(WISHLIST_PAGE_SIZE, pageParam, releaseStatus),
+    queryKey: ["wishlist", "items", releaseStatus, today] as const,
+    queryFn: ({ pageParam }) =>
+      getWishlistItems(WISHLIST_PAGE_SIZE, pageParam, releaseStatus, today),
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) => {
       const loadedCount = allPages.reduce((count, page) => count + page.items.length, 0);
@@ -74,8 +77,9 @@ export function useWishlistItemMutation() {
 }
 
 export function useMoveWishlistItemsMutation() {
+  const today = useToday();
   return usePositionOrderMutation({
-    queryKey: ["wishlist", "items", "all"],
+    queryKey: ["wishlist", "items", "all", today],
     additionalInvalidations: [
       { queryKey: ["wishlist", "items", "upcoming"] },
       { queryKey: ["wishlist", "items", "available"] },
