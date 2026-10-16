@@ -24,10 +24,13 @@ const routerFiles = [...new Bun.Glob("routers/*/index.ts").scanSync(import.meta.
 const routers = await Promise.all(routerFiles.map((file) => import(`./${file}`)));
 const app = new Elysia({ prefix: "/api" });
 for (const router of routers) app.use(router.default);
-const routes = app.routes.map((route) => `${route.method} ${route.path}`);
+const routes = app.routes.map(({ method, path: routePath }) => ({
+  name: `${method} ${routePath}`,
+  method,
+  routePath,
+}));
 
-const anonymousRequest = (route: string) => {
-  const [method = "GET", routePath = "/"] = route.split(" ");
+const anonymousRequest = ({ method, routePath }: (typeof routes)[number]) => {
   const url = `http://localhost${routePath.replaceAll(/:[^/]+/g, "x")}`;
   if (["GET", "DELETE", "HEAD"].includes(method)) return new Request(url, { method });
   return new Request(url, { method, body: "{}", headers: { "content-type": "application/json" } });
@@ -38,11 +41,15 @@ describe("every API route requires a session unless it is listed as public", () 
     expect(routes.length).toBeGreaterThan(20);
   });
 
-  test.each(routes.filter((route) => !PUBLIC_ROUTES.has(route)))("%s", async (route) => {
+  test.each(
+    routes
+      .filter((route) => !PUBLIC_ROUTES.has(route.name))
+      .map((route) => [route.name, route] as const),
+  )("%s", async (name, route) => {
     const response = await app.handle(anonymousRequest(route));
 
-    expect({ route, status: response.status, body: await response.text() }).toEqual({
-      route,
+    expect({ route: name, status: response.status, body: await response.text() }).toEqual({
+      route: name,
       status: 401,
       body: SENTINEL,
     });
