@@ -332,6 +332,7 @@ describe("wishlist reorder", () => {
       saving = move(lenFirst);
     });
     await waitFor(() => expect(server.heldOrderPatch).toHaveLength(1));
+    const requestsBeforeMidnight = server.wishlistRequests.length;
     setSystemTime(new Date(2026, 9, 17, 0, 0, 1));
     await act(
       () =>
@@ -339,11 +340,19 @@ describe("wishlist reorder", () => {
           setTimeout(resolve, 300);
         }),
     );
+    const afterMidnight = {
+      shown: shownIn("wishlist all"),
+      requests: server.wishlistRequests.length - requestsBeforeMidnight,
+    };
     await act(async () => {
       server.heldOrderPatch[0]?.();
       await saving;
     });
 
+    expect(afterMidnight).toEqual({
+      shown: ["Kagamine Len", "Miku (title before sync)", "Kagamine Rin"],
+      requests: 0,
+    });
     await waitFor(() =>
       expect(shownIn("wishlist all")).toEqual([
         "Kagamine Len",
