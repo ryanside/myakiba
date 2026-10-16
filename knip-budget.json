@@ -133,7 +133,6 @@
     "packages/contracts/src/lists/schema.ts listTargetTypeSchema",
     "packages/contracts/src/orders/schema.ts cascadeOptionSchema",
     "packages/contracts/src/orders/schema.ts editedOrderSchema",
-    "packages/contracts/src/orders/schema.ts newOrderSchema",
     "packages/contracts/src/orders/schema.ts orderFiltersSchema",
     "packages/contracts/src/search/schema.ts itemDatabaseItemSchema",
     "packages/contracts/src/search/schema.ts itemDatabaseReleaseSummarySchema",

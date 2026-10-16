@@ -30,7 +30,7 @@ export const ordersQuerySchema = searchSchema.extend({
   status: commaSeparatedStatusArray,
 });
 
-export const orderInsertSchema = createInsertSchema(order).extend({
+const orderInsertSchema = createInsertSchema(order).extend({
   shop: z.string().trim(),
 });
 export const orderUpdateSchema = createUpdateSchema(order)
