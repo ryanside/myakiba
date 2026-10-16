@@ -1,3 +1,4 @@
+import { useDndContext } from "@dnd-kit/core";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { PackageIcon } from "@hugeicons/core-free-icons";
 import * as React from "react";
@@ -50,6 +51,11 @@ interface OrderColumns {
   Owned: DashboardKanbanOrder[];
 }
 type OrderColumnsUpdate = React.SetStateAction<OrderColumns>;
+interface OrdersSnapshot {
+  readonly columns: OrderColumns;
+  // An equal refetch keeps the same orders array, so the fetch time is what makes it a new snapshot.
+  readonly fetchedAt: number;
+}
 interface StatusMutationVariables {
   readonly orderId: string;
   readonly status: OrderStatus;
@@ -117,12 +123,44 @@ function columnsReducer(columns: OrderColumns, update: OrderColumnsUpdate): Orde
   return functionalUpdate(update, columns);
 }
 
-function reconcileOrderColumns(current: OrderColumns, incoming: OrderColumns): OrderColumns {
+function withPendingOrders(
+  incomingOrders: readonly DashboardKanbanOrder[],
+  currentOrders: readonly DashboardKanbanOrder[],
+  pendingOrderIds: ReadonlySet<string>,
+): DashboardKanbanOrder[] {
+  const orders = incomingOrders.filter((order) => !pendingOrderIds.has(order.orderId));
+  currentOrders.forEach((order, index) => {
+    if (!pendingOrderIds.has(order.orderId)) return;
+    const orderIdsAbove = new Set(currentOrders.slice(0, index).map((above) => above.orderId));
+    const slot = orders.findLastIndex((candidate) => orderIdsAbove.has(candidate.orderId)) + 1;
+    orders.splice(slot, 0, order);
+  });
+  return orders;
+}
+
+function orderIdsIn(columns: OrderColumns): Set<string> {
+  return new Set(
+    ORDER_STATUSES.flatMap((columnId) => columns[columnId].map((order) => order.orderId)),
+  );
+}
+
+function reconcileOrderColumns(
+  current: OrderColumns,
+  incoming: OrderColumns,
+  pendingOrderIds: ReadonlySet<string>,
+): OrderColumns {
   const next = { ...incoming };
+  const currentOrderIds = orderIdsIn(current);
+  const incomingOrderIds = orderIdsIn(incoming);
+  const maskedOrderIds = new Set(
+    [...pendingOrderIds].filter(
+      (orderId) => currentOrderIds.has(orderId) && incomingOrderIds.has(orderId),
+    ),
+  );
 
   for (const columnId of ORDER_STATUSES) {
-    const incomingOrders = incoming[columnId];
     const currentOrders = current[columnId];
+    const incomingOrders = withPendingOrders(incoming[columnId], currentOrders, maskedOrderIds);
     const incomingById = new Map(incomingOrders.map((order) => [order.orderId, order]));
     const refreshedOrders = currentOrders.flatMap((order) => {
       const incomingOrder = incomingById.get(order.orderId);
@@ -385,23 +423,41 @@ function OrderColumn({
   );
 }
 
+function HeldOrderTracker({
+  onHeldOrderChange,
+}: {
+  readonly onHeldOrderChange: (orderId: string | null) => void;
+}) {
+  const heldId = useDndContext().active?.id;
+  React.useEffect(() => {
+    onHeldOrderChange(heldId === undefined ? null : String(heldId));
+  }, [heldId, onHeldOrderChange]);
+  return null;
+}
+
 function OrderKanbanBoard({
-  initialColumns,
+  snapshot,
   isLoading,
   currency,
   dateFormat,
-}: Omit<OrdersKanbanProps, "orders"> & {
-  initialColumns: OrderColumns;
+}: Omit<OrdersKanbanProps, "orders" | "ordersUpdatedAt"> & {
+  snapshot: OrdersSnapshot;
 }) {
   const queryClient = useQueryClient();
 
-  const [columns, setColumns] = React.useReducer(columnsReducer, initialColumns);
+  const [columns, setColumns] = React.useReducer(columnsReducer, snapshot.columns);
   const pendingStatusMutationsRef = React.useRef(new Map<string, PendingStatusMutations>());
   const pendingDateMutationsRef = React.useRef(new Map<string, PendingDateMutations>());
+  const [heldOrderId, setHeldOrderId] = React.useState<string | null>(null);
 
   React.useEffect((): void => {
-    setColumns((current) => reconcileOrderColumns(current, initialColumns));
-  }, [initialColumns]);
+    const localOrderIds = new Set([
+      ...pendingStatusMutationsRef.current.keys(),
+      ...pendingDateMutationsRef.current.keys(),
+    ]);
+    if (heldOrderId !== null) localOrderIds.add(heldOrderId);
+    setColumns((current) => reconcileOrderColumns(current, snapshot.columns, localOrderIds));
+  }, [snapshot, heldOrderId]);
 
   const statusMutation = useMutation({
     mutationFn: ({ orderId, status }: StatusMutationVariables) =>
@@ -573,6 +629,7 @@ function OrderKanbanBoard({
       getItemValue={(item) => item.orderId}
       className="flex min-h-0 flex-1 flex-col overflow-x-auto"
     >
+      <HeldOrderTracker onHeldOrderChange={setHeldOrderId} />
       <KanbanBoard className="min-h-0 min-w-[1300px] flex-1 gap-2.5 sm:grid-cols-4">
         {ORDER_STATUSES.map((columnId) => (
           <OrderColumn
@@ -598,7 +655,7 @@ export default function OrderKanban({
   currency,
   dateFormat,
 }: OrdersKanbanProps) {
-  const initialColumns = React.useMemo(() => {
+  const snapshot = React.useMemo((): OrdersSnapshot => {
     const grouped: OrderColumns = {
       Ordered: [],
       Paid: [],
@@ -610,13 +667,12 @@ export default function OrderKanban({
       grouped[order.status].push(order);
     }
 
-    return grouped;
-  }, [orders]);
+    return { columns: grouped, fetchedAt: ordersUpdatedAt };
+  }, [orders, ordersUpdatedAt]);
 
   return (
     <OrderKanbanBoard
-      initialColumns={initialColumns}
-      ordersUpdatedAt={ordersUpdatedAt}
+      snapshot={snapshot}
       isLoading={isLoading}
       currency={currency}
       dateFormat={dateFormat}
