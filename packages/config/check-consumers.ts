@@ -24,29 +24,45 @@ const strictFamily = [
   "strictPropertyInitialization",
   "useUnknownInCatchVariables",
 ] as const;
-type CheckedFlag = (typeof requiredFlags)[number] | (typeof strictFamily)[number];
+const forbiddenFlags = ["noCheck"] as const;
+type CheckedFlag =
+  | (typeof requiredFlags)[number]
+  | (typeof strictFamily)[number]
+  | (typeof forbiddenFlags)[number];
+type ShownConfig = {
+  compilerOptions: Partial<Record<CheckedFlag, boolean>>;
+  references?: { path: string }[];
+};
 
-let failed = false;
-for (const consumer of consumers) {
-  const shown = await $`tsc --showConfig -p ${path.join(root, consumer)}`.nothrow().quiet();
+const checked = new Set<string>();
+const lines: string[] = [];
+
+async function checkProject(project: string): Promise<void> {
+  if (checked.has(project)) return;
+  checked.add(project);
+  const label = path.relative(root, project);
+  const shown = await $`tsc --showConfig -p ${project}`.nothrow().quiet();
   if (shown.exitCode !== 0) {
-    failed = true;
-    console.log(
-      `FAIL  ${consumer}: tsc --showConfig exited ${shown.exitCode}\n${shown.stdout}${shown.stderr}`,
+    lines.push(
+      `FAIL  ${label}: tsc --showConfig exited ${shown.exitCode}\n${shown.stdout}${shown.stderr}`,
     );
-    continue;
+    return;
   }
-  const { compilerOptions }: { compilerOptions: Partial<Record<CheckedFlag, boolean>> } =
-    shown.json();
+  const { compilerOptions, references = [] }: ShownConfig = shown.json();
   const off = [
     ...requiredFlags.filter((flag) => compilerOptions[flag] !== true),
     ...strictFamily.filter((flag) => compilerOptions[flag] === false),
   ];
-  if (off.length > 0) failed = true;
-  console.log(
-    off.length === 0
-      ? `PASS  ${consumer} keeps every required flag`
-      : `FAIL  ${consumer} turns off ${off.join(", ")}`,
+  const on = forbiddenFlags.filter((flag) => compilerOptions[flag] === true);
+  if (off.length > 0) lines.push(`FAIL  ${label} turns off ${off.join(", ")}`);
+  if (on.length > 0) lines.push(`FAIL  ${label} turns on ${on.join(", ")}`);
+  if (off.length + on.length === 0) lines.push(`PASS  ${label} keeps every required flag`);
+  const configDir = project.endsWith(".json") ? path.dirname(project) : project;
+  await Promise.all(
+    references.map((reference) => checkProject(path.resolve(configDir, reference.path))),
   );
 }
-process.exitCode = failed ? 1 : 0;
+
+await Promise.all(consumers.map((consumer) => checkProject(path.join(root, consumer))));
+for (const line of lines.toSorted()) console.log(line);
+process.exitCode = lines.some((line) => line.startsWith("FAIL")) ? 1 : 0;
