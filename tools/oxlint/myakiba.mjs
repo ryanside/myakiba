@@ -98,7 +98,8 @@ const runtimeOwner = (context, identifier, depth) => {
   return ENV_OWNERS.has(identifier.name) ? identifier.name : null;
 };
 
-const envOwner = (context, node, depth = 0) => {
+const envOwner = (context, owner, depth = 0) => {
+  const node = unwrap(owner);
   if (node.type === "Identifier") return runtimeOwner(context, node, depth);
   if (node.type === "MetaProperty" && node.meta.name === "import" && node.property.name === "meta")
     return "import.meta";
