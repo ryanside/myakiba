@@ -10,6 +10,8 @@ const server = {
   fetches: [] as string[],
   heldSaves: [] as (() => void)[],
   failSaves: false,
+  holdFetches: false,
+  heldFetches: [] as (() => void)[],
 };
 
 function applyMove(listId: string, { movedIds, anchorId, placement }: PositionOrderInput) {
@@ -37,6 +39,8 @@ afterEach(() => {
   server.fetches.length = 0;
   server.heldSaves.length = 0;
   server.failSaves = false;
+  server.holdFetches = false;
+  server.heldFetches.length = 0;
 });
 
 let move: (intent: PositionOrderInput) => Promise<void> = async () => {};
@@ -48,6 +52,11 @@ function Members({ listId }: { listId: string }) {
     queryFn: async ({ pageParam }) => {
       server.fetches.push(listId);
       const items = (server.members[listId] ?? []).map((id) => ({ id }));
+      if (server.holdFetches) {
+        await new Promise<void>((resolve) => {
+          server.heldFetches.push(resolve);
+        });
+      }
       return { items, totalCount: items.length, limit: 50, offset: pageParam };
     },
     initialPageParam: 0,
@@ -157,5 +166,39 @@ describe("position order saves", () => {
 
     expect(afterFailure).toEqual({ shown: ["a", "b", "c"], fetches: fetchesBeforeFailure + 1 });
     expect(shownIn("first")).toEqual(["c", "a", "b"]);
+  });
+
+  test("a save that fails while another save is pending does not hide the order that saved", async () => {
+    server.members = { first: ["a", "b", "c"] };
+    renderMembers("first");
+    await waitFor(() => expect(shownIn("first")).toEqual(["a", "b", "c"]));
+
+    let failing: Promise<void> = Promise.resolve();
+    let saving: Promise<void> = Promise.resolve();
+    act(() => {
+      failing = move(cFirst).catch(() => {});
+      saving = move({ movedIds: ["b"], anchorId: "a", placement: "before" });
+    });
+    await waitFor(() => expect(server.heldSaves).toHaveLength(2));
+    server.holdFetches = true;
+    server.failSaves = true;
+    await act(async () => {
+      server.heldSaves[0]?.();
+      await new Promise((resolve) => {
+        setTimeout(resolve, 20);
+      });
+    });
+    server.failSaves = false;
+    await act(async () => {
+      server.heldSaves[1]?.();
+      await saving;
+    });
+    server.holdFetches = false;
+    await act(async () => {
+      for (const release of server.heldFetches) release();
+      await failing;
+    });
+
+    await waitFor(() => expect(shownIn("first")).toEqual(["b", "a", "c"]));
   });
 });
