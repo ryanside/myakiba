@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, realpathSync } from "node:fs";
 import path from "node:path";
 
 type ClientVar = { name: string; source: string };
@@ -22,6 +22,7 @@ type Build = {
   where: string;
   argsAt: string;
   envAt: string;
+  fileAt: string;
   dockerfile: string;
   publishes: boolean;
   args: Map<string, string>;
@@ -58,6 +59,8 @@ type ClientVars = { ok: true; vars: ClientVar[] } | { ok: false; error: string }
 
 type EnvSchema = { safeParse: (value?: undefined) => { success: boolean } };
 
+type EnvOptions = { client?: Record<string, EnvSchema>; extends?: object[] };
+
 const read = (file: string): string => readFileSync(file, "utf-8");
 
 const assignments = (list: ComposeList = []): Map<string, string> =>
@@ -86,37 +89,72 @@ async function requiredClientVars(): Promise<ClientVars> {
       ok: false,
       error: `${source} does not exist. If the client env moved, point requiredClientVars in scripts/check-deploy-config.ts at its file.`,
     };
-  let client: Record<string, EnvSchema> | undefined;
+  const calls = new Map<object, EnvOptions>();
   Bun.plugin({
     name: "read-client-env-schema",
     setup(build) {
       build.module("@t3-oss/env-core", () => ({
         exports: {
-          createEnv: (options: { client?: Record<string, EnvSchema> }) => {
-            client = options.client;
-            return {};
+          createEnv: (options: EnvOptions) => {
+            const env = {};
+            calls.set(env, options);
+            return env;
           },
         },
         loader: "object",
       }));
     },
   });
+  let exported: { env?: object };
   try {
-    await import(path.resolve(source));
+    exported = await import(path.resolve(source));
   } catch (error) {
     return {
       ok: false,
-      error: `could not load ${source} to read its client schema (${String(error)}). Run bun install first.`,
+      error: `${loadErrorAt(Bun.inspect(error), source)}: could not load ${source} to read its client schema (${String(error)}). Run bun install first if a package is missing.`,
     };
   }
-  if (!client)
-    return { ok: false, error: `${source} did not call createEnv with a client schema.` };
+  const options = exported.env ? calls.get(exported.env) : undefined;
+  if (!options)
+    return {
+      ok: false,
+      error: `${source}:1: does not export env = createEnv(...), so the checker cannot read its client schema.`,
+    };
+  const client: Record<string, EnvSchema> = {};
+  const merge = (current: EnvOptions): string | undefined => {
+    for (const base of current.extends ?? []) {
+      const extended = calls.get(base);
+      if (!extended) return "extends an env that createEnv did not build";
+      const problem = merge(extended);
+      if (problem) return problem;
+    }
+    Object.assign(client, current.client);
+    return undefined;
+  };
+  const problem = merge(options);
+  if (problem)
+    return {
+      ok: false,
+      error: `${source}:${nestedKeyLine(source, "extends")}: ${problem}, so the checker cannot read its client schema.`,
+    };
   return {
     ok: true,
     vars: Object.entries(client)
       .filter(([, schema]) => !schema.safeParse().success)
       .map(([name]) => ({ name, source })),
   };
+}
+
+function loadErrorAt(report: string, source: string): string {
+  const cwd = realpathSync(".");
+  const thrown = /at (\/\S+):(\d+):\d+/.exec(report);
+  if (thrown?.[1]) return `${path.relative(cwd, thrown[1])}:${thrown[2]}`;
+  const missing = /Cannot find module '([^']+)' from '([^']+)'/.exec(report);
+  if (missing?.[1] && missing[2]) {
+    const file = path.relative(cwd, missing[2]);
+    return `${file}:${nestedKeyLine(file, `"${missing[1]}"`) || nestedKeyLine(file, `'${missing[1]}'`) || 1}`;
+  }
+  return `${source}:1`;
 }
 
 function clientVarsBeforePackagesEnv(): ClientVar[] {
@@ -154,7 +192,8 @@ function parseDockerfile(file: string): Dockerfile {
     stage.text += `${line}\n`;
     if (!arg) return;
     const name = arg[1] ?? "";
-    stage.args.set(name, Boolean(arg[2]) || globalDefaults.has(name));
+    // A later ARG X=default does not reach uses of X earlier in the stage.
+    if (!stage.args.has(name)) stage.args.set(name, Boolean(arg[2]) || globalDefaults.has(name));
     if (!argLines.has(name)) argLines.set(name, index + 1);
   });
 
@@ -196,8 +235,10 @@ const composeReferences = (value: string): string[] =>
   [...value.matchAll(/\$\{?([A-Za-z_][A-Za-z0-9_]*)/g)].map(([, name = ""]) => name);
 
 const workflowReferences = (value: string): string[] =>
-  [...value.matchAll(/\$\{\{\s*(?:vars|secrets|env|inputs)\.(\w+)\s*\}\}/g)].map(
-    ([, name = ""]) => name,
+  [...value.matchAll(/\$\{\{([\s\S]*?)\}\}/g)].flatMap(([, expression = ""]) =>
+    [
+      ...expression.matchAll(/\b(?:vars|secrets|env|inputs)(?:\.(\w+)|\[\s*['"](\w+)['"]\s*\])/g),
+    ].map(([, dotted, bracketed]) => dotted ?? bracketed ?? ""),
   );
 
 function workflowBuilds(): Build[] {
@@ -218,15 +259,24 @@ function workflowBuilds(): Build[] {
               /\$\{\{\s*matrix\.(\w+)\s*\}\}/g,
               (_, key: string) => entry[key] ?? "",
             );
-          const argsKey = /\$\{\{\s*matrix\.(\w+)\s*\}\}/.exec(inputs["build-args"] ?? "")?.[1];
-          const where = `${file} jobs.${jobId}${entry.image ? ` matrix entry "${entry.image}"` : ""}`;
-          const line = argsKey
-            ? nestedKeyLine(file, "jobs:", `  ${jobId}:`, `image: ${entry.image}`, `${argsKey}:`)
-            : nestedKeyLine(file, "jobs:", `  ${jobId}:`, "build-args:");
+          const matrixKey = (input = ""): string | undefined =>
+            /\$\{\{\s*matrix\.(\w+)\s*\}\}/.exec(input)?.[1];
+          const jobAt = ["jobs:", `  ${jobId}:`];
+          const entryAt = entry.image ? [...jobAt, `image: ${entry.image}`] : jobAt;
+          const label = `jobs.${jobId}${entry.image ? ` matrix entry "${entry.image}"` : ""}`;
+          const argsKey = matrixKey(inputs["build-args"]);
+          const fileKey = matrixKey(inputs.file);
+          const argsLine = argsKey
+            ? nestedKeyLine(file, ...entryAt, `${argsKey}:`)
+            : nestedKeyLine(file, ...jobAt, "build-args:");
+          const fileLine = fileKey
+            ? nestedKeyLine(file, ...entryAt, `${fileKey}:`)
+            : nestedKeyLine(file, ...jobAt, inputs.file ? "file:" : "context:");
           builds.push({
-            where,
-            argsAt: `${file}:${line} (jobs.${jobId}${entry.image ? ` matrix entry "${entry.image}"` : ""} ${argsKey ?? "build-args"})`,
-            envAt: where,
+            where: `${file}:${nestedKeyLine(file, ...entryAt)} (${label})`,
+            argsAt: `${file}:${argsLine} (${label} ${argsKey ?? "build-args"})`,
+            envAt: `${file}:${nestedKeyLine(file, ...entryAt)} (${label})`,
+            fileAt: `${file}:${fileLine} (${label} ${fileKey ?? "file"})`,
             // build-push-action reads file from the checkout root, not from context.
             dockerfile: path.normalize(
               resolve(inputs.file) || path.join(resolve(inputs.context) || ".", "Dockerfile"),
@@ -262,6 +312,7 @@ function composeBuilds(deployedByWorkflow: Set<string>): Build[] {
       builds.push({
         where: `${file}:${nestedKeyLine(file, "services:", `  ${service}:`)} (services.${service})`,
         argsAt: `${file}:${line} (services.${service}.build.args)`,
+        fileAt: `${file}:${nestedKeyLine(file, "services:", `  ${service}:`, build.dockerfile ? "dockerfile:" : "build:")} (services.${service}.build)`,
         envAt: `${file}:${nestedKeyLine(file, "services:", `  ${service}:`, "environment:")} (services.${service}.environment)`,
         dockerfile,
         publishes: !deployedByWorkflow.has(dockerfile),
@@ -302,7 +353,7 @@ const builds = [
 for (const build of builds)
   if (!existsSync(build.dockerfile))
     errors.push(
-      `${build.where}: builds ${build.dockerfile}, which does not exist. Give the Dockerfile as a literal path or a matrix.include value.`,
+      `${build.fileAt}: builds ${build.dockerfile}, which does not exist. Give the Dockerfile as a literal path or a matrix.include value.`,
     );
 const dockerfiles = [
   ...new Set([
