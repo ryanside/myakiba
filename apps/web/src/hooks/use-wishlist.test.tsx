@@ -1,9 +1,21 @@
-import { afterEach, describe, expect, mock, setSystemTime, test } from "bun:test";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  afterEach,
+  describe,
+  expect,
+  mock,
+  setDefaultTimeout,
+  setSystemTime,
+  test,
+} from "bun:test";
+import { act, cleanup, configure, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { useEffect } from "react";
 import type { getErrorMessage as realGetErrorMessage } from "@/lib/treaty-client";
+import { useToday } from "./use-today";
+
+configure({ asyncUtilTimeout: 4000 });
+setDefaultTimeout(20_000);
 
 type WishlistQuery = { limit: number; offset: number; releaseStatus: string; today: string };
 type ServerItem = { id: string; title: string; releaseDate: string };
@@ -152,8 +164,17 @@ const shownIn = (label: string) =>
     (li) => li.textContent,
   );
 
+let renderedClient = new QueryClient();
+
 function renderWithClient(ui: React.ReactNode, queryClient = new QueryClient()) {
+  renderedClient = queryClient;
   return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
+
+const fetchesSettled = () => waitFor(() => expect(renderedClient.isFetching()).toBe(0));
+
+function Today() {
+  return <p aria-label="today">{useToday()}</p>;
 }
 
 describe("wishlist after a sync rewrites item metadata", () => {
@@ -172,12 +193,7 @@ describe("wishlist after a sync rewrites item metadata", () => {
     await waitFor(() =>
       expect(screen.getByLabelText("collection row").textContent).toBe("Nendoroid Hatsune Miku"),
     );
-    await act(
-      () =>
-        new Promise((resolve) => {
-          setTimeout(resolve, 50);
-        }),
-    );
+    await fetchesSettled();
 
     expect({
       collection: screen.getByLabelText("collection row").textContent,
@@ -302,12 +318,7 @@ describe("wishlist reorder", () => {
     });
     await waitFor(() => expect(server.heldOrderPatch).toHaveLength(2));
     await act(async () => server.heldOrderPatch[0]?.());
-    await act(
-      () =>
-        new Promise((resolve) => {
-          setTimeout(resolve, 50);
-        }),
-    );
+    await fetchesSettled();
     const afterFirstSave = shownIn("wishlist all");
     await act(async () => {
       server.heldOrderPatch[1]?.();
@@ -323,7 +334,7 @@ describe("wishlist reorder", () => {
   test("a move that saves across local midnight keeps its order", async () => {
     setSystemTime(new Date(2026, 9, 16, 23, 59, 59, 800));
     server.items = [MIKU_BEFORE_SYNC, KAGAMINE_RIN, KAGAMINE_LEN];
-    const move = renderReorderableAll();
+    const move = renderReorderableAll(<Today />);
     await waitFor(() => expect(shownIn("wishlist all")).toHaveLength(3));
 
     server.holdOrderPatch = true;
@@ -334,12 +345,8 @@ describe("wishlist reorder", () => {
     await waitFor(() => expect(server.heldOrderPatch).toHaveLength(1));
     const requestsBeforeMidnight = server.wishlistRequests.length;
     setSystemTime(new Date(2026, 9, 17, 0, 0, 1));
-    await act(
-      () =>
-        new Promise((resolve) => {
-          setTimeout(resolve, 300);
-        }),
-    );
+    await waitFor(() => expect(screen.getByLabelText("today").textContent).toBe("2026-10-17"));
+    await fetchesSettled();
     const afterMidnight = {
       shown: shownIn("wishlist all"),
       requests: server.wishlistRequests.length - requestsBeforeMidnight,
