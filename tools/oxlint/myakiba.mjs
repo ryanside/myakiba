@@ -63,21 +63,43 @@ const runtimeDefinition = (variable) =>
       )
     : undefined;
 
-const runtimeOwner = (context, identifier) => {
+const WRAPPERS = new Set([
+  "ChainExpression",
+  "ParenthesizedExpression",
+  "TSAsExpression",
+  "TSNonNullExpression",
+  "TSSatisfiesExpression",
+  "TSTypeAssertion",
+]);
+const unwrap = (node) => (WRAPPERS.has(node?.type) ? unwrap(node.expression) : node);
+
+const aliasesRuntime = (context, { type, node, parent }, depth) => {
+  if (type === "ImportBinding") {
+    const imported =
+      node.type === "ImportSpecifier" ? (node.imported.name ?? node.imported.value) : "default";
+    return imported === "default" && ENV_MODULES.has(parent.source.value);
+  }
+  if (type !== "Variable" || node.id.type !== "Identifier" || !node.init || depth > 3) return false;
+  const init = unwrap(node.init);
+  if (
+    init.type === "CallExpression" &&
+    init.callee.type === "Identifier" &&
+    init.callee.name === "require"
+  )
+    return ENV_MODULES.has(init.arguments[0]?.value);
+  return envOwner(context, init, depth + 1) !== null;
+};
+
+const runtimeOwner = (context, identifier, depth) => {
   for (let scope = context.sourceCode.getScope(identifier); scope; scope = scope.upper) {
     const definition = runtimeDefinition(scope.set.get(identifier.name));
-    if (!definition) continue;
-    const isModuleImport =
-      definition.type === "ImportBinding" &&
-      definition.node.type !== "ImportSpecifier" &&
-      ENV_MODULES.has(definition.parent.source.value);
-    return isModuleImport ? identifier.name : null;
+    if (definition) return aliasesRuntime(context, definition, depth) ? identifier.name : null;
   }
   return ENV_OWNERS.has(identifier.name) ? identifier.name : null;
 };
 
-const envOwner = (context, node) => {
-  if (node.type === "Identifier") return runtimeOwner(context, node);
+const envOwner = (context, node, depth = 0) => {
+  if (node.type === "Identifier") return runtimeOwner(context, node, depth);
   if (node.type === "MetaProperty" && node.meta.name === "import" && node.property.name === "meta")
     return "import.meta";
   if (
@@ -130,7 +152,11 @@ const noEnvOutsideEnvPackage = {
   },
 };
 
-const isLiteral = (node, value) => node?.type === "Literal" && node.value === value;
+const splitsAtT = (node) =>
+  (node?.type === "Literal" && (node.value === "T" || node.regex?.pattern === "T")) ||
+  (node?.type === "TemplateLiteral" &&
+    node.expressions.length === 0 &&
+    node.quasis[0]?.value.cooked === "T");
 const memberName = ({ computed, property }) => {
   if (!computed) return property.type === "Identifier" ? property.name : null;
   if (property.type === "Literal") return String(property.value);
@@ -146,16 +172,15 @@ const noIsoSlice = {
       CallExpression(node) {
         const { callee } = node;
         if (callee.type !== "MemberExpression") return;
-        const inner = callee.object;
+        const inner = unwrap(callee.object);
         if (
-          inner.type !== "CallExpression" ||
+          inner?.type !== "CallExpression" ||
           inner.callee.type !== "MemberExpression" ||
           memberName(inner.callee) !== "toISOString"
         )
           return;
         const method = memberName(callee);
-        const trims =
-          ISO_TRIMS.has(method) || (method === "split" && isLiteral(node.arguments[0], "T"));
+        const trims = ISO_TRIMS.has(method) || (method === "split" && splitsAtT(node.arguments[0]));
         if (!trims) return;
         context.report({
           node,
