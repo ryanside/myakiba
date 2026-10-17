@@ -1,11 +1,9 @@
 import { and, eq, inArray, isNotNull, isNull, lt, max, or, sql } from "drizzle-orm";
-import type { db } from "./client";
 import { collection, item_release, order } from "./schema/figure";
-
-type OrderReleaseDateTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+import type { Tx } from "./tx";
 
 export async function advanceOrderReleaseDatesForCollectionItems(
-  tx: OrderReleaseDateTransaction,
+  tx: Tx,
   collectionItemIds: readonly string[],
 ): Promise<void> {
   if (collectionItemIds.length === 0) return;
