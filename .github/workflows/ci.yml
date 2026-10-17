@@ -40,6 +40,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Test the deploy config checker
+        run: bun test scripts/check-deploy-config.test.ts
+
       - name: Check deploy config
         id: deploy-config
         run: |
