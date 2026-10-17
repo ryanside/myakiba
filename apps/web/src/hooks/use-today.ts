@@ -7,8 +7,9 @@ function readToday(): string {
 }
 
 function subscribeToDayChange(onChange: () => void): () => void {
-  let midnightTimer: ReturnType<typeof setTimeout>;
+  let midnightTimer: ReturnType<typeof setTimeout> | undefined;
   const scheduleNextMidnight = () => {
+    clearTimeout(midnightTimer);
     const now = new Date();
     const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
     midnightTimer = setTimeout(() => {
@@ -17,7 +18,10 @@ function subscribeToDayChange(onChange: () => void): () => void {
     }, nextMidnight.getTime() - now.getTime());
   };
   scheduleNextMidnight();
-  const unsubscribeFocus = focusManager.subscribe(onChange);
+  const unsubscribeFocus = focusManager.subscribe(() => {
+    scheduleNextMidnight();
+    onChange();
+  });
   return () => {
     clearTimeout(midnightTimer);
     unsubscribeFocus();
