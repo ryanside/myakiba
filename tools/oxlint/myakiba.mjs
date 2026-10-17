@@ -107,8 +107,21 @@ const noEnvOutsideEnvPackage = {
 };
 
 const isLiteral = (node, value) => node?.type === "Literal" && node.value === value;
-const isDatePartEnd = (node) =>
-  node?.type === "Literal" && Number.isInteger(node.value) && node.value >= 4 && node.value <= 10;
+const ISO_LENGTH = "2000-01-01T00:00:00.000Z".length;
+const integerValue = (node) => {
+  if (node?.type === "Literal" && Number.isInteger(node.value)) return node.value;
+  if (node?.type === "UnaryExpression" && node.operator === "-") {
+    const value = integerValue(node.argument);
+    return value === null ? null : -value;
+  }
+  return null;
+};
+const isDatePartEnd = (method, node) => {
+  const end = integerValue(node);
+  if (end === null || (end < 0 && method !== "slice")) return false;
+  const length = end < 0 ? ISO_LENGTH + end : end;
+  return length >= 4 && length <= 10;
+};
 
 const noIsoSlice = {
   meta: { type: "problem" },
@@ -129,7 +142,7 @@ const noIsoSlice = {
         const takesDay =
           callee.property.name === "split"
             ? isLiteral(args[0], "T")
-            : isLiteral(args[0], 0) && isDatePartEnd(args[1]);
+            : isLiteral(args[0], 0) && isDatePartEnd(callee.property.name, args[1]);
         if (!takesDay) return;
         context.report({
           node,
