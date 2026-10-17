@@ -7,7 +7,8 @@
     "check-types": "tsc -b",
     "compile": "bun build --compile --minify --sourcemap ./src/index.ts --outfile server",
     "dev": "bun run --hot src/index.ts",
-    "start": "bun run dist/index.js"
+    "start": "bun run dist/index.js",
+    "test": "bun test --isolate --env-file=test.env"
   },
   "dependencies": {
     "@elysiajs/cors": "^1.4.1",
@@ -32,6 +33,7 @@
   },
   "devDependencies": {
     "@types/bun": "catalog:",
+    "drizzle-kit": "^0.31.9",
     "tsdown": "^0.22.14",
     "typescript": "catalog:"
   }

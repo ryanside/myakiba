@@ -9,7 +9,8 @@
     }
   },
   "scripts": {
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "test": "bun test --isolate"
   },
   "dependencies": {
     "zod": "catalog:"
