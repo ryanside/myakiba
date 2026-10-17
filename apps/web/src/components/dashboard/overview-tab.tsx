@@ -10,6 +10,7 @@ import type { DashboardResponse } from "@/queries/dashboard";
 
 interface OverviewTabProps {
   readonly data: DashboardResponse | undefined;
+  readonly dataUpdatedAt: number;
   readonly isLoading: boolean;
   readonly isError: boolean;
   readonly error: Error | null;
@@ -20,6 +21,7 @@ interface OverviewTabProps {
 
 export function OverviewTab({
   data,
+  dataUpdatedAt,
   isLoading,
   isError,
   error,
@@ -113,6 +115,7 @@ export function OverviewTab({
 
       <OrderKanban
         orders={orders}
+        ordersUpdatedAt={dataUpdatedAt}
         isLoading={isLoading}
         currency={currency}
         dateFormat={dateFormat}

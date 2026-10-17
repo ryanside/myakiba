@@ -77,7 +77,7 @@ function RouteComponent(): ReactElement {
     });
   }
 
-  const { isPending, isError, data, error } = useQuery({
+  const { isPending, isError, data, error, dataUpdatedAt } = useQuery({
     queryKey: ["dashboard"],
     queryFn: getDashboard,
     staleTime: 1000 * 60 * 5,
@@ -90,6 +90,7 @@ function RouteComponent(): ReactElement {
     isError: monthlyIsError,
     data: monthlyData,
     error: monthlyError,
+    dataUpdatedAt: monthlyDataUpdatedAt,
   } = useQuery({
     queryKey: ["dashboard", "monthly", selectedMonth, selectedYear],
     queryFn: () => getMonthlyDashboard(selectedMonth, selectedYear),
@@ -149,6 +150,7 @@ function RouteComponent(): ReactElement {
       {activeTab === "overview" && (
         <OverviewTab
           data={data}
+          dataUpdatedAt={dataUpdatedAt}
           isLoading={isPending}
           isError={isError}
           error={error}
@@ -160,6 +162,7 @@ function RouteComponent(): ReactElement {
       {activeTab === "monthly" && (
         <MonthlyTab
           data={monthlyData}
+          dataUpdatedAt={monthlyDataUpdatedAt}
           isLoading={monthlyIsPending}
           isError={monthlyIsError}
           error={monthlyError}
