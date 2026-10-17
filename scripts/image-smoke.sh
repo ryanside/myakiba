@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Usage: scripts/image-smoke.sh [db-push[=IMAGE]] [server[=IMAGE]]
+# Usage: scripts/image-smoke.sh [db-push[=IMAGE]] [server[=IMAGE]], from the repo root with docker and bun on PATH.
 # Runs each image in order against throwaway Postgres and Redis. Builds it from this checkout unless IMAGE is given.
 set -euo pipefail
 
@@ -102,8 +102,6 @@ smoke_server() {
   docker logs "$container" 2>&1 | grep '"environment":"production"' >/dev/null ||
     fail "$container does not log in production mode. Set ENV NODE_ENV=production before bun build --compile." "$container"
   docker cp "$container:/app/dist" "$work/dist" >/dev/null || fail "$container has no web bundle at /app/dist"
-  required=$(bun scripts/check-deploy-config.ts --required-client-vars) ||
-    fail "found no required VITE_* variable. Run bun scripts/check-deploy-config.ts for the reason."
   for name in $required; do
     value=$(printf '%s\n' "${vite_args[@]}" | sed -n "s/^$name=//p")
     [ -n "$value" ] ||
@@ -118,6 +116,11 @@ smoke_server() {
 for target in "$@"; do
   dockerfile "${target%%=*}" >/dev/null || fail "unknown image ${target%%=*}. Use db-push or server."
 done
+if [[ " $* " == *" server"* ]]; then
+  command -v bun >/dev/null || fail "the server smoke needs bun on PATH to read the required VITE_* names."
+  required=$(bun scripts/check-deploy-config.ts --required-client-vars) ||
+    fail "found no required VITE_* variable. Run bun scripts/check-deploy-config.ts for the reason."
+fi
 
 work=$(mktemp -d)
 trap 'cleanup; rm -rf "$work"' EXIT
