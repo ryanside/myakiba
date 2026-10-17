@@ -37,7 +37,7 @@ beforeAll(async () => {
   await db.execute(
     "CREATE TRIGGER fail_collection_delete BEFORE DELETE ON collection FOR EACH ROW EXECUTE FUNCTION fail_when_armed()",
   );
-});
+}, 30_000);
 
 afterAll(async () => {
   await db.$client.close();
