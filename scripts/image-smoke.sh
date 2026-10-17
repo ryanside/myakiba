@@ -5,7 +5,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 prefix=${SMOKE_PREFIX:-image-smoke-$$}
+label=image-smoke.run=$prefix-$$-$RANDOM
 timeout=${SMOKE_TIMEOUT:-10}
+read -ra server_env <<<"${SMOKE_SERVER_ENV:-}"
 network=$prefix-net
 postgres=$prefix-postgres
 redis=$prefix-redis
@@ -23,9 +25,9 @@ fail() {
 }
 
 cleanup() {
-  docker rm -fv "$prefix-db-push" "$prefix-server" "$postgres" "$redis" >/dev/null 2>&1 || true
-  docker rmi -f "$prefix-db-push" "$prefix-server" >/dev/null 2>&1 || true
-  docker network rm "$network" >/dev/null 2>&1 || true
+  for id in $(docker ps -aq --filter "label=$label"); do docker rm -fv "$id" >/dev/null 2>&1 || true; done
+  for id in $(docker images -q --filter "label=$label"); do docker rmi -f "$id" >/dev/null 2>&1 || true; done
+  for id in $(docker network ls -q --filter "label=$label"); do docker network rm "$id" >/dev/null 2>&1 || true; done
 }
 
 wait_until() {
@@ -66,7 +68,7 @@ dockerfile() {
 }
 
 build() {
-  docker build --load -f "$(dockerfile "$1")" -t "$prefix-$1" --build-arg SOURCE_COMMIT=image-smoke \
+  docker build --load --label "$label" -f "$(dockerfile "$1")" -t "$prefix-$1" --build-arg SOURCE_COMMIT=image-smoke \
     "${vite_args[@]/#/--build-arg=}" . >"$work/build.log" 2>&1 || {
     tail -n 30 "$work/build.log"
     fail "$1 image did not build from $(dockerfile "$1")"
@@ -76,7 +78,7 @@ build() {
 smoke_db_push() {
   local container=$prefix-db-push start code tables
   start=$(now)
-  docker run -d --name "$container" --network "$network" -e DATABASE_URL="$database_url" "$1" >/dev/null
+  docker run -d --label "$label" --name "$container" --network "$network" -e DATABASE_URL="$database_url" "$1" >/dev/null
   wait_until 120 exited "$container" || fail "db-push still running after 120s" "$container"
   code=$(docker inspect -f '{{.State.ExitCode}}' "$container")
   [ "$code" = 0 ] || fail "db-push exited with code $code" "$container"
@@ -89,14 +91,16 @@ smoke_db_push() {
 smoke_server() {
   local container=$prefix-server start address
   start=$(now)
-  docker run -d --name "$container" --network "$network" -p 127.0.0.1::3000 \
+  docker run -d --label "$label" --name "$container" --network "$network" -p 127.0.0.1::3000 \
     -e DATABASE_URL="$database_url" -e REDIS_HOST="$redis" -e REDIS_PORT=6379 \
     -e CORS_ORIGIN=http://localhost:3000 -e BETTER_AUTH_URL=http://localhost:3000 \
     -e BETTER_AUTH_SECRET=image-smoke-secret-0123456789abcdef \
     -e TURNSTILE_SECRET_KEY=image-smoke -e RESEND_API_KEY=re_image_smoke \
     -e RESEND_FROM_EMAIL=smoke@example.invalid \
     -e GOOGLE_CLIENT_ID=image-smoke -e GOOGLE_CLIENT_SECRET=image-smoke \
-    "$1" >/dev/null
+    ${server_env[@]+"${server_env[@]/#/--env=}"} "$1" >/dev/null
+  echo "server: docker run returned after $(elapsed "$start")s"
+  start=$(now)
   address=$(docker port "$container" 3000/tcp | head -1) || true
   answer "$container" /health "$start" "$address"
   answer "$container" /api/auth/ok "$start" "$address"
@@ -110,6 +114,7 @@ smoke_server() {
     grep -rqF "$value" "$work/dist" ||
       fail "the web bundle in $1 lacks $name=$value. Vite inlines VITE_* at the web build, so pass it as a build arg to the stage that runs that build. A prebuilt image must use the placeholder from vite_args in scripts/image-smoke.sh, as .github/workflows/ci.yml does."
   done
+  [ "$(docker inspect -f '{{.State.Running}}' "$container")" = true ] || crashed "$container"
   echo "server: web bundle has" $required
 }
 
@@ -117,7 +122,13 @@ smoke_server() {
 for target in "$@"; do
   dockerfile "${target%%=*}" >/dev/null || fail "unknown image ${target%%=*}. Use db-push or server."
 done
-if [[ " $* " == *" server"* ]]; then
+case $prefix in
+  myakiba*) fail "SMOKE_PREFIX=$prefix would name smoke resources like the operator's myakiba-* containers. Choose another prefix." ;;
+esac
+[ -z "$(docker ps -aq --filter "name=^$prefix-")$(docker network ls -q --filter "name=^$prefix-")$(docker images -q --filter "reference=$prefix-*")" ] ||
+  fail "containers, networks or images named $prefix-* already exist, and this run did not create them. Set SMOKE_PREFIX to a name no other run uses."
+required=${SMOKE_REQUIRED_CLIENT_VARS:-}
+if [[ " $* " == *" server"* && -z "$required" ]]; then
   command -v bun >/dev/null || fail "the server smoke needs bun on PATH to read the required VITE_* names."
   required=$(bun scripts/check-deploy-config.ts --required-client-vars) ||
     fail "found no required VITE_* variable. Run bun scripts/check-deploy-config.ts for the reason."
@@ -125,11 +136,10 @@ fi
 
 work=$(mktemp -d)
 trap 'cleanup; rm -rf "$work"' EXIT
-cleanup
-docker network create "$network" >/dev/null
-docker run -d --name "$postgres" --network "$network" \
+docker network create --label "$label" "$network" >/dev/null
+docker run -d --label "$label" --name "$postgres" --network "$network" \
   -e POSTGRES_USER=smoke -e POSTGRES_PASSWORD=smoke -e POSTGRES_DB=smoke postgres:18.6 >/dev/null
-docker run -d --name "$redis" --network "$network" redis:8.8.0 >/dev/null
+docker run -d --label "$label" --name "$redis" --network "$network" redis:8.8.0 >/dev/null
 
 for target in "$@"; do
   name=${target%%=*}
