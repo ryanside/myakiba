@@ -25,6 +25,7 @@ type LintConfig = {
   rules: Record<string, LintRule>;
   overrides: { files: string[]; rules: Record<string, LintRule> }[];
 };
+type BuiltinRule = { scope: string; value: string; type_aware: boolean };
 
 type TestRun = {
   exitCode: number;
@@ -36,6 +37,7 @@ type TestRun = {
 };
 
 const root = path.resolve(import.meta.dir, "..");
+const oxlint = path.join(root, "node_modules/.bin/oxlint");
 const {
   test: testReplays = [],
   lint: lintReplays = [],
@@ -63,9 +65,22 @@ const pick = <Replay extends TestReplay | LintReplay>(list: Replay[]) =>
   );
 const selected = lintMode ? [] : pick(testReplays);
 const selectedLint = lintMode ? pick(lintReplays) : [];
+const builtinRules: BuiltinRule[] = lintMode ? await $`${oxlint} --rules -f json`.json() : [];
+const builtinRule = (rule: string) => {
+  const [, scope, value] = /^(.+)\((.+)\)$/.exec(rule) ?? [];
+  return builtinRules.find((builtin) => builtin.scope === scope && builtin.value === value);
+};
 
 // bun test prints passing tests only when AGENT, CLAUDECODE and REPL_ID are unset.
-$.env({ ...process.env, AGENT: undefined, CLAUDECODE: undefined, REPL_ID: undefined, HUSKY: "0" });
+// A past revision has no oxlint-tsgolint, so type-aware rules run on the head's.
+$.env({
+  ...process.env,
+  AGENT: undefined,
+  CLAUDECODE: undefined,
+  REPL_ID: undefined,
+  HUSKY: "0",
+  OXLINT_TSGOLINT_PATH: path.join(root, "node_modules/.bin/tsgolint"),
+});
 
 const readPackage = (dir: string) => Bun.file(path.join(dir, "package.json")).json();
 
@@ -155,9 +170,11 @@ async function lintHits(checkout: string, rule: string, lines: Map<string, Set<n
   const key = prefix === "eslint" ? name : `${prefix}/${name}`;
   const ruleSetting = head.rules[key];
   if (ruleSetting === undefined) throw new Error(`${key} is not configured in oxlint.config.ts.`);
+  const builtin = builtinRule(rule);
   const config = {
-    plugins: [],
+    plugins: builtin ? [builtin.scope] : [],
     categories: { correctness: "off" },
+    options: { typeAware: builtin?.type_aware ?? false },
     ignorePatterns: head.ignorePatterns,
     jsPlugins: head.jsPlugins.map((plugin) => ({
       ...plugin,
@@ -171,7 +188,6 @@ async function lintHits(checkout: string, rule: string, lines: Map<string, Set<n
   await Bun.write(path.join(checkout, ".oxlint-replay.json"), JSON.stringify(config));
   const files = [...lines.keys()].filter((file) => /\.[cm]?[jt]sx?$/.test(file));
   if (files.length === 0) return [];
-  const oxlint = path.join(root, "node_modules/.bin/oxlint");
   const lint = await $`${oxlint} -c .oxlint-replay.json --disable-nested-config -f json ${files}`
     .cwd(checkout)
     .nothrow()
@@ -268,14 +284,18 @@ for (const [signal, exitCode] of [
 await $`git -C ${root} worktree add --detach --no-checkout ${worktree}`.quiet();
 
 let installedLock = "";
-async function checkOut(revision: string, testFile?: string) {
-  await $`git checkout --quiet --detach --force ${revision} && git clean -fdq`.cwd(worktree);
-  if (testFile === undefined) return;
+async function install(revision: string) {
   const lock = await $`git rev-parse ${`${revision}:bun.lock`}`.cwd(worktree).text();
   if (lock !== installedLock) {
     await $`bun install --frozen-lockfile`.cwd(worktree).quiet();
     installedLock = lock;
   }
+}
+
+async function checkOut(revision: string, testFile?: string) {
+  await $`git checkout --quiet --detach --force ${revision} && git clean -fdq`.cwd(worktree);
+  if (testFile === undefined) return;
+  await install(revision);
 
   const packageDir = await packageDirOf(testFile);
   const harness =
@@ -299,10 +319,13 @@ async function checkOut(revision: string, testFile?: string) {
 
 try {
   for (const replay of selectedLint) {
+    const typeAware = builtinRule(replay.rule)?.type_aware ?? false;
     await checkOut(`${replay.fix}^`);
+    if (typeAware) await install(`${replay.fix}^`);
     const changed = await changedLines(replay.fix);
     const atParent = await lintHits(worktree, replay.rule, changed.atParent);
     await checkOut(replay.fix);
+    if (typeAware) await install(replay.fix);
     const atFix = await lintHits(worktree, replay.rule, changed.atFix);
     const details = [
       ...difference(replay.atParent, atParent).map(
