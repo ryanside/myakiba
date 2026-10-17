@@ -22,6 +22,10 @@ const root = path.resolve(import.meta.dir, "..");
 const { test: replays }: { test: TestReplay[] } = await Bun.file(
   path.join(import.meta.dir, "replays.json"),
 ).json();
+if (replays.length === 0) {
+  console.error("FAIL  scripts/replays.json lists no replay");
+  process.exit(1);
+}
 const filters = process.argv.slice(2);
 const matches = (replay: TestReplay, filter: string) =>
   replay.fix.startsWith(filter) || replay.test.includes(filter);
