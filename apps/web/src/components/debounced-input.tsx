@@ -46,6 +46,7 @@ export function DebouncedInput({
 
     pendingExternalValueRef.current = null;
     pendingLocalAcknowledgementsRef.current.clear();
+    if (timeoutRef.current !== null) return;
     if (inputElement.value !== nextValue) {
       inputElement.value = nextValue;
     }
@@ -59,6 +60,12 @@ export function DebouncedInput({
     };
   }, []);
 
+  const reportAndDropExternalValue = (value: string | number): void => {
+    pendingExternalValueRef.current = null;
+    pendingLocalAcknowledgementsRef.current.add(String(value));
+    onChangeRef.current(value);
+  };
+
   const handleValueChange = (value: string | number): void => {
     if (timeoutRef.current !== null) {
       window.clearTimeout(timeoutRef.current);
@@ -66,29 +73,26 @@ export function DebouncedInput({
     }
 
     if (value === "" || value === 0) {
-      pendingLocalAcknowledgementsRef.current.add(String(value));
-      onChangeRef.current(value);
+      reportAndDropExternalValue(value);
       return;
     }
 
     timeoutRef.current = window.setTimeout(() => {
-      pendingLocalAcknowledgementsRef.current.add(String(value));
-      onChangeRef.current(value);
       timeoutRef.current = null;
+      reportAndDropExternalValue(value);
     }, debounce);
   };
 
   const handleBlur = (event: FocusEvent<HTMLInputElement>): void => {
     const pendingExternalValue = pendingExternalValueRef.current;
+    const isEditPending = timeoutRef.current !== null;
 
-    if (pendingExternalValue !== null) {
-      if (timeoutRef.current !== null) {
-        window.clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
-      }
-      if (event.currentTarget.value !== pendingExternalValue) {
-        event.currentTarget.value = pendingExternalValue;
-      }
+    if (
+      pendingExternalValue !== null &&
+      !isEditPending &&
+      event.currentTarget.value !== pendingExternalValue
+    ) {
+      event.currentTarget.value = pendingExternalValue;
     }
 
     pendingExternalValueRef.current = null;
