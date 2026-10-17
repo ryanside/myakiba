@@ -64,11 +64,11 @@ beforeEach(async () => {
   ]);
 });
 
-const readCollection = () =>
+const readCollection = (owner = userId) =>
   db
     .select({ id: collection.id, orderId: collection.orderId })
     .from(collection)
-    .where(eq(collection.userId, userId))
+    .where(eq(collection.userId, owner))
     .orderBy(collection.id);
 
 describe("removing items from an order", () => {
@@ -93,6 +93,41 @@ describe("removing items from an order", () => {
     expect(await readCollection()).toEqual([
       { id: orderedId, orderId },
       { id: ownedId, orderId },
+    ]);
+  });
+
+  test("another user's items stay in their order when their ids are passed", async () => {
+    await db
+      .insert(authSchema.user)
+      .values({ id: "user-2", name: "Aki", email: "a@example.com", username: "aki" });
+    await db.insert(order).values({ id: "order-2", userId: "user-2", title: "HLJ preorder" });
+    await db.insert(collection).values([
+      {
+        id: "other-owned",
+        userId: "user-2",
+        itemId: "item-1",
+        orderId: "order-2",
+        status: "Owned",
+      },
+      {
+        id: "other-ordered",
+        userId: "user-2",
+        itemId: "item-1",
+        orderId: "order-2",
+        status: "Ordered",
+      },
+    ]);
+
+    await OrdersService.deleteOrderItems(userId, [
+      ownedId,
+      orderedId,
+      "other-owned",
+      "other-ordered",
+    ]);
+
+    expect(await readCollection("user-2")).toEqual([
+      { id: "other-ordered", orderId: "order-2" },
+      { id: "other-owned", orderId: "order-2" },
     ]);
   });
 });
