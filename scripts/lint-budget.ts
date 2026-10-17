@@ -140,7 +140,7 @@ if (base) {
   const raises = (before: Budget[], after: Budget) =>
     Object.entries(after).flatMap(([code, files]) =>
       Object.entries(files)
-        .filter(([file, limit]) => before.every((parent) => limit > (parent[code]?.[file] ?? 0)))
+        .filter(([file, limit]) => before.some((parent) => limit > (parent[code]?.[file] ?? 0)))
         .map(([file]) => `${code} in ${file}`),
     );
   const approved = async (commit: string) => {
@@ -188,7 +188,7 @@ if (base) {
     unapproved.push(`Uncommitted ${BUDGET_PATH} raises the budget for ${pendingRaise.join(", ")}.`);
   if (unapproved.length > 0) {
     failures.push(
-      `${unapproved.join("\n")}\nEach commit that changes ${LINT_TOOLING.join(", ")} or raises a budget needs a human's approval, merge commits included. Once you have it, end that commit's message with the trailer "Lint-Budget-Approved-By: <name>". If a merge from ${TRUNK} brought the change in, rebase onto ${TRUNK} instead of merging.`,
+      `${unapproved.join("\n")}\nEach commit that changes ${LINT_TOOLING.join(", ")} or raises a budget needs a human's approval, merge commits included. Once you have it, add the trailer "Lint-Budget-Approved-By: <name>" to that commit's last paragraph, next to any other trailers such as Co-Authored-By. If a merge from ${TRUNK} brought the change in, rebase onto ${TRUNK} instead of merging.`,
     );
   }
 } else {
