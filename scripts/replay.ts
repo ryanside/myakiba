@@ -260,9 +260,10 @@ try {
     const notReported = replay.errors.filter((error) => !lines.includes(error));
     const errorCount = lines.filter((line) => line.includes(": error TS")).length;
     report(
-      run.exitCode !== 0 && notReported.length === 0,
+      run.exitCode !== 0 && replay.errors.length > 0 && notReported.length === 0,
       `${parent}  ${replay.package}  ${errorCount} errors for: ${replay.bug}`,
       [
+        ...(replay.errors.length === 0 ? ["      lists no expected error"] : []),
         ...notReported.map((error) => `      not reported: ${error}`),
         ...(notReported.length > 0 ? [tail(run.output)] : []),
       ],
