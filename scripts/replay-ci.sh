@@ -1,9 +1,63 @@
 #!/usr/bin/env bash
-# Usage: bash scripts/replay-ci.sh
+# Usage: bash scripts/replay-ci.sh [--self-test]
 # Copies this checkout's deploy-config checker and image smoke into past trees and runs them.
-# A cleared row passes only when the fixed tree exits 0. A row that names a later bug reports STILL
-# when the fixed tree fails on that bug alone.
+# A cleared row passes only when the fixed tree exits 0. A row that names a later bug (an ERE) reports
+# STILL when every failure in the fixed tree is that bug. --self-test checks that classification only.
 set -uo pipefail
+
+only_later() {
+  if grep -q '^ERROR ' "$2"; then
+    ! grep '^ERROR ' "$2" | grep -qvE "$1"
+  else
+    grep -qE "$1" "$2"
+  fi
+}
+
+classify() {
+  local expect=$1 code=$2 pattern=$3 later=$4 log=$5
+  case $expect in
+    caught) if [ "$code" != 0 ] && grep -qF "$pattern" "$log"; then echo PASS; else echo FAIL; fi ;;
+    passes) if [ "$code" = 0 ]; then echo PASS; else echo FAIL; fi ;;
+    cleared)
+      if grep -qF "$pattern" "$log"; then
+        echo FAIL
+      elif [ "$code" = 0 ]; then
+        echo PASS
+      elif [ -n "$later" ] && only_later "$later" "$log"; then
+        echo STILL
+      else
+        echo FAIL
+      fi
+      ;;
+  esac
+}
+
+if [ "${1:-}" = --self-test ]; then
+  sample=$(mktemp)
+  bad=0
+  expect_status() {
+    local want=$1 name=$2 got
+    shift 2
+    printf '%b' "$1" >"$sample"
+    got=$(classify "$2" "$3" "$4" "$5" "$sample")
+    [ "$got" = "$want" ] || bad=$((bad + 1))
+    printf '%s %-24s %s (want %s)\n' "$([ "$got" = "$want" ] && echo ok || echo BAD)" "$name" "$got" "$want"
+  }
+  later='VITE_(SERVER_URL|TURNSTILE_SITE_KEY)'
+  expect_status PASS caught 'ERROR a: missing SOURCE_COMMIT\n' caught 1 'missing SOURCE_COMMIT' ''
+  expect_status FAIL caught-exit-0 'ERROR a: missing SOURCE_COMMIT\n' caught 0 'missing SOURCE_COMMIT' ''
+  expect_status PASS cleared-clean 'deploy config ok\n' cleared 0 'missing SOURCE_COMMIT' "$later"
+  expect_status STILL still-only-later 'ERROR a: VITE_SERVER_URL is required\nERROR b: missing VITE_TURNSTILE_SITE_KEY\n' cleared 1 'missing SOURCE_COMMIT' "$later"
+  expect_status FAIL still-mixed 'ERROR a: VITE_SERVER_URL is required\nERROR b: missing AUDIT_UNRELATED_MISSING\n' cleared 1 'missing SOURCE_COMMIT' "$later"
+  expect_status FAIL cleared-unrelated 'ERROR a: missing AUDIT_UNRELATED_MISSING\n' cleared 1 'missing SOURCE_COMMIT' "$later"
+  expect_status FAIL cleared-old-bug 'ERROR a: missing SOURCE_COMMIT\n' cleared 1 'missing SOURCE_COMMIT' "$later"
+  expect_status STILL smoke-still "image smoke: FAIL db-push exited with code 1\nCannot find package 'dotenv'\n" cleared 1 'lockfile is frozen' "Cannot find package 'dotenv'"
+  expect_status FAIL smoke-unrelated 'image smoke: FAIL db-push exited with code 1\nsomething else\n' cleared 1 'lockfile is frozen' "Cannot find package 'dotenv'"
+  rm -f "$sample"
+  echo "replay self-test: $bad bad"
+  [ "$bad" = 0 ]
+  exit
+fi
 
 root=$(git rev-parse --show-toplevel)
 trees=$(mktemp -d)
@@ -35,20 +89,7 @@ replay() {
   cp "$root/scripts/check-deploy-config.ts" "$root/scripts/image-smoke.sh" "$tree/scripts/"
   (cd "$tree" && "$@") >"$log" 2>&1
   code=$?
-  status=FAIL
-  case $expect in
-    caught) if [ "$code" != 0 ] && grep -qF "$pattern" "$log"; then status=PASS; fi ;;
-    passes) if [ "$code" = 0 ]; then status=PASS; fi ;;
-    cleared)
-      if grep -qF "$pattern" "$log"; then
-        status=FAIL
-      elif [ "$code" = 0 ]; then
-        status=PASS
-      elif [ -n "$later" ] && grep -qF "$later" "$log"; then
-        status=STILL
-      fi
-      ;;
-  esac
+  status=$(classify "$expect" "$code" "$pattern" "$later" "$log")
   case $status in
     FAIL) failures=$((failures + 1)) ;;
     STILL) still=$((still + 1)) ;;
@@ -56,7 +97,7 @@ replay() {
   printf '%-5s %-7s %-10s %-34s exit %s  %s\n' "$status" "$expect" "$rev" "$*" "$code" "$log"
   case $status in
     PASS) if [ "$expect" = caught ]; then grep -m1 -F "$pattern" "$log"; else grep -m1 -E '^(deploy config|image smoke)' "$log"; fi ;;
-    STILL) echo "cleared, but still fails on a later bug: $(grep -m1 -F "$later" "$log")" ;;
+    STILL) echo "cleared, but still fails on a later bug: $(grep -m1 -E "$later" "$log")" ;;
     FAIL) grep -m1 -E '^(ERROR|deploy config|image smoke)' "$log" ;;
   esac | cut -c1-240 | sed 's/^/    /'
 }
@@ -66,7 +107,7 @@ replay caught e9f7709c^ '(services.server.build.args): missing VITE_TURNSTILE_SI
 replay caught e9f7709c '(services.server.environment): VITE_TURNSTILE_SITE_KEY is set at runtime' check
 replay passes 2f7942f9 '' check
 replay caught 25a194bc^ '(services.server.build.args): missing SOURCE_COMMIT' check
-replay cleared 25a194bc 'missing SOURCE_COMMIT' --still 'VITE_SERVER_URL is required in' check
+replay cleared 25a194bc 'missing SOURCE_COMMIT' --still 'VITE_(SERVER_URL|TURNSTILE_SITE_KEY)' check
 replay passes HEAD '' check
 
 replay caught a64882e8^ 'lockfile had changes, but lockfile is frozen' smoke db-push
