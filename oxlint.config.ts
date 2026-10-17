@@ -131,5 +131,41 @@ export default defineConfig({
       files: ["packages/utils/src/parse-json.ts"],
       rules: { "no-restricted-properties": "off" },
     },
+    {
+      files: [
+        "apps/web/src/components/wishlist/**",
+        "apps/web/src/hooks/use-wishlist.ts",
+        "apps/web/src/routes/(app)/wishlist.tsx",
+      ],
+      rules: {
+        "no-restricted-imports": [
+          "error",
+          {
+            paths: [
+              {
+                name: "@tanstack/react-query",
+                importNames: [
+                  "infiniteQueryOptions",
+                  "queryOptions",
+                  "useInfiniteQuery",
+                  "useIsFetching",
+                  "useIsMutating",
+                  "useMutation",
+                  "useMutationState",
+                  "useQueries",
+                  "useQuery",
+                  "useQueryClient",
+                  "useSuspenseInfiniteQuery",
+                  "useSuspenseQueries",
+                  "useSuspenseQuery",
+                ],
+                message:
+                  "Read and write server data through a resource module in apps/web/src/data. Declare a new query family in apps/web/src/data/catalog.ts.",
+              },
+            ],
+          },
+        ],
+      },
+    },
   ],
 });
