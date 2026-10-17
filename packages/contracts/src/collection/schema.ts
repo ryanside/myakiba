@@ -1,7 +1,11 @@
 import * as z from "zod";
 import { CATEGORIES, CONDITIONS, SHIPPING_METHODS } from "../shared/constants";
-import { paginationLimitSchema, paginationOffsetSchema } from "../shared/pagination";
-import { collectionSearchSortSchema, sortDirectionSchema } from "../search/schema";
+import {
+  paginationLimitSchema,
+  paginationOffsetSchema,
+  sortDirectionSchema,
+} from "../shared/pagination";
+import { collectionSearchSortSchema } from "../search/schema";
 
 export const collectionSearchSchema = z.object({
   limit: paginationLimitSchema.optional(),

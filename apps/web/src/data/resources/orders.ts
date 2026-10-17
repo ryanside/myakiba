@@ -7,12 +7,8 @@ import type {
   OrderFilters,
   OrderItemsQuery,
 } from "@myakiba/contracts/orders/schema";
-import type {
-  Order,
-  OrderItem,
-  OrderListItem,
-  PaginatedResult,
-} from "@myakiba/contracts/orders/types";
+import type { Order, OrderItem, OrderListItem } from "@myakiba/contracts/orders/types";
+import type { Page } from "@myakiba/contracts/shared/pagination";
 import { hasActiveFiltersOrSorting } from "@/lib/filters";
 import { updateCollectionItem } from "@/queries/collection";
 import {
@@ -219,27 +215,24 @@ export const editOrderItemCommand = defineCommand({
     if (!itemOrderId) return;
 
     await queryClient.cancelQueries({ queryKey: orderItemsOf(itemOrderId) });
-    const previousOrderItems = queryClient.getQueriesData<PaginatedResult<OrderItem>>({
+    const previousOrderItems = queryClient.getQueriesData<Page<OrderItem>>({
       queryKey: orderItemsOf(itemOrderId),
     });
 
     let oldPrice: number | undefined;
-    queryClient.setQueriesData<PaginatedResult<OrderItem>>(
-      { queryKey: orderItemsOf(itemOrderId) },
-      (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          items: old.items.map((item) => {
-            if (item.id === values.id) {
-              oldPrice = item.price;
-              return { ...item, ...values };
-            }
-            return item;
-          }),
-        };
-      },
-    );
+    queryClient.setQueriesData<Page<OrderItem>>({ queryKey: orderItemsOf(itemOrderId) }, (old) => {
+      if (!old) return old;
+      return {
+        ...old,
+        items: old.items.map((item) => {
+          if (item.id === values.id) {
+            oldPrice = item.price;
+            return { ...item, ...values };
+          }
+          return item;
+        }),
+      };
+    });
 
     const priceChanged = oldPrice !== undefined && oldPrice !== values.price;
     const priceDelta = priceChanged ? values.price - (oldPrice as number) : 0;
@@ -290,23 +283,20 @@ export const deleteOrderItemCommand = defineCommand({
     deleteOrderItem(orderId, itemId),
   optimistic: async (queryClient, { orderId, itemId, list }) => {
     await queryClient.cancelQueries({ queryKey: orderItemsOf(orderId) });
-    const previousOrderItems = queryClient.getQueriesData<PaginatedResult<OrderItem>>({
+    const previousOrderItems = queryClient.getQueriesData<Page<OrderItem>>({
       queryKey: orderItemsOf(orderId),
     });
 
     let removedPrice = 0;
-    queryClient.setQueriesData<PaginatedResult<OrderItem>>(
-      { queryKey: orderItemsOf(orderId) },
-      (old) => {
-        if (!old) return old;
-        const removedItem = old.items.find((item) => item.id === itemId);
-        if (removedItem) removedPrice = removedItem.price;
-        return {
-          items: old.items.filter((item) => item.id !== itemId),
-          totalCount: old.totalCount - 1,
-        };
-      },
-    );
+    queryClient.setQueriesData<Page<OrderItem>>({ queryKey: orderItemsOf(orderId) }, (old) => {
+      if (!old) return old;
+      const removedItem = old.items.find((item) => item.id === itemId);
+      if (removedItem) removedPrice = removedItem.price;
+      return {
+        items: old.items.filter((item) => item.id !== itemId),
+        totalCount: old.totalCount - 1,
+      };
+    });
 
     const orderDetailKey = orders.detail.key(orderId);
     await queryClient.cancelQueries({ queryKey: orderDetailKey });
