@@ -103,4 +103,17 @@ describe("dragging a card to another column", () => {
       done: ["first", "tall", "second"],
     });
   });
+
+  test("a tall card grabbed near its top follows the pointer, not its own center", async () => {
+    render(
+      <Board initial={{ todo: [{ id: "tall" }], done: [{ id: "first" }, { id: "second" }] }} />,
+    );
+
+    await drag("tall", { x: 100, y: 10 }, { x: 400, y: 220 });
+
+    expect({ todo: cardsIn("todo"), done: cardsIn("done") }).toEqual({
+      todo: [],
+      done: ["first", "tall", "second"],
+    });
+  });
 });

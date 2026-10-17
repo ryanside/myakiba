@@ -16,7 +16,8 @@
       "bug": "a dragged kanban card landed away from the pointer",
       "test": "apps/web/src/components/reui/kanban.test.tsx",
       "fixed": [
-        "dragging a card to another column > a tall card grabbed near its top lands where the pointer is"
+        "dragging a card to another column > a tall card grabbed near its top lands where the pointer is",
+        "dragging a card to another column > a tall card grabbed near its top follows the pointer, not its own center"
       ]
     },
     {
@@ -41,7 +42,9 @@
       "fix": "527a76d4",
       "bug": "a failed order-item delete left owned items detached",
       "test": "apps/server/src/routers/orders/service.test.ts",
-      "fixed": ["removing items from an order > a failed delete leaves every item in the order"]
+      "fixed": [
+        "removing items from an order > a failed delete leaves every item in the order"
+      ]
     },
     {
       "fix": "ed65f1d8",
@@ -71,7 +74,9 @@
       "fix": "9fbb24c4",
       "bug": "the debounced callback called a stale onChange",
       "test": "apps/web/src/components/debounced-input.test.tsx",
-      "fixed": ["DebouncedInput > the debounced text goes to the onChange from the latest render"]
+      "fixed": [
+        "DebouncedInput > the debounced text goes to the onChange from the latest render"
+      ]
     },
     {
       "fix": "ed9d00fb",
