@@ -142,7 +142,7 @@ export default function FiltersForm({
 
   const getMultiSelectDisplay = (items: string[] | undefined, label: string): string => {
     if (!items || items.length === 0) return `Select ${label}`;
-    if (items.length === 1) return items[0];
+    if (items.length === 1 && items[0] !== undefined) return items[0];
     return `${items.length} selected`;
   };
 
@@ -338,9 +338,7 @@ export default function FiltersForm({
                         locale={userLocale}
                         placeholder="Min"
                         value={field.state.value || ""}
-                        onValueChange={(maskedValue, unmaskedValue) =>
-                          field.handleChange(unmaskedValue)
-                        }
+                        onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
                       />
                     )}
                   />
@@ -353,9 +351,7 @@ export default function FiltersForm({
                         locale={userLocale}
                         placeholder="Max"
                         value={field.state.value || ""}
-                        onValueChange={(maskedValue, unmaskedValue) =>
-                          field.handleChange(unmaskedValue)
-                        }
+                        onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
                       />
                     )}
                   />
@@ -813,9 +809,7 @@ export default function FiltersForm({
                         locale={userLocale}
                         placeholder="Min"
                         value={field.state.value || ""}
-                        onValueChange={(maskedValue, unmaskedValue) =>
-                          field.handleChange(unmaskedValue)
-                        }
+                        onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
                       />
                     )}
                   />
@@ -828,9 +822,7 @@ export default function FiltersForm({
                         locale={userLocale}
                         placeholder="Max"
                         value={field.state.value || ""}
-                        onValueChange={(maskedValue, unmaskedValue) =>
-                          field.handleChange(unmaskedValue)
-                        }
+                        onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
                       />
                     )}
                   />

@@ -14,5 +14,5 @@ const KAOMOJI_POOL = [
 ] as const;
 
 export function randomKaomoji(): string {
-  return KAOMOJI_POOL[Math.floor(Math.random() * KAOMOJI_POOL.length)];
+  return KAOMOJI_POOL[Math.floor(Math.random() * KAOMOJI_POOL.length)] ?? KAOMOJI_POOL[0];
 }

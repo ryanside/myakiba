@@ -215,7 +215,7 @@ class OrdersService {
   }
 
   async getOrder(userId: string, orderId: string) {
-    const orderInfoRows = await db
+    const [orderInfo] = await db
       .select({
         orderId: order.id,
         title: order.title,
@@ -244,13 +244,13 @@ class OrdersService {
       .where(and(eq(order.userId, userId), eq(order.id, orderId)))
       .groupBy(order.id);
 
-    if (orderInfoRows.length === 0) {
+    if (!orderInfo) {
       throw new Error("ORDER_NOT_FOUND");
     }
 
     return {
-      ...orderInfoRows[0],
-      images: orderInfoRows[0].images.slice(0, 4),
+      ...orderInfo,
+      images: orderInfo.images.slice(0, 4),
     };
   }
 
@@ -261,7 +261,7 @@ class OrdersService {
     cascadeOptions: readonly OrderCascadeOption[],
   ) {
     const merged = await db.transaction(async (tx) => {
-      const newOrderInserted = await tx
+      const [newOrderInserted] = await tx
         .insert(order)
         .values({
           userId,
@@ -269,7 +269,7 @@ class OrdersService {
         })
         .returning();
 
-      if (!newOrderInserted || newOrderInserted.length === 0) {
+      if (!newOrderInserted) {
         throw new Error("FAILED_TO_INSERT_NEW_ORDER");
       }
 
@@ -283,7 +283,7 @@ class OrdersService {
       const collectionUpdated = await tx
         .update(collection)
         .set({
-          orderId: newOrderInserted[0].id,
+          orderId: newOrderInserted.id,
           ...cascadeProperties,
         })
         .where(and(eq(collection.userId, userId), inArray(collection.orderId, orderIds)))
@@ -318,14 +318,14 @@ class OrdersService {
     cascadeOptions: readonly OrderCascadeOption[],
   ) {
     const splitted = await db.transaction(async (tx) => {
-      const newOrderInserted = await tx
+      const [newOrderInserted] = await tx
         .insert(order)
         .values({
           userId,
           ...newOrder,
         })
         .returning();
-      if (newOrderInserted.length === 0) {
+      if (!newOrderInserted) {
         throw new Error("FAILED_TO_INSERT_NEW_ORDER");
       }
 
@@ -339,7 +339,7 @@ class OrdersService {
       const collectionUpdated = await tx
         .update(collection)
         .set({
-          orderId: newOrderInserted[0].id,
+          orderId: newOrderInserted.id,
           ...cascadeProperties,
         })
         .where(and(eq(collection.userId, userId), inArray(collection.id, collectionIds)))

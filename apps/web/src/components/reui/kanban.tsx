@@ -301,6 +301,7 @@ function Kanban<T, TColumnId extends string = string>({
         const newActiveItems = [...activeItems];
         const newOverItems = [...overItems];
         const [movedItem] = newActiveItems.splice(activeIndex, 1);
+        if (movedItem === undefined) return;
         newOverItems.splice(overIndex, 0, movedItem);
 
         recentlyMovedToNewContainerRef.current = true;
@@ -693,7 +694,7 @@ export interface KanbanColumnContentProps extends useRender.ComponentProps<"div"
 function KanbanColumnContent({ value, className, render, ...props }: KanbanColumnContentProps) {
   const { columns, getItemId } = useContext(KanbanContext);
 
-  const itemIds = useMemo(() => columns[value].map(getItemId), [columns, getItemId, value]);
+  const itemIds = useMemo(() => columns[value]?.map(getItemId) ?? [], [columns, getItemId, value]);
 
   const defaultProps = {
     "data-slot": "kanban-column-content",

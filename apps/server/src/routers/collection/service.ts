@@ -157,7 +157,7 @@ class CollectionService {
   }
 
   async getCollectionItem(userId: string, collectionId: string) {
-    const collectionItem = await db
+    const [collectionItem] = await db
       .select({
         id: collection.id,
         orderId: collection.orderId,
@@ -191,11 +191,11 @@ class CollectionService {
       .leftJoin(item_release, eq(collection.releaseId, item_release.id))
       .where(and(eq(collection.userId, userId), eq(collection.id, collectionId)));
 
-    if (collectionItem.length === 0) {
+    if (!collectionItem) {
       throw new Error("COLLECTION_ITEM_NOT_FOUND");
     }
 
-    return collectionItem[0];
+    return collectionItem;
   }
 
   async updateCollectionItem(
@@ -236,16 +236,16 @@ class CollectionService {
   }
 
   async deleteCollectionItem(userId: string, collectionId: string) {
-    const deleted = await db
+    const [deleted] = await db
       .delete(collection)
       .where(and(eq(collection.userId, userId), eq(collection.id, collectionId)))
       .returning();
 
-    if (deleted.length === 0) {
+    if (!deleted) {
       throw new Error("COLLECTION_ITEM_NOT_FOUND");
     }
 
-    return deleted[0];
+    return deleted;
   }
 
   async deleteCollectionItems(userId: string, collectionIds: string[]) {

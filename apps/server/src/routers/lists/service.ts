@@ -92,7 +92,7 @@ class ListsService {
         .select({ position: sql<number>`COALESCE(MAX(${list.position}), -1)::integer` })
         .from(list)
         .where(eq(list.userId, userId));
-      const created = await tx
+      const [created] = await tx
         .insert(list)
         .values({ userId, ...input, position: (positions[0]?.position ?? -1) + 1 })
         .returning({
@@ -104,12 +104,13 @@ class ListsService {
           updatedAt: list.updatedAt,
         });
 
-      return created[0];
+      if (!created) throw new Error("FAILED_TO_CREATE_LIST");
+      return created;
     });
   }
 
   async updateList(userId: string, listId: string, input: ListInput) {
-    const updated = await db
+    const [updated] = await db
       .update(list)
       .set({ ...input, updatedAt: new Date() })
       .where(and(eq(list.id, listId), eq(list.userId, userId)))
@@ -121,8 +122,8 @@ class ListsService {
         updatedAt: list.updatedAt,
       });
 
-    if (updated.length === 0) throw new Error("LIST_NOT_FOUND");
-    return updated[0];
+    if (!updated) throw new Error("LIST_NOT_FOUND");
+    return updated;
   }
 
   async deleteLists(userId: string, listIds: readonly string[]) {

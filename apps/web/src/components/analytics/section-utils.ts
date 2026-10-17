@@ -25,5 +25,8 @@ export function sectionLabel(sectionName: string): string {
 
 export function sectionGradientColor(sectionName: string): string {
   const sectionIndex = SECTION_DISPLAY_ORDER.indexOf(sectionName);
-  return SECTION_GRADIENT_COLORS[sectionIndex % SECTION_GRADIENT_COLORS.length];
+  return (
+    SECTION_GRADIENT_COLORS[sectionIndex % SECTION_GRADIENT_COLORS.length] ??
+    SECTION_GRADIENT_COLORS[0]
+  );
 }

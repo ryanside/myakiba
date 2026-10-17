@@ -10,6 +10,15 @@ type TestReplay = {
   fixed: string[];
 };
 
+type TypesReplay = {
+  name: string;
+  fix: string;
+  bug: string;
+  package: string;
+  config: string[];
+  errors: string[];
+};
+
 type TestRun = {
   exitCode: number;
   passed: string[];
@@ -20,24 +29,44 @@ type TestRun = {
 };
 
 const root = path.resolve(import.meta.dir, "..");
-const { test: replays = [] }: { test?: TestReplay[] } = await Bun.file(
+const { test = [], types = [] }: { test?: TestReplay[]; types?: TypesReplay[] } = await Bun.file(
   path.join(import.meta.dir, "replays.json"),
 ).json();
-if (replays.length === 0) {
+const replays = { test, types };
+if (replays.test.length + replays.types.length === 0) {
   console.error("FAIL  scripts/replays.json lists no replay");
   process.exit(1);
 }
-const filters = process.argv.slice(2);
-const matches = (replay: TestReplay, filter: string) =>
-  replay.fix.startsWith(filter) || replay.test.includes(filter);
-const unmatched = filters.filter((filter) => !replays.some((replay) => matches(replay, filter)));
-if (unmatched.length > 0) {
-  console.error(`FAIL  no replay matches ${unmatched.join(" ")}`);
+const typesMode = process.argv.includes("--types");
+const kind = typesMode ? "types" : "test";
+if (replays[kind].length === 0) {
+  console.error(`FAIL  scripts/replays.json lists no ${kind} replay`);
   process.exit(1);
 }
-const selected = replays.filter(
-  (replay) => filters.length === 0 || filters.some((filter) => matches(replay, filter)),
+const filters = process.argv.slice(2).filter((arg) => arg !== "--types");
+const matches = (replay: TestReplay, filter: string) =>
+  replay.fix.startsWith(filter) || replay.test.includes(filter);
+const matchesTypes = (replay: TypesReplay, filter: string) =>
+  replay.fix.startsWith(filter) || replay.name === filter;
+const unmatched = filters.filter((filter) =>
+  typesMode
+    ? !replays.types.some((replay) => matchesTypes(replay, filter))
+    : !replays.test.some((replay) => matches(replay, filter)),
 );
+if (unmatched.length > 0) {
+  console.error(`FAIL  no ${kind} replay matches ${unmatched.join(" ")}`);
+  process.exit(1);
+}
+const selected = typesMode
+  ? []
+  : replays.test.filter(
+      (replay) => filters.length === 0 || filters.some((filter) => matches(replay, filter)),
+    );
+const selectedTypes = typesMode
+  ? replays.types.filter(
+      (replay) => filters.length === 0 || filters.some((filter) => matchesTypes(replay, filter)),
+    )
+  : [];
 
 // bun test prints passing tests only when AGENT, CLAUDECODE and REPL_ID are unset.
 $.env({ ...process.env, AGENT: undefined, CLAUDECODE: undefined, REPL_ID: undefined, HUSKY: "0" });
@@ -85,6 +114,25 @@ async function runTest(checkout: string, testFile: string): Promise<TestRun> {
   };
 }
 
+async function checkTypes(checkout: string, packageDir: string) {
+  const { scripts } = await readPackage(path.join(checkout, packageDir));
+  const script: string = scripts?.["check-types"] ?? "";
+  const [command, ...args] = script.split(/\s+/).filter(Boolean);
+  if (command !== "tsc")
+    return { exitCode: 1, output: `${packageDir} check-types is not a tsc command: ${script}` };
+  const bins = [path.join(checkout, packageDir), checkout].map((dir) =>
+    path.join(dir, "node_modules", ".bin"),
+  );
+  const { exitCode, stdout } = await $`tsc ${args} --pretty false`
+    .cwd(path.join(checkout, packageDir))
+    .env({ ...process.env, PATH: [...bins, process.env.PATH].join(path.delimiter) })
+    .nothrow()
+    .quiet();
+  return { exitCode, output: stdout.toString() };
+}
+
+const tsDiagnostic = /^\S.*\(\d+,\d+\): error TS\d+: \S/;
+
 const tail = (output: string) =>
   output
     .trimEnd()
@@ -107,6 +155,12 @@ for (const testFile of new Set(selected.map((replay) => replay.test))) {
     run.skipped.length === 0 &&
     run.passed.length > 0;
   report(pass, `head  ${testFile}`, pass ? [] : [tail(run.output)]);
+}
+
+for (const packageDir of new Set(selectedTypes.map((replay) => replay.package))) {
+  const run = await checkTypes(root, packageDir);
+  const pass = run.exitCode === 0;
+  report(pass, `head  ${packageDir} check-types`, pass ? [] : [tail(run.output)]);
 }
 
 const isAlive = (pid: number) => {
@@ -144,8 +198,16 @@ for (const [signal, exitCode] of [
 }
 await $`git -C ${root} worktree add --detach --no-checkout ${worktree}`.quiet();
 
+async function harnessOf(testFile: string, packageDir: string) {
+  const harness =
+    await $`git ls-files --cached --others --exclude-standard ${testFile} ${`${packageDir}/bunfig.toml`} ${`${packageDir}/test.env`} ${`${packageDir}/test`}`
+      .cwd(root)
+      .text();
+  return harness.split("\n").filter(Boolean);
+}
+
 let installedLock = "";
-async function checkOut(revision: string, testFile: string) {
+async function checkOut(revision: string, packageDir: string, files: string[]) {
   await $`git checkout --quiet --detach --force ${revision} && git clean -fdq`.cwd(worktree);
   const lock = await $`git rev-parse ${`${revision}:bun.lock`}`.cwd(worktree).text();
   if (lock !== installedLock) {
@@ -153,12 +215,7 @@ async function checkOut(revision: string, testFile: string) {
     installedLock = lock;
   }
 
-  const packageDir = await packageDirOf(testFile);
-  const harness =
-    await $`git ls-files --cached --others --exclude-standard ${testFile} ${`${packageDir}/bunfig.toml`} ${`${packageDir}/test.env`} ${`${packageDir}/test`}`
-      .cwd(root)
-      .text();
-  for (const file of harness.split("\n").filter(Boolean))
+  for (const file of files)
     await Bun.write(path.join(worktree, file), Bun.file(path.join(root, file)));
 
   const head = await readPackage(path.join(root, packageDir));
@@ -167,7 +224,13 @@ async function checkOut(revision: string, testFile: string) {
   const missing = Object.keys(head.devDependencies ?? {}).filter((name) => !(name in declared));
   if (missing.length > 0) {
     const specs = await Promise.all(
-      missing.map(async (name) => `${name}@${await installedVersion(packageDir, name)}`),
+      missing.map(async (name) => {
+        const spec: string = head.devDependencies[name];
+        const version = spec.startsWith("workspace:")
+          ? spec
+          : await installedVersion(packageDir, name);
+        return `${name}@${version}`;
+      }),
     );
     await $`bun add --dev --no-save ${specs}`.cwd(path.join(worktree, packageDir)).quiet();
   }
@@ -175,9 +238,11 @@ async function checkOut(revision: string, testFile: string) {
 
 try {
   for (const replay of selected) {
-    await checkOut(`${replay.fix}^`, replay.test);
+    const packageDir = await packageDirOf(replay.test);
+    const harness = await harnessOf(replay.test, packageDir);
+    await checkOut(`${replay.fix}^`, packageDir, harness);
     const before = await runTest(worktree, replay.test);
-    await checkOut(replay.fix, replay.test);
+    await checkOut(replay.fix, packageDir, harness);
     const after = await runTest(worktree, replay.test);
 
     const flipped = before.failed.filter((name) => after.passed.includes(name));
@@ -195,6 +260,31 @@ try {
       ...(before.errorOutsideTests || before.failed.length === 0 ? [tail(before.output)] : []),
       ...(after.errorOutsideTests || didNotFlip.length > 0 ? [tail(after.output)] : []),
     ]);
+  }
+
+  for (const replay of selectedTypes) {
+    const parent = `${replay.fix}^`;
+    await checkOut(parent, replay.package, replay.config);
+
+    const run = await checkTypes(worktree, replay.package);
+    const diagnostics = run.output.split("\n").filter((line) => tsDiagnostic.test(line));
+    const malformed = replay.errors.filter((error) => !tsDiagnostic.test(error));
+    const notReported = replay.errors.filter(
+      (error) => tsDiagnostic.test(error) && !diagnostics.includes(error),
+    );
+    report(
+      run.exitCode !== 0 &&
+        replay.errors.length > 0 &&
+        malformed.length === 0 &&
+        notReported.length === 0,
+      `${parent}  ${replay.package}  ${diagnostics.length} errors for: ${replay.bug}`,
+      [
+        ...(replay.errors.length === 0 ? ["      lists no expected error"] : []),
+        ...malformed.map((error) => `      not a TS diagnostic: ${JSON.stringify(error)}`),
+        ...notReported.map((error) => `      not reported: ${error}`),
+        ...(notReported.length > 0 ? [tail(run.output)] : []),
+      ],
+    );
   }
 } finally {
   removeWorktree();
