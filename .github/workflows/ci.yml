@@ -29,6 +29,9 @@ jobs:
       - name: Test the deploy config checker
         run: bun test scripts/check-deploy-config.test.ts
 
+      - name: Test the replay classification
+        run: bash scripts/replay-ci.sh --self-test
+
       - name: Check deploy config
         id: deploy-config
         run: |
