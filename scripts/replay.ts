@@ -1,5 +1,5 @@
 import { $ } from "bun";
-import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -107,17 +107,19 @@ const isAlive = (pid: number) => {
     return (error as NodeJS.ErrnoException).code !== "ESRCH";
   }
 };
-for (const name of await readdir(tmpdir())) {
-  const pid = Number(/^myakiba-replay-(\d+)-/.exec(name)?.[1]);
+const replayDir = path.join(tmpdir(), "myakiba-replay");
+await mkdir(replayDir, { recursive: true });
+for (const name of await readdir(replayDir)) {
+  const pid = Number(/^(\d+)-/.exec(name)?.[1]);
   if (!pid || isAlive(pid)) continue;
-  const stale = path.join(tmpdir(), name);
+  const stale = path.join(replayDir, name);
   await $`git -C ${root} worktree remove --force ${stale}`.nothrow().quiet();
   await rm(stale, { recursive: true, force: true }).catch((error) =>
     console.warn(`could not remove ${stale}: ${error}`),
   );
 }
 
-const worktree = await mkdtemp(path.join(tmpdir(), `myakiba-replay-${process.pid}-`));
+const worktree = await mkdtemp(path.join(replayDir, `${process.pid}-`));
 const removeWorktree = () =>
   Bun.spawnSync(["git", "-C", root, "worktree", "remove", "--force", worktree]);
 for (const [signal, exitCode] of [
