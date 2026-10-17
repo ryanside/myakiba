@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 function Label({ className, ...props }: React.ComponentProps<"label">) {
   return (
-    // oxlint-disable-next-line label-has-associated-control -- The shared Label primitive gets its control from each caller's htmlFor or children (until 2027-04-16, approved by ryanside)
+    // oxlint-disable-next-line label-has-associated-control -- The shared Label primitive gets its control from each caller's htmlFor or children (until 2027-04-16, approved by root, pending operator review)
     <label
       data-slot="label"
       className={cn(
