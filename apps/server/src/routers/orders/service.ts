@@ -1,12 +1,12 @@
 import type { OrderCascadeOption } from "@myakiba/contracts/orders/constants";
-import type { OrderItemsQuery } from "@myakiba/contracts/orders/schema";
+import type { NewOrder, OrderItemsQuery } from "@myakiba/contracts/orders/schema";
 import { db } from "@myakiba/db/client";
 import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
 import { order, collection, item, item_release } from "@myakiba/db/schema/figure";
 import { eq, and, inArray, sql, desc, asc, ilike, ne, gte, lte, or, isNull } from "drizzle-orm";
 import type { OrderStatus, ShippingMethod } from "@myakiba/contracts/shared/types";
 import { orderPreviewImagesSql } from "@/lib/order-preview";
-import type { OrderInsertType, OrderUpdateType } from "./model";
+import type { OrderUpdateType } from "./model";
 
 function removeOrderItems(userId: string, collectionIds: string[], orderId?: string) {
   const orderItems = and(
@@ -257,7 +257,7 @@ class OrdersService {
   async mergeOrders(
     userId: string,
     orderIds: string[],
-    newOrder: Omit<OrderInsertType, "userId">,
+    newOrder: NewOrder,
     cascadeOptions: readonly OrderCascadeOption[],
   ) {
     const merged = await db.transaction(async (tx) => {
@@ -314,7 +314,7 @@ class OrdersService {
   async splitOrders(
     userId: string,
     collectionIds: string[],
-    newOrder: Omit<OrderInsertType, "userId">,
+    newOrder: NewOrder,
     cascadeOptions: readonly OrderCascadeOption[],
   ) {
     const splitted = await db.transaction(async (tx) => {
