@@ -115,14 +115,23 @@ async function runTest(checkout: string, testFile: string): Promise<TestRun> {
 }
 
 async function checkTypes(checkout: string, packageDir: string) {
-  const { exitCode, stdout, stderr } = await $`bun run check-types`
+  const { scripts } = await readPackage(path.join(checkout, packageDir));
+  const script: string = scripts?.["check-types"] ?? "";
+  const [command, ...args] = script.split(/\s+/).filter(Boolean);
+  if (command !== "tsc")
+    return { exitCode: 1, output: `${packageDir} check-types is not a tsc command: ${script}` };
+  const bins = [path.join(checkout, packageDir), checkout].map((dir) =>
+    path.join(dir, "node_modules", ".bin"),
+  );
+  const { exitCode, stdout } = await $`tsc ${args} --pretty false`
     .cwd(path.join(checkout, packageDir))
+    .env({ ...process.env, PATH: [...bins, process.env.PATH].join(path.delimiter) })
     .nothrow()
     .quiet();
-  return { exitCode, output: `${stdout}${stderr}` };
+  return { exitCode, output: stdout.toString() };
 }
 
-const tsDiagnostic = /^\S.*: error TS\d+: \S/;
+const tsDiagnostic = /^\S.*\(\d+,\d+\): error TS\d+: \S/;
 
 const tail = (output: string) =>
   output
