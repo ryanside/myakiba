@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Usage: scripts/image-smoke.sh [db-push[=IMAGE]] [server[=IMAGE]], from the repo root with docker and bun on PATH.
+# Usage: scripts/image-smoke.sh [db-push[=IMAGE]] [server[=IMAGE]]
 # Runs each image in order against throwaway Postgres and Redis. Builds it from this checkout unless IMAGE is given.
 set -euo pipefail
+cd "$(dirname "$0")/.."
 
 prefix=${SMOKE_PREFIX:-image-smoke-$$}
 timeout=${SMOKE_TIMEOUT:-10}
@@ -41,7 +42,7 @@ exited() { [ "$(docker inspect -f '{{.State.Status}}' "$1")" = exited ]; }
 
 crashed() {
   docker logs "$1" 2>&1 | grep 'Invalid environment variables' >/dev/null &&
-    fail "$1 rejected its environment: a variable below is missing or invalid. If it is new, also set it in docker-compose.production.yml and on the production host before you deploy. Then add or fix its placeholder here." "$1"
+    fail "$1 rejected its environment: a variable below is missing or invalid. If it is new, also set it in docker-compose.production.yml and on the production host before you deploy. Then add or fix its placeholder in smoke_server in scripts/image-smoke.sh." "$1"
   fail "$1 exited with code $(docker inspect -f '{{.State.ExitCode}}' "$1")" "$1"
 }
 
