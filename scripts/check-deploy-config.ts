@@ -4,23 +4,32 @@ import path from "node:path";
 
 type ClientVar = { name: string; source: string };
 
+type Stage = {
+  name: string;
+  line: number;
+  parent: Stage | undefined;
+  text: string;
+  args: Map<string, boolean>;
+};
+
 type Dockerfile = {
   file: string;
-  buildsWeb: boolean;
-  webStageArgs: Set<string>;
-  args: Map<string, { hasDefault: boolean; requiredByUse: boolean }>;
+  webBuild: { stage: Stage; line: number; argsBefore: Set<string> } | undefined;
+  args: Map<string, { line: number; hasDefault: boolean; requiredByUse: boolean }>;
 };
 
 type Build = {
   where: string;
   argsAt: string;
+  envAt: string;
   dockerfile: string;
   publishes: boolean;
-  args: Set<string>;
+  args: Map<string, string>;
   runtimeEnv: Set<string>;
+  references: (value: string) => string[];
 };
 
-type ComposeList = Record<string, string> | string[];
+type ComposeList = Record<string, string | null> | string[];
 
 type Compose = {
   services?: Record<
@@ -45,22 +54,70 @@ type Workflow = {
   >;
 };
 
+type ClientVars = { ok: true; vars: ClientVar[] } | { ok: false; error: string };
+
+type EnvSchema = { safeParse: (value?: undefined) => { success: boolean } };
+
 const read = (file: string): string => readFileSync(file, "utf-8");
 
-const keyOf = (assignment: string): string => assignment.replace(/[=].*$/s, "").trim();
+const assignments = (list: ComposeList = []): Map<string, string> =>
+  new Map(
+    Array.isArray(list)
+      ? list.map((item) => [item.replace(/[=].*$/s, "").trim(), item.replace(/^[^=]*=?/, "")])
+      : Object.entries(list).map(([key, value]) => [key, value ?? ""]),
+  );
 
-const composeKeys = (list: ComposeList = []): string[] =>
-  Array.isArray(list) ? list.map(keyOf) : Object.keys(list);
+// Each anchor is searched for on a line after the previous anchor's line.
+function lineOf(file: string, ...anchors: string[]): number {
+  let found = 0;
+  let line = 0;
+  for (const [index, text] of read(file).split("\n").entries())
+    if (found < anchors.length && text.includes(anchors[found] ?? "")) {
+      found++;
+      line = index + 1;
+    }
+  return line;
+}
 
-function requiredClientVars(): ClientVar[] {
-  if (!existsSync("packages/env")) return clientVarsBeforePackagesEnv();
+async function requiredClientVars(): Promise<ClientVars> {
+  if (!existsSync("packages/env")) return { ok: true, vars: clientVarsBeforePackagesEnv() };
   const source = "packages/env/src/web.ts";
-  if (!existsSync(source)) return [];
-  const text = read(source);
-  const client = text.slice(text.indexOf("client:"), text.indexOf("runtimeEnv"));
-  return [...client.matchAll(/(VITE_[A-Z0-9_]+)\s*:([\s\S]*?)(?=\bVITE_[A-Z0-9_]+\s*:|$)/g)]
-    .filter((match) => !/\.optional\(\)|\.default\(/.test(match[2] ?? ""))
-    .map((match) => ({ name: match[1] ?? "", source }));
+  if (!existsSync(source))
+    return {
+      ok: false,
+      error: `${source} does not exist. If the client env moved, point requiredClientVars in scripts/check-deploy-config.ts at its file.`,
+    };
+  let client: Record<string, EnvSchema> | undefined;
+  Bun.plugin({
+    name: "read-client-env-schema",
+    setup(build) {
+      build.module("@t3-oss/env-core", () => ({
+        exports: {
+          createEnv: (options: { client?: Record<string, EnvSchema> }) => {
+            client = options.client;
+            return {};
+          },
+        },
+        loader: "object",
+      }));
+    },
+  });
+  try {
+    await import(path.resolve(source));
+  } catch (error) {
+    return {
+      ok: false,
+      error: `could not load ${source} to read its client schema (${String(error)}). Run bun install first.`,
+    };
+  }
+  if (!client)
+    return { ok: false, error: `${source} did not call createEnv with a client schema.` };
+  return {
+    ok: true,
+    vars: Object.entries(client)
+      .filter(([, schema]) => !schema.safeParse().success)
+      .map(([name]) => ({ name, source })),
+  };
 }
 
 function clientVarsBeforePackagesEnv(): ClientVar[] {
@@ -72,30 +129,77 @@ function clientVarsBeforePackagesEnv(): ClientVar[] {
 }
 
 function parseDockerfile(file: string): Dockerfile {
-  const text = read(file);
+  const lines = read(file).split("\n");
+  const globalDefaults = new Set<string>();
+  const stages: Stage[] = [];
+  const argLines = new Map<string, number>();
+  lines.forEach((line, index) => {
+    const from = /^\s*FROM\s+(\S+)(?:\s+AS\s+(\S+))?/i.exec(line);
+    if (from) {
+      const base = from[1]?.toLowerCase();
+      stages.push({
+        name: from[2]?.toLowerCase() ?? `stage ${stages.length}`,
+        line: index + 1,
+        parent: stages.find((stage) => stage.name === base),
+        text: "",
+        args: new Map(),
+      });
+      return;
+    }
+    const stage = stages.at(-1);
+    const arg = /^\s*ARG\s+(\w+)(=\S*)?/.exec(line);
+    if (!stage) {
+      if (arg?.[2]) globalDefaults.add(arg[1] ?? "");
+      return;
+    }
+    stage.text += `${line}\n`;
+    if (!arg) return;
+    const name = arg[1] ?? "";
+    stage.args.set(name, Boolean(arg[2]) || globalDefaults.has(name));
+    if (!argLines.has(name)) argLines.set(name, index + 1);
+  });
+
+  // A stage sees the ARGs, and their defaults, of the stages it is built FROM.
+  const hasDefault = (stage: Stage | undefined, name: string): boolean =>
+    stage !== undefined && (stage.args.get(name) === true || hasDefault(stage.parent, name));
+
   const args: Dockerfile["args"] = new Map();
-  for (const [, name = "", initializer] of text.matchAll(/^\s*ARG\s+(\w+)(=\S*)?/gm)) {
-    args.set(name, {
-      hasDefault: Boolean(initializer) || Boolean(args.get(name)?.hasDefault),
-      requiredByUse: text.includes(`\${${name}:?`),
-    });
+  for (const stage of stages)
+    for (const name of stage.args.keys()) {
+      const previous = args.get(name);
+      args.set(name, {
+        line: argLines.get(name) ?? stage.line,
+        hasDefault: (previous?.hasDefault ?? true) && hasDefault(stage, name),
+        requiredByUse: (previous?.requiredByUse ?? false) || stage.text.includes(`\${${name}:?`),
+      });
+    }
+
+  const fullText = lines.join("\n");
+  const webIndex = lines.findIndex((line) =>
+    /\b(bun run build|vite build|turbo (run )?build)/.test(line),
+  );
+  const webStage = stages.toReversed().find((stage) => stage.line - 1 < webIndex);
+  let webBuild: Dockerfile["webBuild"];
+  if (/apps\/web/.test(fullText) && webIndex !== -1 && webStage) {
+    const argsBefore = new Set<string>();
+    for (let index = webStage.line; index < webIndex; index++) {
+      const name = /^\s*ARG\s+(\w+)/.exec(lines[index] ?? "")?.[1];
+      if (name) argsBefore.add(name);
+    }
+    for (let stage = webStage.parent; stage; stage = stage.parent)
+      for (const name of stage.args.keys()) argsBefore.add(name);
+    webBuild = { stage: webStage, line: webIndex + 1, argsBefore };
   }
-  const webBuild = /apps\/web/.test(text)
-    ? text.search(/\b(bun run build|vite build|turbo (run )?build)/)
-    : -1;
-  // An ARG is visible only after its declaration in its own stage.
-  const webStage =
-    text
-      .slice(0, Math.max(webBuild, 0))
-      .split(/^FROM\s/im)
-      .at(-1) ?? "";
-  return {
-    file,
-    buildsWeb: webBuild >= 0,
-    webStageArgs: new Set([...webStage.matchAll(/^\s*ARG\s+(\w+)/gm)].map(([, name = ""]) => name)),
-    args,
-  };
+  return { file, webBuild, args };
 }
+
+const composeReferences = (value: string): string[] =>
+  [...value.matchAll(/\$\{?([A-Za-z_][A-Za-z0-9_]*)/g)].map(([, name = ""]) => name);
+
+const workflowReferences = (value: string): string[] =>
+  [...value.matchAll(/\$\{\{\s*(?:vars|secrets|env|inputs)\.(\w+)\s*\}\}/g)].map(
+    ([, name = ""]) => name,
+  );
 
 function workflowBuilds(): Build[] {
   const dir = ".github/workflows";
@@ -115,19 +219,27 @@ function workflowBuilds(): Build[] {
               /\$\{\{\s*matrix\.(\w+)\s*\}\}/g,
               (_, key: string) => entry[key] ?? "",
             );
+          const argsKey = /\$\{\{\s*matrix\.(\w+)\s*\}\}/.exec(inputs["build-args"] ?? "")?.[1];
           const where = `${file} jobs.${jobId}${entry.image ? ` matrix entry "${entry.image}"` : ""}`;
-          const argsKey =
-            /\$\{\{\s*matrix\.(\w+)\s*\}\}/.exec(inputs["build-args"] ?? "")?.[1] ?? "build-args";
+          const line = argsKey
+            ? lineOf(file, "jobs:", `  ${jobId}:`, `image: ${entry.image}`, `${argsKey}:`)
+            : lineOf(file, "jobs:", `  ${jobId}:`, "build-args:");
           builds.push({
             where,
-            argsAt: `${where} ${argsKey}`,
+            argsAt: `${file}:${line} (jobs.${jobId}${entry.image ? ` matrix entry "${entry.image}"` : ""} ${argsKey ?? "build-args"})`,
+            envAt: where,
             // build-push-action reads file from the checkout root, not from context.
             dockerfile: path.normalize(
               resolve(inputs.file) || path.join(resolve(inputs.context) || ".", "Dockerfile"),
             ),
             publishes: Boolean(inputs.push) && inputs.push !== "false",
-            args: new Set(resolve(inputs["build-args"]).split("\n").map(keyOf).filter(Boolean)),
+            args: assignments(
+              resolve(inputs["build-args"])
+                .split("\n")
+                .filter((item) => item.trim()),
+            ),
             runtimeEnv: new Set(),
+            references: workflowReferences,
           });
         }
       }
@@ -145,24 +257,42 @@ function composeBuilds(deployedByWorkflow: Set<string>): Build[] {
       const dockerfile = path.normalize(
         path.join(build.context ?? ".", build.dockerfile ?? "Dockerfile"),
       );
+      const line = build.args
+        ? lineOf(file, "services:", `  ${service}:`, "args:")
+        : lineOf(file, "services:", `  ${service}:`, "build:");
       builds.push({
-        where: `${file} services.${service}`,
-        argsAt: `${file} services.${service}.build.args`,
+        where: `${file}:${lineOf(file, "services:", `  ${service}:`)} (services.${service})`,
+        argsAt: `${file}:${line} (services.${service}.build.args)`,
+        envAt: `${file}:${lineOf(file, "services:", `  ${service}:`, "environment:")} (services.${service}.environment)`,
         dockerfile,
         publishes: !deployedByWorkflow.has(dockerfile),
-        args: new Set(composeKeys(build.args)),
-        runtimeEnv: new Set(composeKeys(environment)),
+        args: assignments(build.args),
+        runtimeEnv: new Set(assignments(environment).keys()),
+        references: composeReferences,
       });
     }
   }
   return builds;
 }
 
-const clientVars = requiredClientVars();
+const clientVars = await requiredClientVars();
+const errors: string[] = [];
+const required = clientVars.ok ? clientVars.vars : [];
+if (!clientVars.ok) errors.push(clientVars.error);
+else if (required.length === 0)
+  errors.push(
+    "found no required VITE_* variable in packages/env/src/web.ts. If the client env moved, point requiredClientVars in scripts/check-deploy-config.ts at its file.",
+  );
+
 if (process.argv.includes("--required-client-vars")) {
-  for (const { name } of clientVars) console.log(name);
-  process.exit(clientVars.length > 0 ? 0 : 1);
+  if (errors.length > 0 || required.length === 0) {
+    for (const error of errors) console.error(`ERROR ${error}`);
+    process.exit(1);
+  }
+  for (const { name } of required) console.log(name);
+  process.exit(0);
 }
+
 const workflows = workflowBuilds();
 const builds = [
   ...composeBuilds(
@@ -170,7 +300,6 @@ const builds = [
   ),
   ...workflows,
 ];
-const errors: string[] = [];
 for (const build of builds)
   if (!existsSync(build.dockerfile))
     errors.push(
@@ -185,47 +314,52 @@ const dockerfiles = [
   .toSorted()
   .map(parseDockerfile);
 
-if (clientVars.length === 0)
-  errors.push(
-    "found no required VITE_* variable in packages/env/src/web.ts. If the client env moved, point requiredClientVars in scripts/check-deploy-config.ts at its file. Otherwise fix the parser there.",
-  );
-
 for (const dockerfile of dockerfiles) {
-  const mine = builds.filter((build) => build.dockerfile === dockerfile.file);
-  if (dockerfile.buildsWeb) {
-    for (const { name, source } of clientVars)
-      if (!dockerfile.webStageArgs.has(name))
+  const { file, webBuild } = dockerfile;
+  const mine = builds.filter((build) => build.dockerfile === file);
+  if (webBuild) {
+    for (const { name, source } of required)
+      if (!webBuild.argsBefore.has(name))
         errors.push(
-          `${dockerfile.file}: ${name} is required in ${source}, but it is not an ARG in the stage that builds apps/web, and Vite inlines VITE_* at that build. Add "ARG ${name}" and "ENV ${name}=\${${name}:?${name}_required}" to that stage before the web build.`,
+          `${file}:${webBuild.line}: ${name} is required in ${source}, but it is not an ARG in stage "${webBuild.stage.name}" (line ${webBuild.stage.line}) before this web build, and Vite inlines VITE_* at that build. Add "ARG ${name}" and "ENV ${name}=\${${name}:?${name}_required}" to that stage before line ${webBuild.line}.`,
         );
     if (mine.length === 0)
       errors.push(
-        `${dockerfile.file}: builds apps/web, but no compose service or workflow builds this image, so no build passes its VITE_* args.`,
+        `${file}:${webBuild.line}: builds apps/web, but no compose service or workflow builds this image, so no build passes its VITE_* args.`,
       );
   }
 
   for (const build of mine) {
     const needed = new Map<string, string>();
-    if (dockerfile.buildsWeb)
-      for (const { name, source } of clientVars)
-        needed.set(name, `required in ${source}, and ${dockerfile.file} builds apps/web`);
+    if (webBuild)
+      for (const { name, source } of required)
+        needed.set(name, `required in ${source}, and ${file}:${webBuild.line} builds apps/web`);
     for (const [name, arg] of dockerfile.args) {
       if (needed.has(name)) continue;
-      if (arg.requiredByUse) needed.set(name, `${dockerfile.file} fails the build without it`);
+      if (arg.requiredByUse) needed.set(name, `${file}:${arg.line} fails the build without it`);
       else if (build.publishes && !arg.hasDefault)
         needed.set(
           name,
-          `"ARG ${name}" in ${dockerfile.file} has no default, and this build publishes the image`,
+          `"ARG ${name}" at ${file}:${arg.line} has no default in its stage, and this build publishes the image`,
         );
     }
-    for (const [name, why] of needed)
-      if (!build.args.has(name))
-        errors.push(`${build.argsAt}: missing ${name} (${why}). Add ${name} to ${build.argsAt}.`);
-    if (dockerfile.buildsWeb)
+    for (const [name, why] of needed) {
+      const value = build.args.get(name);
+      if (value === undefined) {
+        errors.push(`${build.argsAt}: missing ${name} (${why}). Add ${name} there.`);
+        continue;
+      }
+      const references = build.references(value);
+      if (references.length > 0 && !references.includes(name))
+        errors.push(
+          `${build.argsAt}: ${name} is set from ${references.join(", ")}, not from ${name}. Reference ${name} there.`,
+        );
+    }
+    if (webBuild)
       for (const name of build.runtimeEnv)
         if (name.startsWith("VITE_") && !build.args.has(name))
           errors.push(
-            `${build.where}.environment: ${name} is set at runtime, but Vite reads it at build time. Move it to ${build.argsAt}.`,
+            `${build.envAt}: ${name} is set at runtime, but Vite reads it at build time. Move it to ${build.argsAt}.`,
           );
   }
 }
@@ -236,5 +370,5 @@ if (errors.length > 0) {
   process.exit(1);
 }
 console.log(
-  `deploy config ok: ${dockerfiles.length} Dockerfiles, ${builds.length} builds, required ${clientVars.map((v) => v.name).join(", ")}`,
+  `deploy config ok: ${dockerfiles.length} Dockerfiles, ${builds.length} builds, required ${required.map((v) => v.name).join(", ")}`,
 );
