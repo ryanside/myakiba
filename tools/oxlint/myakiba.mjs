@@ -3,7 +3,7 @@ const EXCEPTION =
   /^\S.*?\s--\s+\S.*?\s\(until (?<until>\d{4}-\d{2}-\d{2}), approved by [^\s()<>][^()<>]*\)\s*$/su;
 const EXCEPTION_FORM =
   "`// oxlint-disable-next-line <rule> -- <why this line is safe> (until YYYY-MM-DD, approved by <name>)`";
-const ISO_SLICE_METHODS = new Set(["slice", "substring", "substr", "split"]);
+const ISO_TRIMS = new Set(["slice", "substring", "substr"]);
 
 const localToday = () => {
   const now = new Date();
@@ -52,8 +52,21 @@ const isEnvKey = (key, computed) =>
     ? key.type === "Literal" && key.value === "env"
     : key.type === "Identifier" && key.name === "env";
 
-const envOwner = (node) => {
-  if (node.type === "Identifier" && ENV_OWNERS.has(node.name)) return node.name;
+const runtimeOwner = (context, identifier) => {
+  for (let scope = context.sourceCode.getScope(identifier); scope; scope = scope.upper) {
+    const [definition] = scope.set.get(identifier.name)?.defs ?? [];
+    if (!definition) continue;
+    const isModuleImport =
+      definition.type === "ImportBinding" &&
+      definition.node.type !== "ImportSpecifier" &&
+      ENV_MODULES.has(definition.parent.source.value);
+    return isModuleImport ? identifier.name : null;
+  }
+  return ENV_OWNERS.has(identifier.name) ? identifier.name : null;
+};
+
+const envOwner = (context, node) => {
+  if (node.type === "Identifier") return runtimeOwner(context, node);
   if (node.type === "MetaProperty" && node.meta.name === "import" && node.property.name === "meta")
     return "import.meta";
   if (
@@ -78,11 +91,11 @@ const noEnvOutsideEnvPackage = {
       });
     return {
       MemberExpression(node) {
-        const owner = isEnvKey(node.property, node.computed) && envOwner(node.object);
+        const owner = isEnvKey(node.property, node.computed) && envOwner(context, node.object);
         if (owner) report(node, `${owner}.env`);
       },
       VariableDeclarator(node) {
-        const owner = node.id.type === "ObjectPattern" && node.init && envOwner(node.init);
+        const owner = node.id.type === "ObjectPattern" && node.init && envOwner(context, node.init);
         if (
           owner &&
           node.id.properties.some(
@@ -107,20 +120,12 @@ const noEnvOutsideEnvPackage = {
 };
 
 const isLiteral = (node, value) => node?.type === "Literal" && node.value === value;
-const ISO_LENGTH = "2000-01-01T00:00:00.000Z".length;
-const integerValue = (node) => {
-  if (node?.type === "Literal" && Number.isInteger(node.value)) return node.value;
-  if (node?.type === "UnaryExpression" && node.operator === "-") {
-    const value = integerValue(node.argument);
-    return value === null ? null : -value;
-  }
+const memberName = ({ computed, property }) => {
+  if (!computed) return property.type === "Identifier" ? property.name : null;
+  if (property.type === "Literal") return String(property.value);
+  if (property.type === "TemplateLiteral" && property.expressions.length === 0)
+    return property.quasis[0]?.value.cooked ?? null;
   return null;
-};
-const isDatePartEnd = (method, node) => {
-  const end = integerValue(node);
-  if (end === null || (end < 0 && method !== "slice")) return false;
-  const length = end < 0 ? ISO_LENGTH + end : end;
-  return length >= 4 && length <= 10;
 };
 
 const noIsoSlice = {
@@ -128,26 +133,23 @@ const noIsoSlice = {
   create(context) {
     return {
       CallExpression(node) {
-        const { callee, arguments: args } = node;
-        if (callee.type !== "MemberExpression" || callee.property.type !== "Identifier") return;
-        if (!ISO_SLICE_METHODS.has(callee.property.name)) return;
+        const { callee } = node;
+        if (callee.type !== "MemberExpression") return;
         const inner = callee.object;
         if (
           inner.type !== "CallExpression" ||
           inner.callee.type !== "MemberExpression" ||
-          inner.callee.property.type !== "Identifier" ||
-          inner.callee.property.name !== "toISOString"
+          memberName(inner.callee) !== "toISOString"
         )
           return;
-        const takesDay =
-          callee.property.name === "split"
-            ? isLiteral(args[0], "T")
-            : isLiteral(args[0], 0) && isDatePartEnd(callee.property.name, args[1]);
-        if (!takesDay) return;
+        const method = memberName(callee);
+        const trims =
+          ISO_TRIMS.has(method) || (method === "split" && isLiteral(node.arguments[0], "T"));
+        if (!trims) return;
         context.report({
           node,
           message:
-            '`.toISOString().slice(0, n)` gives a UTC date part, not the local one. Use toDateOnlyString from "@myakiba/utils/date-only".',
+            'Trimming `.toISOString()` gives the UTC date or time, not the local one. Use toDateOnlyString from "@myakiba/utils/date-only".',
         });
       },
     };
