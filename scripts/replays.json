@@ -147,6 +147,23 @@
       "rule": "myakiba(no-iso-slice)",
       "atParent": ["apps/web/src/components/expenses/filters.tsx:50:10"],
       "atFix": []
+    },
+    {
+      "fix": "eafb6ed4",
+      "bug": "the collection item menu copied the MFC id without awaiting the clipboard write, so it showed success even when the copy failed",
+      "rule": "typescript(no-floating-promises)",
+      "atParent": ["apps/web/src/components/collection/collection-item-actions.tsx:131:21"],
+      "atFix": []
+    },
+    {
+      "fix": "60467844",
+      "bug": "the collection and order item menus copied the MFC id without awaiting the clipboard write, so they showed success even when the copy failed",
+      "rule": "typescript(no-floating-promises)",
+      "atParent": [
+        "apps/web/src/components/collection/collection-columns.tsx:147:23",
+        "apps/web/src/components/orders/order-item-sub-columns.tsx:121:21"
+      ],
+      "atFix": []
     }
   ]
 }
