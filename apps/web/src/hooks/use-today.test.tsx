@@ -39,7 +39,8 @@ afterEach(() => {
   cleanup();
   globalThis.setTimeout = realSetTimeout;
   globalThis.clearTimeout = realClearTimeout;
-  process.env.TZ = realTimeZone;
+  if (realTimeZone === undefined) delete process.env.TZ;
+  else process.env.TZ = realTimeZone;
   focusManager.setFocused(undefined);
   midnightTimers = [];
   setSystemTime();
@@ -59,4 +60,20 @@ test("the day rolls at the new zone's midnight after the zone changes and the ta
   advanceTo("2026-10-16T23:00:01Z");
 
   expect(screen.getByLabelText("today").textContent).toBe("2026-10-17");
+});
+
+test("an unmounted page leaves no midnight timer behind after the tab regains focus", () => {
+  process.env.TZ = "America/New_York";
+  setSystemTime(new Date("2026-10-16T16:00:00Z"));
+  holdLongTimers();
+  const view = render(<Today />);
+  act(() => {
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+  });
+  view.unmount();
+
+  expect(midnightTimers).toEqual([]);
 });
