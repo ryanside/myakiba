@@ -6,8 +6,6 @@ import {
   paginationPageSchema,
 } from "../shared/pagination";
 
-export const sortDirectionSchema = z.enum(["asc", "desc"]);
-
 export const orderSearchSortSchema = z.enum([
   "title",
   "shop",
@@ -130,7 +128,6 @@ export const searchOrdersResponseSchema = z.object({
   orderIdsAndTitles: z.array(searchOrderIdAndTitleSchema),
 });
 
-export type SortDirection = z.infer<typeof sortDirectionSchema>;
 export type OrderSearchSort = z.infer<typeof orderSearchSortSchema>;
 export type CollectionSearchSort = z.infer<typeof collectionSearchSortSchema>;
 export type SearchCommandCollectionResult = z.infer<typeof searchCommandCollectionResultSchema>;

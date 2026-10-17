@@ -1,11 +1,6 @@
 import type { CollectionItem } from "../collection/types";
 import type { OrderStatus, ShippingMethod } from "../shared/types";
 
-export type PaginatedResult<T> = {
-  readonly items: readonly T[];
-  readonly totalCount: number;
-};
-
 export type Order = {
   orderId: string;
   title: string;

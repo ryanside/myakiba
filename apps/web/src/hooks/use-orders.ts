@@ -30,12 +30,8 @@ import type {
   OrderFilters,
   OrderItemsQuery,
 } from "@myakiba/contracts/orders/schema";
-import type {
-  Order,
-  OrderItem,
-  OrderListItem,
-  PaginatedResult,
-} from "@myakiba/contracts/orders/types";
+import type { Order, OrderItem, OrderListItem } from "@myakiba/contracts/orders/types";
+import type { Page } from "@myakiba/contracts/shared/pagination";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 
 function ordersQueryOptions(filters: OrderFilters) {
@@ -307,12 +303,12 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       if (!itemOrderId) return;
 
       await queryClient.cancelQueries({ queryKey: ["orderItems", itemOrderId] });
-      const previousOrderItems = queryClient.getQueriesData<PaginatedResult<OrderItem>>({
+      const previousOrderItems = queryClient.getQueriesData<Page<OrderItem>>({
         queryKey: ["orderItems", itemOrderId],
       });
 
       let oldPrice: number | undefined;
-      queryClient.setQueriesData<PaginatedResult<OrderItem>>(
+      queryClient.setQueriesData<Page<OrderItem>>(
         { queryKey: ["orderItems", itemOrderId] },
         (old) => {
           if (!old) return old;
@@ -383,23 +379,20 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       deleteOrderItem(orderId, itemId),
     onMutate: async ({ orderId, itemId }) => {
       await queryClient.cancelQueries({ queryKey: ["orderItems", orderId] });
-      const previousOrderItems = queryClient.getQueriesData<PaginatedResult<OrderItem>>({
+      const previousOrderItems = queryClient.getQueriesData<Page<OrderItem>>({
         queryKey: ["orderItems", orderId],
       });
 
       let removedPrice = 0;
-      queryClient.setQueriesData<PaginatedResult<OrderItem>>(
-        { queryKey: ["orderItems", orderId] },
-        (old) => {
-          if (!old) return old;
-          const removedItem = old.items.find((item) => item.id === itemId);
-          if (removedItem) removedPrice = removedItem.price;
-          return {
-            items: old.items.filter((item) => item.id !== itemId),
-            totalCount: old.totalCount - 1,
-          };
-        },
-      );
+      queryClient.setQueriesData<Page<OrderItem>>({ queryKey: ["orderItems", orderId] }, (old) => {
+        if (!old) return old;
+        const removedItem = old.items.find((item) => item.id === itemId);
+        if (removedItem) removedPrice = removedItem.price;
+        return {
+          items: old.items.filter((item) => item.id !== itemId),
+          totalCount: old.totalCount - 1,
+        };
+      });
 
       const orderDetailKey = ["order", orderId] as const;
       await queryClient.cancelQueries({ queryKey: orderDetailKey });

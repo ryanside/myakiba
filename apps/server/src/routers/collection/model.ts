@@ -3,15 +3,11 @@ import {
   CATEGORIES,
   COLLECTION_STATUSES,
   CONDITIONS,
-  DEFAULT_LIMIT,
   SHIPPING_METHODS,
 } from "@myakiba/contracts/shared/constants";
-import { collectionSearchSortSchema, sortDirectionSchema } from "@myakiba/contracts/search/schema";
+import { collectionSearchSortSchema } from "@myakiba/contracts/search/schema";
 import { collectionSearchSchema } from "@myakiba/contracts/collection/schema";
-import {
-  paginationLimitSchema,
-  paginationOffsetSchema,
-} from "@myakiba/contracts/shared/pagination";
+import { pageFields } from "@myakiba/contracts/shared/pagination";
 import {
   commaSeparatedStringArraySchema,
   createCommaSeparatedEnumArraySchema,
@@ -22,10 +18,7 @@ const commaSeparatedConditionArray = createCommaSeparatedEnumArraySchema(CONDITI
 const commaSeparatedCategoryArray = createCommaSeparatedEnumArraySchema(CATEGORIES);
 
 export const collectionQuerySchema = collectionSearchSchema.extend({
-  limit: paginationLimitSchema.optional().default(DEFAULT_LIMIT),
-  offset: paginationOffsetSchema.optional().default(0),
-  sort: collectionSearchSortSchema.optional().default("createdAt"),
-  order: sortDirectionSchema.optional().default("desc"),
+  ...pageFields(collectionSearchSortSchema, "createdAt"),
   shop: commaSeparatedStringArraySchema,
   shipMethod: commaSeparatedShipMethodArray,
   relCurrency: commaSeparatedStringArraySchema,
