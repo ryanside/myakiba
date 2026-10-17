@@ -95,15 +95,14 @@ export function usePositionOrderMutation({
         ),
       ]);
     },
-    onError: async (_error, _intent, context) => {
+    onError: (_error, _intent, context) => {
       if (context) queryClient.setQueryData(queryKey, context.previous);
-      await queryClient.refetchQueries({ queryKey, exact: true });
       toast.add({
         type: "error",
         title: failureTitle,
       });
     },
-    onSettled: (_data, error) => {
+    onSettled: () => {
       const pendingMoves = pendingMovesOf(queryClient);
       const remaining = (pendingMoves.get(moveKey) ?? 1) - 1;
       if (remaining > 0) {
@@ -111,7 +110,7 @@ export function usePositionOrderMutation({
         return;
       }
       pendingMoves.delete(moveKey);
-      if (!error) void queryClient.refetchQueries({ queryKey, exact: true, type: "active" });
+      void queryClient.invalidateQueries({ queryKey, exact: true });
     },
   });
 
