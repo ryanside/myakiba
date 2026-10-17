@@ -18,6 +18,7 @@ vite_args=(VITE_SERVER_URL=http://vite-server-url.image-smoke.invalid VITE_TURNS
 now() { perl -MTime::HiRes=time -e 'printf "%.2f", time'; }
 elapsed() { perl -e 'printf "%.2f", $ARGV[1] - $ARGV[0]' "$1" "$(now)"; }
 before() { perl -e 'exit !($ARGV[1] - $ARGV[0] < $ARGV[2])' "$1" "$(now)" "$2"; }
+left() { perl -e '$l = $ARGV[2] - ($ARGV[1] - $ARGV[0]); printf "%.3f", $l > 1 ? 1 : $l < 0.001 ? 0.001 : $l' "$1" "$(now)" "$2"; }
 
 fail() {
   echo "image smoke: FAIL $1"
@@ -51,12 +52,11 @@ crashed() {
 
 answer() {
   local container=$1 path=$2 start=$3 address=$4
-  until curl -fsS -m 1 -o /dev/null "http://$address$path" >/dev/null 2>&1; do
+  until curl -fsS -m "$(left "$start" "$timeout")" -o /dev/null "http://$address$path" >/dev/null 2>&1; do
     [ "$(docker inspect -f '{{.State.Running}}' "$container")" = true ] || crashed "$container"
     before "$start" "$timeout" || fail "$container: $path did not answer within ${timeout}s" "$container"
     sleep 0.25
   done
-  before "$start" "$timeout" || fail "$container: $path answered after $(elapsed "$start")s, over ${timeout}s" "$container"
   echo "server: $path answered after $(elapsed "$start")s"
 }
 
