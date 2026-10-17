@@ -1,45 +1,17 @@
 import type { QueryClient } from "@tanstack/react-query";
+import { collectionWriteFamilies, inFamilies, syncResultFamilies } from "@/data/catalog";
+import type { Family } from "@/data/catalog";
 
-const collectionAndOrderQueryRoots = new Set<unknown>([
-  "analytics",
-  "app-command",
-  "calendar",
-  "collection",
-  "dashboard",
-  "expenses",
-  "item",
-  "lists",
-  "order",
-  "orderItemReleases",
-  "orderItems",
-  "orderIdsAndTitles",
-  "orders",
-  "releaseCalendar",
-]);
-
-const syncResultQueryRoots = new Set<unknown>([
-  "item-database-items",
-  ...collectionAndOrderQueryRoots,
-  "entries",
-  "itemReleases",
-  "syncSessions",
-  "syncSessionDetail",
-  "wishlist",
-]);
-
-function invalidateQueriesByRoot(
-  queryClient: QueryClient,
-  queryRoots: ReadonlySet<unknown>,
-): Promise<void> {
+function invalidateFamilies(queryClient: QueryClient, families: readonly Family[]): Promise<void> {
   return queryClient.invalidateQueries({
-    predicate: (query) => queryRoots.has(query.queryKey[0]),
+    predicate: (query) => inFamilies(query.queryKey, families),
   });
 }
 
 export function invalidateCollectionAndOrderQueries(queryClient: QueryClient): Promise<void> {
-  return invalidateQueriesByRoot(queryClient, collectionAndOrderQueryRoots);
+  return invalidateFamilies(queryClient, collectionWriteFamilies);
 }
 
 export function invalidateSyncResultQueries(queryClient: QueryClient): Promise<void> {
-  return invalidateQueriesByRoot(queryClient, syncResultQueryRoots);
+  return invalidateFamilies(queryClient, syncResultFamilies);
 }
