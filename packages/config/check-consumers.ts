@@ -13,18 +13,40 @@ const requiredFlags = [
   "isolatedModules",
   "verbatimModuleSyntax",
 ] as const;
-type RequiredFlag = (typeof requiredFlags)[number];
+const strictFamily = [
+  "alwaysStrict",
+  "noImplicitAny",
+  "noImplicitThis",
+  "strictBindCallApply",
+  "strictBuiltinIteratorReturn",
+  "strictFunctionTypes",
+  "strictNullChecks",
+  "strictPropertyInitialization",
+  "useUnknownInCatchVariables",
+] as const;
+type CheckedFlag = (typeof requiredFlags)[number] | (typeof strictFamily)[number];
 
 let failed = false;
 for (const consumer of consumers) {
-  const { compilerOptions }: { compilerOptions: Partial<Record<RequiredFlag, boolean>> } =
-    await $`tsc --showConfig -p ${path.join(root, consumer)}`.json();
-  const missing = requiredFlags.filter((flag) => compilerOptions[flag] !== true);
-  if (missing.length > 0) failed = true;
+  const shown = await $`tsc --showConfig -p ${path.join(root, consumer)}`.nothrow().quiet();
+  if (shown.exitCode !== 0) {
+    failed = true;
+    console.log(
+      `FAIL  ${consumer}: tsc --showConfig exited ${shown.exitCode}\n${shown.stdout}${shown.stderr}`,
+    );
+    continue;
+  }
+  const { compilerOptions }: { compilerOptions: Partial<Record<CheckedFlag, boolean>> } =
+    shown.json();
+  const off = [
+    ...requiredFlags.filter((flag) => compilerOptions[flag] !== true),
+    ...strictFamily.filter((flag) => compilerOptions[flag] === false),
+  ];
+  if (off.length > 0) failed = true;
   console.log(
-    missing.length === 0
+    off.length === 0
       ? `PASS  ${consumer} keeps every required flag`
-      : `FAIL  ${consumer} turns off ${missing.join(", ")}`,
+      : `FAIL  ${consumer} turns off ${off.join(", ")}`,
   );
 }
 process.exitCode = failed ? 1 : 0;
