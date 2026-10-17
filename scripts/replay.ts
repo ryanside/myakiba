@@ -410,9 +410,10 @@ try {
     const notReported = replay.reports.filter(
       (expected) => !lines.some((line) => line.startsWith(`${expected}.`)),
     );
-    report(run.exitCode !== 0 && notReported.length === 0, `${parent}  knip  ${replay.bug}`, [
+    const pass = replay.reports.length > 0 && notReported.length === 0 && run.exitCode !== 0;
+    report(pass, `${parent}  knip  ${replay.bug}`, [
       ...notReported.map((expected) => `      did not report: ${expected}`),
-      ...(notReported.length > 0 ? [tail(run.output)] : []),
+      ...(pass ? [] : [tail(run.output)]),
     ]);
   }
 } finally {
