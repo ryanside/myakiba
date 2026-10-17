@@ -57,6 +57,7 @@
   "devDependencies": {
     "husky": "^9.1.7",
     "lint-staged": "^17.3.0",
+    "oxc-parser": "^0.154.0",
     "oxfmt": "latest",
     "oxlint": "1.80.0",
     "turbo": "2.10.11",

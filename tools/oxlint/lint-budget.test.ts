@@ -97,6 +97,15 @@ describe("scripts/lint-budget.ts", () => {
     await fails(repo.run(), "1 hits in src/moved.ts, over its budget of 0 there");
   }, 30_000);
 
+  test("lints a tracked file even when .gitignore lists it", async () => {
+    const repo = await fixture();
+    await repo.write("src/hidden.ts", 'export const hidden = JSON.parse("{}");\n');
+    await repo.write(".gitignore", "node_modules\nsrc/hidden.ts\n");
+    await repo.git("add", "-f", "src/hidden.ts", ".gitignore");
+    await repo.git("commit", "--no-verify", "-qm", "hide a parse");
+    await fails(repo.run(), "1 hits in src/hidden.ts, over its budget of 0 there");
+  }, 30_000);
+
   test("fails a hit from a rule with no budget", async () => {
     const repo = await fixture();
     await repo.write("src/day.ts", "export const day = new Date().toISOString().slice(0, 10);\n");
@@ -132,6 +141,10 @@ describe("scripts/lint-budget.ts", () => {
         "names no-abusive-eslint-disable",
       ],
       [
+        "/* oxlint-disable unicorn/no-abusive-eslint-disable -- safe (until 2099-01-01, approved by A) */\n/* oxlint-disable */",
+        "names no rule",
+      ],
+      [
         'export const marker = "/* oxlint-disable harmless -- ";\n/* oxlint-disable myakiba/require-suppression-reason */',
         "names require-suppression-reason",
       ],
@@ -141,6 +154,21 @@ describe("scripts/lint-budget.ts", () => {
       await fails(repo.run(), reason);
     }
   }, 60_000);
+
+  test("passes directive text that is string data, not a comment", async () => {
+    const repo = await fixture();
+    await repo.write(
+      "src/fixture.ts",
+      [
+        'export const blanket = "/* oxlint-disable */";',
+        "export const guard = '// oxlint-disable-next-line myakiba/require-suppression-reason';",
+        "export const template = `/* eslint-disable */`;",
+        "export const pattern = /\\/\\* oxlint-disable \\*\\//u;",
+        "",
+      ].join("\n"),
+    );
+    await passes(repo.run());
+  }, 30_000);
 
   test("fails an unapproved commit to each lint tooling path, and passes it approved", async () => {
     const edits: [file: string, text: (current: string) => string][] = [

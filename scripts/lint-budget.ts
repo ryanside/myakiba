@@ -1,4 +1,5 @@
 import { $ } from "bun";
+import { parseSync } from "oxc-parser";
 import config from "../oxlint.config.ts";
 
 const BUDGET_PATH = "tools/oxlint/budget.json";
@@ -15,7 +16,7 @@ const CONFIG_PATHS = [
   `:(exclude)${BUDGET_PATH}`,
 ];
 const SOURCE_FILES = ["*.js", "*.jsx", "*.mjs", "*.cjs", "*.ts", "*.tsx", "*.mts", "*.cts"];
-const DIRECTIVE = /(?<opener>\/\/|\/\*)[\s*]*(?:eslint|oxlint)-disable(?:-next-line|-line)?\b/gu;
+const DIRECTIVE = /^[\s*/]*(?:eslint|oxlint)-disable(?:-next-line|-line)?\b(?<rest>[\s\S]*)$/u;
 const GUARD_RULES = new Set(["require-suppression-reason", "no-abusive-eslint-disable"]);
 const TRUNK = "origin/main";
 const APPROVER = /^\p{L}[^<>]*$/u;
@@ -54,7 +55,15 @@ if (!isWellFormed(budget)) {
   process.exit(1);
 }
 
-const lint = await $`bun x oxlint -f json`.nothrow().quiet();
+const candidates =
+  await $`git ls-files -z --cached --others --exclude-standard -- ${SOURCE_FILES} ${config.ignorePatterns.map((pattern) => `:(exclude,glob)${pattern}`)}`
+    .quiet()
+    .text();
+const sources: string[] = [];
+for (const name of new Set(candidates.split("\0").filter(Boolean))) {
+  if (await Bun.file(name).exists()) sources.push(name);
+}
+const lint = await $`bun x oxlint -f json ${sources}`.nothrow().quiet();
 if (!lint.text().startsWith("{")) {
   console.error(lint.text(), lint.stderr.toString());
   process.exit(1);
@@ -97,28 +106,29 @@ for (const code of [...new Set([...Object.keys(budget), ...hits.keys()])].toSort
   }
 }
 
-const sources =
-  await $`git ls-files -z --cached --others --exclude-standard -- ${SOURCE_FILES} ${[...LINT_TOOLING, ...config.ignorePatterns].map((pattern) => `:(exclude,glob)${pattern}`)}`
-    .quiet()
-    .text();
+const toolingGlobs = LINT_TOOLING.map((pattern) => new Bun.Glob(pattern));
 const badDirectives: string[] = [];
-for (const name of sources.split("\0").filter(Boolean)) {
-  const file = Bun.file(name);
-  if (!(await file.exists())) continue;
-  const text = await file.text();
-  for (const match of text.matchAll(DIRECTIVE)) {
-    const start = match.index + match[0].length;
-    const end = text.indexOf(match.groups?.opener === "//" ? "\n" : "*/", start);
-    const rest = text.slice(start, end === -1 ? undefined : end);
+for (const name of sources) {
+  if (toolingGlobs.some((glob) => glob.match(name))) continue;
+  const text = await Bun.file(name).text();
+  if (!text.includes("-disable")) continue;
+  const parsed = parseSync(name, text);
+  if (parsed.errors.length > 0) {
+    badDirectives.push(`${name} does not parse, so its suppressions cannot be checked.`);
+    continue;
+  }
+  for (const comment of parsed.comments) {
+    const rest = DIRECTIVE.exec(comment.value)?.groups?.rest;
+    if (rest === undefined) continue;
     const rules = rest
       .split("--")[0]
       ?.split(/[\s,]+/u)
       .filter((rule) => rule && !/^\*+$/u.test(rule));
     const guard = [...GUARD_RULES].find((rule) => rest.includes(rule));
     if (rules?.length && !guard) continue;
-    const line = text.slice(0, match.index).split("\n").length;
+    const line = text.slice(0, comment.start).split("\n").length;
     badDirectives.push(
-      `${name}:${line} ${guard ? `names ${guard}` : "names no rule"}: ${`${match[0]}${rest}`.split("\n")[0]}`,
+      `${name}:${line} ${guard ? `names ${guard}` : "names no rule"}: ${comment.value.trim().split("\n")[0]}`,
     );
   }
 }
@@ -158,7 +168,6 @@ if (base) {
   const history = await $`git log --format=${"%x00%H"} --remerge-diff --name-only ${base}..HEAD`
     .quiet()
     .text();
-  const toolingGlobs = LINT_TOOLING.map((pattern) => new Bun.Glob(pattern));
   const changedFiles = new Map<string, string[]>();
   for (const entry of history.split("\0").filter(Boolean)) {
     const [commit = "", ...files] = entry.split("\n").filter(Boolean);
