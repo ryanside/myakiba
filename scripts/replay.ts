@@ -122,6 +122,8 @@ async function checkTypes(checkout: string, packageDir: string) {
   return { exitCode, output: `${stdout}${stderr}` };
 }
 
+const tsDiagnostic = /^\S.*: error TS\d+: \S/;
+
 const tail = (output: string) =>
   output
     .trimEnd()
@@ -256,14 +258,20 @@ try {
     await checkOut(parent, replay.package, replay.config);
 
     const run = await checkTypes(worktree, replay.package);
-    const lines = run.output.split("\n");
-    const notReported = replay.errors.filter((error) => !lines.includes(error));
-    const errorCount = lines.filter((line) => line.includes(": error TS")).length;
+    const diagnostics = run.output.split("\n").filter((line) => tsDiagnostic.test(line));
+    const malformed = replay.errors.filter((error) => !tsDiagnostic.test(error));
+    const notReported = replay.errors.filter(
+      (error) => tsDiagnostic.test(error) && !diagnostics.includes(error),
+    );
     report(
-      run.exitCode !== 0 && replay.errors.length > 0 && notReported.length === 0,
-      `${parent}  ${replay.package}  ${errorCount} errors for: ${replay.bug}`,
+      run.exitCode !== 0 &&
+        replay.errors.length > 0 &&
+        malformed.length === 0 &&
+        notReported.length === 0,
+      `${parent}  ${replay.package}  ${diagnostics.length} errors for: ${replay.bug}`,
       [
         ...(replay.errors.length === 0 ? ["      lists no expected error"] : []),
+        ...malformed.map((error) => `      not a TS diagnostic: ${JSON.stringify(error)}`),
         ...notReported.map((error) => `      not reported: ${error}`),
         ...(notReported.length > 0 ? [tail(run.output)] : []),
       ],
