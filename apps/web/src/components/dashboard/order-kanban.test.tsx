@@ -66,7 +66,7 @@ mock.module("@tanstack/react-router", () => ({
   Link: ({ children }: { children: ReactNode }) => <a href="#order">{children}</a>,
 }));
 
-const { default: OrderKanban } = await import("./order-kanban");
+const { default: OrderKanban, reconcileOrderColumns } = await import("./order-kanban");
 const { MonthlyTab } = await import("./monthly-tab");
 
 setDefaultTimeout(30_000);
@@ -537,5 +537,40 @@ describe("a dashboard kanban card keeps the user's change while its write is in 
       ],
       afterWrites: { Ordered: [], Paid: [], Shipped: ["miku"], Owned: [] },
     });
+  });
+});
+
+describe("reconciling the board with a fetch", () => {
+  const miku = order("miku", "Ordered");
+  const rin = order("rin", "Paid");
+  const columnsOf = (orders: readonly DashboardKanbanOrder[]) => ({
+    Ordered: orders.filter((candidate) => candidate.status === "Ordered"),
+    Paid: orders.filter((candidate) => candidate.status === "Paid"),
+    Shipped: orders.filter((candidate) => candidate.status === "Shipped"),
+    Owned: orders.filter((candidate) => candidate.status === "Owned"),
+  });
+
+  test("keeps the board's columns when picking up or releasing a card changes nothing", () => {
+    const current = columnsOf([miku, rin]);
+    const sameFetch = columnsOf([miku, rin]);
+
+    expect({
+      release: reconcileOrderColumns(current, sameFetch, new Set()) === current,
+      pickUp: reconcileOrderColumns(current, sameFetch, new Set(["miku"])) === current,
+    }).toEqual({ release: true, pickUp: true });
+  });
+
+  test("returns new columns for a real change and keeps the columns it did not touch", () => {
+    const current = columnsOf([miku, rin]);
+    const rinShipped = { ...rin, status: "Shipped" as const };
+
+    const next = reconcileOrderColumns(current, columnsOf([miku, rinShipped]), new Set());
+
+    expect({
+      newBoard: next !== current,
+      orderedKept: next.Ordered === current.Ordered,
+      paid: next.Paid,
+      shipped: next.Shipped,
+    }).toEqual({ newBoard: true, orderedKept: true, paid: [], shipped: [rinShipped] });
   });
 });
