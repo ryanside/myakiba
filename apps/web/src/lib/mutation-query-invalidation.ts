@@ -24,6 +24,7 @@ const syncResultQueryRoots = new Set<unknown>([
   "itemReleases",
   "syncSessions",
   "syncSessionDetail",
+  "wishlist",
 ]);
 
 function invalidateQueriesByRoot(
