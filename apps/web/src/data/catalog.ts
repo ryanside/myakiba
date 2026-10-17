@@ -35,7 +35,7 @@ const catalog = {
     roots: ["syncSessions", "syncSessionDetail"],
     collectionWrites: false,
   },
-  wishlist: { kind: "persisted", roots: ["wishlist"], collectionWrites: false },
+  wishlist: { kind: "persisted", roots: [], collectionWrites: false },
   accountType: { kind: "account", roots: ["account-type"] },
   currentImport: { kind: "live", roots: ["dataTransferImport"] },
   importStatus: { kind: "live", roots: ["dataTransferImportStatus"] },
