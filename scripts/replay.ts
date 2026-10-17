@@ -14,12 +14,13 @@ type TestRun = {
   exitCode: number;
   passed: string[];
   failed: string[];
+  skipped: string[];
   errorOutsideTests: boolean;
   output: string;
 };
 
 const root = path.resolve(import.meta.dir, "..");
-const { test: replays }: { test: TestReplay[] } = await Bun.file(
+const { test: replays = [] }: { test?: TestReplay[] } = await Bun.file(
   path.join(import.meta.dir, "replays.json"),
 ).json();
 if (replays.length === 0) {
@@ -69,7 +70,7 @@ async function runTest(checkout: string, testFile: string): Promise<TestRun> {
       .nothrow()
       .quiet();
   const output = `${stdout}${stderr}`;
-  const results = [...output.matchAll(/^\((pass|fail)\) (.+?)(?: \[[\d.]+m?s\])?$/gm)];
+  const results = [...output.matchAll(/^\((pass|fail|skip|todo)\) (.+?)(?: \[[\d.]+m?s\])?$/gm)];
   const named = (result: string) => [
     ...new Set(results.filter((match) => match[1] === result).map((match) => match[2] ?? "")),
   ];
@@ -78,6 +79,7 @@ async function runTest(checkout: string, testFile: string): Promise<TestRun> {
     exitCode,
     passed: named("pass").filter((name) => !failed.includes(name)),
     failed,
+    skipped: [...named("skip"), ...named("todo")],
     errorOutsideTests: output.includes("# Unhandled error between tests"),
     output,
   };
@@ -99,7 +101,11 @@ const report = (pass: boolean, label: string, details: string[] = []) => {
 
 for (const testFile of new Set(selected.map((replay) => replay.test))) {
   const run = await runTest(root, testFile);
-  const pass = run.exitCode === 0 && run.failed.length === 0;
+  const pass =
+    run.exitCode === 0 &&
+    run.failed.length === 0 &&
+    run.skipped.length === 0 &&
+    run.passed.length > 0;
   report(pass, `head  ${testFile}`, pass ? [] : [tail(run.output)]);
 }
 
