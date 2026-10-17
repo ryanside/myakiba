@@ -42,9 +42,7 @@
       "fix": "527a76d4",
       "bug": "a failed order-item delete left owned items detached",
       "test": "apps/server/src/routers/orders/service.test.ts",
-      "fixed": [
-        "removing items from an order > a failed delete leaves every item in the order"
-      ]
+      "fixed": ["removing items from an order > a failed delete leaves every item in the order"]
     },
     {
       "fix": "ed65f1d8",
@@ -59,7 +57,8 @@
       "bug": "an outside change made while focused never showed",
       "test": "apps/web/src/components/debounced-input.test.tsx",
       "fixed": [
-        "DebouncedInput > an outside change made while focused shows once the user leaves the field"
+        "DebouncedInput > an outside change made while focused shows once the user leaves the field",
+        "DebouncedInput > text sent before the user left the field does not hide a later outside change to it"
       ]
     },
     {
@@ -74,9 +73,7 @@
       "fix": "9fbb24c4",
       "bug": "the debounced callback called a stale onChange",
       "test": "apps/web/src/components/debounced-input.test.tsx",
-      "fixed": [
-        "DebouncedInput > the debounced text goes to the onChange from the latest render"
-      ]
+      "fixed": ["DebouncedInput > the debounced text goes to the onChange from the latest render"]
     },
     {
       "fix": "ed9d00fb",
@@ -84,7 +81,8 @@
       "test": "apps/web/src/components/debounced-input.test.tsx",
       "fixed": [
         "DebouncedInput > mounting does not report a change",
-        "DebouncedInput > typing reports the final text once after the debounce"
+        "DebouncedInput > typing reports the final text once after the debounce",
+        "DebouncedInput > late echoes of two earlier texts do not replace what the user typed"
       ]
     }
   ]

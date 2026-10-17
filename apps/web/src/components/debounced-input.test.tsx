@@ -101,6 +101,34 @@ describe("DebouncedInput", () => {
     await setOwnerValue(String(emitted[0]));
 
     expect({ emitted, shown: input.value }).toEqual({ emitted: ["mi"], shown: "miku" });
+    await user.tab();
+    expect(input.value).toBe("miku");
+  });
+
+  test("late echoes of two earlier texts do not replace what the user typed", async () => {
+    const { user, input, emitted, setOwnerValue } = renderOwnedInput("", { echoChanges: false });
+    await user.type(input, "mi");
+    await waitForDebounce();
+    await user.type(input, "ku");
+    await waitForDebounce();
+    await setOwnerValue("mi");
+    await setOwnerValue("miku");
+
+    await user.tab();
+    expect({ emitted, shown: input.value }).toEqual({ emitted: ["mi", "miku"], shown: "miku" });
+  });
+
+  test("text sent before the user left the field does not hide a later outside change to it", async () => {
+    const { user, input, setOwnerValue } = renderOwnedInput("", { echoChanges: false });
+    await user.type(input, "mi");
+    await waitForDebounce();
+    await user.tab();
+    await user.click(input);
+    await user.type(input, "ku");
+    await setOwnerValue("mi");
+
+    await user.tab();
+    expect(input.value).toBe("mi");
   });
 
   test("an outside change made while focused shows once the user leaves the field", async () => {
