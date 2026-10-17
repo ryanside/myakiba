@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Usage: scripts/image-smoke.sh [db-push[=IMAGE]] [server[=IMAGE]]
 # Runs each image in order against throwaway Postgres and Redis. Builds it from this checkout unless IMAGE is given.
+# Env: SMOKE_PREFIX, SMOKE_TIMEOUT, SMOKE_REQUIRED_CLIENT_VARS (names, skips the checker), SMOKE_SERVER_ENV (extra K=V for the server).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

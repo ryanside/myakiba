@@ -67,8 +67,7 @@ const assignments = (list: ComposeList = []): Map<string, string> =>
       : Object.entries(list).map(([key, value]) => [key, value ?? ""]),
   );
 
-// Each anchor is searched for on a line after the previous anchor's line.
-function lineOf(file: string, ...anchors: string[]): number {
+function nestedKeyLine(file: string, ...anchors: string[]): number {
   let found = 0;
   let line = 0;
   for (const [index, text] of read(file).split("\n").entries())
@@ -222,8 +221,8 @@ function workflowBuilds(): Build[] {
           const argsKey = /\$\{\{\s*matrix\.(\w+)\s*\}\}/.exec(inputs["build-args"] ?? "")?.[1];
           const where = `${file} jobs.${jobId}${entry.image ? ` matrix entry "${entry.image}"` : ""}`;
           const line = argsKey
-            ? lineOf(file, "jobs:", `  ${jobId}:`, `image: ${entry.image}`, `${argsKey}:`)
-            : lineOf(file, "jobs:", `  ${jobId}:`, "build-args:");
+            ? nestedKeyLine(file, "jobs:", `  ${jobId}:`, `image: ${entry.image}`, `${argsKey}:`)
+            : nestedKeyLine(file, "jobs:", `  ${jobId}:`, "build-args:");
           builds.push({
             where,
             argsAt: `${file}:${line} (jobs.${jobId}${entry.image ? ` matrix entry "${entry.image}"` : ""} ${argsKey ?? "build-args"})`,
@@ -258,12 +257,12 @@ function composeBuilds(deployedByWorkflow: Set<string>): Build[] {
         path.join(build.context ?? ".", build.dockerfile ?? "Dockerfile"),
       );
       const line = build.args
-        ? lineOf(file, "services:", `  ${service}:`, "args:")
-        : lineOf(file, "services:", `  ${service}:`, "build:");
+        ? nestedKeyLine(file, "services:", `  ${service}:`, "args:")
+        : nestedKeyLine(file, "services:", `  ${service}:`, "build:");
       builds.push({
-        where: `${file}:${lineOf(file, "services:", `  ${service}:`)} (services.${service})`,
+        where: `${file}:${nestedKeyLine(file, "services:", `  ${service}:`)} (services.${service})`,
         argsAt: `${file}:${line} (services.${service}.build.args)`,
-        envAt: `${file}:${lineOf(file, "services:", `  ${service}:`, "environment:")} (services.${service}.environment)`,
+        envAt: `${file}:${nestedKeyLine(file, "services:", `  ${service}:`, "environment:")} (services.${service}.environment)`,
         dockerfile,
         publishes: !deployedByWorkflow.has(dockerfile),
         args: assignments(build.args),
