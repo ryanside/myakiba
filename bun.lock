@@ -166,6 +166,9 @@
     "packages/config": {
       "name": "@myakiba/config",
       "version": "0.0.0",
+      "devDependencies": {
+        "typescript": "catalog:",
+      },
     },
     "packages/contracts": {
       "name": "@myakiba/contracts",

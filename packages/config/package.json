@@ -4,5 +4,11 @@
   "private": true,
   "exports": {
     "./tsconfig.base.json": "./tsconfig.base.json"
+  },
+  "scripts": {
+    "check-types": "bun check-consumers.ts"
+  },
+  "devDependencies": {
+    "typescript": "catalog:"
   }
 }
