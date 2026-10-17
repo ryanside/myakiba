@@ -17,11 +17,9 @@ import { ViewToggle } from "@/components/ui/view-toggle";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { GridListViewMode } from "@/components/ui/view-toggle";
 import { buttonVariants } from "@/components/ui/button";
-import {
-  useMoveWishlistItemsMutation,
-  useWishlistItemsQuery,
-  useWishlistItemMutation,
-} from "@/hooks/use-wishlist";
+import { useResourceMutation } from "@/data/client";
+import { setWishlistMembership } from "@/data/resources/wishlist";
+import { useMoveWishlistItemsMutation, useWishlistItemsQuery } from "@/hooks/use-wishlist";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 
@@ -55,7 +53,7 @@ function RouteComponent(): React.JSX.Element {
   const totalCount = itemsQuery.data?.pages[0]?.totalCount ?? 0;
   const [viewMode, setViewMode] = useLocalStorage<GridListViewMode>(VIEW_MODE_KEY, "grid");
   const { currency, dateFormat } = useUserPreferences();
-  const itemMutation = useWishlistItemMutation();
+  const itemMutation = useResourceMutation(setWishlistMembership);
   const moveMutation = useMoveWishlistItemsMutation();
   const handleLoadMore = itemsQuery.fetchNextPage;
   const isPending = itemsQuery.isPending;
@@ -136,12 +134,12 @@ function RouteComponent(): React.JSX.Element {
           isPending={isPending}
           isSaving={moveMutation.isPending}
           sortingDisabled={itemMutation.isPending}
-          removingItemId={itemMutation.isPending ? itemMutation.variables?.itemId : undefined}
+          removingItemId={itemMutation.pendingInput?.itemId}
           hasNextPage={itemsQuery.hasNextPage}
           isFetchingNextPage={itemsQuery.isFetchingNextPage}
           onLoadMore={handleLoadMore}
           onRemove={async (itemId, itemExternalId) => {
-            await itemMutation.mutateAsync({ itemId, itemExternalId, wishlisted: false });
+            await itemMutation.run({ itemId, itemExternalId, wishlisted: false });
           }}
           onMove={async (intent) => {
             await moveMutation.move(intent);

@@ -23,9 +23,8 @@ import { getCategoryColor } from "@/lib/category-colors";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { formatReleasePrice } from "@/lib/locale";
 import { cn } from "@/lib/utils";
-import type { getWishlistItems } from "@/queries/wishlist";
+import type { WishlistPage } from "@/data/resources/wishlist";
 
-type WishlistPage = NonNullable<Awaited<ReturnType<typeof getWishlistItems>>>;
 type WishlistItem = WishlistPage["items"][number];
 
 const EMPTY_SELECTED_IDS: ReadonlySet<string> = new Set();
@@ -292,11 +291,7 @@ function SortableWishlistItem({
             disabled={mutationPending}
             onClick={async () => {
               if (!wishlistItem) return;
-              try {
-                await onRemove(wishlistItem.itemId, wishlistItem.itemExternalId);
-              } catch {
-                // The mutation reports the failure through its error toast.
-              }
+              await onRemove(wishlistItem.itemId, wishlistItem.itemExternalId);
             }}
           >
             {removing ? (
