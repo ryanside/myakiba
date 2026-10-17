@@ -7,7 +7,7 @@ set -uo pipefail
 
 only_later() {
   if grep -q '^ERROR ' "$2"; then
-    ! grep '^ERROR ' "$2" | grep -qvE "$1"
+    LATER=$1 awk '/^ERROR / && $0 !~ ENVIRON["LATER"] { other = 1 } END { exit other }' "$2"
   else
     grep -qE "$1" "$2"
   fi
@@ -49,6 +49,8 @@ if [ "${1:-}" = --self-test ]; then
   expect_status PASS cleared-clean 'deploy config ok\n' cleared 0 'missing SOURCE_COMMIT' "$later"
   expect_status STILL still-only-later 'ERROR a: VITE_SERVER_URL is required\nERROR b: missing VITE_TURNSTILE_SITE_KEY\n' cleared 1 'missing SOURCE_COMMIT' "$later"
   expect_status FAIL still-mixed 'ERROR a: VITE_SERVER_URL is required\nERROR b: missing AUDIT_UNRELATED_MISSING\n' cleared 1 'missing SOURCE_COMMIT' "$later"
+  large="ERROR a: missing AUDIT_UNRELATED_MISSING\\n$(printf 'ERROR b: VITE_SERVER_URL is required in packages/env/src/web.ts %s\\n' $(seq 3000))"
+  expect_status FAIL still-mixed-large "$large" cleared 1 'missing SOURCE_COMMIT' "$later"
   expect_status FAIL cleared-unrelated 'ERROR a: missing AUDIT_UNRELATED_MISSING\n' cleared 1 'missing SOURCE_COMMIT' "$later"
   expect_status FAIL cleared-old-bug 'ERROR a: missing SOURCE_COMMIT\n' cleared 1 'missing SOURCE_COMMIT' "$later"
   expect_status STILL smoke-still "image smoke: FAIL db-push exited with code 1\nCannot find package 'dotenv'\n" cleared 1 'lockfile is frozen' "Cannot find package 'dotenv'"
