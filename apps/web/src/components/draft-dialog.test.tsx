@@ -65,7 +65,11 @@ function renderToolbar(FiltersForm: ComponentType<FiltersFormProps>) {
     await user.click(screen.getByRole("button", { name: "Filters" }));
     return screen.findByRole("dialog");
   };
-  const waitForClose = () => waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  // A failed expect on the open dialog hangs Bun while it prints the React-owned node.
+  const waitForClose = () =>
+    waitFor(() => {
+      if (screen.queryByRole("dialog")) throw new Error("dialog still open");
+    });
   const typeShop = (dialog: HTMLElement, shop: string) =>
     user.type(
       within(dialog).getByPlaceholderText("Press enter after each shop to add"),
