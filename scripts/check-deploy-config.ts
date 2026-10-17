@@ -120,29 +120,27 @@ async function requiredClientVars(): Promise<ClientVars> {
       ok: false,
       error: `${source}:1: does not export env = createEnv(...), so the checker cannot read its client schema.`,
     };
-  const client: Record<string, EnvSchema> = {};
-  const merge = (current: EnvOptions): string | undefined => {
+  // env-core validates each createEnv call on its own, so a key that any call in the extends tree
+  // requires stays required, whatever a later call declares for it.
+  const names = new Set<string>();
+  const collect = (current: EnvOptions): string | undefined => {
     for (const base of current.extends ?? []) {
       const extended = calls.get(base);
       if (!extended) return "extends an env that createEnv did not build";
-      const problem = merge(extended);
+      const problem = collect(extended);
       if (problem) return problem;
     }
-    Object.assign(client, current.client);
+    for (const [name, schema] of Object.entries(current.client ?? {}))
+      if (!schema.safeParse().success) names.add(name);
     return undefined;
   };
-  const problem = merge(options);
+  const problem = collect(options);
   if (problem)
     return {
       ok: false,
       error: `${source}:${nestedKeyLine(source, "extends")}: ${problem}, so the checker cannot read its client schema.`,
     };
-  return {
-    ok: true,
-    vars: Object.entries(client)
-      .filter(([, schema]) => !schema.safeParse().success)
-      .map(([name]) => ({ name, source })),
-  };
+  return { ok: true, vars: [...names].map((name) => ({ name, source })) };
 }
 
 function loadErrorAt(report: string, source: string): string {

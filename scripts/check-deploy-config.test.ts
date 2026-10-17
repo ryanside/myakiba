@@ -205,6 +205,18 @@ export const env = createEnv({ clientPrefix: "VITE_", extends: [extra], client: 
     expect(code).toBe(1);
   });
 
+  test("keeps a var required when a schema that extends it marks it optional", () => {
+    const { code, out } = check({
+      web: `import { createEnv } from "@t3-oss/env-core";
+import { z } from "zod";
+const extra = createEnv({ clientPrefix: "VITE_", client: { VITE_NEW_URL: z.url() }, runtimeEnv: import.meta.env });
+export const env = createEnv({ clientPrefix: "VITE_", extends: [extra], client: { VITE_NEW_URL: z.url().optional(), VITE_API_URL: z.url() }, runtimeEnv: import.meta.env });
+`,
+    });
+    expect(out).toContain("missing VITE_NEW_URL");
+    expect(code).toBe(1);
+  });
+
   test("fails closed on an extends entry that createEnv did not build", () => {
     const { code, out } = check({
       web: schema("VITE_API_URL: z.url() }, extends: [{}], client2: {"),
