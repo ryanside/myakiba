@@ -144,12 +144,20 @@ function orderIdsIn(columns: OrderColumns): Set<string> {
   );
 }
 
+function sameOrders(
+  left: readonly DashboardKanbanOrder[],
+  right: readonly DashboardKanbanOrder[],
+): boolean {
+  return left.length === right.length && left.every((order, index) => order === right[index]);
+}
+
 export function reconcileOrderColumns(
   current: OrderColumns,
   incoming: OrderColumns,
   pendingOrderIds: ReadonlySet<string>,
 ): OrderColumns {
-  const next = { ...incoming };
+  const next = { ...current };
+  let changed = false;
   const currentOrderIds = orderIdsIn(current);
   const incomingOrderIds = orderIdsIn(incoming);
   const maskedOrderIds = new Set(
@@ -167,11 +175,14 @@ export function reconcileOrderColumns(
       return incomingOrder ? [incomingOrder] : [];
     });
 
-    next[columnId] =
+    const reconciledOrders =
       refreshedOrders.length === incomingOrders.length ? refreshedOrders : incomingOrders;
+    if (sameOrders(reconciledOrders, currentOrders)) continue;
+    next[columnId] = reconciledOrders;
+    changed = true;
   }
 
-  return next;
+  return changed ? next : current;
 }
 
 function moveOrderToStatus(
