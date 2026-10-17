@@ -38,7 +38,25 @@ const composeWith = (args: string, extra = ""): string => `services:
 ${args}
 ${extra}`;
 
-type Tree = { web?: string; dockerfile?: string; compose?: string };
+const workflowWith = (dockerfile: string, value: string): string => `jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - image: server
+            dockerfile: ${dockerfile}
+            build_args: |
+              VITE_API_URL=${value}
+    steps:
+      - uses: docker/build-push-action@v7
+        with:
+          file: ${ref("{ matrix.dockerfile }")}
+          push: true
+          build-args: ${ref("{ matrix.build_args }")}
+`;
+
+type Tree = { web?: string; dockerfile?: string; compose?: string; workflow?: string };
 
 type CheckRun = { code: number; out: string };
 
@@ -56,6 +74,10 @@ function check(tree: Tree): CheckRun {
     path.join(dir, "docker-compose.yml"),
     tree.compose ?? composeWith(`        VITE_API_URL: ${ref("VITE_API_URL")}`),
   );
+  if (tree.workflow) {
+    mkdirSync(path.join(dir, ".github/workflows"), { recursive: true });
+    writeFileSync(path.join(dir, ".github/workflows/build.yml"), tree.workflow);
+  }
   const run = Bun.spawnSync(["bun", checker], { cwd: dir });
   return { code: run.exitCode, out: `${run.stdout.toString()}${run.stderr.toString()}` };
 }
@@ -84,9 +106,9 @@ describe("check-deploy-config", () => {
 
   test("fails closed when the schema cannot load", () => {
     const { code, out } = check({
-      web: `import "./missing-module";\n${schema("VITE_API_URL: z.url()")}`,
+      web: schema("VITE_API_URL: z.url()", 'import "./missing-module";'),
     });
-    expect(out).toContain("could not load packages/env/src/web.ts");
+    expect(out).toContain("packages/env/src/web.ts:3: could not load packages/env/src/web.ts");
     expect(code).toBe(1);
   });
 
@@ -167,6 +189,56 @@ describe("check-deploy-config", () => {
     });
     expect(out).toContain(
       "docker-compose.yml:8 (services.server.environment): VITE_BUILD_ID is set at runtime, but Vite reads it at build time",
+    );
+    expect(code).toBe(1);
+  });
+
+  test("reads required vars that the schema adds through extends", () => {
+    const { code, out } = check({
+      web: `import { createEnv } from "@t3-oss/env-core";
+import { z } from "zod";
+const extra = createEnv({ clientPrefix: "VITE_", client: { VITE_NEW_URL: z.url() }, runtimeEnv: import.meta.env });
+export const env = createEnv({ clientPrefix: "VITE_", extends: [extra], client: { VITE_API_URL: z.url() }, runtimeEnv: import.meta.env });
+`,
+    });
+    expect(out).toContain("missing VITE_NEW_URL");
+    expect(code).toBe(1);
+  });
+
+  test("fails closed on an extends entry that createEnv did not build", () => {
+    const { code, out } = check({
+      web: schema("VITE_API_URL: z.url() }, extends: [{}], client2: {"),
+    });
+    expect(out).toContain("extends an env that createEnv did not build");
+    expect(code).toBe(1);
+  });
+
+  test("checks references inside workflow expressions", () => {
+    const { code, out } = check({
+      workflow: workflowWith("apps/server/Dockerfile", ref("{ format('{0}', vars.VITE_API_URl) }")),
+    });
+    expect(out).toContain(
+      '.github/workflows/build.yml:9 (jobs.build matrix entry "server" build_args): VITE_API_URL is set from VITE_API_URl',
+    );
+    expect(code).toBe(1);
+  });
+
+  test("names the workflow line of a Dockerfile that does not exist", () => {
+    const { code, out } = check({
+      workflow: workflowWith("apps/nope/Dockerfile", ref("{ vars.VITE_API_URL }")),
+    });
+    expect(out).toContain(
+      '.github/workflows/build.yml:8 (jobs.build matrix entry "server" dockerfile): builds apps/nope/Dockerfile, which does not exist',
+    );
+    expect(code).toBe(1);
+  });
+
+  test("does not let a later default in the same stage cover an earlier use", () => {
+    const { code, out } = check({
+      dockerfile: `${webBuild}FROM oven/bun:1.4.0-debian\nARG REQUIRED_VALUE\nRUN test -n "$REQUIRED_VALUE"\nARG REQUIRED_VALUE=too_late\n`,
+    });
+    expect(out).toContain(
+      'missing REQUIRED_VALUE ("ARG REQUIRED_VALUE" at apps/server/Dockerfile:8 has no default',
     );
     expect(code).toBe(1);
   });
