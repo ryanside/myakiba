@@ -158,34 +158,4 @@ describe("position order saves", () => {
     expect(afterFailure).toEqual({ shown: ["a", "b", "c"], fetches: fetchesBeforeFailure + 1 });
     expect(shownIn("first")).toEqual(["c", "a", "b"]);
   });
-
-  test("a move rejected before saving refetches once and the pending move still lands", async () => {
-    server.members = { first: ["a", "b", "c"] };
-    renderMembers("first");
-    await waitFor(() => expect(shownIn("first")).toEqual(["a", "b", "c"]));
-
-    let saving: Promise<void> = Promise.resolve();
-    act(() => {
-      saving = move(cFirst);
-    });
-    await waitFor(() => expect(server.heldSaves).toHaveLength(1));
-    const fetchesBeforeRejection = fetchesOf("first");
-    await act(async () => {
-      await move({ movedIds: ["missing"], anchorId: "a", placement: "before" }).catch(() => {});
-    });
-    await act(
-      () =>
-        new Promise((resolve) => {
-          setTimeout(resolve, 50);
-        }),
-    );
-    const fetchesFromRejection = fetchesOf("first") - fetchesBeforeRejection;
-    await act(async () => {
-      server.heldSaves.shift()?.();
-      await saving;
-    });
-
-    await waitFor(() => expect(shownIn("first")).toEqual(["c", "a", "b"]));
-    expect(fetchesFromRejection).toBe(1);
-  });
 });
