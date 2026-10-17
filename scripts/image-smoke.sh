@@ -3,7 +3,6 @@
 # Runs each image in order against throwaway Postgres and Redis. Builds it from this checkout unless IMAGE is given.
 # Env: SMOKE_PREFIX, SMOKE_TIMEOUT, SMOKE_REQUIRED_CLIENT_VARS (names, skips the checker), SMOKE_SERVER_ENV (extra K=V for the server).
 set -euo pipefail
-cd "$(dirname "$0")/.."
 
 prefix=${SMOKE_PREFIX:-image-smoke-$$}
 label=image-smoke.run=$prefix-$$-$RANDOM
@@ -52,9 +51,13 @@ crashed() {
 
 answer() {
   local container=$1 path=$2 start=$3 address=$4
-  until curl -fsS -m "$(left "$start" "$timeout")" -o /dev/null "http://$address$path" >/dev/null 2>&1; do
-    [ "$(docker inspect -f '{{.State.Running}}' "$container")" = true ] || crashed "$container"
+  while :; do
     before "$start" "$timeout" || fail "$container: $path did not answer within ${timeout}s" "$container"
+    if curl -fsS -m "$(left "$start" "$timeout")" -o /dev/null "http://$address$path" >/dev/null 2>&1; then
+      before "$start" "$timeout" || fail "$container: $path answered after $(elapsed "$start")s, over ${timeout}s" "$container"
+      break
+    fi
+    [ "$(docker inspect -f '{{.State.Running}}' "$container")" = true ] || crashed "$container"
     sleep 0.25
   done
   echo "server: $path answered after $(elapsed "$start")s"
@@ -119,38 +122,43 @@ smoke_server() {
   echo "server: web bundle has" $required
 }
 
-[ $# -gt 0 ] || set -- db-push server
-for target in "$@"; do
-  dockerfile "${target%%=*}" >/dev/null || fail "unknown image ${target%%=*}. Use db-push or server."
-done
-case $prefix in
-  myakiba*) fail "SMOKE_PREFIX=$prefix would name smoke resources like the operator's myakiba-* containers. Choose another prefix." ;;
-esac
-[ -z "$(docker ps -aq --filter "name=^$prefix-")$(docker network ls -q --filter "name=^$prefix-")$(docker images -q --filter "reference=$prefix-*")" ] ||
-  fail "containers, networks or images named $prefix-* already exist, and this run did not create them. Set SMOKE_PREFIX to a name no other run uses."
-required=${SMOKE_REQUIRED_CLIENT_VARS:-}
-if [[ " $* " == *" server"* && -z "$required" ]]; then
-  command -v bun >/dev/null || fail "the server smoke needs bun on PATH to read the required VITE_* names."
-  required=$(bun scripts/check-deploy-config.ts --required-client-vars) ||
-    fail "found no required VITE_* variable. Run bun scripts/check-deploy-config.ts for the reason."
-fi
-
-work=$(mktemp -d)
-trap 'cleanup; rm -rf "$work"' EXIT
-docker network create --label "$label" "$network" >/dev/null
-docker run -d --label "$label" --name "$postgres" --network "$network" \
-  -e POSTGRES_USER=smoke -e POSTGRES_PASSWORD=smoke -e POSTGRES_DB=smoke postgres:18.6 >/dev/null
-docker run -d --label "$label" --name "$redis" --network "$network" redis:8.8.0 >/dev/null
-
-for target in "$@"; do
-  name=${target%%=*}
-  image=${target#*=}
-  if [ "$image" = "$target" ]; then
-    build "$name"
-    image=$prefix-$name
+main() {
+  cd "$(dirname "$0")/.."
+  [ $# -gt 0 ] || set -- db-push server
+  for target in "$@"; do
+    dockerfile "${target%%=*}" >/dev/null || fail "unknown image ${target%%=*}. Use db-push or server."
+  done
+  case $prefix in
+    myakiba*) fail "SMOKE_PREFIX=$prefix would name smoke resources like the operator's myakiba-* containers. Choose another prefix." ;;
+  esac
+  [ -z "$(docker ps -aq --filter "name=^$prefix-")$(docker network ls -q --filter "name=^$prefix-")$(docker images -q --filter "reference=$prefix-*")" ] ||
+    fail "containers, networks or images named $prefix-* already exist, and this run did not create them. Set SMOKE_PREFIX to a name no other run uses."
+  required=${SMOKE_REQUIRED_CLIENT_VARS:-}
+  if [[ " $* " == *" server"* && -z "$required" ]]; then
+    command -v bun >/dev/null || fail "the server smoke needs bun on PATH to read the required VITE_* names."
+    required=$(bun scripts/check-deploy-config.ts --required-client-vars) ||
+      fail "found no required VITE_* variable. Run bun scripts/check-deploy-config.ts for the reason."
   fi
-  wait_until 60 docker exec "$postgres" pg_isready -h 127.0.0.1 -U smoke || fail "Postgres did not start" "$postgres"
-  wait_until 60 docker exec "$redis" redis-cli ping || fail "Redis did not start" "$redis"
-  "smoke_${name//-/_}" "$image"
-done
-echo "image smoke ok: $*"
+
+  work=$(mktemp -d)
+  trap 'cleanup; rm -rf "$work"' EXIT
+  docker network create --label "$label" "$network" >/dev/null
+  docker run -d --label "$label" --name "$postgres" --network "$network" \
+    -e POSTGRES_USER=smoke -e POSTGRES_PASSWORD=smoke -e POSTGRES_DB=smoke postgres:18.6 >/dev/null
+  docker run -d --label "$label" --name "$redis" --network "$network" redis:8.8.0 >/dev/null
+
+  for target in "$@"; do
+    name=${target%%=*}
+    image=${target#*=}
+    if [ "$image" = "$target" ]; then
+      build "$name"
+      image=$prefix-$name
+    fi
+    wait_until 60 docker exec "$postgres" pg_isready -h 127.0.0.1 -U smoke || fail "Postgres did not start" "$postgres"
+    wait_until 60 docker exec "$redis" redis-cli ping || fail "Redis did not start" "$redis"
+    "smoke_${name//-/_}" "$image"
+  done
+  echo "image smoke ok: $*"
+}
+
+[ "${BASH_SOURCE[0]}" != "$0" ] || main "$@"
