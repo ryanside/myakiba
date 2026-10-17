@@ -144,7 +144,7 @@ function orderIdsIn(columns: OrderColumns): Set<string> {
   );
 }
 
-function reconcileOrderColumns(
+export function reconcileOrderColumns(
   current: OrderColumns,
   incoming: OrderColumns,
   pendingOrderIds: ReadonlySet<string>,
