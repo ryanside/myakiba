@@ -52,7 +52,7 @@ replay passes 5fb21638 '' smoke db-push
 replay caught 0413ac06^ 'EVLOG_AXIOM_TOKEN' smoke server
 replay cleared 0413ac06 'EVLOG_AXIOM_TOKEN' smoke server
 replay caught aa694df2^ 'does not log in production mode' smoke server
-replay cleared aa694df2 'does not log in production mode' smoke server
+replay caught aa694df2 'web bundle in' smoke server
 replay caught 2f7942f9^ 'web bundle in' smoke server
 replay passes 2f7942f9 '' smoke server
 replay passes HEAD '' smoke
