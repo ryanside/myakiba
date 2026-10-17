@@ -52,9 +52,20 @@ const isEnvKey = (key, computed) =>
     ? key.type === "Literal" && key.value === "env"
     : key.type === "Identifier" && key.name === "env";
 
+const runtimeDefinition = (variable) =>
+  variable?.isValueVariable
+    ? variable.defs.find(
+        ({ node, parent }) =>
+          !node.declare &&
+          !parent?.declare &&
+          node.importKind !== "type" &&
+          parent?.importKind !== "type",
+      )
+    : undefined;
+
 const runtimeOwner = (context, identifier) => {
   for (let scope = context.sourceCode.getScope(identifier); scope; scope = scope.upper) {
-    const [definition] = scope.set.get(identifier.name)?.defs ?? [];
+    const definition = runtimeDefinition(scope.set.get(identifier.name));
     if (!definition) continue;
     const isModuleImport =
       definition.type === "ImportBinding" &&

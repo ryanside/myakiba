@@ -10,13 +10,12 @@ const LINT_TOOLING = [
   "tools/oxlint/**",
   "scripts/lint-budget.ts",
 ];
-const TOOLING_PATHS = LINT_TOOLING.map((pattern) => `:(glob)${pattern}`);
-const CONFIG_PATHS = [...TOOLING_PATHS, `:(exclude)${BUDGET_PATH}`];
-const SOURCE_FILES = ["*.js", "*.jsx", "*.mjs", "*.cjs", "*.ts", "*.tsx", "*.mts", "*.cts"];
-const DIRECTIVES = [
-  /\/\/+\s*(?:eslint|oxlint)-disable(?:-next-line|-line)?\b(?<rest>[^\n]*)/gu,
-  /\/\*[\s*]*(?:eslint|oxlint)-disable(?:-next-line|-line)?\b(?<rest>[\s\S]*?)\*\//gu,
+const CONFIG_PATHS = [
+  ...LINT_TOOLING.map((pattern) => `:(glob)${pattern}`),
+  `:(exclude)${BUDGET_PATH}`,
 ];
+const SOURCE_FILES = ["*.js", "*.jsx", "*.mjs", "*.cjs", "*.ts", "*.tsx", "*.mts", "*.cts"];
+const DIRECTIVE = /(?<opener>\/\/|\/\*)[\s*]*(?:eslint|oxlint)-disable(?:-next-line|-line)?\b/gu;
 const GUARD_RULES = new Set(["require-suppression-reason", "no-abusive-eslint-disable"]);
 const TRUNK = "origin/main";
 const APPROVER = /^\p{L}[^<>]*$/u;
@@ -107,19 +106,20 @@ for (const name of sources.split("\0").filter(Boolean)) {
   const file = Bun.file(name);
   if (!(await file.exists())) continue;
   const text = await file.text();
-  for (const directive of DIRECTIVES) {
-    for (const match of text.matchAll(directive)) {
-      const rules = (match.groups?.rest ?? "")
-        .split("--")[0]
-        ?.split(/[\s,]+/u)
-        .filter((rule) => rule && !/^\*+$/u.test(rule));
-      const guard = rules?.find((rule) => GUARD_RULES.has(rule.split("/").at(-1) ?? ""));
-      if (rules?.length && !guard) continue;
-      const line = text.slice(0, match.index).split("\n").length;
-      badDirectives.push(
-        `${name}:${line} ${guard ? `names ${guard}` : "names no rule"}: ${match[0].split("\n")[0]}`,
-      );
-    }
+  for (const match of text.matchAll(DIRECTIVE)) {
+    const start = match.index + match[0].length;
+    const end = text.indexOf(match.groups?.opener === "//" ? "\n" : "*/", start);
+    const rest = text.slice(start, end === -1 ? undefined : end);
+    const rules = rest
+      .split("--")[0]
+      ?.split(/[\s,]+/u)
+      .filter((rule) => rule && !/^\*+$/u.test(rule));
+    const guard = [...GUARD_RULES].find((rule) => rest.includes(rule));
+    if (rules?.length && !guard) continue;
+    const line = text.slice(0, match.index).split("\n").length;
+    badDirectives.push(
+      `${name}:${line} ${guard ? `names ${guard}` : "names no rule"}: ${`${match[0]}${rest}`.split("\n")[0]}`,
+    );
   }
 }
 if (badDirectives.length > 0) {
@@ -155,16 +155,15 @@ if (base) {
     return subject.trim();
   };
 
-  const commits = await $`git rev-list ${base}..HEAD`.quiet().text();
-  const ownChanges =
-    await $`echo ${commits.trim()} | git diff-tree --stdin --cc --name-only -r -- ${TOOLING_PATHS}`
-      .quiet()
-      .text();
+  const history = await $`git log --format=${"%x00%H"} --remerge-diff --name-only ${base}..HEAD`
+    .quiet()
+    .text();
+  const toolingGlobs = LINT_TOOLING.map((pattern) => new Bun.Glob(pattern));
   const changedFiles = new Map<string, string[]>();
-  let commit = "";
-  for (const line of ownChanges.split("\n").filter(Boolean)) {
-    if (/^[\da-f]{40}$/u.test(line)) commit = line;
-    else changedFiles.set(commit, [...(changedFiles.get(commit) ?? []), line]);
+  for (const entry of history.split("\0").filter(Boolean)) {
+    const [commit = "", ...files] = entry.split("\n").filter(Boolean);
+    const lintFiles = files.filter((file) => toolingGlobs.some((glob) => glob.match(file)));
+    if (lintFiles.length > 0) changedFiles.set(commit, lintFiles);
   }
 
   const unapproved: string[] = [];

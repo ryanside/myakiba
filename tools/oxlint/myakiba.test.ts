@@ -78,7 +78,12 @@ describe("myakiba/no-env-outside-env-package", () => {
       ['import process from "node:process"; export const h2 = process.env.H;', true],
       ['import runtime from "node:process"; export const h3 = runtime.env.H;', true],
       ['import * as proc from "node:process"; export const h4 = proc.env.H;', true],
+      ["type process = { v: 1 }; export type P = process; export const t1 = process.env.T;", true],
+      ["interface Bun { v: 1 } export type B = Bun; export const t2 = Bun.env.T;", true],
+      ["declare const process: { env: string }; export const t3 = process.env;", true],
+      ['import type process from "./types"; export const t4 = process.env.T;', true],
       ["export function i(process: { env: string }) { return process.env; }", false],
+      ["export enum process { env } export const t5 = process.env;", false],
       ["export function j() { const process = { env: 1 }; return process.env; }", false],
       ["export function k(Bun: { env: string }) { const { env } = Bun; return env; }", false],
     ]));
