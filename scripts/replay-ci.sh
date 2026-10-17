@@ -38,6 +38,7 @@ replay() {
 
 replay caught 2f7942f9^ 'apps/server/Dockerfile: VITE_SERVER_URL is required' check
 replay caught e9f7709c^ 'docker-compose.yml services.server.build.args: missing VITE_TURNSTILE_SITE_KEY' check
+replay caught e9f7709c 'docker-compose.yml services.server.environment: VITE_TURNSTILE_SITE_KEY is set at runtime' check
 replay passes 2f7942f9 '' check
 replay caught 25a194bc^ 'docker-compose.yml services.server.build.args: missing SOURCE_COMMIT' check
 replay cleared 25a194bc 'SOURCE_COMMIT' check
