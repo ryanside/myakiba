@@ -1,4 +1,4 @@
-import { existsSync, statSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -13,7 +13,7 @@ const BASE_TSCONFIG = "packages/config/tsconfig.base.json";
 const JUDGMENT = "judgment";
 
 type Reference =
-  | { kind: "file"; path: string }
+  | { kind: "path"; path: string }
   | { kind: "lint rule"; id: string }
   | { kind: "compiler flag"; flag: string }
   | { kind: "script"; name: string };
@@ -25,6 +25,7 @@ type LintConfig = {
   default: {
     jsPlugins?: { name: string; specifier: string }[];
     rules?: Record<string, RuleSetting>;
+    overrides?: { files: string[]; rules?: Record<string, RuleSetting> }[];
   };
 };
 type OxlintRule = { scope: string; value: string };
@@ -36,7 +37,10 @@ type TsConfig = { compilerOptions?: Record<string, string | boolean | string[]> 
 const classify = (text: string): Reference | undefined => {
   const script = /^bun run (?<name>[\w:-]+)$/u.exec(text)?.groups?.name;
   if (script) return { kind: "script", name: script };
-  if (/^\.?[\w@-]+(?:[/.][\w@-]+)*\.[a-z]+$/u.test(text)) return { kind: "file", path: text };
+  const isPath =
+    /^\.?[\w@.-]+(?:\/[\w@.-]+)*\/?$/u.test(text) &&
+    (text.endsWith("/") || /\.[a-z]+$/u.test(text) || text.split("/").length > 2);
+  if (isPath) return { kind: "path", path: text };
   if (/^(?:[a-z0-9-]+\/)?[a-z0-9]+(?:-[a-z0-9]+)+$/u.test(text))
     return { kind: "lint rule", id: text };
   if (/^[a-z]+(?:[A-Z][a-z]+)+$/u.test(text)) return { kind: "compiler flag", flag: text };
@@ -133,7 +137,9 @@ const builtinRules = await listBuiltinRules();
 const lintRuleProblem = async (id: string): Promise<string | undefined> => {
   if (!lintConfig.ok) return `\`${id}\` cannot be checked: ${lintConfig.reason}`;
   const config = lintConfig.value.default;
-  if (!isOn(config.rules?.[id])) return `\`${id}\` is not turned on in the rules of ${LINT_CONFIG}`;
+  const settings = [config.rules, ...(config.overrides ?? []).map((override) => override.rules)];
+  if (!settings.some((rules) => isOn(rules?.[id])))
+    return `\`${id}\` is not turned on in the rules or overrides of ${LINT_CONFIG}`;
   const [prefix, name = ""] = id.split("/");
   const plugin = config.jsPlugins?.find((candidate) => candidate.name === prefix);
   if (!plugin) {
@@ -151,10 +157,8 @@ const lintRuleProblem = async (id: string): Promise<string | undefined> => {
 
 const problemWith = async (reference: Reference): Promise<string | undefined> => {
   switch (reference.kind) {
-    case "file": {
-      return existsSync(reference.path) && statSync(reference.path).isFile()
-        ? undefined
-        : `\`${reference.path}\` does not exist`;
+    case "path": {
+      return existsSync(reference.path) ? undefined : `\`${reference.path}\` does not exist`;
     }
     case "script": {
       return Object.hasOwn(scripts, reference.name)
@@ -195,7 +199,7 @@ for (const row of table.rows) {
   if (!row.rule) failures.push(`${label} has an empty rule cell.`);
   if (spans.length === 0 && !judgment) {
     failures.push(
-      `${label} has no enforcer. Name its check in backticks (a file path, a lint rule id, a compiler flag or \`bun run <script>\`), or start the cell with "${JUDGMENT}".`,
+      `${label} has no enforcer. Name its check in backticks (a file or directory path, a lint rule id, a compiler flag or \`bun run <script>\`), or start the cell with "${JUDGMENT}".`,
     );
   }
   for (const text of spans) {
@@ -203,7 +207,7 @@ for (const row of table.rows) {
     const reference = classify(text);
     const problem = reference
       ? await problemWith(reference)
-      : `\`${text}\` is not a file path, lint rule id, compiler flag or \`bun run <script>\``;
+      : `\`${text}\` is not a path, lint rule id, compiler flag or \`bun run <script>\`. End a one-segment directory with /`;
     if (problem) failures.push(`${label}: ${problem}.`);
   }
 }

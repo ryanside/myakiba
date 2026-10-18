@@ -32,7 +32,12 @@ async function fixture() {
   const writeLintConfig = (
     rules: Record<string, string>,
     jsPlugins = [{ name: "local", specifier: "./tools/plugin.mjs" }],
-  ) => write("oxlint.config.ts", `export default ${JSON.stringify({ jsPlugins, rules })};\n`);
+    overrides: { files: string[]; rules: Record<string, string | string[]> }[] = [],
+  ) =>
+    write(
+      "oxlint.config.ts",
+      `export default ${JSON.stringify({ jsPlugins, rules, overrides })};\n`,
+    );
   const run = async (): Promise<Run> => {
     const result = await $`bun ${CHECKER}`.cwd(dir).nothrow().quiet();
     return { exitCode: result.exitCode, output: `${result.stdout}${result.stderr}` };
@@ -119,8 +124,51 @@ describe("scripts/check-rule-table.ts", () => {
     await repo.writeLintConfig({ "local/no-iso-slice": "off" });
     await fails(
       repo.run(),
-      "`local/no-iso-slice` is not turned on in the rules of oxlint.config.ts.",
-      "`no-restricted-properties` is not turned on in the rules of oxlint.config.ts.",
+      "`local/no-iso-slice` is not turned on in the rules or overrides of oxlint.config.ts.",
+      "`no-restricted-properties` is not turned on in the rules or overrides of oxlint.config.ts.",
+    );
+  });
+
+  test("counts a lint rule that only an override turns on", async () => {
+    const repo = await fixture();
+    await repo.writeLintConfig(
+      { "local/no-iso-slice": "off" },
+      [{ name: "local", specifier: "./tools/plugin.mjs" }],
+      [
+        { files: ["apps/web/**"], rules: { "local/no-iso-slice": "warn" } },
+        { files: ["apps/server/**"], rules: { "no-restricted-properties": ["error"] } },
+      ],
+    );
+    await passes(repo.run());
+  });
+
+  test("fails a lint rule that the top level and every override turn off", async () => {
+    const repo = await fixture();
+    await repo.writeLintConfig(
+      { "local/no-iso-slice": "warn", "no-restricted-properties": "off" },
+      [{ name: "local", specifier: "./tools/plugin.mjs" }],
+      [
+        { files: ["apps/web/**"], rules: { "no-restricted-properties": "off" } },
+        { files: ["apps/server/**"], rules: { eqeqeq: "warn" } },
+      ],
+    );
+    await fails(
+      repo.run(),
+      'AGENTS.md:9 "Restrict JSON.parse.": `no-restricted-properties` is not turned on in the rules or overrides of oxlint.config.ts.',
+    );
+  });
+
+  test("accepts a directory that exists and fails one that does not", async () => {
+    const repo = await fixture();
+    await repo.write("apps/web/src/data/catalog.ts", "export {};\n");
+    await repo.writeTable([...ROWS, "| Hooks live in data. | `apps/web/src/data` and `tools/` |"]);
+    await passes(repo.run());
+    await rm(path.join(repo.dir, "apps/web/src/data"), { recursive: true });
+    await rm(path.join(repo.dir, "tools"), { recursive: true });
+    await fails(
+      repo.run(),
+      'AGENTS.md:13 "Hooks live in data.": `apps/web/src/data` does not exist.',
+      'AGENTS.md:13 "Hooks live in data.": `tools/` does not exist.',
     );
   });
 
@@ -183,7 +231,7 @@ describe("scripts/check-rule-table.ts", () => {
   test("fails a named check it cannot classify", async () => {
     const repo = await fixture();
     await repo.writeTable([...ROWS, "| Routers live here. | `routers/*/index.ts` |"]);
-    await fails(repo.run(), "`routers/*/index.ts` is not a file path, lint rule id");
+    await fails(repo.run(), "`routers/*/index.ts` is not a path, lint rule id");
   });
 
   test("keeps a pipe inside a code span in its cell", async () => {
