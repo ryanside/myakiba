@@ -1,12 +1,12 @@
 import { status } from "elysia";
 import type { ElysiaCustomStatusResponse } from "elysia";
 import type { RequestLogger } from "evlog";
-import { asc, desc, sql } from "drizzle-orm";
+import { asc, count, desc, sql } from "drizzle-orm";
 import type { AnyColumn, SQL } from "drizzle-orm";
 import type { AnyPgColumn, PgSelect } from "drizzle-orm/pg-core";
 import { db } from "@myakiba/db/client";
 import type { ReadTx, Tx } from "@myakiba/db/tx";
-import type { PageRequest } from "@myakiba/contracts/shared/pagination";
+import type { Page, PageRequest } from "@myakiba/contracts/shared/pagination";
 import type { Viewer } from "./viewer";
 
 /**
@@ -230,24 +230,66 @@ export async function serve<I, T, F extends Failure, M extends string>(
 
 type SortColumn = AnyColumn | SQL;
 
+/** Aggregates over the whole filtered set, such as a sum the list shows above its pages. */
+type Totals = Readonly<Record<string, SQL.Aliased>>;
+
+type PageOf<TRows extends PgSelect, TTotals extends Totals> = Page<Awaited<TRows>[number]> & {
+  readonly [K in keyof TTotals]: TTotals[K]["_"]["type"];
+};
+
+type PageSource<TRows extends PgSelect, TTotals extends Totals> = {
+  readonly rows: TRows;
+  /** Reads `filtered`, the rows before the page is cut. A field it reads needs a unique name. */
+  readonly totals?: (filtered: ReturnType<TRows["as"]>) => TTotals;
+};
+
+/**
+ * Cuts one page of `rows` in `orderBy` order, and counts the whole filtered set
+ * beside it, so a page past the end still reports `totalCount` and `totals`.
+ * `orderBy` must end in a key that is unique within `rows`. A list the user
+ * sorts goes through `paginate`.
+ */
+async function paginateBy<TRows extends PgSelect, TTotals extends Totals = Record<never, never>>(
+  scope: { readonly tx: ReadTx },
+  window: { readonly limit: number; readonly offset: number },
+  source: PageSource<TRows, TTotals> & { readonly orderBy: readonly SQL[] },
+): Promise<PageOf<TRows, TTotals>> {
+  // `orderBy` and `limit` mutate the builder, so the filtered set's SQL is taken first.
+  const filtered = source.rows.as("filtered") as ReturnType<TRows["as"]>;
+  const [items, [counted]] = await Promise.all([
+    source.rows
+      .orderBy(...source.orderBy)
+      .limit(window.limit)
+      .offset(window.offset),
+    scope.tx.select({ totalCount: count(), ...source.totals?.(filtered) }).from(filtered),
+  ]);
+  if (!counted) throw new Error("An aggregate without GROUP BY returned no row");
+  return { items, ...counted } as PageOf<TRows, TTotals>;
+}
+
 /**
  * Orders `rows` by the requested sort, then by `tiebreak`, and cuts the page.
  * `sortBy` names a column for every sort key the contract accepts, and the
  * tiebreak ends in a primary key, so the order is total and pages never overlap.
  */
-export function paginate<TSort extends string, TRows extends PgSelect>(
+export function paginate<
+  TSort extends string,
+  TRows extends PgSelect,
+  TTotals extends Totals = Record<never, never>,
+>(
+  scope: { readonly tx: ReadTx },
   request: PageRequest<TSort>,
-  source: {
-    readonly rows: TRows;
+  source: PageSource<TRows, TTotals> & {
     readonly sortBy: { readonly [K in TSort]: SortColumn };
     readonly tiebreak: readonly [...SortColumn[], AnyPgColumn<{ isPrimaryKey: true }>];
   },
-): TRows {
+): Promise<PageOf<TRows, TTotals>> {
   const direction = request.order === "asc" ? asc : desc;
   const sort = source.sortBy[request.sort];
   const columns = [sort, ...source.tiebreak.filter((column) => column !== sort)];
-  return source.rows
-    .orderBy(...columns.map((column) => direction(column)))
-    .limit(request.limit)
-    .offset(request.offset);
+  return paginateBy(scope, request, {
+    rows: source.rows,
+    orderBy: columns.map((column) => direction(column)),
+    totals: source.totals,
+  });
 }

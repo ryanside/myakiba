@@ -47,15 +47,12 @@ export function useOrdersQuery() {
 
   const { data, isPending, isError, status } = useRead(ordersResource.list, filters);
 
-  const orders = data ?? [];
-  const head = orders[0];
-
   return {
-    orders,
-    totalCount: head?.totalCount ?? 0,
-    totalSpent: head?.totalSpent ?? 0,
-    activeOrders: head?.activeOrders ?? 0,
-    unpaidCosts: head?.unpaidCosts ?? 0,
+    orders: data?.items ?? [],
+    totalCount: data?.totalCount ?? 0,
+    totalSpent: data?.totalSpent ?? 0,
+    activeOrders: data?.activeOrders ?? 0,
+    unpaidCosts: data?.unpaidCosts ?? 0,
     isPending,
     isError,
     status,

@@ -221,7 +221,6 @@
     "apps/web/src/queries/search.ts OrderCommandMatch",
     "apps/worker/lib/types.ts ProcessSyncJobContext",
     "packages/contracts/src/calendar/schema.ts CalendarSearch",
-    "packages/contracts/src/collection/types.ts CollectionQueryResponse",
     "packages/contracts/src/collection/types.ts CollectionStats",
     "packages/contracts/src/orders/schema.ts CascadeOption",
     "packages/contracts/src/search/schema.ts CollectionSearchSort",

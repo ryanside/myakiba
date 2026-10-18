@@ -47,12 +47,12 @@ query(config, async (scope, input: PageRequest<"title" | "shop">) => {
   const sortBy = { title: order.title, shop: order.shop };
 
   // @ts-expect-error a1f6ff78: pages ordered by a non-unique key repeated rows; end on a primary key
-  void paginate(input, { rows, sortBy, tiebreak: [order.createdAt] });
+  void paginate(scope, input, { rows, sortBy, tiebreak: [order.createdAt] });
 
   // @ts-expect-error a sort key without a column fell back to createdAt; sortBy names every key
-  void paginate(input, { rows, sortBy: { title: order.title }, tiebreak: [order.id] });
+  void paginate(scope, input, { rows, sortBy: { title: order.title }, tiebreak: [order.id] });
 
-  return ok(await paginate(input, { rows, sortBy, tiebreak: [order.createdAt, order.id] }));
+  return ok(await paginate(scope, input, { rows, sortBy, tiebreak: [order.createdAt, order.id] }));
 });
 
 privateApi("/probe").delete("/:orderId/items/:collectionId", (ctx) =>

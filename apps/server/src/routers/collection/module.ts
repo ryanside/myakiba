@@ -61,7 +61,8 @@ export const Collection = {
           status: collection.status,
           count: collection.count,
           score: collection.score,
-          price: collection.price,
+          // Named apart from item_release.price, so `totals` can read it from the filtered set.
+          price: sql`${collection.price}`.mapWith(collection.price).as("collection_price"),
           shop: collection.shop,
           condition: collection.condition,
           orderDate: collection.orderDate,
@@ -79,11 +80,6 @@ export const Collection = {
           releaseType: item_release.type,
           createdAt: collection.createdAt,
           updatedAt: collection.updatedAt,
-          /* oxlint-disable myakiba/no-window-total -- the collection response carries these totals on every row until S9 moves them to a filtered count (until 2027-01-31, approved by root per plan S2, pending operator review) */
-          totalCount: sql<number>`COUNT(*) OVER()`,
-          totalValue: sql<number>`COALESCE(SUM(${collection.price}) OVER(), 0)`,
-          totalItemsThisMonth: sql<number>`COUNT(*) FILTER (WHERE ${collection.collectionDate} >= date_trunc('month', CURRENT_DATE)::date) OVER()`,
-          /* oxlint-enable myakiba/no-window-total */
         })
         .from(collection)
         .innerJoin(item, eq(collection.itemId, item.id))
@@ -91,7 +87,7 @@ export const Collection = {
         .where(filters)
         .$dynamic();
 
-      const page = await paginate(input, {
+      const page = await paginate(scope, input, {
         rows,
         sortBy: {
           itemTitle: item.title,
@@ -110,15 +106,27 @@ export const Collection = {
           createdAt: collection.createdAt,
         },
         tiebreak: [collection.createdAt, collection.id],
+        totals: (filtered) => ({
+          totalValue: sql<number>`COALESCE(SUM(${filtered.price}), 0)`
+            .mapWith(Number)
+            .as("totalValue"),
+          totalItemsThisMonth:
+            sql<number>`COUNT(*) FILTER (WHERE ${filtered.collectionDate} >= date_trunc('month', CURRENT_DATE)::date)`
+              .mapWith(Number)
+              .as("totalItemsThisMonth"),
+        }),
       });
 
-      const items = page.map((row) => ({
-        ...row,
-        createdAt: row.createdAt.toISOString(),
-        updatedAt: row.updatedAt.toISOString(),
-      }));
-      scope.log.set({ collection: { resultCount: items.length } });
-      return ok(items);
+      const result = {
+        ...page,
+        items: page.items.map((row) => ({
+          ...row,
+          createdAt: row.createdAt.toISOString(),
+          updatedAt: row.updatedAt.toISOString(),
+        })),
+      };
+      scope.log.set({ collection: { resultCount: result.items.length } });
+      return ok(result);
     },
   ),
 

@@ -1,4 +1,5 @@
 import type { CollectionItem } from "../collection/types";
+import type { Page } from "../shared/pagination";
 import type { OrderStatus, ShippingMethod } from "../shared/types";
 
 export type Order = {
@@ -25,14 +26,11 @@ export type Order = {
   updatedAt: string;
 };
 
-export type OrderListItem = Order & {
-  readonly totalCount: number;
+/** A page of Orders and the summary of every Order the filters match. */
+export type OrdersPage = Page<Order> & {
   readonly totalSpent: number;
   readonly activeOrders: number;
   readonly unpaidCosts: number;
 };
 
-export type OrderItem = Omit<
-  CollectionItem,
-  "itemScale" | "createdAt" | "updatedAt" | "totalCount" | "totalValue" | "totalItemsThisMonth"
->;
+export type OrderItem = Omit<CollectionItem, "itemScale" | "createdAt" | "updatedAt">;

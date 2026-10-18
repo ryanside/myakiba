@@ -22,7 +22,13 @@ const write =
     });
 
 await mock.module("@/queries/orders", () => ({
-  getOrders: async () => [],
+  getOrders: async () => ({
+    items: [],
+    totalCount: 0,
+    totalSpent: 0,
+    activeOrders: 0,
+    unpaidCosts: 0,
+  }),
   getOrder: async () => {
     throw new Error("no order page in these tests");
   },

@@ -24,13 +24,11 @@ export function useCollectionQuery() {
 
   const { data, isPending, isError, status } = useRead(collectionResource.list, filters);
 
-  const items = data ?? [];
-
   return {
-    items,
-    totalCount: items[0]?.totalCount ?? 0,
-    totalValue: items[0]?.totalValue ?? 0,
-    totalItemsThisMonth: items[0]?.totalItemsThisMonth ?? 0,
+    items: data?.items ?? [],
+    totalCount: data?.totalCount ?? 0,
+    totalValue: data?.totalValue ?? 0,
+    totalItemsThisMonth: data?.totalItemsThisMonth ?? 0,
     isPending,
     isError,
     status,

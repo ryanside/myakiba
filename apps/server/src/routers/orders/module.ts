@@ -4,7 +4,7 @@ import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-re
 import { collection, item, item_release, order } from "@myakiba/db/schema/figure";
 import type { Tx } from "@myakiba/db/tx";
 import type { CascadeOptions, NewOrder, OrderItemsQuery } from "@myakiba/contracts/orders/schema";
-import type { Order, OrderListItem } from "@myakiba/contracts/orders/types";
+import type { Order } from "@myakiba/contracts/orders/types";
 import { orderPreviewImagesSql } from "@/lib/order-preview";
 import { command, fail, ok, paginate, query } from "@/domain/kernel";
 import type { OrderUpdateType, OrdersQuery } from "./model";
@@ -91,7 +91,7 @@ export const Orders = {
           shippingDate: order.shippingDate,
           collectionDate: order.collectionDate,
           status: order.status,
-          total: orderTotal,
+          total: orderTotal.as("total"),
           shippingFee: order.shippingFee,
           taxes: order.taxes,
           duties: order.duties,
@@ -102,12 +102,6 @@ export const Orders = {
           images: orderPreviewImagesSql,
           createdAt: order.createdAt,
           updatedAt: order.updatedAt,
-          /* oxlint-disable myakiba/no-window-total -- the list response carries these totals on every row until S9 moves them to a filtered count (until 2027-01-31, approved by root per plan S2, pending operator review) */
-          totalCount: sql<number>`COUNT(*) OVER ()`,
-          totalSpent: sql<number>`COALESCE(SUM(${orderTotal}) FILTER (WHERE ${order.status} != 'Ordered') OVER (), 0)`,
-          activeOrders: sql<number>`COUNT(*) FILTER (WHERE ${order.status} != 'Owned') OVER ()`,
-          unpaidCosts: sql<number>`COALESCE(SUM(${orderTotal}) FILTER (WHERE ${order.status} = 'Ordered') OVER (), 0)`,
-          /* oxlint-enable myakiba/no-window-total */
         })
         .from(order)
         .leftJoin(collection, eq(order.id, collection.orderId))
@@ -140,7 +134,7 @@ export const Orders = {
         )
         .$dynamic();
 
-      const page = await paginate(input, {
+      const page = await paginate(scope, input, {
         rows,
         sortBy: {
           title: order.title,
@@ -162,15 +156,31 @@ export const Orders = {
           createdAt: order.createdAt,
         },
         tiebreak: [order.createdAt, order.id],
+        totals: (filtered) => ({
+          totalSpent:
+            sql<number>`COALESCE(SUM(${filtered.total}) FILTER (WHERE ${filtered.status} != 'Ordered'), 0)`
+              .mapWith(Number)
+              .as("totalSpent"),
+          activeOrders: sql<number>`COUNT(*) FILTER (WHERE ${filtered.status} != 'Owned')`
+            .mapWith(Number)
+            .as("activeOrders"),
+          unpaidCosts:
+            sql<number>`COALESCE(SUM(${filtered.total}) FILTER (WHERE ${filtered.status} = 'Ordered'), 0)`
+              .mapWith(Number)
+              .as("unpaidCosts"),
+        }),
       });
 
-      const orders: OrderListItem[] = page.map((row) => ({
-        ...row,
-        images: row.images.slice(0, 4),
-        createdAt: row.createdAt.toISOString(),
-        updatedAt: row.updatedAt.toISOString(),
-      }));
-      scope.log.set({ orders: { resultCount: orders.length } });
+      const orders = {
+        ...page,
+        items: page.items.map((row) => ({
+          ...row,
+          images: row.images.slice(0, 4),
+          createdAt: row.createdAt.toISOString(),
+          updatedAt: row.updatedAt.toISOString(),
+        })),
+      };
+      scope.log.set({ orders: { resultCount: orders.items.length } });
       return ok(orders);
     },
   ),
@@ -251,8 +261,6 @@ export const Orders = {
           condition: collection.condition,
           tags: collection.tags,
           notes: collection.notes,
-          // oxlint-disable-next-line myakiba/no-window-total -- the items response carries the count on every row until S9 moves it to a filtered count (until 2027-01-31, approved by root per plan S2, pending operator review)
-          totalCount: sql<number>`COUNT(*) OVER()`,
         })
         .from(collection)
         .innerJoin(item, eq(collection.itemId, item.id))
@@ -262,7 +270,7 @@ export const Orders = {
         )
         .$dynamic();
 
-      const items = await paginate(input, {
+      const items = await paginate(scope, input, {
         rows,
         sortBy: {
           title: item.title,
@@ -275,7 +283,7 @@ export const Orders = {
         },
         tiebreak: [collection.createdAt, collection.id],
       });
-      scope.log.set({ orders: { itemCount: items.length } });
+      scope.log.set({ orders: { itemCount: items.items.length } });
       return ok(items);
     },
   ),

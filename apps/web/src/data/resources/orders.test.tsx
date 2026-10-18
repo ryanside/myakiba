@@ -41,10 +41,6 @@ const listRow = (order: ServerOrder) => ({
   tariffs: 0,
   miscFees: 0,
   itemCount: 2,
-  totalCount: server.orders.length,
-  totalSpent: 0,
-  activeOrders: 0,
-  unpaidCosts: 0,
 });
 
 const held =
@@ -77,7 +73,13 @@ await mock.module("@/queries/orders", () => ({
     server.listReads++;
     await server.heldReads;
     const matching = server.orders.filter((order) => order.title.includes(filters.search ?? ""));
-    return matching.map((order) => ({ ...listRow(order), totalCount: matching.length }));
+    const totals = { totalCount: matching.length, totalSpent: 0, activeOrders: 0, unpaidCosts: 0 };
+    // The 52f1b8fa replay runs this file from before S9, when the list was an array of rows that
+    // each carried the totals, so the page is also that array.
+    return Object.assign(
+      matching.map((order) => ({ ...listRow(order), ...totals })),
+      { items: matching.map(listRow), ...totals },
+    );
   },
   getOrder: async () => {
     throw new Error("no order page in these tests");

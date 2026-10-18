@@ -43,13 +43,19 @@ function holdListReads() {
   };
 }
 
-const listRows = (items: readonly ServerItem[]) =>
-  items.map((item) => ({
-    ...item,
+const listPage = (items: readonly ServerItem[]) => {
+  const totals = {
     totalCount: items.length,
     totalValue: items.reduce((sum, { price }) => sum + price, 0),
     totalItemsThisMonth: 0,
-  }));
+  };
+  // The 52f1b8fa replay runs this file from before S9, when the list was an array of rows that
+  // each carried the totals, so the page is also that array.
+  return Object.assign(
+    items.map((item) => ({ ...item, ...totals })),
+    { items, ...totals },
+  );
+};
 
 const held =
   (name: string, apply: (...args: never[]) => void) =>
@@ -69,7 +75,7 @@ await mock.module("@/queries/collection", () => ({
   getCollection: async (filters: CollectionFilters) => {
     server.listReads++;
     await server.heldReads;
-    return listRows(server.items.filter((item) => item.itemTitle.includes(filters.search ?? "")));
+    return listPage(server.items.filter((item) => item.itemTitle.includes(filters.search ?? "")));
   },
 
   deleteCollectionItems: held("delete", (ids: string[]) => {

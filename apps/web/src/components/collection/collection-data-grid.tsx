@@ -71,6 +71,7 @@ export const CollectionDataGrid = () => {
   const isTableView = viewMode === "compact" || viewMode === "table";
   const { filters, setFilters } = useCollectionFilters();
   const { items, totalCount, isPending } = useCollectionQuery();
+  const tableData = useMemo(() => [...items], [items]);
   const {
     handleEditCollectionItem,
     handleDeleteCollectionItems,
@@ -208,7 +209,7 @@ export const CollectionDataGrid = () => {
 
   const table = useReactTable({
     columns,
-    data: items,
+    data: tableData,
     pageCount: Math.ceil(totalCount / limit),
     getRowId: (row: CollectionItem) => row.id,
     getRowCanExpand: () => true,

@@ -1,7 +1,11 @@
 import { keepPreviousData } from "@tanstack/react-query";
 import type { Query } from "@tanstack/react-query";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
-import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
+import type {
+  CollectionItem,
+  CollectionItemFormValues,
+  CollectionPage,
+} from "@myakiba/contracts/collection/types";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
 import { hasActiveFiltersOrSorting } from "@/lib/filters";
 import { deleteCollectionItems, getCollection, updateCollectionItem } from "@/queries/collection";
@@ -72,18 +76,25 @@ export const updateCollectionItemCommand = defineCommand({
     );
 
     const listKey = collection.list.key(list);
-    let previousList: CollectionItem[] | undefined;
+    let previousList: CollectionPage | undefined;
     if (!hasActiveFiltersOrSorting(list)) {
       await queryClient.cancelQueries({ queryKey: listKey });
-      previousList = queryClient.getQueryData<CollectionItem[]>(listKey);
-      queryClient.setQueryData<CollectionItem[]>(listKey, (old) =>
-        old?.map((item) => (item.id === values.id ? { ...item, ...values } : item)),
+      previousList = queryClient.getQueryData<CollectionPage>(listKey);
+      queryClient.setQueryData<CollectionPage>(listKey, (old) =>
+        old
+          ? {
+              ...old,
+              items: old.items.map((item) =>
+                item.id === values.id ? { ...item, ...values } : item,
+              ),
+            }
+          : old,
       );
     }
 
     return () => {
       if (previousList) {
-        queryClient.setQueryData<CollectionItem[]>(listKey, previousList);
+        queryClient.setQueryData<CollectionPage>(listKey, previousList);
       }
       for (const [queryKey, data] of previousItemRelated) {
         queryClient.setQueryData(queryKey, data);
@@ -113,35 +124,35 @@ export const deleteCollectionItemsCommand = defineCommand({
     );
 
     const listKey = collection.list.key(list);
-    let previousList: CollectionItem[] | undefined;
+    let previousList: CollectionPage | undefined;
     if (!hasActiveFiltersOrSorting(list)) {
       await queryClient.cancelQueries({ queryKey: listKey });
-      previousList = queryClient.getQueryData<CollectionItem[]>(listKey);
+      previousList = queryClient.getQueryData<CollectionPage>(listKey);
 
-      queryClient.setQueryData<CollectionItem[]>(listKey, (old) => {
+      queryClient.setQueryData<CollectionPage>(listKey, (old) => {
         if (!old) return old;
         let deletedValue = 0;
         const retainedItems: CollectionItem[] = [];
-        for (const item of old) {
+        for (const item of old.items) {
           if (idSet.has(item.id)) {
             deletedValue += item.price;
           } else {
             retainedItems.push(item);
           }
         }
-        const deletedCount = ids.length;
 
-        return retainedItems.map((item) => ({
-          ...item,
-          totalCount: item.totalCount - deletedCount,
-          totalValue: item.totalValue - deletedValue,
-        }));
+        return {
+          ...old,
+          items: retainedItems,
+          totalCount: old.totalCount - ids.length,
+          totalValue: old.totalValue - deletedValue,
+        };
       });
     }
 
     return () => {
       if (previousList) {
-        queryClient.setQueryData<CollectionItem[]>(listKey, previousList);
+        queryClient.setQueryData<CollectionPage>(listKey, previousList);
       }
       for (const [queryKey, data] of previousItemRelated) {
         queryClient.setQueryData(queryKey, data);

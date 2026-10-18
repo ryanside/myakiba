@@ -210,7 +210,14 @@ const answers = [
     "Order item not found",
   ],
   ["get another user's order", "GET", "/order-3", undefined, 404, "Order not found"],
-  ["list another user's order items", "GET", "/order-3/items", undefined, 200, []],
+  [
+    "list another user's order items",
+    "GET",
+    "/order-3/items",
+    undefined,
+    200,
+    { items: [], totalCount: 0 },
+  ],
   ["list another user's item releases", "GET", "/order-3/item-releases", undefined, 200, []],
 ] as const;
 
@@ -226,10 +233,14 @@ describe("each orders route answers as before", () => {
     const { status, body } = await call("GET", "/?sort=title&order=asc");
 
     expect(status).toBe(200);
-    expect(body).toMatchObject([
-      { orderId: "order-1", itemCount: "2", totalCount: "2", activeOrders: "2" },
-      { orderId: "order-2", itemCount: "1", totalCount: "2", activeOrders: "2" },
-    ]);
+    expect(body).toMatchObject({
+      items: [
+        { orderId: "order-1", itemCount: "2" },
+        { orderId: "order-2", itemCount: "1" },
+      ],
+      totalCount: 2,
+      activeOrders: 2,
+    });
   });
 
   test("get", async () => {
@@ -243,8 +254,7 @@ describe("each orders route answers as before", () => {
     const { status, body } = await call("GET", "/order-1/items?sort=createdAt&order=asc");
 
     expect(status).toBe(200);
-    expect(body).toHaveLength(2);
-    expect(body).toMatchObject([{ totalCount: "2" }, { totalCount: "2" }]);
+    expect(body).toMatchObject({ items: [{ id: "c-ordered" }, { id: "c-owned" }], totalCount: 2 });
   });
 
   test("the router mounts no auth handler under its prefix", () => {
