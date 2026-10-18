@@ -66,3 +66,10 @@ void (true satisfies [FailuresOf<typeof Orders.list>] extends [never] ? true : f
 // A message body stays a literal, and an object body stays mutable, as a handler's return was.
 void (ok("List order saved").value satisfies "List order saved");
 ok({ listIds: ["l1"] }).value.listIds.push("l2");
+
+query(config, async (scope) => {
+  const owned = scope.tx.$with("owned").as(scope.tx.select({ id: order.id }).from(order));
+  // @ts-expect-error a read that writes through a CTE; a ReadTx's with() only selects
+  await scope.tx.with(owned).delete(order);
+  return ok(await scope.tx.with(owned).select().from(owned));
+});
