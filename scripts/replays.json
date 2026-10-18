@@ -110,17 +110,10 @@
     },
     {
       "fix": "e3fabef4",
-      "bug": "a sync that finished during a List move left the old order after the save",
+      "bug": "a sync that finished during a List move left the old order after the save, and the reorder hook never refetched the moved list after its last save",
       "test": "apps/web/src/hooks/use-lists.test.tsx",
       "fixed": [
-        "lists reorder > a sync that finishes while a move is saving shows the saved order once the move saves"
-      ]
-    },
-    {
-      "fix": "e3fabef4",
-      "bug": "the reorder hook never refetched the moved list after its last save",
-      "test": "apps/web/src/hooks/use-position-order-mutation.test.tsx",
-      "fixed": [
+        "lists reorder > a sync that finishes while a move is saving shows the saved order once the move saves",
         "position order saves > a list opened while another list's move is saving still refetches after its own moves",
         "position order saves > a move on one list refetches that list while another list's move is still saving",
         "position order saves > a saved move refetches only its own list",
@@ -145,7 +138,7 @@
     {
       "fix": "a6a7d4ff",
       "bug": "a List switched while a move was saving kept that move's count, so the List's later moves never refetched",
-      "test": "apps/web/src/hooks/use-position-order-mutation.test.tsx",
+      "test": "apps/web/src/hooks/use-lists.test.tsx",
       "fixed": [
         "position order saves > a list opened while another list's move is saving still refetches after its own moves"
       ]
@@ -161,7 +154,7 @@
     {
       "fix": "0f97416a",
       "bug": "a failed save's recovery fetch could land last and hide another save that worked",
-      "test": "apps/web/src/hooks/use-position-order-mutation.test.tsx",
+      "test": "apps/web/src/hooks/use-lists.test.tsx",
       "fixed": [
         "position order saves > a save that fails while another save is pending does not hide the order that saved"
       ]
