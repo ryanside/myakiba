@@ -1,4 +1,6 @@
+import { heapStats } from "bun:jsc";
 import { afterEach, describe, expect, test } from "bun:test";
+import { initLogger } from "evlog";
 import Redis from "ioredis";
 import { readinessCheck } from "./readiness";
 
@@ -99,5 +101,26 @@ describe("readinessCheck", () => {
     expect(await check(down, up)).toEqual(["postgres"]);
     expect(await check(up, hangs)).toEqual(["redis"]);
     expect(await check(down, hangs)).toEqual(["postgres", "redis"]);
+  });
+
+  test("keeps nothing per timed-out call while the probe stays pending", async () => {
+    initLogger({ enabled: false });
+    cleanups.push(() => initLogger({}));
+    const check = readinessCheck([{ name: "redis", ping: () => new Promise<void>(() => {}) }], 1);
+    const livePromises = async () => {
+      await Bun.sleep(0);
+      Bun.gc(true);
+      return heapStats().objectTypeCounts.Promise ?? 0;
+    };
+    const timeOut = async (calls: number) => {
+      const results = await Promise.all(Array.from({ length: calls }, () => check()));
+      expect(results).toEqual(Array.from({ length: calls }, () => ["redis"]));
+    };
+    await timeOut(1);
+    const before = await livePromises();
+
+    for (let round = 0; round < 20; round += 1) await timeOut(500);
+
+    expect((await livePromises()) - before).toBeLessThan(1000);
   });
 });
