@@ -5,46 +5,49 @@ export type Dependency = {
   readonly ping: () => Promise<void>;
 };
 
+type Waiter = (failure: string | undefined) => void;
+
 export const readinessCheck = (
   dependencies: readonly Dependency[],
   timeoutMs: number,
 ): (() => Promise<string[]>) => {
-  const inFlight = new Map<string, Promise<void>>();
+  const waitersByName = new Map<string, Set<Waiter>>();
 
-  const sharedPing = ({ name, ping }: Dependency): Promise<void> => {
-    const pending = inFlight.get(name);
-    if (pending) return pending;
-    const probe = (async () => {
-      try {
-        await ping();
-      } finally {
-        inFlight.delete(name);
-      }
-    })();
-    inFlight.set(name, probe);
-    return probe;
-  };
-
-  const failedPing = async (dependency: Dependency): Promise<string | undefined> => {
-    const { name } = dependency;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const deadline = new Promise<never>((_resolve, reject) => {
-      timer = setTimeout(() => reject(new Error(`no answer within ${timeoutMs} ms`)), timeoutMs);
-    });
+  const probe = async ({ name, ping }: Dependency, waiters: Set<Waiter>): Promise<void> => {
+    let failure: string | undefined;
     try {
-      await Promise.race([sharedPing(dependency), deadline]);
-      return undefined;
+      await ping();
     } catch (error) {
       const cause = error instanceof Error && error.cause instanceof Error ? error.cause : error;
-      log.error({
-        msg: "health check failed",
-        dependency: name,
-        reason: cause instanceof Error ? cause.message : String(cause),
-      });
-      return name;
-    } finally {
-      clearTimeout(timer);
+      failure = cause instanceof Error ? cause.message : String(cause);
     }
+    waitersByName.delete(name);
+    for (const settle of waiters) settle(failure);
+  };
+
+  const pingFailure = (dependency: Dependency): Promise<string | undefined> =>
+    new Promise((resolve) => {
+      const pending = waitersByName.get(dependency.name);
+      const waiters = pending ?? new Set<Waiter>();
+      const timer = setTimeout(() => {
+        waiters.delete(settle);
+        resolve(`no answer within ${timeoutMs} ms`);
+      }, timeoutMs);
+      const settle: Waiter = (failure) => {
+        clearTimeout(timer);
+        resolve(failure);
+      };
+      waiters.add(settle);
+      if (pending) return;
+      waitersByName.set(dependency.name, waiters);
+      void probe(dependency, waiters);
+    });
+
+  const failedPing = async (dependency: Dependency): Promise<string | undefined> => {
+    const failure = await pingFailure(dependency);
+    if (failure === undefined) return undefined;
+    log.error({ msg: "health check failed", dependency: dependency.name, reason: failure });
+    return dependency.name;
   };
 
   return async () => {
