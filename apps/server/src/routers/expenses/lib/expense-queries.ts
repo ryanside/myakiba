@@ -1,5 +1,5 @@
 import type { Category, ShippingMethod } from "@myakiba/contracts/shared/types";
-import { db } from "@myakiba/db/client";
+import type { ReadTx } from "@myakiba/db/tx";
 import { collection, item, order } from "@myakiba/db/schema/figure";
 import { and, count, desc, eq, gte, inArray, isNotNull, lte, ne, sql, sum } from "drizzle-orm";
 import type { ExpenseBucket, ExpenseFilters } from "../model";
@@ -113,10 +113,11 @@ function realizedItemDateSql(): ReturnType<typeof sql> {
 }
 
 export async function getCollectionSummary(
+  tx: ReadTx,
   userId: string,
   filters: ExpenseFilters,
 ): Promise<CollectionSummaryRow> {
-  const [row] = await db
+  const [row] = await tx
     .select({
       spend: sql<number>`COALESCE(${sum(collection.price)}, 0)::double precision`,
       itemCount: sql<number>`${count(collection.id)}::integer`,
@@ -148,10 +149,11 @@ export async function getCollectionSummary(
 }
 
 export function getCollectionCategoryRows(
+  tx: ReadTx,
   userId: string,
   filters: ExpenseFilters,
 ): Promise<CollectionCategoryRow[]> {
-  return db
+  return tx
     .select({
       category: sql<Category>`${item.category}::text`,
       count: sql<number>`${count(collection.id)}::integer`,
@@ -220,8 +222,8 @@ function unpaidOrderWhere(userId: string, filters: ExpenseFilters): ReturnType<t
   );
 }
 
-function createUnpaidOrderItemSpendByOrder(userId: string) {
-  return db
+function createUnpaidOrderItemSpendByOrder(tx: ReadTx, userId: string) {
+  return tx
     .select({
       orderId: collection.orderId,
       itemSpend: sql<number>`COALESCE(${sum(collection.price)}, 0)::double precision`.as(
@@ -235,10 +237,10 @@ function createUnpaidOrderItemSpendByOrder(userId: string) {
     .as("unpaid_order_items");
 }
 
-export function createOrderItemSpendByOrder(userId: string, filters: ExpenseFilters) {
+export function createOrderItemSpendByOrder(tx: ReadTx, userId: string, filters: ExpenseFilters) {
   const dateSql = realizedOrderDateSql();
 
-  return db
+  return tx
     .select({
       orderId: collection.orderId,
       itemSpend: sql<number>`COALESCE(${sum(collection.price)}, 0)::double precision`.as(
@@ -275,13 +277,14 @@ export const EMPTY_ORDER_TOTAL = {
 } as const;
 
 export function getOwnedItemSeries(
+  tx: ReadTx,
   userId: string,
   filters: ExpenseFilters,
   bucket: ExpenseBucket,
 ): Promise<ItemSeriesRow[]> {
   const itemSpend = sql<number>`COALESCE(${sum(collection.price)}, 0)::double precision`;
   const itemBucket = bucketSql(realizedItemDateSql(), bucket);
-  return db
+  return tx
     .select({
       bucket: itemBucket,
       itemSpend,
@@ -295,26 +298,29 @@ export function getOwnedItemSeries(
 }
 
 export function getOrderAggregates(
+  tx: ReadTx,
   userId: string,
   filters: ExpenseFilters,
 ): Promise<OrderTotalRow[]>;
 export function getOrderAggregates(
+  tx: ReadTx,
   userId: string,
   filters: ExpenseFilters,
   options: { readonly bucket: ExpenseBucket },
 ): Promise<OrderSeriesRow[]>;
 export function getOrderAggregates(
+  tx: ReadTx,
   userId: string,
   filters: ExpenseFilters,
   options?: { readonly bucket?: ExpenseBucket },
 ): Promise<OrderTotalRow[] | OrderSeriesRow[]> {
-  const orderItems = createOrderItemSpendByOrder(userId, filters);
+  const orderItems = createOrderItemSpendByOrder(tx, userId, filters);
   const bucket = options?.bucket;
 
   if (bucket) {
     const orderBucket = bucketSql(realizedOrderDateSql(), bucket);
 
-    return db
+    return tx
       .select({
         bucket: orderBucket,
         shippingSpend: sql<number>`COALESCE(${sum(order.shippingFee)}, 0)::double precision`,
@@ -336,7 +342,7 @@ export function getOrderAggregates(
       .orderBy(orderBucket);
   }
 
-  return db
+  return tx
     .select({
       shippingSpend: sql<number>`COALESCE(${sum(order.shippingFee)}, 0)::double precision`,
       taxesSpend: sql<number>`COALESCE(${sum(order.taxes)}, 0)::double precision`,
@@ -356,12 +362,13 @@ export function getOrderAggregates(
 }
 
 export async function getUnpaidOrderAggregates(
+  tx: ReadTx,
   userId: string,
   filters: ExpenseFilters,
 ): Promise<UnpaidOrderTotalRow> {
-  const orderItems = createUnpaidOrderItemSpendByOrder(userId);
+  const orderItems = createUnpaidOrderItemSpendByOrder(tx, userId);
 
-  const [row] = await db
+  const [row] = await tx
     .select({
       orderCount: count(),
       items: sql<number>`COALESCE(${sum(sql`COALESCE(${orderItems.itemSpend}, 0)`)}, 0)::double precision`,
@@ -389,13 +396,14 @@ export async function getUnpaidOrderAggregates(
 }
 
 export function getShippingSeries(
+  tx: ReadTx,
   userId: string,
   filters: ExpenseFilters,
   bucket: ExpenseBucket,
 ): Promise<ShippingSeriesRow[]> {
   const orderBucket = bucketSql(realizedOrderDateSql(), bucket);
 
-  return db
+  return tx
     .select({
       bucket: orderBucket,
       shippingMethod: order.shippingMethod,
@@ -409,10 +417,11 @@ export function getShippingSeries(
 }
 
 export function getShippingMethodTotals(
+  tx: ReadTx,
   userId: string,
   filters: ExpenseFilters,
 ): Promise<ShippingMethodTotalRow[]> {
-  return db
+  return tx
     .select({
       shippingMethod: order.shippingMethod,
       shippingSpend: sql<number>`COALESCE(${sum(order.shippingFee)}, 0)::double precision`,
@@ -427,11 +436,12 @@ export function getShippingMethodTotals(
 }
 
 export function getBundleEfficiencyRows(
+  tx: ReadTx,
   userId: string,
   filters: ExpenseFilters,
 ): Promise<BundleEfficiencyRow[]> {
-  const orderBundles = db.$with("order_bundles").as(
-    db
+  const orderBundles = tx.$with("order_bundles").as(
+    tx
       .select({
         itemCount: sql<number>`${count(collection.id)}::integer`.as("item_count"),
         shippingMethod: order.shippingMethod,
@@ -443,7 +453,7 @@ export function getBundleEfficiencyRows(
       .groupBy(order.id, order.shippingMethod, order.shippingFee),
   );
 
-  return db
+  return tx
     .with(orderBundles)
     .select({
       itemCount: sql<number>`"order_bundles"."item_count"`,
