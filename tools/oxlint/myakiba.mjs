@@ -209,6 +209,63 @@ const noWindowTotal = {
   },
 };
 
+const DB_CLIENT = "@myakiba/db/client";
+
+/** The client's owners use it. Exporting it, under any name, hands it to every importer. */
+const noDbClientExport = {
+  meta: { type: "problem" },
+  create(context) {
+    const report = (node) =>
+      context.report({
+        node,
+        message: `Do not export ${DB_CLIENT}. Export an operation or a helper that uses it.`,
+      });
+    return {
+      Program(program) {
+        const client = new Set();
+        const declarators = [];
+        for (const statement of program.body) {
+          if (statement.type === "ImportDeclaration" && statement.source.value === DB_CLIENT)
+            for (const specifier of statement.specifiers) client.add(specifier.local.name);
+          const declaration =
+            statement.type === "ExportNamedDeclaration" ? statement.declaration : statement;
+          if (declaration?.type === "VariableDeclaration")
+            declarators.push(...declaration.declarations);
+        }
+        for (let grew = true; grew;) {
+          grew = false;
+          for (const { id, init } of declarators) {
+            const value = unwrap(init);
+            if (id.type !== "Identifier" || client.has(id.name)) continue;
+            if (value?.type === "Identifier" && client.has(value.name)) {
+              client.add(id.name);
+              grew = true;
+            }
+          }
+        }
+        const isClient = (node) => {
+          const value = unwrap(node);
+          return value?.type === "Identifier" && client.has(value.name);
+        };
+        for (const statement of program.body) {
+          if (statement.type === "ExportAllDeclaration" && statement.source.value === DB_CLIENT)
+            report(statement);
+          if (statement.type === "ExportDefaultDeclaration" && isClient(statement.declaration))
+            report(statement);
+          if (statement.type !== "ExportNamedDeclaration") continue;
+          if (statement.source?.value === DB_CLIENT) report(statement);
+          else if (!statement.source)
+            for (const specifier of statement.specifiers)
+              if (isClient(specifier.local)) report(specifier);
+          if (statement.declaration?.type === "VariableDeclaration")
+            for (const { init } of statement.declaration.declarations)
+              if (isClient(init)) report(statement);
+        }
+      },
+    };
+  },
+};
+
 export default {
   meta: { name: "myakiba" },
   rules: {
@@ -216,5 +273,6 @@ export default {
     "no-env-outside-env-package": noEnvOutsideEnvPackage,
     "no-iso-slice": noIsoSlice,
     "no-window-total": noWindowTotal,
+    "no-db-client-export": noDbClientExport,
   },
 };

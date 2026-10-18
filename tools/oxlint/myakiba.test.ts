@@ -107,6 +107,24 @@ describe("myakiba/no-window-total", () => {
   });
 });
 
+describe("myakiba/no-db-client-export", () => {
+  const client = 'import { db } from "@myakiba/db/client";\n';
+  test("flags every export of the client and its aliases, and allows exports that use it", async () => {
+    const findings = await flags("myakiba/no-db-client-export", [
+      ['export { db as client } from "@myakiba/db/client";', true],
+      ['export * from "@myakiba/db/client";', true],
+      [`${client}export { db as client };`, true],
+      [`${client}const pool = db;\nexport { pool };`, true],
+      [`${client}export default db;`, true],
+      [`${client}export const client = db as unknown;`, true],
+      [`${client}export const probe = () => db.execute("select 1");`, false],
+      ['import type { Tx } from "@myakiba/db/tx";\nexport type { Tx };', false],
+    ]);
+    for (const { message } of findings)
+      expect(message).toContain("Do not export @myakiba/db/client");
+  });
+});
+
 describe("myakiba/no-env-outside-env-package", () => {
   test("flags env reads on the real process, Bun and import.meta, not on a shadowing binding", async () => {
     const findings = await flags("myakiba/no-env-outside-env-package", [

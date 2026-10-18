@@ -7,9 +7,36 @@ const dbClientBan = {
   name: "@myakiba/db/client",
   message: "Read and write through scope.tx in module.ts. The kernel opens the transaction.",
 };
+const dbSourcePath = {
+  regex: "^(?:[./]|file:)(?:.*/)?db/(?:.*/)?src(?:/|$)|^@myakiba/db/src(?:/|$)",
+  message:
+    "Import @myakiba/db through its package exports, not by path. The kernel owns the client.",
+};
+const testImports = [
+  { regex: "(?:^|/)[^/]+\\.test(?:\\.[cm]?[jt]sx?)?$", message: "Only tests import test files." },
+  { regex: "^(?:[./]|@/|file:)(?:.*/)?test(?:/|$)", message: "Only tests import test files." },
+];
+const routeMatcherBans = [
+  {
+    name: "@myakiba/utils/result",
+    importNames: ["tryCatch"],
+    message: "Return fail(category, message) from the operation. serve() answers it.",
+  },
+  {
+    name: "elysia",
+    importNames: ["status"],
+    message: "Return fail(category, message) from the operation. serve() answers it.",
+  },
+  {
+    name: "@/domain/kernel",
+    importNames: ["run"],
+    message: "Routes call serve(ctx, Orders.op, input). run() is for kernel tests.",
+  },
+];
 const dbClientOwners = ["apps/server/src/domain/kernel.ts", "packages/auth/src/server.ts"];
+const testCode = ["**/*.test.ts", "**/*.test.tsx", "**/test/**"];
 // Tests create and read rows directly.
-const testCode = ["apps/server/**/*.test.ts", "apps/server/test/**"];
+const serverTests = ["apps/server/**/*.test.ts", "apps/server/test/**"];
 // scraper code, replaced by the browser extension
 const scraperCode = [
   "apps/worker/**",
@@ -148,8 +175,32 @@ export default defineConfig({
     },
     {
       files: ["**"],
-      excludeFiles: [...dbClientOwners, ...testCode, ...scraperCode],
-      rules: { "no-restricted-imports": ["error", { paths: [dbClientBan] }] },
+      excludeFiles: [...serverTests, ...scraperCode],
+      rules: {
+        "no-restricted-imports": [
+          "error",
+          { paths: [dbClientBan], patterns: [dbSourcePath, ...testImports] },
+        ],
+      },
+    },
+    {
+      files: testCode,
+      excludeFiles: [...serverTests, ...scraperCode],
+      rules: {
+        "no-restricted-imports": ["error", { paths: [dbClientBan], patterns: [dbSourcePath] }],
+      },
+    },
+    {
+      files: scraperCode,
+      excludeFiles: testCode,
+      rules: { "no-restricted-imports": ["error", { patterns: testImports }] },
+    },
+    {
+      files: dbClientOwners,
+      rules: {
+        "no-restricted-imports": ["error", { patterns: [dbSourcePath, ...testImports] }],
+        "myakiba/no-db-client-export": "error",
+      },
     },
     {
       files: [
@@ -200,6 +251,7 @@ export default defineConfig({
               },
               dbClientBan,
             ],
+            patterns: [dbSourcePath, ...testImports],
           },
         ],
       },
@@ -210,29 +262,13 @@ export default defineConfig({
     },
     {
       files: ["apps/server/src/routers/**"],
-      excludeFiles: [...testCode, ...scraperCode],
+      excludeFiles: [...serverTests, ...scraperCode],
       rules: {
         "no-restricted-imports": [
           "error",
           {
-            paths: [
-              dbClientBan,
-              {
-                name: "@myakiba/utils/result",
-                importNames: ["tryCatch"],
-                message: "Return fail(category, message) from the operation. serve() answers it.",
-              },
-              {
-                name: "elysia",
-                importNames: ["status"],
-                message: "Return fail(category, message) from the operation. serve() answers it.",
-              },
-              {
-                name: "@/domain/kernel",
-                importNames: ["run"],
-                message: "Routes call serve(ctx, Orders.op, input). run() is for kernel tests.",
-              },
-            ],
+            paths: [dbClientBan, ...routeMatcherBans],
+            patterns: [dbSourcePath, ...testImports],
           },
         ],
       },
