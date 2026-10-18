@@ -1,10 +1,14 @@
 import { existsSync, statSync } from "node:fs";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
+import { $ } from "bun";
 
 const AGENTS_PATH = "AGENTS.md";
 const TABLE_HEADING = "## Rules";
 const HEADER = ["Rule", "Enforced by"];
 const LINT_CONFIG = "oxlint.config.ts";
+const OXLINT = "node_modules/.bin/oxlint";
 const BASE_TSCONFIG = "packages/config/tsconfig.base.json";
 const JUDGMENT = "judgment";
 
@@ -23,6 +27,7 @@ type LintConfig = {
     rules?: Record<string, RuleSetting>;
   };
 };
+type OxlintRule = { scope: string; value: string };
 type LintRuleModule = { create: (context: never) => Record<string, (node: never) => void> };
 type LintPlugin = { default?: { rules?: Record<string, LintRuleModule> } };
 type PackageManifest = { scripts?: Record<string, string> };
@@ -103,11 +108,27 @@ const isOn = (setting: RuleSetting | undefined) => {
   return level !== undefined && level !== "off" && level !== "allow" && level !== 0;
 };
 
+const listBuiltinRules = async (): Promise<Loaded<Set<string>>> => {
+  if (!existsSync(OXLINT)) return { ok: false, reason: `${OXLINT} does not exist` };
+  const emptyDir = await mkdtemp(path.join(tmpdir(), "rule-table-"));
+  const listed = await $`${path.resolve(OXLINT)} --rules -f json`.cwd(emptyDir).nothrow().quiet();
+  await rm(emptyDir, { recursive: true, force: true });
+  if (listed.exitCode !== 0)
+    return { ok: false, reason: `oxlint --rules exited ${listed.exitCode}` };
+  const rules: OxlintRule[] = listed.json();
+  const ids = rules.flatMap(({ scope, value }) => {
+    const id = `${scope.replaceAll("_", "-")}/${value}`;
+    return scope === "eslint" ? [id, value] : [id];
+  });
+  return { ok: true, value: new Set(ids) };
+};
+
 const manifest = await readJson<PackageManifest>("package.json");
 const scripts = manifest?.scripts ?? {};
 const tsconfig = await readJson<TsConfig>(BASE_TSCONFIG);
 const compilerOptions = tsconfig?.compilerOptions ?? {};
 const lintConfig = await importModule<LintConfig>(LINT_CONFIG);
+const builtinRules = await listBuiltinRules();
 
 const lintRuleProblem = async (id: string): Promise<string | undefined> => {
   if (!lintConfig.ok) return `\`${id}\` cannot be checked: ${lintConfig.reason}`;
@@ -115,7 +136,12 @@ const lintRuleProblem = async (id: string): Promise<string | undefined> => {
   if (!isOn(config.rules?.[id])) return `\`${id}\` is not turned on in the rules of ${LINT_CONFIG}`;
   const [prefix, name = ""] = id.split("/");
   const plugin = config.jsPlugins?.find((candidate) => candidate.name === prefix);
-  if (!plugin) return undefined;
+  if (!plugin) {
+    if (!builtinRules.ok) return `\`${id}\` cannot be checked: ${builtinRules.reason}`;
+    return builtinRules.value.has(id)
+      ? undefined
+      : `\`${id}\` is neither an oxlint rule nor a rule of a plugin in the jsPlugins of ${LINT_CONFIG}`;
+  }
   const loaded = await importModule<LintPlugin>(plugin.specifier);
   if (!loaded.ok) return `\`${id}\` lost its plugin: ${loaded.reason}`;
   return Object.hasOwn(loaded.value.default?.rules ?? {}, name)

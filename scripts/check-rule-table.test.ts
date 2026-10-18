@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, rename, rm } from "node:fs/promises";
+import { mkdtemp, rename, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { $ } from "bun";
@@ -29,16 +29,16 @@ async function fixture() {
   const write = (file: string, text: string) => Bun.write(path.join(dir, file), text);
   const writeTable = (rows: string[], header = HEADER) =>
     write("AGENTS.md", `# Agent instructions\n\n${header}${rows.join("\n")}\n`);
-  const writeLintConfig = (rules: Record<string, string>) =>
-    write(
-      "oxlint.config.ts",
-      `export default ${JSON.stringify({ jsPlugins: [{ name: "local", specifier: "./tools/plugin.mjs" }], rules })};\n`,
-    );
+  const writeLintConfig = (
+    rules: Record<string, string>,
+    jsPlugins = [{ name: "local", specifier: "./tools/plugin.mjs" }],
+  ) => write("oxlint.config.ts", `export default ${JSON.stringify({ jsPlugins, rules })};\n`);
   const run = async (): Promise<Run> => {
     const result = await $`bun ${CHECKER}`.cwd(dir).nothrow().quiet();
     return { exitCode: result.exitCode, output: `${result.stdout}${result.stderr}` };
   };
 
+  await symlink(path.join(repoRoot, "node_modules"), path.join(dir, "node_modules"));
   await write(
     "tools/plugin.mjs",
     'export default { rules: { "no-iso-slice": { create: () => ({}) } } };\n',
@@ -122,6 +122,29 @@ describe("scripts/check-rule-table.ts", () => {
       "`local/no-iso-slice` is not turned on in the rules of oxlint.config.ts.",
       "`no-restricted-properties` is not turned on in the rules of oxlint.config.ts.",
     );
+  });
+
+  test("fails a plugin rule whose plugin is no longer registered", async () => {
+    const repo = await fixture();
+    await repo.writeLintConfig(
+      { "local/no-iso-slice": "warn", "no-restricted-properties": "warn" },
+      [],
+    );
+    await fails(
+      repo.run(),
+      'AGENTS.md:8 "Do not trim ISO strings.": `local/no-iso-slice` is neither an oxlint rule nor a rule of a plugin in the jsPlugins of oxlint.config.ts.',
+    );
+  });
+
+  test("fails a lint rule that oxlint does not have", async () => {
+    const repo = await fixture();
+    await repo.writeTable([...ROWS, "| Restrict more. | `no-restricted-propertys` |"]);
+    await repo.writeLintConfig({
+      "local/no-iso-slice": "warn",
+      "no-restricted-properties": "warn",
+      "no-restricted-propertys": "warn",
+    });
+    await fails(repo.run(), "`no-restricted-propertys` is neither an oxlint rule");
   });
 
   test("fails a plugin rule id that the plugin does not define", async () => {
