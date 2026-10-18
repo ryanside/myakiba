@@ -65,6 +65,11 @@ type OpConfig<M extends string> = {
   readonly failure: M;
 };
 
+type QueryConfig<M extends string> = OpConfig<M> & {
+  /** Reads every statement from one snapshot, for a body whose reads must agree with each other. */
+  readonly snapshot?: true;
+};
+
 /** Only `serve` and `run` can execute an operation, because its body lives in `bodies`. */
 type Op<I, T, F extends Failure, M extends string> = OpConfig<M> & {
   /** Type-only: carries the operation's types for `serve`. Never set at runtime. */
@@ -82,13 +87,17 @@ const bodies = new WeakMap<
   (scope: Scope, input: never) => Promise<Outcome<unknown, Failure>>
 >();
 
+const SNAPSHOT = { isolationLevel: "repeatable read", accessMode: "read only" } as const;
+const snapshots = new WeakSet<AnyOp>();
+
 /** A read. The body takes the scope and one input object, never positional params. */
 export function query<I, R extends Ok<unknown> | Failure, const M extends string>(
-  config: OpConfig<M>,
+  config: QueryConfig<M>,
   body: (scope: ReadScope, input: I) => Promise<R>,
 ): Op<I, ValueOf<R>, FailureOf<R>, M> {
   const op = { action: config.action, failure: config.failure };
   bodies.set(op, body);
+  if (config.snapshot) snapshots.add(op);
   return op;
 }
 
@@ -130,11 +139,14 @@ export async function run<I, T, F extends Failure, M extends string>(
 ): Promise<Outcome<T, F>> {
   const body = bodyOf(op as AnyOp);
   try {
-    return await db.transaction(async (tx) => {
-      const outcome = await body({ viewer, tx, log }, input as never);
-      if (!outcome.ok) throw new Rollback(outcome);
-      return outcome as Ok<T>;
-    });
+    return await db.transaction(
+      async (tx) => {
+        const outcome = await body({ viewer, tx, log }, input as never);
+        if (!outcome.ok) throw new Rollback(outcome);
+        return outcome as Ok<T>;
+      },
+      snapshots.has(op as AnyOp) ? SNAPSHOT : undefined,
+    );
   } catch (error) {
     if (error instanceof Rollback) return error.failure as F;
     throw error;

@@ -95,6 +95,28 @@ test("every statement of one operation shares a transaction, and each operation 
   expect(two.value[0]).not.toBe(one.value[0]);
 });
 
+test("a snapshot query reads one repeatable-read, read-only snapshot", async () => {
+  const settings = (snapshot?: true) =>
+    query({ action: "test.snapshot", failure: "Failed to read", snapshot }, async (scope) => {
+      const [row] = await scope.tx
+        .select({
+          isolation: sql<string>`current_setting('transaction_isolation')`,
+          readOnly: sql<string>`current_setting('transaction_read_only')`,
+        })
+        .from(sql`(select 1) as one`);
+      return ok(row);
+    });
+
+  expect(await run(viewer, settings(true), undefined, log)).toEqual({
+    ok: true,
+    value: { isolation: "repeatable read", readOnly: "on" },
+  });
+  expect(await run(viewer, settings(), undefined, log)).toEqual({
+    ok: true,
+    value: { isolation: "read committed", readOnly: "off" },
+  });
+});
+
 describe("serve answers with the outcome", () => {
   const caller = { viewer, log: createRequestLogger() };
 
