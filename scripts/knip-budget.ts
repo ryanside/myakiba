@@ -94,25 +94,42 @@ const approved = async (commit: string) => {
       .text();
   return approvers.split("\0").some((approver) => APPROVER.test(approver.trim()));
 };
+const labelOf = async (commit: string) => {
+  const subject = await $`git log -1 --format=${"%h %s"} ${commit}`.quiet().text();
+  return subject.trim();
+};
 
 const unapproved: string[] = [];
 const mergeBase = await $`git merge-base HEAD ${TRUNK}`.nothrow().quiet().text();
 const base = mergeBase.trim();
 if (base) {
-  const history = await $`git log --format=${"%x00%H"} --remerge-diff --name-only ${base}..HEAD`
+  const history = await $`git log --format=${"%x00%H %P"} --remerge-diff --name-only ${base}..HEAD`
     .quiet()
     .text();
   for (const entry of history.split("\0").filter(Boolean)) {
-    const [commit = "", ...files] = entry.split("\n").filter(Boolean);
+    const [header = "", ...files] = entry.split("\n").filter(Boolean);
+    const [commit = "", ...parents] = header.split(" ").filter(Boolean);
+    if (parents.length > 2) {
+      const diffs = await Promise.all(
+        parents.map((parent) =>
+          $`git diff --name-only ${parent} ${commit} -- ${KNIP_TOOLING}`.quiet().text(),
+        ),
+      );
+      const differing = [...new Set(diffs.flatMap((diff) => diff.split("\n").filter(Boolean)))];
+      if (differing.length > 0)
+        unapproved.push(
+          `${await labelOf(commit)} merges ${parents.length} branches and differs from one of them in ${differing.join(", ")}. Git cannot show an octopus merge's own changes, so merge one branch at a time.`,
+        );
+      continue;
+    }
     const tooling = files.filter((file) => KNIP_TOOLING.includes(file));
     if (tooling.length === 0 || (await approved(commit))) continue;
-    const subject = await $`git log -1 --format=${"%h %s"} ${commit}`.quiet().text();
-    const label = subject.trim();
+    const label = await labelOf(commit);
     const changed = tooling.filter((file) => file !== BUDGET_PATH);
     if (changed.length > 0) unapproved.push(`${label} changes ${changed.join(", ")}.`);
     if (!tooling.includes(BUDGET_PATH)) continue;
-    const parents = await $`git rev-parse ${`${commit}^@`}`.quiet().text();
-    const before = await Promise.all(parents.split("\n").filter(Boolean).map(budgetAt));
+    const before =
+      parents.length > 0 ? await Promise.all(parents.map(budgetAt)) : [new Set<string>()];
     const raised = raises(before, await budgetAt(commit));
     if (raised.length > 0) unapproved.push(`${label} raises the budget for ${raised.join(", ")}.`);
   }

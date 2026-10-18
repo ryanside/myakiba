@@ -80,6 +80,15 @@ const addDeadFile = async (repo: Fixture) => {
   await repo.setBudget({ files: ["src/dead.ts", "src/more.ts"] });
 };
 
+const ignoreNewDeadFile = async (repo: Fixture) => {
+  await repo.write("src/hidden.ts", "export const hidden = 1;\n");
+  const config = await repo.readConfig();
+  await repo.write(
+    "knip.json",
+    `${JSON.stringify({ ...config, ignore: ["src/hidden.ts"] }, null, 2)}\n`,
+  );
+};
+
 describe("scripts/knip-budget.ts", () => {
   test("passes when the budget lists every finding", async () => {
     const repo = await fixture();
@@ -174,6 +183,64 @@ describe("scripts/knip-budget.ts", () => {
     await fails(repo.run(), "merge trunk raises the budget for files src/dead.ts");
   }, 30_000);
 
+  test("fails an octopus merge that changes the knip budget or config, and passes a clean one", async () => {
+    const octopus = async (edit: (repo: Fixture) => Promise<void>) => {
+      const repo = await fixture();
+      for (const branch of ["one", "two"]) {
+        await repo.git("checkout", "-q", "-b", branch, "pr");
+        await repo.write(`${branch}.md`, `${branch}\n`);
+        await repo.commit(branch);
+      }
+      await repo.git("checkout", "-q", "pr");
+      await repo.git("merge", "-q", "--no-ff", "--no-commit", "one", "two");
+      await edit(repo);
+      await repo.commit("octopus");
+      return repo;
+    };
+    const raised = await octopus(addDeadFile);
+    await fails(
+      raised.run(),
+      "octopus merges 3 branches and differs from one of them in knip-budget.json",
+    );
+    const ignored = await octopus(ignoreNewDeadFile);
+    await fails(
+      ignored.run(),
+      "octopus merges 3 branches and differs from one of them in knip.json",
+    );
+    const clean = await octopus(async () => {});
+    await passes(clean.run());
+  }, 60_000);
+
+  test("fails a budget raise in a root commit merged in from an unrelated history", async () => {
+    const repo = await fixture();
+    const stray = await mkdtemp(path.join(tmpdir(), "knip-budget-stray-"));
+    fixtures.push(stray);
+    await Bun.write(path.join(stray, "src/more.ts"), "export const more = 1;\n");
+    await Bun.write(
+      path.join(stray, BUDGET),
+      `${JSON.stringify({ files: ["src/dead.ts", "src/more.ts"] }, null, 2)}\n`,
+    );
+    const strayGit = (...args: string[]) => $`git ${args}`.cwd(stray).env(GIT_ENV).quiet();
+    await strayGit("init", "-q", "-b", "main");
+    await strayGit("add", "-A");
+    await strayGit("commit", "--no-verify", "-qm", "stray root");
+    await repo.git("fetch", "-q", stray, "main:stray");
+    await repo.git(
+      "merge",
+      "-q",
+      "--allow-unrelated-histories",
+      "-X",
+      "theirs",
+      "--no-commit",
+      "stray",
+    );
+    await repo.commit("merge stray", true);
+    await fails(
+      repo.run(),
+      "stray root raises the budget for files src/dead.ts, files src/more.ts",
+    );
+  }, 30_000);
+
   test("passes a clean CI merge of an approved PR into an advanced trunk", async () => {
     const repo = await fixture();
     const config = await repo.readConfig();
@@ -192,17 +259,7 @@ describe("scripts/knip-budget.ts", () => {
 
   test("fails an unapproved commit to each knip tooling path, and passes it approved", async () => {
     const edits: [file: string, edit: (repo: Fixture) => Promise<void>][] = [
-      [
-        "knip.json",
-        async (repo) => {
-          await repo.write("src/hidden.ts", "export const hidden = 1;\n");
-          const config = await repo.readConfig();
-          await repo.write(
-            "knip.json",
-            `${JSON.stringify({ ...config, ignore: ["src/hidden.ts"] }, null, 2)}\n`,
-          );
-        },
-      ],
+      ["knip.json", ignoreNewDeadFile],
       [
         "scripts/knip-budget.ts",
         async (repo) => {
