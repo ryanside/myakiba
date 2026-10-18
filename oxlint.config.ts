@@ -209,20 +209,8 @@ export default defineConfig({
       rules: { "myakiba/no-window-total": "warn" },
     },
     {
-      files: [
-        "apps/server/src/routers/orders/**",
-        "apps/server/src/routers/collection/**",
-        "apps/server/src/routers/lists/**",
-        "apps/server/src/routers/wishlist/**",
-        "apps/server/src/routers/item/**",
-        "apps/server/src/routers/search/**",
-        "apps/server/src/routers/calendar/**",
-        "apps/server/src/routers/analytics/**",
-        "apps/server/src/routers/dashboard/**",
-        "apps/server/src/routers/expenses/**",
-        "apps/server/src/routers/settings/**",
-      ],
-      excludeFiles: ["**/*.test.ts", "apps/server/src/routers/item/resync-service.ts"],
+      files: ["apps/server/src/routers/**"],
+      excludeFiles: [...testCode, ...scraperCode],
       rules: {
         "no-restricted-imports": [
           "error",
