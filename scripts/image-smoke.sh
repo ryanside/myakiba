@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Usage: scripts/image-smoke.sh [--redis unreachable] [db-push[=IMAGE]] [server[=IMAGE]]
+# Usage: scripts/image-smoke.sh [--redis unreachable | --postgres unreachable] [db-push[=IMAGE]] [server[=IMAGE]]
 # Runs each image in order against throwaway Postgres and Redis. Builds it from this checkout unless IMAGE is given.
-# --redis unreachable points the server at an address that drops packets and expects /health to answer 503 naming Redis.
+# --redis or --postgres unreachable points the server at an address that drops packets for that dependency
+# and expects /health to answer 503 naming it.
 # Env: SMOKE_PREFIX, SMOKE_TIMEOUT, SMOKE_REQUIRED_CLIENT_VARS (names, skips the checker), SMOKE_SERVER_ENV (extra K=V for the server).
 set -euo pipefail
 
@@ -14,7 +15,7 @@ postgres=$prefix-postgres
 redis=$prefix-redis
 database_url=postgres://smoke:smoke@$postgres:5432/smoke
 unreachable_host=10.255.255.1
-redis_mode=up
+unreachable=
 vite_args=(VITE_SERVER_URL=http://vite-server-url.image-smoke.invalid VITE_TURNSTILE_SITE_KEY=vite-turnstile-site-key-image-smoke)
 
 now() { perl -MTime::HiRes=time -e 'printf "%.2f", time'; }
@@ -103,11 +104,14 @@ smoke_db_push() {
 }
 
 smoke_server() {
-  local container=$prefix-server start address redis_host=$redis
-  [ "$redis_mode" = up ] || redis_host=$unreachable_host
+  local container=$prefix-server start address redis_host=$redis server_database_url=$database_url
+  case $unreachable in
+    redis) redis_host=$unreachable_host ;;
+    postgres) server_database_url=postgres://smoke:smoke@$unreachable_host:5432/smoke ;;
+  esac
   start=$(now)
   docker run -d --label "$label" --name "$container" --network "$network" -p 127.0.0.1::3000 \
-    -e DATABASE_URL="$database_url" -e REDIS_HOST="$redis_host" -e REDIS_PORT=6379 \
+    -e DATABASE_URL="$server_database_url" -e REDIS_HOST="$redis_host" -e REDIS_PORT=6379 \
     -e CORS_ORIGIN=http://localhost:3000 -e BETTER_AUTH_URL=http://localhost:3000 \
     -e BETTER_AUTH_SECRET=image-smoke-secret-0123456789abcdef \
     -e TURNSTILE_SECRET_KEY=image-smoke -e RESEND_API_KEY=re_image_smoke \
@@ -117,11 +121,11 @@ smoke_server() {
   echo "server: docker run returned after $(elapsed "$start")s"
   start=$(now)
   address=$(docker port "$container" 3000/tcp | head -1) || true
-  if [ "$redis_mode" = up ]; then
+  if [ -z "$unreachable" ]; then
     answer "$container" /health "$start" "$address"
     answer "$container" /api/auth/ok "$start" "$address"
   else
-    answer "$container" /health "$start" "$address" 503 '{"status":"redis unavailable"}'
+    answer "$container" /health "$start" "$address" 503 "{\"status\":\"$unreachable unavailable\"}"
   fi
   docker logs "$container" 2>&1 | grep '"environment":"production"' >/dev/null ||
     fail "$container does not log in production mode. Set ENV NODE_ENV=production before bun build --compile." "$container"
@@ -139,11 +143,16 @@ smoke_server() {
 
 main() {
   cd "$(dirname "$0")/.."
-  if [ "${1:-}" = --redis ]; then
-    [ "${2:-}" = unreachable ] || fail "the --redis option takes one value, unreachable."
-    redis_mode=unreachable
-    shift 2
-  fi
+  case ${1:-} in
+    --redis | --postgres)
+      [ "${2:-}" = unreachable ] || fail "the $1 option takes one value, unreachable."
+      unreachable=${1#--}
+      shift 2
+      ;;
+  esac
+  case ${1:-} in
+    --*) fail "unknown option $1. Use one of --redis unreachable or --postgres unreachable, before the images." ;;
+  esac
   [ $# -gt 0 ] || set -- db-push server
   for target in "$@"; do
     dockerfile "${target%%=*}" >/dev/null || fail "unknown image ${target%%=*}. Use db-push or server."
@@ -178,7 +187,7 @@ main() {
     wait_until 60 docker exec "$redis" redis-cli ping || fail "Redis did not start" "$redis"
     "smoke_${name//-/_}" "$image"
   done
-  [ "$redis_mode" = up ] || set -- "$@" "with Redis $redis_mode"
+  [ -z "$unreachable" ] || set -- "$@" "with $unreachable unreachable"
   echo "image smoke ok: $*"
 }
 

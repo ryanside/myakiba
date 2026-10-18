@@ -140,3 +140,9 @@ jobs:
         env:
           SMOKE_REQUIRED_CLIENT_VARS: ${{ needs.validate.outputs.required_client_vars }}
         run: bash scripts/image-smoke.sh --redis unreachable server=myakiba-server:ci
+
+      - name: Smoke-test the server image with Postgres unreachable
+        if: matrix.image == 'server'
+        env:
+          SMOKE_REQUIRED_CLIENT_VARS: ${{ needs.validate.outputs.required_client_vars }}
+        run: bash scripts/image-smoke.sh --postgres unreachable server=myakiba-server:ci
