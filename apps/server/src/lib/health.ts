@@ -37,10 +37,11 @@ const failedPing = async ({ name, ping }: Dependency): Promise<string | undefine
     await Promise.race([ping(), deadline]);
     return undefined;
   } catch (error) {
+    const cause = error instanceof Error && error.cause instanceof Error ? error.cause : error;
     log.error({
       msg: "health check failed",
       dependency: name,
-      reason: error instanceof Error ? error.message : String(error),
+      reason: cause instanceof Error ? cause.message : String(cause),
     });
     return name;
   } finally {
