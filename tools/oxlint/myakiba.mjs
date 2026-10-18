@@ -211,6 +211,28 @@ const noWindowTotal = {
 
 const DB_CLIENT = "@myakiba/db/client";
 
+const CALLS = new Set(["CallExpression", "NewExpression"]);
+const SKIP = new Set(["parent", "type", "range", "loc", "start", "end"]);
+
+/** Reports where an exported declaration hands the client out: a property, a return, an arrow body. */
+const handOuts = (root, isClient, report) => {
+  const visit = (node, parent, grandparent) => {
+    if (Array.isArray(node)) {
+      for (const child of node) visit(child, parent, grandparent);
+      return;
+    }
+    if (!node?.type) return;
+    const callArgument = CALLS.has(grandparent?.type) && grandparent.arguments.includes(parent);
+    if (node.type === "Property" && isClient(node.value) && !callArgument) report(node);
+    if (node.type === "PropertyDefinition" && isClient(node.value)) report(node);
+    if (node.type === "ReturnStatement" && isClient(node.argument)) report(node);
+    if (node.type === "ArrowFunctionExpression" && node.expression && isClient(node.body))
+      report(node);
+    for (const key of Object.keys(node)) if (!SKIP.has(key)) visit(node[key], node, parent);
+  };
+  visit(root);
+};
+
 /** The client's owners use it. Exporting it, under any name, hands it to every importer. */
 const noDbClientExport = {
   meta: { type: "problem" },
@@ -247,7 +269,23 @@ const noDbClientExport = {
           const value = unwrap(node);
           return value?.type === "Identifier" && client.has(value.name);
         };
+        const exported = new Set();
+        for (const statement of program.body)
+          if (statement.type === "ExportNamedDeclaration" && !statement.source)
+            for (const specifier of statement.specifiers) exported.add(specifier.local.name);
+          else if (statement.type === "ExportDefaultDeclaration")
+            exported.add(statement.declaration.name);
         for (const statement of program.body) {
+          if (
+            statement.type === "ExportNamedDeclaration" ||
+            statement.type === "ExportDefaultDeclaration"
+          )
+            handOuts(statement.declaration, isClient, report);
+          if (statement.type === "FunctionDeclaration" || statement.type === "ClassDeclaration") {
+            if (exported.has(statement.id?.name)) handOuts(statement, isClient, report);
+          } else if (statement.type === "VariableDeclaration")
+            for (const declarator of statement.declarations)
+              if (exported.has(declarator.id.name)) handOuts(declarator, isClient, report);
           if (statement.type === "ExportAllDeclaration" && statement.source.value === DB_CLIENT)
             report(statement);
           if (statement.type === "ExportDefaultDeclaration" && isClient(statement.declaration))

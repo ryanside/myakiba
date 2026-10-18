@@ -77,40 +77,80 @@ const files = {
   },
 } satisfies Record<string, { source: string; flagged: string[] }>;
 
-let tree = "";
-const flagged = new Map<string, string[]>();
+const trees: string[] = [];
 
-beforeAll(async () => {
-  tree = await mkdtemp(path.join(tmpdir(), "client-lock-"));
+/** Lints `sources` in a throwaway tree with this repo's oxlint config and returns each file's restriction messages. */
+async function lintTree(sources: Record<string, string>) {
+  const tree = await mkdtemp(path.join(tmpdir(), "client-lock-"));
+  trees.push(tree);
   await $`cp ${path.join(root, "oxlint.config.ts")} ${tree}`;
   await mkdir(path.join(tree, "tools/oxlint"), { recursive: true });
   await $`cp ${path.join(root, "tools/oxlint/myakiba.mjs")} ${path.join(tree, "tools/oxlint")}`;
   await symlink(path.join(root, "node_modules"), path.join(tree, "node_modules"));
-  for (const [file, { source }] of Object.entries(files)) {
+  for (const [file, source] of Object.entries(sources)) {
     await mkdir(path.dirname(path.join(tree, file)), { recursive: true });
     await Bun.write(path.join(tree, file), source);
   }
-  const lint = await $`${path.join(root, "node_modules/.bin/oxlint")} -f json ${Object.keys(files)}`
-    .cwd(tree)
-    .nothrow()
-    .quiet();
+  const lint =
+    await $`${path.join(root, "node_modules/.bin/oxlint")} -f json ${Object.keys(sources)}`
+      .cwd(tree)
+      .nothrow()
+      .quiet();
   const {
     diagnostics,
   }: { diagnostics: { code: string; help?: string; message: string; filename: string }[] } =
     lint.json();
-  for (const file of Object.keys(files)) flagged.set(file, []);
+  const flagged = new Map(Object.keys(sources).map((file): [string, string[]] => [file, []]));
   for (const { code, help, message, filename } of diagnostics) {
     if (code === "eslint(no-restricted-imports)") flagged.get(filename)?.push(help ?? message);
     if (code === "myakiba(no-db-client-export)") flagged.get(filename)?.push(message);
   }
+  return flagged;
+}
+
+const KERNEL = "apps/server/src/domain/kernel.ts";
+const AUTH = "packages/auth/src/server.ts";
+const owners = { [KERNEL]: "pool", [AUTH]: "db" };
+const handOuts = {
+  "an object property": (client: string) => `export const s7Database = { client: ${client} };\n`,
+  "a getter": (client: string) =>
+    `export const s7Database = {\n  get client() {\n    return ${client};\n  },\n};\n`,
+  "an arrow body": (client: string) => `export const getS7Client = () => ${client};\n`,
+};
+const ownerSources = async (): Promise<Record<string, string>> => ({
+  [KERNEL]: await Bun.file(path.join(root, KERNEL)).text(),
+  [AUTH]: await Bun.file(path.join(root, AUTH)).text(),
+});
+
+let flagged = new Map<string, string[]>();
+
+beforeAll(async () => {
+  flagged = await lintTree(
+    Object.fromEntries(Object.entries(files).map(([file, { source }]) => [file, source])),
+  );
 }, 30_000);
 
 afterAll(async () => {
-  if (tree) await rm(tree, { recursive: true, force: true });
+  for (const tree of trees) await rm(tree, { recursive: true, force: true });
 });
 
 describe("only the kernel and the auth adapter reach the db client", () => {
   test.each(Object.entries(files))("%s", (file, { flagged: expected }) => {
     expect(flagged.get(file)?.toSorted()).toEqual(expected.toSorted());
   });
+
+  test("the kernel and the auth adapter as they are export no client", async () => {
+    const real = await lintTree(await ownerSources());
+    expect(Object.fromEntries(real)).toEqual({ [KERNEL]: [], [AUTH]: [] });
+  });
+
+  for (const [owner, client] of Object.entries(owners))
+    test.each(Object.entries(handOuts))(
+      `${owner} cannot hand the client out through %s`,
+      async (_, handOut) => {
+        const sources = await ownerSources();
+        const result = await lintTree({ [owner]: `${sources[owner]}\n${handOut(client)}` });
+        expect(result.get(owner)).toEqual([EXPORT]);
+      },
+    );
 });

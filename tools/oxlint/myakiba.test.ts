@@ -123,6 +123,21 @@ describe("myakiba/no-db-client-export", () => {
     for (const { message } of findings)
       expect(message).toContain("Do not export @myakiba/db/client");
   });
+
+  test("flags a client handed out by a property, getter, return or arrow body, not one passed to a call", async () => {
+    await flags("myakiba/no-db-client-export", [
+      [`${client}export const s7 = { client: db };`, true],
+      [`${client}export const s7 = {\n  get client() {\n    return db;\n  },\n};`, true],
+      [`${client}export const getClient = () => db;`, true],
+      [`${client}function getClient() {\n  return db;\n}\nexport { getClient };`, true],
+      [`${client}export class Holder {\n  static client = db;\n}`, true],
+      [
+        `${client}declare const read: (scope: unknown) => unknown;\nexport const run = () => read({ tx: db });`,
+        false,
+      ],
+      [`${client}export const ping = async () => {\n  await db.execute("select 1");\n};`, false],
+    ]);
+  });
 });
 
 describe("myakiba/no-env-outside-env-package", () => {
