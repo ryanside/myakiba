@@ -175,6 +175,19 @@ if (base) {
     if (lintFiles.length > 0) changedFiles.set(commit, lintFiles);
   }
 
+  const octopuses = await $`git rev-list --min-parents=3 ${base}..HEAD`.quiet().text();
+  for (const octopus of octopuses.split("\n").filter(Boolean)) {
+    const touched = new Set<string>();
+    const parents = await $`git rev-parse ${`${octopus}^@`}`.quiet().text();
+    for (const parent of parents.split("\n").filter(Boolean)) {
+      const diff = await $`git diff --name-only ${parent} ${octopus}`.quiet().text();
+      for (const file of diff.split("\n")) {
+        if (toolingGlobs.some((glob) => glob.match(file))) touched.add(file);
+      }
+    }
+    if (touched.size > 0) changedFiles.set(octopus, [...touched]);
+  }
+
   const unapproved: string[] = [];
   for (const [changed, files] of changedFiles) {
     const tooling = files.filter((file) => file !== BUDGET_PATH);

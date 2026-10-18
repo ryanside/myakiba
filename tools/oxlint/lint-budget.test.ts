@@ -324,6 +324,33 @@ describe("scripts/lint-budget.ts", () => {
     await fails(reverted.run(), "merge trunk changes oxlint.config.ts");
   }, 60_000);
 
+  test("checks an octopus merge's own edits, which git's remerge diff skips", async () => {
+    for (const [edit, reason] of [
+      ["tooling", "octopus changes tools/oxlint/octopus.txt"],
+      ["raise", "octopus raises the budget for eslint(no-restricted-properties) in src/more.ts"],
+    ] as const) {
+      const repo = await fixture();
+      for (const branch of ["left", "right"]) {
+        await repo.git("checkout", "-q", "-b", branch, "main");
+        await repo.write(`src/${branch}.ts`, `export const ${branch} = 1;\n`);
+        await repo.commit(branch);
+      }
+      await repo.git("checkout", "-q", "pr");
+      await repo.git("merge", "-q", "--no-ff", "--no-commit", "left", "right");
+      if (edit === "tooling") await repo.write("tools/oxlint/octopus.txt", "octopus\n");
+      else {
+        await repo.write("src/more.ts", 'export const more = JSON.parse("{}");\n');
+        await repo.setBudget({
+          "eslint(no-restricted-properties)": { "src/parse.ts": 1, "src/more.ts": 1 },
+        });
+      }
+      await repo.commit("octopus");
+      await fails(repo.run(), reason);
+      await repo.git("commit", "--no-verify", "-q", "--amend", "-m", "octopus", "-m", APPROVAL);
+      await passes(repo.run());
+    }
+  }, 60_000);
+
   test("fails uncommitted tooling changes and an uncommitted raise", async () => {
     const repo = await fixture();
     await repo.write("tools/oxlint/notes.txt", "notes\n");
