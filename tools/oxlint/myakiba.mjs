@@ -202,7 +202,7 @@ const noWindowTotal = {
         context.report({
           node,
           message:
-            "Window total over the page. A total must count the filtered set, so it survives an offset past the end.",
+            "Window total over the page, so a page past the end reports 0. Return paginate() or paginateBy(): they count the filtered set, and their totals option sums it.",
         });
       },
     };

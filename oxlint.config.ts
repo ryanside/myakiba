@@ -272,7 +272,7 @@ export default defineConfig({
       },
     },
     {
-      files: ["apps/server/src/routers/*/module.ts"],
+      files: ["apps/server/src/**"],
       rules: { "myakiba/no-window-total": "warn" },
     },
     {
