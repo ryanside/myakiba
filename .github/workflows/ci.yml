@@ -55,6 +55,9 @@ jobs:
       - name: Check formatting
         run: bunx oxfmt --check .
 
+      - name: Check the rule table
+        run: bun scripts/check-rule-table.ts
+
       - name: Check the lint budget
         run: bun scripts/lint-budget.ts
 
