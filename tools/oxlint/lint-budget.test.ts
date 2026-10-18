@@ -452,4 +452,27 @@ describe("scripts/lint-budget.ts", () => {
     await repo.git("update-ref", "-d", "refs/remotes/origin/main");
     await fails(repo.run(), "Cannot find the merge base with origin/main");
   }, 30_000);
+
+  test("CI's Validate job runs the budget itself, so an edited check script cannot skip it", async () => {
+    const workflow: { jobs: { validate: { steps: { name?: string; run?: string }[] } } } =
+      Bun.YAML.parse(await Bun.file(path.join(repoRoot, ".github/workflows/ci.yml")).text());
+    const budgetStep = workflow.jobs.validate.steps.find(({ run }) => run?.includes("lint-budget"));
+    expect(budgetStep?.run?.trim()).toBe("bun scripts/lint-budget.ts");
+    const repo = await fixture();
+    await repo.write(
+      "package.json",
+      `${JSON.stringify({ scripts: { check: "oxfmt --check ." } }, null, 2)}\n`,
+    );
+    await repo.write("src/hidden.ts", 'export const hidden = JSON.parse("{}");\n');
+    await repo.commit("drop the budget from check");
+    const step = await $`sh -c ${budgetStep?.run ?? "true"}`
+      .cwd(repo.dir)
+      .env(GIT_ENV)
+      .nothrow()
+      .quiet();
+    expect(step.exitCode).toBe(1);
+    expect(`${step.stdout}${step.stderr}`).toContain(
+      "1 hits in src/hidden.ts, over its budget of 0 there",
+    );
+  }, 30_000);
 });

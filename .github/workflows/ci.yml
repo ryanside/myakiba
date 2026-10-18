@@ -41,8 +41,11 @@ jobs:
       - name: Audit dependencies
         run: bun run audit
 
-      - name: Check formatting and lint
-        run: bun run check
+      - name: Check formatting
+        run: bunx oxfmt --check .
+
+      - name: Check the lint budget
+        run: bun scripts/lint-budget.ts
 
       - name: Check types
         run: bunx turbo run check-types
