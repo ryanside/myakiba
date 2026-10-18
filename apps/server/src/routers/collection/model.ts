@@ -29,6 +29,8 @@ export const collectionQuerySchema = collectionSearchSchema.extend({
   condition: commaSeparatedConditionArray,
 });
 
+export type CollectionQuery = z.infer<typeof collectionQuerySchema>;
+
 export const collectionParamSchema = z.object({
   id: z.string(),
 });
