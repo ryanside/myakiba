@@ -10,6 +10,8 @@ const CLIENT = "Read and write through scope.tx in module.ts. The kernel opens t
 const BY_PATH =
   "Import @myakiba/db through its package exports, not by path. The kernel owns the client.";
 const TEST_FILE = "Only tests import test files.";
+const IN_PACKAGE =
+  "Only the kernel reads the client. Inside @myakiba/db, import it as a type only.";
 const EXPORT = "Do not export @myakiba/db/client. Export an operation or a helper that uses it.";
 
 const files = {
@@ -24,6 +26,18 @@ const files = {
   "packages/redis/src/relative.ts": {
     source: `import { db } from "../../db/./src/client.ts";\n\nexport const probe = () => db.execute("select 1");\n`,
     flagged: [BY_PATH],
+  },
+  "packages/db/src/schema/proxy.ts": {
+    source: `export { db } from "../client";\n`,
+    flagged: [IN_PACKAGE],
+  },
+  "packages/db/src/order-proxy.ts": {
+    source: `import { db } from "./client.ts";\n\nexport const probe = () => db.execute("select 1");\n`,
+    flagged: [IN_PACKAGE],
+  },
+  "packages/db/src/typed.ts": {
+    source: `import type { db } from "./client";\n\nexport type Client = typeof db;\n`,
+    flagged: [],
   },
   "apps/server/src/lib/through-test-file.ts": {
     source: `import { db } from "./proxy.test";\n\nexport const probe = () => db.execute("select 1");\n`,

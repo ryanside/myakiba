@@ -12,6 +12,11 @@ const dbSourcePath = {
   message:
     "Import @myakiba/db through its package exports, not by path. The kernel owns the client.",
 };
+const dbClientInPackage = {
+  regex: "^\\.{1,2}/(?:.*/)?client(?:\\.[cm]?[jt]sx?)?$",
+  allowTypeImports: true,
+  message: "Only the kernel reads the client. Inside @myakiba/db, import it as a type only.",
+};
 const testImports = [
   { regex: "(?:^|/)[^/]+\\.test(?:\\.[cm]?[jt]sx?)?$", message: "Only tests import test files." },
   { regex: "^(?:[./]|@/|file:)(?:.*/)?test(?:/|$)", message: "Only tests import test files." },
@@ -180,6 +185,16 @@ export default defineConfig({
         "no-restricted-imports": [
           "error",
           { paths: [dbClientBan], patterns: [dbSourcePath, ...testImports] },
+        ],
+      },
+    },
+    {
+      files: ["packages/db/**"],
+      excludeFiles: ["packages/db/src/client.ts"],
+      rules: {
+        "no-restricted-imports": [
+          "error",
+          { paths: [dbClientBan], patterns: [dbSourcePath, dbClientInPackage, ...testImports] },
         ],
       },
     },
