@@ -241,10 +241,14 @@ function UnifiedItemMoveFormContent({
 
         {moveMode === "existing" ? (
           <form
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
               e.stopPropagation();
-              existingOrderForm.handleSubmit();
+              try {
+                await existingOrderForm.handleSubmit();
+              } catch {
+                // The mutation reports the error and the dialog stays open.
+              }
             }}
           >
             <ScrollArea className="gap-4 py-4 mb-4 w-full overflow-auto">
@@ -398,10 +402,14 @@ function UnifiedItemMoveFormContent({
           </form>
         ) : (
           <form
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
               e.stopPropagation();
-              newOrderForm.handleSubmit();
+              try {
+                await newOrderForm.handleSubmit();
+              } catch {
+                // The mutation reports the error and the dialog stays open.
+              }
             }}
           >
             <div className="overflow-y-auto w-full max-h-[60vh] py-2">
