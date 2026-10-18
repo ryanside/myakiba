@@ -1,5 +1,6 @@
 import { Elysia } from "elysia";
 import { auth } from "@myakiba/auth/server";
+import { Viewer } from "@/domain/viewer";
 
 type Session = Awaited<ReturnType<typeof auth.api.getSession>>;
 
@@ -21,6 +22,7 @@ export const betterAuth = new Elysia({ name: "better-auth" }).macro({
       return {
         user: session.user,
         session: session.session,
+        viewer: Viewer.fromSession(session),
       };
     },
   },
