@@ -17,6 +17,12 @@ setTimeout(
       port: 3000,
       fetch(request) {
         const { pathname } = new URL(request.url);
+        if (pathname === "/health" && mode === "nested-redis-text") {
+          return Response.json(
+            { status: "postgres unavailable", debug: { status: "redis unavailable" } },
+            { status: 503 },
+          );
+        }
         if (pathname === "/health" && mode.includes("-unavailable")) {
           return Response.json(
             { status: mode.replace(/-unavailable.*/, " unavailable") },

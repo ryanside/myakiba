@@ -53,14 +53,16 @@ crashed() {
 }
 
 answer() {
-  local container=$1 path=$2 start=$3 address=$4 want=${5:-200} body=${6:-} reply last=none
+  local container=$1 path=$2 start=$3 address=$4 want=${5:-200} body=${6:-} reply code content last=none
   while :; do
     before "$start" "$timeout" ||
-      fail "$container: $path did not answer within ${timeout}s. Expected $want${body:+ with $body}, last answer: $last" "$container"
+      fail "$container: $path did not answer within ${timeout}s. Expected $want${body:+ with body $body}, last answer: $last" "$container"
     if reply=$(curl -sS -m "$(left "$start" "$timeout")" -w '\n%{http_code}' "http://$address$path" 2>/dev/null); then
-      last=${reply##*$'\n'}
-      [ "$reply" = "$last" ] || last="$last ${reply%$'\n'*}"
-      if [ "${reply##*$'\n'}" = "$want" ] && [[ $reply == *"$body"* ]]; then
+      code=${reply##*$'\n'}
+      content=
+      [ "$reply" = "$code" ] || content=${reply%$'\n'*}
+      last="$code${content:+ $content}"
+      if [ "$code" = "$want" ] && { [ -z "$body" ] || [ "$content" = "$body" ]; }; then
         before "$start" "$timeout" || fail "$container: $path answered after $(elapsed "$start")s, over ${timeout}s" "$container"
         break
       fi
@@ -119,7 +121,7 @@ smoke_server() {
     answer "$container" /health "$start" "$address"
     answer "$container" /api/auth/ok "$start" "$address"
   else
-    answer "$container" /health "$start" "$address" 503 '"status":"redis unavailable"'
+    answer "$container" /health "$start" "$address" 503 '{"status":"redis unavailable"}'
   fi
   docker logs "$container" 2>&1 | grep '"environment":"production"' >/dev/null ||
     fail "$container does not log in production mode. Set ENV NODE_ENV=production before bun build --compile." "$container"
