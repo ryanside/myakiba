@@ -62,6 +62,27 @@ type ReadScope = {
   readonly log: RequestLogger;
 };
 
+/** The values a prepared read binds to its `sql.placeholder(name)` slots. */
+type Placeholders = Readonly<Record<string, string | number | boolean | Date | null>>;
+type Statement<T> = { readonly execute: (placeholders?: Placeholders) => Promise<T> };
+type Prepared<T> = { readonly statement: Statement<T> };
+
+/** A query without `snapshot` reads from the pool, so it can also run reads built once by `prepared()`. */
+type PoolScope = ReadScope & {
+  readonly read: <T>(statement: Prepared<T>, placeholders?: Placeholders) => Promise<T>;
+};
+
+/**
+ * A pool read whose SQL is built once, at module load. Pass per-call values
+ * through `sql.placeholder(name)` and run it with `scope.read(statement, values)`.
+ */
+export function prepared<T>(
+  name: string,
+  build: (pool: ReadTx) => { readonly prepare: (name: string) => Statement<T> },
+): Prepared<T> {
+  return { statement: build(pool).prepare(name) };
+}
+
 type Scope = Omit<ReadScope, "tx"> & { readonly tx: Tx };
 
 type OpConfig<M extends string> = {
@@ -90,7 +111,7 @@ type AnyOp = Op<never, unknown, Failure, string>;
 
 const bodies = new WeakMap<
   AnyOp,
-  (scope: Scope, input: never) => Promise<Outcome<unknown, Failure>>
+  (scope: never, input: never) => Promise<Outcome<unknown, Failure>>
 >();
 
 const SNAPSHOT = { isolationLevel: "repeatable read", accessMode: "read only" } as const;
@@ -98,10 +119,18 @@ const snapshots = new WeakSet<AnyOp>();
 const poolReads = new WeakSet<AnyOp>();
 const pool: ReadTx = db;
 
+const readPrepared = <T>(statement: Prepared<T>, placeholders?: Placeholders) =>
+  statement.statement.execute(placeholders);
+
 /** A read. The body takes the scope and one input object, never positional params. */
-export function query<I, R extends Ok<unknown> | Failure, const M extends string>(
-  config: QueryConfig<M>,
-  body: (scope: ReadScope, input: I) => Promise<R>,
+export function query<
+  I,
+  R extends Ok<unknown> | Failure,
+  const M extends string,
+  const S extends true | undefined = undefined,
+>(
+  config: QueryConfig<M> & { readonly snapshot?: S },
+  body: (scope: S extends true ? ReadScope : PoolScope, input: I) => Promise<R>,
 ): Op<I, ValueOf<R>, FailureOf<R>, M> {
   const op = { action: config.action, failure: config.failure };
   bodies.set(op, body);
@@ -147,13 +176,14 @@ export async function run<I, T, F extends Failure, M extends string>(
 ): Promise<Outcome<T, F>> {
   const body = bodyOf(op as AnyOp);
   if (poolReads.has(op as AnyOp)) {
-    const read = body as (scope: ReadScope, input: never) => Promise<Outcome<T, F>>;
-    return read({ viewer, tx: pool, log }, input as never);
+    const read = body as (scope: PoolScope, input: never) => Promise<Outcome<T, F>>;
+    return read({ viewer, tx: pool, read: readPrepared, log }, input as never);
   }
+  const inTransaction = body as (scope: Scope, input: never) => Promise<Outcome<T, F>>;
   try {
     return await db.transaction(
       async (tx) => {
-        const outcome = await body({ viewer, tx, log }, input as never);
+        const outcome = await inTransaction({ viewer, tx, log }, input as never);
         if (!outcome.ok) throw new Rollback(outcome);
         return outcome as Ok<T>;
       },

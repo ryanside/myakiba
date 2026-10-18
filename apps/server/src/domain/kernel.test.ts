@@ -8,7 +8,7 @@ import { createTestDatabase } from "../../test/database";
 initLogger({ enabled: false });
 
 const db = await createTestDatabase();
-const { command, fail, ok, query, run, serve } = await import("./kernel");
+const { command, fail, ok, prepared, query, run, serve } = await import("./kernel");
 const { Viewer } = await import("./viewer");
 
 const viewer = Viewer.fromSession({ user: { id: "viewer-1" } });
@@ -127,6 +127,50 @@ test("a snapshot query reads one repeatable-read, read-only snapshot", async () 
   expect(await run(viewer, settings(), undefined, log)).toEqual({
     ok: true,
     value: { isolation: "read committed", readOnly: "off" },
+  });
+});
+
+describe("a prepared read", () => {
+  let builds = 0;
+  const createdAt = prepared("test_user_created_at", (pool) => {
+    builds += 1;
+    return pool
+      .select({ id: user.id, createdAt: user.createdAt })
+      .from(user)
+      .where(eq(user.id, sql.placeholder("id")));
+  });
+  const readCreatedAt = query(
+    { action: "test.prepared", failure: "Failed to read" },
+    async (scope, input: { readonly id: string }) => {
+      const [found] = await scope.read(createdAt, { id: input.id });
+      return found ? ok(found) : fail("not_found", "No such user");
+    },
+  );
+
+  test("builds its SQL once, binds each call's values and keeps drizzle's column mapping", async () => {
+    await run(viewer, writeThen("ok"), { id: "prepared-1" }, log);
+    await run(viewer, writeThen("ok"), { id: "prepared-2" }, log);
+
+    const one = await run(viewer, readCreatedAt, { id: "prepared-1" }, log);
+    const two = await run(viewer, readCreatedAt, { id: "prepared-2" }, log);
+    if (!one.ok || !two.ok) throw new Error("the prepared read failed");
+
+    expect(builds).toBe(1);
+    expect([one.value.id, two.value.id]).toEqual(["prepared-1", "prepared-2"]);
+    expect(one.value.createdAt).toBeInstanceOf(Date);
+  });
+
+  test("only a query without a snapshot can run one, because it reads from the pool", () => {
+    query({ action: "test.snapshot", failure: "Failed to read", snapshot: true }, async (scope) => {
+      // @ts-expect-error a snapshot query reads one transaction
+      await scope.read(createdAt, { id: "x" });
+      return ok(1);
+    });
+    command(config, async (scope) => {
+      // @ts-expect-error a command's reads must see its own writes
+      await scope.read(createdAt, { id: "x" });
+      return ok(1);
+    });
   });
 });
 
