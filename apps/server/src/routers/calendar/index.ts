@@ -1,57 +1,15 @@
-import { Elysia, status } from "elysia";
-import { betterAuth } from "@/middleware/better-auth";
-import { evlog } from "evlog/elysia";
-import { tryCatch } from "@myakiba/utils/result";
-import CalendarService from "./service";
+import { privateApi } from "@/boundary/private-api";
+import { serve } from "@/domain/kernel";
 import { calendarQuerySchema } from "./model";
+import { Calendar } from "./module";
 
-const calendarRouter = new Elysia({ prefix: "/calendar" })
-  .use(betterAuth)
-  .use(evlog())
-  .get(
-    "/",
-    async ({ query, user, log }) => {
-      log.set({
-        action: "calendar.get",
-        user: { id: user.id },
-        calendar: { view: query.view, month: query.month, year: query.year },
-      });
-
-      if (query.view === "items") {
-        const { data, error } = await tryCatch(
-          CalendarService.getItems(user.id, query.month, query.year),
-        );
-        if (error) {
-          log.error(error, { step: "calendar.getItems" });
-          log.set({ outcome: "error" });
-          return status(500, "Failed to get calendar items");
-        }
-        log.set({ outcome: "success", calendar: { resultCount: data.length } });
-        return {
-          view: "items" as const,
-          month: query.month,
-          year: query.year,
-          items: data,
-        };
-      }
-
-      const { data, error } = await tryCatch(
-        CalendarService.getOrders(user.id, query.month, query.year),
-      );
-      if (error) {
-        log.error(error, { step: "calendar.getOrders" });
-        log.set({ outcome: "error" });
-        return status(500, "Failed to get calendar orders");
-      }
-      log.set({ outcome: "success", calendar: { resultCount: data.length } });
-      return {
-        view: "orders" as const,
-        month: query.month,
-        year: query.year,
-        orders: data,
-      };
-    },
-    { query: calendarQuerySchema, auth: true },
-  );
+const calendarRouter = privateApi("/calendar").get(
+  "/",
+  (ctx) =>
+    ctx.query.view === "items"
+      ? serve(ctx, Calendar.items, ctx.query)
+      : serve(ctx, Calendar.orders, ctx.query),
+  { query: calendarQuerySchema },
+);
 
 export default calendarRouter;

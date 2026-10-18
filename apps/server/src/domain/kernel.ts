@@ -23,6 +23,7 @@ import type { Viewer } from "./viewer";
  */
 
 const FAILURE_STATUS = {
+  bad_request: 400,
   not_found: 404,
 } as const;
 
