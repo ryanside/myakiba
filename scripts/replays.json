@@ -244,6 +244,29 @@
         "collection filters dialog starts each open from the URL filters > closing without Apply discards the draft",
         "collection filters dialog starts each open from the URL filters > reopening while the dialog is still closing discards the draft"
       ]
+    },
+    {
+      "fix": "cd02b2ac",
+      "bug": "a dashboard kanban card snapped back to its old column, or lost an edited date, when a refetch landed while its write was in flight",
+      "test": "apps/web/src/components/dashboard/order-kanban.test.tsx",
+      "fixed": [
+        "a dashboard kanban card keeps the user's change while its write is in flight > a moved card stays in its new column when a refetch lands mid-write, then follows the server",
+        "a dashboard kanban card keeps the user's change while its write is in flight > a moved card keeps its slot when the refetch also brings a new card into its column",
+        "a dashboard kanban card keeps the user's change while its write is in flight > a moved card stays below the card it was dropped under when the refetch brings a new card above both",
+        "a dashboard kanban card keeps the user's change while its write is in flight > a card whose moves all fail returns to its first slot, then the board follows the server",
+        "a dashboard kanban card keeps the user's change while its write is in flight > a card the server moved again during its status write shows in the server's column once the write settles",
+        "a dashboard kanban card keeps the user's change while its write is in flight > an edited date stays on the card when a refetch lands mid-write",
+        "a dashboard kanban card keeps the user's change while its write is in flight > a card the server moved during its date write shows in the server's column once the write settles"
+      ]
+    },
+    {
+      "fix": "bcefafcf",
+      "bug": "every kanban reconcile published a new board and four new column arrays even when no card changed, so pickup and release re-rendered the board",
+      "test": "apps/web/src/components/dashboard/order-kanban.test.tsx",
+      "fixed": [
+        "reconciling the board with a fetch > keeps the board's columns when picking up or releasing a card changes nothing",
+        "reconciling the board with a fetch > returns new columns for a real change and keeps the columns it did not touch"
+      ]
     }
   ],
   "lint": [
