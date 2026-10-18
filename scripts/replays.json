@@ -267,6 +267,18 @@
         "reconciling the board with a fetch > keeps the board's columns when picking up or releasing a card changes nothing",
         "reconciling the board with a fetch > returns new columns for a real change and keeps the columns it did not touch"
       ]
+    },
+    {
+      "fix": "0e06a016",
+      "bug": "each /health call left another Redis ping pending while packets dropped",
+      "test": "apps/server/src/lib/readiness.test.ts",
+      "fixed": ["readinessCheck > keeps one Redis ping pending while the connection drops packets"]
+    },
+    {
+      "fix": "13284a20",
+      "bug": "each timed-out /health call stayed attached to the pending probe until it settled",
+      "test": "apps/server/src/lib/readiness.test.ts",
+      "fixed": ["readinessCheck > keeps nothing per timed-out call while the probe stays pending"]
     }
   ],
   "lint": [
