@@ -377,6 +377,50 @@ describe("scripts/knip-budget.ts", () => {
     }
   }, 60_000);
 
+  const binaryVariants: [name: string, setup: (repo: Fixture) => Promise<void>][] = [
+    ["an attribute", (repo) => repo.write(".gitattributes", "src/tagged.ts -diff\n")],
+    [
+      "a NUL byte",
+      async (repo) => {
+        const tagged = await repo.read("src/tagged.ts");
+        await repo.write("src/tagged.ts", `${tagged}// \0\n`);
+      },
+    ],
+  ];
+  for (const [name, setup] of binaryVariants) {
+    test(`fails an export tag in a file that ${name} makes git treat as binary`, async () => {
+      const tag = "public";
+      const repo = await fixture();
+      await repo.write(
+        "src/index.ts",
+        'import { tagged } from "./tagged.ts";\nconsole.log(tagged);\n',
+      );
+      await repo.write(
+        "src/tagged.ts",
+        `export const tagged = 1;\n/** @${tag} */\nexport const hidden = 1;\n`,
+      );
+      await setup(repo);
+      await repo.commit(`hide a tag behind ${name}`);
+      await fails(repo.run(), `src/tagged.ts:2:/** @${tag} */`);
+    }, 30_000);
+  }
+
+  for (const tag of ["public\u00B2", "public\u00E9", "beta\u00E9", "alias\u00E9"]) {
+    test(`fails a ${tag} tag in a block comment, which knip reads as its ASCII prefix`, async () => {
+      const repo = await fixture();
+      await repo.write(
+        "src/index.ts",
+        'import { tagged } from "./tagged.ts";\nconsole.log(tagged);\n',
+      );
+      await repo.write(
+        "src/tagged.ts",
+        `export const tagged = 1;\n/* @${tag} */\nexport const hidden = 1;\n`,
+      );
+      await repo.commit(`tag ${tag}`);
+      await fails(repo.run(), `src/tagged.ts:2:/* @${tag} */`);
+    }, 30_000);
+  }
+
   test("fails a committed source file that .gitignore hides from knip", async () => {
     const repo = await fixture();
     await repo.write(".gitignore", "node_modules\nsrc/hidden.ts\n");

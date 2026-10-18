@@ -9,7 +9,7 @@ const KNIP_TOOLING = ["knip.json", BUDGET_PATH, "scripts/knip-budget.ts", "pnpm-
 const MANIFEST = "package.json";
 const MANIFEST_SETTINGS = "the knip or workspaces key in package.json";
 const SOURCE_FILES = ["*.js", "*.jsx", "*.mjs", "*.cjs", "*.ts", "*.tsx", "*.mts", "*.cts"];
-const SKIPPED_TAG = "@(public|beta|alias)([^[:alnum:]_]|$)";
+const SKIPPED_TAG = /@(?:public|beta|alias)(?![A-Za-z0-9_])/u;
 const TRUNK = "origin/main";
 const APPROVER = /^\p{L}[^<>]*$/u;
 
@@ -174,14 +174,23 @@ if (base) {
   );
 }
 
-const tagged = await $`git grep -n --untracked -I -E ${SKIPPED_TAG} -- ${SOURCE_FILES}`
-  .nothrow()
+const sources = await $`git ls-files -z --cached --others --exclude-standard -- ${SOURCE_FILES}`
   .quiet()
   .text();
-if (tagged.trim())
+const tagged: string[] = [];
+for (const name of new Set(sources.split("\0").filter(Boolean))) {
+  const file = Bun.file(name);
+  if (!(await file.exists())) continue;
+  const text = await file.text();
+  for (const [index, line] of text.split("\n").entries()) {
+    if (SKIPPED_TAG.test(line)) tagged.push(`${name}:${index + 1}:${line.trim()}`);
+  }
+}
+if (tagged.length > 0)
   console.error(
-    `${tagged.trimEnd()}\nknip never reports an export tagged public, beta or alias, so these tags can hide dead code. Remove the tag, or list the export as an entry in knip.json, which needs approval.`,
+    `${tagged.join("\n")}\nknip never reports an export tagged public, beta or alias, so these tags can hide dead code. Remove the tag, or list the export as an entry in knip.json, which needs approval.`,
   );
+
 const ignored = await $`git ls-files -ci --exclude-standard -- ${SOURCE_FILES}`.quiet().text();
 if (ignored.trim())
   console.error(
@@ -189,7 +198,7 @@ if (ignored.trim())
   );
 
 if (
-  tagged.trim() ||
+  tagged.length > 0 ||
   ignored.trim() ||
   !base ||
   knip.exitCode !== 0 ||
