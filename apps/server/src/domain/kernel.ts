@@ -40,7 +40,10 @@ type Outcome<T, F extends Failure> = Ok<T> | F;
 type ValueOf<R> = R extends Ok<infer T> ? T : never;
 type FailureOf<R> = Extract<R, Failure>;
 
-export function ok<const T>(value: T): Ok<T> {
+/** A message keeps its literal type for Eden. Any other body keeps the shape it has. */
+export function ok<const T extends string>(value: T): Ok<T>;
+export function ok<T>(value: T): Ok<T>;
+export function ok<T>(value: T): Ok<T> {
   return { ok: true, value };
 }
 
