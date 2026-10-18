@@ -3,6 +3,21 @@ import antiSlop from "ultracite/oxlint/anti-slop";
 import core from "ultracite/oxlint/core";
 import react from "ultracite/oxlint/react";
 
+const dbClientBan = {
+  name: "@myakiba/db/client",
+  message: "Read and write through scope.tx in module.ts. The kernel opens the transaction.",
+};
+const dbClientOwners = ["apps/server/src/domain/kernel.ts", "packages/auth/src/server.ts"];
+// Tests create and read rows directly.
+const testCode = ["apps/server/**/*.test.ts", "apps/server/test/**"];
+// scraper code, replaced by the browser extension
+const scraperCode = [
+  "apps/worker/**",
+  "apps/server/src/routers/sync/**",
+  "apps/server/src/routers/data-transfer/**",
+  "apps/server/src/routers/item/resync-service.ts",
+];
+
 const otherTypeAwareRules = [
   "typescript/await-thenable",
   "typescript/consistent-return",
@@ -132,6 +147,11 @@ export default defineConfig({
       rules: { "no-restricted-properties": "off" },
     },
     {
+      files: ["**"],
+      excludeFiles: [...dbClientOwners, ...testCode, ...scraperCode],
+      rules: { "no-restricted-imports": ["error", { paths: [dbClientBan] }] },
+    },
+    {
       files: [
         "apps/web/src/components/wishlist/**",
         "apps/web/src/hooks/use-wishlist.ts",
@@ -178,6 +198,7 @@ export default defineConfig({
                 message:
                   "Read and write server data through a resource module in apps/web/src/data. Declare a new query family in apps/web/src/data/catalog.ts.",
               },
+              dbClientBan,
             ],
           },
         ],
@@ -207,11 +228,7 @@ export default defineConfig({
           "error",
           {
             paths: [
-              {
-                name: "@myakiba/db/client",
-                message:
-                  "Read and write through scope.tx in module.ts. The kernel opens the transaction.",
-              },
+              dbClientBan,
               {
                 name: "@myakiba/utils/result",
                 importNames: ["tryCatch"],
