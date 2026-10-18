@@ -24,7 +24,7 @@ export type AnalyticsSectionItemsData = NonNullable<
 export type AnalyticsSectionRelationshipsData = NonNullable<
   Awaited<ReturnType<AnalyticsSectionClient["relationships"]["get"]>>["data"]
 >;
-export type AnalyticsSectionRelationshipValue = AnalyticsSectionRelationshipsData["values"][number];
+export type AnalyticsSectionRelationshipValue = AnalyticsSectionRelationshipsData["items"][number];
 export type AnalyticsSectionRelationshipPreviewItem =
   AnalyticsSectionRelationshipValue["previewItems"][number];
 
@@ -125,7 +125,7 @@ export async function getAnalyticsSectionRelationships(
     throw new Error(getErrorMessage(error, "Failed to get analytics section relationships"));
   }
 
-  if (!data?.values) {
+  if (!data?.items) {
     throw new Error("Failed to get analytics section relationships");
   }
 

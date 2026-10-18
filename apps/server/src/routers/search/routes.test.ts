@@ -130,7 +130,7 @@ describe("each search route answers as before", () => {
   test("item database search past the last page", async () => {
     expect(await call("/items?page=9&pageSize=2")).toEqual({
       status: 200,
-      body: { items: [], totalCount: 0 },
+      body: { items: [], totalCount: 3 },
     });
   });
 

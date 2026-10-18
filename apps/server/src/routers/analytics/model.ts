@@ -1,3 +1,4 @@
+import type { Page } from "@myakiba/contracts/shared/pagination";
 import type { AnalyticsSection, EntryCategory } from "@myakiba/contracts/shared/types";
 
 export type EntryLeaderboardRow = {
@@ -68,9 +69,7 @@ export type AnalyticsSectionItem = {
   readonly image: string | null;
 };
 
-export type AnalyticsSectionItemsResult = {
-  readonly items: readonly AnalyticsSectionItem[];
-  readonly totalCount: number;
+export type AnalyticsSectionItemsResult = Page<AnalyticsSectionItem> & {
   readonly limit: number;
   readonly offset: number;
 };
@@ -89,10 +88,8 @@ export type AnalyticsSectionRelationshipValue = {
   readonly previewItems: readonly AnalyticsSectionRelationshipPreviewItem[];
 };
 
-export type AnalyticsSectionRelationshipsResult = {
+export type AnalyticsSectionRelationshipsResult = Page<AnalyticsSectionRelationshipValue> & {
   readonly section: AnalyticsSection;
-  readonly totalCount: number;
-  readonly values: readonly AnalyticsSectionRelationshipValue[];
   readonly limit: number;
   readonly offset: number;
 };

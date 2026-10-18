@@ -80,7 +80,7 @@ export function ShopTable({
     staleTime: 1000 * 60 * 5,
     retry: false,
   });
-  const rows = query.data?.rows ?? [];
+  const rows = query.data?.items ?? [];
   const totalCount = query.data?.totalCount ?? 0;
   const shopSearchInput = (
     <div className="relative w-full sm:w-64">

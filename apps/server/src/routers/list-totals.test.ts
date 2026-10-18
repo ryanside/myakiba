@@ -24,7 +24,15 @@ await mock.module("@myakiba/auth/server", () => ({
 const db = await createTestDatabase();
 const { default: ordersRouter } = await import("./orders/index");
 const { default: collectionRouter } = await import("./collection/index");
-const app = new Elysia({ prefix: "/api" }).use(ordersRouter).use(collectionRouter);
+const { default: searchRouter } = await import("./search/index");
+const { default: analyticsRouter } = await import("./analytics/index");
+const { default: expensesRouter } = await import("./expenses/index");
+const app = new Elysia({ prefix: "/api" })
+  .use(ordersRouter)
+  .use(collectionRouter)
+  .use(searchRouter)
+  .use(analyticsRouter)
+  .use(expensesRouter);
 
 const userId = "user-1";
 
@@ -113,4 +121,42 @@ describe("a page past the end keeps the filtered set's totals", () => {
     expect(await get("/collection?limit=2")).toMatchObject(totals);
     expect(await get(`/collection?${pastEnd}`)).toMatchObject({ items: [], ...totals });
   });
+
+  test("GET /search/items", async () => {
+    expect(await get("/search/items?pageSize=2")).toMatchObject({ totalCount: 3 });
+    expect(await get("/search/items?pageSize=2&page=50")).toEqual({ items: [], totalCount: 3 });
+  });
+
+  test("GET /analytics/:sectionName/items", async () => {
+    const path = "/analytics/shops/items?match=AmiAmi";
+    expect(await get(`${path}&limit=1`)).toMatchObject({ totalCount: 2 });
+    expect(await get(`${path}&${pastEnd}`)).toMatchObject({ items: [], totalCount: 2 });
+  });
+
+  test("GET /analytics/:sectionName/relationships for each kind of related section", async () => {
+    for (const relatedSection of ["shops", "scales", "characters"]) {
+      const path = `/analytics/companies/relationships?match=entry-1&relatedSection=${relatedSection}`;
+      expect(await get(`${path}&limit=1`)).toMatchObject({ totalCount: 2 });
+      expect(await get(`${path}&${pastEnd}`)).toMatchObject({ items: [], totalCount: 2 });
+    }
+  });
+
+  test("GET /expenses/shops in every scope", async () => {
+    for (const [scope, totalCount] of Object.entries({ collection: 2, orders: 2, shipping: 2 })) {
+      const path = `/expenses/shops?scope=${scope}`;
+      expect(await get(`${path}&limit=1`)).toMatchObject({ totalCount });
+      expect(await get(`${path}&${pastEnd}`)).toEqual({ items: [], totalCount });
+    }
+  });
+});
+
+test("GET /expenses/shops with a search keeps each shop's share of all scoped spend", async () => {
+  type ShopsPage = { totalCount: number; items: { shop: string; share: number }[] };
+  const shareOf = (page: ShopsPage, shop: string) =>
+    page.items.find((row) => row.shop === shop)?.share;
+  const everyShop = (await get("/expenses/shops?scope=collection")) as ShopsPage;
+  const searched = (await get("/expenses/shops?scope=collection&search=HLJ")) as ShopsPage;
+  expect(searched.totalCount).toBe(1);
+  expect(shareOf(searched, "HLJ")).toBe(shareOf(everyShop, "HLJ"));
+  expect(shareOf(searched, "HLJ")).toBeLessThan(100);
 });

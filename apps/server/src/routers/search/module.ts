@@ -18,7 +18,7 @@ import type {
 } from "@myakiba/contracts/search/schema";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 import { orderPreviewImagesSql } from "@/lib/order-preview";
-import { ok, prepared, query } from "@/domain/kernel";
+import { ok, paginateBy, prepared, query } from "@/domain/kernel";
 import { SEARCH_COLLECTION_RESULT_LIMIT, SEARCH_ORDER_RESULT_LIMIT } from "./model";
 
 const latestOwnedAt = sql<Date>`max(${collection.createdAt})`;
@@ -185,7 +185,7 @@ export const Search = {
           WORD_SIMILARITY(${normalizedSearch}, ${item.title})
         )`
         : sql<number>`0`;
-      const rows = await scope.tx
+      const rows = scope.tx
         .select({
           itemId: item.id,
           externalId: sql<number>`${item.externalId}`.as("externalId"),
@@ -195,22 +195,26 @@ export const Search = {
           releaseDate: latestRelease.date,
           releasePrice: latestRelease.price,
           releasePriceCurrency: latestRelease.priceCurrency,
-          // oxlint-disable-next-line myakiba/no-window-total -- the item search response carries the count on every row until S9 moves it to a filtered count (until 2027-01-31, approved by root per plan S2, pending operator review)
-          totalCount: sql<number>`COUNT(*) OVER()::integer`.as("totalCount"),
         })
         .from(item)
         .leftJoinLateral(latestRelease, sql`TRUE`)
         .where(and(eq(item.source, "mfc"), isNotNull(item.externalId), searchFilter))
-        .orderBy(
-          ...(normalizedSearch ? [asc(relevance), desc(titleSimilarity)] : []),
-          desc(item.createdAt),
-          desc(item.id),
-        )
-        .limit(input.pageSize)
-        .offset(offset);
+        .$dynamic();
+      const page = await paginateBy(
+        scope,
+        { limit: input.pageSize, offset },
+        {
+          rows,
+          orderBy: [
+            ...(normalizedSearch ? [asc(relevance), desc(titleSimilarity)] : []),
+            desc(item.createdAt),
+            desc(item.id),
+          ],
+        },
+      );
 
       const result: ItemDatabaseSearchResponse = {
-        items: rows.map((row) => ({
+        items: page.items.map((row) => ({
           itemId: row.itemId,
           externalId: row.externalId,
           title: row.title,
@@ -224,7 +228,7 @@ export const Search = {
               }
             : null,
         })),
-        totalCount: rows[0]?.totalCount ?? 0,
+        totalCount: page.totalCount,
       };
       scope.log.set({ result: { count: result.items.length, totalCount: result.totalCount } });
       return ok(result);

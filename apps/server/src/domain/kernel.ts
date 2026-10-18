@@ -249,7 +249,10 @@ type PageSource<TRows extends PgSelect, TTotals extends Totals> = {
  * `orderBy` must end in a key that is unique within `rows`. A list the user
  * sorts goes through `paginate`.
  */
-async function paginateBy<TRows extends PgSelect, TTotals extends Totals = Record<never, never>>(
+export async function paginateBy<
+  TRows extends PgSelect,
+  TTotals extends Totals = Record<never, never>,
+>(
   scope: { readonly tx: ReadTx },
   window: { readonly limit: number; readonly offset: number },
   source: PageSource<TRows, TTotals> & { readonly orderBy: readonly SQL[] },
