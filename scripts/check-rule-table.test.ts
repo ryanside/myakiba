@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, rename, rm, symlink } from "node:fs/promises";
+import { mkdir, mkdtemp, rename, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { $ } from "bun";
@@ -87,7 +87,7 @@ describe("scripts/check-rule-table.ts", () => {
     await rm(path.join(repo.dir, "tools/plugin.mjs"));
     await fails(
       repo.run(),
-      'AGENTS.md:7 "Keep the plugin file.": `tools/plugin.mjs` does not exist.',
+      'AGENTS.md:7 "Keep the plugin file.": `tools/plugin.mjs` is not a file.',
       'AGENTS.md:8 "Do not trim ISO strings.": `local/no-iso-slice` lost its plugin',
     );
   });
@@ -116,7 +116,7 @@ describe("scripts/check-rule-table.ts", () => {
   test("checks the named checks of a judgment row", async () => {
     const repo = await fixture();
     await repo.writeTable([...ROWS, "| Test first. | judgment, plus `scripts/replay.ts` |"]);
-    await fails(repo.run(), 'AGENTS.md:13 "Test first.": `scripts/replay.ts` does not exist.');
+    await fails(repo.run(), 'AGENTS.md:13 "Test first.": `scripts/replay.ts` is not a file.');
   });
 
   test("fails a lint rule that the config turns off or never names", async () => {
@@ -161,15 +161,48 @@ describe("scripts/check-rule-table.ts", () => {
   test("accepts a directory that exists and fails one that does not", async () => {
     const repo = await fixture();
     await repo.write("apps/web/src/data/catalog.ts", "export {};\n");
-    await repo.writeTable([...ROWS, "| Hooks live in data. | `apps/web/src/data` and `tools/` |"]);
+    await repo.writeTable([...ROWS, "| Hooks live in data. | `apps/web/src/data/` and `tools/` |"]);
     await passes(repo.run());
     await rm(path.join(repo.dir, "apps/web/src/data"), { recursive: true });
     await rm(path.join(repo.dir, "tools"), { recursive: true });
     await fails(
       repo.run(),
-      'AGENTS.md:13 "Hooks live in data.": `apps/web/src/data` does not exist.',
-      'AGENTS.md:13 "Hooks live in data.": `tools/` does not exist.',
+      'AGENTS.md:13 "Hooks live in data.": `apps/web/src/data/` is not a directory.',
+      'AGENTS.md:13 "Hooks live in data.": `tools/` is not a directory.',
     );
+  });
+
+  test("fails a directory enforcer that is a file", async () => {
+    const repo = await fixture();
+    await repo.write("apps/web/src/data", "not a directory\n");
+    await repo.writeTable([...ROWS, "| Hooks live in data. | `apps/web/src/data/` |"]);
+    await fails(repo.run(), "`apps/web/src/data/` is not a directory.");
+  });
+
+  test("fails a file enforcer that a directory replaced", async () => {
+    const repo = await fixture();
+    const named = "apps/server/src/route-auth.test.ts";
+    await repo.write(named, "export {};\n");
+    await repo.writeTable([...ROWS, `| Every route needs a session. | \`${named}\` |`]);
+    await passes(repo.run());
+    await rm(path.join(repo.dir, named));
+    await mkdir(path.join(repo.dir, named));
+    await fails(
+      repo.run(),
+      `AGENTS.md:13 "Every route needs a session.": \`${named}\` is not a file.`,
+    );
+  });
+
+  test("reads a path without an extension or trailing slash as a file", async () => {
+    const repo = await fixture();
+    await repo.write("apps/server/Dockerfile", "FROM scratch\n");
+    await repo.write("apps/web/src/data/catalog.ts", "export {};\n");
+    await repo.writeTable([
+      ...ROWS,
+      "| The image builds. | `apps/server/Dockerfile` |",
+      "| Hooks live in data. | `apps/web/src/data` |",
+    ]);
+    await fails(repo.run(), "`apps/web/src/data` is not a file.");
   });
 
   test("fails a plugin rule whose plugin is no longer registered", async () => {

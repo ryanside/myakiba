@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -13,7 +13,8 @@ const BASE_TSCONFIG = "packages/config/tsconfig.base.json";
 const JUDGMENT = "judgment";
 
 type Reference =
-  | { kind: "path"; path: string }
+  | { kind: "file"; path: string }
+  | { kind: "directory"; path: string }
   | { kind: "lint rule"; id: string }
   | { kind: "compiler flag"; flag: string }
   | { kind: "script"; name: string };
@@ -37,10 +38,11 @@ type TsConfig = { compilerOptions?: Record<string, string | boolean | string[]> 
 const classify = (text: string): Reference | undefined => {
   const script = /^bun run (?<name>[\w:-]+)$/u.exec(text)?.groups?.name;
   if (script) return { kind: "script", name: script };
-  const isPath =
-    /^\.?[\w@.-]+(?:\/[\w@.-]+)*\/?$/u.test(text) &&
-    (text.endsWith("/") || /\.[a-z]+$/u.test(text) || text.split("/").length > 2);
-  if (isPath) return { kind: "path", path: text };
+  if (/^\.?[\w@.-]+(?:\/[\w@.-]+)*\/$/u.test(text)) return { kind: "directory", path: text };
+  const isFile =
+    /^\.?[\w@.-]+(?:\/[\w@.-]+)*$/u.test(text) &&
+    (/\.[a-z]+$/u.test(text) || text.split("/").length > 2);
+  if (isFile) return { kind: "file", path: text };
   if (/^(?:[a-z0-9-]+\/)?[a-z0-9]+(?:-[a-z0-9]+)+$/u.test(text))
     return { kind: "lint rule", id: text };
   if (/^[a-z]+(?:[A-Z][a-z]+)+$/u.test(text)) return { kind: "compiler flag", flag: text };
@@ -157,8 +159,15 @@ const lintRuleProblem = async (id: string): Promise<string | undefined> => {
 
 const problemWith = async (reference: Reference): Promise<string | undefined> => {
   switch (reference.kind) {
-    case "path": {
-      return existsSync(reference.path) ? undefined : `\`${reference.path}\` does not exist`;
+    case "file": {
+      return existsSync(reference.path) && statSync(reference.path).isFile()
+        ? undefined
+        : `\`${reference.path}\` is not a file`;
+    }
+    case "directory": {
+      return existsSync(reference.path) && statSync(reference.path).isDirectory()
+        ? undefined
+        : `\`${reference.path}\` is not a directory`;
     }
     case "script": {
       return Object.hasOwn(scripts, reference.name)
@@ -199,7 +208,7 @@ for (const row of table.rows) {
   if (!row.rule) failures.push(`${label} has an empty rule cell.`);
   if (spans.length === 0 && !judgment) {
     failures.push(
-      `${label} has no enforcer. Name its check in backticks (a file or directory path, a lint rule id, a compiler flag or \`bun run <script>\`), or start the cell with "${JUDGMENT}".`,
+      `${label} has no enforcer. Name its check in backticks (a file path, a directory path ending in /, a lint rule id, a compiler flag or \`bun run <script>\`), or start the cell with "${JUDGMENT}".`,
     );
   }
   for (const text of spans) {
@@ -207,7 +216,7 @@ for (const row of table.rows) {
     const reference = classify(text);
     const problem = reference
       ? await problemWith(reference)
-      : `\`${text}\` is not a path, lint rule id, compiler flag or \`bun run <script>\`. End a one-segment directory with /`;
+      : `\`${text}\` is not a path, lint rule id, compiler flag or \`bun run <script>\`. End a directory path with /`;
     if (problem) failures.push(`${label}: ${problem}.`);
   }
 }
