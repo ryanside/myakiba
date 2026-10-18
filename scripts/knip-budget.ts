@@ -5,11 +5,16 @@ type KnipSymbol = { name: string; line?: number };
 type KnipFileIssues = { file: string } & Record<string, KnipSymbol[] | KnipSymbol[][]>;
 
 const BUDGET_PATH = "knip-budget.json";
-const KNIP_TOOLING = ["knip.json", BUDGET_PATH, "scripts/knip-budget.ts"];
+const KNIP_TOOLING = ["knip.json", BUDGET_PATH, "scripts/knip-budget.ts", "pnpm-workspace.yaml"];
+const MANIFEST = "package.json";
+const MANIFEST_SETTINGS = "the knip or workspaces key in package.json";
+const SOURCE_FILES = ["*.js", "*.jsx", "*.mjs", "*.cjs", "*.ts", "*.tsx", "*.mts", "*.cts"];
+const SKIPPED_TAG = "@(public|beta|alias)([^[:alnum:]_]|$)";
 const TRUNK = "origin/main";
 const APPROVER = /^\p{L}[^<>]*$/u;
 
 type Budget = Record<string, string[]>;
+type KnipManifest = { knip?: object; workspaces?: object };
 
 const BROKEN_IMPORT_TYPES = new Set(["unlisted", "unresolved", "binaries"]);
 
@@ -94,6 +99,17 @@ const approved = async (commit: string) => {
       .text();
   return approvers.split("\0").some((approver) => APPROVER.test(approver.trim()));
 };
+const knipSettings = ({ knip: config = null, workspaces = null }: KnipManifest) =>
+  JSON.stringify({ knip: config, workspaces });
+const knipSettingsAt = async (revision: string) => {
+  const shown = await $`git show ${`${revision}:${MANIFEST}`}`.nothrow().quiet();
+  return shown.exitCode === 0 ? knipSettings(shown.json()) : "";
+};
+const settingsChanged = async (commit: string, parents: string[]) => {
+  const after = await knipSettingsAt(commit);
+  const before = parents.length > 0 ? await Promise.all(parents.map(knipSettingsAt)) : [""];
+  return before.some((settings) => settings !== after);
+};
 const labelOf = async (commit: string) => {
   const subject = await $`git log -1 --format=${"%h %s"} ${commit}`.quiet().text();
   return subject.trim();
@@ -116,16 +132,19 @@ if (base) {
         ),
       );
       const differing = [...new Set(diffs.flatMap((diff) => diff.split("\n").filter(Boolean)))];
+      if (await settingsChanged(commit, parents)) differing.push(MANIFEST_SETTINGS);
       if (differing.length > 0)
         unapproved.push(
           `${await labelOf(commit)} merges ${parents.length} branches and differs from one of them in ${differing.join(", ")}. Git cannot show an octopus merge's own changes, so merge one branch at a time.`,
         );
       continue;
     }
-    const tooling = files.filter((file) => KNIP_TOOLING.includes(file));
+    const tooling = files.filter((file) => KNIP_TOOLING.includes(file) || file === MANIFEST);
     if (tooling.length === 0 || (await approved(commit))) continue;
     const label = await labelOf(commit);
-    const changed = tooling.filter((file) => file !== BUDGET_PATH);
+    const changed = tooling.filter((file) => file !== BUDGET_PATH && file !== MANIFEST);
+    if (tooling.includes(MANIFEST) && (await settingsChanged(commit, parents)))
+      changed.push(MANIFEST_SETTINGS);
     if (changed.length > 0) unapproved.push(`${label} changes ${changed.join(", ")}.`);
     if (!tooling.includes(BUDGET_PATH)) continue;
     const before =
@@ -139,12 +158,14 @@ if (base) {
       .text();
   if (pending.trim())
     unapproved.push(`Uncommitted changes to the knip tooling:\n${pending.trimEnd()}`);
+  if ((await knipSettingsAt("HEAD")) !== knipSettings(await Bun.file(MANIFEST).json()))
+    unapproved.push(`Uncommitted changes to ${MANIFEST_SETTINGS}.`);
   const pendingRaise = raises([await budgetAt("HEAD")], entriesOf(budget));
   if (pendingRaise.length > 0)
     unapproved.push(`Uncommitted ${BUDGET_PATH} raises the budget for ${pendingRaise.join(", ")}.`);
   if (unapproved.length > 0) {
     console.error(
-      `${unapproved.join("\n")}\nEach commit that changes ${KNIP_TOOLING.join(", ")} needs a human's approval, merge commits included, unless it only removes ${BUDGET_PATH} entries. Once you have it, add the trailer "Lint-Budget-Approved-By: <name>" to that commit's last paragraph. If a merge from ${TRUNK} brought the change in, rebase onto ${TRUNK} instead of merging.`,
+      `${unapproved.join("\n")}\nEach commit that changes ${KNIP_TOOLING.join(", ")} or ${MANIFEST_SETTINGS} needs a human's approval, merge commits included, unless it only removes ${BUDGET_PATH} entries. Once you have it, add the trailer "Lint-Budget-Approved-By: <name>" to that commit's last paragraph. If a merge from ${TRUNK} brought the change in, rebase onto ${TRUNK} instead of merging.`,
     );
   }
 } else {
@@ -153,6 +174,28 @@ if (base) {
   );
 }
 
-if (!base || knip.exitCode !== 0 || added.length > 0 || fixed.length > 0 || unapproved.length > 0) {
+const tagged = await $`git grep -n --untracked -I -E ${SKIPPED_TAG} -- ${SOURCE_FILES}`
+  .nothrow()
+  .quiet()
+  .text();
+if (tagged.trim())
+  console.error(
+    `${tagged.trimEnd()}\nknip never reports an export tagged public, beta or alias, so these tags can hide dead code. Remove the tag, or list the export as an entry in knip.json, which needs approval.`,
+  );
+const ignored = await $`git ls-files -ci --exclude-standard -- ${SOURCE_FILES}`.quiet().text();
+if (ignored.trim())
+  console.error(
+    `${ignored.trimEnd()}\nThese committed files match .gitignore, so knip skips them. Remove the .gitignore pattern, or delete the files.`,
+  );
+
+if (
+  tagged.trim() ||
+  ignored.trim() ||
+  !base ||
+  knip.exitCode !== 0 ||
+  added.length > 0 ||
+  fixed.length > 0 ||
+  unapproved.length > 0
+) {
   process.exit(1);
 }
