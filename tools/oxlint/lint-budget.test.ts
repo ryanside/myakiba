@@ -324,11 +324,8 @@ describe("scripts/lint-budget.ts", () => {
     await fails(reverted.run(), "merge trunk changes oxlint.config.ts");
   }, 60_000);
 
-  test("checks an octopus merge's own edits, which git's remerge diff skips", async () => {
-    for (const [edit, reason] of [
-      ["tooling", "octopus changes tools/oxlint/octopus.txt"],
-      ["raise", "octopus raises the budget for eslint(no-restricted-properties) in src/more.ts"],
-    ] as const) {
+  test("fails any merge of three or more parents without the trailer", async () => {
+    for (const edit of ["none", "tooling", "raise"] as const) {
       const repo = await fixture();
       for (const branch of ["left", "right"]) {
         await repo.git("checkout", "-q", "-b", branch, "main");
@@ -338,18 +335,41 @@ describe("scripts/lint-budget.ts", () => {
       await repo.git("checkout", "-q", "pr");
       await repo.git("merge", "-q", "--no-ff", "--no-commit", "left", "right");
       if (edit === "tooling") await repo.write("tools/oxlint/octopus.txt", "octopus\n");
-      else {
+      if (edit === "raise") {
         await repo.write("src/more.ts", 'export const more = JSON.parse("{}");\n');
         await repo.setBudget({
           "eslint(no-restricted-properties)": { "src/parse.ts": 1, "src/more.ts": 1 },
         });
       }
       await repo.commit("octopus");
-      await fails(repo.run(), reason);
+      await fails(repo.run(), "octopus merges 3 parents");
       await repo.git("commit", "--no-verify", "-q", "--amend", "-m", "octopus", "-m", APPROVAL);
       await passes(repo.run());
     }
-  }, 60_000);
+  }, 90_000);
+
+  test("counts a raise in a parentless commit merged in from an unrelated history", async () => {
+    const repo = await fixture();
+    await repo.git("checkout", "-q", "--orphan", "unrelated");
+    await repo.write("src/more.ts", 'export const more = JSON.parse("{}");\n');
+    await repo.setBudget({
+      "eslint(no-restricted-properties)": { "src/parse.ts": 1, "src/more.ts": 1 },
+    });
+    await repo.commit("unrelated root");
+    await repo.git("checkout", "-q", "pr");
+    await repo.git(
+      "merge",
+      "-q",
+      "--no-ff",
+      "--no-commit",
+      "--allow-unrelated-histories",
+      "-X",
+      "theirs",
+      "unrelated",
+    );
+    await repo.commit("merge unrelated", true);
+    await fails(repo.run(), "unrelated root raises the budget for");
+  }, 30_000);
 
   test("fails uncommitted tooling changes and an uncommitted raise", async () => {
     const repo = await fixture();

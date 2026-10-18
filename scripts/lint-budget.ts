@@ -175,27 +175,23 @@ if (base) {
     if (lintFiles.length > 0) changedFiles.set(commit, lintFiles);
   }
 
+  const unapproved: string[] = [];
   const octopuses = await $`git rev-list --min-parents=3 ${base}..HEAD`.quiet().text();
   for (const octopus of octopuses.split("\n").filter(Boolean)) {
-    const touched = new Set<string>();
     const parents = await $`git rev-parse ${`${octopus}^@`}`.quiet().text();
-    for (const parent of parents.split("\n").filter(Boolean)) {
-      const diff = await $`git diff --name-only ${parent} ${octopus}`.quiet().text();
-      for (const file of diff.split("\n")) {
-        if (toolingGlobs.some((glob) => glob.match(file))) touched.add(file);
-      }
-    }
-    if (touched.size > 0) changedFiles.set(octopus, [...touched]);
+    if (!(await approved(octopus)))
+      unapproved.push(
+        `${await label(octopus)} merges ${parents.trim().split("\n").length} parents. git shows no own changes for such a merge, so it needs the trailer, or merge one branch at a time.`,
+      );
   }
-
-  const unapproved: string[] = [];
   for (const [changed, files] of changedFiles) {
     const tooling = files.filter((file) => file !== BUDGET_PATH);
     if (tooling.length > 0 && !(await approved(changed)))
       unapproved.push(`${await label(changed)} changes ${tooling.join(", ")}.`);
     if (!files.includes(BUDGET_PATH)) continue;
     const parents = await $`git rev-parse ${`${changed}^@`}`.quiet().text();
-    const before = await Promise.all(parents.split("\n").filter(Boolean).map(budgetAt));
+    const parentBudgets = await Promise.all(parents.split("\n").filter(Boolean).map(budgetAt));
+    const before = parentBudgets.length > 0 ? parentBudgets : [{}];
     const raised = raises(before, await budgetAt(changed));
     if (raised.length > 0 && !(await approved(changed)))
       unapproved.push(`${await label(changed)} raises the budget for ${raised.join(", ")}.`);
