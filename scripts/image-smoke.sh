@@ -176,6 +176,7 @@ main() {
     wait_until 60 docker exec "$redis" redis-cli ping || fail "Redis did not start" "$redis"
     "smoke_${name//-/_}" "$image"
   done
+  [ "$redis_mode" = up ] || set -- "$@" "with Redis $redis_mode"
   echo "image smoke ok: $*"
 }
 
