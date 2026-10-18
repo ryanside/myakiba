@@ -12,7 +12,6 @@ import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-quer
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { useEffect } from "react";
 import type { getErrorMessage as realGetErrorMessage } from "@/lib/treaty-client";
-import { useToday } from "./use-today";
 
 configure({ asyncUtilTimeout: 4000 });
 setDefaultTimeout(20_000);
@@ -176,10 +175,6 @@ function renderWithClient(ui: React.ReactNode, queryClient = new QueryClient()) 
 
 const fetchesSettled = () => waitFor(() => expect(renderedClient.isFetching()).toBe(0));
 
-function Today() {
-  return <p aria-label="today">{useToday()}</p>;
-}
-
 describe("wishlist after a sync rewrites item metadata", () => {
   test("an open wishlist page shows the synced title once the sync finishes", async () => {
     renderWithClient(
@@ -337,7 +332,7 @@ describe("wishlist reorder", () => {
   test("a move that saves across local midnight keeps its order", async () => {
     setSystemTime(new Date(2026, 9, 16, 23, 59, 59, 800));
     server.items = [MIKU_BEFORE_SYNC, KAGAMINE_RIN, KAGAMINE_LEN];
-    const move = renderReorderableAll(<Today />);
+    const move = renderReorderableAll(<WishlistTab tab="upcoming" />);
     await waitFor(() => expect(shownIn("wishlist all")).toHaveLength(3));
 
     server.holdOrderPatch = true;
@@ -346,13 +341,17 @@ describe("wishlist reorder", () => {
       saving = move(lenFirst);
     });
     await waitFor(() => expect(server.heldOrderPatch).toHaveLength(1));
-    const requestsBeforeMidnight = server.wishlistRequests.length;
+    const allRequests = () =>
+      server.wishlistRequests.filter((request) => request.releaseStatus === "all").length;
+    const requestsBeforeMidnight = allRequests();
     setSystemTime(new Date(2026, 9, 17, 0, 0, 1));
-    await waitFor(() => expect(screen.getByLabelText("today").textContent).toBe("2026-10-17"));
+    await waitFor(() =>
+      expect(server.wishlistRequests.map((request) => request.today)).toContain("2026-10-17"),
+    );
     await fetchesSettled();
     const afterMidnight = {
       shown: shownIn("wishlist all"),
-      requests: server.wishlistRequests.length - requestsBeforeMidnight,
+      requests: allRequests() - requestsBeforeMidnight,
     };
     await act(async () => {
       server.heldOrderPatch[0]?.();
