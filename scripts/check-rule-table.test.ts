@@ -179,6 +179,14 @@ describe("scripts/check-rule-table.ts", () => {
     await fails(repo.run(), "`apps/web/src/data/` is not a directory.");
   });
 
+  test("fails a directory enforcer that is a symlink to a file", async () => {
+    const repo = await fixture();
+    await repo.write("apps/server/target.ts", "export {};\n");
+    await symlink("target.ts", path.join(repo.dir, "apps/server/link.ts"));
+    await repo.writeTable([...ROWS, "| Linked. | `apps/server/link.ts/` |"]);
+    await fails(repo.run(), "`apps/server/link.ts/` is not a directory.");
+  });
+
   test("fails a file enforcer that a directory replaced", async () => {
     const repo = await fixture();
     const named = "apps/server/src/route-auth.test.ts";
