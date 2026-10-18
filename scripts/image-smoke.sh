@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Usage: scripts/image-smoke.sh [db-push[=IMAGE]] [server[=IMAGE]]
+# Usage: scripts/image-smoke.sh [--redis unreachable] [db-push[=IMAGE]] [server[=IMAGE]]
 # Runs each image in order against throwaway Postgres and Redis. Builds it from this checkout unless IMAGE is given.
+# --redis unreachable points the server at an address that drops packets and expects /health to answer 503 naming Redis.
 # Env: SMOKE_PREFIX, SMOKE_TIMEOUT, SMOKE_REQUIRED_CLIENT_VARS (names, skips the checker), SMOKE_SERVER_ENV (extra K=V for the server).
 set -euo pipefail
 
@@ -12,12 +13,14 @@ network=$prefix-net
 postgres=$prefix-postgres
 redis=$prefix-redis
 database_url=postgres://smoke:smoke@$postgres:5432/smoke
+unreachable_host=10.255.255.1
+redis_mode=up
 vite_args=(VITE_SERVER_URL=http://vite-server-url.image-smoke.invalid VITE_TURNSTILE_SITE_KEY=vite-turnstile-site-key-image-smoke)
 
 now() { perl -MTime::HiRes=time -e 'printf "%.2f", time'; }
 elapsed() { perl -e 'printf "%.2f", $ARGV[1] - $ARGV[0]' "$1" "$(now)"; }
 before() { perl -e 'exit !($ARGV[1] - $ARGV[0] < $ARGV[2])' "$1" "$(now)" "$2"; }
-left() { perl -e '$l = $ARGV[2] - ($ARGV[1] - $ARGV[0]); printf "%.3f", $l > 1 ? 1 : $l < 0.001 ? 0.001 : $l' "$1" "$(now)" "$2"; }
+left() { perl -e '$l = $ARGV[2] - ($ARGV[1] - $ARGV[0]); printf "%.3f", $l > 2 ? 2 : $l < 0.001 ? 0.001 : $l' "$1" "$(now)" "$2"; }
 
 fail() {
   echo "image smoke: FAIL $1"
@@ -50,17 +53,22 @@ crashed() {
 }
 
 answer() {
-  local container=$1 path=$2 start=$3 address=$4
+  local container=$1 path=$2 start=$3 address=$4 want=${5:-200} body=${6:-} reply last=none
   while :; do
-    before "$start" "$timeout" || fail "$container: $path did not answer within ${timeout}s" "$container"
-    if curl -fsS -m "$(left "$start" "$timeout")" -o /dev/null "http://$address$path" >/dev/null 2>&1; then
-      before "$start" "$timeout" || fail "$container: $path answered after $(elapsed "$start")s, over ${timeout}s" "$container"
-      break
+    before "$start" "$timeout" ||
+      fail "$container: $path did not answer within ${timeout}s. Expected $want${body:+ with $body}, last answer: $last" "$container"
+    if reply=$(curl -sS -m "$(left "$start" "$timeout")" -w '\n%{http_code}' "http://$address$path" 2>/dev/null); then
+      last=${reply##*$'\n'}
+      [ "$reply" = "$last" ] || last="$last ${reply%$'\n'*}"
+      if [ "${reply##*$'\n'}" = "$want" ] && [[ $reply == *"$body"* ]]; then
+        before "$start" "$timeout" || fail "$container: $path answered after $(elapsed "$start")s, over ${timeout}s" "$container"
+        break
+      fi
     fi
     [ "$(docker inspect -f '{{.State.Running}}' "$container")" = true ] || crashed "$container"
     sleep 0.25
   done
-  echo "server: $path answered after $(elapsed "$start")s"
+  echo "server: $path answered $want after $(elapsed "$start")s"
 }
 
 dockerfile() {
@@ -93,10 +101,11 @@ smoke_db_push() {
 }
 
 smoke_server() {
-  local container=$prefix-server start address
+  local container=$prefix-server start address redis_host=$redis
+  [ "$redis_mode" = up ] || redis_host=$unreachable_host
   start=$(now)
   docker run -d --label "$label" --name "$container" --network "$network" -p 127.0.0.1::3000 \
-    -e DATABASE_URL="$database_url" -e REDIS_HOST="$redis" -e REDIS_PORT=6379 \
+    -e DATABASE_URL="$database_url" -e REDIS_HOST="$redis_host" -e REDIS_PORT=6379 \
     -e CORS_ORIGIN=http://localhost:3000 -e BETTER_AUTH_URL=http://localhost:3000 \
     -e BETTER_AUTH_SECRET=image-smoke-secret-0123456789abcdef \
     -e TURNSTILE_SECRET_KEY=image-smoke -e RESEND_API_KEY=re_image_smoke \
@@ -106,8 +115,12 @@ smoke_server() {
   echo "server: docker run returned after $(elapsed "$start")s"
   start=$(now)
   address=$(docker port "$container" 3000/tcp | head -1) || true
-  answer "$container" /health "$start" "$address"
-  answer "$container" /api/auth/ok "$start" "$address"
+  if [ "$redis_mode" = up ]; then
+    answer "$container" /health "$start" "$address"
+    answer "$container" /api/auth/ok "$start" "$address"
+  else
+    answer "$container" /health "$start" "$address" 503 '"status":"redis unavailable"'
+  fi
   docker logs "$container" 2>&1 | grep '"environment":"production"' >/dev/null ||
     fail "$container does not log in production mode. Set ENV NODE_ENV=production before bun build --compile." "$container"
   docker cp "$container:/app/dist" "$work/dist" >/dev/null || fail "$container has no web bundle at /app/dist"
@@ -124,6 +137,11 @@ smoke_server() {
 
 main() {
   cd "$(dirname "$0")/.."
+  if [ "${1:-}" = --redis ]; then
+    [ "${2:-}" = unreachable ] || fail "the --redis option takes one value, unreachable."
+    redis_mode=unreachable
+    shift 2
+  fi
   [ $# -gt 0 ] || set -- db-push server
   for target in "$@"; do
     dockerfile "${target%%=*}" >/dev/null || fail "unknown image ${target%%=*}. Use db-push or server."
