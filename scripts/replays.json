@@ -314,6 +314,15 @@
         "DataGridPagination range > a page past the end shows no rows of the total",
         "DataGridPagination range > an empty result shows no rows of none"
       ]
+    },
+    {
+      "fix": "742ae25e",
+      "bug": "a failed kanban status or date write reset the whole board to its last fetch, undoing another card's move that was still in flight",
+      "test": "apps/web/src/components/dashboard/order-kanban-rollback.test.tsx",
+      "fixed": [
+        "a failed dashboard kanban write rolls back only its own change > a failed status write returns its card and keeps another card's move that is still in flight",
+        "a failed dashboard kanban write rolls back only its own change > a failed date write restores its date and keeps another card's move that is still in flight"
+      ]
     }
   ],
   "lint": [
