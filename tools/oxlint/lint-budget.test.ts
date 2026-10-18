@@ -35,8 +35,12 @@ async function fixture() {
     await git("add", "-A");
     await git("commit", "--no-verify", "-qm", subject, ...(approved ? ["-m", APPROVAL] : []));
   };
-  const run = async () => {
-    const result = await $`bun scripts/lint-budget.ts`.cwd(dir).env(GIT_ENV).nothrow().quiet();
+  const run = async (cwd = dir) => {
+    const result = await $`bun ${path.join(dir, "scripts/lint-budget.ts")}`
+      .cwd(cwd)
+      .env(GIT_ENV)
+      .nothrow()
+      .quiet();
     return { exitCode: result.exitCode, output: `${result.stdout}${result.stderr}` };
   };
 
@@ -170,6 +174,29 @@ describe("scripts/lint-budget.ts", () => {
     await passes(repo.run());
   }, 30_000);
 
+  test("reads files that git treats as binary, so .gitattributes and NUL bytes hide nothing", async () => {
+    const cases: [file: string, text: string, reason: string][] = [
+      ["src/marked.ts", "/* oxlint-disable */\nexport const marked = 1;\n", "names no rule"],
+      [
+        "src/nul-directive.ts",
+        'export const nul = "\u0000";\n/* oxlint-disable */\n',
+        "names no rule",
+      ],
+      [
+        "src/nul-hit.ts",
+        'export const nul = "\u0000";\nexport const parsed = JSON.parse("{}");\n',
+        "1 hits in src/nul-hit.ts, over its budget of 0 there",
+      ],
+    ];
+    for (const [file, text, reason] of cases) {
+      const repo = await fixture();
+      await repo.write(".gitattributes", "src/*.ts -diff binary\n");
+      await repo.write(file, text);
+      await repo.commit(`add ${file}`);
+      await fails(repo.run(), reason);
+    }
+  }, 60_000);
+
   test("fails an unapproved commit to each lint tooling path, and passes it approved", async () => {
     const edits: [file: string, text: (current: string) => string][] = [
       [
@@ -181,6 +208,7 @@ describe("scripts/lint-budget.ts", () => {
       [".eslintignore", () => "src/ignored.ts\n"],
       ["tools/oxlint/notes.txt", () => "notes\n"],
       ["scripts/lint-budget.ts", (current) => `${current}\n`],
+      ["patches/ultracite.patch", () => "patch\n"],
     ];
     for (const [file, edit] of edits) {
       const repo = await fixture();
@@ -370,6 +398,42 @@ describe("scripts/lint-budget.ts", () => {
     await repo.commit("merge unrelated", true);
     await fails(repo.run(), "unrelated root raises the budget for");
   }, 30_000);
+
+  test("fails an unapproved change to a lint dependency, override or lockfile entry", async () => {
+    const manifest = (ultracite: string, extra: { overrides?: Record<string, string> } = {}) =>
+      `${JSON.stringify(
+        { devDependencies: { left: "1.0.0", oxlint: "1.80.0", ultracite }, ...extra },
+        null,
+        2,
+      )}\n`;
+    const lockfile = (oxlint: string) =>
+      `{\n  "packages": {\n    "left": ["left@1.0.0", "", {}, "sha512-a"],\n    "oxlint": ["oxlint@${oxlint}", "", {}, "sha512-b"],\n  }\n}\n`;
+    const changes: [subject: string, files: Record<string, string>][] = [
+      ["bump ultracite", { "package.json": manifest("7.0.0") }],
+      ["override", { "package.json": manifest("7.10.7", { overrides: { ultracite: "7.0.0" } }) }],
+      ["lock oxlint", { "bun.lock": lockfile("1.79.0") }],
+    ];
+    for (const [subject, files] of changes) {
+      const repo = await fixture();
+      await repo.git("checkout", "-q", "main");
+      await repo.write("package.json", manifest("7.10.7"));
+      await repo.write("bun.lock", lockfile("1.80.0"));
+      await repo.commit("trunk dependencies", true);
+      await repo.git("update-ref", "refs/remotes/origin/main", "HEAD");
+      await repo.git("checkout", "-q", "-B", "pr", "main");
+      await repo.write(
+        "package.json",
+        manifest("7.10.7").replace('"left": "1.0.0"', '"left": "2.0.0"'),
+      );
+      await repo.commit("bump an unrelated package");
+      await passes(repo.run());
+      for (const [file, text] of Object.entries(files)) await repo.write(file, text);
+      await repo.commit(subject);
+      await fails(repo.run(), `${subject} changes the lint dependencies`);
+      await repo.git("commit", "--no-verify", "-q", "--amend", "-m", subject, "-m", APPROVAL);
+      await passes(repo.run());
+    }
+  }, 90_000);
 
   test("fails uncommitted tooling changes and an uncommitted raise", async () => {
     const repo = await fixture();

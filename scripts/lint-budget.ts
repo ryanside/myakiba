@@ -10,7 +10,11 @@ const LINT_TOOLING = [
   "**/.eslintignore",
   "tools/oxlint/**",
   "scripts/lint-budget.ts",
+  "patches/**",
 ];
+const LINT_PACKAGES = ["oxlint", "ultracite", "oxc-parser"];
+const LOCKED_LINT_PACKAGE =
+  /^\s*"(?:oxlint|ultracite|oxc-parser|@oxlint\/[^"]+|@oxc-parser\/[^"]+|@oxc-project\/[^"]+)": \[/u;
 const CONFIG_PATHS = [
   ...LINT_TOOLING.map((pattern) => `:(glob)${pattern}`),
   `:(exclude)${BUDGET_PATH}`,
@@ -22,6 +26,14 @@ const TRUNK = "origin/main";
 const APPROVER = /^\p{L}[^<>]*$/u;
 
 type Budget = Record<string, Record<string, number>>;
+type Manifest = {
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+  optionalDependencies?: Record<string, string>;
+  overrides?: Record<string, string | Record<string, string>>;
+  resolutions?: Record<string, string>;
+  patchedDependencies?: Record<string, string>;
+};
 type Diagnostic = {
   code: string;
   severity: "error" | "warning";
@@ -175,7 +187,47 @@ if (base) {
     if (lintFiles.length > 0) changedFiles.set(commit, lintFiles);
   }
 
+  const lintDependencies = (manifest: Manifest, lockfile: string) =>
+    JSON.stringify({
+      packages: LINT_PACKAGES.map((name) => [
+        manifest.dependencies?.[name],
+        manifest.devDependencies?.[name],
+        manifest.optionalDependencies?.[name],
+      ]),
+      overrides: manifest.overrides ?? null,
+      resolutions: manifest.resolutions ?? null,
+      patched: manifest.patchedDependencies ?? null,
+      locked: lockfile.split("\n").filter((line) => LOCKED_LINT_PACKAGE.test(line)),
+    });
+  const lintDependenciesAt = async (revision: string) => {
+    const manifest = await $`git show ${`${revision}:package.json`}`.nothrow().quiet();
+    const lockfile = await $`git show ${`${revision}:bun.lock`}`.nothrow().quiet();
+    return lintDependencies(
+      manifest.exitCode === 0 ? manifest.json() : {},
+      lockfile.exitCode === 0 ? lockfile.text() : "",
+    );
+  };
+  const dependencyCommits = history
+    .split("\0")
+    .filter(Boolean)
+    .map((entry) => entry.split("\n").filter(Boolean))
+    .filter(([, ...files]) => files.includes("package.json") || files.includes("bun.lock"))
+    .map(([commit = ""]) => commit);
+
   const unapproved: string[] = [];
+  for (const commit of dependencyCommits) {
+    const parents = await $`git rev-parse ${`${commit}^@`}`.quiet().text();
+    const before = await Promise.all(parents.split("\n").filter(Boolean).map(lintDependenciesAt));
+    const after = await lintDependenciesAt(commit);
+    const changed =
+      before.length === 0
+        ? after !== lintDependencies({}, "")
+        : before.some((parent) => parent !== after);
+    if (changed && !(await approved(commit)))
+      unapproved.push(
+        `${await label(commit)} changes the lint dependencies (${LINT_PACKAGES.join(", ")}, overrides, resolutions or patches).`,
+      );
+  }
   const octopuses = await $`git rev-list --min-parents=3 ${base}..HEAD`.quiet().text();
   for (const octopus of octopuses.split("\n").filter(Boolean)) {
     const parents = await $`git rev-parse ${`${octopus}^@`}`.quiet().text();
@@ -201,12 +253,20 @@ if (base) {
     .text();
   if (pending.trim())
     unapproved.push(`Uncommitted changes to the lint tooling:\n${pending.trimEnd()}`);
+  const manifestFile = Bun.file("package.json");
+  const lockFile = Bun.file("bun.lock");
+  const workingDependencies = lintDependencies(
+    (await manifestFile.exists()) ? await manifestFile.json() : {},
+    (await lockFile.exists()) ? await lockFile.text() : "",
+  );
+  if (workingDependencies !== (await lintDependenciesAt("HEAD")))
+    unapproved.push("Uncommitted changes to the lint dependencies in package.json or bun.lock.");
   const pendingRaise = raises([await budgetAt("HEAD")], budget);
   if (pendingRaise.length > 0)
     unapproved.push(`Uncommitted ${BUDGET_PATH} raises the budget for ${pendingRaise.join(", ")}.`);
   if (unapproved.length > 0) {
     failures.push(
-      `${unapproved.join("\n")}\nEach commit that changes ${LINT_TOOLING.join(", ")} or raises a budget needs a human's approval, merge commits included. Once you have it, add the trailer "Lint-Budget-Approved-By: <name>" to that commit's last paragraph, next to any other trailers such as Co-Authored-By. If a merge from ${TRUNK} brought the change in, rebase onto ${TRUNK} instead of merging.`,
+      `${unapproved.join("\n")}\nEach commit that changes ${LINT_TOOLING.join(", ")} or the lint dependencies, or raises a budget, needs a human's approval, merge commits included. Once you have it, add the trailer "Lint-Budget-Approved-By: <name>" to that commit's last paragraph, next to any other trailers such as Co-Authored-By. If a merge from ${TRUNK} brought the change in, rebase onto ${TRUNK} instead of merging.`,
     );
   }
 } else {
