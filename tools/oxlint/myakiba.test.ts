@@ -138,6 +138,24 @@ describe("myakiba/no-db-client-export", () => {
       [`${client}export const ping = async () => {\n  await db.execute("select 1");\n};`, false],
     ]);
   });
+
+  test("follows the client through await, branches, fallbacks and reassigned aliases", async () => {
+    const findings = await flags("myakiba/no-db-client-export", [
+      [`${client}export async function getClient() {\n  return await db;\n}`, true],
+      [`${client}export function getClient(on: boolean) {\n  return on ? db : undefined;\n}`, true],
+      [`${client}export const getClient = (fallback?: unknown) => fallback ?? db;`, true],
+      [`${client}let alias: unknown = null;\nalias = db;\nexport const s7 = alias;`, true],
+      [
+        `${client}export const count = async () => {\n  const local = () => db;\n  return local().execute("select 1");\n};`,
+        true,
+      ],
+      [
+        `${client}export function query(on: boolean) {\n  return on ? db.execute("select 1") : undefined;\n}`,
+        false,
+      ],
+    ]);
+    expect(findings.at(-1)?.message).toContain("don't wrap it in a local factory");
+  });
 });
 
 describe("myakiba/no-env-outside-env-package", () => {

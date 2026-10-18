@@ -12,7 +12,8 @@ const BY_PATH =
 const TEST_FILE = "Only tests import test files.";
 const IN_PACKAGE =
   "Only the kernel reads the client. Inside @myakiba/db, import it as a type only.";
-const EXPORT = "Do not export @myakiba/db/client. Export an operation or a helper that uses it.";
+const EXPORT =
+  "Do not export @myakiba/db/client. Export an operation or a helper that uses it. Owners call the client directly; don't wrap it in a local factory.";
 
 const files = {
   "apps/server/src/lib/canonical.ts": {
@@ -116,6 +117,14 @@ const handOuts = {
   "a getter": (client: string) =>
     `export const s7Database = {\n  get client() {\n    return ${client};\n  },\n};\n`,
   "an arrow body": (client: string) => `export const getS7Client = () => ${client};\n`,
+  "an awaited return": (client: string) =>
+    `export async function getS7Client() {\n  return await ${client};\n}\n`,
+  "a conditional return": (client: string) =>
+    `export function getS7Client(enabled: boolean) {\n  return enabled ? ${client} : undefined;\n}\n`,
+  "a nullish fallback": (client: string) =>
+    `export const getS7Client = (override?: unknown) => override ?? ${client};\n`,
+  "a reassigned alias": (client: string) =>
+    `let s7Client: unknown = null;\ns7Client = ${client};\nexport const s7Database = s7Client;\n`,
 };
 const ownerSources = async (): Promise<Record<string, string>> => ({
   [KERNEL]: await Bun.file(path.join(root, KERNEL)).text(),
@@ -153,4 +162,11 @@ describe("only the kernel and the auth adapter reach the db client", () => {
         expect(result.get(owner)).toEqual([EXPORT]);
       },
     );
+
+  test("a local factory inside an exported operation is flagged, so owners call the client directly", async () => {
+    const sources = await ownerSources();
+    const factory = `export const s7Count = async () => {\n  const client = () => pool;\n  return client().execute("select 1");\n};\n`;
+    const result = await lintTree({ [KERNEL]: `${sources[KERNEL]}\n${factory}` });
+    expect(result.get(KERNEL)).toEqual([EXPORT]);
+  });
 });

@@ -211,27 +211,38 @@ const noWindowTotal = {
 
 const DB_CLIENT = "@myakiba/db/client";
 
+/** A client handed out through `await` is still the client. */
+const clientValue = (node) => {
+  const value = unwrap(node);
+  return value?.type === "AwaitExpression" ? clientValue(value.argument) : value;
+};
+
 const CALLS = new Set(["CallExpression", "NewExpression"]);
 const SKIP = new Set(["parent", "type", "range", "loc", "start", "end"]);
 
-/** Reports where an exported declaration hands the client out: a property, a return, an arrow body. */
-const handOuts = (root, isClient, report) => {
-  const visit = (node, parent, grandparent) => {
+const walk = (root, visit) => {
+  const step = (node, parent, grandparent) => {
     if (Array.isArray(node)) {
-      for (const child of node) visit(child, parent, grandparent);
+      for (const child of node) step(child, parent, grandparent);
       return;
     }
     if (!node?.type) return;
+    visit(node, parent, grandparent);
+    for (const key of Object.keys(node)) if (!SKIP.has(key)) step(node[key], node, parent);
+  };
+  step(root);
+};
+
+/** Reports where an exported declaration hands the client out: a property, a return, an arrow body. */
+const handOuts = (root, isClient, report) =>
+  walk(root, (node, parent, grandparent) => {
     const callArgument = CALLS.has(grandparent?.type) && grandparent.arguments.includes(parent);
     if (node.type === "Property" && isClient(node.value) && !callArgument) report(node);
     if (node.type === "PropertyDefinition" && isClient(node.value)) report(node);
     if (node.type === "ReturnStatement" && isClient(node.argument)) report(node);
     if (node.type === "ArrowFunctionExpression" && node.expression && isClient(node.body))
       report(node);
-    for (const key of Object.keys(node)) if (!SKIP.has(key)) visit(node[key], node, parent);
-  };
-  visit(root);
-};
+  });
 
 /** The client's owners use it. Exporting it, under any name, hands it to every importer. */
 const noDbClientExport = {
@@ -240,7 +251,7 @@ const noDbClientExport = {
     const report = (node) =>
       context.report({
         node,
-        message: `Do not export ${DB_CLIENT}. Export an operation or a helper that uses it.`,
+        message: `Do not export ${DB_CLIENT}. Export an operation or a helper that uses it. Owners call the client directly; don't wrap it in a local factory.`,
       });
     return {
       Program(program) {
@@ -254,21 +265,28 @@ const noDbClientExport = {
           if (declaration?.type === "VariableDeclaration")
             declarators.push(...declaration.declarations);
         }
+        const isClient = (node) => {
+          const value = clientValue(node);
+          if (value?.type === "ConditionalExpression")
+            return isClient(value.consequent) || isClient(value.alternate);
+          if (value?.type === "LogicalExpression")
+            return isClient(value.left) || isClient(value.right);
+          return value?.type === "Identifier" && client.has(value.name);
+        };
+        const bindings = new Set(declarators.map(({ id }) => id.name));
+        const sources = declarators.map(({ id, init }) => [id, init]);
+        walk(program, (node) => {
+          if (node.type === "AssignmentExpression" && bindings.has(node.left.name))
+            sources.push([node.left, node.right]);
+        });
         for (let grew = true; grew;) {
           grew = false;
-          for (const { id, init } of declarators) {
-            const value = unwrap(init);
-            if (id.type !== "Identifier" || client.has(id.name)) continue;
-            if (value?.type === "Identifier" && client.has(value.name)) {
+          for (const [id, value] of sources)
+            if (id.type === "Identifier" && !client.has(id.name) && isClient(value)) {
               client.add(id.name);
               grew = true;
             }
-          }
         }
-        const isClient = (node) => {
-          const value = unwrap(node);
-          return value?.type === "Identifier" && client.has(value.name);
-        };
         const exported = new Set();
         for (const statement of program.body)
           if (statement.type === "ExportNamedDeclaration" && !statement.source)
