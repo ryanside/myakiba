@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, DragDropVerticalIcon } from "@hugeicons/core-free-icons";
-import { useQuery } from "@tanstack/react-query";
 import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
 import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
@@ -24,7 +23,8 @@ import type { OrderItemsQuery } from "@myakiba/contracts/orders/schema";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import { createOrderItemSubColumns } from "./order-item-sub-columns";
 import { OrderItemSyncSheet } from "./order-item-sync-sheet";
-import { orderItemsQueryOptions } from "@/hooks/use-orders";
+import { useRead } from "@/data/client";
+import { orders } from "@/data/resources/orders";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 
@@ -93,15 +93,19 @@ export function OrderItemSubDataGrid({
     isPending,
     isError,
     error,
-  } = useQuery({
-    ...orderItemsQueryOptions(orderId, {
-      limit: pagination.pageSize,
-      offset,
-      sort: (sortConfig?.id as OrderItemsQuery["sort"] | undefined) ?? "createdAt",
-      order: sortConfig?.desc === false ? "asc" : "desc",
-    }),
-    enabled: !isLoading,
-  });
+  } = useRead(
+    orders.items,
+    {
+      orderId,
+      query: {
+        limit: pagination.pageSize,
+        offset,
+        sort: (sortConfig?.id as OrderItemsQuery["sort"] | undefined) ?? "createdAt",
+        order: sortConfig?.desc === false ? "asc" : "desc",
+      },
+    },
+    { enabled: !isLoading },
+  );
 
   const items = itemsData?.items ?? [];
   const totalCount = itemsData?.totalCount ?? 0;

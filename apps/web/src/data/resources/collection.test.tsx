@@ -10,7 +10,7 @@ import {
 } from "@testing-library/react";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 
@@ -43,12 +43,13 @@ function holdListReads() {
   };
 }
 
-const listRow = (item: ServerItem) => ({
-  ...item,
-  totalCount: server.items.length,
-  totalValue: server.items.reduce((sum, { price }) => sum + price, 0),
-  totalItemsThisMonth: 0,
-});
+const listRows = (items: readonly ServerItem[]) =>
+  items.map((item) => ({
+    ...item,
+    totalCount: items.length,
+    totalValue: items.reduce((sum, { price }) => sum + price, 0),
+    totalItemsThisMonth: 0,
+  }));
 
 const held =
   (name: string, apply: (...args: never[]) => void) =>
@@ -65,11 +66,12 @@ const held =
     });
 
 await mock.module("@/queries/collection", () => ({
-  getCollection: async () => {
+  getCollection: async (filters: CollectionFilters) => {
     server.listReads++;
     await server.heldReads;
-    return server.items.map(listRow);
+    return listRows(server.items.filter((item) => item.itemTitle.includes(filters.search ?? "")));
   },
+
   deleteCollectionItems: held("delete", (ids: string[]) => {
     server.items = server.items.filter((item) => !ids.includes(item.id));
   }),
@@ -84,18 +86,26 @@ await mock.module("@/queries/orders", () => ({
   splitOrders: held("assign new", () => {}),
 }));
 
-const page = { filters: {} as CollectionFilters };
+const url = { filters: {} as CollectionFilters, listeners: new Set<() => void>() };
+const subscribe = (listener: () => void) => {
+  url.listeners.add(listener);
+  return () => url.listeners.delete(listener);
+};
 await mock.module("@/hooks/use-filters", () => ({
   useFilters: () => ({
-    filters: page.filters,
+    filters: useSyncExternalStore(subscribe, () => url.filters),
     setFilters: async () => {},
     resetFilters: async () => {},
   }),
 }));
 
 const { toast } = await import("@/components/ui/toast");
-const { useCollectionMutations, useCollectionOrderMutations, useCollectionQuery } =
-  await import("@/hooks/use-collection");
+const {
+  useCollectionFilters,
+  useCollectionMutations,
+  useCollectionOrderMutations,
+  useCollectionQuery,
+} = await import("@/hooks/use-collection");
 
 const toastAdd = spyOn(toast, "add");
 
@@ -105,16 +115,17 @@ afterEach(() => {
   server.listReads = 0;
   server.heldReads = null;
   server.writes.length = 0;
-  page.filters = {};
+  url.filters = {};
   toastAdd.mockClear();
 });
 
 type Actions = ReturnType<typeof useCollectionMutations>;
 
-function renderCollectionPage(filters: CollectionFilters) {
-  page.filters = filters;
+function renderCollectionPage(initialFilters: CollectionFilters) {
+  url.filters = initialFilters;
   let actions: Actions | null = null;
   function CollectionPage() {
+    const { filters } = useCollectionFilters();
     const { items, totalCount, totalValue } = useCollectionQuery();
     const mutations = useCollectionMutations({ filters });
     useEffect(() => {
@@ -148,6 +159,12 @@ function renderCollectionPage(filters: CollectionFilters) {
     </QueryClientProvider>,
   );
   return {
+    filterTo: async (next: CollectionFilters) => {
+      await act(async () => {
+        url.filters = next;
+        for (const listener of url.listeners) listener();
+      });
+    },
     act: (run: (current: Actions) => Promise<void>) => {
       if (!actions) throw new Error("the collection page has not rendered");
       return run(actions).then(
@@ -300,5 +317,37 @@ describe("a Collection Item action's promise settles with the server write", () 
     );
     await answer(0, "fail");
     expect(await call).toBe("rejected");
+  });
+});
+
+describe("a failed Collection Item write after the filter changes", () => {
+  test("leaves the new list as the server sent it", async () => {
+    const collection = renderCollectionPage({});
+    await loaded();
+
+    const deleting = collection.act((actions) =>
+      actions.handleDeleteCollectionItems(new Set([LEN.id])),
+    );
+    await waitFor(() => expect(shown().items).toEqual(["Miku 1000", "Rin 500"]));
+    await collection.filterTo({ search: "Rin" });
+    await waitFor(() => expect(shown().items).toEqual(["Rin 500"]));
+
+    const releaseReads = holdListReads();
+    await answer(0, "fail");
+    await waitFor(() =>
+      expect(toastTitles()).toContain(
+        "error: Failed to delete collection item(s). Please try again.",
+      ),
+    );
+    await act(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(resolve, 50);
+        }),
+    );
+    expect(shown()).toEqual({ totals: "1 items worth 500", items: ["Rin 500"], itemPage: "1000" });
+
+    await releaseReads();
+    expect(await deleting).toBe("rejected");
   });
 });

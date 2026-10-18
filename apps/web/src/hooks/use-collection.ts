@@ -1,51 +1,18 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
-import {
-  keepPreviousData,
-  useMutation,
-  useQuery,
-  useQueryClient,
-  queryOptions,
-} from "@tanstack/react-query";
 import { toast } from "@/components/ui/toast";
+import { orThrow, useRead, useResourceMutation } from "@/data/client";
+import {
+  assignToNewOrderCommand,
+  assignToOrderCommand,
+  collection as collectionResource,
+  deleteCollectionItemsCommand,
+  updateCollectionItemCommand,
+} from "@/data/resources/collection";
 import { useFilters } from "@/hooks/use-filters";
-import { getCollection, deleteCollectionItems, updateCollectionItem } from "@/queries/collection";
-import { moveItem, splitOrders } from "@/queries/orders";
 import { hasActiveFiltersOrSorting } from "@/lib/filters";
-import { invalidateCollectionAndOrderQueries } from "@/lib/mutation-query-invalidation";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
-import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
+import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
-
-// Shape of the cache backing the item detail route at `["item", externalId, "itemRelatedCollection"]`.
-// The route returns a subset of CollectionItem fields under `collection`.
-type ItemRelatedCollectionRow = Pick<
-  CollectionItem,
-  | "id"
-  | "orderId"
-  | "status"
-  | "count"
-  | "releaseId"
-  | "score"
-  | "price"
-  | "shop"
-  | "orderDate"
-  | "paymentDate"
-  | "shippingDate"
-  | "collectionDate"
-  | "shippingMethod"
-  | "tags"
-  | "condition"
-  | "notes"
->;
-type ItemRelatedCollectionData = { readonly collection: readonly ItemRelatedCollectionRow[] };
-
-function collectionQueryOptions(filters: CollectionFilters) {
-  return queryOptions({
-    queryKey: ["collection", filters] as const,
-    queryFn: () => getCollection(filters),
-    placeholderData: keepPreviousData,
-  });
-}
 
 export function useCollectionFilters() {
   return useFilters("/(app)/collection", { resetOffsetOnFilterChange: true });
@@ -53,10 +20,9 @@ export function useCollectionFilters() {
 
 export function useCollectionQuery() {
   const { filters } = useCollectionFilters();
-  const queryOpts = collectionQueryOptions(filters);
   const filtersActive = hasActiveFiltersOrSorting(filters);
 
-  const { data, isPending, isError, status } = useQuery(queryOpts);
+  const { data, isPending, isError, status } = useRead(collectionResource.list, filters);
 
   const items = data ?? [];
 
@@ -68,10 +34,11 @@ export function useCollectionQuery() {
     isPending,
     isError,
     status,
-    queryOpts,
     filtersActive,
   } as const;
 }
+
+const NO_FILTERS: CollectionFilters = {};
 
 function addPendingIds(previous: readonly string[], ids: readonly string[]): readonly string[] {
   return [...new Set([...previous, ...ids])];
@@ -87,72 +54,14 @@ function removePendingIds(previous: readonly string[], ids: readonly string[]): 
 }
 
 export function useCollectionOrderMutations() {
-  const queryClient = useQueryClient();
   const [pendingCollectionIdList, setPendingCollectionIdList] = useState<readonly string[]>([]);
   const pendingCollectionIds = useMemo(
     () => new Set(pendingCollectionIdList),
     [pendingCollectionIdList],
   );
 
-  const moveItemsMutation = useMutation({
-    mutationFn: ({
-      targetOrderId,
-      collectionIds,
-      orderIds,
-    }: {
-      targetOrderId: string;
-      collectionIds: ReadonlySet<string>;
-      orderIds?: ReadonlySet<string>;
-    }) => moveItem(targetOrderId, collectionIds, orderIds),
-    onSuccess: (_data, { collectionIds }) => {
-      toast.add({
-        type: "success",
-        title:
-          collectionIds.size === 1
-            ? "Order assigned"
-            : `Successfully assigned ${collectionIds.size} items to an order`,
-      });
-    },
-    onError: () => {
-      toast.add({
-        type: "error",
-        title: "Failed to assign items to an order. Please try again.",
-      });
-    },
-    onSettled: async () => {
-      await invalidateCollectionAndOrderQueries(queryClient);
-    },
-  });
-
-  const splitItemsMutation = useMutation({
-    mutationFn: ({
-      values,
-      collectionIds,
-      cascadeOptions,
-    }: {
-      values: NewOrder;
-      collectionIds: ReadonlySet<string>;
-      cascadeOptions: CascadeOptions;
-    }) => splitOrders(values, collectionIds, cascadeOptions),
-    onSuccess: (_data, { collectionIds }) => {
-      toast.add({
-        type: "success",
-        title:
-          collectionIds.size === 1
-            ? "Order assigned"
-            : `Successfully assigned ${collectionIds.size} items to a new order`,
-      });
-    },
-    onError: () => {
-      toast.add({
-        type: "error",
-        title: "Failed to assign items to a new order. Please try again.",
-      });
-    },
-    onSettled: async () => {
-      await invalidateCollectionAndOrderQueries(queryClient);
-    },
-  });
+  const moveItemsMutation = useResourceMutation(assignToOrderCommand);
+  const splitItemsMutation = useResourceMutation(assignToNewOrderCommand);
   // Keep the latest mutation objects in refs so these action callbacks can stay stable.
   // Recreating them churns CollectionDataGrid columns and causes editable cells to remount.
   const moveItemsMutationRef = useRef(moveItemsMutation);
@@ -177,7 +86,7 @@ export function useCollectionOrderMutations() {
       setPendingCollectionIdList((previous) => addPendingIds(previous, ids));
 
       try {
-        await moveItemsMutationRef.current.mutateAsync({ targetOrderId, collectionIds, orderIds });
+        await orThrow(moveItemsMutationRef.current.run({ targetOrderId, collectionIds, orderIds }));
       } finally {
         toast.close(loadingToastId);
         setPendingCollectionIdList((previous) => removePendingIds(previous, ids));
@@ -201,7 +110,7 @@ export function useCollectionOrderMutations() {
       setPendingCollectionIdList((previous) => addPendingIds(previous, ids));
 
       try {
-        await splitItemsMutationRef.current.mutateAsync({ values, cascadeOptions, collectionIds });
+        await orThrow(splitItemsMutationRef.current.run({ values, cascadeOptions, collectionIds }));
       } finally {
         toast.close(loadingToastId);
         setPendingCollectionIdList((previous) => removePendingIds(previous, ids));
@@ -225,157 +134,20 @@ export function useCollectionOrderMutations() {
 }
 
 export function useCollectionMutations(options?: { readonly filters?: CollectionFilters }) {
-  const queryClient = useQueryClient();
-  const filters = options?.filters;
-  const queryOpts = collectionQueryOptions(filters ?? {});
-  const filtersActive = hasActiveFiltersOrSorting(filters ?? {});
+  const list = options?.filters ?? NO_FILTERS;
 
   const [pendingCollectionIdList, setPendingCollectionIdList] = useState<readonly string[]>([]);
   const pendingCollectionIds = useMemo(
     () => new Set(pendingCollectionIdList),
     [pendingCollectionIdList],
   );
-  const filtersActiveRef = useRef(filtersActive);
+  const listRef = useRef(list);
   useLayoutEffect(() => {
-    filtersActiveRef.current = filtersActive;
-  }, [filtersActive]);
+    listRef.current = list;
+  }, [list]);
 
-  const updateMutation = useMutation({
-    mutationFn: (values: CollectionItemFormValues) => updateCollectionItem(values),
-    onMutate: async (values: CollectionItemFormValues) => {
-      // Always patch the item detail cache (`["item", *, "itemRelatedCollection"]`).
-      // It is keyed by item externalId, so this update is safe regardless of
-      // any list-page filter state.
-      await queryClient.cancelQueries({
-        predicate: (query) =>
-          query.queryKey[0] === "item" && query.queryKey[2] === "itemRelatedCollection",
-      });
-      const previousItemRelated = queryClient.getQueriesData<ItemRelatedCollectionData>({
-        predicate: (query) =>
-          query.queryKey[0] === "item" && query.queryKey[2] === "itemRelatedCollection",
-      });
-      queryClient.setQueriesData<ItemRelatedCollectionData>(
-        {
-          predicate: (query) =>
-            query.queryKey[0] === "item" && query.queryKey[2] === "itemRelatedCollection",
-        },
-        (old) =>
-          old
-            ? {
-                ...old,
-                collection: old.collection.map((item) =>
-                  item.id === values.id ? { ...item, ...values } : item,
-                ),
-              }
-            : old,
-      );
-
-      if (filtersActive) {
-        return { previousItemRelated };
-      }
-
-      await queryClient.cancelQueries({ queryKey: queryOpts.queryKey });
-      const previousList = queryClient.getQueryData<CollectionItem[]>(queryOpts.queryKey);
-      queryClient.setQueryData<CollectionItem[]>(queryOpts.queryKey, (old) =>
-        old?.map((item) => (item.id === values.id ? { ...item, ...values } : item)),
-      );
-
-      return { previousList, previousItemRelated };
-    },
-    onError: (_err, _values, context) => {
-      if (context?.previousList) {
-        queryClient.setQueryData<CollectionItem[]>(queryOpts.queryKey, context.previousList);
-      }
-      if (context?.previousItemRelated) {
-        for (const [queryKey, data] of context.previousItemRelated) {
-          queryClient.setQueryData(queryKey, data);
-        }
-      }
-      toast.add({
-        type: "error",
-        title: "Failed to update collection item. Please try again.",
-      });
-    },
-    onSuccess: () => {
-      toast.add({ type: "success", title: "Collection updated" });
-    },
-    onSettled: async () => {
-      await invalidateCollectionAndOrderQueries(queryClient);
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (ids: readonly string[]) => deleteCollectionItems([...ids]),
-    onMutate: async (ids: readonly string[]) => {
-      const idSet = new Set(ids);
-
-      await queryClient.cancelQueries({
-        predicate: (query) =>
-          query.queryKey[0] === "item" && query.queryKey[2] === "itemRelatedCollection",
-      });
-      const previousItemRelated = queryClient.getQueriesData<ItemRelatedCollectionData>({
-        predicate: (query) =>
-          query.queryKey[0] === "item" && query.queryKey[2] === "itemRelatedCollection",
-      });
-      queryClient.setQueriesData<ItemRelatedCollectionData>(
-        {
-          predicate: (query) =>
-            query.queryKey[0] === "item" && query.queryKey[2] === "itemRelatedCollection",
-        },
-        (old) =>
-          old ? { ...old, collection: old.collection.filter((item) => !idSet.has(item.id)) } : old,
-      );
-
-      if (filtersActive) {
-        return { previousItemRelated };
-      }
-
-      await queryClient.cancelQueries({ queryKey: queryOpts.queryKey });
-      const previousList = queryClient.getQueryData<CollectionItem[]>(queryOpts.queryKey);
-
-      queryClient.setQueryData<CollectionItem[]>(queryOpts.queryKey, (old) => {
-        if (!old) return old;
-        let deletedValue = 0;
-        const retainedItems: CollectionItem[] = [];
-        for (const item of old) {
-          if (idSet.has(item.id)) {
-            deletedValue += item.price;
-          } else {
-            retainedItems.push(item);
-          }
-        }
-        const deletedCount = ids.length;
-
-        return retainedItems.map((item) => ({
-          ...item,
-          totalCount: item.totalCount - deletedCount,
-          totalValue: item.totalValue - deletedValue,
-        }));
-      });
-
-      return { previousList, previousItemRelated };
-    },
-    onError: (_err, _ids, context) => {
-      if (context?.previousList) {
-        queryClient.setQueryData<CollectionItem[]>(queryOpts.queryKey, context.previousList);
-      }
-      if (context?.previousItemRelated) {
-        for (const [queryKey, data] of context.previousItemRelated) {
-          queryClient.setQueryData(queryKey, data);
-        }
-      }
-      toast.add({
-        type: "error",
-        title: "Failed to delete collection item(s). Please try again.",
-      });
-    },
-    onSuccess: () => {
-      toast.add({ type: "success", title: "Collection item(s) deleted" });
-    },
-    onSettled: async () => {
-      await invalidateCollectionAndOrderQueries(queryClient);
-    },
-  });
+  const updateMutation = useResourceMutation(updateCollectionItemCommand);
+  const deleteMutation = useResourceMutation(deleteCollectionItemsCommand);
   const updateMutationRef = useRef(updateMutation);
   const deleteMutationRef = useRef(deleteMutation);
   useLayoutEffect(() => {
@@ -392,9 +164,10 @@ export function useCollectionMutations(options?: { readonly filters?: Collection
     async (collectionIds: ReadonlySet<string>): Promise<void> => {
       const deleteMutationState = deleteMutationRef.current;
       const ids = [...collectionIds];
+      const deleteList = listRef.current;
 
-      if (!filtersActiveRef.current) {
-        await deleteMutationState.mutateAsync(ids);
+      if (!hasActiveFiltersOrSorting(deleteList)) {
+        await orThrow(deleteMutationState.run({ ids, list: deleteList }));
         return;
       }
 
@@ -409,7 +182,7 @@ export function useCollectionMutations(options?: { readonly filters?: Collection
       });
 
       try {
-        await deleteMutationState.mutateAsync(ids);
+        await orThrow(deleteMutationState.run({ ids, list: deleteList }));
       } finally {
         toast.close(loadingToastId);
         setPendingCollectionIdList((previous) =>
@@ -423,8 +196,9 @@ export function useCollectionMutations(options?: { readonly filters?: Collection
   const handleEditCollectionItem = useCallback(
     async (values: CollectionItemFormValues): Promise<void> => {
       const updateMutationState = updateMutationRef.current;
-      if (!filtersActiveRef.current) {
-        await updateMutationState.mutateAsync(values);
+      const editList = listRef.current;
+      if (!hasActiveFiltersOrSorting(editList)) {
+        await orThrow(updateMutationState.run({ values, list: editList }));
         return;
       }
       setPendingCollectionIdList((previous) => {
@@ -433,7 +207,7 @@ export function useCollectionMutations(options?: { readonly filters?: Collection
       });
 
       try {
-        await updateMutationState.mutateAsync(values);
+        await orThrow(updateMutationState.run({ values, list: editList }));
       } finally {
         setPendingCollectionIdList((previous) =>
           previous.filter((collectionId) => collectionId !== values.id),

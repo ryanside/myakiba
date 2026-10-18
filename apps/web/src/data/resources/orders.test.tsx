@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, mock, setDefaultTimeout, spyOn, test } from "bun:test";
 import { act, cleanup, configure, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import type { EditedOrder, OrderFilters } from "@myakiba/contracts/orders/schema";
 
 configure({ asyncUtilTimeout: 4000 });
@@ -73,10 +73,11 @@ const editServerOrder = (values: EditedOrder) => {
 };
 
 await mock.module("@/queries/orders", () => ({
-  getOrders: async () => {
+  getOrders: async (filters: OrderFilters) => {
     server.listReads++;
     await server.heldReads;
-    return server.orders.map(listRow);
+    const matching = server.orders.filter((order) => order.title.includes(filters.search ?? ""));
+    return matching.map((order) => ({ ...listRow(order), totalCount: matching.length }));
   },
   getOrder: async () => {
     throw new Error("no order page in these tests");
@@ -95,17 +96,21 @@ await mock.module("@/queries/collection", () => ({
   updateCollectionItem: held("edit item", () => {}),
 }));
 
-const page = { filters: {} as OrderFilters };
+const url = { filters: {} as OrderFilters, listeners: new Set<() => void>() };
+const subscribe = (listener: () => void) => {
+  url.listeners.add(listener);
+  return () => url.listeners.delete(listener);
+};
 await mock.module("@/hooks/use-filters", () => ({
   useFilters: () => ({
-    filters: page.filters,
+    filters: useSyncExternalStore(subscribe, () => url.filters),
     setFilters: async () => {},
     resetFilters: async () => {},
   }),
 }));
 
 const { toast } = await import("@/components/ui/toast");
-const { useOrdersMutations, useOrdersQuery } = await import("@/hooks/use-orders");
+const { useOrdersFilters, useOrdersMutations, useOrdersQuery } = await import("@/hooks/use-orders");
 
 const toastAdd = spyOn(toast, "add");
 const toastClose = spyOn(toast, "close");
@@ -116,17 +121,18 @@ afterEach(() => {
   server.listReads = 0;
   server.heldReads = null;
   server.writes.length = 0;
-  page.filters = {};
+  url.filters = {};
   toastAdd.mockClear();
   toastClose.mockClear();
 });
 
 type Actions = ReturnType<typeof useOrdersMutations>;
 
-function renderOrdersPage(filters: OrderFilters) {
-  page.filters = filters;
+function renderOrdersPage(initialFilters: OrderFilters) {
+  url.filters = initialFilters;
   let actions: Actions | null = null;
   function OrdersPage() {
+    const { filters } = useOrdersFilters();
     const { orders, totalCount } = useOrdersQuery();
     const mutations = useOrdersMutations({ filters });
     useEffect(() => {
@@ -152,6 +158,12 @@ function renderOrdersPage(filters: OrderFilters) {
     </QueryClientProvider>,
   );
   return {
+    filterTo: async (next: OrderFilters) => {
+      await act(async () => {
+        url.filters = next;
+        for (const listener of url.listeners) listener();
+      });
+    },
     act: (run: (current: Actions) => Promise<void>) => {
       if (!actions) throw new Error("the orders page has not rendered");
       return run(actions).then(
@@ -300,5 +312,35 @@ describe("an Order write on the orders page", () => {
       "error: Failed to update order. Please try again.",
       "success: Order deleted",
     ]);
+  });
+});
+
+describe("a failed Order write after the filter changes", () => {
+  test("leaves the new list as the server sent it", async () => {
+    const orders = renderOrdersPage({});
+    await loaded();
+
+    const deleting = orders.act((actions) => actions.handleDeleteOrders(new Set([BRAVO.orderId])));
+    await waitFor(() =>
+      expect(shown()).toEqual({ count: "2", orders: ["Alpha 1000", "Charlie 200"] }),
+    );
+    await orders.filterTo({ search: "Alpha" });
+    await waitFor(() => expect(shown()).toEqual({ count: "1", orders: ["Alpha 1000"] }));
+
+    const releaseReads = holdListReads();
+    await answer(0, "fail");
+    await waitFor(() =>
+      expect(toastTitles()).toContain("error: Failed to delete order(s). Please try again."),
+    );
+    await act(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(resolve, 50);
+        }),
+    );
+    expect(shown()).toEqual({ count: "1", orders: ["Alpha 1000"] });
+
+    await releaseReads();
+    expect(await deleting).toBe("rejected");
   });
 });

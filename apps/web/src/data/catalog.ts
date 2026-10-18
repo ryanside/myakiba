@@ -44,6 +44,7 @@ const catalog = {
 } as const satisfies Record<string, FamilySpec>;
 
 export type Family = keyof typeof catalog;
+export type RootOf<F extends Family> = (typeof catalog)[F]["roots"][number];
 export type PersistedFamily = {
   [F in Family]: (typeof catalog)[F]["kind"] extends "persisted" ? F : never;
 }[Family];
@@ -55,8 +56,17 @@ export const syncResultFamilies: readonly PersistedFamily[] = (
   Object.keys(catalog) as Family[]
 ).filter(isPersisted);
 
-export const collectionWriteFamilies: readonly PersistedFamily[] = syncResultFamilies.filter(
-  (family) => catalog[family].collectionWrites,
+export type Families = readonly [PersistedFamily, ...PersistedFamily[]];
+
+function nonEmpty(families: readonly PersistedFamily[]): Families {
+  const [first, ...rest] = families;
+  if (first === undefined) throw new Error("No cataloged family changes on a collection write");
+  return [first, ...rest];
+}
+
+/** Every family a collection or order write can change. Each such write refreshes all of them. */
+export const collectionWriteFamilies = nonEmpty(
+  syncResultFamilies.filter((family) => catalog[family].collectionWrites),
 );
 
 /** Matches a resource key `["resource", family, ...]` or a hand-built key under one of the family's roots. */

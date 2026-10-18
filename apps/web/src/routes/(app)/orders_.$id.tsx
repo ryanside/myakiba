@@ -1,17 +1,17 @@
 import type { ReactNode } from "react";
 import { useCallback, useState } from "react";
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import { BackLink } from "@/components/ui/back-link";
 import { OrderDetailItems } from "@/components/orders/order-detail-items";
 import { OrderHero } from "@/components/orders/order-hero";
 import { OrderItemsActionBar } from "@/components/orders/order-items-action-bar";
 import { OrderSummary } from "@/components/orders/order-summary";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useRead } from "@/data/client";
+import { orders } from "@/data/resources/orders";
 import { useOrdersMutations } from "@/hooks/use-orders";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { formatTimestampForDisplay } from "@/lib/date-display";
-import { getOrder } from "@/queries/orders";
 
 export const Route = createFileRoute("/(app)/orders_/$id")({
   component: RouteComponent,
@@ -46,17 +46,7 @@ function RouteComponent(): ReactNode {
     isSplitting,
   } = useOrdersMutations();
 
-  const {
-    data: order,
-    isPending,
-    isError,
-    error: orderError,
-  } = useQuery({
-    queryKey: ["order", id],
-    queryFn: () => getOrder(id),
-    staleTime: 1000 * 60 * 5,
-    retry: false,
-  });
+  const { data: order, isPending, isError, error: orderError } = useRead(orders.detail, id);
 
   const handleDeleteOrder = useCallback(
     async (orderId: string): Promise<void> => {
