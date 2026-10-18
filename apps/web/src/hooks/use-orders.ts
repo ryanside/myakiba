@@ -538,7 +538,11 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       const mutableOrderIds = new Set(orderIds);
 
       if (!filtersActive) {
-        mergeOrdersMutation.mutate({ values, orderIds: mutableOrderIds, cascadeOptions });
+        await mergeOrdersMutation.mutateAsync({
+          values,
+          orderIds: mutableOrderIds,
+          cascadeOptions,
+        });
         return;
       }
 
@@ -573,7 +577,7 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       const mutableCollectionIds = new Set(collectionIds);
 
       if (!filtersActive) {
-        splitOrdersMutation.mutate({
+        await splitOrdersMutation.mutateAsync({
           values,
           collectionIds: mutableCollectionIds,
           cascadeOptions,
@@ -683,7 +687,7 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       const mutableCollectionIds = new Set(collectionIds);
 
       if (!filtersActive) {
-        deleteItemsMutation.mutate(mutableCollectionIds);
+        await deleteItemsMutation.mutateAsync(mutableCollectionIds);
         return;
       }
 
@@ -715,7 +719,7 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       const mutableOrderIds = orderIds ? new Set(orderIds) : undefined;
 
       if (!filtersActive) {
-        moveItemMutation.mutate({
+        await moveItemMutation.mutateAsync({
           targetOrderId,
           collectionIds: mutableCollectionIds,
           orderIds: mutableOrderIds,
