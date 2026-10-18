@@ -141,8 +141,16 @@ const answers = [
     "PUT",
     "/move-items",
     { targetOrderId: "order-2", collectionIds: ["c-other"] },
-    500,
-    "Failed to move items",
+    404,
+    "Order items not found",
+  ],
+  [
+    "move an item deleted in another tab",
+    "PUT",
+    "/move-items",
+    { targetOrderId: "order-2", collectionIds: ["c-deleted"], orderIds: ["order-1"] },
+    404,
+    "Order items not found",
   ],
   [
     "update",
