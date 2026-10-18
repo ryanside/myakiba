@@ -27,6 +27,7 @@ async function lintCases(rule: string, cases: string[], setting: RuleSetting = "
     );
     const lint = await $`${oxlint} -c oxlintrc.json --disable-nested-config -f json .`
       .cwd(dir)
+      .env({ ...process.env, TZ: Intl.DateTimeFormat().resolvedOptions().timeZone })
       .nothrow()
       .quiet();
     const { diagnostics }: { diagnostics: { filename: string; message: string; help?: string }[] } =
@@ -88,7 +89,7 @@ describe("myakiba/no-iso-slice", () => {
       ["export const n = new Date().toISOString();", false],
     ]);
     for (const { message } of findings)
-      expect(message).toContain('toDateOnlyString from "@myakiba/utils/date-only"');
+      expect(message).toContain('format(date, "yyyy-MM-dd") from date-fns');
   });
 });
 
@@ -116,6 +117,11 @@ describe("myakiba/no-env-outside-env-package", () => {
       ["declare const process: { env: string }; export const t3 = process.env;", true],
       ['import type process from "./types"; export const t4 = process.env.T;', true],
       ["export const w1 = (process as NodeJS.Process).env.W;", true],
+      ["export const g1 = (globalThis as typeof globalThis).process.env.G;", true],
+      ["export const { env: g2 } = (globalThis satisfies object).process;", true],
+      ["export const g3 = (globalThis!).process.env.G;", true],
+      ['export const g4 = globalThis["process"].env.G;', true],
+      ["export const g5 = (globalThis as typeof globalThis).Bun.env.G;", true],
       ["export const w2 = (process satisfies object).env.W;", true],
       ["export const w3 = (process).env.W;", true],
       ["const { env } = process as NodeJS.Process; export const w4 = env.W;", true],

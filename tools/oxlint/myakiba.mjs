@@ -103,16 +103,12 @@ const envOwner = (context, owner, depth = 0) => {
   if (node.type === "Identifier") return runtimeOwner(context, node, depth);
   if (node.type === "MetaProperty" && node.meta.name === "import" && node.property.name === "meta")
     return "import.meta";
-  if (
-    node.type === "MemberExpression" &&
-    !node.computed &&
-    node.object.type === "Identifier" &&
-    node.object.name === "globalThis" &&
-    node.property.type === "Identifier" &&
-    ENV_OWNERS.has(node.property.name)
-  )
-    return `globalThis.${node.property.name}`;
-  return null;
+  if (node.type !== "MemberExpression") return null;
+  const base = unwrap(node.object);
+  const name = memberName(node);
+  return base.type === "Identifier" && base.name === "globalThis" && ENV_OWNERS.has(name)
+    ? `globalThis.${name}`
+    : null;
 };
 
 const noEnvOutsideEnvPackage = {
@@ -186,7 +182,7 @@ const noIsoSlice = {
         context.report({
           node,
           message:
-            'Trimming `.toISOString()` gives the UTC date or time, not the local one. Use toDateOnlyString from "@myakiba/utils/date-only".',
+            'Trimming `.toISOString()` gives the UTC date or time, not the local one. For a local calendar day use format(date, "yyyy-MM-dd") from date-fns. toDateOnlyString from "@myakiba/utils/date-only" reads UTC fields, so use it only to turn a date-only value back into YYYY-MM-DD.',
         });
       },
     };
