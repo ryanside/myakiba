@@ -461,16 +461,30 @@ function OrderKanbanBoard({
   const [columns, setColumns] = React.useReducer(columnsReducer, snapshot.columns);
   const pendingStatusMutationsRef = React.useRef(new Map<string, PendingStatusMutations>());
   const pendingDateMutationsRef = React.useRef(new Map<string, PendingDateMutations>());
-  const [heldOrderId, setHeldOrderId] = React.useState<string | null>(null);
-
-  React.useEffect((): void => {
+  const snapshotRef = React.useRef(snapshot);
+  const heldOrderIdRef = React.useRef<string | null>(null);
+  const reconcileWithSnapshot = React.useCallback((): void => {
     const localOrderIds = new Set([
       ...pendingStatusMutationsRef.current.keys(),
       ...pendingDateMutationsRef.current.keys(),
     ]);
-    if (heldOrderId !== null) localOrderIds.add(heldOrderId);
-    setColumns((current) => reconcileOrderColumns(current, snapshot.columns, localOrderIds));
-  }, [snapshot, heldOrderId]);
+    if (heldOrderIdRef.current !== null) localOrderIds.add(heldOrderIdRef.current);
+    setColumns((current) =>
+      reconcileOrderColumns(current, snapshotRef.current.columns, localOrderIds),
+    );
+  }, []);
+  const setHeldOrderId = React.useCallback(
+    (orderId: string | null): void => {
+      heldOrderIdRef.current = orderId;
+      reconcileWithSnapshot();
+    },
+    [reconcileWithSnapshot],
+  );
+
+  React.useEffect((): void => {
+    snapshotRef.current = snapshot;
+    reconcileWithSnapshot();
+  }, [snapshot, reconcileWithSnapshot]);
 
   const statusMutation = useMutation({
     mutationFn: ({ orderId, status }: StatusMutationVariables) =>
