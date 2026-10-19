@@ -84,10 +84,13 @@ const ColumnContext = createContext<{
 });
 
 const ItemContext = createContext<{
+  attributes: DraggableAttributes;
   listeners: DraggableSyntheticListeners | undefined;
+  setActivatorNodeRef?: (element: HTMLElement | null) => void;
   isDragging?: boolean;
   disabled?: boolean;
 }>({
+  attributes: {} as DraggableAttributes,
   listeners: undefined,
   isDragging: false,
   disabled: false,
@@ -555,7 +558,12 @@ function KanbanItem(props: KanbanItemProps) {
 
 function KanbanOverlayItem({ value, className, render, ...props }: KanbanItemProps) {
   const contextValue = useMemo(
-    () => ({ listeners: undefined, isDragging: true, disabled: false }),
+    () => ({
+      attributes: {} as DraggableAttributes,
+      listeners: undefined,
+      isDragging: true,
+      disabled: false,
+    }),
     [],
   );
   const defaultProps = {
@@ -580,6 +588,7 @@ function KanbanOverlayItem({ value, className, render, ...props }: KanbanItemPro
 function KanbanSortableItem({ value, className, render, disabled, ...props }: KanbanItemProps) {
   const {
     setNodeRef,
+    setActivatorNodeRef,
     transform,
     transition,
     attributes,
@@ -594,8 +603,8 @@ function KanbanSortableItem({ value, className, render, disabled, ...props }: Ka
   const { activeId, isColumn } = useContext(KanbanContext);
   const isItemDragging = activeId ? !isColumn(activeId) : false;
   const contextValue = useMemo(
-    () => ({ listeners, isDragging: isItemDragging, disabled }),
-    [disabled, isItemDragging, listeners],
+    () => ({ attributes, listeners, setActivatorNodeRef, isDragging: isItemDragging, disabled }),
+    [attributes, disabled, isItemDragging, listeners, setActivatorNodeRef],
   );
 
   const style = {
@@ -610,7 +619,6 @@ function KanbanSortableItem({ value, className, render, disabled, ...props }: Ka
     "data-disabled": disabled,
     ref: setNodeRef,
     style,
-    ...attributes,
     className: cn(isSortableDragging && "opacity-50 z-50", disabled && "opacity-50", className),
     children: props.children,
   };
@@ -631,12 +639,15 @@ export interface KanbanItemHandleProps extends useRender.ComponentProps<"div"> {
 }
 
 function KanbanItemHandle({ className, render, cursor = true, ...props }: KanbanItemHandleProps) {
-  const { listeners, isDragging, disabled } = useContext(ItemContext);
+  const { attributes, listeners, setActivatorNodeRef, isDragging, disabled } =
+    useContext(ItemContext);
 
   const defaultProps = {
     "data-slot": "kanban-item-handle",
     "data-dragging": isDragging,
     "data-disabled": disabled,
+    ref: setActivatorNodeRef,
+    ...attributes,
     ...listeners,
     className: cn(cursor && (isDragging ? "cursor-grabbing!" : "cursor-grab!"), className),
     children: props.children,
