@@ -14,9 +14,12 @@ import type { Viewer } from "./viewer";
  * operations built with `query` or `command`, and a route answers with
  * `serve(ctx, Module.op, input)`.
  *
- * Every call runs in one transaction. A body that returns `fail(...)` or throws
- * rolls it back. `serve` turns the outcome into the response: the value, the
- * failure's status and message, or a logged 500 with the operation's `failure`.
+ * A command runs in one transaction. A body that returns `fail(...)` or throws
+ * rolls it back. A query reads from the pool, so its parallel reads run on
+ * separate connections and may see different commits; a query whose reads must
+ * agree sets `snapshot: true` and reads one snapshot in one transaction. `serve`
+ * turns the outcome into the response: the value, the failure's status and
+ * message, or a logged 500 with the operation's `failure`.
  */
 
 const FAILURE_STATUS = {
@@ -89,6 +92,8 @@ const bodies = new WeakMap<
 
 const SNAPSHOT = { isolationLevel: "repeatable read", accessMode: "read only" } as const;
 const snapshots = new WeakSet<AnyOp>();
+const poolReads = new WeakSet<AnyOp>();
+const pool: ReadTx = db;
 
 /** A read. The body takes the scope and one input object, never positional params. */
 export function query<I, R extends Ok<unknown> | Failure, const M extends string>(
@@ -97,7 +102,7 @@ export function query<I, R extends Ok<unknown> | Failure, const M extends string
 ): Op<I, ValueOf<R>, FailureOf<R>, M> {
   const op = { action: config.action, failure: config.failure };
   bodies.set(op, body);
-  if (config.snapshot) snapshots.add(op);
+  (config.snapshot ? snapshots : poolReads).add(op);
   return op;
 }
 
@@ -138,6 +143,10 @@ export async function run<I, T, F extends Failure, M extends string>(
   log: RequestLogger,
 ): Promise<Outcome<T, F>> {
   const body = bodyOf(op as AnyOp);
+  if (poolReads.has(op as AnyOp)) {
+    const read = body as (scope: ReadScope, input: never) => Promise<Outcome<T, F>>;
+    return read({ viewer, tx: pool, log }, input as never);
+  }
   try {
     return await db.transaction(
       async (tx) => {

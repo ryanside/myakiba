@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { eq, sql } from "drizzle-orm";
 import { createRequestLogger, initLogger } from "evlog";
 import { user } from "@myakiba/db/schema/auth";
+import type { ReadTx } from "@myakiba/db/tx";
 import { createTestDatabase } from "../../test/database";
 
 initLogger({ enabled: false });
@@ -75,24 +76,36 @@ describe("an operation runs in one transaction", () => {
   });
 });
 
-test("every statement of one operation shares a transaction, and each operation gets its own", async () => {
-  const transactionIds = query(
-    { action: "test.transaction", failure: "Failed to read" },
-    async (scope) => {
-      const read = () =>
-        scope.tx.select({ id: sql<string>`txid_current()::text` }).from(sql`(select 1) as one`);
-      const [first] = await read();
-      const [second] = await read();
-      return ok([first?.id, second?.id]);
-    },
-  );
+const transactionIds = (kind: "command" | "query" | "snapshot") => {
+  const body = async (scope: { readonly tx: ReadTx }) => {
+    const read = () =>
+      scope.tx.select({ id: sql<string>`txid_current()::text` }).from(sql`(select 1) as one`);
+    const [first] = await read();
+    const [second] = await read();
+    return ok([first?.id, second?.id]);
+  };
+  const readConfig = { action: `test.${kind}`, failure: "Failed to read" };
+  if (kind === "command") return command(readConfig, body);
+  return query(kind === "snapshot" ? { ...readConfig, snapshot: true } : readConfig, body);
+};
 
-  const one = await run(viewer, transactionIds, undefined, log);
-  const two = await run(viewer, transactionIds, undefined, log);
-  if (!one.ok || !two.ok) throw new Error("the query failed");
+test.each(["command", "snapshot"] as const)(
+  "every statement of one %s shares a transaction, and each call gets its own",
+  async (kind) => {
+    const one = await run(viewer, transactionIds(kind), undefined, log);
+    const two = await run(viewer, transactionIds(kind), undefined, log);
+    if (!one.ok || !two.ok) throw new Error("the operation failed");
 
-  expect(one.value[0]).toBe(one.value[1]);
-  expect(two.value[0]).not.toBe(one.value[0]);
+    expect(one.value[0]).toBe(one.value[1]);
+    expect(two.value[0]).not.toBe(one.value[0]);
+  },
+);
+
+test("a query without a snapshot reads from the pool, one autocommit statement at a time", async () => {
+  const outcome = await run(viewer, transactionIds("query"), undefined, log);
+  if (!outcome.ok) throw new Error("the query failed");
+
+  expect(outcome.value[0]).not.toBe(outcome.value[1]);
 });
 
 test("a snapshot query reads one repeatable-read, read-only snapshot", async () => {
