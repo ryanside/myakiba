@@ -12,9 +12,9 @@ const LINT_TOOLING = [
   "scripts/lint-budget.ts",
   "patches/**",
 ];
-const LINT_PACKAGES = ["oxlint", "ultracite", "oxc-parser"];
+const LINT_PACKAGES = ["oxlint", "oxlint-tsgolint", "ultracite", "oxc-parser"];
 const LOCKED_LINT_PACKAGE =
-  /^\s*"(?:oxlint|ultracite|oxc-parser|@oxlint\/[^"]+|@oxc-parser\/[^"]+|@oxc-project\/[^"]+)": \[/u;
+  /^\s*"(?:oxlint|oxlint-tsgolint|ultracite|oxc-parser|@oxlint\/[^"]+|@oxlint-tsgolint\/[^"]+|@oxc-parser\/[^"]+|@oxc-project\/[^"]+)": \[/u;
 const CONFIG_PATHS = [
   ...LINT_TOOLING.map((pattern) => `:(glob)${pattern}`),
   `:(exclude)${BUDGET_PATH}`,

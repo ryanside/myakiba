@@ -60,6 +60,7 @@
     "oxc-parser": "0.154.0",
     "oxfmt": "latest",
     "oxlint": "1.80.0",
+    "oxlint-tsgolint": "7.0.2004",
     "turbo": "2.10.11",
     "typescript": "catalog:",
     "ultracite": "7.10.7"

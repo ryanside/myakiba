@@ -400,18 +400,33 @@ describe("scripts/lint-budget.ts", () => {
   }, 30_000);
 
   test("fails an unapproved change to a lint dependency, override or lockfile entry", async () => {
-    const manifest = (ultracite: string, extra: { overrides?: Record<string, string> } = {}) =>
+    const manifest = (
+      ultracite: string,
+      extra: { overrides?: Record<string, string> } = {},
+      tsgolint = "7.0.2004",
+    ) =>
       `${JSON.stringify(
-        { devDependencies: { left: "1.0.0", oxlint: "1.80.0", ultracite }, ...extra },
+        {
+          devDependencies: {
+            left: "1.0.0",
+            oxlint: "1.80.0",
+            "oxlint-tsgolint": tsgolint,
+            ultracite,
+          },
+          ...extra,
+        },
         null,
         2,
       )}\n`;
-    const lockfile = (oxlint: string) =>
-      `{\n  "packages": {\n    "left": ["left@1.0.0", "", {}, "sha512-a"],\n    "oxlint": ["oxlint@${oxlint}", "", {}, "sha512-b"],\n  }\n}\n`;
+    const lockfile = (oxlint: string, tsgolint = "7.0.2004", tsgolintBinary = tsgolint) =>
+      `{\n  "packages": {\n    "@oxlint-tsgolint/darwin-arm64": ["@oxlint-tsgolint/darwin-arm64@${tsgolintBinary}", "", {}, "sha512-c"],\n    "left": ["left@1.0.0", "", {}, "sha512-a"],\n    "oxlint": ["oxlint@${oxlint}", "", {}, "sha512-b"],\n    "oxlint-tsgolint": ["oxlint-tsgolint@${tsgolint}", "", {}, "sha512-d"],\n  }\n}\n`;
     const changes: [subject: string, files: Record<string, string>][] = [
       ["bump ultracite", { "package.json": manifest("7.0.0") }],
       ["override", { "package.json": manifest("7.10.7", { overrides: { ultracite: "7.0.0" } }) }],
       ["lock oxlint", { "bun.lock": lockfile("1.79.0") }],
+      ["bump oxlint-tsgolint", { "package.json": manifest("7.10.7", {}, "7.0.2003") }],
+      ["lock oxlint-tsgolint", { "bun.lock": lockfile("1.80.0", "7.0.2003", "7.0.2004") }],
+      ["lock a tsgolint binary", { "bun.lock": lockfile("1.80.0", "7.0.2004", "7.0.2003") }],
     ];
     for (const [subject, files] of changes) {
       const repo = await fixture();
