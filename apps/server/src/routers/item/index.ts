@@ -1,5 +1,7 @@
+/* oxlint-disable no-restricted-imports -- only the item resync routes use these; Item Refresh is scraper code, left as it is until the browser extension replaces it (until 2027-01-31, approved by root: scraper resync routes stay untouched, pending operator review) */
 import { status } from "elysia";
 import { tryCatch } from "@myakiba/utils/result";
+/* oxlint-enable no-restricted-imports */
 import { privateApi } from "@/boundary/private-api";
 import { serve } from "@/domain/kernel";
 import ItemResyncService, { deriveResyncStatus } from "./resync-service";
