@@ -47,6 +47,9 @@ jobs:
       - name: Check the lint budget
         run: bun scripts/lint-budget.ts
 
+      - name: Check dependencies and dead exports
+        run: bun scripts/knip-budget.ts
+
       - name: Check types
         run: bunx turbo run check-types
 

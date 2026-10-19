@@ -18,6 +18,12 @@ type LintReplay = {
   atFix: string[];
 };
 
+type KnipReplay = {
+  fix: string;
+  bug: string;
+  reports: string[];
+};
+
 type LintRule = string | [string, ...unknown[]];
 type LintConfig = {
   ignorePatterns: string[];
@@ -41,30 +47,37 @@ const oxlint = path.join(root, "node_modules/.bin/oxlint");
 const {
   test: testReplays = [],
   lint: lintReplays = [],
-}: { test?: TestReplay[]; lint?: LintReplay[] } = await Bun.file(
+  knip: knipReplays = [],
+}: { test?: TestReplay[]; lint?: LintReplay[]; knip?: KnipReplay[] } = await Bun.file(
   path.join(import.meta.dir, "replays.json"),
 ).json();
-const lintMode = process.argv.includes("--lint");
-if ((lintMode ? lintReplays : testReplays).length === 0) {
-  console.error(`FAIL  scripts/replays.json lists no ${lintMode ? "lint " : ""}replay`);
+const replaysByMode = { lint: lintReplays, knip: knipReplays, test: testReplays };
+const mode =
+  (["lint", "knip"] as const).find((name) => process.argv.includes(`--${name}`)) ?? "test";
+const lintMode = mode === "lint";
+const knipMode = mode === "knip";
+const listed: (TestReplay | LintReplay | KnipReplay)[] = replaysByMode[mode];
+if (listed.length === 0) {
+  console.error(`FAIL  scripts/replays.json lists no ${mode === "test" ? "" : `${mode} `}replay`);
   process.exit(1);
 }
-const filters = process.argv.slice(2).filter((arg) => arg !== "--lint");
-const matches = (replay: TestReplay | LintReplay, filter: string) =>
-  replay.fix.startsWith(filter) || ("rule" in replay ? replay.rule : replay.test).includes(filter);
-const unmatched = filters.filter(
-  (filter) => !(lintMode ? lintReplays : testReplays).some((replay) => matches(replay, filter)),
-);
+const filters = process.argv.slice(2).filter((arg) => arg !== "--lint" && arg !== "--knip");
+const matches = (replay: TestReplay | LintReplay | KnipReplay, filter: string) =>
+  replay.fix.startsWith(filter) ||
+  ("rule" in replay && replay.rule.includes(filter)) ||
+  ("test" in replay && replay.test.includes(filter));
+const unmatched = filters.filter((filter) => !listed.some((replay) => matches(replay, filter)));
 if (unmatched.length > 0) {
   console.error(`FAIL  no replay matches ${unmatched.join(" ")}`);
   process.exit(1);
 }
-const pick = <Replay extends TestReplay | LintReplay>(list: Replay[]) =>
+const pick = <Replay extends TestReplay | LintReplay | KnipReplay>(list: Replay[]) =>
   list.filter(
     (replay) => filters.length === 0 || filters.some((filter) => matches(replay, filter)),
   );
-const selected = lintMode ? [] : pick(testReplays);
+const selected = lintMode || knipMode ? [] : pick(testReplays);
 const selectedLint = lintMode ? pick(lintReplays) : [];
+const selectedKnip = knipMode ? pick(knipReplays) : [];
 const builtinRules: BuiltinRule[] = lintMode ? await $`${oxlint} --rules -f json`.json() : [];
 const builtinRule = (rule: string) => {
   const [, scope, value] = /^(.+)\((.+)\)$/.exec(rule) ?? [];
@@ -215,6 +228,14 @@ async function lintHits(checkout: string, rule: string, lines: Map<string, Set<n
     .toSorted();
 }
 
+async function runKnip(checkout: string) {
+  const { exitCode, stdout, stderr } = await $`bun ${path.join(checkout, "scripts/knip-budget.ts")}`
+    .cwd(checkout)
+    .nothrow()
+    .quiet();
+  return { exitCode, output: `${stdout}${stderr}` };
+}
+
 const tail = (output: string) =>
   output
     .trimEnd()
@@ -246,6 +267,11 @@ for (const testFile of new Set(selected.map((replay) => replay.test))) {
     run.skipped.length === 0 &&
     run.passed.length > 0;
   report(pass, `head  ${testFile}`, pass ? [] : [tail(run.output)]);
+}
+
+if (knipMode) {
+  const run = await runKnip(root);
+  report(run.exitCode === 0, "head  knip", run.exitCode === 0 ? [] : [tail(run.output)]);
 }
 
 const isAlive = (pid: number) => {
@@ -292,17 +318,22 @@ async function install(revision: string) {
   }
 }
 
-async function checkOut(revision: string, testFile?: string) {
-  await $`git checkout --quiet --detach --force ${revision} && git clean -fdq`.cwd(worktree);
-  if (testFile === undefined) return;
-  await install(revision);
-
+async function harnessOf(testFile: string) {
   const packageDir = await packageDirOf(testFile);
-  const harness =
+  const files =
     await $`git ls-files --cached --others --exclude-standard ${testFile} ${`${packageDir}/bunfig.toml`} ${`${packageDir}/test.env`} ${`${packageDir}/test`}`
       .cwd(root)
       .text();
-  for (const file of harness.split("\n").filter(Boolean))
+  return { packageDir, files: files.split("\n").filter(Boolean) };
+}
+
+async function checkOut(revision: string, harness?: { packageDir: string; files: string[] }) {
+  await $`git checkout --quiet --detach --force ${revision} && git clean -fdq`.cwd(worktree);
+  if (harness === undefined) return;
+  await install(revision);
+
+  const { packageDir, files } = harness;
+  for (const file of files)
     await Bun.write(path.join(worktree, file), Bun.file(path.join(root, file)));
 
   const head = await readPackage(path.join(root, packageDir));
@@ -345,9 +376,10 @@ try {
   }
 
   for (const replay of selected) {
-    await checkOut(`${replay.fix}^`, replay.test);
+    const harness = await harnessOf(replay.test);
+    await checkOut(`${replay.fix}^`, harness);
     const before = await runTest(worktree, replay.test);
-    await checkOut(replay.fix, replay.test);
+    await checkOut(replay.fix, harness);
     const after = await runTest(worktree, replay.test);
 
     const flipped = before.failed.filter((name) => after.passed.includes(name));
@@ -364,6 +396,24 @@ try {
       ...alsoFlipped.map((name) => `      also flipped: ${name}`),
       ...(before.errorOutsideTests || before.failed.length === 0 ? [tail(before.output)] : []),
       ...(after.errorOutsideTests || didNotFlip.length > 0 ? [tail(after.output)] : []),
+    ]);
+  }
+  for (const replay of selectedKnip) {
+    const parent = `${replay.fix}^`;
+    await checkOut(parent, {
+      packageDir: ".",
+      files: ["knip.json", "knip-budget.json", "scripts/knip-budget.ts"],
+    });
+
+    const run = await runKnip(worktree);
+    const lines = run.output.split("\n");
+    const notReported = replay.reports.filter(
+      (expected) => !lines.some((line) => line.startsWith(`${expected}.`)),
+    );
+    const pass = replay.reports.length > 0 && notReported.length === 0 && run.exitCode !== 0;
+    report(pass, `${parent}  knip  ${replay.bug}`, [
+      ...notReported.map((expected) => `      did not report: ${expected}`),
+      ...(pass ? [] : [tail(run.output)]),
     ]);
   }
 } finally {
