@@ -380,6 +380,14 @@
       "fixed": [
         "a failed kanban status write > shows retry advice when the server answers 400 with a blank body"
       ]
+    },
+    {
+      "fix": "f7607e13",
+      "bug": "a 4xx body of only zero width spaces gave a failed kanban status write a blank toast title",
+      "test": "apps/web/src/data/resources/dashboard.test.tsx",
+      "fixed": [
+        "a failed kanban status write > shows retry advice when the server answers 400 with only zero-width spaces"
+      ]
     }
   ],
   "lint": [
