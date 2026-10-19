@@ -4,6 +4,9 @@
   "workspaces": {
     ".": {
       "entry": ["scripts/*.ts"]
+    },
+    "apps/server": {
+      "entry": ["src/**/*.type-test.ts"]
     }
   }
 }
