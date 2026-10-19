@@ -2,6 +2,7 @@ import * as React from "react";
 import { Toast as ToastPrimitive } from "@base-ui/react/toast";
 
 import { cn } from "@/lib/utils";
+import { Z_INDEX } from "@/lib/z-index";
 import { Button } from "@/components/ui/button";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -30,9 +31,10 @@ function ToastViewport({ className, ...props }: ToastPrimitive.Viewport.Props) {
     <ToastPrimitive.Viewport
       data-slot="toast-viewport"
       className={cn(
-        "pointer-events-none fixed inset-x-4 top-4 z-[60] mx-auto w-auto max-w-sm outline-none sm:w-full",
+        "pointer-events-none fixed inset-x-4 top-4 mx-auto w-auto max-w-sm outline-none sm:w-full",
         className,
       )}
+      style={{ zIndex: Z_INDEX.toast }}
       {...props}
     />
   );
