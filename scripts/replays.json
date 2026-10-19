@@ -279,6 +279,27 @@
       "bug": "each timed-out /health call stayed attached to the pending probe until it settled",
       "test": "apps/server/src/lib/readiness.test.ts",
       "fixed": ["readinessCheck > keeps nothing per timed-out call while the probe stays pending"]
+    },
+    {
+      "fix": "17ff9846",
+      "bug": "moving items another tab had deleted, or another user's items, answered a logged 500",
+      "test": "apps/server/src/routers/orders/routes.test.ts",
+      "fixed": [
+        "each orders route answers as before > move another user's item",
+        "each orders route answers as before > move an item deleted in another tab"
+      ]
+    },
+    {
+      "fix": "6951e768",
+      "bug": "collection edit and delete returned Date timestamps that the wire sends as strings",
+      "test": "apps/server/src/routers/collection/routes.test.ts",
+      "fixed": ["the edit and delete operations return strings, so Eden types them as strings"]
+    },
+    {
+      "fix": "25bdd705",
+      "bug": "the move toast hid the server's not-found message behind a retry prompt",
+      "test": "apps/web/src/hooks/use-orders-move-toast.test.tsx",
+      "fixed": ["a rejected move shows the server's message"]
     }
   ],
   "lint": [
