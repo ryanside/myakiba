@@ -45,6 +45,21 @@ function getPageNumbers({
   return pages;
 }
 
+export function pageRange({
+  totalCount,
+  limit,
+  offset,
+}: {
+  readonly totalCount: number;
+  readonly limit: number;
+  readonly offset: number;
+}): string {
+  if (offset >= totalCount) {
+    return `0 of ${totalCount}`;
+  }
+  return `${offset + 1}–${Math.min(offset + limit, totalCount)} of ${totalCount}`;
+}
+
 export function DataTablePagination({
   totalCount,
   limit,

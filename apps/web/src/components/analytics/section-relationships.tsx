@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { DataTablePagination, pageRange } from "@/components/data-table/data-table-pagination";
 import { sectionLabel } from "@/components/analytics/section-utils";
 import type {
   AnalyticsSectionRelationshipPreviewItem,
@@ -167,8 +167,8 @@ function RelationshipPage({
       {data.totalCount > RELATIONSHIP_PAGE_SIZE ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground tabular-nums">
-            Showing {offset + 1}–{Math.min(offset + RELATIONSHIP_PAGE_SIZE, data.totalCount)} of{" "}
-            {data.totalCount}
+            Showing{" "}
+            {pageRange({ totalCount: data.totalCount, limit: RELATIONSHIP_PAGE_SIZE, offset })}
           </p>
           <DataTablePagination
             totalCount={data.totalCount}

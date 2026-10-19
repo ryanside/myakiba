@@ -18,7 +18,7 @@ import { SectionTable } from "@/components/analytics/section-table";
 import { SectionShell } from "@/components/analytics/section";
 import { sectionGradientColor, sectionLabel } from "@/components/analytics/section-utils";
 import { DebouncedInput } from "@/components/debounced-input";
-import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { DataTablePagination, pageRange } from "@/components/data-table/data-table-pagination";
 import { BackLink } from "@/components/ui/back-link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFilters } from "@/hooks/use-filters";
@@ -166,8 +166,7 @@ function RouteComponent(): ReactNode {
             <div className="relative flex items-center justify-between gap-3 pt-2">
               {data && data.totalCount > 0 ? (
                 <p className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
-                  Showing {offset + 1}–{Math.min(offset + limit, data.totalCount)} of{" "}
-                  {data.totalCount}
+                  Showing {pageRange({ totalCount: data.totalCount, limit, offset })}
                 </p>
               ) : null}
               {data ? (

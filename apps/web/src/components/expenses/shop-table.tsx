@@ -15,7 +15,7 @@ import type {
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { DataTable, DataTableEmpty } from "@/components/data-table/data-table";
-import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { DataTablePagination, pageRange } from "@/components/data-table/data-table-pagination";
 import { DebouncedInput } from "@/components/debounced-input";
 import { ExpensePanel } from "@/components/expenses/dashboard-shell";
 import { ShopTableRowExpansion } from "@/components/expenses/shop-table-row-expansion";
@@ -99,7 +99,7 @@ export function ShopTable({
   } else if (totalCount > 0) {
     resultCount = (
       <p className="animate-data-in shrink-0 whitespace-nowrap text-xs text-muted-foreground">
-        Showing {offset + 1}-{Math.min(offset + PAGE_SIZE, totalCount)} of {totalCount}
+        Showing {pageRange({ totalCount, limit: PAGE_SIZE, offset })}
       </p>
     );
   }
