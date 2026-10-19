@@ -38,6 +38,57 @@ const routeMatcherBans = [
     message: "Routes call serve(ctx, Orders.op, input). run() is for kernel tests.",
   },
 ];
+const reactQueryBan = {
+  name: "@tanstack/react-query",
+  importNames: [
+    "InfiniteQueryObserver",
+    "MutationObserver",
+    "QueriesObserver",
+    "QueryObserver",
+    "infiniteQueryOptions",
+    "mutationOptions",
+    "queryOptions",
+    "useInfiniteQuery",
+    "useIsFetching",
+    "useIsMutating",
+    "useMutation",
+    "useMutationState",
+    "usePrefetchInfiniteQuery",
+    "usePrefetchQuery",
+    "useQueries",
+    "useQuery",
+    "useQueryClient",
+    "useSuspenseInfiniteQuery",
+    "useSuspenseQueries",
+    "useSuspenseQuery",
+  ],
+  message:
+    "Read and write server data through a resource module in apps/web/src/data. Declare a new query family in apps/web/src/data/catalog.ts.",
+};
+const webTestCode = ["apps/web/src/**/*.test.ts", "apps/web/src/**/*.test.tsx"];
+// S7's lock on W1 and W2's folders also banned test imports in their tests, so these tests keep it.
+const orderCollectionWishlistTests = ["orders", "collection", "wishlist"].flatMap((folder) => [
+  `apps/web/src/components/${folder}/**/*.test.ts`,
+  `apps/web/src/components/${folder}/**/*.test.tsx`,
+]);
+// The react-query hook ban skips these web files. S7's lock still covers them through the overrides above.
+const webOutsideHookBan = [
+  "apps/web/src/data/**",
+  // Scraper flow, replaced by the browser extension.
+  "apps/web/src/components/orders/order-item-sync-sheet.tsx",
+  "apps/web/src/components/settings/data-transfer/**",
+  "apps/web/src/components/sync/**",
+  "apps/web/src/hooks/use-data-transfer-import-status-query.ts",
+  "apps/web/src/hooks/use-sync-job-status-query.ts",
+  "apps/web/src/hooks/use-sync-mutations.ts",
+  "apps/web/src/routes/(app)/sync.tsx",
+  "apps/web/src/routes/(app)/sync_.$id.tsx",
+  // Replayed tests that stand in for a screen's reads. The replay copies each into
+  // revisions from before apps/web/src/data existed, so they call react-query directly.
+  "apps/web/src/components/dashboard/order-kanban.test.tsx",
+  "apps/web/src/components/dashboard/order-kanban-rollback.test.tsx",
+  "apps/web/src/hooks/use-wishlist.test.tsx",
+];
 const dbClientOwners = ["apps/server/src/domain/kernel.ts", "packages/auth/src/server.ts"];
 const testCode = ["**/*.test.ts", "**/*.test.tsx", "**/test/**"];
 // Tests create and read rows directly.
@@ -218,56 +269,33 @@ export default defineConfig({
       },
     },
     {
-      files: [
-        "apps/web/src/components/wishlist/**",
-        "apps/web/src/hooks/use-wishlist.ts",
-        "apps/web/src/routes/(app)/wishlist.tsx",
-        "apps/web/src/components/orders/**",
-        "apps/web/src/components/collection/**",
-        "apps/web/src/components/cells/popover-release-date-cell.tsx",
-        "apps/web/src/hooks/use-orders.ts",
-        "apps/web/src/hooks/use-collection.ts",
-        "apps/web/src/routes/(app)/orders.tsx",
-        "apps/web/src/routes/(app)/orders_.$id.tsx",
-        "apps/web/src/routes/(app)/collection.tsx",
-      ],
-      excludeFiles: [
-        // Scraper flow, replaced by the browser extension.
-        "apps/web/src/components/orders/order-item-sync-sheet.tsx",
-        // The order search, release and entry reads move with their families in W3.
-        "apps/web/src/components/orders/unified-item-move-form.tsx",
-        "apps/web/src/components/collection/collection-item-form.tsx",
-        "apps/web/src/components/collection/filters-form.tsx",
-      ],
+      files: ["apps/web/src/**"],
+      excludeFiles: [...webTestCode, ...webOutsideHookBan],
       rules: {
         "no-restricted-imports": [
           "error",
-          {
-            paths: [
-              {
-                name: "@tanstack/react-query",
-                importNames: [
-                  "infiniteQueryOptions",
-                  "queryOptions",
-                  "useInfiniteQuery",
-                  "useIsFetching",
-                  "useIsMutating",
-                  "useMutation",
-                  "useMutationState",
-                  "useQueries",
-                  "useQuery",
-                  "useQueryClient",
-                  "useSuspenseInfiniteQuery",
-                  "useSuspenseQueries",
-                  "useSuspenseQuery",
-                ],
-                message:
-                  "Read and write server data through a resource module in apps/web/src/data. Declare a new query family in apps/web/src/data/catalog.ts.",
-              },
-              dbClientBan,
-            ],
-            patterns: [dbSourcePath, ...testImports],
-          },
+          { paths: [reactQueryBan, dbClientBan], patterns: [dbSourcePath, ...testImports] },
+        ],
+      },
+    },
+    {
+      // Web tests may import test helpers, as testCode allows, but not react-query hooks.
+      files: webTestCode,
+      excludeFiles: webOutsideHookBan,
+      rules: {
+        "no-restricted-imports": [
+          "error",
+          { paths: [reactQueryBan, dbClientBan], patterns: [dbSourcePath] },
+        ],
+      },
+    },
+    {
+      files: orderCollectionWishlistTests,
+      excludeFiles: webOutsideHookBan,
+      rules: {
+        "no-restricted-imports": [
+          "error",
+          { paths: [reactQueryBan, dbClientBan], patterns: [dbSourcePath, ...testImports] },
         ],
       },
     },
