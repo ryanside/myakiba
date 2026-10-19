@@ -268,7 +268,7 @@ class ItemService {
   }
 
   async getItem(userId: string, externalId: number) {
-    const itemData = await db
+    const [itemData] = await db
       .select({
         id: item.id,
         externalId: item.externalId,
@@ -341,11 +341,11 @@ class ItemService {
       )
       .where(and(eq(item.source, "mfc"), eq(item.externalId, externalId)));
 
-    if (itemData.length === 0) {
+    if (!itemData) {
       throw new Error("ITEM_NOT_FOUND");
     }
 
-    const { isWishlisted, ...itemRecord } = itemData[0];
+    const { isWishlisted, ...itemRecord } = itemData;
     return {
       item: {
         ...itemRecord,

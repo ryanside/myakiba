@@ -79,7 +79,7 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
 
   const maxValueIndex = useMemo(() => {
     if (activeIndex !== undefined) {
-      return { index: activeIndex, value: chartData[activeIndex].desktop };
+      return { index: activeIndex, value: chartData[activeIndex]?.desktop ?? 0 };
     }
     return chartData.reduce(
       (max, d, index) => {
@@ -126,7 +126,7 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
             {maxValueIndex.value}{" "}
             <span className="ml-1 text-sm text-muted-foreground">
               {maxValueIndex.value === 1 ? "order" : "orders"} in{" "}
-              {chartData[maxValueIndex.index].month}
+              {chartData[maxValueIndex.index]?.month}
             </span>
           </FrameTitle>
         )}

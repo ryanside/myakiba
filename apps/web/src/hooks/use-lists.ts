@@ -199,7 +199,7 @@ export function useAddTargetsToListsMutation() {
           children: listIds.length === 1 ? "Open List" : "Open Lists",
           onClick() {
             toast.close(toastId);
-            if (listIds.length === 1) {
+            if (listIds.length === 1 && listIds[0] !== undefined) {
               void navigate({ to: "/lists/$listId", params: { listId: listIds[0] } });
               return;
             }

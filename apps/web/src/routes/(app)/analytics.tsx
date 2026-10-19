@@ -98,7 +98,10 @@ function RouteComponent(): ReactNode {
             key={entry.category}
             title={entry.category}
             uniqueOwned={entry.uniqueOwned}
-            gradientColor={SECTION_GRADIENT_COLORS[idx % SECTION_GRADIENT_COLORS.length]}
+            gradientColor={
+              SECTION_GRADIENT_COLORS[idx % SECTION_GRADIENT_COLORS.length] ??
+              SECTION_GRADIENT_COLORS[0]
+            }
             isLoading={isLoading}
             link={{
               to: `/analytics/${entry.category.toLowerCase()}`,
@@ -149,7 +152,10 @@ function RouteComponent(): ReactNode {
         <Section
           title="Shops"
           uniqueOwned={shops.uniqueOwned}
-          gradientColor={SECTION_GRADIENT_COLORS[entries.length % SECTION_GRADIENT_COLORS.length]}
+          gradientColor={
+            SECTION_GRADIENT_COLORS[entries.length % SECTION_GRADIENT_COLORS.length] ??
+            SECTION_GRADIENT_COLORS[0]
+          }
           isLoading={isLoading}
           link={{ to: "/analytics/shops", label: "View all shops" }}
         >
@@ -197,7 +203,8 @@ function RouteComponent(): ReactNode {
           title="Scales"
           uniqueOwned={scales.uniqueOwned}
           gradientColor={
-            SECTION_GRADIENT_COLORS[(entries.length + 1) % SECTION_GRADIENT_COLORS.length]
+            SECTION_GRADIENT_COLORS[(entries.length + 1) % SECTION_GRADIENT_COLORS.length] ??
+            SECTION_GRADIENT_COLORS[0]
           }
           isLoading={isLoading}
           link={{ to: "/analytics/scales", label: "View all scales" }}

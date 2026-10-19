@@ -41,7 +41,7 @@ export function ShopBreakdown({
         ...s,
         id: s.shopName,
         label: s.shopName,
-        color: CHART_PALETTE[i % CHART_PALETTE.length],
+        color: CHART_PALETTE[i % CHART_PALETTE.length] ?? CHART_PALETTE[0],
         percentage: totalOrderCount > 0 ? (s.orderCount / totalOrderCount) * 100 : 0,
         tooltip: (
           <div className="flex flex-col gap-0.5">

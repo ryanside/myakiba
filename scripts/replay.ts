@@ -24,6 +24,15 @@ type KnipReplay = {
   reports: string[];
 };
 
+type TypesReplay = {
+  name: string;
+  fix: string;
+  bug: string;
+  package: string;
+  config: string[];
+  errors: string[];
+};
+
 type LintRule = string | [string, ...unknown[]];
 type LintConfig = {
   ignorePatterns: string[];
@@ -48,36 +57,50 @@ const {
   test: testReplays = [],
   lint: lintReplays = [],
   knip: knipReplays = [],
-}: { test?: TestReplay[]; lint?: LintReplay[]; knip?: KnipReplay[] } = await Bun.file(
-  path.join(import.meta.dir, "replays.json"),
-).json();
-const replaysByMode = { lint: lintReplays, knip: knipReplays, test: testReplays };
+  types: typesReplays = [],
+}: {
+  test?: TestReplay[];
+  lint?: LintReplay[];
+  knip?: KnipReplay[];
+  types?: TypesReplay[];
+} = await Bun.file(path.join(import.meta.dir, "replays.json")).json();
+const replaysByMode = {
+  lint: lintReplays,
+  knip: knipReplays,
+  types: typesReplays,
+  test: testReplays,
+};
 const mode =
-  (["lint", "knip"] as const).find((name) => process.argv.includes(`--${name}`)) ?? "test";
+  (["lint", "knip", "types"] as const).find((name) => process.argv.includes(`--${name}`)) ?? "test";
 const lintMode = mode === "lint";
 const knipMode = mode === "knip";
-const listed: (TestReplay | LintReplay | KnipReplay)[] = replaysByMode[mode];
+const typesMode = mode === "types";
+const listed: (TestReplay | LintReplay | KnipReplay | TypesReplay)[] = replaysByMode[mode];
 if (listed.length === 0) {
   console.error(`FAIL  scripts/replays.json lists no ${mode === "test" ? "" : `${mode} `}replay`);
   process.exit(1);
 }
-const filters = process.argv.slice(2).filter((arg) => arg !== "--lint" && arg !== "--knip");
-const matches = (replay: TestReplay | LintReplay | KnipReplay, filter: string) =>
+const filters = process.argv
+  .slice(2)
+  .filter((arg) => arg !== "--lint" && arg !== "--knip" && arg !== "--types");
+const matches = (replay: TestReplay | LintReplay | KnipReplay | TypesReplay, filter: string) =>
   replay.fix.startsWith(filter) ||
   ("rule" in replay && replay.rule.includes(filter)) ||
-  ("test" in replay && replay.test.includes(filter));
+  ("test" in replay && replay.test.includes(filter)) ||
+  ("name" in replay && replay.name === filter);
 const unmatched = filters.filter((filter) => !listed.some((replay) => matches(replay, filter)));
 if (unmatched.length > 0) {
   console.error(`FAIL  no replay matches ${unmatched.join(" ")}`);
   process.exit(1);
 }
-const pick = <Replay extends TestReplay | LintReplay | KnipReplay>(list: Replay[]) =>
+const pick = <Replay extends TestReplay | LintReplay | KnipReplay | TypesReplay>(list: Replay[]) =>
   list.filter(
     (replay) => filters.length === 0 || filters.some((filter) => matches(replay, filter)),
   );
-const selected = lintMode || knipMode ? [] : pick(testReplays);
+const selected = lintMode || knipMode || typesMode ? [] : pick(testReplays);
 const selectedLint = lintMode ? pick(lintReplays) : [];
 const selectedKnip = knipMode ? pick(knipReplays) : [];
+const selectedTypes = typesMode ? pick(typesReplays) : [];
 const builtinRules: BuiltinRule[] = lintMode ? await $`${oxlint} --rules -f json`.json() : [];
 const builtinRule = (rule: string) => {
   const [, scope, value] = /^(.+)\((.+)\)$/.exec(rule) ?? [];
@@ -236,6 +259,25 @@ async function runKnip(checkout: string) {
   return { exitCode, output: `${stdout}${stderr}` };
 }
 
+async function checkTypes(checkout: string, packageDir: string) {
+  const { scripts } = await readPackage(path.join(checkout, packageDir));
+  const script: string = scripts?.["check-types"] ?? "";
+  const [command, ...args] = script.split(/\s+/).filter(Boolean);
+  if (command !== "tsc")
+    return { exitCode: 1, output: `${packageDir} check-types is not a tsc command: ${script}` };
+  const bins = [path.join(checkout, packageDir), checkout].map((dir) =>
+    path.join(dir, "node_modules", ".bin"),
+  );
+  const { exitCode, stdout } = await $`tsc ${args} --pretty false`
+    .cwd(path.join(checkout, packageDir))
+    .env({ ...process.env, PATH: [...bins, process.env.PATH].join(path.delimiter) })
+    .nothrow()
+    .quiet();
+  return { exitCode, output: stdout.toString() };
+}
+
+const tsDiagnostic = /^\S.*\(\d+,\d+\): error TS\d+: \S/;
+
 const tail = (output: string) =>
   output
     .trimEnd()
@@ -272,6 +314,12 @@ for (const testFile of new Set(selected.map((replay) => replay.test))) {
 if (knipMode) {
   const run = await runKnip(root);
   report(run.exitCode === 0, "head  knip", run.exitCode === 0 ? [] : [tail(run.output)]);
+}
+
+for (const packageDir of new Set(selectedTypes.map((replay) => replay.package))) {
+  const run = await checkTypes(root, packageDir);
+  const pass = run.exitCode === 0;
+  report(pass, `head  ${packageDir} check-types`, pass ? [] : [tail(run.output)]);
 }
 
 const isAlive = (pid: number) => {
@@ -342,7 +390,13 @@ async function checkOut(revision: string, harness?: { packageDir: string; files:
   const missing = Object.keys(head.devDependencies ?? {}).filter((name) => !(name in declared));
   if (missing.length > 0) {
     const specs = await Promise.all(
-      missing.map(async (name) => `${name}@${await installedVersion(packageDir, name)}`),
+      missing.map(async (name) => {
+        const spec: string = head.devDependencies[name];
+        const version = spec.startsWith("workspace:")
+          ? spec
+          : await installedVersion(packageDir, name);
+        return `${name}@${version}`;
+      }),
     );
     await $`bun add --dev --no-save ${specs}`.cwd(path.join(worktree, packageDir)).quiet();
   }
@@ -415,6 +469,31 @@ try {
       ...notReported.map((expected) => `      did not report: ${expected}`),
       ...(pass ? [] : [tail(run.output)]),
     ]);
+  }
+
+  for (const replay of selectedTypes) {
+    const parent = `${replay.fix}^`;
+    await checkOut(parent, { packageDir: replay.package, files: replay.config });
+
+    const run = await checkTypes(worktree, replay.package);
+    const diagnostics = run.output.split("\n").filter((line) => tsDiagnostic.test(line));
+    const malformed = replay.errors.filter((error) => !tsDiagnostic.test(error));
+    const notReported = replay.errors.filter(
+      (error) => tsDiagnostic.test(error) && !diagnostics.includes(error),
+    );
+    report(
+      run.exitCode !== 0 &&
+        replay.errors.length > 0 &&
+        malformed.length === 0 &&
+        notReported.length === 0,
+      `${parent}  ${replay.package}  ${diagnostics.length} errors for: ${replay.bug}`,
+      [
+        ...(replay.errors.length === 0 ? ["      lists no expected error"] : []),
+        ...malformed.map((error) => `      not a TS diagnostic: ${JSON.stringify(error)}`),
+        ...notReported.map((error) => `      not reported: ${error}`),
+        ...(notReported.length > 0 ? [tail(run.output)] : []),
+      ],
+    );
   }
 } finally {
   removeWorktree();

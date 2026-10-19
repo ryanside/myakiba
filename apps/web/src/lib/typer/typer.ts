@@ -240,7 +240,7 @@ export class Typer {
       let variation = "charInit";
       if (p > 0) {
         const idx = Math.round(remap(p, 0, 1, 0, this.cycles));
-        variation = this.variations[idx % this.variations.length];
+        variation = this.variations[idx % this.variations.length] ?? "";
       }
       if (p >= 1) variation = "";
       const midClass = variation ? `char ${variation}` : "char";
