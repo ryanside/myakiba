@@ -88,7 +88,7 @@ export interface DataGridProps<TData extends object> {
 }
 
 const DataGridContext = createContext<
-  // oxlint-disable-next-line typescript/no-explicit-any
+  // oxlint-disable-next-line typescript/no-explicit-any -- A React context cannot carry the grid's row type parameter (until 2027-04-16, approved by root, pending operator review)
   DataGridContextProps<any> | undefined
 >(undefined);
 

@@ -276,11 +276,11 @@ function ActionBarGroup(props: DivProps) {
         const elementB = b.ref.current;
         if (!elementA || !elementB) return 0;
         const position = elementA.compareDocumentPosition(elementB);
-        // oxlint-disable-next-line no-bitwise
+        // oxlint-disable-next-line no-bitwise -- compareDocumentPosition returns a bitmask, so the flag test needs & (until 2027-04-16, approved by root, pending operator review)
         if (position & Node.DOCUMENT_POSITION_FOLLOWING) {
           return -1;
         }
-        // oxlint-disable-next-line no-bitwise
+        // oxlint-disable-next-line no-bitwise -- compareDocumentPosition returns a bitmask, so the flag test needs & (until 2027-04-16, approved by root, pending operator review)
         if (position & Node.DOCUMENT_POSITION_PRECEDING) {
           return 1;
         }

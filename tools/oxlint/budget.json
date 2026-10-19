@@ -1,0 +1,20 @@
+{
+  "eslint(no-restricted-properties)": {
+    "apps/web/src/hooks/use-local-storage.ts": 1,
+    "apps/web/src/lib/data-transfer.ts": 1,
+    "packages/redis/src/job-status.ts": 1
+  },
+  "myakiba(no-env-outside-env-package)": {
+    "apps/server/src/index.ts": 3,
+    "apps/web/src/lib/sync.ts": 2,
+    "apps/web/src/main.tsx": 1,
+    "apps/web/src/routes/__root.tsx": 1,
+    "packages/db/drizzle.config.ts": 1,
+    "packages/db/src/scripts/push-schema.ts": 2
+  },
+  "myakiba(no-iso-slice)": {},
+  "myakiba(require-suppression-reason)": {
+    "apps/server/src/routers/sync/index.ts": 1,
+    "apps/web/src/lib/sync.ts": 1
+  }
+}

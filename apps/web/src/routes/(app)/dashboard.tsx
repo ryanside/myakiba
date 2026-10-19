@@ -41,7 +41,7 @@ function RouteComponent(): ReactElement {
   const { session } = Route.useRouteContext();
   const { tab } = Route.useSearch();
   const { currency: userCurrency, locale: userLocale, dateFormat } = useUserPreferences();
-  // eslint-disable-next-line react/hook-use-state -- Keep one kaomoji for this route instance.
+  // eslint-disable-next-line react/hook-use-state -- Keep one kaomoji for this route instance (until 2027-04-16, approved by root, pending operator review)
   const [kaomoji] = useState(randomKaomoji);
   const activeTab = tab ?? "overview";
   const [visibleMonth, setVisibleMonth] = useState<Date>(getCurrentVisibleMonth);

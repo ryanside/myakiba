@@ -134,7 +134,7 @@ export function EvilAreaChart<
   // Brush is a <Brush /> child now (not props): pull it out of the children so
   // it never reaches the Recharts tree, and drive the footer from its props.
   const brush = useMemo(() => {
-    // eslint-disable-next-line react/no-react-children
+    // eslint-disable-next-line react/no-react-children -- Brush arrives as a child element, so the chart splits it out of children (until 2027-04-16, approved by root, pending operator review)
     const parts = Children.toArray(children);
     const brushEl = parts.find((child) => isValidElement(child) && child.type === Brush);
     const bp = (isValidElement(brushEl) ? brushEl.props : {}) as BrushProps;
@@ -493,7 +493,7 @@ const resolveDots = (
   let dot: AreaDotProp = false;
   let activeDot: AreaActiveDotProp = false;
 
-  // eslint-disable-next-line react/no-react-children
+  // eslint-disable-next-line react/no-react-children -- Dot and ActiveDot arrive as child elements, so the chart reads its dot config from children (until 2027-04-16, approved by root, pending operator review)
   const dotChildren = Children.toArray(children);
   for (const child of dotChildren) {
     if (!isValidElement(child)) continue;
@@ -864,8 +864,7 @@ export function useLoadingData(isLoading: boolean, loadingPoints = 14) {
 
   const loadingData = useMemo(
     () => getLoadingData(loadingPoints),
-    // loadingDataKey toggle triggers re-computation when the shimmer exits
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadingDataKey is unread, and its toggle recomputes the loading data when the shimmer exits (until 2027-04-16, approved by root, pending operator review)
     [loadingPoints, loadingDataKey],
   );
 
