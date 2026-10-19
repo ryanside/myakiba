@@ -349,6 +349,126 @@ describe("a write that names any id the caller does not own answers 404 and chan
   });
 });
 
+const fixtureOrderIds = new Set(["order-1", "order-2", "order-3"]);
+const orderName = (id: string | null) => (id === null || fixtureOrderIds.has(id) ? id : "new");
+type Placement = {
+  readonly orders: readonly (string | null)[];
+  readonly items: Record<string, string | null>;
+};
+const readPlacement = async (): Promise<Placement> => {
+  const orders = await db.select({ id: order.id }).from(order);
+  const items = await db
+    .select({ id: collection.id, orderId: collection.orderId })
+    .from(collection);
+  return {
+    orders: orders.map(({ id }) => orderName(id)).toSorted(),
+    items: Object.fromEntries(items.map(({ id, orderId }) => [id, orderName(orderId)])),
+  };
+};
+const fixtureItems = {
+  "c-owned": "order-1",
+  "c-ordered": "order-1",
+  "c-2": "order-2",
+  "c-other": "order-3",
+};
+
+const repeatedIdWrites = [
+  [
+    "merge",
+    "POST",
+    "/merge",
+    { orderIds: ["order-1", "order-1", "order-2"], newOrder, cascadeOptions: [] },
+    "Orders merged successfully",
+    {
+      orders: ["new", "order-3"],
+      items: { "c-owned": "new", "c-ordered": "new", "c-2": "new", "c-other": "order-3" },
+    },
+  ],
+  [
+    "split",
+    "POST",
+    "/split",
+    { collectionIds: ["c-2", "c-2"], newOrder, cascadeOptions: [] },
+    "Items split successfully",
+    { orders: ["new", "order-1", "order-2", "order-3"], items: { ...fixtureItems, "c-2": "new" } },
+  ],
+  [
+    "move",
+    "PUT",
+    "/move-items",
+    { targetOrderId: "order-2", collectionIds: ["c-ordered", "c-ordered"], orderIds: ["order-1"] },
+    "Items moved successfully",
+    {
+      orders: ["order-1", "order-2", "order-3"],
+      items: { ...fixtureItems, "c-ordered": "order-2" },
+    },
+  ],
+  [
+    "delete orders",
+    "DELETE",
+    "/",
+    { orderIds: ["order-2", "order-2"] },
+    "Orders deleted successfully",
+    {
+      orders: ["order-1", "order-3"],
+      items: { "c-owned": "order-1", "c-ordered": "order-1", "c-other": "order-3" },
+    },
+  ],
+  [
+    "delete items",
+    "DELETE",
+    "/items",
+    { collectionIds: ["c-2", "c-2"] },
+    "Order items deleted successfully",
+    {
+      orders: ["order-1", "order-2", "order-3"],
+      items: { "c-owned": "order-1", "c-ordered": "order-1", "c-other": "order-3" },
+    },
+  ],
+] as const;
+
+describe("a write that repeats an own id applies it once", () => {
+  test.each(repeatedIdWrites)("%s", async (_, method, path, body, answer, placement) => {
+    expect(await call(method, path, JSON.stringify(body))).toEqual({ status: 200, body: answer });
+    expect(await readPlacement()).toEqual(placement);
+  });
+});
+
+const emptyListWrites = [
+  [
+    "merge",
+    "POST",
+    "/merge",
+    { orderIds: [], newOrder, cascadeOptions: [] },
+    "Order items not found",
+  ],
+  [
+    "split",
+    "POST",
+    "/split",
+    { collectionIds: [], newOrder, cascadeOptions: [] },
+    "Order items not found",
+  ],
+  [
+    "move",
+    "PUT",
+    "/move-items",
+    { targetOrderId: "order-2", collectionIds: [] },
+    "Order items not found",
+  ],
+  ["delete orders", "DELETE", "/", { orderIds: [] }, "One or more orders not found"],
+  ["delete items", "DELETE", "/items", { collectionIds: [] }, "One or more order items not found"],
+] as const;
+
+describe("a write with an empty id list answers 404 and changes nothing", () => {
+  test.each(emptyListWrites)("%s", async (_, method, path, body, answer) => {
+    const before = await readState();
+
+    expect(await call(method, path, JSON.stringify(body))).toEqual({ status: 404, body: answer });
+    expect(await readState()).toEqual(before);
+  });
+});
+
 describe("a failure after a write leaves nothing behind", () => {
   test("a merge that finds no order to delete keeps the new order and the moved items out", async () => {
     await db

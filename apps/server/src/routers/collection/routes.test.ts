@@ -146,3 +146,29 @@ test.each([
   });
   expect(await readItems()).toEqual(before);
 });
+
+const bulkDelete = async (ids: string[]) => {
+  const response = await app.handle(
+    new Request("http://localhost/api/collection", {
+      method: "DELETE",
+      headers: { "x-test-user": userId, "content-type": "application/json" },
+      body: JSON.stringify({ ids }),
+    }),
+  );
+  return { status: response.status, body: await response.text() };
+};
+
+test("a bulk delete that repeats an own item deletes it once", async () => {
+  expect(await bulkDelete(["c-1", "c-1"])).toEqual({
+    status: 200,
+    body: "Collection item(s) deleted successfully",
+  });
+  expect(await db.select().from(collection)).toEqual([]);
+});
+
+test("a bulk delete of an empty list answers 404 and deletes nothing", async () => {
+  const before = await db.select().from(collection);
+
+  expect(await bulkDelete([])).toEqual({ status: 404, body: "Collection item(s) not found" });
+  expect(await db.select().from(collection)).toEqual(before);
+});
