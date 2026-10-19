@@ -9,10 +9,12 @@ afterEach(cleanup);
 function Pager({
   recordCount,
   pageIndex,
+  offset,
   onPageIndexChange,
 }: {
   recordCount: number;
   pageIndex: number;
+  offset?: number;
   onPageIndexChange?: (pageIndex: number) => void;
 }) {
   const pagination = { pageIndex, pageSize: 10 };
@@ -28,12 +30,15 @@ function Pager({
   });
   return (
     <DataGridProvider table={table} recordCount={recordCount}>
-      <DataGridPagination />
+      <DataGridPagination offset={offset} />
     </DataGridProvider>
   );
 }
 
-function pageRequestedBy(button: string, props: { recordCount: number; pageIndex: number }) {
+function pageRequestedBy(
+  button: string,
+  props: { recordCount: number; pageIndex: number; offset?: number },
+) {
   let requested: number | undefined;
   render(<Pager {...props} onPageIndexChange={(pageIndex) => (requested = pageIndex)} />);
   fireEvent.click(screen.getByRole("button", { name: button }));
@@ -78,5 +83,32 @@ describe("DataGridPagination past the end", () => {
     render(<Pager recordCount={3} pageIndex={0} />);
     expect(screen.queryByRole("button", { name: "1" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Go to previous page" })).toBeNull();
+  });
+});
+
+describe("DataGridPagination at an offset that is not a page start", () => {
+  test("an offset past the rows of the only page offers page 1, not marked current", () => {
+    expect(pageRequestedBy("1", { recordCount: 3, pageIndex: 0, offset: 5 })).toBe(0);
+    expect(screen.getByRole("button", { name: "1" }).className).not.toContain("bg-accent");
+  });
+
+  test("an empty result at an offset inside page 1 offers page 1", () => {
+    expect(pageRequestedBy("1", { recordCount: 0, pageIndex: 0, offset: 5 })).toBe(0);
+  });
+
+  test("previous from an offset past the rows of page 1 goes to page 1", () => {
+    expect(
+      pageRequestedBy("Go to previous page", { recordCount: 3, pageIndex: 0, offset: 5 }),
+    ).toBe(0);
+  });
+
+  test("an offset past the rows of the only page shows no rows of the total", () => {
+    render(<Pager recordCount={7} pageIndex={0} offset={10} />);
+    expect(screen.getByText("0 of 7")).toBeTruthy();
+  });
+
+  test("an offset inside the rows names the rows from that offset", () => {
+    render(<Pager recordCount={50} pageIndex={1} offset={15} />);
+    expect(screen.getByText("16 - 25 of 50")).toBeTruthy();
   });
 });

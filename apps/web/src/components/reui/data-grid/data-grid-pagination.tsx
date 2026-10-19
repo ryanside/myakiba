@@ -27,6 +27,8 @@ interface DataGridPaginationProps {
   previousPageLabel?: string;
   nextPageLabel?: string;
   ellipsisText?: string;
+  /** The first row's index, for callers whose offset need not start a page. */
+  offset?: number;
 }
 
 function DataGridPagination(props: DataGridPaginationProps): React.JSX.Element {
@@ -51,11 +53,13 @@ function DataGridPagination(props: DataGridPaginationProps): React.JSX.Element {
   const btnArrowClasses = `${btnBaseClasses} rtl:transform rtl:rotate-180`;
   const pageIndex = table.getState().pagination.pageIndex;
   const pageSize = table.getState().pagination.pageSize;
-  const from = pageIndex * pageSize + 1;
-  const to = Math.min((pageIndex + 1) * pageSize, recordCount);
+  const offset = props.offset ?? pageIndex * pageSize;
+  const from = offset + 1;
+  const to = Math.min(offset + pageSize, recordCount);
   const pageCount = table.getPageCount();
   const lastPageIndex = Math.max(pageCount - 1, 0);
-  const isPastEnd = pageIndex > lastPageIndex;
+  const isPastEnd = offset > 0 && offset >= recordCount;
+  const previousPageIndex = isPastEnd ? lastPageIndex : Math.max(pageIndex - 1, 0);
 
   const pageInfo = mergedProps?.info
     ? mergedProps.info
@@ -80,10 +84,10 @@ function DataGridPagination(props: DataGridPaginationProps): React.JSX.Element {
           size="icon-sm"
           variant="ghost"
           className={cn(btnBaseClasses, "text-muted-foreground", {
-            "bg-accent text-accent-foreground": pageIndex === i,
+            "bg-accent text-accent-foreground": offset === i * pageSize,
           })}
           onClick={() => {
-            if (pageIndex !== i) {
+            if (offset !== i * pageSize) {
               table.setPageIndex(i);
             }
           }}
@@ -166,8 +170,8 @@ function DataGridPagination(props: DataGridPaginationProps): React.JSX.Element {
               size="icon-sm"
               variant="ghost"
               className={btnArrowClasses}
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
+              onClick={() => table.setPageIndex(previousPageIndex)}
+              disabled={offset === 0}
             >
               <span className="sr-only">{mergedProps.previousPageLabel}</span>
               <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-4" />

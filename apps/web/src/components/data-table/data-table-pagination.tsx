@@ -74,7 +74,8 @@ export function DataTablePagination({
   const totalPages = Math.ceil(totalCount / limit);
   const currentPage = Math.floor(offset / limit) + 1;
   const lastPage = Math.max(totalPages, 1);
-  const isPastEnd = currentPage > lastPage;
+  const isPastEnd = offset > 0 && offset >= totalCount;
+  const previousPage = isPastEnd ? lastPage : Math.max(currentPage - 1, 1);
 
   if (totalPages <= 1 && !isPastEnd) {
     return null;
@@ -100,8 +101,8 @@ export function DataTablePagination({
             size="icon-sm"
             variant="ghost"
             className={arrowButtonClasses}
-            onClick={() => goToPage(Math.min(currentPage - 1, lastPage))}
-            disabled={currentPage === 1}
+            onClick={() => goToPage(previousPage)}
+            disabled={offset === 0}
           >
             <span className="sr-only">Go to previous page</span>
             <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-4" />
@@ -124,9 +125,9 @@ export function DataTablePagination({
                 type="button"
                 size="icon-sm"
                 variant="ghost"
-                aria-current={page === currentPage ? "page" : undefined}
+                aria-current={offset === (page - 1) * limit ? "page" : undefined}
                 className={cn(buttonClasses, "text-muted-foreground", {
-                  "bg-accent text-accent-foreground": page === currentPage,
+                  "bg-accent text-accent-foreground": offset === (page - 1) * limit,
                 })}
                 onClick={() => goToPage(page)}
               >

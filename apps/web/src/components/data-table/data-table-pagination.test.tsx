@@ -72,3 +72,20 @@ describe("pageRange", () => {
     expect(pagination.pageRange({ totalCount: 0, limit: 10, offset: 0 })).toBe("0 of 0");
   });
 });
+
+describe("DataTablePagination at an offset that is not a page start", () => {
+  test("an offset past the rows of the only page offers page 1, not marked current", () => {
+    expect(offsetRequestedBy("1", { totalCount: 5, limit: 24, offset: 10 })).toBe(0);
+    expect(screen.getByRole("button", { name: "1" }).getAttribute("aria-current")).toBeNull();
+  });
+
+  test("an empty result at an offset inside page 1 offers page 1", () => {
+    expect(offsetRequestedBy("1", { totalCount: 0, limit: 24, offset: 10 })).toBe(0);
+  });
+
+  test("previous from an offset past the rows of page 1 goes to page 1", () => {
+    expect(offsetRequestedBy("Go to previous page", { totalCount: 5, limit: 24, offset: 10 })).toBe(
+      0,
+    );
+  });
+});

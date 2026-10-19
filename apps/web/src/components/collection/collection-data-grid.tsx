@@ -339,7 +339,7 @@ export const CollectionDataGrid = () => {
                 {table.getFilteredSelectedRowModel().rows.length} of{" "}
                 {table.getFilteredRowModel().rows.length} row(s) selected
               </div>
-              <DataGridPagination />
+              <DataGridPagination offset={offset} />
             </div>
           </div>
         </DataGrid>
