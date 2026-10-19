@@ -84,6 +84,82 @@
         "DebouncedInput > typing reports the final text once after the debounce",
         "DebouncedInput > late echoes of two earlier texts do not replace what the user typed"
       ]
+    },
+    {
+      "fix": "f93aa434",
+      "bug": "an open Wishlist kept old titles after a sync, and Upcoming kept a released Item past midnight",
+      "test": "apps/web/src/hooks/use-wishlist.test.tsx",
+      "fixed": [
+        "wishlist after a sync rewrites item metadata > an open wishlist page shows the synced title once the sync finishes",
+        "wishlist release filters across midnight > returning to Upcoming after the release date does not show the released item while refetching",
+        "wishlist release filters across midnight > an Upcoming page left open drops the item at local midnight on its release date"
+      ]
+    },
+    {
+      "fix": "e3fabef4",
+      "bug": "a sync that finished during a Wishlist move left the old order after the save",
+      "test": "apps/web/src/hooks/use-wishlist.test.tsx",
+      "fixed": [
+        "wishlist reorder > a sync that finishes while a move is saving shows the saved order once the move saves"
+      ]
+    },
+    {
+      "fix": "e3fabef4",
+      "bug": "a sync that finished during a List move left the old order after the save",
+      "test": "apps/web/src/hooks/use-lists.test.tsx",
+      "fixed": [
+        "lists reorder > a sync that finishes while a move is saving shows the saved order once the move saves"
+      ]
+    },
+    {
+      "fix": "e3fabef4",
+      "bug": "the reorder hook never refetched the moved list after its last save",
+      "test": "apps/web/src/hooks/use-position-order-mutation.test.tsx",
+      "fixed": [
+        "position order saves > a list opened while another list's move is saving still refetches after its own moves",
+        "position order saves > a move on one list refetches that list while another list's move is still saving",
+        "position order saves > a saved move refetches only its own list",
+        "position order saves > a failed save shows the order it restored while the list refetches, then refetches once"
+      ]
+    },
+    {
+      "fix": "6c001651",
+      "bug": "a Wishlist move that saved across local midnight kept the old order",
+      "test": "apps/web/src/hooks/use-wishlist.test.tsx",
+      "fixed": ["wishlist reorder > a move that saves across local midnight keeps its order"]
+    },
+    {
+      "fix": "4adf7f61",
+      "bug": "the grid stayed busy until the refetch after a save returned, and two saves that finished together both skipped it",
+      "test": "apps/web/src/hooks/use-wishlist.test.tsx",
+      "fixed": [
+        "wishlist reorder > a move stops saving when its save finishes, before the refetch returns",
+        "wishlist reorder > two saves that finish together after a sync show the saved order"
+      ]
+    },
+    {
+      "fix": "a6a7d4ff",
+      "bug": "a List switched while a move was saving kept that move's count, so the List's later moves never refetched",
+      "test": "apps/web/src/hooks/use-position-order-mutation.test.tsx",
+      "fixed": [
+        "position order saves > a list opened while another list's move is saving still refetches after its own moves"
+      ]
+    },
+    {
+      "fix": "63d2ae3b",
+      "bug": "after a time zone change, the Wishlist day rolled at the old zone's midnight",
+      "test": "apps/web/src/hooks/use-today.test.tsx",
+      "fixed": [
+        "the day rolls at the new zone's midnight after the zone changes and the tab regains focus"
+      ]
+    },
+    {
+      "fix": "0f97416a",
+      "bug": "a failed save's recovery fetch could land last and hide another save that worked",
+      "test": "apps/web/src/hooks/use-position-order-mutation.test.tsx",
+      "fixed": [
+        "position order saves > a save that fails while another save is pending does not hide the order that saved"
+      ]
     }
   ],
   "lint": [

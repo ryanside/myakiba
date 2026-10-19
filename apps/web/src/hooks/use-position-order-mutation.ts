@@ -1,7 +1,18 @@
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { InfiniteData, QueryKey } from "@tanstack/react-query";
+import { hashKey, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { InfiniteData, QueryClient, QueryKey } from "@tanstack/react-query";
 import { toast } from "@/components/ui/toast";
+
+const pendingMovesByClient = new WeakMap<QueryClient, Map<string, number>>();
+
+function pendingMovesOf(queryClient: QueryClient) {
+  let pendingMoves = pendingMovesByClient.get(queryClient);
+  if (!pendingMoves) {
+    pendingMoves = new Map();
+    pendingMovesByClient.set(queryClient, pendingMoves);
+  }
+  return pendingMoves;
+}
 
 export function usePositionOrderMutation({
   queryKey,
@@ -18,9 +29,13 @@ export function usePositionOrderMutation({
   readonly failureTitle: string;
 }) {
   const queryClient = useQueryClient();
+  const moveKey = hashKey(queryKey);
   const mutation = useMutation({
+    mutationKey: queryKey,
     mutationFn: persist,
     onMutate: async (intent) => {
+      const pendingMoves = pendingMovesOf(queryClient);
+      pendingMoves.set(moveKey, (pendingMoves.get(moveKey) ?? 0) + 1);
       await queryClient.cancelQueries({ queryKey, exact: true });
       const current = queryClient.getQueryData<
         InfiniteData<
@@ -80,13 +95,22 @@ export function usePositionOrderMutation({
         ),
       ]);
     },
-    onError: async (_error, _intent, context) => {
+    onError: (_error, _intent, context) => {
       if (context) queryClient.setQueryData(queryKey, context.previous);
-      await queryClient.refetchQueries({ queryKey, exact: true });
       toast.add({
         type: "error",
         title: failureTitle,
       });
+    },
+    onSettled: () => {
+      const pendingMoves = pendingMovesOf(queryClient);
+      const remaining = (pendingMoves.get(moveKey) ?? 1) - 1;
+      if (remaining > 0) {
+        pendingMoves.set(moveKey, remaining);
+        return;
+      }
+      pendingMoves.delete(moveKey);
+      void queryClient.invalidateQueries({ queryKey, exact: true });
     },
   });
 
