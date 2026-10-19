@@ -51,10 +51,7 @@ export const orderItemsQuerySchema = z.object({
   order: sortDirectionSchema.default("desc"),
 });
 
-export const newOrderSchema = syncOrderSchema.omit({
-  id: true,
-  userId: true,
-});
+export const newOrderSchema = syncOrderSchema.omit({ id: true, userId: true }).strict();
 
 export const editedOrderSchema = newOrderSchema.extend({
   orderId: z.string(),
