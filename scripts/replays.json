@@ -323,6 +323,16 @@
         "a failed dashboard kanban write rolls back only its own change > a failed status write returns its card and keeps another card's move that is still in flight",
         "a failed dashboard kanban write rolls back only its own change > a failed date write restores its date and keeps another card's move that is still in flight"
       ]
+    },
+    {
+      "fix": "2ca2fcb2",
+      "bug": "a failed inline or popover cell edit raised an unhandled rejection after its error toast, because no cell handler awaited the rejecting edit action",
+      "test": "apps/web/src/components/cells/cell-edit-failure.test.tsx",
+      "fixed": [
+        "a failed cell edit > pressing Enter in a text cell leaves no unhandled rejection",
+        "a failed cell edit > leaving a text cell leaves no unhandled rejection",
+        "a failed cell edit > pressing Enter in a count cell leaves no unhandled rejection"
+      ]
     }
   ],
   "lint": [
