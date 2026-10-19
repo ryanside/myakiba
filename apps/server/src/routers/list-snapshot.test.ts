@@ -1,4 +1,4 @@
-import { expect, mock, test } from "bun:test";
+import { expect, mock, spyOn, test } from "bun:test";
 import { SQL } from "bun";
 import { Elysia } from "elysia";
 import { initLogger } from "evlog";
@@ -92,3 +92,67 @@ test("a delete committed while a page is read leaves its rows and totals in agre
     await controller.close();
   }
 }, 15_000);
+
+test("an insert committed while a page past the end is read makes the re-read return the page it reaches", async () => {
+  // Runs after the test above, so item_release is already the view that waits for the pause lock.
+  await db.insert(order).values({ id: "order-2", userId, title: "HLJ" });
+  await db.insert(collection).values({
+    id: "c-2",
+    userId,
+    itemId: "item-1",
+    orderId: "order-2",
+    releaseId: "00000000-0000-4000-8000-000000000001",
+    createdAt: new Date("2026-01-01T00:00:00Z"),
+  });
+
+  const controller = new SQL({ url: process.env.DATABASE_URL, max: 1 });
+  const transactions = spyOn(db, "transaction");
+  await controller`select pg_advisory_lock(${pauseLock})`;
+  try {
+    const response = app.handle(
+      new Request("http://localhost/api/orders/order-2/items?limit=1&offset=1", {
+        headers: { "x-test-user": userId },
+      }),
+    );
+    let paused = false;
+    for (let attempt = 0; attempt < 100 && !paused; attempt++) {
+      const waiting =
+        await controller`select pid from pg_stat_activity where datname = current_database() and wait_event = 'advisory'`;
+      paused = waiting.length > 0;
+      if (!paused) await Bun.sleep(20);
+    }
+    expect(paused).toBe(true);
+    await controller`insert into collection (id, user_id, item_id, order_id, release_id, tags, created_at) values ('c-3', ${userId}, 'item-1', 'order-2', '00000000-0000-4000-8000-000000000001', '{}', '2026-02-01T00:00:00Z')`;
+    await controller`select pg_advisory_unlock(${pauseLock})`;
+
+    const answered = await response;
+    const body = (await answered.json()) as {
+      items: { id: string }[];
+      totalCount: number;
+    };
+    expect({
+      ids: body.items.map((row) => row.id),
+      totalCount: body.totalCount,
+    }).toEqual({ ids: ["c-2"], totalCount: 2 });
+    expect(transactions).not.toHaveBeenCalled();
+  } finally {
+    transactions.mockRestore();
+    await controller`select pg_advisory_unlock_all()`;
+    await controller.close();
+  }
+}, 15_000);
+
+test("a page past the end with no new rows reads its totals in one more statement, without a transaction", async () => {
+  const transactions = spyOn(db, "transaction");
+  try {
+    const response = await app.handle(
+      new Request("http://localhost/api/orders/order-2/items?limit=1&offset=5", {
+        headers: { "x-test-user": userId },
+      }),
+    );
+    expect(await response.json()).toEqual({ items: [], totalCount: 2 });
+    expect(transactions).not.toHaveBeenCalled();
+  } finally {
+    transactions.mockRestore();
+  }
+});

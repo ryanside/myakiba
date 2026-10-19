@@ -1,7 +1,7 @@
 import { status } from "elysia";
 import type { ElysiaCustomStatusResponse } from "elysia";
 import type { RequestLogger } from "evlog";
-import { SQL, asc, count, desc, is, sql } from "drizzle-orm";
+import { SQL, asc, desc, is, sql } from "drizzle-orm";
 import type { AnyColumn } from "drizzle-orm";
 import type { AnyPgColumn, PgSelect } from "drizzle-orm/pg-core";
 import { db } from "@myakiba/db/client";
@@ -234,29 +234,41 @@ type Direction = "asc" | "desc";
 /** A flat selection, as a list query passes to `scope.tx.select(...)`. */
 type Fields = Readonly<Record<string, SortColumn>>;
 
-/** Aggregates over the whole filtered set, such as a sum the list shows above its pages. */
-type Totals = Readonly<Record<string, SQL.Aliased>>;
+/**
+ * A total over the whole filtered set: the sum of a column or expression, or the
+ * count of rows that match a condition, either one optionally filtered.
+ */
+type Total = { readonly sum: SortColumn; readonly where?: SQL } | { readonly count: SQL };
+type Totals = Readonly<Record<string, Total>>;
 
 type PageOf<TRows extends PgSelect, TTotals extends Totals> = Page<Awaited<TRows>[number]> & {
-  readonly [K in keyof TTotals]: TTotals[K]["_"]["type"];
+  readonly [K in keyof TTotals]: number;
 };
 
 type PageSource<TFields extends Fields, TRows extends PgSelect, TTotals extends Totals> = {
   readonly select: TFields;
   /** Builds the filtered rows from `select`, such as `(fields) => scope.tx.select(fields).from(...)`. */
   readonly rows: (fields: TFields) => TRows;
-  /** Reads `filtered`, the rows before the page is cut, by their `select` keys. */
-  readonly totals?: (filtered: { readonly [K in keyof TFields]: SQL.Aliased }) => TTotals;
+  readonly totals?: TTotals;
 };
 
-/** Fields renamed by `named`, as the CTE, the page and the totals select them. */
+/** A total as a window over every filtered row, so each row of the page carries it. */
+function windowTotal(total: Total): SQL<number> {
+  if ("count" in total) {
+    return sql<number>`COUNT(*) FILTER (WHERE ${total.count}) OVER ()`.mapWith(Number);
+  }
+  const filter = total.where ? sql` FILTER (WHERE ${total.where})` : sql``;
+  return sql<number>`COALESCE(SUM(${total.sum})${filter} OVER (), 0)`.mapWith(Number);
+}
+
+/** Fields renamed by `named`, as a CTE selects them. */
 type NamedFields = Readonly<Record<string, SQL.Aliased>>;
 
 /** A subquery's aliased field, which renders as a reference to its alias. */
 const isSubqueryField = (field: SQL.Aliased) =>
   "isSelectionField" in field && field.isSelectionField === true;
 
-/** Names a field, so the filtered rows can be read back by name. */
+/** Names a field, so rows read through a CTE decode by name. */
 function named(field: SortColumn, name: string): SQL.Aliased {
   if (is(field, SQL.Aliased)) {
     if (field.fieldAlias === name) return field;
@@ -266,28 +278,30 @@ function named(field: SortColumn, name: string): SQL.Aliased {
   return sql`${field}`.mapWith(field).as(name);
 }
 
-/** Reads a named field of a CTE or subquery, which keeps the field's decoder. */
+/** Reads a named field of a CTE, which keeps the field's decoder. */
 function fieldOf(source: NamedFields, name: string): SQL.Aliased {
   const field = source[name];
   if (!field) throw new Error(`${name} is not a named field`);
   return field;
 }
 
-const fieldsOf = (source: NamedFields, names: readonly string[], prefix = ""): NamedFields =>
-  Object.fromEntries(names.map((name) => [`${prefix}${name}`, fieldOf(source, name)]));
+const fieldsOf = (source: NamedFields, names: readonly string[]): NamedFields =>
+  Object.fromEntries(names.map((name) => [name, fieldOf(source, name)]));
 
 const valuesOf = <T>(row: Readonly<Record<string, T>>, names: readonly string[], prefix = "") =>
   Object.fromEntries(names.map((name) => [name, row[`${prefix}${name}`]]));
 
-/** Names the outer select gives the page and totals columns, which it reads unqualified. */
-const RESERVED_NAME = /^(?:sort_\d+|on_page|onPage|total_)/u;
+/** Names the kernel gives the totals, sort keys and page marker it adds to a list's own fields. */
+const RESERVED_NAME = /^(?:sort_\d+|total_|on_page$)/u;
 
 /**
- * Cuts one page of `rows` in `orderBy` order, and counts the whole filtered set
- * beside it, so a page past the end still reports `totalCount` and `totals`.
- * One statement reads both: the filtered rows are a CTE, its aggregate is one
- * row, and the page is left-joined to it, so the page and its totals share a
- * snapshot. `orderBy` must end in a key that is unique within `rows`. A list
+ * Cuts one page of `rows` in `orderBy` order, with `totalCount` and `totals`
+ * over the whole filtered set. One statement reads the page with each total as
+ * a window over the filtered rows, so the page and its totals share a snapshot.
+ * A page with no rows reads nothing more at offset 0, where the filtered set is
+ * empty. Past the end, one more statement reads the totals, and only when rows
+ * have arrived up to the offset does one statement read the totals and the page
+ * together. `orderBy` must end in a key that is unique within `rows`. A list
  * the user sorts goes through `paginate`.
  */
 export async function paginateBy<
@@ -301,62 +315,128 @@ export async function paginateBy<
     readonly orderBy: readonly (readonly [SortColumn, Direction])[];
   },
 ): Promise<PageOf<TRows, TTotals>> {
-  const fields = Object.entries(source.select);
-  const keys = fields.map(([key]) => key);
+  const keys = Object.keys(source.select);
   const reserved = keys.find((key) => RESERVED_NAME.test(key));
   if (reserved) throw new Error(`paginateBy reserves the field name ${reserved}`);
-  const sorts = source.orderBy.map(([by, direction], index) => ({
-    name: `sort_${index}`,
-    by,
-    direction,
-  }));
-  const selection: NamedFields = Object.fromEntries([
-    ...fields.map(([key, field]) => [key, named(field, key)]),
-    ...sorts.map(({ name, by }) => [name, named(by, name)]),
-  ]);
-  // Every field keeps its key and decoder, so these rows decode as `select` does.
-  const filtered = scope.tx
-    .$with("filtered", selection)
-    .as(source.rows(selection as TFields).getSQL());
-  const aggregates = {
-    totalCount: count(),
-    ...source.totals?.(fieldsOf(filtered, keys) as { readonly [K in keyof TFields]: SQL.Aliased }),
-  };
-  const totalKeys = Object.keys(aggregates);
-  const totalsSelection: NamedFields = Object.fromEntries(
-    Object.entries(aggregates).map(([key, value]) => [key, named(value, `total_${key}`)]),
-  );
-  const totals = scope.tx
-    .$with("filtered_totals")
-    .as(scope.tx.select(totalsSelection).from(filtered));
-  const ordered = (from: NamedFields) =>
-    sorts.map(({ name, direction }) => (direction === "asc" ? asc : desc)(fieldOf(from, name)));
-  const pageSelection = {
-    ...fieldsOf(filtered, [...keys, ...sorts.map(({ name }) => name)]),
-    ...Object.fromEntries([["onPage", sql<boolean>`true`.as("on_page")]]),
-  };
-  const page = scope.tx
-    .select(pageSelection)
-    .from(filtered)
-    .orderBy(...ordered(filtered))
+  const totals = [
+    ["totalCount", sql<number>`COUNT(*) OVER ()`.mapWith(Number)] as const,
+    ...Object.entries(source.totals ?? {}).map(
+      ([key, total]) => [key, windowTotal(total)] as const,
+    ),
+  ];
+  const totalKeys = totals.map(([key]) => key);
+  const totalFields = Object.fromEntries(totals.map(([key, total]) => [`total_${key}`, total]));
+  const orderBy = source.orderBy.map(([by, direction]) => (direction === "asc" ? asc : desc)(by));
+  const fields = { ...source.select, ...totalFields } satisfies Fields;
+  const rows = source.rows(fields as TFields);
+  // Postgres computes windows before DISTINCT, so a distinct source is paged as a CTE of its rows.
+  if (rows["config"].distinct) return paginateDistinct(scope, window, source);
+  const cut = (limit: number, offset: number) =>
+    source
+      .rows(fields as TFields)
+      .orderBy(...orderBy)
+      .limit(limit)
+      .offset(offset);
+  const page = await rows
+    .orderBy(...orderBy)
     .limit(window.limit)
-    .offset(window.offset)
-    .as("page");
-  const rows = await scope.tx
-    .with(filtered, totals)
-    .select({ ...fieldsOf(page, [...keys, "onPage"]), ...fieldsOf(totals, totalKeys, "total_") })
-    .from(totals)
-    .leftJoin(page, sql`true`)
-    .orderBy(...ordered(page));
-  const [first] = rows;
-  if (!first) throw new Error("An aggregate without GROUP BY returned no row");
-  // The rows decode through each field's own decoder, so they have the shape `rows` declares.
-  const result: Page<unknown> = {
-    items: rows.filter((row) => row["onPage"]).map((row) => valuesOf(row, keys)),
-    totalCount: Number(first["total_totalCount"]),
-    ...valuesOf(first, totalKeys, "total_"),
-  };
-  return result as PageOf<TRows, TTotals>;
+    .offset(window.offset);
+  const [first] = page;
+  if (first) return pageOf(page, first);
+  if (window.offset === 0) return pageOf([], {});
+  // Past the end, one statement reads the totals. When its count stops short of the offset,
+  // its snapshot has no rows there either, so the empty page and those totals agree.
+  const [head] = await cut(1, 0);
+  if (!head) return pageOf([], {});
+  if (Number(head["total_totalCount"]) <= window.offset) return pageOf([], head);
+  // Rows arrived, so one statement reads the totals and the page from one snapshot.
+  const sorts = source.orderBy.map(([by], index) => [`sort_${index}`, by] as const);
+  const pageSelection: NamedFields = Object.fromEntries([
+    ...Object.entries(source.select).map(([key, field]) => [key, named(field, key)]),
+    ...sorts.map(([name, by]) => [name, named(by, name)]),
+    ["on_page", sql<boolean>`true`.as("on_page")],
+  ]);
+  const totalsSelection: NamedFields = Object.fromEntries(
+    Object.entries(totalFields).map(([key, total]) => [key, total.as(key)]),
+  );
+  const pageRows = scope.tx.$with("page_rows", pageSelection).as(
+    source
+      .rows(pageSelection as TFields)
+      .orderBy(...orderBy)
+      .limit(window.limit)
+      .offset(window.offset)
+      .getSQL(),
+  );
+  const pageTotals = scope.tx.$with("page_totals", totalsSelection).as(
+    source
+      .rows(totalsSelection as TFields)
+      .limit(1)
+      .getSQL(),
+  );
+  const together = await scope.tx
+    .with(pageRows, pageTotals)
+    .select({
+      ...fieldsOf(pageRows, [...keys, "on_page"]),
+      ...fieldsOf(pageTotals, Object.keys(totalsSelection)),
+    })
+    .from(pageTotals)
+    .leftJoin(pageRows, sql`true`)
+    .orderBy(
+      ...source.orderBy.map(([, direction], index) =>
+        (direction === "asc" ? asc : desc)(fieldOf(pageRows, `sort_${index}`)),
+      ),
+    );
+  const [latest] = together;
+  if (!latest) return pageOf([], {});
+  return pageOf(
+    together.filter((row) => row["on_page"]),
+    latest,
+  );
+
+  function pageOf<T>(
+    items: readonly Readonly<Record<string, T>>[],
+    totalsRow: Readonly<Record<string, T>>,
+  ) {
+    const result: Page<unknown> = {
+      items: items.map((row) => valuesOf(row, keys)),
+      totalCount: Number(totalsRow["total_totalCount"] ?? 0),
+      ...Object.fromEntries(totalKeys.map((key) => [key, Number(totalsRow[`total_${key}`] ?? 0)])),
+    };
+    return result as PageOf<TRows, TTotals>;
+  }
+}
+
+/**
+ * Pages a DISTINCT source through a CTE of its distinct rows, so the window
+ * totals count rows after DISTINCT removes duplicates. A total other than the
+ * count would read the source's own columns, which the CTE no longer exposes.
+ */
+function paginateDistinct<TFields extends Fields, TRows extends PgSelect, TTotals extends Totals>(
+  scope: { readonly tx: ReadTx },
+  window: { readonly limit: number; readonly offset: number },
+  source: PageSource<TFields, TRows, TTotals> & {
+    readonly orderBy: readonly (readonly [SortColumn, Direction])[];
+  },
+): Promise<PageOf<TRows, TTotals>> {
+  if (Object.keys(source.totals ?? {}).length > 0) {
+    throw new Error("paginateBy counts a DISTINCT source but cannot total its columns");
+  }
+  const keys = Object.keys(source.select);
+  const selection: NamedFields = Object.fromEntries([
+    ...Object.entries(source.select).map(([key, field]) => [key, named(field, key)]),
+    ...source.orderBy.map(([by], index) => [`sort_${index}`, named(by, `sort_${index}`)]),
+  ]);
+  const distinctRows = scope.tx
+    .$with("distinct_rows", selection)
+    .as(source.rows(selection as TFields).getSQL());
+  const page: Promise<Page<unknown>> = paginateBy(scope, window, {
+    select: fieldsOf(distinctRows, keys),
+    rows: (fields) => scope.tx.with(distinctRows).select(fields).from(distinctRows).$dynamic(),
+    orderBy: source.orderBy.map(
+      ([, direction], index) => [fieldOf(distinctRows, `sort_${index}`), direction] as const,
+    ),
+  });
+  return page as Promise<PageOf<TRows, TTotals>>;
 }
 
 /**

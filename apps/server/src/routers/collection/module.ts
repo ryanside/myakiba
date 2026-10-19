@@ -108,15 +108,12 @@ export const Collection = {
           createdAt: collection.createdAt,
         },
         tiebreak: [collection.createdAt, collection.id],
-        totals: (filtered) => ({
-          totalValue: sql<number>`COALESCE(SUM(${filtered.price}), 0)`
-            .mapWith(Number)
-            .as("totalValue"),
-          totalItemsThisMonth:
-            sql<number>`COUNT(*) FILTER (WHERE ${filtered.collectionDate} >= date_trunc('month', CURRENT_DATE)::date)`
-              .mapWith(Number)
-              .as("totalItemsThisMonth"),
-        }),
+        totals: {
+          totalValue: { sum: collection.price },
+          totalItemsThisMonth: {
+            count: sql`${collection.collectionDate} >= date_trunc('month', CURRENT_DATE)::date`,
+          },
+        },
       });
 
       const result = {

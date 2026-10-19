@@ -159,19 +159,11 @@ export const Orders = {
           createdAt: order.createdAt,
         },
         tiebreak: [order.createdAt, order.id],
-        totals: (filtered) => ({
-          totalSpent:
-            sql<number>`COALESCE(SUM(${filtered.total}) FILTER (WHERE ${filtered.status} != 'Ordered'), 0)`
-              .mapWith(Number)
-              .as("totalSpent"),
-          activeOrders: sql<number>`COUNT(*) FILTER (WHERE ${filtered.status} != 'Owned')`
-            .mapWith(Number)
-            .as("activeOrders"),
-          unpaidCosts:
-            sql<number>`COALESCE(SUM(${filtered.total}) FILTER (WHERE ${filtered.status} = 'Ordered'), 0)`
-              .mapWith(Number)
-              .as("unpaidCosts"),
-        }),
+        totals: {
+          totalSpent: { sum: orderTotal, where: ne(order.status, "Ordered") },
+          activeOrders: { count: ne(order.status, "Owned") },
+          unpaidCosts: { sum: orderTotal, where: eq(order.status, "Ordered") },
+        },
       });
 
       const orders = {
