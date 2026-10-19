@@ -160,6 +160,32 @@
       "fixed": [
         "position order saves > a save that fails while another save is pending does not hide the order that saved"
       ]
+    },
+    {
+      "fix": "374c7408",
+      "bug": "a failed write in an order form became an unhandled rejection because the form did not await its submit",
+      "test": "apps/web/src/components/orders/order-submit.test.tsx",
+      "fixed": [
+        "edit-order sheet submit > stays open with the selection kept and no unhandled rejection after the write fails",
+        "merge dialog submit > stays open with the selection kept and no unhandled rejection after the write fails",
+        "move to an existing order submit > stays open with the selection kept and no unhandled rejection after the write fails",
+        "move to a new order submit > stays open with the selection kept and no unhandled rejection after the write fails"
+      ]
+    },
+    {
+      "fix": "488ec693",
+      "bug": "merge, split, move and bulk item delete on an unfiltered orders list returned before the write finished, and resolved even when it failed",
+      "test": "apps/web/src/hooks/use-orders.test.tsx",
+      "fixed": [
+        "an order action's promise settles after the server write (unfiltered list) > handleMerge: the caller's await waits for the write",
+        "an order action's promise settles after the server write (unfiltered list) > handleMerge: a rejected write rejects the caller's await",
+        "an order action's promise settles after the server write (unfiltered list) > handleSplit: the caller's await waits for the write",
+        "an order action's promise settles after the server write (unfiltered list) > handleSplit: a rejected write rejects the caller's await",
+        "an order action's promise settles after the server write (unfiltered list) > handleDeleteItems: the caller's await waits for the write",
+        "an order action's promise settles after the server write (unfiltered list) > handleDeleteItems: a rejected write rejects the caller's await",
+        "an order action's promise settles after the server write (unfiltered list) > handleMoveItem: the caller's await waits for the write",
+        "an order action's promise settles after the server write (unfiltered list) > handleMoveItem: a rejected write rejects the caller's await"
+      ]
     }
   ],
   "lint": [
