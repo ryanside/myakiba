@@ -10,6 +10,8 @@ jobs:
   validate:
     name: Validate
     runs-on: ubuntu-latest
+    outputs:
+      required_client_vars: ${{ steps.deploy-config.outputs.required_client_vars }}
     services:
       postgres:
         image: postgres:18.6
@@ -37,6 +39,15 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
+      - name: Test the replay classification
+        run: bash scripts/replay-ci.sh --self-test
+
+      - name: Check deploy config
+        id: deploy-config
+        run: |
+          bun scripts/check-deploy-config.ts
+          echo "required_client_vars=$(bun scripts/check-deploy-config.ts --required-client-vars | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
 
       - name: Audit dependencies
         run: bun run audit
@@ -70,14 +81,17 @@ jobs:
             dockerfile: apps/server/Dockerfile
             build_args: |
               SOURCE_COMMIT=${{ github.sha }}
-              VITE_SERVER_URL=http://localhost:3000
-              VITE_TURNSTILE_SITE_KEY=ci-public-placeholder
+              VITE_SERVER_URL=http://vite-server-url.image-smoke.invalid
+              VITE_TURNSTILE_SITE_KEY=vite-turnstile-site-key-image-smoke
+            smoke: db-push=myakiba-db-push:ci server=myakiba-server:ci
           - image: worker
             dockerfile: apps/worker/Dockerfile
             build_args: ""
+            smoke: ""
           - image: db-push
             dockerfile: packages/db/Dockerfile
             build_args: ""
+            smoke: ""
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
@@ -93,6 +107,27 @@ jobs:
           platforms: linux/amd64
           push: false
           pull: true
+          load: ${{ matrix.smoke != '' }}
+          tags: myakiba-${{ matrix.image }}:ci
           build-args: ${{ matrix.build_args }}
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+      - name: Build db-push image for the server smoke
+        if: matrix.image == 'server'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: packages/db/Dockerfile
+          platforms: linux/amd64
+          push: false
+          pull: true
+          load: true
+          tags: myakiba-db-push:ci
+          cache-from: type=gha,scope=db-push
+
+      - name: Smoke-test images
+        if: matrix.smoke != ''
+        env:
+          SMOKE_REQUIRED_CLIENT_VARS: ${{ needs.validate.outputs.required_client_vars }}
+        run: bash scripts/image-smoke.sh ${{ matrix.smoke }}

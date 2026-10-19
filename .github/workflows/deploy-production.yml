@@ -30,6 +30,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Check deploy config
+        run: bun scripts/check-deploy-config.ts
+
       - name: Audit dependencies
         run: bun run audit
 
