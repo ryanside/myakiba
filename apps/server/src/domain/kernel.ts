@@ -1,8 +1,8 @@
 import { status } from "elysia";
 import type { ElysiaCustomStatusResponse } from "elysia";
 import type { RequestLogger } from "evlog";
-import { asc, count, desc, sql } from "drizzle-orm";
-import type { AnyColumn, SQL } from "drizzle-orm";
+import { SQL, asc, count, desc, is, sql } from "drizzle-orm";
+import type { AnyColumn } from "drizzle-orm";
 import type { AnyPgColumn, PgSelect } from "drizzle-orm/pg-core";
 import { db } from "@myakiba/db/client";
 import type { ReadTx, Tx } from "@myakiba/db/tx";
@@ -228,7 +228,11 @@ export async function serve<I, T, F extends Failure, M extends string>(
   }
 }
 
-type SortColumn = AnyColumn | SQL;
+type SortColumn = AnyColumn | SQL | SQL.Aliased;
+type Direction = "asc" | "desc";
+
+/** A flat selection, as a list query passes to `scope.tx.select(...)`. */
+type Fields = Readonly<Record<string, SortColumn>>;
 
 /** Aggregates over the whole filtered set, such as a sum the list shows above its pages. */
 type Totals = Readonly<Record<string, SQL.Aliased>>;
@@ -237,37 +241,122 @@ type PageOf<TRows extends PgSelect, TTotals extends Totals> = Page<Awaited<TRows
   readonly [K in keyof TTotals]: TTotals[K]["_"]["type"];
 };
 
-type PageSource<TRows extends PgSelect, TTotals extends Totals> = {
-  readonly rows: TRows;
-  /** Reads `filtered`, the rows before the page is cut. A field it reads needs a unique name. */
-  readonly totals?: (filtered: ReturnType<TRows["as"]>) => TTotals;
+type PageSource<TFields extends Fields, TRows extends PgSelect, TTotals extends Totals> = {
+  readonly select: TFields;
+  /** Builds the filtered rows from `select`, such as `(fields) => scope.tx.select(fields).from(...)`. */
+  readonly rows: (fields: TFields) => TRows;
+  /** Reads `filtered`, the rows before the page is cut, by their `select` keys. */
+  readonly totals?: (filtered: { readonly [K in keyof TFields]: SQL.Aliased }) => TTotals;
 };
+
+/** Fields renamed by `named`, as the CTE, the page and the totals select them. */
+type NamedFields = Readonly<Record<string, SQL.Aliased>>;
+
+/** A subquery's aliased field, which renders as a reference to its alias. */
+const isSubqueryField = (field: SQL.Aliased) =>
+  "isSelectionField" in field && field.isSelectionField === true;
+
+/** Names a field, so the filtered rows can be read back by name. */
+function named(field: SortColumn, name: string): SQL.Aliased {
+  if (is(field, SQL.Aliased)) {
+    if (field.fieldAlias === name) return field;
+    return isSubqueryField(field) ? sql`${field}`.as(name) : field.sql.as(name);
+  }
+  if (is(field, SQL)) return field.as(name);
+  return sql`${field}`.mapWith(field).as(name);
+}
+
+/** Reads a named field of a CTE or subquery, which keeps the field's decoder. */
+function fieldOf(source: NamedFields, name: string): SQL.Aliased {
+  const field = source[name];
+  if (!field) throw new Error(`${name} is not a named field`);
+  return field;
+}
+
+const fieldsOf = (source: NamedFields, names: readonly string[], prefix = ""): NamedFields =>
+  Object.fromEntries(names.map((name) => [`${prefix}${name}`, fieldOf(source, name)]));
+
+const valuesOf = <T>(row: Readonly<Record<string, T>>, names: readonly string[], prefix = "") =>
+  Object.fromEntries(names.map((name) => [name, row[`${prefix}${name}`]]));
+
+/** Names the outer select gives the page and totals columns, which it reads unqualified. */
+const RESERVED_NAME = /^(?:sort_\d+|on_page|onPage|total_)/u;
 
 /**
  * Cuts one page of `rows` in `orderBy` order, and counts the whole filtered set
  * beside it, so a page past the end still reports `totalCount` and `totals`.
- * `orderBy` must end in a key that is unique within `rows`. A list the user
- * sorts goes through `paginate`.
+ * One statement reads both: the filtered rows are a CTE, its aggregate is one
+ * row, and the page is left-joined to it, so the page and its totals share a
+ * snapshot. `orderBy` must end in a key that is unique within `rows`. A list
+ * the user sorts goes through `paginate`.
  */
 export async function paginateBy<
+  TFields extends Fields,
   TRows extends PgSelect,
   TTotals extends Totals = Record<never, never>,
 >(
   scope: { readonly tx: ReadTx },
   window: { readonly limit: number; readonly offset: number },
-  source: PageSource<TRows, TTotals> & { readonly orderBy: readonly SQL[] },
+  source: PageSource<TFields, TRows, TTotals> & {
+    readonly orderBy: readonly (readonly [SortColumn, Direction])[];
+  },
 ): Promise<PageOf<TRows, TTotals>> {
-  // `orderBy` and `limit` mutate the builder, so the filtered set's SQL is taken first.
-  const filtered = source.rows.as("filtered") as ReturnType<TRows["as"]>;
-  const [items, [counted]] = await Promise.all([
-    source.rows
-      .orderBy(...source.orderBy)
-      .limit(window.limit)
-      .offset(window.offset),
-    scope.tx.select({ totalCount: count(), ...source.totals?.(filtered) }).from(filtered),
+  const fields = Object.entries(source.select);
+  const keys = fields.map(([key]) => key);
+  const reserved = keys.find((key) => RESERVED_NAME.test(key));
+  if (reserved) throw new Error(`paginateBy reserves the field name ${reserved}`);
+  const sorts = source.orderBy.map(([by, direction], index) => ({
+    name: `sort_${index}`,
+    by,
+    direction,
+  }));
+  const selection: NamedFields = Object.fromEntries([
+    ...fields.map(([key, field]) => [key, named(field, key)]),
+    ...sorts.map(({ name, by }) => [name, named(by, name)]),
   ]);
-  if (!counted) throw new Error("An aggregate without GROUP BY returned no row");
-  return { items, ...counted } as PageOf<TRows, TTotals>;
+  // Every field keeps its key and decoder, so these rows decode as `select` does.
+  const filtered = scope.tx
+    .$with("filtered", selection)
+    .as(source.rows(selection as TFields).getSQL());
+  const aggregates = {
+    totalCount: count(),
+    ...source.totals?.(fieldsOf(filtered, keys) as { readonly [K in keyof TFields]: SQL.Aliased }),
+  };
+  const totalKeys = Object.keys(aggregates);
+  const totalsSelection: NamedFields = Object.fromEntries(
+    Object.entries(aggregates).map(([key, value]) => [key, named(value, `total_${key}`)]),
+  );
+  const totals = scope.tx
+    .$with("filtered_totals")
+    .as(scope.tx.select(totalsSelection).from(filtered));
+  const ordered = (from: NamedFields) =>
+    sorts.map(({ name, direction }) => (direction === "asc" ? asc : desc)(fieldOf(from, name)));
+  const pageSelection = {
+    ...fieldsOf(filtered, [...keys, ...sorts.map(({ name }) => name)]),
+    ...Object.fromEntries([["onPage", sql<boolean>`true`.as("on_page")]]),
+  };
+  const page = scope.tx
+    .select(pageSelection)
+    .from(filtered)
+    .orderBy(...ordered(filtered))
+    .limit(window.limit)
+    .offset(window.offset)
+    .as("page");
+  const rows = await scope.tx
+    .with(filtered, totals)
+    .select({ ...fieldsOf(page, [...keys, "onPage"]), ...fieldsOf(totals, totalKeys, "total_") })
+    .from(totals)
+    .leftJoin(page, sql`true`)
+    .orderBy(...ordered(page));
+  const [first] = rows;
+  if (!first) throw new Error("An aggregate without GROUP BY returned no row");
+  // The rows decode through each field's own decoder, so they have the shape `rows` declares.
+  const result: Page<unknown> = {
+    items: rows.filter((row) => row["onPage"]).map((row) => valuesOf(row, keys)),
+    totalCount: Number(first["total_totalCount"]),
+    ...valuesOf(first, totalKeys, "total_"),
+  };
+  return result as PageOf<TRows, TTotals>;
 }
 
 /**
@@ -277,22 +366,23 @@ export async function paginateBy<
  */
 export function paginate<
   TSort extends string,
+  TFields extends Fields,
   TRows extends PgSelect,
   TTotals extends Totals = Record<never, never>,
 >(
   scope: { readonly tx: ReadTx },
   request: PageRequest<TSort>,
-  source: PageSource<TRows, TTotals> & {
+  source: PageSource<TFields, TRows, TTotals> & {
     readonly sortBy: { readonly [K in TSort]: SortColumn };
     readonly tiebreak: readonly [...SortColumn[], AnyPgColumn<{ isPrimaryKey: true }>];
   },
 ): Promise<PageOf<TRows, TTotals>> {
-  const direction = request.order === "asc" ? asc : desc;
   const sort = source.sortBy[request.sort];
   const columns = [sort, ...source.tiebreak.filter((column) => column !== sort)];
   return paginateBy(scope, request, {
+    select: source.select,
     rows: source.rows,
-    orderBy: columns.map((column) => direction(column)),
+    orderBy: columns.map((column) => [column, request.order] as const),
     totals: source.totals,
   });
 }

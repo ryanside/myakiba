@@ -79,62 +79,65 @@ export const Orders = {
   list: query(
     { action: "orders.list", failure: "Failed to get orders" },
     async (scope, input: OrdersQuery) => {
-      const rows = scope.tx
-        .select({
-          orderId: order.id,
-          title: order.title,
-          shop: order.shop,
-          releaseDate: order.releaseDate,
-          shippingMethod: order.shippingMethod,
-          orderDate: order.orderDate,
-          paymentDate: order.paymentDate,
-          shippingDate: order.shippingDate,
-          collectionDate: order.collectionDate,
-          status: order.status,
-          total: orderTotal.as("total"),
-          shippingFee: order.shippingFee,
-          taxes: order.taxes,
-          duties: order.duties,
-          tariffs: order.tariffs,
-          miscFees: order.miscFees,
-          notes: order.notes,
-          itemCount,
-          images: orderPreviewImagesSql,
-          createdAt: order.createdAt,
-          updatedAt: order.updatedAt,
-        })
-        .from(order)
-        .leftJoin(collection, eq(order.id, collection.orderId))
-        .where(listFilters(scope.viewer.userId, input))
-        .groupBy(
-          order.id,
-          order.title,
-          order.shop,
-          order.releaseDate,
-          order.shippingMethod,
-          order.orderDate,
-          order.paymentDate,
-          order.shippingDate,
-          order.collectionDate,
-          order.status,
-          order.shippingFee,
-          order.taxes,
-          order.duties,
-          order.tariffs,
-          order.miscFees,
-          order.notes,
-          order.createdAt,
-          order.updatedAt,
-        )
-        .having(
-          and(
-            input.totalMin === undefined ? undefined : sql`${orderTotal} >= ${input.totalMin}`,
-            input.totalMax === undefined ? undefined : sql`${orderTotal} <= ${input.totalMax}`,
-          ),
-        )
-        .$dynamic();
+      const select = {
+        orderId: order.id,
+        title: order.title,
+        shop: order.shop,
+        releaseDate: order.releaseDate,
+        shippingMethod: order.shippingMethod,
+        orderDate: order.orderDate,
+        paymentDate: order.paymentDate,
+        shippingDate: order.shippingDate,
+        collectionDate: order.collectionDate,
+        status: order.status,
+        total: orderTotal,
+        shippingFee: order.shippingFee,
+        taxes: order.taxes,
+        duties: order.duties,
+        tariffs: order.tariffs,
+        miscFees: order.miscFees,
+        notes: order.notes,
+        itemCount,
+        images: orderPreviewImagesSql,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+      };
+      const rows = (fields: typeof select) =>
+        scope.tx
+          .select(fields)
+          .from(order)
+          .leftJoin(collection, eq(order.id, collection.orderId))
+          .where(listFilters(scope.viewer.userId, input))
+          .groupBy(
+            order.id,
+            order.title,
+            order.shop,
+            order.releaseDate,
+            order.shippingMethod,
+            order.orderDate,
+            order.paymentDate,
+            order.shippingDate,
+            order.collectionDate,
+            order.status,
+            order.shippingFee,
+            order.taxes,
+            order.duties,
+            order.tariffs,
+            order.miscFees,
+            order.notes,
+            order.createdAt,
+            order.updatedAt,
+          )
+          .having(
+            and(
+              input.totalMin === undefined ? undefined : sql`${orderTotal} >= ${input.totalMin}`,
+              input.totalMax === undefined ? undefined : sql`${orderTotal} <= ${input.totalMax}`,
+            ),
+          )
+          .$dynamic();
 
       const page = await paginate(scope, input, {
+        select,
         rows,
         sortBy: {
           title: order.title,
@@ -233,44 +236,47 @@ export const Orders = {
     { action: "orders.items", failure: "Failed to get order items" },
     async (scope, input: OrderItemsQuery & { readonly orderId: string }) => {
       scope.log.set({ order: { id: input.orderId } });
-      const rows = scope.tx
-        .select({
-          id: collection.id,
-          orderId: collection.orderId,
-          itemId: item.id,
-          itemExternalId: item.externalId,
-          releaseId: collection.releaseId,
-          status: collection.status,
-          itemTitle: item.title,
-          itemImage: item.image,
-          itemCategory: item.category,
-          price: collection.price,
-          count: collection.count,
-          shop: collection.shop,
-          score: sql<string>`${collection.score}::text`,
-          orderDate: collection.orderDate,
-          paymentDate: collection.paymentDate,
-          shippingDate: collection.shippingDate,
-          collectionDate: collection.collectionDate,
-          shippingMethod: collection.shippingMethod,
-          releaseDate: item_release.date,
-          releaseType: item_release.type,
-          releasePrice: item_release.price,
-          releaseCurrency: item_release.priceCurrency,
-          releaseBarcode: item_release.barcode,
-          condition: collection.condition,
-          tags: collection.tags,
-          notes: collection.notes,
-        })
-        .from(collection)
-        .innerJoin(item, eq(collection.itemId, item.id))
-        .leftJoin(item_release, eq(collection.releaseId, item_release.id))
-        .where(
-          and(eq(collection.userId, scope.viewer.userId), eq(collection.orderId, input.orderId)),
-        )
-        .$dynamic();
+      const select = {
+        id: collection.id,
+        orderId: collection.orderId,
+        itemId: item.id,
+        itemExternalId: item.externalId,
+        releaseId: collection.releaseId,
+        status: collection.status,
+        itemTitle: item.title,
+        itemImage: item.image,
+        itemCategory: item.category,
+        price: collection.price,
+        count: collection.count,
+        shop: collection.shop,
+        score: sql<string>`${collection.score}::text`,
+        orderDate: collection.orderDate,
+        paymentDate: collection.paymentDate,
+        shippingDate: collection.shippingDate,
+        collectionDate: collection.collectionDate,
+        shippingMethod: collection.shippingMethod,
+        releaseDate: item_release.date,
+        releaseType: item_release.type,
+        releasePrice: item_release.price,
+        releaseCurrency: item_release.priceCurrency,
+        releaseBarcode: item_release.barcode,
+        condition: collection.condition,
+        tags: collection.tags,
+        notes: collection.notes,
+      };
+      const rows = (fields: typeof select) =>
+        scope.tx
+          .select(fields)
+          .from(collection)
+          .innerJoin(item, eq(collection.itemId, item.id))
+          .leftJoin(item_release, eq(collection.releaseId, item_release.id))
+          .where(
+            and(eq(collection.userId, scope.viewer.userId), eq(collection.orderId, input.orderId)),
+          )
+          .$dynamic();
 
       const items = await paginate(scope, input, {
+        select,
         rows,
         sortBy: {
           title: item.title,

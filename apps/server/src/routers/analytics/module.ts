@@ -498,8 +498,17 @@ async function getSectionItems(
     { tx },
     { limit, offset },
     {
-      rows: tx.select().from(matchedItems).$dynamic(),
-      orderBy: [asc(sql`LOWER(${matchedItems.title})`), asc(matchedItems.id)],
+      select: {
+        id: matchedItems.id,
+        externalId: matchedItems.externalId,
+        title: matchedItems.title,
+        image: matchedItems.image,
+      },
+      rows: (fields) => tx.select(fields).from(matchedItems).$dynamic(),
+      orderBy: [
+        [sql`LOWER(${matchedItems.title})`, "asc"],
+        [matchedItems.id, "asc"],
+      ],
     },
   );
 
@@ -550,8 +559,13 @@ async function getSectionRelationships(
         { tx },
         { limit, offset },
         {
-          rows: tx.select().from(summary).$dynamic(),
-          orderBy: [desc(summary.itemCount), asc(sql`LOWER(${summary.name})`), asc(summary.name)],
+          select: { id: summary.id, name: summary.name, itemCount: summary.itemCount },
+          rows: (fields) => tx.select(fields).from(summary).$dynamic(),
+          orderBy: [
+            [summary.itemCount, "desc"],
+            [sql`LOWER(${summary.name})`, "asc"],
+            [summary.name, "asc"],
+          ],
         },
       );
     }
@@ -572,8 +586,13 @@ async function getSectionRelationships(
         { tx },
         { limit, offset },
         {
-          rows: tx.select().from(summary).$dynamic(),
-          orderBy: [desc(summary.itemCount), asc(sql`LOWER(${summary.name})`), asc(summary.name)],
+          select: { id: summary.id, name: summary.name, itemCount: summary.itemCount },
+          rows: (fields) => tx.select(fields).from(summary).$dynamic(),
+          orderBy: [
+            [summary.itemCount, "desc"],
+            [sql`LOWER(${summary.name})`, "asc"],
+            [summary.name, "asc"],
+          ],
         },
       );
     }
@@ -595,12 +614,13 @@ async function getSectionRelationships(
       { tx },
       { limit, offset },
       {
-        rows: tx.select().from(summary).$dynamic(),
+        select: { id: summary.id, name: summary.name, itemCount: summary.itemCount },
+        rows: (fields) => tx.select(fields).from(summary).$dynamic(),
         orderBy: [
-          desc(summary.itemCount),
-          asc(sql`LOWER(${summary.name})`),
-          asc(summary.name),
-          asc(summary.id),
+          [summary.itemCount, "desc"],
+          [sql`LOWER(${summary.name})`, "asc"],
+          [summary.name, "asc"],
+          [summary.id, "asc"],
         ],
       },
     );

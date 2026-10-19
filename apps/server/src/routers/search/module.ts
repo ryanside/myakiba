@@ -185,30 +185,38 @@ export const Search = {
           WORD_SIMILARITY(${normalizedSearch}, ${item.title})
         )`
         : sql<number>`0`;
-      const rows = scope.tx
-        .select({
-          itemId: item.id,
-          externalId: sql<number>`${item.externalId}`.as("externalId"),
-          title: item.title,
-          image: item.image,
-          category: item.category,
-          releaseDate: latestRelease.date,
-          releasePrice: latestRelease.price,
-          releasePriceCurrency: latestRelease.priceCurrency,
-        })
-        .from(item)
-        .leftJoinLateral(latestRelease, sql`TRUE`)
-        .where(and(eq(item.source, "mfc"), isNotNull(item.externalId), searchFilter))
-        .$dynamic();
+      const select = {
+        itemId: item.id,
+        externalId: sql<number>`${item.externalId}`,
+        title: item.title,
+        image: item.image,
+        category: item.category,
+        releaseDate: latestRelease.date,
+        releasePrice: latestRelease.price,
+        releasePriceCurrency: latestRelease.priceCurrency,
+      };
+      const rows = (fields: typeof select) =>
+        scope.tx
+          .select(fields)
+          .from(item)
+          .leftJoinLateral(latestRelease, sql`TRUE`)
+          .where(and(eq(item.source, "mfc"), isNotNull(item.externalId), searchFilter))
+          .$dynamic();
       const page = await paginateBy(
         scope,
         { limit: input.pageSize, offset },
         {
+          select,
           rows,
           orderBy: [
-            ...(normalizedSearch ? [asc(relevance), desc(titleSimilarity)] : []),
-            desc(item.createdAt),
-            desc(item.id),
+            ...(normalizedSearch
+              ? ([
+                  [relevance, "asc"],
+                  [titleSimilarity, "desc"],
+                ] as const)
+              : []),
+            [item.createdAt, "desc"],
+            [item.id, "desc"],
           ],
         },
       );

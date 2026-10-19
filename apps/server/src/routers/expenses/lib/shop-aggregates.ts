@@ -90,25 +90,27 @@ async function getCollectionShopRows(
     { tx },
     { limit: filters.limit ?? 10, offset: filters.offset ?? 0 },
     {
-      rows: tx
-        .with(grouped, scopedShops)
-        .select({
-          shop: scopedShops.shop,
-          spend: scopedShops.spend,
-          itemCount: scopedShops.itemCount,
-          totalScopedSpend: scopedShops.totalScopedSpend,
-        })
-        .from(scopedShops)
-        .where(
-          filters.search
-            ? sql`COALESCE(NULLIF("scoped_shops"."shop", ''), 'Unassigned') ILIKE ${`%${filters.search}%`}`
-            : undefined,
-        )
-        .$dynamic(),
+      select: {
+        shop: scopedShops.shop,
+        spend: scopedShops.spend,
+        itemCount: scopedShops.itemCount,
+        totalScopedSpend: scopedShops.totalScopedSpend,
+      },
+      rows: (fields) =>
+        tx
+          .with(grouped, scopedShops)
+          .select(fields)
+          .from(scopedShops)
+          .where(
+            filters.search
+              ? sql`COALESCE(NULLIF("scoped_shops"."shop", ''), 'Unassigned') ILIKE ${`%${filters.search}%`}`
+              : undefined,
+          )
+          .$dynamic(),
       orderBy: [
-        desc(sql`CASE WHEN ${scopedShops.spend} > 0 THEN 1 ELSE 0 END`),
-        desc(scopedShops.spend),
-        asc(scopedShops.shop),
+        [sql`CASE WHEN ${scopedShops.spend} > 0 THEN 1 ELSE 0 END`, "desc"],
+        [scopedShops.spend, "desc"],
+        [scopedShops.shop, "asc"],
       ],
     },
   );
@@ -178,27 +180,29 @@ async function getOrdersShopRows(
     { tx },
     { limit: filters.limit ?? 10, offset: filters.offset ?? 0 },
     {
-      rows: tx
-        .with(orderItems, grouped, scopedShops)
-        .select({
-          shop: scopedShops.shop,
-          spend: scopedShops.spend,
-          orderCount: scopedShops.orderCount,
-          orderItemCount: scopedShops.orderItemCount,
-          fees: scopedShops.fees,
-          totalScopedSpend: scopedShops.totalScopedSpend,
-        })
-        .from(scopedShops)
-        .where(
-          filters.search
-            ? sql`COALESCE(NULLIF("scoped_shops"."shop", ''), 'Unassigned') ILIKE ${`%${filters.search}%`}`
-            : undefined,
-        )
-        .$dynamic(),
+      select: {
+        shop: scopedShops.shop,
+        spend: scopedShops.spend,
+        orderCount: scopedShops.orderCount,
+        orderItemCount: scopedShops.orderItemCount,
+        fees: scopedShops.fees,
+        totalScopedSpend: scopedShops.totalScopedSpend,
+      },
+      rows: (fields) =>
+        tx
+          .with(orderItems, grouped, scopedShops)
+          .select(fields)
+          .from(scopedShops)
+          .where(
+            filters.search
+              ? sql`COALESCE(NULLIF("scoped_shops"."shop", ''), 'Unassigned') ILIKE ${`%${filters.search}%`}`
+              : undefined,
+          )
+          .$dynamic(),
       orderBy: [
-        desc(sql`CASE WHEN ${scopedShops.spend} > 0 THEN 1 ELSE 0 END`),
-        desc(scopedShops.spend),
-        asc(scopedShops.shop),
+        [sql`CASE WHEN ${scopedShops.spend} > 0 THEN 1 ELSE 0 END`, "desc"],
+        [scopedShops.spend, "desc"],
+        [scopedShops.shop, "asc"],
       ],
     },
   );
@@ -258,25 +262,27 @@ async function getShippingShopRows(
     { tx },
     { limit: filters.limit ?? 10, offset: filters.offset ?? 0 },
     {
-      rows: tx
-        .with(grouped, scopedShops)
-        .select({
-          shop: scopedShops.shop,
-          spend: scopedShops.spend,
-          orderCount: scopedShops.orderCount,
-          totalScopedSpend: scopedShops.totalScopedSpend,
-        })
-        .from(scopedShops)
-        .where(
-          filters.search
-            ? sql`COALESCE(NULLIF("scoped_shops"."shop", ''), 'Unassigned') ILIKE ${`%${filters.search}%`}`
-            : undefined,
-        )
-        .$dynamic(),
+      select: {
+        shop: scopedShops.shop,
+        spend: scopedShops.spend,
+        orderCount: scopedShops.orderCount,
+        totalScopedSpend: scopedShops.totalScopedSpend,
+      },
+      rows: (fields) =>
+        tx
+          .with(grouped, scopedShops)
+          .select(fields)
+          .from(scopedShops)
+          .where(
+            filters.search
+              ? sql`COALESCE(NULLIF("scoped_shops"."shop", ''), 'Unassigned') ILIKE ${`%${filters.search}%`}`
+              : undefined,
+          )
+          .$dynamic(),
       orderBy: [
-        desc(sql`CASE WHEN ${scopedShops.spend} > 0 THEN 1 ELSE 0 END`),
-        desc(scopedShops.spend),
-        asc(scopedShops.shop),
+        [sql`CASE WHEN ${scopedShops.spend} > 0 THEN 1 ELSE 0 END`, "desc"],
+        [scopedShops.spend, "desc"],
+        [scopedShops.shop, "asc"],
       ],
     },
   );
