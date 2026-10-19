@@ -58,8 +58,10 @@ export function DataTablePagination({
 }): ReactNode {
   const totalPages = Math.ceil(totalCount / limit);
   const currentPage = Math.floor(offset / limit) + 1;
+  const lastPage = Math.max(totalPages, 1);
+  const isPastEnd = currentPage > lastPage;
 
-  if (totalPages <= 1) {
+  if (totalPages <= 1 && !isPastEnd) {
     return null;
   }
 
@@ -67,6 +69,10 @@ export function DataTablePagination({
     onOffsetChange((page - 1) * limit);
   };
 
+  const pageNumbers = getPageNumbers({
+    totalPages: lastPage,
+    currentPage: Math.min(currentPage, lastPage),
+  });
   const buttonClasses = "size-7 p-0 text-sm";
   const arrowButtonClasses = `${buttonClasses} rtl:transform rtl:rotate-180`;
 
@@ -79,7 +85,7 @@ export function DataTablePagination({
             size="icon-sm"
             variant="ghost"
             className={arrowButtonClasses}
-            onClick={() => goToPage(currentPage - 1)}
+            onClick={() => goToPage(Math.min(currentPage - 1, lastPage))}
             disabled={currentPage === 1}
           >
             <span className="sr-only">Go to previous page</span>
@@ -87,7 +93,7 @@ export function DataTablePagination({
           </Button>
         </PaginationItem>
 
-        {getPageNumbers({ totalPages, currentPage }).map((page) =>
+        {pageNumbers.map((page) =>
           page === "ellipsis-start" || page === "ellipsis-end" ? (
             <PaginationItem key={page}>
               <span

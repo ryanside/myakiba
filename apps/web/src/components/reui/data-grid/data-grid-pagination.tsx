@@ -54,6 +54,8 @@ function DataGridPagination(props: DataGridPaginationProps): React.JSX.Element {
   const from = pageIndex * pageSize + 1;
   const to = Math.min((pageIndex + 1) * pageSize, recordCount);
   const pageCount = table.getPageCount();
+  const lastPageIndex = Math.max(pageCount - 1, 0);
+  const isPastEnd = pageIndex > lastPageIndex;
 
   const pageInfo = mergedProps?.info
     ? mergedProps.info
@@ -65,8 +67,9 @@ function DataGridPagination(props: DataGridPaginationProps): React.JSX.Element {
 
   const paginationMoreLimit = mergedProps?.moreLimit || 5;
 
-  const currentGroupStart = Math.floor(pageIndex / paginationMoreLimit) * paginationMoreLimit;
-  const currentGroupEnd = Math.min(currentGroupStart + paginationMoreLimit, pageCount);
+  const currentGroupStart =
+    Math.floor(Math.min(pageIndex, lastPageIndex) / paginationMoreLimit) * paginationMoreLimit;
+  const currentGroupEnd = Math.min(currentGroupStart + paginationMoreLimit, lastPageIndex + 1);
 
   const renderPageButtons = () => {
     const buttons = [];
@@ -157,7 +160,7 @@ function DataGridPagination(props: DataGridPaginationProps): React.JSX.Element {
         <div className="text-muted-foreground text-sm order-2 text-nowrap sm:order-1">
           {paginationInfo}
         </div>
-        {pageCount > 1 && (
+        {(pageCount > 1 || isPastEnd) && (
           <div className="order-1 flex items-center space-x-1 sm:order-2">
             <Button
               size="icon-sm"
