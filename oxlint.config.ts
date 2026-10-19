@@ -183,5 +183,42 @@ export default defineConfig({
         ],
       },
     },
+    {
+      files: ["apps/server/src/routers/*/module.ts"],
+      rules: { "myakiba/no-window-total": "warn" },
+    },
+    {
+      files: ["apps/server/src/routers/orders/**"],
+      excludeFiles: ["**/*.test.ts"],
+      rules: {
+        "no-restricted-imports": [
+          "error",
+          {
+            paths: [
+              {
+                name: "@myakiba/db/client",
+                message:
+                  "Read and write through scope.tx in module.ts. The kernel opens the transaction.",
+              },
+              {
+                name: "@myakiba/utils/result",
+                importNames: ["tryCatch"],
+                message: "Return fail(category, message) from the operation. serve() answers it.",
+              },
+              {
+                name: "elysia",
+                importNames: ["status"],
+                message: "Return fail(category, message) from the operation. serve() answers it.",
+              },
+              {
+                name: "@/domain/kernel",
+                importNames: ["run"],
+                message: "Routes call serve(ctx, Orders.op, input). run() is for kernel tests.",
+              },
+            ],
+          },
+        ],
+      },
+    },
   ],
 });

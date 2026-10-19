@@ -1,8 +1,12 @@
 import { status } from "elysia";
 import type { ElysiaCustomStatusResponse } from "elysia";
 import type { RequestLogger } from "evlog";
+import { asc, desc } from "drizzle-orm";
+import type { AnyColumn, SQL } from "drizzle-orm";
+import type { AnyPgColumn, PgSelect } from "drizzle-orm/pg-core";
 import { db } from "@myakiba/db/client";
 import type { ReadTx, Tx } from "@myakiba/db/tx";
+import type { PageRequest } from "@myakiba/contracts/shared/pagination";
 import type { Viewer } from "./viewer";
 
 /**
@@ -162,4 +166,28 @@ export async function serve<I, T, F extends Failure, M extends string>(
     caller.log.set({ outcome: "error" });
     return status(500, op.failure);
   }
+}
+
+type SortColumn = AnyColumn | SQL;
+
+/**
+ * Orders `rows` by the requested sort, then by `tiebreak`, and cuts the page.
+ * `sortBy` names a column for every sort key the contract accepts, and the
+ * tiebreak ends in a primary key, so the order is total and pages never overlap.
+ */
+export function paginate<TSort extends string, TRows extends PgSelect>(
+  request: PageRequest<TSort>,
+  source: {
+    readonly rows: TRows;
+    readonly sortBy: { readonly [K in TSort]: SortColumn };
+    readonly tiebreak: readonly [...SortColumn[], AnyPgColumn<{ isPrimaryKey: true }>];
+  },
+): TRows {
+  const direction = request.order === "asc" ? asc : desc;
+  const sort = source.sortBy[request.sort];
+  const columns = [sort, ...source.tiebreak.filter((column) => column !== sort)];
+  return source.rows
+    .orderBy(...columns.map((column) => direction(column)))
+    .limit(request.limit)
+    .offset(request.offset);
 }

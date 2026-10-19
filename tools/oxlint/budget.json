@@ -13,6 +13,7 @@
     "packages/db/src/scripts/push-schema.ts": 2
   },
   "myakiba(no-iso-slice)": {},
+  "myakiba(no-window-total)": {},
   "myakiba(require-suppression-reason)": {
     "apps/server/src/routers/sync/index.ts": 1,
     "apps/web/src/lib/sync.ts": 1

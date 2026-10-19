@@ -1,11 +1,27 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import { SQL } from "bun";
 import { generateDrizzleJson, generateMigration } from "drizzle-kit/api";
 import { eq } from "drizzle-orm";
+import { Elysia } from "elysia";
+import { initLogger } from "evlog";
 import * as authSchema from "@myakiba/db/schema/auth";
 import * as figureSchema from "@myakiba/db/schema/figure";
 
 const { collection, item, order } = figureSchema;
+
+initLogger({ enabled: false });
+
+await mock.module("@myakiba/auth/server", () => ({
+  auth: {
+    handler: () => new Response(null, { status: 404 }),
+    api: {
+      getSession: async ({ headers }: { headers: Headers }) => {
+        const id = headers.get("x-test-user");
+        return id ? { user: { id }, session: { id: `session-${id}` } } : null;
+      },
+    },
+  },
+}));
 
 const serverUrl = process.env.TEST_DATABASE_URL;
 if (!serverUrl) {
@@ -23,7 +39,17 @@ const disarmTrigger =
   "CREATE OR REPLACE FUNCTION fail_when_armed() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN OLD; END $$";
 
 const { db } = await import("@myakiba/db/client");
-const { default: OrdersService } = await import("./service");
+const { default: ordersRouter } = await import("./index");
+const app = new Elysia({ prefix: "/api" }).use(ordersRouter);
+
+const removeItems = (collectionIds: string[]) =>
+  app.handle(
+    new Request("http://localhost/api/orders/items", {
+      method: "DELETE",
+      headers: { "x-test-user": userId, "content-type": "application/json" },
+      body: JSON.stringify({ collectionIds }),
+    }),
+  );
 
 beforeAll(async () => {
   await server.unsafe(`CREATE DATABASE ${databaseName}`);
@@ -73,8 +99,9 @@ const readCollection = (owner = userId) =>
 
 describe("removing items from an order", () => {
   test("owned items leave the order and unowned items are deleted", async () => {
-    await OrdersService.deleteOrderItems(userId, [ownedId, orderedId]);
+    const response = await removeItems([ownedId, orderedId]);
 
+    expect(response.status).toBe(200);
     expect(await readCollection()).toEqual([{ id: ownedId, orderId: null }]);
   });
 
@@ -84,10 +111,11 @@ describe("removing items from an order", () => {
        BEGIN RAISE EXCEPTION 'injected collection delete failure'; END $$`,
     );
 
-    await expect(
-      OrdersService.deleteOrderItems(userId, [ownedId, orderedId]),
-    ).rejects.toMatchObject({
-      cause: { message: "injected collection delete failure" },
+    const response = await removeItems([ownedId, orderedId]);
+
+    expect({ status: response.status, body: await response.text() }).toEqual({
+      status: 500,
+      body: "Failed to delete order items",
     });
 
     expect(await readCollection()).toEqual([
@@ -118,12 +146,7 @@ describe("removing items from an order", () => {
       },
     ]);
 
-    await OrdersService.deleteOrderItems(userId, [
-      ownedId,
-      orderedId,
-      "other-owned",
-      "other-ordered",
-    ]);
+    await removeItems([ownedId, orderedId, "other-owned", "other-ordered"]);
 
     expect(await readCollection("user-2")).toEqual([
       { id: "other-ordered", orderId: "order-2" },

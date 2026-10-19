@@ -18,6 +18,14 @@ export function pageFields<const TSort extends string>(
   };
 }
 
+/** The page fields of a parsed list query, as `pageFields` fills them. */
+export type PageRequest<TSort extends string> = {
+  readonly limit: number;
+  readonly offset: number;
+  readonly sort: TSort;
+  readonly order: z.infer<typeof sortDirectionSchema>;
+};
+
 /** A server-paginated list response. `totalCount` counts the whole filtered set, not the page. */
 export type Page<T> = {
   readonly items: readonly T[];

@@ -189,11 +189,32 @@ const noIsoSlice = {
   },
 };
 
+const WINDOW_OVER_ALL = /\bover\s*\(\s*\)/iu;
+
+/** `COUNT(*) OVER ()` over a page reports 0 once the offset passes the end (5adf7f61). */
+const noWindowTotal = {
+  meta: { type: "problem" },
+  create(context) {
+    return {
+      TaggedTemplateExpression(node) {
+        if (node.tag.type !== "Identifier" || node.tag.name !== "sql") return;
+        if (!node.quasi.quasis.some((quasi) => WINDOW_OVER_ALL.test(quasi.value.raw))) return;
+        context.report({
+          node,
+          message:
+            "Window total over the page. A total must count the filtered set, so it survives an offset past the end.",
+        });
+      },
+    };
+  },
+};
+
 export default {
   meta: { name: "myakiba" },
   rules: {
     "require-suppression-reason": requireSuppressionReason,
     "no-env-outside-env-package": noEnvOutsideEnvPackage,
     "no-iso-slice": noIsoSlice,
+    "no-window-total": noWindowTotal,
   },
 };

@@ -7,5 +7,3 @@ export const ORDER_CASCADE_OPTIONS = [
   "collectionDate",
   "shippingMethod",
 ] as const;
-
-export type OrderCascadeOption = (typeof ORDER_CASCADE_OPTIONS)[number];

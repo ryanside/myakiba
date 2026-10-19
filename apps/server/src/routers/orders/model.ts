@@ -36,5 +36,6 @@ export const orderUpdateSchema = createUpdateSchema(order)
 
 export const orderIdParamSchema = z.object({ orderId: z.string() });
 
+export type OrdersQuery = z.infer<typeof ordersQuerySchema>;
 export type OrderInsertType = z.infer<typeof orderInsertSchema>;
 export type OrderUpdateType = z.infer<typeof orderUpdateSchema>;

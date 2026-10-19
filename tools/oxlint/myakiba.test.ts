@@ -93,6 +93,20 @@ describe("myakiba/no-iso-slice", () => {
   });
 });
 
+describe("myakiba/no-window-total", () => {
+  test("flags a sql template that totals over the whole window", async () => {
+    const findings = await flags("myakiba/no-window-total", [
+      ["declare const sql: any; export const a = sql`COUNT(*) OVER ()`;", true],
+      ["declare const sql: any; export const b = sql<number>`COUNT(*) over()`;", true],
+      ["declare const sql: any; export const c = sql`SUM(price) FILTER (WHERE x) OVER ( )`;", true],
+      ["declare const sql: any; export const d = sql`ROW_NUMBER() OVER (ORDER BY id)`;", false],
+      ["declare const sql: any; export const e = sql`COUNT(*)`;", false],
+      ["declare const raw: any; export const f = raw`COUNT(*) OVER ()`;", false],
+    ]);
+    for (const { message } of findings) expect(message).toContain("count the filtered set");
+  });
+});
+
 describe("myakiba/no-env-outside-env-package", () => {
   test("flags env reads on the real process, Bun and import.meta, not on a shadowing binding", async () => {
     const findings = await flags("myakiba/no-env-outside-env-package", [
