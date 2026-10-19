@@ -399,7 +399,9 @@ function KanbanBoard({ className, render, ...props }: KanbanBoardProps) {
 
   const defaultProps = {
     "data-slot": "kanban-board",
-    className: cn("grid auto-rows-fr gap-4 sm:grid-cols-3", className),
+    // Stacked columns size to their own cards. Equal rows would move a column under a still
+    // pointer each time a drag moves a card, and the card would bounce between columns.
+    className: cn("grid gap-4 sm:auto-rows-fr sm:grid-cols-3", className),
     children: props.children,
   };
 
