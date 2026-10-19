@@ -29,8 +29,7 @@ export const updateKanbanOrderStatusCommand = defineCommand({
   persist: ({ orderId, status }: { readonly orderId: string; readonly status: OrderStatus }) =>
     updateOrderStatus(orderId, status),
   successTitle: ({ status }) => (status === "Owned" ? "Order marked as collected" : undefined),
-  failureTitle: ({ orderId, status }) => `Failed to update order ${orderId} to status ${status}:`,
-  failureDescription: (_input, error) => `Error: ${error.message}`,
+  failureTitle: (_input, error) => error.message,
 });
 
 export const updateKanbanOrderDateCommand = defineCommand({

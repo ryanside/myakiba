@@ -17,7 +17,7 @@ export type ReleaseItem = ReleaseCalendarData["releaseCalendar"]["releases"][num
 export async function getDashboard(): Promise<DashboardResponse> {
   const { data, error } = await app.api.dashboard.get();
   if (error) {
-    throw new Error(error.value || "Failed to get dashboard");
+    throw new Error(getErrorMessage(error, "Failed to get dashboard"));
   }
 
   return data;

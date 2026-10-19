@@ -189,7 +189,9 @@ export async function getOrder(orderId: string): Promise<Order> {
   const { data, error } = await app.api.orders({ orderId }).get();
 
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to get order"));
+    throw new Error(
+      getErrorMessage(error, "Couldn't load this order. Check your connection and try again."),
+    );
   }
 
   if (!data) {
@@ -208,7 +210,7 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus): P
   });
 
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to update order status"));
+    throw new Error(getErrorMessage(error, "Failed to update order status. Please try again."));
   }
 }
 
