@@ -263,11 +263,90 @@ describe("each orders route answers as before", () => {
 });
 
 const readState = async () => ({
-  orders: await db.select({ id: order.id }).from(order).orderBy(order.id),
-  items: await db
-    .select({ id: collection.id, orderId: collection.orderId })
-    .from(collection)
-    .orderBy(collection.id),
+  orders: await db.select().from(order).orderBy(order.id),
+  items: await db.select().from(collection).orderBy(collection.id),
+});
+
+const foreignIdWrites = [
+  [
+    "merge an own and another user's order",
+    "POST",
+    "/merge",
+    { orderIds: ["order-1", "order-3"], newOrder, cascadeOptions: ["status"] },
+    "One or more orders not found",
+  ],
+  [
+    "merge only another user's order",
+    "POST",
+    "/merge",
+    { orderIds: ["order-3"], newOrder, cascadeOptions: [] },
+    "Order items not found",
+  ],
+  [
+    "split an own and another user's item",
+    "POST",
+    "/split",
+    { collectionIds: ["c-2", "c-other"], newOrder, cascadeOptions: ["status"] },
+    "Order items not found",
+  ],
+  [
+    "split only another user's item",
+    "POST",
+    "/split",
+    { collectionIds: ["c-other"], newOrder, cascadeOptions: [] },
+    "Order items not found",
+  ],
+  [
+    "move an own and another user's item",
+    "PUT",
+    "/move-items",
+    { targetOrderId: "order-2", collectionIds: ["c-ordered", "c-other"] },
+    "Order items not found",
+  ],
+  [
+    "move only another user's item",
+    "PUT",
+    "/move-items",
+    { targetOrderId: "order-2", collectionIds: ["c-other"] },
+    "Order items not found",
+  ],
+  [
+    "delete an own and another user's order",
+    "DELETE",
+    "/",
+    { orderIds: ["order-2", "order-3"] },
+    "One or more orders not found",
+  ],
+  [
+    "delete only another user's order",
+    "DELETE",
+    "/",
+    { orderIds: ["order-3"] },
+    "One or more orders not found",
+  ],
+  [
+    "delete an own and another user's item",
+    "DELETE",
+    "/items",
+    { collectionIds: ["c-2", "c-other"] },
+    "One or more order items not found",
+  ],
+  [
+    "delete only another user's item",
+    "DELETE",
+    "/items",
+    { collectionIds: ["c-other"] },
+    "One or more order items not found",
+  ],
+] as const;
+
+describe("a write that names any id the caller does not own answers 404 and changes nothing", () => {
+  test.each(foreignIdWrites)("%s", async (_, method, path, body, answer) => {
+    const before = await readState();
+
+    expect(await call(method, path, JSON.stringify(body))).toEqual({ status: 404, body: answer });
+    expect(await readState()).toEqual(before);
+  });
 });
 
 describe("a failure after a write leaves nothing behind", () => {

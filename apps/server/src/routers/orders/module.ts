@@ -49,6 +49,11 @@ function listFilters(userId: string, filters: OrdersQuery): SQL | undefined {
   );
 }
 
+/** An empty request finds nothing, so it still answers 404. */
+function foundAll(ids: readonly string[], touched: number): boolean {
+  return touched > 0 && touched === new Set(ids).size;
+}
+
 /** Detaches the Owned items and deletes the rest. Returns how many rows it touched. */
 async function removeItems(
   tx: Tx,
@@ -351,7 +356,9 @@ export const Orders = {
         .delete(order)
         .where(and(eq(order.userId, userId), inArray(order.id, input.orderIds)))
         .returning({ id: order.id });
-      if (deleted.length === 0) return fail("not_found", "One or more orders not found");
+      if (!foundAll(input.orderIds, deleted.length)) {
+        return fail("not_found", "One or more orders not found");
+      }
 
       return ok("Orders merged successfully");
     },
@@ -390,7 +397,9 @@ export const Orders = {
         .set({ orderId: inserted.id, ...cascadeProperties })
         .where(and(eq(collection.userId, userId), inArray(collection.id, input.collectionIds)))
         .returning({ id: collection.id });
-      if (moved.length === 0) return fail("not_found", "Order items not found");
+      if (!foundAll(input.collectionIds, moved.length)) {
+        return fail("not_found", "Order items not found");
+      }
 
       await advanceOrderReleaseDatesForCollectionItems(
         scope.tx,
@@ -438,7 +447,9 @@ export const Orders = {
           ),
         )
         .returning({ id: collection.id });
-      if (moved.length === 0) return fail("not_found", "Order items not found");
+      if (!foundAll(input.collectionIds, moved.length)) {
+        return fail("not_found", "Order items not found");
+      }
 
       await advanceOrderReleaseDatesForCollectionItems(
         scope.tx,
@@ -502,7 +513,9 @@ export const Orders = {
         .delete(order)
         .where(and(eq(order.userId, userId), inArray(order.id, input.orderIds)))
         .returning({ id: order.id });
-      if (deleted.length === 0) return fail("not_found", "One or more orders not found");
+      if (!foundAll(input.orderIds, deleted.length)) {
+        return fail("not_found", "One or more orders not found");
+      }
 
       return ok("Orders deleted successfully");
     },
@@ -513,7 +526,9 @@ export const Orders = {
     async (scope, input: { readonly collectionIds: string[] }) => {
       scope.log.set({ delete: { itemCount: input.collectionIds.length } });
       const removed = await removeItems(scope.tx, scope.viewer.userId, input.collectionIds);
-      if (removed === 0) return fail("not_found", "One or more order items not found");
+      if (!foundAll(input.collectionIds, removed)) {
+        return fail("not_found", "One or more order items not found");
+      }
 
       return ok("Order items deleted successfully");
     },
