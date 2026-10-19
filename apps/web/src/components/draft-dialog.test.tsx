@@ -6,7 +6,9 @@ import { useEffect, useState } from "react";
 import type { ComponentType, ReactElement } from "react";
 import type { SearchEntriesResponse } from "@myakiba/contracts/search/schema";
 
+const realSearch = await import("@/queries/search");
 await mock.module("@/queries/search", () => ({
+  ...realSearch,
   searchEntries: async (): Promise<SearchEntriesResponse> => ({
     entries: [{ id: "entry-miku", name: "Hatsune Miku", category: "Character" }],
   }),

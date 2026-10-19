@@ -7,7 +7,8 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { IconSvgElement } from "@hugeicons/react";
-import { useQuery } from "@tanstack/react-query";
+import { useRead } from "@/data/client";
+import { searches } from "@/data/resources/search";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
@@ -26,7 +27,6 @@ import {
 } from "@/components/ui/command";
 import { APP_COMMAND_NAVIGATION_ITEMS } from "@/lib/app-navigation";
 import type { AppNavigationItem, AppNavigationTarget } from "@/lib/app-navigation";
-import { searchCommandResults } from "@/queries/search";
 import type { CommandSearchResults } from "@/queries/search";
 import { SyncActionSheet } from "@/components/sync/sync-launcher";
 import { LAUNCHABLE_SYNC_OPTIONS } from "@/components/sync/sync-launcher-options";
@@ -188,12 +188,7 @@ export function AppCommand(): React.JSX.Element {
     data: { orderMatches, itemMatches } = EMPTY_RESULTS,
     isLoading: isSearchLoading,
     error: searchError,
-  } = useQuery({
-    queryKey: ["app-command", "search", debouncedQuery.toLowerCase()],
-    queryFn: () => searchCommandResults(debouncedQuery),
-    enabled: debouncedQuery.length > 0,
-    staleTime: 30_000,
-  });
+  } = useRead(searches.command, debouncedQuery, { enabled: debouncedQuery.length > 0 });
 
   const closeCommand = (): void => {
     setOpen(false);

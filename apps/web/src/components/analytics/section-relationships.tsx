@@ -1,7 +1,8 @@
 import { useId, useState } from "react";
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useRead } from "@/data/client";
+import { analytics } from "@/data/resources/analytics";
 import { ANALYTICS_SECTIONS } from "@myakiba/contracts/shared/constants";
 import type { AnalyticsSection } from "@myakiba/contracts/shared/types";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -11,7 +12,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { sectionLabel } from "@/components/analytics/section-utils";
-import { getAnalyticsSectionRelationships } from "@/queries/analytics";
 import type {
   AnalyticsSectionRelationshipPreviewItem,
   AnalyticsSectionRelationshipValue,
@@ -38,28 +38,13 @@ export function SectionRelationships({
       : (relationshipSections[0] ?? PREFERRED_RELATIONSHIP_SECTION),
   );
   const [offset, setOffset] = useState(0);
-  const { data, isPending, isError, error, isFetching, refetch } = useQuery({
-    queryKey: [
-      "analytics",
-      "section-relationships",
+  const { data, isPending, isError, error, isFetching, refetch } = useRead(
+    analytics.sectionRelationships,
+    {
       sectionName,
-      match,
-      relatedSection,
-      RELATIONSHIP_PAGE_SIZE,
-      offset,
-    ],
-    queryFn: () =>
-      getAnalyticsSectionRelationships(sectionName, {
-        match,
-        relatedSection,
-        limit: RELATIONSHIP_PAGE_SIZE,
-        offset,
-      }),
-    placeholderData: (previousData) =>
-      previousData?.section === relatedSection ? previousData : undefined,
-    staleTime: 30_000,
-    retry: false,
-  });
+      filters: { match, relatedSection, limit: RELATIONSHIP_PAGE_SIZE, offset },
+    },
+  );
 
   const handleTabChange = (nextSection: AnalyticsSection): void => {
     setRelatedSection(nextSection);

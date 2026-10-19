@@ -4,8 +4,9 @@ import { useNavigate } from "@tanstack/react-router";
 import { authClient } from "@/lib/auth-client";
 import { toast } from "@/components/ui/toast";
 import { useForm } from "@tanstack/react-form";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getAccountType } from "@/queries/settings";
+import { useRead } from "@/data/client";
+import { useClearServerData } from "@/data/resources/session";
+import { settings } from "@/data/resources/settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,20 +25,15 @@ import { SettingsGroup } from "./settings-group";
 import { SettingsRow } from "./settings-row";
 
 export function DeleteAccount() {
-  const { data, isPending, isError, error } = useQuery({
-    queryKey: ["account-type"],
-    queryFn: getAccountType,
-    staleTime: 1000 * 60 * 5,
-    retry: false,
-  });
+  const { data, isPending, isError, error } = useRead(settings.accountType);
   const hasCredentialAccount = data?.hasCredentialAccount ?? false;
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const clearServerData = useClearServerData();
   const isTriggerDisabled = isPending || isError;
 
   const completeAccountDeletion = () => {
     toast.add({ type: "success", title: "Account deleted successfully" });
-    queryClient.clear();
+    clearServerData();
     navigate({ to: "/login" });
   };
 

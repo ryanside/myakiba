@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useRead } from "@/data/client";
+import { expenses } from "@/data/resources/expenses";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AddSquareIcon, MinusSignSquareIcon, Search01Icon } from "@hugeicons/core-free-icons";
 import { getCoreRowModel, getExpandedRowModel, useReactTable } from "@tanstack/react-table";
@@ -20,7 +21,6 @@ import { ExpensePanel } from "@/components/expenses/dashboard-shell";
 import { ShopTableRowExpansion } from "@/components/expenses/shop-table-row-expansion";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getExpensesShops } from "@/queries/expenses";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 10;
@@ -74,12 +74,7 @@ export function ShopTable({
     }),
     [filters.dateStart, filters.dateEnd, filters.shop, offset, scope, search],
   );
-  const query = useQuery({
-    queryKey: ["expenses", "shops", queryFilters],
-    queryFn: () => getExpensesShops(queryFilters),
-    staleTime: 1000 * 60 * 5,
-    retry: false,
-  });
+  const query = useRead(expenses.shops, queryFilters);
   const rows = query.data?.items ?? [];
   const totalCount = query.data?.totalCount ?? 0;
   const shopSearchInput = (

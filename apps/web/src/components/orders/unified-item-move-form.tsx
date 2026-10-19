@@ -32,8 +32,8 @@ import { CascadeOptionsDropdown } from "@/components/cascade-options-dropdown";
 import { Textarea } from "../ui/textarea";
 import { parseMoneyToMinorUnits } from "@myakiba/utils/currency";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useInfiniteQuery } from "@tanstack/react-query";
-import { searchOrders } from "@/queries/search";
+import { useRootedInfiniteRead } from "@/data/client";
+import { searches } from "@/data/resources/search";
 import { DebouncedInput } from "@/components/debounced-input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -69,8 +69,6 @@ type UnifiedItemMoveFormProps = {
   readonly currency: Currency;
   readonly intent?: "move" | "add";
 };
-
-const ORDER_SEARCH_PAGE_SIZE = 20;
 
 export default function UnifiedItemMoveForm({
   renderTrigger,
@@ -134,21 +132,7 @@ function UnifiedItemMoveFormContent({
     hasNextPage: hasMoreOrders,
     fetchNextPage: fetchMoreOrders,
     error: orderSearchError,
-  } = useInfiniteQuery({
-    queryKey: ["orderIdsAndTitles", orderSearch.title],
-    queryFn: ({ pageParam }) =>
-      searchOrders({
-        title: orderSearch.title,
-        limit: ORDER_SEARCH_PAGE_SIZE,
-        offset: pageParam,
-      }),
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, _allPages, lastPageParam) =>
-      lastPage.orderIdsAndTitles.length < ORDER_SEARCH_PAGE_SIZE
-        ? undefined
-        : lastPageParam + ORDER_SEARCH_PAGE_SIZE,
-    staleTime: 1000 * 60 * 5,
-    retry: false,
+  } = useRootedInfiniteRead(searches.orders, orderSearch.title, {
     enabled: orderSearch.title.length > 0 && moveMode === "existing",
   });
 

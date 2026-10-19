@@ -3,7 +3,8 @@ import type { ReactNode } from "react";
 import { InformationCircleIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useRead } from "@/data/client";
+import { calendar } from "@/data/resources/calendar";
 import { calendarSearchSchema } from "@myakiba/contracts/calendar/schema";
 import type { CalendarView } from "@myakiba/contracts/calendar/schema";
 import { CalendarMonthGrid } from "@/components/calendar/calendar-month-grid";
@@ -11,7 +12,6 @@ import { CalendarReleasePanel } from "@/components/calendar/calendar-release-lis
 import { CalendarToolbar } from "@/components/calendar/calendar-toolbar";
 import { Button } from "@/components/ui/button";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
-import { getCalendar } from "@/queries/calendar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const CALENDAR_MIN_YEAR = 2000;
@@ -104,12 +104,7 @@ function RouteComponent(): ReactNode {
     [updateSearch, days, selectedDaysSet],
   );
 
-  const { data, isPending, isError, error } = useQuery({
-    queryKey: ["calendar", view, month, year],
-    queryFn: () => getCalendar({ view, month, year }),
-    staleTime: 1000 * 60 * 5,
-    retry: false,
-  });
+  const { data, isPending, isError, error } = useRead(calendar.view, { view, month, year });
 
   const yearOptions = useMemo(() => {
     const currentYear = now.getFullYear();

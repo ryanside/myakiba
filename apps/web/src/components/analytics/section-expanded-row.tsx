@@ -1,13 +1,13 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useRead } from "@/data/client";
+import { analytics } from "@/data/resources/analytics";
 import type { AnalyticsSection } from "@myakiba/contracts/shared/types";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { SectionRelationships } from "@/components/analytics/section-relationships";
 import { Button } from "@/components/ui/button";
-import { getAnalyticsSectionItems } from "@/queries/analytics";
 import type { AnalyticsSectionItemsData, AnalyticsSectionRow } from "@/queries/analytics";
 import { cn } from "@/lib/utils";
 
@@ -23,16 +23,9 @@ export function ExpandedRowContent({
   const [offset, setOffset] = useState(0);
   const collectionSearch = getCollectionSearch(sectionName, row);
   const match = row.id ?? row.name;
-  const { data, isPending, isError, error, isFetching } = useQuery({
-    queryKey: ["analytics", "section-items", sectionName, match, SECTION_ITEM_PAGE_SIZE, offset],
-    queryFn: () =>
-      getAnalyticsSectionItems(sectionName, {
-        match,
-        limit: SECTION_ITEM_PAGE_SIZE,
-        offset,
-      }),
-    placeholderData: keepPreviousData,
-    staleTime: 30_000,
+  const { data, isPending, isError, error, isFetching } = useRead(analytics.sectionItems, {
+    sectionName,
+    filters: { match, limit: SECTION_ITEM_PAGE_SIZE, offset },
   });
 
   return (

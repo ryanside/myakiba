@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading03Icon } from "@hugeicons/core-free-icons";
-import { useQuery } from "@tanstack/react-query";
-import { getAccountType } from "@/queries/settings";
+import { useRead } from "@/data/client";
+import { settings } from "@/data/resources/settings";
 import { authClient } from "@/lib/auth-client";
 import { toast } from "@/components/ui/toast";
 import { useForm } from "@tanstack/react-form";
@@ -38,12 +38,7 @@ const PASSWORD_FIELDS = [
 ] as const;
 
 export function Account() {
-  const { data, isPending, isError, error } = useQuery({
-    queryKey: ["account-type"],
-    queryFn: getAccountType,
-    staleTime: 1000 * 60 * 5,
-    retry: false,
-  });
+  const { data, isPending, isError, error } = useRead(settings.accountType);
   const hasCredentialAccount = data?.hasCredentialAccount ?? false;
   const isFormDisabled = isPending || isError || !hasCredentialAccount;
   const showOAuthNote = !isPending && !isError && !hasCredentialAccount;

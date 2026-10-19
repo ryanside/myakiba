@@ -31,8 +31,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
-import { useInfiniteQuery } from "@tanstack/react-query";
-import { searchEntries } from "@/queries/search";
+import { useRootedInfiniteRead } from "@/data/client";
+import { searches } from "@/data/resources/search";
 import { DebouncedInput } from "@/components/debounced-input";
 import {
   Command,
@@ -59,8 +59,6 @@ interface FiltersFormProps {
   onApplyFilters: (filters: CollectionFilters) => void;
   currency: Currency;
 }
-
-const ENTRY_SEARCH_PAGE_SIZE = 20;
 
 type EntryNameMap = Record<string, string>;
 
@@ -184,21 +182,7 @@ function FiltersDraft({
     fetchNextPage: fetchMoreEntries,
     error: entriesError,
     isError: isEntriesError,
-  } = useInfiniteQuery({
-    queryKey: ["entries", entrySearch],
-    queryFn: ({ pageParam }) =>
-      searchEntries({
-        search: entrySearch,
-        limit: ENTRY_SEARCH_PAGE_SIZE,
-        offset: pageParam,
-      }),
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, _allPages, lastPageParam) =>
-      lastPage.entries.length < ENTRY_SEARCH_PAGE_SIZE
-        ? undefined
-        : lastPageParam + ENTRY_SEARCH_PAGE_SIZE,
-    staleTime: 1000 * 60 * 5,
-    retry: false,
+  } = useRootedInfiniteRead(searches.entries, entrySearch, {
     enabled: entrySearch.length > 0,
   });
 

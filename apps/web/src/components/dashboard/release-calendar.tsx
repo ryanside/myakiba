@@ -8,11 +8,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/reui/badge";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import type { Currency } from "@myakiba/contracts/shared/types";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInvalidateRead, useRead } from "@/data/client";
+import { calendar } from "@/data/resources/calendar";
 import { Link } from "@tanstack/react-router";
 import { getCategoryColor } from "@/lib/category-colors";
 import { formatReleasePrice } from "@/lib/locale";
-import { getReleaseCalendar } from "@/queries/dashboard";
 import type { ReleaseItem } from "@/queries/dashboard";
 import { parseISO } from "date-fns";
 
@@ -71,18 +71,16 @@ function ReleaseCalendar({
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
-  const queryClient = useQueryClient();
+  const invalidateReleases = useInvalidateRead(calendar.releases);
 
   const isControlled = controlledMonth != null && controlledYear != null;
   const apiMonth = isControlled ? controlledMonth : internalMonth.getMonth() + 1;
   const apiYear = isControlled ? controlledYear : internalMonth.getFullYear();
   const displayDate = isControlled ? new Date(controlledYear, controlledMonth - 1) : internalMonth;
 
-  const { isPending, isError, data, error } = useQuery({
-    queryKey: ["releaseCalendar", apiMonth, apiYear],
-    queryFn: () => getReleaseCalendar(apiMonth, apiYear),
-    staleTime: 1000 * 60 * 5,
-    retry: false,
+  const { isPending, isError, data, error } = useRead(calendar.releases, {
+    month: apiMonth,
+    year: apiYear,
   });
 
   const releases = useMemo(() => data?.releaseCalendar.releases ?? [], [data]);
@@ -97,10 +95,8 @@ function ReleaseCalendar({
   }, []);
 
   const refetch = useCallback((): void => {
-    void queryClient.invalidateQueries({
-      queryKey: ["releaseCalendar", apiMonth, apiYear],
-    });
-  }, [queryClient, apiMonth, apiYear]);
+    void invalidateReleases({ month: apiMonth, year: apiYear });
+  }, [invalidateReleases, apiMonth, apiYear]);
 
   return (
     <Frame

@@ -1,14 +1,14 @@
 import { useMemo, useState } from "react";
 import type { ReactElement } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useRead } from "@/data/client";
+import { dashboard } from "@/data/resources/dashboard";
 import * as z from "zod";
 import { MonthlyTab } from "@/components/dashboard/monthly-tab";
 import { OverviewTab } from "@/components/dashboard/overview-tab";
 import { Button } from "@/components/ui/button";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { randomKaomoji } from "@/lib/kaomoji";
-import { getDashboard, getMonthlyDashboard } from "@/queries/dashboard";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
@@ -77,13 +77,11 @@ function RouteComponent(): ReactElement {
     });
   }
 
-  const { isPending, isError, data, error, dataUpdatedAt } = useQuery({
-    queryKey: ["dashboard"],
-    queryFn: getDashboard,
-    staleTime: 1000 * 60 * 5,
-    retry: false,
-    enabled: activeTab === "overview",
-  });
+  const { isPending, isError, data, error, dataUpdatedAt } = useRead(
+    dashboard.overview,
+    undefined,
+    { enabled: activeTab === "overview" },
+  );
 
   const {
     isPending: monthlyIsPending,
@@ -91,13 +89,11 @@ function RouteComponent(): ReactElement {
     data: monthlyData,
     error: monthlyError,
     dataUpdatedAt: monthlyDataUpdatedAt,
-  } = useQuery({
-    queryKey: ["dashboard", "monthly", selectedMonth, selectedYear],
-    queryFn: () => getMonthlyDashboard(selectedMonth, selectedYear),
-    staleTime: 1000 * 60 * 5,
-    retry: false,
-    enabled: activeTab === "monthly",
-  });
+  } = useRead(
+    dashboard.monthly,
+    { month: selectedMonth, year: selectedYear },
+    { enabled: activeTab === "monthly" },
+  );
 
   return (
     <div className="mx-auto flex min-h-[calc(100dvh-6rem)] max-w-[88rem] flex-col gap-4 md:min-h-[calc(100dvh-7rem)]">

@@ -1,7 +1,7 @@
 import type { WishlistReleaseStatus } from "@myakiba/contracts/wishlist/schema";
 import { useInfiniteRead } from "@/data/client";
 import { moveWishlistItems, wishlist } from "@/data/resources/wishlist";
-import { usePositionOrderMutation } from "@/hooks/use-position-order-mutation";
+import { usePositionOrderMutation } from "@/data/position-order";
 import { useToday } from "@/hooks/use-today";
 
 export function useWishlistItemsQuery(releaseStatus: WishlistReleaseStatus) {
