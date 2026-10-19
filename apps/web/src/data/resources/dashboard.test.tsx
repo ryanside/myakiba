@@ -66,4 +66,10 @@ describe("a failed kanban status write", () => {
 
     expect(await moveCardAndReadToast()).toEqual([RETRY_ADVICE]);
   });
+
+  test("shows retry advice when the server answers 400 with only zero-width spaces", async () => {
+    answerWith(async () => new Response("\u200B\u200B", { status: 400 }));
+
+    expect(await moveCardAndReadToast()).toEqual([RETRY_ADVICE]);
+  });
 });

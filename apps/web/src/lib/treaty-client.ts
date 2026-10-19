@@ -31,7 +31,8 @@ export function getErrorMessage(error: InternalApiError, fallback: string): stri
 /** Eden's error: the status and parsed body, or 503 and the thrown error when no response arrived. */
 type ApiError = { readonly status: number; readonly value: unknown };
 
-const serverMessage = z.string().regex(/\S/);
+/** A visible character: not whitespace and not an invisible format character such as U+200B. */
+const serverMessage = z.string().regex(/[^\s\p{Cf}]/u);
 
 /** Only a 4xx text body with visible text is a message the server wrote for the user. Anything else shows `fallback`. */
 export function getUserErrorMessage({ status, value }: ApiError, fallback: string): string {
