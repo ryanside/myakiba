@@ -430,6 +430,12 @@
         "DataTablePagination past the end > an empty result offers page 1",
         "DataTablePagination past the end > previous goes to the last page with rows"
       ]
+    },
+    {
+      "fix": "9597fbf5",
+      "bug": "the analytics section page and the expenses shop table showed an impossible range such as Showing 101\u20135 of 5 on a page past the end",
+      "test": "apps/web/src/components/data-table/data-table-pagination.test.tsx",
+      "fixed": ["pageRange > names the rows on a page, and no rows on a page past the end"]
     }
   ],
   "lint": [
