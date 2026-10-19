@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, describe, expect, test } from "bun:test";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import {
   Kanban,
@@ -9,7 +9,7 @@ import {
   KanbanItem,
   KanbanItemHandle,
 } from "./kanban";
-import { cardsIn, drag, stopDrags, stubKanbanLayout } from "../../../test/kanban-drag";
+import { cardsIn, drag, frame, stopDrags, stubKanbanLayout } from "../../../test/kanban-drag";
 
 afterEach(async () => {
   await stopDrags();
@@ -73,6 +73,54 @@ describe("dragging a card to another column", () => {
       expect({ todo: cardsIn("todo"), done: cardsIn("done") }).toEqual({
         todo: [],
         done: ["first", "tall", "second"],
+      });
+    },
+    DRAG_TIMEOUT_MS,
+  );
+});
+
+describe("holding a card over the gap between two columns", () => {
+  test(
+    "the card stays in its own column",
+    async () => {
+      render(
+        <Board
+          initial={{
+            todo: [{ id: "first" }, { id: "second" }],
+            done: [{ id: "moving" }, { id: "third" }, { id: "fourth" }],
+          }}
+        />,
+      );
+
+      await drag(screen.getByText("moving"), { x: 400, y: 10 }, { x: 250, y: 30 });
+
+      expect({ todo: cardsIn("todo"), done: cardsIn("done") }).toEqual({
+        todo: ["first", "second"],
+        done: ["moving", "third", "fourth"],
+      });
+    },
+    DRAG_TIMEOUT_MS,
+  );
+});
+
+describe("dragging a card with the keyboard", () => {
+  test(
+    "Space, ArrowRight, Space moves the focused card to the next column",
+    async () => {
+      render(<Board initial={{ todo: [{ id: "moving" }], done: [{ id: "first" }] }} />);
+      const card = screen.getByRole("button", { name: "moving" });
+
+      await act(async () => {
+        card.focus();
+      });
+      for (const code of ["Space", "ArrowRight", "Space"]) {
+        fireEvent.keyDown(card, { code, key: code });
+        await frame();
+      }
+
+      expect({ todo: cardsIn("todo"), done: cardsIn("done") }).toEqual({
+        todo: [],
+        done: ["moving", "first"],
       });
     },
     DRAG_TIMEOUT_MS,
