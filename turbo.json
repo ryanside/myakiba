@@ -11,6 +11,10 @@
       "dependsOn": ["^check-types"],
       "cache": false
     },
+    "test": {
+      "cache": false,
+      "passThroughEnv": ["TEST_DATABASE_URL"]
+    },
     "dev": {
       "cache": false,
       "persistent": true

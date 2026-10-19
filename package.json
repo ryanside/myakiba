@@ -29,6 +29,7 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "check-types": "turbo run check-types",
+    "test": "turbo run test",
     "stop": "turbo run db:stop redis:stop",
     "dev:native": "turbo run dev -F native",
     "dev:web": "turbo run dev -F web",

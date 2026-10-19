@@ -1,0 +1,89 @@
+{
+  "test": [
+    {
+      "fix": "f74b2615",
+      "bug": "the date normalizer dropped MM/DD/YYYY dates",
+      "test": "packages/utils/src/date-only.test.ts",
+      "fixed": [
+        "normalizeScrapedDate with release dates as MFC prints them > \"10/13/2010\" becomes \"2010-10-13\"",
+        "normalizeScrapedDate with release dates as MFC prints them > \"09/18/2025\" becomes \"2025-09-18\"",
+        "normalizeScrapedDate with release dates as MFC prints them > \"1/5/2012\" becomes \"2012-01-05\"",
+        "normalizeScrapedDate with release dates as MFC prints them > \" 10/13/2010 \" becomes \"2010-10-13\""
+      ]
+    },
+    {
+      "fix": "dd30621e",
+      "bug": "a dragged kanban card landed away from the pointer",
+      "test": "apps/web/src/components/reui/kanban.test.tsx",
+      "fixed": [
+        "dragging a card to another column > a tall card grabbed near its top lands where the pointer is",
+        "dragging a card to another column > a tall card grabbed near its top follows the pointer, not its own center"
+      ]
+    },
+    {
+      "fix": "5a51f519",
+      "bug": "item details and the release and entry searches needed no session",
+      "test": "apps/server/src/route-auth.test.ts",
+      "fixed": [
+        "every API route requires a session unless it is listed as public > GET /api/item/:externalId",
+        "every API route requires a session unless it is listed as public > GET /api/search/releases",
+        "every API route requires a session unless it is listed as public > GET /api/search/entries"
+      ]
+    },
+    {
+      "fix": "8bf962cd",
+      "bug": "resync status needed no session",
+      "test": "apps/server/src/route-auth.test.ts",
+      "fixed": [
+        "every API route requires a session unless it is listed as public > GET /api/items/:itemId/resync-status"
+      ]
+    },
+    {
+      "fix": "527a76d4",
+      "bug": "a failed order-item delete left owned items detached",
+      "test": "apps/server/src/routers/orders/service.test.ts",
+      "fixed": ["removing items from an order > a failed delete leaves every item in the order"]
+    },
+    {
+      "fix": "ed65f1d8",
+      "bug": "an outside change back to earlier typed text was lost",
+      "test": "apps/web/src/components/debounced-input.test.tsx",
+      "fixed": [
+        "DebouncedInput > an outside change back to earlier typed text still shows after blur"
+      ]
+    },
+    {
+      "fix": "50e97069",
+      "bug": "an outside change made while focused never showed",
+      "test": "apps/web/src/components/debounced-input.test.tsx",
+      "fixed": [
+        "DebouncedInput > an outside change made while focused shows once the user leaves the field",
+        "DebouncedInput > text sent before the user left the field does not hide a later outside change to it"
+      ]
+    },
+    {
+      "fix": "37b4b86a",
+      "bug": "a late echo of earlier text replaced focused text",
+      "test": "apps/web/src/components/debounced-input.test.tsx",
+      "fixed": [
+        "DebouncedInput > a late echo of earlier text does not replace what the user is typing"
+      ]
+    },
+    {
+      "fix": "9fbb24c4",
+      "bug": "the debounced callback called a stale onChange",
+      "test": "apps/web/src/components/debounced-input.test.tsx",
+      "fixed": ["DebouncedInput > the debounced text goes to the onChange from the latest render"]
+    },
+    {
+      "fix": "ed9d00fb",
+      "bug": "mounting reported a change",
+      "test": "apps/web/src/components/debounced-input.test.tsx",
+      "fixed": [
+        "DebouncedInput > mounting does not report a change",
+        "DebouncedInput > typing reports the final text once after the debounce",
+        "DebouncedInput > late echoes of two earlier texts do not replace what the user typed"
+      ]
+    }
+  ]
+}
