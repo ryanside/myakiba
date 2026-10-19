@@ -176,7 +176,7 @@ export const Orders = {
 
       const orders = {
         ...page,
-        items: page.items.map((row) => ({
+        items: page.items.map((row): Order => ({
           ...row,
           images: row.images.slice(0, 4),
           createdAt: row.createdAt.toISOString(),
