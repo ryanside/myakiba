@@ -7,7 +7,7 @@ import type {
   SearchOrdersQuery,
   SearchOrdersResponse,
 } from "@myakiba/contracts/search/schema";
-import { app, getErrorMessage } from "@/lib/treaty-client";
+import { app, getUserErrorMessage } from "@/lib/treaty-client";
 
 export type OrderCommandMatch = {
   readonly id: string;
@@ -26,7 +26,7 @@ export async function searchCommandResults(search: string): Promise<CommandSearc
   });
 
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to search orders and items"));
+    throw new Error(getUserErrorMessage(error, "Failed to search orders and items"));
   }
 
   return {
@@ -47,7 +47,7 @@ export async function getItemDatabaseItems(
   });
 
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to search item database"));
+    throw new Error(getUserErrorMessage(error, "Failed to search item database"));
   }
 
   return data;
@@ -59,7 +59,7 @@ export async function searchEntries(params: SearchEntriesQuery): Promise<SearchE
   });
 
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to search entries"));
+    throw new Error(getUserErrorMessage(error, "Failed to search entries"));
   }
 
   return data;
@@ -71,7 +71,7 @@ export async function searchOrders(params: SearchOrdersQuery): Promise<SearchOrd
   });
 
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to search orders"));
+    throw new Error(getUserErrorMessage(error, "Failed to search orders"));
   }
 
   return data;

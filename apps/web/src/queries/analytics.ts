@@ -1,4 +1,4 @@
-import { app, getErrorMessage } from "@/lib/treaty-client";
+import { app, getUserErrorMessage } from "@/lib/treaty-client";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 import type { AnalyticsSection } from "@myakiba/contracts/shared/types";
 import type {
@@ -43,7 +43,7 @@ export async function getAnalytics(): Promise<AnalyticsOverviewResponse> {
   const { data, error } = await app.api.analytics.get();
 
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to get analytics"));
+    throw new Error(getUserErrorMessage(error, "Failed to get analytics"));
   }
 
   if (!data) {
@@ -70,7 +70,7 @@ export async function getAnalyticsSection(
   const { data, error } = await app.api.analytics({ sectionName: apiSectionName }).get({ query });
 
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to get analytics section"));
+    throw new Error(getUserErrorMessage(error, "Failed to get analytics section"));
   }
 
   if (!data?.analytics) {
@@ -96,7 +96,7 @@ export async function getAnalyticsSectionItems(
   });
 
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to get analytics section items"));
+    throw new Error(getUserErrorMessage(error, "Failed to get analytics section items"));
   }
 
   if (!data?.items) {
@@ -122,7 +122,7 @@ export async function getAnalyticsSectionRelationships(
     .relationships.get({ query });
 
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to get analytics section relationships"));
+    throw new Error(getUserErrorMessage(error, "Failed to get analytics section relationships"));
   }
 
   if (!data?.items) {

@@ -1,4 +1,4 @@
-import { app, getErrorMessage } from "@/lib/treaty-client";
+import { app, getUserErrorMessage } from "@/lib/treaty-client";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
@@ -36,7 +36,7 @@ export async function getCollection(filters: CollectionFilters) {
     query: queryParams,
   });
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to get collection"));
+    throw new Error(getUserErrorMessage(error, "Failed to get collection"));
   }
   if (!data) {
     throw new Error("Failed to get collection");
@@ -48,13 +48,13 @@ export async function getCollection(filters: CollectionFilters) {
 export async function deleteCollectionItems(ids: string[]) {
   const { error } = await app.api.collection.delete({ ids });
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to delete collection items"));
+    throw new Error(getUserErrorMessage(error, "Failed to delete collection items"));
   }
 }
 
 export async function updateCollectionItem(values: CollectionItemFormValues) {
   const { error } = await app.api.collection({ id: values.id }).put(values);
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to update collection item"));
+    throw new Error(getUserErrorMessage(error, "Failed to update collection item"));
   }
 }

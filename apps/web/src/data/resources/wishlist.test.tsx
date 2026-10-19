@@ -59,6 +59,7 @@ const getErrorMessage: typeof realGetErrorMessage = (_error, fallback) => fallba
 await mock.module("@/lib/treaty-client", () => ({
   app: { api: { wishlist: wishlistEndpoint } },
   getErrorMessage,
+  getUserErrorMessage: getErrorMessage,
 }));
 
 const { toast } = await import("@/components/ui/toast");

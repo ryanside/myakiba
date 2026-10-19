@@ -165,7 +165,11 @@ const fakeApp = {
 };
 
 const getErrorMessage: typeof realGetErrorMessage = (_error, fallback) => fallback;
-await mock.module("@/lib/treaty-client", () => ({ app: fakeApp, getErrorMessage }));
+await mock.module("@/lib/treaty-client", () => ({
+  app: fakeApp,
+  getErrorMessage,
+  getUserErrorMessage: getErrorMessage,
+}));
 const realRouter = await import("@tanstack/react-router");
 await mock.module("@tanstack/react-router", () => ({
   ...realRouter,

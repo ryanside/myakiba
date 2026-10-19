@@ -9,13 +9,13 @@ import {
 import type { keepPreviousData, QueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { toast } from "@/components/ui/toast";
-import { getErrorMessage } from "@/lib/treaty-client";
+import { getUserErrorMessage } from "@/lib/treaty-client";
 import { inFamilies } from "./catalog";
 import type { Family, PersistedFamily, RootOf } from "./catalog";
 
 type EdenResult<Data> =
   | { readonly data: Data; readonly error: null }
-  | { readonly data: null; readonly error: Parameters<typeof getErrorMessage>[0] };
+  | { readonly data: null; readonly error: Parameters<typeof getUserErrorMessage>[0] };
 
 /** The one place an Eden response becomes data or a thrown Error. */
 export async function unwrap<Data>(
@@ -23,7 +23,7 @@ export async function unwrap<Data>(
   fallback: string,
 ): Promise<Data> {
   const { data, error } = await response;
-  if (error) throw new Error(getErrorMessage(error, fallback));
+  if (error) throw new Error(getUserErrorMessage(error, fallback));
   return data;
 }
 

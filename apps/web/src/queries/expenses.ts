@@ -8,13 +8,13 @@ import type {
   ExpensesShippingResponse,
   ShopExpansionResponse,
 } from "@myakiba/contracts/expenses/schema";
-import { app, getErrorMessage } from "@/lib/treaty-client";
+import { app, getUserErrorMessage } from "@/lib/treaty-client";
 
 export async function getExpenseFilterOptions(): Promise<ExpenseFilterOptions> {
   const { data, error } = await app.api.expenses["filter-options"].get();
 
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to get expense filter options"));
+    throw new Error(getUserErrorMessage(error, "Failed to get expense filter options"));
   }
 
   return data;
@@ -26,7 +26,7 @@ export async function getExpensesCollection(
   const { data, error } = await app.api.expenses.collection.get({ query: filters });
 
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to get collection expenses"));
+    throw new Error(getUserErrorMessage(error, "Failed to get collection expenses"));
   }
 
   return data;
@@ -38,7 +38,7 @@ export async function getExpensesOrders(
   const { data, error } = await app.api.expenses.orders.get({ query: filters });
 
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to get order expenses"));
+    throw new Error(getUserErrorMessage(error, "Failed to get order expenses"));
   }
 
   return data;
@@ -50,7 +50,7 @@ export async function getExpensesShipping(
   const { data, error } = await app.api.expenses.shipping.get({ query: filters });
 
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to get shipping expenses"));
+    throw new Error(getUserErrorMessage(error, "Failed to get shipping expenses"));
   }
 
   return data;
@@ -60,7 +60,7 @@ export async function getExpensesShops(filters: ExpenseShopFilters): Promise<Exp
   const { data, error } = await app.api.expenses.shops.get({ query: filters });
 
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to get expense shops"));
+    throw new Error(getUserErrorMessage(error, "Failed to get expense shops"));
   }
 
   return data;
@@ -75,7 +75,7 @@ export async function getShopExpansion(
     .expansion.get({ query: filters });
 
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to get shop expansion"));
+    throw new Error(getUserErrorMessage(error, "Failed to get shop expansion"));
   }
 
   return data;

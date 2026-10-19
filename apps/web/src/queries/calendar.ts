@@ -1,4 +1,4 @@
-import { app, getErrorMessage } from "@/lib/treaty-client";
+import { app, getUserErrorMessage } from "@/lib/treaty-client";
 import type { CalendarQuery } from "@myakiba/contracts/calendar/schema";
 
 export type CalendarResponse = NonNullable<
@@ -14,7 +14,7 @@ export type CalendarOrder = CalendarOrdersResponse["orders"][number];
 export async function getCalendar(query: CalendarQuery): Promise<CalendarResponse> {
   const { data, error } = await app.api.calendar.get({ query });
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to get calendar"));
+    throw new Error(getUserErrorMessage(error, "Failed to get calendar"));
   }
   return data;
 }
