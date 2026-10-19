@@ -29,7 +29,6 @@
     "apps/web/src/components/reui/data-grid/data-grid-table.tsx DataGridTableRowSelect",
     "apps/web/src/components/reui/data-grid/data-grid-table.tsx DataGridTableRowSelectAll",
     "apps/web/src/components/reui/data-grid/data-grid-table.tsx DataGridTableRowSpacer",
-    "apps/web/src/components/reui/data-grid/data-grid.tsx DataGridProvider",
     "apps/web/src/components/reui/frame.tsx FrameDescription",
     "apps/web/src/components/reui/frame.tsx FrameFooter",
     "apps/web/src/components/reui/frame.tsx frameVariants",

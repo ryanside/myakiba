@@ -122,7 +122,7 @@ export function DataTablePagination({
             variant="ghost"
             className={arrowButtonClasses}
             onClick={() => goToPage(currentPage + 1)}
-            disabled={currentPage === totalPages}
+            disabled={currentPage >= totalPages}
           >
             <span className="sr-only">Go to next page</span>
             <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4" />
