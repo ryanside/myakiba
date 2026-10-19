@@ -60,4 +60,10 @@ describe("a failed kanban status write", () => {
 
     expect(await moveCardAndReadToast()).toEqual([{ type: "error", title: "Order not found" }]);
   });
+
+  test("shows retry advice when the server answers 400 with a blank body", async () => {
+    answerWith(async () => new Response(" \n\t ", { status: 400 }));
+
+    expect(await moveCardAndReadToast()).toEqual([RETRY_ADVICE]);
+  });
 });

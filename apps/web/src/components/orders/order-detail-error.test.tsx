@@ -95,3 +95,14 @@ test("a refetch of a deleted order shows the server's message on the order page"
 
   expect(await screen.findByText("Order not found")).toBeTruthy();
 });
+
+test("a refetch answered with a blank 400 shows a readable message on the order page", async () => {
+  const queryClient = await openOrderPage();
+  answerWith(async () => new Response(" \n\t ", { status: 400 }));
+
+  await act(() => queryClient.refetchQueries({ queryKey: ["order", "od-alpha"] }));
+
+  expect(
+    await screen.findByText("Couldn't load this order. Check your connection and try again."),
+  ).toBeTruthy();
+});
