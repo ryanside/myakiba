@@ -1,128 +1,25 @@
-import { Elysia, status } from "elysia";
-import ItemService from "./service";
-import ItemResyncService, { deriveResyncStatus } from "./resync-service";
+/* oxlint-disable no-restricted-imports -- only the item resync routes use these; Item Refresh is scraper code, left as it is until the browser extension replaces it (until 2027-01-31, approved by root: scraper resync routes stay untouched, pending operator review) */
+import { status } from "elysia";
 import { tryCatch } from "@myakiba/utils/result";
-import { betterAuth } from "@/middleware/better-auth";
-import { evlog } from "evlog/elysia";
+/* oxlint-enable no-restricted-imports */
+import { privateApi } from "@/boundary/private-api";
+import { serve } from "@/domain/kernel";
+import ItemResyncService, { deriveResyncStatus } from "./resync-service";
 import { itemIdParamSchema, itemParamSchema, customItemSchema } from "./model";
+import { Items } from "./module";
 
-const itemRouter = new Elysia({ prefix: "/item" })
-  .use(betterAuth)
-  .use(evlog())
-  .post(
-    "/custom",
-    async ({ body, user, log }) => {
-      log.set({ action: "item.createCustom", user: { id: user.id } });
-
-      const { data: customItem, error } = await tryCatch(ItemService.createCustomItem(body));
-
-      if (error) {
-        if (error.message === "ENTRY_NOT_FOUND") {
-          log.set({ outcome: "not_found" });
-          return status(404, "Entry not found");
-        }
-        if (error.message === "ENTRY_CATEGORY_MISMATCH") {
-          log.set({ outcome: "bad_request" });
-          return status(400, "Entry category mismatch");
-        }
-        if (error.message === "FAILED_TO_CREATE_CUSTOM_ITEM") {
-          log.error(error, { step: "createCustomItem", outcome: "error" });
-          return status(500, "Failed to create custom item");
-        }
-
-        log.error(error, { step: "createCustomItem", outcome: "error" });
-        return status(500, "Failed to create custom item");
-      }
-
-      log.set({ outcome: "success" });
-      return customItem;
-    },
-    { body: customItemSchema, auth: true },
-  )
-  .get(
-    "/:id/releases",
-    async ({ params, log }) => {
-      log.set({ action: "item.getReleases", item: { id: params.id } });
-
-      const { data: result, error } = await tryCatch(ItemService.getItemReleases(params.id));
-
-      if (error) {
-        log.error(error, { step: "getItemReleases", outcome: "error" });
-        return status(500, "Failed to get item releases");
-      }
-
-      log.set({ result: { count: result.releases.length }, outcome: "success" });
-      return result;
-    },
-    { params: itemIdParamSchema, auth: true },
-  )
-  .get(
-    "/:id",
-    async ({ params, user, log }) => {
-      log.set({ action: "item.get", user: { id: user.id }, item: { externalId: params.id } });
-
-      const { data: result, error } = await tryCatch(ItemService.getItem(user.id, params.id));
-
-      if (error) {
-        if (error.message === "ITEM_NOT_FOUND") {
-          log.set({ outcome: "not_found" });
-          return status(404, "Item not found");
-        }
-        log.error(error, { step: "getItem", outcome: "error" });
-        return status(500, "Failed to get item");
-      }
-
-      log.set({ outcome: "success" });
-      return result;
-    },
-    { params: itemParamSchema, auth: true },
-  )
-  .get(
-    "/:id/orders",
-    async ({ params, user, log }) => {
-      log.set({
-        action: "item.getRelatedOrders",
-        user: { id: user.id },
-        item: { externalId: params.id },
-      });
-
-      const { data: orders, error } = await tryCatch(
-        ItemService.getItemRelatedOrders(user.id, params.id),
-      );
-
-      if (error) {
-        log.error(error, { step: "getItemRelatedOrders", outcome: "error" });
-        return status(500, "Failed to get item related orders");
-      }
-
-      log.set({ outcome: "success" });
-      return { orders };
-    },
-    { params: itemParamSchema, auth: true },
-  )
-  .get(
-    "/:id/collection",
-    async ({ params, user, log }) => {
-      log.set({
-        action: "item.getRelatedCollection",
-        user: { id: user.id },
-        item: { externalId: params.id },
-      });
-
-      const { data: collection, error } = await tryCatch(
-        ItemService.getItemRelatedCollection(user.id, params.id),
-      );
-
-      if (error) {
-        log.error(error, { step: "getItemRelatedCollection", outcome: "error" });
-        return status(500, "Failed to get item related collections");
-      }
-
-      log.set({ outcome: "success" });
-      return { collection };
-    },
-    { params: itemParamSchema, auth: true },
-  )
+const itemRouter = privateApi("/item")
+  .post("/custom", (ctx) => serve(ctx, Items.createCustom, ctx.body), { body: customItemSchema })
+  .get("/:id/releases", (ctx) => serve(ctx, Items.releases, ctx.params), {
+    params: itemIdParamSchema,
+  })
+  .get("/:id", (ctx) => serve(ctx, Items.get, ctx.params), { params: itemParamSchema })
+  .get("/:id/orders", (ctx) => serve(ctx, Items.relatedOrders, ctx.params), {
+    params: itemParamSchema,
+  })
+  .get("/:id/collection", (ctx) => serve(ctx, Items.relatedCollection, ctx.params), {
+    params: itemParamSchema,
+  })
   .get(
     "/:id/resync-status",
     async ({ params, user, log }) => {

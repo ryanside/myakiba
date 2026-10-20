@@ -193,8 +193,11 @@ export default defineConfig({
         "apps/server/src/routers/collection/**",
         "apps/server/src/routers/lists/**",
         "apps/server/src/routers/wishlist/**",
+        "apps/server/src/routers/item/**",
+        "apps/server/src/routers/search/**",
+        "apps/server/src/routers/calendar/**",
       ],
-      excludeFiles: ["**/*.test.ts"],
+      excludeFiles: ["**/*.test.ts", "apps/server/src/routers/item/resync-service.ts"],
       rules: {
         "no-restricted-imports": [
           "error",

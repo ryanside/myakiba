@@ -179,7 +179,6 @@
     "apps/server/src/routers/analytics/model.ts RankedAnalytics",
     "apps/server/src/routers/analytics/model.ts ScaleLeaderboardRow",
     "apps/server/src/routers/analytics/model.ts ShopLeaderboardRow",
-    "apps/server/src/routers/calendar/model.ts CalendarQuery",
     "apps/server/src/routers/calendar/model.ts CalendarView",
     "apps/server/src/routers/sync/model.ts CollectionSyncType",
     "apps/server/src/routers/sync/model.ts InternalCsvItem",
