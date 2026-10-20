@@ -14,7 +14,7 @@ import type {
   Updater,
 } from "@tanstack/react-table";
 import type { OrderFilters } from "@myakiba/contracts/orders/schema";
-import type { OrderListItem } from "@myakiba/contracts/orders/types";
+import type { Order } from "@myakiba/contracts/orders/types";
 import { useSelection } from "@/hooks/use-selection";
 import { DataGridColumnCombobox } from "../ui/data-grid-column-combobox";
 import { OrdersToolbar } from "./orders-toolbar";
@@ -78,6 +78,7 @@ export default function OrdersDataGrid() {
   const isTableView = viewMode === "compact" || viewMode === "table";
   const { filters, setFilters } = useOrdersFilters();
   const { orders, totalCount, isPending } = useOrdersQuery();
+  const tableData = useMemo(() => [...orders], [orders]);
   const {
     handleEditOrder,
     handleDeleteOrders,
@@ -212,9 +213,9 @@ export default function OrdersDataGrid() {
 
   const table = useReactTable({
     columns,
-    data: orders,
+    data: tableData,
     pageCount: Math.ceil(totalCount / limit),
-    getRowId: (row: OrderListItem) => row.orderId,
+    getRowId: (row: Order) => row.orderId,
     getRowCanExpand: () => true,
     state: {
       pagination,

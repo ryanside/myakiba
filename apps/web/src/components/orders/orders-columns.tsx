@@ -30,7 +30,7 @@ import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-colu
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
 import type { CascadeOptions, EditedOrder } from "@myakiba/contracts/orders/schema";
-import type { OrderListItem } from "@myakiba/contracts/orders/types";
+import type { Order } from "@myakiba/contracts/orders/types";
 import { OrderForm } from "./order-form";
 import { OrderItemSubDataGrid } from "./order-item-sub-data-grid";
 import { PopoverMultiInputCell } from "../cells/popover-multi-input-cell";
@@ -60,7 +60,7 @@ export const OrderItemSelectionContext = createContext<{
   setSelectedOrderIdByCollectionId: Dispatch<SetStateAction<Map<string, string>>>;
 } | null>(null);
 
-function ExpandButton({ row }: { readonly row: Row<OrderListItem> }) {
+function ExpandButton({ row }: { readonly row: Row<Order> }) {
   const isExpanded = row.getIsExpanded();
 
   return row.getCanExpand() ? (
@@ -87,7 +87,7 @@ function OrderActionsCell({
   onDeleteOrders,
   currency,
 }: Pick<OrdersColumnsParams, "onEditOrder" | "onDeleteOrders" | "currency"> & {
-  readonly order: OrderListItem;
+  readonly order: Order;
   readonly isPending: boolean;
 }): React.JSX.Element {
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -201,7 +201,7 @@ export function createOrdersColumns({
   dateFormat,
   isOrderPending,
   isCollectionItemPending,
-}: OrdersColumnsParams): ColumnDef<OrderListItem>[] {
+}: OrdersColumnsParams): ColumnDef<Order>[] {
   return [
     {
       id: "select",

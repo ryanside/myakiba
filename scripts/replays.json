@@ -300,6 +300,27 @@
       "bug": "the move toast hid the server's not-found message behind a retry prompt",
       "test": "apps/web/src/hooks/use-orders-move-toast.test.tsx",
       "fixed": ["a rejected move shows the server's message"]
+    },
+    {
+      "fix": "6bdc8823",
+      "bug": "a list page and its totals read two snapshots, so a committed delete left rows the totals did not count",
+      "test": "apps/server/src/routers/list-snapshot.test.ts",
+      "fixed": ["a delete committed while a page is read leaves its rows and totals in agreement"]
+    },
+    {
+      "fix": "9d8845a0",
+      "bug": "the item search pager kept Next enabled on a page past the end",
+      "test": "apps/web/src/components/data-table/data-table-pagination.test.tsx",
+      "fixed": ["DataTablePagination > a page past the end cannot go further"]
+    },
+    {
+      "fix": "9d8845a0",
+      "bug": "the data grid showed an impossible range such as 101 - 50 of 50 on an empty page",
+      "test": "apps/web/src/components/reui/data-grid/data-grid-pagination.test.tsx",
+      "fixed": [
+        "DataGridPagination range > a page past the end shows no rows of the total",
+        "DataGridPagination range > an empty result shows no rows of none"
+      ]
     }
   ],
   "lint": [
@@ -430,9 +451,9 @@
         "src/domain/kernel.type-test.ts(31,34): error TS2345",
         "src/domain/kernel.type-test.ts(37,59): error TS2741",
         "src/domain/kernel.type-test.ts(40,14): error TS2741",
-        "src/domain/kernel.type-test.ts(50,40): error TS2322",
-        "src/domain/kernel.type-test.ts(53,32): error TS2741",
-        "src/domain/kernel.type-test.ts(73,30): error TS2339"
+        "src/domain/kernel.type-test.ts(51,55): error TS2322",
+        "src/domain/kernel.type-test.ts(57,5): error TS2741",
+        "src/domain/kernel.type-test.ts(81,30): error TS2339"
       ]
     }
   ]

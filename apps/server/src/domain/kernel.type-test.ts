@@ -43,16 +43,24 @@ void serve({ viewer: { userId: "u1" }, log: createRequestLogger() }, Orders.remo
 });
 
 query(config, async (scope, input: PageRequest<"title" | "shop">) => {
-  const rows = scope.tx.select({ id: order.id }).from(order).$dynamic();
+  const select = { id: order.id };
+  const rows = (fields: typeof select) => scope.tx.select(fields).from(order).$dynamic();
   const sortBy = { title: order.title, shop: order.shop };
 
   // @ts-expect-error a1f6ff78: pages ordered by a non-unique key repeated rows; end on a primary key
-  void paginate(input, { rows, sortBy, tiebreak: [order.createdAt] });
+  void paginate(scope, input, { select, rows, sortBy, tiebreak: [order.createdAt] });
 
-  // @ts-expect-error a sort key without a column fell back to createdAt; sortBy names every key
-  void paginate(input, { rows, sortBy: { title: order.title }, tiebreak: [order.id] });
+  void paginate(scope, input, {
+    select,
+    rows,
+    // @ts-expect-error a sort key without a column fell back to createdAt; sortBy names every key
+    sortBy: { title: order.title },
+    tiebreak: [order.id],
+  });
 
-  return ok(await paginate(input, { rows, sortBy, tiebreak: [order.createdAt, order.id] }));
+  return ok(
+    await paginate(scope, input, { select, rows, sortBy, tiebreak: [order.createdAt, order.id] }),
+  );
 });
 
 privateApi("/probe").delete("/:orderId/items/:collectionId", (ctx) =>

@@ -1,3 +1,4 @@
+import type { Page } from "../shared/pagination";
 import type { Category, CollectionStatus, Condition, ShippingMethod } from "../shared/types";
 
 export type CollectionItem = {
@@ -30,20 +31,11 @@ export type CollectionItem = {
   releaseBarcode: string | null;
   createdAt: string;
   updatedAt: string;
-  totalCount: number;
-  totalValue: number;
-  totalItemsThisMonth: number;
 };
 
 export type CollectionItemFormValues = Omit<
   CollectionItem,
-  | "createdAt"
-  | "updatedAt"
-  | "totalCount"
-  | "totalValue"
-  | "totalItemsThisMonth"
-  | "itemCategory"
-  | "itemScale"
+  "createdAt" | "updatedAt" | "itemCategory" | "itemScale"
 >;
 
 export type CollectionStats = {
@@ -53,4 +45,8 @@ export type CollectionStats = {
   totalSpentThisMonth: number;
 };
 
-export type CollectionQueryResponse = CollectionItem[];
+/** A page of Collection Items and the summary of every item the filters match. */
+export type CollectionPage = Page<CollectionItem> & {
+  readonly totalValue: number;
+  readonly totalItemsThisMonth: number;
+};

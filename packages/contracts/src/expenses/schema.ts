@@ -179,7 +179,7 @@ export const expenseShopRowSchema = z.discriminatedUnion("scope", [
 ]);
 
 export const expenseShopsResponseSchema = z.object({
-  rows: z.array(expenseShopRowSchema),
+  items: z.array(expenseShopRowSchema),
   totalCount: z.number(),
 });
 

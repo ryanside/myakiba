@@ -7,14 +7,14 @@ import { Card } from "@/components/ui/card";
 import { getStatusVariant } from "@/lib/orders";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { cn } from "@/lib/utils";
-import type { OrderListItem } from "@myakiba/contracts/orders/types";
+import type { Order } from "@myakiba/contracts/orders/types";
 import type { CascadeOptions, EditedOrder } from "@myakiba/contracts/orders/schema";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import type { RowSelectionState } from "@tanstack/react-table";
 import { ThemedBadge } from "../reui/badge";
 
 interface OrdersCardGridProps {
-  readonly orders: readonly OrderListItem[];
+  readonly orders: readonly Order[];
   readonly cardWidth: number;
   readonly rowSelection: RowSelectionState;
   readonly onRowSelectionChange: (

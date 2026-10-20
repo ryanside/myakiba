@@ -7,12 +7,12 @@ import type {
   OrderFilters,
   OrderItemsQuery,
 } from "@myakiba/contracts/orders/schema";
-import type { Order, OrderItem, OrderListItem } from "@myakiba/contracts/orders/types";
+import type { Order, OrderItem, OrdersPage } from "@myakiba/contracts/orders/types";
 import type { Page } from "@myakiba/contracts/shared/pagination";
 import type { OrderStatus } from "@myakiba/contracts/shared/types";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 
-export async function getOrders(filters: OrderFilters): Promise<OrderListItem[]> {
+export async function getOrders(filters: OrderFilters): Promise<OrdersPage> {
   const queryParams = {
     limit: filters.limit ?? DEFAULT_LIMIT,
     offset: filters.offset ?? 0,
@@ -84,14 +84,11 @@ export async function getOrderItems(
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to get order items"));
   }
-  if (!data || !Array.isArray(data) || data.length === 0) {
-    return { items: [], totalCount: 0 };
+  if (!data) {
+    throw new Error("Failed to get order items");
   }
 
-  const totalCount = (data[0] as { totalCount?: number }).totalCount ?? 0;
-  const items = data.map(({ totalCount: _tc, ...item }) => item);
-
-  return { items, totalCount };
+  return data;
 }
 
 export async function mergeOrders(

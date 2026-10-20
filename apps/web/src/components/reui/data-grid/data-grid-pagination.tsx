@@ -55,12 +55,13 @@ function DataGridPagination(props: DataGridPaginationProps): React.JSX.Element {
   const to = Math.min((pageIndex + 1) * pageSize, recordCount);
   const pageCount = table.getPageCount();
 
-  const paginationInfo = mergedProps?.info
+  const pageInfo = mergedProps?.info
     ? mergedProps.info
         .replace("{from}", from.toString())
         .replace("{to}", to.toString())
         .replace("{count}", recordCount.toString())
     : `${from} - ${to} of ${recordCount}`;
+  const paginationInfo = from > recordCount ? `0 of ${recordCount}` : pageInfo;
 
   const paginationMoreLimit = mergedProps?.moreLimit || 5;
 

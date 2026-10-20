@@ -5,14 +5,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { OrderControls } from "@/components/orders/order-controls";
 import { cn } from "@/lib/utils";
-import type { OrderListItem } from "@myakiba/contracts/orders/types";
+import type { Order } from "@myakiba/contracts/orders/types";
 import type { CascadeOptions, EditedOrder } from "@myakiba/contracts/orders/schema";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import type { RowSelectionState } from "@tanstack/react-table";
 import type { GalleryLayout } from "@/components/ui/gallery-layout-toggle";
 
 interface OrdersGalleryGridProps {
-  readonly orders: readonly OrderListItem[];
+  readonly orders: readonly Order[];
   readonly tileSize: number;
   readonly galleryLayout: GalleryLayout;
   readonly rowSelection: RowSelectionState;

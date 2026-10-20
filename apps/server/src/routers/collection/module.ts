@@ -48,50 +48,48 @@ export const Collection = {
         input.search ? ilike(item.title, `%${input.search}%`) : undefined,
       );
 
-      const rows = scope.tx
-        .select({
-          id: collection.id,
-          orderId: collection.orderId,
-          itemId: item.id,
-          itemExternalId: item.externalId,
-          itemTitle: item.title,
-          itemImage: item.image,
-          itemCategory: item.category,
-          itemScale: item.scale,
-          status: collection.status,
-          count: collection.count,
-          score: collection.score,
-          price: collection.price,
-          shop: collection.shop,
-          condition: collection.condition,
-          orderDate: collection.orderDate,
-          paymentDate: collection.paymentDate,
-          shippingDate: collection.shippingDate,
-          collectionDate: collection.collectionDate,
-          shippingMethod: collection.shippingMethod,
-          tags: collection.tags,
-          notes: collection.notes,
-          releaseId: collection.releaseId,
-          releaseDate: item_release.date,
-          releasePrice: item_release.price,
-          releaseCurrency: item_release.priceCurrency,
-          releaseBarcode: item_release.barcode,
-          releaseType: item_release.type,
-          createdAt: collection.createdAt,
-          updatedAt: collection.updatedAt,
-          /* oxlint-disable myakiba/no-window-total -- the collection response carries these totals on every row until S9 moves them to a filtered count (until 2027-01-31, approved by root per plan S2, pending operator review) */
-          totalCount: sql<number>`COUNT(*) OVER()`,
-          totalValue: sql<number>`COALESCE(SUM(${collection.price}) OVER(), 0)`,
-          totalItemsThisMonth: sql<number>`COUNT(*) FILTER (WHERE ${collection.collectionDate} >= date_trunc('month', CURRENT_DATE)::date) OVER()`,
-          /* oxlint-enable myakiba/no-window-total */
-        })
-        .from(collection)
-        .innerJoin(item, eq(collection.itemId, item.id))
-        .leftJoin(item_release, eq(collection.releaseId, item_release.id))
-        .where(filters)
-        .$dynamic();
+      const select = {
+        id: collection.id,
+        orderId: collection.orderId,
+        itemId: item.id,
+        itemExternalId: item.externalId,
+        itemTitle: item.title,
+        itemImage: item.image,
+        itemCategory: item.category,
+        itemScale: item.scale,
+        status: collection.status,
+        count: collection.count,
+        score: collection.score,
+        price: collection.price,
+        shop: collection.shop,
+        condition: collection.condition,
+        orderDate: collection.orderDate,
+        paymentDate: collection.paymentDate,
+        shippingDate: collection.shippingDate,
+        collectionDate: collection.collectionDate,
+        shippingMethod: collection.shippingMethod,
+        tags: collection.tags,
+        notes: collection.notes,
+        releaseId: collection.releaseId,
+        releaseDate: item_release.date,
+        releasePrice: item_release.price,
+        releaseCurrency: item_release.priceCurrency,
+        releaseBarcode: item_release.barcode,
+        releaseType: item_release.type,
+        createdAt: collection.createdAt,
+        updatedAt: collection.updatedAt,
+      };
+      const rows = (fields: typeof select) =>
+        scope.tx
+          .select(fields)
+          .from(collection)
+          .innerJoin(item, eq(collection.itemId, item.id))
+          .leftJoin(item_release, eq(collection.releaseId, item_release.id))
+          .where(filters)
+          .$dynamic();
 
-      const page = await paginate(input, {
+      const page = await paginate(scope, input, {
+        select,
         rows,
         sortBy: {
           itemTitle: item.title,
@@ -110,15 +108,24 @@ export const Collection = {
           createdAt: collection.createdAt,
         },
         tiebreak: [collection.createdAt, collection.id],
+        totals: {
+          totalValue: { sum: collection.price },
+          totalItemsThisMonth: {
+            count: sql`${collection.collectionDate} >= date_trunc('month', CURRENT_DATE)::date`,
+          },
+        },
       });
 
-      const items = page.map((row) => ({
-        ...row,
-        createdAt: row.createdAt.toISOString(),
-        updatedAt: row.updatedAt.toISOString(),
-      }));
-      scope.log.set({ collection: { resultCount: items.length } });
-      return ok(items);
+      const result = {
+        ...page,
+        items: page.items.map((row) => ({
+          ...row,
+          createdAt: row.createdAt.toISOString(),
+          updatedAt: row.updatedAt.toISOString(),
+        })),
+      };
+      scope.log.set({ collection: { resultCount: result.items.length } });
+      return ok(result);
     },
   ),
 

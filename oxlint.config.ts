@@ -272,7 +272,9 @@ export default defineConfig({
       },
     },
     {
-      files: ["apps/server/src/routers/*/module.ts"],
+      files: ["apps/server/src/**"],
+      // Window totals are only safe inside paginate, which re-reads an empty page past the end with one statement.
+      excludeFiles: ["apps/server/src/domain/kernel.ts"],
       rules: { "myakiba/no-window-total": "warn" },
     },
     {

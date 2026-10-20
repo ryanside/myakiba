@@ -21,7 +21,8 @@ import type {
   AnalyticsSectionSort,
   AnalyticsSectionSortOrder,
 } from "@myakiba/contracts/analytics/schema";
-import { fail, ok, prepared, query } from "@/domain/kernel";
+import type { Page } from "@myakiba/contracts/shared/pagination";
+import { fail, ok, paginateBy, prepared, query } from "@/domain/kernel";
 import type {
   AnalyticsResult,
   AnalyticsSectionItemsResult,
@@ -493,26 +494,25 @@ async function getSectionItems(
     .where(and(eq(collection.userId, userId), eq(collection.status, "Owned"), sourceFilter))
     .as("analytics_section_items");
 
-  const rows = await tx
-    .select({
-      id: matchedItems.id,
-      externalId: matchedItems.externalId,
-      title: matchedItems.title,
-      image: matchedItems.image,
-      // oxlint-disable-next-line myakiba/no-window-total -- the response's totalCount comes from the page window; moving it to a filtered count changes past-end responses (until 2027-01-31, approved by root: byte-identical refactor, S9 removes it, pending operator review)
-      totalCount: sql<number>`(COUNT(*) OVER ())::integer`.as("totalCount"),
-    })
-    .from(matchedItems)
-    .orderBy(asc(sql`LOWER(${matchedItems.title})`), asc(matchedItems.id))
-    .limit(limit)
-    .offset(offset);
+  const page = await paginateBy(
+    { tx },
+    { limit, offset },
+    {
+      select: {
+        id: matchedItems.id,
+        externalId: matchedItems.externalId,
+        title: matchedItems.title,
+        image: matchedItems.image,
+      },
+      rows: (fields) => tx.select(fields).from(matchedItems).$dynamic(),
+      orderBy: [
+        [sql`LOWER(${matchedItems.title})`, "asc"],
+        [matchedItems.id, "asc"],
+      ],
+    },
+  );
 
-  return {
-    items: rows.map(({ id, externalId, title, image }) => ({ id, externalId, title, image })),
-    totalCount: rows[0]?.totalCount ?? 0,
-    limit,
-    offset,
-  };
+  return { ...page, limit, offset };
 }
 
 async function getSectionRelationships(
@@ -542,11 +542,7 @@ async function getSectionRelationships(
     .where(and(eq(collection.userId, userId), eq(collection.status, "Owned"), sourceFilter))
     .as("analytics_relationship_matched_collections");
 
-  type RelationshipRow = Omit<AnalyticsSectionRelationshipValue, "previewItems"> & {
-    readonly totalCount: number;
-  };
-
-  const relationshipRows: readonly RelationshipRow[] = await (async () => {
+  const page: Page<Omit<AnalyticsSectionRelationshipValue, "previewItems">> = await (async () => {
     if (relatedSection === "shops") {
       const summary = tx
         .select({
@@ -559,18 +555,19 @@ async function getSectionRelationships(
         .groupBy(matchedCollections.shop)
         .as("analytics_shop_relationship_summary");
 
-      return tx
-        .select({
-          id: summary.id,
-          name: summary.name,
-          itemCount: summary.itemCount,
-          // oxlint-disable-next-line myakiba/no-window-total -- the response's totalCount comes from the page window; moving it to a filtered count changes past-end responses (until 2027-01-31, approved by root: byte-identical refactor, S9 removes it, pending operator review)
-          totalCount: sql<number>`(COUNT(*) OVER ())::integer`.as("totalCount"),
-        })
-        .from(summary)
-        .orderBy(desc(summary.itemCount), asc(sql`LOWER(${summary.name})`), asc(summary.name))
-        .limit(limit)
-        .offset(offset);
+      return paginateBy(
+        { tx },
+        { limit, offset },
+        {
+          select: { id: summary.id, name: summary.name, itemCount: summary.itemCount },
+          rows: (fields) => tx.select(fields).from(summary).$dynamic(),
+          orderBy: [
+            [summary.itemCount, "desc"],
+            [sql`LOWER(${summary.name})`, "asc"],
+            [summary.name, "asc"],
+          ],
+        },
+      );
     }
 
     if (relatedSection === "scales") {
@@ -585,18 +582,19 @@ async function getSectionRelationships(
         .groupBy(matchedCollections.scale)
         .as("analytics_scale_relationship_summary");
 
-      return tx
-        .select({
-          id: summary.id,
-          name: summary.name,
-          itemCount: summary.itemCount,
-          // oxlint-disable-next-line myakiba/no-window-total -- the response's totalCount comes from the page window; moving it to a filtered count changes past-end responses (until 2027-01-31, approved by root: byte-identical refactor, S9 removes it, pending operator review)
-          totalCount: sql<number>`(COUNT(*) OVER ())::integer`.as("totalCount"),
-        })
-        .from(summary)
-        .orderBy(desc(summary.itemCount), asc(sql`LOWER(${summary.name})`), asc(summary.name))
-        .limit(limit)
-        .offset(offset);
+      return paginateBy(
+        { tx },
+        { limit, offset },
+        {
+          select: { id: summary.id, name: summary.name, itemCount: summary.itemCount },
+          rows: (fields) => tx.select(fields).from(summary).$dynamic(),
+          orderBy: [
+            [summary.itemCount, "desc"],
+            [sql`LOWER(${summary.name})`, "asc"],
+            [summary.name, "asc"],
+          ],
+        },
+      );
     }
 
     const summary = tx
@@ -612,24 +610,22 @@ async function getSectionRelationships(
       .groupBy(entry.id, entry.name)
       .as("analytics_entry_relationship_summary");
 
-    return tx
-      .select({
-        id: summary.id,
-        name: summary.name,
-        itemCount: summary.itemCount,
-        // oxlint-disable-next-line myakiba/no-window-total -- the response's totalCount comes from the page window; moving it to a filtered count changes past-end responses (until 2027-01-31, approved by root: byte-identical refactor, S9 removes it, pending operator review)
-        totalCount: sql<number>`(COUNT(*) OVER ())::integer`.as("totalCount"),
-      })
-      .from(summary)
-      .orderBy(
-        desc(summary.itemCount),
-        asc(sql`LOWER(${summary.name})`),
-        asc(summary.name),
-        asc(summary.id),
-      )
-      .limit(limit)
-      .offset(offset);
+    return paginateBy(
+      { tx },
+      { limit, offset },
+      {
+        select: { id: summary.id, name: summary.name, itemCount: summary.itemCount },
+        rows: (fields) => tx.select(fields).from(summary).$dynamic(),
+        orderBy: [
+          [summary.itemCount, "desc"],
+          [sql`LOWER(${summary.name})`, "asc"],
+          [summary.name, "asc"],
+          [summary.id, "asc"],
+        ],
+      },
+    );
   })();
+  const relationshipRows = page.items;
 
   const previewItemsByRelationship = new Map<string, AnalyticsSectionRelationshipPreviewItem[]>();
   const addPreviewItem = (
@@ -747,13 +743,13 @@ async function getSectionRelationships(
 
   return {
     section: relatedSection,
-    values: relationshipRows.map(({ id, name, itemCount }) => ({
+    items: relationshipRows.map(({ id, name, itemCount }) => ({
       id,
       name,
       itemCount,
       previewItems: previewItemsByRelationship.get(id ?? name) ?? [],
     })),
-    totalCount: relationshipRows[0]?.totalCount ?? 0,
+    totalCount: page.totalCount,
     limit,
     offset,
   };
@@ -877,7 +873,7 @@ export const Analytics = {
       scope.log.set({
         analytics: {
           ...analytics,
-          resultCount: relationships.values.length,
+          resultCount: relationships.items.length,
           totalCount: relationships.totalCount,
         },
       });

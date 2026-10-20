@@ -7,7 +7,7 @@ import type {
   OrderFilters,
   OrderItemsQuery,
 } from "@myakiba/contracts/orders/schema";
-import type { Order, OrderItem, OrderListItem } from "@myakiba/contracts/orders/types";
+import type { Order, OrderItem, OrdersPage } from "@myakiba/contracts/orders/types";
 import type { Page } from "@myakiba/contracts/shared/pagination";
 import { hasActiveFiltersOrSorting } from "@/lib/filters";
 import { updateCollectionItem } from "@/queries/collection";
@@ -88,11 +88,11 @@ export const editOrderCommand = defineCommand({
     );
 
     const listKey = orders.list.key(list);
-    let previousList: OrderListItem[] | undefined;
+    let previousList: OrdersPage | undefined;
     if (!hasActiveFiltersOrSorting(list)) {
       await queryClient.cancelQueries({ queryKey: listKey });
-      previousList = queryClient.getQueryData<OrderListItem[]>(listKey);
-      const oldOrder = previousList?.find((o) => o.orderId === values.orderId);
+      previousList = queryClient.getQueryData<OrdersPage>(listKey);
+      const oldOrder = previousList?.items.find((o) => o.orderId === values.orderId);
 
       const newTotal = oldOrder
         ? Number(oldOrder.total) +
@@ -103,18 +103,23 @@ export const editOrderCommand = defineCommand({
           (values.miscFees - Number(oldOrder.miscFees))
         : undefined;
 
-      queryClient.setQueryData<OrderListItem[]>(listKey, (old) =>
-        old?.map((order) =>
-          order.orderId === values.orderId
-            ? { ...order, ...values, ...(newTotal !== undefined && { total: newTotal }) }
-            : order,
-        ),
+      queryClient.setQueryData<OrdersPage>(listKey, (old) =>
+        old
+          ? {
+              ...old,
+              items: old.items.map((order) =>
+                order.orderId === values.orderId
+                  ? { ...order, ...values, ...(newTotal !== undefined && { total: newTotal }) }
+                  : order,
+              ),
+            }
+          : old,
       );
     }
 
     return () => {
       if (previousList) {
-        queryClient.setQueryData<OrderListItem[]>(listKey, previousList);
+        queryClient.setQueryData<OrdersPage>(listKey, previousList);
       }
       if (previousOrderDetail) {
         queryClient.setQueryData<Order>(
@@ -137,19 +142,19 @@ export const deleteOrdersCommand = defineCommand({
 
     const listKey = orders.list.key(list);
     await queryClient.cancelQueries({ queryKey: listKey });
-    const previous = queryClient.getQueryData<OrderListItem[]>(listKey);
+    const previous = queryClient.getQueryData<OrdersPage>(listKey);
 
-    queryClient.setQueryData<OrderListItem[]>(listKey, (old) => {
+    queryClient.setQueryData<OrdersPage>(listKey, (old) => {
       if (!old) return old;
-      return old.flatMap((order) =>
-        orderIds.has(order.orderId)
-          ? []
-          : [{ ...order, totalCount: order.totalCount - orderIds.size }],
-      );
+      return {
+        ...old,
+        items: old.items.filter((order) => !orderIds.has(order.orderId)),
+        totalCount: old.totalCount - orderIds.size,
+      };
     });
 
     return () => {
-      if (previous) queryClient.setQueryData<OrderListItem[]>(listKey, previous);
+      if (previous) queryClient.setQueryData<OrdersPage>(listKey, previous);
     };
   },
   successTitle: ({ orderIds }) =>
@@ -174,15 +179,15 @@ export const mergeOrdersCommand = defineCommand({
 
     const listKey = orders.list.key(list);
     await queryClient.cancelQueries({ queryKey: listKey });
-    const previous = queryClient.getQueryData<OrderListItem[]>(listKey);
+    const previous = queryClient.getQueryData<OrdersPage>(listKey);
 
-    queryClient.setQueryData<OrderListItem[]>(listKey, (old) => {
+    queryClient.setQueryData<OrdersPage>(listKey, (old) => {
       if (!old) return old;
-      return old.filter((order) => !orderIds.has(order.orderId));
+      return { ...old, items: old.items.filter((order) => !orderIds.has(order.orderId)) };
     });
 
     return () => {
-      if (previous) queryClient.setQueryData<OrderListItem[]>(listKey, previous);
+      if (previous) queryClient.setQueryData<OrdersPage>(listKey, previous);
     };
   },
   successTitle: ({ orderIds }) => `Successfully merged ${orderIds.size} orders into one!`,
@@ -248,17 +253,23 @@ export const editOrderItemCommand = defineCommand({
     }
 
     const listKey = orders.list.key(list);
-    let previousOrders: OrderListItem[] | undefined;
+    let previousOrders: OrdersPage | undefined;
 
     if (!hasActiveFiltersOrSorting(list) && priceChanged) {
       await queryClient.cancelQueries({ queryKey: listKey });
-      previousOrders = queryClient.getQueryData<OrderListItem[]>(listKey);
-      const nextOrders = previousOrders?.map((order) =>
-        order.orderId === itemOrderId
-          ? { ...order, total: Number(order.total) + priceDelta }
-          : order,
+      previousOrders = queryClient.getQueryData<OrdersPage>(listKey);
+      queryClient.setQueryData<OrdersPage>(listKey, (old) =>
+        old
+          ? {
+              ...old,
+              items: old.items.map((order) =>
+                order.orderId === itemOrderId
+                  ? { ...order, total: Number(order.total) + priceDelta }
+                  : order,
+              ),
+            }
+          : old,
       );
-      queryClient.setQueryData<OrderListItem[]>(listKey, nextOrders);
     }
 
     return () => {
@@ -266,7 +277,7 @@ export const editOrderItemCommand = defineCommand({
         queryClient.setQueryData(queryKey, data);
       }
       if (previousOrders) {
-        queryClient.setQueryData<OrderListItem[]>(listKey, previousOrders);
+        queryClient.setQueryData<OrdersPage>(listKey, previousOrders);
       }
       if (previousOrderDetail) {
         queryClient.setQueryData<Order>(orderDetailKey, previousOrderDetail);
@@ -313,21 +324,26 @@ export const deleteOrderItemCommand = defineCommand({
     );
 
     const listKey = orders.list.key(list);
-    let previousOrders: OrderListItem[] | undefined;
+    let previousOrders: OrdersPage | undefined;
 
     if (!hasActiveFiltersOrSorting(list)) {
       await queryClient.cancelQueries({ queryKey: listKey });
-      previousOrders = queryClient.getQueryData<OrderListItem[]>(listKey);
-      queryClient.setQueryData<OrderListItem[]>(listKey, (old) =>
-        old?.map((order) =>
-          order.orderId === orderId
-            ? {
-                ...order,
-                total: order.total - removedPrice,
-                itemCount: order.itemCount - 1,
-              }
-            : order,
-        ),
+      previousOrders = queryClient.getQueryData<OrdersPage>(listKey);
+      queryClient.setQueryData<OrdersPage>(listKey, (old) =>
+        old
+          ? {
+              ...old,
+              items: old.items.map((order) =>
+                order.orderId === orderId
+                  ? {
+                      ...order,
+                      total: order.total - removedPrice,
+                      itemCount: order.itemCount - 1,
+                    }
+                  : order,
+              ),
+            }
+          : old,
       );
     }
 
@@ -336,7 +352,7 @@ export const deleteOrderItemCommand = defineCommand({
         queryClient.setQueryData(queryKey, data);
       }
       if (previousOrders) {
-        queryClient.setQueryData<OrderListItem[]>(listKey, previousOrders);
+        queryClient.setQueryData<OrdersPage>(listKey, previousOrders);
       }
       if (previousOrderDetail) {
         queryClient.setQueryData<Order>(orderDetailKey, previousOrderDetail);

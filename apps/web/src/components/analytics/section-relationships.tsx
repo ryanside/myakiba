@@ -148,7 +148,7 @@ function RelationshipPage({
     );
   }
 
-  if (!data || data.values.length === 0) {
+  if (!data || data.items.length === 0) {
     const canRecover = offset > 0;
 
     return (
@@ -174,7 +174,7 @@ function RelationshipPage({
   return (
     <div className={cn("flex flex-col gap-3", isFetching && "opacity-60")}>
       <ul className="divide-y overflow-hidden rounded-lg border bg-card">
-        {data.values.map((value) => (
+        {data.items.map((value) => (
           <RelationshipRow key={value.id ?? value.name} value={value} />
         ))}
       </ul>
