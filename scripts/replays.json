@@ -229,6 +229,21 @@
         "Reset Filters on /collection > drops text typed after an outside change when Reset comes within the debounce",
         "Reset Filters on /collection > drops a first search typed just before Reset, though Reset leaves the search unchanged"
       ]
+    },
+    {
+      "fix": "c4d771e6",
+      "bug": "the orders and collection filter dialogs reopened with a stale draft after Reset Filters, Back or Cancel, and Apply wrote it back",
+      "test": "apps/web/src/components/draft-dialog.test.tsx",
+      "fixed": [
+        "orders filters dialog starts each open from the URL filters > after Reset Filters, the reopened dialog is empty and Apply keeps the reset",
+        "orders filters dialog starts each open from the URL filters > after browser Back to an earlier filter, the reopened dialog shows that filter",
+        "orders filters dialog starts each open from the URL filters > closing without Apply discards the draft",
+        "orders filters dialog starts each open from the URL filters > reopening while the dialog is still closing discards the draft",
+        "collection filters dialog starts each open from the URL filters > after Reset Filters, the reopened dialog is empty and Apply keeps the reset",
+        "collection filters dialog starts each open from the URL filters > after browser Back to an earlier filter, the reopened dialog shows that filter",
+        "collection filters dialog starts each open from the URL filters > closing without Apply discards the draft",
+        "collection filters dialog starts each open from the URL filters > reopening while the dialog is still closing discards the draft"
+      ]
     }
   ],
   "lint": [

@@ -6,15 +6,13 @@ import {
   Loading03Icon,
 } from "@hugeicons/core-free-icons";
 import {
-  Dialog,
   DialogClose,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
+import { DraftDialog } from "@/components/draft-dialog";
 import { useForm } from "@tanstack/react-form";
 import { useId, useState } from "react";
 import type { ReactElement } from "react";
@@ -64,12 +62,42 @@ interface FiltersFormProps {
 
 const ENTRY_SEARCH_PAGE_SIZE = 20;
 
+type EntryNameMap = Record<string, string>;
+
 export default function FiltersForm({
   renderTrigger,
+  onApplyFilters,
+  ...draftProps
+}: FiltersFormProps): React.JSX.Element {
+  const [entryNameMap, setEntryNameMap] = useState<EntryNameMap>({});
+
+  return (
+    <DraftDialog trigger={renderTrigger} className="sm:max-w-lg! px-0">
+      {(close) => (
+        <FiltersDraft
+          {...draftProps}
+          entryNameMap={entryNameMap}
+          rememberEntryName={(id, name) => setEntryNameMap((prev) => ({ ...prev, [id]: name }))}
+          onApplyFilters={(filters) => {
+            onApplyFilters(filters);
+            close();
+          }}
+        />
+      )}
+    </DraftDialog>
+  );
+}
+
+function FiltersDraft({
   currentFilters,
   onApplyFilters,
   currency,
-}: FiltersFormProps) {
+  entryNameMap,
+  rememberEntryName,
+}: Omit<FiltersFormProps, "renderTrigger"> & {
+  readonly entryNameMap: EntryNameMap;
+  readonly rememberEntryName: (id: string, name: string) => void;
+}): React.JSX.Element {
   const entriesListId = useId();
   const [entriesPopoverOpen, setEntriesPopoverOpen] = useState(false);
   const userLocale = getCurrencyLocale(currency);
@@ -147,7 +175,6 @@ export default function FiltersForm({
   };
 
   const [entrySearch, setEntrySearch] = useState("");
-  const [entryNameMap, setEntryNameMap] = useState<Record<string, string>>({});
 
   const {
     data: entryPages,
@@ -178,724 +205,694 @@ export default function FiltersForm({
   const entries = entryPages?.pages.flatMap((page) => page.entries) ?? [];
 
   return (
-    <Dialog>
-      <DialogTrigger render={renderTrigger} />
-      <DialogContent className="sm:max-w-lg! px-0">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            form.handleSubmit();
-          }}
-        >
-          <DialogHeader className="pb-4 px-4">
-            <DialogTitle>Filters</DialogTitle>
-            <DialogDescription>Apply filters to narrow down your collection</DialogDescription>
-          </DialogHeader>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        form.handleSubmit();
+      }}
+    >
+      <DialogHeader className="pb-4 px-4">
+        <DialogTitle>Filters</DialogTitle>
+        <DialogDescription>Apply filters to narrow down your collection</DialogDescription>
+      </DialogHeader>
 
-          <ScrollArea className="overflow-auto max-h-[60vh] pb-4 w-full">
-            <div className="grid gap-4 px-4">
-              {/* Shipping Method */}
-              <form.Field
-                name="shipMethod"
-                children={(field) => (
-                  <Field>
-                    <FieldTitle>Shipping Method</FieldTitle>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        render={
-                          <Button
-                            variant="outline"
-                            className="w-full justify-between"
-                            type="button"
-                          >
-                            {getMultiSelectDisplay(field.state.value, "shipping method")}
-                            <HugeiconsIcon icon={ArrowDown01Icon} data-icon="inline-end" />
-                          </Button>
-                        }
-                      />
-                      <DropdownMenuContent className="w-(--anchor-width)">
-                        <ScrollArea className="h-[200px]">
-                          {SHIPPING_METHODS.map((method) => (
-                            <DropdownMenuCheckboxItem
-                              key={method}
-                              checked={field.state.value?.includes(method)}
-                              onCheckedChange={(checked) => {
-                                const current = field.state.value || [];
-                                const updated = checked
-                                  ? [...current, method]
-                                  : current.filter((m) => m !== method);
-                                field.handleChange(updated);
-                              }}
-                              onSelect={(e) => e.preventDefault()}
-                            >
-                              {method}
-                            </DropdownMenuCheckboxItem>
-                          ))}
-                        </ScrollArea>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </Field>
-                )}
-              />
-
-              {/* Condition */}
-              <form.Field
-                name="condition"
-                children={(field) => (
-                  <Field>
-                    <FieldTitle>Condition</FieldTitle>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        render={
-                          <Button
-                            variant="outline"
-                            className="w-full justify-between"
-                            type="button"
-                          >
-                            {getMultiSelectDisplay(field.state.value, "condition")}
-                            <HugeiconsIcon icon={ArrowDown01Icon} data-icon="inline-end" />
-                          </Button>
-                        }
-                      />
-                      <DropdownMenuContent className="w-(--anchor-width)">
-                        {CONDITIONS.map((condition) => (
-                          <DropdownMenuCheckboxItem
-                            key={condition}
-                            checked={field.state.value?.includes(condition)}
-                            onCheckedChange={(checked) => {
-                              const current = field.state.value || [];
-                              const updated = checked
-                                ? [...current, condition]
-                                : current.filter((c) => c !== condition);
-                              field.handleChange(updated);
-                            }}
-                            onSelect={(e) => e.preventDefault()}
-                          >
-                            {condition}
-                          </DropdownMenuCheckboxItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </Field>
-                )}
-              />
-
-              {/* Category */}
-              <form.Field
-                name="category"
-                children={(field) => (
-                  <Field>
-                    <FieldTitle>Category</FieldTitle>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        render={
-                          <Button
-                            variant="outline"
-                            className="w-full justify-between"
-                            type="button"
-                          >
-                            {getMultiSelectDisplay(field.state.value, "category")}
-                            <HugeiconsIcon icon={ArrowDown01Icon} data-icon="inline-end" />
-                          </Button>
-                        }
-                      />
-                      <DropdownMenuContent className="w-(--anchor-width)">
-                        <ScrollArea className="h-[200px]">
-                          {CATEGORIES.map((category) => (
-                            <DropdownMenuCheckboxItem
-                              key={category}
-                              checked={field.state.value?.includes(category)}
-                              onCheckedChange={(checked) => {
-                                const current = field.state.value || [];
-                                const updated = checked
-                                  ? [...current, category]
-                                  : current.filter((c) => c !== category);
-                                field.handleChange(updated);
-                              }}
-                              onSelect={(e) => e.preventDefault()}
-                            >
-                              {category}
-                            </DropdownMenuCheckboxItem>
-                          ))}
-                        </ScrollArea>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </Field>
-                )}
-              />
-
-              {/* Paid Price Range */}
+      <ScrollArea className="overflow-auto max-h-[60vh] pb-4 w-full">
+        <div className="grid gap-4 px-4">
+          {/* Shipping Method */}
+          <form.Field
+            name="shipMethod"
+            children={(field) => (
               <Field>
-                <FieldTitle>Paid Price Range</FieldTitle>
-                <div className="grid grid-cols-2 gap-2">
-                  <form.Field
-                    name="paidMin"
-                    children={(field) => (
-                      <MaskInput
-                        mask="currency"
-                        currency={currency}
-                        locale={userLocale}
-                        placeholder="Min"
-                        value={field.state.value || ""}
-                        onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-                      />
-                    )}
+                <FieldTitle>Shipping Method</FieldTitle>
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button variant="outline" className="w-full justify-between" type="button">
+                        {getMultiSelectDisplay(field.state.value, "shipping method")}
+                        <HugeiconsIcon icon={ArrowDown01Icon} data-icon="inline-end" />
+                      </Button>
+                    }
                   />
-                  <form.Field
-                    name="paidMax"
-                    children={(field) => (
-                      <MaskInput
-                        mask="currency"
-                        currency={currency}
-                        locale={userLocale}
-                        placeholder="Max"
-                        value={field.state.value || ""}
-                        onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-                      />
-                    )}
-                  />
-                </div>
+                  <DropdownMenuContent className="w-(--anchor-width)">
+                    <ScrollArea className="h-[200px]">
+                      {SHIPPING_METHODS.map((method) => (
+                        <DropdownMenuCheckboxItem
+                          key={method}
+                          checked={field.state.value?.includes(method)}
+                          onCheckedChange={(checked) => {
+                            const current = field.state.value || [];
+                            const updated = checked
+                              ? [...current, method]
+                              : current.filter((m) => m !== method);
+                            field.handleChange(updated);
+                          }}
+                          onSelect={(e) => e.preventDefault()}
+                        >
+                          {method}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </ScrollArea>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </Field>
+            )}
+          />
 
-              {/* Entries */}
-              <form.Field
-                name="entries"
-                children={(field) => (
-                  <Field className="gap-2">
-                    <FieldTitle>Entries</FieldTitle>
-                    <FieldDescription>e.g., Companies, Characters, Artists</FieldDescription>
-                    <FieldContent>
-                      <div className="flex flex-wrap gap-1.5">
-                        {field.state.value?.map((entryId) => (
-                          <Badge
-                            key={entryId}
-                            variant="outline"
-                            className="flex items-center gap-0.5 pr-0"
-                          >
-                            {entryNameMap[entryId] ?? entryId}
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                field.handleChange(
-                                  (field.state.value || []).filter((id) => id !== entryId),
-                                );
-                              }}
-                              className="hover:text-red-500 hover:bg-transparent!"
-                            >
-                              <HugeiconsIcon icon={Cancel01Icon} />
-                            </Button>
-                          </Badge>
-                        ))}
-                      </div>
-                      <div className="flex gap-2">
-                        <Popover open={entriesPopoverOpen} onOpenChange={setEntriesPopoverOpen}>
-                          <PopoverTrigger
-                            render={
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-controls={entriesListId}
-                                aria-expanded={entriesPopoverOpen}
-                                className="w-full justify-between"
-                              >
-                                Select entries...
-                                <HugeiconsIcon
-                                  icon={ArrowUpDownIcon}
-                                  data-icon="inline-end"
-                                  className="shrink-0 opacity-50"
-                                />
-                              </Button>
-                            }
-                          />
-
-                          <PopoverContent className="w-(--anchor-width) p-0">
-                            <Command shouldFilter={false}>
-                              <DebouncedInput
-                                value={entrySearch}
-                                onChange={(value) => setEntrySearch(value.toString())}
-                                placeholder="Search entries..."
-                                debounce={200}
-                                isCommandInput
-                              />
-                              <CommandList id={entriesListId}>
-                                {entrySearch.length === 0 && (
-                                  <div className="px-3 py-6 text-center text-sm text-muted-foreground">
-                                    Type to search for entries
-                                  </div>
-                                )}
-                                {entrySearch.length > 0 && isEntriesError && (
-                                  <CommandEmpty>
-                                    Could not load entries. {entriesError.message}
-                                  </CommandEmpty>
-                                )}
-                                {entrySearch.length > 0 && isEntriesPending && !isEntriesError && (
-                                  <div className="flex items-center justify-center gap-2 px-2 py-6 text-sm text-muted-foreground">
-                                    <HugeiconsIcon
-                                      icon={Loading03Icon}
-                                      className="size-4 animate-spin"
-                                    />
-                                    Searching...
-                                  </div>
-                                )}
-                                {entrySearch.length > 0 &&
-                                  entries.length === 0 &&
-                                  !isEntriesPending &&
-                                  !isEntriesError && <CommandEmpty>No entries found.</CommandEmpty>}
-                                {entries.length > 0 && (
-                                  <>
-                                    <CommandGroup>
-                                      {entries.map((entry) => {
-                                        const isSelected = field.state.value.includes(entry.id);
-                                        return (
-                                          <CommandItem
-                                            key={entry.id}
-                                            value={entry.id}
-                                            data-checked={isSelected}
-                                            onSelect={() => {
-                                              const current = field.state.value ?? [];
-                                              if (isSelected) {
-                                                field.handleChange(
-                                                  current.filter((id) => id !== entry.id),
-                                                );
-                                              } else {
-                                                field.handleChange([...current, entry.id]);
-                                                setEntryNameMap((prev) => ({
-                                                  ...prev,
-                                                  [entry.id]: entry.name,
-                                                }));
-                                              }
-                                            }}
-                                          >
-                                            <span className="flex flex-col">
-                                              <span>{entry.name}</span>
-                                              {entry.category && (
-                                                <span className="text-xs text-muted-foreground">
-                                                  {entry.category}
-                                                </span>
-                                              )}
-                                            </span>
-                                          </CommandItem>
-                                        );
-                                      })}
-                                    </CommandGroup>
-                                    {hasMoreEntries && (
-                                      <div className="px-2 pb-2">
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="sm"
-                                          className="w-full justify-center text-xs"
-                                          onClick={() => fetchMoreEntries()}
-                                          disabled={isFetchingMoreEntries}
-                                        >
-                                          {isFetchingMoreEntries ? (
-                                            <>
-                                              <HugeiconsIcon
-                                                icon={Loading03Icon}
-                                                data-icon="inline-start"
-                                                className="animate-spin"
-                                              />
-                                              Loading...
-                                            </>
-                                          ) : (
-                                            "Load more"
-                                          )}
-                                        </Button>
-                                      </div>
-                                    )}
-                                  </>
-                                )}
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    </FieldContent>
-                  </Field>
-                )}
-              />
-
-              {/* Shop */}
-              <form.Field
-                name="shop"
-                children={(field) => (
-                  <Field className="gap-2">
-                    <FieldTitle>Shop</FieldTitle>
-                    <FieldDescription>e.g., AmiAmi, Mandarake</FieldDescription>
-                    <FieldContent>
-                      <div className="flex flex-wrap gap-2">
-                        {field.state.value?.map((shop, shopIndex) => (
-                          <Badge
-                            key={shopIndex}
-                            variant="outline"
-                            className="flex items-center justify-between pr-0"
-                          >
-                            {shop}
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                const current = field.state.value || [];
-                                field.handleChange(current.filter((_, idx) => idx !== shopIndex));
-                              }}
-                              className=" hover:text-red-500 hover:bg-transparent"
-                            >
-                              <HugeiconsIcon icon={Cancel01Icon} />
-                            </Button>
-                          </Badge>
-                        ))}
-                      </div>
-                      <div className="flex gap-2">
-                        <Input
-                          id="shop-input"
-                          type="text"
-                          placeholder="Press enter after each shop to add"
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              const input = e.currentTarget;
-                              const value = input.value.trim();
-                              if (value) {
-                                const current = field.state.value || [];
-                                field.handleChange([...current, value]);
-                                input.value = "";
-                              }
-                            }
-                          }}
-                        />
-                      </div>
-                    </FieldContent>
-                  </Field>
-                )}
-              />
-
-              {/* Scale */}
-              <form.Field
-                name="scale"
-                children={(field) => (
-                  <Field className="gap-2">
-                    <FieldTitle>Scale</FieldTitle>
-                    <FieldDescription>e.g., 1/8, 1/7, {NO_SCALE} (non-scale)</FieldDescription>
-                    <FieldContent>
-                      <div className="flex flex-wrap gap-2">
-                        {field.state.value?.map((scale, scaleIndex) => (
-                          <Badge
-                            key={scaleIndex}
-                            variant="outline"
-                            size="lg"
-                            className="flex items-center justify-between pr-0"
-                          >
-                            {scale}
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                const current = field.state.value || [];
-                                field.handleChange(current.filter((_, idx) => idx !== scaleIndex));
-                              }}
-                              className=" hover:text-red-500 hover:bg-transparent"
-                            >
-                              <HugeiconsIcon icon={Cancel01Icon} />
-                            </Button>
-                          </Badge>
-                        ))}
-                      </div>
-                      <div className="flex gap-2">
-                        <Input
-                          id="scale-input"
-                          type="text"
-                          placeholder="Press enter after each scale to add"
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              const input = e.currentTarget;
-                              const value = input.value.trim();
-                              if (value) {
-                                const current = field.state.value || [];
-                                field.handleChange([...current, normalizeScale(value)]);
-                                input.value = "";
-                              }
-                            }
-                          }}
-                        />
-                      </div>
-                    </FieldContent>
-                  </Field>
-                )}
-              />
-
-              {/* Tags */}
-              <form.Field
-                name="tags"
-                children={(field) => (
-                  <Field className="gap-2">
-                    <FieldTitle>Tags</FieldTitle>
-                    <FieldDescription>e.g., favorite, limited-edition</FieldDescription>
-                    <FieldContent>
-                      <div className="flex flex-wrap gap-2">
-                        {field.state.value?.map((tag, tagIndex) => (
-                          <Badge
-                            key={tagIndex}
-                            variant="outline"
-                            size="lg"
-                            className="flex items-center justify-between pr-0"
-                          >
-                            {tag}
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                const current = field.state.value || [];
-                                field.handleChange(current.filter((_, idx) => idx !== tagIndex));
-                              }}
-                              className=" hover:text-red-500 hover:bg-transparent"
-                            >
-                              <HugeiconsIcon icon={Cancel01Icon} />
-                            </Button>
-                          </Badge>
-                        ))}
-                      </div>
-                      <div className="flex gap-2">
-                        <Input
-                          id="tags-input"
-                          type="text"
-                          placeholder="Press enter after each tag to add"
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              const input = e.currentTarget;
-                              const value = input.value.trim();
-                              if (value) {
-                                const current = field.state.value || [];
-                                field.handleChange([...current, value]);
-                                input.value = "";
-                              }
-                            }
-                          }}
-                        />
-                      </div>
-                    </FieldContent>
-                  </Field>
-                )}
-              />
-
-              {/* Date Range Filters */}
-              <div className="space-y-4">
-                {/* Payment Date */}
-                <Field>
-                  <Label>Payment Date</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <form.Field
-                      name="payDateStart"
-                      children={(field) => (
-                        <DatePicker
-                          placeholder="From"
-                          value={field.state.value || null}
-                          onChange={(value) => field.handleChange(value || "")}
-                        />
-                      )}
-                    />
-                    <form.Field
-                      name="payDateEnd"
-                      children={(field) => (
-                        <DatePicker
-                          placeholder="To"
-                          value={field.state.value || null}
-                          onChange={(value) => field.handleChange(value || "")}
-                        />
-                      )}
-                    />
-                  </div>
-                </Field>
-
-                {/* Shipping Date */}
-                <Field>
-                  <Label>Shipping Date</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <form.Field
-                      name="shipDateStart"
-                      children={(field) => (
-                        <DatePicker
-                          placeholder="From"
-                          value={field.state.value || null}
-                          onChange={(value) => field.handleChange(value || "")}
-                        />
-                      )}
-                    />
-                    <form.Field
-                      name="shipDateEnd"
-                      children={(field) => (
-                        <DatePicker
-                          placeholder="To"
-                          value={field.state.value || null}
-                          onChange={(value) => field.handleChange(value || "")}
-                        />
-                      )}
-                    />
-                  </div>
-                </Field>
-
-                {/* Collection Date */}
-                <Field>
-                  <Label>Collection Date</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <form.Field
-                      name="colDateStart"
-                      children={(field) => (
-                        <DatePicker
-                          placeholder="From"
-                          value={field.state.value || null}
-                          onChange={(value) => field.handleChange(value || "")}
-                        />
-                      )}
-                    />
-                    <form.Field
-                      name="colDateEnd"
-                      children={(field) => (
-                        <DatePicker
-                          placeholder="To"
-                          value={field.state.value || null}
-                          onChange={(value) => field.handleChange(value || "")}
-                        />
-                      )}
-                    />
-                  </div>
-                </Field>
-
-                {/* Release Date */}
-                <Field>
-                  <Label>Release Date</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <form.Field
-                      name="relDateStart"
-                      children={(field) => (
-                        <DatePicker
-                          placeholder="From"
-                          value={field.state.value || null}
-                          onChange={(value) => field.handleChange(value || "")}
-                        />
-                      )}
-                    />
-                    <form.Field
-                      name="relDateEnd"
-                      children={(field) => (
-                        <DatePicker
-                          placeholder="To"
-                          value={field.state.value || null}
-                          onChange={(value) => field.handleChange(value || "")}
-                        />
-                      )}
-                    />
-                  </div>
-                </Field>
-              </div>
-
-              {/* Release Price Range Filter */}
+          {/* Condition */}
+          <form.Field
+            name="condition"
+            children={(field) => (
               <Field>
-                <FieldTitle>Release Price Range</FieldTitle>
-                <div className="grid grid-cols-2 gap-2">
-                  <form.Field
-                    name="relPriceMin"
-                    children={(field) => (
-                      <MaskInput
-                        mask="currency"
-                        currency={currency}
-                        locale={userLocale}
-                        placeholder="Min"
-                        value={field.state.value || ""}
-                        onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-                      />
-                    )}
+                <FieldTitle>Condition</FieldTitle>
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button variant="outline" className="w-full justify-between" type="button">
+                        {getMultiSelectDisplay(field.state.value, "condition")}
+                        <HugeiconsIcon icon={ArrowDown01Icon} data-icon="inline-end" />
+                      </Button>
+                    }
                   />
-                  <form.Field
-                    name="relPriceMax"
-                    children={(field) => (
-                      <MaskInput
-                        mask="currency"
-                        currency={currency}
-                        locale={userLocale}
-                        placeholder="Max"
-                        value={field.state.value || ""}
-                        onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-                      />
-                    )}
-                  />
-                </div>
+                  <DropdownMenuContent className="w-(--anchor-width)">
+                    {CONDITIONS.map((condition) => (
+                      <DropdownMenuCheckboxItem
+                        key={condition}
+                        checked={field.state.value?.includes(condition)}
+                        onCheckedChange={(checked) => {
+                          const current = field.state.value || [];
+                          const updated = checked
+                            ? [...current, condition]
+                            : current.filter((c) => c !== condition);
+                          field.handleChange(updated);
+                        }}
+                        onSelect={(e) => e.preventDefault()}
+                      >
+                        {condition}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </Field>
+            )}
+          />
 
-              {/* Release Currency */}
+          {/* Category */}
+          <form.Field
+            name="category"
+            children={(field) => (
+              <Field>
+                <FieldTitle>Category</FieldTitle>
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button variant="outline" className="w-full justify-between" type="button">
+                        {getMultiSelectDisplay(field.state.value, "category")}
+                        <HugeiconsIcon icon={ArrowDown01Icon} data-icon="inline-end" />
+                      </Button>
+                    }
+                  />
+                  <DropdownMenuContent className="w-(--anchor-width)">
+                    <ScrollArea className="h-[200px]">
+                      {CATEGORIES.map((category) => (
+                        <DropdownMenuCheckboxItem
+                          key={category}
+                          checked={field.state.value?.includes(category)}
+                          onCheckedChange={(checked) => {
+                            const current = field.state.value || [];
+                            const updated = checked
+                              ? [...current, category]
+                              : current.filter((c) => c !== category);
+                            field.handleChange(updated);
+                          }}
+                          onSelect={(e) => e.preventDefault()}
+                        >
+                          {category}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </ScrollArea>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </Field>
+            )}
+          />
+
+          {/* Paid Price Range */}
+          <Field>
+            <FieldTitle>Paid Price Range</FieldTitle>
+            <div className="grid grid-cols-2 gap-2">
               <form.Field
-                name="relCurrency"
+                name="paidMin"
                 children={(field) => (
-                  <Field>
-                    <FieldTitle>Release Price Currency</FieldTitle>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        render={
-                          <Button
-                            variant="outline"
-                            className="w-full justify-between"
-                            type="button"
-                          >
-                            {getMultiSelectDisplay(field.state.value, "currency")}
-                            <HugeiconsIcon icon={ArrowDown01Icon} data-icon="inline-end" />
-                          </Button>
-                        }
-                      />
-                      <DropdownMenuContent className="w-(--anchor-width)">
-                        <ScrollArea className="h-[200px]">
-                          {CURRENCIES.map((currencyOption) => (
-                            <DropdownMenuCheckboxItem
-                              key={currencyOption}
-                              checked={field.state.value?.includes(currencyOption)}
-                              onCheckedChange={(checked) => {
-                                const current = field.state.value || [];
-                                const updated = checked
-                                  ? [...current, currencyOption]
-                                  : current.filter((c) => c !== currencyOption);
-                                field.handleChange(updated);
-                              }}
-                              onSelect={(e) => e.preventDefault()}
-                            >
-                              {currencyOption}
-                            </DropdownMenuCheckboxItem>
-                          ))}
-                        </ScrollArea>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </Field>
+                  <MaskInput
+                    mask="currency"
+                    currency={currency}
+                    locale={userLocale}
+                    placeholder="Min"
+                    value={field.state.value || ""}
+                    onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
+                  />
+                )}
+              />
+              <form.Field
+                name="paidMax"
+                children={(field) => (
+                  <MaskInput
+                    mask="currency"
+                    currency={currency}
+                    locale={userLocale}
+                    placeholder="Max"
+                    value={field.state.value || ""}
+                    onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
+                  />
                 )}
               />
             </div>
-          </ScrollArea>
+          </Field>
 
-          <DialogFooter className="px-4! mx-0">
-            <form.Subscribe
-              selector={(state) => [state.canSubmit, state.isSubmitting]}
-              children={([, isSubmitting]) => (
-                <>
-                  <DialogClose>
-                    <Button type="button" variant="outline">
-                      Cancel
-                    </Button>
-                  </DialogClose>
-                  <DialogClose>
-                    <Button type="submit" disabled={isSubmitting}>
-                      Apply Filters
-                    </Button>
-                  </DialogClose>
-                </>
-              )}
-            />
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+          {/* Entries */}
+          <form.Field
+            name="entries"
+            children={(field) => (
+              <Field className="gap-2">
+                <FieldTitle>Entries</FieldTitle>
+                <FieldDescription>e.g., Companies, Characters, Artists</FieldDescription>
+                <FieldContent>
+                  <div className="flex flex-wrap gap-1.5">
+                    {field.state.value?.map((entryId) => (
+                      <Badge
+                        key={entryId}
+                        variant="outline"
+                        className="flex items-center gap-0.5 pr-0"
+                      >
+                        {entryNameMap[entryId] ?? entryId}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            field.handleChange(
+                              (field.state.value || []).filter((id) => id !== entryId),
+                            );
+                          }}
+                          className="hover:text-red-500 hover:bg-transparent!"
+                        >
+                          <HugeiconsIcon icon={Cancel01Icon} />
+                        </Button>
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Popover open={entriesPopoverOpen} onOpenChange={setEntriesPopoverOpen}>
+                      <PopoverTrigger
+                        render={
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-controls={entriesListId}
+                            aria-expanded={entriesPopoverOpen}
+                            className="w-full justify-between"
+                          >
+                            Select entries...
+                            <HugeiconsIcon
+                              icon={ArrowUpDownIcon}
+                              data-icon="inline-end"
+                              className="shrink-0 opacity-50"
+                            />
+                          </Button>
+                        }
+                      />
+
+                      <PopoverContent className="w-(--anchor-width) p-0">
+                        <Command shouldFilter={false}>
+                          <DebouncedInput
+                            value={entrySearch}
+                            onChange={(value) => setEntrySearch(value.toString())}
+                            placeholder="Search entries..."
+                            debounce={200}
+                            isCommandInput
+                          />
+                          <CommandList id={entriesListId}>
+                            {entrySearch.length === 0 && (
+                              <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                                Type to search for entries
+                              </div>
+                            )}
+                            {entrySearch.length > 0 && isEntriesError && (
+                              <CommandEmpty>
+                                Could not load entries. {entriesError.message}
+                              </CommandEmpty>
+                            )}
+                            {entrySearch.length > 0 && isEntriesPending && !isEntriesError && (
+                              <div className="flex items-center justify-center gap-2 px-2 py-6 text-sm text-muted-foreground">
+                                <HugeiconsIcon
+                                  icon={Loading03Icon}
+                                  className="size-4 animate-spin"
+                                />
+                                Searching...
+                              </div>
+                            )}
+                            {entrySearch.length > 0 &&
+                              entries.length === 0 &&
+                              !isEntriesPending &&
+                              !isEntriesError && <CommandEmpty>No entries found.</CommandEmpty>}
+                            {entries.length > 0 && (
+                              <>
+                                <CommandGroup>
+                                  {entries.map((entry) => {
+                                    const isSelected = field.state.value.includes(entry.id);
+                                    return (
+                                      <CommandItem
+                                        key={entry.id}
+                                        value={entry.id}
+                                        data-checked={isSelected}
+                                        onSelect={() => {
+                                          const current = field.state.value ?? [];
+                                          if (isSelected) {
+                                            field.handleChange(
+                                              current.filter((id) => id !== entry.id),
+                                            );
+                                          } else {
+                                            field.handleChange([...current, entry.id]);
+                                            rememberEntryName(entry.id, entry.name);
+                                          }
+                                        }}
+                                      >
+                                        <span className="flex flex-col">
+                                          <span>{entry.name}</span>
+                                          {entry.category && (
+                                            <span className="text-xs text-muted-foreground">
+                                              {entry.category}
+                                            </span>
+                                          )}
+                                        </span>
+                                      </CommandItem>
+                                    );
+                                  })}
+                                </CommandGroup>
+                                {hasMoreEntries && (
+                                  <div className="px-2 pb-2">
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      className="w-full justify-center text-xs"
+                                      onClick={() => fetchMoreEntries()}
+                                      disabled={isFetchingMoreEntries}
+                                    >
+                                      {isFetchingMoreEntries ? (
+                                        <>
+                                          <HugeiconsIcon
+                                            icon={Loading03Icon}
+                                            data-icon="inline-start"
+                                            className="animate-spin"
+                                          />
+                                          Loading...
+                                        </>
+                                      ) : (
+                                        "Load more"
+                                      )}
+                                    </Button>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </FieldContent>
+              </Field>
+            )}
+          />
+
+          {/* Shop */}
+          <form.Field
+            name="shop"
+            children={(field) => (
+              <Field className="gap-2">
+                <FieldTitle>Shop</FieldTitle>
+                <FieldDescription>e.g., AmiAmi, Mandarake</FieldDescription>
+                <FieldContent>
+                  <div className="flex flex-wrap gap-2">
+                    {field.state.value?.map((shop, shopIndex) => (
+                      <Badge
+                        key={shopIndex}
+                        variant="outline"
+                        className="flex items-center justify-between pr-0"
+                      >
+                        {shop}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            const current = field.state.value || [];
+                            field.handleChange(current.filter((_, idx) => idx !== shopIndex));
+                          }}
+                          className=" hover:text-red-500 hover:bg-transparent"
+                        >
+                          <HugeiconsIcon icon={Cancel01Icon} />
+                        </Button>
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      id="shop-input"
+                      type="text"
+                      placeholder="Press enter after each shop to add"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          const input = e.currentTarget;
+                          const value = input.value.trim();
+                          if (value) {
+                            const current = field.state.value || [];
+                            field.handleChange([...current, value]);
+                            input.value = "";
+                          }
+                        }
+                      }}
+                    />
+                  </div>
+                </FieldContent>
+              </Field>
+            )}
+          />
+
+          {/* Scale */}
+          <form.Field
+            name="scale"
+            children={(field) => (
+              <Field className="gap-2">
+                <FieldTitle>Scale</FieldTitle>
+                <FieldDescription>e.g., 1/8, 1/7, {NO_SCALE} (non-scale)</FieldDescription>
+                <FieldContent>
+                  <div className="flex flex-wrap gap-2">
+                    {field.state.value?.map((scale, scaleIndex) => (
+                      <Badge
+                        key={scaleIndex}
+                        variant="outline"
+                        size="lg"
+                        className="flex items-center justify-between pr-0"
+                      >
+                        {scale}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            const current = field.state.value || [];
+                            field.handleChange(current.filter((_, idx) => idx !== scaleIndex));
+                          }}
+                          className=" hover:text-red-500 hover:bg-transparent"
+                        >
+                          <HugeiconsIcon icon={Cancel01Icon} />
+                        </Button>
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      id="scale-input"
+                      type="text"
+                      placeholder="Press enter after each scale to add"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          const input = e.currentTarget;
+                          const value = input.value.trim();
+                          if (value) {
+                            const current = field.state.value || [];
+                            field.handleChange([...current, normalizeScale(value)]);
+                            input.value = "";
+                          }
+                        }
+                      }}
+                    />
+                  </div>
+                </FieldContent>
+              </Field>
+            )}
+          />
+
+          {/* Tags */}
+          <form.Field
+            name="tags"
+            children={(field) => (
+              <Field className="gap-2">
+                <FieldTitle>Tags</FieldTitle>
+                <FieldDescription>e.g., favorite, limited-edition</FieldDescription>
+                <FieldContent>
+                  <div className="flex flex-wrap gap-2">
+                    {field.state.value?.map((tag, tagIndex) => (
+                      <Badge
+                        key={tagIndex}
+                        variant="outline"
+                        size="lg"
+                        className="flex items-center justify-between pr-0"
+                      >
+                        {tag}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            const current = field.state.value || [];
+                            field.handleChange(current.filter((_, idx) => idx !== tagIndex));
+                          }}
+                          className=" hover:text-red-500 hover:bg-transparent"
+                        >
+                          <HugeiconsIcon icon={Cancel01Icon} />
+                        </Button>
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      id="tags-input"
+                      type="text"
+                      placeholder="Press enter after each tag to add"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          const input = e.currentTarget;
+                          const value = input.value.trim();
+                          if (value) {
+                            const current = field.state.value || [];
+                            field.handleChange([...current, value]);
+                            input.value = "";
+                          }
+                        }
+                      }}
+                    />
+                  </div>
+                </FieldContent>
+              </Field>
+            )}
+          />
+
+          {/* Date Range Filters */}
+          <div className="space-y-4">
+            {/* Payment Date */}
+            <Field>
+              <Label>Payment Date</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <form.Field
+                  name="payDateStart"
+                  children={(field) => (
+                    <DatePicker
+                      placeholder="From"
+                      value={field.state.value || null}
+                      onChange={(value) => field.handleChange(value || "")}
+                    />
+                  )}
+                />
+                <form.Field
+                  name="payDateEnd"
+                  children={(field) => (
+                    <DatePicker
+                      placeholder="To"
+                      value={field.state.value || null}
+                      onChange={(value) => field.handleChange(value || "")}
+                    />
+                  )}
+                />
+              </div>
+            </Field>
+
+            {/* Shipping Date */}
+            <Field>
+              <Label>Shipping Date</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <form.Field
+                  name="shipDateStart"
+                  children={(field) => (
+                    <DatePicker
+                      placeholder="From"
+                      value={field.state.value || null}
+                      onChange={(value) => field.handleChange(value || "")}
+                    />
+                  )}
+                />
+                <form.Field
+                  name="shipDateEnd"
+                  children={(field) => (
+                    <DatePicker
+                      placeholder="To"
+                      value={field.state.value || null}
+                      onChange={(value) => field.handleChange(value || "")}
+                    />
+                  )}
+                />
+              </div>
+            </Field>
+
+            {/* Collection Date */}
+            <Field>
+              <Label>Collection Date</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <form.Field
+                  name="colDateStart"
+                  children={(field) => (
+                    <DatePicker
+                      placeholder="From"
+                      value={field.state.value || null}
+                      onChange={(value) => field.handleChange(value || "")}
+                    />
+                  )}
+                />
+                <form.Field
+                  name="colDateEnd"
+                  children={(field) => (
+                    <DatePicker
+                      placeholder="To"
+                      value={field.state.value || null}
+                      onChange={(value) => field.handleChange(value || "")}
+                    />
+                  )}
+                />
+              </div>
+            </Field>
+
+            {/* Release Date */}
+            <Field>
+              <Label>Release Date</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <form.Field
+                  name="relDateStart"
+                  children={(field) => (
+                    <DatePicker
+                      placeholder="From"
+                      value={field.state.value || null}
+                      onChange={(value) => field.handleChange(value || "")}
+                    />
+                  )}
+                />
+                <form.Field
+                  name="relDateEnd"
+                  children={(field) => (
+                    <DatePicker
+                      placeholder="To"
+                      value={field.state.value || null}
+                      onChange={(value) => field.handleChange(value || "")}
+                    />
+                  )}
+                />
+              </div>
+            </Field>
+          </div>
+
+          {/* Release Price Range Filter */}
+          <Field>
+            <FieldTitle>Release Price Range</FieldTitle>
+            <div className="grid grid-cols-2 gap-2">
+              <form.Field
+                name="relPriceMin"
+                children={(field) => (
+                  <MaskInput
+                    mask="currency"
+                    currency={currency}
+                    locale={userLocale}
+                    placeholder="Min"
+                    value={field.state.value || ""}
+                    onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
+                  />
+                )}
+              />
+              <form.Field
+                name="relPriceMax"
+                children={(field) => (
+                  <MaskInput
+                    mask="currency"
+                    currency={currency}
+                    locale={userLocale}
+                    placeholder="Max"
+                    value={field.state.value || ""}
+                    onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
+                  />
+                )}
+              />
+            </div>
+          </Field>
+
+          {/* Release Currency */}
+          <form.Field
+            name="relCurrency"
+            children={(field) => (
+              <Field>
+                <FieldTitle>Release Price Currency</FieldTitle>
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button variant="outline" className="w-full justify-between" type="button">
+                        {getMultiSelectDisplay(field.state.value, "currency")}
+                        <HugeiconsIcon icon={ArrowDown01Icon} data-icon="inline-end" />
+                      </Button>
+                    }
+                  />
+                  <DropdownMenuContent className="w-(--anchor-width)">
+                    <ScrollArea className="h-[200px]">
+                      {CURRENCIES.map((currencyOption) => (
+                        <DropdownMenuCheckboxItem
+                          key={currencyOption}
+                          checked={field.state.value?.includes(currencyOption)}
+                          onCheckedChange={(checked) => {
+                            const current = field.state.value || [];
+                            const updated = checked
+                              ? [...current, currencyOption]
+                              : current.filter((c) => c !== currencyOption);
+                            field.handleChange(updated);
+                          }}
+                          onSelect={(e) => e.preventDefault()}
+                        >
+                          {currencyOption}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </ScrollArea>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </Field>
+            )}
+          />
+        </div>
+      </ScrollArea>
+
+      <DialogFooter className="px-4! mx-0">
+        <form.Subscribe
+          selector={(state) => [state.canSubmit, state.isSubmitting]}
+          children={([, isSubmitting]) => (
+            <>
+              <DialogClose render={<Button type="button" variant="outline" />}>Cancel</DialogClose>
+              <Button type="submit" disabled={isSubmitting}>
+                Apply Filters
+              </Button>
+            </>
+          )}
+        />
+      </DialogFooter>
+    </form>
   );
 }

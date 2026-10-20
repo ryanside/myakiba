@@ -1,15 +1,13 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import {
-  Dialog,
   DialogClose,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
+import { DraftDialog } from "@/components/draft-dialog";
 import { useForm } from "@tanstack/react-form";
 import { Field, FieldContent, FieldTitle } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
@@ -40,10 +38,29 @@ interface OrdersFiltersFormProps {
 
 export default function OrdersFiltersForm({
   renderTrigger,
+  onApplyFilters,
+  ...draftProps
+}: OrdersFiltersFormProps): React.JSX.Element {
+  return (
+    <DraftDialog trigger={renderTrigger} className="sm:max-w-lg! px-0">
+      {(close) => (
+        <OrdersFiltersDraft
+          {...draftProps}
+          onApplyFilters={(filters) => {
+            onApplyFilters(filters);
+            close();
+          }}
+        />
+      )}
+    </DraftDialog>
+  );
+}
+
+function OrdersFiltersDraft({
   currentFilters,
   onApplyFilters,
   currency,
-}: OrdersFiltersFormProps) {
+}: Omit<OrdersFiltersFormProps, "renderTrigger">): React.JSX.Element {
   const userLocale = getCurrencyLocale(currency);
 
   const form = useForm({
@@ -641,40 +658,29 @@ export default function OrdersFiltersForm({
   );
 
   return (
-    <Dialog>
-      <DialogTrigger render={renderTrigger} />
-      <DialogContent className="sm:max-w-lg! px-0">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader className="pb-4 px-4">
-            <DialogTitle>Filters</DialogTitle>
-            <DialogDescription>Apply filters to narrow down your orders</DialogDescription>
-          </DialogHeader>
+    <form onSubmit={handleSubmit}>
+      <DialogHeader className="pb-4 px-4">
+        <DialogTitle>Filters</DialogTitle>
+        <DialogDescription>Apply filters to narrow down your orders</DialogDescription>
+      </DialogHeader>
 
-          <ScrollArea className="overflow-auto max-h-[60vh] pb-4 w-full">
-            <div className="grid gap-4 px-4">{formFieldsContent}</div>
-          </ScrollArea>
+      <ScrollArea className="overflow-auto max-h-[60vh] pb-4 w-full">
+        <div className="grid gap-4 px-4">{formFieldsContent}</div>
+      </ScrollArea>
 
-          <DialogFooter className="px-4! mx-0">
-            <form.Subscribe
-              selector={(state) => [state.canSubmit, state.isSubmitting]}
-              children={([, isSubmitting]) => (
-                <>
-                  <DialogClose>
-                    <Button type="button" variant="outline">
-                      Cancel
-                    </Button>
-                  </DialogClose>
-                  <DialogClose>
-                    <Button type="submit" disabled={isSubmitting}>
-                      Apply Filters
-                    </Button>
-                  </DialogClose>
-                </>
-              )}
-            />
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      <DialogFooter className="px-4! mx-0">
+        <form.Subscribe
+          selector={(state) => [state.canSubmit, state.isSubmitting]}
+          children={([, isSubmitting]) => (
+            <>
+              <DialogClose render={<Button type="button" variant="outline" />}>Cancel</DialogClose>
+              <Button type="submit" disabled={isSubmitting}>
+                Apply Filters
+              </Button>
+            </>
+          )}
+        />
+      </DialogFooter>
+    </form>
   );
 }
