@@ -1,14 +1,6 @@
 import * as React from "react";
 import * as z from "zod";
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
@@ -92,10 +84,13 @@ const ColumnContext = createContext<{
 });
 
 const ItemContext = createContext<{
+  attributes: DraggableAttributes;
   listeners: DraggableSyntheticListeners | undefined;
+  setActivatorNodeRef?: (element: HTMLElement | null) => void;
   isDragging?: boolean;
   disabled?: boolean;
 }>({
+  attributes: {} as DraggableAttributes,
   listeners: undefined,
   isDragging: false,
   disabled: false,
@@ -163,9 +158,6 @@ function Kanban<T, TColumnId extends string = string>({
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const originalContainerRef = useRef<TColumnId | null>(null);
   const originalIndexRef = useRef<number | null>(null);
-  const lastOverIdRef = useRef<UniqueIdentifier | null>(null);
-  const recentlyMovedToNewContainerRef = useRef(false);
-  const previousColumnsRef = useRef(columns);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -195,7 +187,7 @@ function Kanban<T, TColumnId extends string = string>({
 
   const collisionDetectionStrategy = useCallback<CollisionDetection>(
     (args) => {
-      if (activeId !== null && isColumn(activeId)) {
+      if (isColumn(args.active.id)) {
         return closestCenter({
           ...args,
           droppableContainers: args.droppableContainers.filter((container) =>
@@ -204,57 +196,32 @@ function Kanban<T, TColumnId extends string = string>({
         });
       }
 
-      const pointerIntersections = pointerWithin(args);
-      const intersections =
-        pointerIntersections.length > 0 ? pointerIntersections : rectIntersection(args);
-      let overId = getFirstCollision(intersections, "id");
+      // A pointer drag follows the pointer alone. The card's own rect moves with each column
+      // change, so testing it against the columns can send the card back and forth forever.
+      const intersections = args.pointerCoordinates ? pointerWithin(args) : rectIntersection(args);
+      const overId = getFirstCollision(intersections, "id");
+      if (overId === null) return [{ id: args.active.id }];
+      if (!isColumn(overId)) return [{ id: overId }];
 
-      if (overId !== null) {
-        if (isColumn(overId)) {
-          const itemIds = new Set(columns[overId].map(getItemValue));
-          if (itemIds.size > 0) {
-            overId =
-              getFirstCollision(
-                closestCenter({
-                  ...args,
-                  droppableContainers: args.droppableContainers.filter((container) =>
-                    itemIds.has(String(container.id)),
-                  ),
-                }),
-                "id",
-              ) ?? overId;
-          }
-        }
-
-        lastOverIdRef.current = overId;
-        return [{ id: overId }];
-      }
-
-      if (recentlyMovedToNewContainerRef.current) {
-        lastOverIdRef.current = activeId;
-      }
-
-      return lastOverIdRef.current === null ? [] : [{ id: lastOverIdRef.current }];
+      const itemIds = new Set(columns[overId].map(getItemValue));
+      if (itemIds.size === 0) return [{ id: overId }];
+      const closestItemId = getFirstCollision(
+        closestCenter({
+          ...args,
+          droppableContainers: args.droppableContainers.filter((container) =>
+            itemIds.has(String(container.id)),
+          ),
+        }),
+        "id",
+      );
+      return [{ id: closestItemId ?? overId }];
     },
-    [activeId, columns, getItemValue, isColumn],
+    [columns, getItemValue, isColumn],
   );
-
-  useEffect(() => {
-    if (previousColumnsRef.current === columns) return;
-    previousColumnsRef.current = columns;
-
-    const frame = requestAnimationFrame(() => {
-      recentlyMovedToNewContainerRef.current = false;
-    });
-
-    return () => cancelAnimationFrame(frame);
-  }, [columns]);
 
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
       setActiveId(event.active.id);
-      lastOverIdRef.current = null;
-      recentlyMovedToNewContainerRef.current = false;
       if (isColumn(event.active.id)) {
         originalContainerRef.current = null;
         originalIndexRef.current = null;
@@ -305,7 +272,6 @@ function Kanban<T, TColumnId extends string = string>({
         if (movedItem === undefined) return;
         newOverItems.splice(overIndex, 0, movedItem);
 
-        recentlyMovedToNewContainerRef.current = true;
         setColumns({
           ...columns,
           [activeContainer]: newActiveItems,
@@ -320,8 +286,6 @@ function Kanban<T, TColumnId extends string = string>({
     setActiveId(null);
     originalContainerRef.current = null;
     originalIndexRef.current = null;
-    lastOverIdRef.current = null;
-    recentlyMovedToNewContainerRef.current = false;
   }, []);
 
   const handleDragEnd = useCallback(
@@ -353,8 +317,6 @@ function Kanban<T, TColumnId extends string = string>({
       setActiveId(null);
       originalContainerRef.current = null;
       originalIndexRef.current = null;
-      lastOverIdRef.current = null;
-      recentlyMovedToNewContainerRef.current = false;
 
       if (!over) return;
 
@@ -440,7 +402,9 @@ function KanbanBoard({ className, render, ...props }: KanbanBoardProps) {
 
   const defaultProps = {
     "data-slot": "kanban-board",
-    className: cn("grid auto-rows-fr gap-4 sm:grid-cols-3", className),
+    // Stacked columns size to their own cards. Equal rows would move a column under a still
+    // pointer each time a drag moves a card, and the card would bounce between columns.
+    className: cn("grid gap-4 sm:auto-rows-fr sm:grid-cols-3", className),
     children: props.children,
   };
 
@@ -594,7 +558,12 @@ function KanbanItem(props: KanbanItemProps) {
 
 function KanbanOverlayItem({ value, className, render, ...props }: KanbanItemProps) {
   const contextValue = useMemo(
-    () => ({ listeners: undefined, isDragging: true, disabled: false }),
+    () => ({
+      attributes: {} as DraggableAttributes,
+      listeners: undefined,
+      isDragging: true,
+      disabled: false,
+    }),
     [],
   );
   const defaultProps = {
@@ -619,6 +588,7 @@ function KanbanOverlayItem({ value, className, render, ...props }: KanbanItemPro
 function KanbanSortableItem({ value, className, render, disabled, ...props }: KanbanItemProps) {
   const {
     setNodeRef,
+    setActivatorNodeRef,
     transform,
     transition,
     attributes,
@@ -633,8 +603,8 @@ function KanbanSortableItem({ value, className, render, disabled, ...props }: Ka
   const { activeId, isColumn } = useContext(KanbanContext);
   const isItemDragging = activeId ? !isColumn(activeId) : false;
   const contextValue = useMemo(
-    () => ({ listeners, isDragging: isItemDragging, disabled }),
-    [disabled, isItemDragging, listeners],
+    () => ({ attributes, listeners, setActivatorNodeRef, isDragging: isItemDragging, disabled }),
+    [attributes, disabled, isItemDragging, listeners, setActivatorNodeRef],
   );
 
   const style = {
@@ -649,7 +619,6 @@ function KanbanSortableItem({ value, className, render, disabled, ...props }: Ka
     "data-disabled": disabled,
     ref: setNodeRef,
     style,
-    ...attributes,
     className: cn(isSortableDragging && "opacity-50 z-50", disabled && "opacity-50", className),
     children: props.children,
   };
@@ -670,12 +639,15 @@ export interface KanbanItemHandleProps extends useRender.ComponentProps<"div"> {
 }
 
 function KanbanItemHandle({ className, render, cursor = true, ...props }: KanbanItemHandleProps) {
-  const { listeners, isDragging, disabled } = useContext(ItemContext);
+  const { attributes, listeners, setActivatorNodeRef, isDragging, disabled } =
+    useContext(ItemContext);
 
   const defaultProps = {
     "data-slot": "kanban-item-handle",
     "data-dragging": isDragging,
     "data-disabled": disabled,
+    ref: setActivatorNodeRef,
+    ...attributes,
     ...listeners,
     className: cn(cursor && (isDragging ? "cursor-grabbing!" : "cursor-grab!"), className),
     children: props.children,

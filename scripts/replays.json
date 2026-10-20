@@ -394,6 +394,22 @@
       "bug": "a toast raised during a kanban drag drew under the dragged card, because the drag overlay took dnd-kit's inline z-index 999",
       "test": "apps/web/src/components/reui/kanban-overlay-layer.test.tsx",
       "fixed": ["a toast raised during a kanban drag > stacks above the dragged card"]
+    },
+    {
+      "fix": "1fe7e13a",
+      "bug": "a kanban card held over the gap between two columns moved back and forth between them until the board crashed with \"Maximum update depth exceeded\"",
+      "test": "apps/web/src/components/reui/kanban.test.tsx",
+      "fixed": [
+        "holding a card over the gap between two columns > the card stays in its own column"
+      ]
+    },
+    {
+      "fix": "622cbb52",
+      "bug": "a focused kanban card ignored Space and the arrow keys, because the drag listeners sat on a handle the key press never reached",
+      "test": "apps/web/src/components/reui/kanban.test.tsx",
+      "fixed": [
+        "dragging a card with the keyboard > Space, ArrowRight, Space moves the focused card to the next column"
+      ]
     }
   ],
   "lint": [
