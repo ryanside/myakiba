@@ -3,6 +3,53 @@ import antiSlop from "ultracite/oxlint/anti-slop";
 import core from "ultracite/oxlint/core";
 import react from "ultracite/oxlint/react";
 
+const dbClientBan = {
+  name: "@myakiba/db/client",
+  message: "Read and write through scope.tx in module.ts. The kernel opens the transaction.",
+};
+const dbSourcePath = {
+  regex: "^(?:[./]|file:)(?:.*/)?db/(?:.*/)?src(?:/|$)|^@myakiba/db/src(?:/|$)",
+  message:
+    "Import @myakiba/db through its package exports, not by path. The kernel owns the client.",
+};
+const dbClientInPackage = {
+  regex: "^\\.{1,2}/(?:.*/)?client(?:\\.[cm]?[jt]sx?)?$",
+  allowTypeImports: true,
+  message: "Only the kernel reads the client. Inside @myakiba/db, import it as a type only.",
+};
+const testImports = [
+  { regex: "(?:^|/)[^/]+\\.test(?:\\.[cm]?[jt]sx?)?$", message: "Only tests import test files." },
+  { regex: "^(?:[./]|@/|file:)(?:.*/)?test(?:/|$)", message: "Only tests import test files." },
+];
+const routeMatcherBans = [
+  {
+    name: "@myakiba/utils/result",
+    importNames: ["tryCatch"],
+    message: "Return fail(category, message) from the operation. serve() answers it.",
+  },
+  {
+    name: "elysia",
+    importNames: ["status"],
+    message: "Return fail(category, message) from the operation. serve() answers it.",
+  },
+  {
+    name: "@/domain/kernel",
+    importNames: ["run"],
+    message: "Routes call serve(ctx, Orders.op, input). run() is for kernel tests.",
+  },
+];
+const dbClientOwners = ["apps/server/src/domain/kernel.ts", "packages/auth/src/server.ts"];
+const testCode = ["**/*.test.ts", "**/*.test.tsx", "**/test/**"];
+// Tests create and read rows directly.
+const serverTests = ["apps/server/**/*.test.ts", "apps/server/test/**"];
+// scraper code, replaced by the browser extension
+const scraperCode = [
+  "apps/worker/**",
+  "apps/server/src/routers/sync/**",
+  "apps/server/src/routers/data-transfer/**",
+  "apps/server/src/routers/item/resync-service.ts",
+];
+
 const otherTypeAwareRules = [
   "typescript/await-thenable",
   "typescript/consistent-return",
@@ -132,6 +179,45 @@ export default defineConfig({
       rules: { "no-restricted-properties": "off" },
     },
     {
+      files: ["**"],
+      excludeFiles: [...serverTests, ...scraperCode],
+      rules: {
+        "no-restricted-imports": [
+          "error",
+          { paths: [dbClientBan], patterns: [dbSourcePath, ...testImports] },
+        ],
+      },
+    },
+    {
+      files: ["packages/db/**"],
+      excludeFiles: ["packages/db/src/client.ts"],
+      rules: {
+        "no-restricted-imports": [
+          "error",
+          { paths: [dbClientBan], patterns: [dbSourcePath, dbClientInPackage, ...testImports] },
+        ],
+      },
+    },
+    {
+      files: testCode,
+      excludeFiles: [...serverTests, ...scraperCode],
+      rules: {
+        "no-restricted-imports": ["error", { paths: [dbClientBan], patterns: [dbSourcePath] }],
+      },
+    },
+    {
+      files: scraperCode,
+      excludeFiles: testCode,
+      rules: { "no-restricted-imports": ["error", { patterns: testImports }] },
+    },
+    {
+      files: dbClientOwners,
+      rules: {
+        "no-restricted-imports": ["error", { patterns: [dbSourcePath, ...testImports] }],
+        "myakiba/no-db-client-export": "error",
+      },
+    },
+    {
       files: [
         "apps/web/src/components/wishlist/**",
         "apps/web/src/hooks/use-wishlist.ts",
@@ -178,7 +264,9 @@ export default defineConfig({
                 message:
                   "Read and write server data through a resource module in apps/web/src/data. Declare a new query family in apps/web/src/data/catalog.ts.",
               },
+              dbClientBan,
             ],
+            patterns: [dbSourcePath, ...testImports],
           },
         ],
       },
@@ -188,46 +276,14 @@ export default defineConfig({
       rules: { "myakiba/no-window-total": "warn" },
     },
     {
-      files: [
-        "apps/server/src/routers/orders/**",
-        "apps/server/src/routers/collection/**",
-        "apps/server/src/routers/lists/**",
-        "apps/server/src/routers/wishlist/**",
-        "apps/server/src/routers/item/**",
-        "apps/server/src/routers/search/**",
-        "apps/server/src/routers/calendar/**",
-        "apps/server/src/routers/analytics/**",
-        "apps/server/src/routers/dashboard/**",
-        "apps/server/src/routers/expenses/**",
-        "apps/server/src/routers/settings/**",
-      ],
-      excludeFiles: ["**/*.test.ts", "apps/server/src/routers/item/resync-service.ts"],
+      files: ["apps/server/src/routers/**"],
+      excludeFiles: [...serverTests, ...scraperCode],
       rules: {
         "no-restricted-imports": [
           "error",
           {
-            paths: [
-              {
-                name: "@myakiba/db/client",
-                message:
-                  "Read and write through scope.tx in module.ts. The kernel opens the transaction.",
-              },
-              {
-                name: "@myakiba/utils/result",
-                importNames: ["tryCatch"],
-                message: "Return fail(category, message) from the operation. serve() answers it.",
-              },
-              {
-                name: "elysia",
-                importNames: ["status"],
-                message: "Return fail(category, message) from the operation. serve() answers it.",
-              },
-              {
-                name: "@/domain/kernel",
-                importNames: ["run"],
-                message: "Routes call serve(ctx, Orders.op, input). run() is for kernel tests.",
-              },
-            ],
+            paths: [dbClientBan, ...routeMatcherBans],
+            patterns: [dbSourcePath, ...testImports],
           },
         ],
       },

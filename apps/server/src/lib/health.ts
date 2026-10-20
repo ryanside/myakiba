@@ -1,15 +1,12 @@
-import { db } from "@myakiba/db/client";
 import { redis } from "@myakiba/redis/client";
-import { sql } from "drizzle-orm";
+import { ping } from "@/domain/kernel";
 import { readinessCheck } from "./readiness";
 
 export const unavailableDependencies = readinessCheck(
   [
     {
       name: "postgres",
-      ping: async () => {
-        await db.execute(sql`select 1`);
-      },
+      ping,
     },
     {
       name: "redis",

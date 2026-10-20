@@ -209,6 +209,119 @@ const noWindowTotal = {
   },
 };
 
+const DB_CLIENT = "@myakiba/db/client";
+
+/** A client handed out through `await` is still the client. */
+const clientValue = (node) => {
+  const value = unwrap(node);
+  return value?.type === "AwaitExpression" ? clientValue(value.argument) : value;
+};
+
+const CALLS = new Set(["CallExpression", "NewExpression"]);
+const SKIP = new Set(["parent", "type", "range", "loc", "start", "end"]);
+
+const walk = (root, visit) => {
+  const step = (node, parent, grandparent) => {
+    if (Array.isArray(node)) {
+      for (const child of node) step(child, parent, grandparent);
+      return;
+    }
+    if (!node?.type) return;
+    visit(node, parent, grandparent);
+    for (const key of Object.keys(node)) if (!SKIP.has(key)) step(node[key], node, parent);
+  };
+  step(root);
+};
+
+/** Reports where an exported declaration hands the client out: a property, a return, an arrow body. */
+const handOuts = (root, isClient, report) =>
+  walk(root, (node, parent, grandparent) => {
+    const callArgument = CALLS.has(grandparent?.type) && grandparent.arguments.includes(parent);
+    if (node.type === "Property" && isClient(node.value) && !callArgument) report(node);
+    if (node.type === "PropertyDefinition" && isClient(node.value)) report(node);
+    if (node.type === "ReturnStatement" && isClient(node.argument)) report(node);
+    if (node.type === "ArrowFunctionExpression" && node.expression && isClient(node.body))
+      report(node);
+  });
+
+/** The client's owners use it. Exporting it, under any name, hands it to every importer. */
+const noDbClientExport = {
+  meta: { type: "problem" },
+  create(context) {
+    const report = (node) =>
+      context.report({
+        node,
+        message: `Do not export ${DB_CLIENT}. Export an operation or a helper that uses it. Owners call the client directly; don't wrap it in a local factory.`,
+      });
+    return {
+      Program(program) {
+        const client = new Set();
+        const declarators = [];
+        for (const statement of program.body) {
+          if (statement.type === "ImportDeclaration" && statement.source.value === DB_CLIENT)
+            for (const specifier of statement.specifiers) client.add(specifier.local.name);
+          const declaration =
+            statement.type === "ExportNamedDeclaration" ? statement.declaration : statement;
+          if (declaration?.type === "VariableDeclaration")
+            declarators.push(...declaration.declarations);
+        }
+        const isClient = (node) => {
+          const value = clientValue(node);
+          if (value?.type === "ConditionalExpression")
+            return isClient(value.consequent) || isClient(value.alternate);
+          if (value?.type === "LogicalExpression")
+            return isClient(value.left) || isClient(value.right);
+          return value?.type === "Identifier" && client.has(value.name);
+        };
+        const bindings = new Set(declarators.map(({ id }) => id.name));
+        const sources = declarators.map(({ id, init }) => [id, init]);
+        walk(program, (node) => {
+          if (node.type === "AssignmentExpression" && bindings.has(node.left.name))
+            sources.push([node.left, node.right]);
+        });
+        for (let grew = true; grew;) {
+          grew = false;
+          for (const [id, value] of sources)
+            if (id.type === "Identifier" && !client.has(id.name) && isClient(value)) {
+              client.add(id.name);
+              grew = true;
+            }
+        }
+        const exported = new Set();
+        for (const statement of program.body)
+          if (statement.type === "ExportNamedDeclaration" && !statement.source)
+            for (const specifier of statement.specifiers) exported.add(specifier.local.name);
+          else if (statement.type === "ExportDefaultDeclaration")
+            exported.add(statement.declaration.name);
+        for (const statement of program.body) {
+          if (
+            statement.type === "ExportNamedDeclaration" ||
+            statement.type === "ExportDefaultDeclaration"
+          )
+            handOuts(statement.declaration, isClient, report);
+          if (statement.type === "FunctionDeclaration" || statement.type === "ClassDeclaration") {
+            if (exported.has(statement.id?.name)) handOuts(statement, isClient, report);
+          } else if (statement.type === "VariableDeclaration")
+            for (const declarator of statement.declarations)
+              if (exported.has(declarator.id.name)) handOuts(declarator, isClient, report);
+          if (statement.type === "ExportAllDeclaration" && statement.source.value === DB_CLIENT)
+            report(statement);
+          if (statement.type === "ExportDefaultDeclaration" && isClient(statement.declaration))
+            report(statement);
+          if (statement.type !== "ExportNamedDeclaration") continue;
+          if (statement.source?.value === DB_CLIENT) report(statement);
+          else if (!statement.source)
+            for (const specifier of statement.specifiers)
+              if (isClient(specifier.local)) report(specifier);
+          if (statement.declaration?.type === "VariableDeclaration")
+            for (const { init } of statement.declaration.declarations)
+              if (isClient(init)) report(statement);
+        }
+      },
+    };
+  },
+};
+
 export default {
   meta: { name: "myakiba" },
   rules: {
@@ -216,5 +329,6 @@ export default {
     "no-env-outside-env-package": noEnvOutsideEnvPackage,
     "no-iso-slice": noIsoSlice,
     "no-window-total": noWindowTotal,
+    "no-db-client-export": noDbClientExport,
   },
 };

@@ -107,6 +107,57 @@ describe("myakiba/no-window-total", () => {
   });
 });
 
+describe("myakiba/no-db-client-export", () => {
+  const client = 'import { db } from "@myakiba/db/client";\n';
+  test("flags every export of the client and its aliases, and allows exports that use it", async () => {
+    const findings = await flags("myakiba/no-db-client-export", [
+      ['export { db as client } from "@myakiba/db/client";', true],
+      ['export * from "@myakiba/db/client";', true],
+      [`${client}export { db as client };`, true],
+      [`${client}const pool = db;\nexport { pool };`, true],
+      [`${client}export default db;`, true],
+      [`${client}export const client = db as unknown;`, true],
+      [`${client}export const probe = () => db.execute("select 1");`, false],
+      ['import type { Tx } from "@myakiba/db/tx";\nexport type { Tx };', false],
+    ]);
+    for (const { message } of findings)
+      expect(message).toContain("Do not export @myakiba/db/client");
+  });
+
+  test("flags a client handed out by a property, getter, return or arrow body, not one passed to a call", async () => {
+    await flags("myakiba/no-db-client-export", [
+      [`${client}export const s7 = { client: db };`, true],
+      [`${client}export const s7 = {\n  get client() {\n    return db;\n  },\n};`, true],
+      [`${client}export const getClient = () => db;`, true],
+      [`${client}function getClient() {\n  return db;\n}\nexport { getClient };`, true],
+      [`${client}export class Holder {\n  static client = db;\n}`, true],
+      [
+        `${client}declare const read: (scope: unknown) => unknown;\nexport const run = () => read({ tx: db });`,
+        false,
+      ],
+      [`${client}export const ping = async () => {\n  await db.execute("select 1");\n};`, false],
+    ]);
+  });
+
+  test("follows the client through await, branches, fallbacks and reassigned aliases", async () => {
+    const findings = await flags("myakiba/no-db-client-export", [
+      [`${client}export async function getClient() {\n  return await db;\n}`, true],
+      [`${client}export function getClient(on: boolean) {\n  return on ? db : undefined;\n}`, true],
+      [`${client}export const getClient = (fallback?: unknown) => fallback ?? db;`, true],
+      [`${client}let alias: unknown = null;\nalias = db;\nexport const s7 = alias;`, true],
+      [
+        `${client}export const count = async () => {\n  const local = () => db;\n  return local().execute("select 1");\n};`,
+        true,
+      ],
+      [
+        `${client}export function query(on: boolean) {\n  return on ? db.execute("select 1") : undefined;\n}`,
+        false,
+      ],
+    ]);
+    expect(findings.at(-1)?.message).toContain("don't wrap it in a local factory");
+  });
+});
+
 describe("myakiba/no-env-outside-env-package", () => {
   test("flags env reads on the real process, Bun and import.meta, not on a shadowing binding", async () => {
     const findings = await flags("myakiba/no-env-outside-env-package", [

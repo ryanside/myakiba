@@ -1,7 +1,7 @@
 import { status } from "elysia";
 import type { ElysiaCustomStatusResponse } from "elysia";
 import type { RequestLogger } from "evlog";
-import { asc, desc } from "drizzle-orm";
+import { asc, desc, sql } from "drizzle-orm";
 import type { AnyColumn, SQL } from "drizzle-orm";
 import type { AnyPgColumn, PgSelect } from "drizzle-orm/pg-core";
 import { db } from "@myakiba/db/client";
@@ -122,6 +122,11 @@ const pool: ReadTx = db;
 
 const readPrepared = <T>(statement: Prepared<T>, placeholders?: Placeholders) =>
   statement.statement.execute(placeholders);
+
+/** Runs `select 1` on the pool, for the readiness check. */
+export async function ping(): Promise<void> {
+  await db.execute(sql`select 1`);
+}
 
 /** A read. The body takes the scope and one input object, never positional params. */
 export function query<
