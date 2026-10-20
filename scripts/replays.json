@@ -66,7 +66,11 @@
       "bug": "a late echo of earlier text replaced focused text",
       "test": "apps/web/src/components/debounced-input.test.tsx",
       "fixed": [
-        "DebouncedInput > a late echo of earlier text does not replace what the user is typing"
+        "DebouncedInput > a late echo of earlier text does not replace what the user is typing",
+        "DebouncedInput > text typed after an outside change is reported when the user leaves the field at once",
+        "DebouncedInput > an outside change during the debounce does not replace text the user is still typing",
+        "DebouncedInput > text reported after an outside change is what the owner and the field show after blur",
+        "DebouncedInput > a late echo of earlier text that lands after the edit does not show when the user leaves"
       ]
     },
     {
@@ -82,7 +86,8 @@
       "fixed": [
         "DebouncedInput > mounting does not report a change",
         "DebouncedInput > typing reports the final text once after the debounce",
-        "DebouncedInput > late echoes of two earlier texts do not replace what the user typed"
+        "DebouncedInput > late echoes of two earlier texts do not replace what the user typed",
+        "DebouncedInput > an outside change after leaving the field with an edit pending leaves the owner and the field in agreement"
       ]
     },
     {
@@ -201,6 +206,28 @@
       "test": "apps/web/src/data/resources/collection.test.tsx",
       "fixed": [
         "a failed Collection Item write after the filter changes > leaves the new list as the server sent it"
+      ]
+    },
+    {
+      "fix": "ad737d6d",
+      "bug": "text typed after an outside change was lost on blur or hidden behind the outside value",
+      "test": "apps/web/src/components/debounced-input.test.tsx",
+      "fixed": [
+        "DebouncedInput > text typed after an outside change is reported when the user leaves the field at once",
+        "DebouncedInput > an outside change during the debounce does not replace text the user is still typing",
+        "DebouncedInput > an outside change after leaving the field with an edit pending leaves the owner and the field in agreement",
+        "DebouncedInput > text reported after an outside change is what the owner and the field show after blur"
+      ]
+    },
+    {
+      "fix": "21ded567",
+      "bug": "Reset Filters clicked within the search debounce was undone by the pending search",
+      "test": "apps/web/src/components/toolbar-search-reset.test.tsx",
+      "fixed": [
+        "Reset Filters on /orders > drops text typed after an outside change when Reset comes within the debounce",
+        "Reset Filters on /orders > drops a first search typed just before Reset, though Reset leaves the search unchanged",
+        "Reset Filters on /collection > drops text typed after an outside change when Reset comes within the debounce",
+        "Reset Filters on /collection > drops a first search typed just before Reset, though Reset leaves the search unchanged"
       ]
     }
   ],

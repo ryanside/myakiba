@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { FilterIcon, FilterResetIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { OrderFilters } from "@myakiba/contracts/orders/schema";
@@ -31,6 +32,7 @@ const SORTABLE_COLUMNS: SortableColumn[] = [
 
 export function OrdersToolbar(): React.JSX.Element {
   const { filters, setFilters, resetFilters } = useOrdersFilters();
+  const [searchResetKey, setSearchResetKey] = useState(0);
   const { currency } = useUserPreferences();
   const currentSort =
     filters.sort && filters.order
@@ -49,6 +51,7 @@ export function OrdersToolbar(): React.JSX.Element {
   return (
     <div className="flex items-center justify-start gap-2">
       <DebouncedInput
+        key={searchResetKey}
         value={filters.search ?? ""}
         onChange={(value) => setFilters({ search: value.toString() || undefined })}
         placeholder="Search"
@@ -70,7 +73,13 @@ export function OrdersToolbar(): React.JSX.Element {
         currentSort={currentSort}
         onSortChange={handleSortChange}
       />
-      <Button onClick={resetFilters} variant="outline">
+      <Button
+        onClick={() => {
+          setSearchResetKey((key) => key + 1);
+          void resetFilters();
+        }}
+        variant="outline"
+      >
         <HugeiconsIcon icon={FilterResetIcon} data-icon="inline-start" />
         <span className="hidden md:block">Reset Filters</span>
       </Button>
