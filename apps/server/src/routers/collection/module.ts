@@ -229,7 +229,9 @@ export const Collection = {
         .delete(collection)
         .where(and(eq(collection.userId, scope.viewer.userId), inArray(collection.id, input.ids)))
         .returning();
-      if (deleted.length === 0) return fail("not_found", "Collection item(s) not found");
+      if (deleted.length === 0 || deleted.length < new Set(input.ids).size) {
+        return fail("not_found", "Collection item(s) not found");
+      }
 
       return ok("Collection item(s) deleted successfully");
     },

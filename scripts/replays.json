@@ -458,6 +458,24 @@
         "DataTablePagination at an offset that is not a page start > an empty result at an offset inside page 1 offers page 1",
         "DataTablePagination at an offset that is not a page start > previous from an offset past the rows of page 1 goes to page 1"
       ]
+    },
+    {
+      "fix": "97a0d693",
+      "bug": "merge, split, move-items, order delete and order item delete answered 200 for a mix of the caller's ids and another user's, writing the caller's rows and skipping the rest",
+      "test": "apps/server/src/routers/orders/routes.test.ts",
+      "fixed": [
+        "a write that names any id the caller does not own answers 404 and changes nothing > merge an own and another user's order",
+        "a write that names any id the caller does not own answers 404 and changes nothing > split an own and another user's item",
+        "a write that names any id the caller does not own answers 404 and changes nothing > move an own and another user's item",
+        "a write that names any id the caller does not own answers 404 and changes nothing > delete an own and another user's order",
+        "a write that names any id the caller does not own answers 404 and changes nothing > delete an own and another user's item"
+      ]
+    },
+    {
+      "fix": "97a0d693",
+      "bug": "a collection bulk delete answered 200 for a mix of the caller's items and another user's, deleting the caller's and skipping the rest",
+      "test": "apps/server/src/routers/collection/routes.test.ts",
+      "fixed": ["a bulk delete of an own and another user's item answers 404 and deletes nothing"]
     }
   ],
   "lint": [

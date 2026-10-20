@@ -118,3 +118,57 @@ test("the edit and delete operations return strings, so Eden types them as strin
   const timestamps = { createdAt: createdAt.toISOString(), updatedAt: expect.stringMatching(ISO) };
   expect(rows).toMatchObject([timestamps, timestamps]);
 });
+
+test.each([
+  ["an own and another user's item", ["c-1", "c-other"]],
+  ["only another user's item", ["c-other"]],
+])("a bulk delete of %s answers 404 and deletes nothing", async (_, ids) => {
+  await db
+    .insert(authSchema.user)
+    .values({ id: "user-2", name: "Aki", email: "a@example.com", username: "aki" });
+  await db
+    .insert(collection)
+    .values({ id: "c-other", userId: "user-2", itemId: "item-1", status: "Ordered" });
+  const readItems = () => db.select().from(collection).orderBy(collection.id);
+  const before = await readItems();
+
+  const response = await app.handle(
+    new Request("http://localhost/api/collection", {
+      method: "DELETE",
+      headers: { "x-test-user": userId, "content-type": "application/json" },
+      body: JSON.stringify({ ids }),
+    }),
+  );
+
+  expect({ status: response.status, body: await response.text() }).toEqual({
+    status: 404,
+    body: "Collection item(s) not found",
+  });
+  expect(await readItems()).toEqual(before);
+});
+
+const bulkDelete = async (ids: string[]) => {
+  const response = await app.handle(
+    new Request("http://localhost/api/collection", {
+      method: "DELETE",
+      headers: { "x-test-user": userId, "content-type": "application/json" },
+      body: JSON.stringify({ ids }),
+    }),
+  );
+  return { status: response.status, body: await response.text() };
+};
+
+test("a bulk delete that repeats an own item deletes it once", async () => {
+  expect(await bulkDelete(["c-1", "c-1"])).toEqual({
+    status: 200,
+    body: "Collection item(s) deleted successfully",
+  });
+  expect(await db.select().from(collection)).toEqual([]);
+});
+
+test("a bulk delete of an empty list answers 404 and deletes nothing", async () => {
+  const before = await db.select().from(collection);
+
+  expect(await bulkDelete([])).toEqual({ status: 404, body: "Collection item(s) not found" });
+  expect(await db.select().from(collection)).toEqual(before);
+});
