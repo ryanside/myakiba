@@ -398,7 +398,7 @@
   "fixtures": [
     {
       "name": "kernel",
-      "bug": "kernel fixtures for 58a5d423, 87ebc2a0, b14fda39, 5a51f519 and a1f6ff78",
+      "bug": "kernel fixtures for 58a5d423, 87ebc2a0, b14fda39, 5a51f519, a1f6ff78 and a CTE write in a read",
       "package": "apps/server",
       "file": "apps/server/src/domain/kernel.type-test.ts",
       "errors": [
@@ -410,7 +410,8 @@
         "src/domain/kernel.type-test.ts(37,59): error TS2741",
         "src/domain/kernel.type-test.ts(40,14): error TS2741",
         "src/domain/kernel.type-test.ts(50,40): error TS2322",
-        "src/domain/kernel.type-test.ts(53,32): error TS2741"
+        "src/domain/kernel.type-test.ts(53,32): error TS2741",
+        "src/domain/kernel.type-test.ts(73,30): error TS2339"
       ]
     }
   ]

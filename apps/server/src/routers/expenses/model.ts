@@ -6,7 +6,6 @@ export const EXPENSE_UNASSIGNED_SHOP_ID = "unassigned";
 export { expenseFiltersSchema, expenseShopFiltersSchema } from "@myakiba/contracts/expenses/schema";
 
 export type {
-  ExpenseFilterOptions,
   ExpenseBucket,
   ExpenseFilters,
   ExpenseShopFilters,

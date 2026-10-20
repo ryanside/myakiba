@@ -1,4 +1,4 @@
-import { db } from "@myakiba/db/client";
+import type { ReadTx } from "@myakiba/db/tx";
 import { collection, item, order } from "@myakiba/db/schema/figure";
 import { asc, count, desc, eq, sql, sum } from "drizzle-orm";
 import { orderPreviewImagesSql } from "@/lib/order-preview";
@@ -35,20 +35,22 @@ function rawShop(id: string): string {
 }
 
 export async function getScopedShopRows(
+  tx: ReadTx,
   userId: string,
   filters: ExpenseShopFilters,
 ): Promise<ExpenseShopsResponse> {
   switch (filters.scope) {
     case "collection":
-      return getCollectionShopRows(userId, filters);
+      return getCollectionShopRows(tx, userId, filters);
     case "orders":
-      return getOrdersShopRows(userId, filters);
+      return getOrdersShopRows(tx, userId, filters);
     case "shipping":
-      return getShippingShopRows(userId, filters);
+      return getShippingShopRows(tx, userId, filters);
   }
 }
 
 async function getCollectionShopRows(
+  tx: ReadTx,
   userId: string,
   filters: ExpenseShopFilters,
 ): Promise<ExpenseShopsResponse> {
@@ -57,8 +59,8 @@ async function getCollectionShopRows(
     dateEnd: filters.dateEnd,
     shop: filters.shop,
   };
-  const grouped = db.$with("shop_agg").as(
-    db
+  const grouped = tx.$with("shop_agg").as(
+    tx
       .select({
         shop: collection.shop,
         spend: sql<number>`COALESCE(${sum(collection.price)}, 0)::double precision`.as("spend"),
@@ -69,8 +71,8 @@ async function getCollectionShopRows(
       .where(collectionWhere(userId, scopedFilters, "total"))
       .groupBy(collection.shop),
   );
-  const scopedShops = db.$with("scoped_shops").as(
-    db
+  const scopedShops = tx.$with("scoped_shops").as(
+    tx
       .with(grouped)
       .select({
         shop: grouped.shop,
@@ -82,7 +84,7 @@ async function getCollectionShopRows(
       })
       .from(grouped),
   );
-  const rows = await db
+  const rows = await tx
     .with(grouped, scopedShops)
     .select({
       shop: scopedShops.shop,
@@ -120,6 +122,7 @@ async function getCollectionShopRows(
 }
 
 async function getOrdersShopRows(
+  tx: ReadTx,
   userId: string,
   filters: ExpenseShopFilters,
 ): Promise<ExpenseShopsResponse> {
@@ -128,9 +131,9 @@ async function getOrdersShopRows(
     dateEnd: filters.dateEnd,
     shop: filters.shop,
   };
-  const orderItems = createOrderItemSpendByOrder(userId, scopedFilters);
-  const grouped = db.$with("shop_agg").as(
-    db
+  const orderItems = createOrderItemSpendByOrder(tx, userId, scopedFilters);
+  const grouped = tx.$with("shop_agg").as(
+    tx
       .select({
         shop: order.shop,
         spend: sql<number>`COALESCE(${sum(
@@ -149,8 +152,8 @@ async function getOrdersShopRows(
       .where(orderWhere(userId, scopedFilters, "total"))
       .groupBy(order.shop),
   );
-  const scopedShops = db.$with("scoped_shops").as(
-    db
+  const scopedShops = tx.$with("scoped_shops").as(
+    tx
       .with(grouped)
       .select({
         shop: grouped.shop,
@@ -164,7 +167,7 @@ async function getOrdersShopRows(
       })
       .from(grouped),
   );
-  const rows = await db
+  const rows = await tx
     .with(orderItems, grouped, scopedShops)
     .select({
       shop: scopedShops.shop,
@@ -206,6 +209,7 @@ async function getOrdersShopRows(
 }
 
 async function getShippingShopRows(
+  tx: ReadTx,
   userId: string,
   filters: ExpenseShopFilters,
 ): Promise<ExpenseShopsResponse> {
@@ -214,8 +218,8 @@ async function getShippingShopRows(
     dateEnd: filters.dateEnd,
     shop: filters.shop,
   };
-  const grouped = db.$with("shop_agg").as(
-    db
+  const grouped = tx.$with("shop_agg").as(
+    tx
       .select({
         shop: order.shop,
         spend: sql<number>`COALESCE(${sum(order.shippingFee)}, 0)::double precision`.as("spend"),
@@ -225,8 +229,8 @@ async function getShippingShopRows(
       .where(orderWhere(userId, scopedFilters, "total"))
       .groupBy(order.shop),
   );
-  const scopedShops = db.$with("scoped_shops").as(
-    db
+  const scopedShops = tx.$with("scoped_shops").as(
+    tx
       .with(grouped)
       .select({
         shop: grouped.shop,
@@ -238,7 +242,7 @@ async function getShippingShopRows(
       })
       .from(grouped),
   );
-  const rows = await db
+  const rows = await tx
     .with(grouped, scopedShops)
     .select({
       shop: scopedShops.shop,
@@ -276,6 +280,7 @@ async function getShippingShopRows(
 }
 
 export async function loadScopedShopExpansion(
+  tx: ReadTx,
   userId: string,
   shopIdValue: string,
   filters: ExpenseShopFilters,
@@ -291,19 +296,19 @@ export async function loadScopedShopExpansion(
     case "collection":
       return {
         scope: "collection",
-        items: await loadCollectionItems(userId, scopedFilters),
+        items: await loadCollectionItems(tx, userId, scopedFilters),
       };
     case "orders": {
       const [feeBreakdown, topOrders] = await Promise.all([
-        loadFeeBreakdown(userId, scopedFilters),
-        loadTopOrders(userId, scopedFilters, "orders"),
+        loadFeeBreakdown(tx, userId, scopedFilters),
+        loadTopOrders(tx, userId, scopedFilters, "orders"),
       ]);
       return { scope: "orders", feeBreakdown, topOrders };
     }
     case "shipping": {
       const [methodRows, topOrders] = await Promise.all([
-        getShippingMethodTotals(userId, scopedFilters),
-        loadTopOrders(userId, scopedFilters, "shipping"),
+        getShippingMethodTotals(tx, userId, scopedFilters),
+        loadTopOrders(tx, userId, scopedFilters, "shipping"),
       ]);
       return {
         scope: "shipping",
@@ -321,8 +326,8 @@ export async function loadScopedShopExpansion(
   }
 }
 
-function loadCollectionItems(userId: string, filters: ExpenseFilters) {
-  return db
+function loadCollectionItems(tx: ReadTx, userId: string, filters: ExpenseFilters) {
+  return tx
     .select({
       collectionId: collection.id,
       itemId: item.id,
@@ -338,8 +343,8 @@ function loadCollectionItems(userId: string, filters: ExpenseFilters) {
     .limit(6);
 }
 
-async function loadFeeBreakdown(userId: string, filters: ExpenseFilters) {
-  const [row] = await db
+async function loadFeeBreakdown(tx: ReadTx, userId: string, filters: ExpenseFilters) {
+  const [row] = await tx
     .select({
       shipping: sql<number>`COALESCE(${sum(order.shippingFee)}, 0)::double precision`,
       taxes: sql<number>`COALESCE(${sum(order.taxes)}, 0)::double precision`,
@@ -354,12 +359,13 @@ async function loadFeeBreakdown(userId: string, filters: ExpenseFilters) {
 }
 
 async function loadTopOrders(
+  tx: ReadTx,
   userId: string,
   filters: ExpenseFilters,
   scope: "orders" | "shipping",
 ) {
-  const orderItems = createOrderItemSpendByOrder(userId, filters);
-  const rows = await db
+  const orderItems = createOrderItemSpendByOrder(tx, userId, filters);
+  const rows = await tx
     .select({
       orderId: order.id,
       title: order.title,

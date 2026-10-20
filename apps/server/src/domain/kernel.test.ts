@@ -188,6 +188,16 @@ describe("serve answers with the outcome", () => {
     });
   });
 
+  test("a bad request answers 400 with its message", async () => {
+    const rejects = query({ action: "test.bad_request", failure: "Failed to read" }, async () =>
+      fail("bad_request", "Pick another section"),
+    );
+    expect(await serve(caller, rejects, {})).toMatchObject({
+      code: 400,
+      response: "Pick another section",
+    });
+  });
+
   test("a throw answers 500 with the operation's failure", async () => {
     expect(await serve(caller, writeThen("throw"), { id: "served-throw" })).toMatchObject({
       code: 500,
