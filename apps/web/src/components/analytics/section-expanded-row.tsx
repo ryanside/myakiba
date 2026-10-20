@@ -5,7 +5,7 @@ import { useRead } from "@/data/client";
 import { analytics } from "@/data/resources/analytics";
 import type { AnalyticsSection } from "@myakiba/contracts/shared/types";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
-import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { DataTablePagination, pageRange } from "@/components/data-table/data-table-pagination";
 import { SectionRelationships } from "@/components/analytics/section-relationships";
 import { Button } from "@/components/ui/button";
 import type { AnalyticsSectionItemsData, AnalyticsSectionRow } from "@/queries/analytics";
@@ -159,8 +159,8 @@ function ExpandedRowItems({
       {data.totalCount > SECTION_ITEM_PAGE_SIZE ? (
         <div className="flex items-center justify-between gap-3 pt-1">
           <p className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
-            Showing {offset + 1}–{Math.min(offset + SECTION_ITEM_PAGE_SIZE, data.totalCount)} of{" "}
-            {data.totalCount}
+            Showing{" "}
+            {pageRange({ totalCount: data.totalCount, limit: SECTION_ITEM_PAGE_SIZE, offset })}
           </p>
           <DataTablePagination
             totalCount={data.totalCount}

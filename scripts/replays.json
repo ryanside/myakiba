@@ -410,6 +410,54 @@
       "fixed": [
         "dragging a card with the keyboard > Space, ArrowRight, Space moves the focused card to the next column"
       ]
+    },
+    {
+      "fix": "087e165d",
+      "bug": "the data grid hid its page controls on a page past the end of a one-page or empty result, and showed no page buttons past the end of a longer one",
+      "test": "apps/web/src/components/reui/data-grid/data-grid-pagination.test.tsx",
+      "fixed": [
+        "DataGridPagination past the end > a one-page result offers its only page",
+        "DataGridPagination past the end > an empty result offers page 1",
+        "DataGridPagination past the end > a longer result offers its last page"
+      ]
+    },
+    {
+      "fix": "087e165d",
+      "bug": "the item, expenses and analytics pager hid every page control on a page past the end of a one-page or empty result, and its Previous went to another empty page",
+      "test": "apps/web/src/components/data-table/data-table-pagination.test.tsx",
+      "fixed": [
+        "DataTablePagination past the end > a one-page result offers its only page",
+        "DataTablePagination past the end > an empty result offers page 1",
+        "DataTablePagination past the end > previous goes to the last page with rows"
+      ]
+    },
+    {
+      "fix": "9597fbf5",
+      "bug": "the analytics section page and the expenses shop table showed an impossible range such as Showing 101\u20135 of 5 on a page past the end",
+      "test": "apps/web/src/components/data-table/data-table-pagination.test.tsx",
+      "fixed": ["pageRange > names the rows on a page, and no rows on a page past the end"]
+    },
+    {
+      "fix": "abc05395",
+      "bug": "the data grid read an offset that was not a page start as page 1, so an offset past the rows inside the last page hid the pager and printed rows the table did not show",
+      "test": "apps/web/src/components/reui/data-grid/data-grid-pagination.test.tsx",
+      "fixed": [
+        "DataGridPagination at an offset that is not a page start > an offset past the rows of the only page offers page 1, not marked current",
+        "DataGridPagination at an offset that is not a page start > an empty result at an offset inside page 1 offers page 1",
+        "DataGridPagination at an offset that is not a page start > previous from an offset past the rows of page 1 goes to page 1",
+        "DataGridPagination at an offset that is not a page start > an offset past the rows of the only page shows no rows of the total",
+        "DataGridPagination at an offset that is not a page start > an offset inside the rows names the rows from that offset"
+      ]
+    },
+    {
+      "fix": "abc05395",
+      "bug": "the item, expenses and analytics pager read an offset past the rows inside the last page as page 1, so it hid itself and left the user on an empty page",
+      "test": "apps/web/src/components/data-table/data-table-pagination.test.tsx",
+      "fixed": [
+        "DataTablePagination at an offset that is not a page start > an offset past the rows of the only page offers page 1, not marked current",
+        "DataTablePagination at an offset that is not a page start > an empty result at an offset inside page 1 offers page 1",
+        "DataTablePagination at an offset that is not a page start > previous from an offset past the rows of page 1 goes to page 1"
+      ]
     }
   ],
   "lint": [
