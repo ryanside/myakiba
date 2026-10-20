@@ -2,7 +2,8 @@ import { StarIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { useWishlistItemMutation } from "@/hooks/use-wishlist";
+import { useResourceMutation } from "@/data/client";
+import { setWishlistMembership } from "@/data/resources/wishlist";
 
 export function WishlistToggleButton({
   itemId,
@@ -15,7 +16,7 @@ export function WishlistToggleButton({
   readonly isWishlisted: boolean;
   readonly disabled?: boolean;
 }): React.JSX.Element {
-  const mutation = useWishlistItemMutation();
+  const mutation = useResourceMutation(setWishlistMembership);
   const label = isWishlisted ? "Remove from Wishlist" : "Add to Wishlist";
 
   return (
@@ -28,12 +29,9 @@ export function WishlistToggleButton({
       onClick={
         itemId === undefined
           ? undefined
-          : () =>
-              mutation.mutate({
-                itemId,
-                itemExternalId,
-                wishlisted: !isWishlisted,
-              })
+          : async () => {
+              await mutation.run({ itemId, itemExternalId, wishlisted: !isWishlisted });
+            }
       }
     >
       {mutation.isPending ? (
