@@ -188,7 +188,12 @@ export default defineConfig({
       rules: { "myakiba/no-window-total": "warn" },
     },
     {
-      files: ["apps/server/src/routers/orders/**"],
+      files: [
+        "apps/server/src/routers/orders/**",
+        "apps/server/src/routers/collection/**",
+        "apps/server/src/routers/lists/**",
+        "apps/server/src/routers/wishlist/**",
+      ],
       excludeFiles: ["**/*.test.ts"],
       rules: {
         "no-restricted-imports": [

@@ -62,3 +62,7 @@ privateApi("/probe").delete("/:orderId/items/:collectionId", (ctx) =>
 type FailuresOf<O> = O extends { readonly "~types"?: { readonly failure: infer F } } ? F : never;
 // A body that never fails gives Eden no failure entry, so the list answers no 404.
 void (true satisfies [FailuresOf<typeof Orders.list>] extends [never] ? true : false);
+
+// A message body stays a literal, and an object body stays mutable, as a handler's return was.
+void (ok("List order saved").value satisfies "List order saved");
+ok({ listIds: ["l1"] }).value.listIds.push("l2");
