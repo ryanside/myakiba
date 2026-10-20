@@ -5,7 +5,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import type { Order } from "@myakiba/contracts/orders/types";
 
+const realSearch = await import("@/queries/search");
 await mock.module("@/queries/search", () => ({
+  ...realSearch,
   searchOrders: async () => ({ orderIdsAndTitles: [{ id: "od-target", title: "Target Order" }] }),
 }));
 

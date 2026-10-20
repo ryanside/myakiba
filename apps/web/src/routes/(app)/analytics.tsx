@@ -1,9 +1,9 @@
 import { useCallback } from "react";
 import type { ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useRead } from "@/data/client";
+import { analytics as analyticsResource } from "@/data/resources/analytics";
 import { ENTRY_CATEGORIES } from "@myakiba/contracts/shared/constants";
-import { getAnalytics } from "@/queries/analytics";
 import { LeaderboardTable } from "@/components/analytics/leaderboard-table";
 import { Section } from "@/components/analytics/section";
 import { SECTION_GRADIENT_COLORS } from "@/components/analytics/section-utils";
@@ -38,12 +38,7 @@ export const Route = createFileRoute("/(app)/analytics")({
 
 function RouteComponent(): ReactNode {
   const { currency, locale } = useUserPreferences();
-  const { isPending, isError, data, error } = useQuery({
-    queryKey: ["analytics"],
-    queryFn: getAnalytics,
-    staleTime: 1000 * 60 * 5,
-    retry: false,
-  });
+  const { isPending, isError, data, error } = useRead(analyticsResource.overview);
 
   const analytics = data?.analytics;
   const isLoading = isPending;

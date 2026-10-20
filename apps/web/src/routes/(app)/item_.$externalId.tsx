@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { createFileRoute, useParams, notFound } from "@tanstack/react-router";
+// oxlint-disable-next-line no-restricted-imports -- scraper flow, replaced by the browser extension: the Item resync status and request stay here (until 2027-04-16, approved by root)
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/components/ui/toast";
 import { BackLink } from "@/components/ui/back-link";
@@ -11,13 +12,9 @@ import { ItemDetails } from "@/components/item/item-details";
 import { ItemHero } from "@/components/item/item-hero";
 import { ItemNotFound } from "@/components/item/item-not-found";
 import { useCollectionMutations, useCollectionOrderMutations } from "@/hooks/use-collection";
-import {
-  getItem,
-  getItemRelatedCollection,
-  getItemRelatedOrders,
-  getResyncStatus,
-  requestResync,
-} from "@/queries/item";
+import { useRead } from "@/data/client";
+import { items } from "@/data/resources/item";
+import { getResyncStatus, requestResync } from "@/queries/item";
 
 export const Route = createFileRoute("/(app)/item_/$externalId")({
   parseParams: ({ externalId }) => {
@@ -46,17 +43,7 @@ function RouteComponent(): ReactNode {
   const { externalId } = useParams({ from: "/(app)/item_/$externalId" });
   const [syncType, setSyncType] = useState<LaunchableSyncType | null>(null);
 
-  const {
-    data,
-    isPending,
-    isError,
-    error: itemError,
-  } = useQuery({
-    queryKey: ["item", externalId],
-    queryFn: () => getItem(externalId),
-    staleTime: 1000 * 60 * 5,
-    retry: false,
-  });
+  const { data, isPending, isError, error: itemError } = useRead(items.detail, externalId);
 
   const isNotFound = data === null;
 
@@ -83,11 +70,7 @@ function RouteComponent(): ReactNode {
     },
   });
 
-  const { data: itemRelatedOrders } = useQuery({
-    queryKey: ["item", externalId, "itemRelatedOrders"],
-    queryFn: () => getItemRelatedOrders(externalId),
-    staleTime: 1000 * 60 * 5,
-    retry: false,
+  const { data: itemRelatedOrders } = useRead(items.relatedOrders, externalId, {
     enabled: data != null,
   });
 
@@ -103,13 +86,7 @@ function RouteComponent(): ReactNode {
     isPending: isPendingItemRelatedCollection,
     isError: isErrorItemRelatedCollection,
     error: errorItemRelatedCollection,
-  } = useQuery({
-    queryKey: ["item", externalId, "itemRelatedCollection"],
-    queryFn: () => getItemRelatedCollection(externalId),
-    staleTime: 1000 * 60 * 5,
-    retry: false,
-    enabled: data != null,
-  });
+  } = useRead(items.relatedCollection, externalId, { enabled: data != null });
 
   if (isError) {
     return (

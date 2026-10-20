@@ -15,8 +15,8 @@ import { Button } from "../ui/button";
 import { Input } from "@/components/ui/input";
 import { MaskInput } from "@/components/ui/mask-input";
 import { useForm } from "@tanstack/react-form";
-import { useQuery } from "@tanstack/react-query";
-import { getItemReleases } from "@/queries/item";
+import { useRead } from "@/data/client";
+import { items } from "@/data/resources/item";
 import { Label } from "../ui/label";
 import {
   Select,
@@ -97,13 +97,7 @@ function CollectionItemFormContent({
     isLoading: releasesLoading,
     error: releasesError,
     refetch: refetchReleases,
-  } = useQuery({
-    queryKey: ["itemReleases", itemData.itemId],
-    queryFn: () => getItemReleases(itemData.itemId),
-    staleTime: 1000 * 60 * 5,
-    retry: false,
-    enabled: false,
-  });
+  } = useRead(items.releases, itemData.itemId, { enabled: false });
 
   return (
     <SheetContent side="right" className="w-full sm:max-w-lg! h-full">

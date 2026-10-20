@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import { useCallback } from "react";
 import { createFileRoute, notFound, stripSearchParams } from "@tanstack/react-router";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useRead } from "@/data/client";
+import { analytics } from "@/data/resources/analytics";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 import {
   analyticsSectionSchema,
@@ -22,7 +23,6 @@ import { BackLink } from "@/components/ui/back-link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFilters } from "@/hooks/use-filters";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
-import { getAnalyticsSection } from "@/queries/analytics";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 
 const KPI_LABELS = ["Unique", "Total Items", "Total Spent", "Avg. Spent"] as const;
@@ -64,12 +64,9 @@ function RouteComponent(): ReactNode {
   const sort = filters.sort;
   const order = filters.order;
 
-  const { data, isPending, isError, error, isFetching } = useQuery({
-    queryKey: ["analytics", "section", sectionName, { search, limit, offset, sort, order }],
-    queryFn: () => getAnalyticsSection(sectionName, { search, limit, offset, sort, order }),
-    staleTime: 1000 * 60 * 5,
-    retry: false,
-    placeholderData: keepPreviousData,
+  const { data, isPending, isError, error, isFetching } = useRead(analytics.section, {
+    sectionName,
+    filters: { search, limit, offset, sort, order },
   });
 
   const handleSearchChange = useCallback(

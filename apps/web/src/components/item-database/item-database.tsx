@@ -1,4 +1,5 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useRead } from "@/data/client";
+import { searches } from "@/data/resources/search";
 import { Link, getRouteApi, useNavigate } from "@tanstack/react-router";
 import { PackageIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -18,7 +19,6 @@ import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { getCategoryColor } from "@/lib/category-colors";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { formatReleasePrice } from "@/lib/locale";
-import { getItemDatabaseItems } from "@/queries/search";
 
 const itemsRoute = getRouteApi("/(app)/items");
 const VIEW_MODE_KEY = "item-database:viewMode";
@@ -197,11 +197,7 @@ export function ItemDatabase(): React.JSX.Element {
   const navigate = useNavigate();
   const { currency, dateFormat } = useUserPreferences();
   const [viewMode, setViewMode] = useLocalStorage<GridListViewMode>(VIEW_MODE_KEY, "grid");
-  const { data, isPending, isError, error } = useQuery({
-    queryKey: ["item-database-items", search] as const,
-    queryFn: () => getItemDatabaseItems(search),
-    placeholderData: keepPreviousData,
-  });
+  const { data, isPending, isError, error } = useRead(searches.itemDatabase, search);
 
   const items = data?.items ?? [];
   const totalCount = data?.totalCount ?? 0;

@@ -10,8 +10,8 @@ type FamilySpec =
 
 /**
  * Every query family the web app caches. A persisted family refreshes after every
- * sync and import. `roots` lists the hand-built key roots a family keeps until it
- * moves into a resource module, so sync still refreshes them.
+ * sync and import. `roots` lists the roots of the family's hand-built keys, so sync
+ * and the family's writes refresh them.
  */
 const catalog = {
   analytics: { kind: "persisted", roots: ["analytics"], collectionWrites: true },

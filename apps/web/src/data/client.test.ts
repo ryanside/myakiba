@@ -55,3 +55,26 @@ test("a rooted read keeps its family's hand-built key", () => {
   // @ts-expect-error -- an uncataloged root would never refresh.
   rootedRead("orders", { key: (orderId: string) => ["orderz", orderId] as const, load });
 });
+
+test("a write refetches only keys of the families it names, at one time", () => {
+  defineCommand({
+    invalidates: ["lists"],
+    refetchKeys: () => [{ queryKey: ["lists", "overview"], exact: true }],
+    persist,
+  });
+
+  defineCommand({
+    invalidates: ["lists"],
+    // @ts-expect-error -- a narrowed refetch stays inside the families the write names.
+    refetchKeys: () => [{ queryKey: ["orders"] }],
+    persist,
+  });
+
+  defineCommand({
+    invalidates: ["orders"],
+    refetchAfterFailure: true,
+    // @ts-expect-error -- a write refetches after a failure or leaves the refetch to its caller, not both.
+    refetchBy: "caller",
+    persist,
+  });
+});

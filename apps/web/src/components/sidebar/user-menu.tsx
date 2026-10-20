@@ -19,7 +19,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { authClient } from "@/lib/auth-client";
 import { useNavigate } from "@tanstack/react-router";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { useQueryClient } from "@tanstack/react-query";
+import { useClearServerData } from "@/data/resources/session";
 import { useTheme } from "next-themes";
 import { setThemeWithTransition } from "@/lib/theme-transition";
 import type { RouterAppContext } from "@/routes/__root";
@@ -28,7 +28,7 @@ import { Button } from "../ui/button";
 
 export default function UserMenu({ session }: { session: RouterAppContext["session"] }) {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const clearServerData = useClearServerData();
   const { theme, setTheme } = useTheme();
 
   const handleSignOut = () => {
@@ -36,7 +36,7 @@ export default function UserMenu({ session }: { session: RouterAppContext["sessi
       fetchOptions: {
         onSuccess: () => {
           toast.add({ type: "success", title: "Signed out successfully" });
-          queryClient.clear();
+          clearServerData();
           navigate({ to: "/login" });
         },
       },

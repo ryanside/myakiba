@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useRead } from "@/data/client";
+import { expenses } from "@/data/resources/expenses";
 import { SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import type {
@@ -14,7 +15,6 @@ import { ExpenseOrderRow, ExpenseOrderRowSkeleton } from "@/components/expenses/
 import { EXPENSE_CHART_COLORS } from "@/components/expenses/chart-utils";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getShopExpansion } from "@/queries/expenses";
 
 type OrdersExpansion = Extract<ShopExpansionResponse, { scope: "orders" }>;
 type ShippingExpansion = Extract<ShopExpansionResponse, { scope: "shipping" }>;
@@ -46,11 +46,9 @@ export function ShopTableRowExpansion({
     dateStart: filters.dateStart,
     dateEnd: filters.dateEnd,
   };
-  const { data, isPending, isError, error } = useQuery({
-    queryKey: ["expenses", "shop-expansion", row.id, queryFilters],
-    queryFn: () => getShopExpansion(row.id, queryFilters),
-    staleTime: 1000 * 60 * 5,
-    retry: false,
+  const { data, isPending, isError, error } = useRead(expenses.shopExpansion, {
+    shopId: row.id,
+    filters: queryFilters,
   });
 
   if (isPending) {

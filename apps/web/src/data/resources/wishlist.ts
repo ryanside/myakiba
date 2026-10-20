@@ -4,6 +4,7 @@ import type { WishlistReleaseStatus } from "@myakiba/contracts/wishlist/schema";
 import { app } from "@/lib/treaty-client";
 import type { getItem } from "@/queries/item";
 import { defineCommand, defineResource, infiniteRead, unwrap } from "../client";
+import { items } from "./item";
 
 type ItemQueryData = Awaited<ReturnType<typeof getItem>>;
 
@@ -41,12 +42,12 @@ export const setWishlistMembership = defineCommand({
   },
   saved: async (queryClient, { itemExternalId, wishlisted }) => {
     if (itemExternalId === null) return;
-    await queryClient.cancelQueries({ queryKey: ["item", itemExternalId], exact: true });
-    queryClient.setQueryData<ItemQueryData>(["item", itemExternalId], (current) =>
+    await queryClient.cancelQueries({ queryKey: items.detail.key(itemExternalId), exact: true });
+    queryClient.setQueryData<ItemQueryData>(items.detail.key(itemExternalId), (current) =>
       current ? { ...current, isWishlisted: wishlisted } : current,
     );
     await queryClient.invalidateQueries({
-      queryKey: ["item", itemExternalId],
+      queryKey: items.detail.key(itemExternalId),
       exact: true,
       refetchType: "none",
     });

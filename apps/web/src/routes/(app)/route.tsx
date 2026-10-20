@@ -2,7 +2,8 @@ import { useEffect, useRef } from "react";
 import { Add01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useRead } from "@/data/client";
+import { version } from "@/data/resources/version";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import UserMenu from "@/components/sidebar/user-menu";
@@ -11,7 +12,6 @@ import SyncStatusWidget from "@/components/sync/sync-status-widget";
 import { AppCommand } from "@/components/command/app-command";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
-import { getVersion } from "@/queries/version";
 import { toast } from "@/components/ui/toast";
 import { env } from "@myakiba/env/web";
 
@@ -37,14 +37,7 @@ function RouteComponent() {
   const hasNotified = useRef(false);
   const { session } = Route.useRouteContext();
 
-  const { data: versionData } = useQuery({
-    queryKey: ["version"],
-    queryFn: getVersion,
-    refetchOnWindowFocus: true,
-    refetchInterval: 60 * 1000,
-    refetchIntervalInBackground: false,
-    retry: false,
-  });
+  const { data: versionData } = useRead(version.current);
 
   useEffect(() => {
     if (versionData && !hasNotified.current && versionData.buildId !== env.VITE_BUILD_ID) {

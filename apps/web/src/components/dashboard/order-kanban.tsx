@@ -21,18 +21,19 @@ import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import type { Currency, DateFormat, OrderStatus } from "@myakiba/contracts/shared/types";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { functionalUpdate } from "@tanstack/react-table";
-import { updateOrderStatus, updateOrderDate } from "@/queries/orders";
+import { orThrow, useResourceMutation } from "@/data/client";
+import {
+  updateKanbanOrderDateCommand,
+  updateKanbanOrderStatusCommand,
+} from "@/data/resources/dashboard";
 import type { OrderDateField } from "@/queries/orders";
 import type { DashboardKanbanOrder } from "@/queries/dashboard";
-import { toast } from "@/components/ui/toast";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { getCurrencyLocale } from "@/lib/locale";
-import { invalidateCollectionAndOrderQueries } from "@/lib/mutation-query-invalidation";
 import { Skeleton } from "../ui/skeleton";
 import Loader from "../loader";
 
@@ -456,8 +457,6 @@ function OrderKanbanBoard({
 }: Omit<OrdersKanbanProps, "orders" | "ordersUpdatedAt"> & {
   snapshot: OrdersSnapshot;
 }) {
-  const queryClient = useQueryClient();
-
   const [columns, setColumns] = React.useReducer(columnsReducer, snapshot.columns);
   const pendingStatusMutationsRef = React.useRef(new Map<string, PendingStatusMutations>());
   const pendingDateMutationsRef = React.useRef(new Map<string, PendingDateMutations>());
@@ -486,34 +485,8 @@ function OrderKanbanBoard({
     reconcileWithSnapshot();
   }, [snapshot, reconcileWithSnapshot]);
 
-  const statusMutation = useMutation({
-    mutationFn: ({ orderId, status }: StatusMutationVariables) =>
-      updateOrderStatus(orderId, status),
-    onSuccess: (_data, variables) => {
-      if (variables.status === "Owned") {
-        toast.add({ type: "success", title: "Order marked as collected" });
-      }
-    },
-    onError: (error: Error, variables) => {
-      toast.add({
-        type: "error",
-        title: `Failed to update order ${variables.orderId} to status ${variables.status}:`,
-        description: `Error: ${error.message}`,
-      });
-    },
-  });
-
-  const dateMutation = useMutation({
-    mutationFn: ({ orderId, field, date }: DateMutationVariables) =>
-      updateOrderDate(orderId, field, date),
-    onError: (error: Error) => {
-      toast.add({
-        type: "error",
-        title: "Failed to update date",
-        description: error.message,
-      });
-    },
-  });
+  const statusWrite = useResourceMutation(updateKanbanOrderStatusCommand);
+  const dateWrite = useResourceMutation(updateKanbanOrderDateCommand);
 
   const enqueueStatusMutation = React.useCallback(
     (variables: StatusMutationVariables) => {
@@ -538,7 +511,7 @@ function OrderKanbanBoard({
             queue.persistedIndex = pendingVariables.previousIndex;
           }
 
-          await statusMutation.mutateAsync(pendingVariables);
+          await orThrow(statusWrite.run(pendingVariables));
         },
         (persistedVariables, succeeded) => {
           queue.lastMutationSucceeded = succeeded;
@@ -558,11 +531,11 @@ function OrderKanbanBoard({
             ),
           );
           pendingStatusMutationsRef.current.delete(variables.orderId);
-          await invalidateCollectionAndOrderQueries(queryClient);
+          await statusWrite.refetch();
         },
       );
     },
-    [queryClient, statusMutation],
+    [statusWrite],
   );
 
   const enqueueDateMutation = React.useCallback(
@@ -585,7 +558,7 @@ function OrderKanbanBoard({
       void drainMutationQueue(
         queue.mutations,
         async (pendingVariables) => {
-          await dateMutation.mutateAsync(pendingVariables);
+          await orThrow(dateWrite.run(pendingVariables));
         },
         (persistedVariables, succeeded) => {
           if (!succeeded) return;
@@ -601,11 +574,11 @@ function OrderKanbanBoard({
             return next;
           });
           pendingDateMutationsRef.current.delete(variables.orderId);
-          await invalidateCollectionAndOrderQueries(queryClient);
+          await dateWrite.refetch();
         },
       );
     },
-    [dateMutation, queryClient],
+    [dateWrite],
   );
 
   const handleDateChange = React.useCallback(

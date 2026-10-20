@@ -6,8 +6,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Field } from "@/components/ui/field";
-import { useQuery } from "@tanstack/react-query";
-import { getItemReleases } from "@/queries/item";
+import { useRead } from "@/data/client";
+import { items } from "@/data/resources/item";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { formatReleasePrice } from "@/lib/locale";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
@@ -45,13 +45,7 @@ export function InlineReleaseCell({
     isLoading: releasesLoading,
     error: releasesError,
     refetch: refetchReleases,
-  } = useQuery({
-    queryKey: ["itemReleases", itemId],
-    queryFn: () => getItemReleases(itemId),
-    staleTime: 1000 * 60 * 5,
-    retry: false,
-    enabled: false,
-  });
+  } = useRead(items.releases, itemId, { enabled: false });
 
   const [displayReleaseId, submit] = usePendingValue<string | null>(releaseId, async (next) => {
     if (next !== null) await onSubmit(next);

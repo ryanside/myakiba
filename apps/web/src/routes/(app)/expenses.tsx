@@ -3,7 +3,8 @@ import type { ReactNode } from "react";
 import { InformationCircleIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useRead } from "@/data/client";
+import { expenses } from "@/data/resources/expenses";
 import * as z from "zod";
 import { EXPENSE_SCOPES, expenseFiltersSchema } from "@myakiba/contracts/expenses/schema";
 import type { ExpenseFilters, ExpenseScope } from "@myakiba/contracts/expenses/schema";
@@ -18,12 +19,6 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
-import {
-  getExpenseFilterOptions,
-  getExpensesCollection,
-  getExpensesOrders,
-  getExpensesShipping,
-} from "@/queries/expenses";
 
 const expensesSearchSchema = expenseFiltersSchema.extend({
   tab: z.enum(EXPENSE_SCOPES).optional(),
@@ -33,10 +28,6 @@ const TAB_LABELS = {
   orders: "Orders",
   shipping: "Shipping",
 } satisfies Record<ExpenseScope, string>;
-const EXPENSES_QUERY_OPTIONS = {
-  staleTime: 1000 * 60 * 5,
-  retry: false,
-} as const;
 
 export const Route = createFileRoute("/(app)/expenses")({
   validateSearch: expensesSearchSchema,
@@ -59,29 +50,10 @@ function RouteComponent(): ReactNode {
   const [collectionChart, setCollectionChart] = useState<CollectionChart>("cumulative");
   const [ordersChart, setOrdersChart] = useState<OrdersChart>("cumulative");
   const [shippingChart, setShippingChart] = useState<ShippingChart>("period");
-  const filterOptionsQuery = useQuery({
-    queryKey: ["expenses", "filter-options"],
-    queryFn: getExpenseFilterOptions,
-    ...EXPENSES_QUERY_OPTIONS,
-  });
-  const collectionQuery = useQuery({
-    queryKey: ["expenses", "collection", filters],
-    queryFn: () => getExpensesCollection(filters),
-    enabled: tab === "collection",
-    ...EXPENSES_QUERY_OPTIONS,
-  });
-  const ordersQuery = useQuery({
-    queryKey: ["expenses", "orders", filters],
-    queryFn: () => getExpensesOrders(filters),
-    enabled: tab === "orders",
-    ...EXPENSES_QUERY_OPTIONS,
-  });
-  const shippingQuery = useQuery({
-    queryKey: ["expenses", "shipping", filters],
-    queryFn: () => getExpensesShipping(filters),
-    enabled: tab === "shipping",
-    ...EXPENSES_QUERY_OPTIONS,
-  });
+  const filterOptionsQuery = useRead(expenses.filterOptions);
+  const collectionQuery = useRead(expenses.collection, filters, { enabled: tab === "collection" });
+  const ordersQuery = useRead(expenses.orders, filters, { enabled: tab === "orders" });
+  const shippingQuery = useRead(expenses.shipping, filters, { enabled: tab === "shipping" });
   const activeQuery = {
     collection: collectionQuery,
     orders: ordersQuery,

@@ -13,6 +13,8 @@ function usePendingValue<T>(
     setPending({ value: newValue });
     try {
       await onSubmit(newValue);
+    } catch {
+      // The edit action has already shown its failure toast. No cell caller acts on the rejection.
     } finally {
       setPending(null);
     }
