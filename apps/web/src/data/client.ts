@@ -144,7 +144,7 @@ type CommandSpec<Input, Output> = {
   /** Patches the cache before the write and returns what puts it back if the write fails. */
   readonly optimistic?: (queryClient: QueryClient, input: Input) => Promise<Rollback | undefined>;
   readonly successTitle?: (input: Input) => string;
-  readonly failureTitle: (input: Input) => string;
+  readonly failureTitle: (input: Input, error: Error) => string;
   /** Cache patches that run after the write and before the refetch. */
   readonly saved?: (queryClient: QueryClient, input: Input, output: Output) => Promise<void>;
 };
@@ -175,7 +175,7 @@ export function useResourceMutation<Input, Output>(command: Command<Input, Outpu
     queryClient.invalidateQueries({
       predicate: (query) => inFamilies(query.queryKey, spec.invalidates),
     });
-  const mutation = useMutation<Output, unknown, Input, Rollback | undefined>({
+  const mutation = useMutation<Output, Error, Input, Rollback | undefined>({
     mutationFn: spec.persist,
     onMutate: optimistic && ((input) => optimistic(queryClient, input)),
     onSuccess: async (output, input) => {
@@ -183,9 +183,9 @@ export function useResourceMutation<Input, Output>(command: Command<Input, Outpu
       await spec.saved?.(queryClient, input, output);
       if (!refetchAfterFailure) await refetch();
     },
-    onError: (_error, input, rollback) => {
+    onError: (error, input, rollback) => {
       rollback?.();
-      toast.add({ type: "error", title: spec.failureTitle(input) });
+      toast.add({ type: "error", title: spec.failureTitle(input, error) });
     },
     onSettled: refetchAfterFailure && refetch,
   });

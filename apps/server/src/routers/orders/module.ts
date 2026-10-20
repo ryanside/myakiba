@@ -432,7 +432,7 @@ export const Orders = {
           ),
         )
         .returning({ id: collection.id });
-      if (moved.length === 0) throw new Error("FAILED_TO_MOVE_ITEMS");
+      if (moved.length === 0) return fail("not_found", "Order items not found");
 
       await advanceOrderReleaseDatesForCollectionItems(
         scope.tx,

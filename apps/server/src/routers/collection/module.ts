@@ -4,6 +4,10 @@ import { collection, entry_to_item, item, item_release } from "@myakiba/db/schem
 import { command, fail, ok, paginate, query } from "@/domain/kernel";
 import type { CollectionQuery, CollectionUpdateType } from "./model";
 
+const withTimestampStrings = <T extends { readonly createdAt: Date; readonly updatedAt: Date }>(
+  row: T,
+) => ({ ...row, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() });
+
 export const Collection = {
   list: query(
     { action: "collection.list", failure: "Failed to get collection table" },
@@ -191,7 +195,8 @@ export const Collection = {
         );
       }
 
-      return ok({ update: updated[0] });
+      const [update] = updated;
+      return ok({ update: update && withTimestampStrings(update) });
     },
   ),
 
@@ -205,7 +210,7 @@ export const Collection = {
         .returning();
       if (!deleted) return fail("not_found", "Collection item not found");
 
-      return ok({ deleted });
+      return ok({ deleted: withTimestampStrings(deleted) });
     },
   ),
 

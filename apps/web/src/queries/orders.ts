@@ -1,4 +1,5 @@
 import { app, getErrorMessage } from "@/lib/treaty-client";
+import { MoveNotFoundError } from "./move-not-found-error";
 import type {
   CascadeOptions,
   EditedOrder,
@@ -182,6 +183,7 @@ export async function moveItem(
   const { error } = await app.api.orders["move-items"].put(moveItemPayload);
 
   if (error) {
+    if (error.status === 404) throw new MoveNotFoundError(error.value);
     throw new Error(getErrorMessage(error, "Failed to move items"));
   }
 }

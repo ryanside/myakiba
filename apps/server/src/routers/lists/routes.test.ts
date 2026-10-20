@@ -5,7 +5,7 @@ import * as authSchema from "@myakiba/db/schema/auth";
 import * as figureSchema from "@myakiba/db/schema/figure";
 import { createTestDatabase } from "../../../test/database";
 
-const { item, list, listMember } = figureSchema;
+const { collection, item, list, listMember } = figureSchema;
 
 initLogger({ enabled: false });
 
@@ -48,12 +48,12 @@ beforeEach(async () => {
   ]);
 });
 
-const call = async (method: string, path: string, body: Record<string, string[]>) => {
+const call = async (method: string, path: string, body?: Record<string, string[]>) => {
   const response = await app.handle(
     new Request(`http://localhost/api/lists${path}`, {
       method,
       headers: { "x-test-user": userId, "content-type": "application/json" },
-      body: JSON.stringify(body),
+      body: body && JSON.stringify(body),
     }),
   );
   return { status: response.status, body: await response.text() };
@@ -78,4 +78,18 @@ test("removing a present and a missing member removes neither", async () => {
     body: "Selection not found",
   });
   expect(await ids(listMember)).toEqual(["member-1", "member-2"]);
+});
+
+test("a member whose target the owner cannot see stays a 500", async () => {
+  await db
+    .insert(collection)
+    .values({ id: "c-other", userId: "user-2", itemId: "item-1", status: "Owned" });
+  await db
+    .insert(listMember)
+    .values({ id: "member-dangling", listId: "list-1", collectionId: "c-other", position: 2 });
+
+  expect(await call("GET", "/list-1/members")).toEqual({
+    status: 500,
+    body: "Failed to load List",
+  });
 });

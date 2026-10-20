@@ -24,6 +24,7 @@ import {
   moveItem,
   splitOrders,
 } from "@/queries/orders";
+import { MoveNotFoundError } from "@/queries/move-not-found-error";
 import { collectionWriteFamilies } from "../catalog";
 import { defineCommand, rootedRead } from "../client";
 
@@ -370,5 +371,6 @@ export const moveOrderItemsCommand = defineCommand({
   }) => moveItem(targetOrderId, collectionIds, orderIds),
   successTitle: ({ collectionIds }) =>
     collectionIds.size === 1 ? "Item moved" : `Successfully moved ${collectionIds.size} items`,
-  failureTitle: () => "Failed to move items. Please try again.",
+  failureTitle: (_input, error) =>
+    error instanceof MoveNotFoundError ? error.message : "Failed to move items. Please try again.",
 });
