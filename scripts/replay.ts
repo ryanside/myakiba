@@ -33,6 +33,15 @@ type TypesReplay = {
   errors: string[];
 };
 
+/** A type test whose `@ts-expect-error` lines must each fail with the listed error. */
+type TypesFixture = {
+  name: string;
+  bug: string;
+  package: string;
+  file: string;
+  errors: string[];
+};
+
 type LintRule = string | [string, ...unknown[]];
 type LintConfig = {
   ignorePatterns: string[];
@@ -58,16 +67,18 @@ const {
   lint: lintReplays = [],
   knip: knipReplays = [],
   types: typesReplays = [],
+  fixtures: fixtureReplays = [],
 }: {
   test?: TestReplay[];
   lint?: LintReplay[];
   knip?: KnipReplay[];
   types?: TypesReplay[];
+  fixtures?: TypesFixture[];
 } = await Bun.file(path.join(import.meta.dir, "replays.json")).json();
 const replaysByMode = {
   lint: lintReplays,
   knip: knipReplays,
-  types: typesReplays,
+  types: [...typesReplays, ...fixtureReplays],
   test: testReplays,
 };
 const mode =
@@ -75,7 +86,8 @@ const mode =
 const lintMode = mode === "lint";
 const knipMode = mode === "knip";
 const typesMode = mode === "types";
-const listed: (TestReplay | LintReplay | KnipReplay | TypesReplay)[] = replaysByMode[mode];
+type Replay = TestReplay | LintReplay | KnipReplay | TypesReplay | TypesFixture;
+const listed: Replay[] = replaysByMode[mode];
 if (listed.length === 0) {
   console.error(`FAIL  scripts/replays.json lists no ${mode === "test" ? "" : `${mode} `}replay`);
   process.exit(1);
@@ -83,8 +95,8 @@ if (listed.length === 0) {
 const filters = process.argv
   .slice(2)
   .filter((arg) => arg !== "--lint" && arg !== "--knip" && arg !== "--types");
-const matches = (replay: TestReplay | LintReplay | KnipReplay | TypesReplay, filter: string) =>
-  replay.fix.startsWith(filter) ||
+const matches = (replay: Replay, filter: string) =>
+  ("fix" in replay && replay.fix.startsWith(filter)) ||
   ("rule" in replay && replay.rule.includes(filter)) ||
   ("test" in replay && replay.test.includes(filter)) ||
   ("name" in replay && replay.name === filter);
@@ -93,7 +105,7 @@ if (unmatched.length > 0) {
   console.error(`FAIL  no replay matches ${unmatched.join(" ")}`);
   process.exit(1);
 }
-const pick = <Replay extends TestReplay | LintReplay | KnipReplay | TypesReplay>(list: Replay[]) =>
+const pick = <Picked extends Replay>(list: Picked[]) =>
   list.filter(
     (replay) => filters.length === 0 || filters.some((filter) => matches(replay, filter)),
   );
@@ -101,6 +113,7 @@ const selected = lintMode || knipMode || typesMode ? [] : pick(testReplays);
 const selectedLint = lintMode ? pick(lintReplays) : [];
 const selectedKnip = knipMode ? pick(knipReplays) : [];
 const selectedTypes = typesMode ? pick(typesReplays) : [];
+const selectedFixtures = typesMode ? pick(fixtureReplays) : [];
 const builtinRules: BuiltinRule[] = lintMode ? await $`${oxlint} --rules -f json`.json() : [];
 const builtinRule = (rule: string) => {
   const [, scope, value] = /^(.+)\((.+)\)$/.exec(rule) ?? [];
@@ -316,7 +329,9 @@ if (knipMode) {
   report(run.exitCode === 0, "head  knip", run.exitCode === 0 ? [] : [tail(run.output)]);
 }
 
-for (const packageDir of new Set(selectedTypes.map((replay) => replay.package))) {
+for (const packageDir of new Set(
+  [...selectedTypes, ...selectedFixtures].map((replay) => replay.package),
+)) {
   const run = await checkTypes(root, packageDir);
   const pass = run.exitCode === 0;
   report(pass, `head  ${packageDir} check-types`, pass ? [] : [tail(run.output)]);
@@ -492,6 +507,33 @@ try {
         ...malformed.map((error) => `      not a TS diagnostic: ${JSON.stringify(error)}`),
         ...notReported.map((error) => `      not reported: ${error}`),
         ...(notReported.length > 0 ? [tail(run.output)] : []),
+      ],
+    );
+  }
+
+  const headOutput = await $`git rev-parse HEAD`.cwd(root).text();
+  const head = headOutput.trim();
+  for (const fixture of selectedFixtures) {
+    await checkOut(head, { packageDir: fixture.package, files: [] });
+    const file = path.join(worktree, fixture.file);
+    const source = await Bun.file(file).text();
+    const directive = /^(\s*)\/\/ @ts-expect-error\b.*$/gm;
+    const directives = source.match(directive)?.length ?? 0;
+    await Bun.write(file, source.replace(directive, "$1//"));
+
+    const run = await checkTypes(worktree, fixture.package);
+    const diagnostics = run.output.split("\n").filter((line) => tsDiagnostic.test(line));
+    const expected = (line: string) => fixture.errors.some((error) => line.startsWith(`${error}:`));
+    const notReported = fixture.errors.filter(
+      (error) => !diagnostics.some((line) => line.startsWith(`${error}:`)),
+    );
+    const unexpected = diagnostics.filter((line) => !expected(line));
+    report(
+      run.exitCode !== 0 && directives > 0 && notReported.length === 0 && unexpected.length === 0,
+      `${head.slice(0, 8)}  ${fixture.file} without its ${directives} @ts-expect-error  ${diagnostics.length} errors for: ${fixture.bug}`,
+      [
+        ...notReported.map((error) => `      not reported: ${error}`),
+        ...unexpected.map((line) => `      unexpected: ${line}`),
       ],
     );
   }

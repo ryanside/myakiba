@@ -5,7 +5,7 @@ import { initLogger, log } from "evlog";
 import type { DrainContext } from "evlog";
 import { createPostHogDrain } from "evlog/posthog";
 import { createDrainPipeline } from "evlog/pipeline";
-import { auth, OpenAPI } from "@myakiba/auth/server";
+import { OpenAPI } from "@myakiba/auth/server";
 import { env } from "@myakiba/env/server";
 import { openapi } from "@elysiajs/openapi";
 import { staticPlugin } from "@elysiajs/static";
@@ -13,20 +13,7 @@ import path from "node:path";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import * as z from "zod";
-import analyticsRouter from "./routers/analytics";
-import calendarRouter from "./routers/calendar";
-import collectionRouter from "./routers/collection";
-import dataTransferRouter from "./routers/data-transfer";
-import dashboardRouter from "./routers/dashboard";
-import expensesRouter from "./routers/expenses";
-import itemRouter from "./routers/item";
-import listsRouter from "./routers/lists";
-import ordersRouter from "./routers/orders";
-import searchRouter from "./routers/search";
-import settingsRouter from "./routers/settings";
-import syncRouter from "./routers/sync";
-import wishlistRouter from "./routers/wishlist";
-import { unavailableDependencies } from "./lib/health";
+import { routes } from "./routes";
 
 const pipeline = createDrainPipeline<DrainContext>({
   batch: { size: 50, intervalMs: 5000 },
@@ -114,41 +101,7 @@ const app = new Elysia()
       documentation: authDocs,
     }),
   )
-  .get("/api/auth/*", ({ request }) => auth.handler(request))
-  .post("/api/auth/*", ({ request }) => auth.handler(request), {
-    parse: "none",
-  })
-  .get("/health", async ({ status }) => {
-    const unavailable = await unavailableDependencies();
-    if (unavailable.length === 0) return { status: "ok" };
-    return status(503, { status: `${unavailable.join(" and ")} unavailable` });
-  })
-  .group("/api", (api) =>
-    api
-      .get(
-        "/version",
-        ({ set }) => {
-          set.headers["cache-control"] = "no-store";
-          return { buildId: env.BUILD_ID };
-        },
-        {
-          response: z.object({ buildId: z.string() }),
-        },
-      )
-      .use(analyticsRouter)
-      .use(calendarRouter)
-      .use(collectionRouter)
-      .use(dataTransferRouter)
-      .use(dashboardRouter)
-      .use(expensesRouter)
-      .use(itemRouter)
-      .use(listsRouter)
-      .use(ordersRouter)
-      .use(searchRouter)
-      .use(settingsRouter)
-      .use(syncRouter)
-      .use(wishlistRouter),
-  )
+  .use(routes)
   .get("/", () => serveIndexHtml(serverDistPath))
   .use(
     staticPlugin({

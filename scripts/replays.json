@@ -41,7 +41,7 @@
     {
       "fix": "527a76d4",
       "bug": "a failed order-item delete left owned items detached",
-      "test": "apps/server/src/routers/orders/service.test.ts",
+      "test": "apps/server/src/routers/orders/remove-items.test.ts",
       "fixed": ["removing items from an order > a failed delete leaves every item in the order"]
     },
     {
@@ -392,6 +392,25 @@
       "config": ["apps/server/tsconfig.json", "packages/config/tsconfig.base.json"],
       "errors": [
         "src/routers/orders/service.ts(588,5): error TS2322: Type '{ totalOrders: number; totalSpent: number; activeOrders: number; unpaidCosts: number; } | undefined' is not assignable to type '{ totalOrders: number; totalSpent: number; activeOrders: number; unpaidCosts: number; }'."
+      ]
+    }
+  ],
+  "fixtures": [
+    {
+      "name": "kernel",
+      "bug": "kernel fixtures for 58a5d423, 87ebc2a0, b14fda39, 5a51f519 and a1f6ff78",
+      "package": "apps/server",
+      "file": "apps/server/src/domain/kernel.type-test.ts",
+      "errors": [
+        "src/domain/kernel.type-test.ts(19,15): error TS2345",
+        "src/domain/kernel.type-test.ts(19,22): error TS7006",
+        "src/domain/kernel.type-test.ts(23,18): error TS2339",
+        "src/domain/kernel.type-test.ts(28,29): error TS2322",
+        "src/domain/kernel.type-test.ts(31,34): error TS2345",
+        "src/domain/kernel.type-test.ts(37,59): error TS2741",
+        "src/domain/kernel.type-test.ts(40,14): error TS2741",
+        "src/domain/kernel.type-test.ts(50,40): error TS2322",
+        "src/domain/kernel.type-test.ts(53,32): error TS2741"
       ]
     }
   ]
