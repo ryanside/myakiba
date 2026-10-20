@@ -10,6 +10,9 @@
     "./order-release-date": {
       "default": "./src/order-release-date.ts"
     },
+    "./tx": {
+      "default": "./src/tx.ts"
+    },
     "./schema/*": {
       "default": "./src/schema/*.ts"
     }

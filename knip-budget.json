@@ -227,7 +227,6 @@
     "packages/contracts/src/orders/schema.ts CascadeOption",
     "packages/contracts/src/search/schema.ts CollectionSearchSort",
     "packages/contracts/src/search/schema.ts OrderSearchSort",
-    "packages/contracts/src/search/schema.ts SortDirection",
     "packages/contracts/src/sync/constants.ts SyncCsvItemStatus",
     "packages/contracts/src/sync/schema.ts CollectionItemMetadata",
     "packages/contracts/src/sync/schema.ts CsvItem",

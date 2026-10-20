@@ -1,30 +1,20 @@
 import * as z from "zod";
 import { createInsertSchema, createUpdateSchema } from "drizzle-zod";
 import { order } from "@myakiba/db/schema/figure";
-import {
-  DEFAULT_LIMIT,
-  ORDER_STATUSES,
-  SHIPPING_METHODS,
-} from "@myakiba/contracts/shared/constants";
+import { ORDER_STATUSES, SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import {
   createCommaSeparatedEnumArraySchema,
   commaSeparatedStringArraySchema,
 } from "@myakiba/contracts/search/query-params";
 import { searchSchema } from "@myakiba/contracts/orders/schema";
-import { orderSearchSortSchema, sortDirectionSchema } from "@myakiba/contracts/search/schema";
-import {
-  paginationLimitSchema,
-  paginationOffsetSchema,
-} from "@myakiba/contracts/shared/pagination";
+import { orderSearchSortSchema } from "@myakiba/contracts/search/schema";
+import { pageFields } from "@myakiba/contracts/shared/pagination";
 
 const commaSeparatedShipMethodArray = createCommaSeparatedEnumArraySchema(SHIPPING_METHODS);
 const commaSeparatedStatusArray = createCommaSeparatedEnumArraySchema(ORDER_STATUSES);
 
 export const ordersQuerySchema = searchSchema.extend({
-  limit: paginationLimitSchema.optional().default(DEFAULT_LIMIT),
-  offset: paginationOffsetSchema.optional().default(0),
-  sort: orderSearchSortSchema.optional().default("createdAt"),
-  order: sortDirectionSchema.optional().default("desc"),
+  ...pageFields(orderSearchSortSchema, "createdAt"),
   shop: commaSeparatedStringArraySchema,
   shipMethod: commaSeparatedShipMethodArray,
   status: commaSeparatedStatusArray,

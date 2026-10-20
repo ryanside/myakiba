@@ -6,12 +6,8 @@ import type {
   OrderFilters,
   OrderItemsQuery,
 } from "@myakiba/contracts/orders/schema";
-import type {
-  Order,
-  OrderItem,
-  OrderListItem,
-  PaginatedResult,
-} from "@myakiba/contracts/orders/types";
+import type { Order, OrderItem, OrderListItem } from "@myakiba/contracts/orders/types";
+import type { Page } from "@myakiba/contracts/shared/pagination";
 import type { OrderStatus } from "@myakiba/contracts/shared/types";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 
@@ -82,7 +78,7 @@ export async function getOrderItemReleases(orderId: string): Promise<readonly Or
 export async function getOrderItems(
   orderId: string,
   query: OrderItemsQuery,
-): Promise<PaginatedResult<OrderItem>> {
+): Promise<Page<OrderItem>> {
   const { data, error } = await app.api.orders({ orderId }).items.get({ query });
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to get order items"));
