@@ -1,6 +1,5 @@
 import type { ReactElement } from "react";
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Calendar01Icon } from "@hugeicons/core-free-icons";
 import { Calendar } from "@/components/ui/calendar";
@@ -16,7 +15,8 @@ import {
 } from "@/components/ui/select";
 import { parseDateOnly } from "@myakiba/utils/date-only";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
-import { orderItemReleasesQueryOptions } from "@/hooks/use-orders";
+import { useRead } from "@/data/client";
+import { orders } from "@/data/resources/orders";
 import type { DateFormat } from "@myakiba/contracts/shared/types";
 import type { OrderItemRelease } from "@/queries/orders";
 import { format } from "date-fns";
@@ -66,12 +66,7 @@ function ReleaseSelect({
   readonly dateFormat: DateFormat;
   readonly onSelect: (date: string | null) => void;
 }) {
-  const {
-    data: releases,
-    isLoading,
-    isError,
-    error,
-  } = useQuery(orderItemReleasesQueryOptions(orderId));
+  const { data: releases, isLoading, isError, error } = useRead(orders.itemReleases, orderId);
 
   const itemReleaseDates = useMemo(() => (releases ? groupReleases(releases) : []), [releases]);
 

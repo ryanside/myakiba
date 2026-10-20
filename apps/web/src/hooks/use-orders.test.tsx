@@ -23,6 +23,9 @@ const write =
 
 await mock.module("@/queries/orders", () => ({
   getOrders: async () => [],
+  getOrder: async () => {
+    throw new Error("no order page in these tests");
+  },
   getOrderItems: async () => ({ items: [], totalCount: 0 }),
   getOrderItemReleases: async () => [],
   mergeOrders: write("merge"),

@@ -186,6 +186,22 @@
         "an order action's promise settles after the server write (unfiltered list) > handleMoveItem: the caller's await waits for the write",
         "an order action's promise settles after the server write (unfiltered list) > handleMoveItem: a rejected write rejects the caller's await"
       ]
+    },
+    {
+      "fix": "52f1b8fa",
+      "bug": "a failed order write restored the old list's rows into the list the filter or sort had changed to",
+      "test": "apps/web/src/data/resources/orders.test.tsx",
+      "fixed": [
+        "a failed Order write after the filter changes > leaves the new list as the server sent it"
+      ]
+    },
+    {
+      "fix": "52f1b8fa",
+      "bug": "a failed collection write restored the old list's rows into the list the filter or sort had changed to",
+      "test": "apps/web/src/data/resources/collection.test.tsx",
+      "fixed": [
+        "a failed Collection Item write after the filter changes > leaves the new list as the server sent it"
+      ]
     }
   ],
   "lint": [

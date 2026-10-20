@@ -136,6 +136,22 @@ export default defineConfig({
         "apps/web/src/components/wishlist/**",
         "apps/web/src/hooks/use-wishlist.ts",
         "apps/web/src/routes/(app)/wishlist.tsx",
+        "apps/web/src/components/orders/**",
+        "apps/web/src/components/collection/**",
+        "apps/web/src/components/cells/popover-release-date-cell.tsx",
+        "apps/web/src/hooks/use-orders.ts",
+        "apps/web/src/hooks/use-collection.ts",
+        "apps/web/src/routes/(app)/orders.tsx",
+        "apps/web/src/routes/(app)/orders_.$id.tsx",
+        "apps/web/src/routes/(app)/collection.tsx",
+      ],
+      excludeFiles: [
+        // Scraper flow, replaced by the browser extension.
+        "apps/web/src/components/orders/order-item-sync-sheet.tsx",
+        // The order search, release and entry reads move with their families in W3.
+        "apps/web/src/components/orders/unified-item-move-form.tsx",
+        "apps/web/src/components/collection/collection-item-form.tsx",
+        "apps/web/src/components/collection/filters-form.tsx",
       ],
       rules: {
         "no-restricted-imports": [
