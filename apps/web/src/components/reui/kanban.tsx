@@ -53,6 +53,7 @@ import { createPortal } from "react-dom";
 
 import { getCrossColumnInsertionIndex, getDragPositionY } from "@/components/reui/kanban-placement";
 import { cn } from "@/lib/utils";
+import { Z_INDEX } from "@/lib/z-index";
 
 interface KanbanContextProps<T> {
   columns: Record<string, T[]>;
@@ -755,7 +756,8 @@ function KanbanOverlay({ children, className, ...props }: KanbanOverlayProps) {
     <DragOverlay
       dropAnimation={dropAnimationConfig}
       modifiers={modifiers}
-      className={cn("z-50", activeId && "cursor-grabbing", className)}
+      className={cn(activeId && "cursor-grabbing", className)}
+      zIndex={Z_INDEX.dragOverlay}
       {...props}
     >
       <IsOverlayContext.Provider value={true}>{content}</IsOverlayContext.Provider>

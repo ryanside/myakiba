@@ -388,6 +388,12 @@
       "fixed": [
         "a failed kanban status write > shows retry advice when the server answers 400 with only zero-width spaces"
       ]
+    },
+    {
+      "fix": "3d912c08",
+      "bug": "a toast raised during a kanban drag drew under the dragged card, because the drag overlay took dnd-kit's inline z-index 999",
+      "test": "apps/web/src/components/reui/kanban-overlay-layer.test.tsx",
+      "fixed": ["a toast raised during a kanban drag > stacks above the dragged card"]
     }
   ],
   "lint": [
