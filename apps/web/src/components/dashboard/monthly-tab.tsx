@@ -11,6 +11,7 @@ import type { MonthlyData } from "@/queries/dashboard";
 
 interface MonthlyTabProps {
   readonly data: MonthlyData | undefined;
+  readonly dataUpdatedAt: number;
   readonly isLoading: boolean;
   readonly isError: boolean;
   readonly error: Error | null;
@@ -23,6 +24,7 @@ interface MonthlyTabProps {
 
 export function MonthlyTab({
   data,
+  dataUpdatedAt,
   isLoading,
   isError,
   error,
@@ -112,6 +114,7 @@ export function MonthlyTab({
       </div>
       <OrderKanban
         orders={orders}
+        ordersUpdatedAt={dataUpdatedAt}
         isLoading={isLoading}
         currency={currency}
         dateFormat={dateFormat}
