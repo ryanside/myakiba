@@ -17,6 +17,18 @@ setTimeout(
       port: 3000,
       fetch(request) {
         const { pathname } = new URL(request.url);
+        if (pathname === "/health" && mode === "nested-redis-text") {
+          return Response.json(
+            { status: "postgres unavailable", debug: { status: "redis unavailable" } },
+            { status: 503 },
+          );
+        }
+        if (pathname === "/health" && mode.includes("-unavailable")) {
+          return Response.json(
+            { status: mode.replace(/-unavailable.*/, " unavailable") },
+            { status: mode.endsWith("-200") ? 200 : 503 },
+          );
+        }
         if (pathname === "/health" && mode !== "no-health") return new Response("ok");
         if (pathname === "/api/auth/ok" && mode !== "no-auth") {
           if (mode === "exit-after") setTimeout(() => process.exit(23), 50);

@@ -71,7 +71,7 @@ expect_answer() {
   local name=$1 pattern=$2 fakes out code ok=1
   selected "$name" || return 0
   fakes=$(mktemp -d)
-  printf '#!/bin/sh\nsleep %s\n' "$5" >"$fakes/curl"
+  printf '#!/bin/sh\nsleep %s\necho\necho 200\n' "$5" >"$fakes/curl"
   printf '#!/bin/sh\necho true\n' >"$fakes/docker"
   chmod +x "$fakes/curl" "$fakes/docker"
   out=$(
@@ -106,6 +106,16 @@ expect late nonzero '/health did not answer within 6s' SMOKE_SERVER_ENV=SELFTEST
 expect exits-after nonzero 'exited with code 23' SMOKE_SERVER_ENV=SELFTEST_MODE=exit-after SMOKE_TIMEOUT=10 -- server="$run-server"
 expect bad-env nonzero 'rejected its environment' SMOKE_SERVER_ENV=SELFTEST_MODE=bad-env SMOKE_TIMEOUT=10 -- server="$run-server"
 expect no-placeholder nonzero 'VITE_SELFTEST_NEW is required in packages/env but has no placeholder' "SMOKE_REQUIRED_CLIENT_VARS=$names VITE_SELFTEST_NEW" SMOKE_SERVER_ENV=SELFTEST_MODE=ok SMOKE_TIMEOUT=10 -- server="$run-server"
+expect redis-unavailable 0 'image smoke ok' SMOKE_SERVER_ENV=SELFTEST_MODE=redis-unavailable -- --redis unreachable server="$run-server"
+expect redis-ignored nonzero 'Expected 503 with body {"status":"redis unavailable"}, last answer: 200 ok' SMOKE_SERVER_ENV=SELFTEST_MODE=ok -- --redis unreachable server="$run-server"
+expect redis-200 nonzero 'last answer: 200 {"status":"redis unavailable"}' SMOKE_SERVER_ENV=SELFTEST_MODE=redis-unavailable-200 -- --redis unreachable server="$run-server"
+expect nested-redis-text nonzero 'last answer: 503 {"status":"postgres unavailable","debug":{"status":"redis unavailable"}}' SMOKE_SERVER_ENV=SELFTEST_MODE=nested-redis-text -- --redis unreachable server="$run-server"
+expect wrong-dependency nonzero 'last answer: 503 {"status":"postgres unavailable"}' SMOKE_SERVER_ENV=SELFTEST_MODE=postgres-unavailable -- --redis unreachable server="$run-server"
+expect postgres-unavailable 0 'image smoke ok' SMOKE_SERVER_ENV=SELFTEST_MODE=postgres-unavailable -- --postgres unreachable server="$run-server"
+expect postgres-ignored nonzero 'Expected 503 with body {"status":"postgres unavailable"}, last answer: 200 ok' SMOKE_SERVER_ENV=SELFTEST_MODE=ok -- --postgres unreachable server="$run-server"
+expect postgres-wrong-dependency nonzero 'last answer: 503 {"status":"redis unavailable"}' SMOKE_SERVER_ENV=SELFTEST_MODE=redis-unavailable -- --postgres unreachable server="$run-server"
+expect two-unreachable nonzero 'unknown option --postgres. Use one of' -- --redis unreachable --postgres unreachable server="$run-server"
+expect bad-redis-mode nonzero 'the --redis option takes one value, unreachable.' -- --redis down server="$run-server"
 expect no-tables nonzero 'db-push exited 0 but created no tables' -- db-push="$run-db-push-no-tables"
 expect db-push-exit-3 nonzero 'db-push exited with code 3' -- db-push="$run-db-push-exit-3"
 expect missing-image 125 'Unable to find image' -- server=lane-g6-selftest-missing:none

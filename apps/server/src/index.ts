@@ -26,6 +26,7 @@ import searchRouter from "./routers/search";
 import settingsRouter from "./routers/settings";
 import syncRouter from "./routers/sync";
 import wishlistRouter from "./routers/wishlist";
+import { unavailableDependencies } from "./lib/health";
 
 const pipeline = createDrainPipeline<DrainContext>({
   batch: { size: 50, intervalMs: 5000 },
@@ -117,7 +118,11 @@ const app = new Elysia()
   .post("/api/auth/*", ({ request }) => auth.handler(request), {
     parse: "none",
   })
-  .get("/health", () => ({ status: "ok" }))
+  .get("/health", async ({ status }) => {
+    const unavailable = await unavailableDependencies();
+    if (unavailable.length === 0) return { status: "ok" };
+    return status(503, { status: `${unavailable.join(" and ")} unavailable` });
+  })
   .group("/api", (api) =>
     api
       .get(
