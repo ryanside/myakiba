@@ -66,7 +66,7 @@ function RouteComponent(): ReactNode {
       <div className="flex flex-col gap-3">
         <BackLink fallbackTo="/orders" text="Back" font="sans" className="self-start" />
         <div className="animate-data-in text-lg font-medium text-destructive">
-          Error: {orderError.message}
+          {orderError.message}
         </div>
       </div>
     );

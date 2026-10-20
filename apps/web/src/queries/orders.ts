@@ -1,4 +1,4 @@
-import { app, getErrorMessage } from "@/lib/treaty-client";
+import { app, getUserErrorMessage } from "@/lib/treaty-client";
 import { MoveNotFoundError } from "./move-not-found-error";
 import type {
   CascadeOptions,
@@ -50,7 +50,7 @@ export async function getOrders(filters: OrderFilters): Promise<OrdersPage> {
 
   const { data, error } = await app.api.orders.get({ query: queryParams });
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to get orders"));
+    throw new Error(getUserErrorMessage(error, "Failed to get orders"));
   }
   if (!data) {
     throw new Error("Failed to get orders");
@@ -67,7 +67,7 @@ export type OrderItemRelease = NonNullable<
 export async function getOrderItemReleases(orderId: string): Promise<readonly OrderItemRelease[]> {
   const { data, error } = await app.api.orders({ orderId })["item-releases"].get();
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to get order item releases"));
+    throw new Error(getUserErrorMessage(error, "Failed to get order item releases"));
   }
   if (!data) {
     throw new Error("Failed to get order item releases");
@@ -82,7 +82,7 @@ export async function getOrderItems(
 ): Promise<Page<OrderItem>> {
   const { data, error } = await app.api.orders({ orderId }).items.get({ query });
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to get order items"));
+    throw new Error(getUserErrorMessage(error, "Failed to get order items"));
   }
   if (!data) {
     throw new Error("Failed to get order items");
@@ -103,7 +103,7 @@ export async function mergeOrders(
   });
 
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to merge orders"));
+    throw new Error(getUserErrorMessage(error, "Failed to merge orders"));
   }
 
   return data;
@@ -121,7 +121,7 @@ export async function splitOrders(
   });
 
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to split orders"));
+    throw new Error(getUserErrorMessage(error, "Failed to split orders"));
   }
 
   return data;
@@ -134,7 +134,7 @@ export async function editOrder(values: EditedOrder, cascadeOptions: CascadeOpti
   });
 
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to edit order"));
+    throw new Error(getUserErrorMessage(error, "Failed to edit order"));
   }
 }
 
@@ -144,7 +144,7 @@ export async function deleteOrders(orderIds: Set<string>) {
   });
 
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to delete orders"));
+    throw new Error(getUserErrorMessage(error, "Failed to delete orders"));
   }
 }
 
@@ -152,7 +152,7 @@ export async function deleteOrderItem(orderId: string, collectionId: string) {
   const { error } = await app.api.orders({ orderId }).items({ collectionId }).delete();
 
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to delete order item"));
+    throw new Error(getUserErrorMessage(error, "Failed to delete order item"));
   }
 }
 
@@ -162,7 +162,7 @@ export async function deleteOrderItems(collectionIds: Set<string>) {
   });
 
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to delete order items"));
+    throw new Error(getUserErrorMessage(error, "Failed to delete order items"));
   }
 }
 
@@ -181,7 +181,7 @@ export async function moveItem(
 
   if (error) {
     if (error.status === 404) throw new MoveNotFoundError(error.value);
-    throw new Error(getErrorMessage(error, "Failed to move items"));
+    throw new Error(getUserErrorMessage(error, "Failed to move items"));
   }
 }
 
@@ -189,7 +189,9 @@ export async function getOrder(orderId: string): Promise<Order> {
   const { data, error } = await app.api.orders({ orderId }).get();
 
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to get order"));
+    throw new Error(
+      getUserErrorMessage(error, "Couldn't load this order. Check your connection and try again."),
+    );
   }
 
   if (!data) {
@@ -208,7 +210,7 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus): P
   });
 
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to update order status"));
+    throw new Error(getUserErrorMessage(error, "Failed to update order status. Please try again."));
   }
 }
 
@@ -230,6 +232,6 @@ export async function updateOrderDate(
   });
 
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to update order date"));
+    throw new Error(getUserErrorMessage(error, "Failed to update order date"));
   }
 }

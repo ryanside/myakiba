@@ -1,11 +1,11 @@
-import { app, getErrorMessage } from "@/lib/treaty-client";
+import { app, getErrorMessage, getUserErrorMessage } from "@/lib/treaty-client";
 import type { ItemReleasesResponse } from "@myakiba/contracts/item/schema";
 
 export async function getItem(externalId: number) {
   const { data, error } = await app.api.item({ id: externalId }).get();
   if (error) {
     if (error.status === 404) return null;
-    throw new Error(getErrorMessage(error, "Failed to get item"));
+    throw new Error(getUserErrorMessage(error, "Failed to get item"));
   }
   return data;
 }
@@ -14,7 +14,7 @@ export async function getItemReleases(itemId: string): Promise<ItemReleasesRespo
   const { data, error } = await app.api.item({ id: itemId }).releases.get();
 
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to get item releases"));
+    throw new Error(getUserErrorMessage(error, "Failed to get item releases"));
   }
 
   return data;
@@ -23,7 +23,7 @@ export async function getItemReleases(itemId: string): Promise<ItemReleasesRespo
 export async function getItemRelatedOrders(externalId: number) {
   const { data, error } = await app.api.item({ id: externalId }).orders.get();
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to get item related orders"));
+    throw new Error(getUserErrorMessage(error, "Failed to get item related orders"));
   }
   return data;
 }
@@ -31,7 +31,7 @@ export async function getItemRelatedOrders(externalId: number) {
 export async function getItemRelatedCollection(externalId: number) {
   const { data, error } = await app.api.item({ id: externalId }).collection.get();
   if (error) {
-    throw new Error(getErrorMessage(error, "Failed to get item related collection"));
+    throw new Error(getUserErrorMessage(error, "Failed to get item related collection"));
   }
   return data;
 }

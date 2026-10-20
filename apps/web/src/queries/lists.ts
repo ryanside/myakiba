@@ -1,16 +1,16 @@
 import type { ListInput, ListTarget } from "@myakiba/contracts/lists/schema";
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
-import { app, getErrorMessage } from "@/lib/treaty-client";
+import { app, getUserErrorMessage } from "@/lib/treaty-client";
 
 export async function getLists(limit: number, offset: number) {
   const { data, error } = await app.api.lists.get({ query: { limit, offset } });
-  if (error) throw new Error(getErrorMessage(error, "Failed to get lists"));
+  if (error) throw new Error(getUserErrorMessage(error, "Failed to get lists"));
   return data;
 }
 
 export async function createList(input: ListInput) {
   const { data, error } = await app.api.lists.post(input);
-  if (error) throw new Error(getErrorMessage(error, "Failed to create list"));
+  if (error) throw new Error(getUserErrorMessage(error, "Failed to create list"));
   return data;
 }
 
@@ -19,23 +19,23 @@ export async function moveLists(intent: PositionOrderInput): Promise<void> {
     ...intent,
     movedIds: [...intent.movedIds],
   });
-  if (error) throw new Error(getErrorMessage(error, "Failed to move lists"));
+  if (error) throw new Error(getUserErrorMessage(error, "Failed to move lists"));
 }
 
 export async function updateList(listId: string, input: ListInput) {
   const { data, error } = await app.api.lists({ listId }).put(input);
-  if (error) throw new Error(getErrorMessage(error, "Failed to update list"));
+  if (error) throw new Error(getUserErrorMessage(error, "Failed to update list"));
   return data;
 }
 
 export async function deleteLists(listIds: readonly string[]): Promise<void> {
   const { error } = await app.api.lists.delete({ listIds: [...listIds] });
-  if (error) throw new Error(getErrorMessage(error, "Failed to delete lists"));
+  if (error) throw new Error(getUserErrorMessage(error, "Failed to delete lists"));
 }
 
 export async function getList(listId: string) {
   const { data, error } = await app.api.lists({ listId }).get();
-  if (error) throw new Error(getErrorMessage(error, "Failed to get list"));
+  if (error) throw new Error(getUserErrorMessage(error, "Failed to get list"));
   return data;
 }
 
@@ -43,7 +43,7 @@ export async function getListMembers(listId: string, limit: number, offset: numb
   const { data, error } = await app.api.lists({ listId }).members.get({
     query: { limit, offset },
   });
-  if (error) throw new Error(getErrorMessage(error, "Failed to load List"));
+  if (error) throw new Error(getUserErrorMessage(error, "Failed to load List"));
   return data;
 }
 
@@ -51,7 +51,7 @@ export async function getListOptionsForTargets(targets: readonly ListTarget[]) {
   const { data, error } = await app.api.lists.targets.options.post({
     targets: [...targets],
   });
-  if (error) throw new Error(getErrorMessage(error, "Failed to get List options"));
+  if (error) throw new Error(getUserErrorMessage(error, "Failed to get List options"));
   return data;
 }
 
@@ -63,7 +63,7 @@ export async function addTargetsToLists(
     targets: [...targets],
     listIds: [...listIds],
   });
-  if (error) throw new Error(getErrorMessage(error, "Failed to add to Lists"));
+  if (error) throw new Error(getUserErrorMessage(error, "Failed to add to Lists"));
   return data;
 }
 
@@ -72,7 +72,7 @@ export async function removeTargetsFromList(targets: readonly ListTarget[], list
     targets: [...targets],
     listId,
   });
-  if (error) throw new Error(getErrorMessage(error, "Failed to remove from List"));
+  if (error) throw new Error(getUserErrorMessage(error, "Failed to remove from List"));
   return data;
 }
 
@@ -83,7 +83,7 @@ export async function removeListMembers(
   const { error } = await app.api.lists({ listId }).members.delete({
     memberIds: [...memberIds],
   });
-  if (error) throw new Error(getErrorMessage(error, "Failed to remove from List"));
+  if (error) throw new Error(getUserErrorMessage(error, "Failed to remove from List"));
 }
 
 export async function moveListMembers(listId: string, intent: PositionOrderInput): Promise<void> {
@@ -91,5 +91,5 @@ export async function moveListMembers(listId: string, intent: PositionOrderInput
     ...intent,
     movedIds: [...intent.movedIds],
   });
-  if (error) throw new Error(getErrorMessage(error, "Failed to save List order"));
+  if (error) throw new Error(getUserErrorMessage(error, "Failed to save List order"));
 }

@@ -333,6 +333,61 @@
         "a failed cell edit > leaving a text cell leaves no unhandled rejection",
         "a failed cell edit > pressing Enter in a count cell leaves no unhandled rejection"
       ]
+    },
+    {
+      "fix": "d5c6cc9f",
+      "bug": "a failed API call showed raw error text, such as \"TypeError: Failed to fetch\" or \"[object Object]\", because getErrorMessage passed any error body through as the message",
+      "test": "apps/web/src/queries/api-error-message.test.ts",
+      "fixed": [
+        "an order that fails to load > reads as a connection problem when the server cannot be reached",
+        "an order that fails to load > reads as a connection problem when the server answers 500 with a JSON body",
+        "an order that fails to load > reads as a connection problem when a gateway answers 502 with a page",
+        "an order that fails to load > reads as a connection problem when the server answers 500 with text",
+        "an order that fails to load > reads as a connection problem when the server answers 422 with a validation body",
+        "an order that fails to load > reads as a connection problem when the server answers 401 without a message",
+        "a dashboard that cannot reach the server fails with a readable message"
+      ]
+    },
+    {
+      "fix": "d5c6cc9f",
+      "bug": "a failed kanban status write toasted \"Error: [object Object]\" on a JSON 500 and \"Error: TypeError: Failed to fetch\" with the server down",
+      "test": "apps/web/src/data/resources/dashboard.test.tsx",
+      "fixed": [
+        "a failed kanban status write > shows retry advice when the server answers 500 with a JSON body",
+        "a failed kanban status write > shows retry advice when the server cannot be reached",
+        "a failed kanban status write > shows the server's message when the order no longer exists"
+      ]
+    },
+    {
+      "fix": "d5c6cc9f",
+      "bug": "the order page showed \"Error: TypeError: Failed to fetch\" when its refetch failed with the server down",
+      "test": "apps/web/src/components/orders/order-detail-error.test.tsx",
+      "fixed": [
+        "a refetch that cannot reach the server shows a readable message on the order page",
+        "a refetch of a deleted order shows the server's message on the order page"
+      ]
+    },
+    {
+      "fix": "196f8159",
+      "bug": "a 4xx with a blank body left the order page's error panel empty",
+      "test": "apps/web/src/components/orders/order-detail-error.test.tsx",
+      "fixed": ["a refetch answered with a blank 400 shows a readable message on the order page"]
+    },
+    {
+      "fix": "196f8159",
+      "bug": "a 4xx with a blank body gave a failed kanban status write an empty toast title",
+      "test": "apps/web/src/data/resources/dashboard.test.tsx",
+      "fixed": [
+        "a failed kanban status write > shows retry advice when the server answers 400 with a blank body"
+      ]
+    },
+    {
+      "fix": "f7607e13",
+      "bug": "a 4xx body of only zero width spaces gave a failed kanban status write a blank toast title",
+      "test": "apps/web/src/data/resources/dashboard.test.tsx",
+      "fixed": [
+        "a failed kanban status write > shows retry advice when the server answers 400 with only zero-width spaces"
+      ]
     }
   ],
   "lint": [
