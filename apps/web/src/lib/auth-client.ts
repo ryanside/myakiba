@@ -9,3 +9,55 @@ export const authClient = createAuthClient({
 });
 
 export type User = typeof authClient.$Infer.Session.user;
+
+const sessionAtom = authClient.$store.atoms.session;
+if (!sessionAtom)
+  throw new Error("Better Auth's client has no session store at $store.atoms.session");
+type SessionState = ReturnType<typeof authClient.useSession>;
+const sessionStore: {
+  get: () => SessionState;
+  set: (value: SessionState) => void;
+  listen: (listener: (value: SessionState) => void) => () => void;
+} = sessionAtom;
+
+export function classifySession({
+  data,
+  error,
+  isPending,
+}: Pick<SessionState, "data" | "error" | "isPending">):
+  | "pending"
+  | "signed-in"
+  | "signed-out"
+  | "unavailable" {
+  if (isPending) return "pending";
+  if (data) return "signed-in";
+  if (error && error.status !== 401) return "unavailable";
+  return "signed-out";
+}
+
+export async function endSession<T extends { error: unknown }>(operation: () => Promise<T>) {
+  let result: T;
+  try {
+    result = await operation();
+  } catch {
+    return { error: { message: undefined } };
+  }
+  if (result.error) return result;
+  // Sign-in pages reload the page, and signup creates no session until email verification.
+  // Until then, stale checks cannot restore this session.
+  sessionStore.listen((state) => {
+    if (state.data || state.error) settleSignedOut();
+  });
+  settleSignedOut();
+  return result;
+}
+
+function settleSignedOut() {
+  sessionStore.set({
+    data: null,
+    error: null,
+    isPending: false,
+    isRefetching: false,
+    refetch: sessionStore.get().refetch,
+  });
+}

@@ -47,11 +47,6 @@ export default function SignUpForm() {
         callbackURL: getAuthRedirectUrl("/dashboard"),
       },
       {
-        onSuccess: () => {
-          navigate({
-            to: "/dashboard",
-          });
-        },
         onError: (error) => {
           toast.add({
             type: "error",

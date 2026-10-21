@@ -16,36 +16,37 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { authClient } from "@/lib/auth-client";
+import { authClient, endSession } from "@/lib/auth-client";
 import { useNavigate } from "@tanstack/react-router";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { useClearServerData } from "@/data/resources/session";
 import { useTheme } from "next-themes";
 import { setThemeWithTransition } from "@/lib/theme-transition";
-import type { RouterAppContext } from "@/routes/__root";
+import type { Session } from "@/lib/session";
 import { toast } from "@/components/ui/toast";
 import { Button } from "../ui/button";
 
-export default function UserMenu({ session }: { session: RouterAppContext["session"] }) {
+export default function UserMenu({ session }: { session: Session }) {
   const navigate = useNavigate();
-  const clearServerData = useClearServerData();
   const { theme, setTheme } = useTheme();
 
-  const handleSignOut = () => {
-    authClient.signOut({
-      fetchOptions: {
-        onSuccess: () => {
-          toast.add({ type: "success", title: "Signed out successfully" });
-          clearServerData();
-          navigate({ to: "/login" });
-        },
-      },
-    });
+  const handleSignOut = async () => {
+    const result = await endSession(() => authClient.signOut());
+    if (result.error) {
+      toast.add({
+        type: "error",
+        title: result.error.message || "Couldn't sign out. Try again.",
+      });
+      return;
+    }
+    toast.add({ type: "success", title: "Signed out successfully" });
   };
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger render={<Button variant="ghost" size="icon-lg" />}>
+      <DropdownMenuTrigger
+        aria-label="Account menu"
+        render={<Button variant="ghost" size="icon-lg" />}
+      >
         <Avatar className="size-7">
           {session.user.image && <AvatarImage src={session.user.image} />}
           <AvatarFallback className="bg-linear-to-br from-background via-muted to-background">
