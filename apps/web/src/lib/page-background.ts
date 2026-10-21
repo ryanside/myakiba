@@ -24,6 +24,39 @@ const backgrounds: ReadonlyMap<string, string> = new Map([
   ["settings", settings],
 ]);
 
+const decodeCap = 50;
+// Keeps one downloaded image per background for the page's lifetime, so the
+// browser holds its bytes in memory cache and a page change's decode skips disk.
+const downloads = new Map<string, HTMLImageElement>();
+
 export function getPageBackground(pathname: string) {
   return backgrounds.get(pathname.split("/")[1] ?? "");
+}
+
+export async function preparePageBackground(pathname: string) {
+  const source = getPageBackground(pathname);
+  if (!source) return;
+  const image = new Image();
+  image.src = source;
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      image.decode(),
+      new Promise<void>((resolve) => {
+        timeout = setTimeout(resolve, decodeCap);
+      }),
+    ]);
+  } catch {
+    // The page renders without a background that fails to decode.
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export function downloadPageBackground(pathname: string) {
+  const source = getPageBackground(pathname);
+  if (!source) return;
+  const image = new Image();
+  image.src = source;
+  downloads.set(source, image);
 }

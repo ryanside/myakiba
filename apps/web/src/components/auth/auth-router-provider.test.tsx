@@ -1,4 +1,4 @@
-import { afterAll, afterEach, expect, spyOn, test } from "bun:test";
+import { afterAll, afterEach, expect, mock, spyOn, test } from "bun:test";
 import {
   act,
   cleanup,
@@ -20,6 +20,12 @@ import type { ReactNode } from "react";
 import type { RouterAppContext } from "@/routes/__root";
 import { createSessionSource } from "@/lib/session";
 import type { Session, SessionSource } from "@/lib/session";
+
+await mock.module("@/lib/page-background", () => ({
+  downloadPageBackground: () => {},
+  preparePageBackground: () => {},
+  getPageBackground: () => {},
+}));
 
 let sessionRequests = 0;
 let responseStatus = 200;

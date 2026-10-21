@@ -29,9 +29,11 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { Link, useLocation } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { Link, useLocation, useRouter } from "@tanstack/react-router";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
 import { OnboardingDialog } from "@/components/onboarding/onboarding-dialog";
+import { downloadPageBackground } from "@/lib/page-background";
 import SyncWidget from "../sync/sync-widget";
 import { Button } from "../ui/button";
 
@@ -123,8 +125,31 @@ const data = {
   ],
 };
 
+function useWarmDestinations(urls: readonly string[]) {
+  const router = useRouter();
+  useEffect(() => {
+    let cancelled = false;
+    const warmDestinations = async () => {
+      for (const url of urls) {
+        if (cancelled) return;
+        await router.preloadRoute({ to: url });
+      }
+      if (cancelled) return;
+      for (const url of urls) downloadPageBackground(url);
+    };
+    const handle = window.setTimeout(warmDestinations, 0);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(handle);
+    };
+  }, [router, urls]);
+}
+
+const navMainUrls = data.navMain.map((item) => item.url);
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const location = useLocation();
+  useWarmDestinations(navMainUrls);
 
   return (
     <Sidebar variant="inset" collapsible="icon" {...props}>

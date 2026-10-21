@@ -9,6 +9,7 @@ import { SessionUnavailable } from "@/components/auth/session-unavailable";
 import { RouteError } from "@/components/errors/route-error";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
 import { PageBackground } from "@/components/page-background";
+import { preparePageBackground } from "@/lib/page-background";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import UserMenu from "@/components/sidebar/user-menu";
 import SyncWidget from "@/components/sync/sync-widget";
@@ -22,7 +23,7 @@ import { env } from "@myakiba/env/web";
 export const Route = createFileRoute("/(app)")({
   component: RouteComponent,
   errorComponent: AppRouteError,
-  beforeLoad: async ({ context, location }) => {
+  beforeLoad: async ({ context, location, cause, matches }) => {
     const { session, unavailable } = await context.readSession();
     if (unavailable) throw new SessionUnavailableError();
     if (!session) {
@@ -33,11 +34,31 @@ export const Route = createFileRoute("/(app)")({
         },
       });
     }
+    if (cause === "preload" || matches.at(-1)?.cause !== "enter") return { session };
+    const background = preparePageBackground(location.pathname);
+    if (cause === "stay") await afterNextPaint();
+    await background;
     return {
       session,
     };
   },
 });
+
+function afterNextPaint() {
+  if (document.visibilityState === "hidden") return;
+  return new Promise<void>((resolve) => {
+    const finish = () => {
+      cancelAnimationFrame(frame);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      resolve();
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") finish();
+    };
+    const frame = requestAnimationFrame(() => setTimeout(finish, 0));
+    document.addEventListener("visibilitychange", onVisibilityChange);
+  });
+}
 
 function AppRouteError(props: ErrorComponentProps) {
   if (props.error instanceof SessionUnavailableError) return <SessionUnavailable />;
