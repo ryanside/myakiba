@@ -90,6 +90,7 @@ const app = new Elysia()
       origin: env.CORS_ORIGIN.split(",").map((origin) => origin.trim()),
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization", "x-captcha-response"],
+      exposeHeaders: ["Retry-After"],
       credentials: true,
     }),
   )
