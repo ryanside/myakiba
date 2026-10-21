@@ -88,14 +88,17 @@ export function parseMfcItemPage(html: string, expected: MfcItemId): MfcParseRes
 
   const { title, contentLabel } = splitContentLabel(rawTitle);
   const warnings = [...fields.warnings];
-  const bracket = UNKNOWN_BRACKET.exec(title);
-  if (!contentLabel && bracket) warnings.push(`unknown title bracket "${bracket[0]}"`);
+  const bracket = CONTENT_LABEL_PREFIX.exec(title);
+  if (!contentLabel && bracket) warnings.push(`unknown title bracket "[${bracket[1]}]"`);
+  if (envelope.ogImage.kind === "rejected") {
+    warnings.push(`picture rejected: "${envelope.ogImage.raw}"`);
+  }
 
   const releases: MfcRelease[] = [];
-  for (const release of fields.releases) {
-    const date = normalizeScrapedDate(release.date);
-    if (date) releases.push({ ...release, date });
-    else warnings.push(`release skipped: unsupported date "${release.date}"`);
+  for (const { rawDate, ...release } of fields.releases) {
+    const date = normalizeScrapedDate(rawDate);
+    if (date) releases.push({ date, ...release });
+    else warnings.push(`release skipped: unsupported date "${rawDate}"`);
   }
 
   return {
@@ -115,14 +118,13 @@ export function parseMfcItemPage(html: string, expected: MfcItemId): MfcParseRes
       depth: fields.depth,
       entries: mergeEntryLinks(fields.mentions),
       releases,
-      picture: envelope.picture,
+      picture: envelope.ogImage.kind === "picture" ? envelope.ogImage.picture : null,
       warnings,
     },
   };
 }
 
 const CONTENT_LABEL_PREFIX = /^\[([^\]]+)\] - /;
-const UNKNOWN_BRACKET = /^\[[^\]]*\]/;
 
 export function splitContentLabel(rawTitle: string): {
   readonly title: string;

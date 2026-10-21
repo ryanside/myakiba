@@ -2,6 +2,7 @@ import type { Cheerio, CheerioAPI } from "cheerio";
 import type { AnyNode, Element } from "domhandler";
 import type { EntryCategory } from "@myakiba/contracts/shared/types";
 import { parseMoneyToMinorUnits } from "@myakiba/utils/currency";
+import type { MfcRelease } from "../parse";
 
 export type EntryMention = {
   readonly externalId: number;
@@ -9,14 +10,6 @@ export type EntryMention = {
   readonly sourceLabel: string;
   readonly role: string;
   readonly materialPercentage: number | null;
-};
-
-type RawRelease = {
-  readonly date: string;
-  readonly type: string;
-  readonly price: number;
-  readonly priceCurrency: string;
-  readonly barcode: string;
 };
 
 export type ItemFields = {
@@ -30,7 +23,7 @@ export type ItemFields = {
   width: number | null;
   depth: number | null;
   mentions: EntryMention[];
-  releases: RawRelease[];
+  releases: (Omit<MfcRelease, "date"> & { readonly rawDate: string })[];
   warnings: string[];
 };
 
@@ -148,7 +141,7 @@ const readReleases: FieldReader = (field, $, fields) => {
     }
     const price = PATTERNS.price.exec(text);
     fields.releases.push({
-      date: dateLink.text().trim(),
+      rawDate: dateLink.text().trim(),
       type: types.join(" "),
       price: price?.[1] ? parseMoneyToMinorUnits(price[1]) : 0,
       priceCurrency: price?.[2] ?? "JPY",

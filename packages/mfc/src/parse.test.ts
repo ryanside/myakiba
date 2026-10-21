@@ -254,7 +254,19 @@ describe("parseMfcItemPage warnings", () => {
     expect(page.warnings).toEqual(['release skipped: unsupported date "Spring 2018"']);
   });
 
-  test("an unknown title bracket stays in the title and warns", () => {
+  test("an unknown label in the content-label shape stays in the title and warns", () => {
+    const html = edit(
+      item98777,
+      'class="title">[Explicit] - Hello',
+      'class="title">[Mature] - Hello',
+    );
+    const page = parsedPage(html);
+    expect(page.title).toBe("[Mature] - Hello, Good-bye - Yukishiro May - 1/7 (Orchid Seed)");
+    expect(page.contentLabel).toBeNull();
+    expect(page.warnings).toEqual(['unknown title bracket "[Mature]"']);
+  });
+
+  test("a bracket that is part of the name does not warn", () => {
     const html = edit(
       item98777,
       'class="title">[Explicit] - Hello',
@@ -262,8 +274,30 @@ describe("parseMfcItemPage warnings", () => {
     );
     const page = parsedPage(html);
     expect(page.title).toBe("[Re:Zero] Hello, Good-bye - Yukishiro May - 1/7 (Orchid Seed)");
-    expect(page.contentLabel).toBeNull();
-    expect(page.warnings).toEqual(['unknown title bracket "[Re:Zero]"']);
+    expect(page.warnings).toEqual([]);
+  });
+
+  test("a rejected og:image leaves no picture and warns", () => {
+    const raw = "https://static.example.com/upload/items/1/98777.jpg";
+    const html = edit(
+      item98777,
+      'content="https://myfigurecollection.net/?_tb=commit&amp;commit=nsp&amp;objectType=item&amp;objectId=98777&amp;size=1"',
+      `content="${raw}"`,
+    );
+    const page = parsedPage(html);
+    expect(page.picture).toBeNull();
+    expect(page.warnings).toEqual([`picture rejected: "${raw}"`]);
+  });
+
+  test("no og:image leaves no picture and no warning", () => {
+    const html = edit(
+      item98777,
+      '<meta property="og:image" content="https://myfigurecollection.net/?_tb=commit&amp;commit=nsp&amp;objectType=item&amp;objectId=98777&amp;size=1"/>',
+      "",
+    );
+    const page = parsedPage(html);
+    expect(page.picture).toBeNull();
+    expect(page.warnings).toEqual([]);
   });
 
   test("a field the parser does not read warns", () => {

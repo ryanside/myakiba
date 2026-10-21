@@ -3,5 +3,5 @@ import ultracite from "ultracite/oxfmt";
 
 export default defineConfig({
   extends: [ultracite],
-  ignorePatterns: ["**/*.gen.ts", "**/*.gen.tsx", "packages/mfc/fixtures/**"],
+  ignorePatterns: ["**/*.gen.ts", "**/*.gen.tsx", "packages/mfc/fixtures/*.html"],
 });

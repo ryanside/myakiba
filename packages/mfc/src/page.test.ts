@@ -41,7 +41,7 @@ describe("readMfcEnvelope on the signed-in 98777 page", () => {
       kind: "item",
       mfcItemId: ID_98777,
       signedIn: true,
-      picture: { access: "gated", url: GATED_98777 },
+      ogImage: { kind: "picture", picture: { access: "gated", url: GATED_98777 } },
     });
   });
 
@@ -70,6 +70,11 @@ describe("readMfcEnvelope on the signed-in 98777 page", () => {
   test("a non-200 status with item markup is unexpected", () => {
     expect(envelopeOf(item98777, 500)).toEqual({ kind: "unexpected", status: 500 });
   });
+
+  test("the not-found sentence on a 503 is unexpected, even in a comment", () => {
+    const html = edit(item98777, "</body>", "<!-- The page you requested was not found --></body>");
+    expect(envelopeOf(html, 503)).toEqual({ kind: "unexpected", status: 503 });
+  });
 });
 
 describe("readMfcEnvelope on pages derived from item-98777.html", () => {
@@ -78,9 +83,12 @@ describe("readMfcEnvelope on pages derived from item-98777.html", () => {
       kind: "item",
       mfcItemId: ID_98777,
       signedIn: false,
-      picture: {
-        access: "public",
-        url: "https://static.myfigurecollection.net/upload/items/1/98777-a1b2c.jpg",
+      ogImage: {
+        kind: "picture",
+        picture: {
+          access: "public",
+          url: "https://static.myfigurecollection.net/upload/items/1/98777-a1b2c.jpg",
+        },
       },
     });
   });
@@ -122,11 +130,105 @@ describe("readMfcEnvelope on other responses", () => {
   });
 });
 
-describe("picture choice", () => {
+describe("markup the envelope ignores", () => {
+  test("a commented-out canonical before the real one", () => {
+    const html = edit(
+      item98777,
+      '<link rel="canonical"',
+      '<!-- <link rel="canonical" href="https://myfigurecollection.net/item/98778"/> --><link rel="canonical"',
+    );
+    expect(envelopeOf(html)).toMatchObject({ kind: "item", mfcItemId: ID_98777 });
+  });
+
+  test("a challenge title inside a script", () => {
+    const html = edit(item98777, "</body>", '<script>"<title>Just a moment"</script></body>');
+    expect(envelopeOf(html).kind).toBe("item");
+  });
+
+  test("a challenge title inside a template", () => {
+    const html = edit(
+      item98777,
+      "<head>",
+      "<head><template><title>Just a moment</title></template>",
+    );
+    expect(envelopeOf(html).kind).toBe("item");
+  });
+
+  test("a > inside a quoted attribute of the canonical link", () => {
+    const html = edit(
+      item98777,
+      '<link rel="canonical"',
+      '<link data-note="a > b" rel="canonical"',
+    );
+    expect(envelopeOf(html)).toMatchObject({ kind: "item", mfcItemId: ID_98777 });
+  });
+
+  test("a duplicate attribute after the first", () => {
+    const html = edit(
+      item98777,
+      'href="https://myfigurecollection.net/item/98777"',
+      'href="https://myfigurecollection.net/item/98777" href="https://myfigurecollection.net/item/98778"',
+    );
+    expect(envelopeOf(html)).toMatchObject({ kind: "item", mfcItemId: ID_98777 });
+  });
+});
+
+describe("signed-in state", () => {
+  test("a single-quoted class list with the user-menu token", async () => {
+    const html = edit(
+      await fixture("derived-public-item.html"),
+      "<header>",
+      "<header><div class='tbx-menu user-menu'></div>",
+    );
+    expect(envelopeOf(html)).toMatchObject({ kind: "item", signedIn: true });
+  });
+
+  test("a class that only starts with user-menu", async () => {
+    const html = edit(
+      await fixture("derived-public-item.html"),
+      "<header>",
+      '<header><div class="user-menu-guest"></div>',
+    );
+    expect(envelopeOf(html)).toMatchObject({ kind: "item", signedIn: false });
+  });
+});
+
+describe("og:image", () => {
+  const rejected = (raw: string) => ({ kind: "item", ogImage: { kind: "rejected", raw } });
+
+  test("a gated picture comes back rebuilt with its size", () => {
+    const html = withOgImage(
+      "https://myfigurecollection.net/?size=2&amp;objectId=98777&amp;objectType=item&amp;commit=nsp&amp;_tb=commit#top",
+    );
+    expect(envelopeOf(html)).toMatchObject({
+      ogImage: {
+        kind: "picture",
+        picture: {
+          access: "gated",
+          url: "https://myfigurecollection.net/?_tb=commit&commit=nsp&objectType=item&objectId=98777&size=2",
+        },
+      },
+    });
+  });
+
+  test("a public picture loses its query and fragment", () => {
+    const html = withOgImage(
+      "https://static.myfigurecollection.net/upload/items/1/98777.jpg?x=1#f",
+    );
+    expect(envelopeOf(html)).toMatchObject({
+      ogImage: {
+        kind: "picture",
+        picture: {
+          access: "public",
+          url: "https://static.myfigurecollection.net/upload/items/1/98777.jpg",
+        },
+      },
+    });
+  });
+
   test("public pictures must live under /upload/items/ on the static host", () => {
-    expect(
-      envelopeOf(withOgImage("https://static.myfigurecollection.net/upload/users/1/1.jpg")),
-    ).toMatchObject({ kind: "item", picture: null });
+    const raw = "https://static.myfigurecollection.net/upload/users/1/1.jpg";
+    expect(envelopeOf(withOgImage(raw))).toMatchObject(rejected(raw));
   });
 
   test.each([
@@ -145,15 +247,35 @@ describe("picture choice", () => {
       "a path escaping /upload/items/",
       "https://static.myfigurecollection.net/upload/items/../users/1.jpg",
     ],
+    [
+      "a duplicate objectId",
+      "https://myfigurecollection.net/?_tb=commit&amp;commit=nsp&amp;objectType=item&amp;objectId=98777&amp;objectId=98778&amp;size=1",
+    ],
+    [
+      "an extra commit",
+      "https://myfigurecollection.net/?_tb=commit&amp;commit=nsp&amp;objectType=item&amp;objectId=98777&amp;size=1&amp;commit=other",
+    ],
+    [
+      "an unknown parameter",
+      "https://myfigurecollection.net/?_tb=commit&amp;commit=nsp&amp;objectType=item&amp;objectId=98777&amp;size=1&amp;next=x",
+    ],
+    [
+      "no size",
+      "https://myfigurecollection.net/?_tb=commit&amp;commit=nsp&amp;objectType=item&amp;objectId=98777",
+    ],
+    [
+      "a size that is not a small integer",
+      "https://myfigurecollection.net/?_tb=commit&amp;commit=nsp&amp;objectType=item&amp;objectId=98777&amp;size=01",
+    ],
     ["not a URL", "not a url"],
-  ])("drops %s", (_, url) => {
-    expect(envelopeOf(withOgImage(url))).toMatchObject({ kind: "item", picture: null });
+  ])("rejects %s", (_, url) => {
+    expect(envelopeOf(withOgImage(url))).toMatchObject(rejected(url.replaceAll("&amp;", "&")));
   });
 
-  test("no og:image means no picture", () => {
+  test("no og:image is absent", () => {
     expect(envelopeOf(edit(item98777, OG_IMAGE_98777, ""))).toMatchObject({
       kind: "item",
-      picture: null,
+      ogImage: { kind: "absent" },
     });
   });
 });
