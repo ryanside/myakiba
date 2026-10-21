@@ -6,7 +6,8 @@
   "scripts": {
     "build": "wxt build && wxt build -b firefox --mv3",
     "check-types": "tsc --noEmit",
-    "test": "bun test lib/"
+    "test": "bun test lib/",
+    "e2e": "bun test e2e/"
   },
   "dependencies": {
     "@myakiba/env": "workspace:*",
@@ -16,6 +17,7 @@
   "devDependencies": {
     "@myakiba/config": "workspace:*",
     "@types/bun": "catalog:",
+    "playwright": "1.64.1",
     "wxt": "0.21.4"
   }
 }

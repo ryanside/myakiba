@@ -1,0 +1,217 @@
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
+import path from "node:path";
+import { chromium } from "playwright";
+import type { BrowserContext, Page } from "playwright";
+import { E2E_ORIGINS, GATED_ID, PICTURE_SHA256, PUBLIC_ID, startMocks } from "./mock-mfc";
+
+const EXTENSION = path.join(import.meta.dir, "../.output/chrome-mv3-e2e");
+const MFC = E2E_ORIGINS.WXT_MFC_ORIGIN;
+const SCENARIO_TIMEOUT_MS = 60_000;
+
+type PageItem = {
+  readonly mfcItemId: number;
+  readonly ok: boolean;
+  readonly error: string | null;
+  readonly html: string | null;
+  readonly picture: {
+    readonly isArrayBuffer: boolean;
+    readonly byteLength: number;
+    readonly contentType: string;
+    readonly sha256: string;
+  } | null;
+};
+type PageRun = { readonly items: readonly PageItem[]; readonly reason: string };
+type Bridge = {
+  readonly statuses: readonly { readonly state: string }[];
+  readonly hello: (timeoutMs: number) => Promise<{ readonly type: string } | null>;
+  readonly fetchItems: (ids: readonly number[]) => Promise<PageRun>;
+  readonly rogue: (waitMs: number) => Promise<number>;
+};
+declare global {
+  var bridge: Bridge;
+}
+
+const mocks = startMocks();
+let context: BrowserContext;
+let openedPages: Page[] = [];
+
+beforeAll(() => {
+  const build = Bun.spawnSync(["bunx", "wxt", "build", "--mode", "e2e"], {
+    cwd: path.join(import.meta.dir, ".."),
+    env: { ...process.env, ...E2E_ORIGINS },
+  });
+  if (build.exitCode !== 0) throw new Error(`the e2e build failed\n${build.stderr.toString()}`);
+});
+
+afterEach(async () => {
+  await context.close();
+  Object.assign(mocks.scenario, { signedIn: true, challenge: false });
+  mocks.requests.length = 0;
+});
+
+afterAll(() => mocks.stop());
+
+async function launch(): Promise<Page> {
+  context = await chromium.launchPersistentContext("", {
+    channel: "chromium",
+    headless: true,
+    args: [`--disable-extensions-except=${EXTENSION}`, `--load-extension=${EXTENSION}`],
+  });
+  if (context.serviceWorkers().length === 0) await context.waitForEvent("serviceworker");
+  openedPages = [];
+  context.on("page", (opened) => {
+    openedPages.push(opened);
+  });
+  const myakiba = context.pages()[0] ?? (await context.newPage());
+  await myakiba.goto(`${E2E_ORIGINS.WXT_WEB_ORIGIN}/`);
+  const announce = await myakiba.evaluate(() => globalThis.bridge.hello(5000));
+  expect(announce?.type).toBe("announce");
+  return myakiba;
+}
+
+function openedUrls(): string[] {
+  return openedPages.map((page) => page.url());
+}
+
+function mfcTabs(): Page[] {
+  return context.pages().filter((page) => page.url().startsWith(MFC));
+}
+
+async function until(condition: () => boolean, label: string, timeoutMs = 10_000) {
+  for (const deadline = Date.now() + timeoutMs; Date.now() < deadline;) {
+    if (condition()) return;
+    await Bun.sleep(50);
+  }
+  throw new Error(`timed out waiting for ${label}`);
+}
+
+function fetchItems(myakiba: Page, ids: readonly number[]): Promise<PageRun> {
+  return myakiba.evaluate((mfcItemIds) => globalThis.bridge.fetchItems(mfcItemIds), ids);
+}
+
+describe("the extension against a mock MFC", () => {
+  test(
+    "a cold fetch opens a tab of its own, carries the gated picture intact and closes the tab",
+    async () => {
+      const myakiba = await launch();
+      expect(mfcTabs()).toHaveLength(0);
+
+      const run = await fetchItems(myakiba, [GATED_ID]);
+      const [item] = run.items;
+
+      expect(run.reason).toBe("complete");
+      expect(item?.ok).toBe(true);
+      expect(item?.picture).toEqual({
+        isArrayBuffer: true,
+        byteLength: 256 * 1024 + 6,
+        contentType: "image/jpeg",
+        sha256: PICTURE_SHA256.gated,
+      });
+      expect(item?.html).toContain(
+        '<link rel="canonical" href="https://myfigurecollection.net/item/98777">',
+      );
+      expect(item?.html).not.toContain("fixture_user");
+      expect(openedUrls()).toEqual([`${MFC}/`]);
+      await until(() => mfcTabs().length === 0, "the owned tab to close");
+    },
+    SCENARIO_TIMEOUT_MS,
+  );
+
+  test(
+    "a warm fetch reuses the open MFC tab and leaves it open",
+    async () => {
+      const myakiba = await launch();
+      const open = await context.newPage();
+      await open.goto(`${MFC}/`);
+      await myakiba.bringToFront();
+      openedPages = [];
+
+      const run = await fetchItems(myakiba, [GATED_ID]);
+
+      expect(run.items[0]?.picture?.sha256).toBe(PICTURE_SHA256.gated);
+      expect(openedUrls()).toEqual([]);
+      expect(mfcTabs()).toEqual([open]);
+    },
+    SCENARIO_TIMEOUT_MS,
+  );
+
+  test(
+    "two ids load at least 2.5 s apart, and a public picture comes from the static origin",
+    async () => {
+      const myakiba = await launch();
+
+      const run = await fetchItems(myakiba, [GATED_ID, PUBLIC_ID]);
+      const [first, second] = mocks.itemRequests();
+      const gapMs = (second?.at ?? 0) - (first?.at ?? 0);
+      console.info(`throttle gap between page loads: ${gapMs} ms`);
+
+      expect(mocks.itemRequests().map((request) => request.path)).toEqual([
+        `/item/${GATED_ID}`,
+        `/item/${PUBLIC_ID}`,
+      ]);
+      expect(gapMs).toBeGreaterThanOrEqual(2500);
+      expect(run.items.map((item) => item.picture?.sha256)).toEqual([
+        PICTURE_SHA256.gated,
+        PICTURE_SHA256.public,
+      ]);
+      expect(mocks.requests.map((request) => request.origin)).toContain(
+        E2E_ORIGINS.WXT_MFC_STATIC_ORIGIN,
+      );
+    },
+    SCENARIO_TIMEOUT_MS,
+  );
+
+  test(
+    "a challenge waits for a click in the extension's MFC tab, then completes",
+    async () => {
+      mocks.scenario.challenge = true;
+      const myakiba = await launch();
+
+      const running = fetchItems(myakiba, [GATED_ID]);
+      await until(
+        () => mfcTabs().some((tab) => tab.url().endsWith(`/item/${GATED_ID}`)),
+        "the challenge tab",
+      );
+      const challengeTab = mfcTabs().find((tab) => tab.url().endsWith(`/item/${GATED_ID}`));
+      await challengeTab?.locator("#solve").click();
+      const run = await running;
+
+      expect(
+        await myakiba.evaluate(() => globalThis.bridge.statuses.map((status) => status.state)),
+      ).toContain("needs_user");
+      expect(run.items[0]?.ok).toBe(true);
+      expect(run.items[0]?.picture?.sha256).toBe(PICTURE_SHA256.gated);
+      await until(() => mfcTabs().length === 0, "the challenge tab to close");
+    },
+    SCENARIO_TIMEOUT_MS,
+  );
+
+  test(
+    "a signed-out MFC session gives mfc_signed_out",
+    async () => {
+      mocks.scenario.signedIn = false;
+      const myakiba = await launch();
+
+      const run = await fetchItems(myakiba, [GATED_ID]);
+
+      expect(run.items).toEqual([
+        { mfcItemId: GATED_ID, ok: false, error: "mfc_signed_out", html: null, picture: null },
+      ]);
+    },
+    SCENARIO_TIMEOUT_MS,
+  );
+
+  test(
+    "a fetch-url message is ignored",
+    async () => {
+      const myakiba = await launch();
+
+      const answers = await myakiba.evaluate(() => globalThis.bridge.rogue(2000));
+
+      expect(answers).toBe(0);
+      expect(mocks.requests).toEqual([]);
+      expect(openedUrls()).toEqual([]);
+    },
+    SCENARIO_TIMEOUT_MS,
+  );
+});

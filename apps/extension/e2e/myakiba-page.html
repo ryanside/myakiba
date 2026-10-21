@@ -1,0 +1,80 @@
+<!doctype html>
+<title>mock myakiba</title>
+<h1>mock myakiba</h1>
+<script>
+  const CHANNEL = "myakiba-mfc-bridge";
+  const runs = new Map();
+  const seen = [];
+
+  window.addEventListener("message", (event) => {
+    if (event.source !== window || event.origin !== location.origin) return;
+    const message = event.data;
+    if (message?.channel !== CHANNEL || !message.event) return;
+    seen.push(message);
+    runs.get(message.requestId)?.(message.event);
+  });
+
+  function send(request) {
+    const requestId = crypto.randomUUID();
+    window.postMessage({ channel: CHANNEL, protocol: 1, requestId, request }, location.origin);
+    return requestId;
+  }
+
+  async function sha256(buffer) {
+    const digest = await crypto.subtle.digest("SHA-256", buffer);
+    return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+
+  window.bridge = {
+    statuses: [],
+    async hello(timeoutMs) {
+      for (const deadline = performance.now() + timeoutMs; performance.now() < deadline;) {
+        const requestId = send({ type: "hello" });
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        const answer = seen.find((message) => message.requestId === requestId);
+        if (answer) return answer.event;
+      }
+      return null;
+    },
+    fetchItems(mfcItemIds) {
+      return new Promise((resolve) => {
+        const items = [];
+        const requestId = send({ type: "fetch-items", mfcItemIds });
+        runs.set(requestId, async (event) => {
+          if (event.type === "status") window.bridge.statuses.push(event);
+          if (event.type === "item") {
+            const { result } = event;
+            const picture = result.ok ? result.picture : null;
+            items.push({
+              mfcItemId: event.mfcItemId,
+              ok: result.ok,
+              error: result.ok ? null : result.error,
+              html: result.ok ? result.html : null,
+              picture: picture && {
+                isArrayBuffer: picture.bytes instanceof ArrayBuffer,
+                byteLength: picture.bytes.byteLength,
+                contentType: picture.contentType,
+                sha256: await sha256(picture.bytes),
+              },
+            });
+          }
+          if (event.type === "done") resolve({ items, reason: event.reason });
+        });
+      });
+    },
+    async rogue(waitMs) {
+      const requestId = crypto.randomUUID();
+      window.postMessage(
+        {
+          channel: CHANNEL,
+          protocol: 1,
+          requestId,
+          request: { type: "fetch-url", url: "http://127.0.0.1:4601/item/98777" },
+        },
+        location.origin,
+      );
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+      return seen.filter((message) => message.requestId === requestId).length;
+    },
+  };
+</script>
