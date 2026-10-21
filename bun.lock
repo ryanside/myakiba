@@ -218,6 +218,24 @@
         "typescript": "catalog:",
       },
     },
+    "packages/mfc": {
+      "name": "@myakiba/mfc",
+      "version": "0.0.0",
+      "dependencies": {
+        "@myakiba/contracts": "workspace:*",
+        "@myakiba/utils": "workspace:*",
+        "cheerio": "^1.2.0",
+        "domhandler": "^6.0.1",
+        "uuid": "catalog:",
+      },
+      "devDependencies": {
+        "@myakiba/config": "workspace:*",
+        "@types/bun": "catalog:",
+      },
+      "peerDependencies": {
+        "typescript": "catalog:",
+      },
+    },
     "packages/redis": {
       "name": "@myakiba/redis",
       "version": "0.0.0",
@@ -545,6 +563,8 @@
     "@myakiba/db": ["@myakiba/db@workspace:packages/db"],
 
     "@myakiba/env": ["@myakiba/env@workspace:packages/env"],
+
+    "@myakiba/mfc": ["@myakiba/mfc@workspace:packages/mfc"],
 
     "@myakiba/redis": ["@myakiba/redis@workspace:packages/redis"],
 

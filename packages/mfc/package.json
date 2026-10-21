@@ -1,0 +1,28 @@
+{
+  "name": "@myakiba/mfc",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./page": "./src/page.ts",
+    "./parse": "./src/parse.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "test": "bun test --isolate"
+  },
+  "dependencies": {
+    "@myakiba/contracts": "workspace:*",
+    "@myakiba/utils": "workspace:*",
+    "cheerio": "^1.2.0",
+    "domhandler": "^6.0.1",
+    "uuid": "catalog:"
+  },
+  "devDependencies": {
+    "@myakiba/config": "workspace:*",
+    "@types/bun": "catalog:"
+  },
+  "peerDependencies": {
+    "typescript": "catalog:"
+  }
+}

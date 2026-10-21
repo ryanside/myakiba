@@ -80,6 +80,8 @@ export const ITEM_CATEGORY_GROUPS = {
 
 export const MFC_ITEM_METADATA_VERSION = 1;
 
+export const CONTENT_LABELS = ["intermediate", "explicit", "controversial"] as const;
+
 export const CURRENCIES = [
   "USD",
   "JPY",
