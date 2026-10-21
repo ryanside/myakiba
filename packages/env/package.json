@@ -8,7 +8,8 @@
     "./web": "./src/web.ts",
     "./worker": "./src/worker.ts",
     "./shared": "./src/shared.ts",
-    "./redis": "./src/redis.ts"
+    "./redis": "./src/redis.ts",
+    "./extension": "./src/extension.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit"
