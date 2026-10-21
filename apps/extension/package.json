@@ -1,0 +1,21 @@
+{
+  "name": "extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "wxt build && wxt build -b firefox --mv3",
+    "check-types": "tsc --noEmit",
+    "test": "bun test lib/"
+  },
+  "dependencies": {
+    "@myakiba/env": "workspace:*",
+    "@myakiba/mfc": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@myakiba/config": "workspace:*",
+    "@types/bun": "catalog:",
+    "wxt": "0.21.4"
+  }
+}

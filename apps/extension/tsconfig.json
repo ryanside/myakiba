@@ -1,0 +1,8 @@
+{
+  "extends": "@myakiba/config/tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "noEmit": true
+  },
+  "include": ["entrypoints", "lib", "test", "wxt.config.ts"]
+}

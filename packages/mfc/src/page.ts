@@ -20,7 +20,7 @@ export type MfcEnvelope =
   | { readonly kind: "challenge" }
   | { readonly kind: "unexpected"; readonly status: number };
 
-type MfcOgImage =
+export type MfcOgImage =
   | { readonly kind: "picture"; readonly picture: MfcPicture }
   | { readonly kind: "rejected"; readonly raw: string }
   | { readonly kind: "absent" };
