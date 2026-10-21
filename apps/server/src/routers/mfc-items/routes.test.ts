@@ -1,0 +1,459 @@
+import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { Elysia } from "elysia";
+import { initLogger } from "evlog";
+import path from "node:path";
+import { asc, eq } from "drizzle-orm";
+import * as z from "zod";
+import type { PutObjectCommand } from "@aws-sdk/client-s3";
+import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
+import * as authSchema from "@myakiba/db/schema/auth";
+import { entry, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
+import { mfcItemId } from "@myakiba/mfc/page";
+import { mfcReleaseId } from "@myakiba/mfc/parse";
+import { createTestDatabase } from "../../../test/database";
+import { createItemImages } from "@/lib/item-images";
+
+initLogger({ enabled: false });
+
+const userId = "user-1";
+const rateLimitKeys: string[] = [];
+let rateLimitCount = 1;
+
+await mock.module("@myakiba/auth/server", () => ({
+  auth: {
+    handler: () => new Response(null, { status: 404 }),
+    api: {
+      getSession: async ({ headers }: { headers: Headers }) => {
+        const id = headers.get("x-test-user");
+        const emailVerified = headers.get("x-test-unverified") === null;
+        return id ? { user: { id, emailVerified }, session: { id: `session-${id}` } } : null;
+      },
+    },
+  },
+}));
+
+await mock.module("@myakiba/redis/client", () => ({
+  redis: {
+    eval: async (_script: string, _keys: number, key: string) => {
+      rateLimitKeys.push(key);
+      return [rateLimitCount, 1800];
+    },
+  },
+}));
+
+const db = await createTestDatabase();
+const { createMfcItemsRouter } = await import("./index");
+const { makeMfcItems } = await import("./module");
+
+const fixtures = path.join(import.meta.dir, "../../../../../packages/mfc/fixtures");
+const fixture = (name: string) => Bun.file(path.join(fixtures, name)).text();
+
+function edit(html: string, from: string, to: string): string {
+  if (!html.includes(from)) throw new Error(`fixture has no ${from}`);
+  return html.replaceAll(from, to);
+}
+
+const page98777 = await fixture("item-98777.html");
+/** Derived from 98777: another item with the same entries. */
+const page98779 = edit(
+  edit(page98777, "/item/98777", "/item/98779"),
+  "objectId=98777",
+  "objectId=98779",
+);
+/** Derived from 98777: the page of item 98778. */
+const page98778 = edit(page98777, "/item/98777", "/item/98778");
+
+const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]);
+
+function memoryStore() {
+  const objects = new Map<string, PutObjectCommand["input"]>();
+  let gate: (() => Promise<null>) | null = null;
+  const images = createItemImages({
+    client: {
+      send: async (command) => {
+        await gate?.();
+        objects.set(command.input.Key ?? "", command.input);
+        return { $metadata: { httpStatusCode: 200 } };
+      },
+    },
+    name: "pictures",
+    publicUrl: "https://pictures.example.test",
+  });
+  /** Holds every picture put until `parties` uploads reach it, so their transactions overlap. */
+  const holdPuts = (parties: number) => {
+    const { promise, resolve } = Promise.withResolvers<null>();
+    let arrived = 0;
+    gate = () => {
+      arrived += 1;
+      if (arrived === parties) resolve(null);
+      return promise;
+    };
+  };
+  return { images, objects, holdPuts };
+}
+
+let store = memoryStore();
+let app = new Elysia({ prefix: "/api" }).use(createMfcItemsRouter(makeMfcItems(store.images)));
+
+beforeEach(async () => {
+  await db.execute('TRUNCATE "user", item, entry CASCADE');
+  await db
+    .insert(authSchema.user)
+    .values({ id: userId, name: "Ryan", email: "r@example.com", username: "ryan" });
+  store = memoryStore();
+  app = new Elysia({ prefix: "/api" }).use(createMfcItemsRouter(makeMfcItems(store.images)));
+  rateLimitKeys.length = 0;
+  rateLimitCount = 1;
+});
+
+type Upload = {
+  readonly mfcItemId: number;
+  readonly page: string;
+  readonly pageAs?: "file" | "text";
+  readonly picture?: Uint8Array;
+  readonly headers?: Record<string, string>;
+};
+
+async function answer(response: Response) {
+  const json = response.headers.get("content-type")?.includes("json");
+  return { status: response.status, body: json ? await response.json() : await response.text() };
+}
+
+async function upload({ mfcItemId: id, page, pageAs = "file", picture, headers }: Upload) {
+  const form = new FormData();
+  form.set("mfcItemId", String(id));
+  if (pageAs === "file") form.set("page", new File([page], "page.html", { type: "text/html" }));
+  else form.set("page", page);
+  if (picture) form.set("picture", new File([picture], "picture", { type: "image/png" }));
+  const response = await app.handle(
+    new Request("http://localhost/api/mfc-items", {
+      method: "POST",
+      headers: { "x-test-user": userId, ...headers },
+      body: form,
+    }),
+  );
+  return answer(response);
+}
+
+async function lookup(mfcItemIds: readonly number[], headers?: Record<string, string>) {
+  const response = await app.handle(
+    new Request("http://localhost/api/mfc-items/missing", {
+      method: "POST",
+      headers: { "x-test-user": userId, "content-type": "application/json", ...headers },
+      body: JSON.stringify({ mfcItemIds }),
+    }),
+  );
+  return answer(response);
+}
+
+async function itemRows(externalId: number) {
+  const [row] = await db
+    .select({
+      title: item.title,
+      mfcTitle: item.mfcTitle,
+      numbering: item.numbering,
+      category: item.category,
+      version: item.version,
+      scale: item.scale,
+      height: item.height,
+      width: item.width,
+      depth: item.depth,
+      mfcMetadataVersion: item.mfcMetadataVersion,
+      contentLabel: item.contentLabel,
+      mfcRatingId: item.mfcRatingId,
+      image: item.image,
+    })
+    .from(item)
+    .where(eq(item.externalId, externalId));
+  const links = await db
+    .select({
+      entry: entry.externalId,
+      category: entry.category,
+      name: entry.name,
+      role: entry_to_item.role,
+      roles: entry_to_item.roles,
+      sourceLabel: entry_to_item.sourceLabel,
+      materialPercentage: entry_to_item.materialPercentage,
+    })
+    .from(entry_to_item)
+    .innerJoin(entry, eq(entry.id, entry_to_item.entryId))
+    .innerJoin(item, eq(item.id, entry_to_item.itemId))
+    .where(eq(item.externalId, externalId))
+    .orderBy(asc(entry.externalId));
+  const releases = await db
+    .select({
+      id: item_release.id,
+      date: item_release.date,
+      type: item_release.type,
+      price: item_release.price,
+      priceCurrency: item_release.priceCurrency,
+      barcode: item_release.barcode,
+    })
+    .from(item_release)
+    .innerJoin(item, eq(item.id, item_release.itemId))
+    .where(eq(item.externalId, externalId));
+  return { item: row, links, releases };
+}
+
+const savedSchema = z.object({ saved: z.enum(["created", "existing"]), itemId: z.string() });
+const saved = (reply: { readonly body: unknown }) => savedSchema.parse(reply.body);
+
+const counts = async () => ({
+  items: await db.$count(item),
+  entries: await db.$count(entry),
+  links: await db.$count(entry_to_item),
+  releases: await db.$count(item_release),
+});
+
+const ID_98777 = mfcItemId(98_777);
+if (ID_98777 === null) throw new Error("98777 is an MFC item id");
+
+const RELEASE_98777 = {
+  date: "2018-11-15",
+  type: "Standard (Japan)",
+  price: 1_350_000,
+  priceCurrency: "JPY",
+  barcode: "4582292601715",
+};
+
+const link = (externalId: number, category: string, name: string, roles: string[] = []) => ({
+  entry: externalId,
+  category,
+  name,
+  role: roles[0] ?? "",
+  roles,
+  sourceLabel: name,
+  materialPercentage: null,
+});
+
+describe("POST /api/mfc-items saves an MFC item page as a new item", () => {
+  test("the 98777 page creates one item with its label, rating, entries, links and release", async () => {
+    const { status, body } = await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG });
+
+    expect(status).toBe(200);
+    expect(body).toEqual({
+      saved: "created",
+      itemId: expect.any(String),
+      mfcItemId: 98_777,
+      picture: "stored",
+    });
+    const [key] = store.objects.keys();
+    expect(key).toMatch(/^items\/mfc\/98777\/[0-9a-f]{16}\.jpg$/);
+    expect(await itemRows(98_777)).toEqual({
+      item: {
+        title: "Hello, Good-bye - Yukishiro May - 1/7 (Orchid Seed)",
+        mfcTitle: null,
+        numbering: null,
+        category: "Prepainted",
+        version: [],
+        scale: "1/7",
+        height: 140,
+        width: null,
+        depth: null,
+        mfcMetadataVersion: 1,
+        contentLabel: "explicit",
+        mfcRatingId: 3,
+        image: `https://pictures.example.test/${key}`,
+      },
+      links: [
+        link(7628, "Companies", "Orchid Seed", ["Manufacturer"]),
+        link(9613, "Artists", "Minheru", ["Sculptor"]),
+        link(21_937, "Artists", "Moekibara Fumitake", ["Illustrator"]),
+        link(23_441, "Materials", "PVC"),
+        link(23_442, "Materials", "ABS"),
+        link(23_761, "Origins", "Hello, Good-bye"),
+        link(23_762, "Characters", "Yukishiro May"),
+      ],
+      releases: [{ id: mfcReleaseId(ID_98777, RELEASE_98777), ...RELEASE_98777 }],
+    });
+    expect(await counts()).toEqual({ items: 1, entries: 7, links: 7, releases: 1 });
+  });
+
+  test("uploading it again answers existing and writes nothing", async () => {
+    const first = await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG });
+    const rows = await itemRows(98_777);
+    const updatedAt = await db.select({ updatedAt: item.updatedAt }).from(item);
+
+    const again = await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG });
+
+    expect(again).toEqual({
+      status: 200,
+      body: { saved: "existing", itemId: saved(first).itemId, mfcItemId: 98_777 },
+    });
+    expect(await itemRows(98_777)).toEqual(rows);
+    expect(await db.select({ updatedAt: item.updatedAt }).from(item)).toEqual(updatedAt);
+    expect(await counts()).toEqual({ items: 1, entries: 7, links: 7, releases: 1 });
+    expect(store.objects.size).toBe(1);
+  });
+
+  test("an existing item answers existing even when the page would not parse", async () => {
+    await upload({ mfcItemId: 98_777, page: page98777 });
+
+    expect(
+      await upload({ mfcItemId: 98_777, page: await fixture("derived-challenge.html") }),
+    ).toMatchObject({ status: 200, body: { saved: "existing", mfcItemId: 98_777 } });
+  });
+
+  test("two concurrent uploads of 98777 end with one item and its seven links", async () => {
+    store.holdPuts(2);
+
+    const answers = await Promise.all([
+      upload({ mfcItemId: 98_777, page: page98777, picture: JPEG }),
+      upload({ mfcItemId: 98_777, page: page98777, picture: JPEG }),
+    ]);
+
+    expect(answers.map((a) => a.status)).toEqual([200, 200]);
+    expect(answers.map((a) => saved(a).saved).toSorted()).toEqual(["created", "existing"]);
+    expect(new Set(answers.map((a) => saved(a).itemId)).size).toBe(1);
+    expect(await counts()).toEqual({ items: 1, entries: 7, links: 7, releases: 1 });
+  });
+
+  test("concurrent uploads of two items that share entries both finish", async () => {
+    store.holdPuts(2);
+
+    const answers = await Promise.all([
+      upload({ mfcItemId: 98_777, page: page98777, picture: JPEG }),
+      upload({ mfcItemId: 98_779, page: page98779, picture: JPEG }),
+    ]);
+
+    expect(answers.map((a) => [a.status, saved(a).saved])).toEqual([
+      [200, "created"],
+      [200, "created"],
+    ]);
+    expect(await counts()).toEqual({ items: 2, entries: 7, links: 14, releases: 2 });
+  });
+
+  test("a page sent as text is read like a file", async () => {
+    expect(await upload({ mfcItemId: 98_779, page: page98779, pageAs: "text" })).toMatchObject({
+      status: 200,
+      body: { saved: "created", mfcItemId: 98_779, picture: "absent" },
+    });
+  });
+
+  test("a picture that is not an image is rejected and the item is still created", async () => {
+    const html = new TextEncoder().encode("<!DOCTYPE html><title>NSFW</title>");
+
+    expect(await upload({ mfcItemId: 98_777, page: page98777, picture: html })).toMatchObject({
+      status: 200,
+      body: { saved: "created", picture: "rejected" },
+    });
+    const rows = await itemRows(98_777);
+    expect(rows.item?.image).toBeNull();
+    expect(store.objects.size).toBe(0);
+  });
+
+  test.each([
+    [
+      "a challenge page",
+      "derived-challenge.html",
+      "MyFigureCollection showed a security check instead of the item",
+    ],
+    [
+      "a signed-in not-found page",
+      "derived-not-found-signed-in.html",
+      "MyFigureCollection did not show this item",
+    ],
+    [
+      "a signed-out not-found page",
+      "derived-not-found-signed-out.html",
+      "MyFigureCollection did not show this item",
+    ],
+  ])("%s answers 400 and writes nothing", async (_name, file, message) => {
+    expect(await upload({ mfcItemId: 98_777, page: await fixture(file), picture: JPEG })).toEqual({
+      status: 400,
+      body: message,
+    });
+    expect(await counts()).toEqual({ items: 0, entries: 0, links: 0, releases: 0 });
+    expect(store.objects.size).toBe(0);
+  });
+
+  test("the page of 98778 posted as 98777 answers 400 and writes nothing", async () => {
+    expect(await upload({ mfcItemId: 98_777, page: page98778, picture: JPEG })).toEqual({
+      status: 400,
+      body: "The page is for a different item",
+    });
+    expect(await counts()).toEqual({ items: 0, entries: 0, links: 0, releases: 0 });
+  });
+
+  test("a page over 2 MB is refused by the contract and writes nothing", async () => {
+    const oversized = page98777 + " ".repeat(2 * 1024 * 1024);
+
+    const asFile = await upload({ mfcItemId: 98_777, page: oversized });
+    const asText = await upload({ mfcItemId: 98_777, page: oversized, pageAs: "text" });
+
+    expect([asFile.status, asText.status]).toEqual([422, 422]);
+    expect(await counts()).toEqual({ items: 0, entries: 0, links: 0, releases: 0 });
+  });
+
+  test("an unknown field is refused by the strict contract", async () => {
+    const form = new FormData();
+    form.set("mfcItemId", "98777");
+    form.set("page", page98777);
+    form.set("userId", "user-2");
+    const response = await app.handle(
+      new Request("http://localhost/api/mfc-items", {
+        method: "POST",
+        headers: { "x-test-user": userId },
+        body: form,
+      }),
+    );
+
+    expect(response.status).toBe(422);
+    expect(await counts()).toEqual({ items: 0, entries: 0, links: 0, releases: 0 });
+  });
+});
+
+describe("POST /api/mfc-items/missing lists the ids with no MFC item", () => {
+  test("ids already saved are left out, in the order sent", async () => {
+    await upload({ mfcItemId: 98_777, page: page98777 });
+    await db.insert(item).values({ source: "custom", externalId: 5, title: "Custom figure" });
+
+    expect(await lookup([98_779, 98_777, 5])).toEqual({
+      status: 200,
+      body: { missing: [98_779, 5] },
+    });
+  });
+
+  test("repeated ids are refused", async () => {
+    const { status } = await lookup([98_777, 98_777]);
+
+    expect(status).toBe(422);
+  });
+});
+
+describe("both routes need a verified email and have their own rate limit", () => {
+  test("an unverified user gets 403 with the sync routes' message", async () => {
+    const unverified = { "x-test-unverified": "1" };
+
+    expect(await upload({ mfcItemId: 98_777, page: page98777, headers: unverified })).toEqual({
+      status: 403,
+      body: SYNC_STATUS_MESSAGES.requireEmailVerification,
+    });
+    expect(await lookup([98_777], unverified)).toEqual({
+      status: 403,
+      body: SYNC_STATUS_MESSAGES.requireEmailVerification,
+    });
+    expect(await counts()).toEqual({ items: 0, entries: 0, links: 0, releases: 0 });
+  });
+
+  test("each route counts against its own per-user limit", async () => {
+    await upload({ mfcItemId: 98_777, page: page98777 });
+    await lookup([98_777]);
+
+    expect(rateLimitKeys).toEqual([`rl:mfc-ingest:${userId}`, `rl:mfc-lookup:${userId}`]);
+  });
+
+  test("a user over the limit gets 429 with Retry-After", async () => {
+    rateLimitCount = 901;
+    const response = await app.handle(
+      new Request("http://localhost/api/mfc-items/missing", {
+        method: "POST",
+        headers: { "x-test-user": userId, "content-type": "application/json" },
+        body: JSON.stringify({ mfcItemIds: [98_777] }),
+      }),
+    );
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("1800");
+  });
+});

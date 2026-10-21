@@ -9,6 +9,7 @@ import dashboardRouter from "./routers/dashboard";
 import expensesRouter from "./routers/expenses";
 import itemRouter from "./routers/item";
 import listsRouter from "./routers/lists";
+import mfcItemsRouter from "./routers/mfc-items";
 import ordersRouter from "./routers/orders";
 import searchRouter from "./routers/search";
 import settingsRouter from "./routers/settings";
@@ -27,6 +28,7 @@ export const routes = new Elysia()
       .use(expensesRouter)
       .use(itemRouter)
       .use(listsRouter)
+      .use(mfcItemsRouter)
       .use(ordersRouter)
       .use(searchRouter)
       .use(settingsRouter)
