@@ -5,6 +5,7 @@ import path from "node:path";
 
 type TestReplay = {
   fix: string;
+  base?: string;
   bug: string;
   test: string;
   fixed: string[];
@@ -446,10 +447,13 @@ try {
 
   for (const replay of selected) {
     const harness = await harnessOf(replay.test);
-    await checkOut(`${replay.fix}^`, harness);
+    const workingTree = replay.fix === "WORKTREE";
+    const base = workingTree ? replay.base : `${replay.fix}^`;
+    if (!base) throw new Error("A WORKTREE replay needs a base revision");
+    await checkOut(base, harness);
     const before = await runTest(worktree, replay.test);
-    await checkOut(replay.fix, harness);
-    const after = await runTest(worktree, replay.test);
+    if (!workingTree) await checkOut(replay.fix, harness);
+    const after = await runTest(workingTree ? root : worktree, replay.test);
 
     const flipped = before.failed.filter((name) => after.passed.includes(name));
     const didNotFlip = replay.fixed.filter((name) => !flipped.includes(name));
