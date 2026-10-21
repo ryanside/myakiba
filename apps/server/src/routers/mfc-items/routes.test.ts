@@ -54,14 +54,12 @@ function edit(html: string, from: string, to: string): string {
 }
 
 const page98777 = await fixture("item-98777.html");
-/** Derived from 98777: another item with the same entries. */
-const page98779 = edit(
+const derivedSharedEntriesPage = edit(
   edit(page98777, "/item/98777", "/item/98779"),
   "objectId=98777",
   "objectId=98779",
 );
-/** Derived from 98777: the page of item 98778. */
-const page98778 = edit(page98777, "/item/98777", "/item/98778");
+const derivedWrongItemPage = edit(page98777, "/item/98777", "/item/98778");
 
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]);
 
@@ -79,8 +77,7 @@ function memoryStore() {
     name: "pictures",
     publicUrl: "https://pictures.example.test",
   });
-  /** Holds every picture put until `parties` uploads reach it, so their transactions overlap. */
-  const holdPuts = (parties: number) => {
+  const releasePutsTogether = (parties: number) => {
     const { promise, resolve } = Promise.withResolvers<null>();
     let arrived = 0;
     gate = () => {
@@ -89,7 +86,7 @@ function memoryStore() {
       return promise;
     };
   };
-  return { images, objects, holdPuts };
+  return { images, objects, releasePutsTogether };
 }
 
 let store = memoryStore();
@@ -295,7 +292,7 @@ describe("POST /api/mfc-items saves an MFC item page as a new item", () => {
   });
 
   test("two concurrent uploads of 98777 end with one item and its seven links", async () => {
-    store.holdPuts(2);
+    store.releasePutsTogether(2);
 
     const answers = await Promise.all([
       upload({ mfcItemId: 98_777, page: page98777, picture: JPEG }),
@@ -309,11 +306,11 @@ describe("POST /api/mfc-items saves an MFC item page as a new item", () => {
   });
 
   test("concurrent uploads of two items that share entries both finish", async () => {
-    store.holdPuts(2);
+    store.releasePutsTogether(2);
 
     const answers = await Promise.all([
       upload({ mfcItemId: 98_777, page: page98777, picture: JPEG }),
-      upload({ mfcItemId: 98_779, page: page98779, picture: JPEG }),
+      upload({ mfcItemId: 98_779, page: derivedSharedEntriesPage, picture: JPEG }),
     ]);
 
     expect(answers.map((a) => [a.status, saved(a).saved])).toEqual([
@@ -324,7 +321,9 @@ describe("POST /api/mfc-items saves an MFC item page as a new item", () => {
   });
 
   test("a page sent as text is read like a file", async () => {
-    expect(await upload({ mfcItemId: 98_779, page: page98779, pageAs: "text" })).toMatchObject({
+    expect(
+      await upload({ mfcItemId: 98_779, page: derivedSharedEntriesPage, pageAs: "text" }),
+    ).toMatchObject({
       status: 200,
       body: { saved: "created", mfcItemId: 98_779, picture: "absent" },
     });
@@ -368,7 +367,7 @@ describe("POST /api/mfc-items saves an MFC item page as a new item", () => {
   });
 
   test("the page of 98778 posted as 98777 answers 400 and writes nothing", async () => {
-    expect(await upload({ mfcItemId: 98_777, page: page98778, picture: JPEG })).toEqual({
+    expect(await upload({ mfcItemId: 98_777, page: derivedWrongItemPage, picture: JPEG })).toEqual({
       status: 400,
       body: "The page is for a different item",
     });

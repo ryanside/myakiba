@@ -9,7 +9,7 @@ import { mfcReleaseId, parseMfcItemPage } from "@myakiba/mfc/parse";
 import type { MfcItemPage, MfcPageProblem } from "@myakiba/mfc/parse";
 import { command, fail, ok, query } from "@/domain/kernel";
 import { itemImages } from "@/lib/item-images";
-import type { ItemImages, StoredPicture } from "@/lib/item-images";
+import type { ItemImages } from "@/lib/item-images";
 
 const PROBLEM_MESSAGE = {
   challenge: "MyFigureCollection showed a security check instead of the item",
@@ -40,8 +40,7 @@ async function findMfcItem(tx: Tx, id: MfcItemId): Promise<string | undefined> {
   return found?.id;
 }
 
-/** Writes the item and, only when this call created it, its entries, links and releases. */
-async function insertMfcItem(
+async function createMfcItemIfAbsent(
   tx: Tx,
   page: MfcItemPage,
   image: string | null,
@@ -69,13 +68,12 @@ async function insertMfcItem(
     .returning({ id: item.id });
   if (!created) return undefined;
 
-  // Ingests of items that share entries lock entry rows in one order, so they cannot deadlock.
-  const links = page.entries.toSorted((a, b) => a.externalId - b.externalId);
-  if (links.length > 0) {
+  const linksInLockOrder = page.entries.toSorted((a, b) => a.externalId - b.externalId);
+  if (linksInLockOrder.length > 0) {
     const entries = await tx
       .insert(entry)
       .values(
-        links.map((link) => ({
+        linksInLockOrder.map((link) => ({
           externalId: link.externalId,
           source: "mfc" as const,
           category: link.category,
@@ -89,7 +87,7 @@ async function insertMfcItem(
       .returning({ id: entry.id, externalId: entry.externalId });
     const entryIds = new Map(entries.map((row) => [row.externalId, row.id]));
     await tx.insert(entry_to_item).values(
-      links.map((link) => {
+      linksInLockOrder.map((link) => {
         const entryId = entryIds.get(link.externalId);
         if (!entryId) throw new Error(`Entry ${link.externalId} was not saved`);
         return {
@@ -119,9 +117,6 @@ async function insertMfcItem(
   return created.id;
 }
 
-const pictureOutcome = (stored: StoredPicture | null): PictureOutcome =>
-  stored === null ? "absent" : stored.kind;
-
 export function makeMfcItems(images: ItemImages) {
   return {
     missing: query(
@@ -136,7 +131,6 @@ export function makeMfcItems(images: ItemImages) {
       },
     ),
 
-    /** Saves an MFC item page as a new Item. An item that already exists is left as it is. */
     ingest: command(
       { action: "mfc_items.ingest", failure: "Failed to import item" },
       async (scope, input: ItemUpload) => {
@@ -158,8 +152,8 @@ export function makeMfcItems(images: ItemImages) {
         const { page } = parsed;
 
         const stored = page.picture && input.picture ? await images.store(id, input.picture) : null;
-        const picture = pictureOutcome(stored);
-        const createdId = await insertMfcItem(
+        const picture: PictureOutcome = stored?.kind ?? "absent";
+        const createdId = await createMfcItemIfAbsent(
           scope.tx,
           page,
           stored?.kind === "stored" ? stored.url : null,

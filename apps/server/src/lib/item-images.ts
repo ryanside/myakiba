@@ -5,15 +5,11 @@ import { MAX_ITEM_PICTURE_BYTES } from "@myakiba/contracts/mfc-items/schema";
 import { env } from "@myakiba/env/server";
 import type { MfcItemId } from "@myakiba/mfc/page";
 
-export type StoredPicture =
+type StoredPicture =
   | { readonly kind: "stored"; readonly url: string }
   | { readonly kind: "rejected"; readonly reason: "not_an_image" | "too_large" };
 
 export type ItemImages = {
-  /**
-   * Stores the picture of an MFC item under a key derived from its bytes, so a
-   * retry or a second user writes the same object. The declared type is ignored.
-   */
   readonly store: (mfcItemId: MfcItemId, picture: Blob) => Promise<StoredPicture>;
 };
 
@@ -74,18 +70,18 @@ export function createItemImages(bucket: Bucket): ItemImages {
       const bytes = new Uint8Array(await picture.arrayBuffer());
       const format = FORMATS.find((candidate) => candidate.matches(bytes));
       if (!format) return { kind: "rejected", reason: "not_an_image" };
-      const digest = createHash("sha256").update(bytes).digest("hex").slice(0, 16);
-      const key = `items/mfc/${mfcItemId}/${digest}.${format.extension}`;
+      const contentHash = createHash("sha256").update(bytes).digest("hex").slice(0, 16);
+      const contentKey = `items/mfc/${mfcItemId}/${contentHash}.${format.extension}`;
       await bucket.client.send(
         new PutObjectCommand({
           Bucket: bucket.name,
-          Key: key,
+          Key: contentKey,
           Body: bytes,
           ContentType: format.contentType,
           CacheControl: IMMUTABLE,
         }),
       );
-      return { kind: "stored", url: `${baseUrl}/${key}` };
+      return { kind: "stored", url: `${baseUrl}/${contentKey}` };
     },
   };
 }

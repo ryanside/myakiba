@@ -21,7 +21,6 @@ export type MissingItemsInput = z.infer<typeof missingItemsSchema>;
 const isPageSize = (bytes: number) => bytes > 0 && bytes <= MAX_ITEM_PAGE_BYTES;
 const PAGE_SIZE_MESSAGE = "The item page is empty or larger than 2 MB";
 
-/** Multipart, so every field arrives as text or a file. The page has to prove it is `mfcItemId`. */
 export const itemUploadSchema = z.strictObject({
   mfcItemId: z.union([
     mfcItemIdField,

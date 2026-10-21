@@ -17,6 +17,5 @@ export const itemPictureBucketSchema = {
   AWS_BUCKET_REGION: z.string().min(1),
   AWS_BUCKET_NAME: z.string().min(1),
   AWS_BUCKET_URL: z.url().optional(),
-  /** An S3-compatible store such as MinIO in local and e2e runs. Unset on AWS. */
   AWS_ENDPOINT_URL: z.url().optional(),
 } as const;

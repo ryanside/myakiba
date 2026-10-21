@@ -5,7 +5,6 @@ import { rateLimit } from "@/middleware/rate-limit";
 import { verifiedEmail } from "@/middleware/verified-email";
 import { MfcItems } from "./module";
 
-/** Takes the operations as an argument so tests can give them an in-memory picture store. */
 export const createMfcItemsRouter = (items: typeof MfcItems) =>
   privateApi("/mfc-items")
     .use(rateLimit)

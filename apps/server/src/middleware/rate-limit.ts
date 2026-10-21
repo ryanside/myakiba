@@ -62,8 +62,6 @@ const rateLimitConfigs = {
     keyPrefix: "rl:sync-retry",
     strategy: "userId",
   },
-  // A 400-item import at one page every 2.5 s sends about 400 uploads in 17 minutes, and the
-  // extension's throttle caps a client near 1440 an hour.
   mfcIngest: {
     maxRequests: 900,
     windowSeconds: 3600,
