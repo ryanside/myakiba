@@ -61,3 +61,19 @@ function settleSignedOut() {
     refetch: sessionStore.get().refetch,
   });
 }
+let checkingSession: Promise<void> | undefined;
+
+/** Rechecks the session that `useSession` reads, unless it is already signed out. Callers during a check share it. */
+export async function recheckSession() {
+  if (classifySession(sessionStore.get()) === "signed-out") return;
+  checkingSession ??= checkSession();
+  await checkingSession;
+}
+
+async function checkSession() {
+  try {
+    await sessionStore.get().refetch();
+  } finally {
+    checkingSession = undefined;
+  }
+}
