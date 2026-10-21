@@ -17,5 +17,4 @@ export const itemPictureBucketSchema = {
   AWS_BUCKET_REGION: z.string().min(1),
   AWS_BUCKET_NAME: z.string().min(1),
   AWS_BUCKET_URL: z.url().optional(),
-  AWS_ENDPOINT_URL: z.url().optional(),
 } as const;

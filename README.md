@@ -172,6 +172,8 @@ Set `AWS_BUCKET_URL` if uploaded files should use a custom domain or CDN, such a
 `https://cdn.example.com`. If it is empty, the worker builds each file's URL from
 `AWS_BUCKET_NAME` and `AWS_BUCKET_REGION`:
 `https://<AWS_BUCKET_NAME>.s3.<AWS_BUCKET_REGION>.amazonaws.com/<filename>`.
+Set `S3_ENDPOINT_URL` only to store item pictures in an S3-compatible store other
+than AWS, such as MinIO. The server then requires `AWS_BUCKET_URL`.
 
 1. Start the app:
 
