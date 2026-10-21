@@ -32,6 +32,17 @@ async function expectOrders() {
   });
 }
 
+test("every sidebar link is the whole menu button, so its hover area is its hit area", async () => {
+  await renderSidebar();
+
+  const links = screen.getAllByRole("link");
+  expect(links.length).toBeGreaterThan(0);
+  for (const link of links) {
+    expect(link.dataset.sidebar, link.textContent ?? "").toBe("menu-button");
+    expect(link.closest("button"), link.textContent ?? "").toBeNull();
+  }
+});
+
 test("a sidebar destination opens on the click without waiting for its code to load", async () => {
   const { ordersImported } = await renderSidebar(Bun.sleep(100));
   await act(async () => {

@@ -43,20 +43,19 @@ export function NavMain({
                     ? location.pathname.startsWith(item.url)
                     : location.pathname === item.url
                 }
+                render={<Link to={item.url} preload="intent" />}
               >
-                <Link to={item.url} preload="intent">
-                  <HugeiconsIcon icon={item.icon} />
-                  <span>{item.title}</span>
-                  {item.badge ? (
-                    <ThemedBadge
-                      variant="default"
-                      size="xs"
-                      className="group-data-[collapsible=icon]:hidden mt-0.5 ml-0.5"
-                    >
-                      {item.badge}
-                    </ThemedBadge>
-                  ) : null}
-                </Link>
+                <HugeiconsIcon icon={item.icon} />
+                <span>{item.title}</span>
+                {item.badge ? (
+                  <ThemedBadge
+                    variant="default"
+                    size="xs"
+                    className="group-data-[collapsible=icon]:hidden mt-0.5 ml-0.5"
+                  >
+                    {item.badge}
+                  </ThemedBadge>
+                ) : null}
               </SidebarMenuButton>
             </SidebarMenuItem>
           </Collapsible>
