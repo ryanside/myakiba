@@ -80,6 +80,9 @@ export const ITEM_CATEGORY_GROUPS = {
 
 export const MFC_ITEM_METADATA_VERSION = 1;
 
+/** MFC item ids fit `item.external_id`, a Postgres integer. */
+export const MAX_MFC_ITEM_ID = 2 ** 31 - 1;
+
 export const CONTENT_LABELS = ["intermediate", "explicit", "controversial"] as const;
 
 export const CURRENCIES = [

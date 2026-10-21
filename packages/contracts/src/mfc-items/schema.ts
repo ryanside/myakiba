@@ -1,8 +1,8 @@
 import * as z from "zod";
+import { MAX_MFC_ITEM_ID } from "../shared/constants";
 
 const MAX_ITEM_PAGE_BYTES = 2 * 1024 * 1024;
 const MAX_MISSING_LOOKUP_IDS = 1000;
-const MAX_MFC_ITEM_ID = 2 ** 31 - 1;
 
 export const MAX_ITEM_PICTURE_BYTES = 10 * 1024 * 1024;
 

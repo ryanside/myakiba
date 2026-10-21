@@ -1,8 +1,7 @@
 import { Parser } from "htmlparser2";
+import { MAX_MFC_ITEM_ID } from "@myakiba/contracts/shared/constants";
 
 export type MfcItemId = number & { readonly __brand: "MfcItemId" };
-
-const MAX_MFC_ITEM_ID = 2 ** 31 - 1;
 
 export function mfcItemId(value: number): MfcItemId | null {
   return Number.isInteger(value) && value >= 1 && value <= MAX_MFC_ITEM_ID
