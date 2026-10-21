@@ -8,6 +8,7 @@ import { version } from "@/data/resources/version";
 import { SessionUnavailable } from "@/components/auth/session-unavailable";
 import { RouteError } from "@/components/errors/route-error";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
+import { PageBackground } from "@/components/page-background";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import UserMenu from "@/components/sidebar/user-menu";
 import SyncWidget from "@/components/sync/sync-widget";
@@ -70,7 +71,8 @@ function RouteComponent() {
       <SidebarProvider className="flex flex-col">
         <div className="flex min-w-0 max-w-full flex-1 overflow-x-hidden">
           <AppSidebar />
-          <SidebarInset>
+          <SidebarInset className="page-background-surface">
+            <PageBackground />
             <header className="flex h-12 shrink-0 items-center justify-between gap-2 px-4">
               <div className="flex items-center">
                 <SidebarTrigger className="-ml-1" />

@@ -1,0 +1,68 @@
+.page-background-surface {
+  isolation: isolate;
+}
+
+.page-background {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0.3;
+  transition-property: none;
+}
+
+.dark .page-background {
+  opacity: 0.4;
+}
+
+.page-background img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
+  opacity: 1;
+  transition-property: none;
+}
+
+.page-background[data-preset="panorama"] {
+  height: 660px;
+  mask-image: linear-gradient(to bottom, #000 0%, #0009 24%, #0003 64%, transparent 100%);
+}
+
+.page-background[data-preset="panorama"] img {
+  object-position: 50% 43%;
+}
+
+.page-background[data-preset="canopy"] {
+  height: 1040px;
+  mask-image: linear-gradient(to bottom, #000 0%, #000d 20%, #0005 60%, transparent 100%);
+}
+
+.page-background[data-preset="canopy"] img {
+  object-position: 50% 30%;
+}
+
+.page-background[data-preset="vignette"] {
+  height: 800px;
+  mask-image: linear-gradient(to bottom, #000 0%, #0009 36%, transparent 100%);
+}
+
+.page-background[data-preset="vignette"] img {
+  object-position: 50% 48%;
+  mask-image: radial-gradient(ellipse 45% 90% at 50% 50%, transparent 0%, #0003 48%, #000 100%);
+}
+
+@media (max-width: 767px) {
+  .page-background[data-preset="panorama"] {
+    height: 600px;
+  }
+  .page-background[data-preset="canopy"] {
+    height: 1000px;
+  }
+  .page-background[data-preset="vignette"] {
+    height: 760px;
+  }
+}
