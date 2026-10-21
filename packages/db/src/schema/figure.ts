@@ -18,6 +18,7 @@ import { createId } from "@paralleldrive/cuid2";
 import {
   CATEGORIES,
   COLLECTION_STATUSES,
+  CONTENT_LABELS,
   SHIPPING_METHODS,
   ORDER_STATUSES,
   CONDITIONS,
@@ -56,6 +57,8 @@ export const item = pgTable(
     width: integer("width"),
     depth: integer("depth"),
     mfcMetadataVersion: integer("mfc_metadata_version").notNull().default(0),
+    contentLabel: text("content_label", { enum: CONTENT_LABELS }),
+    mfcRatingId: integer("mfc_rating_id"),
     image: text("image"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
