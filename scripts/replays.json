@@ -547,6 +547,15 @@
       "bug": "Google sign-in navigated into the signed-out app before opening consent",
       "test": "apps/web/src/components/auth/google-sign-in.test.tsx",
       "fixed": ["Google sign-in opens consent without navigating through the signed-out app"]
+    },
+    {
+      "fix": "7cf2e1f3",
+      "bug": "MFC ingest held its transaction open through the picture put, which had no timeout",
+      "test": "apps/server/src/routers/mfc-items/routes.test.ts",
+      "fixed": [
+        "POST /api/mfc-items saves an MFC item page as a new item > no transaction is open while the picture is stored",
+        "POST /api/mfc-items fails the item when its picture cannot be stored > a store that fails (hang) answers 500 and writes nothing"
+      ]
     }
   ],
   "lint": [
