@@ -230,6 +230,7 @@
         "domhandler": "^6.0.1",
         "htmlparser2": "^10.1.0",
         "uuid": "catalog:",
+        "zod": "catalog:",
       },
       "devDependencies": {
         "@myakiba/config": "workspace:*",

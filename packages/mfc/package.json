@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./bridge": "./src/bridge.ts",
     "./page": "./src/page.ts",
     "./parse": "./src/parse.ts"
   },
@@ -17,7 +18,8 @@
     "cheerio": "^1.2.0",
     "domhandler": "^6.0.1",
     "htmlparser2": "^10.1.0",
-    "uuid": "catalog:"
+    "uuid": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@myakiba/config": "workspace:*",
