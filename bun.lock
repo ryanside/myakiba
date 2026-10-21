@@ -233,6 +233,7 @@
         "zod": "catalog:",
       },
       "devDependencies": {
+        "@happy-dom/global-registrator": "^21.0.3",
         "@myakiba/config": "workspace:*",
         "@types/bun": "catalog:",
       },
