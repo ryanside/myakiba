@@ -15,13 +15,25 @@ export type ItemImages = {
 
 type Bucket = {
   readonly client: {
-    readonly send: (command: PutObjectCommand) => Promise<PutObjectCommandOutput>;
+    readonly send: (
+      command: PutObjectCommand,
+      options: { readonly abortSignal: AbortSignal },
+    ) => Promise<PutObjectCommandOutput>;
   };
   readonly name: string;
   readonly publicUrl: string;
+  readonly putTimeoutMs?: number;
 };
 
 const IMMUTABLE = "public, max-age=31536000, immutable";
+const PUT_TIMEOUT_MS = 5000;
+
+function racingAbort<T>(put: Promise<T>, signal: AbortSignal): Promise<T> {
+  const aborted = new Promise<never>((_resolve, reject) => {
+    signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+  });
+  return Promise.race([put, aborted]);
+}
 
 const ascii = (text: string) => [...new TextEncoder().encode(text)];
 
@@ -72,15 +84,15 @@ export function createItemImages(bucket: Bucket): ItemImages {
       if (!format) return { kind: "rejected", reason: "not_an_image" };
       const contentHash = createHash("sha256").update(bytes).digest("hex").slice(0, 16);
       const contentKey = `items/mfc/${mfcItemId}/${contentHash}.${format.extension}`;
-      await bucket.client.send(
-        new PutObjectCommand({
-          Bucket: bucket.name,
-          Key: contentKey,
-          Body: bytes,
-          ContentType: format.contentType,
-          CacheControl: IMMUTABLE,
-        }),
-      );
+      const timeout = AbortSignal.timeout(bucket.putTimeoutMs ?? PUT_TIMEOUT_MS);
+      const put = new PutObjectCommand({
+        Bucket: bucket.name,
+        Key: contentKey,
+        Body: bytes,
+        ContentType: format.contentType,
+        CacheControl: IMMUTABLE,
+      });
+      await racingAbort(bucket.client.send(put, { abortSignal: timeout }), timeout);
       return { kind: "stored", url: `${baseUrl}/${contentKey}` };
     },
   };

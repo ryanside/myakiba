@@ -10,6 +10,7 @@ import * as authSchema from "@myakiba/db/schema/auth";
 import { entry, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
 import { mfcItemId } from "@myakiba/mfc/page";
 import { mfcReleaseId } from "@myakiba/mfc/parse";
+import type { MfcItemId } from "@myakiba/mfc/page";
 import { createTestDatabase } from "../../../test/database";
 import { createItemImages } from "@/lib/item-images";
 
@@ -41,9 +42,14 @@ await mock.module("@myakiba/redis/client", () => ({
   },
 }));
 
+await mock.module("@/lib/item-images", () => ({
+  createItemImages,
+  itemImages: { store: (id: MfcItemId, picture: Blob) => store.images.store(id, picture) },
+}));
+
 const db = await createTestDatabase();
-const { createMfcItemsRouter } = await import("./index");
-const { makeMfcItems } = await import("./module");
+const { default: mfcItemsRouter } = await import("./index");
+const app = new Elysia({ prefix: "/api" }).use(mfcItemsRouter);
 
 const fixtures = path.join(import.meta.dir, "../../../../../packages/mfc/fixtures");
 const fixture = (name: string) => Bun.file(path.join(fixtures, name)).text();
@@ -63,7 +69,7 @@ const derivedWrongItemPage = edit(page98777, "/item/98777", "/item/98778");
 
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]);
 
-function memoryStore() {
+function memoryStore(putTimeoutMs?: number) {
   const objects = new Map<string, PutObjectCommand["input"]>();
   let gate: (() => Promise<null>) | null = null;
   const images = createItemImages({
@@ -76,6 +82,7 @@ function memoryStore() {
     },
     name: "pictures",
     publicUrl: "https://pictures.example.test",
+    putTimeoutMs,
   });
   const releasePutsTogether = (parties: number) => {
     const { promise, resolve } = Promise.withResolvers<null>();
@@ -86,11 +93,23 @@ function memoryStore() {
       return promise;
     };
   };
-  return { images, objects, releasePutsTogether };
+  const holdPut = () => {
+    const arrived = Promise.withResolvers<null>();
+    const release = Promise.withResolvers<null>();
+    gate = () => {
+      arrived.resolve(null);
+      return release.promise;
+    };
+    return { arrived: arrived.promise, release: () => release.resolve(null) };
+  };
+  const failPuts = (failure: "hang" | "error") => {
+    gate = () =>
+      failure === "hang" ? new Promise<null>(() => {}) : Promise.reject(new Error("S3 is down"));
+  };
+  return { images, objects, releasePutsTogether, holdPut, failPuts };
 }
 
 let store = memoryStore();
-let app = new Elysia({ prefix: "/api" }).use(createMfcItemsRouter(makeMfcItems(store.images)));
 
 beforeEach(async () => {
   await db.execute('TRUNCATE "user", item, entry CASCADE');
@@ -98,7 +117,6 @@ beforeEach(async () => {
     .insert(authSchema.user)
     .values({ id: userId, name: "Ryan", email: "r@example.com", username: "ryan" });
   store = memoryStore();
-  app = new Elysia({ prefix: "/api" }).use(createMfcItemsRouter(makeMfcItems(store.images)));
   rateLimitKeys.length = 0;
   rateLimitCount = 1;
 });
@@ -320,6 +338,20 @@ describe("POST /api/mfc-items saves an MFC item page as a new item", () => {
     expect(await counts()).toEqual({ items: 2, entries: 7, links: 14, releases: 2 });
   });
 
+  test("no transaction is open while the picture is stored", async () => {
+    const put = store.holdPut();
+    const created = upload({ mfcItemId: 98_777, page: page98777, picture: JPEG });
+    await put.arrived;
+
+    const [open] = await db.execute<{ count: number }>(
+      "SELECT count(*)::int AS count FROM pg_stat_activity WHERE datname = current_database() AND state LIKE 'idle in transaction%'",
+    );
+    put.release();
+
+    expect(open?.count).toBe(0);
+    expect(await created).toMatchObject({ status: 200, body: { saved: "created" } });
+  });
+
   test("a page sent as text is read like a file", async () => {
     expect(
       await upload({ mfcItemId: 98_779, page: derivedSharedEntriesPage, pageAs: "text" }),
@@ -455,4 +487,20 @@ describe("both routes need a verified email and have their own rate limit", () =
     expect(response.status).toBe(429);
     expect(response.headers.get("retry-after")).toBe("1800");
   });
+});
+
+describe("POST /api/mfc-items fails the item when its picture cannot be stored", () => {
+  test.each(["error", "hang"] as const)(
+    "a store that fails (%s) answers 500 and writes nothing",
+    async (failure) => {
+      store = memoryStore(100);
+      store.failPuts(failure);
+
+      expect(await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG })).toEqual({
+        status: 500,
+        body: "Failed to import item",
+      });
+      expect(await counts()).toEqual({ items: 0, entries: 0, links: 0, releases: 0 });
+    },
+  );
 });

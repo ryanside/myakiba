@@ -5,18 +5,15 @@ import { rateLimit } from "@/middleware/rate-limit";
 import { verifiedEmail } from "@/middleware/verified-email";
 import { MfcItems } from "./module";
 
-export const createMfcItemsRouter = (items: typeof MfcItems) =>
-  privateApi("/mfc-items")
-    .use(rateLimit)
-    .use(verifiedEmail)
-    .guard({ verifiedEmail: true })
-    .post("/missing", (ctx) => serve(ctx, items.missing, ctx.body), {
-      body: missingItemsSchema,
-      rateLimit: "mfcLookup",
-    })
-    .post("/", (ctx) => serve(ctx, items.ingest, ctx.body), {
-      body: itemUploadSchema,
-      rateLimit: "mfcIngest",
-    });
-
-export default createMfcItemsRouter(MfcItems);
+export default privateApi("/mfc-items")
+  .use(rateLimit)
+  .use(verifiedEmail)
+  .guard({ verifiedEmail: true })
+  .post("/missing", (ctx) => serve(ctx, MfcItems.missing, ctx.body), {
+    body: missingItemsSchema,
+    rateLimit: "mfcLookup",
+  })
+  .post("/", (ctx) => serve(ctx, MfcItems.ingest, ctx.body), {
+    body: itemUploadSchema,
+    rateLimit: "mfcIngest",
+  });

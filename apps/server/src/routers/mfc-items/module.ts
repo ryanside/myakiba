@@ -2,14 +2,12 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import type { ItemUpload, MissingItemsInput } from "@myakiba/contracts/mfc-items/schema";
 import { MFC_ITEM_METADATA_VERSION } from "@myakiba/contracts/shared/constants";
 import { entry, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
-import type { Tx } from "@myakiba/db/tx";
-import { mfcItemId } from "@myakiba/mfc/page";
+import type { ReadTx, Tx } from "@myakiba/db/tx";
 import type { MfcItemId } from "@myakiba/mfc/page";
 import { mfcReleaseId, parseMfcItemPage } from "@myakiba/mfc/parse";
 import type { MfcItemPage, MfcPageProblem } from "@myakiba/mfc/parse";
-import { command, fail, ok, query } from "@/domain/kernel";
+import { command, fail, ok, proceed, query } from "@/domain/kernel";
 import { itemImages } from "@/lib/item-images";
-import type { ItemImages } from "@/lib/item-images";
 
 const PROBLEM_MESSAGE = {
   challenge: "MyFigureCollection showed a security check instead of the item",
@@ -32,7 +30,7 @@ type IngestResult =
       readonly picture: PictureOutcome;
     };
 
-async function findMfcItem(tx: Tx, id: MfcItemId): Promise<string | undefined> {
+async function findMfcItem(tx: ReadTx, id: MfcItemId): Promise<string | undefined> {
   const [found] = await tx
     .select({ id: item.id })
     .from(item)
@@ -117,26 +115,25 @@ async function createMfcItemIfAbsent(
   return created.id;
 }
 
-export function makeMfcItems(images: ItemImages) {
-  return {
-    missing: query(
-      { action: "mfc_items.missing", failure: "Failed to check which items are missing" },
-      async (scope, input: MissingItemsInput) => {
-        const found = await scope.tx
-          .select({ externalId: item.externalId })
-          .from(item)
-          .where(and(eq(item.source, "mfc"), inArray(item.externalId, input.mfcItemIds)));
-        const existing = new Set(found.map((row) => row.externalId));
-        return ok({ missing: input.mfcItemIds.filter((id) => !existing.has(id)) });
-      },
-    ),
+export const MfcItems = {
+  missing: query(
+    { action: "mfc_items.missing", failure: "Failed to check which items are missing" },
+    async (scope, input: MissingItemsInput) => {
+      const found = await scope.tx
+        .select({ externalId: item.externalId })
+        .from(item)
+        .where(and(eq(item.source, "mfc"), inArray(item.externalId, input.mfcItemIds)));
+      const existing = new Set(found.map((row) => row.externalId));
+      return ok({ missing: input.mfcItemIds.filter((id) => !existing.has(id)) });
+    },
+  ),
 
-    ingest: command(
-      { action: "mfc_items.ingest", failure: "Failed to import item" },
-      async (scope, input: ItemUpload) => {
-        const id = mfcItemId(input.mfcItemId);
-        if (id === null) return fail("bad_request", "The MFC item id is not valid");
-
+  ingest: command(
+    {
+      action: "mfc_items.ingest",
+      failure: "Failed to import item",
+      before: async (scope, input: ItemUpload) => {
+        const id = input.mfcItemId as MfcItemId;
         const existingId = await findMfcItem(scope.tx, id);
         if (existingId) {
           scope.log.set({ mfc: { itemId: id, outcome: "existing" } });
@@ -150,34 +147,36 @@ export function makeMfcItems(images: ItemImages) {
           return fail("bad_request", PROBLEM_MESSAGE[parsed.problem.kind]);
         }
         const { page } = parsed;
-
-        const stored = page.picture && input.picture ? await images.store(id, input.picture) : null;
-        const picture: PictureOutcome = stored?.kind ?? "absent";
-        const createdId = await createMfcItemIfAbsent(
-          scope.tx,
-          page,
-          stored?.kind === "stored" ? stored.url : null,
-        );
-        const itemId = createdId ?? (await findMfcItem(scope.tx, id));
-        if (!itemId) throw new Error(`MFC item ${id} was neither created nor found`);
-
-        scope.log.set({
-          mfc: {
-            itemId: id,
-            contentLabel: page.contentLabel,
-            outcome: createdId ? "created" : "existing",
-            picture: stored?.kind === "rejected" ? `rejected: ${stored.reason}` : picture,
-            warnings: page.warnings,
-          },
-        });
-        return ok<IngestResult>(
-          createdId
-            ? { saved: "created", itemId, mfcItemId: id, picture }
-            : { saved: "existing", itemId, mfcItemId: id },
-        );
+        const stored =
+          page.picture && input.picture ? await itemImages.store(id, input.picture) : null;
+        return proceed({ page, stored });
       },
-    ),
-  };
-}
+    },
+    async (scope, { page, stored }) => {
+      const id = page.mfcItemId;
+      const picture: PictureOutcome = stored?.kind ?? "absent";
+      const createdId = await createMfcItemIfAbsent(
+        scope.tx,
+        page,
+        stored?.kind === "stored" ? stored.url : null,
+      );
+      const itemId = createdId ?? (await findMfcItem(scope.tx, id));
+      if (!itemId) throw new Error(`MFC item ${id} was neither created nor found`);
 
-export const MfcItems = makeMfcItems(itemImages);
+      scope.log.set({
+        mfc: {
+          itemId: id,
+          contentLabel: page.contentLabel,
+          outcome: createdId ? "created" : "existing",
+          picture: stored?.kind === "rejected" ? `rejected: ${stored.reason}` : picture,
+          warnings: page.warnings,
+        },
+      });
+      return ok<IngestResult>(
+        createdId
+          ? { saved: "created", itemId, mfcItemId: id, picture }
+          : { saved: "existing", itemId, mfcItemId: id },
+      );
+    },
+  ),
+};
