@@ -476,6 +476,15 @@
       "bug": "a collection bulk delete answered 200 for a mix of the caller's items and another user's, deleting the caller's and skipping the rest",
       "test": "apps/server/src/routers/collection/routes.test.ts",
       "fixed": ["a bulk delete of an own and another user's item answers 404 and deletes nothing"]
+    },
+    {
+      "fix": "9a8047a1",
+      "bug": "the dashboard order reference-line spring rebuilt bars every frame, interrupting their entrance growth and detaching the pressed bar before its first click",
+      "test": "apps/web/src/components/dashboard/orders-bar-chart.test.tsx",
+      "fixed": [
+        "hovering during the order chart intro still grows every bar to its full height",
+        "switching hovered order bars navigates to the second month on the first click"
+      ]
     }
   ],
   "lint": [
