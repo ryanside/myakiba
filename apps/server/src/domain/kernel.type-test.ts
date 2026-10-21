@@ -11,7 +11,7 @@ import type { PageRequest } from "@myakiba/contracts/shared/pagination";
 import { betterAuth } from "@/middleware/better-auth";
 import { privateApi } from "@/boundary/private-api";
 import { Orders } from "@/routers/orders/module";
-import { command, fail, ok, paginate, query, serve } from "./kernel";
+import { command, fail, ok, paginate, proceed, query, serve } from "./kernel";
 
 const config = { action: "probe", failure: "Probe failed" };
 
@@ -81,3 +81,15 @@ query(config, async (scope) => {
   await scope.tx.with(owned).delete(order);
   return ok(await scope.tx.with(owned).select().from(owned));
 });
+
+command(
+  {
+    ...config,
+    before: async (scope) => {
+      // @ts-expect-error a slow step that writes before the transaction; its ReadTx has no insert
+      await scope.tx.insert(order).values({ userId: "u1", title: "Order" });
+      return proceed(1);
+    },
+  },
+  async (_scope, input: number) => ok(input),
+);

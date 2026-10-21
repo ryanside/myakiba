@@ -17,9 +17,11 @@ import type { Viewer } from "./viewer";
  * A command runs in one transaction. A body that returns `fail(...)` or throws
  * rolls it back. A query reads from the pool, so its parallel reads run on
  * separate connections and may see different commits; a query whose reads must
- * agree sets `snapshot: true` and reads one snapshot in one transaction. `serve`
- * turns the outcome into the response: the value, the failure's status and
- * message, or a logged 500 with the operation's `failure`.
+ * agree sets `snapshot: true` and reads one snapshot in one transaction. A
+ * command whose slow work must not hold a connection does it in `before`, which
+ * reads from the pool before the transaction opens. `serve` turns the outcome
+ * into the response: the value, the failure's status and message, or a logged
+ * 500 with the operation's `failure`.
  */
 
 const FAILURE_STATUS = {
@@ -36,6 +38,8 @@ type Failure<C extends FailureCategory = FailureCategory, M extends string = str
   readonly message: M;
 };
 type Outcome<T, F extends Failure> = Ok<T> | F;
+
+type Proceed<P> = { readonly proceed: P };
 
 /** Splits what a body returns, so a body that never fails has no failure entry. */
 type ValueOf<R> = R extends Ok<infer T> ? T : never;
@@ -54,6 +58,11 @@ export function fail<const C extends FailureCategory, const M extends string>(
   message: M,
 ): Failure<C, M> {
   return { ok: false, category, message };
+}
+
+/** Ends a command's `before` and runs its body in the transaction with `value`. */
+export function proceed<P>(value: P): Proceed<P> {
+  return { proceed: value };
 }
 
 type ReadScope = {
@@ -115,6 +124,8 @@ const bodies = new WeakMap<
   (scope: never, input: never) => Promise<Outcome<unknown, Failure>>
 >();
 
+const befores = new WeakMap<AnyOp, Before<never, Ok<unknown> | Failure, unknown>>();
+
 const SNAPSHOT = { isolationLevel: "repeatable read", accessMode: "read only" } as const;
 const snapshots = new WeakSet<AnyOp>();
 const poolReads = new WeakSet<AnyOp>();
@@ -144,13 +155,35 @@ export function query<
   return op;
 }
 
-/** A write. Everything the body does through `scope.tx` commits together or not at all. */
+type Before<I, B, P> = (scope: PoolScope, input: I) => Promise<B | Proceed<P>>;
+
+/**
+ * A write. Everything the body does through `scope.tx` commits together or not at all.
+ * `before` runs first, outside any transaction, for work such as parsing or a network
+ * call. It returns `proceed(value)` to run the body with `value`, or an outcome that
+ * answers without opening a transaction.
+ */
+export function command<
+  I,
+  P,
+  B extends Ok<unknown> | Failure,
+  R extends Ok<unknown> | Failure,
+  const M extends string,
+>(
+  config: OpConfig<M> & { readonly before: Before<I, B, P> },
+  body: (scope: Scope, input: P) => Promise<R>,
+): Op<I, ValueOf<B | R>, FailureOf<B | R>, M>;
 export function command<I, R extends Ok<unknown> | Failure, const M extends string>(
   config: OpConfig<M>,
   body: (scope: Scope, input: I) => Promise<R>,
-): Op<I, ValueOf<R>, FailureOf<R>, M> {
+): Op<I, ValueOf<R>, FailureOf<R>, M>;
+export function command(
+  config: OpConfig<string> & { readonly before?: Before<never, Ok<unknown> | Failure, unknown> },
+  body: (scope: Scope, input: never) => Promise<Ok<unknown> | Failure>,
+): AnyOp {
   const op = { action: config.action, failure: config.failure };
   bodies.set(op, body);
+  if (config.before) befores.set(op, config.before);
   return op;
 }
 
@@ -185,11 +218,18 @@ export async function run<I, T, F extends Failure, M extends string>(
     const read = body as (scope: PoolScope, input: never) => Promise<Outcome<T, F>>;
     return read({ viewer, tx: pool, read: readPrepared, log }, input as never);
   }
+  const before = befores.get(op as AnyOp);
+  let handoff: unknown = input;
+  if (before) {
+    const first = await before({ viewer, tx: pool, read: readPrepared, log }, input as never);
+    if (!("proceed" in first)) return first as Outcome<T, F>;
+    handoff = first.proceed;
+  }
   const inTransaction = body as (scope: Scope, input: never) => Promise<Outcome<T, F>>;
   try {
     return await db.transaction(
       async (tx) => {
-        const outcome = await inTransaction({ viewer, tx, log }, input as never);
+        const outcome = await inTransaction({ viewer, tx, log }, handoff as never);
         if (!outcome.ok) throw new Rollback(outcome);
         return outcome as Ok<T>;
       },

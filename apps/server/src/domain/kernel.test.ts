@@ -8,7 +8,7 @@ import { createTestDatabase } from "../../test/database";
 initLogger({ enabled: false });
 
 const db = await createTestDatabase();
-const { command, fail, ok, prepared, query, run, serve } = await import("./kernel");
+const { command, fail, ok, prepared, proceed, query, run, serve } = await import("./kernel");
 const { Viewer } = await import("./viewer");
 
 const viewer = Viewer.fromSession({ user: { id: "viewer-1" } });
@@ -128,6 +128,63 @@ test("a snapshot query reads one repeatable-read, read-only snapshot", async () 
     ok: true,
     value: { isolation: "read committed", readOnly: "off" },
   });
+});
+
+describe("a command's before step", () => {
+  const currentTxid = async (scope: { readonly tx: ReadTx }) => {
+    const [row] = await scope.tx
+      .select({ id: sql<string>`txid_current()::text` })
+      .from(sql`(select 1) as one`);
+    return row?.id;
+  };
+  const writeAfter = (answer: "proceed" | "ok" | "fail") => {
+    let bodyRuns = 0;
+    const op = command(
+      {
+        ...config,
+        before: async (scope, input: { readonly id: string }) => {
+          const reads = [await currentTxid(scope), await currentTxid(scope)];
+          if (answer === "ok") return ok({ reads });
+          if (answer === "fail") return fail("bad_request", "Not this one");
+          return proceed({ id: input.id, reads });
+        },
+      },
+      async (scope, input) => {
+        bodyRuns += 1;
+        await scope.tx.insert(user).values({
+          id: input.id,
+          name: input.id,
+          email: `${input.id}@example.com`,
+          username: input.id,
+        });
+        return ok({ reads: input.reads });
+      },
+    );
+    return { op, bodyRuns: () => bodyRuns };
+  };
+
+  test("reads from the pool before the transaction, then hands its value to the body", async () => {
+    const { op } = writeAfter("proceed");
+
+    const outcome = await run(viewer, op, { id: "after-before" }, log);
+    if (!outcome.ok) throw new Error("the command failed");
+
+    expect(outcome.value.reads[0]).not.toBe(outcome.value.reads[1]);
+    expect(await userExists("after-before")).toBe(true);
+  });
+
+  test.each(["ok", "fail"] as const)(
+    "an outcome (%s) answers without running the body",
+    async (answer) => {
+      const { op, bodyRuns } = writeAfter(answer);
+
+      const outcome = await run(viewer, op, { id: `answered-${answer}` }, log);
+
+      expect(outcome.ok).toBe(answer === "ok");
+      expect(bodyRuns()).toBe(0);
+      expect(await userExists(`answered-${answer}`)).toBe(false);
+    },
+  );
 });
 
 describe("a prepared read", () => {
