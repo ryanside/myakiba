@@ -1,11 +1,12 @@
 import "dotenv/config";
 import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
-import { redisSchema } from "./schemas";
+import { itemPictureBucketSchema, redisSchema } from "./schemas";
 
 export const env = createEnv({
   server: {
     ...redisSchema,
+    ...itemPictureBucketSchema,
     CORS_ORIGIN: z.string().min(1),
     RESEND_API_KEY: z.string().min(1),
     RESEND_FROM_EMAIL: z.string().min(1),

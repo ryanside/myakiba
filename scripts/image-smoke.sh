@@ -117,6 +117,7 @@ smoke_server() {
     -e TURNSTILE_SECRET_KEY=image-smoke -e RESEND_API_KEY=re_image_smoke \
     -e RESEND_FROM_EMAIL=smoke@example.invalid \
     -e GOOGLE_CLIENT_ID=image-smoke -e GOOGLE_CLIENT_SECRET=image-smoke \
+    -e AWS_BUCKET_REGION=us-east-1 -e AWS_BUCKET_NAME=image-smoke \
     ${server_env[@]+"${server_env[@]/#/--env=}"} "$1" >/dev/null
   echo "server: docker run returned after $(elapsed "$start")s"
   start=$(now)
