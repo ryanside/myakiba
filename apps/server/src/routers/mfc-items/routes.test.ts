@@ -59,11 +59,27 @@ function edit(html: string, from: string, to: string): string {
   return html.replaceAll(from, to);
 }
 
+function slice(html: string, from: string, upTo: string): string {
+  const start = html.indexOf(from);
+  const end = html.indexOf(upTo, start);
+  if (start === -1 || end === -1) throw new Error(`fixture has no ${from} before ${upTo}`);
+  return html.slice(start, end);
+}
+
 const page98777 = await fixture("item-98777.html");
+const field = (label: string) => `<div class="data-field"><div class="data-label">${label}<`;
+const entryLink = (entryId: number) =>
+  `${slice(page98777, `<div class="item-entries"><a href="/entry/${entryId}"`, "</small></div>")}</small></div>`;
+const [sculptor, illustrator] = [entryLink(9613), entryLink(21_937)];
+// Drops the fields before Artists: a shared first entry would queue one writer behind the other.
 const derivedSharedEntriesPage = edit(
-  edit(page98777, "/item/98777", "/item/98779"),
-  "objectId=98777",
-  "objectId=98779",
+  edit(
+    edit(edit(page98777, "/item/98777", "/item/98779"), "objectId=98777", "objectId=98779"),
+    slice(page98777, field("Origin"), field("Artists")),
+    "",
+  ),
+  sculptor + illustrator,
+  illustrator + sculptor,
 );
 const derivedWrongItemPage = edit(page98777, "/item/98777", "/item/98778");
 
@@ -220,6 +236,18 @@ const counts = async () => ({
   releases: await db.$count(item_release),
 });
 
+async function uploadsWaitingOnLocks(expected: number) {
+  const deadline = Date.now() + 5000;
+  for (;;) {
+    const [waiting] = await db.execute<{ count: number }>(
+      "SELECT count(*)::int AS count FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'",
+    );
+    if (waiting?.count === expected) return;
+    if (Date.now() > deadline) throw new Error(`${waiting?.count} uploads wait on locks`);
+    await Bun.sleep(10);
+  }
+}
+
 const ID_98777 = mfcItemId(98_777);
 if (ID_98777 === null) throw new Error("98777 is an MFC item id");
 
@@ -323,19 +351,25 @@ describe("POST /api/mfc-items saves an MFC item page as a new item", () => {
     expect(await counts()).toEqual({ items: 1, entries: 7, links: 7, releases: 1 });
   });
 
-  test("concurrent uploads of two items that share entries both finish", async () => {
-    store.releasePutsTogether(2);
+  test("concurrent uploads that reach their shared entries in opposite orders both finish", async () => {
+    const { answers } = await db.transaction(async (tx) => {
+      await tx.insert(entry).values([
+        { externalId: 9613, source: "mfc", category: "Artists", name: "Minheru" },
+        { externalId: 21_937, source: "mfc", category: "Artists", name: "Moekibara Fumitake" },
+      ]);
+      const uploads = Promise.all([
+        upload({ mfcItemId: 98_777, page: page98777 }),
+        upload({ mfcItemId: 98_779, page: derivedSharedEntriesPage }),
+      ]);
+      await uploadsWaitingOnLocks(2);
+      return { answers: uploads };
+    });
 
-    const answers = await Promise.all([
-      upload({ mfcItemId: 98_777, page: page98777, picture: JPEG }),
-      upload({ mfcItemId: 98_779, page: derivedSharedEntriesPage, picture: JPEG }),
+    expect(await answers).toMatchObject([
+      { status: 200, body: { saved: "created" } },
+      { status: 200, body: { saved: "created" } },
     ]);
-
-    expect(answers.map((a) => [a.status, saved(a).saved])).toEqual([
-      [200, "created"],
-      [200, "created"],
-    ]);
-    expect(await counts()).toEqual({ items: 2, entries: 7, links: 14, releases: 2 });
+    expect(await counts()).toEqual({ items: 2, entries: 7, links: 11, releases: 2 });
   });
 
   test("no transaction is open while the picture is stored", async () => {
