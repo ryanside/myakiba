@@ -63,7 +63,7 @@ const rateLimitConfigs = {
     strategy: "userId",
   },
   mfcIngest: {
-    maxRequests: 900,
+    maxRequests: 2000,
     windowSeconds: 3600,
     keyPrefix: "rl:mfc-ingest",
     strategy: "userId",
