@@ -1,6 +1,5 @@
 import type { ItemError, ItemResult, PortPicture, RunEvent } from "@myakiba/mfc/bridge";
 import type { MfcItemId } from "@myakiba/mfc/page";
-import { THROTTLE } from "./throttle";
 
 export type RunKey = string & { readonly __brand: "RunKey" };
 
@@ -17,12 +16,8 @@ type Run = {
   readonly waitingFor: readonly MfcItemId[];
 };
 
-/** A rate limit this soon after the last one, with no other answer between them, is in a row. */
-const CONSECUTIVE_LIMIT_MS = 10 * 60_000;
-
 type QueueMode =
   | { readonly kind: "running" }
-  | { readonly kind: "paused"; readonly limitedAt: number }
   /** MFC limited the queue in a row or for long, so new runs fail with rate_limited until then. */
   | { readonly kind: "halted"; readonly until: number };
 
@@ -35,7 +30,8 @@ export type QueueState = {
 
 export type Outcome =
   | { readonly kind: "result"; readonly result: ItemResult<PortPicture> }
-  | { readonly kind: "rate_limited"; readonly pausedUntil: number };
+  | { readonly kind: "rate_limited"; readonly pausedUntil: number }
+  | { readonly kind: "halted"; readonly until: number };
 
 export type QueueAction =
   | {
@@ -47,12 +43,7 @@ export type QueueAction =
     }
   | { readonly type: "started" }
   | { readonly type: "needs_user"; readonly untilMs: number }
-  | {
-      readonly type: "answered";
-      readonly job: Job;
-      readonly outcome: Outcome;
-      readonly at: number;
-    }
+  | { readonly type: "answered"; readonly job: Job; readonly outcome: Outcome }
   | { readonly type: "cancelled"; readonly run: RunKey };
 
 type Emission = { readonly run: RunKey; readonly event: RunEvent<PortPicture> };
@@ -101,14 +92,6 @@ function halt(state: QueueState, until: number): QueueStep {
   };
 }
 
-/** The pause a halt asks for. One for limits in a row outlasts what MFC asked, so a restarted worker keeps it. */
-function haltUntil(state: QueueState, pausedUntil: number, at: number): number | null {
-  const pauseMs = pausedUntil - at;
-  if (pauseMs > THROTTLE.maxPauseMs) return pausedUntil;
-  const inRow = state.mode.kind === "paused" && at - state.mode.limitedAt <= CONSECUTIVE_LIMIT_MS;
-  return inRow ? at + Math.max(THROTTLE.maxPauseMs, 2 * pauseMs) : null;
-}
-
 function settle(state: QueueState, job: Job, result: ItemResult<PortPicture>): QueueStep {
   const emit: Emission[] = [];
   const runs: Run[] = [];
@@ -122,11 +105,34 @@ function settle(state: QueueState, job: Job, result: ItemResult<PortPicture>): Q
     if (waitingFor.length > 0) runs.push({ ...run, waitingFor });
     else emit.push({ run: run.key, event: { type: "done", reason: "complete" } });
   }
-  return { state: { ...state, mode: RUNNING, runs, active: null }, emit };
+  return { state: { ...state, runs, active: null }, emit };
 }
 
 function toActiveWaiters(state: QueueState, event: RunEvent<PortPicture>): Emission[] {
   return state.active ? waitersOf(state, state.active).map((run) => ({ run: run.key, event })) : [];
+}
+
+function answer(state: QueueState, job: Job, outcome: Outcome): QueueStep {
+  switch (outcome.kind) {
+    case "result":
+      // An unsolved challenge fails the runs open now, so none of them asks the user again. A later run may.
+      if (!outcome.result.ok && outcome.result.error === "challenge_unsolved") {
+        return { state: EMPTY_QUEUE, emit: failAll(state.runs, "challenge_unsolved") };
+      }
+      return settle(state, job, outcome.result);
+    case "halted":
+      return halt(state, outcome.until);
+    case "rate_limited":
+      return {
+        state,
+        emit: toActiveWaiters(state, {
+          type: "status",
+          state: "backing_off",
+          mfcItemId: job.mfcItemId,
+          untilMs: outcome.pausedUntil,
+        }),
+      };
+  }
 }
 
 export function reduceQueue(state: QueueState, action: QueueAction): QueueStep {
@@ -187,29 +193,10 @@ export function reduceQueue(state: QueueState, action: QueueAction): QueueStep {
         }),
       };
     }
-    case "answered": {
-      if (!sameJob(state.active, action.job)) return { state, emit: [] };
-      const { outcome } = action;
-      if (outcome.kind === "result") {
-        // An unsolved challenge fails the runs open now, so none of them asks the user again. A later run may.
-        if (!outcome.result.ok && outcome.result.error === "challenge_unsolved") {
-          return { state: EMPTY_QUEUE, emit: failAll(state.runs, "challenge_unsolved") };
-        }
-        return settle(state, action.job, outcome.result);
-      }
-      const until = haltUntil(state, outcome.pausedUntil, action.at);
-      if (until !== null) return halt(state, until);
-      const paused = { ...state, mode: { kind: "paused", limitedAt: action.at } } as const;
-      return {
-        state: paused,
-        emit: toActiveWaiters(paused, {
-          type: "status",
-          state: "backing_off",
-          mfcItemId: action.job.mfcItemId,
-          untilMs: outcome.pausedUntil,
-        }),
-      };
-    }
+    case "answered":
+      return sameJob(state.active, action.job)
+        ? answer(state, action.job, action.outcome)
+        : { state, emit: [] };
     case "cancelled": {
       if (!state.runs.some((run) => run.key === action.run)) return { state, emit: [] };
       const runs = state.runs.filter((run) => run.key !== action.run);

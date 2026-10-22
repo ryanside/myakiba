@@ -5,7 +5,6 @@ import type { Job, QueueAction, Requester, RunKey } from "./queue";
 import { THROTTLE } from "./throttle";
 
 const START = 1_000_000;
-const HOUR = 60 * 60_000;
 const REQUESTER: Requester = { tabId: 1, context: { incognito: false, cookieStoreId: null } };
 
 const job = (id: number): Job => ({ mfcItemId: itemId(id), context: REQUESTER.context });
@@ -20,20 +19,19 @@ function submitted(run: string, ids: readonly number[], at: number): QueueAction
   };
 }
 
-function limited(id: number, at: number, pauseMs: number): QueueAction {
-  return {
-    type: "answered",
-    job: job(id),
-    outcome: { kind: "rate_limited", pausedUntil: at + pauseMs },
-    at,
-  };
+function limited(id: number, pausedUntil: number): QueueAction {
+  return { type: "answered", job: job(id), outcome: { kind: "rate_limited", pausedUntil } };
 }
 
-function answered(id: number, at: number, ok: boolean): QueueAction {
+function halted(id: number, until: number): QueueAction {
+  return { type: "answered", job: job(id), outcome: { kind: "halted", until } };
+}
+
+function answered(id: number, ok: boolean): QueueAction {
   const result = ok
     ? ({ ok: true, html: `<html>${id}</html>`, picture: null } as const)
     : ({ ok: false, error: "challenge_unsolved" } as const);
-  return { type: "answered", job: job(id), outcome: { kind: "result", result }, at };
+  return { type: "answered", job: job(id), outcome: { kind: "result", result } };
 }
 
 function play(actions: readonly QueueAction[]) {
@@ -54,60 +52,43 @@ function play(actions: readonly QueueAction[]) {
 const STARTED: QueueAction = { type: "started" };
 
 describe("rate limits in the queue", () => {
-  test("one an hour after a cancelled backoff gets one backoff and a retry", () => {
-    const later = START + HOUR;
+  test("a rate limit backs off and keeps the item for its retry", () => {
     const { eventsOf } = play([
       submitted("a", [1], START),
       STARTED,
-      limited(1, START, 10_000),
-      { type: "cancelled", run: "a" as RunKey },
-      submitted("b", [2], later),
+      limited(1, START + 10_000),
       STARTED,
-      limited(2, later, 10_000),
-      STARTED,
-      answered(2, later + 10_000, true),
+      answered(1, true),
     ]);
 
-    expect(eventsOf("b")).toEqual([
+    expect(eventsOf("a")).toEqual([
       { type: "status", state: "queued", mfcItemId: null, untilMs: null },
-      { type: "status", state: "fetching", mfcItemId: itemId(2), untilMs: null },
-      { type: "status", state: "backing_off", mfcItemId: itemId(2), untilMs: later + 10_000 },
+      { type: "status", state: "fetching", mfcItemId: itemId(1), untilMs: null },
+      { type: "status", state: "backing_off", mfcItemId: itemId(1), untilMs: START + 10_000 },
       {
         type: "item",
-        mfcItemId: itemId(2),
-        result: { ok: true, html: "<html>2</html>", picture: null },
+        mfcItemId: itemId(1),
+        result: { ok: true, html: "<html>1</html>", picture: null },
       },
       { type: "done", reason: "complete" },
     ]);
   });
 
-  test("a second within ten minutes halts every run for five minutes, or twice what MFC asked", () => {
-    const { state, eventsOf } = play([
+  test("a halt fails every run, and new runs until it has passed", () => {
+    const until = START + THROTTLE.maxPauseMs;
+    const { eventsOf } = play([
       submitted("a", [1, 2], START),
       STARTED,
-      limited(1, START, 200_000),
-      limited(1, START + 200_000, 200_000),
-    ]);
-
-    expect(state.mode).toEqual({ kind: "halted", until: START + 200_000 + 400_000 });
-    expect(eventsOf("a").filter((event) => (event as { type: string }).type === "item")).toEqual([
-      { type: "item", mfcItemId: itemId(1), result: { ok: false, error: "rate_limited" } },
-      { type: "item", mfcItemId: itemId(2), result: { ok: false, error: "rate_limited" } },
-    ]);
-  });
-
-  test("a halt fails new runs until its pause has passed", () => {
-    const haltedAt = START + 5000;
-    const until = haltedAt + THROTTLE.maxPauseMs;
-    const { eventsOf } = play([
-      submitted("a", [1], START),
-      STARTED,
-      limited(1, START, 5000),
-      limited(1, haltedAt, 5000),
+      halted(1, until),
       submitted("early", [3], until - 1),
       submitted("later", [3], until),
     ]);
 
+    expect(eventsOf("a").slice(-3)).toEqual([
+      { type: "item", mfcItemId: itemId(1), result: { ok: false, error: "rate_limited" } },
+      { type: "item", mfcItemId: itemId(2), result: { ok: false, error: "rate_limited" } },
+      { type: "done", reason: "complete" },
+    ]);
     expect(eventsOf("early")).toEqual([
       { type: "item", mfcItemId: itemId(3), result: { ok: false, error: "rate_limited" } },
       { type: "done", reason: "complete" },
@@ -124,7 +105,7 @@ describe("an unsolved challenge in the queue", () => {
       submitted("a", [7, 8], START),
       submitted("b", [9], START),
       STARTED,
-      answered(7, START, false),
+      answered(7, false),
       submitted("c", [7], START),
     ]);
 

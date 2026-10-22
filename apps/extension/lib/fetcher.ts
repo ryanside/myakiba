@@ -11,7 +11,7 @@ import type { Origins } from "./origins";
 import { PICTURE_TIMEOUT_MS } from "./picture";
 import { EMPTY_QUEUE, reduceQueue, sameJob, waitersOf } from "./queue";
 import type { Job, Outcome, QueueAction, Requester, RunKey } from "./queue";
-import { PauseTooLongError, THROTTLE, createThrottle, parseRetryAfter } from "./throttle";
+import { HaltedError, THROTTLE, createThrottle, parseRetryAfter } from "./throttle";
 import type { ThrottleState } from "./throttle";
 
 export const CHALLENGE_WINDOW_MS = 120_000;
@@ -54,11 +54,11 @@ export type FetchRun = {
 type Reading =
   | { readonly kind: "item"; readonly ogImage: MfcOgImage }
   | { readonly kind: "challenge" }
-  | Outcome;
+  | Exclude<Outcome, { readonly kind: "halted" }>;
 
 type Answer = Exclude<Reading, { readonly kind: "challenge" }>;
 
-function failed(error: ItemError): Outcome {
+function failed(error: ItemError): Extract<Outcome, { readonly kind: "result" }> {
   return { kind: "result", result: { ok: false, error } };
 }
 
@@ -156,7 +156,7 @@ export function createFetcher(deps: FetcherDeps) {
     try {
       return { page: await fetchPage(lease, job, signal), tabId: lease.tabId };
     } catch (error) {
-      if (lease.kind === "owned" || signal.aborted || error instanceof PauseTooLongError) {
+      if (lease.kind === "owned" || signal.aborted || error instanceof HaltedError) {
         throw error;
       }
     }
@@ -218,7 +218,7 @@ export function createFetcher(deps: FetcherDeps) {
     try {
       tabId = await mfcTabs.showChallenge(requester, job.mfcItemId, signal);
     } catch (error) {
-      if (signal.aborted || error instanceof PauseTooLongError) throw error;
+      if (signal.aborted || error instanceof HaltedError) throw error;
       return failed("challenge_unsolved");
     }
     const deadline = clock.now() + CHALLENGE_WINDOW_MS;
@@ -247,11 +247,18 @@ export function createFetcher(deps: FetcherDeps) {
           return reading;
       }
     } catch (error) {
-      if (error instanceof PauseTooLongError) {
-        return { kind: "rate_limited", pausedUntil: error.pausedUntil };
-      }
+      if (error instanceof HaltedError) return { kind: "halted", until: error.until };
       return failed(error instanceof TimeoutError ? "timeout" : "unexpected_page");
     }
+  }
+
+  /** Puts MFC's answer on the throttle's books, which turn a rate limit in a row, or a long one, into a halt. */
+  async function booked(outcome: Outcome): Promise<Outcome> {
+    if (outcome.kind === "halted") return outcome;
+    const until = await throttle.answered(
+      outcome.kind === "rate_limited" ? outcome.pausedUntil : null,
+    );
+    return until === null ? outcome : { kind: "halted", until };
   }
 
   async function drain(): Promise<void> {
@@ -264,11 +271,7 @@ export function createFetcher(deps: FetcherDeps) {
       const outcome = await attempt(job, controller.signal);
       current = null;
       if (controller.signal.aborted) continue;
-      dispatch({ type: "answered", job, outcome, at: clock.now() });
-      if (outcome.kind === "rate_limited") {
-        const { mode } = state;
-        await throttle.pause(mode.kind === "halted" ? mode.until : outcome.pausedUntil);
-      }
+      dispatch({ type: "answered", job, outcome: await booked(outcome) });
     }
     await mfcTabs.release();
   }

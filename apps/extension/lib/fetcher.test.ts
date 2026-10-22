@@ -356,17 +356,17 @@ describe("cancel", () => {
 });
 
 describe("rate limits", () => {
-  test("each one sets the shared pause, and a second in a row fails every queued item and pauses five minutes", async () => {
+  test("each one sets the shared pause, and a second in a row fails every queued item and halts five minutes", async () => {
     const throttleState = memoryValue(OPEN_THROTTLE);
     const extension = fakeExtension({ pages: () => rateLimited("5"), throttleState });
     const first = extension.run([1, 2]);
     const second = extension.run([3]);
     await extension.clock.runUntil(() => first.done() && second.done());
 
+    const [limited, again] = extension.calls;
     expect(fetches(extension.calls)).toEqual([itemId(1), itemId(1)]);
-    expect(throttleState.peek().pausedUntil).toBe(
-      (extension.calls[1]?.at ?? 0) + THROTTLE.maxPauseMs,
-    );
+    expect((again?.at ?? 0) - (limited?.at ?? 0)).toBeGreaterThanOrEqual(5000);
+    expect(throttleState.peek().haltedUntil).toBe((again?.at ?? 0) + THROTTLE.maxPauseMs);
     expect(first.results()).toEqual([
       { ok: false, error: "rate_limited" },
       { ok: false, error: "rate_limited" },
@@ -441,6 +441,45 @@ describe("rate limits", () => {
 
     expect(after.calls).toEqual([]);
     expect(run.results()).toEqual([{ ok: false, error: "rate_limited" }]);
+  });
+
+  test("after a halt for limits in a row, a restarted worker fails new runs at once until it has passed", async () => {
+    let limited = true;
+    const extension = fakeExtension({
+      pages: ({ mfcItemId }) => (limited ? rateLimited("5") : page(itemPage(mfcItemId))),
+    });
+    const halted = extension.run([1]);
+    await extension.clock.runUntil(halted.done);
+    const haltedAt = extension.clock.now();
+    limited = false;
+
+    extension.restart();
+    const early = extension.run([2]);
+    await extension.clock.runUntil(early.done);
+    expect(extension.clock.now() - haltedAt).toBeLessThan(1000);
+    await advance(extension.clock, haltedAt + THROTTLE.maxPauseMs - extension.clock.now());
+    const later = extension.run([3]);
+    await extension.clock.runUntil(later.done);
+
+    expect(early.results()).toEqual([{ ok: false, error: "rate_limited" }]);
+    expect(later.results()).toEqual([{ ok: true, html: itemPage(3), picture: null }]);
+    expect(fetches(extension.calls)).toEqual([itemId(1), itemId(1), itemId(3)]);
+  });
+
+  test("a worker restart between two limits in a row still halts", async () => {
+    const extension = fakeExtension({ pages: () => rateLimited("5") });
+    const first = extension.run([1]);
+    await extension.clock.runUntil(() => asked(first.events, "backing_off"));
+
+    extension.restart();
+    const second = extension.run([2, 3]);
+    await extension.clock.runUntil(second.done);
+
+    expect(fetches(extension.calls)).toEqual([itemId(1), itemId(2)]);
+    expect(second.results()).toEqual([
+      { ok: false, error: "rate_limited" },
+      { ok: false, error: "rate_limited" },
+    ]);
   });
 
   test("one an hour after a cancelled backoff backs off and tries again", async () => {

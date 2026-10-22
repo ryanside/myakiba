@@ -11,23 +11,35 @@ export const THROTTLE = {
   maxPauseMs: 5 * 60_000,
   /** How long a load that timed out may take to stop in its tab. */
   graceMs: 5000,
+  /** A rate limit this soon after the last one, with no other answer between them, is in a row. */
+  inRowMs: 10 * 60_000,
 } as const;
 
+/** Kept in storage.session, so a restarted worker keeps MFC's pause, its halt and a run of limits. */
 export const throttleStateSchema = z.strictObject({
   nextPageAt: z.number(),
   pausedUntil: z.number(),
+  /** New runs fail with rate_limited until then, without a load. */
+  haltedUntil: z.number(),
+  /** When MFC last answered with a rate limit, or null once it answered any other way. */
+  limitedAt: z.number().nullable(),
 });
 export type ThrottleState = z.output<typeof throttleStateSchema>;
 
-export const OPEN_THROTTLE: ThrottleState = { nextPageAt: 0, pausedUntil: 0 };
+export const OPEN_THROTTLE: ThrottleState = {
+  nextPageAt: 0,
+  pausedUntil: 0,
+  haltedUntil: 0,
+  limitedAt: null,
+};
 
-export class PauseTooLongError extends Error {
-  readonly pausedUntil: number;
+export class HaltedError extends Error {
+  readonly until: number;
 
-  constructor(pausedUntil: number) {
-    super(`MFC asked for a pause until ${new Date(pausedUntil).toISOString()}`);
-    this.name = "PauseTooLongError";
-    this.pausedUntil = pausedUntil;
+  constructor(until: number) {
+    super(`MFC halted the queue until ${new Date(until).toISOString()}`);
+    this.name = "HaltedError";
+    this.until = until;
   }
 }
 
@@ -86,8 +98,9 @@ export function createThrottle(deps: {
     for (;;) {
       signal.throwIfAborted();
       const wait = await book((current, now): [ThrottleState, number] => {
+        if (now < current.haltedUntil) throw new HaltedError(current.haltedUntil);
         if (current.pausedUntil - now > THROTTLE.maxPauseMs) {
-          throw new PauseTooLongError(current.pausedUntil);
+          throw new HaltedError(current.pausedUntil);
         }
         const untilFree = Math.max(current.nextPageAt, current.pausedUntil) - now;
         if (untilFree > 0) return [current, untilFree];
@@ -143,6 +156,29 @@ export function createThrottle(deps: {
         { ...current, pausedUntil: Math.max(current.pausedUntil, until) },
         null,
       ]);
+    },
+
+    /**
+     * Books MFC's answer to an item: the pause it asked for with a rate limit, or null for any other answer.
+     * @returns when a halt ends, for a limit in a row or a pause too long to wait out, or null.
+     */
+    async answered(pausedUntil: number | null): Promise<number | null> {
+      return book((current, now): [ThrottleState, number | null] => {
+        if (pausedUntil === null) return [{ ...current, limitedAt: null }, null];
+        const pauseMs = pausedUntil - now;
+        const inRow = current.limitedAt !== null && now - current.limitedAt <= THROTTLE.inRowMs;
+        let haltedUntil: number | null = null;
+        if (pauseMs > THROTTLE.maxPauseMs) haltedUntil = pausedUntil;
+        else if (inRow) haltedUntil = now + Math.max(THROTTLE.maxPauseMs, 2 * pauseMs);
+        const next = {
+          ...current,
+          pausedUntil: Math.max(current.pausedUntil, pausedUntil),
+          haltedUntil: Math.max(current.haltedUntil, haltedUntil ?? 0),
+          // A halt ends the row, so the first limit after it only pauses.
+          limitedAt: haltedUntil === null ? now : null,
+        };
+        return [next, haltedUntil];
+      });
     },
 
     /** Books a page load the extension did not start, such as the reload after a solved challenge. */
