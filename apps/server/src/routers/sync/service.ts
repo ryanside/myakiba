@@ -12,11 +12,7 @@ import type { DbEnrichedSyncSessionItemRow } from "@myakiba/db/schema/figure";
 import { and, inArray, eq, desc, count, sql } from "drizzle-orm";
 import { syncJobStatusSchema } from "./model";
 import type { JobData, SyncJobProgress } from "@myakiba/contracts/sync/schema";
-import {
-  jobDataSchema,
-  sessionStatusToPhase,
-  sessionStatusToTerminalState,
-} from "@myakiba/contracts/sync/schema";
+import { sessionStatusToPhase, sessionStatusToTerminalState } from "@myakiba/contracts/sync/schema";
 import type { SyncSessionRow } from "@myakiba/contracts/sync/types";
 import type { SyncJobStatus, CollectionInsertType, ExistingItemWithLatestRelease } from "./model";
 import type { OrderInsertType } from "../orders/model";
@@ -28,39 +24,15 @@ import type {
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import {
   ACTIVE_SYNC_SESSION_STATUS_SET,
-  SYNC_QUEUE_NAME,
   SYNC_SESSION_RETRY_WINDOW_MS,
 } from "@myakiba/contracts/sync/constants";
-import { Queue } from "bullmq";
-import { createId } from "@paralleldrive/cuid2";
-import { env } from "@myakiba/env/server";
-import { tryCatch } from "@myakiba/utils/result";
-import {
-  getJobStatusSnapshotKey,
-  parseJobStatusPayload,
-  writeJobStatusSnapshotAndPublish,
-} from "@myakiba/redis/job-status";
+import { getJobStatusSnapshotKey, parseJobStatusPayload } from "@myakiba/redis/job-status";
 import { redis } from "@myakiba/redis/client";
+import { tryCatch } from "@myakiba/utils/result";
 import { createLogger } from "evlog";
-import { buildRetryJobData } from "./retry";
-
-const syncQueue = new Queue<JobData>(SYNC_QUEUE_NAME, {
-  connection: {
-    host: env.REDIS_HOST,
-    port: env.REDIS_PORT,
-    enableOfflineQueue: false,
-  },
-});
-
-syncQueue.on("error", (err: Error) => {
-  const queueLog = createLogger({
-    action: "sync.queue",
-    outcome: "error",
-    queue: { name: SYNC_QUEUE_NAME },
-  });
-  queueLog.error(err);
-  queueLog.emit();
-});
+import { insertItemRows } from "./item-rows";
+import type { ItemRows } from "./item-rows";
+import { publishJobStatus, queuedJobStatus } from "./job-status";
 
 type SyncSessionUpdatePayload = Partial<
   Pick<
@@ -85,20 +57,6 @@ type SyncSessionCreation = {
   readonly orderId?: string;
   readonly existingItemExternalIds?: readonly number[];
 };
-
-type RetrySyncSessionResult =
-  | { readonly outcome: "queued"; readonly jobId: string }
-  | { readonly outcome: "not_found" }
-  | { readonly outcome: "expired" }
-  | { readonly outcome: "unavailable" };
-
-type RetrySyncSessionPreparation =
-  | Exclude<RetrySyncSessionResult, { readonly outcome: "queued" }>
-  | {
-      readonly outcome: "prepared";
-      readonly jobId: string;
-      readonly jobData: JobData;
-    };
 
 const resolveFallbackJobStatusMessage = ({
   status,
@@ -178,75 +136,6 @@ class SyncService {
     if (rows.length > 0) {
       await tx.insert(syncSessionItem).values(rows);
     }
-  }
-
-  private async failPendingSyncSession(
-    syncSessionId: string,
-    statusMessage: string,
-  ): Promise<void> {
-    const failed = await db.transaction(async (tx) => {
-      const [session] = await tx
-        .update(syncSession)
-        .set({
-          status: sql`CASE WHEN ${syncSession.successCount} > 0 THEN 'partial' ELSE 'failed' END`,
-          statusMessage,
-          failCount: sql`${syncSession.totalItems} - ${syncSession.successCount}`,
-          completedAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(and(eq(syncSession.id, syncSessionId), eq(syncSession.status, "pending")))
-        .returning({ id: syncSession.id });
-      if (!session) return false;
-
-      await tx
-        .update(syncSessionItem)
-        .set({
-          status: "failed",
-          errorReason: statusMessage,
-          updatedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(syncSessionItem.syncSessionId, syncSessionId),
-            eq(syncSessionItem.status, "pending"),
-          ),
-        );
-      return true;
-    });
-    if (failed) await redis.del(getJobStatusSnapshotKey(syncSessionId)).catch(() => {});
-  }
-
-  private async writeQueuedJobStatus(jobId: string, statusMessage: string): Promise<void> {
-    const now = new Date().toISOString();
-    await writeJobStatusSnapshotAndPublish(redis, jobId, {
-      jobId,
-      phase: "queued",
-      statusMessage,
-      progress: null,
-      recentItems: [],
-      error: null,
-      startedAt: now,
-      updatedAt: now,
-      terminalState: null,
-    });
-  }
-
-  private async writeQueuedJobStatusBestEffort(
-    jobId: string,
-    syncSessionId: string,
-  ): Promise<void> {
-    const { error } = await tryCatch(this.writeQueuedJobStatus(jobId, SYNC_STATUS_MESSAGES.queued));
-    if (!error) return;
-
-    const cacheLog = createLogger({
-      action: "sync.queueStatusCache",
-      outcome: "warn",
-      jobId,
-      syncSessionId,
-      message: "Failed to publish queued status; durable session remains available",
-    });
-    cacheLog.error(error);
-    cacheLog.emit();
   }
 
   async getExistingItemsWithLatestReleaseByExternalIds(
@@ -380,122 +269,49 @@ class SyncService {
     }
   }
 
-  async queueSyncJob(jobData: JobData): Promise<string> {
-    const jobId = jobData.syncSessionId;
-
-    try {
-      const updated = await this.updateSyncSession(jobData.syncSessionId, {
-        requestPayload: jobData,
-      });
-      if (!updated) throw new Error("SYNC_SESSION_NOT_FOUND");
-      await this.writeQueuedJobStatusBestEffort(jobId, jobData.syncSessionId);
-      await syncQueue.add("sync-job", jobData, {
-        removeOnComplete: true,
-        removeOnFail: true,
-        jobId,
-      });
-
-      return jobId;
-    } catch (error) {
-      await this.failPendingSyncSession(
-        jobData.syncSessionId,
-        SYNC_STATUS_MESSAGES.failedBeforeStart,
-      );
-      throw error;
-    }
-  }
-
-  async retrySyncSession(sessionId: string, userId: string): Promise<RetrySyncSessionResult> {
-    const prepared = await db.transaction(async (tx): Promise<RetrySyncSessionPreparation> => {
-      const [session] = await tx
-        .select()
-        .from(syncSession)
-        .where(and(eq(syncSession.id, sessionId), eq(syncSession.userId, userId)))
-        .for("update");
-
-      if (!session) return { outcome: "not_found" };
-      if (ACTIVE_SYNC_SESSION_STATUS_SET.has(session.status)) {
-        return { outcome: "unavailable" };
-      }
-      if (session.status === "completed" || session.failCount === 0 || !session.requestPayload) {
-        return { outcome: "unavailable" };
-      }
-      if (session.createdAt.getTime() + SYNC_SESSION_RETRY_WINDOW_MS <= Date.now()) {
-        return { outcome: "expired" };
-      }
-
-      const parsedPayload = jobDataSchema.safeParse(session.requestPayload);
-      if (!parsedPayload.success) return { outcome: "unavailable" };
-
-      if (
-        parsedPayload.data.type === "order-item" ||
-        (parsedPayload.data.type === "order" && session.successCount > 0)
-      ) {
-        const [existingOrder] = await tx
-          .select({ id: orderTable.id })
-          .from(orderTable)
+  /**
+   * Starts a run the page drives through the extension. The rows for Items already in
+   * the Item Database are written now, and the session stays processing until the page
+   * reports every missing item.
+   */
+  async startSyncRun({
+    session,
+    requestPayload,
+    existingRows,
+  }: {
+    readonly session: SyncSessionCreation;
+    readonly requestPayload: JobData;
+    readonly existingRows: ItemRows;
+  }): Promise<void> {
+    const existingIds = session.existingItemExternalIds ?? [];
+    const createsOrder = requestPayload.type === "order" && existingRows.collectionItems.length > 0;
+    await db.transaction(async (tx) => {
+      await this.insertSyncSession(tx, session);
+      await insertItemRows(tx, requestPayload.type, existingRows);
+      if (existingIds.length > 0) {
+        await tx
+          .update(syncSessionItem)
+          .set({ status: "scraped", updatedAt: new Date() })
           .where(
             and(
-              eq(orderTable.id, parsedPayload.data.order.details.id),
-              eq(orderTable.userId, userId),
+              eq(syncSessionItem.syncSessionId, session.id),
+              inArray(syncSessionItem.itemExternalId, [...existingIds]),
             ),
           );
-        if (!existingOrder) return { outcome: "unavailable" };
       }
-
-      const failedItems = await tx
-        .select({ itemExternalId: syncSessionItem.itemExternalId })
-        .from(syncSessionItem)
-        .where(
-          and(eq(syncSessionItem.syncSessionId, sessionId), eq(syncSessionItem.status, "failed")),
-        );
-      const failedItemExternalIds = new Set(failedItems.map((item) => item.itemExternalId));
-      const existingItems =
-        parsedPayload.data.type === "item"
-          ? []
-          : await this.getExistingItemsWithLatestReleaseByExternalIds(
-              [...failedItemExternalIds],
-              tx,
-            );
-      const jobData = buildRetryJobData(parsedPayload.data, failedItemExternalIds, existingItems);
-
-      const jobId = createId();
-      await tx
-        .update(syncSessionItem)
-        .set({ status: "pending", errorReason: null, updatedAt: new Date() })
-        .where(
-          and(eq(syncSessionItem.syncSessionId, sessionId), eq(syncSessionItem.status, "failed")),
-        );
       await tx
         .update(syncSession)
         .set({
-          jobId,
-          status: "pending",
-          statusMessage: SYNC_STATUS_MESSAGES.retryQueued,
-          failCount: 0,
-          completedAt: null,
+          requestPayload,
+          status: "processing",
+          statusMessage: SYNC_STATUS_MESSAGES.queued,
+          successCount: existingIds.length,
+          ...(createsOrder && { orderId: requestPayload.order.details.id }),
           updatedAt: new Date(),
         })
-        .where(eq(syncSession.id, sessionId));
-
-      return { outcome: "prepared", jobId, jobData };
+        .where(eq(syncSession.id, session.id));
     });
-
-    if (prepared.outcome !== "prepared") return prepared;
-
-    try {
-      await syncQueue.add("sync-job", prepared.jobData, {
-        removeOnComplete: true,
-        removeOnFail: true,
-        jobId: prepared.jobId,
-      });
-      return { outcome: "queued", jobId: prepared.jobId };
-    } catch (error) {
-      await tryCatch(
-        this.failPendingSyncSession(sessionId, SYNC_STATUS_MESSAGES.failedBeforeStart),
-      );
-      throw error;
-    }
+    await publishJobStatus(queuedJobStatus(session.id, SYNC_STATUS_MESSAGES.queued), session.id);
   }
 
   async getJobStatus(jobId: string, userId: string): Promise<SyncJobStatus> {
@@ -515,12 +331,15 @@ class SyncService {
     if (!session) {
       throw new Error("SYNC_JOB_NOT_FOUND");
     }
+    const terminalState = sessionStatusToTerminalState(session.status);
 
     const cached = await redis.get(getJobStatusSnapshotKey(jobId));
     if (cached) {
       const parsedStatus = parseJobStatusPayload(cached);
+      const sessionOverridesSnapshot =
+        parsedStatus !== null && terminalState !== null && parsedStatus.terminalState === null;
 
-      if (parsedStatus) {
+      if (parsedStatus && !sessionOverridesSnapshot) {
         // Defensive backfill: if the worker crashed between marking the session
         // terminal and writing a terminal-state snapshot, derive it from the session.
         const isPhaseTerminal =
@@ -535,17 +354,18 @@ class SyncService {
         return syncJobStatusSchema.parse(parsedStatus);
       }
 
-      createLogger({
-        action: "sync.getJobStatus",
-        outcome: "warn",
-        jobId,
-        message: "Corrupt Redis job status cache; falling back to DB",
-      }).emit();
+      if (!parsedStatus) {
+        createLogger({
+          action: "sync.getJobStatus",
+          outcome: "warn",
+          jobId,
+          message: "Corrupt Redis job status cache; falling back to DB",
+        }).emit();
+      }
     }
 
     // Redis key expired — synthesize a v2 snapshot from the durable session row.
     const statusMessage = resolveFallbackJobStatusMessage(session);
-    const terminalState = sessionStatusToTerminalState(session.status);
     const progress: SyncJobProgress | null =
       session.totalItems > 0
         ? {

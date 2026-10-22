@@ -8,6 +8,8 @@ import {
   collectionSyncSchema,
   internalCsvItemSchema,
   orderSyncSchema,
+  syncItemFailureSchema,
+  syncItemUploadSchema,
   syncOrderItemsSchema,
 } from "./model";
 import type {
@@ -37,6 +39,8 @@ import {
   waitForNextJobStatusEvent,
 } from "@/lib/job-status-stream";
 import { prepareCsvItems } from "./csv";
+import { idsToFetch } from "./item-rows";
+import { completeSyncItem, failSyncItem, retrySyncRun } from "./run";
 
 const createTerminalJobStatus = ({
   jobId,
@@ -88,6 +92,8 @@ const buildExistingItemLookups = (existingItems: ExistingItemsWithLatestRelease)
   };
 };
 
+const sessionParams = z.object({ id: z.string() });
+
 const syncRouter = new Elysia({ prefix: "/sync" })
   .use(betterAuth)
   .use(evlog())
@@ -111,57 +117,64 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       const existingIds = new Set(existingItems.map((item) => item.externalId));
       const missingIds = body.items.filter((id) => !existingIds.has(id));
       const syncSessionId = createId();
-      const { error: sessionError } = await tryCatch(
-        SyncService.createSyncSession({
-          id: syncSessionId,
-          userId: user.id,
-          syncType: "item",
-          itemExternalIds: body.items,
-          existingItemExternalIds: body.items.filter((id) => existingIds.has(id)),
-        }),
-      );
-      if (sessionError) {
-        log.error(sessionError, { step: "createSyncSession", outcome: "error" });
-        return status(500, "Failed to create import record");
-      }
-
-      log.set({
-        sync: { sessionId: syncSessionId },
-        items: {
-          requested: body.items.length,
-          existing: existingIds.size,
-          queuedForScrape: missingIds.length,
-        },
-      });
+      const session = {
+        id: syncSessionId,
+        userId: user.id,
+        syncType: "item" as const,
+        itemExternalIds: body.items,
+        existingItemExternalIds: body.items.filter((id) => existingIds.has(id)),
+      };
       const statusMessage =
         missingIds.length > 0
           ? SYNC_STATUS_MESSAGES.queued
           : "These items are already in the item database.";
-      const { error: startError } = await tryCatch<string | boolean>(
-        missingIds.length > 0
-          ? SyncService.queueSyncJob({
+
+      if (missingIds.length > 0) {
+        const { error: startError } = await tryCatch(
+          SyncService.startSyncRun({
+            session,
+            requestPayload: {
               type: "item",
               payloadVersion: 3,
               userId: user.id,
               syncSessionId,
               itemExternalIds: missingIds,
-            })
-          : SyncService.updateSyncSession(syncSessionId, {
-              status: "completed",
-              statusMessage,
-              completedAt: new Date(),
-            }),
-      );
-      if (startError) {
-        log.error(startError, { step: "startItemSync", outcome: "error" });
-        return status(
-          500,
-          missingIds.length > 0
-            ? "Failed to queue item database items"
-            : "Failed to update import record",
+            },
+            existingRows: { collectionItems: [], orders: [] },
+          }),
         );
+        if (startError) {
+          log.error(startError, { step: "startSyncRun", outcome: "error" });
+          return status(500, "Failed to create import record");
+        }
+      } else {
+        const { error: sessionError } = await tryCatch(SyncService.createSyncSession(session));
+        if (sessionError) {
+          log.error(sessionError, { step: "createSyncSession", outcome: "error" });
+          return status(500, "Failed to create import record");
+        }
+        const { error: completeError } = await tryCatch(
+          SyncService.updateSyncSession(syncSessionId, {
+            status: "completed",
+            statusMessage,
+            completedAt: new Date(),
+          }),
+        );
+        if (completeError) {
+          log.error(completeError, { step: "startItemSync", outcome: "error" });
+          return status(500, "Failed to update import record");
+        }
       }
-      log.set({ outcome: "success" });
+
+      log.set({
+        outcome: "success",
+        sync: { sessionId: syncSessionId },
+        items: {
+          requested: body.items.length,
+          existing: existingIds.size,
+          toFetch: missingIds.length,
+        },
+      });
       return {
         status: statusMessage,
         isFinished: missingIds.length === 0,
@@ -169,6 +182,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         newItems: missingIds.length,
         jobId: missingIds.length > 0 ? syncSessionId : null,
         syncSessionId,
+        missingMfcItemIds: missingIds,
       };
     },
     { body: itemSyncSchema, auth: true, rateLimit: "item" },
@@ -247,12 +261,16 @@ const syncRouter = new Elysia({ prefix: "/sync" })
               orderItems,
               requestPayload: jobData,
             })
-          : SyncService.createSyncSession(session),
+          : SyncService.startSyncRun({
+              session,
+              requestPayload: jobData,
+              existingRows: { collectionItems, orders: orderItems },
+            }),
       );
 
       if (syncSessionError) {
         log.error(syncSessionError, {
-          step: itemsToScrape.length === 0 ? "insertToCollectionAndOrders" : "createSyncSession",
+          step: itemsToScrape.length === 0 ? "insertToCollectionAndOrders" : "startSyncRun",
           outcome: "error",
           sync: { type: "csv", sessionId: syncSessionId },
         });
@@ -264,34 +282,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         );
       }
 
-      log.set({
-        sync: {
-          type: "csv",
-          sessionId: syncSessionId,
-        },
-      });
-
-      let jobId: string | null = null;
-      if (itemsToScrape.length > 0) {
-        const { data: jobIdData, error: queueCSVSyncJobError } = await tryCatch(
-          SyncService.queueSyncJob(jobData),
-        );
-
-        if (queueCSVSyncJobError) {
-          log.error(queueCSVSyncJobError, {
-            step: "queueCSVSyncJob",
-            outcome: "error",
-            sync: {
-              type: "csv",
-              sessionId: syncSessionId,
-            },
-          });
-          return status(500, "Failed to queue MyFigureCollection CSV import");
-        }
-
-        jobId = jobIdData;
-      }
-
+      const jobId = itemsToScrape.length > 0 ? syncSessionId : null;
       const statusMessage: string = jobId
         ? SYNC_STATUS_MESSAGES.queued
         : SYNC_STATUS_MESSAGES.insertedWithoutScrape;
@@ -307,7 +298,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           requested: body.length,
           existing: existingItemExternalIds.length,
           toInsert: collectionItems.length,
-          queuedForScrape: itemsToScrape.length,
+          toFetch: itemsToScrape.length,
         },
       });
 
@@ -318,6 +309,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         newItems: itemsToScrape.length,
         jobId,
         syncSessionId,
+        missingMfcItemIds: idsToFetch(jobData),
       };
     },
     {
@@ -470,12 +462,19 @@ const syncRouter = new Elysia({ prefix: "/sync" })
               orderItems: [order],
               requestPayload: jobData,
             })
-          : SyncService.createSyncSession(session),
+          : SyncService.startSyncRun({
+              session,
+              requestPayload: jobData,
+              existingRows: {
+                collectionItems: collectionItemsToInsert,
+                orders: collectionItemsToInsert.length > 0 ? [order] : [],
+              },
+            }),
       );
 
       if (syncSessionError) {
         log.error(syncSessionError, {
-          step: itemsToScrape.length === 0 ? "insertToCollectionAndOrders" : "createSyncSession",
+          step: itemsToScrape.length === 0 ? "insertToCollectionAndOrders" : "startSyncRun",
           outcome: "error",
           sync: {
             type: "order",
@@ -501,27 +500,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         order: { id: orderId },
       });
 
-      let jobId: string | null = null;
-      if (itemsToScrape.length > 0) {
-        const { data: jobIdData, error: queueOrderSyncJobError } = await tryCatch(
-          SyncService.queueSyncJob(jobData),
-        );
-
-        if (queueOrderSyncJobError) {
-          log.error(queueOrderSyncJobError, {
-            step: "queueOrderSyncJob",
-            outcome: "error",
-            sync: {
-              type: "order",
-              sessionId: syncSessionId,
-              orderId,
-            },
-            order: { id: orderId },
-          });
-          return status(500, "Failed to queue order creation");
-        }
-        jobId = jobIdData;
-      }
+      const jobId = itemsToScrape.length > 0 ? syncSessionId : null;
 
       log.set({
         outcome: "success",
@@ -536,7 +515,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           requested: body.items.length,
           existing: existingOrderItemExternalIds.length,
           toInsert: itemsToInsert.length,
-          queuedForScrape: itemsToScrape.length,
+          toFetch: itemsToScrape.length,
         },
       });
 
@@ -551,6 +530,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         newItems: itemsToScrape.length,
         jobId,
         syncSessionId,
+        missingMfcItemIds: idsToFetch(jobData),
       };
     },
     {
@@ -717,12 +697,16 @@ const syncRouter = new Elysia({ prefix: "/sync" })
               collectionItems: collectionItemsToInsert,
               requestPayload: jobData,
             })
-          : SyncService.createSyncSession(session),
+          : SyncService.startSyncRun({
+              session,
+              requestPayload: jobData,
+              existingRows: { collectionItems: collectionItemsToInsert, orders: [] },
+            }),
       );
 
       if (syncSessionError) {
         log.error(syncSessionError, {
-          step: itemsToScrape.length === 0 ? "insertOrderItems" : "createSyncSession",
+          step: itemsToScrape.length === 0 ? "insertOrderItems" : "startSyncRun",
           outcome: "error",
           sync: {
             type: "order-item",
@@ -748,27 +732,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         order: { id: existingOrder.id },
       });
 
-      let jobId: string | null = null;
-      if (itemsToScrape.length > 0) {
-        const { data: jobIdData, error: queueOrderItemSyncJobError } = await tryCatch(
-          SyncService.queueSyncJob(jobData),
-        );
-
-        if (queueOrderItemSyncJobError) {
-          log.error(queueOrderItemSyncJobError, {
-            step: "queueOrderItemSyncJob",
-            outcome: "error",
-            sync: {
-              type: "order-item",
-              sessionId: syncSessionId,
-              orderId: existingOrder.id,
-            },
-            order: { id: existingOrder.id },
-          });
-          return status(500, "Failed to queue order items");
-        }
-        jobId = jobIdData;
-      }
+      const jobId = itemsToScrape.length > 0 ? syncSessionId : null;
 
       log.set({
         outcome: "success",
@@ -783,7 +747,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           requested: body.items.length,
           existing: existingOrderItemExternalIds.length,
           toInsert: itemsToInsert.length,
-          queuedForScrape: itemsToScrape.length,
+          toFetch: itemsToScrape.length,
         },
       });
 
@@ -798,6 +762,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         newItems: itemsToScrape.length,
         jobId,
         syncSessionId,
+        missingMfcItemIds: idsToFetch(jobData),
       };
     },
     {
@@ -922,12 +887,16 @@ const syncRouter = new Elysia({ prefix: "/sync" })
               collectionItems: collectionItemsToInsert,
               requestPayload: jobData,
             })
-          : SyncService.createSyncSession(session),
+          : SyncService.startSyncRun({
+              session,
+              requestPayload: jobData,
+              existingRows: { collectionItems: collectionItemsToInsert, orders: [] },
+            }),
       );
 
       if (syncSessionError) {
         log.error(syncSessionError, {
-          step: itemsToScrape.length === 0 ? "insertToCollectionAndOrders" : "createSyncSession",
+          step: itemsToScrape.length === 0 ? "insertToCollectionAndOrders" : "startSyncRun",
           outcome: "error",
           sync: { type: "collection", sessionId: syncSessionId },
         });
@@ -946,25 +915,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         },
       });
 
-      let jobId: string | null = null;
-      if (itemsToScrape.length > 0) {
-        const { data: jobIdData, error: queueCollectionSyncJobError } = await tryCatch(
-          SyncService.queueSyncJob(jobData),
-        );
-
-        if (queueCollectionSyncJobError) {
-          log.error(queueCollectionSyncJobError, {
-            step: "queueCollectionSyncJob",
-            outcome: "error",
-            sync: {
-              type: "collection",
-              sessionId: syncSessionId,
-            },
-          });
-          return status(500, "Failed to queue collection items");
-        }
-        jobId = jobIdData;
-      }
+      const jobId = itemsToScrape.length > 0 ? syncSessionId : null;
 
       log.set({
         outcome: "success",
@@ -977,7 +928,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           requested: body.length,
           existing: existingCollectionItemExternalIds.length,
           toInsert: itemsToInsert.length,
-          queuedForScrape: itemsToScrape.length,
+          toFetch: itemsToScrape.length,
         },
       });
 
@@ -992,6 +943,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         newItems: itemsToScrape.length,
         jobId,
         syncSessionId,
+        missingMfcItemIds: idsToFetch(jobData),
       };
     },
     {
@@ -1149,9 +1101,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         return status(403, SYNC_STATUS_MESSAGES.requireEmailVerification);
       }
 
-      const { data: result, error } = await tryCatch(
-        SyncService.retrySyncSession(params.id, user.id),
-      );
+      const { data: result, error } = await tryCatch(retrySyncRun(params.id, user.id));
       if (error) {
         log.error(error, { step: "retrySyncSession", outcome: "error" });
         return status(500, "Failed to retry failed item results");
@@ -1178,14 +1128,71 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         sync: {
           jobId: result.jobId,
         },
+        items: { toFetch: result.missingMfcItemIds.length },
       });
-      return { jobId: result.jobId };
+      return { jobId: result.jobId, missingMfcItemIds: result.missingMfcItemIds };
     },
     {
       params: z.object({ id: z.string() }),
       auth: true,
       rateLimit: "retry",
     },
+  )
+  .post(
+    "/sessions/:id/items",
+    async ({ params, body, user, log }) => {
+      log.set({
+        action: "sync.completeItem",
+        user: { id: user.id },
+        sync: { sessionId: params.id, jobId: body.jobId },
+        mfc: { itemId: body.mfcItemId },
+      });
+      if (!user.emailVerified) {
+        log.set({ outcome: "forbidden", sync: { reason: "email_not_verified" } });
+        return status(403, SYNC_STATUS_MESSAGES.requireEmailVerification);
+      }
+
+      const { data: result, error } = await tryCatch(completeSyncItem(params.id, user.id, body));
+      if (error) {
+        log.error(error, { step: "completeSyncItem", outcome: "error" });
+        return status(500, "Failed to import item");
+      }
+      if (!result) {
+        log.set({ outcome: "not_found" });
+        return status(404, "This item is not part of the import");
+      }
+      log.set({ outcome: result.outcome });
+      return result;
+    },
+    { params: sessionParams, body: syncItemUploadSchema, auth: true, rateLimit: "mfcIngest" },
+  )
+  .post(
+    "/sessions/:id/failures",
+    async ({ params, body, user, log }) => {
+      log.set({
+        action: "sync.failItem",
+        user: { id: user.id },
+        sync: { sessionId: params.id, jobId: body.jobId },
+        mfc: { itemId: body.mfcItemId, error: body.error },
+      });
+      if (!user.emailVerified) {
+        log.set({ outcome: "forbidden", sync: { reason: "email_not_verified" } });
+        return status(403, SYNC_STATUS_MESSAGES.requireEmailVerification);
+      }
+
+      const { data: result, error } = await tryCatch(failSyncItem(params.id, user.id, body));
+      if (error) {
+        log.error(error, { step: "failSyncItem", outcome: "error" });
+        return status(500, "Failed to save the item result");
+      }
+      if (!result) {
+        log.set({ outcome: "not_found" });
+        return status(404, "Import not found");
+      }
+      log.set({ outcome: result.outcome });
+      return result;
+    },
+    { params: sessionParams, body: syncItemFailureSchema, auth: true, rateLimit: "mfcIngest" },
   )
   .get(
     "/job-status",
