@@ -13,10 +13,12 @@ import {
   createRootRouteWithContext,
   createRoute,
   createRouter,
+  getRouteApi,
   Outlet,
 } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import * as z from "zod";
 import type { RouterAppContext } from "@/routes/__root";
 import { createSessionSource } from "@/lib/session";
 import type { Session, SessionSource } from "@/lib/session";
@@ -70,6 +72,13 @@ globalThis.fetch = Object.assign(
     const url = input instanceof Request ? input.url : String(input);
     if (url.endsWith("/account-type"))
       return Response.json({ hasCredentialAccount: endFailure === "password" });
+    if (url.endsWith("/update-user")) {
+      const changes = z
+        .object({ currency: z.string(), dateFormat: z.string() })
+        .parse(await new Request(input, init).json());
+      account = { ...account, user: { ...account.user, ...changes } };
+      return Response.json({ status: true });
+    }
     if (url.endsWith("/sign-out") || url.endsWith("/delete-user")) {
       if (endFailure === "network") throw new TypeError("Failed to fetch");
       if (endFailure === "server") {
@@ -122,6 +131,8 @@ const { Route: loginRoute } = await import("@/routes/(auth)/login");
 const { Route: appRoute } = await import("@/routes/(app)/route");
 const { authClient } = await import("@/lib/auth-client");
 const { Toaster } = await import("@/components/ui/toast");
+const { Preferences } = await import("@/components/settings/preferences");
+const { useUserPreferences } = await import("@/hooks/use-user-preferences");
 const sessionAtom = authClient.$store.atoms.session;
 if (!sessionAtom) throw new Error("Missing session atom");
 const listen = sessionAtom.listen.bind(sessionAtom);
@@ -191,6 +202,19 @@ function Dashboard() {
   );
 }
 
+const appRouteApi = getRouteApi("/(app)");
+
+function Settings() {
+  const { user } = appRouteApi.useRouteContext().session;
+  const { dateFormat } = useUserPreferences();
+  return (
+    <>
+      <p>{`Dates show as ${dateFormat}`}</p>
+      <Preferences user={user} />
+    </>
+  );
+}
+
 function renderApp(router: ReturnType<typeof makeRouter>, sessions: SessionSource) {
   const queryClient = new QueryClient();
   render(<AuthRouterProvider router={router} sessions={sessions} />, {
@@ -222,6 +246,11 @@ function makeRouter(sessions: SessionSource, path = "/dashboard", checkSignedIn 
     path: "/orders",
     component: () => <h1>Orders</h1>,
   });
+  const settings = createRoute({
+    getParentRoute: () => app,
+    path: "/settings",
+    component: Settings,
+  });
   const login = createRoute({
     getParentRoute: () => root,
     path: "/login",
@@ -230,14 +259,14 @@ function makeRouter(sessions: SessionSource, path = "/dashboard", checkSignedIn 
     component: () => <h1>Login</h1>,
   });
   return createRouter({
-    routeTree: root.addChildren([app.addChildren([dashboard, orders]), login]),
+    routeTree: root.addChildren([app.addChildren([dashboard, orders, settings]), login]),
     history: createMemoryHistory({ initialEntries: [path] }),
     context: { readSession: sessions.read },
     defaultPendingMinMs: 0,
   });
 }
 
-async function openApp(checkSignedIn = false) {
+async function openApp(checkSignedIn = false, path = "/dashboard") {
   const authState = renderHook(() => authClient.useSession());
   const status = responseStatus;
   const authenticated = signedIn;
@@ -249,7 +278,7 @@ async function openApp(checkSignedIn = false) {
   sessionRequests = 0;
   await act(() => authState.result.current.refetch());
   const sessions = createSessionSource();
-  const router = makeRouter(sessions, "/dashboard", checkSignedIn);
+  const router = makeRouter(sessions, path, checkSignedIn);
   const queryClient = renderApp(router, sessions);
   return { router, queryClient, refetch: () => authState.result.current.refetch(), authState };
 }
@@ -364,6 +393,22 @@ test("a session that ends drops the signed-out account's cached data", async () 
   await act(refetch);
   await screen.findByRole("heading", { name: "Login" });
   expect(queryClient.getQueryData<string>(ownerKey)).toBeUndefined();
+});
+
+test("saved preferences reach the route context without a page reload", async () => {
+  await openApp(false, "/settings");
+  await screen.findByText("Dates show as MM/DD/YYYY");
+  const check = Promise.withResolvers<null>();
+  held = check.promise;
+  const requests = sessionRequests;
+
+  fireEvent.click(screen.getByRole("button", { name: "DD/MM/YYYY" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save preferences" }));
+  await screen.findByText("Preferences updated successfully");
+  await waitFor(() => expect(sessionRequests).toBeGreaterThan(requests));
+  check.resolve(null);
+
+  expect(await screen.findByText("Dates show as DD/MM/YYYY")).toBeTruthy();
 });
 
 test.each([
