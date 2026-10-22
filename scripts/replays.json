@@ -527,6 +527,12 @@
       ]
     },
     {
+      "fix": "7da6de43",
+      "bug": "Google sign-in navigated into the signed-out app before opening consent",
+      "test": "apps/web/src/components/auth/google-sign-in.test.tsx",
+      "fixed": ["Google sign-in opens consent without navigating through the signed-out app"]
+    },
+    {
       "fix": "0d3f95ce",
       "bug": "a dashboard order bar hover highlight replaced every bar node, so a press that began before the replacement lost its click",
       "test": "apps/web/src/components/dashboard/orders-bar-chart.test.tsx",
