@@ -1,7 +1,7 @@
-import { createContext, memo, use, useCallback, useEffect, useMemo, useState } from "react";
+import { createContext, memo, use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentProps } from "react";
 import { Bar, Rectangle, XAxis, ReferenceLine } from "recharts";
-import { useMotionValueEvent, useReducedMotionConfig, useSpring } from "motion/react";
+import { useMotionValueEvent, useReducedMotion, useSpring } from "motion/react";
 import { useNavigate } from "@tanstack/react-router";
 import { getDateOnlyMonthBounds } from "@myakiba/utils/date-only";
 import { EvilBarChart } from "@/components/evilcharts/charts/recharts-bar-chart";
@@ -50,9 +50,10 @@ interface ActiveMonth {
 interface OrderChartState {
   readonly months: readonly MonthlyChartRow[];
   readonly active: ActiveMonth;
+  readonly focusedIndex: number | undefined;
   readonly onMonthFocus: (monthIndex: number) => void;
   readonly onMonthOpen: (monthIndex: number) => void;
-  readonly onChartBlur: () => void;
+  readonly onChartBlur: (monthIndex: number, isPointerInChart: boolean) => void;
 }
 
 // Recharts remounts every bar whenever <Bar> re-renders, so the highlight
@@ -60,6 +61,7 @@ interface OrderChartState {
 const OrderChartContext = createContext<OrderChartState>({
   months: [],
   active: { index: 0, value: 0 },
+  focusedIndex: undefined,
   onMonthFocus: () => {},
   onMonthOpen: () => {},
   onChartBlur: () => {},
@@ -83,7 +85,8 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
 
   const currentMonthIndex = useMemo(() => new Date().getMonth(), []);
 
-  const [activeIndex, setActiveIndex] = useState<number | undefined>(currentMonthIndex);
+  const [activeIndex, setActiveIndex] = useState<number>();
+  const [focusedIndex, setFocusedIndex] = useState<number>();
 
   const getReleaseMonthDateRange = useCallback((monthIndex: number) => {
     const currentYear = new Date().getFullYear();
@@ -95,10 +98,17 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
     };
   }, []);
 
-  const resetActiveIndex = useCallback(
-    () => setActiveIndex(currentMonthIndex),
-    [currentMonthIndex],
-  );
+  const resetActiveIndex = useCallback(() => setActiveIndex(undefined), []);
+
+  const focusMonth = useCallback((monthIndex: number) => {
+    setFocusedIndex(monthIndex);
+    setActiveIndex(undefined);
+  }, []);
+
+  const blurChart = useCallback((monthIndex: number, isPointerInChart: boolean) => {
+    setFocusedIndex(undefined);
+    if (isPointerInChart) setActiveIndex((index) => index ?? monthIndex);
+  }, []);
 
   const handleBarClick = useCallback(
     (monthIndex: number) => {
@@ -111,27 +121,22 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
     [navigate, getReleaseMonthDateRange],
   );
 
+  // The pointer's month wins, then the focused month, then the current month.
   const maxValueIndex = useMemo(() => {
-    if (activeIndex !== undefined) {
-      return { index: activeIndex, value: chartData[activeIndex]?.desktop ?? 0 };
-    }
-    return chartData.reduce(
-      (max, d, index) => {
-        return d.desktop > max.value ? { index, value: d.desktop } : max;
-      },
-      { index: 0, value: 0 },
-    );
-  }, [activeIndex, chartData]);
+    const index = activeIndex ?? focusedIndex ?? currentMonthIndex;
+    return { index, value: chartData[index]?.desktop ?? 0 };
+  }, [activeIndex, focusedIndex, currentMonthIndex, chartData]);
 
   const orderChart = useMemo(
     () => ({
       months: chartData,
       active: maxValueIndex,
-      onMonthFocus: setActiveIndex,
+      focusedIndex,
+      onMonthFocus: focusMonth,
       onMonthOpen: handleBarClick,
-      onChartBlur: resetActiveIndex,
+      onChartBlur: blurChart,
     }),
-    [chartData, maxValueIndex, handleBarClick, resetActiveIndex],
+    [chartData, maxValueIndex, focusedIndex, focusMonth, handleBarClick, blurChart],
   );
 
   return (
@@ -247,7 +252,16 @@ function OrderBar(props: OrderBarProps): React.ReactNode {
   const monthIndex = props.originalDataIndex;
   const month = chart.months[monthIndex];
   const isActive = monthIndex === chart.active.index;
+  const isFocused = monthIndex === chart.focusedIndex;
   const column = props.background;
+  const barRef = useRef<SVGGElement>(null);
+
+  // Recharts remounts a bar when its value changes, which drops focus to the body.
+  useEffect(() => {
+    if (isFocused && document.activeElement === document.body) {
+      barRef.current?.focus({ preventScroll: true });
+    }
+  }, [isFocused]);
 
   const handleKeyDown = (event: React.KeyboardEvent<SVGGElement>) => {
     if (event.key === "Enter") {
@@ -266,19 +280,22 @@ function OrderBar(props: OrderBarProps): React.ReactNode {
   const handleBlur = (event: React.FocusEvent<SVGGElement>) => {
     const next = event.relatedTarget;
     if (next instanceof Element && next.closest("[data-month-index]")) return;
-    chart.onChartBlur();
+    chart.onChartBlur(monthIndex, Boolean(event.currentTarget.closest("svg")?.matches(":hover")));
   };
 
   return (
     <g
       role="link"
-      tabIndex={isActive ? 0 : -1}
+      ref={barRef}
+      tabIndex={monthIndex === (chart.focusedIndex ?? chart.active.index) ? 0 : -1}
       aria-label={
         month && `${month.month}: ${month.desktop} ${month.desktop === 1 ? "order" : "orders"}`
       }
       data-month-index={monthIndex}
       className="group/bar outline-none"
-      onFocus={() => chart.onMonthFocus(monthIndex)}
+      onFocus={() => {
+        if (!isFocused) chart.onMonthFocus(monthIndex);
+      }}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
     >
@@ -356,7 +373,7 @@ function CustomReferenceLabel(props: CustomReferenceLabelProps): React.ReactNode
 
 function OrderReferenceLine(): React.ReactNode {
   const { value } = use(OrderChartContext).active;
-  const reduceMotion = useReducedMotionConfig();
+  const reduceMotion = useReducedMotion();
   const valueSpring = useSpring(value, { stiffness: 150, damping: 18 });
   const [springyValue, setSpringyValue] = useState(() => valueSpring.get());
 

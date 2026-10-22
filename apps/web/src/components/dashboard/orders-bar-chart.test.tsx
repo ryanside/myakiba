@@ -1,6 +1,5 @@
 import { afterAll, afterEach, expect, jest, mock, spyOn, test } from "bun:test";
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
-import { MotionConfig } from "motion/react";
 
 const navigate = mock(() => Promise.resolve());
 const router = await import("@tanstack/react-router");
@@ -10,6 +9,22 @@ const { OrdersBarChart } = await import("./orders-bar-chart");
 spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(
   () => new DOMRect(0, 0, 700, 200),
 );
+
+let prefersReducedMotion = false;
+const mediaQueries = new Set<MediaQueryList>();
+const matchMedia = window.matchMedia.bind(window);
+spyOn(window, "matchMedia").mockImplementation((query) => {
+  const mediaQuery = matchMedia(query);
+  Object.defineProperty(mediaQuery, "matches", {
+    get: () => prefersReducedMotion && query.includes("prefers-reduced-motion"),
+  });
+  mediaQueries.add(mediaQuery);
+  return mediaQuery;
+});
+function setPrefersReducedMotion(value: boolean) {
+  prefersReducedMotion = value;
+  for (const mediaQuery of mediaQueries) mediaQuery.dispatchEvent(new Event("change"));
+}
 
 jest.setSystemTime(new Date(2026, 9, 21));
 afterAll(() => {
@@ -170,15 +185,59 @@ test("tabbing out of the order chart returns the highlight to the current month"
 });
 
 test("with reduced motion the order reference line jumps to the highlighted month", async () => {
-  const { container } = render(
-    <MotionConfig reducedMotion="always">
-      <OrdersBarChart data={data} />
-    </MotionConfig>,
-  );
+  setPrefersReducedMotion(true);
+  try {
+    const { container } = render(<OrdersBarChart data={data} />);
+    await frame(600);
+    act(() => monthLink(container, "August").focus());
+    await frame(16);
+    expect(container.querySelector(".recharts-reference-line line")?.getAttribute("y1")).toBe(
+      bar(container, 0).getAttribute("y"),
+    );
+  } finally {
+    setPrefersReducedMotion(false);
+  }
+});
+
+test("a focused month keeps the tab stop and the Enter target while the pointer highlights another month", async () => {
+  const { container } = render(<OrdersBarChart data={data} />);
+  await frame(600);
+  const august = monthLink(container, "August");
+  act(() => august.focus());
+  fireEvent.mouseOver(bar(container, 1));
+  await frame();
+  expect(container.textContent).toContain("1 order in October");
+  expect(document.activeElement).toBe(august);
+  expect(august.isConnected).toBe(true);
+  expect(
+    [...container.querySelectorAll('[role="link"][tabindex="0"]')].map((link) =>
+      link.getAttribute("aria-label"),
+    ),
+  ).toEqual(["August: 2 orders"]);
+  const wrapper = container.querySelector(".recharts-wrapper");
+  if (!wrapper) throw new Error("Missing order chart wrapper");
+  fireEvent.mouseLeave(wrapper);
+  await frame();
+  expect(container.textContent).toContain("2 orders in August");
+  fireEvent.keyDown(august, { key: "Enter" });
+  expect(navigate).toHaveBeenCalledWith({
+    to: "/orders",
+    search: { releaseDateStart: "2026-08-01", releaseDateEnd: "2026-08-31" },
+  });
+});
+
+test("a focused month keeps keyboard focus when the order counts refresh", async () => {
+  const { container, rerender } = render(<OrdersBarChart data={data} />);
   await frame(600);
   act(() => monthLink(container, "August").focus());
-  await frame(16);
-  expect(container.querySelector(".recharts-reference-line line")?.getAttribute("y1")).toBe(
-    bar(container, 0).getAttribute("y"),
+  rerender(
+    <OrdersBarChart
+      data={[
+        { month: 8, orderCount: 3 },
+        { month: 10, orderCount: 1 },
+      ]}
+    />,
   );
+  await frame(600);
+  expect(document.activeElement?.getAttribute("aria-label")).toBe("August: 3 orders");
 });
