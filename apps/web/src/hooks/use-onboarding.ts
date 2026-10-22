@@ -6,7 +6,6 @@ const STORAGE_KEY = "myakiba:onboarding-v2";
 
 const storedOnboardingStateSchema = z.object({
   step: z.number().finite().optional(),
-  hasSeen: z.boolean().optional(),
   completed: z.boolean().optional(),
 });
 
@@ -14,13 +13,11 @@ type StoredOnboardingState = z.infer<typeof storedOnboardingStateSchema>;
 
 type OnboardingState = {
   readonly step: number;
-  readonly hasSeen: boolean;
   readonly completed: boolean;
 };
 
 const INITIAL_STATE: StoredOnboardingState = {
   step: 0,
-  hasSeen: false,
   completed: false,
 };
 
@@ -31,7 +28,7 @@ function normalize(raw: StoredOnboardingState, totalSteps: number): OnboardingSt
   // Migration: earlier versions encoded completion as `step > lastStepIndex`
   // (past-the-end sentinel) without a dedicated flag.
   const completed = raw.completed ?? rawStep > lastStepIndex;
-  return { step, hasSeen: raw.hasSeen ?? false, completed };
+  return { step, completed };
 }
 
 type UseOnboardingOptions = {
@@ -40,11 +37,9 @@ type UseOnboardingOptions = {
 
 type UseOnboardingReturn = {
   readonly step: number;
-  readonly hasSeen: boolean;
   readonly isCompleted: boolean;
   readonly setStep: (step: number) => void;
   readonly complete: () => void;
-  readonly dismiss: () => void;
 };
 
 function useOnboarding({ totalSteps }: UseOnboardingOptions): UseOnboardingReturn {
@@ -57,26 +52,20 @@ function useOnboarding({ totalSteps }: UseOnboardingOptions): UseOnboardingRetur
 
   const setStep = useCallback(
     (step: number) => {
-      setState((previous) => ({ ...previous, step, hasSeen: true }));
+      setState((previous) => ({ ...previous, step }));
     },
     [setState],
   );
 
   const complete = useCallback(() => {
-    setState((previous) => ({ ...previous, hasSeen: true, completed: true }));
-  }, [setState]);
-
-  const dismiss = useCallback(() => {
-    setState((previous) => ({ ...previous, hasSeen: true }));
+    setState((previous) => ({ ...previous, completed: true }));
   }, [setState]);
 
   return {
     step: state.step,
-    hasSeen: state.hasSeen,
     isCompleted: state.completed,
     setStep,
     complete,
-    dismiss,
   } as const;
 }
 
