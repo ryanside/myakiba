@@ -1,5 +1,5 @@
 import { afterAll, afterEach, expect, test } from "bun:test";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
@@ -99,10 +99,9 @@ test("an account signed in before the deploy keeps the welcome dialog closed", a
 
 test("a new account sees the welcome dialog and saves that it has seen onboarding", async () => {
   await openDashboard(false);
-  await act(() => Bun.sleep(500));
 
   expect(await screen.findByRole("dialog", { name: "Welcome to myakiba." })).toBeTruthy();
-  expect(updates).toEqual([{ hasSeenOnboarding: true }]);
+  await waitFor(() => expect(updates).toEqual([{ hasSeenOnboarding: true }]));
 });
 
 test("Getting Started resumes the saved step from legacy local storage", async () => {

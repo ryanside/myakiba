@@ -190,7 +190,8 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
   }, [open, sessionUsername, sessionCurrency, sessionDateFormat, form]);
 
   useEffect(() => {
-    if (session.user.hasSeenOnboarding) return;
+    // Sessions from before the column existed have no key and count as onboarded.
+    if (session.user.hasSeenOnboarding !== false) return;
     const timeoutId = window.setTimeout(async () => {
       setOpen(true);
       try {
