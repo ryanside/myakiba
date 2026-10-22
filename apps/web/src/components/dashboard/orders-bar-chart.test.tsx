@@ -82,3 +82,19 @@ test("switching hovered order bars navigates to the second month on the first cl
     search: { releaseDateStart: "2026-08-01", releaseDateEnd: "2026-08-31" },
   });
 });
+
+test("a bar pressed while the hover highlight moves to it stays mounted and navigates on release", async () => {
+  const { container } = render(<OrdersBarChart data={data} />);
+  await frame(600);
+  const pressedBar = bar(container, 0);
+  fireEvent.mouseDown(pressedBar);
+  fireEvent.mouseOver(pressedBar);
+  await frame(32);
+  expect(pressedBar.isConnected).toBe(true);
+  fireEvent.mouseUp(pressedBar);
+  fireEvent.click(pressedBar);
+  expect(navigate).toHaveBeenCalledWith({
+    to: "/orders",
+    search: { releaseDateStart: "2026-08-01", releaseDateEnd: "2026-08-31" },
+  });
+});
