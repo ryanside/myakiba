@@ -525,6 +525,16 @@
         "hovering during the order chart intro still grows every bar to its full height",
         "switching hovered order bars navigates to the second month on the first click"
       ]
+    },
+    {
+      "fix": "670907bd",
+      "bug": "the request log recorded every auth response as 200",
+      "test": "apps/server/src/boundary/auth-log-status.test.ts",
+      "fixed": [
+        "GET /api/auth/does-not-exist logs 404 and keeps Better Auth's response",
+        "POST /api/auth/delete-user logs 401 and keeps Better Auth's response",
+        "GET /api/auth/callback/google logs 302 and keeps Better Auth's response"
+      ]
     }
   ],
   "lint": [
