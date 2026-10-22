@@ -1,7 +1,7 @@
 import type { PortPicture } from "@myakiba/mfc/bridge";
 import { scrubMfcPage } from "@myakiba/mfc/capture";
 import { defineUnlistedScript } from "wxt/utils/define-unlisted-script";
-import { PAGE_TIMEOUT_MS, runArmed } from "../lib/collect";
+import { NO_STATUS, PAGE_TIMEOUT_MS, runArmed } from "../lib/collect";
 import type { CollectedPage } from "../lib/collect";
 import { ORIGINS } from "../lib/config";
 import { toConfiguredUrl } from "../lib/origins";
@@ -27,7 +27,7 @@ function loadedItemPage(): CollectedPage {
     .getEntriesByType("navigation")
     .find((entry) => entry instanceof PerformanceNavigationTiming);
   return {
-    status: navigation?.responseStatus ?? 0,
+    status: navigation?.responseStatus ?? NO_STATUS,
     cfMitigated: null,
     retryAfter: null,
     html: scrubMfcPage(document),

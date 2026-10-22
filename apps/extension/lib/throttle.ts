@@ -9,19 +9,15 @@ export const THROTTLE = {
   defaultPauseMs: 15_000,
   /** A longer pause halts the queue instead of keeping the user waiting. */
   maxPauseMs: 5 * 60_000,
-  /** How long a load that timed out may take to stop in its tab. */
+  /** How long a load may still run in its tab after it timed out, since the tab hears of it last. */
   graceMs: 5000,
-  /** A rate limit this soon after the last one, with no other answer between them, is in a row. */
   inRowMs: 10 * 60_000,
 } as const;
 
-/** Kept in storage.session, so a restarted worker keeps MFC's pause, its halt and a run of limits. */
 export const throttleStateSchema = z.strictObject({
   nextPageAt: z.number(),
   pausedUntil: z.number(),
-  /** New runs fail with rate_limited until then, without a load. */
   haltedUntil: z.number(),
-  /** When MFC last answered with a rate limit, or null once it answered any other way. */
   limitedAt: z.number().nullable(),
 });
 export type ThrottleState = z.output<typeof throttleStateSchema>;
@@ -43,8 +39,7 @@ export class HaltedError extends Error {
   }
 }
 
-/** MFC's pause. One too long to wait out halts the queue until it ends instead. */
-function paused(current: ThrottleState, until: number, now: number): ThrottleState {
+function pausedOrHalted(current: ThrottleState, until: number, now: number): ThrottleState {
   const haltedUntil = until - now > THROTTLE.maxPauseMs ? until : 0;
   return {
     ...current,
@@ -53,19 +48,18 @@ function paused(current: ThrottleState, until: number, now: number): ThrottleSta
   };
 }
 
-async function stopped(settled: Promise<void>): Promise<never> {
+async function timedOutOnceSettled(settled: Promise<void>): Promise<never> {
   await settled;
   throw new TimeoutError(PAGE_TIMEOUT_MS);
 }
 
-/** The load's result. A load that timed out answers only once it has stopped, so its caller never moves on while it still runs. */
-async function answerOf<T>(
+async function answerOnceStopped<T>(
   running: Promise<T>,
   settled: Promise<void>,
   timeout: AbortSignal,
 ): Promise<T> {
   try {
-    return await Promise.race([running, stopped(settled)]);
+    return await Promise.race([running, timedOutOnceSettled(settled)]);
   } catch (error) {
     throw timeout.aborted ? timeout.reason : error;
   }
@@ -77,10 +71,7 @@ export function createThrottle(deps: {
   readonly state: SessionValue<ThrottleState>;
 }) {
   const { clock, random, state } = deps;
-  /**
-   * Settles once the last load this worker started has ended and is on the books. Only this worker sees it,
-   * so its next load can start a gap after that real end rather than when the reservation runs out.
-   */
+  /** Settles once the last load this worker started has ended and is on the books. */
   let lastLoad: Promise<unknown> = Promise.resolve();
   let books: Promise<unknown> = Promise.resolve();
 
@@ -136,7 +127,7 @@ export function createThrottle(deps: {
 
   return {
     /**
-     * Runs one MFC page load in its turn. `work` gets a signal that aborts once the load times out, and then stops the load.
+     * Runs one MFC page load in its turn. `work` gets a signal that aborts once the load times out.
      * The next turn starts a gap after this load ends, even when the caller stopped waiting first.
      */
     async load<T>(signal: AbortSignal, work: (timeout: AbortSignal) => Promise<T>): Promise<T> {
@@ -155,34 +146,32 @@ export function createThrottle(deps: {
       const running = signal.aborted ? Promise.reject(signal.reason) : work(timeout);
       const settled = settle(running, finished);
       ended.resolve(settled);
-      return unlessAborted(signal, answerOf(running, settled, timeout));
+      return unlessAborted(signal, answerOnceStopped(running, settled, timeout));
     },
 
-    /** Books a pause MFC asked for along with a challenge. One too long to wait out halts the queue. */
-    async pause(until: number): Promise<void> {
-      await book((current, now) => [paused(current, until, now), null]);
+    async pauseOrHalt(until: number): Promise<void> {
+      await book((current, now) => [pausedOrHalted(current, until, now), null]);
     },
 
-    /**
-     * Books MFC's answer to an item: the pause it asked for with a rate limit, or null for any other answer.
-     * @returns when a halt ends, for a limit in a row or a pause too long to wait out, or null.
-     */
-    async answered(pausedUntil: number | null): Promise<number | null> {
-      return book((current, now): [ThrottleState, number | null] => {
-        if (pausedUntil === null) return [{ ...current, limitedAt: null }, null];
+    async rateLimited(pausedUntil: number): Promise<{ readonly haltedUntil: number | null }> {
+      return book((current, now): [ThrottleState, { readonly haltedUntil: number | null }] => {
         const pauseMs = pausedUntil - now;
         const inRow = current.limitedAt !== null && now - current.limitedAt <= THROTTLE.inRowMs;
         let haltedUntil: number | null = null;
         if (pauseMs > THROTTLE.maxPauseMs) haltedUntil = pausedUntil;
         else if (inRow) haltedUntil = now + Math.max(THROTTLE.maxPauseMs, 2 * pauseMs);
+        const haltEndsRow = haltedUntil !== null;
         const next = {
-          ...paused(current, pausedUntil, now),
+          ...pausedOrHalted(current, pausedUntil, now),
           haltedUntil: Math.max(current.haltedUntil, haltedUntil ?? 0),
-          // A halt ends the row, so the first limit after it only pauses.
-          limitedAt: haltedUntil === null ? now : null,
+          limitedAt: haltEndsRow ? null : now,
         };
-        return [next, haltedUntil];
+        return [next, { haltedUntil }];
       });
+    },
+
+    async answered(): Promise<void> {
+      await book((current) => [{ ...current, limitedAt: null }, null]);
     },
 
     /** Books a page load the extension did not start, such as the reload after a solved challenge. */

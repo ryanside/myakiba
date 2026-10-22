@@ -24,20 +24,19 @@ declare global {
 }
 
 /**
- * Injected as a `func` before the collector file. Chrome may run a later stop before it has read that file,
- * so the controller a stop aborts exists from here on.
+ * Chrome injects this as source text, so it cannot use module scope. Chrome can run a later func injection,
+ * such as the stop, before it has read the collector file.
  */
 export function armCollector(request: CollectRequest): void {
   globalThis.myakibaCollectRequest = request;
   globalThis.myakibaCollectAbort = new AbortController();
 }
 
-/** Injected as a `func` once the load is cancelled. */
+/** Chrome injects this as source text, so it cannot use module scope. */
 export function stopCollector(): void {
   globalThis.myakibaCollectAbort?.abort();
 }
 
-/** The collector's side: runs `work` on the request the background left, with a signal a stop aborts. */
 export async function runArmed<T>(
   work: (request: CollectRequest, signal: AbortSignal) => Promise<T>,
 ): Promise<T> {
@@ -47,10 +46,11 @@ export async function runArmed<T>(
   try {
     return await work(request, controller.signal);
   } finally {
-    // A stop that lands after this load must not reach it, nor a load armed after it.
     if (globalThis.myakibaCollectAbort === controller) globalThis.myakibaCollectAbort = undefined;
   }
 }
+
+export const NO_STATUS = 0;
 
 export const collectedPageSchema = z.strictObject({
   status: z.number().int(),

@@ -126,8 +126,7 @@ export function createMfcTabs(deps: {
     if (own) await tabs.remove(own.tabId).catch(() => null);
   }
 
-  /** Closes the extension's tab and waits until it is gone, the one sure way to stop its navigation. */
-  async function abandon(tabId: number): Promise<void> {
+  async function closeUntilGone(tabId: number): Promise<void> {
     const ours = await exclusively(async () => {
       const record = await owned.load();
       if (record?.tabId !== tabId) return false;
@@ -141,7 +140,7 @@ export function createMfcTabs(deps: {
     }
   }
 
-  async function waitFor(
+  async function waitOrClose(
     tabId: number,
     path: string,
     timeout: AbortSignal,
@@ -156,8 +155,7 @@ export function createMfcTabs(deps: {
         await clock.sleep(POLL_MS, timeout);
       }
     } catch (error) {
-      // A navigation still running at its deadline would overlap the next load, so it stops before the load ends.
-      if (timeout.aborted) await abandon(tabId);
+      if (timeout.aborted) await closeUntilGone(tabId);
       throw error;
     }
   }
@@ -189,7 +187,7 @@ export function createMfcTabs(deps: {
       if (focused.has(tabId)) throw new TabTakenError(tabId);
       await owned.save({ tabId, path: pathname });
     });
-    await waitFor(tabId, pathname, timeout, true);
+    await waitOrClose(tabId, pathname, timeout, true);
     return tabId;
   }
 
@@ -251,7 +249,7 @@ export function createMfcTabs(deps: {
       const tabId = await throttle.load(signal, async (timeout) => {
         const navigated = await navigateOwned(requester, url, signal);
         if (navigated === null) return createOwned(requester, url, signal, timeout);
-        await waitFor(navigated, new URL(url).pathname, timeout);
+        await waitOrClose(navigated, new URL(url).pathname, timeout);
         return navigated;
       });
       await activate(tabId, signal);

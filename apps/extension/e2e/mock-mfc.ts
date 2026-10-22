@@ -41,7 +41,6 @@ export const PICTURE_SHA256 = { gated: sha256(gatedPicture), public: sha256(publ
 
 type MockRequest = {
   readonly at: number;
-  /** When the mock answered, or when the client gave up on the request. */
   endedAt: number | null;
   aborted: boolean;
   readonly origin: string;

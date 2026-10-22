@@ -3,6 +3,7 @@ import { readMfcEnvelope } from "@myakiba/mfc/page";
 import type { MfcItemId, MfcOgImage } from "@myakiba/mfc/page";
 import { TimeoutError, timeoutSignal, unlessAborted, withTimeout } from "./clock";
 import type { Clock, SessionValue } from "./clock";
+import { NO_STATUS } from "./collect";
 import type { CollectedPage, PageRequest } from "./collect";
 import { createMfcTabs } from "./mfc-tab";
 import type { LiveRequester, MfcTabLease, OwnedTab, TabsApi, WindowsApi } from "./mfc-tab";
@@ -18,11 +19,9 @@ export const CHALLENGE_WINDOW_MS = 120_000;
 const RATE_LIMIT_STATUSES = new Set([429, 503]);
 /**
  * Cloudflare serves its challenge with 403. A loaded page cannot read the header that marks it, nor rely on its localized title,
- * so every 403 counts as the challenge. A real MFC 403 after a solve costs only the window. Capping repeat reads of one 403
- * would not help, because a localized challenge the user is still working on reads the same each time too.
+ * so every 403 counts as the challenge. A cap on repeat reads would not catch a real MFC 403, because a localized challenge reads the same each time too.
  */
 const CHALLENGE_STATUS = 403;
-/** A read of the shown page can fail while its frame settles, and no navigation may follow to prompt another. */
 const READ_TRIES = 3;
 const READ_RETRY_MS = 1000;
 
@@ -171,7 +170,6 @@ export function createFetcher(deps: FetcherDeps) {
     return { page: await fetchPage(own, job, signal), tabId: own.tabId };
   }
 
-  /** Reads the page the tab shows, or null while it has not answered: a failed read, an error page or no status. */
   async function readShown(
     tabId: number,
     job: Job,
@@ -182,7 +180,7 @@ export function createFetcher(deps: FetcherDeps) {
       const page = await unlessAborted(open, deps.collectPage(tabId, request, open)).catch(
         () => null,
       );
-      if (page && page.status !== 0) return page;
+      if (page && page.status !== NO_STATUS) return page;
       if (tries === READ_TRIES) break;
       await clock.sleep(READ_RETRY_MS, open);
     }
@@ -252,8 +250,7 @@ export function createFetcher(deps: FetcherDeps) {
         case "item":
           return await itemResult(page, reading.ogImage, tabId, signal);
         case "challenge":
-          // The challenge's own load then waits out MFC's pause, or halts the queue when it is too long.
-          if (reading.pausedUntil !== null) await throttle.pause(reading.pausedUntil);
+          if (reading.pausedUntil !== null) await throttle.pauseOrHalt(reading.pausedUntil);
           return await solveChallenge(job, requester, reading.status, signal);
         case "result":
         case "rate_limited":
@@ -265,13 +262,18 @@ export function createFetcher(deps: FetcherDeps) {
     }
   }
 
-  /** Puts MFC's answer on the throttle's books, which turn a rate limit in a row, or a long one, into a halt. */
   async function booked(outcome: Outcome): Promise<Outcome> {
-    if (outcome.kind === "halted") return outcome;
-    const until = await throttle.answered(
-      outcome.kind === "rate_limited" ? outcome.pausedUntil : null,
-    );
-    return until === null ? outcome : { kind: "halted", until };
+    switch (outcome.kind) {
+      case "halted":
+        return outcome;
+      case "result":
+        await throttle.answered();
+        return outcome;
+      case "rate_limited": {
+        const { haltedUntil } = await throttle.rateLimited(outcome.pausedUntil);
+        return haltedUntil === null ? outcome : { kind: "halted", until: haltedUntil };
+      }
+    }
   }
 
   async function drain(): Promise<void> {

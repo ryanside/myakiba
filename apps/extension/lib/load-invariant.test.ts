@@ -17,7 +17,8 @@ import { THROTTLE } from "./throttle";
 
 const SEEDS = [1, 2, 3, 4, 5, 6, 7, 8];
 const STEPS = 200;
-const INJECTION_MS = 1000;
+const INJECTION_DELAY_MS = 1000;
+const COLLECTOR_TIMEOUT_MS = PAGE_TIMEOUT_MS + INJECTION_DELAY_MS;
 
 const MODULUS = 2_147_483_647;
 
@@ -70,8 +71,7 @@ async function play(seed: number) {
       return solved.has(id) ? page(itemPage(id)) : page(CHALLENGE_PAGE, { status: 403 });
     }
     const latency = random() < 0.03 ? PAGE_TIMEOUT_MS + 10_000 : between(0, 6000);
-    // The collector gives up on its own fetch at the page timeout, which starts once it is injected, a little after the throttle's.
-    await clock.sleep(Math.min(latency, PAGE_TIMEOUT_MS + INJECTION_MS));
+    await clock.sleep(Math.min(latency, COLLECTOR_TIMEOUT_MS));
     if (latency > PAGE_TIMEOUT_MS) {
       seen.timeouts += 1;
       throw new DOMException("The operation timed out.", "TimeoutError");
