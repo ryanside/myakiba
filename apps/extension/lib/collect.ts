@@ -10,7 +10,7 @@ const pageRequestSchema = z.strictObject({
 });
 export type PageRequest = z.output<typeof pageRequestSchema>;
 
-export const collectRequestSchema = z.discriminatedUnion("kind", [
+const collectRequestSchema = z.discriminatedUnion("kind", [
   pageRequestSchema,
   z.strictObject({ kind: z.literal("gated-picture"), url: z.string() }),
 ]);
@@ -21,6 +21,27 @@ declare global {
   var myakibaCollectRequest: CollectRequest | undefined;
   /** Stops the running collector's MFC fetch, so a cancelled load ends in the tab too. */
   var myakibaCollectAbort: AbortController | undefined;
+}
+
+/** Injected as a `func` before the collector file, so the collector finds its request. */
+export function armCollector(request: CollectRequest): void {
+  globalThis.myakibaCollectRequest = request;
+}
+
+/** Injected as a `func` once the load is cancelled. */
+export function stopCollector(): void {
+  globalThis.myakibaCollectAbort?.abort();
+}
+
+/** The collector's side: runs `work` on the request the background left, with a signal a stop aborts. */
+export async function runArmed<T>(
+  work: (request: CollectRequest, signal: AbortSignal) => Promise<T>,
+): Promise<T> {
+  const request = collectRequestSchema.parse(globalThis.myakibaCollectRequest);
+  globalThis.myakibaCollectRequest = undefined;
+  const controller = new AbortController();
+  globalThis.myakibaCollectAbort = controller;
+  return work(request, controller.signal);
 }
 
 export const collectedPageSchema = z.strictObject({

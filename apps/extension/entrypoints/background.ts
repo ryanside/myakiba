@@ -4,7 +4,7 @@ import { browser } from "wxt/browser";
 import { defineBackground } from "wxt/utils/define-background";
 import type { SessionValue } from "../lib/clock";
 import { systemClock } from "../lib/clock";
-import { collectedPageSchema } from "../lib/collect";
+import { armCollector, collectedPageSchema, stopCollector } from "../lib/collect";
 import type { CollectRequest } from "../lib/collect";
 import { ORIGINS } from "../lib/config";
 import { createFetcher } from "../lib/fetcher";
@@ -33,20 +33,11 @@ async function runCollector<T>(
   signal?: AbortSignal,
 ): Promise<T> {
   signal?.throwIfAborted();
-  await browser.scripting.executeScript({
-    target: { tabId },
-    func: (value: CollectRequest) => {
-      globalThis.myakibaCollectRequest = value;
-    },
-    args: [request],
-  });
+  await browser.scripting.executeScript({ target: { tabId }, func: armCollector, args: [request] });
   signal?.throwIfAborted();
   const stop = async () => {
     try {
-      await browser.scripting.executeScript({
-        target: { tabId },
-        func: () => globalThis.myakibaCollectAbort?.abort(),
-      });
+      await browser.scripting.executeScript({ target: { tabId }, func: stopCollector });
     } catch {
       // The tab closed or moved on, which stops the collector as well.
     }

@@ -1,7 +1,7 @@
 import type { PortPicture } from "@myakiba/mfc/bridge";
 import { scrubMfcPage } from "@myakiba/mfc/capture";
 import { defineUnlistedScript } from "wxt/utils/define-unlisted-script";
-import { PAGE_TIMEOUT_MS, collectRequestSchema } from "../lib/collect";
+import { PAGE_TIMEOUT_MS, runArmed } from "../lib/collect";
 import type { CollectedPage } from "../lib/collect";
 import { ORIGINS } from "../lib/config";
 import { toConfiguredUrl } from "../lib/origins";
@@ -46,12 +46,10 @@ async function fetchGatedPicture(canonical: string): Promise<PortPicture | null>
   }
 }
 
-export default defineUnlistedScript(async (): Promise<CollectedPage | PortPicture | null> => {
-  const request = collectRequestSchema.parse(globalThis.myakibaCollectRequest);
-  globalThis.myakibaCollectRequest = undefined;
-  if (request.kind === "gated-picture") return fetchGatedPicture(request.url);
-  if (request.mode === "document") return loadedItemPage();
-  const controller = new AbortController();
-  globalThis.myakibaCollectAbort = controller;
-  return fetchItemPage(request.mfcItemId, controller.signal);
-});
+export default defineUnlistedScript(async (): Promise<CollectedPage | PortPicture | null> =>
+  runArmed(async (request, signal) => {
+    if (request.kind === "gated-picture") return fetchGatedPicture(request.url);
+    if (request.mode === "document") return loadedItemPage();
+    return fetchItemPage(request.mfcItemId, signal);
+  }),
+);
