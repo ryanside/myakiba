@@ -516,6 +516,15 @@
       "bug": "a sidebar link sat inside its menu button, so part of the hover area missed the link",
       "test": "apps/web/src/components/sidebar/app-sidebar.test.tsx",
       "fixed": ["every sidebar link is the whole menu button, so its hover area is its hit area"]
+    },
+    {
+      "fix": "9a8047a1",
+      "bug": "the dashboard order reference-line spring rebuilt bars every frame, interrupting their entrance growth and detaching the pressed bar before its first click",
+      "test": "apps/web/src/components/dashboard/orders-bar-chart.test.tsx",
+      "fixed": [
+        "hovering during the order chart intro still grows every bar to its full height",
+        "switching hovered order bars navigates to the second month on the first click"
+      ]
     }
   ],
   "lint": [

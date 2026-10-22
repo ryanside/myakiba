@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Bar, Cell, XAxis, ReferenceLine } from "recharts";
 import { useMotionValueEvent, useSpring } from "motion/react";
 import { useNavigate } from "@tanstack/react-router";
@@ -89,29 +89,6 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
     );
   }, [activeIndex, chartData]);
 
-  const maxValueIndexSpring = useSpring(maxValueIndex.value, {
-    stiffness: 150,
-    damping: 18,
-  });
-
-  const [springyValue, setSpringyValue] = useState(maxValueIndex.value);
-
-  useMotionValueEvent(maxValueIndexSpring, "change", (latest) => {
-    setSpringyValue(Number(latest));
-  });
-
-  const hasInitializedSpringRef = useRef(false);
-  useEffect(() => {
-    if (isLoading) return;
-    if (!hasInitializedSpringRef.current) {
-      hasInitializedSpringRef.current = true;
-      maxValueIndexSpring.jump(maxValueIndex.value);
-      setSpringyValue(maxValueIndex.value);
-      return;
-    }
-    maxValueIndexSpring.set(maxValueIndex.value);
-  }, [isLoading, maxValueIndex.value, maxValueIndexSpring]);
-
   return (
     <Frame
       spacing="sm"
@@ -176,17 +153,7 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
               ))}
             </Bar>
           )}
-          {isLoading ? null : (
-            <ReferenceLine
-              ifOverflow="visible"
-              opacity={0.4}
-              y={springyValue}
-              stroke="var(--foreground)"
-              strokeWidth={1}
-              strokeDasharray="3 3"
-              label={<CustomReferenceLabel value={maxValueIndex.value} />}
-            />
-          )}
+          {isLoading ? null : <OrderReferenceLine value={maxValueIndex.value} />}
         </EvilBarChart>
       </FramePanel>
     </Frame>
@@ -226,5 +193,31 @@ function CustomReferenceLabel(props: CustomReferenceLabelProps): React.ReactNode
         {value}
       </text>
     </>
+  );
+}
+
+function OrderReferenceLine({ value }: { readonly value: number }): React.ReactNode {
+  const valueSpring = useSpring(value, { stiffness: 150, damping: 18 });
+  const [springyValue, setSpringyValue] = useState(() => valueSpring.get());
+
+  useMotionValueEvent(valueSpring, "change", (latest) => {
+    setSpringyValue(Number(latest));
+  });
+
+  useEffect(() => {
+    valueSpring.set(value);
+  }, [value, valueSpring]);
+
+  return (
+    <ReferenceLine
+      pointerEvents="none"
+      ifOverflow="visible"
+      opacity={0.4}
+      y={springyValue}
+      stroke="var(--foreground)"
+      strokeWidth={1}
+      strokeDasharray="3 3"
+      label={<CustomReferenceLabel value={value} />}
+    />
   );
 }
