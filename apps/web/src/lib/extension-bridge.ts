@@ -18,7 +18,7 @@ export type ExtensionStatus =
   | { readonly kind: "ready"; readonly extensionVersion: string };
 
 /** `unknown` is a code from a newer extension. `extension_stopped` means no answer came for the id. */
-export type FetchItemError = ItemError | "unknown" | "extension_stopped";
+type FetchItemError = ItemError | "unknown" | "extension_stopped";
 
 export type ExtensionFetchEvent =
   | {
