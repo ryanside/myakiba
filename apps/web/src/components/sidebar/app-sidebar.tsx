@@ -160,17 +160,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuButton
               size="lg"
               className="flex justify-start items-center bg-transparent! group-data-[collapsible=icon]:p-0! w-full"
+              render={<Link to="/dashboard" />}
             >
-              <Link to="/dashboard">
-                <MyAkibaLogo
-                  size="icon"
-                  className="ml-2 scale-175 opacity-0 group-data-[collapsible=icon]:opacity-100 transition-opacity duration-100 ease-in-out"
-                />
-                <MyAkibaLogo
-                  size="full"
-                  className="ml-1 scale-500 opacity-100 group-data-[collapsible=icon]:opacity-0 transition-opacity duration-100 ease-in-out"
-                />
-              </Link>
+              <MyAkibaLogo
+                size="icon"
+                className="ml-2 scale-175 opacity-0 group-data-[collapsible=icon]:opacity-100 transition-opacity duration-100 ease-in-out"
+              />
+              <MyAkibaLogo
+                size="full"
+                className="ml-1 scale-500 opacity-100 group-data-[collapsible=icon]:opacity-0 transition-opacity duration-100 ease-in-out"
+              />
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

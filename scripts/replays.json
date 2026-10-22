@@ -510,6 +510,12 @@
         "the clicked sidebar item turns active before the page renders",
         "a page change finishes if the tab becomes hidden before its frame"
       ]
+    },
+    {
+      "fix": "71ecea79",
+      "bug": "a sidebar link sat inside its menu button, so part of the hover area missed the link",
+      "test": "apps/web/src/components/sidebar/app-sidebar.test.tsx",
+      "fixed": ["every sidebar link is the whole menu button, so its hover area is its hit area"]
     }
   ],
   "lint": [
