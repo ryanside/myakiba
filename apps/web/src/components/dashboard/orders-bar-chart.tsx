@@ -1,7 +1,7 @@
 import { createContext, memo, use, useCallback, useEffect, useMemo, useState } from "react";
 import type { ComponentProps } from "react";
 import { Bar, Rectangle, XAxis, ReferenceLine } from "recharts";
-import { useMotionValueEvent, useSpring } from "motion/react";
+import { useMotionValueEvent, useReducedMotionConfig, useSpring } from "motion/react";
 import { useNavigate } from "@tanstack/react-router";
 import { getDateOnlyMonthBounds } from "@myakiba/utils/date-only";
 import { EvilBarChart } from "@/components/evilcharts/charts/recharts-bar-chart";
@@ -47,9 +47,23 @@ interface ActiveMonth {
   readonly value: number;
 }
 
+interface OrderChartState {
+  readonly months: readonly MonthlyChartRow[];
+  readonly active: ActiveMonth;
+  readonly onMonthFocus: (monthIndex: number) => void;
+  readonly onMonthOpen: (monthIndex: number) => void;
+  readonly onChartBlur: () => void;
+}
+
 // Recharts remounts every bar whenever <Bar> re-renders, so the highlight
 // reaches the bars through context instead of through <Bar> props.
-const ActiveMonthContext = createContext<ActiveMonth>({ index: 0, value: 0 });
+const OrderChartContext = createContext<OrderChartState>({
+  months: [],
+  active: { index: 0, value: 0 },
+  onMonthFocus: () => {},
+  onMonthOpen: () => {},
+  onChartBlur: () => {},
+});
 
 interface OrdersBarChartProps {
   readonly data: readonly MonthlyOrderData[];
@@ -109,6 +123,17 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
     );
   }, [activeIndex, chartData]);
 
+  const orderChart = useMemo(
+    () => ({
+      months: chartData,
+      active: maxValueIndex,
+      onMonthFocus: setActiveIndex,
+      onMonthOpen: handleBarClick,
+      onChartBlur: resetActiveIndex,
+    }),
+    [chartData, maxValueIndex, handleBarClick, resetActiveIndex],
+  );
+
   return (
     <Frame
       spacing="sm"
@@ -129,7 +154,7 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
         )}
       </FrameHeader>
       <FramePanel className="shadow-none! border-none m-1 mt-0">
-        <ActiveMonthContext value={maxValueIndex}>
+        <OrderChartContext value={orderChart}>
           <OrderBars
             chartData={chartData}
             isLoading={isLoading}
@@ -137,7 +162,7 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
             onBarClick={handleBarClick}
             onChartLeave={resetActiveIndex}
           />
-        </ActiveMonthContext>
+        </OrderChartContext>
       </FramePanel>
     </Frame>
   );
@@ -168,6 +193,8 @@ function OrderBarsChart({
       loadingBars={MONTH_NAMES.length}
       className="animate-data-in w-full h-full"
       chartProps={{
+        // Each bar is its own tab stop, so the surface is not one.
+        accessibilityLayer: false,
         onMouseLeave: onChartLeave,
         margin: {
           left: CHART_MARGIN,
@@ -216,14 +243,79 @@ const orderBarRenderer = Object.fromEntries([["shape", renderOrderBar]]) as Pick
 >;
 
 function OrderBar(props: OrderBarProps): React.ReactNode {
-  const activeMonth = use(ActiveMonthContext);
+  const chart = use(OrderChartContext);
+  const monthIndex = props.originalDataIndex;
+  const month = chart.months[monthIndex];
+  const isActive = monthIndex === chart.active.index;
+  const column = props.background;
+
+  const handleKeyDown = (event: React.KeyboardEvent<SVGGElement>) => {
+    if (event.key === "Enter") {
+      chart.onMonthOpen(monthIndex);
+      return;
+    }
+    const nextIndex = monthIndexForKey(event.key, monthIndex);
+    if (nextIndex === undefined) return;
+    event.preventDefault();
+    event.currentTarget
+      .closest("svg")
+      ?.querySelector<SVGGElement>(`[data-month-index="${nextIndex}"]`)
+      ?.focus();
+  };
+
+  const handleBlur = (event: React.FocusEvent<SVGGElement>) => {
+    const next = event.relatedTarget;
+    if (next instanceof Element && next.closest("[data-month-index]")) return;
+    chart.onChartBlur();
+  };
+
   return (
-    <Rectangle
-      {...props}
-      className="cursor-pointer transition-opacity duration-200"
-      opacity={props.originalDataIndex === activeMonth.index ? 1 : 0.2}
-    />
+    <g
+      role="link"
+      tabIndex={isActive ? 0 : -1}
+      aria-label={
+        month && `${month.month}: ${month.desktop} ${month.desktop === 1 ? "order" : "orders"}`
+      }
+      data-month-index={monthIndex}
+      className="group/bar outline-none"
+      onFocus={() => chart.onMonthFocus(monthIndex)}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+    >
+      <Rectangle
+        {...props}
+        className="cursor-pointer transition-opacity duration-200"
+        opacity={isActive ? 1 : 0.2}
+      />
+      {/* Ring the whole column so a month with no orders still shows focus. */}
+      {column?.y == null ? null : (
+        <rect
+          x={props.x - 3}
+          y={column.y - 3}
+          width={props.width + 6}
+          height={column.height + 6}
+          rx={8}
+          strokeWidth={2}
+          className="pointer-events-none fill-none stroke-none group-focus-visible/bar:stroke-foreground"
+        />
+      )}
+    </g>
   );
+}
+
+function monthIndexForKey(key: string, monthIndex: number): number | undefined {
+  switch (key) {
+    case "ArrowLeft":
+      return Math.max(monthIndex - 1, 0);
+    case "ArrowRight":
+      return Math.min(monthIndex + 1, MONTH_NAMES.length - 1);
+    case "Home":
+      return 0;
+    case "End":
+      return MONTH_NAMES.length - 1;
+    default:
+      return undefined;
+  }
 }
 
 interface CustomReferenceLabelProps {
@@ -263,7 +355,8 @@ function CustomReferenceLabel(props: CustomReferenceLabelProps): React.ReactNode
 }
 
 function OrderReferenceLine(): React.ReactNode {
-  const { value } = use(ActiveMonthContext);
+  const { value } = use(OrderChartContext).active;
+  const reduceMotion = useReducedMotionConfig();
   const valueSpring = useSpring(value, { stiffness: 150, damping: 18 });
   const [springyValue, setSpringyValue] = useState(() => valueSpring.get());
 
@@ -280,7 +373,7 @@ function OrderReferenceLine(): React.ReactNode {
       pointerEvents="none"
       ifOverflow="visible"
       opacity={0.4}
-      y={springyValue}
+      y={reduceMotion ? value : springyValue}
       stroke="var(--foreground)"
       strokeWidth={1}
       strokeDasharray="3 3"

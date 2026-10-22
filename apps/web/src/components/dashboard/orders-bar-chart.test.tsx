@@ -1,5 +1,6 @@
 import { afterAll, afterEach, expect, jest, mock, spyOn, test } from "bun:test";
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
+import { MotionConfig } from "motion/react";
 
 const navigate = mock(() => Promise.resolve());
 const router = await import("@tanstack/react-router");
@@ -100,4 +101,84 @@ test("a bar pressed while the hover highlight moves to it stays mounted and navi
     to: "/orders",
     search: { releaseDateStart: "2026-08-01", releaseDateEnd: "2026-08-31" },
   });
+});
+
+function monthLink(container: HTMLElement, name: string) {
+  const link = container.querySelector<SVGElement>(`[role="link"][aria-label^="${name}:"]`);
+  if (!link) throw new Error(`Missing ${name} order bar link`);
+  return link;
+}
+
+test("each order bar is a link named for its month and count, and only the highlighted month is a tab stop", async () => {
+  const { container } = render(<OrdersBarChart data={data} />);
+  await frame(600);
+  const links = [...container.querySelectorAll('[role="link"]')];
+  expect(links.map((link) => link.getAttribute("aria-label"))).toEqual([
+    "January: 0 orders",
+    "February: 0 orders",
+    "March: 0 orders",
+    "April: 0 orders",
+    "May: 0 orders",
+    "June: 0 orders",
+    "July: 0 orders",
+    "August: 2 orders",
+    "September: 0 orders",
+    "October: 1 order",
+    "November: 0 orders",
+    "December: 0 orders",
+  ]);
+  expect(links.filter((link) => link.getAttribute("tabindex") === "0")).toEqual([
+    monthLink(container, "October"),
+  ]);
+  expect(container.querySelector("svg.recharts-surface")?.hasAttribute("tabindex")).toBe(false);
+});
+
+test("arrow keys move the order chart highlight between months and Enter opens the focused month", async () => {
+  const { container } = render(<OrdersBarChart data={data} />);
+  await frame(600);
+  act(() => monthLink(container, "October").focus());
+  fireEvent.keyDown(document.activeElement ?? container, { key: "ArrowLeft" });
+  fireEvent.keyDown(document.activeElement ?? container, { key: "ArrowLeft" });
+  await frame();
+  expect(document.activeElement).toBe(monthLink(container, "August"));
+  expect(bar(container, 0).getAttribute("opacity")).toBe("1");
+  expect(container.textContent).toContain("2 orders in August");
+  fireEvent.keyDown(document.activeElement ?? container, { key: "End" });
+  expect(document.activeElement).toBe(monthLink(container, "December"));
+  fireEvent.keyDown(document.activeElement ?? container, { key: "Home" });
+  expect(document.activeElement).toBe(monthLink(container, "January"));
+  fireEvent.keyDown(document.activeElement ?? container, { key: "ArrowLeft" });
+  expect(document.activeElement).toBe(monthLink(container, "January"));
+  fireEvent.keyDown(document.activeElement ?? container, { key: "ArrowRight" });
+  fireEvent.keyDown(document.activeElement ?? container, { key: "Enter" });
+  expect(navigate).toHaveBeenCalledWith({
+    to: "/orders",
+    search: { releaseDateStart: "2026-02-01", releaseDateEnd: "2026-02-28" },
+  });
+});
+
+test("tabbing out of the order chart returns the highlight to the current month", async () => {
+  const { container } = render(<OrdersBarChart data={data} />);
+  await frame(600);
+  act(() => monthLink(container, "August").focus());
+  await frame();
+  expect(container.textContent).toContain("2 orders in August");
+  act(() => monthLink(container, "August").blur());
+  await frame();
+  expect(container.textContent).toContain("1 order in October");
+  expect(monthLink(container, "October").getAttribute("tabindex")).toBe("0");
+});
+
+test("with reduced motion the order reference line jumps to the highlighted month", async () => {
+  const { container } = render(
+    <MotionConfig reducedMotion="always">
+      <OrdersBarChart data={data} />
+    </MotionConfig>,
+  );
+  await frame(600);
+  act(() => monthLink(container, "August").focus());
+  await frame(16);
+  expect(container.querySelector(".recharts-reference-line line")?.getAttribute("y1")).toBe(
+    bar(container, 0).getAttribute("y"),
+  );
 });
