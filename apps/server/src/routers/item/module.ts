@@ -11,10 +11,10 @@ import {
 import type { ItemRelease, ItemReleasesResponse } from "@myakiba/contracts/item/schema";
 import type { ItemRefresh } from "@myakiba/contracts/mfc-items/schema";
 import { normalizeScale } from "@myakiba/contracts/shared/scale";
-import type { ReadTx } from "@myakiba/db/tx";
+import type { ReadTx, Tx } from "@myakiba/db/tx";
 import { mfcItemId } from "@myakiba/mfc/page";
 import { redis } from "@myakiba/redis/client";
-import { getResyncCooldownExpiresAt, setResyncCooldown } from "@myakiba/redis/item-resync";
+import { getResyncCooldown, setResyncCooldown } from "@myakiba/redis/item-resync";
 import type { ItemResyncState } from "@myakiba/redis/item-resync";
 import { command, fail, ok, proceed, query } from "@/domain/kernel";
 import { findMfcItem, pictureLog, readPage } from "@/lib/mfc-item-page";
@@ -32,9 +32,34 @@ async function findResyncItem(tx: ReadTx, externalId: number) {
   return itemId === undefined ? undefined : { id, itemId };
 }
 
+// The cooldown is written before the refresh commits, so it holds only while the
+// transaction that wrote it has not aborted. A transaction Postgres can no longer look up,
+// or one newer than this database after a restore, counts as committed.
+async function cooldownHeldUntil(tx: ReadTx, itemId: string): Promise<string | null> {
+  const cooldown = await getResyncCooldown(redis, itemId);
+  if (!cooldown) return null;
+  if (cooldown.transactionId === null) return cooldown.expiresAt;
+  const xid = sql`${cooldown.transactionId}::xid8`;
+  const [writer] = await tx
+    .select({
+      status: sql<
+        string | null
+      >`case when ${xid} < pg_snapshot_xmax(pg_current_snapshot()) then pg_xact_status(${xid}) end`,
+    })
+    .from(item)
+    .where(eq(item.id, itemId));
+  return writer?.status === "aborted" ? null : cooldown.expiresAt;
+}
+
+async function currentTransactionId(tx: Tx): Promise<string> {
+  const [row] = await tx.execute<{ id: string }>(sql`select pg_current_xact_id()::text as id`);
+  if (!row) throw new Error("pg_current_xact_id returned no row");
+  return row.id;
+}
+
 // The status keeps the queue's four states for the web. "requested" and "processing" no longer occur.
-async function resyncState(itemId: string): Promise<ItemResyncState> {
-  const cooldownExpiresAt = await getResyncCooldownExpiresAt(redis, itemId);
+async function resyncState(tx: ReadTx, itemId: string): Promise<ItemResyncState> {
+  const cooldownExpiresAt = await cooldownHeldUntil(tx, itemId);
   if (cooldownExpiresAt) return { status: "cooldown", cooldownExpiresAt };
   return { status: "idle", cooldownExpiresAt: null };
 }
@@ -473,7 +498,7 @@ export const Items = {
       scope.log.set({ item: { externalId: input.id } });
       const found = await findResyncItem(scope.tx, input.id);
       if (!found) return fail("not_found", "Item not found");
-      const state = await resyncState(found.itemId);
+      const state = await resyncState(scope.tx, found.itemId);
       scope.log.set({ resyncStatus: state.status });
       return ok(state);
     },
@@ -487,7 +512,7 @@ export const Items = {
         scope.log.set({ item: { externalId: input.id } });
         const found = await findResyncItem(scope.tx, input.id);
         if (!found) return fail("not_found", "Item not found");
-        if (await getResyncCooldownExpiresAt(redis, found.itemId)) {
+        if (await cooldownHeldUntil(scope.tx, found.itemId)) {
           return fail("too_many_requests", RECENTLY_REFRESHED);
         }
         const read = await readPage(scope.log, found.id, input);
@@ -498,7 +523,7 @@ export const Items = {
     async (scope, { itemId, page, stored }) => {
       const locked = await lockItem(scope.tx, itemId);
       if (!locked) return fail("not_found", "Item not found");
-      if (await getResyncCooldownExpiresAt(redis, itemId)) {
+      if (await cooldownHeldUntil(scope.tx, itemId)) {
         return fail("too_many_requests", RECENTLY_REFRESHED);
       }
       const image = stored?.kind === "stored" ? stored.url : locked.image;
@@ -512,7 +537,11 @@ export const Items = {
           warnings: page.warnings,
         },
       });
-      const cooldownExpiresAt = await setResyncCooldown(redis, itemId);
+      const cooldownExpiresAt = await setResyncCooldown(
+        redis,
+        itemId,
+        await currentTransactionId(scope.tx),
+      );
       return ok<ResyncResult>({
         status: "cooldown",
         cooldownExpiresAt,

@@ -23,10 +23,10 @@ import { createItemImages } from "@/lib/item-images";
 initLogger({ enabled: false });
 
 const userId = "user-1";
-const redisKeys = new Map<string, number>();
+const redisKeys = new Map<string, { readonly value: string; readonly expiresAt: number }>();
 const liveKey = (key: string) => {
-  const expiresAt = redisKeys.get(key);
-  return expiresAt !== undefined && expiresAt > Date.now() ? expiresAt : undefined;
+  const stored = redisKeys.get(key);
+  return stored !== undefined && stored.expiresAt > Date.now() ? stored : undefined;
 };
 
 await mock.module("@myakiba/auth/server", () => ({
@@ -45,6 +45,7 @@ const rateLimited: string[] = [];
 let resyncsThisHour = 1;
 let redisLost = false;
 let loseRedis: "at the cooldown write" | "after the cooldown write" | null = null;
+let dropTransactionAtCooldown = false;
 const reachRedis = () => {
   if (redisLost) throw new Error("Connection is closed.");
 };
@@ -57,17 +58,22 @@ await mock.module("@myakiba/redis/client", () => ({
       rateLimited.push(key);
       return [key.startsWith("rl:item-resync:") ? resyncsThisHour : 1, 3600];
     },
-    set: async (key: string, _value: string, _mode: "EX", seconds: number) => {
+    set: async (key: string, value: string, _mode: "EX", seconds: number) => {
       if (isCooldown(key) && loseRedis === "at the cooldown write") redisLost = true;
       reachRedis();
-      redisKeys.set(key, Date.now() + seconds * 1000);
+      redisKeys.set(key, { value, expiresAt: Date.now() + seconds * 1000 });
       if (isCooldown(key) && loseRedis === "after the cooldown write") redisLost = true;
+      if (isCooldown(key) && dropTransactionAtCooldown) await dropOpenTransaction();
       return "OK";
+    },
+    get: async (key: string) => {
+      reachRedis();
+      return liveKey(key)?.value ?? null;
     },
     ttl: async (key: string) => {
       reachRedis();
-      const expiresAt = liveKey(key);
-      return expiresAt === undefined ? -2 : Math.ceil((expiresAt - Date.now()) / 1000);
+      const stored = liveKey(key);
+      return stored === undefined ? -2 : Math.ceil((stored.expiresAt - Date.now()) / 1000);
     },
     exists: async (key: string) => {
       reachRedis();
@@ -86,6 +92,26 @@ await mock.module("@/lib/item-images", () => ({
 }));
 
 const db = await createTestDatabase();
+
+async function dropOpenTransaction() {
+  const dropped = await db.execute<{ pid: number }>(
+    "SELECT pid FROM pg_stat_activity WHERE datname = current_database() AND pid <> pg_backend_pid() AND state = 'idle in transaction' AND pg_terminate_backend(pid)",
+  );
+  if (dropped.length !== 1) throw new Error(`dropped ${dropped.length} transactions`);
+}
+
+// Bun's pool can hand out the dropped connection once more before it notices the close.
+async function poolRecovered() {
+  const deadline = Date.now() + 2000;
+  for (;;) {
+    try {
+      await db.execute("SELECT 1");
+      return;
+    } catch (error) {
+      if (Date.now() > deadline) throw error;
+    }
+  }
+}
 const { default: itemRouter } = await import("./index");
 const { default: mfcItemsRouter } = await import("../mfc-items/index");
 const app = new Elysia({ prefix: "/api" }).use(itemRouter).use(mfcItemsRouter);
@@ -187,6 +213,7 @@ beforeEach(async () => {
   resyncsThisHour = 1;
   redisLost = false;
   loseRedis = null;
+  dropTransactionAtCooldown = false;
 });
 
 async function answer(response: Response) {
@@ -465,6 +492,23 @@ describe("a resync that fails part way leaves no cooldown and no refresh", () =>
     const { item: row } = await itemRows();
     expect(row?.title).toBe(RETITLED);
     expect(await resyncStatus()).toMatchObject({ body: { status: "cooldown" } });
+  });
+
+  test("a commit that fails after the cooldown write answers 500, keeps no cooldown, and a retry refreshes", async () => {
+    await upload(page98777);
+    const before = await itemRows();
+    dropTransactionAtCooldown = true;
+
+    expect(await resync(derivedRetitledPage)).toEqual({
+      status: 500,
+      body: "Failed to request item refresh",
+    });
+
+    dropTransactionAtCooldown = false;
+    await poolRecovered();
+    expect(await itemRows()).toEqual(before);
+    expect(await resyncStatus()).toEqual(IDLE);
+    expect(await resync(derivedRetitledPage)).toEqual(refreshed("refreshed"));
   });
 });
 
