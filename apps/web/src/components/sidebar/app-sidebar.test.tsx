@@ -43,6 +43,31 @@ test("every sidebar link is the whole menu button, so its hover area is its hit 
   }
 });
 
+test("every active-state style on the active sidebar item matches its attribute", async () => {
+  await renderSidebar();
+  await act(async () => {
+    fireEvent.click(screen.getByRole("link", { name: "Orders" }));
+  });
+  await act(async () => {
+    flushFrame();
+  });
+  await expectOrders();
+
+  const ordersButton = menuButton("Orders");
+  const activeSelectors = [...ordersButton.classList].flatMap((token) => {
+    const variant = /^data-(?:active|\[active=([^\]]+)\]):/.exec(token);
+    if (!variant) return [];
+    const value = variant[1];
+    return [
+      { token, selector: value === undefined ? "[data-active]" : `[data-active="${value}"]` },
+    ];
+  });
+  expect(activeSelectors.length).toBeGreaterThan(0);
+  for (const { token, selector } of activeSelectors) {
+    expect(ordersButton.matches(selector), token).toBe(true);
+  }
+});
+
 test("a sidebar destination opens on the click without waiting for its code to load", async () => {
   const { ordersImported } = await renderSidebar(Bun.sleep(100));
   await act(async () => {
