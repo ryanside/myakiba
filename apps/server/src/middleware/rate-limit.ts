@@ -68,6 +68,12 @@ const rateLimitConfigs = {
     keyPrefix: "rl:mfc-ingest",
     strategy: "userId",
   },
+  itemResync: {
+    maxRequests: 60,
+    windowSeconds: 3600,
+    keyPrefix: "rl:item-resync",
+    strategy: "userId",
+  },
   mfcLookup: {
     maxRequests: 120,
     windowSeconds: 3600,

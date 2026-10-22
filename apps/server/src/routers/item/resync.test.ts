@@ -41,19 +41,42 @@ await mock.module("@myakiba/auth/server", () => ({
   },
 }));
 
+const rateLimited: string[] = [];
+let resyncsThisHour = 1;
+let redisLost = false;
+let loseRedis: "at the cooldown write" | "after the cooldown write" | null = null;
+const reachRedis = () => {
+  if (redisLost) throw new Error("Connection is closed.");
+};
+const isCooldown = (key: string) => key.startsWith("item-resync:cooldown:");
+
 await mock.module("@myakiba/redis/client", () => ({
   redis: {
-    eval: async () => [1, 3600],
+    eval: async (_script: string, _keys: number, key: string) => {
+      reachRedis();
+      rateLimited.push(key);
+      return [key.startsWith("rl:item-resync:") ? resyncsThisHour : 1, 3600];
+    },
     set: async (key: string, _value: string, _mode: "EX", seconds: number) => {
+      if (isCooldown(key) && loseRedis === "at the cooldown write") redisLost = true;
+      reachRedis();
       redisKeys.set(key, Date.now() + seconds * 1000);
+      if (isCooldown(key) && loseRedis === "after the cooldown write") redisLost = true;
       return "OK";
     },
     ttl: async (key: string) => {
+      reachRedis();
       const expiresAt = liveKey(key);
       return expiresAt === undefined ? -2 : Math.ceil((expiresAt - Date.now()) / 1000);
     },
-    exists: async (key: string) => (liveKey(key) === undefined ? 0 : 1),
-    del: async (key: string) => (redisKeys.delete(key) ? 1 : 0),
+    exists: async (key: string) => {
+      reachRedis();
+      return liveKey(key) === undefined ? 0 : 1;
+    },
+    del: async (key: string) => {
+      reachRedis();
+      return redisKeys.delete(key) ? 1 : 0;
+    },
   },
 }));
 
@@ -118,6 +141,7 @@ const ID_98777 = mfcItemId(98_777);
 if (ID_98777 === null) throw new Error("98777 is an MFC item id");
 
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]);
+const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00]);
 const RECENTLY_REFRESHED = { status: 429, body: "Item details were recently refreshed" };
 
 function memoryStore() {
@@ -143,7 +167,10 @@ function memoryStore() {
     };
     return { arrived: arrived.promise, release: () => release.resolve(null) };
   };
-  return { images, objects, holdPut };
+  const failPut = () => {
+    gate = () => Promise.reject(new Error("bucket unreachable"));
+  };
+  return { images, objects, holdPut, failPut };
 }
 
 let store = memoryStore();
@@ -155,6 +182,10 @@ beforeEach(async () => {
     .values({ id: userId, name: "Ryan", email: "r@example.com", username: "ryan" });
   store = memoryStore();
   redisKeys.clear();
+  rateLimited.length = 0;
+  resyncsThisHour = 1;
+  redisLost = false;
+  loseRedis = null;
 });
 
 async function answer(response: Response) {
@@ -359,16 +390,13 @@ describe("the 3-day cooldown and resync-status", () => {
     expect(row?.title).toBe(RETITLED);
   });
 
-  test("status reads processing while a posted page is being written", async () => {
+  test("status reads idle while a posted page is being written, then cooldown", async () => {
     await upload(page98777);
     const put = store.holdPut();
 
     const pending = resync(derivedRetitledPage, JPEG);
     await put.arrived;
-    expect(await resyncStatus()).toEqual({
-      status: 200,
-      body: { status: "processing", cooldownExpiresAt: null },
-    });
+    expect(await resyncStatus()).toEqual(IDLE);
     put.release();
 
     expect(await pending).toEqual(refreshed("refreshed"));
@@ -393,5 +421,64 @@ describe("the 3-day cooldown and resync-status", () => {
     expect(links).toHaveLength(7);
     expect(releases).toHaveLength(1);
     expect(await selectedReleases()).toEqual(releases.map((release) => release.id));
+  });
+});
+
+describe("a resync that fails part way leaves no cooldown and no refresh", () => {
+  test("a picture store that throws answers 500 and status reads idle", async () => {
+    await upload(page98777);
+    const before = await itemRows();
+    store.failPut();
+
+    expect(await resync(derivedRetitledPage, PNG)).toEqual({
+      status: 500,
+      body: "Failed to request item refresh",
+    });
+
+    expect(await itemRows()).toEqual(before);
+    expect(await resyncStatus()).toEqual(IDLE);
+  });
+
+  test("Redis lost at the cooldown write rolls the refresh back, and a retry refreshes", async () => {
+    await upload(page98777);
+    const before = await itemRows();
+    loseRedis = "at the cooldown write";
+
+    expect(await resync(derivedRetitledPage)).toMatchObject({ status: 500 });
+
+    redisLost = false;
+    loseRedis = null;
+    expect(await itemRows()).toEqual(before);
+    expect(await resyncStatus()).toEqual(IDLE);
+    expect(await resync(derivedRetitledPage)).toEqual(refreshed("refreshed"));
+  });
+
+  test("Redis lost right after the cooldown write still commits the refresh the cooldown names", async () => {
+    await upload(page98777);
+    loseRedis = "after the cooldown write";
+
+    expect(await resync(derivedRetitledPage)).toEqual(refreshed("refreshed"));
+
+    redisLost = false;
+    loseRedis = null;
+    const { item: row } = await itemRows();
+    expect(row?.title).toBe(RETITLED);
+    expect(await resyncStatus()).toMatchObject({ body: { status: "cooldown" } });
+  });
+});
+
+describe("the per-user resync rate limit", () => {
+  test("the 61st resync in an hour answers 429 and refreshes nothing", async () => {
+    await upload(page98777);
+    const before = await itemRows();
+    resyncsThisHour = 61;
+
+    const refused = await resync(derivedRetitledPage);
+
+    expect(refused.status).toBe(429);
+    expect(refused.body).toStartWith("Rate limit exceeded");
+    expect(rateLimited).toContain(`rl:item-resync:${userId}`);
+    expect(await itemRows()).toEqual(before);
+    expect(await resyncStatus()).toEqual(IDLE);
   });
 });

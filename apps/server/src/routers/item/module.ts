@@ -14,13 +14,7 @@ import { normalizeScale } from "@myakiba/contracts/shared/scale";
 import type { ReadTx } from "@myakiba/db/tx";
 import { mfcItemId } from "@myakiba/mfc/page";
 import { redis } from "@myakiba/redis/client";
-import {
-  clearResyncRunning,
-  getResyncCooldownExpiresAt,
-  isResyncRunning,
-  markResyncRunning,
-  setResyncCooldown,
-} from "@myakiba/redis/item-resync";
+import { getResyncCooldownExpiresAt, setResyncCooldown } from "@myakiba/redis/item-resync";
 import type { ItemResyncState } from "@myakiba/redis/item-resync";
 import { command, fail, ok, proceed, query } from "@/domain/kernel";
 import { findMfcItem, pictureLog, readPage } from "@/lib/mfc-item-page";
@@ -38,13 +32,10 @@ async function findResyncItem(tx: ReadTx, externalId: number) {
   return itemId === undefined ? undefined : { id, itemId };
 }
 
-// The status keeps the queue's four states. "requested" no longer occurs, since the server never sees the extension's fetch.
+// The status keeps the queue's four states for the web. "requested" and "processing" no longer occur.
 async function resyncState(itemId: string): Promise<ItemResyncState> {
   const cooldownExpiresAt = await getResyncCooldownExpiresAt(redis, itemId);
   if (cooldownExpiresAt) return { status: "cooldown", cooldownExpiresAt };
-  if (await isResyncRunning(redis, itemId)) {
-    return { status: "processing", cooldownExpiresAt: null };
-  }
   return { status: "idle", cooldownExpiresAt: null };
 }
 
@@ -499,43 +490,34 @@ export const Items = {
         if (await getResyncCooldownExpiresAt(redis, found.itemId)) {
           return fail("too_many_requests", RECENTLY_REFRESHED);
         }
-        await markResyncRunning(redis, found.itemId);
         const read = await readPage(scope.log, found.id, input);
-        if (!("proceed" in read)) {
-          await clearResyncRunning(redis, found.itemId);
-          return read;
-        }
+        if (!("proceed" in read)) return read;
         return proceed({ itemId: found.itemId, ...read.proceed });
       },
     },
     async (scope, { itemId, page, stored }) => {
-      try {
-        const locked = await lockItem(scope.tx, itemId);
-        if (!locked) return fail("not_found", "Item not found");
-        if (await getResyncCooldownExpiresAt(redis, itemId)) {
-          return fail("too_many_requests", RECENTLY_REFRESHED);
-        }
-        const image = stored?.kind === "stored" ? stored.url : locked.image;
-        const outcome = await refreshItem(scope.tx, locked, page, image);
-        await setResyncCooldown(redis, itemId);
-
-        scope.log.set({
-          mfc: {
-            itemId: page.mfcItemId,
-            contentLabel: page.contentLabel,
-            outcome,
-            picture: pictureLog(stored),
-            warnings: page.warnings,
-          },
-        });
-        return ok<ResyncResult>({
-          status: "cooldown",
-          cooldownExpiresAt: await getResyncCooldownExpiresAt(redis, itemId),
-          saved: outcome === "unchanged" ? "unchanged" : "refreshed",
-        });
-      } finally {
-        await clearResyncRunning(redis, itemId);
+      const locked = await lockItem(scope.tx, itemId);
+      if (!locked) return fail("not_found", "Item not found");
+      if (await getResyncCooldownExpiresAt(redis, itemId)) {
+        return fail("too_many_requests", RECENTLY_REFRESHED);
       }
+      const image = stored?.kind === "stored" ? stored.url : locked.image;
+      const outcome = await refreshItem(scope.tx, locked, page, image);
+      scope.log.set({
+        mfc: {
+          itemId: page.mfcItemId,
+          contentLabel: page.contentLabel,
+          outcome,
+          picture: pictureLog(stored),
+          warnings: page.warnings,
+        },
+      });
+      const cooldownExpiresAt = await setResyncCooldown(redis, itemId);
+      return ok<ResyncResult>({
+        status: "cooldown",
+        cooldownExpiresAt,
+        saved: outcome === "unchanged" ? "unchanged" : "refreshed",
+      });
     },
   ),
 };
