@@ -7,6 +7,7 @@ import { Elysia, status } from "elysia";
 import { evlog } from "evlog/elysia";
 import { createRequestLogger } from "evlog";
 import { order } from "@myakiba/db/schema/figure";
+import type { Tx } from "@myakiba/db/tx";
 import type { PageRequest } from "@myakiba/contracts/shared/pagination";
 import { betterAuth } from "@/middleware/better-auth";
 import { privateApi } from "@/boundary/private-api";
@@ -93,3 +94,38 @@ command(
   },
   async (_scope, input: number) => ok(input),
 );
+
+const writesBeforeTheTransaction = {
+  ...config,
+  before: async (scope: { readonly tx: Tx }) => {
+    await scope.tx.insert(order).values({ userId: "u1", title: "Order" });
+    return proceed(1);
+  },
+};
+// @ts-expect-error a before held in a variable took a Tx, got the pool and committed its write early
+command(writesBeforeTheTransaction, async () => ok(1));
+
+type ValuesOf<O> = O extends { readonly "~types"?: { readonly value: infer T } } ? T : never;
+type Equal<A, B> =
+  (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
+
+const proceeds = command(
+  { ...config, before: async (_scope, input: { readonly id: string }) => proceed(input.id) },
+  async (_scope, id) => ok(id.length),
+);
+void (true satisfies Equal<ValuesOf<typeof proceeds>, number>);
+void (true satisfies Equal<FailuresOf<typeof proceeds>, never>);
+
+const mayFail = command(
+  {
+    ...config,
+    before: async (_scope, input: { readonly id: string }) =>
+      input.id ? proceed(input.id) : fail("bad_request", "No id"),
+  },
+  async (_scope, id) => ok(id.length),
+);
+void (true satisfies Equal<ValuesOf<typeof mayFail>, number>);
+void (true satisfies Equal<
+  FailuresOf<typeof mayFail>,
+  { readonly ok: false; readonly category: "bad_request"; readonly message: "No id" }
+>);

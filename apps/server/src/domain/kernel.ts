@@ -40,6 +40,8 @@ type Failure<C extends FailureCategory = FailureCategory, M extends string = str
 type Outcome<T, F extends Failure> = Ok<T> | F;
 
 type Proceed<P> = { readonly proceed: P };
+type BeforeResult = Ok<unknown> | Failure | Proceed<unknown>;
+type HandoffOf<B> = B extends Proceed<infer P> ? P : never;
 
 /** Splits what a body returns, so a body that never fails has no failure entry. */
 type ValueOf<R> = R extends Ok<infer T> ? T : never;
@@ -124,7 +126,7 @@ const bodies = new WeakMap<
   (scope: never, input: never) => Promise<Outcome<unknown, Failure>>
 >();
 
-const befores = new WeakMap<AnyOp, Before<never, Ok<unknown> | Failure, unknown>>();
+const befores = new WeakMap<AnyOp, Before<never, BeforeResult>>();
 
 const SNAPSHOT = { isolationLevel: "repeatable read", accessMode: "read only" } as const;
 const snapshots = new WeakSet<AnyOp>();
@@ -155,30 +157,31 @@ export function query<
   return op;
 }
 
-type Before<I, B, P> = (scope: PoolScope, input: I) => Promise<B | Proceed<P>>;
+type Before<I, B extends BeforeResult> = (scope: PoolScope, input: I) => Promise<B>;
 
 /**
  * A write. Everything the body does through `scope.tx` commits together or not at all.
- * `before` runs first, outside any transaction, for work such as parsing or a network
- * call. It returns `proceed(value)` to run the body with `value`, or an outcome that
- * answers without opening a transaction.
+ * `before` runs first, for work such as parsing or a network call, and reads the pool
+ * outside the transaction. A row it read can change before the body runs, so the body
+ * must re-check inside the transaction anything it writes against. Its effects outside the
+ * database, such as a stored file, are never rolled back. It returns `proceed(value)` to
+ * run the body with `value`, or an outcome that answers without opening a transaction.
  */
 export function command<
   I,
-  P,
-  B extends Ok<unknown> | Failure,
+  B extends BeforeResult,
   R extends Ok<unknown> | Failure,
   const M extends string,
 >(
-  config: OpConfig<M> & { readonly before: Before<I, B, P> },
-  body: (scope: Scope, input: P) => Promise<R>,
+  config: OpConfig<M> & { readonly before: Before<I, B> },
+  body: (scope: Scope, input: HandoffOf<B>) => Promise<R>,
 ): Op<I, ValueOf<B | R>, FailureOf<B | R>, M>;
 export function command<I, R extends Ok<unknown> | Failure, const M extends string>(
-  config: OpConfig<M>,
+  config: OpConfig<M> & { readonly before?: never },
   body: (scope: Scope, input: I) => Promise<R>,
 ): Op<I, ValueOf<R>, FailureOf<R>, M>;
 export function command(
-  config: OpConfig<string> & { readonly before?: Before<never, Ok<unknown> | Failure, unknown> },
+  config: OpConfig<string> & { readonly before?: Before<never, BeforeResult> },
   body: (scope: Scope, input: never) => Promise<Ok<unknown> | Failure>,
 ): AnyOp {
   const op = { action: config.action, failure: config.failure };
