@@ -206,17 +206,7 @@ export async function readView(
   return viewImport(row, await readWaitingItems(tx, userId), now);
 }
 
-export async function lockImport(
-  tx: Tx,
-  userId: string,
-  now: Date,
-): Promise<{ readonly current: ImportView | undefined; readonly interruptedByLapse: boolean }> {
-  await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${userId}, 0))`);
-  const view = await readView(tx, userId, now);
-  if (!view || !isActive(view.row.status) || isActive(view.status)) {
-    return { current: view, interruptedByLapse: false };
-  }
-
+async function recordLapse(tx: Tx, view: ImportView, now: Date): Promise<ImportView> {
   await tx
     .update(dataTransferImportItem)
     .set({
@@ -225,9 +215,37 @@ export async function lockImport(
       updatedAt: now,
     })
     .where(
-      and(eq(dataTransferImportItem.userId, userId), eq(dataTransferImportItem.status, "pending")),
+      and(
+        eq(dataTransferImportItem.userId, view.row.userId),
+        eq(dataTransferImportItem.status, "pending"),
+      ),
     );
-  return { current: await saveView(tx, view, now), interruptedByLapse: true };
+  return saveView(tx, view, now);
+}
+
+type Mutation<T> = { readonly value: T; readonly changed: boolean };
+
+/**
+ * Runs `body` under the user's import lock, after recording a lease that lapsed, and publishes the
+ * status once committed if the lapse or the body changed anything.
+ */
+export async function mutateImport<T>(
+  userId: string,
+  now: Date,
+  body: (tx: Tx, current: ImportView | undefined) => Promise<Mutation<T>>,
+): Promise<T> {
+  const { value, changed } = await db.transaction(
+    async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${userId}, 0))`);
+      const view = await readView(tx, userId, now);
+      const lapsed = view !== undefined && isActive(view.row.status) && !isActive(view.status);
+      const outcome = await body(tx, lapsed ? await recordLapse(tx, view, now) : view);
+      return { value: outcome.value, changed: lapsed || outcome.changed };
+    },
+    { isolationLevel: "read committed" },
+  );
+  if (changed) await publishStatus(userId);
+  return value;
 }
 
 async function saveView(tx: Tx, view: ImportView, now: Date): Promise<ImportView> {
@@ -358,7 +376,7 @@ export async function readJobStatus(userId: string): Promise<SyncJobStatus | nul
   return jobStatusOf(view, await readRecentItems(userId));
 }
 
-export async function publishStatus(userId: string): Promise<void> {
+async function publishStatus(userId: string): Promise<void> {
   const { error } = await tryCatch(
     (async () => {
       if (redis.status !== "ready") throw new Error("Redis is unavailable");

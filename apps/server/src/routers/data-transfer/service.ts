@@ -35,8 +35,7 @@ import type { ImportableItem, PlannedCollectionRow } from "./import-plan";
 import {
   importRowColumns,
   isActive,
-  lockImport,
-  publishStatus,
+  mutateImport,
   readJobStatus,
   readView,
   settle,
@@ -48,6 +47,11 @@ import type { ImportRow, ImportView } from "./import-state";
 const INSERT_CHUNK_SIZE = 500;
 
 type ImportRun = { readonly userId: string; readonly importId: string };
+
+type DeletedImport =
+  | { readonly kind: "deleted"; readonly id: string }
+  | { readonly kind: "active" }
+  | { readonly kind: "not_found" };
 
 function chunks<T>(values: readonly T[]): T[][] {
   const result: T[][] = [];
@@ -439,40 +443,35 @@ const DataTransferService = {
     const jobId = `data-transfer-import-${createId()}`;
     const now = new Date();
 
-    const started = await db.transaction(
-      async (tx) => {
-        const { current } = await lockImport(tx, userId, now);
-        if (current && isActive(current.status)) throw new Error("DATA_TRANSFER_ACTIVE_IMPORT");
+    const started = await mutateImport(userId, now, async (tx, current) => {
+      if (current && isActive(current.status)) throw new Error("DATA_TRANSFER_ACTIVE_IMPORT");
 
-        const values = {
-          importId,
-          jobId,
-          fileName,
-          archive,
-          status: "running",
-          phase: "preparing_items",
-          report: null,
-          importedOrders: 0,
-          importedCollectionItems: 0,
-          failedCollectionItems: 0,
-          totalCollectionItems: archive.collectionItems.length,
-          error: null,
-          startedAt: now,
-          updatedAt: now,
-          heartbeatAt: now,
-        } as const;
-        const [row] = await tx
-          .insert(dataTransferImport)
-          .values({ userId, ...values })
-          .onConflictDoUpdate({ target: dataTransferImport.userId, set: values })
-          .returning(importRowColumns);
-        if (!row) throw new Error("DATA_TRANSFER_IMPORT_NOT_SAVED");
-        return applyArchive(tx, row, archive, now);
-      },
-      { isolationLevel: "read committed" },
-    );
+      const values = {
+        importId,
+        jobId,
+        fileName,
+        archive,
+        status: "running",
+        phase: "preparing_items",
+        report: null,
+        importedOrders: 0,
+        importedCollectionItems: 0,
+        failedCollectionItems: 0,
+        totalCollectionItems: archive.collectionItems.length,
+        error: null,
+        startedAt: now,
+        updatedAt: now,
+        heartbeatAt: now,
+      } as const;
+      const [row] = await tx
+        .insert(dataTransferImport)
+        .values({ userId, ...values })
+        .onConflictDoUpdate({ target: dataTransferImport.userId, set: values })
+        .returning(importRowColumns);
+      if (!row) throw new Error("DATA_TRANSFER_IMPORT_NOT_SAVED");
+      return { value: await applyArchive(tx, row, archive, now), changed: true };
+    });
 
-    await publishStatus(userId);
     return { ...toImport(started.view), missingMfcItemIds: started.missingMfcItemIds };
   },
 
@@ -485,64 +484,49 @@ const DataTransferService = {
     return readJobStatus(userId);
   },
 
-  async deleteCurrentImport(
-    userId: string,
-  ): Promise<
-    | { readonly kind: "deleted"; readonly id: string }
-    | { readonly kind: "active" }
-    | { readonly kind: "not_found" }
-  > {
-    return db.transaction(
-      async (tx) => {
-        const { current } = await lockImport(tx, userId, new Date());
-        if (!current) return { kind: "not_found" };
-        if (isActive(current.status)) return { kind: "active" };
+  deleteCurrentImport(userId: string): Promise<DeletedImport> {
+    return mutateImport<DeletedImport>(userId, new Date(), async (tx, current) => {
+      if (!current) return { value: { kind: "not_found" }, changed: false };
+      if (isActive(current.status)) return { value: { kind: "active" }, changed: false };
 
-        await tx.delete(dataTransferImport).where(eq(dataTransferImport.userId, userId));
-        return { kind: "deleted", id: current.row.jobId };
-      },
-      { isolationLevel: "read committed" },
-    );
+      await tx.delete(dataTransferImport).where(eq(dataTransferImport.userId, userId));
+      return { value: { kind: "deleted", id: current.row.jobId }, changed: true };
+    });
   },
 
   async retryImport(userId: string): Promise<DataTransferImportRun> {
     const jobId = `data-transfer-import-${createId()}`;
     const now = new Date();
-    const retried = await db.transaction(
-      async (tx) => {
-        const { current } = await lockImport(tx, userId, now);
-        if (
-          !current?.row.hasArchive ||
-          (current.status !== "partial" && current.status !== "failed")
-        ) {
-          throw new Error("DATA_TRANSFER_IMPORT_NOT_RETRYABLE");
-        }
+    const retried = await mutateImport(userId, now, async (tx, current) => {
+      if (
+        !current?.row.hasArchive ||
+        (current.status !== "partial" && current.status !== "failed")
+      ) {
+        throw new Error("DATA_TRANSFER_IMPORT_NOT_RETRYABLE");
+      }
 
-        const [retrying] = await tx
-          .update(dataTransferImport)
-          .set({
-            jobId,
-            status: "running",
-            phase: "preparing_items",
-            error: null,
-            startedAt: now,
-            updatedAt: now,
-            heartbeatAt: now,
-          })
-          .where(eq(dataTransferImport.userId, userId))
-          .returning({ ...importRowColumns, archive: dataTransferImport.archive });
-        if (!retrying) throw new Error("DATA_TRANSFER_IMPORT_NOT_RETRYABLE");
+      const [retrying] = await tx
+        .update(dataTransferImport)
+        .set({
+          jobId,
+          status: "running",
+          phase: "preparing_items",
+          error: null,
+          startedAt: now,
+          updatedAt: now,
+          heartbeatAt: now,
+        })
+        .where(eq(dataTransferImport.userId, userId))
+        .returning({ ...importRowColumns, archive: dataTransferImport.archive });
+      if (!retrying) throw new Error("DATA_TRANSFER_IMPORT_NOT_RETRYABLE");
 
-        const parsedArchive = dataTransferArchiveV1Schema.safeParse(retrying.archive);
-        if (!parsedArchive.success) {
-          throw new Error("DATA_TRANSFER_RETAINED_ARCHIVE_INVALID", { cause: parsedArchive.error });
-        }
-        return applyArchive(tx, retrying, parsedArchive.data, now);
-      },
-      { isolationLevel: "read committed" },
-    );
+      const parsedArchive = dataTransferArchiveV1Schema.safeParse(retrying.archive);
+      if (!parsedArchive.success) {
+        throw new Error("DATA_TRANSFER_RETAINED_ARCHIVE_INVALID", { cause: parsedArchive.error });
+      }
+      return { value: await applyArchive(tx, retrying, parsedArchive.data, now), changed: true };
+    });
 
-    await publishStatus(userId);
     return { ...toImport(retried.view), missingMfcItemIds: retried.missingMfcItemIds };
   },
 
@@ -564,44 +548,38 @@ const DataTransferService = {
     }
 
     const now = new Date();
-    const { view, changed } = await db.transaction(
-      async (tx) => {
-        const { current, interruptedByLapse } = await lockImport(tx, userId, now);
-        if (prepared.kind === "parsed") await ensureMfcItem(tx, prepared.page, prepared.stored);
-        if (!current) return { view: current, changed: interruptedByLapse };
+    const view = await mutateImport(userId, now, async (tx, current) => {
+      if (prepared.kind === "parsed") await ensureMfcItem(tx, prepared.page, prepared.stored);
+      if (!current) return { value: current, changed: false };
 
-        const [waiting] = await tx
-          .select({ status: dataTransferImportItem.status, rows: dataTransferImportItem.rows })
-          .from(dataTransferImportItem)
-          .where(
-            and(
-              eq(dataTransferImportItem.userId, userId),
-              eq(dataTransferImportItem.itemExternalId, upload.mfcItemId),
-            ),
-          );
-        if (!waiting || waiting.status === "scraped")
-          return { view: current, changed: interruptedByLapse };
+      const [waiting] = await tx
+        .select({ status: dataTransferImportItem.status, rows: dataTransferImportItem.rows })
+        .from(dataTransferImportItem)
+        .where(
+          and(
+            eq(dataTransferImportItem.userId, userId),
+            eq(dataTransferImportItem.itemExternalId, upload.mfcItemId),
+          ),
+        );
+      if (!waiting || waiting.status === "scraped") return { value: current, changed: false };
 
-        const arrived = await loadImportableItems(tx, [upload.mfcItemId]);
-        if (!arrived.has(upload.mfcItemId)) {
-          throw new Error(`MFC item ${upload.mfcItemId} was neither created nor found`);
-        }
-        await applyItemRows(tx, current, arrived, waiting.rows);
-        await tx
-          .update(dataTransferImportItem)
-          .set({ status: "scraped", errorReason: null, updatedAt: now })
-          .where(
-            and(
-              eq(dataTransferImportItem.userId, userId),
-              eq(dataTransferImportItem.itemExternalId, upload.mfcItemId),
-            ),
-          );
-        return { view: await settle(tx, userId, now), changed: true };
-      },
-      { isolationLevel: "read committed" },
-    );
+      const arrived = await loadImportableItems(tx, [upload.mfcItemId]);
+      if (!arrived.has(upload.mfcItemId)) {
+        throw new Error(`MFC item ${upload.mfcItemId} was neither created nor found`);
+      }
+      await applyItemRows(tx, current, arrived, waiting.rows);
+      await tx
+        .update(dataTransferImportItem)
+        .set({ status: "scraped", errorReason: null, updatedAt: now })
+        .where(
+          and(
+            eq(dataTransferImportItem.userId, userId),
+            eq(dataTransferImportItem.itemExternalId, upload.mfcItemId),
+          ),
+        );
+      return { value: await settle(tx, userId, now), changed: true };
+    });
 
-    if (changed) await publishStatus(userId);
     return { kind: "imported", import: view ? toImport(view) : null };
   },
 
@@ -610,82 +588,65 @@ const DataTransferService = {
     failure: DataTransferImportItemFailure,
   ): Promise<DataTransferImport | null> {
     const now = new Date();
-    const { view, changed } = await db.transaction(
-      async (tx) => {
-        const { current, interruptedByLapse } = await lockImport(tx, userId, now);
-        if (!current || current.row.jobId !== failure.jobId || current.status !== "running") {
-          return { view: current, changed: interruptedByLapse };
-        }
-        const failed = await tx
-          .update(dataTransferImportItem)
-          .set({ status: "failed", errorReason: failure.reason, updatedAt: now })
-          .where(
-            and(
-              eq(dataTransferImportItem.userId, userId),
-              eq(dataTransferImportItem.itemExternalId, failure.mfcItemId),
-              eq(dataTransferImportItem.status, "pending"),
-            ),
-          )
-          .returning({ id: dataTransferImportItem.itemExternalId });
-        if (failed.length === 0) return { view: current, changed: false };
-        return { view: await settle(tx, userId, now), changed: true };
-      },
-      { isolationLevel: "read committed" },
-    );
+    const view = await mutateImport(userId, now, async (tx, current) => {
+      if (!current || current.row.jobId !== failure.jobId || current.status !== "running") {
+        return { value: current, changed: false };
+      }
+      const failed = await tx
+        .update(dataTransferImportItem)
+        .set({ status: "failed", errorReason: failure.reason, updatedAt: now })
+        .where(
+          and(
+            eq(dataTransferImportItem.userId, userId),
+            eq(dataTransferImportItem.itemExternalId, failure.mfcItemId),
+            eq(dataTransferImportItem.status, "pending"),
+          ),
+        )
+        .returning({ id: dataTransferImportItem.itemExternalId });
+      if (failed.length === 0) return { value: current, changed: false };
+      return { value: await settle(tx, userId, now), changed: true };
+    });
 
-    if (changed) await publishStatus(userId);
     return view ? toImport(view) : null;
   },
 
   async interruptImport(userId: string, jobId: string): Promise<DataTransferImport | null> {
     const now = new Date();
-    const { view, changed } = await db.transaction(
-      async (tx) => {
-        const { current, interruptedByLapse } = await lockImport(tx, userId, now);
-        if (!current || current.row.jobId !== jobId || current.status !== "running") {
-          return { view: current, changed: interruptedByLapse };
-        }
-        await tx
-          .update(dataTransferImportItem)
-          .set({
-            status: "failed",
-            errorReason: DATA_TRANSFER_IMPORT_INTERRUPTED_REASON,
-            updatedAt: now,
-          })
-          .where(
-            and(
-              eq(dataTransferImportItem.userId, userId),
-              eq(dataTransferImportItem.status, "pending"),
-            ),
-          );
-        return { view: await settle(tx, userId, now), changed: true };
-      },
-      { isolationLevel: "read committed" },
-    );
+    const view = await mutateImport(userId, now, async (tx, current) => {
+      if (!current || current.row.jobId !== jobId || current.status !== "running") {
+        return { value: current, changed: false };
+      }
+      await tx
+        .update(dataTransferImportItem)
+        .set({
+          status: "failed",
+          errorReason: DATA_TRANSFER_IMPORT_INTERRUPTED_REASON,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(dataTransferImportItem.userId, userId),
+            eq(dataTransferImportItem.status, "pending"),
+          ),
+        );
+      return { value: await settle(tx, userId, now), changed: true };
+    });
 
-    if (changed) await publishStatus(userId);
     return view ? toImport(view) : null;
   },
 
-  async heartbeat(userId: string, jobId: string): Promise<boolean> {
+  heartbeat(userId: string, jobId: string): Promise<boolean> {
     const now = new Date();
-    const { running, changed } = await db.transaction(
-      async (tx) => {
-        const { current, interruptedByLapse } = await lockImport(tx, userId, now);
-        if (!current || current.row.jobId !== jobId || current.status !== "running") {
-          return { running: false, changed: interruptedByLapse };
-        }
-        await tx
-          .update(dataTransferImport)
-          .set({ heartbeatAt: now })
-          .where(eq(dataTransferImport.userId, userId));
-        return { running: true, changed: false };
-      },
-      { isolationLevel: "read committed" },
-    );
-
-    if (changed) await publishStatus(userId);
-    return running;
+    return mutateImport(userId, now, async (tx, current) => {
+      if (!current || current.row.jobId !== jobId || current.status !== "running") {
+        return { value: false, changed: false };
+      }
+      await tx
+        .update(dataTransferImport)
+        .set({ heartbeatAt: now })
+        .where(eq(dataTransferImport.userId, userId));
+      return { value: true, changed: false };
+    });
   },
 };
 
