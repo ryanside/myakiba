@@ -1,146 +1,254 @@
 import { Buffer } from "node:buffer";
 import { createId } from "@paralleldrive/cuid2";
-import { Queue } from "bullmq";
-import { and, asc, eq, inArray, isNotNull, sql } from "drizzle-orm";
-import { createLogger } from "evlog";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@myakiba/db/client";
+import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
 import {
   collection as collectionTable,
   dataTransferImport,
+  dataTransferImportItem,
   item as itemTable,
   item_release as itemReleaseTable,
   order as orderTable,
 } from "@myakiba/db/schema/figure";
-import { env } from "@myakiba/env/server";
+import type { Tx } from "@myakiba/db/tx";
 import {
   DATA_TRANSFER_FORMAT,
+  DATA_TRANSFER_IMPORT_INTERRUPTED_REASON,
   DATA_TRANSFER_MAX_BYTES,
   DATA_TRANSFER_MAX_RECORDS,
   DATA_TRANSFER_VERSION,
   dataTransferArchiveV1Schema,
-  dataTransferImportSchema,
 } from "@myakiba/contracts/data-transfer/schema";
 import type {
   DataTransferArchiveV1,
+  DataTransferCollectionItemV1,
   DataTransferImport,
+  DataTransferImportItemFailure,
+  DataTransferImportItemUpload,
+  DataTransferImportRun,
 } from "@myakiba/contracts/data-transfer/schema";
 import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
-import { DATA_TRANSFER_IMPORT_QUEUE_NAME } from "@myakiba/redis/data-transfer";
-import type { DataTransferImportJobPayload } from "@myakiba/redis/data-transfer";
-import { redis } from "@myakiba/redis/client";
-import { getJobStatusSnapshotKey, parseJobStatusPayload } from "@myakiba/redis/job-status";
-import { tryCatch } from "@myakiba/utils/result";
+import { prepareMfcItem, ensureMfcItem } from "@/routers/mfc-items/ingest";
+import { createImportId, planCollectionRows } from "./import-plan";
+import type { ImportableItem, PlannedCollectionRow } from "./import-plan";
+import {
+  importRowColumns,
+  isActive,
+  lockImport,
+  publishStatus,
+  readJobStatus,
+  readView,
+  settle,
+  toImport,
+} from "./import-state";
+import type { ImportRow, ImportView } from "./import-state";
 
-const dataTransferImportQueue = new Queue<DataTransferImportJobPayload>(
-  DATA_TRANSFER_IMPORT_QUEUE_NAME,
-  {
-    connection: {
-      host: env.REDIS_HOST,
-      port: env.REDIS_PORT,
-      enableOfflineQueue: false,
-    },
-    defaultJobOptions: {
-      removeOnComplete: true,
-      removeOnFail: true,
-    },
-  },
-);
+// Postgres binds at most 65535 parameters per statement, so rows are written in chunks.
+const INSERT_CHUNK_SIZE = 500;
 
-const IMPORT_STATUS_CACHE_READ_TIMEOUT_MS = 1000;
+type ImportRun = { readonly userId: string; readonly importId: string };
 
-dataTransferImportQueue.on("error", (error: Error) => {
-  const queueLog = createLogger({
-    action: "dataTransfer.queue",
-    outcome: "error",
-    queue: { name: DATA_TRANSFER_IMPORT_QUEUE_NAME },
-  });
-  queueLog.error(error);
-  queueLog.emit();
-});
-
-const readImportStatusCache = async (jobId: string): Promise<string | null> => {
-  if (redis.status !== "ready") {
-    createLogger({
-      action: "dataTransfer.getImportJobStatus",
-      outcome: "warn",
-      jobId,
-      message: "Redis is unavailable; falling back to the database",
-    }).emit();
-    return null;
+function chunks<T>(values: readonly T[]): T[][] {
+  const result: T[][] = [];
+  for (let start = 0; start < values.length; start += INSERT_CHUNK_SIZE) {
+    result.push(values.slice(start, start + INSERT_CHUNK_SIZE));
   }
+  return result;
+}
 
-  let timeoutId: ReturnType<typeof setTimeout> | null = null;
-  const cacheRead = await tryCatch(
-    Promise.race([
-      redis.get(getJobStatusSnapshotKey(jobId)),
-      new Promise<null>((resolve) => {
-        timeoutId = setTimeout(() => {
-          createLogger({
-            action: "dataTransfer.getImportJobStatus",
-            outcome: "warn",
-            jobId,
-            message: "Redis job status read timed out; falling back to the database",
-          }).emit();
-          resolve(null);
-        }, IMPORT_STATUS_CACHE_READ_TIMEOUT_MS);
-      }),
-    ]),
-  );
-
-  if (timeoutId !== null) clearTimeout(timeoutId);
-  if (!cacheRead.error) return cacheRead.data;
-
-  const cacheLog = createLogger({
-    action: "dataTransfer.getImportJobStatus",
-    outcome: "warn",
-    jobId,
-    message: "Failed to read Redis job status cache; falling back to the database",
-  });
-  cacheLog.error(cacheRead.error);
-  cacheLog.emit();
-  return null;
-};
-
-const markEnqueueFailure = async ({
-  payload,
-  queueError,
-}: {
-  readonly payload: DataTransferImportJobPayload;
-  readonly queueError: unknown;
-}): Promise<never> => {
-  const errorMessage = "The import could not be queued. Retry it when the queue is available.";
-  const now = new Date();
-
-  const { error: persistenceError } = await tryCatch(
-    db
-      .update(dataTransferImport)
-      .set({
-        status: "failed",
-        phase: "failed",
-        error: errorMessage,
-        updatedAt: now,
+async function loadImportableItems(
+  tx: Tx,
+  externalIds: readonly number[],
+): Promise<ReadonlyMap<number, ImportableItem>> {
+  const items = new Map<
+    number,
+    { itemId: string; releases: ImportableItem["releases"][number][] }
+  >();
+  for (const externalIdChunk of chunks(externalIds)) {
+    const rows = await tx
+      .select({
+        itemId: itemTable.id,
+        externalId: itemTable.externalId,
+        release: {
+          id: itemReleaseTable.id,
+          date: itemReleaseTable.date,
+          type: itemReleaseTable.type,
+          price: itemReleaseTable.price,
+          priceCurrency: itemReleaseTable.priceCurrency,
+          barcode: itemReleaseTable.barcode,
+        },
       })
-      .where(
-        and(
-          eq(dataTransferImport.userId, payload.userId),
-          eq(dataTransferImport.jobId, payload.jobId),
-          eq(dataTransferImport.status, "queued"),
-        ),
-      ),
-  );
-  if (persistenceError) {
-    const failureLog = createLogger({
-      action: "dataTransfer.queueFailure",
-      outcome: "error",
-      dataTransfer: { importId: payload.jobId },
-      step: "markImportFailed",
-    });
-    failureLog.error(persistenceError);
-    failureLog.emit();
+      .from(itemTable)
+      .leftJoin(itemReleaseTable, eq(itemReleaseTable.itemId, itemTable.id))
+      .where(and(eq(itemTable.source, "mfc"), inArray(itemTable.externalId, externalIdChunk)));
+
+    for (const row of rows) {
+      if (row.externalId === null) continue;
+      let item = items.get(row.externalId);
+      if (!item) {
+        item = { itemId: row.itemId, releases: [] };
+        items.set(row.externalId, item);
+      }
+      if (row.release) item.releases.push(row.release);
+    }
+  }
+  return items;
+}
+
+async function writeCollectionRows(
+  tx: Tx,
+  run: ImportRun,
+  rows: readonly PlannedCollectionRow[],
+  orderIdOf: (orderKey: string) => string | null,
+): Promise<number> {
+  let inserted = 0;
+  for (const rowChunk of chunks(rows)) {
+    const insertedRows = await tx
+      .insert(collectionTable)
+      .values(
+        rowChunk.map(({ row, itemId, releaseId }) => {
+          const { collectionKey, orderKey, item: _item, createdAt, updatedAt, ...values } = row;
+          return {
+            id: createImportId({ ...run, kind: "collection", localKey: collectionKey }),
+            userId: run.userId,
+            itemId,
+            orderId: orderKey === null ? null : orderIdOf(orderKey),
+            releaseId,
+            ...values,
+            createdAt: new Date(createdAt),
+            updatedAt: new Date(updatedAt),
+          };
+        }),
+      )
+      .onConflictDoNothing({ target: collectionTable.id })
+      .returning({ id: collectionTable.id });
+    inserted += insertedRows.length;
+    await advanceOrderReleaseDatesForCollectionItems(
+      tx,
+      insertedRows.map(({ id }) => id),
+    );
+  }
+  return inserted;
+}
+
+/**
+ * Writes every order and every row whose item is in the database, and records the
+ * rest as waiting for their item. A retry runs this again on the same import id, so
+ * rows already written conflict and are skipped, as the worker's retry did.
+ */
+async function applyArchive(
+  tx: Tx,
+  row: ImportRow,
+  archive: DataTransferArchiveV1,
+  now: Date,
+): Promise<{ readonly view: ImportView; readonly missingMfcItemIds: number[] }> {
+  const run = { userId: row.userId, importId: row.importId };
+  const orderIdOf = (orderKey: string) =>
+    createImportId({ ...run, kind: "order", localKey: orderKey });
+
+  let importedOrders = 0;
+  for (const orderChunk of chunks(archive.orders)) {
+    const inserted = await tx
+      .insert(orderTable)
+      .values(
+        orderChunk.map(({ orderKey, createdAt, updatedAt, ...values }) => ({
+          id: orderIdOf(orderKey),
+          userId: run.userId,
+          ...values,
+          createdAt: new Date(createdAt),
+          updatedAt: new Date(updatedAt),
+        })),
+      )
+      .onConflictDoNothing({ target: orderTable.id })
+      .returning({ id: orderTable.id });
+    importedOrders += inserted.length;
   }
 
-  throw new Error("DATA_TRANSFER_QUEUE_UNAVAILABLE", { cause: queueError });
-};
+  const items = await loadImportableItems(tx, [
+    ...new Set(archive.collectionItems.map((collectionRow) => collectionRow.item.externalId)),
+  ]);
+  const plan = planCollectionRows(archive.collectionItems, items);
+  const importedCollectionItems = await writeCollectionRows(tx, run, plan.rows, orderIdOf);
+
+  await tx.delete(dataTransferImportItem).where(eq(dataTransferImportItem.userId, run.userId));
+  const waiting = [...plan.rowsByMissingItem].map(([itemExternalId, rows]) => ({
+    userId: run.userId,
+    itemExternalId,
+    rows: [...rows],
+    rowCount: rows.length,
+    updatedAt: now,
+  }));
+  for (const waitingChunk of chunks(waiting)) {
+    await tx.insert(dataTransferImportItem).values(waitingChunk);
+  }
+
+  await tx
+    .update(dataTransferImport)
+    .set({
+      importedOrders: sql`${dataTransferImport.importedOrders} + ${importedOrders}`,
+      importedCollectionItems: sql`${dataTransferImport.importedCollectionItems} + ${importedCollectionItems}`,
+      totalCollectionItems: archive.collectionItems.length,
+      report: {
+        failureReasons: [],
+        releaseSubstitutions: plan.releaseSubstitutions,
+        missingReleases: plan.missingReleases,
+      },
+    })
+    .where(eq(dataTransferImport.userId, run.userId));
+
+  return {
+    view: await settle(tx, run.userId, now),
+    missingMfcItemIds: [...plan.rowsByMissingItem.keys()],
+  };
+}
+
+/** Writes one arrived item's rows. An order the user deleted meanwhile leaves its rows without one. */
+async function applyItemRows(
+  tx: Tx,
+  view: ImportView,
+  items: ReadonlyMap<number, ImportableItem>,
+  rows: readonly DataTransferCollectionItemV1[],
+): Promise<void> {
+  const run = { userId: view.row.userId, importId: view.row.importId };
+  const wantedOrderIds = [
+    ...new Set(
+      rows.flatMap((row) =>
+        row.orderKey === null
+          ? []
+          : [createImportId({ ...run, kind: "order", localKey: row.orderKey })],
+      ),
+    ),
+  ];
+  const presentOrderIds = new Set<string>();
+  if (wantedOrderIds.length > 0) {
+    const present = await tx
+      .select({ id: orderTable.id })
+      .from(orderTable)
+      .where(and(eq(orderTable.userId, run.userId), inArray(orderTable.id, wantedOrderIds)))
+      .orderBy(asc(orderTable.id))
+      .for("update");
+    for (const { id } of present) presentOrderIds.add(id);
+  }
+
+  const plan = planCollectionRows(rows, items);
+  const inserted = await writeCollectionRows(tx, run, plan.rows, (orderKey) => {
+    const orderId = createImportId({ ...run, kind: "order", localKey: orderKey });
+    return presentOrderIds.has(orderId) ? orderId : null;
+  });
+
+  await tx
+    .update(dataTransferImport)
+    .set({
+      importedCollectionItems: sql`${dataTransferImport.importedCollectionItems} + ${inserted}`,
+      report: {
+        failureReasons: view.report?.failureReasons ?? [],
+        releaseSubstitutions: (view.report?.releaseSubstitutions ?? 0) + plan.releaseSubstitutions,
+        missingReleases: (view.report?.missingReleases ?? 0) + plan.missingReleases,
+      },
+    })
+    .where(eq(dataTransferImport.userId, run.userId));
+}
 
 const DataTransferService = {
   async exportArchive(userId: string): Promise<DataTransferArchiveV1> {
@@ -328,7 +436,7 @@ const DataTransferService = {
     readonly userId: string;
     readonly fileName: string;
     readonly archive: DataTransferArchiveV1;
-  }): Promise<DataTransferImport> {
+  }): Promise<DataTransferImportRun> {
     if (Buffer.byteLength(JSON.stringify(archive), "utf-8") > DATA_TRANSFER_MAX_BYTES) {
       throw new Error("DATA_TRANSFER_ARCHIVE_TOO_LARGE");
     }
@@ -336,232 +444,50 @@ const DataTransferService = {
     const jobId = `data-transfer-import-${createId()}`;
     const now = new Date();
 
-    const currentImport = await db.transaction(
-      async (transaction) => {
-        await transaction.execute(
-          sql`select pg_advisory_xact_lock(hashtextextended(${userId}, 0))`,
-        );
+    const started = await db.transaction(
+      async (tx) => {
+        const { current } = await lockImport(tx, userId, now);
+        if (current && isActive(current.status)) throw new Error("DATA_TRANSFER_ACTIVE_IMPORT");
 
-        const [existing] = await transaction
-          .select({ status: dataTransferImport.status })
-          .from(dataTransferImport)
-          .where(eq(dataTransferImport.userId, userId))
-          .limit(1);
-
-        if (existing?.status === "queued" || existing?.status === "running") {
-          throw new Error("DATA_TRANSFER_ACTIVE_IMPORT");
-        }
-
-        const [saved] = await transaction
+        const values = {
+          importId,
+          jobId,
+          fileName,
+          archive,
+          status: "running",
+          phase: "preparing_items",
+          report: null,
+          importedOrders: 0,
+          importedCollectionItems: 0,
+          failedCollectionItems: 0,
+          totalCollectionItems: archive.collectionItems.length,
+          error: null,
+          startedAt: now,
+          updatedAt: now,
+          heartbeatAt: now,
+        } as const;
+        const [row] = await tx
           .insert(dataTransferImport)
-          .values({
-            userId,
-            importId,
-            jobId,
-            fileName,
-            status: "queued",
-            phase: "queued",
-            archive,
-            startedAt: now,
-            updatedAt: now,
-          })
-          .onConflictDoUpdate({
-            target: dataTransferImport.userId,
-            set: {
-              importId,
-              jobId,
-              fileName,
-              archive,
-              status: "queued",
-              phase: "queued",
-              report: null,
-              importedOrders: 0,
-              importedCollectionItems: 0,
-              failedCollectionItems: 0,
-              error: null,
-              startedAt: now,
-              updatedAt: now,
-            },
-          })
-          .returning({
-            jobId: dataTransferImport.jobId,
-            fileName: dataTransferImport.fileName,
-            status: dataTransferImport.status,
-            importedOrders: dataTransferImport.importedOrders,
-            importedCollectionItems: dataTransferImport.importedCollectionItems,
-            failedCollectionItems: dataTransferImport.failedCollectionItems,
-            report: dataTransferImport.report,
-            error: dataTransferImport.error,
-          });
-
-        if (!saved) throw new Error("DATA_TRANSFER_IMPORT_NOT_SAVED");
-        return dataTransferImportSchema.parse({
-          id: saved.jobId,
-          fileName: saved.fileName,
-          status: saved.status,
-          importedOrders: saved.importedOrders,
-          importedCollectionItems: saved.importedCollectionItems,
-          failedCollectionItems: saved.failedCollectionItems,
-          report: saved.report,
-          error: saved.error,
-        });
+          .values({ userId, ...values })
+          .onConflictDoUpdate({ target: dataTransferImport.userId, set: values })
+          .returning(importRowColumns);
+        if (!row) throw new Error("DATA_TRANSFER_IMPORT_NOT_SAVED");
+        return applyArchive(tx, row, archive, now);
       },
       { isolationLevel: "read committed" },
     );
 
-    const payload = { userId, jobId } satisfies DataTransferImportJobPayload;
-
-    const { error: queueError } = await tryCatch(
-      dataTransferImportQueue.add("data-transfer-import", payload, {
-        jobId: payload.jobId,
-      }),
-    );
-    if (queueError) {
-      return markEnqueueFailure({ payload, queueError });
-    }
-    return currentImport;
+    await publishStatus(userId);
+    return { ...toImport(started.view), missingMfcItemIds: started.missingMfcItemIds };
   },
 
   async getCurrentImport(userId: string): Promise<DataTransferImport | null> {
-    const [current] = await db
-      .select({
-        jobId: dataTransferImport.jobId,
-        fileName: dataTransferImport.fileName,
-        status: dataTransferImport.status,
-        importedOrders: dataTransferImport.importedOrders,
-        importedCollectionItems: dataTransferImport.importedCollectionItems,
-        failedCollectionItems: dataTransferImport.failedCollectionItems,
-        report: dataTransferImport.report,
-        error: dataTransferImport.error,
-      })
-      .from(dataTransferImport)
-      .where(eq(dataTransferImport.userId, userId))
-      .limit(1);
-
-    if (!current) return null;
-
-    const currentImport = dataTransferImportSchema.parse({
-      id: current.jobId,
-      fileName: current.fileName,
-      status: current.status,
-      importedOrders: current.importedOrders,
-      importedCollectionItems: current.importedCollectionItems,
-      failedCollectionItems: current.failedCollectionItems,
-      report: current.report,
-      error: current.error,
-    });
-    if (currentImport.status === "queued") {
-      const { error } = await tryCatch(
-        dataTransferImportQueue.add(
-          "data-transfer-import",
-          { userId, jobId: currentImport.id },
-          {
-            jobId: currentImport.id,
-          },
-        ),
-      );
-      if (error) {
-        const recoveryLog = createLogger({
-          action: "dataTransfer.queueRecovery",
-          outcome: "error",
-          dataTransfer: { importId: currentImport.id },
-        });
-        recoveryLog.error(error);
-        recoveryLog.emit();
-      }
-    }
-    return currentImport;
+    const view = await readView(db, userId, new Date());
+    return view ? toImport(view) : null;
   },
 
-  async getImportJobStatus(userId: string): Promise<SyncJobStatus | null> {
-    const [currentImport] = await db
-      .select({
-        jobId: dataTransferImport.jobId,
-        status: dataTransferImport.status,
-        phase: dataTransferImport.phase,
-        error: dataTransferImport.error,
-        startedAt: dataTransferImport.startedAt,
-        updatedAt: dataTransferImport.updatedAt,
-      })
-      .from(dataTransferImport)
-      .where(eq(dataTransferImport.userId, userId))
-      .limit(1);
-
-    if (!currentImport) return null;
-
-    const isActive = currentImport.status === "queued" || currentImport.status === "running";
-    const cached = isActive ? await readImportStatusCache(currentImport.jobId) : null;
-
-    if (cached) {
-      const parsed = parseJobStatusPayload(cached);
-      if (parsed && (currentImport.phase !== "writing_records" || parsed.phase === "persisting")) {
-        return parsed;
-      }
-
-      if (!parsed) {
-        createLogger({
-          action: "dataTransfer.getImportJobStatus",
-          outcome: "warn",
-          jobId: currentImport.jobId,
-          message: "Corrupt Redis job status cache; falling back to the database",
-        }).emit();
-      }
-    }
-
-    let phase: SyncJobStatus["phase"];
-    switch (currentImport.phase) {
-      case "queued":
-        phase = "queued";
-        break;
-      case "preparing_items":
-        phase = "scraping";
-        break;
-      case "writing_records":
-        phase = "persisting";
-        break;
-      case "completed":
-        phase = "completed";
-        break;
-      case "failed":
-        phase = "failed";
-        break;
-      default: {
-        const exhaustive: never = currentImport.phase;
-        phase = exhaustive;
-      }
-    }
-
-    let terminalState: SyncJobStatus["terminalState"] = null;
-    if (currentImport.status === "completed") terminalState = "success";
-    else if (currentImport.status === "partial") terminalState = "partial";
-    else if (currentImport.status === "failed") terminalState = "error";
-
-    let statusMessage = "Waiting for the import worker…";
-    if (currentImport.phase === "preparing_items") {
-      statusMessage = "Checking items already in myakiba…";
-    } else if (currentImport.phase === "writing_records") {
-      statusMessage = "Writing imported records…";
-    } else if (currentImport.status === "completed") statusMessage = "Import completed.";
-    else if (currentImport.status === "partial") {
-      statusMessage = "Import completed with skipped records.";
-    } else if (currentImport.status === "failed") {
-      statusMessage = currentImport.error ?? "Import failed.";
-    }
-
-    return {
-      jobId: currentImport.jobId,
-      phase,
-      statusMessage,
-      progress: null,
-      recentItems: [],
-      error:
-        currentImport.status === "failed"
-          ? { code: "unknown", message: currentImport.error ?? "Import failed." }
-          : null,
-      startedAt: currentImport.startedAt.toISOString(),
-      updatedAt: currentImport.updatedAt.toISOString(),
-      terminalState,
-    };
+  getImportJobStatus(userId: string): Promise<SyncJobStatus | null> {
+    return readJobStatus(userId);
   },
 
   async deleteCurrentImport(
@@ -572,104 +498,205 @@ const DataTransferService = {
     | { readonly kind: "not_found" }
   > {
     return db.transaction(
-      async (transaction) => {
-        await transaction.execute(
-          sql`select pg_advisory_xact_lock(hashtextextended(${userId}, 0))`,
-        );
+      async (tx) => {
+        const { current } = await lockImport(tx, userId, new Date());
+        if (!current) return { kind: "not_found" };
+        if (isActive(current.status)) return { kind: "active" };
 
-        const [deleted] = await transaction
-          .delete(dataTransferImport)
-          .where(
-            and(
-              eq(dataTransferImport.userId, userId),
-              inArray(dataTransferImport.status, ["completed", "partial", "failed"]),
-            ),
-          )
-          .returning({ id: dataTransferImport.jobId });
-
-        if (deleted) return { kind: "deleted", id: deleted.id };
-
-        const [current] = await transaction
-          .select({ status: dataTransferImport.status })
-          .from(dataTransferImport)
-          .where(eq(dataTransferImport.userId, userId))
-          .limit(1);
-
-        if (current?.status === "queued" || current?.status === "running") {
-          return { kind: "active" };
-        }
-        return { kind: "not_found" };
+        await tx.delete(dataTransferImport).where(eq(dataTransferImport.userId, userId));
+        return { kind: "deleted", id: current.row.jobId };
       },
       { isolationLevel: "read committed" },
     );
   },
 
-  async retryImport(userId: string): Promise<DataTransferImport> {
+  async retryImport(userId: string): Promise<DataTransferImportRun> {
     const jobId = `data-transfer-import-${createId()}`;
     const now = new Date();
-    const currentImport = await db.transaction(
-      async (transaction) => {
-        await transaction.execute(
-          sql`select pg_advisory_xact_lock(hashtextextended(${userId}, 0))`,
-        );
-
-        const [retrying] = await transaction
-          .update(dataTransferImport)
-          .set({
-            jobId,
-            status: "queued",
-            phase: "queued",
-            error: null,
-            startedAt: now,
-            updatedAt: now,
-          })
-          .where(
-            and(
-              eq(dataTransferImport.userId, userId),
-              inArray(dataTransferImport.status, ["partial", "failed"]),
-              isNotNull(dataTransferImport.archive),
-            ),
-          )
-          .returning({
-            jobId: dataTransferImport.jobId,
-            fileName: dataTransferImport.fileName,
-            status: dataTransferImport.status,
-            importedOrders: dataTransferImport.importedOrders,
-            importedCollectionItems: dataTransferImport.importedCollectionItems,
-            failedCollectionItems: dataTransferImport.failedCollectionItems,
-            report: dataTransferImport.report,
-            error: dataTransferImport.error,
-          });
-
-        if (!retrying) {
+    const retried = await db.transaction(
+      async (tx) => {
+        const { current } = await lockImport(tx, userId, now);
+        if (
+          !current?.row.hasArchive ||
+          (current.status !== "partial" && current.status !== "failed")
+        ) {
           throw new Error("DATA_TRANSFER_IMPORT_NOT_RETRYABLE");
         }
 
-        return dataTransferImportSchema.parse({
-          id: retrying.jobId,
-          fileName: retrying.fileName,
-          status: retrying.status,
-          importedOrders: retrying.importedOrders,
-          importedCollectionItems: retrying.importedCollectionItems,
-          failedCollectionItems: retrying.failedCollectionItems,
-          report: retrying.report,
-          error: retrying.error,
-        });
+        const [retrying] = await tx
+          .update(dataTransferImport)
+          .set({
+            jobId,
+            status: "running",
+            phase: "preparing_items",
+            error: null,
+            startedAt: now,
+            updatedAt: now,
+            heartbeatAt: now,
+          })
+          .where(eq(dataTransferImport.userId, userId))
+          .returning({ ...importRowColumns, archive: dataTransferImport.archive });
+        if (!retrying) throw new Error("DATA_TRANSFER_IMPORT_NOT_RETRYABLE");
+
+        const parsedArchive = dataTransferArchiveV1Schema.safeParse(retrying.archive);
+        if (!parsedArchive.success) {
+          throw new Error("DATA_TRANSFER_RETAINED_ARCHIVE_INVALID", { cause: parsedArchive.error });
+        }
+        return applyArchive(tx, retrying, parsedArchive.data, now);
       },
       { isolationLevel: "read committed" },
     );
 
-    const payload = { userId, jobId } satisfies DataTransferImportJobPayload;
+    await publishStatus(userId);
+    return { ...toImport(retried.view), missingMfcItemIds: retried.missingMfcItemIds };
+  },
 
-    const { error: queueError } = await tryCatch(
-      dataTransferImportQueue.add("data-transfer-import", payload, {
-        jobId: payload.jobId,
-      }),
-    );
-    if (queueError) {
-      return markEnqueueFailure({ payload, queueError });
+  /**
+   * Saves an item the extension fetched and writes the import's rows that wait for it.
+   * A late upload still imports, so the run id only gates failures.
+   */
+  async completeItem(
+    userId: string,
+    upload: DataTransferImportItemUpload,
+  ): Promise<
+    | { readonly kind: "imported"; readonly import: DataTransferImport | null }
+    | { readonly kind: "problem"; readonly message: string }
+  > {
+    const prepared = await prepareMfcItem(db, upload);
+    if (prepared.kind === "unreadable") {
+      await DataTransferService.failItem(userId, {
+        jobId: upload.jobId,
+        mfcItemId: upload.mfcItemId,
+        reason: prepared.message,
+      });
+      return { kind: "problem", message: prepared.message };
     }
-    return currentImport;
+
+    const now = new Date();
+    const { view, changed } = await db.transaction(
+      async (tx) => {
+        const { current, settled } = await lockImport(tx, userId, now);
+        if (prepared.kind === "parsed") await ensureMfcItem(tx, prepared.page, prepared.stored);
+        if (!current) return { view: current, changed: settled };
+
+        const [waiting] = await tx
+          .select({ status: dataTransferImportItem.status, rows: dataTransferImportItem.rows })
+          .from(dataTransferImportItem)
+          .where(
+            and(
+              eq(dataTransferImportItem.userId, userId),
+              eq(dataTransferImportItem.itemExternalId, upload.mfcItemId),
+            ),
+          );
+        if (!waiting || waiting.status === "scraped") return { view: current, changed: settled };
+
+        const arrived = await loadImportableItems(tx, [upload.mfcItemId]);
+        if (!arrived.has(upload.mfcItemId)) {
+          throw new Error(`MFC item ${upload.mfcItemId} was neither created nor found`);
+        }
+        await applyItemRows(tx, current, arrived, waiting.rows);
+        await tx
+          .update(dataTransferImportItem)
+          .set({ status: "scraped", errorReason: null, updatedAt: now })
+          .where(
+            and(
+              eq(dataTransferImportItem.userId, userId),
+              eq(dataTransferImportItem.itemExternalId, upload.mfcItemId),
+            ),
+          );
+        return { view: await settle(tx, userId, now), changed: true };
+      },
+      { isolationLevel: "read committed" },
+    );
+
+    if (changed) await publishStatus(userId);
+    return { kind: "imported", import: view ? toImport(view) : null };
+  },
+
+  /** Records that the extension could not fetch an item. A failure from an earlier run is ignored. */
+  async failItem(
+    userId: string,
+    failure: DataTransferImportItemFailure,
+  ): Promise<DataTransferImport | null> {
+    const now = new Date();
+    const { view, changed } = await db.transaction(
+      async (tx) => {
+        const { current, settled } = await lockImport(tx, userId, now);
+        if (!current || current.row.jobId !== failure.jobId || current.status !== "running") {
+          return { view: current, changed: settled };
+        }
+        const failed = await tx
+          .update(dataTransferImportItem)
+          .set({ status: "failed", errorReason: failure.reason, updatedAt: now })
+          .where(
+            and(
+              eq(dataTransferImportItem.userId, userId),
+              eq(dataTransferImportItem.itemExternalId, failure.mfcItemId),
+              eq(dataTransferImportItem.status, "pending"),
+            ),
+          )
+          .returning({ id: dataTransferImportItem.itemExternalId });
+        if (failed.length === 0) return { view: current, changed: false };
+        return { view: await settle(tx, userId, now), changed: true };
+      },
+      { isolationLevel: "read committed" },
+    );
+
+    if (changed) await publishStatus(userId);
+    return view ? toImport(view) : null;
+  },
+
+  /** Ends the run when its page closes: every item still pending fails as interrupted. */
+  async interruptImport(userId: string, jobId: string): Promise<DataTransferImport | null> {
+    const now = new Date();
+    const { view, changed } = await db.transaction(
+      async (tx) => {
+        const { current, settled } = await lockImport(tx, userId, now);
+        if (!current || current.row.jobId !== jobId || current.status !== "running") {
+          return { view: current, changed: settled };
+        }
+        await tx
+          .update(dataTransferImportItem)
+          .set({
+            status: "failed",
+            errorReason: DATA_TRANSFER_IMPORT_INTERRUPTED_REASON,
+            updatedAt: now,
+          })
+          .where(
+            and(
+              eq(dataTransferImportItem.userId, userId),
+              eq(dataTransferImportItem.status, "pending"),
+            ),
+          );
+        return { view: await settle(tx, userId, now), changed: true };
+      },
+      { isolationLevel: "read committed" },
+    );
+
+    if (changed) await publishStatus(userId);
+    return view ? toImport(view) : null;
+  },
+
+  /** Extends the run's lease. Answers false once the run is over, so the page stops fetching. */
+  async heartbeat(userId: string, jobId: string): Promise<boolean> {
+    const now = new Date();
+    const { running, changed } = await db.transaction(
+      async (tx) => {
+        const { current, settled } = await lockImport(tx, userId, now);
+        if (!current || current.row.jobId !== jobId || current.status !== "running") {
+          return { running: false, changed: settled };
+        }
+        await tx
+          .update(dataTransferImport)
+          .set({ heartbeatAt: now })
+          .where(eq(dataTransferImport.userId, userId));
+        return { running: true, changed: false };
+      },
+      { isolationLevel: "read committed" },
+    );
+
+    if (changed) await publishStatus(userId);
+    return running;
   },
 };
 

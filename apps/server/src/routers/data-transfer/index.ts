@@ -2,10 +2,15 @@ import { Elysia, sse, status } from "elysia";
 import { evlog } from "evlog/elysia";
 import {
   DATA_TRANSFER_MAX_RECORDS,
+  dataTransferImportItemFailureSchema,
+  dataTransferImportItemUploadSchema,
   dataTransferImportRequestSchema,
+  dataTransferImportRunSchema,
 } from "@myakiba/contracts/data-transfer/schema";
 import { tryCatch } from "@myakiba/utils/result";
 import { betterAuth } from "@/middleware/better-auth";
+import { rateLimit } from "@/middleware/rate-limit";
+import { verifiedEmail } from "@/middleware/verified-email";
 import { jobStatusSubscriptionRegistry } from "@/lib/job-status-subscription-registry";
 import {
   MAX_JOB_STATUS_STREAM_DURATION_MS,
@@ -16,6 +21,8 @@ import DataTransferService from "./service";
 const dataTransferRouter = new Elysia({ prefix: "/data-transfer" })
   .use(betterAuth)
   .use(evlog())
+  .use(rateLimit)
+  .use(verifiedEmail)
   .get(
     "/export",
     async ({ user, log }) => {
@@ -223,7 +230,24 @@ const dataTransferRouter = new Elysia({ prefix: "/data-transfer" })
             return;
           }
           if (nextEvent.kind === "heartbeat") {
+            // A closed import tab publishes nothing, so a lapsed lease only shows up on a re-read.
+            const { data: polledStatus, error: polledStatusError } = await tryCatch(
+              DataTransferService.getImportJobStatus(user.id),
+            );
+            if (polledStatusError) {
+              log.error(polledStatusError, { step: "pollImportStatus", outcome: "error" });
+              return;
+            }
+            if (polledStatus === null) {
+              log.set({ outcome: "not_found" });
+              return;
+            }
+            latestStatus = polledStatus;
             yield sse({ data: latestStatus });
+            if (latestStatus.terminalState !== null) {
+              log.set({ outcome: latestStatus.terminalState });
+              return;
+            }
             continue;
           }
           if (nextEvent.event.kind === "error") {
@@ -289,12 +313,6 @@ const dataTransferRouter = new Elysia({ prefix: "/data-transfer" })
         }
 
         log.error(error, { step: "startImport", outcome: "error" });
-        if (error.message === "DATA_TRANSFER_QUEUE_UNAVAILABLE") {
-          return status(
-            500,
-            "The import could not be queued. Retry it when the queue is available.",
-          );
-        }
         return status(500, "Failed to start import.");
       }
 
@@ -303,6 +321,7 @@ const dataTransferRouter = new Elysia({ prefix: "/data-transfer" })
         dataTransfer: {
           importId: currentImport.id,
           status: currentImport.status,
+          missingItems: currentImport.missingMfcItemIds.length,
         },
       });
       return currentImport;
@@ -337,12 +356,6 @@ const dataTransferRouter = new Elysia({ prefix: "/data-transfer" })
         }
 
         log.error(error, { step: "retryImport", outcome: "error" });
-        if (error.message === "DATA_TRANSFER_QUEUE_UNAVAILABLE") {
-          return status(
-            500,
-            "The import could not be queued. Retry it when the queue is available.",
-          );
-        }
         return status(500, "Failed to retry import.");
       }
 
@@ -351,12 +364,119 @@ const dataTransferRouter = new Elysia({ prefix: "/data-transfer" })
         dataTransfer: {
           importId: currentImport.id,
           status: currentImport.status,
+          missingItems: currentImport.missingMfcItemIds.length,
         },
       });
       return currentImport;
     },
     {
       auth: true,
+    },
+  )
+  .post(
+    "/imports/current/items",
+    async ({ body, user, log }) => {
+      log.set({
+        action: "dataTransfer.completeItem",
+        user: { id: user.id },
+        dataTransfer: { importId: body.jobId, mfcItemId: body.mfcItemId },
+      });
+
+      const { data: result, error } = await tryCatch(
+        DataTransferService.completeItem(user.id, body),
+      );
+      if (error) {
+        log.error(error, { step: "completeItem", outcome: "error" });
+        return status(500, "Failed to import the item.");
+      }
+      if (result.kind === "problem") {
+        log.set({ outcome: "rejected", dataTransfer: { code: result.message } });
+        return status(400, result.message);
+      }
+
+      log.set({ outcome: "success", dataTransfer: { status: result.import?.status ?? null } });
+      return result.import;
+    },
+    {
+      auth: true,
+      verifiedEmail: true,
+      rateLimit: "mfcIngest",
+      body: dataTransferImportItemUploadSchema,
+    },
+  )
+  .post(
+    "/imports/current/items/failure",
+    async ({ body, user, log }) => {
+      log.set({
+        action: "dataTransfer.failItem",
+        user: { id: user.id },
+        dataTransfer: { importId: body.jobId, mfcItemId: body.mfcItemId },
+      });
+
+      const { data: currentImport, error } = await tryCatch(
+        DataTransferService.failItem(user.id, body),
+      );
+      if (error) {
+        log.error(error, { step: "failItem", outcome: "error" });
+        return status(500, "Failed to record the item failure.");
+      }
+
+      log.set({ outcome: "success", dataTransfer: { status: currentImport?.status ?? null } });
+      return currentImport;
+    },
+    {
+      auth: true,
+      body: dataTransferImportItemFailureSchema,
+    },
+  )
+  .post(
+    "/imports/current/interrupt",
+    async ({ body, user, log }) => {
+      log.set({
+        action: "dataTransfer.interruptImport",
+        user: { id: user.id },
+        dataTransfer: { importId: body.jobId },
+      });
+
+      const { data: currentImport, error } = await tryCatch(
+        DataTransferService.interruptImport(user.id, body.jobId),
+      );
+      if (error) {
+        log.error(error, { step: "interruptImport", outcome: "error" });
+        return status(500, "Failed to interrupt the import.");
+      }
+
+      log.set({ outcome: "success", dataTransfer: { status: currentImport?.status ?? null } });
+      return currentImport;
+    },
+    {
+      auth: true,
+      body: dataTransferImportRunSchema,
+    },
+  )
+  .post(
+    "/imports/current/heartbeat",
+    async ({ body, user, log }) => {
+      log.set({
+        action: "dataTransfer.heartbeat",
+        user: { id: user.id },
+        dataTransfer: { importId: body.jobId },
+      });
+
+      const { data: running, error } = await tryCatch(
+        DataTransferService.heartbeat(user.id, body.jobId),
+      );
+      if (error) {
+        log.error(error, { step: "heartbeat", outcome: "error" });
+        return status(500, "Failed to extend the import.");
+      }
+
+      log.set({ outcome: running ? "success" : "rejected" });
+      return { running };
+    },
+    {
+      auth: true,
+      body: dataTransferImportRunSchema,
     },
   );
 
