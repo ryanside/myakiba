@@ -784,6 +784,31 @@ describe("a challenge", () => {
     expect(run.results()).toEqual([{ ok: true, html: itemPage(7), picture: null }]);
   });
 
+  test("served with 503, keeps waiting while the tab still shows it with that status", async () => {
+    let solved = false;
+    const extension = fakeExtension({
+      pages: ({ mode, mfcItemId }) => {
+        if (solved && mode === "document") return page(itemPage(mfcItemId));
+        return page(CHALLENGE_PAGE, {
+          status: 503,
+          cfMitigated: mode === "fetch" ? "challenge" : null,
+          retryAfter: "10",
+        });
+      },
+    });
+    const run = extension.run([7]);
+    await extension.clock.runUntil(() => asked(run.events, "needs_user"));
+    await advance(extension.clock, 30_000);
+    expect(run.done()).toBe(false);
+
+    solved = true;
+    extension.tabs.navigate(challengeTab(extension, 7), { title: "Item 7" });
+    await extension.clock.runUntil(run.done);
+
+    expect(asked(run.events, "backing_off")).toBe(false);
+    expect(run.results()).toEqual([{ ok: true, html: itemPage(7), picture: null }]);
+  });
+
   test("a 503 without cf-mitigated: challenge is a rate limit, whatever its title", async () => {
     let answered = 0;
     const extension = fakeExtension({

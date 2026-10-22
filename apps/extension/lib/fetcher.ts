@@ -53,7 +53,7 @@ export type FetchRun = {
 
 type Reading =
   | { readonly kind: "item"; readonly ogImage: MfcOgImage }
-  | { readonly kind: "challenge"; readonly pausedUntil: number | null }
+  | { readonly kind: "challenge"; readonly status: number; readonly pausedUntil: number | null }
   | Exclude<Outcome, { readonly kind: "halted" }>;
 
 type Answer = Exclude<Reading, { readonly kind: "challenge" }>;
@@ -76,7 +76,11 @@ function readPage(page: CollectedPage, job: Job, now: number): Reading {
         ? { kind: "item", ogImage: envelope.ogImage }
         : failed("unexpected_page");
     case "challenge":
-      return { kind: "challenge", pausedUntil: pauseMs === null ? null : now + pauseMs };
+      return {
+        kind: "challenge",
+        status: page.status,
+        pausedUntil: pauseMs === null ? null : now + pauseMs,
+      };
     case "not_found":
       return failed(envelope.signedIn ? "hidden_or_missing" : "mfc_signed_out");
     case "unexpected":
@@ -188,9 +192,13 @@ export function createFetcher(deps: FetcherDeps) {
   async function afterChallenge(
     tabId: number,
     job: Job,
+    servedWith: number,
     deadline: number,
     signal: AbortSignal,
   ): Promise<{ readonly page: CollectedPage; readonly reading: Answer } | null> {
+    // Shown in the tab, a challenge Cloudflare served with 503 reads as a bare 503.
+    const stillShown = (status: number) =>
+      status === CHALLENGE_STATUS || (status === servedWith && status !== 200);
     const done = new AbortController();
     const open = AbortSignal.any([
       signal,
@@ -201,7 +209,7 @@ export function createFetcher(deps: FetcherDeps) {
         // The user's solve reloads the page, and that load counts against the throttle like the extension's own.
         if (navigation === "reloaded") await throttle.noteLoad();
         const page = await readShown(tabId, job, open);
-        if (!page || page.status === CHALLENGE_STATUS) continue;
+        if (!page || stillShown(page.status)) continue;
         const reading = readPage(page, job, clock.now());
         if (reading.kind !== "challenge") return { page, reading };
       }
@@ -214,6 +222,7 @@ export function createFetcher(deps: FetcherDeps) {
   async function solveChallenge(
     job: Job,
     requester: LiveRequester,
+    servedWith: number,
     signal: AbortSignal,
   ): Promise<Outcome> {
     let tabId: number;
@@ -225,7 +234,7 @@ export function createFetcher(deps: FetcherDeps) {
     }
     const deadline = clock.now() + CHALLENGE_WINDOW_MS;
     dispatch({ type: "needs_user", untilMs: deadline });
-    const answer = await afterChallenge(tabId, job, deadline, signal);
+    const answer = await afterChallenge(tabId, job, servedWith, deadline, signal);
     if (!answer) await mfcTabs.dismiss(tabId);
     await mfcTabs.handBack(requester, signal);
     signal.throwIfAborted();
@@ -245,7 +254,7 @@ export function createFetcher(deps: FetcherDeps) {
         case "challenge":
           // The challenge's own load then waits out MFC's pause, or halts the queue when it is too long.
           if (reading.pausedUntil !== null) await throttle.pause(reading.pausedUntil);
-          return await solveChallenge(job, requester, signal);
+          return await solveChallenge(job, requester, reading.status, signal);
         case "result":
         case "rate_limited":
           return reading;
