@@ -43,8 +43,14 @@ type Bridge = {
   readonly fetchItems: (ids: readonly number[]) => Promise<PageRun>;
   readonly rogue: (waitMs: number) => Promise<number>;
 };
+type WorkerTabs = {
+  readonly query: (filter: {
+    readonly url: string;
+  }) => Promise<readonly { readonly status?: string }[]>;
+};
 declare global {
   var bridge: Bridge;
+  var chrome: { readonly tabs: WorkerTabs };
 }
 
 const mocks = startMocks();
@@ -101,6 +107,19 @@ async function until(condition: () => boolean, label: string, timeoutMs = 10_000
   throw new Error(`timed out waiting for ${label}`);
 }
 
+async function untilExtensionSeesMfcTabComplete() {
+  const [worker] = context.serviceWorkers();
+  for (const deadline = Date.now() + 10_000; Date.now() < deadline;) {
+    const complete = await worker?.evaluate(async (origin) => {
+      const tabs = await chrome.tabs.query({ url: `${origin}/*` });
+      return tabs.length > 0 && tabs.every((tab) => tab.status === "complete");
+    }, MFC);
+    if (complete) return;
+    await Bun.sleep(50);
+  }
+  throw new Error("timed out waiting for the extension to see the MFC tab complete");
+}
+
 function fetchItems(myakiba: Page, ids: readonly number[]): Promise<PageRun> {
   return myakiba.evaluate((mfcItemIds) => globalThis.bridge.fetchItems(mfcItemIds), ids);
 }
@@ -139,6 +158,7 @@ describe("the extension against a mock MFC", () => {
       const myakiba = await launch();
       const open = await context.newPage();
       await open.goto(`${MFC}/`);
+      await untilExtensionSeesMfcTabComplete();
       await myakiba.bringToFront();
       openedPages = [];
 
