@@ -543,24 +543,31 @@ describe("both routes need a verified email and have their own rate limit", () =
 });
 
 describe("POST /api/mfc-items fails the item when its picture cannot be stored", () => {
-  test.each(["error", "hang"] as const)(
-    "a store that fails (%s) answers 500 and writes nothing",
-    async (failure) => {
-      const timeout = AbortSignal.timeout.bind(AbortSignal);
-      const budget = spyOn(AbortSignal, "timeout").mockImplementation((ms) =>
-        timeout(ms === 5000 ? 100 : ms),
-      );
-      store.failPuts(failure);
-      try {
-        expect(await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG })).toEqual({
-          status: 500,
-          body: "Failed to import item",
-        });
-        expect(budget.mock.calls.map(([ms]) => ms)).toContain(5000);
-      } finally {
-        budget.mockRestore();
-      }
-      expect(await counts()).toEqual({ items: 0, entries: 0, links: 0, releases: 0 });
-    },
-  );
+  test("a store that errors answers 500 and writes nothing", async () => {
+    store.failPuts("error");
+
+    expect(await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG })).toEqual({
+      status: 500,
+      body: "Failed to import item",
+    });
+    expect(await counts()).toEqual({ items: 0, entries: 0, links: 0, releases: 0 });
+  });
+
+  test("a store that hangs is cut off by its 5 s budget, answers 500 and writes nothing", async () => {
+    const timeout = AbortSignal.timeout.bind(AbortSignal);
+    const budget = spyOn(AbortSignal, "timeout").mockImplementation((ms) =>
+      timeout(ms === 5000 ? 100 : ms),
+    );
+    store.failPuts("hang");
+    try {
+      expect(await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG })).toEqual({
+        status: 500,
+        body: "Failed to import item",
+      });
+      expect(budget.mock.calls.map(([ms]) => ms)).toContain(5000);
+    } finally {
+      budget.mockRestore();
+    }
+    expect(await counts()).toEqual({ items: 0, entries: 0, links: 0, releases: 0 });
+  });
 });
