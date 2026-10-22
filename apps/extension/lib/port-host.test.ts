@@ -13,7 +13,7 @@ const OWN_CONTENT_SCRIPT: PortSender = {
   frameId: 0,
   origin: ORIGINS.web,
   url: `${ORIGINS.web}/sync`,
-  tab: { id: 7 },
+  tab: { id: 7, incognito: false },
 };
 
 type PortMessage = { readonly [key: string]: string | number | readonly number[] };
@@ -65,6 +65,7 @@ describe("servePort", () => {
     ["a child frame", { frameId: 1 }],
     ["another extension", { id: "theirs" }],
     ["no tab", { tab: undefined }],
+    ["a tab of unknown browsing context", { tab: { id: 7 } }],
   ])("refuses %s", (_, change) => {
     const port = connect({ ...OWN_CONTENT_SCRIPT, ...change });
     port.send({ type: "fetch-items", requestId: REQUEST_ID, mfcItemIds: [1] });
@@ -86,11 +87,27 @@ describe("servePort", () => {
     const [run] = port.submitted;
     run?.emit({ type: "done", reason: "complete" });
 
-    expect(run?.requesterTabId).toBe(7);
+    expect(run?.requester).toEqual({
+      tabId: 7,
+      context: { incognito: false, cookieStoreId: null },
+    });
     expect(run?.mfcItemIds).toEqual([itemId(1), itemId(2)]);
     expect(port.posted).toEqual([
       { requestId: REQUEST_ID, event: { type: "done", reason: "complete" } },
     ]);
+  });
+
+  test("runs a fetch in the sender's container", () => {
+    const port = connect({
+      ...OWN_CONTENT_SCRIPT,
+      tab: { id: 7, incognito: true, cookieStoreId: "firefox-private" },
+    });
+    port.send({ type: "fetch-items", requestId: REQUEST_ID, mfcItemIds: [1] });
+
+    expect(port.submitted[0]?.requester.context).toEqual({
+      incognito: true,
+      cookieStoreId: "firefox-private",
+    });
   });
 
   test("ignores a URL", () => {

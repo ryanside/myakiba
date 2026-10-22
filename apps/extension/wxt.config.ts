@@ -11,7 +11,8 @@ export default defineConfig({
       name: "myakiba",
       description:
         "Brings MyFigureCollection items into myakiba with your MyFigureCollection session.",
-      permissions: ["scripting", "storage"],
+      // Firefox needs "cookies" to open the MFC tab in the requesting tab's container.
+      permissions: firefox ? ["scripting", "storage", "cookies"] : ["scripting", "storage"],
       host_permissions: [`${env.WXT_MFC_ORIGIN}/*`, `${env.WXT_MFC_STATIC_ORIGIN}/*`],
       // Uint8Array.fromBase64 and toBase64.
       ...(firefox

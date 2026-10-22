@@ -3,10 +3,17 @@ import { mfcItemIdSchema } from "@myakiba/mfc/bridge";
 
 export const PAGE_TIMEOUT_MS = 45_000;
 
-export const collectRequestSchema = z.strictObject({
+const pageRequestSchema = z.strictObject({
+  kind: z.literal("page"),
   mode: z.enum(["fetch", "document"]),
   mfcItemId: mfcItemIdSchema,
 });
+export type PageRequest = z.output<typeof pageRequestSchema>;
+
+export const collectRequestSchema = z.discriminatedUnion("kind", [
+  pageRequestSchema,
+  z.strictObject({ kind: z.literal("gated-picture"), url: z.string() }),
+]);
 export type CollectRequest = z.output<typeof collectRequestSchema>;
 
 declare global {
@@ -19,6 +26,5 @@ export const collectedPageSchema = z.strictObject({
   cfMitigated: z.string().nullable(),
   retryAfter: z.string().nullable(),
   html: z.string(),
-  picture: z.strictObject({ base64: z.base64(), contentType: z.string() }).nullable(),
 });
 export type CollectedPage = z.output<typeof collectedPageSchema>;

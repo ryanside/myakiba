@@ -1,14 +1,18 @@
 import { portRequestSchema } from "@myakiba/mfc/bridge";
 import type { PortEvent, PortRequest } from "@myakiba/mfc/bridge";
 import type { Fetcher } from "./fetcher";
-import type { RunKey } from "./queue";
+import type { Requester, RunKey } from "./queue";
 
 export type PortSender = {
   readonly id?: string;
   readonly frameId?: number;
   readonly origin?: string;
   readonly url?: string;
-  readonly tab?: { readonly id?: number };
+  readonly tab?: {
+    readonly id?: number;
+    readonly incognito?: boolean;
+    readonly cookieStoreId?: string;
+  };
 };
 
 export type BridgePort = {
@@ -19,14 +23,21 @@ export type BridgePort = {
   readonly onDisconnect: { readonly addListener: (listener: () => void) => void };
 };
 
-function trustedTabId(
+function trustedRequester(
   sender: PortSender | undefined,
   expected: { readonly extensionId: string; readonly webOrigin: string },
-): number | null {
+): Requester | null {
   if (sender?.id !== expected.extensionId || sender.frameId !== 0) return null;
   // Firefox gives no sender.origin.
   const origin = sender.origin ?? URL.parse(sender.url ?? "")?.origin;
-  return origin === expected.webOrigin ? (sender.tab?.id ?? null) : null;
+  const tab = sender.tab;
+  if (origin !== expected.webOrigin || tab?.id === undefined || tab.incognito === undefined) {
+    return null;
+  }
+  return {
+    tabId: tab.id,
+    context: { incognito: tab.incognito, cookieStoreId: tab.cookieStoreId ?? null },
+  };
 }
 
 export function servePort(
@@ -34,8 +45,8 @@ export function servePort(
   fetcher: Pick<Fetcher, "submit" | "cancel">,
   expected: { readonly extensionId: string; readonly webOrigin: string },
 ): void {
-  const requesterTabId = trustedTabId(port.sender, expected);
-  if (requesterTabId === null) {
+  const requester = trustedRequester(port.sender, expected);
+  if (requester === null) {
     port.disconnect();
     return;
   }
@@ -58,7 +69,7 @@ export function servePort(
         openRuns.add(key);
         fetcher.submit({
           key,
-          requesterTabId,
+          requester,
           mfcItemIds: request.mfcItemIds,
           emit: (event) => {
             if (event.type === "done") openRuns.delete(key);

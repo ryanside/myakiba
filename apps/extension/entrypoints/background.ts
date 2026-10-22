@@ -1,14 +1,15 @@
+import { portPictureSchema } from "@myakiba/mfc/bridge";
 import type * as z from "zod";
 import { browser } from "wxt/browser";
 import { defineBackground } from "wxt/utils/define-background";
 import type { SessionValue } from "../lib/clock";
 import { systemClock } from "../lib/clock";
 import { collectedPageSchema } from "../lib/collect";
-import type { CollectRequest, CollectedPage } from "../lib/collect";
+import type { CollectRequest } from "../lib/collect";
 import { ORIGINS } from "../lib/config";
 import { createFetcher } from "../lib/fetcher";
 import { ownedTabSchema } from "../lib/mfc-tab";
-import { readPicture } from "../lib/picture";
+import { PICTURE_TIMEOUT_MS, readPicture } from "../lib/picture";
 import { servePort } from "../lib/port-host";
 import { OPEN_THROTTLE, throttleStateSchema } from "../lib/throttle";
 
@@ -25,7 +26,11 @@ function sessionValue<T>(key: string, schema: z.ZodType<T>, fallback: T): Sessio
   };
 }
 
-async function runCollector(tabId: number, request: CollectRequest): Promise<CollectedPage> {
+async function runCollector<T>(
+  tabId: number,
+  request: CollectRequest,
+  schema: z.ZodType<T>,
+): Promise<T> {
   await browser.scripting.executeScript({
     target: { tabId },
     func: (value: CollectRequest) => {
@@ -37,7 +42,7 @@ async function runCollector(tabId: number, request: CollectRequest): Promise<Col
     target: { tabId },
     files: ["/collector.js"],
   });
-  return collectedPageSchema.parse(injection?.result);
+  return schema.parse(injection?.result);
 }
 
 export default defineBackground(() => {
@@ -49,9 +54,17 @@ export default defineBackground(() => {
     origins: ORIGINS,
     throttleState: sessionValue("throttle", throttleStateSchema, OPEN_THROTTLE),
     ownedTab: sessionValue("ownedTab", ownedTabSchema, null),
-    collect: runCollector,
+    collectPage: (tabId, request) => runCollector(tabId, request, collectedPageSchema),
+    fetchGatedPicture: (tabId, url) =>
+      runCollector(tabId, { kind: "gated-picture", url }, portPictureSchema.nullable()),
     fetchPublicPicture: async (url) =>
-      readPicture(await fetch(url, { credentials: "omit", cache: "no-store" })),
+      readPicture(
+        await fetch(url, {
+          credentials: "omit",
+          cache: "no-store",
+          signal: AbortSignal.timeout(PICTURE_TIMEOUT_MS),
+        }),
+      ),
   });
 
   browser.tabs.onActivated.addListener(async ({ tabId }) => {
@@ -64,4 +77,5 @@ export default defineBackground(() => {
   browser.runtime.onConnect.addListener((port) => {
     servePort(port, fetcher, { extensionId: browser.runtime.id, webOrigin: ORIGINS.web });
   });
+  fetcher.resume();
 });

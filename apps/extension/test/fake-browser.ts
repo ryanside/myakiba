@@ -2,11 +2,11 @@ import type { PortPicture, RunEvent } from "@myakiba/mfc/bridge";
 import { mfcItemId } from "@myakiba/mfc/page";
 import type { MfcItemId } from "@myakiba/mfc/page";
 import type { Clock, SessionValue } from "../lib/clock";
-import type { CollectRequest, CollectedPage } from "../lib/collect";
+import type { CollectedPage, PageRequest } from "../lib/collect";
 import { createFetcher } from "../lib/fetcher";
 import type { OwnedTab, TabsApi, WindowsApi } from "../lib/mfc-tab";
 import type { Origins } from "../lib/origins";
-import type { RunKey } from "../lib/queue";
+import type { Requester, RunKey, TabContext } from "../lib/queue";
 import { OPEN_THROTTLE } from "../lib/throttle";
 import type { ThrottleState } from "../lib/throttle";
 
@@ -16,14 +16,17 @@ export const ORIGINS: Origins = {
   mfcStatic: "http://static.mfc.test",
 };
 
+const NORMAL: TabContext = { incognito: false, cookieStoreId: null };
+export const INCOGNITO: TabContext = { incognito: true, cookieStoreId: null };
+
 export function itemId(value: number): MfcItemId {
   const id = mfcItemId(value);
   if (id === null) throw new Error(`${value} is not an MFC item id`);
   return id;
 }
 
-async function flushMicrotasks(): Promise<void> {
-  for (let round = 0; round < 10; round++) {
+async function flushMicrotasks(rounds: number): Promise<void> {
+  for (let round = 0; round < rounds; round++) {
     await new Promise((resolve) => {
       setImmediate(resolve);
     });
@@ -32,11 +35,22 @@ async function flushMicrotasks(): Promise<void> {
 
 export type FakeClock = Clock & {
   readonly runUntil: (done: () => boolean) => Promise<void>;
+  readonly runUntilIdle: () => Promise<void>;
 };
 
 export function fakeClock(start = 1_000_000): FakeClock {
   let now = start;
   let timers: { at: number; fire: () => void }[] = [];
+
+  function fireNext(): boolean {
+    const [next] = timers.toSorted((a, b) => a.at - b.at);
+    if (!next) return false;
+    timers = timers.filter((timer) => timer !== next);
+    now = Math.max(now, next.at);
+    next.fire();
+    return true;
+  }
+
   return {
     now: () => now,
     sleep: (ms, signal) =>
@@ -54,21 +68,24 @@ export function fakeClock(start = 1_000_000): FakeClock {
       }),
     async runUntil(done) {
       for (let step = 0; step < 100_000; step++) {
-        await flushMicrotasks();
+        await flushMicrotasks(10);
         if (done()) return;
-        const [next] = timers.toSorted((a, b) => a.at - b.at);
-        if (!next) throw new Error("nothing left to run, and the condition never held");
-        timers = timers.filter((timer) => timer !== next);
-        now = Math.max(now, next.at);
-        next.fire();
+        if (!fireNext()) throw new Error("nothing left to run, and the condition never held");
       }
       throw new Error("the condition never held");
+    },
+    async runUntilIdle() {
+      for (let step = 0; step < 100_000; step++) {
+        await flushMicrotasks(100);
+        if (!fireNext()) return;
+      }
+      throw new Error("the clock never went idle");
     },
   };
 }
 
 /** Each read and write takes a turn of the event loop, as storage.session does. */
-export function memoryValue<T>(initial: T): SessionValue<T> {
+export function memoryValue<T>(initial: T): SessionValue<T> & { readonly peek: () => T } {
   let value = initial;
   const later = () =>
     new Promise((resolve) => {
@@ -83,22 +100,56 @@ export function memoryValue<T>(initial: T): SessionValue<T> {
       await later();
       value = next;
     },
+    peek: () => value,
   };
 }
 
-type FakeTab = { id: number; windowId: number; url: string; status: string; title: string };
+type FakeTab = {
+  id: number;
+  windowId: number;
+  url: string;
+  status: string;
+  active: boolean;
+  incognito: boolean;
+  cookieStoreId?: string;
+};
+
+const WINDOWS = new Map([
+  [1, NORMAL],
+  [2, INCOGNITO],
+]);
 
 /** Activating a tab runs the onActivated listener before the call returns, as Chrome does. */
-function fakeTabs(activated: (tabId: number) => Promise<void>) {
-  const dispatchActivated = (tabId: number) => {
-    void activated(tabId);
-  };
+function fakeTabs(clock: Clock, activated: (tabId: number) => Promise<void>) {
   const tabs = new Map<number, FakeTab>();
   const log: string[] = [];
+  const loads: { readonly at: number; readonly url: string }[] = [];
   let nextId = 100;
 
-  function titleOf(url: string): string {
-    return url.includes("/item/") ? "Just a moment..." : "MyFigureCollection";
+  function activate(tabId: number): void {
+    const tab = tabs.get(tabId);
+    if (!tab || tab.active) return;
+    for (const other of tabs.values()) {
+      if (other.windowId === tab.windowId) other.active = false;
+    }
+    tab.active = true;
+    void activated(tabId);
+  }
+
+  function add(url: string, windowId: number, status: string, cookieStoreId?: string): FakeTab {
+    const context = WINDOWS.get(windowId);
+    if (!context) throw new Error(`No window with id: ${windowId}`);
+    const tab: FakeTab = {
+      id: nextId++,
+      windowId,
+      url,
+      status,
+      active: false,
+      incognito: context.incognito,
+    };
+    if (cookieStoreId !== undefined) tab.cookieStoreId = cookieStoreId;
+    tabs.set(tab.id, tab);
+    return tab;
   }
 
   const api: TabsApi = {
@@ -115,19 +166,22 @@ function fakeTabs(activated: (tabId: number) => Promise<void>) {
         .filter((tab) => tab.status === "complete" && tab.url.startsWith(prefix))
         .map((tab) => ({ ...tab }));
     },
-    async create({ url, active }) {
-      const tab = { id: nextId++, windowId: 1, url, status: "loading", title: titleOf(url) };
-      tabs.set(tab.id, tab);
+    async create({ url, active, windowId = 1, cookieStoreId }) {
+      const tab = add(url, windowId, "loading", cookieStoreId);
       log.push(`create ${active ? "active" : "inactive"} ${url}`);
-      if (active) dispatchActivated(tab.id);
+      loads.push({ at: clock.now(), url });
+      if (active) activate(tab.id);
       return { ...tab };
     },
     async update(tabId, { url, active }) {
       const tab = tabs.get(tabId);
       if (!tab) throw new Error(`No tab with id: ${tabId}`);
-      if (url !== undefined) Object.assign(tab, { url, status: "loading", title: titleOf(url) });
+      if (url !== undefined) {
+        Object.assign(tab, { url, status: "loading" });
+        loads.push({ at: clock.now(), url });
+      }
       log.push(`update ${tabId}${url === undefined ? "" : ` ${url}`}${active ? " active" : ""}`);
-      if (active) dispatchActivated(tabId);
+      if (active) activate(tabId);
       return { ...tab };
     },
     async remove(tabId) {
@@ -139,15 +193,16 @@ function fakeTabs(activated: (tabId: number) => Promise<void>) {
   return {
     api,
     log,
-    open(url: string): number {
-      const tab = { id: nextId++, windowId: 1, url, status: "complete", title: titleOf(url) };
-      tabs.set(tab.id, tab);
-      return tab.id;
+    loads,
+    open(url: string, options: { windowId?: number; cookieStoreId?: string } = {}): number {
+      return add(url, options.windowId ?? 1, "complete", options.cookieStoreId).id;
     },
     set(tabId: number, change: Partial<FakeTab>): void {
       const tab = tabs.get(tabId);
       if (tab) Object.assign(tab, change);
     },
+    activate,
+    get: (tabId: number): FakeTab | undefined => tabs.get(tabId),
     has: (tabId: number) => tabs.has(tabId),
   };
 }
@@ -175,20 +230,26 @@ export function notFoundPage(signedIn: boolean): string {
 export const CHALLENGE_PAGE = "<html><head><title>Just a moment...</title></head></html>";
 
 export function page(html: string, overrides: Partial<CollectedPage> = {}): CollectedPage {
-  return { status: 200, cfMitigated: null, retryAfter: null, html, picture: null, ...overrides };
+  return { status: 200, cfMitigated: null, retryAfter: null, html, ...overrides };
 }
 
-type CollectCall = CollectRequest & { readonly tabId: number; readonly at: number };
+type CollectCall = PageRequest & {
+  readonly tabId: number;
+  readonly tab: Readonly<FakeTab> | undefined;
+  readonly at: number;
+};
 
 export function fakeExtension(options: {
-  readonly pages: (request: CollectRequest) => CollectedPage | Promise<CollectedPage>;
+  readonly pages: (request: PageRequest) => CollectedPage | Promise<CollectedPage>;
   readonly clock?: FakeClock;
   readonly throttleState?: SessionValue<ThrottleState>;
+  readonly ownedTab?: SessionValue<OwnedTab>;
+  readonly gatedPicture?: (url: string) => Promise<PortPicture | null>;
   readonly publicPicture?: (url: URL) => Promise<PortPicture | null>;
 }) {
   const clock = options.clock ?? fakeClock();
-  const tabs = fakeTabs((tabId) => fetcher.noteTabActivated(tabId));
-  const ownedTab = memoryValue<OwnedTab>(null);
+  const tabs = fakeTabs(clock, (tabId) => fetcher.noteTabActivated(tabId));
+  const myakiba: Requester = { tabId: tabs.open(`${ORIGINS.web}/sync`), context: NORMAL };
   const calls: CollectCall[] = [];
   const pictureUrls: string[] = [];
   const fetcher = createFetcher({
@@ -198,10 +259,17 @@ export function fakeExtension(options: {
     random: () => 0.5,
     origins: ORIGINS,
     throttleState: options.throttleState ?? memoryValue(OPEN_THROTTLE),
-    ownedTab,
-    collect: async (tabId, request) => {
-      calls.push({ ...request, tabId, at: clock.now() });
+    ownedTab: options.ownedTab ?? memoryValue<OwnedTab>(null),
+    collectPage: async (tabId, request) => {
+      const tab = tabs.get(tabId);
+      calls.push({ ...request, tabId, tab: tab && { ...tab }, at: clock.now() });
       return options.pages(request);
+    },
+    fetchGatedPicture: async (_tabId, url) => {
+      pictureUrls.push(url);
+      return options.gatedPicture
+        ? options.gatedPicture(url)
+        : { base64: "/9j/", contentType: "image/jpeg" };
     },
     fetchPublicPicture: async (url) => {
       pictureUrls.push(url.href);
@@ -211,12 +279,12 @@ export function fakeExtension(options: {
     },
   });
 
-  function run(ids: readonly number[], requesterTabId = 1) {
+  function run(ids: readonly number[], requester: Requester = myakiba) {
     const key = crypto.randomUUID() as RunKey;
     const events: RunEvent<PortPicture>[] = [];
     fetcher.submit({
       key,
-      requesterTabId,
+      requester,
       mfcItemIds: ids.map(itemId),
       emit: (event) => events.push(event),
     });
@@ -225,18 +293,9 @@ export function fakeExtension(options: {
       events,
       done: () => events.some((event) => event.type === "done"),
       items: () => events.filter((event) => event.type === "item"),
+      results: () => events.flatMap((event) => (event.type === "item" ? [event.result] : [])),
     };
   }
 
-  async function settle(): Promise<void> {
-    let idle = false;
-    const draining = (async () => {
-      await fetcher.idle();
-      idle = true;
-    })();
-    await clock.runUntil(() => idle);
-    await draining;
-  }
-
-  return { clock, tabs, calls, pictureUrls, ownedTab, fetcher, run, settle };
+  return { clock, tabs, myakiba, calls, pictureUrls, fetcher, run, settle: clock.runUntilIdle };
 }
