@@ -116,7 +116,8 @@ export const bridgeEventSchema = z.object({
 });
 
 /** Chrome JSON-serializes runtime messages, so picture bytes cross the extension as base64. */
-export type PortPicture = { readonly base64: string; readonly contentType: string };
+export const portPictureSchema = z.strictObject({ base64: z.base64(), contentType: z.string() });
+export type PortPicture = Readonly<z.output<typeof portPictureSchema>>;
 
 export const portRequestSchema = z.discriminatedUnion("type", [
   z.strictObject({
@@ -139,7 +140,7 @@ export const portEventSchema = z.strictObject({
         z.strictObject({
           ok: z.literal(true),
           html: z.string(),
-          picture: z.strictObject({ base64: z.base64(), contentType: z.string() }).nullable(),
+          picture: portPictureSchema.nullable(),
         }),
         z.strictObject({ ok: z.literal(false), error: z.enum(ITEM_ERRORS) }),
       ]),
