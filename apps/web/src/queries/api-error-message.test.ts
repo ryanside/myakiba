@@ -1,6 +1,12 @@
-import { afterEach, describe, expect, test } from "bun:test";
-import { getDashboard } from "./dashboard";
-import { getOrder } from "./orders";
+import { afterEach, describe, expect, mock, test } from "bun:test";
+
+const realAuthClient = await import("@/lib/auth-client");
+await mock.module("@/lib/auth-client", () => ({
+  ...realAuthClient,
+  recheckSession: async () => {},
+}));
+const { getDashboard } = await import("./dashboard");
+const { getOrder } = await import("./orders");
 
 const realFetch = globalThis.fetch;
 

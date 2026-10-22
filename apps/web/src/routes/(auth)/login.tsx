@@ -1,7 +1,6 @@
 import SignInForm from "@/components/auth/sign-in-form";
 import { AuthLayout } from "@/components/auth/auth-layout";
 import { VerifyEmailView } from "@/components/auth/verify-email-view";
-import { authClient } from "@/lib/auth-client";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import * as z from "zod";
 
@@ -33,8 +32,8 @@ export const Route = createFileRoute("/(auth)/login")({
       },
     ],
   }),
-  beforeLoad: async ({ search }) => {
-    const { data: session } = await authClient.getSession();
+  beforeLoad: async ({ context, search }) => {
+    const { session } = await context.readSession();
     if (session) {
       throw redirect({
         href: resolvePostAuthRedirect(search.redirect),

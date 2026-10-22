@@ -476,6 +476,30 @@
       "bug": "a collection bulk delete answered 200 for a mix of the caller's items and another user's, deleting the caller's and skipping the rest",
       "test": "apps/server/src/routers/collection/routes.test.ts",
       "fixed": ["a bulk delete of an own and another user's item answers 404 and deletes nothing"]
+    },
+    {
+      "fix": "2a572a42",
+      "bug": "sidebar preloads and navigation repeatedly checked the session until a 429 incorrectly redirected a signed-in user to login",
+      "test": "apps/web/src/components/auth/navigation-session.test.tsx",
+      "fixed": [
+        "sidebar preloads and navigation keep a valid session without exhausting session checks",
+        "the auth pages read the same session as the app instead of checking it again"
+      ]
+    },
+    {
+      "fix": "61071f7f",
+      "bug": "an API 401 from a revoked or expired session never rechecked the session, so the app kept rendering until focus, reconnect or reload",
+      "test": "apps/web/src/lib/treaty-client.test.ts",
+      "fixed": [
+        "a burst of API 401s checks the session once and signs a revoked session out",
+        "an API 401 rechecks a session whose initial check was unavailable"
+      ]
+    },
+    {
+      "fix": "2a572a42",
+      "bug": "Google signup navigated into the signed-out app before the redirect plugin opened consent",
+      "test": "apps/web/src/components/auth/google-signup.test.tsx",
+      "fixed": ["Google signup opens consent without navigating through the signed-out app"]
     }
   ],
   "lint": [

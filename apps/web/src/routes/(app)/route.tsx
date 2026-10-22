@@ -2,8 +2,11 @@ import { useEffect, useRef } from "react";
 import { Add01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import type { ErrorComponentProps } from "@tanstack/react-router";
 import { useRead } from "@/data/client";
 import { version } from "@/data/resources/version";
+import { SessionUnavailable } from "@/components/auth/session-unavailable";
+import { RouteError } from "@/components/errors/route-error";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import UserMenu from "@/components/sidebar/user-menu";
@@ -11,14 +14,16 @@ import SyncWidget from "@/components/sync/sync-widget";
 import SyncStatusWidget from "@/components/sync/sync-status-widget";
 import { AppCommand } from "@/components/command/app-command";
 import { Button } from "@/components/ui/button";
-import { authClient } from "@/lib/auth-client";
 import { toast } from "@/components/ui/toast";
+import { SessionUnavailableError } from "@/lib/session";
 import { env } from "@myakiba/env/web";
 
 export const Route = createFileRoute("/(app)")({
   component: RouteComponent,
-  beforeLoad: async ({ location }) => {
-    const { data: session } = await authClient.getSession();
+  errorComponent: AppRouteError,
+  beforeLoad: async ({ context, location }) => {
+    const { session, unavailable } = await context.readSession();
+    if (unavailable) throw new SessionUnavailableError();
     if (!session) {
       throw redirect({
         to: "/login",
@@ -32,6 +37,11 @@ export const Route = createFileRoute("/(app)")({
     };
   },
 });
+
+function AppRouteError(props: ErrorComponentProps) {
+  if (props.error instanceof SessionUnavailableError) return <SessionUnavailable />;
+  return <RouteError {...props} />;
+}
 
 function RouteComponent() {
   const hasNotified = useRef(false);

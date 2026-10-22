@@ -3,10 +3,10 @@ import { Toaster } from "@/components/ui/toast";
 import { HeadContent, Outlet, createRootRouteWithContext } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import "../index.css";
-import type { authClient } from "@/lib/auth-client";
+import type { SessionCheck } from "@/lib/session";
 
 export interface RouterAppContext {
-  session: Awaited<ReturnType<typeof authClient.getSession>>["data"];
+  readSession: () => Promise<SessionCheck>;
 }
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({

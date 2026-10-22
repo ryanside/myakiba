@@ -1,11 +1,9 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Delete02Icon, Loading03Icon } from "@hugeicons/core-free-icons";
-import { useNavigate } from "@tanstack/react-router";
-import { authClient } from "@/lib/auth-client";
+import { authClient, endSession } from "@/lib/auth-client";
 import { toast } from "@/components/ui/toast";
 import { useForm } from "@tanstack/react-form";
 import { useRead } from "@/data/client";
-import { useClearServerData } from "@/data/resources/session";
 import { settings } from "@/data/resources/settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,27 +25,7 @@ import { SettingsRow } from "./settings-row";
 export function DeleteAccount() {
   const { data, isPending, isError, error } = useRead(settings.accountType);
   const hasCredentialAccount = data?.hasCredentialAccount ?? false;
-  const navigate = useNavigate();
-  const clearServerData = useClearServerData();
   const isTriggerDisabled = isPending || isError;
-
-  const completeAccountDeletion = () => {
-    toast.add({ type: "success", title: "Account deleted successfully" });
-    clearServerData();
-    navigate({ to: "/login" });
-  };
-
-  const deleteUserCallbacks = {
-    onSuccess: () => {
-      completeAccountDeletion();
-    },
-    onError: (authError) => {
-      toast.add({
-        type: "error",
-        title: authError.error.message || "Failed to delete account",
-      });
-    },
-  } satisfies NonNullable<Parameters<typeof authClient.deleteUser>[1]>;
 
   const form = useForm({
     defaultValues: {
@@ -55,11 +33,17 @@ export function DeleteAccount() {
       confirmationPhrase: "",
     },
     onSubmit: async ({ value }) => {
-      if (hasCredentialAccount) {
-        await authClient.deleteUser({ password: value.password }, deleteUserCallbacks);
-      } else {
-        await authClient.deleteUser({}, deleteUserCallbacks);
+      const result = await endSession(() =>
+        authClient.deleteUser(hasCredentialAccount ? { password: value.password } : {}),
+      );
+      if (result.error) {
+        toast.add({
+          type: "error",
+          title: result.error.message || "Couldn't delete account. Try again.",
+        });
+        return;
       }
+      toast.add({ type: "success", title: "Account deleted successfully" });
     },
   });
   return (
