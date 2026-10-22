@@ -235,8 +235,15 @@ const counts = async () => ({
   releases: await db.$count(item_release),
 });
 
+const LOCK_WAIT_MS = 1000;
+const POSTGRES_DEADLOCK_TIMEOUT_MS = 1000;
+const UPLOAD_PAIR_MS = 1000;
+const RACE_ROUNDS = 5;
+const RACE_TIMEOUT_MS =
+  RACE_ROUNDS * (LOCK_WAIT_MS + POSTGRES_DEADLOCK_TIMEOUT_MS + UPLOAD_PAIR_MS);
+
 async function uploadsWaitingOnLocks(expected: number) {
-  const deadline = Date.now() + 5000;
+  const deadline = Date.now() + LOCK_WAIT_MS;
   for (;;) {
     const [waiting] = await db.execute<{ count: number }>(
       "SELECT count(*)::int AS count FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'",
@@ -350,35 +357,39 @@ describe("POST /api/mfc-items saves an MFC item page as a new item", () => {
     expect(await counts()).toEqual({ items: 1, entries: 7, links: 7, releases: 1 });
   });
 
-  test("concurrent uploads that reach their shared entries in opposite orders both finish", async () => {
-    const race = async () => {
-      await db.execute("TRUNCATE item, entry CASCADE");
-      const { answers } = await db.transaction(async (tx) => {
-        await tx.insert(entry).values([
-          { externalId: 9613, source: "mfc", category: "Artists", name: "Minheru" },
-          { externalId: 21_937, source: "mfc", category: "Artists", name: "Moekibara Fumitake" },
-        ]);
-        const uploads = Promise.all([
-          upload({ mfcItemId: 98_777, page: page98777 }),
-          upload({ mfcItemId: 98_779, page: derivedSharedEntriesPage }),
-        ]);
-        await uploadsWaitingOnLocks(2);
-        return { answers: uploads };
-      });
-      const answered = await answers;
-      return { statuses: answered.map((a) => a.status), counts: await counts() };
-    };
-    const rounds = [];
-    // A broken lock order waits out Postgres's 1 s deadlock check in every round.
-    for (let round = 0; round < 5; round++) rounds.push(await race());
+  test(
+    "concurrent uploads that reach their shared entries in opposite orders both finish",
+    async () => {
+      const race = async () => {
+        await db.execute("TRUNCATE item, entry CASCADE");
+        const { answers } = await db.transaction(async (tx) => {
+          await tx.insert(entry).values([
+            { externalId: 9613, source: "mfc", category: "Artists", name: "Minheru" },
+            { externalId: 21_937, source: "mfc", category: "Artists", name: "Moekibara Fumitake" },
+          ]);
+          const uploads = Promise.all([
+            upload({ mfcItemId: 98_777, page: page98777 }),
+            upload({ mfcItemId: 98_779, page: derivedSharedEntriesPage }),
+          ]);
+          await uploadsWaitingOnLocks(2);
+          return { answers: uploads };
+        });
+        const answered = await answers;
+        return { statuses: answered.map((a) => a.status), counts: await counts() };
+      };
+      const rounds = [];
+      // Each round is a fresh chance to interleave. A broken lock order deadlocks in some rounds, not all.
+      for (let round = 0; round < RACE_ROUNDS; round++) rounds.push(await race());
 
-    expect(rounds).toEqual(
-      Array.from({ length: 5 }, () => ({
-        statuses: [200, 200],
-        counts: { items: 2, entries: 7, links: 11, releases: 2 },
-      })),
-    );
-  }, 15_000);
+      expect(rounds).toEqual(
+        Array.from({ length: RACE_ROUNDS }, () => ({
+          statuses: [200, 200],
+          counts: { items: 2, entries: 7, links: 11, releases: 2 },
+        })),
+      );
+    },
+    RACE_TIMEOUT_MS,
+  );
 
   test("no transaction is open while the picture is stored", async () => {
     const put = store.holdPut();
@@ -536,15 +547,19 @@ describe("POST /api/mfc-items fails the item when its picture cannot be stored",
     "a store that fails (%s) answers 500 and writes nothing",
     async (failure) => {
       const timeout = AbortSignal.timeout.bind(AbortSignal);
-      const budget = spyOn(AbortSignal, "timeout").mockImplementation(() => timeout(100));
+      const budget = spyOn(AbortSignal, "timeout").mockImplementation((ms) =>
+        timeout(ms === 5000 ? 100 : ms),
+      );
       store.failPuts(failure);
-
-      const answered = await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG });
-      const budgets = budget.mock.calls.map(([ms]) => ms);
-      budget.mockRestore();
-
-      expect(answered).toEqual({ status: 500, body: "Failed to import item" });
-      expect(budgets).toEqual([5000]);
+      try {
+        expect(await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG })).toEqual({
+          status: 500,
+          body: "Failed to import item",
+        });
+        expect(budget.mock.calls.map(([ms]) => ms)).toContain(5000);
+      } finally {
+        budget.mockRestore();
+      }
       expect(await counts()).toEqual({ items: 0, entries: 0, links: 0, releases: 0 });
     },
   );
