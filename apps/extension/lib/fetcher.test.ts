@@ -3,6 +3,7 @@ import {
   CHALLENGE_PAGE,
   INCOGNITO,
   ORIGINS,
+  OTHER_WINDOW,
   fakeClock,
   fakeExtension,
   itemId,
@@ -14,6 +15,7 @@ import {
 } from "../test/fake-browser";
 import type { FakeClock, FakeExtension } from "../test/fake-browser";
 import type { CollectedPage, PageRequest } from "./collect";
+import { PAGE_TIMEOUT_MS } from "./collect";
 import { CHALLENGE_WINDOW_MS } from "./fetcher";
 import type { OwnedTab } from "./mfc-tab";
 import { PICTURE_TIMEOUT_MS } from "./picture";
@@ -21,6 +23,8 @@ import { OPEN_THROTTLE, THROTTLE } from "./throttle";
 
 const SLOW_PAGE_MS = 3000;
 const CONTAINER = "firefox-container-1";
+const NORMAL = { incognito: false, cookieStoreId: null };
+const MFC_ERROR = page("<html><title>Server error</title></html>", { status: 500 });
 
 function itemPages() {
   return ({ mfcItemId }: PageRequest) => page(itemPage(mfcItemId));
@@ -502,6 +506,166 @@ describe("a challenge", () => {
     expect(run.results()).toEqual([{ ok: true, html: itemPage(7), picture: null }]);
   });
 
+  test.each([
+    ["a signed-out 404", page(notFoundPage(false), { status: 404 }), "mfc_signed_out"],
+    ["a signed-in 404", page(notFoundPage(true), { status: 404 }), "hidden_or_missing"],
+    ["another item's page", page(itemPage(99)), "unexpected_page"],
+    ["an MFC error", MFC_ERROR, "unexpected_page"],
+  ] as const)(
+    "solved into %s answers at once and leaves the rest of the queue running",
+    async (_page, solvedInto, error) => {
+      let solved = false;
+      const challenge = challengeOn([7]);
+      const extension = fakeExtension({
+        pages: (request) =>
+          solved && request.mode === "document" ? solvedInto : challenge.pages(request),
+      });
+      const first = extension.run([7, 8]);
+      const second = extension.run([9]);
+      await extension.clock.runUntil(() => asked(first.events, "needs_user"));
+
+      solved = true;
+      extension.tabs.navigate(challengeTab(extension, 7), { title: "MyFigureCollection.net" });
+      const solvedAt = extension.clock.now();
+      await extension.clock.runUntil(() => first.items().length === 1);
+      expect(extension.clock.now() - solvedAt).toBeLessThan(1000);
+      await extension.clock.runUntil(() => first.done() && second.done());
+
+      expect(first.results()).toEqual([
+        { ok: false, error },
+        { ok: true, html: itemPage(8), picture: null },
+      ]);
+      expect(second.results()).toEqual([{ ok: true, html: itemPage(9), picture: null }]);
+    },
+  );
+
+  test("solved into a rate limit backs off, then tries the item again", async () => {
+    let solved = false;
+    const challenge = challengeOn([7]);
+    const extension = fakeExtension({
+      pages: (request) => {
+        if (!solved) return challenge.pages(request);
+        return request.mode === "document" ? rateLimited("10") : page(itemPage(7));
+      },
+    });
+    const run = extension.run([7]);
+    await extension.clock.runUntil(() => asked(run.events, "needs_user"));
+
+    solved = true;
+    extension.tabs.navigate(challengeTab(extension, 7), { title: "Too many" });
+    await extension.clock.runUntil(run.done);
+
+    expect(asked(run.events, "backing_off")).toBe(true);
+    expect(run.results()).toEqual([{ ok: true, html: itemPage(7), picture: null }]);
+  });
+
+  test("a failed read of the challenge tab means not yet", async () => {
+    const challenge = challengeOn([7]);
+    let reads = 0;
+    const extension = fakeExtension({
+      pages: (request) => {
+        if (request.mode === "document" && ++reads === 1) {
+          throw new Error("Frame with ID 0 was removed.");
+        }
+        return challenge.pages(request);
+      },
+    });
+    const run = extension.run([7]);
+    await extension.clock.runUntil(() => asked(run.events, "needs_user"));
+    await advance(extension.clock, 10_000);
+    expect(run.done()).toBe(false);
+
+    challenge.solve(extension, 7);
+    await extension.clock.runUntil(run.done);
+
+    expect(run.results()).toEqual([{ ok: true, html: itemPage(7), picture: null }]);
+  });
+
+  test("left unsolved for its whole window reads the page a handful of times, not every poll", async () => {
+    const extension = fakeExtension({ pages: challengeOn([7]).pages });
+    const run = extension.run([7]);
+    await extension.clock.runUntil(run.done);
+
+    const reads = extension.calls.filter((call) => call.mode === "document");
+    expect(run.results()).toEqual([{ ok: false, error: "challenge_unsolved" }]);
+    expect(reads.length).toBeGreaterThan(0);
+    expect(reads.length).toBeLessThanOrEqual(3);
+  });
+
+  test("served with 503 and a long Retry-After halts like any 503, without asking the user", async () => {
+    const throttleState = memoryValue(OPEN_THROTTLE);
+    const extension = fakeExtension({
+      throttleState,
+      pages: () =>
+        page(CHALLENGE_PAGE, { status: 503, cfMitigated: "challenge", retryAfter: "600" }),
+    });
+    const run = extension.run([7, 8]);
+    await extension.clock.runUntil(run.done);
+
+    expect(run.results()).toEqual([
+      { ok: false, error: "rate_limited" },
+      { ok: false, error: "rate_limited" },
+    ]);
+    expect(extension.tabs.loads.map((load) => load.url)).toEqual([`${ORIGINS.mfc}/`]);
+    expect(throttleState.peek().pausedUntil).toBe((extension.calls[0]?.at ?? 0) + 600_000);
+  });
+
+  test("served with 503 and a short Retry-After backs off and tries again", async () => {
+    let answered = 0;
+    const extension = fakeExtension({
+      pages: ({ mfcItemId }) =>
+        answered++ === 0
+          ? page(CHALLENGE_PAGE, { status: 503, cfMitigated: "challenge", retryAfter: "10" })
+          : page(itemPage(mfcItemId)),
+    });
+    const run = extension.run([7]);
+    await extension.clock.runUntil(run.done);
+
+    expect(run.events).toContainEqual({
+      type: "status",
+      state: "backing_off",
+      mfcItemId: itemId(7),
+      untilMs: (extension.calls[0]?.at ?? 0) + 10_000,
+    });
+    expect(extension.tabs.loads.map((load) => load.url)).toEqual([`${ORIGINS.mfc}/`]);
+    expect(run.results()).toEqual([{ ok: true, html: itemPage(7), picture: null }]);
+  });
+
+  test("the reload that delivers the solved item takes a throttle turn", async () => {
+    const challenge = challengeOn([7]);
+    const extension = fakeExtension({ pages: challenge.pages });
+    const run = extension.run([7, 8]);
+    await extension.clock.runUntil(() => asked(run.events, "needs_user"));
+    await advance(extension.clock, 10_000);
+
+    challenge.solve(extension, 7, 2000);
+    await extension.clock.runUntil(run.done);
+
+    const reload = extension.tabs.loads.findLast((load) => load.url.endsWith("/item/7"));
+    const next = extension.calls.find((call) => call.mode === "fetch" && call.mfcItemId === 8);
+    expect((next?.at ?? 0) - (reload?.endedAt ?? Infinity)).toBeGreaterThanOrEqual(
+      THROTTLE.minGapMs,
+    );
+  });
+
+  test("shows in the window of the run still waiting, and hands focus back there", async () => {
+    const challenge = challengeOn([7]);
+    const extension = fakeExtension({ pages: challenge.pages });
+    const other = extension.tabs.open(`${ORIGINS.web}/sync`, { windowId: OTHER_WINDOW });
+    const first = extension.run([7]);
+    const second = extension.run([7], { tabId: other, context: NORMAL });
+    await extension.clock.runUntil(() => extension.calls.length === 1);
+
+    extension.fetcher.cancel(first.key);
+    await extension.clock.runUntil(() => asked(second.events, "needs_user"));
+    challenge.solve(extension, 7);
+    await extension.clock.runUntil(second.done);
+
+    expect(second.results()).toEqual([{ ok: true, html: itemPage(7), picture: null }]);
+    expect(extension.tabs.focused).toEqual([OTHER_WINDOW, OTHER_WINDOW]);
+    expect(extension.tabs.get(other)?.active).toBe(true);
+  });
+
   test("gives challenge_unsolved when the window closes", async () => {
     const extension = fakeExtension({ pages: challengeOn([7]).pages });
     const run = extension.run([7]);
@@ -649,6 +813,77 @@ describe("the MFC tab", () => {
       [itemId(2), 102],
     ]);
     expect(run.results().map((result) => result.ok)).toEqual([true, true]);
+  });
+
+  test("a tab the user focuses while the extension creates it stays theirs", async () => {
+    const extension = fakeExtension({
+      pages: itemPages(),
+      onTabCreated: (tabId) => extension.tabs.activate(tabId),
+    });
+    const run = extension.run([1]);
+    await extension.clock.runUntil(run.done);
+    await extension.settle();
+
+    expect(extension.tabs.has(101)).toBe(true);
+    expect(extension.tabs.log).toEqual([`create inactive ${ORIGINS.mfc}/`]);
+  });
+
+  test("gives up at once on a new tab the user takes somewhere else, and leaves it open", async () => {
+    const extension = fakeExtension({
+      pages: itemPages(),
+      navigationMs: () => 5000,
+      onTabCreated: (tabId) =>
+        extension.tabs.navigate(tabId, { url: "https://example.com/", title: "Example" }),
+    });
+    const startedAt = extension.clock.now();
+    const run = extension.run([1]);
+    await extension.clock.runUntil(run.done);
+    expect(extension.clock.now() - startedAt).toBeLessThan(PAGE_TIMEOUT_MS);
+    await extension.settle();
+
+    expect(extension.tabs.has(101)).toBe(true);
+    expect(extension.tabs.log).toEqual([`create inactive ${ORIGINS.mfc}/`]);
+  });
+
+  test("an MFC error in a borrowed tab is the item's, with no second try", async () => {
+    const extension = fakeExtension({ pages: () => MFC_ERROR });
+    extension.tabs.open(`${ORIGINS.mfc}/`);
+    const run = extension.run([1]);
+    await extension.clock.runUntil(run.done);
+    await extension.settle();
+
+    expect(extension.calls).toHaveLength(1);
+    expect(extension.tabs.log).toEqual([]);
+    expect(run.results()).toEqual([{ ok: false, error: "unexpected_page" }]);
+  });
+
+  test("a failed injection in a borrowed tab tries the item once more in its own tab", async () => {
+    const extension = fakeExtension({
+      pages: (request) => {
+        if (extension.calls.length === 1) throw new Error("Cannot access contents of the page.");
+        return page(itemPage(request.mfcItemId));
+      },
+    });
+    const borrowed = extension.tabs.open(`${ORIGINS.mfc}/`);
+    const run = extension.run([1]);
+    await extension.clock.runUntil(run.done);
+
+    expect(extension.calls.map((call) => call.tabId)).toEqual([borrowed, 102]);
+    expect(run.results().map((result) => result.ok)).toEqual([true]);
+  });
+
+  test("a shared item outlives its first run's tab closing before the MFC tab opens", async () => {
+    const extension = fakeExtension({ pages: itemPages() });
+    const other = extension.tabs.open(`${ORIGINS.web}/sync`, { windowId: OTHER_WINDOW });
+    const first = extension.run([1]);
+    const second = extension.run([1], { tabId: other, context: NORMAL });
+
+    extension.fetcher.cancel(first.key);
+    await extension.tabs.api.remove(extension.myakiba.tabId);
+    await extension.clock.runUntil(second.done);
+
+    expect(second.results()).toEqual([{ ok: true, html: itemPage(1), picture: null }]);
+    expect(extension.calls[0]?.tab?.windowId).toBe(OTHER_WINDOW);
   });
 
   test("never borrows or opens an MFC tab outside an incognito requester's window", async () => {

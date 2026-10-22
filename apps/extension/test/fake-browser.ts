@@ -20,7 +20,7 @@ export const ORIGINS: Origins = {
 const NORMAL: TabContext = { incognito: false, cookieStoreId: null };
 export const INCOGNITO: TabContext = { incognito: true, cookieStoreId: null };
 /** A second normal window, so a test can tell which window the extension focuses. */
-const OTHER_WINDOW = 3;
+export const OTHER_WINDOW = 3;
 
 export function itemId(value: number): MfcItemId {
   const id = mfcItemId(value);
