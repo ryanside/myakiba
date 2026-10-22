@@ -558,13 +558,22 @@
     },
     {
       "fix": "c6ab608d",
-      "bug": "the dashboard order chart bars had no names and no keyboard path, the chart's focus ring was hidden, and its reference line sprang under reduced motion",
+      "bug": "the dashboard order chart bars had no names and no keyboard path, and the chart's focus ring was hidden",
       "test": "apps/web/src/components/dashboard/orders-bar-chart.test.tsx",
       "fixed": [
         "each order bar is a link named for its month and count, and only the highlighted month is a tab stop",
         "arrow keys move the order chart highlight between months and Enter opens the focused month",
-        "tabbing out of the order chart returns the highlight to the current month",
-        "with reduced motion the order reference line jumps to the highlighted month"
+        "tabbing out of the order chart returns the highlight to the current month"
+      ]
+    },
+    {
+      "fix": "1b9f9b52",
+      "bug": "hovering the dashboard order chart moved its tab stop off the focused month, a value refresh dropped keyboard focus, and the reference line ignored the OS reduced-motion setting",
+      "test": "apps/web/src/components/dashboard/orders-bar-chart.test.tsx",
+      "fixed": [
+        "with reduced motion the order reference line jumps to the highlighted month",
+        "a focused month keeps the tab stop and the Enter target while the pointer highlights another month",
+        "a focused month keeps keyboard focus when the order counts refresh"
       ]
     }
   ],
