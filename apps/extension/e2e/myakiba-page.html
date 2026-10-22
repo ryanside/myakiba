@@ -25,8 +25,20 @@
     return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
   }
 
+  const events = new Map();
+
   window.bridge = {
     statuses: [],
+    start(mfcItemIds) {
+      const requestId = send({ type: "fetch-items", mfcItemIds });
+      events.set(requestId, []);
+      runs.set(requestId, (event) => events.get(requestId).push(event));
+      return requestId;
+    },
+    cancel(targetRequestId) {
+      send({ type: "cancel", targetRequestId });
+    },
+    events: (requestId) => events.get(requestId) ?? [],
     announces: () => seen.filter((message) => message.event.type === "announce").length,
     async hello(timeoutMs) {
       for (const deadline = performance.now() + timeoutMs; performance.now() < deadline;) {

@@ -23,9 +23,13 @@ declare global {
   var myakibaCollectAbort: AbortController | undefined;
 }
 
-/** Injected as a `func` before the collector file, so the collector finds its request. */
+/**
+ * Injected as a `func` before the collector file. Chrome may run a later stop before it has read that file,
+ * so the controller a stop aborts exists from here on.
+ */
 export function armCollector(request: CollectRequest): void {
   globalThis.myakibaCollectRequest = request;
+  globalThis.myakibaCollectAbort = new AbortController();
 }
 
 /** Injected as a `func` once the load is cancelled. */
@@ -39,9 +43,13 @@ export async function runArmed<T>(
 ): Promise<T> {
   const request = collectRequestSchema.parse(globalThis.myakibaCollectRequest);
   globalThis.myakibaCollectRequest = undefined;
-  const controller = new AbortController();
-  globalThis.myakibaCollectAbort = controller;
-  return work(request, controller.signal);
+  const controller = globalThis.myakibaCollectAbort ?? new AbortController();
+  try {
+    return await work(request, controller.signal);
+  } finally {
+    // A stop that lands after this load must not reach it, nor a load armed after it.
+    if (globalThis.myakibaCollectAbort === controller) globalThis.myakibaCollectAbort = undefined;
+  }
 }
 
 export const collectedPageSchema = z.strictObject({

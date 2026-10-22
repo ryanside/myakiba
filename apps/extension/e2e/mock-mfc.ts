@@ -41,7 +41,9 @@ export const PICTURE_SHA256 = { gated: sha256(gatedPicture), public: sha256(publ
 
 type MockRequest = {
   readonly at: number;
-  readonly answeredAt: number;
+  /** When the mock answered, or when the client gave up on the request. */
+  endedAt: number | null;
+  aborted: boolean;
   readonly origin: string;
   readonly path: string;
 };
@@ -62,20 +64,34 @@ export function startMocks() {
   const scenario: Scenario = { ...DEFAULT_SCENARIO };
 
   async function answer(request: Request, respond: (url: URL) => Response | Promise<Response>) {
-    const at = Date.now();
     const url = new URL(request.url);
-    const response = await respond(url);
-    requests.push({
-      at,
-      answeredAt: Date.now(),
+    const entry: MockRequest = {
+      at: Date.now(),
+      endedAt: null,
+      aborted: false,
       origin: url.origin,
       path: `${url.pathname}${url.search}`,
+    };
+    requests.push(entry);
+    request.signal.addEventListener("abort", () => {
+      if (entry.endedAt !== null) return;
+      entry.endedAt = Date.now();
+      entry.aborted = true;
     });
+    const response = await respond(url);
+    entry.endedAt ??= Date.now();
     return response;
   }
 
   async function answerMfc(request: Request, url: URL): Promise<Response> {
-    if (url.pathname.startsWith("/item/")) await Bun.sleep(scenario.itemDelayMs);
+    if (url.pathname.startsWith("/item/")) {
+      await Promise.race([
+        Bun.sleep(scenario.itemDelayMs),
+        new Promise((resolve) => {
+          request.signal.addEventListener("abort", resolve);
+        }),
+      ]);
+    }
     const cookie = request.headers.get("cookie") ?? "";
     const session = cookie.includes("mfc_session=ok");
     if (url.pathname === "/" && url.searchParams.get("_tb") === "commit") {

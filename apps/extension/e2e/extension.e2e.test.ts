@@ -16,6 +16,7 @@ const EXTENSION = path.join(import.meta.dir, "../.output/chrome-mv3-e2e");
 const MFC = E2E_ORIGINS.WXT_MFC_ORIGIN;
 const SCENARIO_TIMEOUT_MS = 60_000;
 const SLOW_ITEM_MS = 1000;
+const STALLED_ITEM_MS = 8000;
 
 type PageItem = {
   readonly mfcItemId: number;
@@ -32,6 +33,11 @@ type PageItem = {
 type PageRun = { readonly items: readonly PageItem[]; readonly reason: string };
 type Bridge = {
   readonly statuses: readonly { readonly state: string }[];
+  readonly start: (ids: readonly number[]) => string;
+  readonly cancel: (requestId: string) => void;
+  readonly events: (
+    requestId: string,
+  ) => readonly { readonly type: string; readonly reason?: string }[];
   readonly announces: () => number;
   readonly hello: (timeoutMs: number) => Promise<{ readonly type: string } | null>;
   readonly fetchItems: (ids: readonly number[]) => Promise<PageRun>;
@@ -153,7 +159,7 @@ describe("the extension against a mock MFC", () => {
 
       const run = await fetchItems(myakiba, [GATED_ID, PUBLIC_ID]);
       const [first, second] = mocks.itemRequests();
-      const gapMs = (second?.at ?? 0) - (first?.answeredAt ?? 0);
+      const gapMs = (second?.at ?? 0) - (first?.endedAt ?? Infinity);
       console.info(`throttle gap from one page load's end to the next one's start: ${gapMs} ms`);
 
       expect(mocks.itemRequests().map((request) => request.path)).toEqual([
@@ -168,6 +174,40 @@ describe("the extension against a mock MFC", () => {
       expect(mocks.requests.map((request) => request.origin)).toContain(
         E2E_ORIGINS.WXT_MFC_STATIC_ORIGIN,
       );
+    },
+    SCENARIO_TIMEOUT_MS,
+  );
+
+  test(
+    "a cancel mid-load ends the MFC request in the tab, and the next item starts 2.5 s after it ended",
+    async () => {
+      mocks.scenario.itemDelayMs = STALLED_ITEM_MS;
+      const myakiba = await launch();
+
+      const cancelled = await myakiba.evaluate((id) => globalThis.bridge.start([id]), GATED_ID);
+      await until(() => mocks.itemRequests().length === 1, "the first item request", 20_000);
+      await Bun.sleep(1000);
+      const cancelledAt = Date.now();
+      await myakiba.evaluate((requestId) => globalThis.bridge.cancel(requestId), cancelled);
+      const next = await fetchItems(myakiba, [PUBLIC_ID]);
+
+      const [first, second] = mocks.itemRequests();
+      const endedAfterCancelMs = (first?.endedAt ?? Infinity) - cancelledAt;
+      const gapMs = (second?.at ?? 0) - (first?.endedAt ?? Infinity);
+      console.info(
+        `cancelled request aborted: ${first?.aborted}, ended ${endedAfterCancelMs} ms after the cancel; next request ${gapMs} ms after it ended`,
+      );
+
+      expect(mocks.itemRequests().map((request) => request.path)).toEqual([
+        `/item/${GATED_ID}`,
+        `/item/${PUBLIC_ID}`,
+      ]);
+      expect(endedAfterCancelMs).toBeLessThan(STALLED_ITEM_MS - 1000);
+      expect(gapMs).toBeGreaterThanOrEqual(2500);
+      expect(next.items.map((item) => item.ok)).toEqual([true]);
+      expect(
+        await myakiba.evaluate((requestId) => globalThis.bridge.events(requestId), cancelled),
+      ).toContainEqual({ type: "done", reason: "cancelled" });
     },
     SCENARIO_TIMEOUT_MS,
   );
