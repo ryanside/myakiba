@@ -148,9 +148,7 @@ export function transformCSVData(value: { file: File | undefined }): Promise<Use
       throw new Error("Please select a valid MyFigureCollection CSV file");
     }
 
-    const filteredData = validatedCSV.data.filter((item) => {
-      return SYNC_CSV_STATUS_SET.has(item.status) && !item.title.startsWith("[NSFW");
-    });
+    const filteredData = validatedCSV.data.filter((item) => SYNC_CSV_STATUS_SET.has(item.status));
     if (filteredData.length === 0) {
       throw new Error("This CSV has no supported Owned or Ordered items to import");
     }
