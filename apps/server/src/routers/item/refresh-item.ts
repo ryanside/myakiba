@@ -3,7 +3,7 @@ import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-re
 import { collection, entry, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
 import type { Tx } from "@myakiba/db/tx";
 import { mfcReleaseId } from "@myakiba/mfc/parse";
-import type { MfcItemPage } from "@myakiba/mfc/parse";
+import type { MfcEntryLink, MfcItemPage } from "@myakiba/mfc/parse";
 import { itemFields, linkEntries, linksInLockOrder, releaseRows } from "@/lib/mfc-item-page";
 import { buildReleasePlan } from "./release-plan";
 import type { ReleasePlan } from "./release-plan";
@@ -34,15 +34,8 @@ export async function lockItem(tx: Tx, itemId: string) {
 
 type LockedItem = NonNullable<Awaited<ReturnType<typeof lockItem>>>;
 
-type Snapshot = {
-  readonly fields: Omit<LockedItem, "id">;
-  readonly links: readonly unknown[];
-  readonly releaseIds: readonly string[];
-};
-
-async function storedSnapshot(tx: Tx, locked: LockedItem): Promise<Snapshot> {
-  const { id, ...fields } = locked;
-  const links = await tx
+function storedLinks(tx: Tx, itemId: string) {
+  return tx
     .select({
       externalId: entry.externalId,
       category: entry.category,
@@ -53,8 +46,32 @@ async function storedSnapshot(tx: Tx, locked: LockedItem): Promise<Snapshot> {
     })
     .from(entry_to_item)
     .innerJoin(entry, eq(entry.id, entry_to_item.entryId))
-    .where(eq(entry_to_item.itemId, id))
+    .where(eq(entry_to_item.itemId, itemId))
     .orderBy(asc(entry.externalId));
+}
+
+type Link = Awaited<ReturnType<typeof storedLinks>>[number];
+
+function pageLink(link: MfcEntryLink): Link {
+  return {
+    externalId: link.externalId,
+    category: link.category,
+    name: link.name,
+    sourceLabel: link.sourceLabel,
+    roles: [...link.roles],
+    materialPercentage: link.materialPercentage,
+  };
+}
+
+type Snapshot = {
+  readonly fields: Omit<LockedItem, "id">;
+  readonly links: readonly Link[];
+  readonly releaseIds: readonly string[];
+};
+
+async function storedSnapshot(tx: Tx, locked: LockedItem): Promise<Snapshot> {
+  const { id, ...fields } = locked;
+  const links = await storedLinks(tx, id);
   const releases = await tx
     .select({ id: item_release.id })
     .from(item_release)
@@ -66,14 +83,7 @@ async function storedSnapshot(tx: Tx, locked: LockedItem): Promise<Snapshot> {
 function pageSnapshot(page: MfcItemPage, image: string | null): Snapshot {
   return {
     fields: { ...itemFields(page), image },
-    links: linksInLockOrder(page).map((link) => ({
-      externalId: link.externalId,
-      category: link.category,
-      name: link.name,
-      sourceLabel: link.sourceLabel,
-      roles: link.roles,
-      materialPercentage: link.materialPercentage,
-    })),
+    links: linksInLockOrder(page).map(pageLink),
     releaseIds: page.releases.map((release) => mfcReleaseId(page.mfcItemId, release)).toSorted(),
   };
 }
