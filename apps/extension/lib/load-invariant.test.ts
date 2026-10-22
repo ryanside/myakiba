@@ -17,6 +17,7 @@ import { THROTTLE } from "./throttle";
 
 const SEEDS = [1, 2, 3, 4, 5, 6, 7, 8];
 const STEPS = 200;
+const INJECTION_MS = 1000;
 
 const MODULUS = 2_147_483_647;
 
@@ -53,7 +54,15 @@ async function play(seed: number) {
   const between = (min: number, max: number) => min + Math.floor(random() * (max - min + 1));
   const clock = fakeClock();
   const solved = new Set<number>();
-  const seen = { limits: 0, halts: 0, challenges: 0, injectionErrors: 0, timeouts: 0 };
+  const seen = {
+    limits: 0,
+    halts: 0,
+    challenges: 0,
+    injectionErrors: 0,
+    timeouts: 0,
+    stalledNavigations: 0,
+    stalledNavigationsWithMoreQueued: 0,
+  };
 
   async function mfc(request: PageRequest): Promise<CollectedPage> {
     const id = request.mfcItemId;
@@ -61,8 +70,8 @@ async function play(seed: number) {
       return solved.has(id) ? page(itemPage(id)) : page(CHALLENGE_PAGE, { status: 403 });
     }
     const latency = random() < 0.03 ? PAGE_TIMEOUT_MS + 10_000 : between(0, 6000);
-    // The collector gives up on its own fetch at the page timeout.
-    await clock.sleep(Math.min(latency, PAGE_TIMEOUT_MS));
+    // The collector gives up on its own fetch at the page timeout, which starts once it is injected, a little after the throttle's.
+    await clock.sleep(Math.min(latency, PAGE_TIMEOUT_MS + INJECTION_MS));
     if (latency > PAGE_TIMEOUT_MS) {
       seen.timeouts += 1;
       throw new DOMException("The operation timed out.", "TimeoutError");
@@ -91,10 +100,26 @@ async function play(seed: number) {
     return page(itemPage(id));
   }
 
-  const extension = fakeExtension({ clock, pages: mfc, navigationMs: () => between(0, 3000) });
-  extension.tabs.open(`${ORIGINS.mfc}/`);
-  let runs: ReturnType<typeof extension.run>[] = [];
-  const done = { cancels: 0, cancelsMidLoad: 0, restarts: 0, restartsMidLoad: 0, solves: 0 };
+  function navigationMs(): number {
+    if (random() >= 0.1) return between(0, 3000);
+    seen.stalledNavigations += 1;
+    if (itemsWaiting() > 1) seen.stalledNavigationsWithMoreQueued += 1;
+    return PAGE_TIMEOUT_MS + 25_000;
+  }
+
+  const extension = fakeExtension({ clock, pages: mfc, navigationMs });
+  let usersTab: number | null = extension.tabs.open(`${ORIGINS.mfc}/`);
+  let runs: (ReturnType<typeof extension.run> & { readonly size: number })[] = [];
+  const itemsWaiting = () =>
+    runs.reduce((count, run) => count + (run.done() ? 0 : run.size - run.items().length), 0);
+  const done = {
+    cancels: 0,
+    cancelsMidLoad: 0,
+    restarts: 0,
+    restartsMidLoad: 0,
+    solves: 0,
+    usersTabCloses: 0,
+  };
   const loading = () =>
     extension.loads().some((load) => load.endedAt === null || load.endedAt > clock.now());
 
@@ -103,7 +128,7 @@ async function play(seed: number) {
     const open = runs.filter((run) => !run.done());
     if (roll < 0.4) {
       const ids = new Set(Array.from({ length: between(1, 4) }, () => between(1, 25)));
-      runs.push(extension.run([...ids]));
+      runs.push({ ...extension.run([...ids]), size: ids.size });
     } else if (roll < 0.5) {
       const run = open[between(0, open.length - 1)];
       if (run) {
@@ -124,6 +149,14 @@ async function play(seed: number) {
         solved.add(awaited);
         extension.tabs.navigate(tabId, { title: `Item ${awaited}`, loadMs: between(0, 3000) });
       }
+    } else if (roll < 0.95) {
+      if (usersTab === null) {
+        usersTab = extension.tabs.open(`${ORIGINS.mfc}/`);
+      } else {
+        done.usersTabCloses += 1;
+        await extension.tabs.api.remove(usersTab);
+        usersTab = null;
+      }
     }
     await advance(clock, between(0, 15_000));
   }
@@ -137,7 +170,7 @@ async function play(seed: number) {
   };
 }
 
-test("one MFC load at a time, each 2.5 s after the last ended, across cancels, challenges, rate limits and restarts", async () => {
+test("one MFC load at a time, each 2.5 s after the last ended, across cancels, challenges, rate limits, stalled navigations and restarts", async () => {
   const total = new Map<string, number>();
   for (const seed of SEEDS) {
     const { unfinished, tooSoon, coverage } = await play(seed);

@@ -126,18 +126,39 @@ export function createMfcTabs(deps: {
     if (own) await tabs.remove(own.tabId).catch(() => null);
   }
 
+  /** Closes the extension's tab and waits until it is gone, the one sure way to stop its navigation. */
+  async function abandon(tabId: number): Promise<void> {
+    const ours = await exclusively(async () => {
+      const record = await owned.load();
+      if (record?.tabId !== tabId) return false;
+      await owned.save(null);
+      return true;
+    });
+    if (!ours) return;
+    // Chrome refuses to close a tab while the user drags it.
+    while ((await tabs.get(tabId).catch(() => null)) !== null) {
+      await tabs.remove(tabId).catch(() => clock.sleep(POLL_MS));
+    }
+  }
+
   async function waitFor(
     tabId: number,
     path: string,
     timeout: AbortSignal,
     created = false,
   ): Promise<void> {
-    for (;;) {
-      timeout.throwIfAborted();
-      const tab = await tabs.get(tabId);
-      if (tab.status === "complete" && mfcPath(tab.url) === path) return;
-      if (created && committedElsewhere(tab, path)) throw new TabTakenError(tabId);
-      await clock.sleep(POLL_MS, timeout);
+    try {
+      for (;;) {
+        timeout.throwIfAborted();
+        const tab = await tabs.get(tabId);
+        if (tab.status === "complete" && mfcPath(tab.url) === path) return;
+        if (created && committedElsewhere(tab, path)) throw new TabTakenError(tabId);
+        await clock.sleep(POLL_MS, timeout);
+      }
+    } catch (error) {
+      // A navigation still running at its deadline would overlap the next load, so it stops before the load ends.
+      if (timeout.aborted) await abandon(tabId);
+      throw error;
     }
   }
 

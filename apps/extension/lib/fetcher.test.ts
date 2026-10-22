@@ -170,6 +170,27 @@ describe("the throttle's books", () => {
     expect(tooClose(extension.loads(), THROTTLE.minGapMs)).toEqual([]);
   });
 
+  test("a navigation still running at its deadline is stopped before the next load starts", async () => {
+    let navigations = 0;
+    const extension = fakeExtension({
+      pages: itemPages(),
+      navigationMs: () => (navigations++ === 0 ? PAGE_TIMEOUT_MS + 25_000 : 0),
+    });
+    const run = extension.run([1, 2]);
+    await extension.clock.runUntil(run.done);
+
+    expect(run.results()).toEqual([
+      { ok: false, error: "timeout" },
+      { ok: true, html: itemPage(2), picture: null },
+    ]);
+    expect(extension.tabs.log.slice(0, 3)).toEqual([
+      `create inactive ${ORIGINS.mfc}/`,
+      "remove 101",
+      `create inactive ${ORIGINS.mfc}/`,
+    ]);
+    expect(tooClose(extension.loads(), THROTTLE.minGapMs)).toEqual([]);
+  });
+
   test("a persisted pause delays the first loads without timing them out", async () => {
     const clock = fakeClock();
     const pausedUntil = clock.now() + 120_000;

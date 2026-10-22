@@ -1,6 +1,6 @@
 import * as z from "zod";
 import type { Clock, SessionValue } from "./clock";
-import { timeoutSignal, unlessAborted } from "./clock";
+import { TimeoutError, timeoutSignal, unlessAborted } from "./clock";
 import { PAGE_TIMEOUT_MS } from "./collect";
 
 export const THROTTLE = {
@@ -9,7 +9,7 @@ export const THROTTLE = {
   defaultPauseMs: 15_000,
   /** A longer pause halts the queue instead of keeping the user waiting. */
   maxPauseMs: 5 * 60_000,
-  /** How long a load may still run in its tab after it timed out, since the tab hears of it last. */
+  /** How long a load that timed out may take to stop in its tab. */
   graceMs: 5000,
 } as const;
 
@@ -28,6 +28,24 @@ export class PauseTooLongError extends Error {
     super(`MFC asked for a pause until ${new Date(pausedUntil).toISOString()}`);
     this.name = "PauseTooLongError";
     this.pausedUntil = pausedUntil;
+  }
+}
+
+async function stopped(settled: Promise<void>): Promise<never> {
+  await settled;
+  throw new TimeoutError(PAGE_TIMEOUT_MS);
+}
+
+/** The load's result. A load that timed out answers only once it has stopped, so its caller never moves on while it still runs. */
+async function answerOf<T>(
+  running: Promise<T>,
+  settled: Promise<void>,
+  timeout: AbortSignal,
+): Promise<T> {
+  try {
+    return await Promise.race([running, stopped(settled)]);
+  } catch (error) {
+    throw timeout.aborted ? timeout.reason : error;
   }
 }
 
@@ -98,7 +116,7 @@ export function createThrottle(deps: {
 
   return {
     /**
-     * Runs one MFC page load in its turn. `work` gets a signal that aborts once the load times out.
+     * Runs one MFC page load in its turn. `work` gets a signal that aborts once the load times out, and then stops the load.
      * The next turn starts a gap after this load ends, even when the caller stopped waiting first.
      */
     async load<T>(signal: AbortSignal, work: (timeout: AbortSignal) => Promise<T>): Promise<T> {
@@ -115,8 +133,9 @@ export function createThrottle(deps: {
       const finished = new AbortController();
       const timeout = timeoutSignal(clock, PAGE_TIMEOUT_MS, finished.signal);
       const running = signal.aborted ? Promise.reject(signal.reason) : work(timeout);
-      ended.resolve(settle(running, finished));
-      return unlessAborted(AbortSignal.any([signal, timeout]), running);
+      const settled = settle(running, finished);
+      ended.resolve(settled);
+      return unlessAborted(signal, answerOf(running, settled, timeout));
     },
 
     async pause(until: number): Promise<void> {
