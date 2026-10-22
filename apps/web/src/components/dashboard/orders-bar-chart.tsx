@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Bar, Cell, XAxis, ReferenceLine } from "recharts";
+import { createContext, memo, use, useCallback, useEffect, useMemo, useState } from "react";
+import type { ComponentProps } from "react";
+import { Bar, Rectangle, XAxis, ReferenceLine } from "recharts";
+import type { RectangleProps } from "recharts";
 import { useMotionValueEvent, useSpring } from "motion/react";
 import { useNavigate } from "@tanstack/react-router";
 import { getDateOnlyMonthBounds } from "@myakiba/utils/date-only";
@@ -36,6 +38,20 @@ interface MonthlyOrderData {
   readonly orderCount: number;
 }
 
+type MonthlyChartRow = {
+  readonly month: string;
+  readonly desktop: number;
+};
+
+interface ActiveMonth {
+  readonly index: number;
+  readonly value: number;
+}
+
+// Recharts remounts every bar whenever <Bar> re-renders, so the highlight
+// reaches the bars through context instead of through <Bar> props.
+const ActiveMonthContext = createContext<ActiveMonth>({ index: 0, value: 0 });
+
 interface OrdersBarChartProps {
   readonly data: readonly MonthlyOrderData[];
   readonly isLoading?: boolean;
@@ -65,6 +81,11 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
       releaseDateEnd: bounds.end,
     };
   }, []);
+
+  const resetActiveIndex = useCallback(
+    () => setActiveIndex(currentMonthIndex),
+    [currentMonthIndex],
+  );
 
   const handleBarClick = useCallback(
     (monthIndex: number) => {
@@ -109,54 +130,94 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
         )}
       </FrameHeader>
       <FramePanel className="shadow-none! border-none m-1 mt-0">
-        <EvilBarChart
-          config={chartConfig}
-          data={chartData}
-          isLoading={isLoading}
-          loadingBars={MONTH_NAMES.length}
-          className="animate-data-in w-full h-full"
-          chartProps={{
-            onMouseLeave: () => setActiveIndex(currentMonthIndex),
-            margin: {
-              left: CHART_MARGIN,
-              top: 10,
-              bottom: 0,
-            },
-          }}
-        >
-          {isLoading ? null : (
-            <XAxis
-              dataKey="month"
-              tickLine={false}
-              tickMargin={10}
-              axisLine={false}
-              tickFormatter={(value: string) => value.slice(0, 3)}
-              allowDataOverflow={true}
-            />
-          )}
-          {isLoading ? null : (
-            <Bar
-              dataKey="desktop"
-              fill="var(--primary)"
-              radius={6.25}
-              animationDuration={300}
-              animationEasing="ease-in-out"
-            >
-              {chartData.map((monthData, index) => (
-                <Cell
-                  className="cursor-pointer transition-opacity duration-200"
-                  opacity={index === maxValueIndex.index ? 1 : 0.2}
-                  key={monthData.month}
-                  onMouseEnter={() => setActiveIndex(index)}
-                  onClick={() => handleBarClick(index)}
-                />
-              ))}
-            </Bar>
-          )}
-          {isLoading ? null : <OrderReferenceLine value={maxValueIndex.value} />}
-        </EvilBarChart>
+        <ActiveMonthContext value={maxValueIndex}>
+          <OrderBars
+            chartData={chartData}
+            isLoading={isLoading}
+            onBarEnter={setActiveIndex}
+            onBarClick={handleBarClick}
+            onChartLeave={resetActiveIndex}
+          />
+        </ActiveMonthContext>
       </FramePanel>
     </Frame>
+  );
+}
+
+interface OrderBarsProps {
+  readonly chartData: readonly MonthlyChartRow[];
+  readonly isLoading?: boolean;
+  readonly onBarEnter: (monthIndex: number) => void;
+  readonly onBarClick: (monthIndex: number) => void;
+  readonly onChartLeave: () => void;
+}
+
+const OrderBars = memo(OrderBarsChart);
+
+function OrderBarsChart({
+  chartData,
+  isLoading,
+  onBarEnter,
+  onBarClick,
+  onChartLeave,
+}: OrderBarsProps): React.ReactNode {
+  return (
+    <EvilBarChart
+      config={chartConfig}
+      data={chartData}
+      isLoading={isLoading}
+      loadingBars={MONTH_NAMES.length}
+      className="animate-data-in w-full h-full"
+      chartProps={{
+        onMouseLeave: onChartLeave,
+        margin: {
+          left: CHART_MARGIN,
+          top: 10,
+          bottom: 0,
+        },
+      }}
+    >
+      {isLoading ? null : (
+        <XAxis
+          dataKey="month"
+          tickLine={false}
+          tickMargin={10}
+          axisLine={false}
+          tickFormatter={(value: string) => value.slice(0, 3)}
+          allowDataOverflow={true}
+        />
+      )}
+      {isLoading ? null : (
+        <Bar
+          dataKey="desktop"
+          fill="var(--primary)"
+          radius={6.25}
+          animationDuration={300}
+          animationEasing="ease-in-out"
+          {...orderBarRenderer}
+          onMouseEnter={(_, index) => onBarEnter(index)}
+          onClick={(_, index) => onBarClick(index)}
+        />
+      )}
+      {isLoading ? null : <OrderReferenceLine />}
+    </EvilBarChart>
+  );
+}
+
+type OrderBarProps = RectangleProps & { readonly originalDataIndex: number };
+
+const orderBarRenderer = Object.fromEntries([
+  ["shape", (props: OrderBarProps) => <OrderBar {...props} />],
+]) as Pick<ComponentProps<typeof Bar>, "shape">;
+
+function OrderBar(props: OrderBarProps): React.ReactNode {
+  const activeMonth = use(ActiveMonthContext);
+  return (
+    <Rectangle
+      {...props}
+      className="cursor-pointer transition-opacity duration-200"
+      opacity={props.originalDataIndex === activeMonth.index ? 1 : 0.2}
+    />
   );
 }
 
@@ -196,7 +257,8 @@ function CustomReferenceLabel(props: CustomReferenceLabelProps): React.ReactNode
   );
 }
 
-function OrderReferenceLine({ value }: { readonly value: number }): React.ReactNode {
+function OrderReferenceLine(): React.ReactNode {
+  const { value } = use(ActiveMonthContext);
   const valueSpring = useSpring(value, { stiffness: 150, damping: 18 });
   const [springyValue, setSpringyValue] = useState(() => valueSpring.get());
 
