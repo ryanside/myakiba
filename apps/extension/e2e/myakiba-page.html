@@ -27,6 +27,7 @@
 
   window.bridge = {
     statuses: [],
+    announces: () => seen.filter((message) => message.event.type === "announce").length,
     async hello(timeoutMs) {
       for (const deadline = performance.now() + timeoutMs; performance.now() < deadline;) {
         const requestId = send({ type: "hello" });

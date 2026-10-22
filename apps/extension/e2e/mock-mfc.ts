@@ -7,6 +7,8 @@ export const E2E_ORIGINS = {
   WXT_WEB_ORIGIN: "http://localhost:4603",
 } as const;
 
+export const UNLISTED_ORIGIN = "http://127.0.0.1:4604";
+
 export const GATED_ID = 98_777;
 export const PUBLIC_ID = 98_778;
 
@@ -37,8 +39,15 @@ const gatedPicture = pictureBytes(31);
 const publicPicture = pictureBytes(17);
 export const PICTURE_SHA256 = { gated: sha256(gatedPicture), public: sha256(publicPicture) };
 
-type MockRequest = { readonly at: number; readonly origin: string; readonly path: string };
-type Scenario = { signedIn: boolean; challenge: boolean };
+type MockRequest = {
+  readonly at: number;
+  readonly answeredAt: number;
+  readonly origin: string;
+  readonly path: string;
+};
+type Scenario = { signedIn: boolean; challenge: boolean; itemDelayMs: number };
+
+export const DEFAULT_SCENARIO: Scenario = { signedIn: true, challenge: false, itemDelayMs: 0 };
 
 const html = (body: string, status = 200, headers: Record<string, string> = {}) =>
   new Response(body, {
@@ -50,58 +59,78 @@ const jpeg = (bytes: Uint8Array<ArrayBuffer>) =>
 
 export function startMocks() {
   const requests: MockRequest[] = [];
-  const scenario: Scenario = { signedIn: true, challenge: false };
+  const scenario: Scenario = { ...DEFAULT_SCENARIO };
+
+  async function answer(request: Request, respond: (url: URL) => Response | Promise<Response>) {
+    const at = Date.now();
+    const url = new URL(request.url);
+    const response = await respond(url);
+    requests.push({
+      at,
+      answeredAt: Date.now(),
+      origin: url.origin,
+      path: `${url.pathname}${url.search}`,
+    });
+    return response;
+  }
+
+  async function answerMfc(request: Request, url: URL): Promise<Response> {
+    if (url.pathname.startsWith("/item/")) await Bun.sleep(scenario.itemDelayMs);
+    const cookie = request.headers.get("cookie") ?? "";
+    const session = cookie.includes("mfc_session=ok");
+    if (url.pathname === "/" && url.searchParams.get("_tb") === "commit") {
+      const ours = url.searchParams.get("objectId") === String(GATED_ID);
+      return session && ours ? jpeg(gatedPicture) : html("", 404);
+    }
+    if (url.pathname === "/") {
+      const headers: Record<string, string> = scenario.signedIn
+        ? { "set-cookie": "mfc_session=ok; Path=/; SameSite=Lax" }
+        : {};
+      return html(
+        "<!doctype html><title>MyFigureCollection</title><h1>mock MFC</h1>",
+        200,
+        headers,
+      );
+    }
+    if (url.pathname === `/item/${PUBLIC_ID}`) return html(publicItem);
+    if (url.pathname === `/item/${GATED_ID}`) {
+      if (scenario.challenge && !cookie.includes("cf_clearance=ok")) {
+        return html(challenge, 403, { "cf-mitigated": "challenge" });
+      }
+      return session ? html(signedInItem) : html(signedOutNotFound, 404);
+    }
+    return html(signedOutNotFound, 404);
+  }
 
   const mfc = Bun.serve({
     port: Number(new URL(E2E_ORIGINS.WXT_MFC_ORIGIN).port),
     hostname: "127.0.0.1",
-    fetch(request) {
-      const url = new URL(request.url);
-      requests.push({ at: Date.now(), origin: url.origin, path: `${url.pathname}${url.search}` });
-      const cookie = request.headers.get("cookie") ?? "";
-      const session = cookie.includes("mfc_session=ok");
-      if (url.pathname === "/" && url.searchParams.get("_tb") === "commit") {
-        const ours = url.searchParams.get("objectId") === String(GATED_ID);
-        return session && ours ? jpeg(gatedPicture) : html("", 404);
-      }
-      if (url.pathname === "/") {
-        const headers: Record<string, string> = scenario.signedIn
-          ? { "set-cookie": "mfc_session=ok; Path=/; SameSite=Lax" }
-          : {};
-        return html(
-          "<!doctype html><title>MyFigureCollection</title><h1>mock MFC</h1>",
-          200,
-          headers,
-        );
-      }
-      if (url.pathname === `/item/${PUBLIC_ID}`) return html(publicItem);
-      if (url.pathname === `/item/${GATED_ID}`) {
-        if (scenario.challenge && !cookie.includes("cf_clearance=ok")) {
-          return html(challenge, 403, { "cf-mitigated": "challenge" });
-        }
-        return session ? html(signedInItem) : html(signedOutNotFound, 404);
-      }
-      return html(signedOutNotFound, 404);
-    },
+    fetch: (request) => answer(request, (url) => answerMfc(request, url)),
   });
 
   const mfcStatic = Bun.serve({
     port: Number(new URL(E2E_ORIGINS.WXT_MFC_STATIC_ORIGIN).port),
     hostname: "127.0.0.1",
-    fetch(request) {
-      const url = new URL(request.url);
-      requests.push({ at: Date.now(), origin: url.origin, path: url.pathname });
-      return url.pathname === `/upload/items/1/${PUBLIC_ID}-a1b2c.jpg`
-        ? jpeg(publicPicture)
-        : new Response("not found", { status: 404 });
-    },
+    fetch: (request) =>
+      answer(request, (url) =>
+        url.pathname === `/upload/items/1/${PUBLIC_ID}-a1b2c.jpg`
+          ? jpeg(publicPicture)
+          : new Response("not found", { status: 404 }),
+      ),
   });
 
+  const page = Bun.file(path.join(import.meta.dir, "myakiba-page.html"));
   const myakiba = Bun.serve({
     port: Number(new URL(E2E_ORIGINS.WXT_WEB_ORIGIN).port),
     hostname: "localhost",
     fetch: () => html(""),
-    routes: { "/": Bun.file(path.join(import.meta.dir, "myakiba-page.html")) },
+    routes: { "/": page },
+  });
+  const unlisted = Bun.serve({
+    port: Number(new URL(UNLISTED_ORIGIN).port),
+    hostname: "127.0.0.1",
+    fetch: () => html(""),
+    routes: { "/": page },
   });
 
   return {
@@ -109,7 +138,12 @@ export function startMocks() {
     scenario,
     itemRequests: () => requests.filter((request) => request.path.startsWith("/item/")),
     stop: async () => {
-      await Promise.all([mfc.stop(true), mfcStatic.stop(true), myakiba.stop(true)]);
+      await Promise.all([
+        mfc.stop(true),
+        mfcStatic.stop(true),
+        myakiba.stop(true),
+        unlisted.stop(true),
+      ]);
     },
   };
 }

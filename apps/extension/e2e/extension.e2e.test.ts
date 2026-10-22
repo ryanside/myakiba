@@ -2,11 +2,20 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test
 import path from "node:path";
 import { chromium } from "playwright";
 import type { BrowserContext, Page } from "playwright";
-import { E2E_ORIGINS, GATED_ID, PICTURE_SHA256, PUBLIC_ID, startMocks } from "./mock-mfc";
+import {
+  DEFAULT_SCENARIO,
+  E2E_ORIGINS,
+  GATED_ID,
+  PICTURE_SHA256,
+  PUBLIC_ID,
+  UNLISTED_ORIGIN,
+  startMocks,
+} from "./mock-mfc";
 
 const EXTENSION = path.join(import.meta.dir, "../.output/chrome-mv3-e2e");
 const MFC = E2E_ORIGINS.WXT_MFC_ORIGIN;
 const SCENARIO_TIMEOUT_MS = 60_000;
+const SLOW_ITEM_MS = 1000;
 
 type PageItem = {
   readonly mfcItemId: number;
@@ -23,6 +32,7 @@ type PageItem = {
 type PageRun = { readonly items: readonly PageItem[]; readonly reason: string };
 type Bridge = {
   readonly statuses: readonly { readonly state: string }[];
+  readonly announces: () => number;
   readonly hello: (timeoutMs: number) => Promise<{ readonly type: string } | null>;
   readonly fetchItems: (ids: readonly number[]) => Promise<PageRun>;
   readonly rogue: (waitMs: number) => Promise<number>;
@@ -45,7 +55,7 @@ beforeAll(() => {
 
 afterEach(async () => {
   await context.close();
-  Object.assign(mocks.scenario, { signedIn: true, challenge: false });
+  Object.assign(mocks.scenario, DEFAULT_SCENARIO);
   mocks.requests.length = 0;
 });
 
@@ -136,14 +146,15 @@ describe("the extension against a mock MFC", () => {
   );
 
   test(
-    "two ids load at least 2.5 s apart, and a public picture comes from the static origin",
+    "a slow MFC's page loads end at least 2.5 s before the next starts, and a public picture comes from the static origin",
     async () => {
+      mocks.scenario.itemDelayMs = SLOW_ITEM_MS;
       const myakiba = await launch();
 
       const run = await fetchItems(myakiba, [GATED_ID, PUBLIC_ID]);
       const [first, second] = mocks.itemRequests();
-      const gapMs = (second?.at ?? 0) - (first?.at ?? 0);
-      console.info(`throttle gap between page loads: ${gapMs} ms`);
+      const gapMs = (second?.at ?? 0) - (first?.answeredAt ?? 0);
+      console.info(`throttle gap from one page load's end to the next one's start: ${gapMs} ms`);
 
       expect(mocks.itemRequests().map((request) => request.path)).toEqual([
         `/item/${GATED_ID}`,
@@ -171,6 +182,7 @@ describe("the extension against a mock MFC", () => {
       await until(
         () => mfcTabs().some((tab) => tab.url().endsWith(`/item/${GATED_ID}`)),
         "the challenge tab",
+        20_000,
       );
       const challengeTab = mfcTabs().find((tab) => tab.url().endsWith(`/item/${GATED_ID}`));
       await challengeTab?.locator("#solve").click();
@@ -197,6 +209,38 @@ describe("the extension against a mock MFC", () => {
       expect(run.items).toEqual([
         { mfcItemId: GATED_ID, ok: false, error: "mfc_signed_out", html: null, picture: null },
       ]);
+    },
+    SCENARIO_TIMEOUT_MS,
+  );
+
+  test(
+    "a page on an unlisted origin, and the real page framed in it, get no content script",
+    async () => {
+      await launch();
+      const unlisted = await context.newPage();
+      await unlisted.goto(`${UNLISTED_ORIGIN}/`);
+
+      const answer = await unlisted.evaluate(() => globalThis.bridge.hello(2000));
+      await unlisted.evaluate(
+        (src) =>
+          new Promise((resolve) => {
+            const frame = document.createElement("iframe");
+            frame.addEventListener("load", resolve);
+            frame.src = src;
+            document.body.append(frame);
+          }),
+        `${E2E_ORIGINS.WXT_WEB_ORIGIN}/`,
+      );
+      const framed = unlisted
+        .frames()
+        .find((frame) => frame.url().startsWith(E2E_ORIGINS.WXT_WEB_ORIGIN));
+      const framedAnswer = await framed?.evaluate(() => globalThis.bridge.hello(2000));
+
+      expect(answer).toBeNull();
+      expect(await unlisted.evaluate(() => globalThis.bridge.announces())).toBe(0);
+      expect(framed).toBeDefined();
+      expect(framedAnswer).toBeNull();
+      expect(await framed?.evaluate(() => globalThis.bridge.announces())).toBe(0);
     },
     SCENARIO_TIMEOUT_MS,
   );
