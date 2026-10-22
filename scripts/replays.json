@@ -1,6 +1,12 @@
 {
   "test": [
     {
+      "fix": "92b71fdb",
+      "bug": "Getting Started resumed a step saved in this browser instead of opening at the welcome step",
+      "test": "apps/web/src/components/onboarding/onboarding-dialog.test.tsx",
+      "fixed": ["Getting Started opens at the welcome step even with a step left in local storage"]
+    },
+    {
       "fix": "49986ca8",
       "bug": "a new account that closed Getting Started within 400 ms saw the welcome dialog open again",
       "test": "apps/web/src/components/onboarding/onboarding-dialog.test.tsx",
