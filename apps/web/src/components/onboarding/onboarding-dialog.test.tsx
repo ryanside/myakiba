@@ -104,6 +104,19 @@ test("a new account sees the welcome dialog and saves that it has seen onboardin
   await waitFor(() => expect(updates).toEqual([{ hasSeenOnboarding: true }]));
 });
 
+test("a new account that closes Getting Started before the welcome opens keeps it closed", async () => {
+  await openDashboard(false);
+  fireEvent.click(screen.getByRole("button", { name: "Getting Started" }));
+  await screen.findByRole("dialog", { name: "Welcome to myakiba." });
+  fireEvent.click(screen.getByRole("button", { name: "Close" }));
+  await act(() => Bun.sleep(500));
+
+  expect(
+    screen.queryByRole("dialog") !== null,
+    "the welcome dialog opened again after the user closed it",
+  ).toBe(false);
+});
+
 test("Getting Started resumes the saved step from legacy local storage", async () => {
   localStorage.setItem(
     "myakiba:onboarding-v2",
