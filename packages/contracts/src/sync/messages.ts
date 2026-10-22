@@ -17,6 +17,7 @@ export const SYNC_STATUS_MESSAGES = {
   failedPersist: "Failed to save items",
   failedBeforeStart: "Import failed before processing started",
   failedDuringProcessing: "Import failed during processing",
+  interrupted: "Import interrupted",
   insertedWithoutScrape: "Items added using details already in myakiba",
   streamError: "Lost connection. Reload the page to see the latest status.",
   streamTimeout: "Status updates timed out. Reload the page to see the latest status.",

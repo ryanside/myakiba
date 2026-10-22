@@ -60,6 +60,8 @@ export type SyncItemFetchError = (typeof SYNC_ITEM_FETCH_ERRORS)[number];
 
 const jobIdSchema = z.string().min(1);
 
+export const syncRunSchema = z.strictObject({ jobId: jobIdSchema });
+
 export const syncItemUploadSchema = itemUploadSchema.extend({ jobId: jobIdSchema });
 export type SyncItemUpload = z.infer<typeof syncItemUploadSchema>;
 

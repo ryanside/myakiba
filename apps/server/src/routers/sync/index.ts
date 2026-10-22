@@ -11,6 +11,7 @@ import {
   syncItemFailureSchema,
   syncItemUploadSchema,
   syncOrderItemsSchema,
+  syncRunSchema,
 } from "./model";
 import type {
   JobData,
@@ -40,7 +41,13 @@ import {
 } from "@/lib/job-status-stream";
 import { prepareCsvItems } from "./csv";
 import { idsToFetch } from "./item-rows";
-import { completeSyncItem, failSyncItem, retrySyncRun } from "./run";
+import {
+  completeSyncItem,
+  failSyncItem,
+  heartbeatSyncRun,
+  interruptSyncRun,
+  retrySyncRun,
+} from "./run";
 
 const createTerminalJobStatus = ({
   jobId,
@@ -1193,6 +1200,54 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       return result;
     },
     { params: sessionParams, body: syncItemFailureSchema, auth: true, rateLimit: "mfcIngest" },
+  )
+  .post(
+    "/sessions/:id/heartbeat",
+    async ({ params, body, user, log }) => {
+      log.set({
+        action: "sync.heartbeat",
+        user: { id: user.id },
+        sync: { sessionId: params.id, jobId: body.jobId },
+      });
+      const { data: result, error } = await tryCatch(
+        heartbeatSyncRun(params.id, user.id, body.jobId),
+      );
+      if (error) {
+        log.error(error, { step: "heartbeatSyncRun", outcome: "error" });
+        return status(500, "Failed to renew the import");
+      }
+      if (!result) {
+        log.set({ outcome: "not_found" });
+        return status(404, "Import not found");
+      }
+      log.set({ outcome: result.active ? "active" : "inactive" });
+      return result;
+    },
+    { params: sessionParams, body: syncRunSchema, auth: true },
+  )
+  .post(
+    "/sessions/:id/interrupt",
+    async ({ params, body, user, log }) => {
+      log.set({
+        action: "sync.interrupt",
+        user: { id: user.id },
+        sync: { sessionId: params.id, jobId: body.jobId },
+      });
+      const { data: result, error } = await tryCatch(
+        interruptSyncRun(params.id, user.id, body.jobId),
+      );
+      if (error) {
+        log.error(error, { step: "interruptSyncRun", outcome: "error" });
+        return status(500, "Failed to stop the import");
+      }
+      if (!result) {
+        log.set({ outcome: "not_found" });
+        return status(404, "Import not found");
+      }
+      log.set({ outcome: result.outcome });
+      return result;
+    },
+    { params: sessionParams, body: syncRunSchema, auth: true },
   )
   .get(
     "/job-status",

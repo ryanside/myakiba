@@ -33,6 +33,7 @@ import { createLogger } from "evlog";
 import { insertItemRows } from "./item-rows";
 import type { ItemRows } from "./item-rows";
 import { publishJobStatus, queuedJobStatus } from "./job-status";
+import { leaseCutoff, settleRun, viewSession, viewedStatusSql } from "./run-state";
 
 type SyncSessionUpdatePayload = Partial<
   Pick<
@@ -315,8 +316,9 @@ class SyncService {
   }
 
   async getJobStatus(jobId: string, userId: string): Promise<SyncJobStatus> {
-    const [session] = await db
+    const [row] = await db
       .select({
+        syncType: syncSession.syncType,
         status: syncSession.status,
         statusMessage: syncSession.statusMessage,
         totalItems: syncSession.totalItems,
@@ -328,16 +330,18 @@ class SyncService {
       .from(syncSession)
       .where(and(eq(syncSession.jobId, jobId), eq(syncSession.userId, userId)));
 
-    if (!session) {
+    if (!row) {
       throw new Error("SYNC_JOB_NOT_FOUND");
     }
+    const session = viewSession(row, Date.now());
     const terminalState = sessionStatusToTerminalState(session.status);
 
     const cached = await redis.get(getJobStatusSnapshotKey(jobId));
     if (cached) {
       const parsedStatus = parseJobStatusPayload(cached);
       const sessionOverridesSnapshot =
-        parsedStatus !== null && terminalState !== null && parsedStatus.terminalState === null;
+        parsedStatus !== null &&
+        (session.interrupted || (terminalState !== null && parsedStatus.terminalState === null));
 
       if (parsedStatus && !sessionOverridesSnapshot) {
         // Defensive backfill: if the worker crashed between marking the session
@@ -382,7 +386,7 @@ class SyncService {
       statusMessage,
       progress,
       recentItems: [],
-      error: null,
+      error: session.interrupted ? settleRun(session, "interrupted").error : null,
       startedAt: session.createdAt.toISOString(),
       updatedAt: session.updatedAt.toISOString(),
       terminalState,
@@ -403,10 +407,12 @@ class SyncService {
     syncTypeFilter?: readonly SyncType[],
   ): Promise<{ sessions: SyncSessionRow[]; total: number }> {
     const offset = (page - 1) * limit;
+    const now = Date.now();
+    const viewedStatus = viewedStatusSql(leaseCutoff(now));
 
     const conditions = [eq(syncSession.userId, userId)];
     if (statusFilter && statusFilter.length > 0)
-      conditions.push(inArray(syncSession.status, statusFilter));
+      conditions.push(inArray(viewedStatus, statusFilter));
     if (syncTypeFilter && syncTypeFilter.length > 0)
       conditions.push(inArray(syncSession.syncType, syncTypeFilter));
     const whereClause = and(...conditions);
@@ -433,7 +439,7 @@ class SyncService {
         .from(syncSession)
         .where(whereClause)
         .orderBy(
-          sql`CASE WHEN ${syncSession.status} IN ('pending', 'processing') THEN 0 ELSE 1 END`,
+          sql`CASE WHEN ${viewedStatus} IN ('pending', 'processing') THEN 0 ELSE 1 END`,
           desc(syncSession.updatedAt),
           desc(syncSession.id),
         )
@@ -442,9 +448,9 @@ class SyncService {
       db.select({ total: count() }).from(syncSession).where(whereClause),
     ]);
 
-    const now = Date.now();
     return {
-      sessions: sessionRecords.map(({ hasRequestPayload, ...session }) => {
+      sessions: sessionRecords.map(({ hasRequestPayload, ...record }) => {
+        const { interrupted: _interrupted, ...session } = viewSession(record, now);
         const targetOrderIsAvailable =
           !(
             session.syncType === "order-item" ||
@@ -502,7 +508,8 @@ class SyncService {
       .where(and(eq(syncSession.id, sessionId), eq(syncSession.userId, userId)));
 
     if (!sessionRecord) return null;
-    const { hasRequestPayload, ...session } = sessionRecord;
+    const { hasRequestPayload, ...record } = sessionRecord;
+    const { interrupted, ...session } = viewSession(record, Date.now());
     const targetOrderIsAvailable =
       !(
         session.syncType === "order-item" ||
@@ -515,9 +522,12 @@ class SyncService {
       (session.status === "failed" || session.status === "partial") &&
       session.createdAt.getTime() + SYNC_SESSION_RETRY_WINDOW_MS > Date.now();
 
+    const viewedItemStatus = interrupted
+      ? sql<SyncSessionItemStatus>`CASE WHEN ${syncSessionItem.status} = 'pending' THEN 'failed' ELSE ${syncSessionItem.status} END`
+      : sql<SyncSessionItemStatus>`${syncSessionItem.status}`;
     const itemConditions = [eq(syncSessionItem.syncSessionId, sessionId)];
     if (statusFilter && statusFilter.length > 0) {
-      itemConditions.push(inArray(syncSessionItem.status, statusFilter));
+      itemConditions.push(inArray(viewedItemStatus, statusFilter));
     }
     const itemsWhereClause = and(...itemConditions);
 
@@ -555,6 +565,11 @@ class SyncService {
 
     const items: DbEnrichedSyncSessionItemRow[] = rows.map((row) => ({
       ...row,
+      ...(interrupted &&
+        row.status === "pending" && {
+          status: "failed" as const,
+          errorReason: SYNC_STATUS_MESSAGES.interrupted,
+        }),
       itemId: row.itemId ?? null,
       itemTitle: row.itemTitle ?? null,
       itemImage: row.itemImage ?? null,

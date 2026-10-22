@@ -27,7 +27,7 @@ import type { ItemRows } from "./item-rows";
 import { publishJobStatus, queuedJobStatus } from "./job-status";
 import type { SyncItemFetchError, SyncItemUpload } from "./model";
 import { buildRetryJobData } from "./retry";
-import { settleRun } from "./run-state";
+import { isLapsed, settleRun } from "./run-state";
 import type { RunEnd } from "./run-state";
 import SyncService from "./service";
 
@@ -211,7 +211,7 @@ async function saveRun(tx: Tx, run: Run, change: Exclude<RunChange, null>): Prom
     };
   }
 
-  const end: RunEnd = change === "order_missing" ? change : "finished";
+  const end: RunEnd = change === "interrupted" || change === "order_missing" ? change : "finished";
   const settled = settleRun({ ...session, successCount, failCount }, end);
   await tx
     .update(syncSession)
@@ -255,8 +255,13 @@ async function withRun<T>(
       const done = await db.transaction(async (tx) => {
         const run = await lockRun(tx, sessionId, userId, lockOrder, attempt);
         if (!run) return null;
+        let snapshot: SyncJobStatus | null = null;
+        if (isLapsed(run.session, Date.now())) {
+          await failOpenItems(tx, sessionId, SYNC_STATUS_MESSAGES.interrupted);
+          snapshot = await saveRun(tx, run, "interrupted");
+        }
         const { result, change } = await step(tx, run);
-        const snapshot = change === null ? null : await saveRun(tx, run, change);
+        if (change !== null) snapshot = await saveRun(tx, run, change);
         return { result, snapshot };
       });
       if (!done) return null;
@@ -437,6 +442,45 @@ export async function failSyncItem(
     reason: ITEM_FETCH_ERROR_MESSAGE[error],
   });
   return outcome === null ? null : { outcome };
+}
+
+/** Renews the run's lease. `active` is false once the run ended or a retry replaced it. */
+export async function heartbeatSyncRun(
+  sessionId: string,
+  userId: string,
+  jobId: string,
+): Promise<{ readonly active: boolean } | null> {
+  return withRun<{ readonly active: boolean }>(
+    sessionId,
+    userId,
+    { lockOrder: false },
+    async (tx, run) => {
+      if (!isCurrentRun(run, jobId)) return { result: { active: false }, change: null };
+      await tx
+        .update(syncSession)
+        .set({ updatedAt: new Date() })
+        .where(eq(syncSession.id, sessionId));
+      return { result: { active: true }, change: null };
+    },
+  );
+}
+
+/** Ends the run because its page went away. Its pending items fail and can be retried. */
+export async function interruptSyncRun(
+  sessionId: string,
+  userId: string,
+  jobId: string,
+): Promise<{ readonly outcome: "interrupted" | "ignored" } | null> {
+  return withRun<{ readonly outcome: "interrupted" | "ignored" }>(
+    sessionId,
+    userId,
+    { lockOrder: false },
+    async (tx, run) => {
+      if (!isCurrentRun(run, jobId)) return { result: { outcome: "ignored" }, change: null };
+      await failOpenItems(tx, sessionId, SYNC_STATUS_MESSAGES.interrupted);
+      return { result: { outcome: "interrupted" }, change: "interrupted" };
+    },
+  );
 }
 
 export type RetrySyncRunResult =

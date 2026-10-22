@@ -16,6 +16,8 @@ export const SYNC_SESSION_RETRY_WINDOW_DAYS = 20;
 export const SYNC_SESSION_RETRY_WINDOW_MS = SYNC_SESSION_RETRY_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 export const SYNC_SESSION_RETENTION_DAYS = 30;
 export const SYNC_SESSION_RETENTION_MS = SYNC_SESSION_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+/** A run that reports nothing for this long reads as interrupted. The page's heartbeat keeps it alive. */
+export const SYNC_RUN_LEASE_MS = 120_000;
 
 export const SYNC_QUEUE_NAME = "sync-queue";
 export const JOB_STATUS_TTL_SECONDS = 600;

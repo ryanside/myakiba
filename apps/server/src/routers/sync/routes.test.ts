@@ -4,6 +4,7 @@ import { Elysia } from "elysia";
 import { initLogger } from "evlog";
 import { asc, eq, sql } from "drizzle-orm";
 import * as z from "zod";
+import { SYNC_RUN_LEASE_MS } from "@myakiba/contracts/sync/constants";
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
 import * as authSchema from "@myakiba/db/schema/auth";
@@ -212,6 +213,11 @@ async function complete(run: Run, id: number, page = pages.get(id) ?? "") {
 
 const fail = (run: Run, id: number, error = "hidden_or_missing") =>
   post(`/sessions/${run.syncSessionId}/failures`, { jobId: run.jobId, mfcItemId: id, error });
+const heartbeat = (run: Run) =>
+  post(`/sessions/${run.syncSessionId}/heartbeat`, { jobId: run.jobId });
+const interrupt = (run: Run) =>
+  post(`/sessions/${run.syncSessionId}/interrupt`, { jobId: run.jobId });
+
 const retrySchema = z.object({ jobId: z.string(), missingMfcItemIds: z.array(z.number()) });
 async function retry(syncSessionId: string): Promise<Run & { missingMfcItemIds: number[] }> {
   const reply = await post(`/sessions/${syncSessionId}/retry`);
@@ -238,6 +244,19 @@ async function listed(query = "") {
   return listedSchema.parse(reply.body).sessions;
 }
 
+const detailSchema = z.object({
+  session: z.object({
+    status: z.string(),
+    failCount: z.number(),
+    items: z.array(
+      z.object({
+        itemExternalId: z.number(),
+        status: z.string(),
+        errorReason: z.string().nullable(),
+      }),
+    ),
+  }),
+});
 const HIDDEN = "MyFigureCollection hides this item. Check your MyFigureCollection content settings";
 
 function snapshot(jobId: string): SyncJobStatus {
@@ -713,6 +732,78 @@ test("a retry imports failed items now in the database and returns the rest to f
     await (cases.find((sync) => sync.type === "csv") ?? never()).expectedRows([PRESENT, X, Y]),
   );
   expect(await post(`/sessions/${run.syncSessionId}/retry`)).toMatchObject({ status: 409 });
+});
+
+test("an interrupted run fails its pending items, which a retry fetches again", async () => {
+  const run = await start("item", { items: [X, Y] });
+  expect(await heartbeat(run)).toEqual({ status: 200, body: { active: true } });
+  expect(await complete(run, X)).toEqual(imported);
+
+  expect(await interrupt(run)).toEqual({ status: 200, body: { outcome: "interrupted" } });
+  expect(await results(run.syncSessionId)).toEqual([
+    { id: X, status: "scraped", reason: null },
+    { id: Y, status: "failed", reason: SYNC_STATUS_MESSAGES.interrupted },
+  ]);
+  expect(await session(run.syncSessionId)).toMatchObject({
+    status: "partial",
+    statusMessage: "1/2 items in the item database. 1 failed.",
+  });
+  expect(snapshot(run.jobId)).toMatchObject({
+    terminalState: "partial",
+    recentItems: [
+      { externalId: Y, outcome: "failed", failureReason: SYNC_STATUS_MESSAGES.interrupted },
+      recent(X),
+    ],
+  });
+  expect(await interrupt(run)).toEqual({ status: 200, body: { outcome: "ignored" } });
+  expect(await heartbeat(run)).toEqual({ status: 200, body: { active: false } });
+
+  const second = await retry(run.syncSessionId);
+  expect(second.missingMfcItemIds).toEqual([Y]);
+});
+
+test("a run whose lease lapsed reads as interrupted until the next write saves it", async () => {
+  const run = await start("collection", [collectionEntry(X, 200), collectionEntry(Y, 300)]);
+  expect(await complete(run, X)).toEqual(imported);
+  await db
+    .update(syncSession)
+    .set({ updatedAt: new Date(Date.now() - SYNC_RUN_LEASE_MS - 1000) })
+    .where(eq(syncSession.id, run.syncSessionId));
+
+  const partial = SYNC_STATUS_MESSAGES.partial(1, 2, 1);
+  expect(await listed()).toMatchObject([
+    { status: "partial", statusMessage: partial, failCount: 1, canRetry: true, isRetrying: false },
+  ]);
+  expect(await listed("?status=processing")).toEqual([]);
+  const failedOnly = await get(`/sessions/${run.syncSessionId}?status=failed`);
+  const detail = detailSchema.parse(failedOnly.body);
+  expect(detail.session).toMatchObject({ status: "partial", failCount: 1 });
+  expect(detail.session.items).toMatchObject([
+    { itemExternalId: Y, status: "failed", errorReason: SYNC_STATUS_MESSAGES.interrupted },
+  ]);
+  const stream = await openStream(run.jobId);
+  expect(await stream.next()).toMatchObject({
+    statusMessage: partial,
+    progress: { processed: 2, total: 2, succeeded: 1, failed: 1 },
+    terminalState: "partial",
+  });
+  await stream.close();
+  expect(await session(run.syncSessionId)).toMatchObject({ status: "processing", failCount: 0 });
+
+  expect(await heartbeat(run)).toEqual({ status: 200, body: { active: false } });
+  expect(await session(run.syncSessionId)).toMatchObject({
+    status: "partial",
+    statusMessage: partial,
+    failCount: 1,
+  });
+  expect(await results(run.syncSessionId)).toContainEqual({
+    id: Y,
+    status: "failed",
+    reason: SYNC_STATUS_MESSAGES.interrupted,
+  });
+
+  expect(await complete(run, Y)).toEqual(imported);
+  expect(await session(run.syncSessionId)).toMatchObject({ status: "completed", failCount: 0 });
 });
 
 async function waitForLockWaiters(count: number) {

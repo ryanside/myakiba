@@ -1,3 +1,10 @@
+import { and, inArray, lte, sql } from "drizzle-orm";
+import { syncSession } from "@myakiba/db/schema/figure";
+import {
+  ACTIVE_SYNC_SESSION_STATUSES,
+  ACTIVE_SYNC_SESSION_STATUS_SET,
+  SYNC_RUN_LEASE_MS,
+} from "@myakiba/contracts/sync/constants";
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import type { SyncJobError } from "@myakiba/contracts/sync/schema";
 import type { SyncSessionStatus, SyncType } from "@myakiba/contracts/shared/types";
@@ -9,7 +16,7 @@ type RunCounts = {
   readonly failCount: number;
 };
 
-export type RunEnd = "finished" | "order_missing";
+export type RunEnd = "finished" | "interrupted" | "order_missing";
 
 type SettledRun = {
   readonly status: Extract<SyncSessionStatus, "completed" | "partial" | "failed">;
@@ -34,7 +41,7 @@ export function settleRun(
     statusMessage = SYNC_STATUS_MESSAGES.completed(successCount, totalItems);
   } else if (status === "partial") {
     statusMessage = SYNC_STATUS_MESSAGES.partial(successCount, totalItems, failCount);
-  }
+  } else if (end === "interrupted") statusMessage = SYNC_STATUS_MESSAGES.interrupted;
 
   let error: SyncJobError | null = null;
   if (status === "failed") {
@@ -45,3 +52,36 @@ export function settleRun(
   }
   return { status, statusMessage, error };
 }
+
+type LeasedSession = RunCounts & {
+  readonly status: SyncSessionStatus;
+  readonly statusMessage: string;
+  readonly updatedAt: Date;
+};
+
+export const leaseCutoff = (now: number): Date => new Date(now - SYNC_RUN_LEASE_MS);
+
+export const isLapsed = (session: LeasedSession, now: number): boolean =>
+  ACTIVE_SYNC_SESSION_STATUS_SET.has(session.status) &&
+  session.updatedAt.getTime() <= leaseCutoff(now).getTime();
+
+/**
+ * How a session reads, with a lapsed run shown as interrupted: its pending items count
+ * as failed. The next write to the session saves that state.
+ */
+export function viewSession<S extends LeasedSession>(
+  session: S,
+  now: number,
+): S & { readonly interrupted: boolean } {
+  if (!isLapsed(session, now)) return { ...session, interrupted: false };
+  const failCount = session.totalItems - session.successCount;
+  const { status, statusMessage } = settleRun({ ...session, failCount }, "interrupted");
+  return { ...session, status, statusMessage, failCount, interrupted: true };
+}
+
+/** The status `viewSession` shows, as SQL, for reads that filter or sort on it. */
+export const viewedStatusSql = (cutoff: Date) =>
+  sql<SyncSessionStatus>`CASE WHEN ${and(
+    inArray(syncSession.status, ACTIVE_SYNC_SESSION_STATUSES),
+    lte(syncSession.updatedAt, cutoff),
+  )} THEN (CASE WHEN ${syncSession.successCount} = ${syncSession.totalItems} THEN 'completed' WHEN ${syncSession.successCount} > 0 THEN 'partial' ELSE 'failed' END) ELSE ${syncSession.status} END`;
