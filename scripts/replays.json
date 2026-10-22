@@ -554,7 +554,6 @@
       "test": "apps/server/src/routers/mfc-items/routes.test.ts",
       "fixed": [
         "POST /api/mfc-items saves an MFC item page as a new item > no transaction is open while the picture is stored",
-        "POST /api/mfc-items fails the item when its picture cannot be stored > a store that fails (error) answers 500 and writes nothing",
         "POST /api/mfc-items fails the item when its picture cannot be stored > a store that fails (hang) answers 500 and writes nothing"
       ]
     }
