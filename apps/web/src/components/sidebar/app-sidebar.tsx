@@ -29,9 +29,11 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { Link, useLocation } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { Link, useLocation, useRouter } from "@tanstack/react-router";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
 import { OnboardingDialog } from "@/components/onboarding/onboarding-dialog";
+import { downloadPageBackground } from "@/lib/page-background";
 import SyncWidget from "../sync/sync-widget";
 import { Button } from "../ui/button";
 
@@ -123,8 +125,31 @@ const data = {
   ],
 };
 
+function useWarmDestinations(urls: readonly string[]) {
+  const router = useRouter();
+  useEffect(() => {
+    let cancelled = false;
+    const warmDestinations = async () => {
+      for (const url of urls) {
+        if (cancelled) return;
+        await router.preloadRoute({ to: url });
+      }
+      if (cancelled) return;
+      for (const url of urls) downloadPageBackground(url);
+    };
+    const handle = window.setTimeout(warmDestinations, 0);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(handle);
+    };
+  }, [router, urls]);
+}
+
+const navMainUrls = data.navMain.map((item) => item.url);
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const location = useLocation();
+  useWarmDestinations(navMainUrls);
 
   return (
     <Sidebar variant="inset" collapsible="icon" {...props}>
@@ -135,17 +160,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuButton
               size="lg"
               className="flex justify-start items-center bg-transparent! group-data-[collapsible=icon]:p-0! w-full"
+              render={<Link to="/dashboard" />}
             >
-              <Link to="/dashboard">
-                <MyAkibaLogo
-                  size="icon"
-                  className="ml-2 scale-175 opacity-0 group-data-[collapsible=icon]:opacity-100 transition-opacity duration-100 ease-in-out"
-                />
-                <MyAkibaLogo
-                  size="full"
-                  className="ml-1 scale-500 opacity-100 group-data-[collapsible=icon]:opacity-0 transition-opacity duration-100 ease-in-out"
-                />
-              </Link>
+              <MyAkibaLogo
+                size="icon"
+                className="ml-2 scale-175 opacity-0 group-data-[collapsible=icon]:opacity-100 transition-opacity duration-100 ease-in-out"
+              />
+              <MyAkibaLogo
+                size="full"
+                className="ml-1 scale-500 opacity-100 group-data-[collapsible=icon]:opacity-0 transition-opacity duration-100 ease-in-out"
+              />
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
