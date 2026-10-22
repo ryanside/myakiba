@@ -17,7 +17,6 @@ export type ExtensionStatus =
   | { readonly kind: "outdated"; readonly extensionVersion: string }
   | { readonly kind: "ready"; readonly extensionVersion: string };
 
-/** `unknown` is a code from a newer extension. `extension_stopped` means no answer came for the id. */
 type FetchItemError = ItemError | "unknown" | "extension_stopped";
 
 export type ExtensionFetchEvent =
@@ -37,12 +36,7 @@ export type ExtensionFetchEvent =
 export type ExtensionBridge = {
   readonly status: () => ExtensionStatus;
   readonly subscribe: (listener: () => void) => () => void;
-  /**
-   * Sends `hello` until the extension answers or 500 ms pass, then reads the status. Each call
-   * probes afresh, so an extension removed since the last answer reads as absent.
-   */
   readonly probe: () => Promise<ExtensionStatus>;
-  /** Yields exactly one `item` event per requested id, then ends. Never throws. */
   readonly fetchItems: (
     mfcItemIds: readonly MfcItemId[],
     options: { readonly signal: AbortSignal },

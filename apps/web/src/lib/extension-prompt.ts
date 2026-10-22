@@ -1,6 +1,5 @@
 import { useSyncExternalStore } from "react";
 
-/** What the extension needs from the user, or is waiting on, during this tab's import. */
 export type ExtensionPrompt =
   | { readonly kind: "needs_user" }
   | { readonly kind: "backing_off"; readonly untilMs: number | null }
@@ -21,7 +20,6 @@ function subscribe(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
-/** The prompt for this tab's import, or only for `sessionId`'s when one is given. */
 export function useExtensionPrompt(sessionId?: string): ExtensionPrompt | null {
   const run = useSyncExternalStore(subscribe, () => current);
   if (run === null || (sessionId !== undefined && run.sessionId !== sessionId)) return null;

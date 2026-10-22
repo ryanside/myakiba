@@ -5,8 +5,7 @@ export const PAGE_ORIGIN = "http://localhost:3001";
 
 type MessageListener = Parameters<BridgeWindow["addEventListener"]>[1];
 
-/** What an extension could post, including events and fields this page does not understand. */
-type WireEvent = {
+type LooseWireEvent = {
   readonly type: string;
   readonly mfcItemId?: number | null;
   readonly result?: {
@@ -23,22 +22,18 @@ type WireEvent = {
 };
 type WireMessage =
   | BridgeRequestMessage
-  | { readonly channel: string; readonly requestId: string | null; readonly event: WireEvent };
+  | { readonly channel: string; readonly requestId: string | null; readonly event: LooseWireEvent };
 
 export type FakeRun = {
   readonly requestId: string;
   readonly mfcItemIds: readonly number[];
-  readonly send: (event: WireEvent) => void;
+  readonly send: (event: LooseWireEvent) => void;
   readonly item: (mfcItemId: number, html?: string) => void;
   readonly fail: (mfcItemId: number, error: string) => void;
   readonly status: (state: string, mfcItemId?: number | null) => void;
   readonly done: (reason: string) => void;
 };
 
-/**
- * A page window with the extension's content script on it. With `installed: false` the
- * page has no content script, so nothing answers. `setInstalled` adds or removes it later.
- */
 export function fakeExtension({
   installed: initiallyInstalled = true,
   protocols = { min: 1, max: 1 },
@@ -81,7 +76,7 @@ export function fakeExtension({
     for (const listener of listeners) listener({ source, origin, data });
   }
 
-  const emit = (requestId: string | null, event: WireEvent) =>
+  const emit = (requestId: string | null, event: LooseWireEvent) =>
     deliver({ channel: BRIDGE_CHANNEL, requestId, event });
 
   const announce = (requestId: string | null) =>
@@ -93,7 +88,7 @@ export function fakeExtension({
     const { requestId, request } = parsed.data;
     if (request.type === "hello") announce(requestId);
     if (request.type !== "fetch-items") return;
-    const send = (event: WireEvent) => emit(requestId, event);
+    const send = (event: LooseWireEvent) => emit(requestId, event);
     const run: FakeRun = {
       requestId,
       mfcItemIds: request.mfcItemIds,
@@ -116,7 +111,6 @@ export function fakeExtension({
   return { window, posted, runs, cancelled, deliver, emit, announce, setInstalled };
 }
 
-/** Stands in for the page's one bridge, so each test can give it a new page and extension. */
 export function delegatingBridge(current: () => ExtensionBridge): ExtensionBridge {
   return {
     status: () => current().status(),

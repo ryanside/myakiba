@@ -17,10 +17,6 @@ function subscribeMissing(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
-/**
- * Asks the extension afresh before a flow that needs it. When it is missing or too old, opens
- * the one install dialog and resolves false.
- */
 export async function requireExtension(): Promise<boolean> {
   const status = await extensionBridge.probe();
   if (status.kind === "ready") return true;
