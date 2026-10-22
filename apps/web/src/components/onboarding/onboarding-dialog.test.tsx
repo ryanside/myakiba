@@ -36,7 +36,11 @@ afterAll(() => {
   globalThis.fetch = realFetch;
 });
 
-async function openDashboard(hasSeenOnboarding: boolean) {
+type OnboardingStatus = { hasSeenOnboarding?: boolean };
+
+async function openDashboard(hasSeenOnboarding?: boolean) {
+  const onboarding: OnboardingStatus = {};
+  if (hasSeenOnboarding !== undefined) onboarding.hasSeenOnboarding = hasSeenOnboarding;
   const root = createRootRoute({ component: Outlet });
   const app = createRoute({
     getParentRoute: () => root,
@@ -47,7 +51,7 @@ async function openDashboard(hasSeenOnboarding: boolean) {
           username: "collector",
           currency: "USD",
           dateFormat: "MM/DD/YYYY",
-          hasSeenOnboarding,
+          ...onboarding,
         },
       },
     }),
@@ -78,6 +82,17 @@ test("an onboarded account on a new browser keeps the welcome dialog closed", as
   expect(
     screen.queryByRole("dialog") !== null,
     "the welcome dialog opened for an already onboarded account",
+  ).toBe(false);
+  expect(updates).toEqual([]);
+});
+
+test("an account signed in before the deploy keeps the welcome dialog closed", async () => {
+  await openDashboard();
+  await act(() => Bun.sleep(500));
+
+  expect(
+    screen.queryByRole("dialog") !== null,
+    "the welcome dialog opened for an account signed in before the deploy",
   ).toBe(false);
   expect(updates).toEqual([]);
 });
