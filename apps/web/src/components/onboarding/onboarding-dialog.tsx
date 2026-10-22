@@ -105,6 +105,7 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
     complete,
   } = useOnboarding({ totalSteps: STEPS.length });
   const [open, setOpen] = useState(false);
+  const [userToggled, setUserToggled] = useState(false);
   const [syncSheetType, setSyncSheetType] = useState<LaunchableSyncType | null>(null);
   const resumeStep = isCompleted
     ? FIRST_STEP
@@ -191,7 +192,7 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
 
   useEffect(() => {
     // Sessions from before the column existed have no key and count as onboarded.
-    if (session.user.hasSeenOnboarding !== false) return;
+    if (session.user.hasSeenOnboarding !== false || userToggled) return;
     const timeoutId = window.setTimeout(async () => {
       setOpen(true);
       try {
@@ -204,9 +205,10 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
       }
     }, FIRST_OPEN_DELAY_MS);
     return () => window.clearTimeout(timeoutId);
-  }, [session.user.hasSeenOnboarding]);
+  }, [session.user.hasSeenOnboarding, userToggled]);
 
   const handleOpenChange = useCallback((next: boolean) => {
+    setUserToggled(true);
     setOpen(next);
     if (!next) {
       setCurrentStep(FIRST_STEP);
