@@ -11,6 +11,7 @@ import {
   index,
   uniqueIndex,
   check,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { user } from "./auth";
@@ -33,6 +34,7 @@ import {
 } from "@myakiba/contracts/data-transfer/constants";
 import type {
   DataTransferArchiveV1,
+  DataTransferCollectionItemV1,
   DataTransferImportReport,
 } from "@myakiba/contracts/data-transfer/schema";
 import type { JobData } from "@myakiba/contracts/sync/schema";
@@ -351,10 +353,29 @@ export const dataTransferImport = pgTable("data_transfer_import", {
   importedOrders: integer("imported_orders").notNull().default(0),
   importedCollectionItems: integer("imported_collection_items").notNull().default(0),
   failedCollectionItems: integer("failed_collection_items").notNull().default(0),
+  totalCollectionItems: integer("total_collection_items").notNull().default(0),
   error: text("error"),
   startedAt: timestamp("started_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  heartbeatAt: timestamp("heartbeat_at"),
 });
+
+/** An MFC item the import is waiting for, with the archive rows that need it. */
+export const dataTransferImportItem = pgTable(
+  "data_transfer_import_item",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => dataTransferImport.userId, { onDelete: "cascade" }),
+    itemExternalId: integer("item_external_id").notNull(),
+    status: text("status", { enum: SYNC_SESSION_ITEM_STATUSES }).notNull().default("pending"),
+    errorReason: text("error_reason"),
+    rows: jsonb("rows").$type<DataTransferCollectionItemV1[]>().notNull(),
+    rowCount: integer("row_count").notNull(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.itemExternalId] })],
+);
 
 export const syncSession = pgTable(
   "sync_session",

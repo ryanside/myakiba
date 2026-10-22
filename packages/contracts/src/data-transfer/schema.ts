@@ -1,8 +1,10 @@
 import * as z from "zod";
+import { itemUploadSchema } from "../mfc-items/schema";
 import type { SyncJobStatus } from "../sync/schema";
 import {
   COLLECTION_STATUSES,
   CONDITIONS,
+  MAX_MFC_ITEM_ID,
   ORDER_STATUSES,
   SHIPPING_METHODS,
 } from "../shared/constants";
@@ -15,6 +17,8 @@ import {
 
 export {
   DATA_TRANSFER_FORMAT,
+  DATA_TRANSFER_IMPORT_INTERRUPTED_REASON,
+  DATA_TRANSFER_IMPORT_LEASE_MS,
   DATA_TRANSFER_IMPORT_PHASES,
   DATA_TRANSFER_IMPORT_STATUSES,
   DATA_TRANSFER_MAX_BYTES,
@@ -195,6 +199,20 @@ export const dataTransferImportSchema = z.strictObject({
   ...dataTransferImportResultFields,
 });
 
+export const dataTransferImportRunSchema = z.strictObject({
+  jobId: portableKeySchema,
+});
+
+export const dataTransferImportItemUploadSchema = itemUploadSchema.extend({
+  jobId: portableKeySchema,
+});
+
+export const dataTransferImportItemFailureSchema = z.strictObject({
+  jobId: portableKeySchema,
+  mfcItemId: z.int().min(1).max(MAX_MFC_ITEM_ID),
+  reason: z.string().trim().min(1).max(500),
+});
+
 export type DataTransferReleaseFingerprint = z.infer<typeof dataTransferReleaseFingerprintSchema>;
 export type DataTransferCollectionItemV1 = z.infer<typeof dataTransferCollectionItemV1Schema>;
 export type DataTransferArchiveV1 = z.infer<typeof dataTransferArchiveV1Schema>;
@@ -206,3 +224,9 @@ export type DataTransferImportTerminalStatus = Pick<
   SyncJobStatus,
   "phase" | "statusMessage" | "terminalState" | "error"
 >;
+/** A started or retried import, with the MFC items the page must fetch through the extension. */
+export type DataTransferImportRun = DataTransferImport & {
+  readonly missingMfcItemIds: readonly number[];
+};
+export type DataTransferImportItemUpload = z.infer<typeof dataTransferImportItemUploadSchema>;
+export type DataTransferImportItemFailure = z.infer<typeof dataTransferImportItemFailureSchema>;

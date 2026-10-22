@@ -19,3 +19,7 @@ export const DATA_TRANSFER_IMPORT_PHASES = [
   "completed",
   "failed",
 ] as const;
+
+/** An import whose page sends no heartbeat for this long reads as interrupted. */
+export const DATA_TRANSFER_IMPORT_LEASE_MS = 120_000;
+export const DATA_TRANSFER_IMPORT_INTERRUPTED_REASON = "import interrupted";
