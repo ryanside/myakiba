@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { Elysia } from "elysia";
 import { initLogger } from "evlog";
 import path from "node:path";
@@ -85,7 +85,7 @@ const derivedWrongItemPage = edit(page98777, "/item/98777", "/item/98778");
 
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]);
 
-function memoryStore(putTimeoutMs?: number) {
+function memoryStore() {
   const objects = new Map<string, PutObjectCommand["input"]>();
   let gate: (() => Promise<null>) | null = null;
   const images = createItemImages({
@@ -98,7 +98,6 @@ function memoryStore(putTimeoutMs?: number) {
     },
     name: "pictures",
     publicUrl: "https://pictures.example.test",
-    putTimeoutMs,
   });
   const releasePutsTogether = (parties: number) => {
     const { promise, resolve } = Promise.withResolvers<null>();
@@ -527,13 +526,16 @@ describe("POST /api/mfc-items fails the item when its picture cannot be stored",
   test.each(["error", "hang"] as const)(
     "a store that fails (%s) answers 500 and writes nothing",
     async (failure) => {
-      store = memoryStore(100);
+      const timeout = AbortSignal.timeout.bind(AbortSignal);
+      const budget = spyOn(AbortSignal, "timeout").mockImplementation(() => timeout(100));
       store.failPuts(failure);
 
-      expect(await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG })).toEqual({
-        status: 500,
-        body: "Failed to import item",
-      });
+      const answered = await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG });
+      const budgets = budget.mock.calls.map(([ms]) => ms);
+      budget.mockRestore();
+
+      expect(answered).toEqual({ status: 500, body: "Failed to import item" });
+      expect(budgets).toEqual([5000]);
       expect(await counts()).toEqual({ items: 0, entries: 0, links: 0, releases: 0 });
     },
   );

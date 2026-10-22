@@ -22,7 +22,6 @@ type Bucket = {
   };
   readonly name: string;
   readonly publicUrl: string;
-  readonly putTimeoutMs?: number;
 };
 
 const IMMUTABLE = "public, max-age=31536000, immutable";
@@ -84,7 +83,7 @@ export function createItemImages(bucket: Bucket): ItemImages {
       if (!format) return { kind: "rejected", reason: "not_an_image" };
       const contentHash = createHash("sha256").update(bytes).digest("hex").slice(0, 16);
       const contentKey = `items/mfc/${mfcItemId}/${contentHash}.${format.extension}`;
-      const timeout = AbortSignal.timeout(bucket.putTimeoutMs ?? PUT_TIMEOUT_MS);
+      const timeout = AbortSignal.timeout(PUT_TIMEOUT_MS);
       const put = new PutObjectCommand({
         Bucket: bucket.name,
         Key: contentKey,
@@ -101,6 +100,7 @@ export function createItemImages(bucket: Bucket): ItemImages {
 export const itemImages = createItemImages({
   client: new S3Client({
     region: env.AWS_BUCKET_REGION,
+    maxAttempts: 1,
     ...(env.S3_ENDPOINT_URL && { endpoint: env.S3_ENDPOINT_URL, forcePathStyle: true }),
   }),
   name: env.AWS_BUCKET_NAME,
