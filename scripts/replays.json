@@ -525,6 +525,12 @@
         "hovering during the order chart intro still grows every bar to its full height",
         "switching hovered order bars navigates to the second month on the first click"
       ]
+    },
+    {
+      "fix": "7da6de43",
+      "bug": "Google sign-in navigated into the signed-out app before opening consent",
+      "test": "apps/web/src/components/auth/google-sign-in.test.tsx",
+      "fixed": ["Google sign-in opens consent without navigating through the signed-out app"]
     }
   ],
   "lint": [
