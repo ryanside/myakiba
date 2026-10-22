@@ -233,6 +233,29 @@ describe("cancel", () => {
     expect(other.results().map((result) => result.ok)).toEqual([true]);
   });
 
+  test("mid-load starts the next load a gap after the first really ends, not when its reservation runs out", async () => {
+    const clock = fakeClock();
+    const extension = fakeExtension({
+      clock,
+      pages: async ({ mfcItemId }) => {
+        await clock.sleep(mfcItemId === 1 ? 20_000 : 0);
+        return page(itemPage(mfcItemId));
+      },
+    });
+    const cancelled = extension.run([1]);
+    const other = extension.run([2]);
+    await clock.runUntil(() => extension.calls.length === 1);
+    await advance(clock, 5000);
+
+    extension.fetcher.cancel(cancelled.key);
+    await clock.runUntil(other.done);
+
+    const [first, second] = extension.calls;
+    expect((second?.at ?? Infinity) - (first?.endedAt ?? 0)).toBeLessThan(
+      THROTTLE.minGapMs + THROTTLE.jitterMs,
+    );
+  });
+
   test("mid-load stops the load in the tab, so the next one need not wait it out", async () => {
     const clock = fakeClock();
     const extension = fakeExtension({ clock, pages: slowFor(clock, 1, 20_000) });

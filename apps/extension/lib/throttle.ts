@@ -16,12 +16,10 @@ export const THROTTLE = {
 export const throttleStateSchema = z.strictObject({
   nextPageAt: z.number(),
   pausedUntil: z.number(),
-  /** When the load running now started, so a worker that restarts mid-load waits it out. */
-  inFlightSince: z.number().nullable(),
 });
 export type ThrottleState = z.output<typeof throttleStateSchema>;
 
-export const OPEN_THROTTLE: ThrottleState = { nextPageAt: 0, pausedUntil: 0, inFlightSince: null };
+export const OPEN_THROTTLE: ThrottleState = { nextPageAt: 0, pausedUntil: 0 };
 
 export class PauseTooLongError extends Error {
   readonly pausedUntil: number;
@@ -39,7 +37,10 @@ export function createThrottle(deps: {
   readonly state: SessionValue<ThrottleState>;
 }) {
   const { clock, random, state } = deps;
-  /** Settles once the last load this worker started has ended and is on the books. */
+  /**
+   * Settles once the last load this worker started has ended and is on the books. Only this worker sees it,
+   * so its next load can start a gap after that real end rather than when the reservation runs out.
+   */
   let lastLoad: Promise<unknown> = Promise.resolve();
   let books: Promise<unknown> = Promise.resolve();
 
@@ -67,18 +68,13 @@ export function createThrottle(deps: {
     for (;;) {
       signal.throwIfAborted();
       const wait = await book((current, now): [ThrottleState, number] => {
-        if (current.inFlightSince !== null) {
-          // A worker stopped mid-load. The load may still be running in its tab, so it ends now at the earliest.
-          const nextPageAt = Math.max(current.nextPageAt, gapAfter(now));
-          return [{ ...current, inFlightSince: null, nextPageAt }, nextPageAt - now];
-        }
         if (current.pausedUntil - now > THROTTLE.maxPauseMs) {
           throw new PauseTooLongError(current.pausedUntil);
         }
         const untilFree = Math.max(current.nextPageAt, current.pausedUntil) - now;
         if (untilFree > 0) return [current, untilFree];
-        const nextPageAt = gapAfter(now + PAGE_TIMEOUT_MS + THROTTLE.graceMs);
-        return [{ ...current, inFlightSince: now, nextPageAt }, 0];
+        // Booked to the latest this load can end, so a worker that stops mid-load leaves the next one waiting it out.
+        return [{ ...current, nextPageAt: gapAfter(now + PAGE_TIMEOUT_MS + THROTTLE.graceMs) }, 0];
       });
       if (wait <= 0) return;
       await clock.sleep(wait, signal);
@@ -94,10 +90,7 @@ export function createThrottle(deps: {
     grace.abort();
     finished.abort();
     try {
-      await book((current, now) => [
-        { ...current, inFlightSince: null, nextPageAt: gapAfter(now) },
-        null,
-      ]);
+      await book((current, now) => [{ ...current, nextPageAt: gapAfter(now) }, null]);
     } catch (error) {
       console.error("could not book the end of an MFC page load", error);
     }
