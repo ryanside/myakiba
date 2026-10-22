@@ -132,11 +132,6 @@ async function writeCollectionRows(
   return inserted;
 }
 
-/**
- * Writes every order and every row whose item is in the database, and records the
- * rest as waiting for their item. A retry runs this again on the same import id, so
- * rows already written conflict and are skipped, as the worker's retry did.
- */
 async function applyArchive(
   tx: Tx,
   row: ImportRow,
@@ -203,7 +198,6 @@ async function applyArchive(
   };
 }
 
-/** Writes one arrived item's rows. An order the user deleted meanwhile leaves its rows without one. */
 async function applyItemRows(
   tx: Tx,
   view: ImportView,
@@ -232,10 +226,11 @@ async function applyItemRows(
   }
 
   const plan = planCollectionRows(rows, items);
-  const inserted = await writeCollectionRows(tx, run, plan.rows, (orderKey) => {
+  const orderIdIfStillPresent = (orderKey: string) => {
     const orderId = createImportId({ ...run, kind: "order", localKey: orderKey });
     return presentOrderIds.has(orderId) ? orderId : null;
-  });
+  };
+  const inserted = await writeCollectionRows(tx, run, plan.rows, orderIdIfStillPresent);
 
   await tx
     .update(dataTransferImport)
@@ -551,10 +546,6 @@ const DataTransferService = {
     return { ...toImport(retried.view), missingMfcItemIds: retried.missingMfcItemIds };
   },
 
-  /**
-   * Saves an item the extension fetched and writes the import's rows that wait for it.
-   * A late upload still imports, so the run id only gates failures.
-   */
   async completeItem(
     userId: string,
     upload: DataTransferImportItemUpload,
@@ -575,9 +566,9 @@ const DataTransferService = {
     const now = new Date();
     const { view, changed } = await db.transaction(
       async (tx) => {
-        const { current, settled } = await lockImport(tx, userId, now);
+        const { current, interruptedByLapse } = await lockImport(tx, userId, now);
         if (prepared.kind === "parsed") await ensureMfcItem(tx, prepared.page, prepared.stored);
-        if (!current) return { view: current, changed: settled };
+        if (!current) return { view: current, changed: interruptedByLapse };
 
         const [waiting] = await tx
           .select({ status: dataTransferImportItem.status, rows: dataTransferImportItem.rows })
@@ -588,7 +579,8 @@ const DataTransferService = {
               eq(dataTransferImportItem.itemExternalId, upload.mfcItemId),
             ),
           );
-        if (!waiting || waiting.status === "scraped") return { view: current, changed: settled };
+        if (!waiting || waiting.status === "scraped")
+          return { view: current, changed: interruptedByLapse };
 
         const arrived = await loadImportableItems(tx, [upload.mfcItemId]);
         if (!arrived.has(upload.mfcItemId)) {
@@ -613,7 +605,6 @@ const DataTransferService = {
     return { kind: "imported", import: view ? toImport(view) : null };
   },
 
-  /** Records that the extension could not fetch an item. A failure from an earlier run is ignored. */
   async failItem(
     userId: string,
     failure: DataTransferImportItemFailure,
@@ -621,9 +612,9 @@ const DataTransferService = {
     const now = new Date();
     const { view, changed } = await db.transaction(
       async (tx) => {
-        const { current, settled } = await lockImport(tx, userId, now);
+        const { current, interruptedByLapse } = await lockImport(tx, userId, now);
         if (!current || current.row.jobId !== failure.jobId || current.status !== "running") {
-          return { view: current, changed: settled };
+          return { view: current, changed: interruptedByLapse };
         }
         const failed = await tx
           .update(dataTransferImportItem)
@@ -646,14 +637,13 @@ const DataTransferService = {
     return view ? toImport(view) : null;
   },
 
-  /** Ends the run when its page closes: every item still pending fails as interrupted. */
   async interruptImport(userId: string, jobId: string): Promise<DataTransferImport | null> {
     const now = new Date();
     const { view, changed } = await db.transaction(
       async (tx) => {
-        const { current, settled } = await lockImport(tx, userId, now);
+        const { current, interruptedByLapse } = await lockImport(tx, userId, now);
         if (!current || current.row.jobId !== jobId || current.status !== "running") {
-          return { view: current, changed: settled };
+          return { view: current, changed: interruptedByLapse };
         }
         await tx
           .update(dataTransferImportItem)
@@ -677,14 +667,13 @@ const DataTransferService = {
     return view ? toImport(view) : null;
   },
 
-  /** Extends the run's lease. Answers false once the run is over, so the page stops fetching. */
   async heartbeat(userId: string, jobId: string): Promise<boolean> {
     const now = new Date();
     const { running, changed } = await db.transaction(
       async (tx) => {
-        const { current, settled } = await lockImport(tx, userId, now);
+        const { current, interruptedByLapse } = await lockImport(tx, userId, now);
         if (!current || current.row.jobId !== jobId || current.status !== "running") {
-          return { running: false, changed: settled };
+          return { running: false, changed: interruptedByLapse };
         }
         await tx
           .update(dataTransferImport)

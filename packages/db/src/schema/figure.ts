@@ -360,7 +360,6 @@ export const dataTransferImport = pgTable("data_transfer_import", {
   heartbeatAt: timestamp("heartbeat_at"),
 });
 
-/** An MFC item the import is waiting for, with the archive rows that need it. */
 export const dataTransferImportItem = pgTable(
   "data_transfer_import_item",
   {

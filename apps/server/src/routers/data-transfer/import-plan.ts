@@ -68,7 +68,8 @@ function selectRelease({
   return { kind: "substitute", release: matchingDate ?? latest };
 }
 
-/** The worker's row id formula, so a retry of the same import writes no row twice. */
+const WORKER_IMPORT_ID_NAMESPACE = "85f8f00e-44c6-4e07-8d8d-e99d5e351daa";
+
 export function createImportId({
   userId,
   importId,
@@ -80,13 +81,9 @@ export function createImportId({
   readonly kind: "order" | "collection";
   readonly localKey: string;
 }): string {
-  return uuidv5(
-    JSON.stringify([userId, importId, kind, localKey]),
-    "85f8f00e-44c6-4e07-8d8d-e99d5e351daa",
-  );
+  return uuidv5(JSON.stringify([userId, importId, kind, localKey]), WORKER_IMPORT_ID_NAMESPACE);
 }
 
-/** Plans each row whose item is in the database, and holds back the rest by MFC item. */
 export function planCollectionRows(
   rows: readonly DataTransferCollectionItemV1[],
   itemsByExternalId: ReadonlyMap<number, ImportableItem>,

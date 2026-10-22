@@ -230,7 +230,6 @@ const dataTransferRouter = new Elysia({ prefix: "/data-transfer" })
             return;
           }
           if (nextEvent.kind === "heartbeat") {
-            // A closed import tab publishes nothing, so a lapsed lease only shows up on a re-read.
             const { data: polledStatus, error: polledStatusError } = await tryCatch(
               DataTransferService.getImportJobStatus(user.id),
             );

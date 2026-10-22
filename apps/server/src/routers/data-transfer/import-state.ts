@@ -57,7 +57,6 @@ type WaitingItems = {
   readonly failureReasons: readonly FailureReason[];
 };
 
-/** The import as a reader sees it, with a lapsed lease already read as interrupted. */
 export type ImportView = {
   readonly row: ImportRow;
   readonly status: ImportStatus;
@@ -69,6 +68,8 @@ export type ImportView = {
 };
 
 export const isActive = (status: ImportStatus) => status === "queued" || status === "running";
+
+const isWorkerEraImport = (row: ImportRow) => row.heartbeatAt === null;
 
 function leaseLapsed(row: ImportRow, now: Date): boolean {
   if (!isActive(row.status)) return false;
@@ -96,8 +97,7 @@ function viewImport(row: ImportRow, waiting: WaitingItems, now: Date): ImportVie
     failedRows: row.failedCollectionItems,
     report: row.report,
   };
-  // A worker-era import has no heartbeat or waiting items, so only its lease is ours to read.
-  if (row.heartbeatAt === null) {
+  if (isWorkerEraImport(row)) {
     return lapsed
       ? { ...stored, status: "failed", phase: "failed", error: INTERRUPTED_IMPORT_ERROR }
       : stored;
@@ -206,19 +206,15 @@ export async function readView(
   return viewImport(row, await readWaitingItems(tx, userId), now);
 }
 
-/**
- * Takes the user's import lock and reads the import. A lapsed lease is written down
- * here, on the next write after it lapsed, and `settled` says the status changed.
- */
 export async function lockImport(
   tx: Tx,
   userId: string,
   now: Date,
-): Promise<{ readonly current: ImportView | undefined; readonly settled: boolean }> {
+): Promise<{ readonly current: ImportView | undefined; readonly interruptedByLapse: boolean }> {
   await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${userId}, 0))`);
   const view = await readView(tx, userId, now);
   if (!view || !isActive(view.row.status) || isActive(view.status)) {
-    return { current: view, settled: false };
+    return { current: view, interruptedByLapse: false };
   }
 
   await tx
@@ -231,7 +227,7 @@ export async function lockImport(
     .where(
       and(eq(dataTransferImportItem.userId, userId), eq(dataTransferImportItem.status, "pending")),
     );
-  return { current: await saveView(tx, view, now), settled: true };
+  return { current: await saveView(tx, view, now), interruptedByLapse: true };
 }
 
 async function saveView(tx: Tx, view: ImportView, now: Date): Promise<ImportView> {
@@ -255,7 +251,6 @@ async function saveView(tx: Tx, view: ImportView, now: Date): Promise<ImportView
   return view;
 }
 
-/** Writes the import's state from its waiting items, ending it when none is pending. */
 export async function settle(tx: Tx, userId: string, now: Date): Promise<ImportView> {
   const view = await readView(tx, userId, now);
   if (!view) throw new Error("DATA_TRANSFER_IMPORT_NOT_SAVED");
@@ -332,7 +327,7 @@ function jobStatusOf(view: ImportView, recentItems: SyncJobRecentItem[]): SyncJo
 
   const total = view.row.totalCollectionItems;
   const progress =
-    view.row.heartbeatAt !== null && total > 0
+    !isWorkerEraImport(view.row) && total > 0
       ? {
           processed: total - view.pendingRows,
           total,
@@ -363,7 +358,6 @@ export async function readJobStatus(userId: string): Promise<SyncJobStatus | nul
   return jobStatusOf(view, await readRecentItems(userId));
 }
 
-/** Sends the import's status to its stream. A Redis failure is logged and never fails the write. */
 export async function publishStatus(userId: string): Promise<void> {
   const { error } = await tryCatch(
     (async () => {
