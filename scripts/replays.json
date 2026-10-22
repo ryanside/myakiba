@@ -554,6 +554,7 @@
       "test": "apps/server/src/routers/mfc-items/routes.test.ts",
       "fixed": [
         "POST /api/mfc-items saves an MFC item page as a new item > no transaction is open while the picture is stored",
+        "POST /api/mfc-items fails the item when its picture cannot be stored > a store that fails (error) answers 500 and writes nothing",
         "POST /api/mfc-items fails the item when its picture cannot be stored > a store that fails (hang) answers 500 and writes nothing"
       ]
     }
@@ -669,6 +670,18 @@
       "config": ["apps/server/tsconfig.json", "packages/config/tsconfig.base.json"],
       "errors": [
         "src/routers/orders/service.ts(588,5): error TS2322: Type '{ totalOrders: number; totalSpent: number; activeOrders: number; unpaidCosts: number; } | undefined' is not assignable to type '{ totalOrders: number; totalSpent: number; activeOrders: number; unpaidCosts: number; }'."
+      ]
+    },
+    {
+      "name": "command-before",
+      "fix": "917238d4",
+      "bug": "a command without before accepted a writing before held in a variable, and a before that only proceeded typed the op's value as unknown and its failure as every Failure",
+      "package": "apps/server",
+      "config": ["apps/server/src/domain/kernel.type-test.ts"],
+      "errors": [
+        "src/domain/kernel.type-test.ts(105,1): error TS2578: Unused '@ts-expect-error' directive.",
+        "src/domain/kernel.type-test.ts(116,12): error TS1360: Type 'true' does not satisfy the expected type 'false'.",
+        "src/domain/kernel.type-test.ts(117,12): error TS1360: Type 'true' does not satisfy the expected type 'false'."
       ]
     }
   ],
