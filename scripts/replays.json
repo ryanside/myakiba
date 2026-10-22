@@ -527,6 +527,16 @@
       ]
     },
     {
+      "fix": "670907bd",
+      "bug": "the request log recorded every auth response as 200",
+      "test": "apps/server/src/boundary/auth-log-status.test.ts",
+      "fixed": [
+        "GET /api/auth/does-not-exist logs 404 and keeps Better Auth's response",
+        "POST /api/auth/delete-user logs 401 and keeps Better Auth's response",
+        "GET /api/auth/callback/google logs 302 and keeps Better Auth's response"
+      ]
+    },
+    {
       "fix": "ebab2322",
       "bug": "the active sidebar item's data-[active=true] styles never matched Base UI's data-active=\"\", so its outline never showed",
       "test": "apps/web/src/components/sidebar/app-sidebar.test.tsx",
