@@ -42,13 +42,14 @@ import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { cn } from "@/lib/utils";
 import { SYNC_OPTION_META } from "@/lib/sync";
 import { SyncActionSheet } from "@/components/sync/sync-launcher";
+import { ExtensionStep } from "@/components/onboarding/extension-step";
 import { requireExtension } from "@/lib/extension-gate";
 import type { LaunchableSyncType } from "@/components/sync/sync-launcher-options";
 import { CURRENCIES, DATE_FORMATS } from "@myakiba/contracts/shared/constants";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { getRouteApi, useRouter } from "@tanstack/react-router";
 
-type StepId = "welcome" | "preferences" | "sync";
+type StepId = "welcome" | "preferences" | "extension" | "sync";
 
 type StepMeta = {
   readonly id: StepId;
@@ -75,8 +76,16 @@ const STEPS: readonly [StepMeta, ...StepMeta[]] = [
     description: "Click continue to save your preferences.",
   },
   {
-    id: "sync",
+    id: "extension",
     step: 3,
+    eyebrow: "Extension",
+    title: "Install the myakiba extension.",
+    description:
+      "myakiba gets MyFigureCollection items through its browser extension, with your own MyFigureCollection sign-in. You need it to add items, but you can finish setup without it.",
+  },
+  {
+    id: "sync",
+    step: 4,
     eyebrow: "Add items",
     title: "Bring in your items.",
     description: "You can always add more later through the + button in the sidebar.",
@@ -384,6 +393,7 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
                       </form.Field>
                     </form>
                   ) : null}
+                  {meta.id === "extension" ? <ExtensionStep /> : null}
                   {meta.id === "sync" ? <SyncFields onSelect={handleSelectSync} /> : null}
                 </StepperContent>
               ))}
