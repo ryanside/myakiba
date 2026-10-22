@@ -1,5 +1,7 @@
 import * as z from "zod";
 import type { Clock, SessionValue } from "./clock";
+import { timeoutSignal, unlessAborted } from "./clock";
+import { PAGE_TIMEOUT_MS } from "./collect";
 
 export const THROTTLE = {
   minGapMs: 2500,
@@ -7,15 +9,19 @@ export const THROTTLE = {
   defaultPauseMs: 15_000,
   /** A longer pause halts the queue instead of keeping the user waiting. */
   maxPauseMs: 5 * 60_000,
+  /** How long a load may still run in its tab after it timed out, since the tab hears of it last. */
+  graceMs: 5000,
 } as const;
 
 export const throttleStateSchema = z.strictObject({
   nextPageAt: z.number(),
   pausedUntil: z.number(),
+  /** When the load running now started, so a worker that restarts mid-load waits it out. */
+  inFlightSince: z.number().nullable(),
 });
 export type ThrottleState = z.output<typeof throttleStateSchema>;
 
-export const OPEN_THROTTLE: ThrottleState = { nextPageAt: 0, pausedUntil: 0 };
+export const OPEN_THROTTLE: ThrottleState = { nextPageAt: 0, pausedUntil: 0, inFlightSince: null };
 
 export class PauseTooLongError extends Error {
   readonly pausedUntil: number;
@@ -33,27 +39,106 @@ export function createThrottle(deps: {
   readonly state: SessionValue<ThrottleState>;
 }) {
   const { clock, random, state } = deps;
-  return {
-    /** Runs one MFC page load in its turn. The next turn starts a gap after this load settles. */
-    async load<T>(signal: AbortSignal, work: () => Promise<T>): Promise<T> {
-      const { nextPageAt, pausedUntil } = await state.load();
-      if (pausedUntil - clock.now() > THROTTLE.maxPauseMs) throw new PauseTooLongError(pausedUntil);
-      const wait = Math.max(nextPageAt, pausedUntil) - clock.now();
-      if (wait > 0) await clock.sleep(wait, signal);
+  /** Settles once the last load this worker started has ended and is on the books. */
+  let lastLoad: Promise<unknown> = Promise.resolve();
+  let books: Promise<unknown> = Promise.resolve();
+
+  const gapAfter = (at: number) =>
+    at + THROTTLE.minGapMs + Math.floor(random() * THROTTLE.jitterMs);
+
+  /** Reads and writes the books one change at a time, so no change overwrites another. */
+  async function book<R>(
+    change: (current: ThrottleState, now: number) => [ThrottleState, R],
+  ): Promise<R> {
+    const previous = books;
+    const turn = Promise.withResolvers<null>();
+    books = turn.promise;
+    try {
+      await previous;
+      const [next, result] = change(await state.load(), clock.now());
+      await state.save(next);
+      return result;
+    } finally {
+      turn.resolve(null);
+    }
+  }
+
+  async function reserve(signal: AbortSignal): Promise<void> {
+    for (;;) {
       signal.throwIfAborted();
+      const wait = await book((current, now): [ThrottleState, number] => {
+        if (current.inFlightSince !== null) {
+          // A worker stopped mid-load. The load may still be running in its tab, so it ends now at the earliest.
+          const nextPageAt = Math.max(current.nextPageAt, gapAfter(now));
+          return [{ ...current, inFlightSince: null, nextPageAt }, nextPageAt - now];
+        }
+        if (current.pausedUntil - now > THROTTLE.maxPauseMs) {
+          throw new PauseTooLongError(current.pausedUntil);
+        }
+        const untilFree = Math.max(current.nextPageAt, current.pausedUntil) - now;
+        if (untilFree > 0) return [current, untilFree];
+        const nextPageAt = gapAfter(now + PAGE_TIMEOUT_MS + THROTTLE.graceMs);
+        return [{ ...current, inFlightSince: now, nextPageAt }, 0];
+      });
+      if (wait <= 0) return;
+      await clock.sleep(wait, signal);
+    }
+  }
+
+  async function settle(running: Promise<unknown>, finished: AbortController): Promise<void> {
+    const grace = new AbortController();
+    await Promise.race([
+      Promise.allSettled([running]),
+      clock.sleep(PAGE_TIMEOUT_MS + THROTTLE.graceMs, grace.signal),
+    ]);
+    grace.abort();
+    finished.abort();
+    try {
+      await book((current, now) => [
+        { ...current, inFlightSince: null, nextPageAt: gapAfter(now) },
+        null,
+      ]);
+    } catch (error) {
+      console.error("could not book the end of an MFC page load", error);
+    }
+  }
+
+  return {
+    /**
+     * Runs one MFC page load in its turn. `work` gets a signal that aborts once the load times out.
+     * The next turn starts a gap after this load ends, even when the caller stopped waiting first.
+     */
+    async load<T>(signal: AbortSignal, work: (timeout: AbortSignal) => Promise<T>): Promise<T> {
+      const previous = lastLoad;
+      const ended = Promise.withResolvers<unknown>();
+      lastLoad = Promise.all([previous, ended.promise]);
       try {
-        return await work();
-      } finally {
-        const jitter = Math.floor(random() * THROTTLE.jitterMs);
-        await state.save({
-          ...(await state.load()),
-          nextPageAt: clock.now() + THROTTLE.minGapMs + jitter,
-        });
+        await unlessAborted(signal, previous);
+        await reserve(signal);
+      } catch (error) {
+        ended.resolve(null);
+        throw error;
       }
+      const finished = new AbortController();
+      const timeout = timeoutSignal(clock, PAGE_TIMEOUT_MS, finished.signal);
+      const running = signal.aborted ? Promise.reject(signal.reason) : work(timeout);
+      ended.resolve(settle(running, finished));
+      return unlessAborted(AbortSignal.any([signal, timeout]), running);
     },
+
     async pause(until: number): Promise<void> {
-      const current = await state.load();
-      await state.save({ ...current, pausedUntil: Math.max(current.pausedUntil, until) });
+      await book((current) => [
+        { ...current, pausedUntil: Math.max(current.pausedUntil, until) },
+        null,
+      ]);
+    },
+
+    /** Books a page load the extension did not start, such as the reload after a solved challenge. */
+    async noteLoad(): Promise<void> {
+      await book((current, now) => [
+        { ...current, nextPageAt: Math.max(current.nextPageAt, gapAfter(now)) },
+        null,
+      ]);
     },
   };
 }

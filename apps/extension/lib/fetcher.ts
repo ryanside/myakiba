@@ -1,10 +1,10 @@
 import type { ItemError, PortPicture, RunEvent } from "@myakiba/mfc/bridge";
 import { readMfcEnvelope } from "@myakiba/mfc/page";
 import type { MfcItemId, MfcOgImage } from "@myakiba/mfc/page";
+import { TimeoutError, withTimeout } from "./clock";
 import type { Clock, SessionValue } from "./clock";
-import { PAGE_TIMEOUT_MS } from "./collect";
 import type { CollectedPage, PageRequest } from "./collect";
-import { TabTimeoutError, createMfcTabs } from "./mfc-tab";
+import { createMfcTabs } from "./mfc-tab";
 import type { MfcTabLease, OwnedTab, TabsApi, WindowsApi } from "./mfc-tab";
 import { toConfiguredUrl } from "./origins";
 import type { Origins } from "./origins";
@@ -26,7 +26,11 @@ export type FetcherDeps = {
   readonly origins: Origins;
   readonly throttleState: SessionValue<ThrottleState>;
   readonly ownedTab: SessionValue<OwnedTab>;
-  readonly collectPage: (tabId: number, request: PageRequest) => Promise<CollectedPage>;
+  readonly collectPage: (
+    tabId: number,
+    request: PageRequest,
+    signal: AbortSignal,
+  ) => Promise<CollectedPage>;
   /** Runs in the MFC tab, so the request carries the user's MFC cookies. */
   readonly fetchGatedPicture: (tabId: number, url: string) => Promise<PortPicture | null>;
   readonly fetchPublicPicture: (url: URL) => Promise<PortPicture | null>;
@@ -43,13 +47,6 @@ type Attempt = Outcome | { readonly kind: "aborted" } | { readonly kind: "retry_
 
 const ABORTED: Attempt = { kind: "aborted" };
 const RETRY_OWNED: Attempt = { kind: "retry_owned" };
-
-class TimeoutError extends Error {
-  constructor(timeoutMs: number) {
-    super(`MFC did not answer in ${timeoutMs} ms`);
-    this.name = "TimeoutError";
-  }
-}
 
 function failed(error: ItemError): Attempt {
   return { kind: "result", result: { ok: false, error } };
@@ -78,30 +75,6 @@ export function createFetcher(deps: FetcherDeps) {
     if (current && !sameJob(state.active, current.job)) current.controller.abort();
   }
 
-  async function expire(
-    timeoutMs: number,
-    signal: AbortSignal,
-    settled: AbortSignal,
-  ): Promise<never> {
-    await clock.sleep(timeoutMs, AbortSignal.any([signal, settled]));
-    signal.throwIfAborted();
-    throw new TimeoutError(timeoutMs);
-  }
-
-  async function withTimeout<T>(
-    signal: AbortSignal,
-    timeoutMs: number,
-    work: () => Promise<T>,
-  ): Promise<T> {
-    signal.throwIfAborted();
-    const settled = new AbortController();
-    try {
-      return await Promise.race([work(), expire(timeoutMs, signal, settled.signal)]);
-    } finally {
-      settled.abort();
-    }
-  }
-
   async function pictureOf(
     ogImage: MfcOgImage,
     tabId: number,
@@ -112,7 +85,7 @@ export function createFetcher(deps: FetcherDeps) {
     const url = toConfiguredUrl(picture.url, origins);
     if (!url) return null;
     try {
-      return await withTimeout(signal, PICTURE_TIMEOUT_MS, () =>
+      return await withTimeout(clock, PICTURE_TIMEOUT_MS, signal, () =>
         picture.access === "gated"
           ? deps.fetchGatedPicture(tabId, picture.url)
           : deps.fetchPublicPicture(url),
@@ -138,8 +111,8 @@ export function createFetcher(deps: FetcherDeps) {
     const request = { kind: "page", mode: "document", mfcItemId: job.mfcItemId } as const;
     while (clock.now() < deadline) {
       if (await mfcTabs.isShowing(tabId, job.mfcItemId)) {
-        const page = await withTimeout(signal, deadline - clock.now(), () =>
-          deps.collectPage(tabId, request),
+        const page = await withTimeout(clock, deadline - clock.now(), signal, (bounded) =>
+          deps.collectPage(tabId, request, bounded),
         );
         const envelope = readMfcEnvelope(page);
         if (envelope.kind === "item" && envelope.mfcItemId === job.mfcItemId) {
@@ -157,13 +130,13 @@ export function createFetcher(deps: FetcherDeps) {
     requester: Requester,
     signal: AbortSignal,
   ): Promise<Attempt> {
-    const deadline = clock.now() + CHALLENGE_WINDOW_MS;
     let tabId: number;
     try {
-      tabId = await mfcTabs.showChallenge(requester, job.mfcItemId, deadline, signal);
+      tabId = await mfcTabs.showChallenge(requester, job.mfcItemId, signal);
     } catch {
       return signal.aborted ? ABORTED : failed("challenge_unsolved");
     }
+    const deadline = clock.now() + CHALLENGE_WINDOW_MS;
     dispatch({ type: "needs_user", untilMs: deadline });
     const solved = await waitForItem(tabId, job, deadline, signal).catch(() => null);
     await mfcTabs.handBack(requester, signal);
@@ -177,12 +150,11 @@ export function createFetcher(deps: FetcherDeps) {
     if (!requester) return ABORTED;
     let lease: MfcTabLease | null = null;
     try {
-      lease = await mfcTabs.lease(requester, clock.now() + PAGE_TIMEOUT_MS, signal);
+      lease = await mfcTabs.lease(requester, signal);
       const { tabId } = lease;
-      const page = await throttle.load(signal, () =>
-        withTimeout(signal, PAGE_TIMEOUT_MS, () =>
-          deps.collectPage(tabId, { kind: "page", mode: "fetch", mfcItemId: job.mfcItemId }),
-        ),
+      const request = { kind: "page", mode: "fetch", mfcItemId: job.mfcItemId } as const;
+      const page = await throttle.load(signal, (timeout) =>
+        deps.collectPage(tabId, request, AbortSignal.any([signal, timeout])),
       );
       const envelope = readMfcEnvelope(page);
       switch (envelope.kind) {
@@ -206,8 +178,7 @@ export function createFetcher(deps: FetcherDeps) {
       if (error instanceof PauseTooLongError) {
         return { kind: "rate_limited", pausedUntil: error.pausedUntil };
       }
-      const timedOut = error instanceof TimeoutError || error instanceof TabTimeoutError;
-      return failedIn(lease, timedOut ? "timeout" : "unexpected_page");
+      return failedIn(lease, error instanceof TimeoutError ? "timeout" : "unexpected_page");
     }
   }
 

@@ -19,6 +19,8 @@ export type CollectRequest = z.output<typeof collectRequestSchema>;
 declare global {
   /** The collector is a bundled file and takes no arguments, so the background leaves its request here. */
   var myakibaCollectRequest: CollectRequest | undefined;
+  /** Stops the running collector's MFC fetch, so a cancelled load ends in the tab too. */
+  var myakibaCollectAbort: AbortController | undefined;
 }
 
 export const collectedPageSchema = z.strictObject({

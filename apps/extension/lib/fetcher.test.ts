@@ -10,8 +10,9 @@ import {
   memoryValue,
   notFoundPage,
   page,
+  tooClose,
 } from "../test/fake-browser";
-import type { FakeClock } from "../test/fake-browser";
+import type { FakeClock, FakeExtension } from "../test/fake-browser";
 import type { CollectedPage, PageRequest } from "./collect";
 import { CHALLENGE_WINDOW_MS } from "./fetcher";
 import type { OwnedTab } from "./mfc-tab";
@@ -36,15 +37,38 @@ function rateLimited(retryAfter: string | null): CollectedPage {
   return page("<html><title>Too many</title></html>", { status: 429, retryAfter });
 }
 
-function challengeOn(ids: readonly number[], solved: () => boolean = () => false) {
-  return (request: PageRequest) => {
-    if (!ids.includes(request.mfcItemId)) return page(itemPage(request.mfcItemId));
-    if (request.mode === "document" && solved()) return page(itemPage(request.mfcItemId));
-    return page(CHALLENGE_PAGE, {
-      status: 403,
-      cfMitigated: request.mode === "fetch" ? "challenge" : null,
-    });
+function slowFor(clock: FakeClock, slowId: number, ms: number) {
+  return async ({ mfcItemId }: PageRequest, signal: AbortSignal) => {
+    await clock.sleep(mfcItemId === slowId ? ms : 0, signal);
+    return page(itemPage(mfcItemId));
   };
+}
+
+/** MFC answers `ids` with a challenge until the user solves it in the tab, which reloads into the item. */
+function challengeOn(ids: readonly number[], options: { readonly solved?: boolean } = {}) {
+  const solved = new Set(options.solved ? ids : []);
+  return {
+    pages: (request: PageRequest) => {
+      const id = request.mfcItemId;
+      if (!ids.includes(id) || (request.mode === "document" && solved.has(id))) {
+        return page(itemPage(id));
+      }
+      return page(CHALLENGE_PAGE, {
+        status: 403,
+        cfMitigated: request.mode === "fetch" ? "challenge" : null,
+      });
+    },
+    solve(extension: FakeExtension, id: number, loadMs = 0): void {
+      solved.add(id);
+      extension.tabs.navigate(challengeTab(extension, id), { title: `Item ${id}`, loadMs });
+    },
+  };
+}
+
+function challengeTab(extension: FakeExtension, id: number): number {
+  const tabId = extension.tabs.find(`${ORIGINS.mfc}/item/${id}`);
+  if (tabId === undefined) throw new Error(`no tab shows item ${id}`);
+  return tabId;
 }
 
 function gaps(times: readonly number[]): number[] {
@@ -126,6 +150,35 @@ describe("the queue", () => {
   });
 });
 
+describe("the throttle's books", () => {
+  test("a worker restarted mid-load waits for the load it left running in the tab", async () => {
+    const clock = fakeClock();
+    const extension = fakeExtension({ clock, pages: slowFor(clock, 1, 10_000) });
+    extension.run([1]);
+    await clock.runUntil(() => extension.calls.length === 1);
+    await advance(clock, 3000);
+
+    extension.restart();
+    const run = extension.run([2]);
+    await clock.runUntil(run.done);
+
+    expect(run.results().map((result) => result.ok)).toEqual([true]);
+    expect(tooClose(extension.loads(), THROTTLE.minGapMs)).toEqual([]);
+  });
+
+  test("a persisted pause delays the first loads without timing them out", async () => {
+    const clock = fakeClock();
+    const pausedUntil = clock.now() + 120_000;
+    const throttleState = memoryValue({ ...OPEN_THROTTLE, pausedUntil });
+    const extension = fakeExtension({ clock, throttleState, pages: itemPages() });
+    const run = extension.run([1]);
+    await clock.runUntil(run.done);
+
+    expect(extension.tabs.loads[0]?.at).toBeGreaterThanOrEqual(pausedUntil);
+    expect(run.results()).toEqual([{ ok: true, html: itemPage(1), picture: null }]);
+  });
+});
+
 describe("cancel", () => {
   test("drops the ids no other run waits for and ends the run", async () => {
     let release: (answer: CollectedPage) => void = () => {};
@@ -150,6 +203,49 @@ describe("cancel", () => {
     expect(cancelled.items()).toEqual([]);
     expect(cancelled.events.at(-1)).toEqual({ type: "done", reason: "cancelled" });
     expect(other.items().map((event) => event.mfcItemId)).toEqual([itemId(3)]);
+  });
+
+  test("mid-load holds the next load until the first one has ended in the tab", async () => {
+    const clock = fakeClock();
+    const extension = fakeExtension({
+      clock,
+      pages: async ({ mfcItemId }) => {
+        await clock.sleep(mfcItemId === 1 ? 20_000 : 0);
+        return page(itemPage(mfcItemId));
+      },
+    });
+    const cancelled = extension.run([1]);
+    const other = extension.run([2]);
+    await clock.runUntil(() => extension.calls.length === 1);
+    await advance(clock, 5000);
+
+    extension.fetcher.cancel(cancelled.key);
+    await clock.runUntil(other.done);
+
+    const [first, second] = extension.calls;
+    expect((second?.at ?? 0) - (first?.endedAt ?? Infinity)).toBeGreaterThanOrEqual(
+      THROTTLE.minGapMs,
+    );
+    expect(other.results().map((result) => result.ok)).toEqual([true]);
+  });
+
+  test("mid-load stops the load in the tab, so the next one need not wait it out", async () => {
+    const clock = fakeClock();
+    const extension = fakeExtension({ clock, pages: slowFor(clock, 1, 20_000) });
+    const cancelled = extension.run([1]);
+    const other = extension.run([2]);
+    await clock.runUntil(() => extension.calls.length === 1);
+    await advance(clock, 5000);
+
+    extension.fetcher.cancel(cancelled.key);
+    const cancelledAt = clock.now();
+    await clock.runUntil(other.done);
+
+    const [first, second] = extension.calls;
+    expect(first?.signal.aborted).toBe(true);
+    expect(first?.endedAt).toBe(cancelledAt);
+    expect((second?.at ?? 0) - cancelledAt).toBeGreaterThanOrEqual(THROTTLE.minGapMs);
+    expect((second?.at ?? Infinity) - cancelledAt).toBeLessThan(15_000);
   });
 
   test("during the gap closes the owned tab without waiting out the gap", async () => {
@@ -177,7 +273,7 @@ describe("cancel", () => {
   });
 
   test("during a challenge stops waiting, closes the tab and focuses nothing", async () => {
-    const extension = fakeExtension({ pages: challengeOn([7]) });
+    const extension = fakeExtension({ pages: challengeOn([7]).pages });
     const run = extension.run([7]);
     await extension.clock.runUntil(() => asked(run.events, "needs_user"));
 
@@ -195,15 +291,15 @@ describe("cancel", () => {
   });
 
   test("of the only run leaves a new request for the same id its own fetch", async () => {
-    let solved = false;
-    const extension = fakeExtension({ pages: challengeOn([7], () => solved) });
+    const challenge = challengeOn([7]);
+    const extension = fakeExtension({ pages: challenge.pages });
     const cancelled = extension.run([7]);
     await extension.clock.runUntil(() => asked(cancelled.events, "needs_user"));
 
     extension.fetcher.cancel(cancelled.key);
     const again = extension.run([7]);
     await extension.clock.runUntil(() => asked(again.events, "needs_user"));
-    solved = true;
+    challenge.solve(extension, 7);
     await extension.clock.runUntil(again.done);
 
     expect(fetches(extension.calls)).toEqual([itemId(7), itemId(7)]);
@@ -333,15 +429,15 @@ describe("rate limits", () => {
 
 describe("a challenge", () => {
   test("pauses the queue until the user clears it in the extension's own tab", async () => {
-    let solved = false;
-    const extension = fakeExtension({ pages: challengeOn([7], () => solved) });
+    const challenge = challengeOn([7]);
+    const extension = fakeExtension({ pages: challenge.pages });
     const requester = extension.myakiba.tabId;
     const run = extension.run([7, 8]);
     await extension.clock.runUntil(() => asked(run.events, "needs_user"));
     await advance(extension.clock, 30_000);
     expect(fetches(extension.calls)).toEqual([itemId(7)]);
 
-    solved = true;
+    challenge.solve(extension, 7);
     await extension.clock.runUntil(run.done);
     await extension.settle();
 
@@ -357,7 +453,7 @@ describe("a challenge", () => {
   });
 
   test("never navigates a borrowed tab", async () => {
-    const extension = fakeExtension({ pages: challengeOn([7], () => true) });
+    const extension = fakeExtension({ pages: challengeOn([7], { solved: true }).pages });
     const requester = extension.myakiba.tabId;
     const borrowed = extension.tabs.open(`${ORIGINS.mfc}/`);
     const run = extension.run([7]);
@@ -375,12 +471,12 @@ describe("a challenge", () => {
 
   test("its navigation takes a turn after the page that raised it answers", async () => {
     const clock = fakeClock();
-    const challenge = challengeOn([7], () => true);
+    const challenge = challengeOn([7], { solved: true });
     const extension = fakeExtension({
       clock,
       pages: async (request) => {
         if (request.mode === "fetch") await clock.sleep(SLOW_PAGE_MS);
-        return challenge(request);
+        return challenge.pages(request);
       },
     });
     const run = extension.run([7]);
@@ -391,22 +487,23 @@ describe("a challenge", () => {
     expect((navigation?.at ?? 0) - answeredAt).toBeGreaterThanOrEqual(THROTTLE.minGapMs);
   });
 
-  test("waits for the item's own page, whatever the tab's title says", async () => {
-    let solved = false;
-    const extension = fakeExtension({ pages: challengeOn([7], () => solved) });
+  test("keeps waiting through a localized challenge, whatever the tab's title says", async () => {
+    const challenge = challengeOn([7]);
+    const extension = fakeExtension({ pages: challenge.pages });
     const run = extension.run([7]);
     await extension.clock.runUntil(() => asked(run.events, "needs_user"));
+    extension.tabs.navigate(challengeTab(extension, 7), { title: "Un instant…" });
     await advance(extension.clock, 30_000);
     expect(run.done()).toBe(false);
 
-    solved = true;
+    challenge.solve(extension, 7);
     await extension.clock.runUntil(run.done);
 
     expect(run.results()).toEqual([{ ok: true, html: itemPage(7), picture: null }]);
   });
 
   test("gives challenge_unsolved when the window closes", async () => {
-    const extension = fakeExtension({ pages: challengeOn([7]) });
+    const extension = fakeExtension({ pages: challengeOn([7]).pages });
     const run = extension.run([7]);
     const startedAt = extension.clock.now();
     await extension.clock.runUntil(run.done);
@@ -416,7 +513,7 @@ describe("a challenge", () => {
   });
 
   test("left unsolved fails every queued item without opening another challenge", async () => {
-    const extension = fakeExtension({ pages: challengeOn([7, 8, 9]) });
+    const extension = fakeExtension({ pages: challengeOn([7, 8, 9]).pages });
     const first = extension.run([7, 8]);
     const second = extension.run([9]);
     await extension.clock.runUntil(() => first.done() && second.done());
@@ -485,11 +582,11 @@ describe("the MFC tab", () => {
   });
 
   test("never navigates or closes a tab the user claimed before a challenge", async () => {
-    const challenge = challengeOn([7], () => true);
+    const challenge = challengeOn([7], { solved: true });
     const extension = fakeExtension({
       pages: (request) => {
         if (request.mode === "fetch") extension.tabs.activate(101);
-        return challenge(request);
+        return challenge.pages(request);
       },
     });
     const run = extension.run([7]);
@@ -507,14 +604,14 @@ describe("the MFC tab", () => {
   });
 
   test("ignores only its own focus of the challenge tab, so a later one is the user's", async () => {
-    let solved = false;
-    const extension = fakeExtension({ pages: challengeOn([7], () => solved) });
+    const challenge = challengeOn([7]);
+    const extension = fakeExtension({ pages: challenge.pages });
     const run = extension.run([7]);
     await extension.clock.runUntil(() => asked(run.events, "needs_user"));
 
     extension.tabs.activate(extension.myakiba.tabId);
     extension.tabs.activate(101);
-    solved = true;
+    challenge.solve(extension, 7);
     await extension.clock.runUntil(run.done);
     await extension.settle();
 

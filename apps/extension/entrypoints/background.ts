@@ -30,7 +30,9 @@ async function runCollector<T>(
   tabId: number,
   request: CollectRequest,
   schema: z.ZodType<T>,
+  signal?: AbortSignal,
 ): Promise<T> {
+  signal?.throwIfAborted();
   await browser.scripting.executeScript({
     target: { tabId },
     func: (value: CollectRequest) => {
@@ -38,11 +40,27 @@ async function runCollector<T>(
     },
     args: [request],
   });
-  const [injection] = await browser.scripting.executeScript({
-    target: { tabId },
-    files: ["/collector.js"],
-  });
-  return schema.parse(injection?.result);
+  signal?.throwIfAborted();
+  const stop = async () => {
+    try {
+      await browser.scripting.executeScript({
+        target: { tabId },
+        func: () => globalThis.myakibaCollectAbort?.abort(),
+      });
+    } catch {
+      // The tab closed or moved on, which stops the collector as well.
+    }
+  };
+  signal?.addEventListener("abort", stop, { once: true });
+  try {
+    const [injection] = await browser.scripting.executeScript({
+      target: { tabId },
+      files: ["/collector.js"],
+    });
+    return schema.parse(injection?.result);
+  } finally {
+    signal?.removeEventListener("abort", stop);
+  }
 }
 
 export default defineBackground(() => {
@@ -54,7 +72,8 @@ export default defineBackground(() => {
     origins: ORIGINS,
     throttleState: sessionValue("throttle", throttleStateSchema, OPEN_THROTTLE),
     ownedTab: sessionValue("ownedTab", ownedTabSchema, null),
-    collectPage: (tabId, request) => runCollector(tabId, request, collectedPageSchema),
+    collectPage: (tabId, request, signal) =>
+      runCollector(tabId, request, collectedPageSchema, signal),
     fetchGatedPicture: (tabId, url) =>
       runCollector(tabId, { kind: "gated-picture", url }, portPictureSchema.nullable()),
     fetchPublicPicture: async (url) =>

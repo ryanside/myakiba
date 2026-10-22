@@ -7,11 +7,11 @@ import { ORIGINS } from "../lib/config";
 import { toConfiguredUrl } from "../lib/origins";
 import { PICTURE_TIMEOUT_MS, readPicture } from "../lib/picture";
 
-async function fetchItemPage(mfcItemId: number): Promise<CollectedPage> {
+async function fetchItemPage(mfcItemId: number, signal: AbortSignal): Promise<CollectedPage> {
   const response = await fetch(`/item/${mfcItemId}`, {
     credentials: "include",
     cache: "no-store",
-    signal: AbortSignal.timeout(PAGE_TIMEOUT_MS),
+    signal: AbortSignal.any([signal, AbortSignal.timeout(PAGE_TIMEOUT_MS)]),
   });
   const html = await response.text();
   return {
@@ -50,5 +50,8 @@ export default defineUnlistedScript(async (): Promise<CollectedPage | PortPictur
   const request = collectRequestSchema.parse(globalThis.myakibaCollectRequest);
   globalThis.myakibaCollectRequest = undefined;
   if (request.kind === "gated-picture") return fetchGatedPicture(request.url);
-  return request.mode === "fetch" ? fetchItemPage(request.mfcItemId) : loadedItemPage();
+  if (request.mode === "document") return loadedItemPage();
+  const controller = new AbortController();
+  globalThis.myakibaCollectAbort = controller;
+  return fetchItemPage(request.mfcItemId, controller.signal);
 });

@@ -45,13 +45,6 @@ export const ownedTabSchema = z
   .nullable();
 export type OwnedTab = z.output<typeof ownedTabSchema>;
 
-export class TabTimeoutError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "TabTimeoutError";
-  }
-}
-
 const POLL_MS = 50;
 
 function inContext(tab: Tab, context: TabContext): boolean {
@@ -107,21 +100,20 @@ export function createMfcTabs(deps: {
     if (own) await tabs.remove(own.tabId).catch(() => null);
   }
 
-  async function waitFor(tabId: number, path: string, deadline: number, signal: AbortSignal) {
-    while (clock.now() < deadline) {
-      signal.throwIfAborted();
+  async function waitFor(tabId: number, path: string, timeout: AbortSignal): Promise<void> {
+    for (;;) {
+      timeout.throwIfAborted();
       const tab = await tabs.get(tabId);
       if (tab.status === "complete" && mfcPath(tab.url) === path) return;
-      await clock.sleep(POLL_MS, signal);
+      await clock.sleep(POLL_MS, timeout);
     }
-    throw new TabTimeoutError(`tab ${tabId} did not load ${path} in time`);
   }
 
   async function createOwned(
     requester: Requester,
     url: string,
-    deadline: number,
     signal: AbortSignal,
+    timeout: AbortSignal,
   ): Promise<number> {
     await exclusively(closeOwned);
     const { windowId } = await tabs.get(requester.tabId);
@@ -136,7 +128,7 @@ export function createMfcTabs(deps: {
     if (tabId === undefined) throw new Error("the new MFC tab has no id");
     const { pathname } = new URL(url);
     await exclusively(() => owned.save({ tabId, path: pathname }));
-    await waitFor(tabId, pathname, deadline, signal);
+    await waitFor(tabId, pathname, timeout);
     return tabId;
   }
 
@@ -166,7 +158,7 @@ export function createMfcTabs(deps: {
   }
 
   return {
-    async lease(requester: Requester, deadline: number, signal: AbortSignal): Promise<MfcTabLease> {
+    async lease(requester: Requester, signal: AbortSignal): Promise<MfcTabLease> {
       const own = await exclusively(ownedTab);
       if (own && inContext(own.tab, requester.context)) return { kind: "owned", tabId: own.tabId };
       if (borrowing) {
@@ -178,9 +170,8 @@ export function createMfcTabs(deps: {
         const borrowed = open.find((tab) => inContext(tab, requester.context))?.id;
         if (borrowed !== undefined) return { kind: "borrowed", tabId: borrowed };
       }
-      const url = `${origins.mfc}/`;
-      const tabId = await throttle.load(signal, () =>
-        createOwned(requester, url, deadline, signal),
+      const tabId = await throttle.load(signal, (timeout) =>
+        createOwned(requester, `${origins.mfc}/`, signal, timeout),
       );
       return { kind: "owned", tabId };
     },
@@ -189,14 +180,13 @@ export function createMfcTabs(deps: {
     async showChallenge(
       requester: Requester,
       mfcItemId: MfcItemId,
-      deadline: number,
       signal: AbortSignal,
     ): Promise<number> {
       const url = mfcItemUrl(mfcItemId, origins);
-      const tabId = await throttle.load(signal, async () => {
+      const tabId = await throttle.load(signal, async (timeout) => {
         const navigated = await navigateOwned(requester, url, signal);
-        if (navigated === null) return createOwned(requester, url, deadline, signal);
-        await waitFor(navigated, new URL(url).pathname, deadline, signal);
+        if (navigated === null) return createOwned(requester, url, signal, timeout);
+        await waitFor(navigated, new URL(url).pathname, timeout);
         return navigated;
       });
       await activate(tabId, signal);

@@ -8,6 +8,10 @@ export const systemClock: Clock = {
   now: () => Date.now(),
   sleep: (ms, signal) =>
     new Promise((resolve) => {
+      if (signal?.aborted) {
+        resolve();
+        return;
+      }
       const timer = setTimeout(resolve, ms);
       signal?.addEventListener(
         "abort",
@@ -25,3 +29,50 @@ export type SessionValue<T> = {
   readonly load: () => Promise<T>;
   readonly save: (value: T) => Promise<void>;
 };
+
+export class TimeoutError extends Error {
+  constructor(timeoutMs: number) {
+    super(`MFC did not answer in ${timeoutMs} ms`);
+    this.name = "TimeoutError";
+  }
+}
+
+/** Aborts with a TimeoutError once `ms` pass on `clock`, unless `cancelled` aborts first. */
+export function timeoutSignal(clock: Clock, ms: number, cancelled: AbortSignal): AbortSignal {
+  const controller = new AbortController();
+  void (async () => {
+    await clock.sleep(ms, cancelled);
+    if (!cancelled.aborted) controller.abort(new TimeoutError(ms));
+  })();
+  return controller.signal;
+}
+
+/** Settles as `work` does, or rejects with `signal`'s reason once it aborts, even when `work` ignores it. */
+export async function unlessAborted<T>(signal: AbortSignal, work: Promise<T>): Promise<T> {
+  const aborted = Promise.withResolvers<never>();
+  const abort = () => aborted.reject(signal.reason);
+  if (signal.aborted) abort();
+  else signal.addEventListener("abort", abort, { once: true });
+  try {
+    return await Promise.race([work, aborted.promise]);
+  } finally {
+    signal.removeEventListener("abort", abort);
+  }
+}
+
+/** Runs `work` with a signal that also aborts after `ms`, and stops waiting for it then. */
+export async function withTimeout<T>(
+  clock: Clock,
+  ms: number,
+  signal: AbortSignal,
+  work: (signal: AbortSignal) => Promise<T>,
+): Promise<T> {
+  signal.throwIfAborted();
+  const done = new AbortController();
+  const bounded = AbortSignal.any([signal, timeoutSignal(clock, ms, done.signal)]);
+  try {
+    return await unlessAborted(bounded, work(bounded));
+  } finally {
+    done.abort();
+  }
+}
