@@ -1,7 +1,6 @@
 import { createContext, memo, use, useCallback, useEffect, useMemo, useState } from "react";
 import type { ComponentProps } from "react";
 import { Bar, Rectangle, XAxis, ReferenceLine } from "recharts";
-import type { RectangleProps } from "recharts";
 import { useMotionValueEvent, useSpring } from "motion/react";
 import { useNavigate } from "@tanstack/react-router";
 import { getDateOnlyMonthBounds } from "@myakiba/utils/date-only";
@@ -204,11 +203,17 @@ function OrderBarsChart({
   );
 }
 
-type OrderBarProps = RectangleProps & { readonly originalDataIndex: number };
+type OrderBarRenderer = Extract<
+  NonNullable<ComponentProps<typeof Bar>["shape"]>,
+  (props: never) => React.ReactNode
+>;
+type OrderBarProps = Parameters<OrderBarRenderer>[0];
 
-const orderBarRenderer = Object.fromEntries([
-  ["shape", (props: OrderBarProps) => <OrderBar {...props} />],
-]) as Pick<ComponentProps<typeof Bar>, "shape">;
+const renderOrderBar: OrderBarRenderer = (props) => <OrderBar {...props} />;
+const orderBarRenderer = Object.fromEntries([["shape", renderOrderBar]]) as Pick<
+  ComponentProps<typeof Bar>,
+  "shape"
+>;
 
 function OrderBar(props: OrderBarProps): React.ReactNode {
   const activeMonth = use(ActiveMonthContext);

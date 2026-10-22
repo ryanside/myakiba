@@ -528,7 +528,7 @@
     },
     {
       "fix": "0d3f95ce",
-      "bug": "a dashboard order bar hover highlight replaced every bar node, so a press that began before the replacement lost its click and left the focused bar layer outlined",
+      "bug": "a dashboard order bar hover highlight replaced every bar node, so a press that began before the replacement lost its click",
       "test": "apps/web/src/components/dashboard/orders-bar-chart.test.tsx",
       "fixed": [
         "a bar pressed while the hover highlight moves to it stays mounted and navigates on release"
