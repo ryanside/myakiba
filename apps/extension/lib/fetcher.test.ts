@@ -724,7 +724,7 @@ describe("a challenge", () => {
     expect(reads.length).toBeLessThanOrEqual(3);
   });
 
-  test("served with 503 and a long Retry-After halts like any 503, without asking the user", async () => {
+  test("served with 503 and a Retry-After over five minutes halts without asking the user", async () => {
     const throttleState = memoryValue(OPEN_THROTTLE);
     const extension = fakeExtension({
       throttleState,
@@ -738,28 +738,43 @@ describe("a challenge", () => {
       { ok: false, error: "rate_limited" },
       { ok: false, error: "rate_limited" },
     ]);
+    expect(asked(run.events, "needs_user")).toBe(false);
     expect(extension.tabs.loads.map((load) => load.url)).toEqual([`${ORIGINS.mfc}/`]);
     expect(throttleState.peek().pausedUntil).toBe((extension.calls[0]?.at ?? 0) + 600_000);
   });
 
-  test("served with 503 and a short Retry-After backs off and tries again", async () => {
+  test("served with 503 and a short Retry-After waits out the pause, then asks the user", async () => {
+    const challenge = challengeOn([7]);
+    const extension = fakeExtension({
+      pages: (request) =>
+        request.mode === "fetch"
+          ? page(CHALLENGE_PAGE, { status: 503, cfMitigated: "challenge", retryAfter: "10" })
+          : challenge.pages(request),
+    });
+    const run = extension.run([7]);
+    await extension.clock.runUntil(() => asked(run.events, "needs_user"));
+    challenge.solve(extension, 7);
+    await extension.clock.runUntil(run.done);
+
+    const shown = extension.tabs.loads.find((load) => load.url.endsWith("/item/7"));
+    expect((shown?.at ?? 0) - (extension.calls[0]?.at ?? 0)).toBeGreaterThanOrEqual(10_000);
+    expect(fetches(extension.calls)).toEqual([itemId(7)]);
+    expect(run.results()).toEqual([{ ok: true, html: itemPage(7), picture: null }]);
+  });
+
+  test("a 503 without cf-mitigated: challenge is a rate limit, whatever its title", async () => {
     let answered = 0;
     const extension = fakeExtension({
       pages: ({ mfcItemId }) =>
         answered++ === 0
-          ? page(CHALLENGE_PAGE, { status: 503, cfMitigated: "challenge", retryAfter: "10" })
+          ? page(CHALLENGE_PAGE, { status: 503, retryAfter: "10" })
           : page(itemPage(mfcItemId)),
     });
     const run = extension.run([7]);
     await extension.clock.runUntil(run.done);
 
-    expect(run.events).toContainEqual({
-      type: "status",
-      state: "backing_off",
-      mfcItemId: itemId(7),
-      untilMs: (extension.calls[0]?.at ?? 0) + 10_000,
-    });
-    expect(extension.tabs.loads.map((load) => load.url)).toEqual([`${ORIGINS.mfc}/`]);
+    expect(asked(run.events, "backing_off")).toBe(true);
+    expect(asked(run.events, "needs_user")).toBe(false);
     expect(run.results()).toEqual([{ ok: true, html: itemPage(7), picture: null }]);
   });
 

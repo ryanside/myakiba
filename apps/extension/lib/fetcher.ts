@@ -53,7 +53,7 @@ export type FetchRun = {
 
 type Reading =
   | { readonly kind: "item"; readonly ogImage: MfcOgImage }
-  | { readonly kind: "challenge" }
+  | { readonly kind: "challenge"; readonly pausedUntil: number | null }
   | Exclude<Outcome, { readonly kind: "halted" }>;
 
 type Answer = Exclude<Reading, { readonly kind: "challenge" }>;
@@ -63,9 +63,11 @@ function failed(error: ItemError): Extract<Outcome, { readonly kind: "result" }>
 }
 
 function readPage(page: CollectedPage, job: Job, now: number): Reading {
-  if (RATE_LIMIT_STATUSES.has(page.status)) {
-    const pauseMs = parseRetryAfter(page.retryAfter, now) ?? THROTTLE.defaultPauseMs;
-    return { kind: "rate_limited", pausedUntil: now + pauseMs };
+  const pauseMs = parseRetryAfter(page.retryAfter, now);
+  // Cloudflare may serve its challenge with 503 and Retry-After. It still wants a person, after the pause.
+  const challenged = page.cfMitigated?.trim().toLowerCase() === "challenge";
+  if (!challenged && RATE_LIMIT_STATUSES.has(page.status)) {
+    return { kind: "rate_limited", pausedUntil: now + (pauseMs ?? THROTTLE.defaultPauseMs) };
   }
   const envelope = readMfcEnvelope(page);
   switch (envelope.kind) {
@@ -74,7 +76,7 @@ function readPage(page: CollectedPage, job: Job, now: number): Reading {
         ? { kind: "item", ogImage: envelope.ogImage }
         : failed("unexpected_page");
     case "challenge":
-      return envelope;
+      return { kind: "challenge", pausedUntil: pauseMs === null ? null : now + pauseMs };
     case "not_found":
       return failed(envelope.signedIn ? "hidden_or_missing" : "mfc_signed_out");
     case "unexpected":
@@ -241,6 +243,8 @@ export function createFetcher(deps: FetcherDeps) {
         case "item":
           return await itemResult(page, reading.ogImage, tabId, signal);
         case "challenge":
+          // The challenge's own load then waits out MFC's pause, or halts the queue when it is too long.
+          if (reading.pausedUntil !== null) await throttle.pause(reading.pausedUntil);
           return await solveChallenge(job, requester, signal);
         case "result":
         case "rate_limited":
