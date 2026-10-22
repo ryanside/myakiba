@@ -8,7 +8,6 @@ import { itemFields, linkEntries, linksInLockOrder, releaseRows } from "@/lib/mf
 import { buildReleasePlan } from "./release-plan";
 import type { ReleasePlan } from "./release-plan";
 
-/** Locks the item for its refresh, so concurrent refreshes of one item run one after the other. */
 export async function lockItem(tx: Tx, itemId: string) {
   const [locked] = await tx
     .select({

@@ -14,7 +14,6 @@ export const ITEM_RESYNC_QUEUE_NAME = "item-resync-queue";
 const COOLDOWN_KEY_PREFIX = "item-resync:cooldown";
 const COOLDOWN_TTL_SECONDS = 3 * 24 * 60 * 60; // 3 days
 const RUNNING_KEY_PREFIX = "item-resync:running";
-// Outlives a refresh's picture upload and transaction, so a crashed one stops reading as running.
 const RUNNING_TTL_SECONDS = 60;
 
 export type ItemResyncState = {

@@ -38,10 +38,7 @@ async function findResyncItem(tx: ReadTx, externalId: number) {
   return itemId === undefined ? undefined : { id, itemId };
 }
 
-/**
- * The worker's queue states without a queue: the server never sees the extension's fetch, so
- * "requested" no longer occurs, and "processing" means a posted page is being written.
- */
+// The status keeps the queue's four states. "requested" no longer occurs, since the server never sees the extension's fetch.
 async function resyncState(itemId: string): Promise<ItemResyncState> {
   const cooldownExpiresAt = await getResyncCooldownExpiresAt(redis, itemId);
   if (cooldownExpiresAt) return { status: "cooldown", cooldownExpiresAt };
@@ -512,29 +509,33 @@ export const Items = {
       },
     },
     async (scope, { itemId, page, stored }) => {
-      const locked = await lockItem(scope.tx, itemId);
-      if (!locked) return fail("not_found", "Item not found");
-      if (await getResyncCooldownExpiresAt(redis, itemId)) {
-        return fail("too_many_requests", RECENTLY_REFRESHED);
-      }
-      const image = stored?.kind === "stored" ? stored.url : locked.image;
-      const outcome = await refreshItem(scope.tx, locked, page, image);
-      await setResyncCooldown(redis, itemId);
+      try {
+        const locked = await lockItem(scope.tx, itemId);
+        if (!locked) return fail("not_found", "Item not found");
+        if (await getResyncCooldownExpiresAt(redis, itemId)) {
+          return fail("too_many_requests", RECENTLY_REFRESHED);
+        }
+        const image = stored?.kind === "stored" ? stored.url : locked.image;
+        const outcome = await refreshItem(scope.tx, locked, page, image);
+        await setResyncCooldown(redis, itemId);
 
-      scope.log.set({
-        mfc: {
-          itemId: page.mfcItemId,
-          contentLabel: page.contentLabel,
-          outcome,
-          picture: pictureLog(stored),
-          warnings: page.warnings,
-        },
-      });
-      return ok<ResyncResult>({
-        status: "cooldown",
-        cooldownExpiresAt: await getResyncCooldownExpiresAt(redis, itemId),
-        saved: outcome === "unchanged" ? "unchanged" : "refreshed",
-      });
+        scope.log.set({
+          mfc: {
+            itemId: page.mfcItemId,
+            contentLabel: page.contentLabel,
+            outcome,
+            picture: pictureLog(stored),
+            warnings: page.warnings,
+          },
+        });
+        return ok<ResyncResult>({
+          status: "cooldown",
+          cooldownExpiresAt: await getResyncCooldownExpiresAt(redis, itemId),
+          saved: outcome === "unchanged" ? "unchanged" : "refreshed",
+        });
+      } finally {
+        await clearResyncRunning(redis, itemId);
+      }
     },
   ),
 };

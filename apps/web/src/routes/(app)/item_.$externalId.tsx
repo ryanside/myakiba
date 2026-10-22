@@ -56,7 +56,6 @@ function RouteComponent(): ReactNode {
   });
 
   const requestResyncMutation = useMutation({
-    // The server refreshes from the page the browser extension fetches, and nothing sends it yet.
     mutationFn: async () => {
       throw new Error("Refreshing an item needs the browser extension");
     },
