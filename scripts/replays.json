@@ -1,6 +1,15 @@
 {
   "test": [
     {
+      "fix": "5cb016f3",
+      "bug": "an onboarded account saw the welcome dialog again on a new browser",
+      "test": "apps/web/src/components/onboarding/onboarding-dialog.test.tsx",
+      "fixed": [
+        "an onboarded account on a new browser keeps the welcome dialog closed",
+        "a new account sees the welcome dialog and saves that it has seen onboarding"
+      ]
+    },
+    {
       "fix": "f74b2615",
       "bug": "the date normalizer dropped MM/DD/YYYY dates",
       "test": "packages/utils/src/date-only.test.ts",
