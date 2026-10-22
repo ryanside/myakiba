@@ -369,6 +369,20 @@ describe("POST /api/item/:id/resync refreshes the item from the page the extensi
     ]);
   });
 
+  test("a material share finer than the stored 2 decimals reads unchanged on the next refresh", async () => {
+    const thirds = edit(
+      page98777,
+      '<span switch="塩ビ">PVC</span></a></div>',
+      '<span switch="塩ビ">PVC</span></a> <small class="light">33.333%</small></div>',
+    );
+    await upload(thirds);
+    const before = await itemRows();
+
+    expect(await resync(thirds)).toEqual(refreshed("unchanged"));
+
+    expect(await itemRows()).toEqual(before);
+  });
+
   test("the page as it is stored answers unchanged, writes nothing and still starts the cooldown", async () => {
     await upload(page98777, JPEG);
     const before = await itemRows();

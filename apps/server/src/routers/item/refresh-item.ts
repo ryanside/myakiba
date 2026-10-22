@@ -59,8 +59,13 @@ function pageLink(link: MfcEntryLink): Link {
     name: link.name,
     sourceLabel: link.sourceLabel,
     roles: [...link.roles],
-    materialPercentage: link.materialPercentage,
+    materialPercentage: storedPercentage(link.materialPercentage),
   };
+}
+
+// entry_to_item.material_percentage is decimal(5,2), so a finer share reads back rounded.
+function storedPercentage(percentage: number | null): number | null {
+  return percentage === null ? null : Math.round(percentage * 100) / 100;
 }
 
 type Snapshot = {
