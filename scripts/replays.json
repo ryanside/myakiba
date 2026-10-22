@@ -1,6 +1,14 @@
 {
   "test": [
     {
+      "fix": "49986ca8",
+      "bug": "a new account that closed Getting Started within 400 ms saw the welcome dialog open again",
+      "test": "apps/web/src/components/onboarding/onboarding-dialog.test.tsx",
+      "fixed": [
+        "a new account that closes Getting Started before the welcome opens keeps it closed"
+      ]
+    },
+    {
       "fix": "f8da3c4a",
       "bug": "an account signed in before the deploy saw the welcome dialog because its cached session had no onboarding key",
       "test": "apps/web/src/components/onboarding/onboarding-dialog.test.tsx",
