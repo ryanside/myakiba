@@ -556,6 +556,22 @@
         "POST /api/mfc-items saves an MFC item page as a new item > no transaction is open while the picture is stored",
         "POST /api/mfc-items fails the item when its picture cannot be stored > a store that hangs is cut off by its 5 s budget, answers 500 and writes nothing"
       ]
+    },
+    {
+      "fix": "0a520833",
+      "bug": "an item resync whose commit failed after the cooldown write answered 500, left the item as it was and still held a 3-day cooldown",
+      "test": "apps/server/src/routers/item/resync.test.ts",
+      "fixed": [
+        "a resync that fails part way leaves no cooldown and no refresh > a commit that fails after the cooldown write answers 500, keeps no cooldown, and a retry refreshes"
+      ]
+    },
+    {
+      "fix": "2ad79602",
+      "bug": "an item resync read a page with a material share finer than 2 decimals as changed every time, because the column stores it rounded",
+      "test": "apps/server/src/routers/item/resync.test.ts",
+      "fixed": [
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a material share finer than the stored 2 decimals reads unchanged on the next refresh"
+      ]
     }
   ],
   "lint": [
