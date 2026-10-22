@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import { eq, sql } from "drizzle-orm";
 import { createRequestLogger, initLogger } from "evlog";
 import { user } from "@myakiba/db/schema/auth";
@@ -137,16 +137,24 @@ describe("a command's before step", () => {
       .from(sql`(select 1) as one`);
     return row?.id;
   };
-  const writeAfter = (answer: "proceed" | "ok" | "fail") => {
+  const openTransactions = async () => {
+    const [open] = await db.execute<{ count: number }>(
+      "SELECT count(*)::int AS count FROM pg_stat_activity WHERE datname = current_database() AND backend_type = 'client backend' AND pid <> pg_backend_pid() AND (state LIKE 'idle in transaction%' OR xact_start IS NOT NULL)",
+    );
+    return open?.count;
+  };
+  const writeAfter = (answer: "proceed" | "ok" | "fail" | "throw") => {
     let bodyRuns = 0;
     const op = command(
       {
         ...config,
         before: async (scope, input: { readonly id: string }) => {
           const reads = [await currentTxid(scope), await currentTxid(scope)];
-          if (answer === "ok") return ok({ reads });
+          const open = await openTransactions();
+          if (answer === "ok") return ok({ reads, open });
           if (answer === "fail") return fail("bad_request", "Not this one");
-          return proceed({ id: input.id, reads });
+          if (answer === "throw") throw new Error("injected failure in before");
+          return proceed({ id: input.id, reads, open });
         },
       },
       async (scope, input) => {
@@ -157,7 +165,7 @@ describe("a command's before step", () => {
           email: `${input.id}@example.com`,
           username: input.id,
         });
-        return ok({ reads: input.reads });
+        return ok({ reads: input.reads, open: input.open });
       },
     );
     return { op, bodyRuns: () => bodyRuns };
@@ -169,6 +177,7 @@ describe("a command's before step", () => {
     const outcome = await run(viewer, op, { id: "after-before" }, log);
     if (!outcome.ok) throw new Error("the command failed");
 
+    expect(outcome.value.open).toBe(0);
     expect(outcome.value.reads[0]).not.toBe(outcome.value.reads[1]);
     expect(await userExists("after-before")).toBe(true);
   });
@@ -185,6 +194,22 @@ describe("a command's before step", () => {
       expect(await userExists(`answered-${answer}`)).toBe(false);
     },
   );
+
+  test("a throw answers a logged 500 without running the body", async () => {
+    const { op, bodyRuns } = writeAfter("throw");
+    const caller = { viewer, log: createRequestLogger() };
+    const logged = spyOn(caller.log, "error");
+
+    expect(await serve(caller, op, { id: "before-threw" })).toMatchObject({
+      code: 500,
+      response: "Failed to write",
+    });
+    expect(logged).toHaveBeenCalledWith(new Error("injected failure in before"), {
+      step: "test.write",
+    });
+    expect(bodyRuns()).toBe(0);
+    expect(await userExists("before-threw")).toBe(false);
+  });
 });
 
 describe("a prepared read", () => {
