@@ -37,6 +37,8 @@ const session = {
 
 let sessionRequests = 0;
 const realFetch = globalThis.fetch;
+const realDecode = Image.prototype.decode;
+Image.prototype.decode = async () => {};
 globalThis.fetch = Object.assign(
   async () => {
     sessionRequests++;
@@ -56,6 +58,7 @@ afterEach(() => {
 });
 afterAll(() => {
   globalThis.fetch = realFetch;
+  Image.prototype.decode = realDecode;
 });
 
 function makeRouter(path: string, current: Session = session) {

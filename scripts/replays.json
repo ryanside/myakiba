@@ -500,6 +500,16 @@
       "bug": "Google signup navigated into the signed-out app before the redirect plugin opened consent",
       "test": "apps/web/src/components/auth/google-signup.test.tsx",
       "fixed": ["Google signup opens consent without navigating through the signed-out app"]
+    },
+    {
+      "fix": "a3acade9",
+      "bug": "the first sidebar click waited for destination code, and an already loaded page could render in the click frame before the clicked item painted",
+      "test": "apps/web/src/components/sidebar/app-sidebar.test.tsx",
+      "fixed": [
+        "a sidebar destination opens on the click without waiting for its code to load",
+        "the clicked sidebar item turns active before the page renders",
+        "a page change finishes if the tab becomes hidden before its frame"
+      ]
     }
   ],
   "lint": [

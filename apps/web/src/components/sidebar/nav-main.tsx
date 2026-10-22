@@ -44,7 +44,7 @@ export function NavMain({
                     : location.pathname === item.url
                 }
               >
-                <Link to={item.url}>
+                <Link to={item.url} preload="intent">
                   <HugeiconsIcon icon={item.icon} />
                   <span>{item.title}</span>
                   {item.badge ? (

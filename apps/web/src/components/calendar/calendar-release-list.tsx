@@ -66,7 +66,7 @@ function CalendarReleaseList<TItem>({
 
         return (
           <li key={date} className="flex flex-col gap-1.5">
-            <div className="sticky top-0 z-10 flex items-center gap-2 bg-background pb-1">
+            <div className="flex items-center gap-2 pb-1">
               <span
                 className={cn(
                   "inline-flex shrink-0 items-center gap-1.5 text-xs font-medium tabular-nums",
@@ -151,7 +151,7 @@ export function CalendarReleasePanel({
 function CalendarReleaseListSkeleton({ view }: { readonly view: CalendarView }): ReactNode {
   return (
     <div aria-hidden="true" className="flex flex-col gap-1.5">
-      <div className="sticky top-0 z-10 flex items-center gap-2 bg-background pb-1">
+      <div className="flex items-center gap-2 pb-1">
         <span className="flex h-4 shrink-0 items-center">
           <Skeleton className="h-3 w-20" />
         </span>
