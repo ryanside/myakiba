@@ -43,6 +43,16 @@ export class HaltedError extends Error {
   }
 }
 
+/** MFC's pause. One too long to wait out halts the queue until it ends instead. */
+function paused(current: ThrottleState, until: number, now: number): ThrottleState {
+  const haltedUntil = until - now > THROTTLE.maxPauseMs ? until : 0;
+  return {
+    ...current,
+    pausedUntil: Math.max(current.pausedUntil, until),
+    haltedUntil: Math.max(current.haltedUntil, haltedUntil),
+  };
+}
+
 async function stopped(settled: Promise<void>): Promise<never> {
   await settled;
   throw new TimeoutError(PAGE_TIMEOUT_MS);
@@ -99,9 +109,6 @@ export function createThrottle(deps: {
       signal.throwIfAborted();
       const wait = await book((current, now): [ThrottleState, number] => {
         if (now < current.haltedUntil) throw new HaltedError(current.haltedUntil);
-        if (current.pausedUntil - now > THROTTLE.maxPauseMs) {
-          throw new HaltedError(current.pausedUntil);
-        }
         const untilFree = Math.max(current.nextPageAt, current.pausedUntil) - now;
         if (untilFree > 0) return [current, untilFree];
         // Booked to the latest this load can end, so a worker that stops mid-load leaves the next one waiting it out.
@@ -151,11 +158,9 @@ export function createThrottle(deps: {
       return unlessAborted(signal, answerOf(running, settled, timeout));
     },
 
+    /** Books a pause MFC asked for along with a challenge. One too long to wait out halts the queue. */
     async pause(until: number): Promise<void> {
-      await book((current) => [
-        { ...current, pausedUntil: Math.max(current.pausedUntil, until) },
-        null,
-      ]);
+      await book((current, now) => [paused(current, until, now), null]);
     },
 
     /**
@@ -171,8 +176,7 @@ export function createThrottle(deps: {
         if (pauseMs > THROTTLE.maxPauseMs) haltedUntil = pausedUntil;
         else if (inRow) haltedUntil = now + Math.max(THROTTLE.maxPauseMs, 2 * pauseMs);
         const next = {
-          ...current,
-          pausedUntil: Math.max(current.pausedUntil, pausedUntil),
+          ...paused(current, pausedUntil, now),
           haltedUntil: Math.max(current.haltedUntil, haltedUntil ?? 0),
           // A halt ends the row, so the first limit after it only pauses.
           limitedAt: haltedUntil === null ? now : null,

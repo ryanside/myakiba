@@ -743,6 +743,28 @@ describe("a challenge", () => {
     expect(throttleState.peek().pausedUntil).toBe((extension.calls[0]?.at ?? 0) + 600_000);
   });
 
+  test("served with a Retry-After over five minutes still fails new runs at once after a worker restart", async () => {
+    let challenged = true;
+    const extension = fakeExtension({
+      pages: ({ mfcItemId }) =>
+        challenged
+          ? page(CHALLENGE_PAGE, { status: 503, cfMitigated: "challenge", retryAfter: "400" })
+          : page(itemPage(mfcItemId)),
+    });
+    const halted = extension.run([7]);
+    await extension.clock.runUntil(halted.done);
+    challenged = false;
+    await advance(extension.clock, 200_000);
+
+    extension.restart();
+    const startedAt = extension.clock.now();
+    const run = extension.run([8]);
+    await extension.clock.runUntil(run.done);
+
+    expect(extension.clock.now() - startedAt).toBeLessThan(1000);
+    expect(run.results()).toEqual([{ ok: false, error: "rate_limited" }]);
+  });
+
   test("served with 503 and a short Retry-After waits out the pause, then asks the user", async () => {
     const challenge = challengeOn([7]);
     const extension = fakeExtension({
