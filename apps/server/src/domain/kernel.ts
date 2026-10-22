@@ -176,6 +176,7 @@ export function command<
   config: OpConfig<M> & { readonly before: Before<I, B> },
   body: (scope: Scope, input: HandoffOf<B>) => Promise<R>,
 ): Op<I, ValueOf<B | R>, FailureOf<B | R>, M>;
+// Only the first overload takes a `before`: it reads the pool, so it can never be handed a Tx.
 export function command<I, R extends Ok<unknown> | Failure, const M extends string>(
   config: OpConfig<M> & { readonly before?: never },
   body: (scope: Scope, input: I) => Promise<R>,
