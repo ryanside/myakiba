@@ -16,6 +16,7 @@ import { SyncSessionHero } from "@/components/sync/sync-session-hero";
 import { SyncSessionItemsTable } from "@/components/sync/sync-session-items-table";
 import { SyncSessionStatusPanel } from "@/components/sync/sync-session-status-panel";
 import { RetrySyncSessionButton } from "@/components/sync/retry-sync-session-button";
+import { ExtensionPromptNotice } from "@/components/sync/extension-prompt-notice";
 import { BackLink } from "@/components/ui/back-link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchSyncSessionDetail } from "@/queries/sync";
@@ -143,6 +144,8 @@ function RouteComponent(): ReactNode {
               </div>
             ))}
           </div>
+
+          <ExtensionPromptNotice sessionId={id} />
 
           <SyncSessionStatusPanel
             session={session}

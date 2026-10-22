@@ -31,6 +31,9 @@ import { useSyncJobStatusQuery } from "@/hooks/use-sync-job-status-query";
 import { Spinner } from "@/components/ui/spinner";
 import { SparkleTrail } from "@/components/ui/sparkle-trail";
 import { cn } from "@/lib/utils";
+import { useExtensionPrompt } from "@/lib/extension-prompt";
+import type { ExtensionPrompt } from "@/lib/extension-prompt";
+import { ExtensionPromptNotice } from "@/components/sync/extension-prompt-notice";
 
 export default function SyncStatusWidget() {
   const {
@@ -62,8 +65,15 @@ export default function SyncStatusWidget() {
   const hasActive = activeSessions.length > 0;
 
   const [open, setOpen] = useState(false);
+  const prompt = useExtensionPrompt();
+  const [closedOnPrompt, setClosedOnPrompt] = useState<ExtensionPrompt | null>(null);
+  const opensForPrompt = prompt?.kind === "needs_user" && prompt !== closedOnPrompt;
 
-  const closePopover = () => setOpen(false);
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (!next) setClosedOnPrompt(prompt);
+  };
+  const closePopover = () => handleOpenChange(false);
 
   return (
     <>
@@ -78,7 +88,7 @@ export default function SyncStatusWidget() {
         ) : null,
       )}
 
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open || opensForPrompt} onOpenChange={handleOpenChange}>
         <PopoverTrigger
           render={
             <Button
@@ -106,6 +116,7 @@ export default function SyncStatusWidget() {
           className="h-85 max-h-[calc(100dvh-120px)] w-80 max-w-[calc(100vw-2rem)] gap-0 overflow-hidden p-0 ease-out"
         >
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            <ExtensionPromptNotice className="mx-auto mt-3 w-[calc(100%-1rem)]" />
             {isRecentError ? (
               <div className="p-4">
                 <Alert variant="destructive">
