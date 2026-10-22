@@ -91,6 +91,9 @@ test("a bar pressed while the hover highlight moves to it stays mounted and navi
   fireEvent.mouseOver(pressedBar);
   await frame(32);
   expect(pressedBar.isConnected).toBe(true);
+  expect(pressedBar.getAttribute("opacity")).toBe("1");
+  expect(bar(container, 1).getAttribute("opacity")).toBe("0.2");
+  expect(container.querySelector(".recharts-reference-line text")?.textContent).toBe("2");
   fireEvent.mouseUp(pressedBar);
   fireEvent.click(pressedBar);
   expect(navigate).toHaveBeenCalledWith({
