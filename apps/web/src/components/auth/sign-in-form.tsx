@@ -44,9 +44,6 @@ export default function SignInForm({ redirectTo }: { redirectTo: string }) {
         callbackURL: getAuthRedirectUrl(redirectTo),
       },
       {
-        onSuccess: () => {
-          window.location.assign(getAuthRedirectUrl(redirectTo));
-        },
         onError: (error) => {
           toast.add({
             type: "error",
