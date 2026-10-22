@@ -142,6 +142,7 @@ if (ID_98777 === null) throw new Error("98777 is an MFC item id");
 
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]);
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00]);
+const NOT_AN_IMAGE = new TextEncoder().encode("not a picture");
 const RECENTLY_REFRESHED = { status: 429, body: "Item details were recently refreshed" };
 
 function memoryStore() {
@@ -480,5 +481,84 @@ describe("the per-user resync rate limit", () => {
     expect(rateLimited).toContain(`rl:item-resync:${userId}`);
     expect(await itemRows()).toEqual(before);
     expect(await resyncStatus()).toEqual(IDLE);
+  });
+});
+
+describe("the posted picture", () => {
+  test("a different picture replaces the item's image", async () => {
+    await upload(page98777, JPEG);
+    const { item: imported } = await itemRows();
+
+    expect(await resync(page98777, PNG)).toEqual(refreshed("refreshed"));
+
+    const { item: row } = await itemRows();
+    expect(row?.image).toEndWith(".png");
+    expect(row?.image).not.toBe(imported?.image);
+    expect(store.objects.size).toBe(2);
+  });
+
+  test("a rejected picture keeps the old image", async () => {
+    await upload(page98777, JPEG);
+    const { item: imported } = await itemRows();
+
+    expect(await resync(derivedRetitledPage, NOT_AN_IMAGE)).toEqual(refreshed("refreshed"));
+
+    const { item: row } = await itemRows();
+    expect(row).toMatchObject({ title: RETITLED, image: imported?.image });
+  });
+
+  test("no picture keeps the old image, where the worker wrote whatever it scraped", async () => {
+    await upload(page98777, JPEG);
+    const { item: imported } = await itemRows();
+
+    expect(await resync(derivedRetitledPage)).toEqual(refreshed("refreshed"));
+
+    const { item: row } = await itemRows();
+    expect(row).toMatchObject({ title: RETITLED, image: imported?.image });
+  });
+});
+
+async function storedVersion(itemId: string) {
+  const [row] = await db.select({ version: item.version }).from(item).where(eq(item.id, itemId));
+  return row?.version;
+}
+
+describe("pages the refresh refuses or rewrites", () => {
+  test("a page for a different item answers 400 and starts no cooldown", async () => {
+    await db.insert(item).values({ source: "mfc", externalId: 12_345, title: "Another item" });
+
+    expect(await resync(page98777, JPEG, 12_345)).toEqual({
+      status: 400,
+      body: "The page is for a different item",
+    });
+
+    const [other] = await db
+      .select({ title: item.title, image: item.image })
+      .from(item)
+      .where(eq(item.externalId, 12_345));
+    expect(other).toEqual({ title: "Another item", image: null });
+    expect(await resyncStatus(12_345)).toEqual(IDLE);
+    expect(store.objects.size).toBe(0);
+  });
+
+  test("a legacy scraper row reads as changed, is rewritten, and then reads unchanged", async () => {
+    const itemId = await upload(page98777);
+    const imported = await itemRows();
+    const version = await storedVersion(itemId);
+    expect(imported.links.some((link) => link.roles.length > 0)).toBe(true);
+    expect(version).not.toBeNull();
+    await db.update(item).set({ version: null }).where(eq(item.id, itemId));
+    await db.execute(
+      "UPDATE entry_to_item SET roles = '{}', role = COALESCE(roles[1], '') WHERE roles <> '{}'",
+    );
+
+    expect(await resync(page98777)).toEqual(refreshed("refreshed"));
+
+    const rewritten = await itemRows();
+    expect(rewritten.links).toEqual(imported.links);
+    expect(await storedVersion(itemId)).toEqual(version);
+
+    redisKeys.clear();
+    expect(await resync(page98777)).toEqual(refreshed("unchanged"));
   });
 });
