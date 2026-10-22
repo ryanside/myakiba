@@ -27,7 +27,7 @@ function loadedItemPage(): CollectedPage {
     .getEntriesByType("navigation")
     .find((entry) => entry instanceof PerformanceNavigationTiming);
   return {
-    status: navigation?.responseStatus || 200,
+    status: navigation?.responseStatus ?? 0,
     cfMitigated: null,
     retryAfter: null,
     html: scrubMfcPage(document),

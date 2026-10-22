@@ -604,6 +604,55 @@ describe("a challenge", () => {
     expect(run.results()).toEqual([{ ok: true, html: itemPage(7), picture: null }]);
   });
 
+  test("reads the solved page again when the first read of it fails, without waiting for a navigation", async () => {
+    const challenge = challengeOn([7]);
+    let solved = false;
+    let failedReads = 0;
+    const extension = fakeExtension({
+      pages: (request) => {
+        if (solved && request.mode === "document" && failedReads++ === 0) {
+          throw new Error("Frame with ID 0 was removed.");
+        }
+        return challenge.pages(request);
+      },
+    });
+    const run = extension.run([7, 8]);
+    await extension.clock.runUntil(() => asked(run.events, "needs_user"));
+
+    solved = true;
+    challenge.solve(extension, 7);
+    const solvedAt = extension.clock.now();
+    await extension.clock.runUntil(() => run.items().length === 1);
+    expect(extension.clock.now() - solvedAt).toBeLessThan(5000);
+    await extension.clock.runUntil(run.done);
+
+    expect(run.results()).toEqual([
+      { ok: true, html: itemPage(7), picture: null },
+      { ok: true, html: itemPage(8), picture: null },
+    ]);
+  });
+
+  test("takes a page whose status it cannot read as not answered yet", async () => {
+    const challenge = challengeOn([7]);
+    let solved = false;
+    const extension = fakeExtension({
+      pages: (request) =>
+        request.mode === "document" && !solved
+          ? page("<html><head><title>Un instant…</title></head></html>", { status: 0 })
+          : challenge.pages(request),
+    });
+    const run = extension.run([7]);
+    await extension.clock.runUntil(() => asked(run.events, "needs_user"));
+    await advance(extension.clock, 30_000);
+    expect(run.done()).toBe(false);
+
+    solved = true;
+    challenge.solve(extension, 7);
+    await extension.clock.runUntil(run.done);
+
+    expect(run.results()).toEqual([{ ok: true, html: itemPage(7), picture: null }]);
+  });
+
   test("left unsolved for its whole window reads the page a handful of times, not every poll", async () => {
     const extension = fakeExtension({ pages: challengeOn([7]).pages });
     const run = extension.run([7]);

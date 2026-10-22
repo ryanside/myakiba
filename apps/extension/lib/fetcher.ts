@@ -16,8 +16,15 @@ import type { ThrottleState } from "./throttle";
 
 export const CHALLENGE_WINDOW_MS = 120_000;
 const RATE_LIMIT_STATUSES = new Set([429, 503]);
-/** Cloudflare serves its challenge with 403. A loaded page cannot read the header that marks it, nor rely on its localized title. */
+/**
+ * Cloudflare serves its challenge with 403. A loaded page cannot read the header that marks it, nor rely on its localized title,
+ * so every 403 counts as the challenge. A real MFC 403 after a solve costs only the window. Capping repeat reads of one 403
+ * would not help, because a localized challenge the user is still working on reads the same each time too.
+ */
 const CHALLENGE_STATUS = 403;
+/** A read of the shown page can fail while its frame settles, and no navigation may follow to prompt another. */
+const READ_TRIES = 3;
+const READ_RETRY_MS = 1000;
 
 export type FetcherDeps = {
   readonly tabs: TabsApi;
@@ -158,13 +165,30 @@ export function createFetcher(deps: FetcherDeps) {
     return { page: await fetchPage(own, job, signal), tabId: own.tabId };
   }
 
+  /** Reads the page the tab shows, or null while it has not answered: a failed read, an error page or no status. */
+  async function readShown(
+    tabId: number,
+    job: Job,
+    open: AbortSignal,
+  ): Promise<CollectedPage | null> {
+    const request = { kind: "page", mode: "document", mfcItemId: job.mfcItemId } as const;
+    for (let tries = 1; !open.aborted; tries++) {
+      const page = await unlessAborted(open, deps.collectPage(tabId, request, open)).catch(
+        () => null,
+      );
+      if (page && page.status !== 0) return page;
+      if (tries === READ_TRIES) break;
+      await clock.sleep(READ_RETRY_MS, open);
+    }
+    return null;
+  }
+
   async function afterChallenge(
     tabId: number,
     job: Job,
     deadline: number,
     signal: AbortSignal,
   ): Promise<{ readonly page: CollectedPage; readonly reading: Answer } | null> {
-    const request = { kind: "page", mode: "document", mfcItemId: job.mfcItemId } as const;
     const done = new AbortController();
     const open = AbortSignal.any([
       signal,
@@ -174,10 +198,7 @@ export function createFetcher(deps: FetcherDeps) {
       for await (const navigation of mfcTabs.navigations(tabId, open)) {
         // The user's solve reloads the page, and that load counts against the throttle like the extension's own.
         if (navigation === "reloaded") await throttle.noteLoad();
-        // A tab mid-navigation or on an error page has not answered yet.
-        const page = await unlessAborted(open, deps.collectPage(tabId, request, open)).catch(
-          () => null,
-        );
+        const page = await readShown(tabId, job, open);
         if (!page || page.status === CHALLENGE_STATUS) continue;
         const reading = readPage(page, job, clock.now());
         if (reading.kind !== "challenge") return { page, reading };
