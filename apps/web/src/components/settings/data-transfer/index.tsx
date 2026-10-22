@@ -248,13 +248,9 @@ export function DataTransfer() {
 export function DataTransferView({
   state,
   actions,
-  confirmationOpen,
-  onConfirmationOpenChange,
 }: {
   readonly state: DataTransferViewState;
   readonly actions: DataTransferViewActions;
-  readonly confirmationOpen?: boolean;
-  readonly onConfirmationOpenChange?: (open: boolean) => void;
 }) {
   return (
     <SettingsGroup>
@@ -288,12 +284,7 @@ export function DataTransferView({
         ) : null}
       </SettingsRow>
 
-      <ImportSection
-        state={state.import}
-        actions={actions}
-        confirmationOpen={confirmationOpen}
-        onConfirmationOpenChange={onConfirmationOpenChange}
-      />
+      <ImportSection state={state.import} actions={actions} />
     </SettingsGroup>
   );
 }

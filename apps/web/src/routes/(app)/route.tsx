@@ -15,6 +15,7 @@ import UserMenu from "@/components/sidebar/user-menu";
 import SyncWidget from "@/components/sync/sync-widget";
 import SyncStatusWidget from "@/components/sync/sync-status-widget";
 import { AppCommand } from "@/components/command/app-command";
+import { ExtensionRequiredDialog } from "@/components/extension/extension-required-dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import { SessionUnavailableError } from "@/lib/session";
@@ -119,6 +120,7 @@ function RouteComponent() {
           </SidebarInset>
         </div>
       </SidebarProvider>
+      <ExtensionRequiredDialog />
     </div>
   );
 }

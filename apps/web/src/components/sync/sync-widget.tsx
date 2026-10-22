@@ -1,6 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useState } from "react";
+import { requireExtension } from "@/lib/extension-gate";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SyncActionSheet } from "@/components/sync/sync-launcher";
@@ -16,9 +17,9 @@ export default function SyncWidget({ TriggerWrapper, side = "left" }: SyncWidget
   const [syncType, setSyncType] = useState<LaunchableSyncType | null>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);
 
-  const handleOptionSelect = useCallback((type: LaunchableSyncType) => {
+  const handleOptionSelect = useCallback(async (type: LaunchableSyncType) => {
     setPopoverOpen(false);
-    setSyncType(type);
+    if (await requireExtension()) setSyncType(type);
   }, []);
 
   return (

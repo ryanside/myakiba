@@ -16,6 +16,7 @@ import { SYNC_OPTION_META } from "@/lib/sync";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { useSyncMutations } from "@/hooks/use-sync-mutations";
 import SyncOrderItemForm from "@/components/sync/sync-order-item-form";
+import { requireExtension } from "@/lib/extension-gate";
 
 type OrderItemSyncSheetProps = {
   readonly orderId: string;
@@ -48,7 +49,13 @@ export function OrderItemSyncSheet({
   const meta = SYNC_OPTION_META["order-item"];
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet
+      open={open}
+      onOpenChange={async (next) => {
+        if (next && !(await requireExtension())) return;
+        setOpen(next);
+      }}
+    >
       <SheetTrigger
         render={
           <Button

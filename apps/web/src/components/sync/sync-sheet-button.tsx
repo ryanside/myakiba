@@ -18,6 +18,7 @@ import SyncCollectionForm from "@/components/sync/sync-collection-form";
 import { SyncItemsForm } from "@/components/sync/sync-items-form";
 import { useSyncMutations } from "@/hooks/use-sync-mutations";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
+import { requireExtension } from "@/lib/extension-gate";
 
 type SyncSheetButtonProps = {
   readonly syncType: Extract<SyncType, "collection" | "order" | "item">;
@@ -38,7 +39,13 @@ export function SyncSheetButton({ syncType, label, className }: SyncSheetButtonP
   const meta = SYNC_OPTION_META[syncType];
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet
+      open={open}
+      onOpenChange={async (next) => {
+        if (next && !(await requireExtension())) return;
+        setOpen(next);
+      }}
+    >
       <SheetTrigger
         render={
           <Button variant="default" className={className} aria-label={label} disabled={isSyncing}>

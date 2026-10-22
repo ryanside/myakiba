@@ -42,6 +42,7 @@ import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { cn } from "@/lib/utils";
 import { SYNC_OPTION_META } from "@/lib/sync";
 import { SyncActionSheet } from "@/components/sync/sync-launcher";
+import { requireExtension } from "@/lib/extension-gate";
 import type { LaunchableSyncType } from "@/components/sync/sync-launcher-options";
 import { CURRENCIES, DATE_FORMATS } from "@myakiba/contracts/shared/constants";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
@@ -237,11 +238,11 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
   }, [handleOpenChange]);
 
   const handleSelectSync = useCallback(
-    (type: LaunchableSyncType) => {
+    async (type: LaunchableSyncType) => {
       complete();
       setOpen(false);
       setCurrentStep(FIRST_STEP);
-      setSyncSheetType(type);
+      if (await requireExtension()) setSyncSheetType(type);
     },
     [complete],
   );

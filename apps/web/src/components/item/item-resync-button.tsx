@@ -4,6 +4,7 @@ import { Loading03Icon, Refresh01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { requireExtension } from "@/lib/extension-gate";
 import type { ResyncStatus } from "@/components/item/types";
 
 const RESYNC_LABELS = {
@@ -46,7 +47,14 @@ export function ItemResyncButton({
   const cooldownRemaining = cooldownExpiresAt ? formatCooldownRemaining(cooldownExpiresAt) : "";
 
   const button = (
-    <Button variant="outline" size="xs" disabled={isDisabled} onClick={onRequest}>
+    <Button
+      variant="outline"
+      size="xs"
+      disabled={isDisabled}
+      onClick={async () => {
+        if (await requireExtension()) onRequest();
+      }}
+    >
       <HugeiconsIcon
         icon={isPending ? Loading03Icon : Refresh01Icon}
         data-icon="inline-start"

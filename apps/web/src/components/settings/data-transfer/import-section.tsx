@@ -1,10 +1,12 @@
 import { FileImportIcon, Loading03Icon, Refresh01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { useState } from "react";
 import { DATA_TRANSFER_MAX_BYTES } from "@myakiba/contracts/data-transfer/schema";
 import { Dropzone } from "@/components/kibo-ui/dropzone";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SettingsRow } from "@/components/settings/settings-row";
+import { requireExtension } from "@/lib/extension-gate";
 import { CurrentImportCard } from "./current-import-card";
 import type { ActionState, CurrentImportViewState } from "./current-import-card";
 
@@ -53,14 +55,11 @@ export type ImportViewActions = {
 export function ImportSection({
   state,
   actions,
-  confirmationOpen,
-  onConfirmationOpenChange,
 }: {
   readonly state: ImportViewState;
   readonly actions: ImportViewActions;
-  readonly confirmationOpen?: boolean;
-  readonly onConfirmationOpenChange?: (open: boolean) => void;
 }) {
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
   const currentImport = state.current.kind === "loading" ? null : state.current.current;
   const activeImport = currentImport?.kind === "active";
   const retryPending =
@@ -187,7 +186,10 @@ export function ImportSection({
 
               <ConfirmDialog
                 open={confirmationOpen}
-                onOpenChange={onConfirmationOpenChange}
+                onOpenChange={async (open) => {
+                  if (open && !(await requireExtension())) return;
+                  setConfirmationOpen(open);
+                }}
                 variant="default"
                 icon={FileImportIcon}
                 title="Import this export?"
@@ -247,7 +249,9 @@ export function ImportSection({
             deleteState={state.delete}
             deleteDisabled={state.start.kind === "pending" || retryPending}
             onReconnect={actions.handleReconnectImportStatus}
-            onRetry={actions.handleRetryCurrentImport}
+            onRetry={async () => {
+              if (await requireExtension()) actions.handleRetryCurrentImport();
+            }}
             onDelete={actions.handleDeleteCurrentImport}
           />
         </div>
