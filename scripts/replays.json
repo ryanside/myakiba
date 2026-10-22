@@ -525,6 +525,12 @@
         "hovering during the order chart intro still grows every bar to its full height",
         "switching hovered order bars navigates to the second month on the first click"
       ]
+    },
+    {
+      "fix": "ebab2322",
+      "bug": "the active sidebar item's data-[active=true] styles never matched Base UI's data-active=\"\", so its outline never showed",
+      "test": "apps/web/src/components/sidebar/app-sidebar.test.tsx",
+      "fixed": ["every active-state style on the active sidebar item matches its attribute"]
     }
   ],
   "lint": [
