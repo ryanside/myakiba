@@ -14,7 +14,7 @@ import { ItemNotFound } from "@/components/item/item-not-found";
 import { useCollectionMutations, useCollectionOrderMutations } from "@/hooks/use-collection";
 import { useRead } from "@/data/client";
 import { items } from "@/data/resources/item";
-import { getResyncStatus, requestResync } from "@/queries/item";
+import { getResyncStatus } from "@/queries/item";
 
 export const Route = createFileRoute("/(app)/item_/$externalId")({
   parseParams: ({ externalId }) => {
@@ -56,7 +56,10 @@ function RouteComponent(): ReactNode {
   });
 
   const requestResyncMutation = useMutation({
-    mutationFn: () => requestResync(externalId),
+    // The server refreshes from the page the browser extension fetches, and nothing sends it yet.
+    mutationFn: async () => {
+      throw new Error("Refreshing an item needs the browser extension");
+    },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["item", externalId, "resyncStatus"] });
       toast.add({ type: "success", title: "Item refresh requested" });

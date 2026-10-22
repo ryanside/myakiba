@@ -1,5 +1,6 @@
 import { app, getErrorMessage, getUserErrorMessage } from "@/lib/treaty-client";
 import type { ItemReleasesResponse } from "@myakiba/contracts/item/schema";
+import type { ItemRefresh } from "@myakiba/contracts/mfc-items/schema";
 
 export async function getItem(externalId: number) {
   const { data, error } = await app.api.item({ id: externalId }).get();
@@ -44,8 +45,8 @@ export async function getResyncStatus(externalId: number) {
   return data;
 }
 
-export async function requestResync(externalId: number) {
-  const { data, error } = await app.api.item({ id: externalId }).resync.post();
+export async function requestResync(externalId: number, upload: ItemRefresh) {
+  const { data, error } = await app.api.item({ id: externalId }).resync.post(upload);
   if (error) {
     throw new Error(getErrorMessage(error, "Failed to request item refresh"));
   }

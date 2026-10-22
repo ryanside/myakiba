@@ -14,7 +14,7 @@ function answerWith(respond: () => Promise<Response>) {
 }
 
 const scraperCalls = [
-  ["an item refresh request", () => requestResync(1001)],
+  ["an item refresh request", () => requestResync(1001, { page: "<html></html>" })],
   ["an import retry", () => retrySyncSession("session-1")],
   ["a data export", () => exportDataTransfer()],
 ] as const;

@@ -27,6 +27,7 @@ import type { Viewer } from "./viewer";
 const FAILURE_STATUS = {
   bad_request: 400,
   not_found: 404,
+  too_many_requests: 429,
 } as const;
 
 type FailureCategory = keyof typeof FAILURE_STATUS;

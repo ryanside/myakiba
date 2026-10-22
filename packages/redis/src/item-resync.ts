@@ -10,10 +10,12 @@
 import type Redis from "ioredis";
 
 export const ITEM_RESYNC_QUEUE_NAME = "item-resync-queue";
-export const ITEM_RESYNC_JOB_NAME = "item-resync";
 
 const COOLDOWN_KEY_PREFIX = "item-resync:cooldown";
 const COOLDOWN_TTL_SECONDS = 3 * 24 * 60 * 60; // 3 days
+const RUNNING_KEY_PREFIX = "item-resync:running";
+// Outlives a refresh's picture upload and transaction, so a crashed one stops reading as running.
+const RUNNING_TTL_SECONDS = 60;
 
 export type ItemResyncState = {
   readonly status: "idle" | "requested" | "processing" | "cooldown";
@@ -24,8 +26,8 @@ function getCooldownKey(itemId: string): string {
   return `${COOLDOWN_KEY_PREFIX}:${itemId}`;
 }
 
-export function getResyncJobId(itemId: string): string {
-  return `${ITEM_RESYNC_JOB_NAME}-${itemId}`;
+function getRunningKey(itemId: string): string {
+  return `${RUNNING_KEY_PREFIX}:${itemId}`;
 }
 
 export async function setResyncCooldown(redis: Redis, itemId: string): Promise<void> {
@@ -39,4 +41,16 @@ export async function getResyncCooldownExpiresAt(
   const ttl = await redis.ttl(getCooldownKey(itemId));
   if (ttl <= 0) return null;
   return new Date(Date.now() + ttl * 1000).toISOString();
+}
+
+export async function markResyncRunning(redis: Redis, itemId: string): Promise<void> {
+  await redis.set(getRunningKey(itemId), Date.now().toString(), "EX", RUNNING_TTL_SECONDS);
+}
+
+export async function isResyncRunning(redis: Redis, itemId: string): Promise<boolean> {
+  return (await redis.exists(getRunningKey(itemId))) > 0;
+}
+
+export async function clearResyncRunning(redis: Redis, itemId: string): Promise<void> {
+  await redis.del(getRunningKey(itemId));
 }

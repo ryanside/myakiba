@@ -9,9 +9,47 @@ import {
   wishlistItem,
 } from "@myakiba/db/schema/figure";
 import type { ItemRelease, ItemReleasesResponse } from "@myakiba/contracts/item/schema";
+import type { ItemRefresh } from "@myakiba/contracts/mfc-items/schema";
 import { normalizeScale } from "@myakiba/contracts/shared/scale";
-import { command, fail, ok, query } from "@/domain/kernel";
+import type { ReadTx } from "@myakiba/db/tx";
+import { mfcItemId } from "@myakiba/mfc/page";
+import { redis } from "@myakiba/redis/client";
+import {
+  clearResyncRunning,
+  getResyncCooldownExpiresAt,
+  isResyncRunning,
+  markResyncRunning,
+  setResyncCooldown,
+} from "@myakiba/redis/item-resync";
+import type { ItemResyncState } from "@myakiba/redis/item-resync";
+import { command, fail, ok, proceed, query } from "@/domain/kernel";
+import { findMfcItem, pictureLog, readPage } from "@/lib/mfc-item-page";
 import type { CustomItemInput, EntriesWithRoles } from "./model";
+import { lockItem, refreshItem } from "./refresh-item";
+
+const RECENTLY_REFRESHED = "Item details were recently refreshed";
+
+type ResyncResult = ItemResyncState & { readonly saved: "refreshed" | "unchanged" };
+
+async function findResyncItem(tx: ReadTx, externalId: number) {
+  const id = mfcItemId(externalId);
+  if (id === null) return;
+  const itemId = await findMfcItem(tx, id);
+  return itemId === undefined ? undefined : { id, itemId };
+}
+
+/**
+ * The worker's queue states without a queue: the server never sees the extension's fetch, so
+ * "requested" no longer occurs, and "processing" means a posted page is being written.
+ */
+async function resyncState(itemId: string): Promise<ItemResyncState> {
+  const cooldownExpiresAt = await getResyncCooldownExpiresAt(redis, itemId);
+  if (cooldownExpiresAt) return { status: "cooldown", cooldownExpiresAt };
+  if (await isResyncRunning(redis, itemId)) {
+    return { status: "processing", cooldownExpiresAt: null };
+  }
+  return { status: "idle", cooldownExpiresAt: null };
+}
 
 export const Items = {
   createCustom: command(
@@ -438,6 +476,65 @@ export const Items = {
 
       const result = { collection: collectionItems };
       return ok(result);
+    },
+  ),
+
+  resyncStatus: query(
+    { action: "item.resyncStatus", failure: "Failed to check item refresh status" },
+    async (scope, input: { readonly id: number }) => {
+      scope.log.set({ item: { externalId: input.id } });
+      const found = await findResyncItem(scope.tx, input.id);
+      if (!found) return fail("not_found", "Item not found");
+      const state = await resyncState(found.itemId);
+      scope.log.set({ resyncStatus: state.status });
+      return ok(state);
+    },
+  ),
+
+  resync: command(
+    {
+      action: "item.requestResync",
+      failure: "Failed to request item refresh",
+      before: async (scope, input: { readonly id: number } & ItemRefresh) => {
+        scope.log.set({ item: { externalId: input.id } });
+        const found = await findResyncItem(scope.tx, input.id);
+        if (!found) return fail("not_found", "Item not found");
+        if (await getResyncCooldownExpiresAt(redis, found.itemId)) {
+          return fail("too_many_requests", RECENTLY_REFRESHED);
+        }
+        await markResyncRunning(redis, found.itemId);
+        const read = await readPage(scope.log, found.id, input);
+        if (!("proceed" in read)) {
+          await clearResyncRunning(redis, found.itemId);
+          return read;
+        }
+        return proceed({ itemId: found.itemId, ...read.proceed });
+      },
+    },
+    async (scope, { itemId, page, stored }) => {
+      const locked = await lockItem(scope.tx, itemId);
+      if (!locked) return fail("not_found", "Item not found");
+      if (await getResyncCooldownExpiresAt(redis, itemId)) {
+        return fail("too_many_requests", RECENTLY_REFRESHED);
+      }
+      const image = stored?.kind === "stored" ? stored.url : locked.image;
+      const outcome = await refreshItem(scope.tx, locked, page, image);
+      await setResyncCooldown(redis, itemId);
+
+      scope.log.set({
+        mfc: {
+          itemId: page.mfcItemId,
+          contentLabel: page.contentLabel,
+          outcome,
+          picture: pictureLog(stored),
+          warnings: page.warnings,
+        },
+      });
+      return ok<ResyncResult>({
+        status: "cooldown",
+        cooldownExpiresAt: await getResyncCooldownExpiresAt(redis, itemId),
+        saved: outcome === "unchanged" ? "unchanged" : "refreshed",
+      });
     },
   ),
 };
