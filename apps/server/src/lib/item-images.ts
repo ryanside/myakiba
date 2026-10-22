@@ -5,7 +5,7 @@ import { MAX_ITEM_PICTURE_BYTES } from "@myakiba/contracts/mfc-items/schema";
 import { env } from "@myakiba/env/server";
 import type { MfcItemId } from "@myakiba/mfc/page";
 
-type StoredPicture =
+export type StoredPicture =
   | { readonly kind: "stored"; readonly url: string }
   | { readonly kind: "rejected"; readonly reason: "not_an_image" | "too_large" };
 
