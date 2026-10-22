@@ -351,25 +351,34 @@ describe("POST /api/mfc-items saves an MFC item page as a new item", () => {
   });
 
   test("concurrent uploads that reach their shared entries in opposite orders both finish", async () => {
-    const { answers } = await db.transaction(async (tx) => {
-      await tx.insert(entry).values([
-        { externalId: 9613, source: "mfc", category: "Artists", name: "Minheru" },
-        { externalId: 21_937, source: "mfc", category: "Artists", name: "Moekibara Fumitake" },
-      ]);
-      const uploads = Promise.all([
-        upload({ mfcItemId: 98_777, page: page98777 }),
-        upload({ mfcItemId: 98_779, page: derivedSharedEntriesPage }),
-      ]);
-      await uploadsWaitingOnLocks(2);
-      return { answers: uploads };
-    });
+    const race = async () => {
+      await db.execute("TRUNCATE item, entry CASCADE");
+      const { answers } = await db.transaction(async (tx) => {
+        await tx.insert(entry).values([
+          { externalId: 9613, source: "mfc", category: "Artists", name: "Minheru" },
+          { externalId: 21_937, source: "mfc", category: "Artists", name: "Moekibara Fumitake" },
+        ]);
+        const uploads = Promise.all([
+          upload({ mfcItemId: 98_777, page: page98777 }),
+          upload({ mfcItemId: 98_779, page: derivedSharedEntriesPage }),
+        ]);
+        await uploadsWaitingOnLocks(2);
+        return { answers: uploads };
+      });
+      const answered = await answers;
+      return { statuses: answered.map((a) => a.status), counts: await counts() };
+    };
+    const rounds = [];
+    // A broken lock order waits out Postgres's 1 s deadlock check in every round.
+    for (let round = 0; round < 5; round++) rounds.push(await race());
 
-    expect(await answers).toMatchObject([
-      { status: 200, body: { saved: "created" } },
-      { status: 200, body: { saved: "created" } },
-    ]);
-    expect(await counts()).toEqual({ items: 2, entries: 7, links: 11, releases: 2 });
-  });
+    expect(rounds).toEqual(
+      Array.from({ length: 5 }, () => ({
+        statuses: [200, 200],
+        counts: { items: 2, entries: 7, links: 11, releases: 2 },
+      })),
+    );
+  }, 15_000);
 
   test("no transaction is open while the picture is stored", async () => {
     const put = store.holdPut();
