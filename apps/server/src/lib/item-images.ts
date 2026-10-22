@@ -100,7 +100,6 @@ export function createItemImages(bucket: Bucket): ItemImages {
 export const itemImages = createItemImages({
   client: new S3Client({
     region: env.AWS_BUCKET_REGION,
-    maxAttempts: 1,
     ...(env.S3_ENDPOINT_URL && { endpoint: env.S3_ENDPOINT_URL, forcePathStyle: true }),
   }),
   name: env.AWS_BUCKET_NAME,
