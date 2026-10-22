@@ -212,7 +212,7 @@ describe("cancel", () => {
 });
 
 describe("rate limits", () => {
-  test("each one sets the shared pause, and a second in a row fails every queued item", async () => {
+  test("each one sets the shared pause, and a second in a row fails every queued item and pauses five minutes", async () => {
     const throttleState = memoryValue(OPEN_THROTTLE);
     const extension = fakeExtension({ pages: () => rateLimited("5"), throttleState });
     const first = extension.run([1, 2]);
@@ -220,7 +220,9 @@ describe("rate limits", () => {
     await extension.clock.runUntil(() => first.done() && second.done());
 
     expect(fetches(extension.calls)).toEqual([itemId(1), itemId(1)]);
-    expect(throttleState.peek().pausedUntil).toBe((extension.calls[1]?.at ?? 0) + 5000);
+    expect(throttleState.peek().pausedUntil).toBe(
+      (extension.calls[1]?.at ?? 0) + THROTTLE.maxPauseMs,
+    );
     expect(first.results()).toEqual([
       { ok: false, error: "rate_limited" },
       { ok: false, error: "rate_limited" },
@@ -295,6 +297,24 @@ describe("rate limits", () => {
 
     expect(after.calls).toEqual([]);
     expect(run.results()).toEqual([{ ok: false, error: "rate_limited" }]);
+  });
+
+  test("one an hour after a cancelled backoff backs off and tries again", async () => {
+    let limits = 1;
+    const extension = fakeExtension({
+      pages: ({ mfcItemId }) => (limits-- > 0 ? rateLimited("10") : page(itemPage(mfcItemId))),
+    });
+    const cancelled = extension.run([1]);
+    await extension.clock.runUntil(() => asked(cancelled.events, "backing_off"));
+    extension.fetcher.cancel(cancelled.key);
+    await advance(extension.clock, 60 * 60_000);
+
+    limits = 1;
+    const run = extension.run([2]);
+    await extension.clock.runUntil(run.done);
+
+    expect(asked(run.events, "backing_off")).toBe(true);
+    expect(run.results()).toEqual([{ ok: true, html: itemPage(2), picture: null }]);
   });
 
   test("rate limits with an answer between them are not in a row", async () => {

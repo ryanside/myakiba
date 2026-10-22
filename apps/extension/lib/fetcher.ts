@@ -221,9 +221,12 @@ export function createFetcher(deps: FetcherDeps) {
       const result = await attempt(job, controller.signal);
       current = null;
       if (result.kind === "retry_owned") mfcTabs.stopBorrowing();
-      if (result.kind === "rate_limited") await throttle.pause(result.pausedUntil);
       if (result.kind === "result" || result.kind === "rate_limited") {
         dispatch({ type: "answered", job, outcome: result, at: clock.now() });
+      }
+      if (result.kind === "rate_limited") {
+        const { mode } = state;
+        await throttle.pause(mode.kind === "halted" ? mode.until : result.pausedUntil);
       }
     }
     await mfcTabs.release();

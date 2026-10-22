@@ -17,12 +17,14 @@ type Run = {
   readonly waitingFor: readonly MfcItemId[];
 };
 
-type HaltReason = Extract<ItemError, "rate_limited" | "challenge_unsolved">;
+/** A rate limit this soon after the last one, with no other answer between them, is in a row. */
+const CONSECUTIVE_LIMIT_MS = 10 * 60_000;
 
 type QueueMode =
   | { readonly kind: "running" }
-  | { readonly kind: "paused"; readonly until: number }
-  | { readonly kind: "halted"; readonly reason: HaltReason; readonly until: number };
+  | { readonly kind: "paused"; readonly limitedAt: number }
+  /** MFC limited the queue in a row or for long, so new runs fail with rate_limited until then. */
+  | { readonly kind: "halted"; readonly until: number };
 
 export type QueueState = {
   readonly mode: QueueMode;
@@ -92,11 +94,19 @@ function failAll(
   ]);
 }
 
-function halt(state: QueueState, reason: HaltReason, until: number): QueueStep {
+function halt(state: QueueState, until: number): QueueStep {
   return {
-    state: { mode: { kind: "halted", reason, until }, runs: [], pending: [], active: null },
-    emit: failAll(state.runs, reason),
+    state: { mode: { kind: "halted", until }, runs: [], pending: [], active: null },
+    emit: failAll(state.runs, "rate_limited"),
   };
+}
+
+/** The pause a halt asks for. One for limits in a row outlasts what MFC asked, so a restarted worker keeps it. */
+function haltUntil(state: QueueState, pausedUntil: number, at: number): number | null {
+  const pauseMs = pausedUntil - at;
+  if (pauseMs > THROTTLE.maxPauseMs) return pausedUntil;
+  const inRow = state.mode.kind === "paused" && at - state.mode.limitedAt <= CONSECUTIVE_LIMIT_MS;
+  return inRow ? at + Math.max(THROTTLE.maxPauseMs, 2 * pauseMs) : null;
 }
 
 function settle(state: QueueState, job: Job, result: ItemResult<PortPicture>): QueueStep {
@@ -127,7 +137,7 @@ export function reduceQueue(state: QueueState, action: QueueAction): QueueStep {
       if (mode.kind === "halted" && action.at < mode.until) {
         return {
           state,
-          emit: failAll([{ key: action.run, waitingFor: action.mfcItemIds }], mode.reason),
+          emit: failAll([{ key: action.run, waitingFor: action.mfcItemIds }], "rate_limited"),
         };
       }
       const { context } = action.requester;
@@ -181,15 +191,15 @@ export function reduceQueue(state: QueueState, action: QueueAction): QueueStep {
       if (!sameJob(state.active, action.job)) return { state, emit: [] };
       const { outcome } = action;
       if (outcome.kind === "result") {
+        // An unsolved challenge fails the runs open now, so none of them asks the user again. A later run may.
         if (!outcome.result.ok && outcome.result.error === "challenge_unsolved") {
-          return halt(state, "challenge_unsolved", action.at);
+          return { state: EMPTY_QUEUE, emit: failAll(state.runs, "challenge_unsolved") };
         }
         return settle(state, action.job, outcome.result);
       }
-      if (state.mode.kind === "paused" || outcome.pausedUntil - action.at > THROTTLE.maxPauseMs) {
-        return halt(state, "rate_limited", outcome.pausedUntil);
-      }
-      const paused = { ...state, mode: { kind: "paused", until: outcome.pausedUntil } } as const;
+      const until = haltUntil(state, outcome.pausedUntil, action.at);
+      if (until !== null) return halt(state, until);
+      const paused = { ...state, mode: { kind: "paused", limitedAt: action.at } } as const;
       return {
         state: paused,
         emit: toActiveWaiters(paused, {
