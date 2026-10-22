@@ -531,6 +531,12 @@
       "bug": "the active sidebar item's data-[active=true] styles never matched Base UI's data-active=\"\", so its outline never showed",
       "test": "apps/web/src/components/sidebar/app-sidebar.test.tsx",
       "fixed": ["every active-state style on the active sidebar item matches its attribute"]
+    },
+    {
+      "fix": "7da6de43",
+      "bug": "Google sign-in navigated into the signed-out app before opening consent",
+      "test": "apps/web/src/components/auth/google-sign-in.test.tsx",
+      "fixed": ["Google sign-in opens consent without navigating through the signed-out app"]
     }
   ],
   "lint": [
