@@ -58,6 +58,7 @@ await mock.module("@/lib/item-images", () => ({
   }),
 }));
 const snapshots = new Map<string, string>();
+const rateKeys: string[] = [];
 
 type MessageListener = (channel: string, payload: string) => void;
 type Subscriber = { readonly channels: Set<string>; readonly listeners: Set<MessageListener> };
@@ -66,7 +67,10 @@ const subscribers = new Set<Subscriber>();
 const fakeRedis = {
   status: "ready",
   get: async (key: string) => snapshots.get(key) ?? null,
-  eval: async () => [1, 1800],
+  eval: async (_script: string, _keys: number, key: string) => {
+    if (key.startsWith("rl:")) rateKeys.push(key);
+    return [1, 1800];
+  },
   multi() {
     const writes: (() => void)[] = [];
     const chain = {
@@ -129,7 +133,8 @@ async function answer(response: Response) {
 type PostBody =
   | DataTransferImportRequest
   | DataTransferImportItemFailure
-  | { readonly jobId: string };
+  | { readonly jobId: string }
+  | { readonly jobId: string; readonly failures: { mfcItemId: number; error: string }[] };
 
 async function post(route: string, body?: PostBody) {
   return answer(
@@ -982,3 +987,113 @@ test("import polling keeps its last status through a database blip and retries",
     await reader?.cancel();
   }
 }, 25_000);
+
+test("worker-era import stays running one second before 24 hours", async () => {
+  await db.insert(dataTransferImport).values({
+    userId,
+    importId: "live-worker",
+    jobId: "live-worker",
+    fileName: "export.json",
+    archive: archiveOf([], [collectionRecord("c1", 98_777)]),
+    status: "running",
+    phase: "preparing_items",
+    totalCollectionItems: 1,
+    updatedAt: new Date(Date.now() - 24 * 60 * 60 * 1000 + 1000),
+  });
+  expect(await currentImport()).toMatchObject({ status: "running", error: null });
+  const { default: service } = await import("./service");
+  expect(await service.getImportJobStatus(userId)).toMatchObject({ terminalState: null });
+});
+
+for (const [table, body] of [
+  ["item", "RAISE EXCEPTION 'item persistence unavailable';"],
+  ["item", "RETURN NULL;"],
+  ["collection", "RAISE EXCEPTION 'collection persistence unavailable';"],
+]) {
+  test(`completion records persistence failure from ${table} ${body}`, async () => {
+    const run = await startRun(archiveOf([], [collectionRecord("c1", 98_777)]));
+    await db.execute(
+      `CREATE FUNCTION reject_completion() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN ${body} END $$`,
+    );
+    await db.execute(
+      `CREATE TRIGGER reject_completion BEFORE INSERT ON ${table} FOR EACH ROW EXECUTE FUNCTION reject_completion()`,
+    );
+    try {
+      expect(await complete(run.id, 98_777)).toMatchObject({
+        status: 200,
+        body: {
+          status: "failed",
+          failedCollectionItems: 1,
+          report: {
+            failureReasons: [{ reason: "Persistence failed while saving scraped items", count: 1 }],
+          },
+        },
+      });
+      expect(
+        await db.select({ status: dataTransferImportItem.status }).from(dataTransferImportItem),
+      ).toEqual([{ status: "failed" }]);
+      expect(await db.$count(item)).toBe(0);
+    } finally {
+      await db.execute(`DROP TRIGGER reject_completion ON ${table}`);
+      await db.execute(`DROP FUNCTION reject_completion()`);
+    }
+  });
+}
+
+test("a 1000-item import failure batch uses one transaction and rate-limit unit", async () => {
+  const ids = Array.from({ length: 1000 }, (_, index) => 100_000 + index);
+  const run = await startRun(
+    archiveOf(
+      [],
+      ids.map((id) => collectionRecord(`c${id}`, id)),
+    ),
+  );
+  const transaction = spyOn(db, "transaction");
+  const rateUnits = rateKeys.filter((key) => key.startsWith("rl:sync-failure:")).length;
+  try {
+    expect(
+      await post("/imports/current/items/failure", {
+        jobId: run.id,
+        failures: ids.map((mfcItemId) => ({ mfcItemId, error: "timeout" })),
+      }),
+    ).toMatchObject({ status: 200, body: { status: "failed", failedCollectionItems: 1000 } });
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(rateKeys.filter((key) => key.startsWith("rl:sync-failure:"))).toHaveLength(
+      rateUnits + 1,
+    );
+    const items = await db.select().from(dataTransferImportItem);
+    expect(items).toHaveLength(1000);
+    expect(items.every((row) => row.status === "failed")).toBe(true);
+  } finally {
+    transaction.mockRestore();
+  }
+});
+
+test("a mixed import failure batch preserves imported Items and ignores a stale job", async () => {
+  const run = await startRun(
+    archiveOf(
+      [],
+      [1, 2, 3].map((id) => collectionRecord(`c${id}`, id)),
+    ),
+  );
+  await complete(run.id, 1);
+  const failures = [1, 2, 3].map((mfcItemId) => ({ mfcItemId, error: "timeout" }));
+  expect(await post("/imports/current/items/failure", { jobId: "stale", failures })).toMatchObject({
+    status: 200,
+    body: { status: "running", failedCollectionItems: 0 },
+  });
+  expect(await post("/imports/current/items/failure", { jobId: run.id, failures })).toMatchObject({
+    status: 200,
+    body: { status: "partial", failedCollectionItems: 2 },
+  });
+  expect(
+    await db
+      .select({ id: dataTransferImportItem.itemExternalId, status: dataTransferImportItem.status })
+      .from(dataTransferImportItem)
+      .orderBy(asc(dataTransferImportItem.itemExternalId)),
+  ).toEqual([
+    { id: 1, status: "scraped" },
+    { id: 2, status: "failed" },
+    { id: 3, status: "failed" },
+  ]);
+});

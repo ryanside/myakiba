@@ -1323,7 +1323,7 @@ test("display text alone cannot classify a persistence failure", async () => {
   const { default: service } = await import("./service");
   expect(await service.getJobStatus(run.jobId, userId)).toMatchObject({
     terminalState: "error",
-    error: null,
+    error: { code: "scrape_failed", message: SYNC_STATUS_MESSAGES.failedScrape },
   });
 });
 
@@ -1379,4 +1379,178 @@ test("a fetch failure cannot hide a recorded persistence failure", async () => {
   expect(await service.getJobStatus(run.jobId, userId)).toMatchObject({
     error: { code: "persistence_failed" },
   });
+});
+
+test("CSV request retains the original empty-title fallback", async () => {
+  await db.update(item).set({ title: "" }).where(eq(item.externalId, PRESENT));
+  const reply = await post("/csv", [csvRow(PRESENT, "Ordered", "10.00")]);
+  expect(reply.status).toBe(200);
+  const [saved] = await db.select().from(order);
+  expect(saved?.title).toBe(`Order ${saved?.id}`);
+});
+
+test("two extension CSV Items share one Order", async () => {
+  const run = await start("csv", [
+    { ...csvRow(X, "Ordered", "10.00"), orderId: "shared-order" },
+    { ...csvRow(Y, "Owned", "20.00"), orderId: "shared-order" },
+  ]);
+  expect(await complete(run, X)).toEqual(imported);
+  expect(await complete(run, Y)).toEqual(imported);
+  expect(await db.$count(order)).toBe(1);
+  expect(await userRows()).toMatchObject([
+    { mfcItemId: X, orderTitle: parsedPage(X).title },
+    { mfcItemId: Y, orderTitle: parsedPage(X).title },
+  ]);
+  expect(await session(run.syncSessionId)).toMatchObject({ status: "completed", successCount: 2 });
+});
+
+test("extension CSV cannot reuse another user's Order", async () => {
+  await db
+    .insert(authSchema.user)
+    .values({ id: "other", name: "Other", email: "o@example.test", username: "other" });
+  await db.insert(order).values({ id: "foreign-order", userId: "other", title: "Private" });
+  const run = await start("csv", [{ ...csvRow(X, "Ordered", "10.00"), orderId: "foreign-order" }]);
+  expect(await complete(run, X)).toMatchObject({ status: 200, body: { outcome: "failed" } });
+  expect(await db.$count(collection)).toBe(0);
+});
+
+test("worker-era sync stays processing one second before 24 hours", async () => {
+  const { default: service } = await import("./service");
+  await db.insert(syncSession).values({
+    id: "live-worker",
+    jobId: "live-worker",
+    userId,
+    syncType: "item",
+    status: "processing",
+    totalItems: 1,
+    updatedAt: new Date(Date.now() - 24 * 60 * 60 * 1000 + 1000),
+  });
+  await db.insert(syncSessionItem).values({ syncSessionId: "live-worker", itemExternalId: X });
+  expect(await service.getJobStatus("live-worker", userId)).toMatchObject({ terminalState: null });
+  expect(await listed("?status=processing")).toMatchObject([
+    { status: "processing", failCount: 0 },
+  ]);
+  expect(await listed("?status=failed")).toEqual([]);
+});
+
+test("failedBeforeStart does not label item results as persistence failures", async () => {
+  await db.execute(
+    `CREATE FUNCTION reject_start() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'cannot start'; END $$`,
+  );
+  await db.execute(
+    `CREATE TRIGGER reject_start BEFORE INSERT ON collection FOR EACH ROW EXECUTE FUNCTION reject_start()`,
+  );
+  try {
+    expect(
+      await post("/collection", [collectionEntry(PRESENT, 100), collectionEntry(X, 200)]),
+    ).toMatchObject({ status: 500 });
+    const rows = await db.select().from(syncSessionItem);
+    expect(rows).toHaveLength(2);
+    expect(
+      rows.every(
+        (row) =>
+          row.errorCode === null && row.errorReason === SYNC_STATUS_MESSAGES.failedBeforeStart,
+      ),
+    ).toBe(true);
+  } finally {
+    await db.execute(`DROP TRIGGER reject_start ON collection`);
+    await db.execute(`DROP FUNCTION reject_start()`);
+  }
+});
+
+test("in-request persistence failure keeps its original item reasons", async () => {
+  await db.execute(
+    `CREATE FUNCTION reject_request() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'cannot persist'; END $$`,
+  );
+  await db.execute(
+    `CREATE TRIGGER reject_request BEFORE INSERT ON collection FOR EACH ROW EXECUTE FUNCTION reject_request()`,
+  );
+  try {
+    expect(await post("/collection", [collectionEntry(PRESENT, 100)])).toMatchObject({
+      status: 500,
+    });
+    expect(await db.select({ reason: syncSessionItem.errorReason }).from(syncSessionItem)).toEqual([
+      { reason: SYNC_STATUS_MESSAGES.failedPersist },
+    ]);
+  } finally {
+    await db.execute(`DROP TRIGGER reject_request ON collection`);
+    await db.execute(`DROP FUNCTION reject_request()`);
+  }
+});
+
+test("interruption keeps its error after an earlier persistence failure and cache expiry", async () => {
+  const run = await start("collection", [collectionEntry(X, 100), collectionEntry(Y, 200)]);
+  failS3 = true;
+  await complete(run, X);
+  await interrupt(run);
+  const before = snapshot(run.jobId);
+  expect(before.error).toEqual({
+    code: "scrape_failed",
+    message: SYNC_STATUS_MESSAGES.interrupted,
+  });
+  redisValues.delete(getJobStatusSnapshotKey(run.jobId));
+  const { default: service } = await import("./service");
+  expect((await service.getJobStatus(run.jobId, userId)).error).toEqual(before.error);
+});
+
+test("worker persistence failure keeps its error without a snapshot", async () => {
+  await db.insert(syncSession).values({
+    id: "failed-worker",
+    jobId: "failed-worker",
+    userId,
+    syncType: "collection",
+    status: "failed",
+    statusMessage: SYNC_STATUS_MESSAGES.failedPersist,
+    totalItems: 1,
+    successCount: 0,
+    failCount: 1,
+  });
+  await db.insert(syncSessionItem).values({
+    syncSessionId: "failed-worker",
+    itemExternalId: X,
+    status: "failed",
+  });
+  const { default: service } = await import("./service");
+  expect(await service.getJobStatus("failed-worker", userId)).toMatchObject({
+    error: { code: "persistence_failed", message: SYNC_STATUS_MESSAGES.failedPersist },
+  });
+});
+
+test("a 1000-item failure batch uses one transaction and rate-limit unit", async () => {
+  const ids = Array.from({ length: 1000 }, (_, index) => X + index);
+  const run = await start("item", { items: ids });
+  const transaction = spyOn(db, "transaction");
+  const rateUnits = rateKeys.filter((key) => key.startsWith("rl:sync-failure:")).length;
+  try {
+    const reply = await post(`/sessions/${run.syncSessionId}/failures`, {
+      jobId: run.jobId,
+      failures: ids.map((mfcItemId) => ({ mfcItemId, error: "timeout" })),
+    });
+    expect(reply).toEqual({ status: 200, body: { outcome: "recorded" } });
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(rateKeys.filter((key) => key.startsWith("rl:sync-failure:"))).toHaveLength(
+      rateUnits + 1,
+    );
+    expect(await session(run.syncSessionId)).toMatchObject({ status: "failed", failCount: 1000 });
+    expect((await results(run.syncSessionId)).every((row) => row.status === "failed")).toBe(true);
+  } finally {
+    transaction.mockRestore();
+  }
+});
+
+test("a mixed failure batch preserves imported Items and ignores a stale job", async () => {
+  const run = await start("item", { items: [X, Y, Z] });
+  await complete(run, X);
+  const failures = [X, Y, Z].map((mfcItemId) => ({ mfcItemId, error: "timeout" }));
+  expect(
+    await post(`/sessions/${run.syncSessionId}/failures`, { jobId: "stale", failures }),
+  ).toEqual({ status: 200, body: { outcome: "ignored" } });
+  expect(
+    await post(`/sessions/${run.syncSessionId}/failures`, { jobId: run.jobId, failures }),
+  ).toEqual({ status: 200, body: { outcome: "recorded" } });
+  expect(await results(run.syncSessionId)).toEqual([
+    { id: X, status: "scraped", reason: null },
+    { id: Y, status: "failed", reason: "MyFigureCollection took too long to answer" },
+    { id: Z, status: "failed", reason: "MyFigureCollection took too long to answer" },
+  ]);
 });
