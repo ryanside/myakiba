@@ -192,15 +192,29 @@ async function* fetchPagesShowingPrompts(
   }
 }
 
-async function completeOnce(run: ExtensionRun, item: ItemPage): Promise<ServerAnswer> {
+async function waitUnlessAborted(ms: number, signal: AbortSignal): Promise<void> {
+  if (signal.aborted) return;
+  await new Promise<void>((resolve) => {
+    const stop = () => {
+      clearTimeout(timer);
+      signal.removeEventListener("abort", stop);
+      resolve();
+    };
+    const timer = setTimeout(stop, ms);
+    signal.addEventListener("abort", stop, { once: true });
+  });
+}
+
+async function completeOnce(
+  run: ExtensionRun,
+  item: ItemPage,
+  signal: AbortSignal,
+): Promise<ServerAnswer> {
   const answer = await run.complete(item);
   if (answer.kind !== "busy" || answer.retryAfterMs === null) return answer;
-  const waitMs = answer.retryAfterMs;
-  if (waitMs > MAX_RETRY_AFTER_MS) return answer;
-  await new Promise((resolve) => {
-    setTimeout(resolve, waitMs);
-  });
-  return run.complete(item);
+  if (answer.retryAfterMs > MAX_RETRY_AFTER_MS) return answer;
+  await waitUnlessAborted(answer.retryAfterMs, signal);
+  return signal.aborted ? FAILED : run.complete(item);
 }
 
 function uploadSlots(size: number) {
@@ -308,7 +322,7 @@ export function createExtensionRunner(deps: RunnerDeps) {
     };
     const upload = async (item: ItemPage) => {
       try {
-        const answer = await completeOnce(run, item);
+        const answer = await completeOnce(run, item, controller.signal);
         if (answer.kind === "ok") tally.imported += 1;
         else refused(answer, 1);
       } finally {

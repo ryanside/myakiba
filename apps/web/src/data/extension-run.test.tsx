@@ -680,6 +680,43 @@ describe("a run the user lost access to", () => {
   });
 });
 
+describe("an upload waiting out a Retry-After", () => {
+  test.each([
+    ["the page goes away", Response.json({ active: true })],
+    ["a heartbeat says the run is over", Response.json({ active: false })],
+    ["a heartbeat answers 401", new Response("Unauthorized", { status: 401 })],
+  ] as const)("is not sent again once %s", async (stop, heartbeat) => {
+    fakeFetch();
+    let refusals = 0;
+    answer = (request) => {
+      if (request.path.endsWith("/heartbeat")) return heartbeat.clone();
+      if (request.path.endsWith("/items") && refusals === 0) {
+        refusals += 1;
+        return new Response("Rate limit exceeded", {
+          status: 429,
+          headers: { "retry-after": "0.3" },
+        });
+      }
+      return imported();
+    };
+    loadExtension((fetch) => {
+      fetch.item(fetch.mfcItemIds[0] ?? 0);
+      fetch.done("complete");
+    });
+    const { run, page } = runner({ heartbeatMs: 20 });
+
+    const running = run(sync(1));
+    await waitFor(() => expect(posted(`${SESSION}/items`)).toHaveLength(1));
+    if (stop === "the page goes away") page.hide();
+    await running;
+    await run(importRun({ importId: "imp-1", mfcItemIds: [2] }));
+    await sleep(400);
+
+    expect(posted(`${SESSION}/items`)).toHaveLength(1);
+    expect(posted(`${CURRENT}/items`).map((request) => request.fields.mfcItemId)).toEqual([2]);
+  });
+});
+
 describe("refreshing an item", () => {
   test("posts the fetched page to the item's resync", async () => {
     fakeFetch();
