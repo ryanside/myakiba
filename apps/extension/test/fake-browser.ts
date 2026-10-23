@@ -256,11 +256,7 @@ function fakeTabs(
     return answer;
   }
 
-  /**
-   * Once the user claims a tab, the extension answers for a load it started there only until that load's throttle turn
-   * runs out, since it may neither close nor stop the user's tab.
-   */
-  function activateByUser(tabId: number): void {
+  function endClaimedLoadsAtTurnLimit(tabId: number): void {
     for (const running of loads) {
       if (
         running.tabId !== tabId ||
@@ -274,6 +270,10 @@ function fakeTabs(
         : PAGE_TIMEOUT_MS;
       running.endedAt = Math.min(running.endedAt ?? Infinity, running.at + turnMs);
     }
+  }
+
+  function activateByUser(tabId: number): void {
+    endClaimedLoadsAtTurnLimit(tabId);
     activate(tabId);
   }
 
@@ -494,7 +494,6 @@ export function fakeExtension(options: {
   readonly deferNavigationCommit?: CommitStyle | undefined;
   readonly redirect?: (url: string) => string | undefined;
   readonly dropsNavigation?: (url: string) => boolean;
-  /** The collector's fetch in the MFC tab. Aborting its signal stops it, as the stop injection does. */
   readonly gatedPicture?: (url: string, signal: AbortSignal) => Promise<PortPicture | null>;
   /** The collector's fetch in the picture tab. Aborting its signal stops it, as the stop injection does. */
   readonly publicPicture?: (url: URL, signal: AbortSignal) => Promise<PortPicture | null>;
@@ -651,7 +650,6 @@ export function fakeExtension(options: {
     },
     run,
     settle: clock.runUntilIdle,
-    /** Only MFC's loads, since the throttle spaces only those. */
     loads(): readonly Load[] {
       const fetches = calls
         .filter((call) => call.mode === "fetch")

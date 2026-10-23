@@ -79,10 +79,6 @@ function hasLanded(tab: Tab, before: string | null, origin: string): boolean {
   return hasEnded(tab, before) && onOrigin(tab.url, origin);
 }
 
-/**
- * The one tab on `origin` the extension created and the user has not claimed, which it loads pages in and closes. Only
- * `claim` ends that ownership. A URL never does.
- */
 export function ownedTab(deps: {
   readonly tabs: TabsApi;
   readonly clock: Clock;
@@ -142,8 +138,7 @@ export function ownedTab(deps: {
     if (own) await closeUntilGone(own.tabId);
   }
 
-  /** A tab that already shows `url` is used as it is, since a load of the page it shows could not be told from that page. */
-  async function navigate(
+  async function navigateUnlessShown(
     requester: LiveRequester,
     url: string,
     signal: AbortSignal,
@@ -195,11 +190,10 @@ export function ownedTab(deps: {
     return true;
   }
 
-  /**
-   * A tab the user claimed mid-load may still run the extension's request, so the turn waits until the tab is seen
-   * loading and then complete, which is also when a load of the user's own has replaced it.
-   */
-  async function untilEnded({ tabId, before }: Load, timeout: AbortSignal): Promise<void> {
+  async function holdTurnUntilLoadEnds(
+    { tabId, before }: Load,
+    timeout: AbortSignal,
+  ): Promise<void> {
     let loading = false;
     while (!timeout.aborted) {
       const tab = await tabs.get(tabId).catch(() => null);
@@ -217,7 +211,8 @@ export function ownedTab(deps: {
     timeout: AbortSignal,
   ): Promise<number> {
     const signal = AbortSignal.any([cancel, timeout]);
-    const load = (await navigate(requester, url, signal)) ?? (await create(requester, url, signal));
+    const load =
+      (await navigateUnlessShown(requester, url, signal)) ?? (await create(requester, url, signal));
     try {
       for (;;) {
         signal.throwIfAborted();
@@ -226,21 +221,16 @@ export function ownedTab(deps: {
       }
     } catch (error) {
       if (signal.aborted) await closeUntilGone(load.tabId);
-      await untilEnded(load, timeout);
+      await holdTurnUntilLoadEnds(load, timeout);
       throw error;
     }
   }
 
   return {
-    /**
-     * Loads `url` in the extension's own tab in one throttle turn. A load cut short closes the tab before the turn ends,
-     * unless the user claimed it.
-     */
     load(requester: LiveRequester, url: string, signal: AbortSignal): Promise<number> {
       return throttle.load(signal, (timeout) => open(requester, url, signal, timeout), turnMs);
     },
 
-    /** Loads `url` and runs `read` in the tab, both in one throttle turn, so the next load waits for the whole of it. */
     loadAndRead<T>(
       requester: LiveRequester,
       url: string,
@@ -260,7 +250,6 @@ export function ownedTab(deps: {
       return own && inContext(own.tab, context) && onOrigin(own.tab.url, origin) ? own.tabId : null;
     },
 
-    /** The user focused the tab, or the extension showed it to them, so it is theirs from now on. */
     async claim(tabId: number): Promise<void> {
       focusedDuringCreate?.add(tabId);
       await exclusively(async () => {

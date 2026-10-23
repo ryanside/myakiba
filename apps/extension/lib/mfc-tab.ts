@@ -51,10 +51,6 @@ export function createMfcTabs(deps: {
       return { kind: "owned", tabId: await own.load(requester, `${origins.mfc}/`, signal) };
     },
 
-    /**
-     * Loads the item in a tab of the extension's own, never a borrowed one, and gives the tab to the user by showing it.
-     * The extension reads the page the user solves there, but never closes that tab.
-     */
     async showChallenge(
       requester: LiveRequester,
       mfcItemId: MfcItemId,

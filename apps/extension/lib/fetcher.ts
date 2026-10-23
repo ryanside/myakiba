@@ -142,7 +142,6 @@ export function createFetcher(deps: FetcherDeps) {
     };
   }
 
-  /** Each picture is a request to MFC, so it takes a throttle turn of its own, and its budget starts with that turn. */
   async function pictureOf(
     ogImage: MfcOgImage,
     { tabId, requester, signal }: ItemContext,
