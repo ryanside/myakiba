@@ -1,3 +1,5 @@
+import { inArray } from "drizzle-orm";
+import { parseMoneyToMinorUnits } from "@myakiba/utils/currency";
 import type { JobData, UpdatedSyncOrder } from "@myakiba/contracts/sync/schema";
 import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
 import { collection, order } from "@myakiba/db/schema/figure";
@@ -31,7 +33,55 @@ export function idsToFetch(payload: JobData): number[] {
 }
 
 export function fetchedItemRows(payload: JobData, item: ExistingItemWithLatestRelease): ItemRows {
-  return retryRows(buildRetryJobData(payload, new Set([item.externalId]), [item]));
+  if (payload.type !== "csv") {
+    return retryRows(buildRetryJobData(payload, new Set([item.externalId]), [item]));
+  }
+  const rows = payload.items.filter((row) => row.itemExternalId === item.externalId);
+  return {
+    collectionItems: rows.map((row) => ({
+      id: row.collectionId,
+      userId: payload.userId,
+      itemId: item.id,
+      releaseId: item.releaseId,
+      orderId: row.orderId,
+      status: row.status,
+      count: row.count,
+      score: row.score.trim() === "" ? "0.0" : row.score,
+      price: parseMoneyToMinorUnits(row.price),
+      shop: row.shop,
+      orderDate: row.orderDate,
+      paymentDate: row.payment_date,
+      shippingDate: row.shipping_date,
+      collectionDate: row.collecting_date,
+      shippingMethod: row.shipping_method,
+      notes: row.note,
+    })),
+    orders: rows.flatMap((row) =>
+      row.orderId === null
+        ? []
+        : [
+            {
+              id: row.orderId,
+              userId: payload.userId,
+              title: item.title ?? `Order ${row.orderId}`,
+              shop: row.shop,
+              orderDate: row.orderDate,
+              releaseDate: item.releaseDate,
+              paymentDate: row.payment_date,
+              shippingDate: row.shipping_date,
+              collectionDate: row.collecting_date,
+              shippingMethod: row.shipping_method,
+              status: "Ordered",
+              shippingFee: 0,
+              taxes: 0,
+              duties: 0,
+              tariffs: 0,
+              miscFees: 0,
+              notes: "",
+            },
+          ],
+    ),
+  };
 }
 
 export function retryRows(retry: JobData): ItemRows {
@@ -53,7 +103,26 @@ export async function insertItemRows(
   syncType: JobData["type"],
   { collectionItems, orders }: ItemRows,
 ): Promise<void> {
-  if (orders.length > 0) await tx.insert(order).values([...orders]);
+  if (orders.length > 0) {
+    const uniqueOrders = [...new Map(orders.map((row) => [row.id, row])).values()];
+    await tx.insert(order).values(uniqueOrders).onConflictDoNothing({ target: order.id });
+  }
+  const references = [
+    ...orders.map(({ id, userId }) => ({ id, userId })),
+    ...collectionItems.flatMap(({ orderId, userId }) => (orderId ? [{ id: orderId, userId }] : [])),
+  ];
+  if (references.length > 0) {
+    const owners = await tx
+      .select({ id: order.id, userId: order.userId })
+      .from(order)
+      .where(inArray(order.id, [...new Set(references.map(({ id }) => id))]))
+      .orderBy(order.id)
+      .for("update");
+    const userByOrderId = new Map(owners.map((row) => [row.id, row.userId]));
+    if (references.some((row) => userByOrderId.get(row.id) !== row.userId)) {
+      throw new Error("ORDER_NOT_FOUND");
+    }
+  }
   if (collectionItems.length === 0) return;
   const inserted = await tx
     .insert(collection)
