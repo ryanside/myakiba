@@ -13,7 +13,7 @@ export type PageRequest = z.output<typeof pageRequestSchema>;
 const collectRequestSchema = z.discriminatedUnion("kind", [
   pageRequestSchema,
   z.strictObject({ kind: z.literal("gated-picture"), url: z.string() }),
-  z.strictObject({ kind: z.literal("public-picture") }),
+  z.strictObject({ kind: z.literal("public-picture"), url: z.string() }),
 ]);
 export type CollectRequest = z.output<typeof collectRequestSchema>;
 

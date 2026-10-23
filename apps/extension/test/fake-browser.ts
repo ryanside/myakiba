@@ -7,6 +7,7 @@ import { createFetcher } from "../lib/fetcher";
 import type { Fetcher } from "../lib/fetcher";
 import type { OwnedTab, Tab, TabsApi, WindowsApi } from "../lib/mfc-tab";
 import type { Origins } from "../lib/origins";
+import { pictureToRead } from "../lib/picture";
 import type { Requester, RunKey, TabContext } from "../lib/queue";
 import { OPEN_THROTTLE } from "../lib/throttle";
 import type { ThrottleState } from "../lib/throttle";
@@ -402,7 +403,7 @@ export function fakeExtension(options: {
   /** Where the server sends a navigation to `url` instead, if anywhere. */
   readonly redirect?: (url: string) => string | undefined;
   readonly gatedPicture?: (url: string) => Promise<PortPicture | null>;
-  /** The collector's read in the picture tab. Aborting its signal stops it, as the stop injection does. */
+  /** The collector's fetch in the picture tab. Aborting its signal stops it, as the stop injection does. */
   readonly publicPicture?: (url: URL, signal: AbortSignal) => Promise<PortPicture | null>;
 }) {
   const clock = options.clock ?? fakeClock();
@@ -444,7 +445,9 @@ export function fakeExtension(options: {
     }
   }
 
-  async function readPublicPicture(tabId: number, signal: AbortSignal) {
+  /** Stands in for the collector, which reads only the picture asked for. */
+  async function readPublicPicture(tabId: number, requested: string, signal: AbortSignal) {
+    signal.throwIfAborted();
     const tab = tabs.get(tabId);
     publicPictureCalls.push({ tabId, signal, tab: tab && { ...tab } });
     const url = new URL(tab?.url ?? "about:blank");
@@ -462,6 +465,7 @@ export function fakeExtension(options: {
     const stopped = Promise.withResolvers<null>();
     signal.addEventListener("abort", () => stopped.resolve(null), { once: true });
     try {
+      if (!pictureToRead(requested, url.href, ORIGINS)) return null;
       return await Promise.race([
         options.publicPicture
           ? options.publicPicture(url, signal)

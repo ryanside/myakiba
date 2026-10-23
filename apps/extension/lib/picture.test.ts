@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { readPicture } from "./picture";
+import type { Origins } from "./origins";
+import { pictureToRead, readPicture } from "./picture";
 
 const MB = 1024 * 1024;
 const ascii = (text: string) => [...new TextEncoder().encode(text)];
@@ -52,5 +53,45 @@ describe("readPicture", () => {
     expect(
       await readPicture(new Response(new Uint8Array([0xff, 0xd8, 0xff]), { status: 404 })),
     ).toBeNull();
+  });
+});
+
+describe("pictureToRead", () => {
+  const origins: Origins = {
+    web: "http://myakiba.test",
+    mfc: "http://mfc.test",
+    mfcStatic: "http://static.mfc.test",
+  };
+  const requested = "https://static.myfigurecollection.net/upload/items/1/98777-a1b2c.jpg";
+  const configured = "http://static.mfc.test/upload/items/1/98777-a1b2c.jpg";
+
+  test("is the configured URL when the tab shows the picture asked for", () => {
+    expect(pictureToRead(requested, configured, origins)?.href).toBe(configured);
+  });
+
+  test("compares the URLs once normalized", () => {
+    const shown = "HTTP://STATIC.MFC.TEST:80/upload/items/1/./98777-a1b2c.jpg";
+    expect(pictureToRead(requested, shown, origins)?.href).toBe(configured);
+  });
+
+  test.each([
+    ["another picture", "http://static.mfc.test/upload/items/1/98778-a1b2c.jpg"],
+    ["the picture with a query", `${configured}?redirected=1`],
+    ["the picture on the MFC origin", "http://mfc.test/upload/items/1/98777-a1b2c.jpg"],
+    ["a challenge page", "http://static.mfc.test/cdn-cgi/challenge-platform/h/b"],
+    ["an unreadable URL", ""],
+  ])("is null when the tab shows %s", (_name, shown) => {
+    expect(pictureToRead(requested, shown, origins)).toBeNull();
+  });
+
+  test.each([
+    ["outside /upload/items/", "https://static.myfigurecollection.net/upload/users/1/1.jpg"],
+    ["on the MFC origin", "https://myfigurecollection.net/upload/items/1/98777-a1b2c.jpg"],
+    ["on another origin", "https://example.com/upload/items/1/98777-a1b2c.jpg"],
+  ])("is null for a requested URL %s, even when the tab shows it", (_name, url) => {
+    const shown = URL.parse(url);
+    const mapped = shown && new URL(shown.pathname, origins.mfcStatic).href;
+    expect(pictureToRead(url, mapped ?? url, origins)).toBeNull();
+    expect(pictureToRead(url, url, origins)).toBeNull();
   });
 });

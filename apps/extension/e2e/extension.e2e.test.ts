@@ -127,7 +127,7 @@ function fetchItems(myakiba: Page, ids: readonly number[]): Promise<PageRun> {
 
 describe("the extension against a mock MFC", () => {
   test(
-    "public pictures require browsing the static origin and reach the page intact",
+    "public pictures require browsing the static origin, reach the page intact and are asked of the CDN once",
     async () => {
       const myakiba = await launch();
       const url = `${E2E_ORIGINS.WXT_MFC_STATIC_ORIGIN}/upload/items/1/${PUBLIC_ID}-a1b2c.jpg`;
@@ -147,10 +147,7 @@ describe("the extension against a mock MFC", () => {
           request.origin === E2E_ORIGINS.WXT_MFC_STATIC_ORIGIN &&
           request.path === new URL(url).pathname,
       );
-      expect(pictures.some((request) => request.mode === "navigate")).toBe(true);
-      expect(
-        pictures.some((request) => request.mode !== "navigate" && request.site === "same-origin"),
-      ).toBe(true);
+      expect(pictures.map((request) => request.mode)).toEqual(["navigate"]);
       await until(
         () =>
           context.pages().every((tab) => !tab.url().startsWith(E2E_ORIGINS.WXT_MFC_STATIC_ORIGIN)),

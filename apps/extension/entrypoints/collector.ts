@@ -5,7 +5,7 @@ import { NO_STATUS, PAGE_TIMEOUT_MS, runArmed } from "../lib/collect";
 import type { CollectedPage } from "../lib/collect";
 import { ORIGINS } from "../lib/config";
 import { toConfiguredUrl } from "../lib/origins";
-import { PICTURE_TIMEOUT_MS, readPicture } from "../lib/picture";
+import { PICTURE_TIMEOUT_MS, pictureToRead, readPicture } from "../lib/picture";
 
 async function fetchItemPage(mfcItemId: number, signal: AbortSignal): Promise<CollectedPage> {
   const response = await fetch(`/item/${mfcItemId}`, {
@@ -34,12 +34,17 @@ function loadedItemPage(): CollectedPage {
   };
 }
 
-async function fetchPicture(url: URL | null, signal: AbortSignal): Promise<PortPicture | null> {
+async function fetchPicture(
+  url: URL | null,
+  cache: RequestCache,
+  signal: AbortSignal,
+): Promise<PortPicture | null> {
   if (url?.origin !== location.origin) return null;
   try {
     return await readPicture(
       await fetch(url, {
         credentials: "include",
+        cache,
         signal: AbortSignal.any([signal, AbortSignal.timeout(PICTURE_TIMEOUT_MS)]),
       }),
     );
@@ -51,11 +56,15 @@ async function fetchPicture(url: URL | null, signal: AbortSignal): Promise<PortP
 export default defineUnlistedScript(async (): Promise<CollectedPage | PortPicture | null> =>
   runArmed(async (request, signal) => {
     if (request.kind === "gated-picture")
-      return fetchPicture(toConfiguredUrl(request.url, ORIGINS), signal);
-    if (request.kind === "public-picture")
-      return location.origin === ORIGINS.mfcStatic
-        ? fetchPicture(new URL(location.href), signal)
-        : null;
+      return fetchPicture(toConfiguredUrl(request.url, ORIGINS), "default", signal);
+    if (request.kind === "public-picture") {
+      // The tab just loaded the picture, so the browser's copy saves the CDN a second request.
+      return fetchPicture(
+        pictureToRead(request.url, location.href, ORIGINS),
+        "force-cache",
+        signal,
+      );
+    }
     if (request.mode === "document") return loadedItemPage();
     return fetchItemPage(request.mfcItemId, signal);
   }),

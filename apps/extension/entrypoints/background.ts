@@ -67,8 +67,8 @@ export default defineBackground(() => {
       runCollector(tabId, request, collectedPageSchema, signal),
     fetchGatedPicture: (tabId, url, signal) =>
       runCollector(tabId, { kind: "gated-picture", url }, portPictureSchema.nullable(), signal),
-    fetchPublicPicture: (tabId, signal) =>
-      runCollector(tabId, { kind: "public-picture" }, portPictureSchema.nullable(), signal),
+    fetchPublicPicture: (tabId, url, signal) =>
+      runCollector(tabId, { kind: "public-picture", url }, portPictureSchema.nullable(), signal),
   });
 
   browser.tabs.onActivated.addListener(async ({ tabId }) => {

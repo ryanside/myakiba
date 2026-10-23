@@ -1,4 +1,6 @@
 import type { PortPicture } from "@myakiba/mfc/bridge";
+import { toConfiguredUrl } from "./origins";
+import type { Origins } from "./origins";
 
 export const PICTURE_TIMEOUT_MS = 20_000;
 const MAX_PICTURE_BYTES = 10 * 1024 * 1024;
@@ -64,4 +66,14 @@ export async function readPicture(response: Response): Promise<PortPicture | nul
   const bytes = await readAtMost(response.body, MAX_PICTURE_BYTES);
   const format = bytes && FORMATS.find((candidate) => candidate.matches(bytes));
   return bytes && format ? { base64: bytes.toBase64(), contentType: format.contentType } : null;
+}
+
+/**
+ * The picture to read in a static-origin tab, only when the tab shows the one asked for, so a redirect or a page the user
+ * opened there never passes as the item's picture. Like `@myakiba/mfc/page`, it allows only pictures under `/upload/items/`.
+ */
+export function pictureToRead(requested: string, shown: string, origins: Origins): URL | null {
+  const url = toConfiguredUrl(requested, origins);
+  if (url?.origin !== origins.mfcStatic || !url.pathname.startsWith("/upload/items/")) return null;
+  return URL.parse(shown)?.href === url.href ? url : null;
 }

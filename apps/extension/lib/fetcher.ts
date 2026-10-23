@@ -45,7 +45,12 @@ export type FetcherDeps = {
     url: string,
     signal: AbortSignal,
   ) => Promise<PortPicture | null>;
-  readonly fetchPublicPicture: (tabId: number, signal: AbortSignal) => Promise<PortPicture | null>;
+  /** Runs in the picture tab, and answers no picture unless the tab shows `url`. */
+  readonly fetchPublicPicture: (
+    tabId: number,
+    url: string,
+    signal: AbortSignal,
+  ) => Promise<PortPicture | null>;
 };
 
 export type FetchRun = {
@@ -142,7 +147,7 @@ export function createFetcher(deps: FetcherDeps) {
         if (picture.access === "gated") return deps.fetchGatedPicture(tabId, picture.url, bounded);
         const pictureTabId = await pictureTabs.loadOwned(requester, url.href, bounded);
         bounded.throwIfAborted();
-        return deps.fetchPublicPicture(pictureTabId, bounded);
+        return deps.fetchPublicPicture(pictureTabId, picture.url, bounded);
       });
     } catch {
       return null;
