@@ -31,6 +31,8 @@ interface RateLimitResult {
   readonly remaining: number;
 }
 
+// At 2.5 seconds per fetch the extension uploads at most about 1,440 items an hour.
+// Batches cover mass failures without spending one request per item.
 const MFC_ITEM_HOURLY_BUDGET = 2000;
 
 const rateLimitConfigs = {

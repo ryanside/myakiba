@@ -1181,7 +1181,10 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         action: "sync.failItem",
         user: { id: user.id },
         sync: { sessionId: params.id, jobId: body.jobId },
-        mfc: { itemId: body.mfcItemId, error: body.error },
+        mfc:
+          "failures" in body
+            ? { failureCount: body.failures.length }
+            : { itemId: body.mfcItemId, error: body.error },
       });
       if (!user.emailVerified) {
         log.set({ outcome: "forbidden", sync: { reason: "email_not_verified" } });

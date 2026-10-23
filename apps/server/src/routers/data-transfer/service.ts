@@ -32,7 +32,7 @@ import type {
 } from "@myakiba/contracts/data-transfer/schema";
 import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
 import { UNSAVED_ITEM_REASON } from "@myakiba/contracts/sync/constants";
-import { tryCatch } from "@myakiba/utils/result";
+import { ITEM_FETCH_ERROR_MESSAGE } from "@myakiba/contracts/sync/messages";
 import { ensureMfcItem, prepareMfcItem } from "@/lib/mfc-item-ingest";
 import { createImportId, planCollectionRows } from "./import-plan";
 import type { ImportableItem, PlannedCollectionRow } from "./import-plan";
@@ -544,14 +544,64 @@ const DataTransferService = {
     | { readonly kind: "imported"; readonly import: DataTransferImport | null }
     | { readonly kind: "problem"; readonly message: string }
   > {
-    const { data: prepared, error } = await tryCatch(prepareMfcItem(db, upload));
-    if (error) {
+    try {
+      const prepared = await prepareMfcItem(db, upload);
+      if (prepared.kind === "unreadable") {
+        await DataTransferService.failItem(userId, {
+          jobId: upload.jobId,
+          mfcItemId: upload.mfcItemId,
+          reason: prepared.message,
+        });
+        return { kind: "problem", message: prepared.message };
+      }
+
+      const now = new Date();
+      const view = await mutateImport(userId, now, async (tx, current) => {
+        if (prepared.kind === "parsed") await ensureMfcItem(tx, prepared.page, prepared.stored);
+        if (!current) return { value: current, changed: false };
+        if (current.row.jobId === upload.jobId) {
+          await tx
+            .update(dataTransferImport)
+            .set({ heartbeatAt: now })
+            .where(eq(dataTransferImport.userId, userId));
+        }
+
+        const [waiting] = await tx
+          .select({ status: dataTransferImportItem.status, rows: dataTransferImportItem.rows })
+          .from(dataTransferImportItem)
+          .where(
+            and(
+              eq(dataTransferImportItem.userId, userId),
+              eq(dataTransferImportItem.itemExternalId, upload.mfcItemId),
+            ),
+          );
+        if (!waiting || waiting.status === "scraped") return { value: current, changed: false };
+
+        const arrived = await loadImportableItems(tx, [upload.mfcItemId]);
+        if (!arrived.has(upload.mfcItemId)) {
+          throw new Error(`MFC item ${upload.mfcItemId} was neither created nor found`);
+        }
+        await applyItemRows(tx, current, arrived, waiting.rows);
+        await tx
+          .update(dataTransferImportItem)
+          .set({ status: "scraped", errorReason: null, rows: [], updatedAt: now })
+          .where(
+            and(
+              eq(dataTransferImportItem.userId, userId),
+              eq(dataTransferImportItem.itemExternalId, upload.mfcItemId),
+            ),
+          );
+        return { value: await settle(tx, userId, now), changed: true };
+      });
+
+      return { kind: "imported", import: view ? toImport(view) : null };
+    } catch (error) {
       const log = createLogger({
-        action: "dataTransfer.prepareItem",
+        action: "dataTransfer.completeItem",
         user: { id: userId },
         mfcItemId: upload.mfcItemId,
       });
-      log.error(error);
+      log.error(error instanceof Error ? error : String(error));
       log.emit();
       const currentImport = await DataTransferService.failItem(userId, {
         jobId: upload.jobId,
@@ -560,55 +610,6 @@ const DataTransferService = {
       });
       return { kind: "imported", import: currentImport };
     }
-    if (prepared.kind === "unreadable") {
-      await DataTransferService.failItem(userId, {
-        jobId: upload.jobId,
-        mfcItemId: upload.mfcItemId,
-        reason: prepared.message,
-      });
-      return { kind: "problem", message: prepared.message };
-    }
-
-    const now = new Date();
-    const view = await mutateImport(userId, now, async (tx, current) => {
-      if (prepared.kind === "parsed") await ensureMfcItem(tx, prepared.page, prepared.stored);
-      if (!current) return { value: current, changed: false };
-      if (current.row.jobId === upload.jobId) {
-        await tx
-          .update(dataTransferImport)
-          .set({ heartbeatAt: now })
-          .where(eq(dataTransferImport.userId, userId));
-      }
-
-      const [waiting] = await tx
-        .select({ status: dataTransferImportItem.status, rows: dataTransferImportItem.rows })
-        .from(dataTransferImportItem)
-        .where(
-          and(
-            eq(dataTransferImportItem.userId, userId),
-            eq(dataTransferImportItem.itemExternalId, upload.mfcItemId),
-          ),
-        );
-      if (!waiting || waiting.status === "scraped") return { value: current, changed: false };
-
-      const arrived = await loadImportableItems(tx, [upload.mfcItemId]);
-      if (!arrived.has(upload.mfcItemId)) {
-        throw new Error(`MFC item ${upload.mfcItemId} was neither created nor found`);
-      }
-      await applyItemRows(tx, current, arrived, waiting.rows);
-      await tx
-        .update(dataTransferImportItem)
-        .set({ status: "scraped", errorReason: null, rows: [], updatedAt: now })
-        .where(
-          and(
-            eq(dataTransferImportItem.userId, userId),
-            eq(dataTransferImportItem.itemExternalId, upload.mfcItemId),
-          ),
-        );
-      return { value: await settle(tx, userId, now), changed: true };
-    });
-
-    return { kind: "imported", import: view ? toImport(view) : null };
   },
 
   async failItem(
@@ -626,18 +627,29 @@ const DataTransferService = {
       if (!current || current.row.jobId !== failure.jobId || current.status !== "running") {
         return { value: current, changed: false };
       }
-      const failed = await tx
-        .update(dataTransferImportItem)
-        .set({ status: "failed", errorReason: failure.reason, updatedAt: now })
-        .where(
-          and(
-            eq(dataTransferImportItem.userId, userId),
-            eq(dataTransferImportItem.itemExternalId, failure.mfcItemId),
-            eq(dataTransferImportItem.status, "pending"),
-          ),
-        )
-        .returning({ id: dataTransferImportItem.itemExternalId });
-      if (failed.length === 0) return { value: current, changed: false };
+      const failures =
+        "failures" in failure
+          ? failure.failures.map(({ mfcItemId, error }) => ({
+              mfcItemId,
+              reason: ITEM_FETCH_ERROR_MESSAGE[error],
+            }))
+          : [failure];
+      let changed = false;
+      for (const entry of failures) {
+        const failed = await tx
+          .update(dataTransferImportItem)
+          .set({ status: "failed", errorReason: entry.reason, updatedAt: now })
+          .where(
+            and(
+              eq(dataTransferImportItem.userId, userId),
+              eq(dataTransferImportItem.itemExternalId, entry.mfcItemId),
+              eq(dataTransferImportItem.status, "pending"),
+            ),
+          )
+          .returning({ id: dataTransferImportItem.itemExternalId });
+        changed = failed.length > 0 || changed;
+      }
+      if (!changed) return { value: current, changed: false };
       return { value: await settle(tx, userId, now), changed: true };
     });
 

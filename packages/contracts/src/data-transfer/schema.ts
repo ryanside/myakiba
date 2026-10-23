@@ -1,5 +1,6 @@
 import * as z from "zod";
 import { itemUploadSchema } from "../mfc-items/schema";
+import { syncItemFailureBatchSchema } from "../sync/schema";
 import type { SyncJobStatus } from "../sync/schema";
 import {
   COLLECTION_STATUSES,
@@ -207,11 +208,14 @@ export const dataTransferImportItemUploadSchema = itemUploadSchema.extend({
   jobId: portableKeySchema,
 });
 
-export const dataTransferImportItemFailureSchema = z.strictObject({
-  jobId: portableKeySchema,
-  mfcItemId: z.int().min(1).max(MAX_MFC_ITEM_ID),
-  reason: z.string().trim().min(1).max(500),
-});
+export const dataTransferImportItemFailureSchema = z.union([
+  z.strictObject({
+    jobId: portableKeySchema,
+    mfcItemId: z.int().min(1).max(MAX_MFC_ITEM_ID),
+    reason: z.string().trim().min(1).max(500),
+  }),
+  syncItemFailureBatchSchema,
+]);
 
 export type DataTransferReleaseFingerprint = z.infer<typeof dataTransferReleaseFingerprintSchema>;
 export type DataTransferCollectionItemV1 = z.infer<typeof dataTransferCollectionItemV1Schema>;

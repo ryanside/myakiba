@@ -25,7 +25,6 @@ import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import {
   ACTIVE_SYNC_SESSION_STATUS_SET,
   SYNC_SESSION_RETRY_WINDOW_MS,
-  UNSAVED_ITEM_REASON,
 } from "@myakiba/contracts/sync/constants";
 import { getJobStatusSnapshotKey, parseJobStatusPayload } from "@myakiba/redis/job-status";
 import { redis } from "@myakiba/redis/client";
@@ -34,7 +33,7 @@ import { createLogger } from "evlog";
 import { insertItemRows } from "./item-rows";
 import type { ItemRows } from "./item-rows";
 import { publishJobStatus, queuedJobStatus } from "./job-status";
-import { settleRun, viewSession, viewedStatusSql } from "./run-state";
+import { persistenceFailure, settleRun, viewSession, viewedStatusSql } from "./run-state";
 
 type SyncSessionUpdatePayload = Partial<
   Pick<
@@ -245,7 +244,7 @@ class SyncService {
     } catch (error) {
       await tryCatch(
         db.transaction((tx) =>
-          this.recordFailedStart(tx, session, requestPayload, SYNC_STATUS_MESSAGES.failedPersist),
+          this.recordFailedStart(tx, session, requestPayload, "request_persistence"),
         ),
       );
       throw error;
@@ -299,14 +298,7 @@ class SyncService {
       });
     } catch (error) {
       await tryCatch(
-        db.transaction((tx) =>
-          this.recordFailedStart(
-            tx,
-            session,
-            requestPayload,
-            SYNC_STATUS_MESSAGES.failedBeforeStart,
-          ),
-        ),
+        db.transaction((tx) => this.recordFailedStart(tx, session, requestPayload, "before_start")),
       );
       throw error;
     }
@@ -317,16 +309,23 @@ class SyncService {
     tx: SyncTransaction,
     session: SyncSessionCreation,
     payload: JobData,
-    message: string,
+    failure: "before_start" | "request_persistence",
   ): Promise<void> {
+    const message =
+      failure === "before_start"
+        ? SYNC_STATUS_MESSAGES.failedBeforeStart
+        : SYNC_STATUS_MESSAGES.failedPersist;
+    const details =
+      failure === "before_start"
+        ? { errorReason: message, errorCode: null }
+        : { ...persistenceFailure(payload.type), errorReason: message };
     await this.insertSyncSession(tx, session);
     const now = new Date();
     await tx
       .update(syncSessionItem)
       .set({
         status: "failed",
-        errorReason: payload.type === "item" ? message : UNSAVED_ITEM_REASON,
-        errorCode: "persistence_failed",
+        ...details,
         updatedAt: now,
       })
       .where(eq(syncSessionItem.syncSessionId, session.id));
@@ -340,7 +339,8 @@ class SyncService {
         failCount: sql`${syncSession.totalItems}`,
         completedAt: now,
         updatedAt: now,
-        extensionRun: true,
+        extensionRun: failure === "before_start",
+        endCause: failure === "before_start" ? "finished" : "persistence_failed",
         revision: 1,
       })
       .where(eq(syncSession.id, session.id));
@@ -359,6 +359,7 @@ class SyncService {
         createdAt: syncSession.createdAt,
         updatedAt: syncSession.updatedAt,
         extensionRun: syncSession.extensionRun,
+        endCause: syncSession.endCause,
         revision: syncSession.revision,
       })
       .from(syncSession)
@@ -402,20 +403,13 @@ class SyncService {
           }
         : null;
 
-    let error: SyncJobStatus["error"] = null;
-    if (session.interrupted) error = settleRun(session, "interrupted").error;
-    else if (session.status === "failed" && session.failCount > 0) {
-      const persistenceFailures = await db.$count(
-        syncSessionItem,
-        and(
-          eq(syncSessionItem.syncSessionId, session.id),
-          eq(syncSessionItem.status, "failed"),
-          eq(syncSessionItem.errorCode, "persistence_failed"),
-        ),
-      );
-      if (persistenceFailures > 0)
-        error = { code: "persistence_failed", message: SYNC_STATUS_MESSAGES.failedPersist };
-    }
+    const end = session.interrupted
+      ? "interrupted"
+      : (session.endCause ??
+        (!session.extensionRun && session.statusMessage === SYNC_STATUS_MESSAGES.failedPersist
+          ? "persistence_failed"
+          : "finished"));
+    const error = terminalState === null ? null : settleRun(session, end).error;
     return {
       revision: session.revision,
       jobId,

@@ -417,7 +417,12 @@ const dataTransferRouter = new Elysia({ prefix: "/data-transfer" })
       log.set({
         action: "dataTransfer.failItem",
         user: { id: user.id },
-        dataTransfer: { importId: body.jobId, mfcItemId: body.mfcItemId },
+        dataTransfer: {
+          importId: body.jobId,
+          ...("failures" in body
+            ? { failureCount: body.failures.length }
+            : { mfcItemId: body.mfcItemId }),
+        },
       });
 
       const { data: currentImport, error } = await tryCatch(
@@ -434,6 +439,7 @@ const dataTransferRouter = new Elysia({ prefix: "/data-transfer" })
     {
       auth: true,
       body: dataTransferImportItemFailureSchema,
+      rateLimit: "syncFailure",
     },
   )
   .post(

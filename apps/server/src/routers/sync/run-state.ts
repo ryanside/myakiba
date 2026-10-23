@@ -5,6 +5,7 @@ import {
   ACTIVE_SYNC_SESSION_STATUS_SET,
   SYNC_RUN_LEASE_MS,
   WORKER_RUN_LEASE_MS,
+  UNSAVED_ITEM_REASON,
 } from "@myakiba/contracts/sync/constants";
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import type { SyncJobError } from "@myakiba/contracts/sync/schema";
@@ -17,7 +18,14 @@ type RunCounts = {
   readonly failCount: number;
 };
 
-export type RunEnd = "finished" | "interrupted" | "order_missing" | "persistence_failed";
+export type RunEnd = NonNullable<typeof syncSession.$inferSelect.endCause>;
+
+export function persistenceFailure(syncType: SyncType) {
+  return {
+    errorReason: syncType === "item" ? SYNC_STATUS_MESSAGES.failedPersist : UNSAVED_ITEM_REASON,
+    errorCode: "persistence_failed" as const,
+  };
+}
 
 type SettledRun = {
   readonly status: Extract<SyncSessionStatus, "completed" | "partial" | "failed">;

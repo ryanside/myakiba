@@ -398,6 +398,9 @@ export const syncSession = pgTable(
     failCount: integer("fail_count").notNull().default(0),
     requestPayload: jsonb("request_payload").$type<JobData>(),
     extensionRun: boolean("extension_run").notNull().default(false),
+    endCause: text("end_cause", {
+      enum: ["finished", "interrupted", "order_missing", "persistence_failed"],
+    }),
     revision: integer("revision").notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),

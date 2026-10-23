@@ -1,6 +1,8 @@
 import * as z from "zod";
+import { itemUploadSchema } from "../mfc-items/schema";
 import {
   CONDITIONS,
+  MAX_MFC_ITEM_ID,
   ORDER_STATUSES,
   SHIPPING_METHODS,
   SYNC_SESSION_ITEM_STATUSES,
@@ -57,6 +59,33 @@ export const itemSyncSchema = z.object({
 });
 
 export type ItemSyncInput = z.infer<typeof itemSyncSchema>;
+
+const syncItemFetchErrorSchema = z.enum([
+  "mfc_signed_out",
+  "hidden_or_missing",
+  "challenge_unsolved",
+  "rate_limited",
+  "timeout",
+  "unexpected_page",
+  "unknown",
+]);
+const syncItemFailureEntrySchema = z.strictObject({
+  mfcItemId: z.int().min(1).max(MAX_MFC_ITEM_ID),
+  error: syncItemFetchErrorSchema,
+});
+
+export const syncItemFailureBatchSchema = z.strictObject({
+  jobId: z.string().min(1),
+  failures: z.array(syncItemFailureEntrySchema).min(1).max(1000),
+});
+export const syncItemFailureSchema = z.union([
+  itemUploadSchema.pick({ mfcItemId: true }).extend({
+    jobId: z.string().min(1),
+    error: syncItemFetchErrorSchema,
+  }),
+  syncItemFailureBatchSchema,
+]);
+export type SyncItemFailure = z.infer<typeof syncItemFailureSchema>;
 
 /**
  * Schema for CSV date fields that handles MFC export quirks.
