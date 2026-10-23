@@ -857,6 +857,78 @@
         "CSV and order-item completions import the same missing Item without deadlocking",
         "CSV retry locks Orders from in-request rows before its session"
       ]
+    },
+    {
+      "fix": "1f796363",
+      "bug": "a focus that came while a cleanup or navigation was reading storage lost, and the extension closed or navigated the user's tab",
+      "test": "apps/extension/lib/fetcher.test.ts",
+      "fixed": [
+        "the MFC tab > a focus that comes while the extension reads whose tab it is keeps the tab open and where it was, at every read"
+      ]
+    },
+    {
+      "fix": "f4f14142",
+      "bug": "a challenge tab the browser refused to show was given to the user anyway and leaked",
+      "test": "apps/extension/lib/fetcher.test.ts",
+      "fixed": [
+        "a challenge > whose tab the browser refuses to show, as during a drag, stays the extension's and closes once it can"
+      ]
+    },
+    {
+      "fix": "bce24b2b",
+      "bug": "a load that ended on another page waited out the 45 s turn and failed as timeout",
+      "test": "apps/extension/lib/fetcher.test.ts",
+      "fixed": [
+        "the MFC tab > a homepage that redirects to a site the extension cannot read after 0 ms fails as an unexpected page within moments and closes its tab (at once commits)",
+        "the MFC tab > a homepage that redirects to a site the extension cannot read after 1500 ms fails as an unexpected page within moments and closes its tab (at once commits)",
+        "the MFC tab > a homepage that redirects to another origin it can read after 0 ms fails as an unexpected page within moments and closes its tab (at once commits)",
+        "the MFC tab > a homepage that redirects to another origin it can read after 1500 ms fails as an unexpected page within moments and closes its tab (at once commits)",
+        "the MFC tab > a homepage that is answered with a 204 or a download after 0 ms fails as an unexpected page within moments and closes its tab (at once commits)",
+        "the MFC tab > a homepage that is answered with a 204 or a download after 1500 ms fails as an unexpected page within moments and closes its tab (at once commits)",
+        "the MFC tab > a homepage that redirects to a site the extension cannot read after 0 ms fails as an unexpected page within moments and closes its tab (Chrome-style commits)",
+        "the MFC tab > a homepage that redirects to a site the extension cannot read after 1500 ms fails as an unexpected page within moments and closes its tab (Chrome-style commits)",
+        "the MFC tab > a homepage that redirects to another origin it can read after 0 ms fails as an unexpected page within moments and closes its tab (Chrome-style commits)",
+        "the MFC tab > a homepage that redirects to another origin it can read after 1500 ms fails as an unexpected page within moments and closes its tab (Chrome-style commits)",
+        "the MFC tab > a homepage that is answered with a 204 or a download after 0 ms fails as an unexpected page within moments and closes its tab (Chrome-style commits)",
+        "the MFC tab > a homepage that is answered with a 204 or a download after 1500 ms fails as an unexpected page within moments and closes its tab (Chrome-style commits)",
+        "the MFC tab > a homepage that redirects to a site the extension cannot read after 0 ms fails as an unexpected page within moments and closes its tab (Firefox-style commits)",
+        "the MFC tab > a homepage that redirects to a site the extension cannot read after 1500 ms fails as an unexpected page within moments and closes its tab (Firefox-style commits)",
+        "the MFC tab > a homepage that redirects to another origin it can read after 0 ms fails as an unexpected page within moments and closes its tab (Firefox-style commits)",
+        "the MFC tab > a homepage that redirects to another origin it can read after 1500 ms fails as an unexpected page within moments and closes its tab (Firefox-style commits)",
+        "the MFC tab > a homepage that is answered with a 204 or a download after 0 ms fails as an unexpected page within moments and closes its tab (Firefox-style commits)",
+        "the MFC tab > a homepage that is answered with a 204 or a download after 1500 ms fails as an unexpected page within moments and closes its tab (Firefox-style commits)",
+        "the MFC tab > a homepage that redirects to a site the extension cannot read after 0 ms fails as an unexpected page within moments and closes its tab (Firefox-style, complete before it starts commits)",
+        "the MFC tab > a homepage that redirects to a site the extension cannot read after 1500 ms fails as an unexpected page within moments and closes its tab (Firefox-style, complete before it starts commits)",
+        "the MFC tab > a homepage that redirects to another origin it can read after 0 ms fails as an unexpected page within moments and closes its tab (Firefox-style, complete before it starts commits)",
+        "the MFC tab > a homepage that redirects to another origin it can read after 1500 ms fails as an unexpected page within moments and closes its tab (Firefox-style, complete before it starts commits)",
+        "the MFC tab > a homepage that is answered with a 204 or a download after 0 ms fails as an unexpected page within moments and closes its tab (Firefox-style, complete before it starts commits)",
+        "the MFC tab > a homepage that is answered with a 204 or a download after 1500 ms fails as an unexpected page within moments and closes its tab (Firefox-style, complete before it starts commits)"
+      ]
+    },
+    {
+      "fix": "a2ec7b6d",
+      "bug": "a load the user took over outlived its throttle turn, so the next MFC load overlapped it",
+      "test": "apps/extension/lib/fetcher.test.ts",
+      "fixed": [
+        "the MFC tab > a tab the user focuses during a 70000 ms load is theirs, and the next load waits for that load to end (at once commits)",
+        "the MFC tab > a tab the user focuses during a 70000 ms load is theirs, and the next load waits for that load to end (Chrome-style commits)",
+        "the MFC tab > a tab the user focuses during a 70000 ms load is theirs, and the next load waits for that load to end (Firefox-style commits)",
+        "the MFC tab > a tab the user focuses during a 70000 ms load is theirs, and the next load waits for that load to end (Firefox-style, complete before it starts commits)",
+        "the MFC tab > a worker restarted while a load the user took over still runs waits for it to end",
+        "one MFC load at a time, each 2.5 s after the last ended, and only unclaimed tabs of the extension's closed, across cancels, challenges, rate limits, stalled, redirected and dropped navigations, picture reads, claims and restarts (at once commits)",
+        "one MFC load at a time, each 2.5 s after the last ended, and only unclaimed tabs of the extension's closed, across cancels, challenges, rate limits, stalled, redirected and dropped navigations, picture reads, claims and restarts (Chrome-style commits)",
+        "one MFC load at a time, each 2.5 s after the last ended, and only unclaimed tabs of the extension's closed, across cancels, challenges, rate limits, stalled, redirected and dropped navigations, picture reads, claims and restarts (Firefox-style commits)",
+        "one MFC load at a time, each 2.5 s after the last ended, and only unclaimed tabs of the extension's closed, across cancels, challenges, rate limits, stalled, redirected and dropped navigations, picture reads, claims and restarts (Firefox-style, complete before it starts commits)"
+      ]
+    },
+    {
+      "fix": "e23ace1d",
+      "bug": "an owned MFC tab on the browser's error page failed every later item in the drain",
+      "test": "apps/extension/lib/fetcher.test.ts",
+      "fixed": [
+        "the MFC tab > its own tab on the browser's error page fails only the item it was asked for, and the next item loads a fresh tab",
+        "the MFC tab > while every tab of its own shows the browser's error page, each item fails after one fresh tab"
+      ]
     }
   ],
   "lint": [
