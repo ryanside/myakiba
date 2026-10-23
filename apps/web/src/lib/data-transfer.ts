@@ -3,22 +3,15 @@ import {
   dataTransferArchiveV1Schema,
 } from "@myakiba/contracts/data-transfer/schema";
 import type { DataTransferArchiveV1 } from "@myakiba/contracts/data-transfer/schema";
+import { parseJson } from "@myakiba/utils/parse-json";
 
 export function parseDataTransferJson(rawJson: string): DataTransferArchiveV1 {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(rawJson);
-  } catch {
-    throw new Error("This file is not valid JSON.");
-  }
+  const { data, error } = parseJson(dataTransferArchiveV1Schema, rawJson);
+  if (error === null) return data;
+  if (!("issues" in error)) throw new Error("This file is not valid JSON.");
 
-  const result = dataTransferArchiveV1Schema.safeParse(parsed);
-  if (!result.success) {
-    const firstIssue = result.error.issues[0];
-    throw new Error(firstIssue?.message ?? "This is not a supported myakiba export.");
-  }
-
-  return result.data;
+  const firstIssue = error.issues[0];
+  throw new Error(firstIssue?.message ?? "This is not a supported myakiba export.");
 }
 
 export async function readDataTransferFile(file: File): Promise<DataTransferArchiveV1> {

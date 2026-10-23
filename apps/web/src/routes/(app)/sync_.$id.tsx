@@ -55,7 +55,7 @@ function RouteComponent(): ReactNode {
     );
 
     setPagination((current) => ({ ...current, pageIndex: 0 }));
-    setFilters({ status: statuses.length > 0 ? statuses : undefined });
+    void setFilters({ status: statuses.length > 0 ? statuses : undefined });
   };
 
   const {

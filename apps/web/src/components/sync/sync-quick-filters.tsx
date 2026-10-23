@@ -32,7 +32,7 @@ export function SyncQuickFilters(): React.ReactElement {
   const handleSyncTypeChange = (values: string[]): void => {
     const types = values.filter((v): v is SyncType => VALID_SYNC_TYPES.has(v));
 
-    setFilters({
+    void setFilters({
       syncType: types.length > 0 ? types : undefined,
       page: undefined,
     });
@@ -41,7 +41,7 @@ export function SyncQuickFilters(): React.ReactElement {
   const handleStatusChange = (values: string[]): void => {
     const statuses = values.filter((v): v is SyncSessionStatus => VALID_STATUSES.has(v));
 
-    setFilters({
+    void setFilters({
       status: statuses.length > 0 ? statuses : undefined,
       page: undefined,
     });

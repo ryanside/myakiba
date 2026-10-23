@@ -77,7 +77,7 @@ export function SyncSessionsDataGrid({
 
   const handleRowClick = useCallback(
     (row: SyncSessionRow) => {
-      navigate({ to: "/sync/$id", params: { id: row.id } });
+      void navigate({ to: "/sync/$id", params: { id: row.id } });
     },
     [navigate],
   );

@@ -51,7 +51,7 @@ function RouteComponent() {
 
   const handlePaginationChange = useCallback(
     (newPage: number, newLimit: number) => {
-      setFilters({ page: newPage, limit: newLimit });
+      void setFilters({ page: newPage, limit: newLimit });
     },
     [setFilters],
   );
