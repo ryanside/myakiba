@@ -1030,7 +1030,7 @@ test("an oversized archive answers before opening a transaction", async () => {
   }
 });
 
-test("a failed persistence fallback retains both errors and the original cause", async () => {
+test("a failed persistence fallback warns and rethrows the original error", async () => {
   const runInfo = await startRun(archiveOf([], [collectionRecord("c1", 98_777)]));
   const { DataTransfer } = await import("./module");
   const { default: service } = await import("./service");
@@ -1038,6 +1038,9 @@ test("a failed persistence fallback retains both errors and the original cause",
   const { Viewer } = await import("@/domain/viewer");
   const original = new Error("item persistence failed");
   const fallback = new Error("failure recording failed");
+  initLogger({ enabled: true });
+  const log = createRequestLogger();
+  initLogger({ enabled: false });
   const persist = spyOn(service, "completeItem").mockRejectedValue(original);
   const record = spyOn(service, "failItem").mockRejectedValue(fallback);
   try {
@@ -1053,14 +1056,46 @@ test("a failed persistence fallback retains both errors and the original cause",
             type: "image/jpeg",
           }),
         },
-        createRequestLogger(),
+        log,
       ),
-    ).rejects.toMatchObject({
-      cause: original,
-      errors: [original, fallback],
+    ).rejects.toBe(original);
+    expect(log.getContext()).toMatchObject({
+      requestLogs: [expect.objectContaining({ level: "warn", message: fallback.message })],
     });
   } finally {
     persist.mockRestore();
     record.mockRestore();
   }
 });
+
+test.each([1, 2])(
+  "data-transfer SSE read %s keeps the original error in its wide event",
+  async (failAt) => {
+    await startRun(archiveOf([], [collectionRecord("c1", 98_777)]));
+    const { default: service } = await import("./service");
+    const { useLogger } = await import("evlog/elysia");
+    const original = service.getImportJobStatus.bind(service);
+    let reads = 0;
+    let logged: ReturnType<typeof useLogger> | undefined;
+    const read = spyOn(service, "getImportJobStatus").mockImplementation(async (...args) => {
+      logged = useLogger();
+      reads += 1;
+      if (reads === failAt) throw new Error("original import read error");
+      return original(...args);
+    });
+    initLogger({ enabled: true });
+    try {
+      const response = await app.handle(
+        new Request("http://localhost/api/data-transfer/imports/current/status", { headers }),
+      );
+      await response.text();
+      expect(logged?.getContext()).toMatchObject({
+        action: "dataTransfer.importStatus",
+        error: { message: "original import read error" },
+      });
+    } finally {
+      initLogger({ enabled: false });
+      read.mockRestore();
+    }
+  },
+);

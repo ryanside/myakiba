@@ -1574,3 +1574,107 @@ test("a mixed failure batch preserves imported Items and ignores a stale job", a
     { id: Z, status: "failed", reason: "MyFigureCollection took too long to answer" },
   ]);
 });
+
+test.each(["item", "csv", "order", "order-item", "collection"] as const)(
+  "%s keeps the existing-item lookup's 500 body",
+  async (type) => {
+    await db.insert(order).values({ id: "lookup-order", userId, title: "Order" });
+    const bodies = {
+      item: { items: [X] },
+      csv: [csvRow(X, "Owned", "10.00")],
+      order: orderBody([orderItem(X, 100)]),
+      "order-item": { orderId: "lookup-order", items: [orderItem(X, 100)] },
+      collection: [collectionEntry(X, 100)],
+    };
+    const { default: service } = await import("./service");
+    const lookup = spyOn(
+      service,
+      "getExistingItemsWithLatestReleaseByExternalIds",
+    ).mockRejectedValue(new Error("lookup unavailable"));
+    try {
+      expect(await post(`/${type}`, bodies[type])).toEqual({
+        status: 500,
+        body: "Failed to check for existing items",
+      });
+    } finally {
+      lookup.mockRestore();
+    }
+  },
+);
+
+test("the order lookup keeps its own 500 body", async () => {
+  const { default: service } = await import("./service");
+  const lookup = spyOn(service, "getOrderByIdForUser").mockRejectedValue(
+    new Error("order lookup unavailable"),
+  );
+  try {
+    expect(await post("/order-item", { orderId: "order", items: [orderItem(X, 100)] })).toEqual({
+      status: 500,
+      body: "Failed to load order",
+    });
+  } finally {
+    lookup.mockRestore();
+  }
+});
+
+test.each([1, 2])("sync SSE read %s keeps the original error in its wide event", async (failAt) => {
+  const run = await start("item", { items: [X] });
+  const { default: service } = await import("./service");
+  const { useLogger } = await import("evlog/elysia");
+  const original = service.getJobStatus.bind(service);
+  let reads = 0;
+  let logged: ReturnType<typeof useLogger> | undefined;
+  const read = spyOn(service, "getJobStatus").mockImplementation(async (...args) => {
+    logged = useLogger();
+    reads += 1;
+    if (reads === failAt) throw new Error("original sync read error");
+    return original(...args);
+  });
+  initLogger({ enabled: true });
+  try {
+    const response = await app.handle(
+      new Request(`http://localhost/api/sync/job-status?jobId=${run.jobId}`, {
+        headers: { "x-test-user": userId },
+      }),
+    );
+    await response.text();
+    expect(logged?.getContext()).toMatchObject({
+      action: "sync.jobStatus",
+      error: { message: "original sync read error" },
+    });
+  } finally {
+    initLogger({ enabled: false });
+    read.mockRestore();
+  }
+});
+
+test.each([true, false])(
+  "CSV keeps its route action when it needs a fetch: %s",
+  async (missing) => {
+    const { default: service } = await import("./service");
+    const { useLogger } = await import("evlog/elysia");
+    const original = service.getExistingItemsWithLatestReleaseByExternalIds.bind(service);
+    let logged: ReturnType<typeof useLogger> | undefined;
+    const read = spyOn(
+      service,
+      "getExistingItemsWithLatestReleaseByExternalIds",
+    ).mockImplementation(async (...args) => {
+      logged = useLogger();
+      return original(...args);
+    });
+    initLogger({ enabled: true });
+    try {
+      expect(await post("/csv", [csvRow(missing ? X : PRESENT, "Owned", "10.00")])).toMatchObject({
+        status: 200,
+      });
+      expect(logged?.getContext()).toMatchObject({
+        action: "sync.csv",
+        outcome: "success",
+        user: { id: userId },
+      });
+    } finally {
+      initLogger({ enabled: false });
+      read.mockRestore();
+    }
+  },
+);

@@ -122,10 +122,12 @@ const syncRouter = privateApi("/sync")
   .post(
     "/order-item",
     async (ctx) => {
-      const plan = await serve(ctx, Sync.planOrderItem, {
+      const order = await serve(ctx, Sync.order, {
         body: ctx.body,
         emailVerified: ctx.user.emailVerified,
       });
+      if (order instanceof ElysiaCustomStatusResponse) return order;
+      const plan = await serve(ctx, Sync.planOrderItem, { body: ctx.body, order });
       if (plan instanceof ElysiaCustomStatusResponse) return plan;
       const saved = plan.response.jobId
         ? await serve(ctx, Sync.start, plan)
@@ -250,10 +252,8 @@ const syncRouter = privateApi("/sync")
   .get(
     "/job-status",
     async function* (ctx) {
-      const { query, user, log, request } = ctx;
+      const { query, log, request } = ctx;
       log.set({
-        action: "sync.jobStatus",
-        user: { id: user.id },
         sync: { jobId: query.jobId },
       });
 
@@ -276,15 +276,8 @@ const syncRouter = privateApi("/sync")
       const initialJobStatus = await serve(ctx, Sync.jobStatus, { jobId });
 
       if (initialJobStatus instanceof ElysiaCustomStatusResponse) {
-        const initialJobStatusError = new Error(String(initialJobStatus.response));
         const isNotFound = initialJobStatus.code === 404;
         const message = isNotFound ? "Job not found" : "Error fetching job status";
-
-        if (isNotFound) {
-          log.set({ outcome: "not_found" });
-        } else {
-          log.error(initialJobStatusError, { step: "getJobStatus", outcome: "error" });
-        }
 
         yield sse({
           data: createTerminalJobStatus({
@@ -333,15 +326,8 @@ const syncRouter = privateApi("/sync")
         const replayJobStatus = await serve(ctx, Sync.jobStatus, { jobId });
 
         if (replayJobStatus instanceof ElysiaCustomStatusResponse) {
-          const replayJobStatusError = new Error(String(replayJobStatus.response));
           const isNotFound = replayJobStatus.code === 404;
           const message = isNotFound ? "Job not found" : "Error fetching job status";
-
-          if (isNotFound) {
-            log.set({ outcome: "not_found" });
-          } else {
-            log.error(replayJobStatusError, { step: "getJobStatusReplay", outcome: "error" });
-          }
 
           yield sse({
             data: createTerminalJobStatus({
@@ -427,14 +413,11 @@ const syncRouter = privateApi("/sync")
             nextPollAt = Date.now() + JOB_STATUS_POLL_INTERVAL_MS;
             const polledStatus = await serve(ctx, Sync.jobStatus, { jobId });
             if (polledStatus instanceof ElysiaCustomStatusResponse) {
-              const pollError = new Error(String(polledStatus.response));
               const isNotFound = polledStatus.code === 404;
               if (!isNotFound) {
-                log.error(pollError, { step: "getJobStatusHeartbeat", outcome: "error" });
                 yield sse({ data: latestJobStatus });
                 continue;
               }
-              log.set({ outcome: "not_found" });
               yield sse({
                 data: createTerminalJobStatus({
                   jobId,

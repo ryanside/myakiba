@@ -124,9 +124,10 @@ export const DataTransfer = {
           scope.log.error(error);
           return recorded;
         } catch (recordError) {
-          throw new AggregateError([error, recordError], "Failed to record the item failure.", {
-            cause: error,
+          scope.log.warn(recordError instanceof Error ? recordError.message : String(recordError), {
+            step: "dataTransfer.failItem",
           });
+          throw error;
         }
       },
     },

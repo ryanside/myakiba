@@ -492,3 +492,25 @@ test("a committed failure saves its writes and effects before answering its stat
   expect(await userExists("served-committed-failure")).toBe(true);
   expect({ effects, retries, recoveries }).toEqual({ effects: 2, retries: 0, recoveries: 0 });
 });
+
+test("several operations in a route keep its first action and log the failing step", async () => {
+  initLogger({ enabled: true });
+  const caller = { viewer, log: createRequestLogger() };
+  initLogger({ enabled: false });
+  await serve(caller, writeThen("ok"), { id: "route-action" });
+  const original = new Error("later operation failed");
+  const later = query({ action: "test.later", failure: "Later failed" }, async () => {
+    throw original;
+  });
+  expect(await serve(caller, later, {})).toMatchObject({
+    code: 500,
+    response: "Later failed",
+  });
+  expect(caller.log.getContext()).toMatchObject({
+    action: "test.write",
+    user: { id: viewer.userId },
+    outcome: "error",
+    step: "test.later",
+    error: { message: original.message },
+  });
+});

@@ -180,3 +180,6 @@ void (true satisfies Equal<
   FailuresOf<typeof committedFailure>,
   ReturnType<typeof fail<"conflict", "Saved failure">>
 >);
+
+// @ts-expect-error an unexpected 500 is always a throw, never an expected failure
+command(config, async () => fail("internal_error", "Unexpected failure"));

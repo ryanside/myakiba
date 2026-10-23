@@ -209,17 +209,12 @@ export const Sync = {
       const { log } = scope;
       if (!input.emailVerified) {
         log.set({
-          action: "sync.csv",
-          outcome: "forbidden",
-          user: { id: scope.viewer.userId },
           sync: { type: "csv", reason: "email_not_verified" },
         });
         return fail("forbidden", SYNC_STATUS_MESSAGES.requireEmailVerification);
       }
 
       log.set({
-        action: "sync.csv",
-        user: { id: scope.viewer.userId },
         sync: { type: "csv" },
         items: { requested: body.length },
       });
@@ -231,20 +226,10 @@ export const Sync = {
       }));
 
       const itemExternalIds = items.map((item) => item.itemExternalId);
-      let existingItems;
-      try {
-        existingItems = await SyncService.getExistingItemsWithLatestReleaseByExternalIds(
-          itemExternalIds,
-          scope.tx,
-        );
-      } catch (error) {
-        log.error(error instanceof Error ? error : new Error(String(error)), {
-          step: "getExistingItemsWithLatestRelease",
-          outcome: "error",
-          sync: { type: "csv" },
-        });
-        return fail("internal_error", "Failed to check for existing items");
-      }
+      const existingItems = await SyncService.getExistingItemsWithLatestReleaseByExternalIds(
+        itemExternalIds,
+        scope.tx,
+      );
 
       const result = prepareCsvItems(items, existingItems, scope.viewer.userId);
       const {
@@ -279,7 +264,6 @@ export const Sync = {
         : SYNC_STATUS_MESSAGES.insertedFromExisting;
 
       log.set({
-        outcome: "success",
         sync: {
           type: "csv",
           sessionId: syncSessionId,
@@ -322,17 +306,12 @@ export const Sync = {
       const { log } = scope;
       if (!input.emailVerified) {
         log.set({
-          action: "sync.order",
-          outcome: "forbidden",
-          user: { id: scope.viewer.userId },
           sync: { type: "order", reason: "email_not_verified" },
         });
         return fail("forbidden", SYNC_STATUS_MESSAGES.requireEmailVerification);
       }
 
       log.set({
-        action: "sync.order",
-        user: { id: scope.viewer.userId },
         sync: { type: "order" },
         items: { requested: body.items.length },
       });
@@ -345,20 +324,10 @@ export const Sync = {
       }));
       const itemExternalIds = normalizedItems.map((item) => item.itemExternalId);
 
-      let existingItems;
-      try {
-        existingItems = await SyncService.getExistingItemsWithLatestReleaseByExternalIds(
-          itemExternalIds,
-          scope.tx,
-        );
-      } catch (error) {
-        log.error(error instanceof Error ? error : new Error(String(error)), {
-          step: "getExistingItemsWithLatestRelease",
-          outcome: "error",
-          sync: { type: "order" },
-        });
-        return fail("internal_error", "Failed to check for existing items");
-      }
+      const existingItems = await SyncService.getExistingItemsWithLatestReleaseByExternalIds(
+        itemExternalIds,
+        scope.tx,
+      );
 
       const { externalIdToInternalId, releaseIdsByItemId, releaseDatesByItemId } =
         buildExistingItemLookups(existingItems);
@@ -467,7 +436,6 @@ export const Sync = {
       const jobId = itemsToFetch.length > 0 ? syncSessionId : null;
 
       log.set({
-        outcome: "success",
         sync: {
           type: "order",
           sessionId: syncSessionId,
@@ -512,8 +480,8 @@ export const Sync = {
       });
     },
   ),
-  planOrderItem: query(
-    { action: "sync.orderItem", failure: "Failed to check for existing items" },
+  order: query(
+    { action: "sync.orderItem", failure: "Failed to load order" },
     async (
       scope,
       input: { readonly body: SyncOrderItemsInput; readonly emailVerified: boolean },
@@ -522,43 +490,27 @@ export const Sync = {
       const { log } = scope;
       if (!input.emailVerified) {
         log.set({
-          action: "sync.orderItem",
-          outcome: "forbidden",
-          user: { id: scope.viewer.userId },
           sync: { type: "order-item", orderId: body.orderId, reason: "email_not_verified" },
         });
         return fail("forbidden", SYNC_STATUS_MESSAGES.requireEmailVerification);
       }
 
       log.set({
-        action: "sync.orderItem",
-        user: { id: scope.viewer.userId },
         sync: { type: "order-item", orderId: body.orderId },
         items: { requested: body.items.length },
       });
 
-      let existingOrder;
-      try {
-        existingOrder = await SyncService.getOrderByIdForUser(
-          body.orderId,
-          scope.viewer.userId,
-          scope.tx,
-        );
-      } catch (error) {
-        log.error(error instanceof Error ? error : new Error(String(error)), {
-          step: "getOrderByIdForUser",
-          outcome: "error",
-          sync: { type: "order-item", orderId: body.orderId },
-        });
-        return fail("internal_error", "Failed to load order");
-      }
+      const existingOrder = await SyncService.getOrderByIdForUser(
+        body.orderId,
+        scope.viewer.userId,
+        scope.tx,
+      );
 
       if (!existingOrder) {
-        log.set({ outcome: "not_found" });
         return fail("not_found", "Order not found");
       }
 
-      const orderDetails: UpdatedSyncOrder = {
+      return ok({
         id: existingOrder.id,
         userId: existingOrder.userId,
         status: existingOrder.status,
@@ -576,7 +528,17 @@ export const Sync = {
         tariffs: existingOrder.tariffs,
         miscFees: existingOrder.miscFees,
         notes: existingOrder.notes,
-      };
+      } satisfies UpdatedSyncOrder);
+    },
+  ),
+  planOrderItem: query(
+    { action: "sync.orderItem", failure: "Failed to check for existing items" },
+    async (
+      scope,
+      input: { readonly body: SyncOrderItemsInput; readonly order: UpdatedSyncOrder },
+    ) => {
+      const { body, order: orderDetails } = input;
+      const { log } = scope;
 
       const normalizedItems = body.items.map((item: SyncOrderItemInput) => ({
         ...item,
@@ -584,20 +546,10 @@ export const Sync = {
       }));
       const itemExternalIds = normalizedItems.map((item) => item.itemExternalId);
 
-      let existingItems;
-      try {
-        existingItems = await SyncService.getExistingItemsWithLatestReleaseByExternalIds(
-          itemExternalIds,
-          scope.tx,
-        );
-      } catch (error) {
-        log.error(error instanceof Error ? error : new Error(String(error)), {
-          step: "getExistingItemsWithLatestRelease",
-          outcome: "error",
-          sync: { type: "order-item", orderId: body.orderId },
-        });
-        return fail("internal_error", "Failed to check for existing items");
-      }
+      const existingItems = await SyncService.getExistingItemsWithLatestReleaseByExternalIds(
+        itemExternalIds,
+        scope.tx,
+      );
 
       const { externalIdToInternalId, releaseIdsByItemId } =
         buildExistingItemLookups(existingItems);
@@ -607,7 +559,7 @@ export const Sync = {
         .map((item) => ({
           ...item,
           itemId: null,
-          orderId: existingOrder.id,
+          orderId: orderDetails.id,
           releaseId: null,
           userId: scope.viewer.userId,
         }));
@@ -621,7 +573,7 @@ export const Sync = {
           {
             ...item,
             itemId: internalItemId,
-            orderId: existingOrder.id,
+            orderId: orderDetails.id,
             releaseId: releaseIdsByItemId.get(internalItemId) ?? null,
             userId: scope.viewer.userId,
           },
@@ -670,7 +622,7 @@ export const Sync = {
         userId: scope.viewer.userId,
         syncType: "order-item" as const,
         itemExternalIds: orderItemExternalIdsToTrack,
-        orderId: existingOrder.id,
+        orderId: orderDetails.id,
         existingItemExternalIds: existingOrderItemExternalIds,
       };
 
@@ -678,22 +630,21 @@ export const Sync = {
         sync: {
           type: "order-item",
           sessionId: syncSessionId,
-          orderId: existingOrder.id,
+          orderId: orderDetails.id,
         },
-        order: { id: existingOrder.id },
+        order: { id: orderDetails.id },
       });
 
       const jobId = itemsToFetch.length > 0 ? syncSessionId : null;
 
       log.set({
-        outcome: "success",
         sync: {
           type: "order-item",
           sessionId: syncSessionId,
           jobId: jobId ?? null,
-          orderId: existingOrder.id,
+          orderId: orderDetails.id,
         },
-        order: { id: existingOrder.id },
+        order: { id: orderDetails.id },
         items: {
           requested: body.items.length,
           existing: existingOrderItemExternalIds.length,
@@ -740,17 +691,12 @@ export const Sync = {
       const { log } = scope;
       if (!input.emailVerified) {
         log.set({
-          action: "sync.collection",
-          outcome: "forbidden",
-          user: { id: scope.viewer.userId },
           sync: { type: "collection", reason: "email_not_verified" },
         });
         return fail("forbidden", SYNC_STATUS_MESSAGES.requireEmailVerification);
       }
 
       log.set({
-        action: "sync.collection",
-        user: { id: scope.viewer.userId },
         sync: { type: "collection" },
         items: { requested: body.length },
       });
@@ -761,20 +707,10 @@ export const Sync = {
       }));
       const itemExternalIds = normalizedItems.map((item) => item.itemExternalId);
 
-      let existingItems;
-      try {
-        existingItems = await SyncService.getExistingItemsWithLatestReleaseByExternalIds(
-          itemExternalIds,
-          scope.tx,
-        );
-      } catch (error) {
-        log.error(error instanceof Error ? error : new Error(String(error)), {
-          step: "getExistingItemsWithLatestRelease",
-          outcome: "error",
-          sync: { type: "collection" },
-        });
-        return fail("internal_error", "Failed to check for existing items");
-      }
+      const existingItems = await SyncService.getExistingItemsWithLatestReleaseByExternalIds(
+        itemExternalIds,
+        scope.tx,
+      );
 
       const { externalIdToInternalId, releaseIdsByItemId } =
         buildExistingItemLookups(existingItems);
@@ -857,7 +793,6 @@ export const Sync = {
       const jobId = itemsToFetch.length > 0 ? syncSessionId : null;
 
       log.set({
-        outcome: "success",
         sync: {
           type: "collection",
           sessionId: syncSessionId,
@@ -915,8 +850,6 @@ export const Sync = {
       const limit = filters.limit ? Number.parseInt(filters.limit, 10) : 20;
 
       log.set({
-        action: "sync.sessions",
-        user: { id: scope.viewer.userId },
         pagination: { page, limit },
         filters: {
           status: filters.status ?? [],
@@ -925,11 +858,9 @@ export const Sync = {
       });
 
       if (Number.isNaN(page) || page < 1) {
-        log.set({ outcome: "bad_request" });
         return fail("bad_request", "Invalid page parameter");
       }
       if (Number.isNaN(limit) || limit < 1 || limit > MAX_LIMIT) {
-        log.set({ outcome: "bad_request" });
         return fail("bad_request", "Invalid limit parameter");
       }
 
@@ -943,7 +874,6 @@ export const Sync = {
       );
 
       log.set({
-        outcome: "success",
         result: {
           sessionCount: result.sessions.length,
           total: result.total,
@@ -965,8 +895,6 @@ export const Sync = {
       const { query: filters, params } = input;
       const { log } = scope;
       log.set({
-        action: "sync.sessionDetail",
-        user: { id: scope.viewer.userId },
         sync: { sessionId: params.id },
         filters: {
           status: filters.status ?? [],
@@ -984,11 +912,9 @@ export const Sync = {
       });
 
       if (page !== undefined && (Number.isNaN(page) || page < 1)) {
-        log.set({ outcome: "bad_request" });
         return fail("bad_request", "Invalid page parameter");
       }
       if (limit !== undefined && (Number.isNaN(limit) || limit < 1 || limit > MAX_LIMIT)) {
-        log.set({ outcome: "bad_request" });
         return fail("bad_request", "Invalid limit parameter");
       }
 
@@ -1002,12 +928,10 @@ export const Sync = {
       );
 
       if (!result) {
-        log.set({ outcome: "not_found" });
         return fail("not_found", "Import not found");
       }
 
       log.set({
-        outcome: "success",
         result: {
           itemCount: result.items.length,
           totalItems: result.totalItems,

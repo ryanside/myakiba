@@ -30,7 +30,6 @@ const FAILURE_STATUS = {
   forbidden: 403,
   conflict: 409,
   payload_too_large: 413,
-  internal_error: 500,
   not_found: 404,
   too_many_requests: 429,
 } as const;
@@ -361,7 +360,10 @@ export async function serve<I, T, F extends Failure, M extends string>(
   op: Op<I, T, F, M>,
   input: NoInfer<I>,
 ): Promise<T | FailureResponse<F> | ElysiaCustomStatusResponse<500, M>> {
-  caller.log.set({ action: op.action, user: { id: caller.viewer.userId } });
+  caller.log.set({
+    action: caller.log.getContext().action ?? op.action,
+    user: { id: caller.viewer.userId },
+  });
   try {
     const outcome = await run(caller.viewer, op, input, caller.log);
     if (outcome.ok) {

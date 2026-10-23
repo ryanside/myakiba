@@ -26,11 +26,7 @@ const dataTransferRouter = privateApi("/data-transfer")
   .get(
     "/imports/current/status",
     async function* (ctx) {
-      const { user, log, request } = ctx;
-      log.set({
-        action: "dataTransfer.importStatus",
-        user: { id: user.id },
-      });
+      const { log, request } = ctx;
 
       const streamStartedAt = Date.now();
       const abortPromise = request.signal.aborted
@@ -42,8 +38,6 @@ const dataTransferRouter = privateApi("/data-transfer")
       const initialStatus = await serve(ctx, DataTransfer.status, {});
 
       if (initialStatus instanceof ElysiaCustomStatusResponse) {
-        const initialStatusError = new Error(String(initialStatus.response));
-        log.error(initialStatusError, { step: "getImportJobStatus", outcome: "error" });
         return;
       }
       if (initialStatus === null) {
@@ -69,8 +63,6 @@ const dataTransferRouter = privateApi("/data-transfer")
       try {
         const replayStatus = await serve(ctx, DataTransfer.status, {});
         if (replayStatus instanceof ElysiaCustomStatusResponse) {
-          const replayStatusError = new Error(String(replayStatus.response));
-          log.error(replayStatusError, { step: "replayImportStatus", outcome: "error" });
           return;
         }
         if (replayStatus === null) {
@@ -121,8 +113,6 @@ const dataTransferRouter = privateApi("/data-transfer")
             nextPollAt = Date.now() + JOB_STATUS_POLL_INTERVAL_MS;
             const polledStatus = await serve(ctx, DataTransfer.status, {});
             if (polledStatus instanceof ElysiaCustomStatusResponse) {
-              const polledStatusError = new Error(String(polledStatus.response));
-              log.error(polledStatusError, { step: "pollImportStatus", outcome: "error" });
               yield sse({ data: latestStatus });
               continue;
             }
