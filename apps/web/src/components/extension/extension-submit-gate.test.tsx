@@ -32,14 +32,8 @@ const accepted = {
   existingItemsToInsert: 0,
   newItems: 1,
   jobId: "job-1",
-  missingMfcItemIds: [98_777],
+  missingMfcItemIds: [],
 };
-const realRun = await import("@/data/extension-run");
-const started: Parameters<typeof realRun.importSyncItems>[0][] = [];
-await mock.module("@/data/extension-run", () => ({
-  ...realRun,
-  importSyncItems: (run: (typeof started)[number]) => started.push(run),
-}));
 const realSync = await import("@/queries/sync");
 await mock.module("@/queries/sync", () => ({
   ...realSync,
@@ -163,7 +157,6 @@ afterEach(() => {
   cleanup();
   dismissMissingExtension();
   sent.length = 0;
-  started.length = 0;
 });
 
 describe.each(FORMS.map((form) => [form.name, form] as const))("%s", (_name, form) => {
@@ -186,7 +179,7 @@ describe.each(FORMS.map((form) => [form.name, form] as const))("%s", (_name, for
     form.kept();
   });
 
-  test("sends when the extension is still there, then fetches the missing items through it", async () => {
+  test("sends when the extension is still there", async () => {
     loadExtension({ installed: true });
     const user = userEvent.setup();
     renderWithDialog(form.render());
@@ -196,7 +189,6 @@ describe.each(FORMS.map((form) => [form.name, form] as const))("%s", (_name, for
     await user.click(screen.getByRole("button", { name: form.submit }));
 
     await waitFor(() => expect(sent).toEqual([form.sends]));
-    expect(started).toEqual([{ sessionId: "ss-1", jobId: "job-1", mfcItemIds: [98_777] }]);
   });
 });
 

@@ -26,10 +26,33 @@ await mock.module("@/data/extension-run", () => ({
   importDataTransferItems: (run: (typeof importRuns)[number]) => importRuns.push(run),
 }));
 
+const accepted = (newItems: number, missingMfcItemIds: number[]) => ({
+  syncSessionId: "ss-1",
+  status: "Import queued",
+  isFinished: missingMfcItemIds.length === 0,
+  existingItemsToInsert: 1 - newItems,
+  newItems,
+  jobId: missingMfcItemIds.length === 0 ? null : "job-1",
+  missingMfcItemIds,
+});
+let syncAnswer = accepted(1, [98_777]);
+let syncsSent = 0;
 const realSync = await import("@/queries/sync");
 await mock.module("@/queries/sync", () => ({
   ...realSync,
+  sendItemSync: async () => {
+    syncsSent += 1;
+    return syncAnswer;
+  },
+  sendOrder: async () => syncAnswer,
   retrySyncSession: async () => ({ jobId: "job-2", missingMfcItemIds: [11, 12] }),
+}));
+const session = { user: { currency: "USD", dateFormat: "MM/DD/YYYY", username: "fixture" } };
+const realRouter = await import("@tanstack/react-router");
+await mock.module("@tanstack/react-router", () => ({
+  ...realRouter,
+  useNavigate: () => async () => {},
+  getRouteApi: () => ({ useRouteContext: () => ({ session }) }),
 }));
 
 const partialImport: DataTransferImport = {
@@ -71,6 +94,7 @@ await mock.module("@/lib/data-transfer", () => ({
 }));
 
 const { RetrySyncSessionButton } = await import("@/components/sync/retry-sync-session-button");
+const { SyncActionSheet } = await import("@/components/sync/sync-launcher");
 const { DataTransfer } = await import("@/components/settings/data-transfer");
 
 function renderWithQueries(ui: ReactElement) {
@@ -82,6 +106,42 @@ afterEach(() => {
   syncRuns.length = 0;
   importRuns.length = 0;
   currentImport = null;
+  syncAnswer = accepted(1, [98_777]);
+  syncsSent = 0;
+});
+
+async function submitForm(syncType: "item" | "order", submit: string) {
+  const user = userEvent.setup();
+  renderWithQueries(<SyncActionSheet syncType={syncType} onSyncTypeChange={() => {}} />);
+  await user.type(screen.getByPlaceholderText("MyFigureCollection item link or ID"), "98777");
+  await user.click(screen.getByRole("button", { name: submit }));
+}
+
+test.each([
+  ["item", "Add"],
+  ["order", "Create order"],
+] as const)(
+  "a %s sync fetches the items its response lists as missing",
+  async (syncType, submit) => {
+    await submitForm(syncType, submit);
+
+    await waitFor(() =>
+      expect(syncRuns).toEqual([{ sessionId: "ss-1", jobId: "job-1", mfcItemIds: [98_777] }]),
+    );
+  },
+);
+
+test("a sync with nothing missing starts no fetch", async () => {
+  syncAnswer = accepted(0, []);
+  await submitForm("item", "Add");
+
+  await waitFor(() => expect(syncsSent).toBe(1));
+  await waitFor(() =>
+    expect(
+      screen.getByPlaceholderText<HTMLInputElement>("MyFigureCollection item link or ID").value,
+    ).toBe(""),
+  );
+  expect(syncRuns).toEqual([]);
 });
 
 test("a session retry fetches the items it returned under the retry's job", async () => {
