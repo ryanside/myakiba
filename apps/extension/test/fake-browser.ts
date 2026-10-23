@@ -178,6 +178,7 @@ export const COMMIT_STYLES: readonly (readonly [string, CommitStyle | undefined]
 ];
 
 const IDLE_POLLS = 3;
+const DRAGGING = "Tabs cannot be edited right now (user may be dragging a tab).";
 
 const MFC_ORIGINS = new Set([
   ...HOST_ORIGINS,
@@ -359,6 +360,7 @@ function fakeTabs(
     async update(tabId, { url, active }) {
       const tab = tabs.get(tabId);
       if (!tab) throw new Error(`No tab with id: ${tabId}`);
+      if (active && dragged.size > 0) throw new Error(DRAGGING);
       if (url !== undefined) load(tab, url, options.navigationMs());
       const answer = url === undefined ? view(tab) : started(tab);
       log.push(`update ${tabId}${url === undefined ? "" : ` ${url}`}${active ? " active" : ""}`);
@@ -369,9 +371,7 @@ function fakeTabs(
       return answer;
     },
     async remove(tabId) {
-      if (dragged.has(tabId)) {
-        throw new Error("Tabs cannot be edited right now (user may be dragging a tab).");
-      }
+      if (dragged.size > 0) throw new Error(DRAGGING);
       tabs.delete(tabId);
       log.push(`remove ${tabId}`);
       stopLoading(tabId);
@@ -406,7 +406,7 @@ function fakeTabs(
       if (tab) load(tab, change.url ?? tab.url, change.loadMs ?? 0, change.title, true);
     },
     activate: activateByUser,
-    /** While the user drags a tab, Chrome refuses to close it. */
+    /** While the user drags a tab, Chrome refuses to close or focus any tab. */
     drag(tabId: number, dragging: boolean): void {
       if (dragging) dragged.add(tabId);
       else dragged.delete(tabId);

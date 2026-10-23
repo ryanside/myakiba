@@ -873,6 +873,24 @@ describe("a challenge", () => {
     expect(extension.clock.now() - startedAt).toBeGreaterThanOrEqual(CHALLENGE_WINDOW_MS);
   });
 
+  test("whose tab the browser refuses to show, as during a drag, stays the extension's and closes once it can", async () => {
+    const challenge = challengeOn([7]);
+    const extension = fakeExtension({
+      pages: (request) => {
+        extension.tabs.drag(extension.myakiba.tabId, true);
+        return challenge.pages(request);
+      },
+    });
+    const run = extension.run([7]);
+    await extension.clock.runUntil(run.done);
+    extension.tabs.drag(extension.myakiba.tabId, false);
+    await extension.settle();
+
+    expect(run.results()).toEqual([{ ok: false, error: "challenge_unsolved" }]);
+    expect(extension.tabs.shownByExtension).toEqual([]);
+    expect(extension.tabs.has(101)).toBe(false);
+  });
+
   test("left unsolved fails every queued item without opening another challenge", async () => {
     const extension = fakeExtension({ pages: challengeOn([7, 8, 9]).pages });
     const first = extension.run([7, 8]);

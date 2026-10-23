@@ -58,8 +58,8 @@ export function createMfcTabs(deps: {
     ): Promise<number> {
       const tabId = await own.load(requester, mfcItemUrl(mfcItemId, origins), signal);
       signal.throwIfAborted();
-      await own.claim(tabId);
       const shown = await tabs.update(tabId, { active: true });
+      await own.claim(tabId);
       if (shown?.windowId !== undefined) await windows.update(shown.windowId, { focused: true });
       return tabId;
     },
