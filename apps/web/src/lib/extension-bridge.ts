@@ -120,13 +120,16 @@ export function createExtensionBridge(win: BridgeWindow): ExtensionBridge {
   function probe(): Promise<ExtensionStatus> {
     if (probing) return probing.result;
     const hellos = new Set<string>();
-    const { promise: result, resolve } = Promise.withResolvers<ExtensionStatus>();
+    let settle: (status: ExtensionStatus) => void = () => {};
+    const result = new Promise<ExtensionStatus>((resolve) => {
+      settle = resolve;
+    });
     let timer: ReturnType<typeof setTimeout> | undefined;
     const answer = (next: ExtensionStatus) => {
       clearTimeout(timer);
       probing = null;
       setStatus(next);
-      resolve(next);
+      settle(next);
     };
     probing = { hellos, answer, result };
     const deadline = Date.now() + HELLO_TIMEOUT_MS;

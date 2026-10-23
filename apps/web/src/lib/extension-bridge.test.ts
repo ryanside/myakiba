@@ -64,6 +64,18 @@ describe("probe", () => {
     expect(kinds.map((status) => status.kind)).toEqual(["ready", "absent", "ready"]);
   });
 
+  test("works in a browser without Promise.withResolvers", async () => {
+    const { withResolvers } = Promise;
+    Reflect.deleteProperty(Promise, "withResolvers");
+    try {
+      const bridge = createExtensionBridge(fakeExtension().window);
+
+      expect(await bridge.probe()).toEqual({ kind: "ready", extensionVersion: "0.1.0" });
+    } finally {
+      Promise.withResolvers = withResolvers;
+    }
+  });
+
   test("probes that overlap share one round of hellos", async () => {
     const extension = fakeExtension({ installed: false });
     const bridge = createExtensionBridge(extension.window);

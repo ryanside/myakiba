@@ -5,6 +5,7 @@ import {
   configure,
   fireEvent,
   render,
+  renderHook,
   screen,
   waitFor,
 } from "@testing-library/react";
@@ -45,7 +46,7 @@ await mock.module("@/queries/sync", () => ({
 }));
 
 const { ExtensionRequiredDialog } = await import("./extension-required-dialog");
-const { dismissMissingExtension } = await import("@/lib/extension-gate");
+const { dismissMissingExtension, useExtensionGate } = await import("@/lib/extension-gate");
 const { default: SyncWidget } = await import("@/components/sync/sync-widget");
 const { LAUNCHABLE_SYNC_OPTIONS } = await import("@/components/sync/sync-launcher-options");
 const { AppCommand } = await import("@/components/command/app-command");
@@ -472,4 +473,25 @@ test("a gated button shows it is checking and ignores a second click until the c
     setTimeout(resolve, 50);
   });
   expect(calls).toBe(1);
+});
+
+test("a gate whose check throws stops checking and can check again", async () => {
+  const ready = createExtensionBridge(fakeExtension().window);
+  bridge = { ...ready, probe: () => Promise.reject(new Error("probe failed")) };
+  const { result } = renderHook(() => useExtensionGate());
+  let proceeded = 0;
+  const proceed = () => {
+    proceeded += 1;
+  };
+
+  await act(async () => {
+    await expect(result.current.gate(proceed)).rejects.toThrow("probe failed");
+  });
+  expect(result.current.checking).toBe(false);
+  bridge = ready;
+  await act(async () => {
+    await result.current.gate(proceed);
+  });
+
+  expect(proceeded).toBe(1);
 });

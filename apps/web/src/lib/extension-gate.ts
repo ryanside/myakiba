@@ -49,9 +49,13 @@ export function useExtensionGate(): ExtensionGate {
     if (asking.current) return;
     asking.current = true;
     setChecking(true);
-    const ready = await requireExtension();
-    asking.current = false;
-    setChecking(false);
+    let ready: boolean;
+    try {
+      ready = await requireExtension();
+    } finally {
+      asking.current = false;
+      setChecking(false);
+    }
     if (ready) proceed();
   }, []);
   return { checking, gate };
