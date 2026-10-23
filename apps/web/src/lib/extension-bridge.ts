@@ -85,8 +85,11 @@ export function createExtensionBridge(win: BridgeWindow): ExtensionBridge {
   const listeners = new Set<() => void>();
   const runs = new Map<string, (event: RunEvent) => void>();
   let status: ExtensionStatus = { kind: "checking" };
-  let probing: Promise<ExtensionStatus> | null = null;
-  let answered: (() => void) | null = null;
+  let probing: {
+    readonly hellos: ReadonlySet<string>;
+    readonly answer: (next: ExtensionStatus) => void;
+    readonly result: Promise<ExtensionStatus>;
+  } | null = null;
 
   function setStatus(next: ExtensionStatus): void {
     status = next;
@@ -106,36 +109,40 @@ export function createExtensionBridge(win: BridgeWindow): ExtensionBridge {
     if (!decoded.success) return;
     const { requestId, event } = decoded.data;
     if (event.type === "announce") {
-      setStatus(statusFromAnnounce(event));
-      answered?.();
+      const next = statusFromAnnounce(event);
+      if (requestId !== null && probing?.hellos.has(requestId)) probing.answer(next);
+      else setStatus(next);
       return;
     }
     if (requestId !== null) runs.get(requestId)?.(event);
   });
 
   function probe(): Promise<ExtensionStatus> {
-    probing ??= new Promise((resolve) => {
-      let timer: ReturnType<typeof setTimeout> | undefined;
-      const finish = (next: ExtensionStatus | null) => {
-        clearTimeout(timer);
-        answered = null;
-        probing = null;
-        if (next) setStatus(next);
-        resolve(status);
-      };
-      answered = () => finish(null);
-      const deadline = Date.now() + HELLO_TIMEOUT_MS;
-      const hello = () => {
-        if (Date.now() >= deadline) {
-          finish({ kind: "absent" });
-          return;
-        }
-        post(crypto.randomUUID(), { type: "hello" });
-        timer = setTimeout(hello, HELLO_INTERVAL_MS);
-      };
-      hello();
-    });
-    return probing;
+    if (probing) return probing.result;
+    const hellos = new Set<string>();
+    const { promise: result, resolve } = Promise.withResolvers<ExtensionStatus>();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const answer = (next: ExtensionStatus) => {
+      clearTimeout(timer);
+      probing = null;
+      setStatus(next);
+      resolve(next);
+    };
+    probing = { hellos, answer, result };
+    const deadline = Date.now() + HELLO_TIMEOUT_MS;
+    const hello = () => {
+      if (Date.now() >= deadline) {
+        // An update orphans the old content script, which then stays silent until the page reloads.
+        answer(status.kind === "outdated" ? status : { kind: "absent" });
+        return;
+      }
+      const requestId = crypto.randomUUID();
+      hellos.add(requestId);
+      post(requestId, { type: "hello" });
+      timer = setTimeout(hello, HELLO_INTERVAL_MS);
+    };
+    hello();
+    return result;
   }
 
   async function* fetchBatch(

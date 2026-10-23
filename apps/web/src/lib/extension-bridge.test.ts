@@ -86,6 +86,39 @@ describe("probe", () => {
     expect(seen).toEqual(["ready"]);
   });
 
+  test("a late answer to an earlier probe does not answer a fresh one", async () => {
+    const extension = fakeExtension({ installed: false });
+    const bridge = createExtensionBridge(extension.window);
+    await bridge.probe();
+    const earlierHello = extension.posted[0]?.message.requestId ?? null;
+
+    const fresh = bridge.probe();
+    extension.announce(earlierHello);
+
+    expect(await fresh).toEqual({ kind: "absent" });
+  });
+
+  test("an unprompted announce updates the status but does not answer a probe", async () => {
+    const extension = fakeExtension({ installed: false });
+    const bridge = createExtensionBridge(extension.window);
+
+    const probing = bridge.probe();
+    extension.announce(null);
+    expect(bridge.status().kind).toBe("ready");
+
+    expect(await probing).toEqual({ kind: "absent" });
+  });
+
+  test("an outdated extension that goes silent after its update stays outdated", async () => {
+    const extension = fakeExtension({ protocols: { min: 0, max: 0 } });
+    const bridge = createExtensionBridge(extension.window);
+    await bridge.probe();
+
+    extension.setInstalled(false);
+
+    expect(await bridge.probe()).toEqual({ kind: "outdated", extensionVersion: "0.1.0" });
+  });
+
   test("an announce from another origin or another window is ignored", async () => {
     const extension = fakeExtension({ installed: false });
     const bridge = createExtensionBridge(extension.window);
