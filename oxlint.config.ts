@@ -74,15 +74,6 @@ const orderCollectionWishlistTests = ["orders", "collection", "wishlist"].flatMa
 // The react-query hook ban skips these web files. S7's lock still covers them through the overrides above.
 const webOutsideHookBan = [
   "apps/web/src/data/**",
-  // Sync and import screens the extension port kept from before apps/web/src/data.
-  "apps/web/src/components/orders/order-item-sync-sheet.tsx",
-  "apps/web/src/components/settings/data-transfer/**",
-  "apps/web/src/components/sync/**",
-  "apps/web/src/hooks/use-data-transfer-import-status-query.ts",
-  "apps/web/src/hooks/use-sync-job-status-query.ts",
-  "apps/web/src/hooks/use-sync-mutations.ts",
-  "apps/web/src/routes/(app)/sync.tsx",
-  "apps/web/src/routes/(app)/sync_.$id.tsx",
   // Replayed tests that stand in for a screen's reads. The replay copies each into
   // revisions from before apps/web/src/data existed, so they call react-query directly.
   "apps/web/src/components/dashboard/order-kanban.test.tsx",
