@@ -311,6 +311,35 @@ describe.each(ENTRY_POINTS.map((entryPoint) => [entryPoint.name, entryPoint] as 
   },
 );
 
+test.each([
+  {
+    name: "the sync launcher",
+    view: () => <SyncWidget TriggerWrapper={<button type="button">Launch</button>} />,
+    open: async (user: User) => {
+      await click("Launch")(user);
+      return screen.findByRole("button", { name: "Collection" });
+    },
+  },
+  {
+    name: "the command palette",
+    view: () => <AppCommand />,
+    open: async (user: User) => {
+      await click("Search")(user);
+      return screen.findByRole("option", { name: collectionChoice });
+    },
+  },
+])("$name shows it is checking on the chosen option", async ({ name, view, open }) => {
+  loadExtension({ installed: false });
+  const user = userEvent.setup();
+  renderEntryPoint({ name, render: view, start: async () => {}, proceeded: () => false });
+  const option = await open(user);
+
+  fireEvent.click(option);
+
+  await waitFor(() => expect(option.getAttribute("aria-busy")).toBe("true"));
+  await screen.findByRole("dialog", { name: "Install the myakiba extension first" });
+});
+
 test("the dialog closes, and the next try probes again", async () => {
   loadExtension({ installed: false });
   const user = userEvent.setup();

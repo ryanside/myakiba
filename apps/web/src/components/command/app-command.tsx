@@ -26,6 +26,7 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { APP_COMMAND_NAVIGATION_ITEMS } from "@/lib/app-navigation";
+import { cn } from "@/lib/utils";
 import type { AppNavigationItem, AppNavigationTarget } from "@/lib/app-navigation";
 import type { CommandSearchResults } from "@/queries/search";
 import { SyncActionSheet } from "@/components/sync/sync-launcher";
@@ -99,10 +100,22 @@ function isTypingTarget(target: EventTarget | null): boolean {
   );
 }
 
-function CommandLeadIcon({ icon }: { readonly icon: IconSvgElement }): React.JSX.Element {
+function CommandLeadIcon({
+  icon,
+  busy = false,
+}: {
+  readonly icon: IconSvgElement;
+  readonly busy?: boolean;
+}): React.JSX.Element {
   return (
     <div className="flex size-8 shrink-0 items-center justify-center rounded-md">
-      <HugeiconsIcon icon={icon} className="size-4 text-muted-foreground" />
+      <HugeiconsIcon
+        icon={busy ? Loading03Icon : icon}
+        className={cn(
+          "size-4 text-muted-foreground",
+          busy && "animate-spin motion-reduce:animate-none",
+        )}
+      />
     </div>
   );
 }
@@ -112,16 +125,23 @@ function ActionCommandItem({
   title,
   subtitle,
   leading,
+  busy = false,
   onSelect,
 }: {
   readonly value: string;
   readonly title: string;
   readonly subtitle?: string;
   readonly leading: React.ReactNode;
+  readonly busy?: boolean;
   readonly onSelect: () => void;
 }): React.JSX.Element {
   return (
-    <CommandItem value={value} onSelect={onSelect} className="gap-3 py-2">
+    <CommandItem
+      value={value}
+      aria-busy={busy || undefined}
+      onSelect={onSelect}
+      className="gap-3 py-2"
+    >
       {leading}
       <div className="min-w-0 flex-1">
         <div className="whitespace-normal break-words font-medium">{title}</div>
@@ -164,7 +184,8 @@ export function AppCommand(): React.JSX.Element {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [syncType, setSyncType] = useState<LaunchableSyncType | null>(null);
-  const { gate } = useExtensionGate();
+  const { checking, gate } = useExtensionGate();
+  const [chosenSyncType, setChosenSyncType] = useState<LaunchableSyncType | null>(null);
   const [inputValue, setInputValue] = useState("");
   const query = inputValue.trim();
   const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
@@ -210,9 +231,11 @@ export function AppCommand(): React.JSX.Element {
     void navigate({ to });
   };
 
-  const handleSyncAction = (nextSyncType: LaunchableSyncType): Promise<void> => {
+  const handleSyncAction = async (nextSyncType: LaunchableSyncType): Promise<void> => {
+    if (checking) return;
+    setChosenSyncType(nextSyncType);
+    await gate(() => setSyncType(nextSyncType));
     closeCommand();
-    return gate(() => setSyncType(nextSyncType));
   };
 
   const handleOrderOpen = (orderId: string): void => {
@@ -334,16 +357,20 @@ export function AppCommand(): React.JSX.Element {
 
             {showSyncGroup ? (
               <CommandGroup heading="Actions">
-                {visibleSyncItems.map((item) => (
-                  <ActionCommandItem
-                    key={item.type}
-                    value={`sync-${item.type}`}
-                    title={SYNC_OPTION_META[item.type].title}
-                    subtitle={item.description}
-                    leading={<CommandLeadIcon icon={item.icon} />}
-                    onSelect={() => handleSyncAction(item.type)}
-                  />
-                ))}
+                {visibleSyncItems.map((item) => {
+                  const busy = checking && chosenSyncType === item.type;
+                  return (
+                    <ActionCommandItem
+                      key={item.type}
+                      value={`sync-${item.type}`}
+                      title={SYNC_OPTION_META[item.type].title}
+                      subtitle={item.description}
+                      leading={<CommandLeadIcon icon={item.icon} busy={busy} />}
+                      busy={busy}
+                      onSelect={() => handleSyncAction(item.type)}
+                    />
+                  );
+                })}
               </CommandGroup>
             ) : null}
 
