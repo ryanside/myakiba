@@ -59,20 +59,3 @@ export async function unlessAborted<T>(signal: AbortSignal, work: Promise<T>): P
     signal.removeEventListener("abort", abort);
   }
 }
-
-/** Runs `work` with a signal that also aborts after `ms`, and stops waiting for it then. */
-export async function withTimeout<T>(
-  clock: Clock,
-  ms: number,
-  signal: AbortSignal,
-  work: (signal: AbortSignal) => Promise<T>,
-): Promise<T> {
-  signal.throwIfAborted();
-  const done = new AbortController();
-  const bounded = AbortSignal.any([signal, timeoutSignal(clock, ms, done.signal)]);
-  try {
-    return await unlessAborted(bounded, work(bounded));
-  } finally {
-    done.abort();
-  }
-}

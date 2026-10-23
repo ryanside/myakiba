@@ -97,8 +97,10 @@ export function ownedTab(deps: {
   readonly origin: string;
   readonly record: SessionValue<OwnedTab>;
   readonly throttle: Pick<Throttle, "load">;
+  /** How long one throttle turn in this tab may take, from when the turn begins. */
+  readonly turnMs: number;
 }) {
-  const { tabs, clock, origin, record, throttle } = deps;
+  const { tabs, clock, origin, record, throttle, turnMs } = deps;
   /** Tabs the user focused while a create was pending, which may include the new tab. */
   let focusedDuringCreate: Set<number> | null = null;
   let ownership = Promise.resolve(null);
@@ -246,7 +248,7 @@ export function ownedTab(deps: {
      * unless the user claimed it.
      */
     load(requester: LiveRequester, url: string, signal: AbortSignal): Promise<number> {
-      return throttle.load(signal, (timeout) => open(requester, url, signal, timeout));
+      return throttle.load(signal, (timeout) => open(requester, url, signal, timeout), turnMs);
     },
 
     /** Loads `url` and runs `read` in the tab, both in one throttle turn, so the next load waits for the whole of it. */
@@ -256,8 +258,11 @@ export function ownedTab(deps: {
       signal: AbortSignal,
       read: (tabId: number, signal: AbortSignal) => Promise<T>,
     ): Promise<T> {
-      return throttle.load(signal, async (timeout) =>
-        read(await open(requester, url, signal, timeout), AbortSignal.any([signal, timeout])),
+      return throttle.load(
+        signal,
+        async (timeout) =>
+          read(await open(requester, url, signal, timeout), AbortSignal.any([signal, timeout])),
+        turnMs,
       );
     },
 

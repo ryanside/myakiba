@@ -1,5 +1,6 @@
 import type { MfcItemId } from "@myakiba/mfc/page";
 import type { Clock, SessionValue } from "./clock";
+import { PAGE_TIMEOUT_MS } from "./collect";
 import { mfcItemUrl } from "./origins";
 import type { Origins } from "./origins";
 import { inContext, ownedTab } from "./owned-tab";
@@ -29,6 +30,7 @@ export function createMfcTabs(deps: {
     origin: origins.mfc,
     record: deps.owned,
     throttle: deps.throttle,
+    turnMs: PAGE_TIMEOUT_MS,
   });
   let borrowing = true;
 

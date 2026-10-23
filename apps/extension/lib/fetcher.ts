@@ -1,7 +1,7 @@
 import type { ItemError, PortPicture, RunEvent } from "@myakiba/mfc/bridge";
 import { readMfcEnvelope } from "@myakiba/mfc/page";
 import type { MfcItemId, MfcOgImage } from "@myakiba/mfc/page";
-import { TimeoutError, timeoutSignal, unlessAborted, withTimeout } from "./clock";
+import { TimeoutError, timeoutSignal, unlessAborted } from "./clock";
 import type { Clock, SessionValue } from "./clock";
 import { NO_STATUS } from "./collect";
 import type { CollectedPage, PageRequest } from "./collect";
@@ -115,6 +115,7 @@ export function createFetcher(deps: FetcherDeps) {
     origin: origins.mfcStatic,
     record: deps.ownedPictureTab,
     throttle,
+    turnMs: PICTURE_TIMEOUT_MS,
   });
   const listeners = new Map<RunKey, FetchRun["emit"]>();
   let state = EMPTY_QUEUE;
@@ -141,6 +142,10 @@ export function createFetcher(deps: FetcherDeps) {
     };
   }
 
+  /**
+   * A picture takes a throttle turn of its own, whose budget starts with the turn. A gated one is a request to MFC like a
+   * page, and a public one is a page load in the static tab.
+   */
   async function pictureOf(
     ogImage: MfcOgImage,
     { tabId, requester, signal }: ItemContext,
@@ -150,13 +155,16 @@ export function createFetcher(deps: FetcherDeps) {
     const url = toConfiguredUrl(picture.url, origins);
     if (!url) return null;
     try {
-      return await withTimeout(clock, PICTURE_TIMEOUT_MS, signal, (bounded) =>
-        picture.access === "gated"
-          ? deps.fetchGatedPicture(tabId, picture.url, bounded)
-          : pictureTab.loadAndRead(requester, url.href, bounded, (pictureTabId, inTurn) =>
-              deps.fetchPublicPicture(pictureTabId, picture.url, inTurn),
-            ),
-      );
+      return picture.access === "gated"
+        ? await throttle.load(
+            signal,
+            (timeout) =>
+              deps.fetchGatedPicture(tabId, picture.url, AbortSignal.any([signal, timeout])),
+            PICTURE_TIMEOUT_MS,
+          )
+        : await pictureTab.loadAndRead(requester, url.href, signal, (pictureTabId, inTurn) =>
+            deps.fetchPublicPicture(pictureTabId, picture.url, inTurn),
+          );
     } catch {
       return null;
     }

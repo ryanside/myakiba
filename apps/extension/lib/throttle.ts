@@ -48,18 +48,19 @@ function pausedOrHalted(current: ThrottleState, until: number, now: number): Thr
   };
 }
 
-async function timedOutOnceSettled(settled: Promise<void>): Promise<never> {
+async function timedOutOnceSettled(settled: Promise<void>, timeoutMs: number): Promise<never> {
   await settled;
-  throw new TimeoutError(PAGE_TIMEOUT_MS);
+  throw new TimeoutError(timeoutMs);
 }
 
 async function answerOnceStopped<T>(
   running: Promise<T>,
   settled: Promise<void>,
   timeout: AbortSignal,
+  timeoutMs: number,
 ): Promise<T> {
   try {
-    return await Promise.race([running, timedOutOnceSettled(settled)]);
+    return await Promise.race([running, timedOutOnceSettled(settled, timeoutMs)]);
   } catch (error) {
     throw timeout.aborted ? timeout.reason : error;
   }
@@ -95,7 +96,7 @@ export function createThrottle(deps: {
     }
   }
 
-  async function reserve(signal: AbortSignal): Promise<void> {
+  async function reserve(signal: AbortSignal, timeoutMs: number): Promise<void> {
     for (;;) {
       signal.throwIfAborted();
       const wait = await book((current, now): [ThrottleState, number] => {
@@ -103,18 +104,22 @@ export function createThrottle(deps: {
         const untilFree = Math.max(current.nextPageAt, current.pausedUntil) - now;
         if (untilFree > 0) return [current, untilFree];
         // Booked to the latest this load can end, so a worker that stops mid-load leaves the next one waiting it out.
-        return [{ ...current, nextPageAt: gapAfter(now + PAGE_TIMEOUT_MS + THROTTLE.graceMs) }, 0];
+        return [{ ...current, nextPageAt: gapAfter(now + timeoutMs + THROTTLE.graceMs) }, 0];
       });
       if (wait <= 0) return;
       await clock.sleep(wait, signal);
     }
   }
 
-  async function settle(running: Promise<unknown>, finished: AbortController): Promise<void> {
+  async function settle(
+    running: Promise<unknown>,
+    finished: AbortController,
+    timeoutMs: number,
+  ): Promise<void> {
     const grace = new AbortController();
     await Promise.race([
       Promise.allSettled([running]),
-      clock.sleep(PAGE_TIMEOUT_MS + THROTTLE.graceMs, grace.signal),
+      clock.sleep(timeoutMs + THROTTLE.graceMs, grace.signal),
     ]);
     grace.abort();
     finished.abort();
@@ -127,26 +132,30 @@ export function createThrottle(deps: {
 
   return {
     /**
-     * Runs one MFC page load in its turn. `work` gets a signal that aborts once the load times out.
+     * Runs one MFC load in its turn. `work` gets a signal that aborts `timeoutMs` after the turn begins.
      * The next turn starts a gap after this load ends, even when the caller stopped waiting first.
      */
-    async load<T>(signal: AbortSignal, work: (timeout: AbortSignal) => Promise<T>): Promise<T> {
+    async load<T>(
+      signal: AbortSignal,
+      work: (timeout: AbortSignal) => Promise<T>,
+      timeoutMs = PAGE_TIMEOUT_MS,
+    ): Promise<T> {
       const previous = lastLoad;
       const ended = Promise.withResolvers<unknown>();
       lastLoad = Promise.all([previous, ended.promise]);
       try {
         await unlessAborted(signal, previous);
-        await reserve(signal);
+        await reserve(signal, timeoutMs);
       } catch (error) {
         ended.resolve(null);
         throw error;
       }
       const finished = new AbortController();
-      const timeout = timeoutSignal(clock, PAGE_TIMEOUT_MS, finished.signal);
+      const timeout = timeoutSignal(clock, timeoutMs, finished.signal);
       const running = signal.aborted ? Promise.reject(signal.reason) : work(timeout);
-      const settled = settle(running, finished);
+      const settled = settle(running, finished, timeoutMs);
       ended.resolve(settled);
-      return unlessAborted(signal, answerOnceStopped(running, settled, timeout));
+      return unlessAborted(signal, answerOnceStopped(running, settled, timeout, timeoutMs));
     },
 
     async pauseOrHalt(until: number): Promise<void> {
