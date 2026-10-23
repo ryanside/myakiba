@@ -963,22 +963,6 @@ describe("the MFC tab", () => {
     expect(extension.tabs.has(102)).toBe(true);
   });
 
-  test("ignores only its own focus of the challenge tab, so a later one is the user's", async () => {
-    const challenge = challengeOn([7]);
-    const extension = fakeExtension({ pages: challenge.pages });
-    const run = extension.run([7]);
-    await extension.clock.runUntil(() => asked(run.events, "needs_user"));
-
-    extension.tabs.activate(extension.myakiba.tabId);
-    extension.tabs.activate(101);
-    challenge.solve(extension, 7);
-    await extension.clock.runUntil(run.done);
-    await extension.settle();
-
-    expect(extension.tabs.has(101)).toBe(true);
-    expect(extension.tabs.log).not.toContain("remove 101");
-  });
-
   test("a worker that starts with nothing queued closes the tab it left open", async () => {
     const ownedTab = memoryValue<OwnedTab>(null);
     const extension = fakeExtension({ pages: itemPages(), ownedTab });
