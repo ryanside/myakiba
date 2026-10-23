@@ -8,6 +8,7 @@ import { app } from "@/lib/treaty-client";
 import { requestResync } from "@/queries/item";
 
 const HEARTBEAT_MS = 20_000;
+const QUEUED_PROMPT_DELAY_MS = 1000;
 const MAX_UPLOADS_IN_FLIGHT = 2;
 const MAX_RETRY_AFTER_MS = 60_000;
 
@@ -146,18 +147,32 @@ type FetchedPage =
 
 type PromptTarget = { readonly runId: string; readonly sessionId: string | null };
 
+type FetchDeps = { readonly bridge: ExtensionBridge; readonly queuedPromptDelayMs: number };
+
 /**
  * Fetches the ids through the extension, and keeps the extension's prompt in the store until it ends.
  * @yields {FetchedPage} each item's page, or why the extension could not fetch it
  */
 async function* fetchPages(
-  bridge: ExtensionBridge,
+  { bridge, queuedPromptDelayMs }: FetchDeps,
   { runId, sessionId }: PromptTarget,
   ids: readonly MfcItemId[],
   signal: AbortSignal,
 ): AsyncGenerator<FetchedPage> {
-  const show = (prompt: ExtensionPrompt | null) =>
-    setExtensionPrompt(runId, prompt && { sessionId, prompt });
+  let queuedTimer: ReturnType<typeof setTimeout> | undefined;
+  const show = (prompt: ExtensionPrompt | null) => {
+    clearTimeout(queuedTimer);
+    // The extension says "queued" as every batch starts, so only a wait that lasts is shown.
+    if (prompt?.kind === "queued") {
+      setExtensionPrompt(runId, null);
+      queuedTimer = setTimeout(
+        () => setExtensionPrompt(runId, { sessionId, prompt }),
+        queuedPromptDelayMs,
+      );
+    } else {
+      setExtensionPrompt(runId, prompt && { sessionId, prompt });
+    }
+  };
   try {
     for await (const event of bridge.fetchItems(ids, { signal })) {
       if (event.type === "status") {
@@ -227,14 +242,14 @@ type PageEvents = {
   readonly removeEventListener: (type: "pagehide", listener: () => void) => void;
 };
 
-type RunnerDeps = {
-  readonly bridge: ExtensionBridge;
+type RunnerDeps = FetchDeps & {
   readonly page: PageEvents;
   readonly heartbeatMs: number;
 };
 
 /** The returned function never rejects. Its runs share one cap on uploads in flight. */
-export function createExtensionRunner({ bridge, page, heartbeatMs }: RunnerDeps) {
+export function createExtensionRunner(deps: RunnerDeps) {
+  const { page, heartbeatMs } = deps;
   const slots = uploadSlots(MAX_UPLOADS_IN_FLIGHT);
 
   return async function runWithExtension(run: ExtensionRun): Promise<RunOutcome> {
@@ -280,7 +295,7 @@ export function createExtensionRunner({ bridge, page, heartbeatMs }: RunnerDeps)
     };
 
     try {
-      for await (const fetched of fetchPages(bridge, run, ids, controller.signal)) {
+      for await (const fetched of fetchPages(deps, run, ids, controller.signal)) {
         if (!fetched.ok) {
           const answer =
             fetched.error === "extension_stopped"
@@ -308,8 +323,13 @@ export function createExtensionRunner({ bridge, page, heartbeatMs }: RunnerDeps)
   };
 }
 
-const runWithExtension = createExtensionRunner({
+const fetchDeps: FetchDeps = {
   bridge: extensionBridge,
+  queuedPromptDelayMs: QUEUED_PROMPT_DELAY_MS,
+};
+
+const runWithExtension = createExtensionRunner({
+  ...fetchDeps,
   page: window,
   heartbeatMs: HEARTBEAT_MS,
 });
@@ -328,12 +348,7 @@ export async function refreshItemWithExtension(externalId: number) {
   if (id === null) throw new Error("Item not found");
   let fetched: FetchedPage | undefined;
   const target = { runId: `resync:${id}`, sessionId: null };
-  for await (const page of fetchPages(
-    extensionBridge,
-    target,
-    [id],
-    new AbortController().signal,
-  )) {
+  for await (const page of fetchPages(fetchDeps, target, [id], new AbortController().signal)) {
     fetched = page;
   }
   if (fetched === undefined) throw new Error(ITEM_ERROR_MESSAGE.extension_stopped);

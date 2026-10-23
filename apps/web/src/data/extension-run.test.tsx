@@ -97,9 +97,14 @@ function fakePage() {
   };
 }
 
-function runner(options: { readonly heartbeatMs?: number } = {}) {
+type RunnerOptions = {
+  readonly heartbeatMs?: number;
+  readonly queuedPromptDelayMs?: number;
+};
+
+function runner({ heartbeatMs = 60_000, queuedPromptDelayMs = 0 }: RunnerOptions = {}) {
   const page = fakePage();
-  const run = createExtensionRunner({ bridge, page, heartbeatMs: options.heartbeatMs ?? 60_000 });
+  const run = createExtensionRunner({ bridge, page, heartbeatMs, queuedPromptDelayMs });
   return { run, page };
 }
 
@@ -302,6 +307,31 @@ describe("a sync run", () => {
     ).toBeDefined();
 
     await act(async () => {
+      extension.runs[0]?.item(1);
+      extension.runs[0]?.done("complete");
+      await running;
+    });
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  test("shows that it waits for the extension only once the wait lasts", async () => {
+    fakeFetch();
+    loadExtension((fetch) => {
+      fetch.status("queued");
+    });
+    render(<ExtensionPromptNotice sessionId="ss-1" />);
+
+    let running: Promise<unknown> = Promise.resolve();
+    await act(async () => {
+      running = runner({ queuedPromptDelayMs: 100 }).run(sync(1));
+      await waitFor(() => expect(extension.runs).toHaveLength(1));
+      await sleep(20);
+    });
+    expect(screen.queryByText("Waiting for the extension")).toBeNull();
+    expect(await screen.findByText("Waiting for the extension")).toBeDefined();
+
+    await act(async () => {
+      extension.runs[0]?.status("fetching", 1);
       extension.runs[0]?.item(1);
       extension.runs[0]?.done("complete");
       await running;
