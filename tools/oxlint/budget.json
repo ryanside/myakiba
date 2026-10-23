@@ -50,7 +50,6 @@
     "apps/web/src/routes/(app)/sync.tsx": 1,
     "apps/web/src/routes/(app)/wishlist.tsx": 1,
     "apps/web/src/routes/(auth)/forgot-password.tsx": 1,
-    "apps/web/src/routes/(auth)/reset-password.tsx": 2,
-    "apps/worker/index.ts": 1
+    "apps/web/src/routes/(auth)/reset-password.tsx": 2
   }
 }

@@ -20,7 +20,7 @@ async function shutdown(signal: ShutdownSignal, initialExitCode: number): Promis
       signal,
     });
 
-    healthServer.stop(true);
+    await healthServer.stop(true);
 
     const { error } = await tryCatch(closeWorker());
     if (error) {

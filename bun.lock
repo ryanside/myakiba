@@ -146,6 +146,7 @@
         "evlog": "catalog:",
       },
       "devDependencies": {
+        "@myakiba/config": "workspace:*",
         "@types/bun": "catalog:",
       },
       "peerDependencies": {
