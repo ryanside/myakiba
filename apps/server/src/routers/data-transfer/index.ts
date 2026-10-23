@@ -1,14 +1,12 @@
-import { Elysia, sse, status } from "elysia";
-import { evlog } from "evlog/elysia";
+import { privateApi } from "@/boundary/private-api";
+import { sse, ElysiaCustomStatusResponse } from "elysia";
 import {
-  DATA_TRANSFER_MAX_RECORDS,
   dataTransferImportItemFailureSchema,
   dataTransferImportItemUploadSchema,
   dataTransferImportRequestSchema,
   dataTransferImportRunSchema,
 } from "@myakiba/contracts/data-transfer/schema";
-import { tryCatch } from "@myakiba/utils/result";
-import { betterAuth } from "@/middleware/better-auth";
+import { serve } from "@/domain/kernel";
 import { rateLimit } from "@/middleware/rate-limit";
 import { verifiedEmail } from "@/middleware/verified-email";
 import { jobStatusSubscriptionRegistry } from "@/lib/job-status-subscription-registry";
@@ -17,133 +15,18 @@ import {
   JOB_STATUS_POLL_INTERVAL_MS,
   waitForNextJobStatusEvent,
 } from "@/lib/job-status-stream";
-import DataTransferService from "./service";
+import { DataTransfer } from "./module";
 
-const dataTransferRouter = new Elysia({ prefix: "/data-transfer" })
-  .use(betterAuth)
-  .use(evlog())
+const dataTransferRouter = privateApi("/data-transfer")
   .use(rateLimit)
   .use(verifiedEmail)
-  .get(
-    "/export",
-    async ({ user, log }) => {
-      log.set({
-        action: "dataTransfer.export",
-        user: { id: user.id },
-      });
-
-      const { data: archive, error } = await tryCatch(DataTransferService.exportArchive(user.id));
-
-      if (error) {
-        if (error.message === "DATA_TRANSFER_ARCHIVE_EMPTY") {
-          log.set({
-            outcome: "rejected",
-            dataTransfer: { code: error.message },
-          });
-          return status(409, "There is no data to export.");
-        }
-        if (error.message === "DATA_TRANSFER_ARCHIVE_TOO_LARGE") {
-          log.set({
-            outcome: "rejected",
-            dataTransfer: { code: error.message },
-          });
-          return status(413, "The export exceeds the 50 MiB limit.");
-        }
-        if (error.message === "DATA_TRANSFER_ARCHIVE_TOO_MANY_RECORDS") {
-          log.set({
-            outcome: "rejected",
-            dataTransfer: { code: error.message },
-          });
-          return status(413, `The export exceeds the ${DATA_TRANSFER_MAX_RECORDS} record limit.`);
-        }
-        if (error.message === "DATA_TRANSFER_UNSUPPORTED_COLLECTION_ITEM") {
-          log.set({
-            outcome: "rejected",
-            dataTransfer: { code: error.message },
-          });
-          return status(
-            409,
-            "Data transfer only supports MyFigureCollection-backed collection items.",
-          );
-        }
-
-        log.error(error, { step: "exportArchive", outcome: "error" });
-        return status(500, "Failed to export data.");
-      }
-
-      log.set({
-        outcome: "success",
-        dataTransfer: {
-          exportId: archive.exportId,
-          orders: archive.orders.length,
-          collectionItems: archive.collectionItems.length,
-        },
-      });
-      return archive;
-    },
-    { auth: true },
-  )
-  .get(
-    "/imports/current",
-    async ({ user, log }) => {
-      log.set({
-        action: "dataTransfer.getCurrentImport",
-        user: { id: user.id },
-      });
-
-      const { data: currentImport, error } = await tryCatch(
-        DataTransferService.getCurrentImport(user.id),
-      );
-
-      if (error) {
-        log.error(error, { step: "getCurrentImport", outcome: "error" });
-        return status(500, "Failed to check import status.");
-      }
-
-      log.set({
-        outcome: "success",
-        dataTransfer: { importId: currentImport?.id ?? null },
-      });
-      return currentImport;
-    },
-    { auth: true },
-  )
-  .delete(
-    "/imports/current",
-    async ({ user, log }) => {
-      log.set({
-        action: "dataTransfer.deleteCurrentImport",
-        user: { id: user.id },
-      });
-
-      const { data: result, error } = await tryCatch(
-        DataTransferService.deleteCurrentImport(user.id),
-      );
-
-      if (error) {
-        log.error(error, { step: "deleteCurrentImport", outcome: "error" });
-        return status(500, "Failed to delete the import session.");
-      }
-      if (result.kind === "active") {
-        log.set({ outcome: "rejected" });
-        return status(409, "An active import cannot be deleted.");
-      }
-      if (result.kind === "not_found") {
-        log.set({ outcome: "not_found" });
-        return status(404, "No inactive import session was found.");
-      }
-
-      log.set({
-        outcome: "success",
-        dataTransfer: { importId: result.id },
-      });
-      return { id: result.id };
-    },
-    { auth: true },
-  )
+  .get("/export", (ctx) => serve(ctx, DataTransfer.export, {}), { auth: true })
+  .get("/imports/current", (ctx) => serve(ctx, DataTransfer.current, {}), { auth: true })
+  .delete("/imports/current", (ctx) => serve(ctx, DataTransfer.remove, {}), { auth: true })
   .get(
     "/imports/current/status",
-    async function* ({ user, log, request }) {
+    async function* (ctx) {
+      const { user, log, request } = ctx;
       log.set({
         action: "dataTransfer.importStatus",
         user: { id: user.id },
@@ -156,11 +39,10 @@ const dataTransferRouter = new Elysia({ prefix: "/data-transfer" })
             request.signal.addEventListener("abort", () => resolve("aborted"), { once: true });
           });
 
-      const { data: initialStatus, error: initialStatusError } = await tryCatch(
-        DataTransferService.getImportJobStatus(user.id),
-      );
+      const initialStatus = await serve(ctx, DataTransfer.status, {});
 
-      if (initialStatusError) {
+      if (initialStatus instanceof ElysiaCustomStatusResponse) {
+        const initialStatusError = new Error(String(initialStatus.response));
         log.error(initialStatusError, { step: "getImportJobStatus", outcome: "error" });
         return;
       }
@@ -175,19 +57,19 @@ const dataTransferRouter = new Elysia({ prefix: "/data-transfer" })
         return;
       }
 
-      const { data: subscription, error: subscriptionError } = await tryCatch(
-        jobStatusSubscriptionRegistry.subscribe(initialStatus.jobId),
-      );
-      if (subscriptionError) {
+      let subscription;
+      try {
+        subscription = await jobStatusSubscriptionRegistry.subscribe(initialStatus.jobId);
+      } catch (error) {
+        const subscriptionError = error instanceof Error ? error : new Error(String(error));
         log.error(subscriptionError, { step: "subscribeImportStatus", outcome: "error" });
         return;
       }
 
       try {
-        const { data: replayStatus, error: replayStatusError } = await tryCatch(
-          DataTransferService.getImportJobStatus(user.id),
-        );
-        if (replayStatusError) {
+        const replayStatus = await serve(ctx, DataTransfer.status, {});
+        if (replayStatus instanceof ElysiaCustomStatusResponse) {
+          const replayStatusError = new Error(String(replayStatus.response));
           log.error(replayStatusError, { step: "replayImportStatus", outcome: "error" });
           return;
         }
@@ -237,10 +119,9 @@ const dataTransferRouter = new Elysia({ prefix: "/data-transfer" })
               continue;
             }
             nextPollAt = Date.now() + JOB_STATUS_POLL_INTERVAL_MS;
-            const { data: polledStatus, error: polledStatusError } = await tryCatch(
-              DataTransferService.getImportJobStatus(user.id),
-            );
-            if (polledStatusError) {
+            const polledStatus = await serve(ctx, DataTransfer.status, {});
+            if (polledStatus instanceof ElysiaCustomStatusResponse) {
+              const polledStatusError = new Error(String(polledStatus.response));
               log.error(polledStatusError, { step: "pollImportStatus", outcome: "error" });
               yield sse({ data: latestStatus });
               continue;
@@ -282,127 +163,19 @@ const dataTransferRouter = new Elysia({ prefix: "/data-transfer" })
       auth: true,
     },
   )
-  .post(
-    "/imports",
-    async ({ body, user, log }) => {
-      log.set({
-        action: "dataTransfer.startImport",
-        user: { id: user.id },
-        dataTransfer: {
-          exportId: body.archive.exportId,
-          orders: body.archive.orders.length,
-          collectionItems: body.archive.collectionItems.length,
-        },
-      });
-
-      const { data: currentImport, error } = await tryCatch(
-        DataTransferService.startImport({
-          userId: user.id,
-          fileName: body.fileName,
-          archive: body.archive,
-        }),
-      );
-
-      if (error) {
-        if (error.message === "DATA_TRANSFER_ARCHIVE_TOO_LARGE") {
-          log.set({
-            outcome: "rejected",
-            dataTransfer: { code: error.message },
-          });
-          return status(413, "The import archive exceeds the 50 MiB limit.");
-        }
-        if (error.message === "DATA_TRANSFER_ACTIVE_IMPORT") {
-          log.set({
-            outcome: "rejected",
-            dataTransfer: { code: error.message },
-          });
-          return status(409, "Another data import is already active.");
-        }
-
-        log.error(error, { step: "startImport", outcome: "error" });
-        return status(500, "Failed to start import.");
-      }
-
-      log.set({
-        outcome: "success",
-        dataTransfer: {
-          importId: currentImport.id,
-          status: currentImport.status,
-          missingItems: currentImport.missingMfcItemIds.length,
-        },
-      });
-      return currentImport;
-    },
-    {
-      auth: true,
-      body: dataTransferImportRequestSchema,
-    },
-  )
-  .post(
-    "/imports/current/retry",
-    async ({ user, log }) => {
-      log.set({
-        action: "dataTransfer.retryImport",
-        user: { id: user.id },
-      });
-
-      const { data: currentImport, error } = await tryCatch(
-        DataTransferService.retryImport(user.id),
-      );
-
-      if (error) {
-        if (error.message === "DATA_TRANSFER_IMPORT_NOT_RETRYABLE") {
-          log.set({
-            outcome: "rejected",
-            dataTransfer: { code: error.message },
-          });
-          return status(
-            409,
-            "The import does not exist or cannot be retried in its current state.",
-          );
-        }
-
-        log.error(error, { step: "retryImport", outcome: "error" });
-        return status(500, "Failed to retry import.");
-      }
-
-      log.set({
-        outcome: "success",
-        dataTransfer: {
-          importId: currentImport.id,
-          status: currentImport.status,
-          missingItems: currentImport.missingMfcItemIds.length,
-        },
-      });
-      return currentImport;
-    },
-    {
-      auth: true,
-    },
-  )
+  .post("/imports", (ctx) => serve(ctx, DataTransfer.start, ctx.body), {
+    auth: true,
+    body: dataTransferImportRequestSchema,
+  })
+  .post("/imports/current/retry", (ctx) => serve(ctx, DataTransfer.retry, {}), {
+    auth: true,
+  })
   .post(
     "/imports/current/items",
-    async ({ body, user, log }) => {
-      log.set({
-        action: "dataTransfer.completeItem",
-        user: { id: user.id },
-        dataTransfer: { importId: body.jobId, mfcItemId: body.mfcItemId },
-      });
-
-      const { data: result, error } = await tryCatch(
-        DataTransferService.completeItem(user.id, body),
-      );
-      if (error) {
-        log.error(error, { step: "completeItem", outcome: "error" });
-        return status(500, "Failed to import the item.");
-      }
-      if (result.kind === "problem") {
-        log.set({ outcome: "rejected", dataTransfer: { code: result.message } });
-        return status(400, result.message);
-      }
-
-      log.set({ outcome: "success", dataTransfer: { status: result.import?.status ?? null } });
-      return result.import;
+    async (ctx) => {
+      const result = await serve(ctx, DataTransfer.complete, ctx.body);
+      if (result instanceof ElysiaCustomStatusResponse) return result;
+      return serve(ctx, DataTransfer.completeResponse, result);
     },
     {
       auth: true,
@@ -411,86 +184,18 @@ const dataTransferRouter = new Elysia({ prefix: "/data-transfer" })
       body: dataTransferImportItemUploadSchema,
     },
   )
-  .post(
-    "/imports/current/items/failure",
-    async ({ body, user, log }) => {
-      log.set({
-        action: "dataTransfer.failItem",
-        user: { id: user.id },
-        dataTransfer: {
-          importId: body.jobId,
-          ...("failures" in body
-            ? { failureCount: body.failures.length }
-            : { mfcItemId: body.mfcItemId }),
-        },
-      });
-
-      const { data: currentImport, error } = await tryCatch(
-        DataTransferService.failItem(user.id, body),
-      );
-      if (error) {
-        log.error(error, { step: "failItem", outcome: "error" });
-        return status(500, "Failed to record the item failure.");
-      }
-
-      log.set({ outcome: "success", dataTransfer: { status: currentImport?.status ?? null } });
-      return currentImport;
-    },
-    {
-      auth: true,
-      body: dataTransferImportItemFailureSchema,
-      rateLimit: "syncFailure",
-    },
-  )
-  .post(
-    "/imports/current/interrupt",
-    async ({ body, user, log }) => {
-      log.set({
-        action: "dataTransfer.interruptImport",
-        user: { id: user.id },
-        dataTransfer: { importId: body.jobId },
-      });
-
-      const { data: currentImport, error } = await tryCatch(
-        DataTransferService.interruptImport(user.id, body.jobId),
-      );
-      if (error) {
-        log.error(error, { step: "interruptImport", outcome: "error" });
-        return status(500, "Failed to interrupt the import.");
-      }
-
-      log.set({ outcome: "success", dataTransfer: { status: currentImport?.status ?? null } });
-      return currentImport;
-    },
-    {
-      auth: true,
-      body: dataTransferImportRunSchema,
-    },
-  )
-  .post(
-    "/imports/current/heartbeat",
-    async ({ body, user, log }) => {
-      log.set({
-        action: "dataTransfer.heartbeat",
-        user: { id: user.id },
-        dataTransfer: { importId: body.jobId },
-      });
-
-      const { data: running, error } = await tryCatch(
-        DataTransferService.heartbeat(user.id, body.jobId),
-      );
-      if (error) {
-        log.error(error, { step: "heartbeat", outcome: "error" });
-        return status(500, "Failed to extend the import.");
-      }
-
-      log.set({ outcome: running ? "success" : "rejected" });
-      return { running };
-    },
-    {
-      auth: true,
-      body: dataTransferImportRunSchema,
-    },
-  );
+  .post("/imports/current/items/failure", (ctx) => serve(ctx, DataTransfer.failure, ctx.body), {
+    auth: true,
+    body: dataTransferImportItemFailureSchema,
+    rateLimit: "syncFailure",
+  })
+  .post("/imports/current/interrupt", (ctx) => serve(ctx, DataTransfer.interrupt, ctx.body), {
+    auth: true,
+    body: dataTransferImportRunSchema,
+  })
+  .post("/imports/current/heartbeat", (ctx) => serve(ctx, DataTransfer.heartbeat, ctx.body), {
+    auth: true,
+    body: dataTransferImportRunSchema,
+  });
 
 export default dataTransferRouter;

@@ -1,8 +1,7 @@
-import { createLogger } from "evlog";
 import { Buffer } from "node:buffer";
 import { createId } from "@paralleldrive/cuid2";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
-import { db } from "@myakiba/db/client";
+import type { CommandScope } from "@/domain/kernel";
 import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
 import {
   collection as collectionTable,
@@ -12,7 +11,7 @@ import {
   item_release as itemReleaseTable,
   order as orderTable,
 } from "@myakiba/db/schema/figure";
-import type { Tx } from "@myakiba/db/tx";
+import type { ReadTx, Tx } from "@myakiba/db/tx";
 import {
   DATA_TRANSFER_FORMAT,
   DATA_TRANSFER_IMPORT_INTERRUPTED_REASON,
@@ -31,9 +30,9 @@ import type {
   DataTransferImportRun,
 } from "@myakiba/contracts/data-transfer/schema";
 import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
-import { UNSAVED_ITEM_REASON } from "@myakiba/contracts/sync/constants";
 import { ITEM_FETCH_ERROR_MESSAGE } from "@myakiba/contracts/sync/messages";
-import { ensureMfcItem, prepareMfcItem } from "@/lib/mfc-item-ingest";
+import { ensureMfcItem } from "@/lib/mfc-item-ingest";
+import type { prepareMfcItem } from "@/lib/mfc-item-ingest";
 import { createImportId, planCollectionRows } from "./import-plan";
 import type { ImportableItem, PlannedCollectionRow } from "./import-plan";
 import {
@@ -257,90 +256,86 @@ async function applyItemRows(
 }
 
 const DataTransferService = {
-  async exportArchive(userId: string): Promise<DataTransferArchiveV1> {
-    const { orders, collectionItems } = await db.transaction(
-      async (transaction) => {
-        const orderRows = await transaction
-          .select({
-            id: orderTable.id,
-            title: orderTable.title,
-            shop: orderTable.shop,
-            orderDate: orderTable.orderDate,
-            releaseDate: orderTable.releaseDate,
-            paymentDate: orderTable.paymentDate,
-            shippingDate: orderTable.shippingDate,
-            collectionDate: orderTable.collectionDate,
-            shippingMethod: orderTable.shippingMethod,
-            status: orderTable.status,
-            shippingFee: orderTable.shippingFee,
-            taxes: orderTable.taxes,
-            duties: orderTable.duties,
-            tariffs: orderTable.tariffs,
-            miscFees: orderTable.miscFees,
-            notes: orderTable.notes,
-            createdAt: orderTable.createdAt,
-            updatedAt: orderTable.updatedAt,
-          })
-          .from(orderTable)
-          .where(eq(orderTable.userId, userId))
-          .orderBy(asc(orderTable.createdAt), asc(orderTable.id))
-          .limit(DATA_TRANSFER_MAX_RECORDS + 1);
+  async exportArchive(userId: string, tx: ReadTx): Promise<DataTransferArchiveV1> {
+    const orderRows = await tx
+      .select({
+        id: orderTable.id,
+        title: orderTable.title,
+        shop: orderTable.shop,
+        orderDate: orderTable.orderDate,
+        releaseDate: orderTable.releaseDate,
+        paymentDate: orderTable.paymentDate,
+        shippingDate: orderTable.shippingDate,
+        collectionDate: orderTable.collectionDate,
+        shippingMethod: orderTable.shippingMethod,
+        status: orderTable.status,
+        shippingFee: orderTable.shippingFee,
+        taxes: orderTable.taxes,
+        duties: orderTable.duties,
+        tariffs: orderTable.tariffs,
+        miscFees: orderTable.miscFees,
+        notes: orderTable.notes,
+        createdAt: orderTable.createdAt,
+        updatedAt: orderTable.updatedAt,
+      })
+      .from(orderTable)
+      .where(eq(orderTable.userId, userId))
+      .orderBy(asc(orderTable.createdAt), asc(orderTable.id))
+      .limit(DATA_TRANSFER_MAX_RECORDS + 1);
 
-        if (orderRows.length > DATA_TRANSFER_MAX_RECORDS) {
-          throw new Error("DATA_TRANSFER_ARCHIVE_TOO_MANY_RECORDS");
-        }
+    if (orderRows.length > DATA_TRANSFER_MAX_RECORDS) {
+      throw new Error("DATA_TRANSFER_ARCHIVE_TOO_MANY_RECORDS");
+    }
 
-        const collectionRows = await transaction
-          .select({
-            id: collectionTable.id,
-            orderId: collectionTable.orderId,
-            status: collectionTable.status,
-            count: collectionTable.count,
-            score: collectionTable.score,
-            price: collectionTable.price,
-            shop: collectionTable.shop,
-            orderDate: collectionTable.orderDate,
-            paymentDate: collectionTable.paymentDate,
-            shippingDate: collectionTable.shippingDate,
-            collectionDate: collectionTable.collectionDate,
-            shippingMethod: collectionTable.shippingMethod,
-            soldFor: collectionTable.soldFor,
-            soldDate: collectionTable.soldDate,
-            tags: collectionTable.tags,
-            condition: collectionTable.condition,
-            notes: collectionTable.notes,
-            createdAt: collectionTable.createdAt,
-            updatedAt: collectionTable.updatedAt,
-            itemExternalId: itemTable.externalId,
-            itemSource: itemTable.source,
-            itemTitle: itemTable.title,
-            releaseDate: itemReleaseTable.date,
-            releaseType: itemReleaseTable.type,
-            releasePrice: itemReleaseTable.price,
-            releasePriceCurrency: itemReleaseTable.priceCurrency,
-            releaseBarcode: itemReleaseTable.barcode,
-          })
-          .from(collectionTable)
-          .innerJoin(itemTable, eq(collectionTable.itemId, itemTable.id))
-          .leftJoin(
-            itemReleaseTable,
-            and(
-              eq(collectionTable.releaseId, itemReleaseTable.id),
-              eq(itemReleaseTable.itemId, itemTable.id),
-            ),
-          )
-          .where(eq(collectionTable.userId, userId))
-          .orderBy(asc(collectionTable.createdAt), asc(collectionTable.id))
-          .limit(DATA_TRANSFER_MAX_RECORDS - orderRows.length + 1);
+    const collectionRows = await tx
+      .select({
+        id: collectionTable.id,
+        orderId: collectionTable.orderId,
+        status: collectionTable.status,
+        count: collectionTable.count,
+        score: collectionTable.score,
+        price: collectionTable.price,
+        shop: collectionTable.shop,
+        orderDate: collectionTable.orderDate,
+        paymentDate: collectionTable.paymentDate,
+        shippingDate: collectionTable.shippingDate,
+        collectionDate: collectionTable.collectionDate,
+        shippingMethod: collectionTable.shippingMethod,
+        soldFor: collectionTable.soldFor,
+        soldDate: collectionTable.soldDate,
+        tags: collectionTable.tags,
+        condition: collectionTable.condition,
+        notes: collectionTable.notes,
+        createdAt: collectionTable.createdAt,
+        updatedAt: collectionTable.updatedAt,
+        itemExternalId: itemTable.externalId,
+        itemSource: itemTable.source,
+        itemTitle: itemTable.title,
+        releaseDate: itemReleaseTable.date,
+        releaseType: itemReleaseTable.type,
+        releasePrice: itemReleaseTable.price,
+        releasePriceCurrency: itemReleaseTable.priceCurrency,
+        releaseBarcode: itemReleaseTable.barcode,
+      })
+      .from(collectionTable)
+      .innerJoin(itemTable, eq(collectionTable.itemId, itemTable.id))
+      .leftJoin(
+        itemReleaseTable,
+        and(
+          eq(collectionTable.releaseId, itemReleaseTable.id),
+          eq(itemReleaseTable.itemId, itemTable.id),
+        ),
+      )
+      .where(eq(collectionTable.userId, userId))
+      .orderBy(asc(collectionTable.createdAt), asc(collectionTable.id))
+      .limit(DATA_TRANSFER_MAX_RECORDS - orderRows.length + 1);
 
-        if (orderRows.length + collectionRows.length > DATA_TRANSFER_MAX_RECORDS) {
-          throw new Error("DATA_TRANSFER_ARCHIVE_TOO_MANY_RECORDS");
-        }
+    if (orderRows.length + collectionRows.length > DATA_TRANSFER_MAX_RECORDS) {
+      throw new Error("DATA_TRANSFER_ARCHIVE_TOO_MANY_RECORDS");
+    }
 
-        return { orders: orderRows, collectionItems: collectionRows };
-      },
-      { isolationLevel: "repeatable read", accessMode: "read only" },
-    );
+    const orders = orderRows;
+    const collectionItems = collectionRows;
 
     const orderKeysById = new Map(orders.map((order, index) => [order.id, `order-${index + 1}`]));
 
@@ -434,15 +429,18 @@ const DataTransferService = {
     return archive;
   },
 
-  async startImport({
-    userId,
-    fileName,
-    archive,
-  }: {
-    readonly userId: string;
-    readonly fileName: string;
-    readonly archive: DataTransferArchiveV1;
-  }): Promise<DataTransferImportRun> {
+  async startImport(
+    scope: CommandScope,
+    {
+      userId,
+      fileName,
+      archive,
+    }: {
+      readonly userId: string;
+      readonly fileName: string;
+      readonly archive: DataTransferArchiveV1;
+    },
+  ): Promise<DataTransferImportRun> {
     if (Buffer.byteLength(JSON.stringify(archive), "utf-8") > DATA_TRANSFER_MAX_BYTES) {
       throw new Error("DATA_TRANSFER_ARCHIVE_TOO_LARGE");
     }
@@ -450,7 +448,7 @@ const DataTransferService = {
     const jobId = `data-transfer-import-${createId()}`;
     const now = new Date();
 
-    const started = await mutateImport(userId, now, async (tx, current) => {
+    const started = await mutateImport(scope, userId, now, async (tx, current) => {
       if (current && isActive(current.status)) throw new Error("DATA_TRANSFER_ACTIVE_IMPORT");
 
       const values = {
@@ -482,17 +480,17 @@ const DataTransferService = {
     return { ...toImport(started.view), missingMfcItemIds: started.missingMfcItemIds };
   },
 
-  async getCurrentImport(userId: string): Promise<DataTransferImport | null> {
+  async getCurrentImport(userId: string, db: ReadTx): Promise<DataTransferImport | null> {
     const view = await readView(db, userId, new Date());
     return view ? toImport(view) : null;
   },
 
-  getImportJobStatus(userId: string): Promise<SyncJobStatus | null> {
-    return readJobStatus(userId);
+  getImportJobStatus(userId: string, db: ReadTx): Promise<SyncJobStatus | null> {
+    return readJobStatus(db, userId);
   },
 
-  deleteCurrentImport(userId: string): Promise<DeletedImport> {
-    return mutateImport<DeletedImport>(userId, new Date(), async (tx, current) => {
+  deleteCurrentImport(scope: CommandScope, userId: string): Promise<DeletedImport> {
+    return mutateImport<DeletedImport>(scope, userId, new Date(), async (tx, current) => {
       if (!current) return { value: { kind: "not_found" }, changed: false };
       if (isActive(current.status)) return { value: { kind: "active" }, changed: false };
 
@@ -501,10 +499,10 @@ const DataTransferService = {
     });
   },
 
-  async retryImport(userId: string): Promise<DataTransferImportRun> {
+  async retryImport(scope: CommandScope, userId: string): Promise<DataTransferImportRun> {
     const jobId = `data-transfer-import-${createId()}`;
     const now = new Date();
-    const retried = await mutateImport(userId, now, async (tx, current) => {
+    const retried = await mutateImport(scope, userId, now, async (tx, current) => {
       if (
         !current?.row.hasArchive ||
         (current.status !== "partial" && current.status !== "failed")
@@ -538,86 +536,72 @@ const DataTransferService = {
   },
 
   async completeItem(
+    scope: CommandScope,
     userId: string,
     upload: DataTransferImportItemUpload,
+    prepared: Awaited<ReturnType<typeof prepareMfcItem>>,
   ): Promise<
     | { readonly kind: "imported"; readonly import: DataTransferImport | null }
     | { readonly kind: "problem"; readonly message: string }
   > {
-    try {
-      const prepared = await prepareMfcItem(db, upload);
-      if (prepared.kind === "unreadable") {
-        await DataTransferService.failItem(userId, {
-          jobId: upload.jobId,
-          mfcItemId: upload.mfcItemId,
-          reason: prepared.message,
-        });
-        return { kind: "problem", message: prepared.message };
-      }
-
-      const now = new Date();
-      const view = await mutateImport(userId, now, async (tx, current) => {
-        if (prepared.kind === "parsed") await ensureMfcItem(tx, prepared.page, prepared.stored);
-        if (!current) return { value: current, changed: false };
-        if (current.row.jobId === upload.jobId) {
-          await tx
-            .update(dataTransferImport)
-            .set({ heartbeatAt: now })
-            .where(eq(dataTransferImport.userId, userId));
-        }
-
-        const [waiting] = await tx
-          .select({ status: dataTransferImportItem.status, rows: dataTransferImportItem.rows })
-          .from(dataTransferImportItem)
-          .where(
-            and(
-              eq(dataTransferImportItem.userId, userId),
-              eq(dataTransferImportItem.itemExternalId, upload.mfcItemId),
-            ),
-          );
-        if (!waiting || waiting.status === "imported") return { value: current, changed: false };
-
-        const arrived = await loadImportableItems(tx, [upload.mfcItemId]);
-        if (!arrived.has(upload.mfcItemId)) {
-          throw new Error(`MFC item ${upload.mfcItemId} was neither created nor found`);
-        }
-        await applyItemRows(tx, current, arrived, waiting.rows);
-        await tx
-          .update(dataTransferImportItem)
-          .set({ status: "imported", errorReason: null, rows: [], updatedAt: now })
-          .where(
-            and(
-              eq(dataTransferImportItem.userId, userId),
-              eq(dataTransferImportItem.itemExternalId, upload.mfcItemId),
-            ),
-          );
-        return { value: await settle(tx, userId, now), changed: true };
-      });
-
-      return { kind: "imported", import: view ? toImport(view) : null };
-    } catch (error) {
-      const log = createLogger({
-        action: "dataTransfer.completeItem",
-        user: { id: userId },
-        mfcItemId: upload.mfcItemId,
-      });
-      log.error(error instanceof Error ? error : String(error));
-      log.emit();
-      const currentImport = await DataTransferService.failItem(userId, {
+    if (prepared.kind === "unreadable") {
+      await DataTransferService.failItem(scope, userId, {
         jobId: upload.jobId,
         mfcItemId: upload.mfcItemId,
-        reason: UNSAVED_ITEM_REASON,
+        reason: prepared.message,
       });
-      return { kind: "imported", import: currentImport };
+      return { kind: "problem", message: prepared.message };
     }
+
+    const now = new Date();
+    const view = await mutateImport(scope, userId, now, async (tx, current) => {
+      if (prepared.kind === "parsed") await ensureMfcItem(tx, prepared.page, prepared.stored);
+      if (!current) return { value: current, changed: false };
+      if (current.row.jobId === upload.jobId) {
+        await tx
+          .update(dataTransferImport)
+          .set({ heartbeatAt: now })
+          .where(eq(dataTransferImport.userId, userId));
+      }
+
+      const [waiting] = await tx
+        .select({ status: dataTransferImportItem.status, rows: dataTransferImportItem.rows })
+        .from(dataTransferImportItem)
+        .where(
+          and(
+            eq(dataTransferImportItem.userId, userId),
+            eq(dataTransferImportItem.itemExternalId, upload.mfcItemId),
+          ),
+        );
+      if (!waiting || waiting.status === "imported") return { value: current, changed: false };
+
+      const arrived = await loadImportableItems(tx, [upload.mfcItemId]);
+      if (!arrived.has(upload.mfcItemId)) {
+        throw new Error(`MFC item ${upload.mfcItemId} was neither created nor found`);
+      }
+      await applyItemRows(tx, current, arrived, waiting.rows);
+      await tx
+        .update(dataTransferImportItem)
+        .set({ status: "imported", errorReason: null, rows: [], updatedAt: now })
+        .where(
+          and(
+            eq(dataTransferImportItem.userId, userId),
+            eq(dataTransferImportItem.itemExternalId, upload.mfcItemId),
+          ),
+        );
+      return { value: await settle(tx, userId, now), changed: true };
+    });
+
+    return { kind: "imported", import: view ? toImport(view) : null };
   },
 
   async failItem(
+    scope: CommandScope,
     userId: string,
     failure: DataTransferImportItemFailure,
   ): Promise<DataTransferImport | null> {
     const now = new Date();
-    const view = await mutateImport(userId, now, async (tx, current) => {
+    const view = await mutateImport(scope, userId, now, async (tx, current) => {
       if (current?.row.jobId === failure.jobId) {
         await tx
           .update(dataTransferImport)
@@ -656,9 +640,13 @@ const DataTransferService = {
     return view ? toImport(view) : null;
   },
 
-  async interruptImport(userId: string, jobId: string): Promise<DataTransferImport | null> {
+  async interruptImport(
+    scope: CommandScope,
+    userId: string,
+    jobId: string,
+  ): Promise<DataTransferImport | null> {
     const now = new Date();
-    const view = await mutateImport(userId, now, async (tx, current) => {
+    const view = await mutateImport(scope, userId, now, async (tx, current) => {
       if (!current || current.row.jobId !== jobId || current.status !== "running") {
         return { value: current, changed: false };
       }
@@ -681,9 +669,9 @@ const DataTransferService = {
     return view ? toImport(view) : null;
   },
 
-  heartbeat(userId: string, jobId: string): Promise<boolean> {
+  heartbeat(scope: CommandScope, userId: string, jobId: string): Promise<boolean> {
     const now = new Date();
-    return mutateImport(userId, now, async (tx, current) => {
+    return mutateImport(scope, userId, now, async (tx, current) => {
       if (!current || current.row.jobId !== jobId || current.status !== "running") {
         return { value: false, changed: false };
       }

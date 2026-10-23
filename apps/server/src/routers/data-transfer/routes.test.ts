@@ -854,12 +854,12 @@ test("import polling keeps its last status through a database blip and retries",
   const { default: service } = await import("./service");
   const original = service.getImportJobStatus;
   let failRead = false;
-  const read = spyOn(service, "getImportJobStatus").mockImplementation(async (id) => {
+  const read = spyOn(service, "getImportJobStatus").mockImplementation(async (id, tx) => {
     if (failRead) {
       failRead = false;
       throw new Error("Postgres temporarily unavailable");
     }
-    return original(id);
+    return original(id, tx);
   });
   const clock = spyOn(Date, "now");
   const abort = new AbortController();

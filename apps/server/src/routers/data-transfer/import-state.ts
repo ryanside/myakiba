@@ -1,12 +1,12 @@
+import type { CommandScope } from "@/domain/kernel";
 import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
 import { createLogger } from "evlog";
-import { db } from "@myakiba/db/client";
 import {
   dataTransferImport,
   dataTransferImportItem,
   item as itemTable,
 } from "@myakiba/db/schema/figure";
-import type { Tx } from "@myakiba/db/tx";
+import type { ReadTx, Tx } from "@myakiba/db/tx";
 import {
   DATA_TRANSFER_IMPORT_INTERRUPTED_REASON,
   DATA_TRANSFER_IMPORT_LEASE_MS,
@@ -19,7 +19,6 @@ import type {
 import type { SyncJobRecentItem, SyncJobStatus } from "@myakiba/contracts/sync/schema";
 import { redis } from "@myakiba/redis/client";
 import { writeJobStatusSnapshotAndPublish } from "@myakiba/redis/job-status";
-import { tryCatch } from "@myakiba/utils/result";
 
 const RECENT_ITEMS_LIMIT = 5;
 const EMPTY_IMPORT_ERROR = "No orders or collection items could be imported.";
@@ -174,7 +173,7 @@ function waitingItems(
 }
 
 export async function readView(
-  tx: Tx | typeof db,
+  tx: ReadTx,
   userId: string,
   now: Date,
 ): Promise<ImportView | undefined> {
@@ -242,22 +241,19 @@ type Mutation<T> = { readonly value: T; readonly changed: boolean };
  * status once committed if the lapse or the body changed anything.
  */
 export async function mutateImport<T>(
+  scope: CommandScope,
   userId: string,
   now: Date,
   body: (tx: Tx, current: ImportView | undefined) => Promise<Mutation<T>>,
 ): Promise<T> {
-  const { value, changed } = await db.transaction(
-    async (tx) => {
-      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${userId}, 0))`);
-      const view = await readView(tx, userId, now);
-      const lapsed = view !== undefined && isActive(view.row.status) && !isActive(view.status);
-      const outcome = await body(tx, lapsed ? await recordLapse(tx, view, now) : view);
-      return { value: outcome.value, changed: lapsed || outcome.changed };
-    },
-    { isolationLevel: "read committed" },
-  );
-  if (changed) await publishStatus(userId);
-  return value;
+  const tx = scope.tx;
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${userId}, 0))`);
+  const view = await readView(tx, userId, now);
+  const lapsed = view !== undefined && isActive(view.row.status) && !isActive(view.status);
+  const outcome = await body(tx, lapsed ? await recordLapse(tx, view, now) : view);
+  if (lapsed || outcome.changed)
+    scope.afterCommit((committed) => publishStatus(committed.tx, userId));
+  return outcome.value;
 }
 
 async function saveView(tx: Tx, view: ImportView, now: Date): Promise<ImportView> {
@@ -291,7 +287,7 @@ export async function settle(tx: Tx, userId: string, now: Date): Promise<ImportV
   return saveView(tx, view, now);
 }
 
-async function readRecentItems(userId: string): Promise<SyncJobRecentItem[]> {
+async function readRecentItems(db: ReadTx, userId: string): Promise<SyncJobRecentItem[]> {
   const rows = await db
     .select({
       externalId: dataTransferImportItem.itemExternalId,
@@ -386,27 +382,25 @@ function jobStatusOf(view: ImportView, recentItems: SyncJobRecentItem[]): SyncJo
   };
 }
 
-export async function readJobStatus(userId: string): Promise<SyncJobStatus | null> {
+export async function readJobStatus(db: ReadTx, userId: string): Promise<SyncJobStatus | null> {
   const view = await readView(db, userId, new Date());
   if (!view) return null;
-  return jobStatusOf(view, await readRecentItems(userId));
+  return jobStatusOf(view, await readRecentItems(db, userId));
 }
 
-async function publishStatus(userId: string): Promise<void> {
-  const { error } = await tryCatch(
-    (async () => {
-      if (redis.status !== "ready") throw new Error("Redis is unavailable");
-      const status = await readJobStatus(userId);
-      if (status) await writeJobStatusSnapshotAndPublish(redis, status.jobId, status);
-    })(),
-  );
-  if (!error) return;
-  const publishLog = createLogger({
-    action: "dataTransfer.publishStatus",
-    outcome: "warn",
-    user: { id: userId },
-    message: "Failed to publish the import status; the database keeps it",
-  });
-  publishLog.error(error);
-  publishLog.emit();
+async function publishStatus(db: ReadTx, userId: string): Promise<void> {
+  try {
+    if (redis.status !== "ready") throw new Error("Redis is unavailable");
+    const status = await readJobStatus(db, userId);
+    if (status) await writeJobStatusSnapshotAndPublish(redis, status.jobId, status);
+  } catch (error) {
+    const publishLog = createLogger({
+      action: "dataTransfer.publishStatus",
+      outcome: "warn",
+      user: { id: userId },
+      message: "Failed to publish the import status; the database keeps it",
+    });
+    publishLog.error(error instanceof Error ? error : String(error));
+    publishLog.emit();
+  }
 }
