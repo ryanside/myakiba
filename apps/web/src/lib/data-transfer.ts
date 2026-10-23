@@ -5,7 +5,7 @@ import {
 import type { DataTransferArchiveV1 } from "@myakiba/contracts/data-transfer/schema";
 import { parseJson } from "@myakiba/utils/parse-json";
 
-export function parseDataTransferJson(rawJson: string): DataTransferArchiveV1 {
+function parseDataTransferJson(rawJson: string): DataTransferArchiveV1 {
   const { data, error } = parseJson(dataTransferArchiveV1Schema, rawJson);
   if (error === null) return data;
   if (!("issues" in error)) throw new Error("This file is not valid JSON.");

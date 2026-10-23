@@ -105,7 +105,6 @@
     "apps/web/src/components/ui/toast.tsx useToastManager",
     "apps/web/src/components/ui/toggle.tsx Toggle",
     "apps/web/src/lib/compose-refs.ts composeRefs",
-    "apps/web/src/lib/data-transfer.ts parseDataTransferJson",
     "apps/web/src/lib/typer/typer.ts ALL_VARIATIONS",
     "packages/contracts/src/calendar/schema.ts CALENDAR_VIEWS",
     "packages/contracts/src/data-transfer/schema.ts DATA_TRANSFER_IMPORT_PHASES",
