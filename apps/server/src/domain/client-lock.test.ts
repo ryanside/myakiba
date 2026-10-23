@@ -74,6 +74,14 @@ const files = {
   },
   "apps/server/src/routers/sync/probe.ts": {
     source: `import { db } from "@myakiba/db/client";\nimport { helper } from "./helper.test";\n\nexport const probe = () => [db, helper];\n`,
+    flagged: [CLIENT, TEST_FILE],
+  },
+  "apps/server/src/routers/data-transfer/probe.ts": {
+    source: `import { db } from "@myakiba/db/client";\nimport { helper } from "./helper.test";\n\nexport const probe = () => [db, helper];\n`,
+    flagged: [CLIENT, TEST_FILE],
+  },
+  "apps/worker/src/probe.ts": {
+    source: `import { db } from "@myakiba/db/client";\nimport { helper } from "./helper.test";\n\nexport const probe = () => [db, helper];\n`,
     flagged: [TEST_FILE],
   },
 } satisfies Record<string, { source: string; flagged: string[] }>;

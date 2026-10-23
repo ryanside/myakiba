@@ -93,13 +93,8 @@ const dbClientOwners = ["apps/server/src/domain/kernel.ts", "packages/auth/src/s
 const testCode = ["**/*.test.ts", "**/*.test.tsx", "**/test/**"];
 // Tests create and read rows directly.
 const serverTests = ["apps/server/**/*.test.ts", "apps/server/test/**"];
-// The worker's nightly sync history cleanup, and the sync and data-transfer routers
-// the extension port kept from before the kernel. They import the db client directly.
-const beforeKernel = [
-  "apps/worker/**",
-  "apps/server/src/routers/sync/**",
-  "apps/server/src/routers/data-transfer/**",
-];
+// The worker's nightly sync history cleanup imports the db client directly.
+const worker = ["apps/worker/**"];
 
 const otherTypeAwareRules = [
   "typescript/await-thenable",
@@ -231,7 +226,7 @@ export default defineConfig({
     },
     {
       files: ["**"],
-      excludeFiles: [...serverTests, ...beforeKernel],
+      excludeFiles: [...serverTests, ...worker],
       rules: {
         "no-restricted-imports": [
           "error",
@@ -251,13 +246,13 @@ export default defineConfig({
     },
     {
       files: testCode,
-      excludeFiles: [...serverTests, ...beforeKernel],
+      excludeFiles: [...serverTests, ...worker],
       rules: {
         "no-restricted-imports": ["error", { paths: [dbClientBan], patterns: [dbSourcePath] }],
       },
     },
     {
-      files: beforeKernel,
+      files: worker,
       excludeFiles: testCode,
       rules: { "no-restricted-imports": ["error", { patterns: testImports }] },
     },
@@ -307,7 +302,7 @@ export default defineConfig({
     },
     {
       files: ["apps/server/src/routers/**"],
-      excludeFiles: [...serverTests, ...beforeKernel],
+      excludeFiles: [...serverTests, ...worker],
       rules: {
         "no-restricted-imports": [
           "error",
