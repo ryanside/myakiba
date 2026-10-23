@@ -4,7 +4,7 @@ import { collection, entry, entry_to_item, item, item_release } from "@myakiba/d
 import type { Tx } from "@myakiba/db/tx";
 import { mfcReleaseId } from "@myakiba/mfc/parse";
 import type { MfcEntryLink, MfcItemPage } from "@myakiba/mfc/parse";
-import { itemFields, linkEntries, linksInLockOrder, releaseRows } from "@/lib/mfc-item-page";
+import { itemFields, linkEntries, linksInLockOrder, releaseRows } from "@/lib/mfc-item-ingest";
 import { buildReleasePlan } from "./release-plan";
 import type { ReleasePlan } from "./release-plan";
 

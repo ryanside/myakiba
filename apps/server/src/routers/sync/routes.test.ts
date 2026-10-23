@@ -110,7 +110,7 @@ await mock.module("@/lib/item-images", () => ({
 
 const db = await createTestDatabase();
 const { default: syncRouter } = await import("./index");
-const { ensureMfcItem } = await import("@/routers/mfc-items/ingest");
+const { ensureMfcItem } = await import("@/lib/mfc-item-ingest");
 const app = new Elysia({ prefix: "/api" }).use(syncRouter);
 
 const fixtures = path.join(import.meta.dir, "../../../../../packages/mfc/fixtures");

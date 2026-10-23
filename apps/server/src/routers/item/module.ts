@@ -17,7 +17,7 @@ import { redis } from "@myakiba/redis/client";
 import { getResyncCooldown, setResyncCooldown } from "@myakiba/redis/item-resync";
 import type { ItemResyncState } from "@myakiba/redis/item-resync";
 import { command, fail, ok, proceed, query } from "@/domain/kernel";
-import { findMfcItem, pictureLog, readPage } from "@/lib/mfc-item-page";
+import { findMfcItem, pictureLog, readMfcItemPage } from "@/lib/mfc-item-ingest";
 import type { CustomItemInput, EntriesWithRoles } from "./model";
 import { lockItem, refreshItem } from "./refresh-item";
 
@@ -515,9 +515,12 @@ export const Items = {
         if (await cooldownHeldUntil(scope.tx, found.itemId)) {
           return fail("too_many_requests", RECENTLY_REFRESHED);
         }
-        const read = await readPage(scope.log, found.id, input);
-        if (!("proceed" in read)) return read;
-        return proceed({ itemId: found.itemId, ...read.proceed });
+        const read = await readMfcItemPage(found.id, input);
+        if (read.kind === "unreadable") {
+          scope.log.set({ mfc: { itemId: found.id, outcome: read.problem } });
+          return fail("bad_request", read.message);
+        }
+        return proceed({ itemId: found.itemId, page: read.page, stored: read.stored });
       },
     },
     async (scope, { itemId, page, stored }) => {

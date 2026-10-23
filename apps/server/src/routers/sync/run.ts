@@ -21,7 +21,7 @@ import {
 } from "@myakiba/contracts/sync/schema";
 import type { JobData, SyncJobRecentItem, SyncJobStatus } from "@myakiba/contracts/sync/schema";
 import type { SyncSessionItemStatus } from "@myakiba/contracts/shared/types";
-import { ensureMfcItem, prepareMfcItem } from "@/routers/mfc-items/ingest";
+import { ensureMfcItem, prepareMfcItem } from "@/lib/mfc-item-ingest";
 import { fetchedItemRows, idsToFetch, insertItemRows } from "./item-rows";
 import type { ItemRows } from "./item-rows";
 import { publishJobStatus, queuedJobStatus } from "./job-status";

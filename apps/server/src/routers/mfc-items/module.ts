@@ -3,9 +3,8 @@ import type { ItemUpload, MissingItemsInput } from "@myakiba/contracts/mfc-items
 import { item } from "@myakiba/db/schema/figure";
 import type { MfcItemId } from "@myakiba/mfc/page";
 import { command, fail, ok, proceed, query } from "@/domain/kernel";
-import { ensureMfcItem, prepareMfcItem } from "./ingest";
-
-type PictureOutcome = "stored" | "absent" | "rejected";
+import { ensureMfcItem, pictureLog, pictureOutcome, prepareMfcItem } from "@/lib/mfc-item-ingest";
+import type { PictureOutcome } from "@/lib/mfc-item-ingest";
 
 type IngestResult =
   | { readonly saved: "existing"; readonly itemId: string; readonly mfcItemId: MfcItemId }
@@ -52,7 +51,7 @@ export const MfcItems = {
     },
     async (scope, { page, stored }) => {
       const id = page.mfcItemId;
-      const picture: PictureOutcome = stored?.kind ?? "absent";
+      const picture = pictureOutcome(stored);
       const { itemId, created } = await ensureMfcItem(scope.tx, page, stored);
 
       scope.log.set({
@@ -60,7 +59,7 @@ export const MfcItems = {
           itemId: id,
           contentLabel: page.contentLabel,
           outcome: created ? "created" : "existing",
-          picture: stored?.kind === "rejected" ? `rejected: ${stored.reason}` : picture,
+          picture: pictureLog(stored),
           warnings: page.warnings,
         },
       });

@@ -29,7 +29,7 @@ import type {
   DataTransferImportRun,
 } from "@myakiba/contracts/data-transfer/schema";
 import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
-import { prepareMfcItem, ensureMfcItem } from "@/routers/mfc-items/ingest";
+import { ensureMfcItem, prepareMfcItem } from "@/lib/mfc-item-ingest";
 import { createImportId, planCollectionRows } from "./import-plan";
 import type { ImportableItem, PlannedCollectionRow } from "./import-plan";
 import {
