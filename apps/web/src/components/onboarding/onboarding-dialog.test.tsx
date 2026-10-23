@@ -106,6 +106,24 @@ test("a new account sees the welcome dialog and saves that it has seen onboardin
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 });
 
+test("a new account that opens Getting Started right away saves that it has seen onboarding", async () => {
+  await openDashboard(false);
+  fireEvent.click(screen.getByRole("button", { name: "Getting Started", hidden: true }));
+  fireEvent.click(await screen.findByRole("button", { name: "Close" }));
+
+  await waitFor(() => expect(updates).toEqual([{ hasSeenOnboarding: true }]));
+});
+
+test("a new account that dismisses the welcome with Escape saves that it has seen onboarding", async () => {
+  await openDashboard(false);
+  fireEvent.keyDown(await screen.findByRole("dialog", { name: "Welcome to myakiba." }), {
+    key: "Escape",
+  });
+
+  await waitFor(() => expect(updates).toEqual([{ hasSeenOnboarding: true }]));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+});
+
 test("a new account sees the welcome as soon as the dashboard renders", async () => {
   await openDashboard(false);
 
