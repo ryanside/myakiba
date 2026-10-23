@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import type { PortPicture, RunEvent } from "@myakiba/mfc/bridge";
 import {
   CHALLENGE_PAGE,
+  COMMIT_STYLES,
   ORIGINS,
   fakeClock,
   fakeExtension,
@@ -10,7 +11,7 @@ import {
   page,
   tooClose,
 } from "../test/fake-browser";
-import type { FakeClock } from "../test/fake-browser";
+import type { CommitStyle, FakeClock } from "../test/fake-browser";
 import { PAGE_TIMEOUT_MS } from "./collect";
 import type { CollectedPage, PageRequest } from "./collect";
 import { PICTURE_TIMEOUT_MS } from "./picture";
@@ -51,8 +52,8 @@ function awaitedItem(events: readonly RunEvent<PortPicture>[]): number | null {
   return awaited;
 }
 
-/** Drives one seeded mix of runs, cancels, solves and worker restarts against a fake MFC. */
-async function play(seed: number) {
+/** Drives one seeded mix of runs, cancels, solves, claims and worker restarts against a fake MFC. */
+async function play(seed: number, style: CommitStyle | undefined) {
   const random = seeded(seed);
   const between = (min: number, max: number) => min + Math.floor(random() * (max - min + 1));
   const clock = fakeClock();
@@ -67,8 +68,14 @@ async function play(seed: number) {
     stalledNavigationsWithMoreQueued: 0,
     pictureReads: 0,
     stalledPictureReads: 0,
+    gatedReads: 0,
+    stalledGatedReads: 0,
   };
-  const item = (id: number) => page(itemPage(id, id % 3 === 0 ? "public" : null));
+  const pictureOf = (id: number) => {
+    if (id % 3 === 0) return "public";
+    return id % 3 === 1 ? "gated" : null;
+  };
+  const item = (id: number) => page(itemPage(id, pictureOf(id)));
 
   async function mfc(request: PageRequest): Promise<CollectedPage> {
     const id = request.mfcItemId;
@@ -105,12 +112,25 @@ async function play(seed: number) {
     return item(id);
   }
 
-  async function publicPicture(_url: URL, signal: AbortSignal) {
-    seen.pictureReads += 1;
+  async function readPicture(signal: AbortSignal, onStall: () => void) {
     const latency = random() < 0.1 ? PICTURE_TIMEOUT_MS + 10_000 : between(0, 8000);
-    if (latency > PICTURE_TIMEOUT_MS) seen.stalledPictureReads += 1;
+    if (latency > PICTURE_TIMEOUT_MS) onStall();
     await clock.sleep(Math.min(latency, PICTURE_COLLECTOR_TIMEOUT_MS), signal);
     return { base64: "AQID", contentType: "image/jpeg" };
+  }
+
+  function publicPicture(_url: URL, signal: AbortSignal) {
+    seen.pictureReads += 1;
+    return readPicture(signal, () => {
+      seen.stalledPictureReads += 1;
+    });
+  }
+
+  function gatedPicture(_url: string, signal: AbortSignal) {
+    seen.gatedReads += 1;
+    return readPicture(signal, () => {
+      seen.stalledGatedReads += 1;
+    });
   }
 
   function navigationMs(): number {
@@ -120,7 +140,31 @@ async function play(seed: number) {
     return PAGE_TIMEOUT_MS + 25_000;
   }
 
-  const extension = fakeExtension({ clock, pages: mfc, navigationMs, publicPicture });
+  const created = new Set<number>();
+  const claimed = new Set<number>();
+  const claims = { pictureTabs: 0, mfcTabs: 0, duringCreate: 0 };
+  function claim(tabId: number): void {
+    claimed.add(tabId);
+    const url = extension.tabs.get(tabId)?.url ?? "";
+    if (url.startsWith(ORIGINS.mfcStatic)) claims.pictureTabs += 1;
+    else claims.mfcTabs += 1;
+    extension.tabs.activate(tabId);
+  }
+
+  const extension = fakeExtension({
+    clock,
+    pages: mfc,
+    navigationMs,
+    publicPicture,
+    gatedPicture,
+    deferNavigationCommit: style,
+    onTabCreated: (tabId) => {
+      created.add(tabId);
+      if (random() >= 0.05) return;
+      claims.duringCreate += 1;
+      claim(tabId);
+    },
+  });
   let usersTab: number | null = extension.tabs.open(`${ORIGINS.mfc}/`);
   let runs: (ReturnType<typeof extension.run> & { readonly size: number })[] = [];
   const itemsWaiting = () =>
@@ -154,13 +198,26 @@ async function play(seed: number) {
       if (loading()) done.restartsMidLoad += 1;
       extension.restart();
       runs = [];
-    } else if (roll < 0.85) {
+    } else if (roll < 0.78) {
       const awaited = open.map((run) => awaitedItem(run.events)).find((id) => id !== null);
       const tabId = awaited ? extension.tabs.find(`${ORIGINS.mfc}/item/${awaited}`) : undefined;
       if (awaited && tabId !== undefined) {
         done.solves += 1;
         solved.add(awaited);
         extension.tabs.navigate(tabId, { title: `Item ${awaited}`, loadMs: between(0, 3000) });
+      }
+    } else if (roll < 0.86) {
+      const unclaimed = [...created].filter((id) => !claimed.has(id) && extension.tabs.has(id));
+      const tabId = unclaimed[between(0, unclaimed.length - 1)];
+      if (tabId !== undefined) {
+        claim(tabId);
+        if (random() < 0.5) {
+          extension.tabs.navigate(tabId, {
+            url: "https://example.com/",
+            title: "Mine",
+            loadMs: between(0, 3000),
+          });
+        }
       }
     } else if (roll < 0.95) {
       if (usersTab === null) {
@@ -176,22 +233,42 @@ async function play(seed: number) {
   await extension.settle();
 
   const loads = extension.loads();
+  const shown = extension.tabs.raised.filter((id) => id !== extension.myakiba.tabId);
+  const users = new Set([...claimed, ...shown, ...(usersTab === null ? [] : [usersTab])]);
   return {
     unfinished: loads.filter((load) => load.endedAt === null),
     tooSoon: tooClose(loads, THROTTLE.minGapMs),
-    coverage: { ...seen, ...done, loads: loads.length },
+    leftOpen: [...created].filter((id) => !users.has(id) && extension.tabs.has(id)),
+    closedOnUser: [...users].filter((id) => !extension.tabs.has(id)),
+    coverage: {
+      ...seen,
+      ...done,
+      ...claims,
+      shown: shown.length,
+      loads: loads.length,
+      gatedLoads: loads.filter((load) => load.url.includes("_tb=commit")).length,
+    },
   };
 }
 
-test("one MFC load at a time, each 2.5 s after the last ended, across cancels, challenges, rate limits, stalled navigations, picture reads and restarts", async () => {
-  const total = new Map<string, number>();
-  for (const seed of SEEDS) {
-    const { unfinished, tooSoon, coverage } = await play(seed);
-    expect({ seed, unfinished, tooSoon }).toEqual({ seed, unfinished: [], tooSoon: [] });
-    for (const [name, count] of Object.entries(coverage)) {
-      total.set(name, (total.get(name) ?? 0) + count);
+test.each(COMMIT_STYLES)(
+  "one MFC load at a time, each 2.5 s after the last ended, and only unclaimed tabs of the extension's closed, across cancels, challenges, rate limits, stalled navigations, picture reads, claims and restarts (%s commits)",
+  async (_name, style) => {
+    const total = new Map<string, number>();
+    for (const seed of SEEDS) {
+      const { coverage, ...outcome } = await play(seed, style);
+      expect({ seed, ...outcome }).toEqual({
+        seed,
+        unfinished: [],
+        tooSoon: [],
+        leftOpen: [],
+        closedOnUser: [],
+      });
+      for (const [name, count] of Object.entries(coverage)) {
+        total.set(name, (total.get(name) ?? 0) + count);
+      }
     }
-  }
 
-  expect([...total].filter(([, count]) => count === 0)).toEqual([]);
-});
+    expect([...total].filter(([, count]) => count === 0)).toEqual([]);
+  },
+);

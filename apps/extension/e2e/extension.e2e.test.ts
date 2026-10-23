@@ -5,8 +5,10 @@ import type { BrowserContext, Page } from "playwright";
 import {
   DEFAULT_SCENARIO,
   E2E_ORIGINS,
+  ELSEWHERE_PICTURE_ID,
   GATED_ID,
   MOVED_PICTURE_ID,
+  NO_CONTENT_PICTURE_ID,
   PICTURE_SHA256,
   PUBLIC_ID,
   UNLISTED_ORIGIN,
@@ -177,6 +179,28 @@ describe("the extension against a mock MFC", () => {
     SCENARIO_TIMEOUT_MS,
   );
 
+  test.each([
+    ["answers 204", NO_CONTENT_PICTURE_ID],
+    ["redirects to a site the extension cannot read", ELSEWHERE_PICTURE_ID],
+  ])(
+    "a public picture whose CDN %s is sent as none, and every tab the extension opened closes",
+    async (_name, id) => {
+      const myakiba = await launch();
+
+      const run = await fetchItems(myakiba, [id]);
+
+      expect(run.items.map((item) => [item.ok, item.picture])).toEqual([[true, null]]);
+      expect(mocks.requests.map((request) => request.path)).toContain(
+        `/upload/items/1/${id}-a1b2c.jpg`,
+      );
+      await until(
+        () => context.pages().length === 1 && context.pages()[0] === myakiba,
+        "every tab the extension opened to close",
+      );
+    },
+    SCENARIO_TIMEOUT_MS,
+  );
+
   test(
     "a cold fetch opens a tab of its own, carries the gated picture intact and closes the tab",
     async () => {
@@ -285,7 +309,7 @@ describe("the extension against a mock MFC", () => {
   );
 
   test(
-    "a challenge waits for a click in the extension's MFC tab, then completes",
+    "a challenge waits for a click in the tab it shows, then completes and leaves that tab to the user",
     async () => {
       mocks.scenario.challenge = true;
       const myakiba = await launch();
@@ -297,7 +321,8 @@ describe("the extension against a mock MFC", () => {
         20_000,
       );
       const challengeTab = mfcTabs().find((tab) => tab.url().endsWith(`/item/${GATED_ID}`));
-      await challengeTab?.locator("#solve").click();
+      if (!challengeTab) throw new Error("no challenge tab");
+      await challengeTab.locator("#solve").click();
       const run = await running;
 
       expect(
@@ -305,7 +330,15 @@ describe("the extension against a mock MFC", () => {
       ).toContain("needs_user");
       expect(run.items[0]?.ok).toBe(true);
       expect(run.items[0]?.picture?.sha256).toBe(PICTURE_SHA256.gated);
-      await until(() => mfcTabs().length === 0, "the challenge tab to close");
+
+      const next = await fetchItems(myakiba, [PUBLIC_ID]);
+      expect(next.items[0]?.picture?.sha256).toBe(PICTURE_SHA256.public);
+      await until(
+        () =>
+          context.pages().every((tab) => !tab.url().startsWith(E2E_ORIGINS.WXT_MFC_STATIC_ORIGIN)),
+        "the owned static tab to close",
+      );
+      expect(mfcTabs()).toEqual([challengeTab]);
     },
     SCENARIO_TIMEOUT_MS,
   );

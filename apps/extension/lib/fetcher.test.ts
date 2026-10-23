@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
   CHALLENGE_PAGE,
-  COMMITS_SHOWING_PENDING,
   COMMIT_STYLES,
   INCOGNITO,
   ORIGINS,
@@ -322,7 +321,7 @@ describe("cancel", () => {
     expect(extension.calls).toHaveLength(1);
   });
 
-  test("during a challenge stops waiting, closes the tab and focuses nothing", async () => {
+  test("during a challenge stops waiting, focuses nothing and leaves the shown tab to the user", async () => {
     const extension = fakeExtension({ pages: challengeOn([7]).pages });
     const run = extension.run([7]);
     await extension.clock.runUntil(() => asked(run.events, "needs_user"));
@@ -335,8 +334,8 @@ describe("cancel", () => {
       `create inactive ${ORIGINS.mfc}/`,
       `update 101 ${ORIGINS.mfc}/item/7`,
       "update 101 active",
-      "remove 101",
     ]);
+    expect(extension.tabs.has(101)).toBe(true);
     expect(run.events.at(-1)).toEqual({ type: "done", reason: "cancelled" });
   });
 
@@ -517,7 +516,7 @@ describe("rate limits", () => {
 });
 
 describe("a challenge", () => {
-  test("pauses the queue until the user clears it in the extension's own tab", async () => {
+  test("pauses the queue until the user clears it in the tab it showed them, which stays theirs", async () => {
     const challenge = challengeOn([7]);
     const extension = fakeExtension({ pages: challenge.pages });
     const requester = extension.myakiba.tabId;
@@ -537,8 +536,8 @@ describe("a challenge", () => {
       `update 101 ${ORIGINS.mfc}/item/7`,
       "update 101 active",
       `update ${requester} active`,
-      "remove 101",
     ]);
+    expect(extension.tabs.has(101)).toBe(true);
   });
 
   test("never navigates a borrowed tab", async () => {
@@ -553,7 +552,6 @@ describe("a challenge", () => {
       `create inactive ${ORIGINS.mfc}/item/7`,
       "update 102 active",
       `update ${requester} active`,
-      "remove 102",
     ]);
     expect(extension.tabs.has(borrowed)).toBe(true);
   });
@@ -926,10 +924,10 @@ describe("the MFC tab", () => {
     expect(extension.tabs.log).toEqual([`create inactive ${ORIGINS.mfc}/`]);
   });
 
-  test("leaves an opened tab open once the user navigates it", async () => {
+  test("closes its own tab whatever page it moved to, since only a focus makes it the user's", async () => {
     const extension = fakeExtension({
       pages: (request) => {
-        extension.tabs.set(101, { url: `${ORIGINS.mfc}/profile/someone` });
+        extension.tabs.set(101, { url: "https://example.com/" });
         return page(itemPage(request.mfcItemId));
       },
     });
@@ -937,8 +935,7 @@ describe("the MFC tab", () => {
     await extension.clock.runUntil(run.done);
     await extension.settle();
 
-    expect(extension.tabs.has(101)).toBe(true);
-    expect(extension.tabs.log).toEqual([`create inactive ${ORIGINS.mfc}/`]);
+    expect(extension.tabs.log).toEqual([`create inactive ${ORIGINS.mfc}/`, "remove 101"]);
   });
 
   test("never navigates or closes a tab the user claimed before a challenge", async () => {
@@ -958,9 +955,9 @@ describe("the MFC tab", () => {
       `create inactive ${ORIGINS.mfc}/item/7`,
       "update 102 active",
       `update ${extension.myakiba.tabId} active`,
-      "remove 102",
     ]);
     expect(extension.tabs.has(101)).toBe(true);
+    expect(extension.tabs.has(102)).toBe(true);
   });
 
   test("ignores only its own focus of the challenge tab, so a later one is the user's", async () => {
@@ -1028,8 +1025,10 @@ describe("the MFC tab", () => {
     const extension = fakeExtension({
       pages: itemPages(),
       navigationMs: () => 5000,
-      onTabCreated: (tabId) =>
-        extension.tabs.navigate(tabId, { url: "https://example.com/", title: "Example" }),
+      onTabCreated: (tabId) => {
+        extension.tabs.activate(tabId);
+        extension.tabs.navigate(tabId, { url: "https://example.com/", title: "Example" });
+      },
     });
     const startedAt = extension.clock.now();
     const run = extension.run([1]);
@@ -1039,6 +1038,42 @@ describe("the MFC tab", () => {
 
     expect(extension.tabs.has(101)).toBe(true);
     expect(extension.tabs.log).toEqual([`create inactive ${ORIGINS.mfc}/`]);
+  });
+
+  test.each([
+    ["a site the extension cannot read", "https://example.com/"],
+    ["another origin it can read", `${ORIGINS.mfcStatic}/`],
+  ])(
+    "a homepage that redirects to %s never lands, times out and closes its tab",
+    async (_name, elsewhere) => {
+      const extension = fakeExtension({
+        pages: itemPages(),
+        redirect: (url) => (url === `${ORIGINS.mfc}/` ? elsewhere : undefined),
+      });
+      const run = extension.run([1]);
+      await extension.clock.runUntil(run.done);
+      await extension.settle();
+
+      expect(run.results()).toEqual([{ ok: false, error: "timeout" }]);
+      expect(extension.tabs.log).toEqual([`create inactive ${ORIGINS.mfc}/`, "remove 101"]);
+    },
+  );
+
+  test("a focus between tries at closing the tab, as when the user drags it, keeps it open", async () => {
+    const extension = fakeExtension({
+      pages: (request) => {
+        extension.tabs.drag(101, true);
+        return page(itemPage(request.mfcItemId));
+      },
+    });
+    const run = extension.run([1]);
+    await extension.clock.runUntil(run.done);
+    await advance(extension.clock, 500);
+    extension.tabs.activate(101);
+    extension.tabs.drag(101, false);
+    await extension.settle();
+
+    expect(extension.tabs.has(101)).toBe(true);
   });
 
   test("an MFC error in a borrowed tab is the item's, with no second try", async () => {
@@ -1118,7 +1153,7 @@ describe("the MFC tab", () => {
 
 describe("the MFC tab, however the browser shows a load before it commits", () => {
   test.each(COMMIT_STYLES)(
-    "a challenge loads in the extension's own tab, which closes once the queue drains (%s commits)",
+    "a challenge loads in the extension's own tab, which is the user's once shown (%s commits)",
     async (_name, style) => {
       const challenge = challengeOn([7]);
       const extension = fakeExtension({
@@ -1138,8 +1173,8 @@ describe("the MFC tab, however the browser shows a load before it commits", () =
         `update 101 ${ORIGINS.mfc}/item/7`,
         "update 101 active",
         `update ${extension.myakiba.tabId} active`,
-        "remove 101",
       ]);
+      expect(extension.tabs.has(101)).toBe(true);
     },
   );
 
@@ -1212,26 +1247,72 @@ describe("the MFC tab, however the browser shows a load before it commits", () =
     },
   );
 
-  test.each(COMMITS_SHOWING_PENDING)(
-    "a challenge tab the user moves somewhere the extension cannot read stays open when the run is cancelled (%s commits)",
+  test.each(COMMIT_STYLES)(
+    "a new tab the browser calls complete before its load starts is waited for, used and closed (%s commits)",
     async (_name, style) => {
-      let navigations = 0;
       const extension = fakeExtension({
-        pages: challengeOn([7]).pages,
-        navigationMs: () => (navigations++ === 1 ? 6000 : 0),
+        pages: itemPages(),
+        navigationMs: () => 1500,
         deferNavigationCommit: style,
       });
-      const run = extension.run([7]);
-      await extension.clock.runUntil(() => extension.tabs.loads.length === 2);
-      await advance(extension.clock, 1000);
-      extension.tabs.navigate(101, { url: "https://example.com/", title: "Mine", loadMs: 5000 });
-      extension.fetcher.cancel(run.key);
+      const run = extension.run([1]);
+      await extension.clock.runUntil(run.done);
       await extension.settle();
 
-      expect(run.events.at(-1)).toEqual({ type: "done", reason: "cancelled" });
-      expect(extension.tabs.has(101)).toBe(true);
+      expect(run.results()).toEqual([{ ok: true, html: itemPage(1), picture: null }]);
+      expect(extension.calls.map((call) => call.tabId)).toEqual([101]);
+      expect(extension.tabs.log).toEqual([`create inactive ${ORIGINS.mfc}/`, "remove 101"]);
     },
   );
+
+  for (const claimed of [false, true]) {
+    test.each(COMMIT_STYLES)(
+      `a challenge tab cancelled before its load commits is closed only if the user never focused it (${claimed ? "focused" : "not focused"}, %s commits)`,
+      async (_name, style) => {
+        let navigations = 0;
+        const extension = fakeExtension({
+          pages: challengeOn([7]).pages,
+          navigationMs: () => (navigations++ === 1 ? 6000 : 0),
+          deferNavigationCommit: style,
+        });
+        const run = extension.run([7]);
+        await extension.clock.runUntil(() => extension.tabs.loads.length === 2);
+        await advance(extension.clock, 1000);
+        if (claimed) extension.tabs.activate(101);
+        extension.tabs.navigate(101, { url: "https://example.com/", title: "Mine", loadMs: 5000 });
+        extension.fetcher.cancel(run.key);
+        await extension.settle();
+
+        expect(run.events.at(-1)).toEqual({ type: "done", reason: "cancelled" });
+        expect(extension.tabs.has(101)).toBe(claimed);
+      },
+    );
+  }
+
+  for (const end of ["the run is cancelled", "the challenge window ends"] as const) {
+    test.each(COMMIT_STYLES)(
+      `a shown challenge tab the user navigates away from stays open when ${end} (%s commits)`,
+      async (_name, style) => {
+        const extension = fakeExtension({
+          pages: challengeOn([7]).pages,
+          deferNavigationCommit: style,
+        });
+        const run = extension.run([7]);
+        await extension.clock.runUntil(() => asked(run.events, "needs_user"));
+        extension.tabs.navigate(101, {
+          url: "https://example.com/",
+          title: "Mine",
+          loadMs: CHALLENGE_WINDOW_MS + 60_000,
+        });
+        if (end === "the run is cancelled") extension.fetcher.cancel(run.key);
+        await extension.clock.runUntil(run.done);
+        await extension.settle();
+
+        expect(extension.tabs.has(101)).toBe(true);
+        expect(extension.tabs.log).not.toContain("remove 101");
+      },
+    );
+  }
 });
 
 describe("item results", () => {
@@ -1281,6 +1362,24 @@ describe("item results", () => {
     ]);
   });
 
+  test("a gated picture takes a throttle turn of its own, since it is a request to MFC", async () => {
+    const extension = fakeExtension({
+      pages: ({ mfcItemId }) => page(itemPage(mfcItemId, "gated")),
+      gatedPicture: async (_url, signal) => {
+        await extension.clock.sleep(4000, signal);
+        return { base64: "/9j/", contentType: "image/jpeg" };
+      },
+    });
+    const run = extension.run([1, 2]);
+    await extension.clock.runUntil(run.done);
+
+    expect(run.results().map((result) => result.ok && result.picture !== null)).toEqual([
+      true,
+      true,
+    ]);
+    expect(tooClose(extension.loads(), THROTTLE.minGapMs)).toEqual([]);
+  });
+
   test("a picture that stalls goes through as none and holds nothing up", async () => {
     const extension = fakeExtension({
       pages: ({ mfcItemId }) => page(itemPage(mfcItemId, "gated")),
@@ -1292,7 +1391,7 @@ describe("item results", () => {
     expect(run.results().map((result) => result.ok && result.picture)).toEqual([null, null]);
     const [first, second] = extension.calls;
     expect((second?.at ?? 0) - (first?.at ?? 0)).toBeLessThan(
-      PICTURE_TIMEOUT_MS + THROTTLE.minGapMs + THROTTLE.jitterMs,
+      PICTURE_TIMEOUT_MS + 2 * (THROTTLE.minGapMs + THROTTLE.jitterMs),
     );
   });
 

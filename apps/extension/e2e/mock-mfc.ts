@@ -12,6 +12,8 @@ export const UNLISTED_ORIGIN = "http://127.0.0.1:4604";
 export const GATED_ID = 98_777;
 export const PUBLIC_ID = 98_778;
 export const MOVED_PICTURE_ID = 98_779;
+export const NO_CONTENT_PICTURE_ID = 98_780;
+export const ELSEWHERE_PICTURE_ID = 98_781;
 
 const fixtures = path.join(import.meta.dir, "../../../packages/mfc/fixtures");
 const fixture = (name: string) => Bun.file(path.join(fixtures, name)).text();
@@ -20,9 +22,14 @@ const signedInItem = await fixture("item-98777.html");
 const signedOutNotFound = await fixture("derived-not-found-signed-out.html");
 // Derived from derived-public-item.html: the same page as item 98778, so two ids differ.
 const publicFixture = await fixture("derived-public-item.html");
-const publicItem = publicFixture.replaceAll("98777", String(PUBLIC_ID));
-const movedPictureItem = publicFixture.replaceAll("98777", String(MOVED_PICTURE_ID));
-const publicPicturePath = `/upload/items/1/${PUBLIC_ID}-a1b2c.jpg`;
+const derivedItems = new Map(
+  [PUBLIC_ID, MOVED_PICTURE_ID, NO_CONTENT_PICTURE_ID, ELSEWHERE_PICTURE_ID].map((id) => [
+    `/item/${id}`,
+    publicFixture.replaceAll("98777", String(id)),
+  ]),
+);
+const picturePath = (id: number) => `/upload/items/1/${id}-a1b2c.jpg`;
+const publicPicturePath = picturePath(PUBLIC_ID);
 // Derived from derived-challenge.html: a button stands in for Cloudflare's check.
 const challengeFixture = await fixture("derived-challenge.html");
 const challenge = challengeFixture.replace(
@@ -114,8 +121,8 @@ export function startMocks() {
         headers,
       );
     }
-    if (url.pathname === `/item/${PUBLIC_ID}`) return html(publicItem);
-    if (url.pathname === `/item/${MOVED_PICTURE_ID}`) return html(movedPictureItem);
+    const derived = derivedItems.get(url.pathname);
+    if (derived !== undefined) return html(derived);
     if (url.pathname === `/item/${GATED_ID}`) {
       if (scenario.challenge && !cookie.includes("cf_clearance=ok")) {
         return html(challenge, 403, { "cf-mitigated": "challenge" });
@@ -139,8 +146,14 @@ export function startMocks() {
         const browsing = request.headers.get("sec-fetch-mode") === "navigate";
         const sameOrigin = request.headers.get("sec-fetch-site") === "same-origin";
         if (!browsing && !sameOrigin) return html(challenge, 403, { "cf-mitigated": "challenge" });
-        if (url.pathname === `/upload/items/1/${MOVED_PICTURE_ID}-a1b2c.jpg`) {
+        if (url.pathname === picturePath(MOVED_PICTURE_ID)) {
           return Response.redirect(new URL(publicPicturePath, url.origin), 302);
+        }
+        if (url.pathname === picturePath(NO_CONTENT_PICTURE_ID)) {
+          return new Response(null, { status: 204 });
+        }
+        if (url.pathname === picturePath(ELSEWHERE_PICTURE_ID)) {
+          return Response.redirect(`${UNLISTED_ORIGIN}/elsewhere.jpg`, 302);
         }
         return url.pathname === publicPicturePath
           ? jpeg(publicPicture)

@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { PortPicture } from "@myakiba/mfc/bridge";
 import {
-  COMMITS_SHOWING_PENDING,
   COMMIT_STYLES,
   ORIGINS,
   fakeExtension,
@@ -12,12 +11,18 @@ import {
 } from "../test/fake-browser";
 import type { OwnedTab } from "./owned-tab";
 import { PICTURE_TIMEOUT_MS } from "./picture";
-import { THROTTLE } from "./throttle";
+import { OPEN_THROTTLE, THROTTLE } from "./throttle";
 
 const PICTURE: PortPicture = { base64: "AQID", contentType: "image/jpeg" };
 const publicPages = ({ mfcItemId }: { readonly mfcItemId: number }) =>
   page(itemPage(mfcItemId, "public"));
 const pictureUrl = (id: number) => `${ORIGINS.mfcStatic}/upload/items/1/${id}.jpg`;
+const picturesOf = (results: readonly { readonly ok: boolean; readonly picture?: unknown }[]) =>
+  results.map((result) => result.ok && result.picture);
+const extensionTabsLeft = (extension: ReturnType<typeof fakeExtension>) =>
+  extension.tabs.loads
+    .filter((load) => !load.byUser && extension.tabs.has(load.tabId))
+    .map((load) => load.tabId);
 
 describe("public pictures in an owned static tab", () => {
   test.each(COMMIT_STYLES)(
@@ -197,20 +202,22 @@ describe("public pictures in an owned static tab", () => {
     expect(extension.tabs.loads.every((load) => !extension.tabs.has(load.tabId))).toBe(true);
   });
 
-  for (const claim of ["focus", "navigate"] as const) {
+  for (const claim of ["focus", "focus, then navigate"] as const) {
     test(`a picture tab the user claims by ${claim} stays theirs`, async () => {
       const firstPicture = Promise.withResolvers<PortPicture | null>();
-      let pictures = 0;
+      let reads = 0;
       const extension = fakeExtension({
         pages: publicPages,
-        publicPicture: () => (pictures++ === 0 ? firstPicture.promise : Promise.resolve(PICTURE)),
+        publicPicture: () => (reads++ === 0 ? firstPicture.promise : Promise.resolve(PICTURE)),
       });
       const run = extension.run([1, 2]);
       await extension.clock.runUntil(() => extension.publicPictureCalls.length === 1);
       const owned = extension.publicPictureCalls[0]?.tabId;
       if (owned === undefined) throw new Error("no picture tab");
-      if (claim === "focus") extension.tabs.activate(owned);
-      else extension.tabs.navigate(owned, { url: `${ORIGINS.mfcStatic}/elsewhere`, title: "Mine" });
+      extension.tabs.activate(owned);
+      if (claim === "focus, then navigate") {
+        extension.tabs.navigate(owned, { url: `${ORIGINS.mfcStatic}/elsewhere`, title: "Mine" });
+      }
       firstPicture.resolve(PICTURE);
       await extension.settle();
 
@@ -223,46 +230,136 @@ describe("public pictures in an owned static tab", () => {
     });
   }
 
-  test("a picture navigation the user redirects is left open and sends the item without a picture", async () => {
-    const extension = fakeExtension({
-      pages: publicPages,
-      navigationMs: () => 6000,
-      deferNavigationCommit: "chrome",
-    });
-    extension.tabs.open(`${ORIGINS.mfc}/`);
-    const run = extension.run([1]);
-    await extension.clock.runUntil(() => extension.tabs.loads.length === 1);
-    const tabId = extension.tabs.loads[0]?.tabId;
-    if (tabId === undefined) throw new Error("no picture tab");
-    extension.tabs.navigate(tabId, { url: "https://example.com/", title: "Mine" });
-    await extension.settle();
-
-    expect(run.results()).toEqual([{ ok: true, html: itemPage(1, "public"), picture: null }]);
-    expect(extension.tabs.has(tabId)).toBe(true);
-    expect(extension.publicPictureCalls).toEqual([]);
-  });
-
-  test.each(COMMITS_SHOWING_PENDING)(
-    "a picture tab the user moves somewhere the extension cannot read stays open when the run is cancelled (%s commits)",
+  test.each(COMMIT_STYLES)(
+    "a picture the CDN answers with a 204 or a download never lands, and its tab is closed (%s commits)",
     async (_name, style) => {
       const extension = fakeExtension({
         pages: publicPages,
-        navigationMs: () => 6000,
+        navigationMs: () => 1500,
+        deferNavigationCommit: style,
+        dropsNavigation: (url) => url === pictureUrl(1) || url === pictureUrl(3),
+      });
+      const run = extension.run([1, 2, 3]);
+      await extension.settle();
+
+      expect(picturesOf(run.results())).toEqual([null, PICTURE, null]);
+      expect(extensionTabsLeft(extension)).toEqual([]);
+      expect(tooClose(extension.loads(), THROTTLE.minGapMs)).toEqual([]);
+    },
+  );
+
+  test.each(COMMIT_STYLES)(
+    "a picture redirected to another origin never lands, and its tab is closed (%s commits)",
+    async (_name, style) => {
+      const extension = fakeExtension({
+        pages: publicPages,
+        navigationMs: () => 1500,
+        deferNavigationCommit: style,
+        redirect: (url) => {
+          if (url === pictureUrl(1)) return "https://example.com/1.jpg";
+          return url === pictureUrl(2) ? `${ORIGINS.mfc}/upload/items/1/2.jpg` : undefined;
+        },
+      });
+      const run = extension.run([1, 2, 3]);
+      await extension.settle();
+
+      expect(picturesOf(run.results())).toEqual([null, null, PICTURE]);
+      expect(extension.publicPictureCalls.map((call) => call.tab?.url)).toEqual([pictureUrl(3)]);
+      expect(extensionTabsLeft(extension)).toEqual([]);
+    },
+  );
+
+  test.each(COMMIT_STYLES)(
+    "a picture the owned tab already shows is read again without loading it (%s commits)",
+    async (_name, style) => {
+      const extension = fakeExtension({
+        pages: ({ mfcItemId }) =>
+          page(itemPage(mfcItemId, "public").replace(`/${mfcItemId}.jpg`, "/1.jpg")),
+        navigationMs: () => 1500,
+        deferNavigationCommit: style,
+      });
+      extension.tabs.open(`${ORIGINS.mfc}/`);
+      const run = extension.run([1, 2]);
+      await extension.settle();
+
+      expect(picturesOf(run.results())).toEqual([PICTURE, PICTURE]);
+      expect(extension.tabs.loads.map((load) => load.url)).toEqual([pictureUrl(1)]);
+      expect(extension.publicPictureCalls).toHaveLength(2);
+      expect(tooClose(extension.loads(), THROTTLE.minGapMs)).toEqual([]);
+      expect(extensionTabsLeft(extension)).toEqual([]);
+    },
+  );
+
+  test.each(COMMIT_STYLES)(
+    "a new picture tab the browser calls complete before its load starts is waited for, read and closed (%s commits)",
+    async (_name, style) => {
+      const extension = fakeExtension({
+        pages: publicPages,
+        navigationMs: () => 1500,
         deferNavigationCommit: style,
       });
       extension.tabs.open(`${ORIGINS.mfc}/`);
       const run = extension.run([1]);
-      await extension.clock.runUntil(() => extension.tabs.loads.length === 1);
-      const tabId = extension.tabs.loads[0]?.tabId;
-      if (tabId === undefined) throw new Error("no picture tab");
-      const loadingFrom = extension.clock.now();
-      await extension.clock.runUntil(() => extension.clock.now() >= loadingFrom + 1000);
-      extension.tabs.navigate(tabId, { url: "https://example.com/", title: "Mine", loadMs: 5000 });
-      extension.fetcher.cancel(run.key);
       await extension.settle();
 
-      expect(run.events.at(-1)).toEqual({ type: "done", reason: "cancelled" });
-      expect(extension.tabs.has(tabId)).toBe(true);
+      expect(picturesOf(run.results())).toEqual([PICTURE]);
+      expect(extension.publicPictureCalls.map((call) => call.tab?.url)).toEqual([pictureUrl(1)]);
+      expect(extensionTabsLeft(extension)).toEqual([]);
+    },
+  );
+
+  for (const claimed of [false, true]) {
+    test.each(COMMIT_STYLES)(
+      `a picture tab cancelled before its load commits is closed only if the user never focused it (${claimed ? "focused" : "not focused"}, %s commits)`,
+      async (_name, style) => {
+        const extension = fakeExtension({
+          pages: publicPages,
+          navigationMs: () => 6000,
+          deferNavigationCommit: style,
+        });
+        extension.tabs.open(`${ORIGINS.mfc}/`);
+        const run = extension.run([1]);
+        await extension.clock.runUntil(() => extension.tabs.loads.length === 1);
+        const tabId = extension.tabs.loads[0]?.tabId;
+        if (tabId === undefined) throw new Error("no picture tab");
+        const loadingFrom = extension.clock.now();
+        await extension.clock.runUntil(() => extension.clock.now() >= loadingFrom + 1000);
+        if (claimed) extension.tabs.activate(tabId);
+        extension.tabs.navigate(tabId, {
+          url: "https://example.com/",
+          title: "Mine",
+          loadMs: 5000,
+        });
+        extension.fetcher.cancel(run.key);
+        await extension.settle();
+
+        expect(run.events.at(-1)).toEqual({ type: "done", reason: "cancelled" });
+        expect(extension.tabs.has(tabId)).toBe(claimed);
+      },
+    );
+  }
+
+  test.each(["public", "gated"] as const)(
+    "a %s picture's 20 s budget starts with its throttle turn, so a long pause before it drops nothing",
+    async (picture) => {
+      const throttleState = memoryValue(OPEN_THROTTLE);
+      const extension = fakeExtension({
+        throttleState,
+        pages: async ({ mfcItemId }) => {
+          await throttleState.save({
+            ...throttleState.peek(),
+            pausedUntil: extension.clock.now() + 3 * PICTURE_TIMEOUT_MS,
+          });
+          return page(itemPage(mfcItemId, picture));
+        },
+      });
+      extension.tabs.open(`${ORIGINS.mfc}/`);
+      const run = extension.run([1]);
+      await extension.settle();
+
+      expect(picturesOf(run.results())).toEqual([
+        picture === "public" ? PICTURE : { base64: "/9j/", contentType: "image/jpeg" },
+      ]);
     },
   );
 

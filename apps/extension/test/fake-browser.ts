@@ -115,10 +115,16 @@ export function memoryValue<T>(initial: T): SessionValue<T> & { readonly peek: (
 type FakeTab = {
   id: number;
   windowId: number;
+  /** The page the tab shows once its load completes. */
   url: string;
+  /** The page the tab showed before its load. */
   committedUrl: string;
+  /** Where the load is going, which Chrome shows as `pendingUrl`. */
+  destination: string;
   title: string;
   completesAt: number;
+  /** Polls left in which a Firefox tab calls itself complete before its load starts. */
+  idlePolls: number;
   active: boolean;
   incognito: boolean;
   cookieStoreId?: string;
@@ -162,21 +168,19 @@ const WINDOWS = new Map([
 
 /**
  * How a load shows before it commits. By default it commits at once. Chrome shows the old page as `url` and the new one as
- * `pendingUrl`. Firefox has no `pendingUrl`, so it shows only the old page, which is a blank one in a new tab.
+ * `pendingUrl`. Firefox has no `pendingUrl`, so it shows only the old page, which is a blank one in a new tab. Firefox may
+ * also call the tab complete, still on the old page, for a few polls before the load starts.
  */
-export type CommitStyle = "chrome" | "firefox";
+export type CommitStyle = "chrome" | "firefox" | "firefox-late";
 
 export const COMMIT_STYLES: readonly (readonly [string, CommitStyle | undefined])[] = [
   ["at once", undefined],
   ["Chrome-style", "chrome"],
   ["Firefox-style", "firefox"],
+  ["Firefox-style, complete before it starts", "firefox-late"],
 ];
 
-/**
- * Firefox shows only the old page before a load commits, so a tab the user moves reads as the extension's own load
- * until the user's lands.
- */
-export const COMMITS_SHOWING_PENDING = COMMIT_STYLES.filter(([, style]) => style !== "firefox");
+const IDLE_POLLS = 3;
 
 function readable(url: string): boolean {
   const origin = URL.parse(url)?.origin;
@@ -192,37 +196,54 @@ function fakeTabs(
     readonly created: (tabId: number) => void;
     readonly deferNavigationCommit: CommitStyle | undefined;
     readonly redirect: ((url: string) => string | undefined) | undefined;
+    readonly dropsNavigation: ((url: string) => boolean) | undefined;
   },
 ) {
   const tabs = new Map<number, FakeTab>();
   const removed = new Map<number, PromiseWithResolvers<null>>();
+  const dragged = new Set<number>();
   const log: string[] = [];
   const loads: Load[] = [];
   const focused: number[] = [];
+  const raised: number[] = [];
   let nextId = 100;
+  const showsPending =
+    options.deferNavigationCommit === undefined || options.deferNavigationCommit === "chrome";
 
   function status(tab: FakeTab): string {
     return clock.now() >= tab.completesAt ? "complete" : "loading";
   }
 
+  function seen(tab: FakeTab): Tab {
+    const { id, windowId, active, incognito, cookieStoreId } = tab;
+    return cookieStoreId === undefined
+      ? { id, windowId, active, incognito }
+      : { id, windowId, active, incognito, cookieStoreId };
+  }
+
   function view(tab: FakeTab): Tab {
-    const { completesAt, committedUrl, url, title, ...seen } = tab;
-    const loading = clock.now() < completesAt;
+    const loading = clock.now() < tab.completesAt;
     const style = loading ? options.deferNavigationCommit : undefined;
-    const shown = style === undefined ? url : committedUrl;
-    let shownTab: Tab = { ...seen, status: loading ? "loading" : "complete" };
-    if (readable(shown)) shownTab = { ...shownTab, url: shown, title };
-    if (style === "chrome" && readable(url)) shownTab = { ...shownTab, pendingUrl: url };
+    const shown = style === undefined ? tab.url : tab.committedUrl;
+    let shownTab: Tab = { ...seen(tab), status: loading ? "loading" : "complete" };
+    if (readable(shown)) shownTab = { ...shownTab, url: shown, title: tab.title };
+    if (style === "chrome" && readable(tab.destination)) {
+      shownTab = { ...shownTab, pendingUrl: tab.destination };
+    }
     return shownTab;
+  }
+
+  function idleView(tab: FakeTab): Tab {
+    const idle: Tab = { ...seen(tab), status: "complete" };
+    return readable(tab.committedUrl) ? { ...idle, url: tab.committedUrl } : idle;
   }
 
   /** Create and update answer before their load commits, even when the fake commits at once. */
   function started(tab: FakeTab): Tab {
-    const { completesAt: _completesAt, committedUrl, url, title: _title, ...seen } = tab;
-    let answer: Tab = { ...seen, status: "loading" };
-    if (readable(committedUrl)) answer = { ...answer, url: committedUrl };
-    if (options.deferNavigationCommit !== "firefox" && readable(url)) {
-      answer = { ...answer, pendingUrl: url };
+    let answer: Tab = { ...seen(tab), status: "loading" };
+    if (readable(tab.committedUrl)) answer = { ...answer, url: tab.committedUrl };
+    if (showsPending && readable(tab.destination)) {
+      answer = { ...answer, pendingUrl: tab.destination };
     }
     return answer;
   }
@@ -245,12 +266,21 @@ function fakeTabs(
     }
   }
 
+  /** A dropped load, such as a 204 or a download, ends on the page the tab showed before it. */
   function load(tab: FakeTab, url: string, loadMs: number, title = url, byUser = false): void {
     const committedUrl = status(tab) === "complete" ? tab.url : tab.committedUrl;
     stopLoading(tab.id);
     const at = clock.now();
-    const landing = options.redirect?.(url) ?? url;
-    Object.assign(tab, { committedUrl, url: landing, title, completesAt: at + loadMs });
+    const destination = options.redirect?.(url) ?? url;
+    const dropped = options.dropsNavigation?.(url) === true;
+    Object.assign(tab, {
+      committedUrl,
+      destination,
+      url: dropped ? committedUrl : destination,
+      title: dropped ? tab.title : title,
+      completesAt: at + loadMs,
+      idlePolls: options.deferNavigationCommit === "firefox-late" && !byUser ? IDLE_POLLS : 0,
+    });
     loads.push({ tabId: tab.id, url, at, byUser, endedAt: at + loadMs });
   }
 
@@ -262,8 +292,10 @@ function fakeTabs(
       windowId,
       url,
       committedUrl: url,
+      destination: url,
       title: url,
       completesAt: clock.now(),
+      idlePolls: 0,
       active: false,
       incognito: context.incognito,
     };
@@ -276,7 +308,9 @@ function fakeTabs(
     async get(tabId) {
       const tab = tabs.get(tabId);
       if (!tab) throw new Error(`No tab with id: ${tabId}`);
-      return view(tab);
+      if (tab.idlePolls === 0) return view(tab);
+      tab.idlePolls -= 1;
+      return idleView(tab);
     },
     async query({ url }) {
       const prefix = url.replace(/\*$/, "");
@@ -299,10 +333,16 @@ function fakeTabs(
       if (url !== undefined) load(tab, url, options.navigationMs());
       const answer = url === undefined ? view(tab) : started(tab);
       log.push(`update ${tabId}${url === undefined ? "" : ` ${url}`}${active ? " active" : ""}`);
-      if (active) activate(tabId);
+      if (active) {
+        raised.push(tabId);
+        activate(tabId);
+      }
       return answer;
     },
     async remove(tabId) {
+      if (dragged.has(tabId)) {
+        throw new Error("Tabs cannot be edited right now (user may be dragging a tab).");
+      }
       tabs.delete(tabId);
       log.push(`remove ${tabId}`);
       stopLoading(tabId);
@@ -323,6 +363,8 @@ function fakeTabs(
     log,
     loads,
     focused,
+    /** Tabs the extension brought to the front. */
+    raised,
     open(url: string, placement: { windowId?: number; cookieStoreId?: string } = {}): number {
       return add(url, placement.windowId ?? 1, placement.cookieStoreId).id;
     },
@@ -336,6 +378,11 @@ function fakeTabs(
       if (tab) load(tab, change.url ?? tab.url, change.loadMs ?? 0, change.title, true);
     },
     activate,
+    /** While the user drags a tab, Chrome refuses to close it. */
+    drag(tabId: number, dragging: boolean): void {
+      if (dragging) dragged.add(tabId);
+      else dragged.delete(tabId);
+    },
     /** Settles once the tab closes, which ends any script running in it. */
     closed(tabId: number): Promise<null> {
       const closing = removed.get(tabId) ?? Promise.withResolvers<null>();
@@ -418,7 +465,9 @@ export function fakeExtension(options: {
   readonly onTabCreated?: (tabId: number) => void;
   readonly deferNavigationCommit?: CommitStyle | undefined;
   readonly redirect?: (url: string) => string | undefined;
-  readonly gatedPicture?: (url: string) => Promise<PortPicture | null>;
+  readonly dropsNavigation?: (url: string) => boolean;
+  /** The collector's fetch in the MFC tab. Aborting its signal stops it, as the stop injection does. */
+  readonly gatedPicture?: (url: string, signal: AbortSignal) => Promise<PortPicture | null>;
   /** The collector's fetch in the picture tab. Aborting its signal stops it, as the stop injection does. */
   readonly publicPicture?: (url: URL, signal: AbortSignal) => Promise<PortPicture | null>;
 }) {
@@ -432,6 +481,7 @@ export function fakeExtension(options: {
     created: (tabId) => options.onTabCreated?.(tabId),
     deferNavigationCommit: options.deferNavigationCommit,
     redirect: options.redirect,
+    dropsNavigation: options.dropsNavigation,
   });
   const myakiba: Requester = { tabId: tabs.open(`${ORIGINS.web}/sync`), context: NORMAL };
   const calls: CollectCall[] = [];
@@ -461,6 +511,22 @@ export function fakeExtension(options: {
     }
   }
 
+  /** A read in a tab ends once it answers, once its signal stops it, or once its tab closes. */
+  async function readIn(
+    read: Load,
+    signal: AbortSignal,
+    answer: () => Promise<PortPicture | null>,
+  ): Promise<PortPicture | null> {
+    pictureReads.push(read);
+    const stopped = Promise.withResolvers<null>();
+    signal.addEventListener("abort", () => stopped.resolve(null), { once: true });
+    try {
+      return await Promise.race([answer(), stopped.promise, tabs.closed(read.tabId)]);
+    } finally {
+      read.endedAt = clock.now();
+    }
+  }
+
   /** Stands in for the collector, which reads only the picture asked for. */
   async function readPublicPicture(tabId: number, requested: string, signal: AbortSignal) {
     signal.throwIfAborted();
@@ -477,21 +543,23 @@ export function fakeExtension(options: {
       endedAt: null,
       ...(within && { within }),
     };
-    pictureReads.push(read);
-    const stopped = Promise.withResolvers<null>();
-    signal.addEventListener("abort", () => stopped.resolve(null), { once: true });
-    try {
+    return readIn(read, signal, async () => {
       if (!pictureToRead(requested, url.href, ORIGINS)) return null;
-      return await Promise.race([
-        options.publicPicture
-          ? options.publicPicture(url, signal)
-          : { base64: "AQID", contentType: "image/jpeg" },
-        stopped.promise,
-        tabs.closed(tabId),
-      ]);
-    } finally {
-      read.endedAt = clock.now();
-    }
+      return options.publicPicture
+        ? options.publicPicture(url, signal)
+        : { base64: "AQID", contentType: "image/jpeg" };
+    });
+  }
+
+  async function readGatedPicture(tabId: number, url: string, signal: AbortSignal) {
+    signal.throwIfAborted();
+    pictureUrls.push(url);
+    const read: Load = { tabId, url, at: clock.now(), byUser: false, endedAt: null };
+    return readIn(read, signal, async () =>
+      options.gatedPicture
+        ? options.gatedPicture(url, signal)
+        : { base64: "/9j/", contentType: "image/jpeg" },
+    );
   }
 
   function startWorker(): Worker {
@@ -513,12 +581,7 @@ export function fakeExtension(options: {
       ownedTab: mortalValue(ownedTab, wrap),
       ownedPictureTab: mortalValue(ownedPictureTab, wrap),
       collectPage: wrap(collectPage),
-      fetchGatedPicture: wrap(async (_tabId: number, url: string) => {
-        pictureUrls.push(url);
-        return options.gatedPicture
-          ? options.gatedPicture(url)
-          : { base64: "/9j/", contentType: "image/jpeg" };
-      }),
+      fetchGatedPicture: wrap(readGatedPicture),
       fetchPublicPicture: wrap(readPublicPicture),
     });
     return {
