@@ -72,7 +72,7 @@ async function openDashboard(hasSeenOnboarding?: boolean) {
       <RouterProvider router={router} />
     </QueryClientProvider>,
   );
-  await screen.findByRole("heading", { name: "Dashboard" });
+  await screen.findByRole("heading", { name: "Dashboard", hidden: true });
 }
 
 test("an onboarded account on a new browser keeps the welcome dialog closed", async () => {
@@ -115,6 +115,12 @@ test("a new account that closes Getting Started before the welcome opens keeps i
     screen.queryByRole("dialog") !== null,
     "the welcome dialog opened again after the user closed it",
   ).toBe(false);
+});
+
+test("a new account sees the welcome as soon as the dashboard renders", async () => {
+  await openDashboard(false);
+
+  expect(screen.getByRole("dialog", { name: "Welcome to myakiba." })).toBeTruthy();
 });
 
 test("Getting Started opens at the welcome step even with a step left in local storage", async () => {
