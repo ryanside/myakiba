@@ -109,6 +109,24 @@ async function lockRun(
       .for("update");
     orderLocked = locked.length > 0;
   }
+  if (lockOrder && payload?.type === "csv") {
+    const orderIds = [
+      ...new Set([
+        ...[...payload.items, ...payload.itemsToInsert].flatMap((row) =>
+          row.orderId === null ? [] : [row.orderId],
+        ),
+        ...payload.ordersToInsert.map((row) => row.id),
+      ]),
+    ];
+    if (orderIds.length > 0) {
+      await tx
+        .select({ id: orderTable.id })
+        .from(orderTable)
+        .where(and(inArray(orderTable.id, orderIds), eq(orderTable.userId, userId)))
+        .orderBy(orderTable.id)
+        .for("update");
+    }
+  }
   const session = await lockSession(tx, sessionId);
   if (!session) return null;
   return { session, payload, orderLocked };

@@ -859,6 +859,101 @@ async function waitForLockWaiters(count: number) {
   }
 }
 
+test("CSV and order-item completions import the same missing Item without deadlocking", async () => {
+  const orderId = await seedOrder();
+  const csvRun = await start("csv", [{ ...csvRow(X, "Owned", "10.00"), orderId }]);
+  const orderRun = await start("order-item", { orderId, items: [orderItem(X, 2000)] });
+  const held = Promise.withResolvers<null>();
+  const proceed = Promise.withResolvers<null>();
+  const holder = db.transaction(async (tx) => {
+    await tx
+      .select()
+      .from(syncSession)
+      .where(eq(syncSession.id, orderRun.syncSessionId))
+      .for("update");
+    held.resolve(null);
+    await proceed.promise;
+  });
+  await held.promise;
+  const orderCompleting = complete(orderRun, X);
+  let csvCompleting: ReturnType<typeof complete> | undefined;
+  try {
+    await waitForLockWaiters(1);
+    csvCompleting = complete(csvRun, X);
+    await waitForLockWaiters(2);
+  } finally {
+    proceed.resolve(null);
+    await holder;
+    await Promise.all([orderCompleting, csvCompleting]);
+  }
+  expect(await orderCompleting).toEqual(imported);
+  expect(await csvCompleting).toEqual(imported);
+  for (const run of [orderRun, csvRun]) {
+    expect(await session(run.syncSessionId)).toMatchObject({
+      status: "completed",
+      successCount: 1,
+      failCount: 0,
+    });
+    expect(await results(run.syncSessionId)).toEqual([{ id: X, status: "scraped", reason: null }]);
+  }
+  expect(await db.$count(item, eq(item.externalId, X))).toBe(1);
+  expect(await userRows()).toMatchObject([
+    { mfcItemId: X, orderTitle: "Existing order" },
+    { mfcItemId: X, orderTitle: "Existing order" },
+  ]);
+}, 15_000);
+
+test("CSV retry locks Orders from in-request rows before its session", async () => {
+  const orderId = await seedOrder();
+  await db.execute(
+    `CREATE FUNCTION reject_csv_start() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'cannot persist'; END $$`,
+  );
+  await db.execute(
+    `CREATE TRIGGER reject_csv_start BEFORE INSERT ON collection FOR EACH ROW EXECUTE FUNCTION reject_csv_start()`,
+  );
+  try {
+    expect(
+      await post("/csv", [
+        { ...csvRow(PRESENT, "Owned", "10.00"), orderId },
+        csvRow(X, "Owned", "20.00"),
+      ]),
+    ).toMatchObject({ status: 500 });
+  } finally {
+    await db.execute(`DROP TRIGGER reject_csv_start ON collection`);
+    await db.execute(`DROP FUNCTION reject_csv_start()`);
+  }
+  const [run] = await db.select().from(syncSession);
+  if (!run) throw new Error("failed CSV session missing");
+  expect(run).toMatchObject({ status: "failed", failCount: 2 });
+  const held = Promise.withResolvers<null>();
+  const proceed = Promise.withResolvers<null>();
+  const holder = db.transaction(async (tx) => {
+    await tx.select().from(order).where(eq(order.id, orderId)).for("update");
+    held.resolve(null);
+    await proceed.promise;
+    await tx.select().from(syncSession).where(eq(syncSession.id, run.id)).for("update");
+  });
+  await held.promise;
+  const retrying = post(`/sessions/${run.id}/retry`);
+  const settled = Promise.allSettled([holder, retrying]);
+  try {
+    await waitForLockWaiters(1);
+  } finally {
+    proceed.resolve(null);
+    await settled;
+  }
+  await holder;
+  const reply = await retrying;
+  expect(reply.status).toBe(200);
+  expect(retrySchema.parse(reply.body).missingMfcItemIds).toEqual([X]);
+  expect(await session(run.id)).toMatchObject({
+    status: "processing",
+    successCount: 1,
+    failCount: 0,
+  });
+  expect(await userRows()).toMatchObject([{ mfcItemId: PRESENT, orderTitle: "Existing order" }]);
+}, 15_000);
+
 test("a complete takes the Order lock before the session, so an Order delete never deadlocks it", async () => {
   const orderId = await seedOrder();
   const run = await start("order-item", {
