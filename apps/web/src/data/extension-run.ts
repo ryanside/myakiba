@@ -238,6 +238,8 @@ function uploadSlots(size: number) {
   };
 }
 
+const tabUploadSlots = uploadSlots(MAX_UPLOADS_IN_FLIGHT);
+
 export type RunOutcome =
   | { readonly kind: "ended" }
   | { readonly kind: "busy"; readonly notImported: number; readonly retryAfterMs: number | null };
@@ -263,7 +265,6 @@ type RunnerDeps = FetchDeps & {
 
 export function createExtensionRunner(deps: RunnerDeps) {
   const { page, heartbeatMs, failureFlushMs } = deps;
-  const slots = uploadSlots(MAX_UPLOADS_IN_FLIGHT);
 
   return async function runWithExtension(run: ExtensionRun): Promise<RunOutcome> {
     const ids = [...new Set(run.mfcItemIds.map(mfcItemId).filter((id) => id !== null))];
@@ -315,9 +316,9 @@ export function createExtensionRunner(deps: RunnerDeps) {
     const uploads: Promise<void>[] = [];
     const takeSlotUnlessStopped = async () => {
       if (tally.stop !== null) return false;
-      await slots.take();
+      await tabUploadSlots.take();
       if (tally.stop === null) return true;
-      slots.give();
+      tabUploadSlots.give();
       return false;
     };
     const upload = async (item: ItemPage) => {
@@ -326,7 +327,7 @@ export function createExtensionRunner(deps: RunnerDeps) {
         if (answer.kind === "ok") tally.imported += 1;
         else refused(answer, 1);
       } finally {
-        slots.give();
+        tabUploadSlots.give();
       }
     };
 
@@ -395,5 +396,10 @@ export async function refreshItemWithExtension(externalId: number) {
   if (fetched === undefined) throw new Error(ITEM_ERROR_MESSAGE.extension_stopped);
   if (!fetched.ok) throw new Error(ITEM_ERROR_MESSAGE[fetched.error]);
   const { page, picture } = fetched.page;
-  return requestResync(externalId, picture ? { page, picture } : { page });
+  await tabUploadSlots.take();
+  try {
+    return await requestResync(externalId, picture ? { page, picture } : { page });
+  } finally {
+    tabUploadSlots.give();
+  }
 }

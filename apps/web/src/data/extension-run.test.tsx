@@ -760,6 +760,37 @@ describe("refreshing an item", () => {
     );
   });
 
+  test("waits for a free upload slot while runs hold both", async () => {
+    const releases: (() => void)[] = [];
+    fakeFetch();
+    answer = async (request) => {
+      if (!request.path.endsWith("/items")) {
+        return Response.json({ status: "cooldown", cooldownExpiresAt: null, saved: "refreshed" });
+      }
+      await new Promise<void>((resolve) => {
+        releases.push(resolve);
+      });
+      return imported();
+    };
+    loadExtension((fetch) => {
+      for (const id of fetch.mfcItemIds) fetch.item(id);
+      fetch.done("complete");
+    });
+
+    const importing = runner().run(sync(1, 2));
+    await waitFor(() => expect(releases).toHaveLength(2));
+    const refreshing = refreshItemWithExtension(98_777);
+    await sleep(100);
+    const refreshesWhileFull = posted("/api/item/98777/resync").length;
+    releases.shift()?.();
+    await refreshing;
+    for (const release of releases) release();
+    await importing;
+
+    expect(refreshesWhileFull).toBe(0);
+    expect(posted("/api/item/98777/resync")).toHaveLength(1);
+  });
+
   test("sends nothing when the extension cannot fetch the page", async () => {
     fakeFetch();
     loadExtension((fetch) => {
