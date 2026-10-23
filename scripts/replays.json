@@ -572,6 +572,70 @@
       "fixed": [
         "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a material share finer than the stored 2 decimals reads unchanged on the next refresh"
       ]
+    },
+    {
+      "fix": "d089602e",
+      "bug": "a late or unprompted extension announce satisfied a fresh probe, and an outdated extension read as not installed once its update orphaned the old content script",
+      "test": "apps/web/src/lib/extension-bridge.test.ts",
+      "fixed": [
+        "probe > a late answer to an earlier probe does not answer a fresh one",
+        "probe > an unprompted announce updates the status but does not answer a probe",
+        "probe > an outdated extension that goes silent after its update stays outdated"
+      ]
+    },
+    {
+      "fix": "b20d4a0a",
+      "bug": "a sync form or the Import/Export confirmation sent its request after the extension went away while it was open",
+      "test": "apps/web/src/components/extension/extension-submit-gate.test.tsx",
+      "fixed": [
+        "the Add to item database form > sends nothing when the extension went away while it was open, and keeps its values",
+        "the Add to collection form > sends nothing when the extension went away while it was open, and keeps its values",
+        "the Create order form > sends nothing when the extension went away while it was open, and keeps its values",
+        "the order page's add items form > sends nothing when the extension went away while it was open, and keeps its values",
+        "the CSV form > sends nothing when the extension went away while it was open, and keeps its values",
+        "the import confirmation sends nothing when the extension went away while it was open"
+      ]
+    },
+    {
+      "fix": "b20d4a0a",
+      "bug": "onboarding finished before the extension probe and a reload after installing ended it",
+      "test": "apps/web/src/components/onboarding/extension-step.test.tsx",
+      "fixed": [
+        "with no extension it shows how to install it",
+        "an extension that is too old asks for an update",
+        "a new install shows after the reload, and onboarding reopens at the extension step"
+      ]
+    },
+    {
+      "fix": "b20d4a0a",
+      "bug": "onboarding's sync choices finished onboarding before the probe, a gated button took a second click while it probed, and the dialog dropped its copy before it closed",
+      "test": "apps/web/src/components/extension/extension-gate.test.tsx",
+      "fixed": [
+        "the sync launcher's Collection option > asks for the extension instead when it is not installed",
+        "the sync launcher's Order option > asks for the extension instead when it is not installed",
+        "the sync launcher's MyFigureCollection CSV option > asks for the extension instead when it is not installed",
+        "the sync launcher's Item Database option > asks for the extension instead when it is not installed",
+        "the command palette's Collection action > asks for the extension instead when it is not installed",
+        "the command palette's Order action > asks for the extension instead when it is not installed",
+        "the command palette's MyFigureCollection CSV action > asks for the extension instead when it is not installed",
+        "the command palette's Item Database action > asks for the extension instead when it is not installed",
+        "the item sheet button > asks for the extension instead when it is not installed",
+        "the collection sheet button > asks for the extension instead when it is not installed",
+        "onboarding's Add to collection choice > asks for the extension instead when it is not installed",
+        "onboarding's Create order choice > asks for the extension instead when it is not installed",
+        "onboarding's Import MyFigureCollection CSV choice > asks for the extension instead when it is not installed",
+        "the order page's add items > asks for the extension instead when it is not installed",
+        "the item page's Add to collection > asks for the extension instead when it is not installed",
+        "the item page's Create order > asks for the extension instead when it is not installed",
+        "the item page's Add to item database > asks for the extension instead when it is not installed",
+        "the item page's resync button > asks for the extension instead when it is not installed",
+        "the import's retry > asks for the extension instead when it is not installed",
+        "the settings import > asks for the extension instead when it is not installed",
+        "the settings import's retry > asks for the extension instead when it is not installed",
+        "a blocked onboarding choice keeps onboarding open and unfinished, so the user can go back",
+        "closing the dialog keeps its copy while it closes and returns focus to the button",
+        "a gated button shows it is checking and ignores a second click until the check ends"
+      ]
     }
   ],
   "lint": [
