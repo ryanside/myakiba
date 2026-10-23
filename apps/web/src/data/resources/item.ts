@@ -5,6 +5,7 @@ import {
   getItemReleases,
   getResyncStatus,
 } from "@/queries/item";
+import { syncResultFamilies } from "../catalog";
 import { defineCommand, rootedRead } from "../client";
 import { refreshItemWithExtension } from "../extension-run";
 
@@ -40,7 +41,7 @@ export const items = {
 };
 
 export const refreshItemCommand = defineCommand({
-  invalidates: ["item", "releases", "collection", "orders", "calendar"],
+  invalidates: syncResultFamilies,
   persist: refreshItemWithExtension,
   successTitle: (_externalId, refreshed) =>
     refreshed.saved === "refreshed" ? "Item details refreshed" : "Item details are up to date",

@@ -25,6 +25,13 @@ afterEach(() => {
   toastAdd.mockClear();
 });
 
+function renderRefresh(queryClient: QueryClient) {
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+  return renderHook(() => useResourceMutation(itemResource.refreshItemCommand), { wrapper });
+}
+
 test("an Item Refresh refetches the item, its releases, and the collection, orders and calendar that show it", async () => {
   const queryClient = new QueryClient();
   const shown = [
@@ -51,4 +58,28 @@ test("an Item Refresh refetches the item, its releases, and the collection, orde
 
   expect(shown.filter((key) => !queryClient.getQueryState(key)?.isInvalidated)).toEqual([]);
   expect(toastAdd).toHaveBeenCalledWith({ type: "success", title: "Item details refreshed" });
+});
+
+test("an Item Refresh refetches the dashboard, analytics, searches, Wishlist, lists and expenses that show it", async () => {
+  const queryClient = new QueryClient();
+  const shown = [
+    ["dashboard"],
+    ["dashboard", "monthly", 10, 2026],
+    ["analytics"],
+    ["app-command", "search", "miku"],
+    ["item-database-items", { search: "miku" }],
+    ["entries", "miku"],
+    ["resource", "wishlist", "items", { releaseStatus: "all" }],
+    ["lists", "overview"],
+    ["expenses", "filter-options"],
+    ["syncSessions"],
+  ];
+  for (const key of shown) queryClient.setQueryData(key, {});
+  const { result } = renderRefresh(queryClient);
+
+  await act(async () => {
+    await result.current.run(98_777);
+  });
+
+  expect(shown.filter((key) => !queryClient.getQueryState(key)?.isInvalidated)).toEqual([]);
 });

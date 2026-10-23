@@ -52,17 +52,15 @@ export type PersistedFamily = {
 const isPersisted = (family: Family): family is PersistedFamily =>
   catalog[family].kind === "persisted";
 
-export const syncResultFamilies: readonly PersistedFamily[] = (
-  Object.keys(catalog) as Family[]
-).filter(isPersisted);
-
 export type Families = readonly [PersistedFamily, ...PersistedFamily[]];
 
 function nonEmpty(families: readonly PersistedFamily[]): Families {
   const [first, ...rest] = families;
-  if (first === undefined) throw new Error("No cataloged family changes on a collection write");
+  if (first === undefined) throw new Error("No cataloged family matches");
   return [first, ...rest];
 }
+
+export const syncResultFamilies = nonEmpty((Object.keys(catalog) as Family[]).filter(isPersisted));
 
 /** Every family a collection or order write can change. Each such write refreshes all of them. */
 export const collectionWriteFamilies = nonEmpty(
