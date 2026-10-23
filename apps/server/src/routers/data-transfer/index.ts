@@ -14,6 +14,7 @@ import { verifiedEmail } from "@/middleware/verified-email";
 import { jobStatusSubscriptionRegistry } from "@/lib/job-status-subscription-registry";
 import {
   MAX_JOB_STATUS_STREAM_DURATION_MS,
+  JOB_STATUS_POLL_INTERVAL_MS,
   waitForNextJobStatusEvent,
 } from "@/lib/job-status-stream";
 import DataTransferService from "./service";
@@ -209,6 +210,7 @@ const dataTransferRouter = new Elysia({ prefix: "/data-transfer" })
         }
 
         let latestStatus = replayStatus;
+        let nextPollAt = Date.now() + JOB_STATUS_POLL_INTERVAL_MS;
         let subscriptionEventPromise = subscription.next();
 
         while (true) {
@@ -230,12 +232,18 @@ const dataTransferRouter = new Elysia({ prefix: "/data-transfer" })
             return;
           }
           if (nextEvent.kind === "heartbeat") {
+            if (Date.now() < nextPollAt) {
+              yield sse({ data: latestStatus });
+              continue;
+            }
+            nextPollAt = Date.now() + JOB_STATUS_POLL_INTERVAL_MS;
             const { data: polledStatus, error: polledStatusError } = await tryCatch(
               DataTransferService.getImportJobStatus(user.id),
             );
             if (polledStatusError) {
               log.error(polledStatusError, { step: "pollImportStatus", outcome: "error" });
-              return;
+              yield sse({ data: latestStatus });
+              continue;
             }
             if (polledStatus === null) {
               log.set({ outcome: "not_found" });

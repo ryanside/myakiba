@@ -1,3 +1,4 @@
+import { createLogger } from "evlog";
 import { Buffer } from "node:buffer";
 import { createId } from "@paralleldrive/cuid2";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
@@ -24,11 +25,14 @@ import type {
   DataTransferArchiveV1,
   DataTransferCollectionItemV1,
   DataTransferImport,
+  DataTransferImportReport,
   DataTransferImportItemFailure,
   DataTransferImportItemUpload,
   DataTransferImportRun,
 } from "@myakiba/contracts/data-transfer/schema";
 import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
+import { UNSAVED_ITEM_REASON } from "@myakiba/contracts/sync/constants";
+import { tryCatch } from "@myakiba/utils/result";
 import { ensureMfcItem, prepareMfcItem } from "@/lib/mfc-item-ingest";
 import { createImportId, planCollectionRows } from "./import-plan";
 import type { ImportableItem, PlannedCollectionRow } from "./import-plan";
@@ -238,11 +242,16 @@ async function applyItemRows(
   };
   const inserted = await writeCollectionRows(tx, run, plan.rows, orderIdIfStillPresent);
 
+  const report: DataTransferImportReport = {
+    failureReasons: view.report?.failureReasons ?? [],
+    releaseSubstitutions: (view.report?.releaseSubstitutions ?? 0) + plan.releaseSubstitutions,
+    missingReleases: (view.report?.missingReleases ?? 0) + plan.missingReleases,
+  };
   await tx
     .update(dataTransferImport)
     .set({
       importedCollectionItems: sql`${dataTransferImport.importedCollectionItems} + ${inserted}`,
-      report: sql`${JSON.stringify({ releaseSubstitutions: (view.report?.releaseSubstitutions ?? 0) + plan.releaseSubstitutions, missingReleases: (view.report?.missingReleases ?? 0) + plan.missingReleases })}::text::jsonb`,
+      report,
     })
     .where(eq(dataTransferImport.userId, run.userId));
 }
@@ -535,7 +544,22 @@ const DataTransferService = {
     | { readonly kind: "imported"; readonly import: DataTransferImport | null }
     | { readonly kind: "problem"; readonly message: string }
   > {
-    const prepared = await prepareMfcItem(db, upload);
+    const { data: prepared, error } = await tryCatch(prepareMfcItem(db, upload));
+    if (error) {
+      const log = createLogger({
+        action: "dataTransfer.prepareItem",
+        user: { id: userId },
+        mfcItemId: upload.mfcItemId,
+      });
+      log.error(error);
+      log.emit();
+      const currentImport = await DataTransferService.failItem(userId, {
+        jobId: upload.jobId,
+        mfcItemId: upload.mfcItemId,
+        reason: UNSAVED_ITEM_REASON,
+      });
+      return { kind: "imported", import: currentImport };
+    }
     if (prepared.kind === "unreadable") {
       await DataTransferService.failItem(userId, {
         jobId: upload.jobId,

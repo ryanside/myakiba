@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import path from "node:path";
 import { Elysia } from "elysia";
 import { initLogger } from "evlog";
@@ -23,6 +23,7 @@ import {
   item_release,
   order,
 } from "@myakiba/db/schema/figure";
+import { createItemImages } from "@/lib/item-images";
 import { createTestDatabase } from "../../../test/database";
 
 initLogger({ enabled: false });
@@ -42,6 +43,20 @@ await mock.module("@myakiba/auth/server", () => ({
   },
 }));
 
+let failS3 = false;
+await mock.module("@/lib/item-images", () => ({
+  createItemImages,
+  itemImages: createItemImages({
+    client: {
+      send: async () => {
+        if (failS3) throw new Error("S3 request timed out");
+        return { $metadata: { httpStatusCode: 200 } };
+      },
+    },
+    name: "pictures",
+    publicUrl: "https://pictures.example.test",
+  }),
+}));
 const snapshots = new Map<string, string>();
 
 type MessageListener = (channel: string, payload: string) => void;
@@ -140,6 +155,10 @@ async function complete(jobId: string, mfcItemId: number, extraHeaders?: Record<
   const form = new FormData();
   form.set("jobId", jobId);
   form.set("mfcItemId", String(mfcItemId));
+  form.set(
+    "picture",
+    new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe0])], "picture", { type: "image/jpeg" }),
+  );
   form.set("page", new File([derivedPage(mfcItemId)], "page.html", { type: "text/html" }));
   return answer(
     await app.handle(
@@ -847,3 +866,119 @@ test("status reads stay in one snapshot when a retry commits between reads", asy
     await retrying;
   }
 });
+
+test("a lost worker-era import lapses just past 24 hours and retries its archive", async () => {
+  const archive = archiveOf([], [collectionRecord("lost", 98_777)]);
+  await db.insert(dataTransferImport).values({
+    userId,
+    importId: "lost-worker",
+    jobId: "lost-worker",
+    fileName: "export.json",
+    archive,
+    status: "running",
+    phase: "preparing_items",
+    totalCollectionItems: 1,
+    updatedAt: new Date(Date.now() - 24 * 60 * 60 * 1000 - 1000),
+  });
+  expect(await currentImport()).toMatchObject({
+    status: "failed",
+    error: "The import was interrupted. Try again to continue.",
+  });
+  const retried = await post("/imports/current/retry");
+  expect(retried.status).toBe(200);
+  const run = dataTransferImportSchema
+    .extend({ missingMfcItemIds: z.array(z.number()) })
+    .parse(retried.body);
+  expect(run.id).not.toBe("lost-worker");
+  expect(await complete(run.id, 98_777)).toMatchObject({
+    status: 200,
+    body: { status: "completed", importedCollectionItems: 1 },
+  });
+});
+
+test("an S3 preparation timeout records a retryable import item failure", async () => {
+  const run = await startRun(archiveOf([], [collectionRecord("c1", 98_777)]));
+  failS3 = true;
+  try {
+    const response = await complete(run.id, 98_777);
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      status: "failed",
+      failedCollectionItems: 1,
+      report: {
+        failureReasons: [{ reason: "Persistence failed while saving scraped items", count: 1 }],
+      },
+    });
+    expect(
+      await db.select({ status: dataTransferImportItem.status }).from(dataTransferImportItem),
+    ).toEqual([{ status: "failed" }]);
+  } finally {
+    failS3 = false;
+  }
+  const retried = await post("/imports/current/retry");
+  const retry = dataTransferImportSchema
+    .extend({ missingMfcItemIds: z.array(z.number()) })
+    .parse(retried.body);
+  expect(await complete(retry.id, 98_777)).toMatchObject({
+    status: 200,
+    body: { status: "completed" },
+  });
+});
+
+test("import polling keeps its last status through a database blip and retries", async () => {
+  await startRun(archiveOf([], [collectionRecord("c1", 98_777)]));
+  const { default: service } = await import("./service");
+  const original = service.getImportJobStatus;
+  let failRead = false;
+  const read = spyOn(service, "getImportJobStatus").mockImplementation(async (id) => {
+    if (failRead) {
+      failRead = false;
+      throw new Error("Postgres temporarily unavailable");
+    }
+    return original(id);
+  });
+  const clock = spyOn(Date, "now");
+  const abort = new AbortController();
+  const response = await app.handle(
+    new Request("http://localhost/api/data-transfer/imports/current/status", {
+      headers,
+      signal: abort.signal,
+    }),
+  );
+  const reader = response.body?.getReader();
+  try {
+    if (!reader) throw new Error("no stream");
+    const readStatus = async () => {
+      const chunk = await reader?.read();
+      if (!chunk || chunk.done) throw new Error("stream ended");
+      const text = await new Response(chunk.value).text();
+      const raw =
+        text
+          .split("\n")
+          .find((line) => line.startsWith("data:"))
+          ?.slice(5) ?? "";
+      const result = parseJson(syncJobStatusSchema, raw);
+      if (result.error) throw result.error;
+      return result.data;
+    };
+    const initial = await readStatus();
+    await Bun.sleep(20);
+    const reads = read.mock.calls.length;
+    expect(reads).toBe(2);
+    expect(await readStatus()).toEqual(initial);
+    expect(read.mock.calls.length).toBe(reads);
+    const now = Date.now();
+    clock.mockReturnValue(now + 31_000);
+    failRead = true;
+    expect(await readStatus()).toEqual(initial);
+    expect(failRead).toBe(false);
+    clock.mockReturnValue(now + 62_000);
+    expect(await readStatus()).toMatchObject({ terminalState: null });
+    expect(read.mock.calls.length).toBe(reads + 2);
+  } finally {
+    clock.mockRestore();
+    read.mockRestore();
+    abort.abort();
+    await reader?.cancel();
+  }
+}, 25_000);

@@ -17,6 +17,7 @@ import type {
   DataTransferImportReport,
 } from "@myakiba/contracts/data-transfer/schema";
 import type { SyncJobRecentItem, SyncJobStatus } from "@myakiba/contracts/sync/schema";
+import { WORKER_RUN_LEASE_MS } from "@myakiba/contracts/sync/constants";
 import { redis } from "@myakiba/redis/client";
 import { writeJobStatusSnapshotAndPublish } from "@myakiba/redis/job-status";
 import { tryCatch } from "@myakiba/utils/result";
@@ -74,9 +75,7 @@ const isWorkerEraImport = (row: ImportRow) => row.heartbeatAt === null;
 function leaseLapsed(row: ImportRow, now: Date): boolean {
   if (!isActive(row.status)) return false;
   const lastSeen = row.heartbeatAt ?? row.updatedAt;
-  // Delete the worker-era allowance after those imports finish or leave the retention window.
-  // A day allows pre-deploy jobs to drain while bounding an abandoned worker job.
-  const lease = isWorkerEraImport(row) ? 24 * 60 * 60 * 1000 : DATA_TRANSFER_IMPORT_LEASE_MS;
+  const lease = isWorkerEraImport(row) ? WORKER_RUN_LEASE_MS : DATA_TRANSFER_IMPORT_LEASE_MS;
   return now.getTime() - lastSeen.getTime() >= lease;
 }
 
