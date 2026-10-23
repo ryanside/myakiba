@@ -1,22 +1,18 @@
 import { Download01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import type { DataTransferArchiveV1 } from "@myakiba/contracts/data-transfer/schema";
 import { Button } from "@/components/ui/button";
-import {
-  dataTransferCurrentImportQueryKey,
-  dataTransferImportStatusQueryKey,
-  useDataTransferImportStatusQuery,
-} from "@/hooks/use-data-transfer-import-status-query";
+import { useDataTransferImportStatusQuery } from "@/hooks/use-data-transfer-import-status-query";
 import { downloadDataTransferArchive, readDataTransferFile } from "@/lib/data-transfer";
+import { useRead } from "@/data/client";
 import {
-  deleteCurrentDataTransferImport,
-  exportDataTransfer,
-  getCurrentDataTransferImport,
-  retryCurrentDataTransferImport,
-  startDataTransferImport,
-} from "@/queries/data-transfer";
+  dataTransfer,
+  useDeleteImport,
+  useExportData,
+  useRetryImport,
+  useStartImport,
+} from "@/data/resources/data-transfer";
 import type {
   ActionState,
   CurrentImportLiveState,
@@ -49,15 +45,10 @@ export type DataTransferViewActions = ImportViewActions & {
 };
 
 export function DataTransfer() {
-  const queryClient = useQueryClient();
   const [preparedFile, setPreparedFile] = useState<PreparedFile>({ kind: "idle" });
   const readVersion = useRef(0);
 
-  const currentImportQuery = useQuery({
-    queryKey: dataTransferCurrentImportQueryKey,
-    queryFn: getCurrentDataTransferImport,
-    retry: false,
-  });
+  const currentImportQuery = useRead(dataTransfer.currentImport);
   const currentImport = currentImportQuery.data ?? null;
   const liveStatusQuery = useDataTransferImportStatusQuery(currentImport);
 
@@ -73,62 +64,33 @@ export function DataTransfer() {
         }
       : preparedFile;
 
-  const exportMutation = useMutation({
-    mutationFn: exportDataTransfer,
-    onSuccess: (archive) => {
-      downloadDataTransferArchive(archive);
-      exportMutation.reset();
-    },
-  });
+  const exportMutation = useExportData(downloadDataTransferArchive);
 
-  const startMutation = useMutation({
-    mutationFn: startDataTransferImport,
-    onSuccess: (startedImport) => {
-      toastRunOutcome(
-        importDataTransferItems({
-          importId: startedImport.id,
-          mfcItemIds: startedImport.missingMfcItemIds,
-        }),
-      );
-      setPreparedFile({ kind: "idle" });
-      queryClient.setQueryData(dataTransferCurrentImportQueryKey, startedImport);
-    },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: dataTransferCurrentImportQueryKey }),
+  const startMutation = useStartImport((startedImport) => {
+    toastRunOutcome(
+      importDataTransferItems({
+        importId: startedImport.id,
+        mfcItemIds: startedImport.missingMfcItemIds,
+      }),
+    );
+    setPreparedFile({ kind: "idle" });
   });
   const { reset: resetStartMutation } = startMutation;
 
-  const retryMutation = useMutation({
-    mutationFn: retryCurrentDataTransferImport,
-    onSuccess: (retriedImport) => {
-      toastRunOutcome(
-        importDataTransferItems({
-          importId: retriedImport.id,
-          mfcItemIds: retriedImport.missingMfcItemIds,
-        }),
-      );
-      queryClient.removeQueries({
-        queryKey: dataTransferImportStatusQueryKey(retriedImport.id),
-        exact: true,
-      });
-      queryClient.setQueryData(dataTransferCurrentImportQueryKey, retriedImport);
-      setPreparedFile({ kind: "idle" });
-      resetStartMutation();
-    },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: dataTransferCurrentImportQueryKey }),
+  const retryMutation = useRetryImport((retriedImport) => {
+    toastRunOutcome(
+      importDataTransferItems({
+        importId: retriedImport.id,
+        mfcItemIds: retriedImport.missingMfcItemIds,
+      }),
+    );
+    setPreparedFile({ kind: "idle" });
+    resetStartMutation();
   });
   const { reset: resetRetryMutation } = retryMutation;
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteCurrentDataTransferImport,
-    onSuccess: (deletedImport) => {
-      queryClient.removeQueries({
-        queryKey: dataTransferImportStatusQueryKey(deletedImport.id),
-        exact: true,
-      });
-      queryClient.setQueryData(dataTransferCurrentImportQueryKey, null);
-      resetRetryMutation();
-    },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: dataTransferCurrentImportQueryKey }),
+  const deleteMutation = useDeleteImport(() => {
+    resetRetryMutation();
   });
 
   const handleFile = async (file: File): Promise<void> => {
