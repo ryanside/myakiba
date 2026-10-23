@@ -2,14 +2,13 @@ import type { PortPicture, RunEvent } from "@myakiba/mfc/bridge";
 import { mfcItemId } from "@myakiba/mfc/page";
 import type { MfcItemId } from "@myakiba/mfc/page";
 import type { Clock, SessionValue } from "../lib/clock";
-import { PAGE_TIMEOUT_MS } from "../lib/collect";
 import type { CollectedPage, PageRequest } from "../lib/collect";
 import { createFetcher } from "../lib/fetcher";
 import type { Fetcher } from "../lib/fetcher";
 import type { WindowsApi } from "../lib/mfc-tab";
 import type { Origins } from "../lib/origins";
 import type { OwnedTab, Tab, TabsApi } from "../lib/owned-tab";
-import { PICTURE_TIMEOUT_MS, pictureToRead } from "../lib/picture";
+import { pictureToRead } from "../lib/picture";
 import type { Requester, RunKey, TabContext } from "../lib/queue";
 import { OPEN_THROTTLE } from "../lib/throttle";
 import type { ThrottleState } from "../lib/throttle";
@@ -257,27 +256,6 @@ function fakeTabs(
     return answer;
   }
 
-  function endClaimedLoadsAtTurnLimit(tabId: number): void {
-    for (const running of loads) {
-      if (
-        running.tabId !== tabId ||
-        running.byUser ||
-        (running.endedAt ?? Infinity) <= clock.now()
-      ) {
-        continue;
-      }
-      const turnMs = running.url.startsWith(ORIGINS.mfcStatic)
-        ? PICTURE_TIMEOUT_MS
-        : PAGE_TIMEOUT_MS;
-      running.endedAt = Math.min(running.endedAt ?? Infinity, running.at + turnMs);
-    }
-  }
-
-  function activateByUser(tabId: number): void {
-    endClaimedLoadsAtTurnLimit(tabId);
-    activate(tabId);
-  }
-
   function activate(tabId: number): void {
     const tab = tabs.get(tabId);
     if (!tab || tab.active) return;
@@ -405,7 +383,7 @@ function fakeTabs(
       const tab = tabs.get(tabId);
       if (tab) load(tab, change.url ?? tab.url, change.loadMs ?? 0, change.title, true);
     },
-    activate: activateByUser,
+    activate,
     /** While the user drags a tab, Chrome refuses to close or focus any tab. */
     drag(tabId: number, dragging: boolean): void {
       if (dragging) dragged.add(tabId);

@@ -2,7 +2,7 @@ import * as z from "zod";
 import type { Clock, SessionValue } from "./clock";
 import { sameContext } from "./queue";
 import type { Requester, TabContext } from "./queue";
-import type { Throttle } from "./throttle";
+import type { HoldTurn, Throttle } from "./throttle";
 
 export type Tab = {
   readonly id?: number;
@@ -46,6 +46,8 @@ export type OwnedTab = z.output<typeof ownedTabSchema>;
 const POLL_MS = 50;
 /** Firefox may call a tab complete on the page it showed before, for a moment before its load starts. */
 const LOAD_START_MS = 2000;
+/** The extension cannot stop a load in a tab the user took, so the turn waits for it, up to this long after it started. */
+const CLAIMED_LOAD_MS = 2 * 60_000;
 
 class TabTakenError extends Error {
   constructor(tabId: number) {
@@ -195,15 +197,18 @@ export function ownedTab(deps: {
   }
 
   async function holdTurnUntilLoadEnds(
-    { tabId }: Load,
+    { tabId, startedAt }: Load,
     ended: (tab: Tab) => boolean,
-    timeout: AbortSignal,
+    holdUntil: HoldTurn,
   ): Promise<void> {
-    while (!timeout.aborted) {
+    const until = startedAt + CLAIMED_LOAD_MS;
+    const loading = async () => {
       const tab = await tabs.get(tabId).catch(() => null);
-      if (!tab || ended(tab)) return;
-      await clock.sleep(POLL_MS, timeout);
-    }
+      return tab !== null && !ended(tab);
+    };
+    if (!(await loading())) return;
+    await holdUntil(until);
+    while (clock.now() < until && (await loading())) await clock.sleep(POLL_MS);
   }
 
   async function open(
@@ -211,6 +216,7 @@ export function ownedTab(deps: {
     url: string,
     cancel: AbortSignal,
     timeout: AbortSignal,
+    holdUntil: HoldTurn,
   ): Promise<number> {
     const signal = AbortSignal.any([cancel, timeout]);
     const load =
@@ -224,14 +230,18 @@ export function ownedTab(deps: {
       }
     } catch (error) {
       await closeUntilGone(load.tabId);
-      await holdTurnUntilLoadEnds(load, ended, timeout);
+      await holdTurnUntilLoadEnds(load, ended, holdUntil);
       throw error;
     }
   }
 
   return {
     load(requester: LiveRequester, url: string, signal: AbortSignal): Promise<number> {
-      return throttle.load(signal, (timeout) => open(requester, url, signal, timeout), turnMs);
+      return throttle.load(
+        signal,
+        (timeout, holdUntil) => open(requester, url, signal, timeout, holdUntil),
+        turnMs,
+      );
     },
 
     loadAndRead<T>(
@@ -242,8 +252,11 @@ export function ownedTab(deps: {
     ): Promise<T> {
       return throttle.load(
         signal,
-        async (timeout) =>
-          read(await open(requester, url, signal, timeout), AbortSignal.any([signal, timeout])),
+        async (timeout, holdUntil) =>
+          read(
+            await open(requester, url, signal, timeout, holdUntil),
+            AbortSignal.any([signal, timeout]),
+          ),
         turnMs,
       );
     },

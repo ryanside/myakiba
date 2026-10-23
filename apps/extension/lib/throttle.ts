@@ -29,6 +29,12 @@ export const OPEN_THROTTLE: ThrottleState = {
   limitedAt: null,
 };
 
+/**
+ * Keeps a throttle turn going until `at` at the latest. It is booked as well, so a worker that stops meanwhile leaves
+ * the next load waiting.
+ */
+export type HoldTurn = (at: number) => Promise<void>;
+
 export class HaltedError extends Error {
   readonly until: number;
 
@@ -114,14 +120,18 @@ export function createThrottle(deps: {
   async function settle(
     running: Promise<unknown>,
     finished: AbortController,
-    timeoutMs: number,
+    endsBy: () => number,
   ): Promise<void> {
-    const grace = new AbortController();
-    await Promise.race([
-      Promise.allSettled([running]),
-      clock.sleep(timeoutMs + THROTTLE.graceMs, grace.signal),
-    ]);
-    grace.abort();
+    const stopped = (async () => {
+      await Promise.allSettled([running]);
+      return "stopped" as const;
+    })();
+    for (let left = endsBy() - clock.now(); left > 0; left = endsBy() - clock.now()) {
+      const wake = new AbortController();
+      const first = await Promise.race([stopped, clock.sleep(left, wake.signal)]);
+      wake.abort();
+      if (first === "stopped") break;
+    }
     finished.abort();
     try {
       await book((current, now) => [{ ...current, nextPageAt: gapAfter(now) }, null]);
@@ -134,10 +144,11 @@ export function createThrottle(deps: {
     /**
      * Runs one MFC load in its turn. `work` gets a signal that aborts `timeoutMs` after the turn begins.
      * The next turn starts a gap after this load ends, even when the caller stopped waiting first.
+     * `holdUntil` keeps the turn going up to a later time, for a load `work` can no longer stop.
      */
     async load<T>(
       signal: AbortSignal,
-      work: (timeout: AbortSignal) => Promise<T>,
+      work: (timeout: AbortSignal, holdUntil: HoldTurn) => Promise<T>,
       timeoutMs = PAGE_TIMEOUT_MS,
     ): Promise<T> {
       const previous = lastLoad;
@@ -152,8 +163,16 @@ export function createThrottle(deps: {
       }
       const finished = new AbortController();
       const timeout = timeoutSignal(clock, timeoutMs, finished.signal);
-      const running = signal.aborted ? Promise.reject(signal.reason) : work(timeout);
-      const settled = settle(running, finished, timeoutMs);
+      let endsBy = clock.now() + timeoutMs + THROTTLE.graceMs;
+      const holdUntil: HoldTurn = async (at) => {
+        endsBy = Math.max(endsBy, at);
+        await book((current) => [
+          { ...current, nextPageAt: Math.max(current.nextPageAt, gapAfter(at)) },
+          null,
+        ]);
+      };
+      const running = signal.aborted ? Promise.reject(signal.reason) : work(timeout, holdUntil);
+      const settled = settle(running, finished, () => endsBy);
       ended.resolve(settled);
       return unlessAborted(signal, answerOnceStopped(running, settled, timeout, timeoutMs));
     },

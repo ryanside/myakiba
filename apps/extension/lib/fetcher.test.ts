@@ -27,6 +27,7 @@ const CONTAINER = "firefox-container-1";
 const NORMAL = { incognito: false, cookieStoreId: null };
 const MFC_ERROR = page("<html><title>Server error</title></html>", { status: 500 });
 const SHORT_SETTLE_MS = 5000;
+const STALLED_LOAD_MS = PAGE_TIMEOUT_MS + 25_000;
 const HOMEPAGE = `${ORIGINS.mfc}/`;
 const NEVER_LANDS = [
   [
@@ -1088,13 +1089,17 @@ describe("the MFC tab", () => {
     },
   );
 
-  test.each(COMMIT_STYLES)(
-    "a tab the user focuses mid-load is theirs, and the next load waits for that load to end (%s commits)",
-    async (_name, style) => {
+  test.each(
+    COMMIT_STYLES.flatMap(([styleName, style]) =>
+      [6000, STALLED_LOAD_MS].map((loadMs) => [loadMs, styleName, style] as const),
+    ),
+  )(
+    "a tab the user focuses during a %i ms load is theirs, and the next load waits for that load to end (%s commits)",
+    async (loadMs, _styleName, style) => {
       let navigations = 0;
       const extension = fakeExtension({
         pages: itemPages(),
-        navigationMs: () => (navigations++ === 0 ? 6000 : 0),
+        navigationMs: () => (navigations++ === 0 ? loadMs : 0),
         deferNavigationCommit: style,
       });
       const run = extension.run([1, 2]);
@@ -1109,6 +1114,26 @@ describe("the MFC tab", () => {
       expect(tooClose(extension.loads(), THROTTLE.minGapMs)).toEqual([]);
     },
   );
+
+  test("a worker restarted while a load the user took over still runs waits for it to end", async () => {
+    let navigations = 0;
+    const extension = fakeExtension({
+      pages: itemPages(),
+      navigationMs: () => (navigations++ === 0 ? STALLED_LOAD_MS : 0),
+    });
+    extension.run([1]);
+    await extension.clock.runUntil(() => extension.tabs.loads.length === 1);
+    await advance(extension.clock, 1000);
+    extension.tabs.activate(101);
+    await advance(extension.clock, PAGE_TIMEOUT_MS + THROTTLE.graceMs);
+    extension.restart();
+    const next = extension.run([2]);
+    await extension.clock.runUntil(next.done);
+    await extension.settle();
+
+    expect(next.results()).toEqual([{ ok: true, html: itemPage(2), picture: null }]);
+    expect(tooClose(extension.loads(), THROTTLE.minGapMs)).toEqual([]);
+  });
 
   test("a focus between tries at closing the tab, as when the user drags it, keeps it open", async () => {
     const extension = fakeExtension({
