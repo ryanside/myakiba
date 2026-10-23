@@ -27,7 +27,7 @@ export type SyncSessionRow = {
   readonly completedAt: Date | null;
 };
 
-export type SyncSessionItemRow = {
+type SyncSessionItemRow = {
   readonly id: string;
   readonly syncSessionId: string;
   readonly itemExternalId: number;
@@ -41,13 +41,6 @@ export type EnrichedSyncSessionItemRow = SyncSessionItemRow & {
   readonly itemId: string | null;
   readonly itemTitle: string | null;
   readonly itemImage: string | null;
-};
-
-export type SyncStatus = {
-  existingItems: number;
-  newItems: number;
-  isFinished: boolean;
-  status: string;
 };
 
 export type UserItem = InternalCsvItem;
@@ -66,7 +59,7 @@ export type SyncFormOrderItem = {
   collectionDate: string;
 };
 
-export type SyncOrderItem = Omit<
+type SyncOrderItem = Omit<
   SyncFormOrderItem,
   | "formRowId"
   | "itemExternalId"
@@ -82,10 +75,6 @@ export type SyncOrderItem = Omit<
   paymentDate: string | null;
   shippingDate: string | null;
   collectionDate: string | null;
-};
-
-export type SyncFormOrderItems = {
-  readonly items: readonly SyncFormOrderItem[];
 };
 
 export type SyncOrderItems = {

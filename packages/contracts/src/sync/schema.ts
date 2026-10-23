@@ -112,18 +112,18 @@ export const syncSessionDetailSearchSchema = z.object({
   status: z.array(z.enum(SYNC_SESSION_ITEM_STATUSES)).optional(),
 });
 
-export const syncTerminalStateSchema = z.enum(["success", "partial", "error", "timeout"]);
+const syncTerminalStateSchema = z.enum(["success", "partial", "error", "timeout"]);
 
-export const syncJobPhaseSchema = z.enum(["queued", "importing", "saving", "completed", "failed"]);
+const syncJobPhaseSchema = z.enum(["queued", "importing", "saving", "completed", "failed"]);
 
-export const syncJobProgressSchema = z.object({
+const syncJobProgressSchema = z.object({
   processed: z.number().int().nonnegative(),
   total: z.number().int().nonnegative(),
   succeeded: z.number().int().nonnegative(),
   failed: z.number().int().nonnegative(),
 });
 
-export const syncJobRecentItemSchema = z.object({
+const syncJobRecentItemSchema = z.object({
   externalId: z.number().int(),
   title: z.string().nullable(),
   outcome: z.enum(["succeeded", "failed"]),
@@ -131,7 +131,7 @@ export const syncJobRecentItemSchema = z.object({
   completedAt: z.iso.datetime(),
 });
 
-export const syncJobErrorCodeSchema = z.enum([
+const syncJobErrorCodeSchema = z.enum([
   "fetch_failed",
   "persistence_failed",
   "connection_lost",
@@ -139,7 +139,7 @@ export const syncJobErrorCodeSchema = z.enum([
   "unknown",
 ]);
 
-export const syncJobErrorSchema = z.object({
+const syncJobErrorSchema = z.object({
   code: syncJobErrorCodeSchema,
   message: z.string(),
 });
@@ -177,7 +177,7 @@ export const syncOrderSchema = z.object({
   notes: z.string(),
 });
 
-export const syncOrderItemSchema = z.object({
+const syncOrderItemSchema = z.object({
   collectionId: z.string(),
   userId: z.string(),
   orderId: z.string(),
@@ -242,7 +242,7 @@ const csvItemCountSchema = z
   .transform(Number)
   .pipe(z.number().int().positive());
 
-export const csvItemSchema = z.object({
+const csvItemSchema = z.object({
   id: csvItemIdSchema,
   title: z.string(),
   root: z.string(),
@@ -290,32 +290,7 @@ export const internalCsvItemSchema = z.object({
   orderDate: z.iso.date().nullable(),
 });
 
-export const csvItemMetadataSchema = internalCsvItemSchema.omit({
-  collectionId: true,
-  itemExternalId: true,
-});
-
-export const orderItemMetadataSchema = syncOrderItemSchema.pick({
-  price: true,
-  count: true,
-  status: true,
-  condition: true,
-  shippingMethod: true,
-  orderDate: true,
-  paymentDate: true,
-  shippingDate: true,
-  collectionDate: true,
-});
-
-export const collectionItemMetadataSchema = syncCollectionItemSchema.omit({
-  collectionId: true,
-  userId: true,
-  releaseId: true,
-  itemId: true,
-  itemExternalId: true,
-});
-
-export const queuedCollectionItemSchema = z.object({
+const queuedCollectionItemSchema = z.object({
   id: z.string(),
   userId: z.string(),
   itemId: z.string(),
@@ -391,7 +366,6 @@ export type SyncTerminalState = z.infer<typeof syncTerminalStateSchema>;
 export type SyncJobPhase = z.infer<typeof syncJobPhaseSchema>;
 export type SyncJobProgress = z.infer<typeof syncJobProgressSchema>;
 export type SyncJobRecentItem = z.infer<typeof syncJobRecentItemSchema>;
-export type SyncJobErrorCode = z.infer<typeof syncJobErrorCodeSchema>;
 export type SyncJobError = z.infer<typeof syncJobErrorSchema>;
 export type SyncJobStatus = z.infer<typeof syncJobStatusSchema>;
 
@@ -443,15 +417,11 @@ export const sessionStatusToTerminalState = (
       return null;
   }
 };
-export type CsvItem = z.infer<typeof csvItemSchema>;
 export type NormalizedInternalCsvItem = z.infer<typeof internalCsvItemSchema>;
 export type InternalCsvItem = Omit<NormalizedInternalCsvItem, "collectionId"> & {
   readonly collectionId?: string;
 };
 export type QueuedCollectionItem = z.infer<typeof queuedCollectionItemSchema>;
-export type CsvItemMetadata = z.infer<typeof csvItemMetadataSchema>;
-export type OrderItemMetadata = z.infer<typeof orderItemMetadataSchema>;
-export type CollectionItemMetadata = z.infer<typeof collectionItemMetadataSchema>;
 export type UpdatedSyncOrder = z.infer<typeof syncOrderSchema>;
 export type UpdatedSyncOrderItem = z.infer<typeof syncOrderItemSchema>;
 export type UpdatedSyncCollection = z.infer<typeof syncCollectionItemSchema>;

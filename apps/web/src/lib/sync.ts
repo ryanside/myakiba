@@ -147,18 +147,14 @@ async function readCsv(file: File): Promise<UserItem[]> {
 
   const validatedCSV = csvSchema.safeParse(parsedCSV.data);
   if (!validatedCSV.success) {
-    if (import.meta.env.DEV) {
-      console.log("Invalid CSV file", validatedCSV.error);
-    }
-    throw new Error("Please select a valid MyFigureCollection CSV file");
+    throw new Error("Please select a valid MyFigureCollection CSV file", {
+      cause: validatedCSV.error,
+    });
   }
 
   const filteredData = validatedCSV.data.filter((item) => SYNC_CSV_STATUS_SET.has(item.status));
   if (filteredData.length === 0) {
     throw new Error("This CSV has no supported Owned or Ordered items to import");
-  }
-  if (import.meta.env.DEV) {
-    console.log("Filtered data:", filteredData);
   }
   const userItems: UserItem[] = filteredData.map((item) => {
     const normalizedStatus = item.status === "Ordered" ? "Ordered" : "Owned";

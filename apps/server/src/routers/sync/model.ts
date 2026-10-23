@@ -12,22 +12,19 @@ export {
   itemSyncSchema,
   syncItemFailureSchema,
   internalCsvItemSchema,
-  syncTerminalStateSchema,
   syncJobStatusSchema,
-  syncOrderItemInputSchema,
   syncOrderItemsSchema,
 } from "@myakiba/contracts/sync/schema";
 
 export type {
   InternalCsvItem,
   SyncItemFailure,
-  SyncTerminalState,
   SyncJobStatus,
   SyncOrderItemInput,
   SyncOrderItemsInput,
 } from "@myakiba/contracts/sync/schema";
 
-export const collectionInsertSchema = createInsertSchema(collection);
+const collectionInsertSchema = createInsertSchema(collection);
 
 export const orderSyncSchema = syncOrderSchema
   .omit({
