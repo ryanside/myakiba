@@ -126,6 +126,40 @@ function fetchItems(myakiba: Page, ids: readonly number[]): Promise<PageRun> {
 
 describe("the extension against a mock MFC", () => {
   test(
+    "public pictures require browsing the static origin and reach the page intact",
+    async () => {
+      const myakiba = await launch();
+      const url = `${E2E_ORIGINS.WXT_MFC_STATIC_ORIGIN}/upload/items/1/${PUBLIC_ID}-a1b2c.jpg`;
+      const [worker] = context.serviceWorkers();
+      const background = await worker?.evaluate(async (pictureUrl) => {
+        const response = await fetch(pictureUrl, { credentials: "omit", cache: "no-store" });
+        return { status: response.status, mitigated: response.headers.get("cf-mitigated") };
+      }, url);
+      expect(background).toEqual({ status: 403, mitigated: "challenge" });
+      mocks.requests.length = 0;
+
+      const run = await fetchItems(myakiba, [PUBLIC_ID]);
+      expect(run.items[0]?.ok).toBe(true);
+      expect(run.items[0]?.picture?.sha256).toBe(PICTURE_SHA256.public);
+      const pictures = mocks.requests.filter(
+        (request) =>
+          request.origin === E2E_ORIGINS.WXT_MFC_STATIC_ORIGIN &&
+          request.path === new URL(url).pathname,
+      );
+      expect(pictures.some((request) => request.mode === "navigate")).toBe(true);
+      expect(
+        pictures.some((request) => request.mode !== "navigate" && request.site === "same-origin"),
+      ).toBe(true);
+      await until(
+        () =>
+          context.pages().every((tab) => !tab.url().startsWith(E2E_ORIGINS.WXT_MFC_STATIC_ORIGIN)),
+        "the owned static tab to close",
+      );
+    },
+    SCENARIO_TIMEOUT_MS,
+  );
+
+  test(
     "a cold fetch opens a tab of its own, carries the gated picture intact and closes the tab",
     async () => {
       const myakiba = await launch();

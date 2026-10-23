@@ -1181,7 +1181,10 @@ describe("item results", () => {
     const run = extension.run([1]);
     await extension.clock.runUntil(run.done);
 
-    expect(extension.pictureUrls).toEqual([`${ORIGINS.mfcStatic}/upload/items/1/1.jpg`]);
+    const url = `${ORIGINS.mfcStatic}/upload/items/1/1.jpg`;
+    expect(extension.pictureUrls).toEqual([url]);
+    expect(extension.tabs.loads.map((load) => load.url)).toContain(url);
+    expect(tooClose(extension.loads(), THROTTLE.minGapMs)).toEqual([]);
     expect(run.results()).toEqual([
       {
         ok: true,

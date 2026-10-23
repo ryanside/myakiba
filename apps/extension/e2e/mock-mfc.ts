@@ -45,6 +45,8 @@ type MockRequest = {
   aborted: boolean;
   readonly origin: string;
   readonly path: string;
+  readonly mode: string | null;
+  readonly site: string | null;
 };
 type Scenario = { signedIn: boolean; challenge: boolean; itemDelayMs: number };
 
@@ -70,6 +72,8 @@ export function startMocks() {
       aborted: false,
       origin: url.origin,
       path: `${url.pathname}${url.search}`,
+      mode: request.headers.get("sec-fetch-mode"),
+      site: request.headers.get("sec-fetch-site"),
     };
     requests.push(entry);
     request.signal.addEventListener("abort", () => {
@@ -127,11 +131,14 @@ export function startMocks() {
     port: Number(new URL(E2E_ORIGINS.WXT_MFC_STATIC_ORIGIN).port),
     hostname: "127.0.0.1",
     fetch: (request) =>
-      answer(request, (url) =>
-        url.pathname === `/upload/items/1/${PUBLIC_ID}-a1b2c.jpg`
+      answer(request, (url) => {
+        const browsing = request.headers.get("sec-fetch-mode") === "navigate";
+        const sameOrigin = request.headers.get("sec-fetch-site") === "same-origin";
+        if (!browsing && !sameOrigin) return html(challenge, 403, { "cf-mitigated": "challenge" });
+        return url.pathname === `/upload/items/1/${PUBLIC_ID}-a1b2c.jpg`
           ? jpeg(publicPicture)
-          : new Response("not found", { status: 404 }),
-      ),
+          : new Response("not found", { status: 404 });
+      }),
   });
 
   const page = Bun.file(path.join(import.meta.dir, "myakiba-page.html"));
