@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -138,9 +138,14 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
   const isFirst = currentStep === FIRST_STEP;
   const isLast = currentStep === LAST_STEP;
 
+  const atExtensionStep = open && currentMeta.id === "extension";
+  const wroteExtensionStep = useRef(atExtensionStep);
   useEffect(() => {
-    setExtensionStepOpen(open && currentMeta.id === "extension");
-  }, [open, currentMeta.id, setExtensionStepOpen]);
+    // Every tab shares the flag, so this dialog writes it only when it moves itself.
+    if (wroteExtensionStep.current === atExtensionStep) return;
+    wroteExtensionStep.current = atExtensionStep;
+    setExtensionStepOpen(atExtensionStep);
+  }, [atExtensionStep, setExtensionStepOpen]);
 
   const goToStep = useCallback(
     (next: number) => {

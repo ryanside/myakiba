@@ -155,3 +155,20 @@ test("onboarding moved past the extension step does not reopen there after a rel
   });
   expect(screen.queryByRole("dialog")).toBeNull();
 });
+
+test("onboarding opened in a second tab leaves the first tab's extension step to reopen", async () => {
+  localStorage.setItem(ONBOARDING_KEY, JSON.stringify({ step: 0, hasSeen: true }));
+  loadExtension({ installed: false });
+  const user = userEvent.setup();
+  renderOnboarding();
+  localStorage.setItem(
+    ONBOARDING_KEY,
+    JSON.stringify({ step: 0, hasSeen: true, extensionStepOpen: true }),
+  );
+  window.dispatchEvent(new StorageEvent("storage", { key: ONBOARDING_KEY }));
+
+  await user.click(screen.getByRole("button", { name: "Getting Started" }));
+  await screen.findByRole("dialog", { name: "Welcome to myakiba." });
+
+  expect(localStorage.getItem(ONBOARDING_KEY)).toContain('"extensionStepOpen":true');
+});
